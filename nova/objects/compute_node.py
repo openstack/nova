@@ -19,6 +19,7 @@ from nova import exception
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
+from nova.objects import pci_device_pool
 from nova import utils
 
 
@@ -32,7 +33,8 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
     # Version 1.6: Added supported_hv_specs
     # Version 1.7: Added host field
     # Version 1.8: Added get_by_host_and_nodename()
-    VERSION = '1.8'
+    # Version 1.9: Added pci_device_pools
+    VERSION = '1.9'
 
     fields = {
         'id': fields.IntegerField(read_only=True),
@@ -60,9 +62,14 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
         # NOTE(pmurray): the supported_hv_specs field maps to the
         # supported_instances field in the database
         'supported_hv_specs': fields.ListOfObjectsField('HVSpec'),
+        # NOTE(pmurray): the pci_device_pools field maps to the
+        # pci_stats field in the database
+        'pci_device_pools': fields.ObjectField('PciDevicePoolList',
+                                               nullable=True),
         }
 
     obj_relationships = {
+        'pci_device_pools': [('1.9', '1.0')],
         'supported_hv_specs': [('1.6', '1.0')],
     }
 
@@ -110,9 +117,13 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
 
     @staticmethod
     def _from_db_object(context, compute, db_compute):
-
-        fields = set(compute.fields) - set(['stats', 'supported_hv_specs',
-                                            'host'])
+        special_cases = set([
+            'stats',
+            'supported_hv_specs',
+            'host',
+            'pci_device_pools',
+            ])
+        fields = set(compute.fields) - special_cases
         for key in fields:
             compute[key] = db_compute[key]
 
@@ -127,6 +138,8 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
                         for hv_spec in hv_specs]
             compute['supported_hv_specs'] = hv_specs
 
+        pci_stats = db_compute.get('pci_stats')
+        compute.pci_device_pools = pci_device_pool.from_pci_stats(pci_stats)
         compute._context = context
 
         # Make sure that we correctly set the host field depending on either
@@ -165,21 +178,30 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
             db_compute['host'] = service.host
         return cls._from_db_object(context, cls(), db_compute)
 
-    def _convert_stats_to_db_format(self, updates):
+    @staticmethod
+    def _convert_stats_to_db_format(updates):
         stats = updates.pop('stats', None)
         if stats is not None:
             updates['stats'] = jsonutils.dumps(stats)
 
-    def _convert_host_ip_to_db_format(self, updates):
+    @staticmethod
+    def _convert_host_ip_to_db_format(updates):
         host_ip = updates.pop('host_ip', None)
         if host_ip:
             updates['host_ip'] = str(host_ip)
 
-    def _convert_supported_instances_to_db_format(selfself, updates):
+    @staticmethod
+    def _convert_supported_instances_to_db_format(updates):
         hv_specs = updates.pop('supported_hv_specs', None)
         if hv_specs is not None:
             hv_specs = [hv_spec.to_list() for hv_spec in hv_specs]
             updates['supported_instances'] = jsonutils.dumps(hv_specs)
+
+    @staticmethod
+    def _convert_pci_stats_to_db_format(updates):
+        pools = updates.pop('pci_device_pools', None)
+        if pools:
+            updates['pci_stats'] = jsonutils.dumps(pools.obj_to_primitive())
 
     @base.remotable
     def create(self, context):
@@ -190,6 +212,7 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
         self._convert_stats_to_db_format(updates)
         self._convert_host_ip_to_db_format(updates)
         self._convert_supported_instances_to_db_format(updates)
+        self._convert_pci_stats_to_db_format(updates)
 
         db_compute = db.compute_node_create(context, updates)
         self._from_db_object(context, self, db_compute)
@@ -203,6 +226,7 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
         self._convert_stats_to_db_format(updates)
         self._convert_host_ip_to_db_format(updates)
         self._convert_supported_instances_to_db_format(updates)
+        self._convert_pci_stats_to_db_format(updates)
 
         db_compute = db.compute_node_update(context, self.id, updates)
         self._from_db_object(context, self, db_compute)
@@ -230,7 +254,8 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
     # Version 1.6 ComputeNode version 1.6
     # Version 1.7 ComputeNode version 1.7
     # Version 1.8 ComputeNode version 1.8 + add get_all_by_host()
-    VERSION = '1.8'
+    # Version 1.9 ComputeNode version 1.9
+    VERSION = '1.9'
     fields = {
         'objects': fields.ListOfObjectsField('ComputeNode'),
         }
@@ -245,6 +270,7 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
         '1.6': '1.6',
         '1.7': '1.7',
         '1.8': '1.8',
+        '1.9': '1.9',
         }
 
     @base.remotable_classmethod
