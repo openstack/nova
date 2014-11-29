@@ -17,21 +17,41 @@ from oslo.serialization import jsonutils
 from nova import db
 from nova import exception
 from nova.objects import base
-from nova.objects import fields
+from nova.objects import fields as obj_fields
 from nova.virt import hardware
 
 
 class InstanceNUMACell(base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Add pagesize field
-    VERSION = '1.1'
+    # Version 1.2: Add cpu_pinning_raw and topology fields
+    VERSION = '1.2'
 
     fields = {
-        'id': fields.IntegerField(read_only=True),
-        'cpuset': fields.SetOfIntegersField(),
-        'memory': fields.IntegerField(),
-        'pagesize': fields.IntegerField(nullable=True),
+        'id': obj_fields.IntegerField(read_only=True),
+        'cpuset': obj_fields.SetOfIntegersField(),
+        'memory': obj_fields.IntegerField(),
+        'pagesize': obj_fields.IntegerField(nullable=True),
+        'cpu_topology': obj_fields.ObjectField('VirtCPUTopology',
+                                               nullable=True),
+        'cpu_pinning_raw': obj_fields.DictOfIntegersField(nullable=True)
         }
+
+    obj_relationships = {
+        'cpu_topology': [('1.2', '1.0')]
+    }
+
+    cpu_pinning = obj_fields.DictProxyField('cpu_pinning_raw')
+
+    def __init__(self, **kwargs):
+        super(InstanceNUMACell, self).__init__(**kwargs)
+        if 'cpu_topology' not in kwargs:
+            self.cpu_topology = None
+        if 'cpu_pinning' not in kwargs:
+            self.cpu_pinning = None
+
+    def __len__(self):
+        return len(self.cpuset)
 
     def _to_dict(self):
         # NOTE(sahid): Used as legacy, could be renamed in
@@ -53,6 +73,29 @@ class InstanceNUMACell(base.NovaObject):
         return cls(id=cell_id, cpuset=cpuset,
                    memory=memory, pagesize=pagesize)
 
+    @property
+    def siblings(self):
+        cpu_list = sorted(list(self.cpuset))
+
+        threads = 0
+        if self.cpu_topology:
+            threads = self.cpu_topology.threads
+        if threads == 1:
+            threads = 0
+
+        return map(set, zip(*[iter(cpu_list)] * threads))
+
+    def pin(self, vcpu, pcpu):
+        if vcpu not in self.cpuset:
+            return
+        pinning_dict = self.cpu_pinning or {}
+        pinning_dict[vcpu] = pcpu
+        self.cpu_pinning = pinning_dict
+
+    def pin_vcpus(self, *cpu_pairs):
+        for vcpu, pcpu in cpu_pairs:
+            self.pin(vcpu, pcpu)
+
 
 class InstanceNUMATopology(base.NovaObject):
     # Version 1.0: Initial version
@@ -62,9 +105,9 @@ class InstanceNUMATopology(base.NovaObject):
     fields = {
         # NOTE(danms): The 'id' field is no longer used and should be
         # removed in the future when convenient
-        'id': fields.IntegerField(),
-        'instance_uuid': fields.UUIDField(),
-        'cells': fields.ListOfObjectsField('InstanceNUMACell'),
+        'id': obj_fields.IntegerField(),
+        'instance_uuid': obj_fields.UUIDField(),
+        'cells': obj_fields.ListOfObjectsField('InstanceNUMACell'),
         }
 
     @classmethod
