@@ -218,7 +218,12 @@ class VHDUtilsV2(vhdutils.VHDUtils):
         et = ElementTree.fromstring(vhd_info_xml)
         for item in et.findall("PROPERTY"):
             name = item.attrib["NAME"]
-            value_text = item.find("VALUE").text
+            value_item = item.find("VALUE")
+            if value_item is None:
+                value_text = None
+            else:
+                value_text = value_item.text
+
             if name in ["Path", "ParentPath"]:
                 vhd_info_dict[name] = value_text
             elif name in ["BlockSize", "LogicalSectorSize",
