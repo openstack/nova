@@ -93,8 +93,7 @@ class AdminActionsTestV2(AdminActionsTestV21):
 
     def test_actions(self):
         actions = ['pause', 'unpause', 'suspend', 'resume', 'migrate',
-                   'resetNetwork', 'injectNetworkInfo', 'lock',
-                   'unlock']
+                   'resetNetwork', 'injectNetworkInfo']
         method_translations = {'migrate': 'resize',
                                'resetNetwork': 'reset_network',
                                'injectNetworkInfo': 'inject_network_info'}
@@ -119,8 +118,8 @@ class AdminActionsTestV2(AdminActionsTestV21):
 
     def test_actions_with_non_existed_instance(self):
         actions = ['pause', 'unpause', 'suspend', 'resume',
-                   'resetNetwork', 'injectNetworkInfo', 'lock',
-                   'unlock', 'os-resetState', 'migrate', 'os-migrateLive']
+                   'resetNetwork', 'injectNetworkInfo',
+                   'os-resetState', 'migrate', 'os-migrateLive']
         body_map = {'os-resetState': {'state': 'active'},
                     'os-migrateLive':
                                   {'host': 'hostname',
@@ -271,20 +270,6 @@ class AdminActionsTestV2(AdminActionsTestV21):
     def test_migrate_live_migration_with_old_nova_not_safe(self):
         self._test_migrate_live_failed_with_exception(
             exception.LiveMigrationWithOldNovaNotSafe(server=''))
-
-    def test_unlock_not_authorized(self):
-        self.mox.StubOutWithMock(self.compute_api, 'unlock')
-
-        instance = self._stub_instance_get()
-
-        self.compute_api.unlock(self.context, instance).AndRaise(
-                exception.PolicyNotAuthorized(action='unlock'))
-
-        self.mox.ReplayAll()
-
-        res = self._make_request('/servers/%s/action' % instance['uuid'],
-                                 {'unlock': None})
-        self.assertEqual(403, res.status_int)
 
 
 class CreateBackupTestsV2(admin_only_action_common.CommonTests):
