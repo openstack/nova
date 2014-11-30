@@ -14,7 +14,10 @@
 #    under the License.
 
 from nova.api.openstack import common
-from nova.api.openstack.compute.plugins.v3 import create_backup
+from nova.api.openstack.compute.contrib import admin_actions as \
+    create_backup_v2
+from nova.api.openstack.compute.plugins.v3 import create_backup as \
+    create_backup_v21
 from nova.openstack.common import uuidutils
 from nova import test
 from nova.tests.unit.api.openstack.compute.plugins.v3 import \
@@ -22,21 +25,22 @@ from nova.tests.unit.api.openstack.compute.plugins.v3 import \
 from nova.tests.unit.api.openstack import fakes
 
 
-class CreateBackupTests(admin_only_action_common.CommonMixin,
+class CreateBackupTestsV21(admin_only_action_common.CommonMixin,
                         test.NoDBTestCase):
+    create_backup = create_backup_v21
+    controller_name = 'CreateBackupController'
+
     def setUp(self):
-        super(CreateBackupTests, self).setUp()
-        self.controller = create_backup.CreateBackupController()
+        super(CreateBackupTestsV21, self).setUp()
+        self.controller = getattr(self.create_backup, self.controller_name)()
         self.compute_api = self.controller.compute_api
 
         def _fake_controller(*args, **kwargs):
             return self.controller
 
-        self.stubs.Set(create_backup, 'CreateBackupController',
+        self.stubs.Set(self.create_backup, self.controller_name,
                        _fake_controller)
-        self.app = fakes.wsgi_app_v21(init_only=('servers',
-                                                 'os-create-backup'),
-                                      fake_auth_context=self.context)
+        self.app = self._get_app()
         self.mox.StubOutWithMock(self.compute_api, 'get')
         self.mox.StubOutWithMock(common,
                                  'check_img_metadata_properties_quota')
@@ -46,6 +50,11 @@ class CreateBackupTests(admin_only_action_common.CommonMixin,
         if uuid is None:
             uuid = uuidutils.generate_uuid()
         return '/servers/%s/action' % uuid
+
+    def _get_app(self):
+        return fakes.wsgi_app_v21(init_only=('servers',
+                                             'os-create-backup'),
+                                  fake_auth_context=self.context)
 
     def test_create_backup_with_metadata(self):
         metadata = {'123': 'asdf'}
@@ -259,3 +268,22 @@ class CreateBackupTests(admin_only_action_common.CommonMixin,
         }
         res = self._make_request(self._make_url(), body)
         self.assertEqual(400, res.status_int)
+
+
+class CreateBackupTestsV2(CreateBackupTestsV21):
+    create_backup = create_backup_v2
+    controller_name = 'AdminActionsController'
+
+    def setUp(self):
+        super(CreateBackupTestsV2, self).setUp()
+        self.flags(
+            osapi_compute_extension=[
+            'nova.api.openstack.compute.contrib.select_extensions'],
+            osapi_compute_ext_list=['Admin_actions'])
+
+    def _get_app(self):
+        return fakes.wsgi_app(init_only=('servers',),
+            fake_auth_context=self.context)
+
+    def test_create_backup_non_dict_metadata(self):
+        pass
