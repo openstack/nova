@@ -84,8 +84,7 @@ class NovaMigrationsCheckers(test_migrations.WalkVersionsMixin):
 
     def setUp(self):
         super(NovaMigrationsCheckers, self).setUp()
-        conf_fixture.ConfFixture(cfg.CONF)
-        self.addCleanup(cfg.CONF.reset)
+        self.useFixture(conf_fixture.ConfFixture(cfg.CONF))
         # NOTE(viktors): We should reduce log output because it causes issues,
         #                when we run tests with testr
         migrate_log = logging.getLogger('migrate')
