@@ -218,3 +218,12 @@ class LiveMigrationOpsTestCase(test_base.HyperVBaseTestCase):
         self.assertEqual(mock_migr_data_cls.return_value, migr_data)
         self.assertEqual(mock_check_shared_inst_dir.return_value,
                          migr_data.is_shared_instance_path)
+
+    @mock.patch('nova.virt.hyperv.vmops.VMOps.plug_vifs')
+    def test_post_live_migration_at_destination(self, mock_plug_vifs):
+        self._livemigrops.post_live_migration_at_destination(
+            self.context, mock.sentinel.instance,
+            network_info=mock.sentinel.NET_INFO,
+            block_migration=mock.sentinel.BLOCK_INFO)
+        mock_plug_vifs.assert_called_once_with(mock.sentinel.instance,
+                                               mock.sentinel.NET_INFO)

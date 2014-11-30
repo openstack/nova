@@ -119,6 +119,7 @@ class LiveMigrationOps(object):
                                            network_info, block_migration):
         LOG.debug("post_live_migration_at_destination called",
                   instance=instance_ref)
+        self._vmops.plug_vifs(instance_ref, network_info)
 
     def check_can_live_migrate_destination(self, ctxt, instance_ref,
                                            src_compute_info, dst_compute_info,
