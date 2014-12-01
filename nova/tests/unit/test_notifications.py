@@ -173,9 +173,9 @@ class NotificationsTestCase(test.TestCase):
 
     def test_send_on_vm_change(self):
         old = obj_base.obj_to_primitive(self.instance)
-        old['task_state'] = None
+        old['vm_state'] = None
         # pretend we just transitioned to ACTIVE:
-        self.instance.task_state = task_states.SPAWNING
+        self.instance.vm_state = vm_states.ACTIVE
         notifications.send_update(self.context, old, self.instance)
 
         self.assertEqual(1, len(fake_notifier.NOTIFICATIONS))
