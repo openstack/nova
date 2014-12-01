@@ -152,6 +152,7 @@ class ImageMetadata(extensions.V3APIExtensionBase):
         return []
 
     def image_metadata_map(self, mapper, wsgi_resource):
-        mapper.connect("metadata", "/images/{image_id}/metadata",
+        mapper.connect("metadata",
+                       "/{project_id}/images/{image_id}/metadata",
                        controller=wsgi_resource,
                        action='update_all', conditions={"method": ['PUT']})
