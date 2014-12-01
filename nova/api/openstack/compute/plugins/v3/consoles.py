@@ -22,6 +22,7 @@ from nova import exception
 
 
 ALIAS = 'os-consoles'
+authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 def _translate_keys(cons):
@@ -53,6 +54,9 @@ class ConsolesController(wsgi.Controller):
     @extensions.expected_errors(())
     def index(self, req, server_id):
         """Returns a list of consoles for this instance."""
+        context = req.environ['nova.context']
+        authorize(context, action='index')
+
         consoles = self.console_api.get_consoles(
                 req.environ['nova.context'], server_id)
         return dict(consoles=[_translate_keys(console)
@@ -64,6 +68,9 @@ class ConsolesController(wsgi.Controller):
     @extensions.expected_errors(404)
     def create(self, req, server_id, body):
         """Creates a new console."""
+        context = req.environ['nova.context']
+        authorize(context, action='create')
+
         try:
             self.console_api.create_console(
                 req.environ['nova.context'], server_id)
@@ -73,6 +80,9 @@ class ConsolesController(wsgi.Controller):
     @extensions.expected_errors(404)
     def show(self, req, server_id, id):
         """Shows in-depth information on a specific console."""
+        context = req.environ['nova.context']
+        authorize(context, action='show')
+
         try:
             console = self.console_api.get_console(
                                         req.environ['nova.context'],
@@ -86,6 +96,9 @@ class ConsolesController(wsgi.Controller):
     @extensions.expected_errors(404)
     def delete(self, req, server_id, id):
         """Deletes a console."""
+        context = req.environ['nova.context']
+        authorize(context, action='delete')
+
         try:
             self.console_api.delete_console(req.environ['nova.context'],
                                             server_id,

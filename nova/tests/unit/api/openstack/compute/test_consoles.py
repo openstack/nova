@@ -26,6 +26,8 @@ from nova.compute import vm_states
 from nova import console
 from nova import db
 from nova import exception
+from nova.openstack.common import policy as common_policy
+from nova import policy
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import matchers
@@ -263,7 +265,42 @@ class ConsolesControllerTestV21(test.NoDBTestCase):
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.delete,
                           req, self.uuid, '20')
 
+    def _test_fail_policy(self, rule, action, data=None):
+        rules = {
+            rule: common_policy.parse_rule("!"),
+        }
+
+        policy.set_rules(rules)
+        req = fakes.HTTPRequest.blank(self.url + '/20')
+
+        if data is not None:
+            self.assertRaises(exception.PolicyNotAuthorized, action,
+                              req, self.uuid, data)
+        else:
+            self.assertRaises(exception.PolicyNotAuthorized, action,
+                              req, self.uuid)
+
+    def test_delete_console_fail_policy(self):
+        self._test_fail_policy("os_compute_api:os-consoles:delete",
+                               self.controller.delete, data='20')
+
+    def test_create_console_fail_policy(self):
+        self._test_fail_policy("os_compute_api:os-consoles:create",
+                               self.controller.create, data='20')
+
+    def test_index_console_fail_policy(self):
+        self._test_fail_policy("os_compute_api:os-consoles:index",
+                               self.controller.index)
+
+    def test_show_console_fail_policy(self):
+        self._test_fail_policy("os_compute_api:os-consoles:show",
+                               self.controller.show, data='20')
+
 
 class ConsolesControllerTestV2(ConsolesControllerTestV21):
     def _set_up_controller(self):
         self.controller = consoles_v2.Controller()
+
+    def _test_fail_policy(self, rule, action, data=None):
+        # V2 API don't have policy
+        pass
