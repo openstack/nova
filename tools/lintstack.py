@@ -24,7 +24,6 @@ import re
 import sys
 
 from pylint import lint
-from pylint.reporters import text
 
 # Note(maoy): E1103 is error code related to partial type inference
 ignore_codes = ["E1103"]
@@ -130,7 +129,9 @@ class ErrorKeys(object):
 
 def run_pylint():
     buff = StringIO.StringIO()
-    args = ["--msg-template={path}:{line}: [{msg_id}({symbol}), {obj}] {msg}", "-E", "nova"]
+    args = ["--msg-template={path}:{line}: [{msg_id}({symbol}), {obj}] {msg}",
+            "-E",
+            "nova"]
     lint.Run(args, exit=False)
     val = buff.getvalue()
     buff.close()
