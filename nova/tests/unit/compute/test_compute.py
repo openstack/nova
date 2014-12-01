@@ -5768,9 +5768,10 @@ class ComputeTestCase(BaseTestCase):
            get compute_info.
         """
         self._begin_post_live_migration_at_destination()
-        self.compute._get_compute_info(mox.IgnoreArg(),
-                                       mox.IgnoreArg()).AndRaise(
-                                                        exception.NotFound())
+        self.compute._get_compute_info(
+            mox.IgnoreArg(),
+            mox.IgnoreArg()).AndRaise(
+                exception.ComputeHostNotFound(host='fake-host'))
         updated = self._finish_post_live_migration_at_destination()
         self.assertIsNone(updated['node'])
 
@@ -11116,7 +11117,7 @@ class EvacuateHostTestCase(BaseTestCase):
         self.stubs.Set(self.compute.driver, 'instance_on_disk', lambda x: True)
 
         def fake_get_compute_info(context, host):
-            raise exception.NotFound(_("Host %s not found") % host)
+            raise exception.ComputeHostNotFound(host=host)
 
         self.stubs.Set(self.compute, '_get_compute_info',
                        fake_get_compute_info)

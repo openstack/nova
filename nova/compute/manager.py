@@ -2754,7 +2754,7 @@ class ComputeManager(manager.Manager):
                 try:
                     compute_node = self._get_compute_info(context, self.host)
                     node_name = compute_node.hypervisor_hostname
-                except exception.NotFound:
+                except exception.ComputeHostNotFound:
                     LOG.exception(_LE('Failed to get compute_info for %s'),
                                   self.host)
                 finally:
@@ -4810,10 +4810,7 @@ class ComputeManager(manager.Manager):
 
     def _get_compute_info(self, context, host):
         service = objects.Service.get_by_compute_host(context, host)
-        try:
-            return service.compute_node
-        except IndexError:
-            raise exception.NotFound(_("Host %s not found") % host)
+        return service.compute_node
 
     @wrap_exception()
     def check_instance_shared_storage(self, ctxt, instance, data):
@@ -5175,7 +5172,7 @@ class ComputeManager(manager.Manager):
         try:
             compute_node = self._get_compute_info(context, self.host)
             node_name = compute_node.hypervisor_hostname
-        except exception.NotFound:
+        except exception.ComputeHostNotFound:
             LOG.exception(_LE('Failed to get compute_info for %s'), self.host)
         finally:
             instance.host = self.host
