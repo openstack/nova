@@ -45,7 +45,6 @@ from nova.objects import base as nova_object
 from nova.openstack.common import log as logging
 from nova import quota
 from nova.scheduler import client as scheduler_client
-from nova.scheduler import driver as scheduler_driver
 from nova.scheduler import utils as scheduler_utils
 
 LOG = logging.getLogger(__name__)
@@ -646,9 +645,9 @@ class ComputeTaskManager(base.Base):
             hosts = self.scheduler_client.select_destinations(context,
                     request_spec, filter_properties)
         except Exception as exc:
-            for instance in instances:
-                scheduler_driver.handle_schedule_error(context, exc,
-                        instance.uuid, request_spec)
+            updates = {'vm_state': vm_states.ERROR, 'task_state': None}
+            self._set_vm_state_and_notify(context, 'build_instances', updates,
+                                          exc, request_spec)
             return
 
         for (instance, host) in itertools.izip(instances, hosts):
