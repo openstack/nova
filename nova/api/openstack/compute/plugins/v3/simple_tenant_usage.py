@@ -26,7 +26,6 @@ from nova.api.openstack import wsgi
 from nova import exception
 from nova.i18n import _
 from nova import objects
-from nova.objects import instance as instance_obj
 
 ALIAS = "os-simple-tenant-usage"
 authorize_show = extensions.extension_authorizer('compute',
@@ -109,7 +108,7 @@ class SimpleTenantUsageController(wsgi.Controller):
 
         instances = objects.InstanceList.get_active_by_window_joined(
                         context, period_start, period_stop, tenant_id,
-                        expected_attrs=instance_obj.INSTANCE_DEFAULT_FIELDS)
+                        expected_attrs=['system_metadata'])
         rval = {}
         flavors = {}
 
