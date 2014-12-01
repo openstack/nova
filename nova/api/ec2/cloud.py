@@ -43,6 +43,7 @@ from nova.i18n import _LW
 from nova.image import s3
 from nova import network
 from nova.network.security_group import neutron_driver
+from nova.network.security_group import openstack_driver
 from nova import objects
 from nova.objects import base as obj_base
 from nova.openstack.common import log as logging
@@ -1995,7 +1996,7 @@ class CloudSecurityGroupNeutronAPI(EC2SecurityGroupExceptions,
 def get_cloud_security_group_api():
     if cfg.CONF.security_group_api.lower() == 'nova':
         return CloudSecurityGroupNovaAPI()
-    elif cfg.CONF.security_group_api.lower() in ('neutron', 'quantum'):
+    elif openstack_driver.is_neutron_security_groups():
         return CloudSecurityGroupNeutronAPI()
     else:
         raise NotImplementedError()

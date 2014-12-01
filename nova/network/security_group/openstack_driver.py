@@ -33,7 +33,7 @@ NEUTRON_DRIVER = ('nova.network.security_group.neutron_driver.'
 def get_openstack_security_group_driver():
     if CONF.security_group_api.lower() == 'nova':
         return importutils.import_object(NOVA_DRIVER)
-    elif CONF.security_group_api.lower() in ('neutron', 'quantum'):
+    elif is_neutron_security_groups():
         return importutils.import_object(NEUTRON_DRIVER)
     else:
         return importutils.import_object(CONF.security_group_api)
