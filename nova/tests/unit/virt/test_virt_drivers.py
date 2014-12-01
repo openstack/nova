@@ -427,6 +427,17 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
         self.assertIn('host', result)
 
     @catch_notimplementederror
+    def test_get_volume_connector_storage_ip(self):
+        ip = 'my_ip'
+        storage_ip = 'storage_ip'
+        self.flags(my_block_storage_ip=storage_ip, my_ip=ip)
+        result = self.connection.get_volume_connector({'id': 'fake'})
+        self.assertIn('ip', result)
+        self.assertIn('initiator', result)
+        self.assertIn('host', result)
+        self.assertEqual(storage_ip, result['ip'])
+
+    @catch_notimplementederror
     def test_attach_detach_volume(self):
         instance_ref, network_info = self._get_running_instance()
         connection_info = {

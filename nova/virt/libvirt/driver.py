@@ -1306,7 +1306,7 @@ class LibvirtDriver(driver.ComputeDriver):
                           'world wide port names',
                           instance=instance)
 
-        connector = {'ip': CONF.my_ip,
+        connector = {'ip': CONF.my_block_storage_ip,
                      'host': CONF.host}
 
         if self._initiator:

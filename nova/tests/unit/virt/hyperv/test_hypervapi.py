@@ -1487,6 +1487,28 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
         self.assertEqual(fake_host, data.get('host'))
         self.assertEqual(fake_initiator, data.get('initiator'))
 
+    def test_get_volume_connector_storage_ip(self):
+        self._instance_data = self._get_instance_data()
+        instance = db.instance_create(self._context, self._instance_data)
+
+        fake_my_ip = "fake_ip"
+        fake_my_block_ip = "fake_block_ip"
+        fake_host = "fake_host"
+        fake_initiator = "fake_initiator"
+
+        self.flags(my_ip=fake_my_ip)
+        self.flags(my_block_storage_ip=fake_my_block_ip)
+        self.flags(host=fake_host)
+
+        with mock.patch.object(volumeutils.VolumeUtils,
+                               "get_iscsi_initiator") as mock_initiator:
+            mock_initiator.return_value = fake_initiator
+            data = self._conn.get_volume_connector(instance)
+
+        self.assertEqual(fake_my_block_ip, data.get('ip'))
+        self.assertEqual(fake_host, data.get('host'))
+        self.assertEqual(fake_initiator, data.get('initiator'))
+
     def _setup_test_migrate_disk_and_power_off_mocks(self, same_host=False,
                                                      copy_exception=False,
                                                      size_exception=False):

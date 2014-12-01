@@ -46,6 +46,9 @@ netconf_opts = [
     cfg.StrOpt('my_ip',
                default=_get_my_ip(),
                help='IP address of this host'),
+    cfg.StrOpt('my_block_storage_ip',
+               default='$my_ip',
+               help='Block storage IP address of this host'),
     cfg.StrOpt('host',
                default=socket.gethostname(),
                help='Name of this node.  This can be an opaque identifier.  '
