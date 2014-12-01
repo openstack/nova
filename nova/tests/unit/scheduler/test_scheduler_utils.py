@@ -316,7 +316,8 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
 
     @mock.patch.object(scheduler_utils, '_get_group_details')
     def test_setup_instance_group_in_filter_properties(self, mock_ggd):
-        mock_ggd.return_value = (set(['hostA', 'hostB']), ['policy'])
+        mock_ggd.return_value = scheduler_utils.GroupDetails(
+            hosts=set(['hostA', 'hostB']), policies=['policy'])
         spec = {'instance_uuids': ['fake-uuid']}
         filter_props = {'group_hosts': ['hostC']}
 

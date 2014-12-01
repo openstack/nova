@@ -14,6 +14,7 @@
 
 """Utility methods for scheduling."""
 
+import collections
 import sys
 
 from oslo.config import cfg
@@ -42,6 +43,8 @@ CONF = cfg.CONF
 CONF.register_opts(scheduler_opts)
 
 CONF.import_opt('scheduler_default_filters', 'nova.scheduler.host_manager')
+
+GroupDetails = collections.namedtuple('GroupDetails', ['hosts', 'policies'])
 
 
 def build_request_spec(ctxt, image, instances, instance_type=None):
@@ -254,7 +257,7 @@ def _get_group_details(context, instance_uuids, user_group_hosts=None):
     :param instance_uuids: list of instance uuids
     :param user_group_hosts: Hosts from the group or empty set
 
-    :returns: None or tuple (group_hosts, group_policies)
+    :returns: None or namedtuple GroupDetails
     """
     global _SUPPORTS_AFFINITY
     if _SUPPORTS_AFFINITY is None:
@@ -290,7 +293,8 @@ def _get_group_details(context, instance_uuids, user_group_hosts=None):
             raise exception.NoValidHost(reason=msg)
         group_hosts = set(group.get_hosts(context))
         user_hosts = set(user_group_hosts) if user_group_hosts else set()
-        return (user_hosts | group_hosts, group.policies)
+        return GroupDetails(hosts=user_hosts | group_hosts,
+                            policies=group.policies)
 
 
 def setup_instance_group(context, request_spec, filter_properties):
@@ -306,5 +310,5 @@ def setup_instance_group(context, request_spec, filter_properties):
     group_info = _get_group_details(context, instance_uuids, group_hosts)
     if group_info is not None:
         filter_properties['group_updated'] = True
-        (filter_properties['group_hosts'],
-         filter_properties['group_policies']) = group_info
+        filter_properties['group_hosts'] = group_info.hosts
+        filter_properties['group_policies'] = group_info.policies
