@@ -22,7 +22,8 @@ class ServersMetadataJsonTest(test_servers.ServersSampleBase):
 
     def _create_and_set(self, subs):
         uuid = self._post_server()
-        response = self._do_put('servers/%s/metadata' % uuid,
+        response = self._do_put('%s/servers/%s/metadata' %
+                                (self.api.project_id, uuid),
                                 'server-metadata-all-req',
                                 subs)
         self._verify_response('server-metadata-all-resp', subs, response, 200)

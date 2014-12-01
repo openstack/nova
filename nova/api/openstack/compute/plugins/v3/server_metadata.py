@@ -177,6 +177,7 @@ class ServerMetadata(extensions.V3APIExtensionBase):
         return []
 
     def server_metadata_map(self, mapper, wsgi_resource):
-        mapper.connect("metadata", "/servers/{server_id}/metadata",
+        mapper.connect("metadata",
+                       "/{project_id}/servers/{server_id}/metadata",
                        controller=wsgi_resource,
                        action='update_all', conditions={"method": ['PUT']})
