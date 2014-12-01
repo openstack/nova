@@ -634,6 +634,12 @@ def compute_node_delete(context, compute_id):
 
 def compute_node_statistics(context):
     """Compute statistics over all compute nodes."""
+
+    # TODO(sbauza): Remove the service_id filter in a later release
+    # once we are sure that all compute nodes report the host field
+    _filter = or_(models.Service.host == models.ComputeNode.host,
+                  models.Service.id == models.ComputeNode.service_id)
+
     result = model_query(context,
                          models.ComputeNode, (
                              func.count(models.ComputeNode.id),
@@ -650,9 +656,7 @@ def compute_node_statistics(context):
                              func.sum(models.ComputeNode.disk_available_least),
                          ), read_deleted="no").\
                          filter(models.Service.disabled == false()).\
-                         filter(
-                            models.Service.id ==
-                            models.ComputeNode.service_id).\
+                         filter(_filter).\
                          first()
 
     # Build a dict of the info--making no assumptions about result
