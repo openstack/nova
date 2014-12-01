@@ -998,18 +998,14 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         image_id = nova.tests.unit.image.fake.get_valid_image_id()
         image = images.VMwareImage(image_id=image_id)
 
-        def _fake_flavor_get(context, id):
-            flavor = stubs._fake_flavor_get(context, id)
-            return flavor
+        extra_specs = vm_util.ExtraSpecs()
 
-        with mock.patch.object(db, 'flavor_get', _fake_flavor_get):
-            flavor = objects.Flavor.get_by_id(self._context, 1)
-            vm_ref = self._vmops.build_virtual_machine(self._instance,
-                                                       'fake-instance-name',
-                                                       image, self._dc_info,
-                                                       self._ds,
-                                                       self.network_info,
-                                                       flavor)
+        vm_ref = self._vmops.build_virtual_machine(self._instance,
+                                                   'fake-instance-name',
+                                                   image, self._dc_info,
+                                                   self._ds,
+                                                   self.network_info,
+                                                   extra_specs)
 
         vm = vmwareapi_fake._get_object(vm_ref)
 
