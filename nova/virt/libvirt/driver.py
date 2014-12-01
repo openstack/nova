@@ -3809,6 +3809,13 @@ class LibvirtDriver(driver.ComputeDriver):
                 guest_numa_tune.memory = numa_mem
                 guest_numa_tune.memnodes = numa_memnodes
 
+                # normalize cell.id
+                for i, (cell, memnode) in enumerate(
+                                                zip(guest_cpu_numa.cells,
+                                                    guest_numa_tune.memnodes)):
+                    cell.id = i
+                    memnode.cellid = i
+
                 return None, guest_cpu_tune, guest_cpu_numa, guest_numa_tune
             else:
                 return allowed_cpus, None, guest_cpu_numa, None
