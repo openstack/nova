@@ -218,6 +218,7 @@ policy_data = """
     "compute_extension:floating_ip_pools": "",
     "compute_extension:v3:os-floating-ip-pools": "",
     "compute_extension:floating_ips": "",
+    "compute_extension:v3:os-floating-ips": "",
     "compute_extension:floating_ips_bulk": "",
     "compute_extension:v3:os-floating-ips-bulk": "",
     "compute_extension:fping": "",
