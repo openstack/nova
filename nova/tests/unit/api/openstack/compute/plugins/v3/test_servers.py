@@ -1530,6 +1530,37 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
                               self.controller._action_rebuild,
                               self.req, FAKE_UUID, body=self.body)
 
+    def test_rebuild_bad_personality(self):
+        body = {
+            "rebuild": {
+                "imageRef": self.image_href,
+                "personality": [{
+                    "path": "/path/to/file",
+                    "contents": "INVALID b64",
+                }]
+            },
+        }
+
+        self.assertRaises(exception.ValidationError,
+                          self.controller._action_rebuild,
+                          self.req, FAKE_UUID, body=body)
+
+    def test_rebuild_personality(self):
+        body = {
+            "rebuild": {
+                "imageRef": self.image_href,
+                "personality": [{
+                    "path": "/path/to/file",
+                    "contents": base64.b64encode("Test String"),
+                }]
+            },
+        }
+
+        body = self.controller._action_rebuild(self.req, FAKE_UUID,
+                                               body=body).obj
+
+        self.assertNotIn('personality', body['server'])
+
     def test_start(self):
         self.mox.StubOutWithMock(compute_api.API, 'start')
         compute_api.API.start(mox.IgnoreArg(), mox.IgnoreArg())
@@ -1946,8 +1977,14 @@ class ServersControllerCreateTest(test.TestCase):
                     'hello': 'world',
                     'open': 'stack',
                     },
-                },
-            }
+                'personality': [
+                    {
+                        "path": "/etc/banner.txt",
+                        "contents": "MQ==",
+                    },
+                ],
+            },
+        }
         self.bdm = [{'delete_on_termination': 1,
                      'device_name': 123,
                      'volume_size': 1,
@@ -2643,6 +2680,40 @@ class ServersControllerCreateTest(test.TestCase):
                            name='instance-name'))
     def test_create_instance_raise_instance_exists(self, mock_create):
         self.assertRaises(webob.exc.HTTPConflict,
+                          self.controller.create,
+                          self.req, body=self.body)
+
+    @mock.patch.object(compute_api.API, 'create')
+    def test_create_instance_invalid_personality(self, mock_create):
+        codec = 'utf8'
+        content = 'b25zLiINCg0KLVJpY2hhcmQgQ$$%QQmFjaA=='
+        start_position = 19
+        end_position = 20
+        msg = 'invalid start byte'
+        mock_create.side_effect = UnicodeDecodeError(codec, content,
+                                                     start_position,
+                                                     end_position, msg)
+
+        self.body['server']['personality'] = [
+            {
+                "path": "/etc/banner.txt",
+                "contents": "b25zLiINCg0KLVJpY2hhcmQgQ$$%QQmFjaA==",
+            },
+        ]
+        self.req.body = jsonutils.dumps(self.body)
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.create, self.req, body=self.body)
+
+    def test_create_instance_with_extra_personality_arg(self):
+        self.body['server']['personality'] = [
+            {
+                "path": "/etc/banner.txt",
+                "contents": "b25zLiINCg0KLVJpY2hhcmQgQ$$%QQmFjaA==",
+                "extra_arg": "extra value"
+            },
+        ]
+
+        self.assertRaises(exception.ValidationError,
                           self.controller.create,
                           self.req, body=self.body)
 
