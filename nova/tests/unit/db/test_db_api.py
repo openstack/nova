@@ -6355,22 +6355,14 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertEqual(self.stats, new_stats)
 
     def test_compute_node_get_all(self):
-        date_fields = set(['created_at', 'updated_at',
-                           'deleted_at', 'deleted'])
-        for no_date_fields in [False, True]:
-            nodes = db.compute_node_get_all(self.ctxt, no_date_fields)
-            self.assertEqual(1, len(nodes))
-            node = nodes[0]
-            self._assertEqualObjects(self.compute_node_dict, node,
-                                     ignored_keys=self._ignored_keys +
-                                                  ['stats', 'service'])
-            node_fields = set(node.keys())
-            if no_date_fields:
-                self.assertFalse(date_fields & node_fields)
-            else:
-                self.assertTrue(date_fields <= node_fields)
-            new_stats = jsonutils.loads(node['stats'])
-            self.assertEqual(self.stats, new_stats)
+        nodes = db.compute_node_get_all(self.ctxt)
+        self.assertEqual(1, len(nodes))
+        node = nodes[0]
+        self._assertEqualObjects(self.compute_node_dict, node,
+                                 ignored_keys=self._ignored_keys +
+                                              ['stats', 'service'])
+        new_stats = jsonutils.loads(node['stats'])
+        self.assertEqual(self.stats, new_stats)
 
     def test_compute_node_get_all_deleted_compute_node(self):
         # Create a service and compute node and ensure we can find its stats;
@@ -6389,7 +6381,7 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
             node = db.compute_node_create(self.ctxt, compute_node_data)
 
             # Ensure the "new" compute node is found
-            nodes = db.compute_node_get_all(self.ctxt, False)
+            nodes = db.compute_node_get_all(self.ctxt)
             self.assertEqual(2, len(nodes))
             found = None
             for n in nodes:
@@ -6413,7 +6405,6 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
         service = db.service_create(self.ctxt, service_data)
 
         existing_node = dict(self.item.iteritems())
-        existing_node['service'] = dict(self.service.iteritems())
         expected = [existing_node]
 
         for name in ['bm_node1', 'bm_node2']:
@@ -6424,11 +6415,10 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
             node = db.compute_node_create(self.ctxt, compute_node_data)
 
             node = dict(node.iteritems())
-            node['service'] = dict(service.iteritems())
 
             expected.append(node)
 
-        result = sorted(db.compute_node_get_all(self.ctxt, False),
+        result = sorted(db.compute_node_get_all(self.ctxt),
                         key=lambda n: n['hypervisor_hostname'])
 
         self._assertEqualListsOfObjects(expected, result,
