@@ -20,6 +20,7 @@ import re
 
 import mock
 from oslo.vmware import exceptions as vexc
+from oslo.vmware import pbm
 
 from nova import context
 from nova import exception
@@ -30,6 +31,7 @@ from nova.tests.unit import fake_instance
 from nova.tests.unit.virt.vmwareapi import fake
 from nova.tests.unit.virt.vmwareapi import stubs
 from nova.virt.vmwareapi import driver
+from nova.virt.vmwareapi import ds_util
 from nova.virt.vmwareapi import vm_util
 
 
@@ -1054,6 +1056,38 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
                                             'fake-datastore', [],
                                             extra_specs=extra_specs)
         self.assertEqual('vmx-08', result.version)
+
+    def test_vm_create_spec_with_profile_spec(self):
+        instance_uuid = uuidutils.generate_uuid()
+        fake_instance = {'id': 7, 'name': 'fake!',
+                         'uuid': instance_uuid,
+                         'vcpus': 2, 'memory_mb': 2048}
+        datastore = ds_util.Datastore('fake-ds-ref', 'fake-ds-name')
+        extra_specs = vm_util.ExtraSpecs()
+        create_spec = vm_util.get_vm_create_spec(fake.FakeFactory(),
+                                            fake_instance, instance_uuid,
+                                            datastore.name, [],
+                                            extra_specs,
+                                            profile_spec='fake_profile_spec')
+        self.assertEqual(['fake_profile_spec'], create_spec.vmProfile)
+
+    @mock.patch.object(pbm, 'get_profile_id_by_name')
+    def test_get_storage_profile_spec(self, mock_retrieve_profile_id):
+        fake_profile_id = fake.DataObject()
+        fake_profile_id.uniqueId = 'fake_unique_id'
+        mock_retrieve_profile_id.return_value = fake_profile_id
+        profile_spec = vm_util.get_storage_profile_spec(fake.FakeSession(),
+                                                        'fake_policy')
+        self.assertEqual('ns0:VirtualMachineDefinedProfileSpec',
+                         profile_spec.obj_name)
+        self.assertEqual(fake_profile_id.uniqueId, profile_spec.profileId)
+
+    @mock.patch.object(pbm, 'get_profile_id_by_name')
+    def test_storage_spec_empty_profile(self, mock_retrieve_profile_id):
+        mock_retrieve_profile_id.return_value = None
+        profile_spec = vm_util.get_storage_profile_spec(fake.FakeSession(),
+                                                        'fake_policy')
+        self.assertIsNone(profile_spec)
 
 
 @mock.patch.object(driver.VMwareAPISession, 'vim', stubs.fake_vim_prop)
