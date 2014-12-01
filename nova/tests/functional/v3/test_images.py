@@ -62,7 +62,8 @@ class ImagesSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
     def test_image_metadata_put(self):
         # Get api sample of image metadata put request.
         image_id = fake.get_valid_image_id()
-        response = self._do_put('images/%s/metadata' % image_id,
+        response = self._do_put('%s/images/%s/metadata' %
+                                (self.api.project_id, image_id),
                                 'image-metadata-put-req', {})
         subs = self._get_regexes()
         self._verify_response('image-metadata-put-resp', subs, response, 200)
