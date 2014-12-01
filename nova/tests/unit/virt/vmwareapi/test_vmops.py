@@ -1334,3 +1334,30 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 self._session, self._dc_info.ref,
                 sparse_disk_path,
                 DsPathMatcher(target_disk_path))
+
+    def test_get_storage_policy_none(self):
+        flavor = objects.Flavor(name='m1.small',
+                                memory_mb=6,
+                                vcpus=28,
+                                root_gb=496,
+                                ephemeral_gb=8128,
+                                swap=33550336,
+                                extra_specs={})
+        self.flags(pbm_enabled=True,
+                   pbm_default_policy='fake-policy', group='vmware')
+        extra_specs = self._vmops._get_extra_specs(flavor)
+        self.assertEqual('fake-policy', extra_specs.storage_policy)
+
+    def test_get_storage_policy_extra_specs(self):
+        extra_specs = {'vmware:storage_policy': 'flavor-policy'}
+        flavor = objects.Flavor(name='m1.small',
+                                memory_mb=6,
+                                vcpus=28,
+                                root_gb=496,
+                                ephemeral_gb=8128,
+                                swap=33550336,
+                                extra_specs=extra_specs)
+        self.flags(pbm_enabled=True,
+                   pbm_default_policy='default-policy', group='vmware')
+        extra_specs = self._vmops._get_extra_specs(flavor)
+        self.assertEqual('flavor-policy', extra_specs.storage_policy)
