@@ -121,10 +121,12 @@ class ClaimTestCase(test.NoDBTestCase):
             'free_disk_gb': 20,
             'vcpus': 2,
             'vcpus_used': 0,
-            'numa_topology': hardware.VirtNUMAHostTopology(
-                cells=[hardware.VirtNUMATopologyCellUsage(1, [1, 2], 512),
-                       hardware.VirtNUMATopologyCellUsage(2, [3, 4], 512)]
-                ).to_json()
+            'numa_topology': objects.NUMATopology(
+                cells=[objects.NUMACell(id=1, cpuset=set([1, 2]), memory=512,
+                                        memory_usage=0, cpu_usage=0),
+                       objects.NUMACell(id=2, cpuset=set([3, 4]), memory=512,
+                                        memory_usage=0, cpu_usage=0)]
+                )._to_json()
         }
         if values:
             resources.update(values)

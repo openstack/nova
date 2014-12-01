@@ -600,11 +600,11 @@ class ResourceTracker(object):
         if itype:
             host_topology = resources.get('numa_topology')
             if host_topology:
-                host_topology = hardware.VirtNUMAHostTopology.from_json(
+                host_topology = objects.NUMATopology.obj_from_db_obj(
                         host_topology)
             numa_topology = hardware.numa_get_constraints(itype, image_meta)
             numa_topology = (
-                    hardware.VirtNUMAHostTopology.fit_instance_to_host(
+                    hardware.numa_fit_instance_to_host(
                         host_topology, numa_topology))
             usage = self._get_usage_dict(
                         itype, numa_topology=numa_topology)

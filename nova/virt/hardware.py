@@ -652,84 +652,34 @@ class VirtNUMATopologyCellLimit(VirtNUMATopologyCell):
         return cls(cell_id, cpuset, memory, cpu_limit, memory_limit)
 
 
-class VirtNUMATopologyCellUsage(VirtNUMATopologyCell):
-    """Class for reporting NUMA resources and usage in a cell
+def _numa_fit_instance_cell(host_cell, instance_cell, limit_cell=None):
+    """Check if a instance cell can fit and set it's cell id
 
-    The VirtNUMATopologyCellUsage class specializes
-    VirtNUMATopologyCell to include information about the
-    utilization of hardware resources in a NUMA cell.
+    :param host_cell: host cell to fit the instance cell onto
+    :param instance_cell: instance cell we want to fit
+    :param limit_cell: cell with limits of the host_cell if any
+
+    Make sure we can fit the instance cell onto a host cell and if so,
+    return a new objects.InstanceNUMACell with the id set to that of
+    the host, or None if the cell exceeds the limits of the host
+
+    :returns: a new instance cell or None
     """
+    # NOTE (ndipanov): do not allow an instance to overcommit against
+    # itself on any NUMA cell
+    if (instance_cell.memory > host_cell.memory or
+            len(instance_cell.cpuset) > len(host_cell.cpuset)):
+        return None
 
-    def __init__(self, id, cpuset, memory, cpu_usage=0, memory_usage=0):
-        """Create a new NUMA Cell with usage
-
-        :param id: integer identifier of cell
-        :param cpuset: set containing list of CPU indexes
-        :param memory: RAM measured in MiB
-        :param cpu_usage: number of  CPUs allocated
-        :param memory_usage: RAM allocated in MiB
-
-        Creates a new NUMA cell object to record the hardware
-        resources and utilization. The number of CPUs specified
-        by the @cpu_usage parameter may be larger than the number
-        of bits set in @cpuset if CPU overcommit is used. Likewise
-        the amount of RAM specified by the @memory_usage parameter
-        may be larger than the available RAM in @memory if RAM
-        overcommit is used.
-
-        :returns: a new NUMA cell object
-        """
-
-        super(VirtNUMATopologyCellUsage, self).__init__(
-            id, cpuset, memory)
-
-        self.cpu_usage = cpu_usage
-        self.memory_usage = memory_usage
-
-    @classmethod
-    def fit_instance_cell(cls, host_cell, instance_cell, limit_cell=None):
-        """Check if a instance cell can fit and set it's cell id
-
-        :param host_cell: host cell to fit the instance cell onto
-        :param instance_cell: instance cell we want to fit
-        :param limit_cell: cell with limits of the host_cell if any
-
-        Make sure we can fit the instance cell onto a host cell and if so,
-        return a new objects.InstanceNUMACell with the id set to that of
-        the host, or None if the cell exceeds the limits of the host
-
-        :returns: a new instance cell or None
-        """
-        # NOTE (ndipanov): do not allow an instance to overcommit against
-        # itself on any NUMA cell
-        if (instance_cell.memory > host_cell.memory or
-                len(instance_cell.cpuset) > len(host_cell.cpuset)):
+    if limit_cell:
+        memory_usage = host_cell.memory_usage + instance_cell.memory
+        cpu_usage = host_cell.cpu_usage + len(instance_cell.cpuset)
+        if (memory_usage > limit_cell.memory_limit or
+                cpu_usage > limit_cell.cpu_limit):
             return None
-
-        if limit_cell:
-            memory_usage = host_cell.memory_usage + instance_cell.memory
-            cpu_usage = host_cell.cpu_usage + len(instance_cell.cpuset)
-            if (memory_usage > limit_cell.memory_limit or
-                    cpu_usage > limit_cell.cpu_limit):
-                return None
-        return objects.InstanceNUMACell(
-            id=host_cell.id, cpuset=instance_cell.cpuset,
-            memory=instance_cell.memory)
-
-    def _to_dict(self):
-        data_dict = super(VirtNUMATopologyCellUsage, self)._to_dict()
-        data_dict['mem']['used'] = self.memory_usage
-        data_dict['cpu_usage'] = self.cpu_usage
-        return data_dict
-
-    @classmethod
-    def _from_dict(cls, data_dict):
-        cpuset = parse_cpu_spec(data_dict.get('cpus', ''))
-        cpu_usage = data_dict.get('cpu_usage', 0)
-        memory = data_dict.get('mem', {}).get('total', 0)
-        memory_usage = data_dict.get('mem', {}).get('used', 0)
-        cell_id = data_dict.get('id')
-        return cls(cell_id, cpuset, memory, cpu_usage, memory_usage)
+    return objects.InstanceNUMACell(
+        id=host_cell.id, cpuset=instance_cell.cpuset,
+        memory=instance_cell.memory)
 
 
 class VirtNUMATopology(object):
@@ -903,93 +853,83 @@ class VirtNUMALimitTopology(VirtNUMATopology):
     cell_class = VirtNUMATopologyCellLimit
 
 
-class VirtNUMAHostTopology(VirtNUMATopology):
+def numa_fit_instance_to_host(
+        host_topology, instance_topology, limits_topology=None):
+    """Fit the instance topology onto the host topology given the limits
 
-    """Class represents the NUMA configuration and utilization
-    of a compute node. As well as exposing the overall topology
-    it tracks the utilization of the resources by guest instances
+    :param host_topology: objects.NUMATopology object to fit an instance on
+    :param instance_topology: objects.InstanceNUMATopology to be fitted
+    :param limits_topology: VirtNUMALimitTopology that defines limits
+
+    Given a host and instance topology and optionally limits - this method
+    will attempt to fit instance cells onto all permutations of host cells
+    by calling the _numa_fit_instance_cell method, and return a new
+    InstanceNUMATopology with it's cell ids set to host cell id's of
+    the first successful permutation, or None.
+    """
+    if (not (host_topology and instance_topology) or
+        len(host_topology) < len(instance_topology)):
+        return
+    else:
+        if limits_topology is None:
+            limits_topology_cells = itertools.repeat(
+                None, len(host_topology))
+        else:
+            limits_topology_cells = limits_topology.cells
+        # TODO(ndipanov): We may want to sort permutations differently
+        # depending on whether we want packing/spreading over NUMA nodes
+        for host_cell_perm in itertools.permutations(
+                zip(host_topology.cells, limits_topology_cells),
+                len(instance_topology)
+        ):
+            cells = []
+            for (host_cell, limit_cell), instance_cell in zip(
+                    host_cell_perm, instance_topology.cells):
+                got_cell = _numa_fit_instance_cell(
+                    host_cell, instance_cell, limit_cell)
+                if got_cell is None:
+                    break
+                cells.append(got_cell)
+            if len(cells) == len(host_cell_perm):
+                return objects.InstanceNUMATopology(cells=cells)
+
+
+def numa_usage_from_instances(host, instances, free=False):
+    """Get host topology usage
+
+    :param host: objects.NUMATopology with usage information
+    :param instances: list of objects.InstanceNUMATopology
+    :param free: If True usage of the host will be decreased
+
+    Sum the usage from all @instances to report the overall
+    host topology usage
+
+    :returns: objects.NUMATopology including usage information
     """
 
-    cell_class = VirtNUMATopologyCellUsage
+    if host is None:
+        return
 
-    @classmethod
-    def fit_instance_to_host(cls, host_topology, instance_topology,
-                                 limits_topology=None):
-        """Fit the instance topology onto the host topology given the limits
+    instances = instances or []
+    cells = []
+    sign = -1 if free else 1
+    for hostcell in host.cells:
+        memory_usage = hostcell.memory_usage
+        cpu_usage = hostcell.cpu_usage
+        for instance in instances:
+            for instancecell in instance.cells:
+                if instancecell.id == hostcell.id:
+                    memory_usage = (
+                            memory_usage + sign * instancecell.memory)
+                    cpu_usage = cpu_usage + sign * len(instancecell.cpuset)
 
-        :param host_topology: VirtNUMAHostTopology object to fit an instance on
-        :param instance_topology: objects.InstanceNUMATopology to be fitted
-        :param limits_topology: VirtNUMALimitTopology that defines limits
+        cell = objects.NUMACell(
+            id=hostcell.id, cpuset=hostcell.cpuset, memory=hostcell.memory,
+            cpu_usage=max(0, cpu_usage), memory_usage=max(0, memory_usage))
 
-        Given a host and instance topology and optionally limits - this method
-        will attempt to fit instance cells onto all permutations of host cells
-        by calling the fit_instance_cell method, and return a new
-        InstanceNUMATopology with it's cell ids set to host cell id's of
-        the first successful permutation, or None.
-        """
-        if (not (host_topology and instance_topology) or
-                len(host_topology) < len(instance_topology)):
-            return
-        else:
-            if limits_topology is None:
-                limits_topology_cells = itertools.repeat(
-                        None, len(host_topology))
-            else:
-                limits_topology_cells = limits_topology.cells
-            # TODO(ndipanov): We may want to sort permutations differently
-            # depending on whether we want packing/spreading over NUMA nodes
-            for host_cell_perm in itertools.permutations(
-                        zip(host_topology.cells, limits_topology_cells),
-                        len(instance_topology)
-                    ):
-                cells = []
-                for (host_cell, limit_cell), instance_cell in zip(
-                        host_cell_perm, instance_topology.cells):
-                    got_cell = cls.cell_class.fit_instance_cell(
-                        host_cell, instance_cell, limit_cell)
-                    if got_cell is None:
-                        break
-                    cells.append(got_cell)
-                if len(cells) == len(host_cell_perm):
-                    return objects.InstanceNUMATopology(cells=cells)
+        cells.append(cell)
 
-    @classmethod
-    def usage_from_instances(cls, host, instances, free=False):
-        """Get host topology usage
-
-        :param host: VirtNUMAHostTopology with usage information
-        :param instances: list of objects.InstanceNUMATopology
-        :param free: If True usage of the host will be decreased
-
-        Sum the usage from all @instances to report the overall
-        host topology usage
-
-        :returns: VirtNUMAHostTopology including usage information
-        """
-
-        if host is None:
-            return
-
-        instances = instances or []
-        cells = []
-        sign = -1 if free else 1
-        for hostcell in host.cells:
-            memory_usage = hostcell.memory_usage
-            cpu_usage = hostcell.cpu_usage
-            for instance in instances:
-                for instancecell in instance.cells:
-                    if instancecell.id == hostcell.id:
-                        memory_usage = (
-                                memory_usage + sign * instancecell.memory)
-                        cpu_usage = cpu_usage + sign * len(instancecell.cpuset)
-
-            cell = cls.cell_class(
-                hostcell.id, hostcell.cpuset, hostcell.memory,
-                max(0, cpu_usage), max(0, memory_usage))
-
-            cells.append(cell)
-
-        return cls(cells)
+    return objects.NUMATopology(cells=cells)
 
 
 # TODO(ndipanov): Remove when all code paths are using objects
@@ -1055,7 +995,7 @@ def host_topology_and_format_from_host(host):
 
     Since we may get a host as either a dict, a db object, or an actual
     ComputeNode object, or an instance of HostState class, this makes sure we
-    get beck either None, or an instance of VirtNUMAHostTopology class.
+    get beck either None, or an instance of objects.NUMATopology class.
 
     :returns: A two-tuple, first element is the topology itself or None, second
               is a boolean set to True if topology was in json format.
@@ -1069,7 +1009,9 @@ def host_topology_and_format_from_host(host):
     if host_numa_topology is not None and isinstance(
             host_numa_topology, six.string_types):
         was_json = True
-        host_numa_topology = VirtNUMAHostTopology.from_json(host_numa_topology)
+
+        host_numa_topology = (objects.NUMATopology.obj_from_db_obj(
+            host_numa_topology))
 
     return host_numa_topology, was_json
 
@@ -1091,10 +1033,10 @@ def get_host_numa_usage_from_instance(host, instance, free=False,
     :param free: if True the the returned topology will have it's usage
                  decreased instead.
     :param never_serialize_result: if True result will always be an instance of
-                                   VirtNUMAHostTopology class.
+                                   objects.NUMATopology class.
 
     :returns: numa_usage in the format it was on the host or
-              VirtNUMAHostTopology instance if never_serialize_result was True
+              objects.NUMATopology instance if never_serialize_result was True
     """
     instance_numa_topology = instance_topology_from_instance(instance)
     if instance_numa_topology:
@@ -1104,11 +1046,11 @@ def get_host_numa_usage_from_instance(host, instance, free=False,
             host)
 
     updated_numa_topology = (
-        VirtNUMAHostTopology.usage_from_instances(
-                host_numa_topology, instance_numa_topology, free=free))
+        numa_usage_from_instances(
+            host_numa_topology, instance_numa_topology, free=free))
 
     if updated_numa_topology is not None:
         if jsonify_result and not never_serialize_result:
-            updated_numa_topology = updated_numa_topology.to_json()
+            updated_numa_topology = updated_numa_topology._to_json()
 
     return updated_numa_topology

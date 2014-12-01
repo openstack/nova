@@ -80,6 +80,11 @@ class NUMATopology(base.NovaObject):
     def _to_json(self):
         return jsonutils.dumps(self.obj_to_primitive())
 
+    @classmethod
+    def obj_from_db_obj(cls, db_obj):
+        return cls.obj_from_primitive(
+            jsonutils.loads(db_obj))
+
     def __len__(self):
         """Defined so that boolean testing works the same as for lists."""
         return len(self.cells)

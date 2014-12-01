@@ -44,9 +44,11 @@ FAKE_VIRT_MEMORY_MB = 5
 FAKE_VIRT_MEMORY_OVERHEAD = 1
 FAKE_VIRT_MEMORY_WITH_OVERHEAD = (
         FAKE_VIRT_MEMORY_MB + FAKE_VIRT_MEMORY_OVERHEAD)
-FAKE_VIRT_NUMA_TOPOLOGY = hardware.VirtNUMAHostTopology(
-        cells=[hardware.VirtNUMATopologyCellUsage(0, set([1, 2]), 3072),
-               hardware.VirtNUMATopologyCellUsage(1, set([3, 4]), 3072)])
+FAKE_VIRT_NUMA_TOPOLOGY = objects.NUMATopology(
+        cells=[objects.NUMACell(id=0, cpuset=set([1, 2]), memory=3072,
+                                cpu_usage=0, memory_usage=0),
+               objects.NUMACell(id=1, cpuset=set([3, 4]), memory=3072,
+                                cpu_usage=0, memory_usage=0)])
 FAKE_VIRT_NUMA_TOPOLOGY_OVERHEAD = hardware.VirtNUMALimitTopology(
         cells=[hardware.VirtNUMATopologyCellLimit(
                     0, set([1, 2]), 3072, 4, 10240),
@@ -121,7 +123,7 @@ class FakeVirtDriver(driver.ComputeDriver):
             'hypervisor_hostname': 'fakehost',
             'cpu_info': '',
             'numa_topology': (
-                self.numa_topology.to_json() if self.numa_topology else None),
+                self.numa_topology._to_json() if self.numa_topology else None),
         }
         if self.pci_support:
             d['pci_passthrough_devices'] = jsonutils.dumps(self.pci_devices)
@@ -585,7 +587,7 @@ class BaseTrackerTestCase(BaseTestCase):
 
         if field == 'numa_topology':
             self.assertEqualNUMAHostTopology(
-                    value, hardware.VirtNUMAHostTopology.from_json(x))
+                    value, objects.NUMATopology.obj_from_db_obj(x))
         else:
             self.assertEqual(value, x)
 
@@ -729,12 +731,12 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
         if self.tracker.driver.numa_topology is None:
             return None
         mem = mem * 1024
-        return hardware.VirtNUMAHostTopology(
-            cells=[hardware.VirtNUMATopologyCellUsage(
-                       0, set([1, 2]), 3072, cpu_usage=cpus,
+        return objects.NUMATopology(
+            cells=[objects.NUMACell(
+                       id=0, cpuset=set([1, 2]), memory=3072, cpu_usage=cpus,
                        memory_usage=mem),
-                   hardware.VirtNUMATopologyCellUsage(
-                       1, set([3, 4]), 3072, cpu_usage=cpus,
+                   objects.NUMACell(
+                       id=1, cpuset=set([3, 4]), memory=3072, cpu_usage=cpus,
                        memory_usage=mem)])
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid',
@@ -792,7 +794,7 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
         self.assertEqual(FAKE_VIRT_MEMORY_MB - claim_mem_total,
                          self.compute["free_ram_mb"])
         self.assertEqualNUMAHostTopology(
-                claim_topology, hardware.VirtNUMAHostTopology.from_json(
+                claim_topology, objects.NUMATopology.obj_from_db_obj(
                     self.compute['numa_topology']))
 
         self.assertEqual(FAKE_VIRT_LOCAL_GB, self.compute["local_gb"])
@@ -817,7 +819,7 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
         self.assertEqual(FAKE_VIRT_MEMORY_MB - claim_mem_total,
                          self.compute['free_ram_mb'])
         self.assertEqualNUMAHostTopology(
-                claim_topology, hardware.VirtNUMAHostTopology.from_json(
+                claim_topology, objects.NUMATopology.obj_from_db_obj(
                     self.compute['numa_topology']))
 
         self.assertEqual(claim_disk, self.compute['local_gb_used'])
@@ -845,7 +847,7 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
         self.assertEqual(FAKE_VIRT_MEMORY_MB - claim_mem_total,
                          self.compute["free_ram_mb"])
         self.assertEqualNUMAHostTopology(
-                claim_topology, hardware.VirtNUMAHostTopology.from_json(
+                claim_topology, objects.NUMATopology.obj_from_db_obj(
                     self.compute['numa_topology']))
 
         self.assertEqual(claim_disk, self.compute["local_gb_used"])
@@ -858,7 +860,7 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
         self.assertEqual(FAKE_VIRT_MEMORY_MB, self.compute["free_ram_mb"])
         self.assertEqualNUMAHostTopology(
                 FAKE_VIRT_NUMA_TOPOLOGY,
-                hardware.VirtNUMAHostTopology.from_json(
+                objects.NUMATopology.obj_from_db_obj(
                     self.compute['numa_topology']))
 
         self.assertEqual(0, self.compute["local_gb_used"])
@@ -887,7 +889,7 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
                 self.tracker.compute_node['memory_mb_used'])
         self.assertEqualNUMAHostTopology(
                 claim_topology,
-                hardware.VirtNUMAHostTopology.from_json(
+                objects.NUMATopology.obj_from_db_obj(
                     self.compute['numa_topology']))
         self.assertEqual(root_gb * 2,
                 self.tracker.compute_node['local_gb_used'])
@@ -919,7 +921,7 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
 
         self.assertEqualNUMAHostTopology(
                 claim_topology,
-                hardware.VirtNUMAHostTopology.from_json(
+                objects.NUMATopology.obj_from_db_obj(
                     self.compute['numa_topology']))
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid',
@@ -939,7 +941,7 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
         self.assertEqual(0, self.compute['local_gb_used'])
         self.assertEqualNUMAHostTopology(
                 FAKE_VIRT_NUMA_TOPOLOGY,
-                hardware.VirtNUMAHostTopology.from_json(
+                objects.NUMATopology.obj_from_db_obj(
                     self.compute['numa_topology']))
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid',
@@ -962,7 +964,7 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
                              self.compute['memory_mb_used'])
             self.assertEqualNUMAHostTopology(
                     claim_topology,
-                    hardware.VirtNUMAHostTopology.from_json(
+                    objects.NUMATopology.obj_from_db_obj(
                         self.compute['numa_topology']))
             self.assertEqual(flavor['root_gb'] + flavor['ephemeral_gb'],
                              self.compute['local_gb_used'])
@@ -978,7 +980,7 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
                          self.compute['memory_mb_used'])
         self.assertEqualNUMAHostTopology(
                 claim_topology,
-                hardware.VirtNUMAHostTopology.from_json(
+                objects.NUMATopology.obj_from_db_obj(
                     self.compute['numa_topology']))
         self.assertEqual(flavor['root_gb'] + flavor['ephemeral_gb'],
                          self.compute['local_gb_used'])

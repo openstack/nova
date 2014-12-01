@@ -893,10 +893,13 @@ class NUMATopologyTest(test.NoDBTestCase):
                                      topology.cells[i].memory)
 
     def test_host_usage_contiguous(self):
-        hosttopo = hw.VirtNUMAHostTopology([
-            hw.VirtNUMATopologyCellUsage(0, set([0, 1, 2, 3]), 1024),
-            hw.VirtNUMATopologyCellUsage(1, set([4, 6]), 512),
-            hw.VirtNUMATopologyCellUsage(2, set([5, 7]), 512),
+        hosttopo = objects.NUMATopology(cells=[
+            objects.NUMACell(id=0, cpuset=set([0, 1, 2, 3]), memory=1024,
+                             cpu_usage=0, memory_usage=0),
+            objects.NUMACell(id=1, cpuset=set([4, 6]), memory=512,
+                             cpu_usage=0, memory_usage=0),
+            objects.NUMACell(id=2, cpuset=set([5, 7]), memory=512,
+                             cpu_usage=0, memory_usage=0),
         ])
         instance1 = objects.InstanceNUMATopology(cells=[
             objects.InstanceNUMACell(id=0, cpuset=set([0, 1, 2]), memory=256),
@@ -907,13 +910,12 @@ class NUMATopologyTest(test.NoDBTestCase):
             objects.InstanceNUMACell(id=1, cpuset=set([5, 7]), memory=256),
         ])
 
-        hostusage = hw.VirtNUMAHostTopology.usage_from_instances(
+        hostusage = hw.numa_usage_from_instances(
             hosttopo, [instance1, instance2])
 
         self.assertEqual(len(hosttopo), len(hostusage))
 
-        self.assertIsInstance(hostusage.cells[0],
-                              hw.VirtNUMATopologyCellUsage)
+        self.assertIsInstance(hostusage.cells[0], objects.NUMACell)
         self.assertEqual(hosttopo.cells[0].cpuset,
                          hostusage.cells[0].cpuset)
         self.assertEqual(hosttopo.cells[0].memory,
@@ -921,8 +923,7 @@ class NUMATopologyTest(test.NoDBTestCase):
         self.assertEqual(hostusage.cells[0].cpu_usage, 5)
         self.assertEqual(hostusage.cells[0].memory_usage, 512)
 
-        self.assertIsInstance(hostusage.cells[1],
-                              hw.VirtNUMATopologyCellUsage)
+        self.assertIsInstance(hostusage.cells[1], objects.NUMACell)
         self.assertEqual(hosttopo.cells[1].cpuset,
                          hostusage.cells[1].cpuset)
         self.assertEqual(hosttopo.cells[1].memory,
@@ -930,8 +931,7 @@ class NUMATopologyTest(test.NoDBTestCase):
         self.assertEqual(hostusage.cells[1].cpu_usage, 3)
         self.assertEqual(hostusage.cells[1].memory_usage, 512)
 
-        self.assertIsInstance(hostusage.cells[2],
-                              hw.VirtNUMATopologyCellUsage)
+        self.assertIsInstance(hostusage.cells[2], objects.NUMACell)
         self.assertEqual(hosttopo.cells[2].cpuset,
                          hostusage.cells[2].cpuset)
         self.assertEqual(hosttopo.cells[2].memory,
@@ -940,27 +940,31 @@ class NUMATopologyTest(test.NoDBTestCase):
         self.assertEqual(hostusage.cells[2].memory_usage, 0)
 
     def test_host_usage_sparse(self):
-        hosttopo = hw.VirtNUMAHostTopology([
-            hw.VirtNUMATopologyCellUsage(0, set([0, 1, 2, 3]), 1024),
-            hw.VirtNUMATopologyCellUsage(5, set([4, 6]), 512),
-            hw.VirtNUMATopologyCellUsage(6, set([5, 7]), 512),
+        hosttopo = objects.NUMATopology(cells=[
+            objects.NUMACell(id=0, cpuset=set([0, 1, 2, 3]), memory=1024,
+                             cpu_usage=0, memory_usage=0),
+            objects.NUMACell(id=5, cpuset=set([4, 6]), memory=512,
+                             cpu_usage=0, memory_usage=0),
+            objects.NUMACell(id=6, cpuset=set([5, 7]), memory=512,
+                             cpu_usage=0, memory_usage=0),
         ])
         instance1 = objects.InstanceNUMATopology(cells=[
             objects.InstanceNUMACell(id=0, cpuset=set([0, 1, 2]), memory=256),
             objects.InstanceNUMACell(id=6, cpuset=set([4]), memory=256),
         ])
         instance2 = objects.InstanceNUMATopology(cells=[
-            objects.InstanceNUMACell(id=0, cpuset=set([0, 1]), memory=256),
-            objects.InstanceNUMACell(id=5, cpuset=set([5, 7]), memory=256),
+            objects.InstanceNUMACell(id=0, cpuset=set([0, 1]), memory=256,
+                                     cpu_usage=0, memory_usage=0),
+            objects.InstanceNUMACell(id=5, cpuset=set([5, 7]), memory=256,
+                                     cpu_usage=0, memory_usage=0),
         ])
 
-        hostusage = hw.VirtNUMAHostTopology.usage_from_instances(
+        hostusage = hw.numa_usage_from_instances(
             hosttopo, [instance1, instance2])
 
         self.assertEqual(len(hosttopo), len(hostusage))
 
-        self.assertIsInstance(hostusage.cells[0],
-                              hw.VirtNUMATopologyCellUsage)
+        self.assertIsInstance(hostusage.cells[0], objects.NUMACell)
         self.assertEqual(hosttopo.cells[0].id,
                          hostusage.cells[0].id)
         self.assertEqual(hosttopo.cells[0].cpuset,
@@ -970,8 +974,7 @@ class NUMATopologyTest(test.NoDBTestCase):
         self.assertEqual(hostusage.cells[0].cpu_usage, 5)
         self.assertEqual(hostusage.cells[0].memory_usage, 512)
 
-        self.assertIsInstance(hostusage.cells[1],
-                              hw.VirtNUMATopologyCellUsage)
+        self.assertIsInstance(hostusage.cells[1], objects.NUMACell)
         self.assertEqual(hosttopo.cells[1].id,
                          hostusage.cells[1].id)
         self.assertEqual(hosttopo.cells[1].cpuset,
@@ -981,8 +984,7 @@ class NUMATopologyTest(test.NoDBTestCase):
         self.assertEqual(hostusage.cells[1].cpu_usage, 2)
         self.assertEqual(hostusage.cells[1].memory_usage, 256)
 
-        self.assertIsInstance(hostusage.cells[2],
-                              hw.VirtNUMATopologyCellUsage)
+        self.assertIsInstance(hostusage.cells[2], objects.NUMACell)
         self.assertEqual(hosttopo.cells[2].cpuset,
                          hostusage.cells[2].cpuset)
         self.assertEqual(hosttopo.cells[2].memory,
@@ -991,37 +993,35 @@ class NUMATopologyTest(test.NoDBTestCase):
         self.assertEqual(hostusage.cells[2].memory_usage, 256)
 
     def test_host_usage_culmulative_with_free(self):
-        hosttopo = hw.VirtNUMAHostTopology([
-            hw.VirtNUMATopologyCellUsage(
-                0, set([0, 1, 2, 3]), 1024, cpu_usage=2, memory_usage=512),
-            hw.VirtNUMATopologyCellUsage(
-                1, set([4, 6]), 512, cpu_usage=1, memory_usage=512),
-            hw.VirtNUMATopologyCellUsage(2, set([5, 7]), 256),
+        hosttopo = objects.NUMATopology(cells=[
+            objects.NUMACell(id=0, cpuset=set([0, 1, 2, 3]), memory=1024,
+                             cpu_usage=2, memory_usage=512),
+            objects.NUMACell(id=1, cpuset=set([4, 6]), memory=512,
+                             cpu_usage=1, memory_usage=512),
+            objects.NUMACell(id=2, cpuset=set([5, 7]), memory=256,
+                             cpu_usage=0, memory_usage=0),
         ])
         instance1 = objects.InstanceNUMATopology(cells=[
             objects.InstanceNUMACell(id=0, cpuset=set([0, 1, 2]), memory=512),
             objects.InstanceNUMACell(id=1, cpuset=set([3]), memory=256),
             objects.InstanceNUMACell(id=2, cpuset=set([4]), memory=256)])
 
-        hostusage = hw.VirtNUMAHostTopology.usage_from_instances(
+        hostusage = hw.numa_usage_from_instances(
                 hosttopo, [instance1])
-        self.assertIsInstance(hostusage.cells[0],
-                              hw.VirtNUMATopologyCellUsage)
+        self.assertIsInstance(hostusage.cells[0], objects.NUMACell)
         self.assertEqual(hostusage.cells[0].cpu_usage, 5)
         self.assertEqual(hostusage.cells[0].memory_usage, 1024)
 
-        self.assertIsInstance(hostusage.cells[1],
-                              hw.VirtNUMATopologyCellUsage)
+        self.assertIsInstance(hostusage.cells[1], objects.NUMACell)
         self.assertEqual(hostusage.cells[1].cpu_usage, 2)
         self.assertEqual(hostusage.cells[1].memory_usage, 768)
 
-        self.assertIsInstance(hostusage.cells[2],
-                              hw.VirtNUMATopologyCellUsage)
+        self.assertIsInstance(hostusage.cells[2], objects.NUMACell)
         self.assertEqual(hostusage.cells[2].cpu_usage, 1)
         self.assertEqual(hostusage.cells[2].memory_usage, 256)
 
         # Test freeing of resources
-        hostusage = hw.VirtNUMAHostTopology.usage_from_instances(
+        hostusage = hw.numa_usage_from_instances(
                 hostusage, [instance1], free=True)
         self.assertEqual(hostusage.cells[0].cpu_usage, 2)
         self.assertEqual(hostusage.cells[0].memory_usage, 512)
@@ -1033,27 +1033,29 @@ class NUMATopologyTest(test.NoDBTestCase):
         self.assertEqual(hostusage.cells[2].memory_usage, 0)
 
     def test_topo_usage_none(self):
-        hosttopo = hw.VirtNUMAHostTopology([
-            hw.VirtNUMATopologyCellUsage(0, set([0, 1]), 512),
-            hw.VirtNUMATopologyCellUsage(1, set([2, 3]), 512),
+        hosttopo = objects.NUMATopology(cells=[
+            objects.NUMACell(id=0, cpuset=set([0, 1]), memory=512,
+                             cpu_usage=0, memory_usage=0),
+            objects.NUMACell(id=1, cpuset=set([2, 3]), memory=512,
+                             cpu_usage=0, memory_usage=0),
         ])
         instance1 = objects.InstanceNUMATopology(cells=[
             objects.InstanceNUMACell(id=0, cpuset=set([0, 1]), memory=256),
             objects.InstanceNUMACell(id=2, cpuset=set([2]), memory=256),
         ])
 
-        hostusage = hw.VirtNUMAHostTopology.usage_from_instances(
+        hostusage = hw.numa_usage_from_instances(
                 None, [instance1])
         self.assertIsNone(hostusage)
 
-        hostusage = hw.VirtNUMAHostTopology.usage_from_instances(
+        hostusage = hw.numa_usage_from_instances(
                 hosttopo, [])
         self.assertEqual(hostusage.cells[0].cpu_usage, 0)
         self.assertEqual(hostusage.cells[0].memory_usage, 0)
         self.assertEqual(hostusage.cells[1].cpu_usage, 0)
         self.assertEqual(hostusage.cells[1].memory_usage, 0)
 
-        hostusage = hw.VirtNUMAHostTopology.usage_from_instances(
+        hostusage = hw.numa_usage_from_instances(
                 hosttopo, None)
         self.assertEqual(hostusage.cells[0].cpu_usage, 0)
         self.assertEqual(hostusage.cells[0].memory_usage, 0)
@@ -1062,7 +1064,7 @@ class NUMATopologyTest(test.NoDBTestCase):
 
     def assertNUMACellMatches(self, expected_cell, got_cell):
         attrs = ('cpuset', 'memory', 'id')
-        if isinstance(expected_cell, hw.VirtNUMAHostTopology):
+        if isinstance(expected_cell, objects.NUMATopology):
             attrs += ('cpu_usage', 'memory_usage')
 
         for attr in attrs:
@@ -1070,13 +1072,13 @@ class NUMATopologyTest(test.NoDBTestCase):
                              getattr(got_cell, attr))
 
     def test_json(self):
-        expected = hw.VirtNUMAHostTopology(
+        expected = objects.NUMATopology(
                 cells=[
-                    hw.VirtNUMATopologyCellUsage(
-                        1, set([1, 2]), 1024),
-                    hw.VirtNUMATopologyCellUsage(
-                        2, set([3, 4]), 1024)])
-        got = hw.VirtNUMAHostTopology.from_json(expected.to_json())
+                    objects.NUMACell(id=1, cpuset=set([1, 2]), memory=1024,
+                                     cpu_usage=0, memory_usage=0),
+                    objects.NUMACell(id=2, cpuset=set([3, 4]), memory=1024,
+                                     cpu_usage=0, memory_usage=0)])
+        got = objects.NUMATopology.obj_from_db_obj(expected._to_json())
 
         for exp_cell, got_cell in zip(expected.cells, got.cells):
             self.assertNUMACellMatches(exp_cell, got_cell)
@@ -1084,54 +1086,56 @@ class NUMATopologyTest(test.NoDBTestCase):
 
 class VirtNUMATopologyCellUsageTestCase(test.NoDBTestCase):
     def test_fit_instance_cell_success_no_limit(self):
-        host_cell = hw.VirtNUMATopologyCellUsage(4, set([1, 2]), 1024)
+        host_cell = objects.NUMACell(id=4, cpuset=set([1, 2]), memory=1024,
+                                     cpu_usage=0, memory_usage=0)
         instance_cell = objects.InstanceNUMACell(
             id=0, cpuset=set([1, 2]), memory=1024)
-        fitted_cell = host_cell.fit_instance_cell(host_cell, instance_cell)
+        fitted_cell = hw._numa_fit_instance_cell(host_cell, instance_cell)
         self.assertIsInstance(fitted_cell, objects.InstanceNUMACell)
         self.assertEqual(host_cell.id, fitted_cell.id)
 
     def test_fit_instance_cell_success_w_limit(self):
-        host_cell = hw.VirtNUMATopologyCellUsage(4, set([1, 2]), 1024,
+        host_cell = objects.NUMACell(id=4, cpuset=set([1, 2]), memory=1024,
                                                  cpu_usage=2,
                                                  memory_usage=1024)
         limit_cell = hw.VirtNUMATopologyCellLimit(
-                        4, set([1, 2]), 1024,
+                        4, cpuset=set([1, 2]), memory=1024,
                         cpu_limit=4, memory_limit=2048)
         instance_cell = objects.InstanceNUMACell(
             id=0, cpuset=set([1, 2]), memory=1024)
-        fitted_cell = host_cell.fit_instance_cell(
+        fitted_cell = hw._numa_fit_instance_cell(
                 host_cell, instance_cell, limit_cell=limit_cell)
         self.assertIsInstance(fitted_cell, objects.InstanceNUMACell)
         self.assertEqual(host_cell.id, fitted_cell.id)
 
     def test_fit_instance_cell_self_overcommit(self):
-        host_cell = hw.VirtNUMATopologyCellUsage(4, set([1, 2]), 1024)
+        host_cell = objects.NUMACell(id=4, cpuset=set([1, 2]), memory=1024,
+                                     cpu_usage=0, memory_usage=0)
         limit_cell = hw.VirtNUMATopologyCellLimit(
-                        4, set([1, 2]), 1024,
+                        4, cpuset=set([1, 2]), memory=1024,
                         cpu_limit=4, memory_limit=2048)
         instance_cell = objects.InstanceNUMACell(
             id=0, cpuset=set([1, 2, 3]), memory=4096)
-        fitted_cell = host_cell.fit_instance_cell(
+        fitted_cell = hw._numa_fit_instance_cell(
                 host_cell, instance_cell, limit_cell=limit_cell)
         self.assertIsNone(fitted_cell)
 
     def test_fit_instance_cell_fail_w_limit(self):
-        host_cell = hw.VirtNUMATopologyCellUsage(4, set([1, 2]), 1024,
+        host_cell = objects.NUMACell(id=4, cpuset=set([1, 2]), memory=1024,
                                                  cpu_usage=2,
                                                  memory_usage=1024)
         limit_cell = hw.VirtNUMATopologyCellLimit(
-                        4, set([1, 2]), 1024,
+                        4, cpuset=set([1, 2]), memory=1024,
                         cpu_limit=4, memory_limit=2048)
         instance_cell = objects.InstanceNUMACell(
             id=0, cpuset=set([1, 2]), memory=4096)
-        fitted_cell = host_cell.fit_instance_cell(
+        fitted_cell = hw._numa_fit_instance_cell(
                 host_cell, instance_cell, limit_cell=limit_cell)
         self.assertIsNone(fitted_cell)
 
         instance_cell = objects.InstanceNUMACell(
             id=0, cpuset=set([1, 2, 3, 4, 5]), memory=1024)
-        fitted_cell = host_cell.fit_instance_cell(
+        fitted_cell = hw._numa_fit_instance_cell(
                 host_cell, instance_cell, limit_cell=limit_cell)
         self.assertIsNone(fitted_cell)
 
@@ -1140,22 +1144,20 @@ class VirtNUMAHostTopologyTestCase(test.NoDBTestCase):
     def setUp(self):
         super(VirtNUMAHostTopologyTestCase, self).setUp()
 
-        self.host = hw.VirtNUMAHostTopology(
+        self.host = objects.NUMATopology(
                 cells=[
-                    hw.VirtNUMATopologyCellUsage(
-                        1, set([1, 2]), 2048,
+                    objects.NUMACell(id=1, cpuset=set([1, 2]), memory=2048,
                         cpu_usage=2, memory_usage=2048),
-                    hw.VirtNUMATopologyCellUsage(
-                        2, set([3, 4]), 2048,
+                    objects.NUMACell(id=2, cpuset=set([3, 4]), memory=2048,
                         cpu_usage=2, memory_usage=2048)])
 
         self.limits = hw.VirtNUMALimitTopology(
                 cells=[
                     hw.VirtNUMATopologyCellLimit(
-                        1, set([1, 2]), 2048,
+                        1, cpuset=set([1, 2]), memory=2048,
                         cpu_limit=4, memory_limit=4096),
                     hw.VirtNUMATopologyCellLimit(
-                        2, set([3, 4]), 2048,
+                        2, cpuset=set([3, 4]), memory=2048,
                         cpu_limit=4, memory_limit=3072)])
 
         self.instance1 = objects.InstanceNUMATopology(
@@ -1172,45 +1174,45 @@ class VirtNUMAHostTopologyTestCase(test.NoDBTestCase):
                         id=0, cpuset=set([1, 2]), memory=1024)])
 
     def test_get_fitting_success_no_limits(self):
-        fitted_instance1 = hw.VirtNUMAHostTopology.fit_instance_to_host(
+        fitted_instance1 = hw.numa_fit_instance_to_host(
                 self.host, self.instance1)
         self.assertIsInstance(fitted_instance1, objects.InstanceNUMATopology)
-        self.host = hw.VirtNUMAHostTopology.usage_from_instances(self.host,
+        self.host = hw.numa_usage_from_instances(self.host,
                 [fitted_instance1])
-        fitted_instance2 = hw.VirtNUMAHostTopology.fit_instance_to_host(
+        fitted_instance2 = hw.numa_fit_instance_to_host(
                 self.host, self.instance3)
         self.assertIsInstance(fitted_instance2, objects.InstanceNUMATopology)
 
     def test_get_fitting_success_limits(self):
-        fitted_instance = hw.VirtNUMAHostTopology.fit_instance_to_host(
+        fitted_instance = hw.numa_fit_instance_to_host(
                 self.host, self.instance3, self.limits)
         self.assertIsInstance(fitted_instance, objects.InstanceNUMATopology)
         self.assertEqual(1, fitted_instance.cells[0].id)
 
     def test_get_fitting_fails_no_limits(self):
-        fitted_instance = hw.VirtNUMAHostTopology.fit_instance_to_host(
+        fitted_instance = hw.numa_fit_instance_to_host(
                 self.host, self.instance2, self.limits)
         self.assertIsNone(fitted_instance)
 
     def test_get_fitting_culmulative_fails_limits(self):
-        fitted_instance1 = hw.VirtNUMAHostTopology.fit_instance_to_host(
+        fitted_instance1 = hw.numa_fit_instance_to_host(
                 self.host, self.instance1, self.limits)
         self.assertIsInstance(fitted_instance1, objects.InstanceNUMATopology)
         self.assertEqual(1, fitted_instance1.cells[0].id)
-        self.host = hw.VirtNUMAHostTopology.usage_from_instances(self.host,
+        self.host = hw.numa_usage_from_instances(self.host,
                 [fitted_instance1])
-        fitted_instance2 = hw.VirtNUMAHostTopology.fit_instance_to_host(
+        fitted_instance2 = hw.numa_fit_instance_to_host(
                 self.host, self.instance1, self.limits)
         self.assertIsNone(fitted_instance2)
 
     def test_get_fitting_culmulative_success_limits(self):
-        fitted_instance1 = hw.VirtNUMAHostTopology.fit_instance_to_host(
+        fitted_instance1 = hw.numa_fit_instance_to_host(
                 self.host, self.instance1, self.limits)
         self.assertIsInstance(fitted_instance1, objects.InstanceNUMATopology)
         self.assertEqual(1, fitted_instance1.cells[0].id)
-        self.host = hw.VirtNUMAHostTopology.usage_from_instances(self.host,
+        self.host = hw.numa_usage_from_instances(self.host,
                 [fitted_instance1])
-        fitted_instance2 = hw.VirtNUMAHostTopology.fit_instance_to_host(
+        fitted_instance2 = hw.numa_fit_instance_to_host(
                 self.host, self.instance3, self.limits)
         self.assertIsInstance(fitted_instance2, objects.InstanceNUMATopology)
         self.assertEqual(2, fitted_instance2.cells[0].id)
@@ -1263,9 +1265,11 @@ class NumberOfSerialPortsTest(test.NoDBTestCase):
 class HelperMethodsTestCase(test.NoDBTestCase):
     def setUp(self):
         super(HelperMethodsTestCase, self).setUp()
-        self.hosttopo = hw.VirtNUMAHostTopology([
-            hw.VirtNUMATopologyCellUsage(0, set([0, 1]), 512),
-            hw.VirtNUMATopologyCellUsage(1, set([2, 3]), 512),
+        self.hosttopo = objects.NUMATopology(cells=[
+            objects.NUMACell(id=0, cpuset=set([0, 1]), memory=512,
+                             memory_usage=0, cpu_usage=0),
+            objects.NUMACell(id=1, cpuset=set([2, 3]), memory=512,
+                             memory_usage=0, cpu_usage=0),
         ])
         self.instancetopo = objects.InstanceNUMATopology(
             instance_uuid='fake-uuid',
@@ -1285,19 +1289,19 @@ class HelperMethodsTestCase(test.NoDBTestCase):
         self.assertEqual(256, host_usage.cells[1].memory_usage)
 
     def test_dicts_json(self):
-        host = {'numa_topology': self.hosttopo.to_json()}
+        host = {'numa_topology': self.hosttopo._to_json()}
         instance = {'numa_topology': self.instancetopo._to_json()}
 
         res = hw.get_host_numa_usage_from_instance(host, instance)
         self.assertIsInstance(res, six.string_types)
-        self._check_usage(hw.VirtNUMAHostTopology.from_json(res))
+        self._check_usage(objects.NUMATopology.obj_from_db_obj(res))
 
     def test_dicts_instance_json(self):
         host = {'numa_topology': self.hosttopo}
         instance = {'numa_topology': self.instancetopo._to_json()}
 
         res = hw.get_host_numa_usage_from_instance(host, instance)
-        self.assertIsInstance(res, hw.VirtNUMAHostTopology)
+        self.assertIsInstance(res, objects.NUMATopology)
         self._check_usage(res)
 
     def test_dicts_instance_json_old(self):
@@ -1306,35 +1310,44 @@ class HelperMethodsTestCase(test.NoDBTestCase):
                     jsonutils.dumps(self.instancetopo._to_dict())}
 
         res = hw.get_host_numa_usage_from_instance(host, instance)
-        self.assertIsInstance(res, hw.VirtNUMAHostTopology)
+        self.assertIsInstance(res, objects.NUMATopology)
         self._check_usage(res)
 
     def test_dicts_host_json(self):
-        host = {'numa_topology': self.hosttopo.to_json()}
+        host = {'numa_topology': self.hosttopo._to_json()}
         instance = {'numa_topology': self.instancetopo}
 
         res = hw.get_host_numa_usage_from_instance(host, instance)
         self.assertIsInstance(res, six.string_types)
-        self._check_usage(hw.VirtNUMAHostTopology.from_json(res))
+        self._check_usage(objects.NUMATopology.obj_from_db_obj(res))
+
+    def test_dicts_host_json_old(self):
+        host = {'numa_topology': jsonutils.dumps(
+            self.hosttopo._to_dict())}
+        instance = {'numa_topology': self.instancetopo}
+
+        res = hw.get_host_numa_usage_from_instance(host, instance)
+        self.assertIsInstance(res, six.string_types)
+        self._check_usage(objects.NUMATopology.obj_from_db_obj(res))
 
     def test_object_host_instance_json(self):
-        host = objects.ComputeNode(numa_topology=self.hosttopo.to_json())
+        host = objects.ComputeNode(numa_topology=self.hosttopo._to_json())
         instance = {'numa_topology': self.instancetopo._to_json()}
 
         res = hw.get_host_numa_usage_from_instance(host, instance)
         self.assertIsInstance(res, six.string_types)
-        self._check_usage(hw.VirtNUMAHostTopology.from_json(res))
+        self._check_usage(objects.NUMATopology.obj_from_db_obj(res))
 
     def test_object_host_instance(self):
-        host = objects.ComputeNode(numa_topology=self.hosttopo.to_json())
+        host = objects.ComputeNode(numa_topology=self.hosttopo._to_json())
         instance = {'numa_topology': self.instancetopo}
 
         res = hw.get_host_numa_usage_from_instance(host, instance)
         self.assertIsInstance(res, six.string_types)
-        self._check_usage(hw.VirtNUMAHostTopology.from_json(res))
+        self._check_usage(objects.NUMATopology.obj_from_db_obj(res))
 
     def test_instance_with_fetch(self):
-        host = objects.ComputeNode(numa_topology=self.hosttopo.to_json())
+        host = objects.ComputeNode(numa_topology=self.hosttopo._to_json())
         fake_uuid = str(uuid.uuid4())
         instance = {'uuid': fake_uuid}
 
@@ -1345,7 +1358,7 @@ class HelperMethodsTestCase(test.NoDBTestCase):
             self.assertTrue(get_mock.called)
 
     def test_object_instance_with_load(self):
-        host = objects.ComputeNode(numa_topology=self.hosttopo.to_json())
+        host = objects.ComputeNode(numa_topology=self.hosttopo._to_json())
         fake_uuid = str(uuid.uuid4())
         instance = objects.Instance(context=self.context, uuid=fake_uuid)
 
@@ -1356,7 +1369,7 @@ class HelperMethodsTestCase(test.NoDBTestCase):
             self.assertTrue(get_mock.called)
 
     def test_instance_serialized_by_build_request_spec(self):
-        host = objects.ComputeNode(numa_topology=self.hosttopo.to_json())
+        host = objects.ComputeNode(numa_topology=self.hosttopo._to_json())
         fake_uuid = str(uuid.uuid4())
         instance = objects.Instance(context=self.context, id=1, uuid=fake_uuid,
                 numa_topology=self.instancetopo)
@@ -1366,27 +1379,27 @@ class HelperMethodsTestCase(test.NoDBTestCase):
                 base_obj.obj_to_primitive(instance))
         res = hw.get_host_numa_usage_from_instance(host, instance_raw)
         self.assertIsInstance(res, six.string_types)
-        self._check_usage(hw.VirtNUMAHostTopology.from_json(res))
+        self._check_usage(objects.NUMATopology.obj_from_db_obj(res))
 
     def test_attr_host(self):
         class Host(object):
             def __init__(obj):
-                obj.numa_topology = self.hosttopo.to_json()
+                obj.numa_topology = self.hosttopo._to_json()
 
         host = Host()
         instance = {'numa_topology': self.instancetopo._to_json()}
 
         res = hw.get_host_numa_usage_from_instance(host, instance)
         self.assertIsInstance(res, six.string_types)
-        self._check_usage(hw.VirtNUMAHostTopology.from_json(res))
+        self._check_usage(objects.NUMATopology.obj_from_db_obj(res))
 
     def test_never_serialize_result(self):
-        host = {'numa_topology': self.hosttopo.to_json()}
+        host = {'numa_topology': self.hosttopo._to_json()}
         instance = {'numa_topology': self.instancetopo}
 
         res = hw.get_host_numa_usage_from_instance(host, instance,
                                                   never_serialize_result=True)
-        self.assertIsInstance(res, hw.VirtNUMAHostTopology)
+        self.assertIsInstance(res, objects.NUMATopology)
         self._check_usage(res)
 
 
