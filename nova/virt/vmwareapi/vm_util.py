@@ -61,11 +61,12 @@ class CpuLimits(object):
 
 class ExtraSpecs(object):
 
-    def __init__(self, cpu_limits=None):
+    def __init__(self, cpu_limits=None, hw_version=None):
         """ExtraSpecs object holds extra_specs for the instance."""
         if cpu_limits is None:
             cpu_limits = CpuLimits()
         self.cpu_limits = cpu_limits
+        self.hw_version = hw_version
 
     def has_cpu_limits(self):
         return bool(self.cpu_limits.cpu_limit or
@@ -135,6 +136,8 @@ def get_vm_create_spec(client_factory, instance, name, data_store_name,
     # instance UUID or the instance UUID with suffix '-rescue' for VM's that
     # are in rescue mode
     config_spec.instanceUuid = name
+    # set the Hardware version
+    config_spec.version = extra_specs.hw_version
 
     # Allow nested ESX instances to host 64 bit VMs.
     if os_type == "vmkernel5Guest":

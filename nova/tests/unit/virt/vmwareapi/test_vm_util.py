@@ -470,6 +470,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
             'managedBy':  {'extensionKey': 'org.openstack.compute',
                            'type': 'instance',
                            'obj_name': 'ns0:ManagedByInfo'},
+            'version': None,
             'obj_name': 'ns0:VirtualMachineConfigSpec',
             'guestId': 'otherGuest',
             'tools': {'beforeGuestStandby': True,
@@ -507,6 +508,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
             'managedBy':  {'extensionKey': 'org.openstack.compute',
                            'type': 'instance',
                            'obj_name': 'ns0:ManagedByInfo'},
+            'version': None,
             'obj_name': 'ns0:VirtualMachineConfigSpec',
             'guestId': 'otherGuest',
             'tools': {'beforeGuestStandby': True,
@@ -546,6 +548,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
             'managedBy':  {'extensionKey': 'org.openstack.compute',
                            'type': 'instance',
                            'obj_name': 'ns0:ManagedByInfo'},
+            'version': None,
             'obj_name': 'ns0:VirtualMachineConfigSpec',
             'guestId': 'otherGuest',
             'tools': {'beforeGuestStandby': True,
@@ -584,6 +587,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
             'managedBy':  {'extensionKey': 'org.openstack.compute',
                            'type': 'instance',
                            'obj_name': 'ns0:ManagedByInfo'},
+            'version': None,
             'obj_name': 'ns0:VirtualMachineConfigSpec',
             'guestId': 'otherGuest',
             'tools': {'beforeGuestStandby': True,
@@ -625,6 +629,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
             'managedBy':  {'extensionKey': 'org.openstack.compute',
                            'type': 'instance',
                            'obj_name': 'ns0:ManagedByInfo'},
+            'version': None,
             'obj_name': 'ns0:VirtualMachineConfigSpec',
             'guestId': 'otherGuest',
             'tools': {'beforeGuestStandby': True,
@@ -1037,6 +1042,18 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
                                                      'fake-vm-ref')
             fake_wait_for_task.assert_called_once_with('fake-task')
             self.assertFalse(fake_get_ref.called)
+
+    def test_get_vm_create_spec_updated_hw_version(self):
+        extra_specs = vm_util.ExtraSpecs(hw_version='vmx-08')
+        instance_uuid = uuidutils.generate_uuid()
+        fake_instance = {'id': 7, 'name': 'fake!',
+                         'uuid': instance_uuid,
+                         'vcpus': 2, 'memory_mb': 2048}
+        result = vm_util.get_vm_create_spec(fake.FakeFactory(),
+                                            fake_instance, instance_uuid,
+                                            'fake-datastore', [],
+                                            extra_specs=extra_specs)
+        self.assertEqual('vmx-08', result.version)
 
 
 @mock.patch.object(driver.VMwareAPISession, 'vim', stubs.fake_vim_prop)
