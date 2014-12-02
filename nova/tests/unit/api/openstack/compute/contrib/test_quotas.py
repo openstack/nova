@@ -135,6 +135,50 @@ class QuotaSetsTestV21(BaseQuotaSetsTest):
             self.assertEqual(qs['server_groups'], 10)
             self.assertEqual(qs['server_group_members'], 10)
 
+    def test_validate_quota_limit(self):
+        resource = 'fake'
+
+        # Valid - finite values
+        self.assertIsNone(self.controller._validate_quota_limit(resource,
+                                                                50, 10, 100))
+
+        # Valid - finite limit and infinite maximum
+        self.assertIsNone(self.controller._validate_quota_limit(resource,
+                                                                50, 10, -1))
+
+        # Valid - infinite limit and infinite maximum
+        self.assertIsNone(self.controller._validate_quota_limit(resource,
+                                                                -1, 10, -1))
+
+        # Valid - all infinite
+        self.assertIsNone(self.controller._validate_quota_limit(resource,
+                                                                -1, -1, -1))
+
+        # Invalid - limit is less than -1
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller._validate_quota_limit,
+                          resource, -2, 10, 100)
+
+        # Invalid - limit is less than minimum
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller._validate_quota_limit,
+                          resource, 5, 10, 100)
+
+        # Invalid - limit is greater than maximum
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller._validate_quota_limit,
+                          resource, 200, 10, 100)
+
+        # Invalid - infinite limit is greater than maximum
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller._validate_quota_limit,
+                          resource, -1, 10, 100)
+
+        # Invalid - limit is less than infinite minimum
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller._validate_quota_limit,
+                          resource, 50, -1, -1)
+
     def test_quotas_defaults(self):
         uri = '/v2/fake_tenant/os-quota-sets/fake_tenant/defaults'
 

@@ -85,14 +85,17 @@ class QuotaSetsController(wsgi.Controller):
                      "must be -1 or greater.") %
                    {'limit': limit, 'resource': resource})
             raise webob.exc.HTTPBadRequest(explanation=msg)
-        if ((limit < minimum) and
-           (maximum != -1 or (maximum == -1 and limit != -1))):
+
+        def conv_inf(value):
+            return float("inf") if value == -1 else value
+
+        if conv_inf(limit) < conv_inf(minimum):
             msg = (_("Quota limit %(limit)s for %(resource)s must "
                      "be greater than or equal to already used and "
                      "reserved %(minimum)s.") %
                    {'limit': limit, 'resource': resource, 'minimum': minimum})
             raise webob.exc.HTTPBadRequest(explanation=msg)
-        if maximum != -1 and limit > maximum:
+        if conv_inf(limit) > conv_inf(maximum):
             msg = (_("Quota limit %(limit)s for %(resource)s must be "
                      "less than or equal to %(maximum)s.") %
                    {'limit': limit, 'resource': resource, 'maximum': maximum})
