@@ -13,7 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mox
+from mox3 import mox
 import pkg_resources
 import six
 

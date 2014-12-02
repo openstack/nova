@@ -19,7 +19,7 @@ import contextlib
 
 import fixtures
 import mock
-import mox
+from mox3 import mox
 import netaddr
 from oslo.concurrency import processutils
 from oslo.config import cfg

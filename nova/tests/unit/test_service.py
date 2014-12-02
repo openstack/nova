@@ -21,7 +21,7 @@ Unit Tests for remote procedure calls using queue
 import sys
 
 import mock
-import mox
+from mox3 import mox
 from oslo.concurrency import processutils
 from oslo.config import cfg
 import testtools

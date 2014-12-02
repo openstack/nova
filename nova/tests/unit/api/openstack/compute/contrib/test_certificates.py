@@ -16,7 +16,7 @@
 
 from lxml import etree
 import mock
-import mox
+from mox3 import mox
 from webob import exc
 
 from nova.api.openstack.compute.contrib import certificates as certificates_v2

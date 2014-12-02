@@ -12,7 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mox
+from mox3 import mox
 import webob
 
 from nova.api.openstack.compute.contrib import server_start_stop \

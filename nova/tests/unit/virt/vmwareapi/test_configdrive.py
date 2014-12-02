@@ -15,7 +15,7 @@
 
 import fixtures
 import mock
-import mox
+from mox3 import mox
 
 from nova import context
 from nova.image import glance

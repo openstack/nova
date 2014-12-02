@@ -12,7 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import __builtin__
 import datetime
 import functools
 import hashlib
@@ -22,7 +21,8 @@ import os.path
 import StringIO
 import tempfile
 
-import mox
+import mock
+from mox3 import mox
 import netaddr
 from oslo.concurrency import processutils
 from oslo.config import cfg
@@ -181,32 +181,23 @@ class GenericUtilsTestCase(test.NoDBTestCase):
 
     def test_read_modified_cached_file(self):
         self.mox.StubOutWithMock(os.path, "getmtime")
-        self.mox.StubOutWithMock(__builtin__, 'open')
         os.path.getmtime(mox.IgnoreArg()).AndReturn(2)
+        self.mox.ReplayAll()
 
         fake_contents = "lorem ipsum"
-        fake_file = self.mox.CreateMockAnything()
-        fake_file.read().AndReturn(fake_contents)
-        fake_context_manager = self.mox.CreateMockAnything()
-        fake_context_manager.__enter__().AndReturn(fake_file)
-        fake_context_manager.__exit__(mox.IgnoreArg(),
-                                      mox.IgnoreArg(),
-                                      mox.IgnoreArg())
+        m = mock.mock_open(read_data=fake_contents)
+        with mock.patch("__builtin__.open", m, create=True):
+            cache_data = {"data": 1123, "mtime": 1}
+            self.reload_called = False
 
-        __builtin__.open(mox.IgnoreArg()).AndReturn(fake_context_manager)
+            def test_reload(reloaded_data):
+                self.assertEqual(reloaded_data, fake_contents)
+                self.reload_called = True
 
-        self.mox.ReplayAll()
-        cache_data = {"data": 1123, "mtime": 1}
-        self.reload_called = False
-
-        def test_reload(reloaded_data):
-            self.assertEqual(reloaded_data, fake_contents)
-            self.reload_called = True
-
-        data = utils.read_cached_file("/this/is/a/fake", cache_data,
-                                                reload_func=test_reload)
-        self.assertEqual(data, fake_contents)
-        self.assertTrue(self.reload_called)
+            data = utils.read_cached_file("/this/is/a/fake", cache_data,
+                                                    reload_func=test_reload)
+            self.assertEqual(data, fake_contents)
+            self.assertTrue(self.reload_called)
 
     def test_generate_password(self):
         password = utils.generate_password()

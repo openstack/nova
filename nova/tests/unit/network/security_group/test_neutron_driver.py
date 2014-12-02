@@ -13,7 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 #
-import mox
+from mox3 import mox
 from neutronclient.common import exceptions as n_exc
 from neutronclient.v2_0 import client
 

@@ -13,7 +13,7 @@
 #    under the License.
 
 import mock
-import mox
+from mox3 import mox
 
 from nova.compute import manager as compute_manager
 from nova import context

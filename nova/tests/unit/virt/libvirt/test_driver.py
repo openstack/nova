@@ -31,7 +31,7 @@ from eventlet import greenthread
 import fixtures
 from lxml import etree
 import mock
-import mox
+from mox3 import mox
 from oslo.concurrency import lockutils
 from oslo.concurrency import processutils
 from oslo.config import cfg
@@ -11396,7 +11396,10 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                     network_info, image_meta, rescue_password)
         self.mox.VerifyAll()
 
-    def test_rescue_config_drive(self):
+    @mock.patch(
+        'nova.virt.configdrive.ConfigDriveBuilder.add_instance_metadata')
+    @mock.patch('nova.virt.configdrive.ConfigDriveBuilder.make_drive')
+    def test_rescue_config_drive(self, mock_make, mock_add):
         instance = self._create_instance()
         uuid = instance.uuid
         configdrive_path = uuid + '/disk.config.rescue'
@@ -11418,8 +11421,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(imagebackend.Image, 'cache')
         self.mox.StubOutWithMock(instance_metadata.InstanceMetadata,
                                                             '__init__')
-        self.mox.StubOutWithMock(configdrive, 'ConfigDriveBuilder')
-        self.mox.StubOutWithMock(configdrive.ConfigDriveBuilder, 'make_drive')
         self.mox.StubOutWithMock(self.libvirtconnection, '_get_guest_xml')
         self.mox.StubOutWithMock(self.libvirtconnection, '_destroy')
         self.mox.StubOutWithMock(self.libvirtconnection, '_create_domain')
@@ -11455,14 +11456,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                                             content=mox.IgnoreArg(),
                                             extra_md=mox.IgnoreArg(),
                                             network_info=mox.IgnoreArg())
-        cdb = self.mox.CreateMockAnything()
-        m = configdrive.ConfigDriveBuilder(instance_md=mox.IgnoreArg())
-        m.AndReturn(cdb)
-        # __enter__ and __exit__ are required by "with"
-        cdb.__enter__().AndReturn(cdb)
-        cdb.make_drive(mox.Regex(configdrive_path))
-        cdb.__exit__(mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg()
-                        ).AndReturn(None)
         image_meta = {'id': 'fake', 'name': 'fake'}
         self.libvirtconnection._get_guest_xml(mox.IgnoreArg(), instance,
                                 network_info, mox.IgnoreArg(),
@@ -11479,6 +11472,11 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         self.libvirtconnection.rescue(self.context, instance, network_info,
                                                 image_meta, rescue_password)
         self.mox.VerifyAll()
+
+        mock_add.assert_any_call(mock.ANY)
+        expected_call = [mock.call(os.path.join(CONF.instances_path,
+                                                configdrive_path))]
+        mock_make.assert_has_calls(expected_call)
 
     @mock.patch('shutil.rmtree')
     @mock.patch('nova.utils.execute')

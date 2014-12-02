@@ -19,7 +19,7 @@ import datetime
 import os
 
 import mock
-import mox
+from mox3 import mox
 from oslo.concurrency import processutils
 from oslo.config import cfg
 from oslo.serialization import jsonutils

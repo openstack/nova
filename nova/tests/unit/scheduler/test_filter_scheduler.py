@@ -17,7 +17,7 @@ Tests For Filter Scheduler.
 """
 
 import mock
-import mox
+from mox3 import mox
 
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states

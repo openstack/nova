@@ -19,7 +19,7 @@ Tests for Crypto module.
 import os
 
 import mock
-import mox
+from mox3 import mox
 from oslo.concurrency import processutils
 
 from nova import crypto

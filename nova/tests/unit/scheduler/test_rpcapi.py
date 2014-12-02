@@ -16,7 +16,7 @@
 Unit Tests for nova.scheduler.rpcapi
 """
 
-import mox
+from mox3 import mox
 from oslo.config import cfg
 
 from nova import context

@@ -16,7 +16,7 @@
 Fakes For Scheduler tests.
 """
 
-import mox
+from mox3 import mox
 from oslo.serialization import jsonutils
 
 from nova.compute import vm_states
