@@ -14,6 +14,7 @@
 
 import uuid
 
+import mock
 from oslo_config import cfg
 import webob
 
@@ -93,10 +94,6 @@ class EvacuateTestV21(test.NoDBTestCase):
                           controller._evacuate,
                           self.admin_req, uuid or self.UUID, body=body)
 
-    def _fake_update(self, inst, context, instance, task_state,
-                     expected_task_state):
-        return None
-
     def test_evacuate_with_valid_instance(self):
         admin_pass = 'MyNewPass'
         res = self._get_evacuate_response({'host': 'my-host',
@@ -161,8 +158,6 @@ class EvacuateTestV21(test.NoDBTestCase):
                                       'adminPass': 'MyNewPass'})
 
     def test_evacuate_instance_with_target(self):
-        self.stubs.Set(compute_api.API, 'update', self._fake_update)
-
         admin_pass = 'MyNewPass'
         res = self._get_evacuate_response({'host': 'my-host',
                                            'onSharedStorage': 'False',
@@ -170,21 +165,21 @@ class EvacuateTestV21(test.NoDBTestCase):
 
         self.assertEqual(admin_pass, res['adminPass'])
 
-    def test_evacuate_shared_and_pass(self):
-        self.stubs.Set(compute_api.API, 'update', self._fake_update)
+    @mock.patch('nova.objects.Instance.save')
+    def test_evacuate_shared_and_pass(self, mock_save):
         self._check_evacuate_failure(webob.exc.HTTPBadRequest,
                                      {'host': 'bad-host',
                                       'onSharedStorage': 'True',
                                       'adminPass': 'MyNewPass'})
 
-    def test_evacuate_not_shared_pass_generated(self):
-        self.stubs.Set(compute_api.API, 'update', self._fake_update)
+    @mock.patch('nova.objects.Instance.save')
+    def test_evacuate_not_shared_pass_generated(self, mock_save):
         res = self._get_evacuate_response({'host': 'my-host',
                                            'onSharedStorage': 'False'})
         self.assertEqual(CONF.password_length, len(res['adminPass']))
 
-    def test_evacuate_shared(self):
-        self.stubs.Set(compute_api.API, 'update', self._fake_update)
+    @mock.patch('nova.objects.Instance.save')
+    def test_evacuate_shared(self, mock_save):
         self._get_evacuate_response({'host': 'my-host',
                                      'onSharedStorage': 'True'})
 
@@ -208,12 +203,12 @@ class EvacuateTestV21(test.NoDBTestCase):
                                       'adminPass': 'MyNewPass'},
                                      controller=self.controller_no_ext)
 
-    def test_evacuate_instance_with_underscore_in_hostname(self):
+    @mock.patch('nova.objects.Instance.save')
+    def test_evacuate_instance_with_underscore_in_hostname(self, mock_save):
+        admin_pass = 'MyNewPass'
         # NOTE: The hostname grammar in RFC952 does not allow for
         # underscores in hostnames. However, we should test that it
         # is supported because it sometimes occurs in real systems.
-        admin_pass = 'MyNewPass'
-        self.stubs.Set(compute_api.API, 'update', self._fake_update)
         res = self._get_evacuate_response({'host': 'underscore_hostname',
                                            'onSharedStorage': 'False',
                                            'adminPass': admin_pass})
@@ -226,9 +221,10 @@ class EvacuateTestV21(test.NoDBTestCase):
     def test_evacuate_enable_password_return(self):
         self._test_evacuate_enable_instance_password_conf(True)
 
-    def _test_evacuate_enable_instance_password_conf(self, enable_pass):
+    @mock.patch('nova.objects.Instance.save')
+    def _test_evacuate_enable_instance_password_conf(self, mock_save,
+                                                     enable_pass):
         self.flags(enable_instance_password=enable_pass)
-        self.stubs.Set(compute_api.API, 'update', self._fake_update)
 
         res = self._get_evacuate_response({'host': 'underscore_hostname',
                                            'onSharedStorage': 'False'})

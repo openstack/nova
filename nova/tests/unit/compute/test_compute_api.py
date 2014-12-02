@@ -550,7 +550,6 @@ class _ComputeAPIUnitTestMixIn(object):
 
         self.mox.StubOutWithMock(self.context, 'elevated')
         self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
-        self.mox.StubOutWithMock(self.compute_api, 'update')
         self.mox.StubOutWithMock(inst, 'save')
         expected_task_state = [None]
         if reboot_type == 'HARD':
@@ -1410,7 +1409,6 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(flavors, 'get_flavor_by_flavor_id')
         # Should never reach these.
         self.mox.StubOutWithMock(self.compute_api, '_reserve_quota_delta')
-        self.mox.StubOutWithMock(self.compute_api, 'update')
         self.mox.StubOutWithMock(quota.QUOTAS, 'commit')
         self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
         self.mox.StubOutWithMock(self.compute_api.compute_task_api,
@@ -1424,15 +1422,16 @@ class _ComputeAPIUnitTestMixIn(object):
 
         self.mox.ReplayAll()
 
-        self.assertRaises(exception.FlavorNotFound,
-                          self.compute_api.resize, self.context,
-                          fake_inst, flavor_id='flavor-id')
+        with mock.patch.object(fake_inst, 'save') as mock_save:
+            self.assertRaises(exception.FlavorNotFound,
+                              self.compute_api.resize, self.context,
+                              fake_inst, flavor_id='flavor-id')
+            self.assertFalse(mock_save.called)
 
     def test_resize_disabled_flavor_fails(self):
         self.mox.StubOutWithMock(flavors, 'get_flavor_by_flavor_id')
         # Should never reach these.
         self.mox.StubOutWithMock(self.compute_api, '_reserve_quota_delta')
-        self.mox.StubOutWithMock(self.compute_api, 'update')
         self.mox.StubOutWithMock(quota.QUOTAS, 'commit')
         self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
         self.mox.StubOutWithMock(self.compute_api.compute_task_api,
@@ -1447,9 +1446,11 @@ class _ComputeAPIUnitTestMixIn(object):
 
         self.mox.ReplayAll()
 
-        self.assertRaises(exception.FlavorNotFound,
-                          self.compute_api.resize, self.context,
-                          fake_inst, flavor_id='flavor-id')
+        with mock.patch.object(fake_inst, 'save') as mock_save:
+            self.assertRaises(exception.FlavorNotFound,
+                              self.compute_api.resize, self.context,
+                              fake_inst, flavor_id='flavor-id')
+            self.assertFalse(mock_save.called)
 
     @mock.patch.object(flavors, 'get_flavor_by_flavor_id')
     def test_resize_to_zero_disk_flavor_fails(self, get_flavor_by_flavor_id):
@@ -1468,7 +1469,6 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(self.compute_api, '_upsize_quota_delta')
         self.mox.StubOutWithMock(self.compute_api, '_reserve_quota_delta')
         # Should never reach these.
-        self.mox.StubOutWithMock(self.compute_api, 'update')
         self.mox.StubOutWithMock(quota.QUOTAS, 'commit')
         self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
         self.mox.StubOutWithMock(self.compute_api.compute_task_api,
@@ -1497,9 +1497,11 @@ class _ComputeAPIUnitTestMixIn(object):
 
         self.mox.ReplayAll()
 
-        self.assertRaises(exception.TooManyInstances,
-                          self.compute_api.resize, self.context,
-                          fake_inst, flavor_id='flavor-id')
+        with mock.patch.object(fake_inst, 'save') as mock_save:
+            self.assertRaises(exception.TooManyInstances,
+                              self.compute_api.resize, self.context,
+                              fake_inst, flavor_id='flavor-id')
+            self.assertFalse(mock_save.called)
 
     def test_pause(self):
         # Ensure instance can be paused.

@@ -205,32 +205,6 @@ class ComputeCellsAPI(compute_api.API):
         """
         pass
 
-    def update(self, context, instance, **kwargs):
-        """Update an instance."""
-        cell_name = instance.cell_name
-        if cell_name and self._cell_read_only(cell_name):
-            raise exception.InstanceInvalidState(
-                    attr="vm_state",
-                    instance_uuid=instance.uuid,
-                    state="temporary_readonly",
-                    method='update')
-        rv = super(ComputeCellsAPI, self).update(context,
-                instance, **kwargs)
-        kwargs_copy = kwargs.copy()
-        # We need to skip vm_state/task_state updates as the child
-        # cell is authoritative for these.  The admin API does
-        # support resetting state, but it has been converted to use
-        # Instance.save() with an appropriate kwarg.
-        kwargs_copy.pop('vm_state', None)
-        kwargs_copy.pop('task_state', None)
-        if kwargs_copy:
-            try:
-                self._cast_to_cells(context, instance, 'update',
-                        **kwargs_copy)
-            except exception.InstanceUnknownCell:
-                pass
-        return rv
-
     def soft_delete(self, context, instance):
         self._handle_cell_delete(context, instance, 'soft_delete')
 
