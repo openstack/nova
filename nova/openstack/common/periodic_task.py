@@ -11,6 +11,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
 import random
 import time
 
@@ -34,6 +35,11 @@ CONF.register_opts(periodic_opts)
 LOG = logging.getLogger(__name__)
 
 DEFAULT_INTERVAL = 60.0
+
+
+def list_opts():
+    """Entry point for oslo.config-generator."""
+    return [(None, copy.deepcopy(periodic_opts))]
 
 
 class InvalidPeriodicTaskArg(Exception):

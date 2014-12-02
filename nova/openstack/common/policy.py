@@ -77,6 +77,7 @@ as it allows particular rules to be explicitly disabled.
 
 import abc
 import ast
+import copy
 import os
 import re
 
@@ -101,8 +102,8 @@ policy_opts = [
                       'found.')),
     cfg.MultiStrOpt('policy_dirs',
                     default=['policy.d'],
-                    help=_('The directories of policy configuration files is '
-                           'stored')),
+                    help=_('Directories where policy configuration files are '
+                           'stored.')),
 ]
 
 CONF = cfg.CONF
@@ -111,6 +112,11 @@ CONF.register_opts(policy_opts)
 LOG = logging.getLogger(__name__)
 
 _checks = {}
+
+
+def list_opts():
+    """Entry point for oslo.config-generator."""
+    return [(None, copy.deepcopy(policy_opts))]
 
 
 class PolicyNotAuthorized(Exception):
@@ -193,8 +199,8 @@ class Enforcer(object):
 
     def __init__(self, policy_file=None, rules=None,
                  default_rule=None, use_conf=True):
-        self.rules = Rules(rules, default_rule)
         self.default_rule = default_rule or CONF.policy_default_rule
+        self.rules = Rules(rules, self.default_rule)
 
         self.policy_path = None
         self.policy_file = policy_file or CONF.policy_file
@@ -245,7 +251,7 @@ class Enforcer(object):
                 try:
                     path = self._get_policy_path(path)
                 except cfg.ConfigFilesNotFoundError:
-                    LOG.warn(_LW("Can not find policy directories %s"), path)
+                    LOG.warn(_LW("Can not find policy directory: %s"), path)
                     continue
                 self._walk_through_policy_directory(path,
                                                     self._load_policy_file,
@@ -299,7 +305,7 @@ class Enforcer(object):
         :param do_raise: Whether to raise an exception or not if check
                         fails.
         :param exc: Class of the exception to raise if the check fails.
-                    Any remaining arguments passed to check() (both
+                    Any remaining arguments passed to enforce() (both
                     positional and keyword arguments) will be passed to
                     the exception class. If not specified, PolicyNotAuthorized
                     will be used.

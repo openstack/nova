@@ -16,6 +16,7 @@
 
 from __future__ import print_function
 
+import copy
 import errno
 import gc
 import os
@@ -47,6 +48,12 @@ eventlet_backdoor_opts = [
 CONF = cfg.CONF
 CONF.register_opts(eventlet_backdoor_opts)
 LOG = logging.getLogger(__name__)
+
+
+def list_opts():
+    """Entry point for oslo.config-generator.
+    """
+    return [(None, copy.deepcopy(eventlet_backdoor_opts))]
 
 
 class EventletBackdoorConfigValueError(Exception):

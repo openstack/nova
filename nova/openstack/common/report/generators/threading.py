@@ -44,8 +44,7 @@ class ThreadReportGenerator(object):
             for thread_id, stack in sys._current_frames().items()
         ]
 
-        thread_pairs = dict(zip(range(len(threadModels)), threadModels))
-        return mwdv.ModelWithDefaultViews(thread_pairs,
+        return mwdv.ModelWithDefaultViews(threadModels,
                                           text_view=text_views.MultiView())
 
 
@@ -68,6 +67,5 @@ class GreenThreadReportGenerator(object):
             for gr in rutils._find_objects(greenlet.greenlet)
         ]
 
-        thread_pairs = dict(zip(range(len(threadModels)), threadModels))
-        return mwdv.ModelWithDefaultViews(thread_pairs,
+        return mwdv.ModelWithDefaultViews(threadModels,
                                           text_view=text_views.MultiView())

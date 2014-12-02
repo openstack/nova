@@ -117,10 +117,6 @@ def get_context_from_function_and_args(function, args, kwargs):
 
 def is_user_context(context):
     """Indicates if the request context is a normal user."""
-    if not context:
+    if not context or context.is_admin:
         return False
-    if context.is_admin:
-        return False
-    if not context.user_id or not context.project_id:
-        return False
-    return True
+    return context.user_id and context.project_id

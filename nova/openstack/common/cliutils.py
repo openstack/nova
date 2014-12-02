@@ -180,7 +180,10 @@ def print_list(objs, fields, formatters=None, sortby_index=0,
                 row.append(data)
         pt.add_row(row)
 
-    print(encodeutils.safe_encode(pt.get_string(**kwargs)))
+    if six.PY3:
+        print(encodeutils.safe_encode(pt.get_string(**kwargs)).decode())
+    else:
+        print(encodeutils.safe_encode(pt.get_string(**kwargs)))
 
 
 def print_dict(dct, dict_property="Property", wrap=0):
@@ -208,7 +211,11 @@ def print_dict(dct, dict_property="Property", wrap=0):
                 col1 = ''
         else:
             pt.add_row([k, v])
-    print(encodeutils.safe_encode(pt.get_string()))
+
+    if six.PY3:
+        print(encodeutils.safe_encode(pt.get_string()).decode())
+    else:
+        print(encodeutils.safe_encode(pt.get_string()))
 
 
 def get_password(max_password_prompts=3):
