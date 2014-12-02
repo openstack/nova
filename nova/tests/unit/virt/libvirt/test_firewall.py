@@ -14,14 +14,13 @@
 #    under the License.
 
 import re
-import threading
 import uuid
 from xml.dom import minidom
 
 from lxml import etree
 import mock
 from mox3 import mox
-from oslo.concurrency import lockutils
+from oslo_concurrency.fixture import lockutils as lock_fixture
 
 from nova.compute import utils as compute_utils
 from nova import exception
@@ -93,6 +92,7 @@ class FakeVirtAPI(virtapi.VirtAPI):
 class IptablesFirewallTestCase(test.NoDBTestCase):
     def setUp(self):
         super(IptablesFirewallTestCase, self).setUp()
+        self.useFixture(lock_fixture.ExternalLockFixture())
 
         class FakeLibvirtDriver(object):
             def nwfilterDefineXML(*args, **kwargs):
@@ -169,11 +169,7 @@ class IptablesFirewallTestCase(test.NoDBTestCase):
     @mock.patch.object(objects.SecurityGroupRuleList,
                        "get_by_security_group_id")
     @mock.patch.object(objects.SecurityGroupList, "get_by_instance")
-    @mock.patch.object(lockutils, "external_lock")
-    def test_static_filters(self, mock_lock, mock_secgroup,
-                            mock_secrule, mock_instlist):
-        mock_lock.return_value = threading.Semaphore()
-
+    def test_static_filters(self, mock_secgroup, mock_secrule, mock_instlist):
         UUID = "2674993b-6adb-4733-abd9-a7c10cc1f146"
         SRC_UUID = "0e0a76b2-7c52-4bc0-9a60-d83017e42c1a"
         instance_ref = self._create_instance_ref(UUID)
@@ -357,9 +353,7 @@ class IptablesFirewallTestCase(test.NoDBTestCase):
         self.assertEqual(len(rulesv6), 0)
 
     @mock.patch.object(objects.SecurityGroupList, "get_by_instance")
-    @mock.patch.object(lockutils, "external_lock")
-    def test_multinic_iptables(self, mock_lock, mock_secgroup):
-        mock_lock.return_value = threading.Semaphore()
+    def test_multinic_iptables(self, mock_secgroup):
         mock_secgroup.return_value = objects.SecurityGroupList()
 
         ipv4_rules_per_addr = 1
@@ -388,9 +382,7 @@ class IptablesFirewallTestCase(test.NoDBTestCase):
         self.assertEqual(ipv6_network_rules,
                   ipv6_rules_per_addr * ipv6_addr_per_network * networks_count)
 
-    @mock.patch.object(lockutils, "external_lock")
-    def test_do_refresh_security_group_rules(self, mock_lock):
-        mock_lock.return_value = threading.Semaphore()
+    def test_do_refresh_security_group_rules(self):
         instance_ref = self._create_instance_ref()
         self.mox.StubOutWithMock(self.fw,
                                  'instance_rules')
@@ -416,9 +408,7 @@ class IptablesFirewallTestCase(test.NoDBTestCase):
         self.fw.instance_info[instance_ref['id']] = (instance_ref, None)
         self.fw.do_refresh_security_group_rules("fake")
 
-    @mock.patch.object(lockutils, "external_lock")
-    def test_do_refresh_security_group_rules_instance_gone(self, mock_lock):
-        mock_lock.return_value = threading.Semaphore()
+    def test_do_refresh_security_group_rules_instance_gone(self):
         instance1 = {'id': 1, 'uuid': 'fake-uuid1'}
         instance2 = {'id': 2, 'uuid': 'fake-uuid2'}
         self.fw.instance_info = {1: (instance1, 'netinfo1'),
@@ -442,13 +432,10 @@ class IptablesFirewallTestCase(test.NoDBTestCase):
     @mock.patch.object(objects.SecurityGroupRuleList,
                        "get_by_security_group_id")
     @mock.patch.object(objects.SecurityGroupList, "get_by_instance")
-    @mock.patch.object(lockutils, "external_lock")
-    def test_unfilter_instance_undefines_nwfilter(self, mock_lock,
+    def test_unfilter_instance_undefines_nwfilter(self,
                                                   mock_secgroup,
                                                   mock_secrule,
                                                   mock_instlist):
-        mock_lock.return_value = threading.Semaphore()
-
         fakefilter = NWFilterFakes()
         _xml_mock = fakefilter.filterDefineXMLMock
         self.fw.nwfilter._conn.nwfilterDefineXML = _xml_mock
@@ -470,10 +457,7 @@ class IptablesFirewallTestCase(test.NoDBTestCase):
 
     @mock.patch.object(FakeVirtAPI, "provider_fw_rule_get_all")
     @mock.patch.object(objects.SecurityGroupList, "get_by_instance")
-    @mock.patch.object(lockutils, "external_lock")
-    def test_provider_firewall_rules(self, mock_lock, mock_secgroup,
-                                     mock_fwrules):
-        mock_lock.return_value = threading.Semaphore()
+    def test_provider_firewall_rules(self, mock_secgroup, mock_fwrules):
         mock_secgroup.return_value = objects.SecurityGroupList()
 
         # setup basic instance data
