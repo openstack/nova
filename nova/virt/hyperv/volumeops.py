@@ -94,6 +94,17 @@ class VolumeOps(object):
         target_lun = data['target_lun']
         target_iqn = data['target_iqn']
         target_portal = data['target_portal']
+        auth_method = data.get('auth_method')
+        auth_username = data.get('auth_username')
+        auth_password = data.get('auth_password')
+
+        if auth_method and auth_method.upper() != 'CHAP':
+            raise vmutils.HyperVException(
+                _("Cannot log in target %(target_iqn)s. Unsupported iSCSI "
+                  "authentication method: %(auth_method)s.") %
+                 {'target_iqn': target_iqn,
+                  'auth_method': auth_method})
+
         # Check if we already logged in
         if self._volutils.get_device_number_for_target(target_iqn, target_lun):
             LOG.debug("Already logged in on storage target. No need to "
@@ -108,7 +119,8 @@ class VolumeOps(object):
                       {'target_portal': target_portal,
                        'target_iqn': target_iqn, 'target_lun': target_lun})
             self._volutils.login_storage_target(target_lun, target_iqn,
-                                                target_portal)
+                                                target_portal, auth_username,
+                                                auth_password)
             # Wait for the target to be mounted
             self._get_mounted_disk_from_lun(target_iqn, target_lun, True)
 

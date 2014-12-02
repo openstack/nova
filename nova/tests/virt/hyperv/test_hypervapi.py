@@ -1209,7 +1209,9 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
 
         volumeutils.VolumeUtils.login_storage_target(target_lun,
                                                      target_iqn,
-                                                     target_portal)
+                                                     target_portal,
+                                                     'fake_username',
+                                                     'fake_password')
 
         self._mock_get_mounted_disk_from_lun(target_iqn, target_lun,
                                              fake_mounted_disk,
