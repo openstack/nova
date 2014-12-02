@@ -67,7 +67,6 @@ from nova.openstack.common import log as logging
 from nova.openstack.common import uuidutils
 from nova.pci import request as pci_request
 import nova.policy
-from nova import quota
 from nova import rpc
 from nova import servicegroup
 from nova import utils
@@ -149,7 +148,6 @@ CONF.import_opt('enable', 'nova.cells.opts', group='cells')
 CONF.import_opt('default_ephemeral_format', 'nova.virt.driver')
 
 MAX_USERDATA_SIZE = 65535
-QUOTAS = quota.QUOTAS
 RO_SECURITY_GROUPS = ['default']
 VIDEO_RAM = 'hw_video:ram_max_mb'
 
@@ -3816,8 +3814,9 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
         self.db.security_group_ensure_default(context)
 
     def create_security_group(self, context, name, description):
+        quotas = objects.Quotas(context)
         try:
-            reservations = QUOTAS.reserve(context, security_groups=1)
+            quotas.reserve(security_groups=1)
         except exception.OverQuota:
             msg = _("Quota exceeded, too many security groups.")
             self.raise_over_quota(msg)
@@ -3837,10 +3836,10 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
                 msg = _('Security group %s already exists') % name
                 self.raise_group_already_exists(msg)
             # Commit the reservation
-            QUOTAS.commit(context, reservations)
+            quotas.commit()
         except Exception:
             with excutils.save_and_reraise_exception():
-                QUOTAS.rollback(context, reservations)
+                quotas.rollback()
 
         return group_ref
 
