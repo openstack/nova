@@ -428,6 +428,20 @@ class NovaMigrationsCheckers(test_migrations.WalkVersionsMixin):
                                  if [c.name for c in i.columns][:1] ==
                                     ['host']]))
 
+    def _check_266(self, engine, data):
+        self.assertColumnExists(engine, 'tags', 'resource_id')
+        self.assertColumnExists(engine, 'tags', 'tag')
+
+        table = oslodbutils.get_table(engine, 'tags')
+
+        self.assertIsInstance(table.c.resource_id.type,
+                              sqlalchemy.types.String)
+        self.assertIsInstance(table.c.tag.type,
+                              sqlalchemy.types.String)
+
+    def _post_downgrade_266(self, engine):
+        self.assertTableNotExists(engine, 'tags')
+
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
                                test_base.DbTestCase):

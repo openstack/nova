@@ -1103,6 +1103,10 @@ class NotAllowed(NovaException):
     msg_fmt = _("Action not allowed.")
 
 
+class InstanceTagNotFound(NotFound):
+    msg_fmt = _("Instance %(instance_id)s has no tag '%(tag)s'")
+
+
 class ImageRotationNotAllowed(NovaException):
     msg_fmt = _("Rotation is not allowed for snapshots")
 

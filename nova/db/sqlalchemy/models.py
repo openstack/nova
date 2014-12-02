@@ -22,7 +22,8 @@ SQLAlchemy models for nova data.
 from oslo.config import cfg
 from oslo.db.sqlalchemy import models
 from oslo.utils import timeutils
-from sqlalchemy import Column, Index, Integer, BigInteger, Enum, String, schema
+from sqlalchemy import (Column, Index, Integer, BigInteger, Enum, String,
+                        schema, Unicode)
 from sqlalchemy.dialects.mysql import MEDIUMTEXT
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import orm
@@ -1403,3 +1404,22 @@ class PciDevice(BASE, NovaBase):
                             primaryjoin='and_('
                             'PciDevice.instance_uuid == Instance.uuid,'
                             'PciDevice.deleted == 0)')
+
+
+class Tag(BASE, models.ModelBase):
+    """Represents the tag for a resource."""
+
+    __tablename__ = "tags"
+    __table_args__ = (
+        Index('tags_tag_idx', 'tag'),
+    )
+    resource_id = Column(String(36), primary_key=True, nullable=False)
+    tag = Column(Unicode(80), primary_key=True, nullable=False)
+
+    instance = orm.relationship(
+        "Instance",
+        backref='tags',
+        primaryjoin='and_(Tag.resource_id == Instance.uuid,'
+                    'Instance.deleted == 0)',
+        foreign_keys=resource_id
+    )

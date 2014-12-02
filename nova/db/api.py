@@ -1973,3 +1973,31 @@ def archive_deleted_rows_for_table(context, tablename, max_rows=None):
     """
     return IMPL.archive_deleted_rows_for_table(context, tablename,
                                                max_rows=max_rows)
+
+
+####################
+
+
+def instance_tag_add(context, instance_uuid, tag):
+    """Add tag to the instance."""
+    return IMPL.instance_tag_add(context, instance_uuid, tag)
+
+
+def instance_tag_set(context, instance_uuid, tags):
+    """Replace all of the instance tags with specified list of tags."""
+    return IMPL.instance_tag_set(context, instance_uuid, tags)
+
+
+def instance_tag_get_by_instance_uuid(context, instance_uuid):
+    """Get all tags for a given instance."""
+    return IMPL.instance_tag_get_by_instance_uuid(context, instance_uuid)
+
+
+def instance_tag_delete(context, instance_uuid, tag):
+    """Delete specified tag from the instance."""
+    return IMPL.instance_tag_delete(context, instance_uuid, tag)
+
+
+def instance_tag_delete_all(context, instance_uuid):
+    """Delete all tags from the instance."""
+    return IMPL.instance_tag_delete_all(context, instance_uuid)
