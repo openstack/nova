@@ -1242,8 +1242,6 @@ class Controller(object):
 
     # NOTE(cyeoh): This decorator MUST appear first (the outermost
     # decorator) on an API method for it to work correctly
-    # TODO(cyeoh): Would be much better if this was not a requirement
-    # and if so then checked with probably a hacking check
     @classmethod
     def api_version(cls, min_ver, max_ver=None):
         """Decorator for versioning api methods.

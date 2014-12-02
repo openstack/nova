@@ -369,6 +369,16 @@ class HackingTestCase(test.NoDBTestCase):
         errors = [(8, 20, 'N325'), (8, 33, 'N325'), (9, 16, 'N325')]
         self._assert_has_errors(code, checker, expected_errors=errors)
 
+    def test_api_version_decorator_check(self):
+        code = """
+               @some_other_decorator
+               @wsgi.api_version("2.5")
+               def my_method():
+                   pass
+               """
+        self._assert_has_errors(code, checks.check_api_version_decorator,
+                                expected_errors=[(2, 0, "N332")])
+
     def test_trans_add(self):
 
         checker = checks.CheckForTransAdd
