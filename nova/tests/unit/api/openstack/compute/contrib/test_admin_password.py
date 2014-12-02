@@ -122,6 +122,15 @@ class AdminPasswordTestV21(test.NoDBTestCase):
         res = self._get_action()(self.fake_req, '1', body=body)
         self._check_status(202, res, self._get_action())
 
+    @mock.patch('nova.compute.api.API.set_admin_password',
+                side_effect=exception.InstanceInvalidState(instance="1",
+                                                           reason=''))
+    def test_change_password_invalid_state(self, mock_set_admin_password):
+        body = {'changePassword': {'adminPass': 'test'}}
+        self.assertRaises(webob.exc.HTTPConflict,
+                          self._get_action(),
+                          self.fake_req, '1', body=body)
+
 
 class AdminPasswordTestV2(AdminPasswordTestV21):
     validiation_error = webob.exc.HTTPBadRequest
@@ -135,10 +144,6 @@ class AdminPasswordTestV2(AdminPasswordTestV21):
 
     def _check_status(self, expected_status, res, controller_method):
         self.assertEqual(expected_status, res.status_int)
-
-    def test_change_password_failed(self):
-        # TODO(eliqiao): need to handle InstancePasswordSetFailed in v2 api
-        pass
 
     def test_change_password_adminpass_none(self):
         # TODO(eliqiao): need to handle adminpass is None in v2 api
