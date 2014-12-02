@@ -33,20 +33,15 @@ import mmap
 import os
 import random
 import shutil
-import socket
 import sys
 import tempfile
-import threading
 import time
 import uuid
 from xml.dom import minidom
 
 import eventlet
-from eventlet import greenio
 from eventlet import greenthread
-from eventlet import patcher
 from eventlet import tpool
-from eventlet import util as eventlet_util
 from lxml import etree
 from oslo.concurrency import processutils
 from oslo.config import cfg
@@ -93,13 +88,13 @@ from nova.virt import diagnostics
 from nova.virt.disk import api as disk
 from nova.virt.disk.vfs import guestfs
 from nova.virt import driver
-from nova.virt import event as virtevent
 from nova.virt import firewall
 from nova.virt import hardware
 from nova.virt.libvirt import blockinfo
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import dmcrypt
 from nova.virt.libvirt import firewall as libvirt_firewall
+from nova.virt.libvirt import host
 from nova.virt.libvirt import imagebackend
 from nova.virt.libvirt import imagecache
 from nova.virt.libvirt import lvm
@@ -110,9 +105,6 @@ from nova.virt import netutils
 from nova.virt import watchdog_actions
 from nova import volume
 from nova.volume import encryptors
-
-native_threading = patcher.original("threading")
-native_Queue = patcher.original("Queue")
 
 libvirt = None
 
@@ -366,11 +358,6 @@ REQ_HYPERVISOR_DISCARD = "QEMU"
 MIN_LIBVIRT_NUMA_TOPOLOGY_VERSION = (1, 0, 4)
 
 
-def libvirt_error_handler(context, err):
-    # Just ignore instead of default outputting to stderr.
-    pass
-
-
 class LibvirtDriver(driver.ComputeDriver):
 
     capabilities = {
@@ -385,15 +372,15 @@ class LibvirtDriver(driver.ComputeDriver):
         if libvirt is None:
             libvirt = importutils.import_module('libvirt')
 
+        self._host = host.Host(self.uri(), read_only,
+                               lifecycle_event_handler=self.emit_event,
+                               conn_event_handler=self._handle_conn_event)
         self._skip_list_all_domains = False
         self._initiator = None
         self._fc_wwnns = None
         self._fc_wwpns = None
-        self._wrapped_conn = None
-        self._wrapped_conn_lock = threading.Lock()
         self._caps = None
         self._vcpu_total = 0
-        self.read_only = read_only
         self.firewall_driver = firewall.load_driver(
             DEFAULT_FIREWALL_DRIVER,
             self.virtapi,
@@ -406,8 +393,6 @@ class LibvirtDriver(driver.ComputeDriver):
             CONF.libvirt.volume_drivers, self)
 
         self.dev_filter = pci_whitelist.get_pci_devices_filter()
-
-        self._event_queue = None
 
         self._disk_cachemode = None
         self.image_cache_manager = imagecache.ImageCacheManager()
@@ -490,223 +475,6 @@ class LibvirtDriver(driver.ComputeDriver):
                                               driver_cache)
         conf.driver_cache = cache_mode
 
-    @staticmethod
-    def _conn_has_min_version(conn, lv_ver=None, hv_ver=None, hv_type=None):
-        try:
-            if lv_ver is not None:
-                libvirt_version = conn.getLibVersion()
-                if libvirt_version < utils.convert_version_to_int(lv_ver):
-                    return False
-
-            if hv_ver is not None:
-                hypervisor_version = conn.getVersion()
-                if hypervisor_version < utils.convert_version_to_int(hv_ver):
-                    return False
-
-            if hv_type is not None:
-                hypervisor_type = conn.getType()
-                if hypervisor_type != hv_type:
-                    return False
-
-            return True
-        except Exception:
-            return False
-
-    def _has_min_version(self, lv_ver=None, hv_ver=None, hv_type=None):
-        return self._conn_has_min_version(self._conn, lv_ver, hv_ver, hv_type)
-
-    def _native_thread(self):
-        """Receives async events coming in from libvirtd.
-
-        This is a native thread which runs the default
-        libvirt event loop implementation. This processes
-        any incoming async events from libvirtd and queues
-        them for later dispatch. This thread is only
-        permitted to use libvirt python APIs, and the
-        driver.queue_event method. In particular any use
-        of logging is forbidden, since it will confuse
-        eventlet's greenthread integration
-        """
-
-        while True:
-            libvirt.virEventRunDefaultImpl()
-
-    def _dispatch_thread(self):
-        """Dispatches async events coming in from libvirtd.
-
-        This is a green thread which waits for events to
-        arrive from the libvirt event loop thread. This
-        then dispatches the events to the compute manager.
-        """
-
-        while True:
-            self._dispatch_events()
-
-    @staticmethod
-    def _event_lifecycle_callback(conn, dom, event, detail, opaque):
-        """Receives lifecycle events from libvirt.
-
-        NB: this method is executing in a native thread, not
-        an eventlet coroutine. It can only invoke other libvirt
-        APIs, or use self.queue_event(). Any use of logging APIs
-        in particular is forbidden.
-        """
-
-        self = opaque
-
-        uuid = dom.UUIDString()
-        transition = None
-        if event == libvirt.VIR_DOMAIN_EVENT_STOPPED:
-            transition = virtevent.EVENT_LIFECYCLE_STOPPED
-        elif event == libvirt.VIR_DOMAIN_EVENT_STARTED:
-            transition = virtevent.EVENT_LIFECYCLE_STARTED
-        elif event == libvirt.VIR_DOMAIN_EVENT_SUSPENDED:
-            transition = virtevent.EVENT_LIFECYCLE_PAUSED
-        elif event == libvirt.VIR_DOMAIN_EVENT_RESUMED:
-            transition = virtevent.EVENT_LIFECYCLE_RESUMED
-
-        if transition is not None:
-            self._queue_event(virtevent.LifecycleEvent(uuid, transition))
-
-    def _queue_event(self, event):
-        """Puts an event on the queue for dispatch.
-
-        This method is called by the native event thread to
-        put events on the queue for later dispatch by the
-        green thread. Any use of logging APIs is forbidden.
-        """
-
-        if self._event_queue is None:
-            return
-
-        # Queue the event...
-        self._event_queue.put(event)
-
-        # ...then wakeup the green thread to dispatch it
-        c = ' '.encode()
-        self._event_notify_send.write(c)
-        self._event_notify_send.flush()
-
-    def _dispatch_events(self):
-        """Wait for & dispatch events from native thread
-
-        Blocks until native thread indicates some events
-        are ready. Then dispatches all queued events.
-        """
-
-        # Wait to be notified that there are some
-        # events pending
-        try:
-            _c = self._event_notify_recv.read(1)
-            assert _c
-        except ValueError:
-            return  # will be raised when pipe is closed
-
-        # Process as many events as possible without
-        # blocking
-        last_close_event = None
-        while not self._event_queue.empty():
-            try:
-                event = self._event_queue.get(block=False)
-                if isinstance(event, virtevent.LifecycleEvent):
-                    # call possibly with delay
-                    self._event_delayed_cleanup(event)
-                    self._event_emit_delayed(event)
-                elif 'conn' in event and 'reason' in event:
-                    last_close_event = event
-            except native_Queue.Empty:
-                pass
-        if last_close_event is None:
-            return
-        conn = last_close_event['conn']
-        # get_new_connection may already have disabled the host,
-        # in which case _wrapped_conn is None.
-        with self._wrapped_conn_lock:
-            if conn == self._wrapped_conn:
-                reason = last_close_event['reason']
-                _error = _("Connection to libvirt lost: %s") % reason
-                LOG.warn(_error)
-                self._wrapped_conn = None
-                # Disable compute service to avoid
-                # new instances of being scheduled on this host.
-                self._set_host_enabled(False, disable_reason=_error)
-
-    def _event_delayed_cleanup(self, event):
-        """Cleanup possible delayed stop events."""
-        if (event.transition == virtevent.EVENT_LIFECYCLE_STARTED or
-            event.transition == virtevent.EVENT_LIFECYCLE_RESUMED):
-            if event.uuid in self._events_delayed.keys():
-                self._events_delayed[event.uuid].cancel()
-                self._events_delayed.pop(event.uuid, None)
-                LOG.debug("Removed pending event for %s due to "
-                          "lifecycle event", event.uuid)
-
-    def _event_emit_delayed(self, event):
-        """Emit events - possibly delayed."""
-        def event_cleanup(gt, *args, **kwargs):
-            """Callback function for greenthread. Called
-            to cleanup the _events_delayed dictionary when a event
-            was called.
-            """
-            event = args[0]
-            self._events_delayed.pop(event.uuid, None)
-
-        if self._lifecycle_delay > 0:
-            if event.uuid not in self._events_delayed.keys():
-                id_ = greenthread.spawn_after(self._lifecycle_delay,
-                                              self.emit_event, event)
-                self._events_delayed[event.uuid] = id_
-                # add callback to cleanup self._events_delayed dict after
-                # event was called
-                id_.link(event_cleanup, event)
-        else:
-            self.emit_event(event)
-
-    def _init_events_pipe(self):
-        """Create a self-pipe for the native thread to synchronize on.
-
-        This code is taken from the eventlet tpool module, under terms
-        of the Apache License v2.0.
-        """
-
-        self._event_queue = native_Queue.Queue()
-        try:
-            rpipe, wpipe = os.pipe()
-            self._event_notify_send = greenio.GreenPipe(wpipe, 'wb', 0)
-            self._event_notify_recv = greenio.GreenPipe(rpipe, 'rb', 0)
-        except (ImportError, NotImplementedError):
-            # This is Windows compatibility -- use a socket instead
-            #  of a pipe because pipes don't really exist on Windows.
-            sock = eventlet_util.__original_socket__(socket.AF_INET,
-                                                     socket.SOCK_STREAM)
-            sock.bind(('localhost', 0))
-            sock.listen(50)
-            csock = eventlet_util.__original_socket__(socket.AF_INET,
-                                                      socket.SOCK_STREAM)
-            csock.connect(('localhost', sock.getsockname()[1]))
-            nsock, addr = sock.accept()
-            self._event_notify_send = nsock.makefile('wb', 0)
-            gsock = greenio.GreenSocket(csock)
-            self._event_notify_recv = gsock.makefile('rb', 0)
-
-    def _init_events(self):
-        """Initializes the libvirt events subsystem.
-
-        This requires running a native thread to provide the
-        libvirt event loop integration. This forwards events
-        to a green thread which does the actual dispatching.
-        """
-
-        self._init_events_pipe()
-
-        LOG.debug("Starting native event thread")
-        event_thread = native_threading.Thread(target=self._native_thread)
-        event_thread.setDaemon(True)
-        event_thread.start()
-
-        LOG.debug("Starting green dispatch thread")
-        eventlet.spawn(self._dispatch_thread)
-
     def _do_quality_warnings(self):
         """Warn about untested driver configurations.
 
@@ -726,12 +494,16 @@ class LibvirtDriver(driver.ComputeDriver):
                          'HypervisorSupportMatrix'),
                         {'type': CONF.libvirt.virt_type, 'arch': hostarch})
 
+    def _handle_conn_event(self, enabled, reason):
+        LOG.info(_LI("Connection event '%(enabled)d' reason '%(reason)s'"),
+                 {'enabled': enabled, 'reason': reason})
+        if reason is None:
+            reason = DISABLE_REASON_UNDEFINED
+        self._set_host_enabled(enabled, reason)
+
     def init_host(self, host):
-        # NOTE(dkliban): Error handler needs to be registered before libvirt
-        #                connection is used for the first time.  Otherwise, the
-        #                handler does not get registered.
-        libvirt.registerErrorHandler(libvirt_error_handler, None)
-        libvirt.virEventRegisterDefaultImpl()
+        self._host.initialize()
+
         self._do_quality_warnings()
 
         if (CONF.libvirt.virt_type == 'lxc' and
@@ -748,7 +520,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if CONF.libvirt.virt_type != "kvm":
             guestfs.force_tcg()
 
-        if not self._has_min_version(MIN_LIBVIRT_VERSION):
+        if not self._host.has_min_version(MIN_LIBVIRT_VERSION):
             major = MIN_LIBVIRT_VERSION[0]
             minor = MIN_LIBVIRT_VERSION[1]
             micro = MIN_LIBVIRT_VERSION[2]
@@ -757,84 +529,22 @@ class LibvirtDriver(driver.ComputeDriver):
                   '%(major)i.%(minor)i.%(micro)i or greater.') %
                 {'major': major, 'minor': minor, 'micro': micro})
 
-        self._init_events()
-
-    def _get_new_connection(self):
-        # call with _wrapped_conn_lock held
-        LOG.debug('Connecting to libvirt: %s', self.uri())
-        wrapped_conn = None
-
-        try:
-            wrapped_conn = self._connect(self.uri(), self.read_only)
-        finally:
-            # Enabling the compute service, in case it was disabled
-            # since the connection was successful.
-            disable_reason = DISABLE_REASON_UNDEFINED
-            if not wrapped_conn:
-                disable_reason = 'Failed to connect to libvirt'
-            self._set_host_enabled(bool(wrapped_conn), disable_reason)
-
-        self._wrapped_conn = wrapped_conn
-        self._skip_list_all_domains = False
-
-        try:
-            LOG.debug("Registering for lifecycle events %s", self)
-            wrapped_conn.domainEventRegisterAny(
-                None,
-                libvirt.VIR_DOMAIN_EVENT_ID_LIFECYCLE,
-                self._event_lifecycle_callback,
-                self)
-        except Exception as e:
-            LOG.warn(_LW("URI %(uri)s does not support events: %(error)s"),
-                     {'uri': self.uri(), 'error': e})
-
-        try:
-            LOG.debug("Registering for connection events: %s", str(self))
-            wrapped_conn.registerCloseCallback(self._close_callback, None)
-        except (TypeError, AttributeError) as e:
-            # NOTE: The registerCloseCallback of python-libvirt 1.0.1+
-            # is defined with 3 arguments, and the above registerClose-
-            # Callback succeeds. However, the one of python-libvirt 1.0.0
-            # is defined with 4 arguments and TypeError happens here.
-            # Then python-libvirt 0.9 does not define a method register-
-            # CloseCallback.
-            LOG.debug("The version of python-libvirt does not support "
-                      "registerCloseCallback or is too old: %s", e)
-        except libvirt.libvirtError as e:
-            LOG.warn(_LW("URI %(uri)s does not support connection"
-                         " events: %(error)s"),
-                     {'uri': self.uri(), 'error': e})
-
-        return wrapped_conn
-
     def _get_connection(self):
-        # multiple concurrent connections are protected by _wrapped_conn_lock
-        with self._wrapped_conn_lock:
-            wrapped_conn = self._wrapped_conn
-            if not wrapped_conn or not self._test_connection(wrapped_conn):
-                wrapped_conn = self._get_new_connection()
+        try:
+            conn = self._host.get_connection()
+        except libvirt.libvirtError as ex:
+            LOG.exception(_LE("Connection to libvirt failed: %s"), ex)
+            payload = dict(ip=LibvirtDriver.get_host_ip_addr(),
+                           method='_connect',
+                           reason=ex)
+            rpc.get_notifier('compute').error(nova_context.get_admin_context(),
+                                              'compute.libvirt.error',
+                                              payload)
+            raise exception.HypervisorUnavailable(host=CONF.host)
 
-        return wrapped_conn
+        return conn
 
     _conn = property(_get_connection)
-
-    def _close_callback(self, conn, reason, opaque):
-        close_info = {'conn': conn, 'reason': reason}
-        self._queue_event(close_info)
-
-    @staticmethod
-    def _test_connection(conn):
-        try:
-            conn.getLibVersion()
-            return True
-        except libvirt.libvirtError as e:
-            if (e.get_error_code() in (libvirt.VIR_ERR_SYSTEM_ERROR,
-                                       libvirt.VIR_ERR_INTERNAL_ERROR) and
-                e.get_error_domain() in (libvirt.VIR_FROM_REMOTE,
-                                         libvirt.VIR_FROM_RPC)):
-                LOG.debug('Connection to libvirt broke')
-                return False
-            raise
 
     @staticmethod
     def uri():
@@ -847,45 +557,6 @@ class LibvirtDriver(driver.ComputeDriver):
         else:
             uri = CONF.libvirt.connection_uri or 'qemu:///system'
         return uri
-
-    @staticmethod
-    def _connect_auth_cb(creds, opaque):
-        if len(creds) == 0:
-            return 0
-        raise exception.NovaException(
-            _("Can not handle authentication request for %d credentials")
-            % len(creds))
-
-    @staticmethod
-    def _connect(uri, read_only):
-        auth = [[libvirt.VIR_CRED_AUTHNAME,
-                 libvirt.VIR_CRED_ECHOPROMPT,
-                 libvirt.VIR_CRED_REALM,
-                 libvirt.VIR_CRED_PASSPHRASE,
-                 libvirt.VIR_CRED_NOECHOPROMPT,
-                 libvirt.VIR_CRED_EXTERNAL],
-                LibvirtDriver._connect_auth_cb,
-                None]
-
-        try:
-            flags = 0
-            if read_only:
-                flags = libvirt.VIR_CONNECT_RO
-            # tpool.proxy_call creates a native thread. Due to limitations
-            # with eventlet locking we cannot use the logging API inside
-            # the called function.
-            return tpool.proxy_call(
-                (libvirt.virDomain, libvirt.virConnect),
-                libvirt.openAuth, uri, auth, flags)
-        except libvirt.libvirtError as ex:
-            LOG.exception(_LE("Connection to libvirt failed: %s"), ex)
-            payload = dict(ip=LibvirtDriver.get_host_ip_addr(),
-                           method='_connect',
-                           reason=ex)
-            rpc.get_notifier('compute').error(nova_context.get_admin_context(),
-                                              'compute.libvirt.error',
-                                              payload)
-            raise exception.HypervisorUnavailable(host=CONF.host)
 
     def instance_exists(self, instance):
         """Efficient override of base instance_exists method."""
@@ -1216,8 +887,9 @@ class LibvirtDriver(driver.ComputeDriver):
             self._delete_instance_files(instance)
 
         if CONF.serial_console.enabled:
-            for host, port in self._get_serial_ports_from_instance(instance):
-                serial_console.release_port(host=host, port=port)
+            serials = self._get_serial_ports_from_instance(instance)
+            for hostname, port in serials:
+                serial_console.release_port(host=hostname, port=port)
 
         self._undefine_domain(instance)
 
@@ -1391,7 +1063,7 @@ class LibvirtDriver(driver.ComputeDriver):
                         "block size") % CONF.libvirt.virt_type
                 raise exception.InvalidHypervisorType(msg)
 
-            if not self._has_min_version(MIN_LIBVIRT_BLOCKIO_VERSION):
+            if not self._host.has_min_version(MIN_LIBVIRT_BLOCKIO_VERSION):
                 ver = ".".join([str(x) for x in MIN_LIBVIRT_BLOCKIO_VERSION])
                 msg = _("Volume sets block size, but libvirt '%s' or later is "
                         "required.") % ver
@@ -1684,9 +1356,9 @@ class LibvirtDriver(driver.ComputeDriver):
         #               redundant because LVM supports only cold snapshots.
         #               It is necessary in case this situation changes in the
         #               future.
-        if (self._has_min_version(MIN_LIBVIRT_LIVESNAPSHOT_VERSION,
-                                  MIN_QEMU_LIVESNAPSHOT_VERSION,
-                                  REQ_HYPERVISOR_LIVESNAPSHOT)
+        if (self._host.has_min_version(MIN_LIBVIRT_LIVESNAPSHOT_VERSION,
+                                       MIN_QEMU_LIVESNAPSHOT_VERSION,
+                                       REQ_HYPERVISOR_LIVESNAPSHOT)
              and source_format not in ('lvm', 'rbd')
              and not CONF.ephemeral_storage_encryption.enabled):
             live_snapshot = True
@@ -2083,7 +1755,7 @@ class LibvirtDriver(driver.ComputeDriver):
         libvirt 1.0.5.5 vs. 1.0.5.6 here.)
         """
 
-        if not self._has_min_version(MIN_LIBVIRT_BLOCKJOBINFO_VERSION):
+        if not self._host.has_min_version(MIN_LIBVIRT_BLOCKJOBINFO_VERSION):
             ver = '.'.join([str(x) for x in MIN_LIBVIRT_BLOCKJOBINFO_VERSION])
             msg = _("Libvirt '%s' or later is required for online deletion "
                     "of volume snapshots.") % ver
@@ -2775,9 +2447,9 @@ class LibvirtDriver(driver.ComputeDriver):
         return ctype.ConsoleSpice(host=host, port=ports[0], tlsPort=ports[1])
 
     def get_serial_console(self, context, instance):
-        for host, port in self._get_serial_ports_from_instance(
+        for hostname, port in self._get_serial_ports_from_instance(
                 instance, mode='bind'):
-            return ctype.ConsoleSerial(host=host, port=port)
+            return ctype.ConsoleSerial(host=hostname, port=port)
         raise exception.ConsoleTypeUnavailable(console_type='serial')
 
     @staticmethod
@@ -3153,7 +2825,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         # for libvirt version < 1.1.1, this is race condition
         # so forbid detach if not had this version
-        if not self._has_min_version(MIN_LIBVIRT_DEVICE_CALLBACK_VERSION):
+        if not self._host.has_min_version(MIN_LIBVIRT_DEVICE_CALLBACK_VERSION):
             if pci_devs:
                 reason = (_("Detaching PCI devices with libvirt < %(ver)s"
                            " is not permitted") %
@@ -3244,7 +2916,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if self._has_sriov_port(network_info):
             # for libvirt version < 1.1.1, this is race condition
             # so forbid detach if it's an older version
-            if not self._has_min_version(
+            if not self._host.has_min_version(
                             MIN_LIBVIRT_DEVICE_CALLBACK_VERSION):
                 reason = (_("Detaching SR-IOV ports with"
                            " libvirt < %(ver)s is not permitted") %
@@ -3404,9 +3076,9 @@ class LibvirtDriver(driver.ComputeDriver):
     def _get_guest_disk_config(self, instance, name, disk_mapping, inst_type,
                                image_type=None):
         if CONF.libvirt.hw_disk_discard:
-            if not self._has_min_version(MIN_LIBVIRT_DISCARD_VERSION,
-                                     MIN_QEMU_DISCARD_VERSION,
-                                     REQ_HYPERVISOR_DISCARD):
+            if not self._host.has_min_version(MIN_LIBVIRT_DISCARD_VERSION,
+                                              MIN_QEMU_DISCARD_VERSION,
+                                              REQ_HYPERVISOR_DISCARD):
                 msg = (_('Volume sets discard option, but libvirt %(libvirt)s'
                          ' or later is required, qemu %(qemu)s'
                          ' or later is required.') %
@@ -4903,7 +4575,7 @@ class LibvirtDriver(driver.ComputeDriver):
         return jsonutils.dumps(pci_info)
 
     def _get_host_numa_topology(self):
-        if not self._has_min_version(MIN_LIBVIRT_NUMA_TOPOLOGY_VERSION):
+        if not self._host.has_min_version(MIN_LIBVIRT_NUMA_TOPOLOGY_VERSION):
             return
 
         caps = self._get_host_capabilities()

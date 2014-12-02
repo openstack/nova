@@ -75,7 +75,6 @@ from nova.virt import block_device as driver_block_device
 from nova.virt import configdrive
 from nova.virt.disk import api as disk
 from nova.virt import driver
-from nova.virt import event as virtevent
 from nova.virt import fake
 from nova.virt import firewall as base_firewall
 from nova.virt import hardware
@@ -84,6 +83,7 @@ from nova.virt.libvirt import blockinfo
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import driver as libvirt_driver
 from nova.virt.libvirt import firewall
+from nova.virt.libvirt import host
 from nova.virt.libvirt import imagebackend
 from nova.virt.libvirt import rbd_utils
 from nova.virt.libvirt import utils as libvirt_utils
@@ -93,6 +93,7 @@ try:
 except ImportError:
     libvirt = fakelibvirt
 libvirt_driver.libvirt = libvirt
+host.libvirt = libvirt
 
 
 CONF = cfg.CONF
@@ -511,8 +512,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                         2, 1, 1, 1]
 
         self.conn = FakeConn()
-        self.stubs.Set(libvirt_driver.LibvirtDriver, '_connect',
-                       lambda *a, **k: self.conn)
+        self.stubs.Set(host.Host,
+                       'get_connection',
+                       lambda h: self.conn)
 
         sys_meta = {
             'instance_type_memory_mb': 2048,
@@ -618,13 +620,13 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         inst = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         self.assertPublicAPISignatures(baseinst, inst)
 
-    @mock.patch.object(libvirt_driver.LibvirtDriver, "_has_min_version")
+    @mock.patch.object(host.Host, "has_min_version")
     def test_min_version_start_ok(self, mock_version):
         mock_version.return_value = True
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         drvr.init_host("dummyhost")
 
-    @mock.patch.object(libvirt_driver.LibvirtDriver, "_has_min_version")
+    @mock.patch.object(host.Host, "has_min_version")
     def test_min_version_start_abort(self, mock_version):
         mock_version.return_value = False
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -735,9 +737,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                             instance_uuid='uuid')]
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver,
-                                 '_has_min_version')
-        libvirt_driver.LibvirtDriver._has_min_version = lambda x, y: False
+        self.mox.StubOutWithMock(host.Host,
+                                 'has_min_version')
+        host.Host.has_min_version = lambda x, y: False
 
         self.assertRaises(exception.PciDeviceDetachFailed,
                           conn._detach_pci_devices, None, pci_devices)
@@ -767,9 +769,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                             address="0001:04:10:1")]
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver,
-                                 '_has_min_version')
-        libvirt_driver.LibvirtDriver._has_min_version = lambda x, y: True
+        self.mox.StubOutWithMock(host.Host,
+                                 'has_min_version')
+        host.Host.has_min_version = lambda x, y: True
 
         self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver,
                                  '_get_guest_pci_device')
@@ -811,9 +813,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                             address="0000:04:10:1")]
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver,
-                                 '_has_min_version')
-        libvirt_driver.LibvirtDriver._has_min_version = lambda x, y: True
+        self.mox.StubOutWithMock(host.Host,
+                                 'has_min_version')
+        host.Host.has_min_version = lambda x, y: True
 
         self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver,
                                  '_get_guest_pci_device')
@@ -899,15 +901,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual(['fake_registerErrorHandler',
                           'fake_get_host_capabilities'], calls)
 
-    @mock.patch.object(libvirt_driver, 'LOG')
-    def test_connect_auth_cb_exception(self, log_mock):
-        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        creds = dict(authname='nova', password='verybadpass')
-        self.assertRaises(exception.NovaException,
-                          conn._connect_auth_cb, creds, False)
-        self.assertEqual(0, len(log_mock.method_calls),
-                         'LOG should not be used in _connect_auth_cb.')
-
     def test_sanitize_log_to_xml(self):
         # setup fake data
         data = {'auth_password': 'scrubme'}
@@ -935,70 +928,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             # we don't care what the log message is, we just want to make sure
             # our stub method is called which asserts the password is scrubbed
             self.assertTrue(debug_mock.called)
-
-    def test_close_callback(self):
-        self.close_callback = None
-
-        def set_close_callback(cb, opaque):
-            self.close_callback = cb
-
-        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        service_mock = mock.MagicMock()
-        service_mock.disabled.return_value = False
-        with contextlib.nested(
-            mock.patch.object(conn, "_connect", return_value=self.conn),
-            mock.patch.object(self.conn, "registerCloseCallback",
-                              side_effect=set_close_callback),
-            mock.patch.object(objects.Service, "get_by_compute_host",
-                              return_value=service_mock)):
-
-            # verify that the driver registers for the close callback
-            # and re-connects after receiving the callback
-            conn._get_connection()
-            self.assertFalse(service_mock.disabled)
-            self.assertTrue(self.close_callback)
-            conn._init_events_pipe()
-            self.close_callback(self.conn, 1, None)
-            conn._dispatch_events()
-
-            self.assertTrue(service_mock.disabled)
-            conn._get_connection()
-
-    def test_close_callback_bad_signature(self):
-        '''Validates that a connection to libvirt exist,
-           even when registerCloseCallback method has a different
-           number of arguments in the libvirt python library.
-        '''
-        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        service_mock = mock.MagicMock()
-        service_mock.disabled.return_value = False
-        with contextlib.nested(
-            mock.patch.object(conn, "_connect", return_value=self.conn),
-            mock.patch.object(self.conn, "registerCloseCallback",
-                              side_effect=TypeError('dd')),
-            mock.patch.object(objects.Service, "get_by_compute_host",
-                              return_value=service_mock)):
-
-            connection = conn._get_connection()
-            self.assertTrue(connection)
-
-    def test_close_callback_not_defined(self):
-        '''Validates that a connection to libvirt exist,
-           even when registerCloseCallback method missing from
-           the libvirt python library.
-        '''
-        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        service_mock = mock.MagicMock()
-        service_mock.disabled.return_value = False
-        with contextlib.nested(
-            mock.patch.object(conn, "_connect", return_value=self.conn),
-            mock.patch.object(self.conn, "registerCloseCallback",
-                              side_effect=AttributeError('dd')),
-            mock.patch.object(objects.Service, "get_by_compute_host",
-                              return_value=service_mock)):
-
-            connection = conn._get_connection()
-            self.assertTrue(connection)
 
     def test_cpu_features_bug_1217630(self):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -1264,7 +1193,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                             instance_ref)
 
         with contextlib.nested(
-                mock.patch.object(conn, '_has_min_version', return_value=True),
+                mock.patch.object(host.Host, 'has_min_version',
+                                  return_value=True),
                 mock.patch.object(
                     conn, "_get_host_capabilities", return_value=caps),
                 mock.patch.object(
@@ -1326,7 +1256,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                             instance_ref)
 
         with contextlib.nested(
-                mock.patch.object(conn, '_has_min_version', return_value=True),
+                mock.patch.object(host.Host, 'has_min_version',
+                                  return_value=True),
                 mock.patch.object(
                     conn, "_get_host_capabilities", return_value=caps),
                 mock.patch.object(
@@ -1371,7 +1302,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 mock.patch.object(
                     objects.InstanceNUMATopology, "get_by_instance_uuid",
                     return_value=instance_topology),
-                mock.patch.object(conn, '_has_min_version', return_value=True),
+                mock.patch.object(host.Host, 'has_min_version',
+                                  return_value=True),
                 mock.patch.object(
                     conn, "_get_host_capabilities", return_value=caps)):
             cfg = conn._get_guest_config(instance_ref, [], {}, disk_info)
@@ -1416,7 +1348,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 mock.patch.object(
                     objects.InstanceNUMATopology, "get_by_instance_uuid",
                     return_value=instance_topology),
-                mock.patch.object(conn, '_has_min_version', return_value=True),
+                mock.patch.object(host.Host, 'has_min_version',
+                                  return_value=True),
                 mock.patch.object(
                     conn, "_get_host_capabilities", return_value=caps),
                 mock.patch.object(
@@ -7183,54 +7116,53 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         ip = conn.get_host_ip_addr()
         self.assertEqual(ip, CONF.my_ip)
 
-    def test_broken_connection(self):
-        for (error, domain) in (
-                (libvirt.VIR_ERR_SYSTEM_ERROR, libvirt.VIR_FROM_REMOTE),
-                (libvirt.VIR_ERR_SYSTEM_ERROR, libvirt.VIR_FROM_RPC),
-                (libvirt.VIR_ERR_INTERNAL_ERROR, libvirt.VIR_FROM_RPC)):
+    def test_conn_event_handler(self):
+        self.mox.UnsetStubs()
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        service_mock = mock.MagicMock()
+        service_mock.disabled.return_value = False
+        with contextlib.nested(
+            mock.patch.object(conn._host, "_connect",
+                              side_effect=fakelibvirt.make_libvirtError(
+                                  libvirt.libvirtError,
+                                  "Failed to connect to host",
+                                  error_code=libvirt.VIR_ERR_INTERNAL_ERROR)),
+            mock.patch.object(conn._host, "_init_events",
+                              return_value=None),
+            mock.patch.object(objects.Service, "get_by_compute_host",
+                              return_value=service_mock)):
 
-            conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-
-            self.mox.StubOutWithMock(conn, "_wrapped_conn")
-            self.mox.StubOutWithMock(conn._wrapped_conn, "getLibVersion")
-            self.mox.StubOutWithMock(libvirt.libvirtError, "get_error_code")
-            self.mox.StubOutWithMock(libvirt.libvirtError, "get_error_domain")
-
-            conn._wrapped_conn.getLibVersion().AndRaise(
-                    libvirt.libvirtError("fake failure"))
-
-            libvirt.libvirtError.get_error_code().AndReturn(error)
-            libvirt.libvirtError.get_error_domain().AndReturn(domain)
-
-            self.mox.ReplayAll()
-
-            self.assertFalse(conn._test_connection(conn._wrapped_conn))
-
-            self.mox.UnsetStubs()
+            # verify that the driver registers for the close callback
+            # and re-connects after receiving the callback
+            self.assertRaises(exception.HypervisorUnavailable,
+                              conn.init_host,
+                              "wibble")
+            self.assertTrue(service_mock.disabled)
 
     def test_command_with_broken_connection(self):
         self.mox.UnsetStubs()
-        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        service_mock = mock.MagicMock()
+        service_mock.disabled.return_value = False
         with contextlib.nested(
-            mock.patch.object(libvirt, 'openAuth',
-                              side_effect=libvirt.libvirtError("fake")),
-            mock.patch.object(libvirt.libvirtError, "get_error_code"),
-            mock.patch.object(libvirt.libvirtError, "get_error_domain"),
-            mock.patch.object(conn, '_set_host_enabled')):
+            mock.patch.object(conn._host, "_connect",
+                              side_effect=fakelibvirt.make_libvirtError(
+                                  libvirt.libvirtError,
+                                  "Failed to connect to host",
+                                  error_code=libvirt.VIR_ERR_INTERNAL_ERROR)),
+            mock.patch.object(conn._host, "_init_events",
+                              return_value=None),
+            mock.patch.object(host.Host, "has_min_version",
+                              return_value=True),
+            mock.patch.object(conn, "_do_quality_warnings",
+                              return_value=None),
+            mock.patch.object(objects.Service, "get_by_compute_host",
+                              return_value=service_mock)):
+
+            conn.init_host("wibble")
             self.assertRaises(exception.HypervisorUnavailable,
                               conn.get_num_instances)
-
-    def test_broken_connection_disable_service(self):
-        self.mox.UnsetStubs()
-        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        conn._init_events_pipe()
-        with contextlib.nested(
-            mock.patch.object(conn, '_set_host_enabled')):
-            conn._close_callback(conn._wrapped_conn, 'ERROR!', '')
-            conn._dispatch_events()
-            conn._set_host_enabled.assert_called_once_with(
-                False,
-                disable_reason=u'Connection to libvirt lost: ERROR!')
+            self.assertTrue(service_mock.disabled)
 
     def test_service_resume_after_broken_connection(self):
         self.mox.UnsetStubs()
@@ -7238,29 +7170,21 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         service_mock = mock.MagicMock()
         service_mock.disabled.return_value = True
         with contextlib.nested(
-            mock.patch.object(libvirt, 'openAuth',
+            mock.patch.object(conn._host, "_connect",
                               return_value=mock.MagicMock()),
+            mock.patch.object(conn._host, "_init_events",
+                              return_value=None),
+            mock.patch.object(host.Host, "has_min_version",
+                              return_value=True),
+            mock.patch.object(conn, "_do_quality_warnings",
+                              return_value=None),
             mock.patch.object(objects.Service, "get_by_compute_host",
                               return_value=service_mock)):
 
+            conn.init_host("wibble")
             conn.get_num_instances()
             self.assertTrue(not service_mock.disabled and
                             service_mock.disabled_reason is 'None')
-
-    def test_broken_connection_no_wrapped_conn(self):
-        # Tests that calling _close_callback when _wrapped_conn is None
-        # is a no-op, i.e. set_host_enabled won't be called.
-        self.mox.UnsetStubs()
-        # conn._wrapped_conn will be None since we never call libvirt.openAuth
-        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
-        # create our mock connection that libvirt will send to the callback
-        mock_failed_conn = mock.MagicMock()
-        mock_failed_conn.__getitem__.return_value = True
-        # nothing should happen when calling _close_callback since
-        # _wrapped_conn is None in the driver
-        conn._init_events_pipe()
-        conn._close_callback(mock_failed_conn, reason=None, opaque=None)
-        conn._dispatch_events()
 
     def test_immediate_delete(self):
         def fake_lookup_by_name(instance_name):
@@ -7916,8 +7840,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertTrue(mock_attachDevice.called)
 
     @mock.patch.object(objects.Flavor, 'get_by_id')
-    @mock.patch.object(libvirt_driver.LibvirtDriver,
-                       '_has_min_version', return_value=True)
+    @mock.patch.object(host.Host,
+                       'has_min_version', return_value=True)
     @mock.patch.object(FakeVirtDomain, 'detachDeviceFlags')
     @mock.patch.object(compute_utils, 'get_image_metadata', return_value=None)
     def test_detach_sriov_ports(self,
@@ -8486,7 +8410,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                   'mem': {'total': 1024, 'used': 0},
                                   'id': 1}]}
         with contextlib.nested(
-                mock.patch.object(conn, '_has_min_version', return_value=True),
+                mock.patch.object(host.Host, 'has_min_version',
+                                  return_value=True),
                 mock.patch.object(
                     conn, '_get_host_capabilities', return_value=caps),
                 mock.patch.object(
@@ -8504,7 +8429,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         with contextlib.nested(
-            mock.patch.object(conn, '_has_min_version', return_value=True),
+            mock.patch.object(host.Host, 'has_min_version', return_value=True),
             mock.patch.object(conn, '_get_host_capabilities',
                               return_value=caps)
         ) as (has_min_version, get_caps):
@@ -8514,7 +8439,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     def test_get_host_numa_topology_not_supported(self):
         # Tests that libvirt isn't new enough to support numa topology.
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        with mock.patch.object(conn, '_has_min_version', return_value=False):
+        with mock.patch.object(host.Host, 'has_min_version',
+                               return_value=False):
             self.assertIsNone(conn._get_host_numa_topology())
 
     def test_diagnostic_vcpus_exception(self):
@@ -9249,122 +9175,6 @@ Active:          8381604 kB
         got = conn._get_instance_capabilities()
         self.assertEqual(want, got)
 
-    def test_event_dispatch(self):
-        # Validate that the libvirt self-pipe for forwarding
-        # events between threads is working sanely
-        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        got_events = []
-
-        def handler(event):
-            got_events.append(event)
-
-        conn.register_event_listener(handler)
-
-        conn._init_events_pipe()
-
-        event1 = virtevent.LifecycleEvent(
-            "cef19ce0-0ca2-11df-855d-b19fbce37686",
-            virtevent.EVENT_LIFECYCLE_STARTED)
-        event2 = virtevent.LifecycleEvent(
-            "cef19ce0-0ca2-11df-855d-b19fbce37686",
-            virtevent.EVENT_LIFECYCLE_PAUSED)
-        conn._queue_event(event1)
-        conn._queue_event(event2)
-        conn._dispatch_events()
-
-        want_events = [event1, event2]
-        self.assertEqual(want_events, got_events)
-
-        event3 = virtevent.LifecycleEvent(
-            "cef19ce0-0ca2-11df-855d-b19fbce37686",
-            virtevent.EVENT_LIFECYCLE_RESUMED)
-        event4 = virtevent.LifecycleEvent(
-            "cef19ce0-0ca2-11df-855d-b19fbce37686",
-            virtevent.EVENT_LIFECYCLE_STOPPED)
-
-        conn._queue_event(event3)
-        conn._queue_event(event4)
-        conn._dispatch_events()
-
-        want_events = [event1, event2, event3, event4]
-        self.assertEqual(want_events, got_events)
-
-    def test_event_lifecycle(self):
-        # Validate that libvirt events are correctly translated
-        # to Nova events
-        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        got_events = []
-
-        def handler(event):
-            got_events.append(event)
-
-        conn.register_event_listener(handler)
-        conn._init_events_pipe()
-        fake_dom_xml = """
-                <domain type='kvm'>
-                  <uuid>cef19ce0-0ca2-11df-855d-b19fbce37686</uuid>
-                  <devices>
-                    <disk type='file'>
-                      <source file='filename'/>
-                    </disk>
-                  </devices>
-                </domain>
-            """
-        dom = FakeVirtDomain(fake_dom_xml,
-                             "cef19ce0-0ca2-11df-855d-b19fbce37686")
-
-        conn._event_lifecycle_callback(conn._conn,
-                                       dom,
-                                       libvirt.VIR_DOMAIN_EVENT_STOPPED,
-                                       0,
-                                       conn)
-        conn._dispatch_events()
-        self.assertEqual(len(got_events), 1)
-        self.assertIsInstance(got_events[0], virtevent.LifecycleEvent)
-        self.assertEqual(got_events[0].uuid,
-                         "cef19ce0-0ca2-11df-855d-b19fbce37686")
-        self.assertEqual(got_events[0].transition,
-                         virtevent.EVENT_LIFECYCLE_STOPPED)
-
-    @mock.patch.object(libvirt_driver.LibvirtDriver, 'emit_event')
-    def test_event_emit_delayed_call_now(self, emit_event_mock):
-        self.flags(virt_type="kvm", group="libvirt")
-        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        conn._event_emit_delayed(None)
-        emit_event_mock.assert_called_once_with(None)
-
-    @mock.patch.object(greenthread, 'spawn_after')
-    def test_event_emit_delayed_call_delayed(self, spawn_after_mock):
-        CONF.set_override("virt_type", "xen", group="libvirt")
-        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        event = virtevent.LifecycleEvent(
-            "cef19ce0-0ca2-11df-855d-b19fbce37686",
-            virtevent.EVENT_LIFECYCLE_STOPPED)
-        conn._event_emit_delayed(event)
-        spawn_after_mock.assert_called_once_with(15, conn.emit_event, event)
-
-    @mock.patch.object(greenthread, 'spawn_after')
-    def test_event_emit_delayed_call_delayed_pending(self, spawn_after_mock):
-        self.flags(virt_type="xen", group="libvirt")
-        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        uuid = "cef19ce0-0ca2-11df-855d-b19fbce37686"
-        conn._events_delayed[uuid] = None
-        event = virtevent.LifecycleEvent(
-            uuid, virtevent.EVENT_LIFECYCLE_STOPPED)
-        conn._event_emit_delayed(event)
-        self.assertFalse(spawn_after_mock.called)
-
-    def test_event_delayed_cleanup(self):
-        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        uuid = "cef19ce0-0ca2-11df-855d-b19fbce37686"
-        event = virtevent.LifecycleEvent(
-            uuid, virtevent.EVENT_LIFECYCLE_STARTED)
-        gt_mock = mock.Mock()
-        conn._events_delayed[uuid] = gt_mock
-        conn._event_delayed_cleanup(event)
-        gt_mock.cancel.assert_called_once_with()
-        self.assertNotIn(uuid, conn._events_delayed.keys())
-
     def test_set_cache_mode(self):
         self.flags(disk_cachemodes=['file=directsync'], group='libvirt')
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -9925,82 +9735,14 @@ Active:          8381604 kB
             self.assertFalse(conn.is_supported_fs_format(fs))
 
     def test_hypervisor_hostname_caching(self):
-        # Make sure that the first hostname is always returned
-        class FakeConn(object):
-            def getHostname(self):
-                pass
-
-            def getLibVersion(self):
-                return 99999
-
-        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        conn._wrapped_conn = FakeConn()
-        self.mox.StubOutWithMock(conn._wrapped_conn, 'getHostname')
-        conn._conn.getHostname().AndReturn('foo')
-        conn._conn.getHostname().AndReturn('bar')
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        conn = drvr._conn
+        self.mox.StubOutWithMock(conn, 'getHostname')
+        conn.getHostname().AndReturn('foo')
+        conn.getHostname().AndReturn('bar')
         self.mox.ReplayAll()
-        self.assertEqual('foo', conn._get_hypervisor_hostname())
-        self.assertEqual('foo', conn._get_hypervisor_hostname())
-
-    def test_get_connection_serial(self):
-
-        def get_conn_currency(driver):
-            driver._conn.getLibVersion()
-
-        def connect_with_block(*a, **k):
-            # enough to allow another connect to run
-            eventlet.sleep(0)
-            self.connect_calls += 1
-            return self.conn
-
-        def fake_register(*a, **k):
-            self.register_calls += 1
-
-        self.connect_calls = 0
-        self.register_calls = 0
-        self.stubs.Set(libvirt_driver.LibvirtDriver,
-                       '_connect', connect_with_block)
-        driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        self.stubs.Set(self.conn, 'domainEventRegisterAny', fake_register)
-
-        # call serially
-        get_conn_currency(driver)
-        get_conn_currency(driver)
-        self.assertEqual(self.connect_calls, 1)
-        self.assertEqual(self.register_calls, 1)
-
-    def test_get_connection_concurrency(self):
-
-        def get_conn_currency(driver):
-            driver._conn.getLibVersion()
-
-        def connect_with_block(*a, **k):
-            # enough to allow another connect to run
-            eventlet.sleep(0)
-            self.connect_calls += 1
-            return self.conn
-
-        def fake_register(*a, **k):
-            self.register_calls += 1
-
-        self.connect_calls = 0
-        self.register_calls = 0
-        self.stubs.Set(libvirt_driver.LibvirtDriver,
-                       '_connect', connect_with_block)
-        driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        self.stubs.Set(self.conn, 'domainEventRegisterAny', fake_register)
-
-        # call concurrently
-        thr1 = eventlet.spawn(get_conn_currency, driver=driver)
-        thr2 = eventlet.spawn(get_conn_currency, driver=driver)
-
-        # let threads run
-        eventlet.sleep(0)
-
-        thr1.wait()
-        thr2.wait()
-        self.assertEqual(self.connect_calls, 1)
-        self.assertEqual(self.register_calls, 1)
+        self.assertEqual('foo', drvr._get_hypervisor_hostname())
+        self.assertEqual('foo', drvr._get_hypervisor_hostname())
 
     def test_post_live_migration_at_destination_with_block_device_info(self):
         # Preparing mocks
@@ -12378,14 +12120,14 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
         domain.XMLDesc(0).AndReturn(self.dom_xml)
 
         self.mox.StubOutWithMock(self.conn, '_lookup_by_name')
-        self.mox.StubOutWithMock(self.conn, '_has_min_version')
+        self.mox.StubOutWithMock(self.conn._host, 'has_min_version')
         self.mox.StubOutWithMock(domain, 'blockRebase')
         self.mox.StubOutWithMock(domain, 'blockCommit')
         self.mox.StubOutWithMock(domain, 'blockJobInfo')
 
         self.conn._lookup_by_name('instance-%s' % instance['id']).\
             AndReturn(domain)
-        self.conn._has_min_version(mox.IgnoreArg()).AndReturn(True)
+        self.conn._host.has_min_version(mox.IgnoreArg()).AndReturn(True)
 
         domain.blockRebase('vda', 'snap.img', 0, 0)
 
@@ -12410,14 +12152,14 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
         domain.XMLDesc(0).AndReturn(self.dom_xml)
 
         self.mox.StubOutWithMock(self.conn, '_lookup_by_name')
-        self.mox.StubOutWithMock(self.conn, '_has_min_version')
+        self.mox.StubOutWithMock(self.conn._host, 'has_min_version')
         self.mox.StubOutWithMock(domain, 'blockRebase')
         self.mox.StubOutWithMock(domain, 'blockCommit')
         self.mox.StubOutWithMock(domain, 'blockJobInfo')
 
         self.conn._lookup_by_name('instance-%s' % instance['id']).\
             AndReturn(domain)
-        self.conn._has_min_version(mox.IgnoreArg()).AndReturn(True)
+        self.conn._host.has_min_version(mox.IgnoreArg()).AndReturn(True)
 
         domain.blockCommit('vda', 'other-snap.img', 'snap.img', 0, 0)
 
@@ -12501,9 +12243,9 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
 
         self.mox.StubOutWithMock(self.conn, '_lookup_by_name')
         self.mox.StubOutWithMock(self.conn, '_volume_api')
-        self.mox.StubOutWithMock(self.conn, '_has_min_version')
+        self.mox.StubOutWithMock(self.conn._host, 'has_min_version')
 
-        self.conn._has_min_version(mox.IgnoreArg()).AndReturn(True)
+        self.conn._host.has_min_version(mox.IgnoreArg()).AndReturn(True)
 
         self.conn._volume_api.update_snapshot_status(
             self.c, self.snapshot_id, 'error_deleting')
@@ -12539,14 +12281,14 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
         domain.XMLDesc(0).AndReturn(self.dom_netdisk_xml)
 
         self.mox.StubOutWithMock(self.conn, '_lookup_by_name')
-        self.mox.StubOutWithMock(self.conn, '_has_min_version')
+        self.mox.StubOutWithMock(self.conn._host, 'has_min_version')
         self.mox.StubOutWithMock(domain, 'blockRebase')
         self.mox.StubOutWithMock(domain, 'blockCommit')
         self.mox.StubOutWithMock(domain, 'blockJobInfo')
 
         self.conn._lookup_by_name('instance-%s' % instance['id']).\
             AndReturn(domain)
-        self.conn._has_min_version(mox.IgnoreArg()).AndReturn(True)
+        self.conn._host.has_min_version(mox.IgnoreArg()).AndReturn(True)
 
         domain.blockRebase('vdb', 'vdb[1]', 0, 0)
 
@@ -12581,14 +12323,14 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
         domain.XMLDesc(0).AndReturn(self.dom_netdisk_xml)
 
         self.mox.StubOutWithMock(self.conn, '_lookup_by_name')
-        self.mox.StubOutWithMock(self.conn, '_has_min_version')
+        self.mox.StubOutWithMock(self.conn._host, 'has_min_version')
         self.mox.StubOutWithMock(domain, 'blockRebase')
         self.mox.StubOutWithMock(domain, 'blockCommit')
         self.mox.StubOutWithMock(domain, 'blockJobInfo')
 
         self.conn._lookup_by_name('instance-%s' % instance['id']).\
             AndReturn(domain)
-        self.conn._has_min_version(mox.IgnoreArg()).AndReturn(True)
+        self.conn._host.has_min_version(mox.IgnoreArg()).AndReturn(True)
 
         domain.blockCommit('vdb', 'vdb[0]', 'vdb[1]', 0,
                            fakelibvirt.VIR_DOMAIN_BLOCK_COMMIT_RELATIVE)
