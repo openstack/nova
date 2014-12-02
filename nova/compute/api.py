@@ -328,7 +328,8 @@ class API(base.Base):
 
         # Check number of files first
         try:
-            QUOTAS.limit_check(context, injected_files=len(injected_files))
+            objects.Quotas.limit_check(context,
+                                       injected_files=len(injected_files))
         except exception.OverQuota:
             raise exception.OnsetFileLimitExceeded()
 
@@ -341,8 +342,9 @@ class API(base.Base):
             max_content = max(max_content, len(content))
 
         try:
-            QUOTAS.limit_check(context, injected_file_path_bytes=max_path,
-                               injected_file_content_bytes=max_content)
+            objects.Quotas.limit_check(context,
+                                       injected_file_path_bytes=max_path,
+                                       injected_file_content_bytes=max_content)
         except exception.OverQuota as exc:
             # Favor path limit over content limit for reporting
             # purposes
@@ -458,7 +460,7 @@ class API(base.Base):
             raise exception.InvalidMetadata(reason=msg)
         num_metadata = len(metadata)
         try:
-            QUOTAS.limit_check(context, metadata_items=num_metadata)
+            objects.Quotas.limit_check(context, metadata_items=num_metadata)
         except exception.OverQuota as exc:
             quota_metadata = exc.kwargs['quotas']['metadata_items']
             raise exception.MetadataLimitExceeded(allowed=quota_metadata)
@@ -902,12 +904,12 @@ class API(base.Base):
 
                 if instance_group:
                     if check_server_group_quota:
-                        count = QUOTAS.count(context,
+                        count = objects.Quotas.count(context,
                                              'server_group_members',
                                              instance_group,
                                              context.user_id)
                         try:
-                            QUOTAS.limit_check(context,
+                            objects.Quotas.limit_check(context,
                                                server_group_members=count + 1)
                         except exception.OverQuota:
                             msg = _("Quota exceeded, too many servers in "
@@ -3701,9 +3703,10 @@ class KeypairAPI(base.Base):
                 reason=_('Keypair name must be string and between '
                          '1 and 255 characters long'))
 
-        count = QUOTAS.count(context, 'key_pairs', user_id)
+        count = objects.Quotas.count(context, 'key_pairs', user_id)
+
         try:
-            QUOTAS.limit_check(context, key_pairs=count + 1)
+            objects.Quotas.limit_check(context, key_pairs=count + 1)
         except exception.OverQuota:
             raise exception.KeypairLimitExceeded()
 
@@ -4011,10 +4014,10 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
         this function is written to support both.
         """
 
-        count = QUOTAS.count(context, 'security_group_rules', id)
+        count = objects.Quotas.count(context, 'security_group_rules', id)
         try:
             projected = count + len(vals)
-            QUOTAS.limit_check(context, security_group_rules=projected)
+            objects.Quotas.limit_check(context, security_group_rules=projected)
         except exception.OverQuota:
             msg = _("Quota exceeded, too many security group rules.")
             self.raise_over_quota(msg)
