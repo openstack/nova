@@ -54,6 +54,19 @@ class NUMACell(base.NovaObject,
     def free_cpus(self):
         return self.cpuset - self.pinned_cpus or set()
 
+    @property
+    def free_siblings(self):
+        return [sibling_set & self.free_cpus
+                for sibling_set in self.siblings]
+
+    @property
+    def avail_cpus(self):
+        return len(self.free_cpus)
+
+    @property
+    def avail_memory(self):
+        return self.memory - self.memory_usage
+
     def _to_dict(self):
         return {
             'id': self.id,

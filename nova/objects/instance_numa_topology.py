@@ -30,7 +30,7 @@ class InstanceNUMACell(base.NovaObject,
     VERSION = '1.2'
 
     fields = {
-        'id': obj_fields.IntegerField(read_only=True),
+        'id': obj_fields.IntegerField(),
         'cpuset': obj_fields.SetOfIntegersField(),
         'memory': obj_fields.IntegerField(),
         'pagesize': obj_fields.IntegerField(nullable=True),
