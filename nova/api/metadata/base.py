@@ -238,7 +238,7 @@ class InstanceMetadata():
             'ami-manifest-path': 'FIXME',
             'instance-id': self.ec2_ids['instance-id'],
             'hostname': hostname,
-            'local-ipv4': self.address or fixed_ip,
+            'local-ipv4': fixed_ip or self.address,
             'reservation-id': self.instance['reservation_id'],
             'security-groups': fmt_sgroups}
 
