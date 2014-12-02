@@ -17,7 +17,6 @@ Test suite for the Hyper-V driver and related APIs.
 """
 
 import contextlib
-import io
 import os
 import shutil
 import time
@@ -30,7 +29,6 @@ from oslo.utils import units
 
 from nova.api.metadata import base as instance_metadata
 from nova.compute import power_state
-from nova.compute import task_states
 from nova import context
 from nova import db
 from nova import exception
@@ -40,7 +38,6 @@ from nova.openstack.common import fileutils
 from nova import test
 from nova.tests.unit import fake_network
 from nova.tests.unit.image import fake as fake_image
-from nova.tests.unit import matchers
 from nova.tests.unit.virt.hyperv import db_fakes
 from nova.tests.unit.virt.hyperv import fake
 from nova import utils
@@ -161,8 +158,6 @@ class HyperVAPIBaseTestCase(test.NoDBTestCase):
         self._mox.StubOutWithMock(vmutils.VMUtils, 'set_vm_state')
         self._mox.StubOutWithMock(vmutils.VMUtils, 'list_instances')
         self._mox.StubOutWithMock(vmutils.VMUtils, 'get_vm_summary_info')
-        self._mox.StubOutWithMock(vmutils.VMUtils, 'take_vm_snapshot')
-        self._mox.StubOutWithMock(vmutils.VMUtils, 'remove_vm_snapshot')
         self._mox.StubOutWithMock(vmutils.VMUtils, 'set_nic_connection')
         self._mox.StubOutWithMock(vmutils.VMUtils, 'get_vm_scsi_controller')
         self._mox.StubOutWithMock(vmutils.VMUtils, 'get_vm_ide_controller')
@@ -616,104 +611,6 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
         except NotImplementedError:
             self.fail("test_get_instance_disk_info() should not raise "
                       "NotImplementedError")
-
-    def test_snapshot_with_update_failure(self):
-        (snapshot_name, func_call_matcher) = self._setup_snapshot_mocks()
-
-        self._update_image_raise_exception = True
-
-        self._mox.ReplayAll()
-        self.assertRaises(vmutils.HyperVException, self._conn.snapshot,
-                          self._context, self._instance_data, snapshot_name,
-                          func_call_matcher.call)
-        self._mox.VerifyAll()
-
-        # Assert states changed in correct order
-        self.assertIsNone(func_call_matcher.match())
-
-    def _setup_snapshot_mocks(self):
-        expected_calls = [
-            {'args': (),
-             'kwargs': {'task_state': task_states.IMAGE_PENDING_UPLOAD}},
-            {'args': (),
-             'kwargs': {'task_state': task_states.IMAGE_UPLOADING,
-                        'expected_state': task_states.IMAGE_PENDING_UPLOAD}}
-        ]
-        func_call_matcher = matchers.FunctionCallMatcher(expected_calls)
-
-        snapshot_name = 'test_snapshot_' + str(uuid.uuid4())
-
-        fake_hv_snapshot_path = 'fake_snapshot_path'
-        fake_parent_vhd_path = 'C:\\fake_vhd_path\\parent.vhd'
-
-        self._instance_data = self._get_instance_data()
-
-        func = mox.Func(self._check_instance_name)
-        m = vmutils.VMUtils.take_vm_snapshot(func)
-        m.AndReturn(fake_hv_snapshot_path)
-
-        m = fake.PathUtils.get_instance_dir(mox.IsA(str))
-        m.AndReturn(self._test_instance_dir)
-
-        m = vhdutils.VHDUtils.get_vhd_parent_path(mox.IsA(str))
-        m.AndReturn(fake_parent_vhd_path)
-
-        self._fake_dest_disk_path = None
-
-        def copy_dest_disk_path(src, dest):
-            self._fake_dest_disk_path = dest
-
-        m = fake.PathUtils.copyfile(mox.IsA(str), mox.IsA(str))
-        m.WithSideEffects(copy_dest_disk_path)
-
-        self._fake_dest_base_disk_path = None
-
-        def copy_dest_base_disk_path(src, dest):
-            self._fake_dest_base_disk_path = dest
-
-        m = fake.PathUtils.copyfile(fake_parent_vhd_path, mox.IsA(str))
-        m.WithSideEffects(copy_dest_base_disk_path)
-
-        def check_dest_disk_path(path):
-            return path == self._fake_dest_disk_path
-
-        def check_dest_base_disk_path(path):
-            return path == self._fake_dest_base_disk_path
-
-        func1 = mox.Func(check_dest_disk_path)
-        func2 = mox.Func(check_dest_base_disk_path)
-        # Make sure that the hyper-v base and differential VHDs are merged
-        vhdutils.VHDUtils.reconnect_parent_vhd(func1, func2)
-        vhdutils.VHDUtils.merge_vhd(func1, func2)
-
-        def check_snapshot_path(snapshot_path):
-            return snapshot_path == fake_hv_snapshot_path
-
-        # Make sure that the Hyper-V snapshot is removed
-        func = mox.Func(check_snapshot_path)
-        vmutils.VMUtils.remove_vm_snapshot(func)
-
-        fake.PathUtils.rmtree(mox.IsA(str))
-
-        m = fake.PathUtils.open(func2, 'rb')
-        m.AndReturn(io.BytesIO(b'fake content'))
-
-        return (snapshot_name, func_call_matcher)
-
-    def test_snapshot(self):
-        (snapshot_name, func_call_matcher) = self._setup_snapshot_mocks()
-
-        self._mox.ReplayAll()
-        self._conn.snapshot(self._context, self._instance_data, snapshot_name,
-                            func_call_matcher.call)
-        self._mox.VerifyAll()
-
-        self.assertTrue(self._image_metadata)
-        self.assertIn("disk_format", self._image_metadata)
-        self.assertEqual("vhd", self._image_metadata["disk_format"])
-
-        # Assert states changed in correct order
-        self.assertIsNone(func_call_matcher.match())
 
     def _get_instance_data(self):
         instance_name = 'openstack_unit_test_vm_' + str(uuid.uuid4())
