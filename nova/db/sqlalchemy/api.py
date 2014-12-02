@@ -39,6 +39,7 @@ from sqlalchemy.exc import NoSuchTableError
 from sqlalchemy import Integer
 from sqlalchemy import MetaData
 from sqlalchemy import or_
+from sqlalchemy.orm import aliased
 from sqlalchemy.orm import contains_eager
 from sqlalchemy.orm import joinedload
 from sqlalchemy.orm import joinedload_all
@@ -1904,6 +1905,23 @@ def instance_get_all_by_filters_sort(context, filters, limit=None, marker=None,
     |                    include or exclude instances whose
     |                    vm_state is SOFT_DELETED.
 
+    A fourth type of filter (also using exact matching), filters
+    based on instance tags (not metadata tags). There are two types
+    of these tags:
+
+    `tag` -- One or more strings that will be used to filter results
+            in an AND expression.
+
+    `tag-any` -- One or more strings that will be used to filter results in
+            an OR expression.
+
+    Tags should be represented as list::
+
+    |    filters = {
+    |        'tag': [some-tag, some-another-tag],
+    |        'tag-any: [some-any-tag, some-another-any-tag]
+    |    }
+
     """
     # NOTE(mriedem): If the limit is 0 there is no point in even going
     # to the database since nothing is going to be returned anyway.
@@ -1972,6 +1990,27 @@ def instance_get_all_by_filters_sort(context, filters, limit=None, marker=None,
             query_prefix = query_prefix.filter(models.Instance.cleaned == 1)
         else:
             query_prefix = query_prefix.filter(models.Instance.cleaned == 0)
+
+    if 'tag' in filters:
+        tags = filters.pop('tag')
+        # We build a JOIN ladder expression for each tag, JOIN'ing
+        # the first tag to the instances table, and each subsequent
+        # tag to the last JOIN'd tags table
+        first_tag = tags.pop(0)
+        query_prefix = query_prefix.join(models.Instance.tags)
+        query_prefix = query_prefix.filter(models.Tag.tag == first_tag)
+
+        for tag in tags:
+            tag_alias = aliased(models.Tag)
+            query_prefix = query_prefix.join(tag_alias,
+                                             models.Instance.tags)
+            query_prefix = query_prefix.filter(tag_alias.tag == tag)
+
+    if 'tag-any' in filters:
+        tags = filters.pop('tag-any')
+        tag_alias = aliased(models.Tag)
+        query_prefix = query_prefix.join(tag_alias, models.Instance.tags)
+        query_prefix = query_prefix.filter(tag_alias.tag.in_(tags))
 
     if not context.is_admin:
         # If we're not admin context, add appropriate filter..
