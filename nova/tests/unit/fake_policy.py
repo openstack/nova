@@ -309,6 +309,7 @@ policy_data = """
     "compute_extension:v3:os-suspend-server:resume": "",
     "compute_extension:users": "",
     "compute_extension:virtual_interfaces": "",
+    "compute_extension:v3:os-virtual-interfaces": "",
     "compute_extension:virtual_storage_arrays": "",
     "compute_extension:volumes": "",
     "compute_extension:volume_attachments:index": "",
