@@ -282,6 +282,7 @@ class ComputeAPI(object):
         * 3.37 - Add clean_shutdown to stop, resize, rescue, shelve, and
                  shelve_offload
         * 3.38 - Add clean_shutdown to prep_resize
+        * 3.39 - Add quiesce_instance and unquiesce_instance methods
     '''
 
     VERSION_ALIASES = {
@@ -976,6 +977,19 @@ class ComputeAPI(object):
                 security_groups=security_groups,
                 block_device_mapping=block_device_mapping, node=node,
                 limits=limits)
+
+    def quiesce_instance(self, ctxt, instance):
+        version = '3.39'
+        cctxt = self.client.prepare(server=_compute_host(None, instance),
+                version=version)
+        return cctxt.call(ctxt, 'quiesce_instance', instance=instance)
+
+    def unquiesce_instance(self, ctxt, instance, mapping=None):
+        version = '3.39'
+        cctxt = self.client.prepare(server=_compute_host(None, instance),
+                version=version)
+        cctxt.cast(ctxt, 'unquiesce_instance', instance=instance,
+                   mapping=mapping)
 
 
 class SecurityGroupAPI(object):

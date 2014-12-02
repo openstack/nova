@@ -77,6 +77,7 @@ from nova.network.security_group import openstack_driver
 from nova import objects
 from nova.objects import base as obj_base
 from nova.openstack.common import log as logging
+from nova.openstack.common import loopingcall
 from nova.openstack.common import periodic_task
 from nova import paths
 from nova import rpc
@@ -591,7 +592,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='3.38')
+    target = messaging.Target(version='3.39')
 
     # How long to wait in seconds before re-issuing a shutdown
     # signal to a instance during power off.  The overall
@@ -6327,3 +6328,51 @@ class ComputeManager(manager.Manager):
                     instance.cleaned = True
                 with utils.temporary_mutation(context, read_deleted='yes'):
                     instance.save()
+
+    @messaging.expected_exceptions(exception.InstanceQuiesceNotSupported,
+                                   exception.NovaException,
+                                   NotImplementedError)
+    @wrap_exception()
+    def quiesce_instance(self, context, instance):
+        """Quiesce an instance on this host."""
+        context = context.elevated()
+        image_ref = instance.image_ref
+        image_meta = compute_utils.get_image_metadata(
+            context, self.image_api, image_ref, instance)
+        self.driver.quiesce(context, instance, image_meta)
+
+    def _wait_for_snapshots_completion(self, context, mapping):
+        for mapping_dict in mapping:
+            if mapping_dict.get('source_type') == 'snapshot':
+
+                def _wait_snapshot():
+                    snapshot = self.volume_api.get_snapshot(
+                        context, mapping_dict['snapshot_id'])
+                    if snapshot.get('status') != 'creating':
+                        raise loopingcall.LoopingCallDone()
+
+                timer = loopingcall.FixedIntervalLoopingCall(_wait_snapshot)
+                timer.start(interval=0.5).wait()
+
+    @messaging.expected_exceptions(exception.InstanceQuiesceNotSupported,
+                                   exception.NovaException,
+                                   NotImplementedError)
+    @wrap_exception()
+    def unquiesce_instance(self, context, instance, mapping=None):
+        """Unquiesce an instance on this host.
+
+        If snapshots' image mapping is provided, it waits until snapshots are
+        completed before unqueiscing.
+        """
+        context = context.elevated()
+        if mapping:
+            try:
+                self._wait_for_snapshots_completion(context, mapping)
+            except Exception as error:
+                LOG.exception(_LE("Exception while waiting completion of "
+                                  "volume snapshots: %s"),
+                              error, instance=instance)
+        image_ref = instance.image_ref
+        image_meta = compute_utils.get_image_metadata(
+            context, self.image_api, image_ref, instance)
+        self.driver.unquiesce(context, instance, image_meta)

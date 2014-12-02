@@ -2222,6 +2222,21 @@ class API(base.Base):
             properties['root_device_name'] = instance['root_device_name']
         properties.update(extra_properties or {})
 
+        quiesced = False
+        if instance['vm_state'] == vm_states.ACTIVE:
+            try:
+                self.compute_rpcapi.quiesce_instance(context, instance)
+                quiesced = True
+            except (exception.InstanceQuiesceNotSupported,
+                    exception.NovaException, NotImplementedError) as err:
+                if strutils.bool_from_string(properties.get(
+                        'os_require_quiesce')):
+                    raise
+                else:
+                    LOG.info(_LI('Skipping quiescing instance: '
+                                 '%(reason)s.'), {'reason': err},
+                             context=context, instance=instance)
+
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                 context, instance['uuid'])
 
@@ -2246,6 +2261,9 @@ class API(base.Base):
                 mapping_dict = bdm.get_image_mapping()
 
             mapping.append(mapping_dict)
+
+        if quiesced:
+            self.compute_rpcapi.unquiesce_instance(context, instance, mapping)
 
         # NOTE (ndipanov): Remove swap/ephemerals from mappings as they will be
         # in the block_device_mapping for the new image.

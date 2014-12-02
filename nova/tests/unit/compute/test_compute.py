@@ -7193,6 +7193,24 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual('ide', vol_bdm.disk_bus)
         self.assertEqual('disk', vol_bdm.device_type)
 
+    @mock.patch.object(cinder.API, 'get_snapshot')
+    def test_quiesce(self, mock_snapshot_get):
+        # ensure instance can be quiesced and unquiesced
+        instance = self._create_fake_instance_obj()
+        mapping = [{'source_type': 'snapshot', 'snapshot_id': 'fake-id1'},
+                   {'source_type': 'snapshot', 'snapshot_id': 'fake-id2'}]
+        # unquiesce should wait until volume snapshots are completed
+        mock_snapshot_get.side_effect = [{'status': 'creating'},
+                                         {'status': 'available'}] * 2
+        self.compute.run_instance(self.context, instance, {}, {}, [], None,
+                None, True, None, False)
+        self.compute.quiesce_instance(self.context, instance)
+        self.compute.unquiesce_instance(self.context, instance, mapping)
+        self.compute.terminate_instance(self.context, instance, [], [])
+        mock_snapshot_get.assert_any_call(mock.ANY, 'fake-id1')
+        mock_snapshot_get.assert_any_call(mock.ANY, 'fake-id2')
+        self.assertEqual(4, mock_snapshot_get.call_count)
+
 
 class ComputeAPITestCase(BaseTestCase):
     def setUp(self):

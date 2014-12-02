@@ -558,3 +558,11 @@ class ComputeRpcAPITestCase(test.TestCase):
                 security_groups=None,
                 block_device_mapping=None, node='node', limits=[],
                 version='3.23')
+
+    def test_quiesce_instance(self):
+        self._test_compute_api('quiesce_instance', 'call',
+                instance=self.fake_instance_obj, version='3.39')
+
+    def test_unquiesce_instance(self):
+        self._test_compute_api('unquiesce_instance', 'cast',
+                instance=self.fake_instance_obj, mapping=None, version='3.39')

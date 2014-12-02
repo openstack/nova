@@ -972,6 +972,13 @@ class ServerActionsControllerTestV21(test.TestCase):
                                            root_device_name='/dev/vda')
         self.stubs.Set(db, 'instance_get_by_uuid', instance)
 
+        self.mox.StubOutWithMock(self.controller.compute_api.compute_rpcapi,
+                                 'quiesce_instance')
+        self.controller.compute_api.compute_rpcapi.quiesce_instance(
+            mox.IgnoreArg(), mox.IgnoreArg()).AndRaise(
+                exception.InstanceQuiesceNotSupported(instance_id='fake',
+                                                      reason='test'))
+
         volume = dict(id=_fake_id('a'),
                       size=1,
                       host='fake',
@@ -1050,6 +1057,13 @@ class ServerActionsControllerTestV21(test.TestCase):
                                            vm_state=vm_states.ACTIVE,
                                            root_device_name='/dev/vda')
         self.stubs.Set(db, 'instance_get_by_uuid', instance)
+
+        self.mox.StubOutWithMock(self.controller.compute_api.compute_rpcapi,
+                                 'quiesce_instance')
+        self.controller.compute_api.compute_rpcapi.quiesce_instance(
+            mox.IgnoreArg(), mox.IgnoreArg()).AndRaise(
+                exception.InstanceQuiesceNotSupported(instance_id='fake',
+                                                      reason='test'))
 
         fake_metadata = {'test_key1': 'test_value1',
                          'test_key2': 'test_value2'}

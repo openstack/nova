@@ -212,8 +212,8 @@ def _get_unused_letter(used_letters):
 
 def get_image_metadata(context, image_api, image_id_or_uri, instance):
     image_system_meta = {}
-    # In case of boot from volume, image_id_or_uri may be None
-    if image_id_or_uri is not None:
+    # In case of boot from volume, image_id_or_uri may be None or ''
+    if image_id_or_uri is not None and image_id_or_uri != '':
         # If the base image is still available, get its metadata
         try:
             image = image_api.get(context, image_id_or_uri)
