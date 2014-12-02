@@ -51,7 +51,6 @@ from nova.virt.hyperv import constants
 from nova.virt.hyperv import driver as driver_hyperv
 from nova.virt.hyperv import hostutils
 from nova.virt.hyperv import ioutils
-from nova.virt.hyperv import livemigrationutils
 from nova.virt.hyperv import networkutils
 from nova.virt.hyperv import pathutils
 from nova.virt.hyperv import rdpconsoleutils
@@ -202,11 +201,6 @@ class HyperVAPIBaseTestCase(test.NoDBTestCase):
                                   'create_vswitch_port')
         self._mox.StubOutWithMock(networkutils.NetworkUtils,
                                   'vswitch_port_needed')
-
-        self._mox.StubOutWithMock(livemigrationutils.LiveMigrationUtils,
-                                  'live_migrate_vm')
-        self._mox.StubOutWithMock(livemigrationutils.LiveMigrationUtils,
-                                  'check_live_migration_config')
 
         self._mox.StubOutWithMock(basevolumeutils.BaseVolumeUtils,
                                   'volume_in_mapping')
@@ -613,146 +607,6 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
         self._mox.ReplayAll()
         self._conn.destroy(self._context, self._instance_data, None)
         self._mox.VerifyAll()
-
-    def test_live_migration_unsupported_os(self):
-        self._check_min_windows_version_satisfied = False
-        self._conn = driver_hyperv.HyperVDriver(None)
-        self._test_live_migration(unsupported_os=True)
-
-    def test_live_migration_without_volumes(self):
-        self._test_live_migration()
-
-    def test_live_migration_with_volumes(self):
-        self._test_live_migration(with_volumes=True)
-
-    def test_live_migration_with_multiple_luns_per_target(self):
-        self._test_live_migration(with_volumes=True,
-                                  other_luns_available=True)
-
-    def test_live_migration_with_target_failure(self):
-        self._test_live_migration(test_failure=True)
-
-    def _test_live_migration(self, test_failure=False,
-                             with_volumes=False,
-                             other_luns_available=False,
-                             unsupported_os=False):
-        dest_server = 'fake_server'
-
-        instance_data = self._get_instance_data()
-
-        fake_post_method = self._mox.CreateMockAnything()
-        if not test_failure and not unsupported_os:
-            fake_post_method(self._context, instance_data, dest_server,
-                             False)
-
-        fake_recover_method = self._mox.CreateMockAnything()
-        if test_failure:
-            fake_recover_method(self._context, instance_data, dest_server,
-                                False)
-
-        if with_volumes:
-            fake_target_iqn = 'fake_target_iqn'
-            fake_target_lun_count = 1
-
-        if not unsupported_os:
-            m = fake.PathUtils.get_vm_console_log_paths(mox.IsA(str))
-            m.AndReturn(('fake_local_vm_log_path', 'fake_vm_log_path.1'))
-
-            m = fake.PathUtils.get_vm_console_log_paths(
-                mox.IsA(str), remote_server=mox.IsA(str))
-            m.AndReturn(('fake_remote_vm_log_path',
-                         'fake_remote_vm_log_path.1'))
-
-            self._mox.StubOutWithMock(fake.PathUtils, 'exists')
-            m = fake.PathUtils.exists(mox.IsA(str))
-            m.AndReturn(True)
-            m = fake.PathUtils.exists(mox.IsA(str))
-            m.AndReturn(False)
-
-            fake.PathUtils.copy(mox.IsA(str), mox.IsA(str))
-
-            m = livemigrationutils.LiveMigrationUtils.live_migrate_vm(
-                instance_data['name'], dest_server)
-            if test_failure:
-                m.AndRaise(vmutils.HyperVException('Simulated failure'))
-
-            if with_volumes:
-                m.AndReturn({fake_target_iqn: fake_target_lun_count})
-
-                self._mock_logout_storage_target(fake_target_iqn,
-                                                 other_luns_available)
-            else:
-                m.AndReturn({})
-
-        self._mox.ReplayAll()
-        try:
-            hyperv_exception_raised = False
-            unsupported_os_exception_raised = False
-            self._conn.live_migration(self._context, instance_data,
-                                      dest_server, fake_post_method,
-                                      fake_recover_method)
-        except vmutils.HyperVException:
-            hyperv_exception_raised = True
-        except NotImplementedError:
-            unsupported_os_exception_raised = True
-
-        self.assertTrue(not test_failure ^ hyperv_exception_raised)
-        self.assertTrue(not unsupported_os ^ unsupported_os_exception_raised)
-        self._mox.VerifyAll()
-
-    def test_pre_live_migration_cow_image(self):
-        self._test_pre_live_migration(True, False)
-
-    def test_pre_live_migration_no_cow_image(self):
-        self._test_pre_live_migration(False, False)
-
-    def test_pre_live_migration_with_volumes(self):
-        self._test_pre_live_migration(False, True)
-
-    def _test_pre_live_migration(self, cow, with_volumes):
-        self.flags(use_cow_images=cow)
-
-        instance_data = self._get_instance_data()
-        instance = db.instance_create(self._context, instance_data)
-        instance['system_metadata'] = {}
-
-        network_info = fake_network.fake_get_instance_nw_info(self.stubs)
-
-        m = livemigrationutils.LiveMigrationUtils.check_live_migration_config()
-        m.AndReturn(True)
-
-        if cow:
-            self._setup_get_cached_image_mocks(cow)
-
-        if with_volumes:
-            block_device_info = db_fakes.get_fake_block_device_info(
-                self._volume_target_portal, self._volume_id)
-
-            mapping = driver.block_device_info_get_mapping(block_device_info)
-            data = mapping[0]['connection_info']['data']
-            target_lun = data['target_lun']
-            target_iqn = data['target_iqn']
-            target_portal = data['target_portal']
-
-            fake_mounted_disk = "fake_mounted_disk"
-            fake_device_number = 0
-
-            self._mock_login_storage_target(target_iqn, target_lun,
-                                            target_portal,
-                                            fake_mounted_disk,
-                                            fake_device_number)
-        else:
-            block_device_info = None
-
-        self._mox.ReplayAll()
-        self._conn.pre_live_migration(self._context, instance,
-                                      block_device_info, None, network_info)
-        self._mox.VerifyAll()
-
-        if cow:
-            self.assertIsNotNone(self._fetched_image)
-        else:
-            self.assertIsNone(self._fetched_image)
 
     def test_get_instance_disk_info_is_implemented(self):
         # Ensure that the method has been implemented in the driver
@@ -1680,13 +1534,6 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
                           self._conn.unplug_vifs,
                           instance=self._test_spawn_instance,
                           network_info=None)
-
-    def test_rollback_live_migration_at_destination(self):
-        with mock.patch.object(self._conn, "destroy") as mock_destroy:
-            self._conn.rollback_live_migration_at_destination(self._context,
-                    self._test_spawn_instance, [], None)
-            mock_destroy.assert_called_once_with(self._context,
-                    self._test_spawn_instance, [], None)
 
     def test_refresh_instance_security_rules(self):
         self.assertRaises(NotImplementedError,
