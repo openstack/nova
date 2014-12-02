@@ -37,3 +37,23 @@ def db_version():
 def db_initial_version():
     """The starting version for the database."""
     return IMPL.db_initial_version()
+
+
+def db_null_instance_uuid_scan(delete=False):
+    """Utility for scanning the database to look for NULL instance uuid rows.
+
+    Scans the backing nova database to look for table entries where
+    instances.uuid or instance_uuid columns are NULL (except for the
+    fixed_ips table since that can contain NULL instance_uuid entries by
+    design). Dumps the tables that have NULL instance_uuid entries or
+    optionally deletes them based on usage.
+
+    This tool is meant to be used in conjunction with the 267 database
+    migration script to detect and optionally cleanup NULL instance_uuid
+    records.
+
+    :param delete: If true, delete NULL instance_uuid records found, else
+                   just query to see if they exist for reporting.
+    :returns: dict of table name to number of hits for NULL instance_uuid rows.
+    """
+    return IMPL.db_null_instance_uuid_scan(delete=delete)

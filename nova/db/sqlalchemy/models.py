@@ -169,6 +169,7 @@ class Instance(BASE, NovaBase):
               'host', 'node', 'deleted'),
         Index('instances_host_deleted_cleaned_idx',
               'host', 'deleted', 'cleaned'),
+        schema.UniqueConstraint('uuid', name='uniq_instances0uuid'),
     )
     injected_files = []
 
@@ -258,7 +259,7 @@ class Instance(BASE, NovaBase):
     os_type = Column(String(255))
     architecture = Column(String(255))
     vm_mode = Column(String(255))
-    uuid = Column(String(36))
+    uuid = Column(String(36), nullable=False)
 
     root_device_name = Column(String(255))
     default_ephemeral_device = Column(String(255))

@@ -22,6 +22,7 @@ import mock
 from nova.cmd import manage
 from nova import context
 from nova import db
+from nova.db import migration
 from nova import exception
 from nova.i18n import _
 from nova import test
@@ -335,6 +336,36 @@ class DBCommandsTestCase(test.TestCase):
 
     def test_archive_deleted_rows_negative(self):
         self.assertEqual(1, self.commands.archive_deleted_rows(-1))
+
+    @mock.patch.object(migration, 'db_null_instance_uuid_scan',
+                       return_value={'foo': 0})
+    def test_null_instance_uuid_scan_no_records_found(self, mock_scan):
+        self.useFixture(fixtures.MonkeyPatch('sys.stdout',
+                                             StringIO.StringIO()))
+        self.commands.null_instance_uuid_scan()
+        self.assertIn("There were no records found", sys.stdout.getvalue())
+
+    @mock.patch.object(migration, 'db_null_instance_uuid_scan',
+                       return_value={'foo': 1, 'bar': 0})
+    def _test_null_instance_uuid_scan(self, mock_scan, delete):
+        self.useFixture(fixtures.MonkeyPatch('sys.stdout',
+                                             StringIO.StringIO()))
+        self.commands.null_instance_uuid_scan(delete)
+        output = sys.stdout.getvalue()
+
+        if delete:
+            self.assertIn("Deleted 1 records from table 'foo'.", output)
+            self.assertNotIn("Deleted 0 records from table 'bar'.", output)
+        else:
+            self.assertIn("1 records in the 'foo' table", output)
+            self.assertNotIn("0 records in the 'bar' table", output)
+        self.assertNotIn("There were no records found", output)
+
+    def test_null_instance_uuid_scan_readonly(self):
+        self._test_null_instance_uuid_scan(delete=False)
+
+    def test_null_instance_uuid_scan_delete(self):
+        self._test_null_instance_uuid_scan(delete=True)
 
 
 class ServiceCommandsTestCase(test.TestCase):
