@@ -18,6 +18,7 @@ import webob
 
 from nova.api.openstack.compute.plugins.v3 import admin_password \
                                            as admin_password_v21
+from nova.api.openstack.compute import servers
 from nova.compute import api as compute_api
 from nova import exception
 from nova import test
@@ -33,31 +34,37 @@ def fake_set_admin_password(self, context, instance, password=None):
 
 
 class AdminPasswordTestV21(test.NoDBTestCase):
+    validiation_error = exception.ValidationError
 
     def setUp(self):
         super(AdminPasswordTestV21, self).setUp()
         self.stubs.Set(compute_api.API, 'set_admin_password',
                        fake_set_admin_password)
         self.stubs.Set(compute_api.API, 'get', fake_get)
-        self.controller = admin_password_v21.AdminPasswordController()
         self.fake_req = fakes.HTTPRequest.blank('')
+
+    def _get_action(self):
+        return admin_password_v21.AdminPasswordController().change_password
+
+    def _check_status(self, expected_status, res, controller_method):
+        self.assertEqual(expected_status, controller_method.wsgi_code)
 
     def test_change_password(self):
         body = {'changePassword': {'adminPass': 'test'}}
-        self.controller.change_password(self.fake_req, '1', body=body)
-        self.assertEqual(self.controller.change_password.wsgi_code, 202)
+        res = self._get_action()(self.fake_req, '1', body=body)
+        self._check_status(202, res, self._get_action())
 
     def test_change_password_empty_string(self):
         body = {'changePassword': {'adminPass': ''}}
-        self.controller.change_password(self.fake_req, '1', body=body)
-        self.assertEqual(self.controller.change_password.wsgi_code, 202)
+        res = self._get_action()(self.fake_req, '1', body=body)
+        self._check_status(202, res, self._get_action())
 
     @mock.patch('nova.compute.api.API.set_admin_password',
                 side_effect=NotImplementedError())
     def test_change_password_with_non_implement(self, mock_set_admin_password):
         body = {'changePassword': {'adminPass': 'test'}}
         self.assertRaises(webob.exc.HTTPNotImplemented,
-                          self.controller.change_password,
+                          self._get_action(),
                           self.fake_req, '1', body=body)
 
     @mock.patch('nova.compute.api.API.get',
@@ -65,13 +72,13 @@ class AdminPasswordTestV21(test.NoDBTestCase):
     def test_change_password_with_non_existed_instance(self, mock_get):
         body = {'changePassword': {'adminPass': 'test'}}
         self.assertRaises(webob.exc.HTTPNotFound,
-                          self.controller.change_password,
+                          self._get_action(),
                           self.fake_req, '1', body=body)
 
     def test_change_password_with_non_string_password(self):
         body = {'changePassword': {'adminPass': 1234}}
-        self.assertRaises(exception.ValidationError,
-                          self.controller.change_password,
+        self.assertRaises(self.validiation_error,
+                          self._get_action(),
                           self.fake_req, '1', body=body)
 
     @mock.patch('nova.compute.api.API.set_admin_password',
@@ -80,17 +87,59 @@ class AdminPasswordTestV21(test.NoDBTestCase):
     def test_change_password_failed(self, mock_set_admin_password):
         body = {'changePassword': {'adminPass': 'test'}}
         self.assertRaises(webob.exc.HTTPConflict,
-                          self.controller.change_password,
+                          self._get_action(),
                           self.fake_req, '1', body=body)
 
     def test_change_password_without_admin_password(self):
         body = {'changPassword': {}}
-        self.assertRaises(exception.ValidationError,
-                          self.controller.change_password,
+        self.assertRaises(self.validiation_error,
+                          self._get_action(),
                           self.fake_req, '1', body=body)
 
     def test_change_password_none(self):
-        body = {'changePassword': None}
-        self.assertRaises(exception.ValidationError,
-                          self.controller.change_password,
+        body = {'changePassword': {'adminPass': None}}
+        self.assertRaises(self.validiation_error,
+                          self._get_action(),
                           self.fake_req, '1', body=body)
+
+    def test_change_password_adminpass_none(self):
+        body = {'changePassword': None}
+        self.assertRaises(self.validiation_error,
+                          self._get_action(),
+                          self.fake_req, '1', body=body)
+
+    def test_change_password_bad_request(self):
+        body = {'changePassword': {'pass': '12345'}}
+        self.assertRaises(self.validiation_error,
+                          self._get_action(),
+                          self.fake_req, '1', body=body)
+
+    def test_server_change_password_pass_disabled(self):
+        # run with enable_instance_password disabled to verify adminPass
+        # is missing from response. See lp bug 921814
+        self.flags(enable_instance_password=False)
+        body = {'changePassword': {'adminPass': '1234pass'}}
+        res = self._get_action()(self.fake_req, '1', body=body)
+        self._check_status(202, res, self._get_action())
+
+
+class AdminPasswordTestV2(AdminPasswordTestV21):
+    validiation_error = webob.exc.HTTPBadRequest
+
+    def _get_action(self):
+        class FakeExtManager(object):
+            def is_loaded(self, ext):
+                return False
+        return servers.Controller(ext_mgr=FakeExtManager()).\
+                                    _action_change_password
+
+    def _check_status(self, expected_status, res, controller_method):
+        self.assertEqual(expected_status, res.status_int)
+
+    def test_change_password_failed(self):
+        # TODO(eliqiao): need to handle InstancePasswordSetFailed in v2 api
+        pass
+
+    def test_change_password_adminpass_none(self):
+        # TODO(eliqiao): need to handle adminpass is None in v2 api
+        pass
