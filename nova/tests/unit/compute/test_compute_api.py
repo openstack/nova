@@ -166,11 +166,8 @@ class _ComputeAPIUnitTestMixIn(object):
         quotas = {'instances': 1, 'cores': 1, 'ram': 1}
         usages = dict((r, {'in_use': 1, 'reserved': 1}) for r in
                     ['instances', 'cores', 'ram'])
-        headroom = dict((res, quotas[res] -
-                       (usages[res]['in_use'] + usages[res]['reserved']))
-                    for res in quotas.keys())
         quota_exception = exception.OverQuota(quotas=quotas,
-            usages=usages, overs=['instances'], headroom=headroom)
+            usages=usages, overs=['instances'])
 
         for _unused in range(2):
             self.compute_api._get_image(self.context, image_href).AndReturn(
@@ -1464,12 +1461,9 @@ class _ComputeAPIUnitTestMixIn(object):
         quotas = {'resource': 0}
         usages = {'resource': usage}
         overs = ['resource']
-        headroom = {'resource': quotas['resource'] -
-            (usages['resource']['in_use'] + usages['resource']['reserved'])}
         over_quota_args = dict(quotas=quotas,
                                usages=usages,
-                               overs=overs,
-                               headroom=headroom)
+                               overs=overs)
 
         self.compute_api._reserve_quota_delta(self.context, deltas,
                 fake_inst).AndRaise(
