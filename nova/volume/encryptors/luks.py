@@ -14,16 +14,31 @@
 #    under the License.
 
 
-import re
-
 from oslo_concurrency import processutils
 
+from nova.i18n import _LI
 from nova.openstack.common import log as logging
 from nova import utils
 from nova.volume.encryptors import cryptsetup
 
 
 LOG = logging.getLogger(__name__)
+
+
+def is_luks(device):
+    """Checks if the specified device uses LUKS for encryption.
+
+    :param device: the device to check
+    :returns: true if the specified device uses LUKS; false otherwise
+    """
+    try:
+        # check to see if the device uses LUKS: exit status is 0
+        # if the device is a LUKS partition and 1 if not
+        utils.execute('cryptsetup', 'isLuks', '--verbose', device,
+                      run_as_root=True, check_exit_code=True)
+        return True
+    except processutils.ProcessExecutionError:
+        return False
 
 
 class LuksEncryptor(cryptsetup.CryptsetupEncryptor):
@@ -86,9 +101,11 @@ class LuksEncryptor(cryptsetup.CryptsetupEncryptor):
         try:
             self._open_volume(passphrase, **kwargs)
         except processutils.ProcessExecutionError as e:
-            pattern = re.compile('Device \S+ is not a valid LUKS device.')
-            if e.exit_code == 1 and pattern.search(e.stderr):
+            if e.exit_code == 1 and not is_luks(self.dev_path):
                 # the device has never been formatted; format it and try again
+                LOG.info(_LI("%s is not a valid LUKS device;"
+                             " formatting device for first use"),
+                         self.dev_path)
                 self._format_volume(passphrase, **kwargs)
                 self._open_volume(passphrase, **kwargs)
             else:
