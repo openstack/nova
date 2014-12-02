@@ -312,8 +312,13 @@ class KeypairsTestV21(test.TestCase):
         self.assertEqual(res_dict['server']['key_name'], '')
 
     def test_detail_servers(self):
+        # Sort is disabled in v2 without an extension so stub out
+        # the non-sorted DB get
         self.stubs.Set(db, 'instance_get_all_by_filters',
-                        fakes.fake_instance_get_all_by_filters())
+                       fakes.fake_instance_get_all_by_filters())
+        # But it is enabled in v3 so stub out the sorted function
+        self.stubs.Set(db, 'instance_get_all_by_filters_sort',
+                       fakes.fake_instance_get_all_by_filters())
         req = fakes.HTTPRequest.blank(self.base_url + '/servers/detail')
         res = req.get_response(self.app_server)
         server_dicts = jsonutils.loads(res.body)['servers']

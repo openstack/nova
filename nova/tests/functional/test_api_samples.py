@@ -4433,3 +4433,19 @@ class ServerGroupQuotas_QuotaClassesSampleXmlTests(
               "server_group_quotas.Server_group_quotas")
     extends_name = ("nova.api.openstack.compute.contrib.quota_classes."
                     "Quota_classes")
+
+
+class ServerSortKeysJsonTests(ServersSampleBase):
+    extension_name = ("nova.api.openstack.compute.contrib.server_sort_keys"
+                      ".Server_sort_keys")
+
+    def test_servers_list(self):
+        self._post_server()
+        response = self._do_get('servers?sort_key=display_name&sort_dir=asc')
+        subs = self._get_regexes()
+        self._verify_response('server-sort-keys-list-resp', subs, response,
+                              200)
+
+
+class ServerSortKeysXmlTests(ServerSortKeysJsonTests):
+    ctype = 'xml'

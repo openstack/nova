@@ -711,6 +711,14 @@
             "name": "ServerGroupQuotas",
             "namespace": "http://docs.openstack.org/compute/ext/server-group-quotas/api/v2",
             "updated": "%(isotime)s"
+        },
+        {
+            "alias": "os-server-sort-keys",
+            "description": "%(text)s",
+            "links": [],
+            "name": "ServerSortKeys",
+            "namespace": "http://docs.openstack.org/compute/ext/server_sort_keys/api/v2",
+            "updated": "%(isotime)s"
         }
     ]
 }

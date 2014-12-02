@@ -395,6 +395,12 @@ def fake_instance_get_all_by_filters(num_servers=5, **kwargs):
         if 'use_slave' in kwargs:
             kwargs.pop('use_slave')
 
+        if 'sort_keys' in kwargs:
+            kwargs.pop('sort_keys')
+
+        if 'sort_dirs' in kwargs:
+            kwargs.pop('sort_dirs')
+
         for i in xrange(num_servers):
             uuid = get_fake_uuid(i)
             server = stub_instance(id=i + 1, uuid=uuid,

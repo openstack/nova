@@ -287,4 +287,7 @@
   <extension alias="os-volumes" updated="2011-03-25T00:00:00Z" namespace="http://docs.openstack.org/compute/ext/volumes/api/v1.1" name="Volumes">
     <description>Volumes support.</description>
   </extension>
+  <extension alias="os-server-sort-keys" updated="2014-05-22T00:00:00Z" namespace="http://docs.openstack.org/compute/ext/server_sort_keys/api/v2" name="ServerSortKeys">
+    <description>Add sorting support in get Server v2 API.</description>
+  </extension>
 </extensions>

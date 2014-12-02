@@ -266,4 +266,7 @@
   <extension alias="os-server-group-quotas" updated="%(isotime)s" namespace="http://docs.openstack.org/compute/ext/server-group-quotas/api/v2" name="ServerGroupQuotas">
     <description>%(text)s</description>
   </extension>
+  <extension alias="os-server-sort-keys" updated="%(isotime)s" namespace="http://docs.openstack.org/compute/ext/server_sort_keys/api/v2" name="ServerSortKeys">
+    <description>%(text)s</description>
+  </extension>
 </extensions>
