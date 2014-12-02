@@ -10528,12 +10528,14 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
 
         ins_ref = self._create_instance()
         flavor = {'root_gb': 10, 'ephemeral_gb': 20}
+        flavor_obj = objects.Flavor(**flavor)
 
         self.assertRaises(AssertionError,
                           self.libvirtconnection.migrate_disk_and_power_off,
-                          None, ins_ref, '10.0.0.2', flavor, None)
+                          context.get_admin_context(), ins_ref, '10.0.0.2',
+                          flavor_obj, None)
 
-    def test_migrate_disk_and_power_off(self):
+    def _test_migrate_disk_and_power_off(self, flavor_obj):
         """Test for nova.virt.libvirt.libvirt_driver.LivirtConnection
         .migrate_disk_and_power_off.
         """
@@ -10569,17 +10571,24 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         self.stubs.Set(utils, 'execute', fake_execute)
 
         ins_ref = self._create_instance()
-        flavor = {'root_gb': 10, 'ephemeral_gb': 20}
 
         # dest is different host case
         out = self.libvirtconnection.migrate_disk_and_power_off(
-               None, ins_ref, '10.0.0.2', flavor, None)
+               context.get_admin_context(), ins_ref, '10.0.0.2',
+               flavor_obj, None)
         self.assertEqual(out, disk_info_text)
 
         # dest is same host case
         out = self.libvirtconnection.migrate_disk_and_power_off(
-               None, ins_ref, '10.0.0.1', flavor, None)
+               context.get_admin_context(), ins_ref, '10.0.0.1',
+               flavor_obj, None)
         self.assertEqual(out, disk_info_text)
+
+    def test_migrate_disk_and_power_off(self):
+        flavor = {'root_gb': 10, 'ephemeral_gb': 20}
+        flavor_obj = objects.Flavor(**flavor)
+
+        self._test_migrate_disk_and_power_off(flavor_obj)
 
     @mock.patch('nova.utils.execute')
     @mock.patch('nova.virt.libvirt.utils.copy_image')
@@ -10629,10 +10638,12 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
 
         # Re-size fake instance to 20G root and 1024M swap disk
         flavor = {'root_gb': 20, 'ephemeral_gb': 0, 'swap': 1024}
+        flavor_obj = objects.Flavor(**flavor)
 
         # Destination is same host
-        out = conn.migrate_disk_and_power_off(None, instance, '10.0.0.1',
-                                              flavor, None)
+        out = conn.migrate_disk_and_power_off(context.get_admin_context(),
+                                              instance, '10.0.0.1',
+                                              flavor_obj, None)
 
         mock_get_disk_info.assert_called_once_with(instance.name,
                                                    block_device_info=None)
@@ -10675,19 +10686,81 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
 
         ins_ref = self._create_instance()
         flavor = {'root_gb': 10, 'ephemeral_gb': 20}
+        flavor_obj = objects.Flavor(**flavor)
 
         # Migration is not implemented for LVM backed instances
         self.assertRaises(exception.MigrationPreCheckError,
               self.libvirtconnection.migrate_disk_and_power_off,
-              None, ins_ref, '10.0.0.1', flavor, None)
+              None, ins_ref, '10.0.0.1', flavor_obj, None)
 
     def test_migrate_disk_and_power_off_resize_error(self):
         instance = self._create_instance()
-        flavor = {'root_gb': 5}
+        flavor = {'root_gb': 5, 'ephemeral_gb': 10}
+        flavor_obj = objects.Flavor(**flavor)
+
         self.assertRaises(
             exception.InstanceFaultRollback,
             self.libvirtconnection.migrate_disk_and_power_off,
-            'ctx', instance, '10.0.0.1', flavor, None)
+            'ctx', instance, '10.0.0.1', flavor_obj, None)
+
+    @mock.patch('nova.virt.driver.block_device_info_get_ephemerals')
+    def test_migrate_disk_and_power_off_resize_error_eph(self, mock_get):
+        mappings = [
+            {
+                 'device_name': '/dev/sdb4',
+                 'source_type': 'blank',
+                 'destination_type': 'local',
+                 'device_type': 'disk',
+                 'guest_format': 'swap',
+                 'boot_index': -1,
+                 'volume_size': 1
+             },
+             {
+                 'device_name': '/dev/sda1',
+                 'source_type': 'volume',
+                 'destination_type': 'volume',
+                 'device_type': 'disk',
+                 'volume_id': 1,
+                 'guest_format': None,
+                 'boot_index': 1,
+                 'volume_size': 6
+             },
+             {
+                 'device_name': '/dev/sda2',
+                 'source_type': 'snapshot',
+                 'destination_type': 'volume',
+                 'snapshot_id': 1,
+                 'device_type': 'disk',
+                 'guest_format': None,
+                 'boot_index': 0,
+                 'volume_size': 4
+             },
+             {
+                 'device_name': '/dev/sda3',
+                 'source_type': 'blank',
+                 'destination_type': 'local',
+                 'device_type': 'disk',
+                 'guest_format': None,
+                 'boot_index': -1,
+                 'volume_size': 3
+             }
+        ]
+        mock_get.return_value = mappings
+        instance = self._create_instance()
+
+        # Old flavor, eph is 20, real disk is 3, target is 2, fail
+        flavor = {'root_gb': 10, 'ephemeral_gb': 2}
+        flavor_obj = objects.Flavor(**flavor)
+
+        self.assertRaises(
+            exception.InstanceFaultRollback,
+            self.libvirtconnection.migrate_disk_and_power_off,
+            'ctx', instance, '10.0.0.1', flavor_obj, None)
+
+        # Old flavor, eph is 20, real disk is 3, target is 4
+        flavor = {'root_gb': 10, 'ephemeral_gb': 4}
+        flavor_obj = objects.Flavor(**flavor)
+        self._test_migrate_disk_and_power_off(flavor_obj)
 
     def test_wait_for_running(self):
         def fake_get_info(instance):
