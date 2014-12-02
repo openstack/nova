@@ -37,11 +37,11 @@ LOG = logging.getLogger(__name__)
 class VMUtilsV2(vmutils.VMUtils):
 
     _PHYS_DISK_RES_SUB_TYPE = 'Microsoft:Hyper-V:Physical Disk Drive'
-    _DISK_RES_SUB_TYPE = 'Microsoft:Hyper-V:Synthetic Disk Drive'
-    _DVD_RES_SUB_TYPE = 'Microsoft:Hyper-V:Synthetic DVD Drive'
+    _DISK_DRIVE_RES_SUB_TYPE = 'Microsoft:Hyper-V:Synthetic Disk Drive'
+    _DVD_DRIVE_RES_SUB_TYPE = 'Microsoft:Hyper-V:Synthetic DVD Drive'
     _SCSI_RES_SUBTYPE = 'Microsoft:Hyper-V:Synthetic SCSI Controller'
-    _IDE_DISK_RES_SUB_TYPE = 'Microsoft:Hyper-V:Virtual Hard Disk'
-    _IDE_DVD_RES_SUB_TYPE = 'Microsoft:Hyper-V:Virtual CD/DVD Disk'
+    _HARD_DISK_RES_SUB_TYPE = 'Microsoft:Hyper-V:Virtual Hard Disk'
+    _DVD_DISK_RES_SUB_TYPE = 'Microsoft:Hyper-V:Virtual CD/DVD Disk'
     _IDE_CTRL_RES_SUB_TYPE = 'Microsoft:Hyper-V:Emulated IDE Controller'
     _SCSI_CTRL_RES_SUB_TYPE = 'Microsoft:Hyper-V:Synthetic SCSI Controller'
     _SERIAL_PORT_RES_SUB_TYPE = 'Microsoft:Hyper-V:Serial Port'
@@ -117,22 +117,17 @@ class VMUtilsV2(vmutils.VMUtils):
         return [s for s in vmsettings if
                 s.VirtualSystemType == self._VIRTUAL_SYSTEM_TYPE_REALIZED][0]
 
-    def attach_ide_drive(self, vm_name, path, ctrller_addr, drive_addr,
-                         drive_type=constants.IDE_DISK):
-        """Create an IDE drive and attach it to the vm."""
+    def _attach_drive(self, vm, path, ctrller_path, drive_addr, drive_type):
+        """Create a drive and attach it to the vm."""
 
-        vm = self._lookup_vm_check(vm_name)
-
-        ctrller_path = self._get_vm_ide_controller(vm, ctrller_addr)
-
-        if drive_type == constants.IDE_DISK:
-            res_sub_type = self._DISK_RES_SUB_TYPE
-        elif drive_type == constants.IDE_DVD:
-            res_sub_type = self._DVD_RES_SUB_TYPE
+        if drive_type == constants.DISK:
+            res_sub_type = self._DISK_DRIVE_RES_SUB_TYPE
+        elif drive_type == constants.DVD:
+            res_sub_type = self._DVD_DRIVE_RES_SUB_TYPE
 
         drive = self._get_new_resource_setting_data(res_sub_type)
 
-        # Set the IDE ctrller as parent.
+        # Set the ctrller as parent.
         drive.Parent = ctrller_path
         drive.Address = drive_addr
         drive.AddressOnParent = drive_addr
@@ -140,10 +135,10 @@ class VMUtilsV2(vmutils.VMUtils):
         new_resources = self._add_virt_resource(drive, vm.path_())
         drive_path = new_resources[0]
 
-        if drive_type == constants.IDE_DISK:
-            res_sub_type = self._IDE_DISK_RES_SUB_TYPE
-        elif drive_type == constants.IDE_DVD:
-            res_sub_type = self._IDE_DVD_RES_SUB_TYPE
+        if drive_type == constants.DISK:
+            res_sub_type = self._HARD_DISK_RES_SUB_TYPE
+        elif drive_type == constants.DVD:
+            res_sub_type = self._DVD_DISK_RES_SUB_TYPE
 
         res = self._get_new_resource_setting_data(
             res_sub_type, self._STORAGE_ALLOC_SETTING_DATA_CLASS)
@@ -262,7 +257,7 @@ class VMUtilsV2(vmutils.VMUtils):
         metric_svc = self._conn.Msvm_MetricService()[0]
         (disks, volumes) = self._get_vm_disks(vm)
         filtered_disks = [d for d in disks if
-                          d.ResourceSubType is not self._IDE_DVD_RES_SUB_TYPE]
+                          d.ResourceSubType is not self._DVD_DISK_RES_SUB_TYPE]
 
         # enable metrics for disk.
         for disk in filtered_disks:
