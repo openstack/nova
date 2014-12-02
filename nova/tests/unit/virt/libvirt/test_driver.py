@@ -3982,6 +3982,27 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self._test_get_guest_config_ppc64(8)
 
     @mock.patch.object(objects.Flavor, 'get_by_id')
+    def _test_get_guest_config_bootmenu(self, image_meta, extra_specs,
+                                        mock_flavor):
+        self.flags(virt_type='kvm', group='libvirt')
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = objects.Instance(**self.test_instance)
+        flavor = instance_ref.get_flavor()
+        flavor.extra_specs = extra_specs
+        mock_flavor.return_value = flavor
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref, image_meta)
+        conf = conn._get_guest_config(instance_ref, [], image_meta, disk_info)
+        self.assertTrue(conf.os_bootmenu)
+
+    def test_get_guest_config_bootmenu_via_image_meta(self):
+        self._test_get_guest_config_bootmenu(
+            {"properties": {"hw_boot_menu": "True"}}, {})
+
+    def test_get_guest_config_bootmenu_via_extra_specs(self):
+        self._test_get_guest_config_bootmenu({}, {'hw:boot_menu': 'True'})
+
+    @mock.patch.object(objects.Flavor, 'get_by_id')
     def test_get_guest_cpu_config_none(self, mock_flavor):
         self.flags(cpu_mode="none", group='libvirt')
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
