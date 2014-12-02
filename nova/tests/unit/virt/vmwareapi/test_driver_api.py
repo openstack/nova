@@ -47,6 +47,7 @@ from nova import db
 from nova import exception
 from nova.image import glance
 from nova.network import model as network_model
+from nova import objects
 from nova.openstack.common import uuidutils
 from nova import test
 from nova.tests.unit import fake_instance
@@ -1961,7 +1962,9 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                           self.conn.refresh_instance_security_rules,
                           instance=None)
 
-    def test_image_aging_image_used(self):
+    @mock.patch.object(objects.block_device.BlockDeviceMappingList,
+                       'get_by_instance_uuid')
+    def test_image_aging_image_used(self, mock_get_by_inst):
         self._create_vm()
         all_instances = [self.instance]
         self.conn.manage_image_cache(self.context, all_instances)
@@ -2012,7 +2015,9 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
     def test_timestamp_file_removed_spawn(self):
         self._timestamp_file_removed()
 
-    def test_timestamp_file_removed_aging(self):
+    @mock.patch.object(objects.block_device.BlockDeviceMappingList,
+                       'get_by_instance_uuid')
+    def test_timestamp_file_removed_aging(self, mock_get_by_inst):
         self._timestamp_file_removed()
         ts = self._get_timestamp_filename()
         ts_path = ds_util.DatastorePath(self.ds, 'vmware_base',
@@ -2023,7 +2028,9 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.conn.manage_image_cache(self.context, all_instances)
         self._timestamp_file_exists(exists=False)
 
-    def test_image_aging_disabled(self):
+    @mock.patch.object(objects.block_device.BlockDeviceMappingList,
+                       'get_by_instance_uuid')
+    def test_image_aging_disabled(self, mock_get_by_inst):
         self._override_time()
         self.flags(remove_unused_base_images=False)
         self._create_vm()
