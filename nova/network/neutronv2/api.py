@@ -1089,9 +1089,6 @@ class API(base_api.NetworkAPI):
         return [self._format_floating_ip_model(fip, pool_dict, port_dict)
                 for fip in fips]
 
-    def get_floating_ips_by_fixed_address(self, context, fixed_address):
-        raise NotImplementedError()
-
     def get_instance_id_by_floating_address(self, context, address):
         """Return the instance id a floating ip's fixed ip is allocated to."""
         client = neutronv2.get_client(context)

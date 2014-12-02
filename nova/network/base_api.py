@@ -131,10 +131,6 @@ class NetworkAPI(base.Base):
         """Get floating ips by project."""
         raise NotImplementedError()
 
-    def get_floating_ips_by_fixed_address(self, context, fixed_address):
-        """Get floating ips by fixed address."""
-        raise NotImplementedError()
-
     def get_instance_id_by_floating_address(self, context, address):
         """Get instance id by floating address."""
         raise NotImplementedError()

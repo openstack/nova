@@ -272,17 +272,6 @@ class ApiTestCase(test.TestCase):
         mock_get.assert_called_once_with(self.context,
                                          self.context.project_id)
 
-    @mock.patch('nova.objects.FloatingIPList.get_by_fixed_address')
-    def test_get_floating_ips_by_fixed_address(self, mock_get):
-        floatings = [objects.FloatingIP(id=1, address='1.2.3.4'),
-                     objects.FloatingIP(id=2, address='5.6.7.8')]
-        mock_get.return_value = floatings
-        self.assertEqual(['1.2.3.4', '5.6.7.8'],
-                         self.network_api.get_floating_ips_by_fixed_address(
-                             self.context, mock.sentinel.fixed_address))
-        mock_get.assert_called_once_with(self.context,
-                                         mock.sentinel.fixed_address)
-
     def _stub_migrate_instance_calls(self, method, multi_host, info):
         fake_flavor = flavors.get_default_flavor()
         fake_flavor['rxtx_factor'] = 1.21

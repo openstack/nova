@@ -210,15 +210,6 @@ def stub_out_nw_api_get_instance_nw_info(stubs, num_networks=1, func=None):
     fake_network.stub_out_nw_api_get_instance_nw_info(stubs)
 
 
-def stub_out_nw_api_get_floating_ips_by_fixed_address(stubs, func=None):
-    def get_floating_ips_by_fixed_address(self, context, fixed_ip):
-        return ['1.2.3.4']
-
-    if func is None:
-        func = get_floating_ips_by_fixed_address
-    stubs.Set(network_api.API, 'get_floating_ips_by_fixed_address', func)
-
-
 def stub_out_nw_api(stubs, cls=None, private=None, publics=None):
     if not private:
         private = '192.168.0.3'

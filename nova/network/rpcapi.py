@@ -87,6 +87,8 @@ class NetworkAPI(object):
         ... Juno supports message version 1.13.  So, any changes to
         existing methods in 1.x after that point should be done such that they
         can handle the version_cap being set to 1.13.
+
+        * NOTE: remove unused method get_floating_ips_by_fixed_address()
     '''
 
     VERSION_ALIASES = {
@@ -139,10 +141,6 @@ class NetworkAPI(object):
 
     def get_floating_ips_by_project(self, ctxt):
         return self.client.call(ctxt, 'get_floating_ips_by_project')
-
-    def get_floating_ips_by_fixed_address(self, ctxt, fixed_address):
-        return self.client.call(ctxt, 'get_floating_ips_by_fixed_address',
-                                fixed_address=fixed_address)
 
     def get_instance_id_by_floating_address(self, ctxt, address):
         return self.client.call(ctxt, 'get_instance_id_by_floating_address',
