@@ -358,14 +358,11 @@ def service_destroy(context, service_id):
                     soft_delete(synchronize_session=False)
 
 
-def _service_get(context, service_id, with_compute_node=True, session=None,
+def _service_get(context, service_id, session=None,
                  use_slave=False):
     query = model_query(context, models.Service, session=session,
                         use_slave=use_slave).\
                      filter_by(id=service_id)
-
-    if with_compute_node:
-        query = query.options(joinedload('compute_node'))
 
     result = query.first()
     if not result:
@@ -375,10 +372,8 @@ def _service_get(context, service_id, with_compute_node=True, session=None,
 
 
 @require_admin_context
-def service_get(context, service_id, with_compute_node=False,
-                use_slave=False):
+def service_get(context, service_id, use_slave=False):
     return _service_get(context, service_id,
-                        with_compute_node=with_compute_node,
                         use_slave=use_slave)
 
 
@@ -466,8 +461,7 @@ def service_create(context, values):
 def service_update(context, service_id, values):
     session = get_session()
     with session.begin():
-        service_ref = _service_get(context, service_id,
-                                   with_compute_node=False, session=session)
+        service_ref = _service_get(context, service_id, session=session)
         service_ref.update(values)
 
     return service_ref

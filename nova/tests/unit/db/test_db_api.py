@@ -2713,21 +2713,6 @@ class ServiceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self._assertEqualObjects(service1, real_service1,
                                  ignored_keys=['compute_node'])
 
-    def test_service_get_with_compute_node(self):
-        service = self._create_service({})
-        compute_values = dict(vcpus=2, memory_mb=1024, local_gb=2048,
-                              vcpus_used=0, memory_mb_used=0,
-                              local_gb_used=0, free_ram_mb=1024,
-                              free_disk_gb=2048, hypervisor_type="xen",
-                              hypervisor_version=1, cpu_info="",
-                              running_vms=0, current_workload=0,
-                              service_id=service['id'], host=service['host'])
-        compute = db.compute_node_create(self.ctxt, compute_values)
-        real_service = db.service_get(self.ctxt, service['id'],
-                                      with_compute_node=True)
-        real_compute = real_service['compute_node'][0]
-        self.assertEqual(compute['id'], real_compute['id'])
-
     def test_service_get_not_found_exception(self):
         self.assertRaises(exception.ServiceNotFound,
                           db.service_get, self.ctxt, 100500)

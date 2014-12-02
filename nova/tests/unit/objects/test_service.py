@@ -90,21 +90,6 @@ class _TestServiceObject(object):
         self._test_query('service_get_by_args', 'get_by_args', 'fake-host',
                          'fake-service')
 
-    def test_with_compute_node(self):
-        self.mox.StubOutWithMock(db, 'service_get')
-        self.mox.StubOutWithMock(db, 'compute_nodes_get_by_service_id')
-        _fake_service = dict(
-            fake_service, compute_node=[test_compute_node.fake_compute_node])
-        db.service_get(self.context, 123).AndReturn(_fake_service)
-        self.mox.ReplayAll()
-        service_obj = service.Service.get_by_id(self.context, 123)
-        self.assertTrue(service_obj.obj_attr_is_set('compute_node'))
-        self.compare_obj(service_obj.compute_node,
-                         test_compute_node.fake_compute_node,
-                         subs=self.subs(),
-                         allow_missing=OPTIONAL,
-                         comparators=self.comparators())
-
     def test_create(self):
         self.mox.StubOutWithMock(db, 'service_create')
         db.service_create(self.context, {'host': 'fake-host'}).AndReturn(
