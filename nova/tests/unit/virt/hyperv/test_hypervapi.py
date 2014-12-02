@@ -17,10 +17,8 @@ Test suite for the Hyper-V driver and related APIs.
 """
 
 import contextlib
-import datetime
 import io
 import os
-import platform
 import shutil
 import time
 import uuid
@@ -51,7 +49,6 @@ from nova.virt import driver
 from nova.virt.hyperv import basevolumeutils
 from nova.virt.hyperv import constants
 from nova.virt.hyperv import driver as driver_hyperv
-from nova.virt.hyperv import hostops
 from nova.virt.hyperv import hostutils
 from nova.virt.hyperv import ioutils
 from nova.virt.hyperv import livemigrationutils
@@ -201,12 +198,6 @@ class HyperVAPIBaseTestCase(test.NoDBTestCase):
         self._mox.StubOutWithMock(vhdutils.VHDUtils, 'get_vhd_format')
         self._mox.StubOutWithMock(vhdutils.VHDUtils, 'create_dynamic_vhd')
 
-        self._mox.StubOutWithMock(hostutils.HostUtils, 'get_cpus_info')
-        self._mox.StubOutWithMock(hostutils.HostUtils,
-                                  'is_cpu_feature_present')
-        self._mox.StubOutWithMock(hostutils.HostUtils, 'get_memory_info')
-        self._mox.StubOutWithMock(hostutils.HostUtils, 'get_volume_info')
-        self._mox.StubOutWithMock(hostutils.HostUtils, 'get_windows_version')
         self._mox.StubOutWithMock(hostutils.HostUtils, 'get_local_ips')
 
         self._mox.StubOutWithMock(networkutils.NetworkUtils,
@@ -273,51 +264,6 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
     def test_public_api_signatures(self):
         self.assertPublicAPISignatures(driver.ComputeDriver(None), self._conn)
 
-    def test_get_available_resource(self):
-        cpu_info = {'Architecture': 'fake',
-                    'Name': 'fake',
-                    'Manufacturer': 'ACME, Inc.',
-                    'NumberOfCores': 2,
-                    'NumberOfLogicalProcessors': 4}
-
-        tot_mem_kb = 2000000L
-        free_mem_kb = 1000000L
-
-        tot_hdd_b = 4L * 1024 ** 3
-        free_hdd_b = 3L * 1024 ** 3
-
-        windows_version = '6.2.9200'
-
-        hostutils.HostUtils.get_memory_info().AndReturn((tot_mem_kb,
-                                                        free_mem_kb))
-
-        m = hostutils.HostUtils.get_volume_info(mox.IsA(str))
-        m.AndReturn((tot_hdd_b, free_hdd_b))
-
-        hostutils.HostUtils.get_cpus_info().AndReturn([cpu_info])
-        m = hostutils.HostUtils.is_cpu_feature_present(mox.IsA(int))
-        m.MultipleTimes()
-
-        m = hostutils.HostUtils.get_windows_version()
-        m.AndReturn(windows_version)
-
-        self._mox.ReplayAll()
-        dic = self._conn.get_available_resource(None)
-        self._mox.VerifyAll()
-
-        self.assertEqual(dic['vcpus'], cpu_info['NumberOfLogicalProcessors'])
-        self.assertEqual(dic['hypervisor_hostname'], platform.node())
-        self.assertEqual(dic['memory_mb'], tot_mem_kb / units.Ki)
-        self.assertEqual(dic['memory_mb_used'],
-                         tot_mem_kb / units.Ki - free_mem_kb / units.Ki)
-        self.assertEqual(dic['local_gb'], tot_hdd_b / units.Gi)
-        self.assertEqual(dic['local_gb_used'],
-                         tot_hdd_b / units.Gi - free_hdd_b / units.Gi)
-        self.assertEqual(dic['hypervisor_version'],
-                         windows_version.replace('.', ''))
-        self.assertEqual(dic['supported_instances'],
-                '[["i686", "hyperv", "hvm"], ["x86_64", "hyperv", "hvm"]]')
-
     def test_list_instances(self):
         fake_instances = ['fake1', 'fake2']
         vmutils.VMUtils.list_instances().AndReturn(fake_instances)
@@ -327,13 +273,6 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
         self._mox.VerifyAll()
 
         self.assertEqual(instances, fake_instances)
-
-    def test_get_host_uptime(self):
-        fake_host = "fake_host"
-        with mock.patch.object(self._conn._hostops,
-                               "get_host_uptime") as mock_uptime:
-            self._conn._hostops.get_host_uptime(fake_host)
-            mock_uptime.assert_called_once_with(fake_host)
 
     def test_get_info(self):
         self._instance_data = self._get_instance_data()
@@ -1962,24 +1901,3 @@ class VolumeOpsTestCase(HyperVAPIBaseTestCase):
             mock_get_vm_scsi_controller.assert_called_with("test_vm_name")
             mock_set_disk_host_resource("test_vm_name", "fake_controller_path",
                                         0, "fake_mounted_path")
-
-
-class HostOpsTestCase(HyperVAPIBaseTestCase):
-    """Unit tests for the Hyper-V hostops class."""
-
-    def setUp(self):
-        self._hostops = hostops.HostOps()
-        self._hostops._hostutils = mock.MagicMock()
-        self._hostops.time = mock.MagicMock()
-        super(HostOpsTestCase, self).setUp()
-
-    @mock.patch('nova.virt.hyperv.hostops.time')
-    def test_host_uptime(self, mock_time):
-        self._hostops._hostutils.get_host_tick_count64.return_value = 100
-        mock_time.strftime.return_value = "01:01:01"
-
-        result_uptime = "01:01:01 up %s,  0 users,  load average: 0, 0, 0" % (
-                          str(datetime.timedelta(
-                                     milliseconds = long(100))))
-        actual_uptime = self._hostops.get_host_uptime()
-        self.assertEqual(result_uptime, actual_uptime)
