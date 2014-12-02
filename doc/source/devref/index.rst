@@ -46,6 +46,7 @@ Background Concepts for Nova
    rpc
    hooks
    upgrade
+   policy_enforcement
 
 Development policies
 --------------------
