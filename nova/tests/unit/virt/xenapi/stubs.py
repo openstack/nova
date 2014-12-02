@@ -15,7 +15,9 @@
 
 import pickle
 import random
+import sys
 
+import fixtures
 from oslo.serialization import jsonutils
 
 from nova import test
@@ -263,6 +265,23 @@ def stub_out_vm_methods(stubs):
     stubs.Set(vm_utils, '_wait_for_device', fake_wait_for_device)
 
 
+class ReplaceModule(fixtures.Fixture):
+    """Replace a module with a fake module."""
+
+    def __init__(self, name, new_value):
+        self.name = name
+        self.new_value = new_value
+
+    def _restore(self, old_value):
+        sys.modules[self.name] = old_value
+
+    def setUp(self):
+        super(ReplaceModule, self).setUp()
+        old_value = sys.modules.get(self.name)
+        sys.modules[self.name] = self.new_value
+        self.addCleanup(self._restore, old_value)
+
+
 class FakeSessionForVolumeTests(fake.SessionBase):
     """Stubs out a XenAPISession for Volume tests."""
     def VDI_introduce(self, _1, uuid, _2, _3, _4, _5,
@@ -354,12 +373,12 @@ class FakeSessionForFailedMigrateTests(FakeSessionForVMTests):
 class XenAPITestBase(test.TestCase):
     def setUp(self):
         super(XenAPITestBase, self).setUp()
-        self.useFixture(test.ReplaceModule('XenAPI', fake))
+        self.useFixture(ReplaceModule('XenAPI', fake))
         fake.reset()
 
 
 class XenAPITestBaseNoDB(test.NoDBTestCase):
     def setUp(self):
         super(XenAPITestBaseNoDB, self).setUp()
-        self.useFixture(test.ReplaceModule('XenAPI', fake))
+        self.useFixture(ReplaceModule('XenAPI', fake))
         fake.reset()
