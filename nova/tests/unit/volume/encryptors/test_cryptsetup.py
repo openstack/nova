@@ -15,11 +15,11 @@
 
 
 import array
-import os
+
+import mock
 
 from nova.keymgr import key
 from nova.tests.unit.volume.encryptors import test_base
-from nova import utils
 from nova.volume.encryptors import cryptsetup
 
 
@@ -37,47 +37,55 @@ class CryptsetupEncryptorTestCase(test_base.VolumeEncryptorTestCase):
     def setUp(self):
         super(CryptsetupEncryptorTestCase, self).setUp()
 
-        self.executes = []
-
-        def fake_execute(*cmd, **kwargs):
-            self.executes.append(cmd)
-            return None, None
-
-        self.stubs.Set(utils, 'execute', fake_execute)
-        self.stubs.Set(os.path, "realpath", lambda x: x)
-
         self.dev_path = self.connection_info['data']['device_path']
         self.dev_name = self.dev_path.split('/')[-1]
 
         self.symlink_path = self.dev_path
 
-    def test__open_volume(self):
+    @mock.patch('nova.utils.execute')
+    def test__open_volume(self, mock_execute):
         self.encryptor._open_volume("passphrase")
 
-        expected_commands = [('cryptsetup', 'create', '--key-file=-',
-                              self.dev_name, self.dev_path)]
-        self.assertEqual(expected_commands, self.executes)
+        mock_execute.assert_has_calls([
+            mock.call('cryptsetup', 'create', '--key-file=-', self.dev_name,
+                      self.dev_path, process_input='passphrase',
+                      run_as_root=True, check_exit_code=True),
+        ], any_order=False)
+        self.assertEqual(1, mock_execute.call_count)
 
-    def test_attach_volume(self):
-        self.stubs.Set(self.encryptor, '_get_key', fake__get_key)
+    @mock.patch('nova.utils.execute')
+    def test_attach_volume(self, mock_execute):
+        self.encryptor._get_key = mock.MagicMock()
+        self.encryptor._get_key.return_value = fake__get_key(None)
 
         self.encryptor.attach_volume(None)
 
-        expected_commands = [('cryptsetup', 'create', '--key-file=-',
-                              self.dev_name, self.dev_path),
-                             ('ln', '--symbolic', '--force',
-                              '/dev/mapper/%s' % self.dev_name,
-                              self.symlink_path)]
-        self.assertEqual(expected_commands, self.executes)
+        mock_execute.assert_has_calls([
+            mock.call('cryptsetup', 'create', '--key-file=-', self.dev_name,
+                      self.dev_path, process_input='0' * 32,
+                      run_as_root=True, check_exit_code=True),
+            mock.call('ln', '--symbolic', '--force',
+                      '/dev/mapper/%s' % self.dev_name, self.symlink_path,
+                      run_as_root=True, check_exit_code=True),
+        ], any_order=False)
+        self.assertEqual(2, mock_execute.call_count)
 
-    def test__close_volume(self):
+    @mock.patch('nova.utils.execute')
+    def test__close_volume(self, mock_execute):
         self.encryptor.detach_volume()
 
-        expected_commands = [('cryptsetup', 'remove', self.dev_name)]
-        self.assertEqual(expected_commands, self.executes)
+        mock_execute.assert_has_calls([
+            mock.call('cryptsetup', 'remove', self.dev_name,
+                      run_as_root=True, check_exit_code=True),
+        ], any_order=False)
+        self.assertEqual(1, mock_execute.call_count)
 
-    def test_detach_volume(self):
+    @mock.patch('nova.utils.execute')
+    def test_detach_volume(self, mock_execute):
         self.encryptor.detach_volume()
 
-        expected_commands = [('cryptsetup', 'remove', self.dev_name)]
-        self.assertEqual(expected_commands, self.executes)
+        mock_execute.assert_has_calls([
+            mock.call('cryptsetup', 'remove', self.dev_name,
+                      run_as_root=True, check_exit_code=True),
+        ], any_order=False)
+        self.assertEqual(1, mock_execute.call_count)
