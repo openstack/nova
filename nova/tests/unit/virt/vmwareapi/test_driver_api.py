@@ -275,6 +275,9 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         vmwareapi_fake.cleanup()
         nova.tests.unit.image.fake.FakeImageService_reset()
 
+    def test_legacy_block_device_info(self):
+        self.assertFalse(self.conn.need_legacy_block_device_info)
+
     def test_get_host_ip_addr(self):
         self.assertEqual('test_url', self.conn.get_host_ip_addr())
 
