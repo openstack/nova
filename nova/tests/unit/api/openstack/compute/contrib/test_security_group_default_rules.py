@@ -257,7 +257,7 @@ class TestSecurityGroupDefaultRulesV21(test.TestCase):
 
         req = fakes.HTTPRequest.blank(
             '/v2/fake/os-security-group-default-rules', use_admin_context=True)
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
+        self.assertRaises(webob.exc.HTTPConflict, self.controller.create,
                           req, {'security_group_default_rule': sgr})
 
     def test_security_group_default_rules_list(self):
