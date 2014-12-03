@@ -762,8 +762,6 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     @mock.patch('nova.virt.vmwareapi.ds_util.get_datastore')
     @mock.patch(
         'nova.virt.vmwareapi.vmops.VMwareVMOps.get_datacenter_ref_and_name')
-    @mock.patch('nova.virt.vmwareapi.vm_util.get_res_pool_ref',
-                return_value='fake_rp_ref')
     @mock.patch('nova.virt.vmwareapi.vif.get_vif_info',
                 return_value=[])
     @mock.patch('nova.utils.is_neutron',
@@ -792,7 +790,6 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                    mock_get_create_spec,
                    mock_is_neutron,
                    mock_get_vif_info,
-                   mock_get_res_pool_ref,
                    mock_get_datacenter_ref_and_name,
                    mock_get_datastore,
                    mock_configure_config_drive,
@@ -845,8 +842,6 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
 
             self.assertEqual(expected_mkdir_calls, len(mock_mkdir.mock_calls))
 
-            mock_get_res_pool_ref.assert_called_once_with(
-                    self._session, self._cluster.obj)
             mock_get_vif_info.assert_called_once_with(
                     self._session, self._cluster.obj, False,
                     constants.DEFAULT_VIF_MODEL, network_info)
@@ -864,7 +859,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                     self._instance,
                     'fake_vm_folder',
                     'fake_create_spec',
-                    'fake_rp_ref')
+                    self._cluster.resourcePool)
             mock_get_and_set_vnc_config.assert_called_once_with(
                 self._session.vim.client.factory,
                 self._instance)
