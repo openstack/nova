@@ -2063,7 +2063,9 @@ class LibvirtDriver(driver.ComputeDriver):
         # Initialize all the necessary networking, block devices and
         # start the instance.
         self._create_domain_and_network(context, xml, instance, network_info,
-                                        block_device_info, reboot=True,
+                                        disk_info,
+                                        block_device_info=block_device_info,
+                                        reboot=True,
                                         vifs_already_plugged=True)
         self._prepare_pci_devices_for_use(
             pci_manager.get_instance_pci_devs(instance, 'all'))
@@ -2189,10 +2191,18 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def resume(self, context, instance, network_info, block_device_info=None):
         """resume the specified instance."""
+        image_meta = compute_utils.get_image_metadata(context,
+                self._image_api, instance.image_ref, instance)
+
+        disk_info = blockinfo.get_disk_info(
+                CONF.libvirt.virt_type, instance,
+                block_device_info=block_device_info, image_meta=image_meta)
+
         xml = self._get_existing_domain_xml(instance, network_info,
                                             block_device_info)
         dom = self._create_domain_and_network(context, xml, instance,
-                           network_info, block_device_info=block_device_info,
+                           network_info, disk_info,
+                           block_device_info=block_device_info,
                            vifs_already_plugged=True)
         self._attach_pci_devices(dom,
             pci_manager.get_instance_pci_devs(instance))
@@ -2311,7 +2321,8 @@ class LibvirtDriver(driver.ComputeDriver):
                                   block_device_info=block_device_info,
                                   write_to_disk=True)
         self._create_domain_and_network(context, xml, instance, network_info,
-                                        block_device_info, disk_info=disk_info)
+                                        disk_info,
+                                        block_device_info=block_device_info)
         LOG.debug("Instance is running", instance=instance)
 
         def _wait_for_boot():
@@ -4112,9 +4123,9 @@ class LibvirtDriver(driver.ComputeDriver):
                 for vif in network_info if vif.get('active', True) is False]
 
     def _create_domain_and_network(self, context, xml, instance, network_info,
-                                   block_device_info=None, power_on=True,
-                                   reboot=False, vifs_already_plugged=False,
-                                   disk_info=None):
+                                   disk_info, block_device_info=None,
+                                   power_on=True, reboot=False,
+                                   vifs_already_plugged=False):
 
         """Do required network setup and create domain."""
         block_device_mapping = driver.block_device_info_get_mapping(
@@ -5820,7 +5831,9 @@ class LibvirtDriver(driver.ComputeDriver):
                                   block_device_info=block_device_info,
                                   write_to_disk=True)
         self._create_domain_and_network(context, xml, instance, network_info,
-                                        block_device_info, power_on,
+                                        disk_info,
+                                        block_device_info=block_device_info,
+                                        power_on=power_on,
                                         vifs_already_plugged=True)
         if power_on:
             timer = loopingcall.FixedIntervalLoopingCall(
@@ -5860,7 +5873,9 @@ class LibvirtDriver(driver.ComputeDriver):
         xml = self._get_guest_xml(context, instance, network_info, disk_info,
                                   block_device_info=block_device_info)
         self._create_domain_and_network(context, xml, instance, network_info,
-                                        block_device_info, power_on)
+                                        disk_info,
+                                        block_device_info=block_device_info,
+                                        power_on=power_on)
 
         if power_on:
             timer = loopingcall.FixedIntervalLoopingCall(
