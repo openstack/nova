@@ -21,7 +21,7 @@ from oslo.vmware import exceptions as vexc
 from oslo.vmware import pbm
 
 from nova import exception
-from nova.i18n import _, _LE
+from nova.i18n import _, _LE, _LI
 from nova.openstack.common import log as logging
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
@@ -362,6 +362,46 @@ def file_delete(session, ds_path, dc_ref):
             datacenter=dc_ref)
     session._wait_for_task(file_delete_task)
     LOG.debug("Deleted the datastore file")
+
+
+def disk_move(session, dc_ref, src_file, dst_file):
+    """Moves the source virtual disk to the destination.
+
+    The list of possible faults that the server can return on error
+    include:
+
+    * CannotAccessFile: Thrown if the source file or folder cannot be
+      moved because of insufficient permissions.
+    * FileAlreadyExists: Thrown if a file with the given name already
+      exists at the destination.
+    * FileFault: Thrown if there is a generic file error
+    * FileLocked: Thrown if the source file or folder is currently
+      locked or in use.
+    * FileNotFound: Thrown if the file or folder specified by sourceName
+      is not found.
+    * InvalidDatastore: Thrown if the operation cannot be performed on
+      the source or destination datastores.
+    * NoDiskSpace: Thrown if there is not enough space available on the
+      destination datastore.
+    * RuntimeFault: Thrown if any type of runtime fault is thrown that
+      is not covered by the other faults; for example,
+      a communication error.
+
+    """
+    LOG.debug("Moving virtual disk from %(src)s to %(dst)s.",
+              {'src': src_file, 'dst': dst_file})
+    move_task = session._call_method(
+            session.vim,
+            "MoveVirtualDisk_Task",
+            session.vim.service_content.virtualDiskManager,
+            sourceName=str(src_file),
+            sourceDatacenter=dc_ref,
+            destName=str(dst_file),
+            destDatacenter=dc_ref,
+            force=False)
+    session._wait_for_task(move_task)
+    LOG.info(_LI("Moved virtual disk from %(src)s to %(dst)s."),
+             {'src': src_file, 'dst': dst_file})
 
 
 def file_move(session, dc_ref, src_file, dst_file):

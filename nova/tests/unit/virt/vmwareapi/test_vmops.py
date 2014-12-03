@@ -1218,6 +1218,21 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 image_ds_loc.rel_path,
                 cookies='Fake-CookieJar')
 
+    @mock.patch.object(images, 'fetch_image_stream_optimized')
+    def test_fetch_image_as_vapp(self, mock_fetch_image):
+        vi = self._make_vm_config_info()
+        image_ds_loc = mock.Mock()
+        image_ds_loc.parent.basename = 'fake-name'
+        self._vmops._fetch_image_as_vapp(self._context, vi, image_ds_loc)
+        mock_fetch_image.assert_called_once_with(
+                self._context,
+                vi.instance,
+                self._session,
+                'fake-name',
+                self._ds.name,
+                vi.dc_info.vmFolder,
+                self._vmops._root_resource_pool)
+
     @mock.patch.object(uuidutils, 'generate_uuid', return_value='tmp-uuid')
     def test_prepare_iso_image(self, mock_generate_uuid):
         vi = self._make_vm_config_info(is_iso=True)
@@ -1303,6 +1318,23 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 self._session, self._dc_info.ref,
                 tmp_image_ds_loc.parent,
                 DsPathMatcher('[fake_ds] vmware_base/%s' % self._image_id))
+
+    @mock.patch.object(ds_util, 'disk_move')
+    @mock.patch.object(ds_util, 'mkdir')
+    def test_cache_stream_optimized_image(self, mock_mkdir, mock_disk_move):
+        vi = self._make_vm_config_info()
+
+        self._vmops._cache_stream_optimized_image(vi, mock.sentinel.tmp_image)
+
+        mock_mkdir.assert_called_once_with(
+            self._session,
+            DsPathMatcher('[fake_ds] vmware_base/%s' % self._image_id),
+            self._dc_info.ref)
+        mock_disk_move.assert_called_once_with(
+                self._session, self._dc_info.ref,
+                mock.sentinel.tmp_image,
+                DsPathMatcher('[fake_ds] vmware_base/%s/%s.vmdk' %
+                              (self._image_id, self._image_id)))
 
     @mock.patch.object(ds_util, 'file_move')
     @mock.patch.object(vm_util, 'copy_virtual_disk')

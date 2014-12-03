@@ -83,6 +83,29 @@ class DsUtilTestCase(test.NoDBTestCase):
             _wait_for_task.assert_has_calls([
                    mock.call('fake_move_task')])
 
+    def test_disk_move(self):
+        def fake_call_method(module, method, *args, **kwargs):
+            self.assertEqual('MoveVirtualDisk_Task', method)
+            src_name = kwargs.get('sourceName')
+            self.assertEqual('[ds] tmp/src', src_name)
+            dest_name = kwargs.get('destName')
+            self.assertEqual('[ds] base/dst', dest_name)
+            src_datacenter = kwargs.get('sourceDatacenter')
+            self.assertEqual('fake-dc-ref', src_datacenter)
+            dest_datacenter = kwargs.get('destDatacenter')
+            self.assertEqual('fake-dc-ref', dest_datacenter)
+            return 'fake_move_task'
+
+        with contextlib.nested(
+            mock.patch.object(self.session, '_wait_for_task'),
+            mock.patch.object(self.session, '_call_method',
+                              fake_call_method)
+        ) as (_wait_for_task, _call_method):
+            ds_util.disk_move(self.session,
+                              'fake-dc-ref', '[ds] tmp/src', '[ds] base/dst')
+            _wait_for_task.assert_has_calls([
+                   mock.call('fake_move_task')])
+
     def test_mkdir(self):
         def fake_call_method(module, method, *args, **kwargs):
             self.assertEqual('MakeDirectory', method)
