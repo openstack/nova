@@ -731,8 +731,8 @@ class Migration(BASE, NovaBase):
     """Represents a running host-to-host migration."""
     __tablename__ = 'migrations'
     __table_args__ = (
-        Index('migrations_instance_uuid_and_status_idx', 'instance_uuid',
-              'status'),
+        Index('migrations_instance_uuid_and_status_idx', 'deleted',
+              'instance_uuid', 'status'),
         Index('migrations_by_host_nodes_and_status_idx', 'deleted',
               'source_compute', 'dest_compute', 'source_node', 'dest_node',
               'status'),
