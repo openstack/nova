@@ -22,7 +22,8 @@ from nova.virt import hardware
 class NUMACell(base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Added pinned_cpus and siblings fields
-    VERSION = '1.1'
+    # Version 1.2: Added mempages field
+    VERSION = '1.2'
 
     fields = {
         'id': fields.IntegerField(read_only=True),
@@ -31,8 +32,13 @@ class NUMACell(base.NovaObject):
         'cpu_usage': fields.IntegerField(default=0),
         'memory_usage': fields.IntegerField(default=0),
         'pinned_cpus': fields.SetOfIntegersField(),
-        'siblings': fields.ListOfSetsOfIntegersField()
+        'siblings': fields.ListOfSetsOfIntegersField(),
+        'mempages': fields.ListOfObjectsField('NUMAPagesTopology'),
         }
+
+    obj_relationships = {
+        'NUMAPagesTopology': [('1.2', '1.0')]
+    }
 
     def __init__(self, **kwargs):
         super(NUMACell, self).__init__(**kwargs)
@@ -67,17 +73,39 @@ class NUMACell(base.NovaObject):
                    cpu_usage=cpu_usage, memory_usage=memory_usage)
 
 
+class NUMAPagesTopology(base.NovaObject):
+    # Version 1.0: Initial version
+    VERSION = '1.0'
+
+    fields = {
+        'size_kb': fields.IntegerField(),
+        'total': fields.IntegerField(),
+        'used': fields.IntegerField(default=0),
+        }
+
+    @property
+    def free(self):
+        """Returns the number of avail pages."""
+        return self.total - self.used
+
+    @property
+    def free_kb(self):
+        """Returns the avail memory size in KiB."""
+        return self.free * self.size_kb
+
+
 class NUMATopology(base.NovaObject):
     # Version 1.0: Initial version
-    # Version 1.1: NUMACell version 1.1
-    VERSION = '1.1'
+    # Version 1.1: Update NUMACell to 1.1
+    # Version 1.1: Update NUMACell to 1.2
+    VERSION = '1.2'
 
     fields = {
         'cells': fields.ListOfObjectsField('NUMACell'),
         }
 
     obj_relationships = {
-        'NUMACell': [('1.0', '1.0'), ('1.1', '1.1')]
+        'NUMACell': [('1.0', '1.0'), ('1.1', '1.1'), ('1.2', '1.2')]
     }
 
     @classmethod
