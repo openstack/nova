@@ -2036,6 +2036,9 @@ class LibvirtDriver(driver.ComputeDriver):
                                                           image_ref,
                                                           instance)
 
+        instance_dir = libvirt_utils.get_instance_path(instance)
+        fileutils.ensure_tree(instance_dir)
+
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance,
                                             block_device_info,
@@ -2054,7 +2057,6 @@ class LibvirtDriver(driver.ComputeDriver):
         # NOTE (rmk): Re-populate any missing backing files.
         disk_info_json = self._get_instance_disk_info(instance['name'], xml,
                                                       block_device_info)
-        instance_dir = libvirt_utils.get_instance_path(instance)
         self._create_images_and_backing(context, instance, instance_dir,
                                         disk_info_json)
 

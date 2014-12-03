@@ -7599,6 +7599,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         conn._hard_reboot(self.context, instance, network_info,
                           block_device_info)
 
+    @mock.patch('nova.openstack.common.fileutils.ensure_tree')
     @mock.patch('nova.openstack.common.loopingcall.FixedIntervalLoopingCall')
     @mock.patch('nova.pci.manager.get_instance_pci_devs')
     @mock.patch('nova.virt.libvirt.LibvirtDriver._prepare_pci_devices_for_use')
@@ -7615,7 +7616,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             mock_get_instance_path, mock_write_to_file,
             mock_get_instance_disk_info, mock_create_images_and_backing,
             mock_create_domand_and_network, mock_prepare_pci_devices_for_use,
-            mock_get_instance_pci_devs, mock_looping_call):
+            mock_get_instance_pci_devs, mock_looping_call, mock_ensure_tree):
         """For a hard reboot, we shouldn't need an additional call to glance
         to get the image metadata.
 
@@ -7642,6 +7643,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                           block_device_info)
 
         self.assertFalse(conn._image_api.get.called)
+        mock_ensure_tree.assert_called_once_with('/foo')
 
     def test_power_on(self):
 
