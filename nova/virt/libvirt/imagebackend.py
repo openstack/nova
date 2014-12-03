@@ -341,6 +341,10 @@ class Image(object):
         raise exception.ImageUnacceptable(image_id=image_id_or_uri,
                                           reason=reason)
 
+    def _get_lock_name(self, base):
+        """Get an image's name of a base file."""
+        return os.path.split(base)[-1]
+
 
 class Raw(Image):
     def __init__(self, instance=None, disk_name=None, path=None):
@@ -383,7 +387,7 @@ class Raw(Image):
             self.driver_format = self.resolve_driver_format()
 
     def create_image(self, prepare_template, base, size, *args, **kwargs):
-        filename = os.path.split(base)[-1]
+        filename = self._get_lock_name(base)
 
         @utils.synchronized(filename, external=True, lock_path=self.lock_path)
         def copy_raw_image(base, target, size):
@@ -428,7 +432,7 @@ class Qcow2(Image):
         self.resolve_driver_format()
 
     def create_image(self, prepare_template, base, size, *args, **kwargs):
-        filename = os.path.split(base)[-1]
+        filename = self._get_lock_name(base)
 
         @utils.synchronized(filename, external=True, lock_path=self.lock_path)
         def copy_qcow2_image(base, target, size):
@@ -539,7 +543,7 @@ class Lvm(Image):
                                   CONF.ephemeral_storage_encryption.key_size,
                                   key)
 
-        filename = os.path.split(base)[-1]
+        filename = self._get_lock_name(base)
 
         @utils.synchronized(filename, external=True, lock_path=self.lock_path)
         def create_lvm_image(base, size):
