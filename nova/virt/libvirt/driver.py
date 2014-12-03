@@ -4736,11 +4736,6 @@ class LibvirtDriver(driver.ComputeDriver):
             LOG.info(_LI('Could not find domain in libvirt for instance %s. '
                          'Cannot get block stats for device'), instance_name)
 
-    def interface_stats(self, instance_name, iface_id):
-        """Note that this function takes an instance name."""
-        domain = self._lookup_by_name(instance_name)
-        return domain.interfaceStats(iface_id)
-
     def get_console_pool_info(self, console_type):
         # TODO(mdragon): console proxy should be implemented for libvirt,
         #                in case someone wants to use it with kvm or

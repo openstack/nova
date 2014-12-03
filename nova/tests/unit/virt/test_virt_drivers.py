@@ -542,12 +542,6 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
         self.assertEqual(len(stats), 5)
 
     @catch_notimplementederror
-    def test_interface_stats(self):
-        instance_ref, network_info = self._get_running_instance()
-        stats = self.connection.interface_stats(instance_ref['name'], 'someid')
-        self.assertEqual(len(stats), 8)
-
-    @catch_notimplementederror
     def test_get_console_output(self):
         fake_libvirt_utils.files['dummy.log'] = ''
         instance_ref, network_info = self._get_running_instance()

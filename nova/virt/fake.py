@@ -344,9 +344,6 @@ class FakeDriver(driver.ComputeDriver):
     def block_stats(self, instance_name, disk_id):
         return [0L, 0L, 0L, 0L, None]
 
-    def interface_stats(self, instance_name, iface_id):
-        return [0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L]
-
     def get_console_output(self, context, instance):
         return 'FAKE CONSOLE OUTPUT\nANOTHER\nLAST LINE'
 

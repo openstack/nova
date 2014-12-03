@@ -1088,25 +1088,6 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
-    def interface_stats(self, instance_name, iface_id):
-        """Return performance counters associated with the given iface_id
-        on the given instance_id.  These are returned as [rx_bytes, rx_packets,
-        rx_errs, rx_drop, tx_bytes, tx_packets, tx_errs, tx_drop], where rx
-        indicates receive, tx indicates transmit, bytes and packets indicate
-        the total number of bytes or packets transferred, and errs and dropped
-        is the total number of packets failed / dropped.
-
-        All counters are long integers.
-
-        This method is optional.  On some platforms (e.g. XenAPI) performance
-        statistics can be retrieved directly in aggregate form, without Nova
-        having to do the aggregation.  On those platforms, this method is
-        unused.
-
-        Note that this function takes an instance ID.
-        """
-        raise NotImplementedError()
-
     def deallocate_networks_on_reschedule(self, instance):
         """Does the driver want networks deallocated on reschedule?"""
         return False
