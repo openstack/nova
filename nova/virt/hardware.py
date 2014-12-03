@@ -857,24 +857,29 @@ def numa_get_constraints(flavor, image_meta):
     """
     nodes = _numa_get_flavor_or_image_prop(
         flavor, image_meta, "numa_nodes")
+    pagesize = _numa_get_pagesize_constraints(
+        flavor, image_meta)
 
-    if nodes is None:
-        return None
+    topology = None
+    if nodes or pagesize:
+        nodes = nodes and int(nodes) or 1
+        # We'll pick what path to go down based on whether
+        # anything is set for the first node. Both paths
+        # have logic to cope with inconsistent property usage
+        auto = _numa_get_flavor_or_image_prop(
+            flavor, image_meta, "numa_cpus.0") is None
 
-    nodes = int(nodes)
+        if auto:
+            topology = _numa_get_constraints_auto(
+                nodes, flavor, image_meta)
+        else:
+            topology = _numa_get_constraints_manual(
+                nodes, flavor, image_meta)
 
-    # We'll pick what path to go down based on whether
-    # anything is set for the first node. Both paths
-    # have logic to cope with inconsistent property usage
-    auto = _numa_get_flavor_or_image_prop(
-        flavor, image_meta, "numa_cpus.0") is None
+        # We currently support same pagesize for all cells.
+        [setattr(c, 'pagesize', pagesize) for c in topology.cells]
 
-    if auto:
-        return _numa_get_constraints_auto(
-            nodes, flavor, image_meta)
-    else:
-        return _numa_get_constraints_manual(
-            nodes, flavor, image_meta)
+    return topology
 
 
 class VirtNUMALimitTopology(VirtNUMATopology):

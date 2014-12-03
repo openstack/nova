@@ -734,6 +734,18 @@ class NUMATopologyTest(test.NoDBTestCase):
                     ]),
             },
             {
+                "flavor": objects.Flavor(vcpus=8, memory_mb=2048, extra_specs={
+                    "hw:mem_page_size": 2048
+                }),
+                "image": {
+                },
+                "expect": objects.InstanceNUMATopology(cells=[
+                        objects.InstanceNUMACell(
+                            id=0, cpuset=set([0, 1, 2, 3, 4, 5, 6, 7]),
+                            memory=2048, pagesize=2048)
+                    ]),
+            },
+            {
                 # vcpus is not a multiple of nodes, so it
                 # is an error to not provide cpu/mem mapping
                 "flavor": objects.Flavor(vcpus=8, memory_mb=2048, extra_specs={
@@ -891,6 +903,8 @@ class NUMATopologyTest(test.NoDBTestCase):
                                      topology.cells[i].cpuset)
                     self.assertEqual(testitem["expect"].cells[i].memory,
                                      topology.cells[i].memory)
+                    self.assertEqual(testitem["expect"].cells[i].pagesize,
+                                     topology.cells[i].pagesize)
 
     def test_host_usage_contiguous(self):
         hpages0_4K = objects.NUMAPagesTopology(size_kb=4, total=256, used=0)
