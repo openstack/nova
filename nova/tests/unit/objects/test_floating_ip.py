@@ -217,7 +217,7 @@ class _TestFloatingIPObject(object):
 
     @mock.patch('nova.db.floating_ip_bulk_create')
     def test_bulk_create(self, create_mock):
-        def fake_create(ctxt, ip_info):
+        def fake_create(ctxt, ip_info, want_result=False):
             return [{'id': 1, 'address': ip['address'], 'fixed_ip_id': 1,
                      'project_id': 'foo', 'host': 'host',
                      'auto_assigned': False, 'pool': ip['pool'],
@@ -232,6 +232,7 @@ class _TestFloatingIPObject(object):
         result = objects.FloatingIPList.create(None, ips)
         self.assertIs(result, None)
         result = objects.FloatingIPList.create(None, ips, want_result=True)
+        self.assertEqual('1.1.1.1', str(result[0].address))
         self.assertEqual('1.1.1.2', str(result[1].address))
 
     @mock.patch('nova.db.floating_ip_bulk_destroy')

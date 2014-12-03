@@ -779,22 +779,20 @@ def floating_ip_allocate_address(context, project_id, pool,
 
 
 @require_context
-def floating_ip_bulk_create(context, ips):
+def floating_ip_bulk_create(context, ips, want_result=True):
     session = get_session()
-    result = []
     with session.begin():
-        for ip in ips:
-            model = models.FloatingIp()
-            model.update(ip)
-            result.append(model)
-            try:
-                # NOTE(boris-42): To get existing address we have to do each
-                #                  time session.flush()..
-                session.add(model)
-                session.flush()
-            except db_exc.DBDuplicateEntry:
-                raise exception.FloatingIpExists(address=ip['address'])
-    return result
+        try:
+            tab = models.FloatingIp().__table__  # pylint: disable=E1101
+            session.execute(tab.insert(), ips)
+        except db_exc.DBDuplicateEntry as e:
+            raise exception.FloatingIpExists(address=e.value)
+
+        if want_result:
+            return model_query(
+                context, models.FloatingIp, session=session).filter(
+                models.FloatingIp.address.in_(
+                    [ip['address'] for ip in ips])).all()
 
 
 def _ip_range_splitter(ips, block_size=256):

@@ -35,12 +35,14 @@ class FloatingIpsBulkTest(api_sample_base.ApiSampleTestBaseV3):
             {
                 'address': "10.10.10.1",
                 'pool': pool,
-                'interface': interface
+                'interface': interface,
+                'host': None
                 },
             {
                 'address': "10.10.10.2",
                 'pool': pool,
-                'interface': interface
+                'interface': interface,
+                'host': None
                 },
             {
                 'address': "10.10.10.3",

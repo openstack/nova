@@ -4242,8 +4242,10 @@ class FloatingIpTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_floating_ip_bulk_create(self):
         expected_ips = ['1.1.1.1', '1.1.1.2', '1.1.1.3', '1.1.1.4']
-        db.floating_ip_bulk_create(self.ctxt,
-                                   map(lambda x: {'address': x}, expected_ips))
+        result = db.floating_ip_bulk_create(self.ctxt,
+                                   map(lambda x: {'address': x}, expected_ips),
+                                   want_result=False)
+        self.assertIsNone(result)
         self._assertEqualListsOfPrimitivesAsSets(self._get_existing_ips(),
                                                  expected_ips)
 
@@ -4252,10 +4254,11 @@ class FloatingIpTestCase(test.TestCase, ModelsObjectComparatorMixin):
         prepare_ips = lambda x: {'address': x}
 
         result = db.floating_ip_bulk_create(self.ctxt, map(prepare_ips, ips))
-        self.assertEqual('1.1.1.1', result[0].address)
+        self.assertEqual(ips, [ip.address for ip in result])
         self.assertRaises(exception.FloatingIpExists,
                           db.floating_ip_bulk_create,
-                          self.ctxt, map(prepare_ips, ['1.1.1.5', '1.1.1.4']))
+                          self.ctxt, map(prepare_ips, ['1.1.1.5', '1.1.1.4']),
+                          want_result=False)
         self.assertRaises(exception.FloatingIpNotFoundForAddress,
                           db.floating_ip_get_by_address,
                           self.ctxt, '1.1.1.5')
@@ -4273,8 +4276,10 @@ class FloatingIpTestCase(test.TestCase, ModelsObjectComparatorMixin):
             ips_for_delete.extend(create_ips(i, 255))
         ips_for_non_delete.extend(create_ips(3, 255))
 
-        db.floating_ip_bulk_create(self.ctxt,
-                                   ips_for_delete + ips_for_non_delete)
+        result = db.floating_ip_bulk_create(self.ctxt,
+                                   ips_for_delete + ips_for_non_delete,
+                                   want_result=False)
+        self.assertIsNone(result)
 
         non_bulk_ips_for_delete = create_ips(4, 3)
         non_bulk_ips_for_non_delete = create_ips(5, 3)
