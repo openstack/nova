@@ -4680,7 +4680,13 @@ class LibvirtDriver(driver.ComputeDriver):
                     id=cell.id,
                     cpuset=set(cpu.id for cpu in cell.cpus),
                     memory=cell.memory / units.Ki,
-                    cpu_usage=0, memory_usage=0)
+                    cpu_usage=0, memory_usage=0,
+                    mempages=[
+                        objects.NUMAPagesTopology(
+                            size_kb=pages.size,
+                            total=pages.total,
+                            used=0)
+                        for pages in cell.mempages])
                 for cell in topology.cells])
 
         allowed_cpus = hardware.get_vcpu_pin_set()

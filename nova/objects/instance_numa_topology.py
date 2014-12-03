@@ -45,6 +45,9 @@ class InstanceNUMACell(base.NovaObject):
 
     def __init__(self, **kwargs):
         super(InstanceNUMACell, self).__init__(**kwargs)
+        if 'pagesize' not in kwargs:
+            self.pagesize = None
+            self.obj_reset_changes(['pagesize'])
         if 'cpu_topology' not in kwargs:
             self.cpu_topology = None
             self.obj_reset_changes(['cpu_topology'])
