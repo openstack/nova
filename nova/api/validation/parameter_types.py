@@ -125,7 +125,7 @@ image_ref = {
 
 
 flavor_ref = {
-    'type': ['string', 'integer'],
+    'type': ['string', 'integer'], 'minLength': 1
 }
 
 

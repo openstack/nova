@@ -2422,6 +2422,13 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.create, self.req, body=self.body)
 
+    def test_create_instance_invalid_flavor_id_empty(self):
+        flavor_ref = ""
+        self.body['server']['flavorRef'] = flavor_ref
+        self.req.body = jsonutils.dumps(self.body)
+        self.assertRaises(exception.ValidationError,
+                          self.controller.create, self.req, body=self.body)
+
     def test_create_instance_bad_flavor_href(self):
         image_href = 'http://localhost/v2/images/2'
         flavor_ref = 'http://localhost/v2/flavors/17'
