@@ -57,7 +57,7 @@ class BlockDeviceMappingTestV21(test.TestCase):
             'source_type': 'volume',
             'destination_type': 'volume',
             'uuid': 'fake',
-            'device_name': 'vda',
+            'device_name': 'vdb',
             'delete_on_termination': False,
         }]
 

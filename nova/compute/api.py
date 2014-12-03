@@ -701,6 +701,16 @@ class API(base.Base):
         #                  It's needed for legacy conversion to work.
         root_device_name = (base_options.get('root_device_name') or 'vda')
         image_ref = base_options.get('image_ref', '')
+        # If the instance is booted by image and has a volume attached,
+        # the volume cannot have the same device name as root_device_name
+        if image_ref:
+            for bdm in block_device_mapping:
+                if (bdm.get('source_type') == 'volume' and
+                    block_device.strip_dev(bdm.get(
+                    'device_name')) == root_device_name):
+                    msg = _('The volume cannot be assigned the same device'
+                            ' name as the root device %s') % root_device_name
+                    raise exception.InvalidRequest(msg)
 
         image_defined_bdms = self._get_image_defined_bdms(
             base_options, instance_type, image_meta, root_device_name)
