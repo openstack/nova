@@ -14,6 +14,7 @@
 
 from oslo.serialization import jsonutils
 
+from nova import exception
 from nova.objects import base
 from nova.objects import fields
 from nova.virt import hardware
@@ -72,6 +73,21 @@ class NUMACell(base.NovaObject):
         return cls(id=cell_id, cpuset=cpuset, memory=memory,
                    cpu_usage=cpu_usage, memory_usage=memory_usage,
                    mempages=[])
+
+    def can_fit_hugepages(self, pagesize, memory):
+        """Returns whether memory can fit into hugepages size
+
+        :param pagesize: a page size in KibB
+        :param memory: a memory size asked to fit in KiB
+
+        :returns: whether memory can fit in hugepages
+        :raises: MemoryPageSizeNotSupported if page size not supported
+        """
+        for pages in self.mempages:
+            if pages.size_kb == pagesize:
+                return (memory <= pages.free_kb and
+                        (memory % pages.size_kb) == 0)
+        raise exception.MemoryPageSizeNotSupported(pagesize=pagesize)
 
 
 class NUMAPagesTopology(base.NovaObject):
