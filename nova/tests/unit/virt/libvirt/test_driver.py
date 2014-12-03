@@ -489,6 +489,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             def lookupByName(self, name):
                 pass
 
+            def lookupByID(self, id):
+                pass
+
             def getHostname(self):
                 return "mustard"
 
@@ -581,6 +584,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             fake.__setattr__(key, val)
 
         self.stubs.Set(libvirt_driver.LibvirtDriver, '_conn', fake)
+        self.stubs.Set(host.Host, 'get_connection', lambda x: fake)
 
     def fake_lookup(self, instance_name):
         return FakeVirtDomain()
@@ -2323,33 +2327,34 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             exception.SocketPortRangeExhaustedException,
             conn._get_guest_config, instance_ref, [], {}, disk_info)
 
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._lookup_by_name')
-    def test_get_serial_ports_from_instance(self, _lookup_by_name):
-        i = self._test_get_serial_ports_from_instance(_lookup_by_name)
+    @mock.patch.object(host.Host, "get_domain")
+    def test_get_serial_ports_from_instance(self, mock_get_domain):
+        i = self._test_get_serial_ports_from_instance(None,
+                                                      mock_get_domain)
         self.assertEqual([
             ('127.0.0.1', 100),
             ('127.0.0.1', 101),
             ('127.0.0.2', 100),
             ('127.0.0.2', 101)], list(i))
 
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._lookup_by_name')
-    def test_get_serial_ports_from_instance_bind_only(self, _lookup_by_name):
-        i = self._test_get_serial_ports_from_instance(
-            _lookup_by_name, mode='bind')
+    @mock.patch.object(host.Host, "get_domain")
+    def test_get_serial_ports_from_instance_bind_only(self, mock_get_domain):
+        i = self._test_get_serial_ports_from_instance('bind',
+                                                      mock_get_domain)
         self.assertEqual([
             ('127.0.0.1', 101),
             ('127.0.0.2', 100)], list(i))
 
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._lookup_by_name')
+    @mock.patch.object(host.Host, "get_domain")
     def test_get_serial_ports_from_instance_connect_only(self,
-                                                         _lookup_by_name):
-        i = self._test_get_serial_ports_from_instance(
-            _lookup_by_name, mode='connect')
+                                                         mock_get_domain):
+        i = self._test_get_serial_ports_from_instance('connect',
+                                                      mock_get_domain)
         self.assertEqual([
             ('127.0.0.1', 100),
             ('127.0.0.2', 101)], list(i))
 
-    def _test_get_serial_ports_from_instance(self, _lookup_by_name, mode=None):
+    def _test_get_serial_ports_from_instance(self, mode, mock_get_domain):
         xml = """
         <domain type='kvm'>
           <devices>
@@ -2370,7 +2375,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         dom = mock.MagicMock()
         dom.XMLDesc.return_value = xml
-        _lookup_by_name.return_value = dom
+        mock_get_domain.return_value = dom
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         instance = objects.Instance(**self.test_instance)
@@ -4201,25 +4206,17 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         vm4 = FakeVirtDomain(name="instance00000004")
         vms = [vm1, vm2, vm3, vm4]
 
-        def fake_lookup_id(id):
+        def fake_get_domain_by_id(self, id):
             for vm in vms:
                 if vm.ID() == id:
                     return vm
-            ex = fakelibvirt.make_libvirtError(
-                libvirt.libvirtError,
-                "No such domain",
-                error_code=libvirt.VIR_ERR_NO_DOMAIN)
-            raise ex
+            raise exception.InstanceNotFound(instance_id=id)
 
-        def fake_lookup_name(name):
+        def fake_get_domain_by_name(self, name):
             for vm in vms:
                 if vm.name() == name:
                     return vm
-            ex = fakelibvirt.make_libvirtError(
-                libvirt.libvirtError,
-                "No such domain",
-                error_code=libvirt.VIR_ERR_NO_DOMAIN)
-            raise ex
+            raise exception.InstanceNotFound(instance_id=name)
 
         def fake_list_doms():
             # Include one ID that no longer exists
@@ -4231,11 +4228,13 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             # transition from inactive -> running
             return [vm1.name(), vm3.name(), vm4.name(), "fishfood"]
 
+        self.stubs.Set(host.Host, "get_domain_by_id",
+                       fake_get_domain_by_id)
+        self.stubs.Set(host.Host, "get_domain_by_name",
+                       fake_get_domain_by_name)
         self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
         libvirt_driver.LibvirtDriver._conn.listDomainsID = fake_list_doms
         libvirt_driver.LibvirtDriver._conn.listDefinedDomains = fake_list_ddoms
-        libvirt_driver.LibvirtDriver._conn.lookupByID = fake_lookup_id
-        libvirt_driver.LibvirtDriver._conn.lookupByName = fake_lookup_name
         libvirt_driver.LibvirtDriver._conn.numOfDomains = lambda: 2
         libvirt_driver.LibvirtDriver._conn.numOfDefinedDomains = lambda: 2
 
@@ -4259,15 +4258,11 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         vm2 = FakeVirtDomain(id=17, name="instance00000002")
         vms = [vm1, vm2]
 
-        def fake_lookup_id(id):
+        def fake_get_domain_by_id(self, id):
             for vm in vms:
                 if vm.ID() == id:
                     return vm
-            ex = fakelibvirt.make_libvirtError(
-                libvirt.libvirtError,
-                "No such domain",
-                error_code=libvirt.VIR_ERR_NO_DOMAIN)
-            raise ex
+            raise exception.InstanceNotFound(instance_id=id)
 
         def fake_list_doms():
             return [vm1.ID(), vm2.ID()]
@@ -4279,9 +4274,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 error_code=libvirt.VIR_ERR_NO_SUPPORT)
             raise ex
 
+        self.stubs.Set(host.Host, "get_domain_by_id", fake_get_domain_by_id)
         self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
         libvirt_driver.LibvirtDriver._conn.listDomainsID = fake_list_doms
-        libvirt_driver.LibvirtDriver._conn.lookupByID = fake_lookup_id
         libvirt_driver.LibvirtDriver._conn.numOfDomains = lambda: 2
         libvirt_driver.LibvirtDriver._conn.listAllDomains = fake_list_all
 
@@ -4474,8 +4469,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         # To work with it from snapshot, the single image_service is needed
         recv_meta = self.image_service.create(context, sent_meta)
 
-        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
-        libvirt_driver.LibvirtDriver._conn.lookupByName = self.fake_lookup
+        self.stubs.Set(host.Host, "get_domain", lambda a, b: FakeVirtDomain())
         self.mox.StubOutWithMock(libvirt_driver.utils, 'execute')
         libvirt_driver.utils.execute = self.fake_execute
         libvirt_driver.libvirt_utils.disk_type = "qcow2"
@@ -4526,8 +4520,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         # To work with it from snapshot, the single image_service is needed
         recv_meta = self.image_service.create(context, sent_meta)
 
-        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
-        libvirt_driver.LibvirtDriver._conn.lookupByName = self.fake_lookup
+        self.stubs.Set(host.Host, "get_domain", lambda a, b: FakeVirtDomain())
         self.mox.StubOutWithMock(libvirt_driver.utils, 'execute')
         libvirt_driver.utils.execute = self.fake_execute
         libvirt_driver.libvirt_utils.disk_type = "qcow2"
@@ -4572,8 +4565,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         # To work with it from snapshot, the single image_service is needed
         recv_meta = self.image_service.create(context, sent_meta)
 
-        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
-        libvirt_driver.LibvirtDriver._conn.lookupByName = self.fake_lookup
+        self.stubs.Set(host.Host, "get_domain", lambda a, b: FakeVirtDomain())
         self.mox.StubOutWithMock(libvirt_driver.utils, 'execute')
         libvirt_driver.utils.execute = self.fake_execute
         self.stubs.Set(libvirt_driver.libvirt_utils, 'disk_type', 'raw')
@@ -4613,8 +4605,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             mock.call(task_state=task_states.IMAGE_UPLOADING,
                       expected_state=task_states.IMAGE_PENDING_UPLOAD)]
         mock_update_task_state = mock.Mock()
-        mock_lookupByName = mock.Mock(return_value=FakeVirtDomain(xml),
-                                      autospec=True)
+        mock_get_domain = mock.Mock(return_value=FakeVirtDomain(xml),
+                                    autospec=True)
         volume_info = {'VG': 'nova-vg', 'LV': 'disk'}
         mock_volume_info = mock.Mock(return_value=volume_info,
                                              autospec=True)
@@ -4656,13 +4648,13 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 mock.patch.object(libvirt_driver.imagebackend.images,
                                   'convert_image',
                                   mock_convert_image),
-                mock.patch.object(libvirt_driver.LibvirtDriver,
-                                  '_lookup_by_name',
-                                  mock_lookupByName)):
+                mock.patch.object(host.Host,
+                                  'get_domain',
+                                  mock_get_domain)):
             conn.snapshot(self.context, instance_ref, recv_meta['id'],
                       mock_update_task_state)
 
-        mock_lookupByName.assert_called_once_with("instance-00000001")
+        mock_get_domain.assert_called_once_with(instance_ref)
         mock_volume_info.assert_has_calls(mock_volume_info_calls)
         mock_convert_image.assert_called_once_with('/dev/nova-vg/lv',
                                                    mock.ANY,
@@ -4708,8 +4700,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         # To work with it from snapshot, the single image_service is needed
         recv_meta = self.image_service.create(context, sent_meta)
 
-        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
-        libvirt_driver.LibvirtDriver._conn.lookupByName = self.fake_lookup
+        self.stubs.Set(host.Host, "get_domain", lambda a, b: FakeVirtDomain())
         self.mox.StubOutWithMock(libvirt_driver.utils, 'execute')
         libvirt_driver.utils.execute = self.fake_execute
         self.stubs.Set(libvirt_driver.libvirt_utils, 'disk_type', 'raw')
@@ -4762,8 +4753,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         # To work with it from snapshot, the single image_service is needed
         recv_meta = self.image_service.create(context, sent_meta)
 
-        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
-        libvirt_driver.LibvirtDriver._conn.lookupByName = self.fake_lookup
+        self.stubs.Set(host.Host, "get_domain", lambda a, b: FakeVirtDomain())
         self.mox.StubOutWithMock(libvirt_driver.utils, 'execute')
         libvirt_driver.utils.execute = self.fake_execute
         libvirt_driver.libvirt_utils.disk_type = "qcow2"
@@ -4811,8 +4801,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         # To work with it from snapshot, the single image_service is needed
         recv_meta = self.image_service.create(context, sent_meta)
 
-        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
-        libvirt_driver.LibvirtDriver._conn.lookupByName = self.fake_lookup
+        self.stubs.Set(host.Host, "get_domain", lambda a, b: FakeVirtDomain())
         self.mox.StubOutWithMock(libvirt_driver.utils, 'execute')
         libvirt_driver.utils.execute = self.fake_execute
         libvirt_driver.libvirt_utils.disk_type = "qcow2"
@@ -4847,8 +4836,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             mock.call(task_state=task_states.IMAGE_UPLOADING,
                       expected_state=task_states.IMAGE_PENDING_UPLOAD)]
         mock_update_task_state = mock.Mock()
-        mock_lookupByName = mock.Mock(return_value=FakeVirtDomain(xml),
-                                      autospec=True)
+        mock_get_domain = mock.Mock(return_value=FakeVirtDomain(xml),
+                                    autospec=True)
         volume_info = {'VG': 'nova-vg', 'LV': 'disk'}
         mock_volume_info = mock.Mock(return_value=volume_info, autospec=True)
         mock_volume_info_calls = [mock.call('/dev/nova-vg/lv')]
@@ -4889,13 +4878,13 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 mock.patch.object(libvirt_driver.imagebackend.images,
                                    'convert_image',
                                    mock_convert_image),
-                mock.patch.object(libvirt_driver.LibvirtDriver,
-                                   '_lookup_by_name',
-                                   mock_lookupByName)):
+                mock.patch.object(host.Host,
+                                  'get_domain',
+                                  mock_get_domain)):
             conn.snapshot(self.context, instance_ref, recv_meta['id'],
                       mock_update_task_state)
 
-        mock_lookupByName.assert_called_once_with("instance-00000001")
+        mock_get_domain.assert_called_once_with(instance_ref)
         mock_volume_info.assert_has_calls(mock_volume_info_calls)
         mock_convert_image.assert_called_once_with('/dev/nova-vg/lv',
                                                    mock.ANY,
@@ -4943,8 +4932,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         # To work with it from snapshot, the single image_service is needed
         recv_meta = self.image_service.create(context, sent_meta)
 
-        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
-        libvirt_driver.LibvirtDriver._conn.lookupByName = self.fake_lookup
+        self.stubs.Set(host.Host, "get_domain", lambda a, b: FakeVirtDomain())
         self.mox.StubOutWithMock(libvirt_driver.utils, 'execute')
         libvirt_driver.utils.execute = self.fake_execute
 
@@ -4991,8 +4979,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         # To work with it from snapshot, the single image_service is needed
         recv_meta = self.image_service.create(context, sent_meta)
 
-        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
-        libvirt_driver.LibvirtDriver._conn.lookupByName = self.fake_lookup
+        self.stubs.Set(host.Host, "get_domain", lambda a, b: FakeVirtDomain())
         self.mox.StubOutWithMock(libvirt_driver.utils, 'execute')
         libvirt_driver.utils.execute = self.fake_execute
         libvirt_driver.libvirt_utils.disk_type = "qcow2"
@@ -5038,8 +5025,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                      'status': 'creating', 'properties': properties}
         recv_meta = self.image_service.create(context, sent_meta)
 
-        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
-        libvirt_driver.LibvirtDriver._conn.lookupByName = self.fake_lookup
+        self.stubs.Set(host.Host, "get_domain", lambda a, b: FakeVirtDomain())
         self.mox.StubOutWithMock(libvirt_driver.utils, 'execute')
         libvirt_driver.utils.execute = self.fake_execute
 
@@ -5083,8 +5069,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                      'status': 'creating', 'properties': properties}
         recv_meta = self.image_service.create(context, sent_meta)
 
-        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
-        libvirt_driver.LibvirtDriver._conn.lookupByName = self.fake_lookup
+        self.stubs.Set(host.Host, "get_domain", lambda a, b: FakeVirtDomain())
         self.mox.StubOutWithMock(libvirt_driver.utils, 'execute')
         libvirt_driver.utils.execute = self.fake_execute
 
@@ -5132,8 +5117,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                      'status': 'creating', 'properties': properties}
         recv_meta = self.image_service.create(context, sent_meta)
 
-        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
-        libvirt_driver.LibvirtDriver._conn.lookupByName = self.fake_lookup
+        self.stubs.Set(host.Host, "get_domain", lambda a, b: FakeVirtDomain())
         self.mox.StubOutWithMock(libvirt_driver.utils, 'execute')
         libvirt_driver.utils.execute = self.fake_execute
 
@@ -5182,8 +5166,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                      'status': 'creating', 'properties': properties}
         recv_meta = self.image_service.create(context, sent_meta)
 
-        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
-        libvirt_driver.LibvirtDriver._conn.lookupByName = self.fake_lookup
+        self.stubs.Set(host.Host, "get_domain", lambda a, b: FakeVirtDomain())
         self.mox.StubOutWithMock(libvirt_driver.utils, 'execute')
         libvirt_driver.utils.execute = self.fake_execute
 
@@ -5309,13 +5292,13 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                           "/dev/sda")
 
     @mock.patch('nova.virt.libvirt.blockinfo.get_info_from_bdm')
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._lookup_by_name')
+    @mock.patch('nova.virt.libvirt.host.Host.get_domain')
     def test_attach_volume_with_vir_domain_affect_live_flag(self,
-            mock_lookup_by_name, mock_get_info):
+            mock_get_domain, mock_get_info):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instance = fake_instance.fake_instance_obj(mock.sentinel.ctx)
         mock_dom = mock.MagicMock()
-        mock_lookup_by_name.return_value = mock_dom
+        mock_get_domain.return_value = mock_dom
 
         connection_info = {"driver_volume_type": "fake",
                            "data": {"device_path": "/fake",
@@ -5344,7 +5327,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                    "/dev/vdb", disk_bus=bdm['disk_bus'],
                                    device_type=bdm['device_type'])
 
-                mock_lookup_by_name.assert_called_with(instance['name'])
+                mock_get_domain.assert_called_with(instance)
                 mock_get_info.assert_called_with(CONF.libvirt.virt_type, bdm)
                 mock_connect_volume.assert_called_with(
                     connection_info, disk_info)
@@ -5355,9 +5338,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                     mock_conf.to_xml(), flags)
 
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_disk_xml')
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._lookup_by_name')
+    @mock.patch('nova.virt.libvirt.host.Host.get_domain')
     def test_detach_volume_with_vir_domain_affect_live_flag(self,
-            mock_lookup_by_name, mock_get_disk_xml):
+            mock_get_domain, mock_get_disk_xml):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instance = fake_instance.fake_instance_obj(mock.sentinel.ctx)
         mock_dom = mock.MagicMock()
@@ -5380,11 +5363,11 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 mock_disconnect_volume:
             for state in (power_state.RUNNING, power_state.PAUSED):
                 mock_dom.info.return_value = [state, 512, 512, 2, 1234, 5678]
-                mock_lookup_by_name.return_value = mock_dom
+                mock_get_domain.return_value = mock_dom
 
                 conn.detach_volume(connection_info, instance, '/dev/vdc')
 
-                mock_lookup_by_name.assert_called_with(instance['name'])
+                mock_get_domain.assert_called_with(instance)
                 mock_get_disk_xml.assert_called_with(mock_dom.XMLDesc(0),
                                                      'vdc')
                 mock_dom.detachDeviceFlags.assert_called_with(mock_xml, flags)
@@ -6214,12 +6197,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         (mock_getsize, mock_lookup) =\
             self._is_shared_block_storage_test_create_mocks(disks)
-        with mock.patch.object(conn, '_lookup_by_name', mock_lookup):
+        with mock.patch.object(host.Host, 'get_domain', mock_lookup):
             self.assertTrue(conn._is_shared_block_storage(instance,
                                   {'is_volume_backed': True,
                                    'is_shared_instance_path': False},
                                   block_device_info = bdi))
-        mock_lookup.assert_called_once_with(instance['name'])
+        mock_lookup.assert_called_once_with(instance)
 
     def test_is_shared_block_storage_volume_backed_with_disk(self):
         disks = [{'type': 'block',
@@ -6240,14 +6223,14 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             self._is_shared_block_storage_test_create_mocks(disks)
         with contextlib.nested(
                 mock.patch.object(os.path, 'getsize', mock_getsize),
-                mock.patch.object(conn, '_lookup_by_name', mock_lookup)):
+                mock.patch.object(host.Host, 'get_domain', mock_lookup)):
             self.assertFalse(conn._is_shared_block_storage(
                                     instance,
                                     {'is_volume_backed': True,
                                     'is_shared_instance_path': False},
                                     block_device_info = bdi))
         mock_getsize.assert_called_once_with('/instance/disk.local')
-        mock_lookup.assert_called_once_with(instance['name'])
+        mock_lookup.assert_called_once_with(instance)
 
     def test_is_shared_block_storage_nfs(self):
         bdi = {'block_device_mapping': []}
@@ -7740,14 +7723,14 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                             service_mock.disabled_reason is 'None')
 
     def test_immediate_delete(self):
-        def fake_lookup_by_name(instance_name):
-            raise exception.InstanceNotFound(instance_id=instance_name)
+        def fake_get_domain(instance):
+            raise exception.InstanceNotFound(instance_id=instance.name)
 
         def fake_delete_instance_files(instance):
             pass
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.stubs.Set(conn, '_lookup_by_name', fake_lookup_by_name)
+        self.stubs.Set(conn._host, 'get_domain', fake_get_domain)
         self.stubs.Set(conn, '_delete_instance_files',
                        fake_delete_instance_files)
 
@@ -7864,8 +7847,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     @mock.patch.object(libvirt_driver.LibvirtDriver, 'cleanup')
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_teardown_container')
-    @mock.patch.object(libvirt_driver.LibvirtDriver, '_lookup_by_name')
-    def test_destroy_lxc_calls_teardown_container(self, mock_look_up,
+    @mock.patch.object(host.Host, 'get_domain')
+    def test_destroy_lxc_calls_teardown_container(self, mock_get_domain,
                                                   mock_teardown_container,
                                                   mock_cleanup):
         self.flags(virt_type='lxc', group='libvirt')
@@ -7876,15 +7859,15 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         with mock.patch.object(fake_domain, 'destroy',
                side_effect=destroy_side_effect) as mock_domain_destroy:
-            mock_look_up.return_value = fake_domain
+            mock_get_domain.return_value = fake_domain
             instance = fake_instance.fake_instance_obj(self.context)
 
             conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
             network_info = []
             conn.destroy(self.context, instance, network_info, None, False)
 
-            mock_look_up.assert_has_calls([mock.call(instance.name),
-                                           mock.call(instance.name)])
+            mock_get_domain.assert_has_calls([mock.call(instance),
+                                              mock.call(instance)])
             mock_domain_destroy.assert_called_once_with()
             mock_teardown_container.assert_called_once_with(instance)
             mock_cleanup.assert_called_once_with(self.context, instance,
@@ -7893,20 +7876,20 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     @mock.patch.object(libvirt_driver.LibvirtDriver, 'cleanup')
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_teardown_container')
-    @mock.patch.object(libvirt_driver.LibvirtDriver, '_lookup_by_name')
+    @mock.patch.object(host.Host, 'get_domain')
     def test_destroy_lxc_calls_teardown_container_when_no_domain(self,
-            mock_look_up, mock_teardown_container, mock_cleanup):
+            mock_get_domain, mock_teardown_container, mock_cleanup):
         self.flags(virt_type='lxc', group='libvirt')
         instance = fake_instance.fake_instance_obj(self.context)
         inf_exception = exception.InstanceNotFound(instance_id=instance.name)
-        mock_look_up.side_effect = inf_exception
+        mock_get_domain.side_effect = inf_exception
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         network_info = []
         conn.destroy(self.context, instance, network_info, None, False)
 
-        mock_look_up.assert_has_calls([mock.call(instance.name),
-                                       mock.call(instance.name)])
+        mock_get_domain.assert_has_calls([mock.call(instance),
+                                          mock.call(instance)])
         mock_teardown_container.assert_called_once_with(instance)
         mock_cleanup.assert_called_once_with(self.context, instance,
                                              network_info, None, False,
@@ -7936,7 +7919,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         self.mox.ReplayAll()
 
-        def fake_lookup_by_name(instance_name):
+        def fake_get_domain(instance):
             return mock_domain
 
         def fake_create_domain(**kwargs):
@@ -7944,7 +7927,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instance = objects.Instance(**self.test_instance)
-        self.stubs.Set(conn, '_lookup_by_name', fake_lookup_by_name)
+        self.stubs.Set(conn._host, 'get_domain', fake_get_domain)
         self.stubs.Set(conn, '_create_domain', fake_create_domain)
         self.stubs.Set(loopingcall, 'FixedIntervalLoopingCall',
                        lambda *a, **k: FakeLoopingCall())
@@ -7976,7 +7959,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         self.mox.ReplayAll()
 
-        def fake_lookup_by_name(instance_name):
+        def fake_get_domain(instance):
             return mock_domain
 
         def fake_hard_reboot(*args, **kwargs):
@@ -7987,7 +7970,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instance = objects.Instance(**self.test_instance)
-        self.stubs.Set(conn, '_lookup_by_name', fake_lookup_by_name)
+        self.stubs.Set(conn._host, 'get_domain', fake_get_domain)
         self.stubs.Set(greenthread, 'sleep', fake_sleep)
         self.stubs.Set(conn, '_hard_reboot', fake_hard_reboot)
         self.stubs.Set(loopingcall, 'FixedIntervalLoopingCall',
@@ -8013,8 +7996,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         instance = objects.Instance(**self.test_instance)
         network_info = []
 
-        self.mox.StubOutWithMock(conn, '_lookup_by_name')
-        conn._lookup_by_name(instance['name']).AndReturn(mock_domain)
+        self.mox.StubOutWithMock(conn._host, 'get_domain')
+        conn._host.get_domain(instance).AndReturn(mock_domain)
         self.mox.StubOutWithMock(conn, '_hard_reboot')
         conn._hard_reboot(context, instance, network_info, None)
 
@@ -8028,14 +8011,14 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         mock.info().AndReturn([state, None, None, None, None])
         self.mox.ReplayAll()
 
-        def fake_lookup_by_name(instance_name):
+        def fake_get_domain(instance):
             return mock
 
         def fake_hard_reboot(*args):
             called['count'] += 1
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.stubs.Set(conn, '_lookup_by_name', fake_lookup_by_name)
+        self.stubs.Set(conn._host, 'get_domain', fake_get_domain)
         self.stubs.Set(conn, '_hard_reboot', fake_hard_reboot)
         instance_details = {"name": "instancename", "id": 1,
                             "uuid": "875a8070-d0b9-4949-8b31-104d125c9a64"}
@@ -8079,14 +8062,14 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         instance = fake_instance.fake_instance_obj(
             self.context, **instance_details)
 
-        def fake_lookup_by_name(instance_name):
+        def fake_get_domain(instance):
             raise exception.InstanceNotFound(instance_id='fake')
 
         def fake_hard_reboot(*args):
             called['count'] += 1
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.stubs.Set(conn, '_lookup_by_name', fake_lookup_by_name)
+        self.stubs.Set(conn._host, 'get_domain', fake_get_domain)
         self.stubs.Set(conn, '_hard_reboot', fake_hard_reboot)
         conn.resume_state_on_host_boot(self.context, instance, network_info=[],
                                        block_device_info=None)
@@ -8300,7 +8283,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         self.mox.ReplayAll()
 
-        def fake_lookup_by_name(instance_name):
+        def fake_get_domain(instance):
             return mock_domain
 
         def fake_create_domain(**kwargs):
@@ -8308,7 +8291,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instance = objects.Instance(**self.test_instance)
-        self.stubs.Set(conn, '_lookup_by_name', fake_lookup_by_name)
+        self.stubs.Set(conn._host, 'get_domain', fake_get_domain)
         self.stubs.Set(conn, '_create_domain', fake_create_domain)
         result = conn._clean_shutdown(instance, timeout, retry_interval)
 
@@ -8473,7 +8456,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         self.mox.ReplayAll()
 
-        def fake_lookup_by_name(instance_name):
+        def fake_get_domain(instance):
             return mock
 
         def fake_get_info(instance_name):
@@ -8483,7 +8466,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             return None
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.stubs.Set(conn, '_lookup_by_name', fake_lookup_by_name)
+        self.stubs.Set(conn._host, 'get_domain', fake_get_domain)
         self.stubs.Set(conn, 'get_info', fake_get_info)
         self.stubs.Set(conn, '_delete_instance_files',
                        fake_delete_instance_files)
@@ -8511,7 +8494,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         self.mox.ReplayAll()
 
-        def fake_lookup_by_name(instance_name):
+        def fake_get_domain(instance):
             return mock
 
         def fake_get_info(instance_name):
@@ -8521,7 +8504,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             return None
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.stubs.Set(conn, '_lookup_by_name', fake_lookup_by_name)
+        self.stubs.Set(conn._host, 'get_domain', fake_get_domain)
         self.stubs.Set(conn, 'get_info', fake_get_info)
         self.stubs.Set(conn, '_delete_instance_files',
                        fake_delete_instance_files)
@@ -8539,7 +8522,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         self.mox.ReplayAll()
 
-        def fake_lookup_by_name(instance_name):
+        def fake_get_domain(instance):
             return mock
 
         def fake_get_info(instance_name):
@@ -8549,7 +8532,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             return None
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.stubs.Set(conn, '_lookup_by_name', fake_lookup_by_name)
+        self.stubs.Set(conn._host, 'get_domain', fake_get_domain)
         self.stubs.Set(conn, 'get_info', fake_get_info)
         self.stubs.Set(conn, '_delete_instance_files',
                        fake_delete_instance_files)
@@ -8566,7 +8549,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         self.mox.ReplayAll()
 
-        def fake_lookup_by_name(instance_name):
+        def fake_get_domain(self, instance):
             return mock
 
         def fake_get_info(instance_name):
@@ -8576,7 +8559,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             return None
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.stubs.Set(conn, '_lookup_by_name', fake_lookup_by_name)
+        self.stubs.Set(host.Host, 'get_domain', fake_get_domain)
         self.stubs.Set(conn, 'get_info', fake_get_info)
         self.stubs.Set(conn, '_delete_instance_files',
                        fake_delete_instance_files)
@@ -8589,14 +8572,14 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         mock.destroy().AndRaise(libvirt.libvirtError("timed out"))
         self.mox.ReplayAll()
 
-        def fake_lookup_by_name(instance_name):
+        def fake_get_domain(self, instance):
             return mock
 
         def fake_get_error_code(self):
             return libvirt.VIR_ERR_OPERATION_TIMEOUT
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.stubs.Set(conn, '_lookup_by_name', fake_lookup_by_name)
+        self.stubs.Set(host.Host, 'get_domain', fake_get_domain)
         self.stubs.Set(libvirt.libvirtError, 'get_error_code',
                 fake_get_error_code)
         instance = objects.Instance(**self.test_instance)
@@ -8614,24 +8597,21 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         mock.info().AndRaise(ex)
         self.mox.ReplayAll()
 
-        def fake_lookup_by_name(instance_name):
+        def fake_get_domain(instance):
             return mock
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.stubs.Set(conn, '_lookup_by_name', fake_lookup_by_name)
+        self.stubs.Set(conn._host, 'get_domain', fake_get_domain)
         instance = objects.Instance(**self.test_instance)
         # NOTE(vish): verifies destroy doesn't raise if the instance disappears
         conn._destroy(instance)
 
     def test_undefine_domain_with_not_found_instance(self):
-        def fake_lookup(instance_name):
-            raise libvirt.libvirtError("not found")
+        def fake_get_domain(self, instance):
+            raise exception.InstanceNotFound(instance_id=instance.name)
 
-        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
-        libvirt_driver.LibvirtDriver._conn.lookupByName = fake_lookup
+        self.stubs.Set(host.Host, 'get_domain', fake_get_domain)
         self.mox.StubOutWithMock(libvirt.libvirtError, "get_error_code")
-        libvirt.libvirtError.get_error_code().AndReturn(
-            libvirt.VIR_ERR_NO_DOMAIN)
 
         self.mox.ReplayAll()
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -9038,11 +9018,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             def maxMemory(self):
                 return 280160L
 
-        def fake_lookup_name(name):
+        def fake_get_domain(self, instance):
             return DiagFakeDomain()
 
-        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
-        libvirt_driver.LibvirtDriver._conn.lookupByName = fake_lookup_name
+        self.stubs.Set(host.Host, "get_domain", fake_get_domain)
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instance = objects.Instance(**self.test_instance)
@@ -9156,11 +9135,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             def maxMemory(self):
                 return 280160L
 
-        def fake_lookup_name(name):
+        def fake_get_domain(self, instance):
             return DiagFakeDomain()
 
-        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
-        libvirt_driver.LibvirtDriver._conn.lookupByName = fake_lookup_name
+        self.stubs.Set(host.Host, "get_domain", fake_get_domain)
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instance = objects.Instance(**self.test_instance)
@@ -9260,11 +9238,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             def maxMemory(self):
                 return 280160L
 
-        def fake_lookup_name(name):
+        def fake_get_domain(self, instance):
             return DiagFakeDomain()
 
-        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
-        libvirt_driver.LibvirtDriver._conn.lookupByName = fake_lookup_name
+        self.stubs.Set(host.Host, "get_domain", fake_get_domain)
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instance = objects.Instance(**self.test_instance)
@@ -9369,11 +9346,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             def maxMemory(self):
                 return 280160L
 
-        def fake_lookup_name(name):
+        def fake_get_domain(self, instance):
             return DiagFakeDomain()
 
-        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
-        libvirt_driver.LibvirtDriver._conn.lookupByName = fake_lookup_name
+        self.stubs.Set(host.Host, "get_domain", fake_get_domain)
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instance = objects.Instance(**self.test_instance)
@@ -9492,11 +9468,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             def maxMemory(self):
                 return 280160L
 
-        def fake_lookup_name(name):
+        def fake_get_domain(self, instance):
             return DiagFakeDomain()
 
-        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
-        libvirt_driver.LibvirtDriver._conn.lookupByName = fake_lookup_name
+        self.stubs.Set(host.Host, "get_domain", fake_get_domain)
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instance = objects.Instance(**self.test_instance)
@@ -9793,15 +9768,15 @@ Active:          8381604 kB
         self.mox.ReplayAll()
         self.assertTrue(conn._is_storage_shared_with('foo', '/path'))
 
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._lookup_by_name')
-    def test_get_domain_info_with_more_return(self, lookup_mock):
+    @mock.patch('nova.virt.libvirt.host.Host.get_domain')
+    def test_get_domain_info_with_more_return(self, mock_get_domain):
         instance = fake_instance.fake_instance_obj(mock.sentinel.ctx)
         dom_mock = mock.MagicMock()
         dom_mock.info.return_value = [
             1, 2048, 737, 8, 12345, 888888
         ]
         dom_mock.ID.return_value = mock.sentinel.instance_id
-        lookup_mock.return_value = dom_mock
+        mock_get_domain.return_value = dom_mock
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         info = conn.get_info(instance)
         self.assertEqual(1, info.state)
@@ -9812,7 +9787,7 @@ Active:          8381604 kB
         self.assertEqual(mock.sentinel.instance_id, info.id)
         dom_mock.info.assert_called_once_with()
         dom_mock.ID.assert_called_once_with()
-        lookup_mock.assert_called_once_with(instance['name'])
+        mock_get_domain.assert_called_once_with(instance)
 
     @mock.patch.object(encodeutils, 'safe_decode')
     def test_create_domain(self, mock_safe_decode):
@@ -10154,14 +10129,14 @@ Active:          8381604 kB
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
         with contextlib.nested(
-            mock.patch.object(conn, '_lookup_by_name',
+            mock.patch.object(host.Host, 'get_domain',
                               side_effect=exception.InstanceNotFound(
                                   instance_id=instance.name)),
             mock.patch.object(conn, '_disconnect_volume')
-        ) as (_lookup_by_name, _disconnect_volume):
+        ) as (_get_domain, _disconnect_volume):
             connection_info = {'driver_volume_type': 'fake'}
             conn.detach_volume(connection_info, instance, '/dev/sda')
-            _lookup_by_name.assert_called_once_with(instance.name)
+            _get_domain.assert_called_once_with(instance)
             _disconnect_volume.assert_called_once_with(connection_info,
                                                        'sda')
 
@@ -10174,8 +10149,7 @@ Active:          8381604 kB
         method_name: either \"attach_interface\" or \"detach_interface\"
                      depending on the method to test.
         """
-        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
-        libvirt_driver.LibvirtDriver._conn.lookupByName = self.fake_lookup
+        self.stubs.Set(host.Host, "get_domain", lambda a, b: FakeVirtDomain())
 
         instance = objects.Instance(**self.test_instance)
         mock_flavor.return_value = instance.get_flavor()
@@ -10337,7 +10311,7 @@ Active:          8381604 kB
             self.resultXML = conf.to_xml()
             return self.resultXML
 
-        def fake_lookup_name(instance_name):
+        def fake_get_domain(instance):
             return mock_domain
 
         def fake_defineXML(xml):
@@ -10366,7 +10340,6 @@ Active:          8381604 kB
         libvirt_driver.LibvirtDriver._conn.getCapabilities = \
                                                         fake_getCapabilities
         libvirt_driver.LibvirtDriver._conn.getVersion = lambda: 1005001
-        libvirt_driver.LibvirtDriver._conn.lookupByName = fake_lookup_name
         libvirt_driver.LibvirtDriver._conn.defineXML = fake_defineXML
         libvirt_driver.LibvirtDriver._conn.baselineCPU = fake_baselineCPU
 
@@ -10376,9 +10349,9 @@ Active:          8381604 kB
         self.stubs.Set(conn,
                        '_get_guest_xml',
                        fake_to_xml)
-        self.stubs.Set(conn,
-                       '_lookup_by_name',
-                       fake_lookup_name)
+        self.stubs.Set(host.Host,
+                       'get_domain',
+                       fake_get_domain)
         block_device_info = {'block_device_mapping':
                 driver_block_device.convert_volumes([
                     fake_block_device.FakeDbBlockDeviceDict(
@@ -11723,11 +11696,11 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             def XMLDesc(self, *args):
                 raise libvirt.libvirtError("Libvirt error")
 
-        def fake_lookup_by_name(instance_name):
+        def fake_get_domain(self, instance):
             return FakeExceptionDomain()
 
-        self.stubs.Set(self.libvirtconnection, '_lookup_by_name',
-                       fake_lookup_by_name)
+        self.stubs.Set(host.Host, 'get_domain',
+                       fake_get_domain)
         self.assertRaises(exception.InstanceNotFound,
             self.libvirtconnection.get_instance_disk_info,
             instance)
@@ -11898,15 +11871,14 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         instance = self._create_instance()
         network_info = _fake_network_info(self.stubs, 1)
         domain = FakeVirtDomain()
-        self.mox.StubOutWithMock(self.libvirtconnection, '_lookup_by_name')
+        self.mox.StubOutWithMock(host.Host, 'get_domain')
         self.mox.StubOutWithMock(self.libvirtconnection.firewall_driver,
                                  'setup_basic_filtering')
         self.mox.StubOutWithMock(domain, 'attachDeviceFlags')
         self.mox.StubOutWithMock(domain, 'info')
         self.mox.StubOutWithMock(objects.Flavor, 'get_by_id')
 
-        self.libvirtconnection._lookup_by_name(
-            'instance-00000001').AndReturn(domain)
+        host.Host.get_domain(instance).AndReturn(domain)
         if method == 'attach_interface':
             self.libvirtconnection.firewall_driver.setup_basic_filtering(
                 instance, [network_info[0]])
@@ -12399,10 +12371,10 @@ class LibvirtVolumeUsageTestCase(test.NoDBTestCase):
         self.assertEqual(vol_usage, expected_usage)
 
     def test_get_all_volume_usage_device_not_found(self):
-        def fake_lookup(instance_name):
-            raise libvirt.libvirtError('invalid path')
+        def fake_get_domain(self, instance):
+            raise exception.InstanceNotFound(instance_id="fakedom")
 
-        self.stubs.Set(self.conn, '_lookup_by_name', fake_lookup)
+        self.stubs.Set(host.Host, 'get_domain', fake_get_domain)
         vol_usage = self.conn.get_all_volume_usage(self.c,
               [dict(instance=self.ins_ref, instance_bdms=self.bdms)])
         self.assertEqual(vol_usage, [])
@@ -12571,7 +12543,7 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
     def test_volume_snapshot_create(self, quiesce=True):
         """Test snapshot creation with file-based disk."""
         self.flags(instance_name_template='instance-%s')
-        self.mox.StubOutWithMock(self.conn, '_lookup_by_name')
+        self.mox.StubOutWithMock(self.conn._host, 'get_domain')
         self.mox.StubOutWithMock(self.conn, '_volume_api')
 
         instance = objects.Instance(**self.inst)
@@ -12621,7 +12593,7 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
         """Test snapshot creation with libgfapi network disk."""
         self.flags(instance_name_template = 'instance-%s')
         self.flags(qemu_allowed_storage_drivers = ['gluster'], group='libvirt')
-        self.mox.StubOutWithMock(self.conn, '_lookup_by_name')
+        self.mox.StubOutWithMock(self.conn._host, 'get_domain')
         self.mox.StubOutWithMock(self.conn, '_volume_api')
 
         self.dom_xml = """
@@ -12692,11 +12664,11 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
 
         domain = FakeVirtDomain(fake_xml=self.dom_xml)
 
-        self.mox.StubOutWithMock(self.conn, '_lookup_by_name')
+        self.mox.StubOutWithMock(self.conn._host, 'get_domain')
         self.mox.StubOutWithMock(self.conn, '_volume_api')
         self.mox.StubOutWithMock(self.conn, '_volume_snapshot_create')
 
-        self.conn._lookup_by_name('instance-1').AndReturn(domain)
+        self.conn._host.get_domain(instance).AndReturn(domain)
 
         self.conn._volume_snapshot_create(self.c,
                                           instance,
@@ -12724,11 +12696,11 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
 
         domain = FakeVirtDomain(fake_xml=self.dom_xml)
 
-        self.mox.StubOutWithMock(self.conn, '_lookup_by_name')
+        self.mox.StubOutWithMock(self.conn._host, 'get_domain')
         self.mox.StubOutWithMock(self.conn, '_volume_api')
         self.mox.StubOutWithMock(self.conn, '_volume_snapshot_create')
 
-        self.conn._lookup_by_name('instance-1').AndReturn(domain)
+        self.conn._host.get_domain(instance).AndReturn(domain)
 
         self.conn._volume_snapshot_create(self.c,
                                           instance,
@@ -12759,14 +12731,13 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(domain, 'XMLDesc')
         domain.XMLDesc(0).AndReturn(self.dom_xml)
 
-        self.mox.StubOutWithMock(self.conn, '_lookup_by_name')
+        self.mox.StubOutWithMock(self.conn._host, 'get_domain')
         self.mox.StubOutWithMock(self.conn._host, 'has_min_version')
         self.mox.StubOutWithMock(domain, 'blockRebase')
         self.mox.StubOutWithMock(domain, 'blockCommit')
         self.mox.StubOutWithMock(domain, 'blockJobInfo')
 
-        self.conn._lookup_by_name('instance-%s' % instance['id']).\
-            AndReturn(domain)
+        self.conn._host.get_domain(instance).AndReturn(domain)
         self.conn._host.has_min_version(mox.IgnoreArg()).AndReturn(True)
 
         domain.blockRebase('vda', 'snap.img', 0, 0)
@@ -12791,14 +12762,13 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(domain, 'XMLDesc')
         domain.XMLDesc(0).AndReturn(self.dom_xml)
 
-        self.mox.StubOutWithMock(self.conn, '_lookup_by_name')
+        self.mox.StubOutWithMock(self.conn._host, 'get_domain')
         self.mox.StubOutWithMock(self.conn._host, 'has_min_version')
         self.mox.StubOutWithMock(domain, 'blockRebase')
         self.mox.StubOutWithMock(domain, 'blockCommit')
         self.mox.StubOutWithMock(domain, 'blockJobInfo')
 
-        self.conn._lookup_by_name('instance-%s' % instance['id']).\
-            AndReturn(domain)
+        self.conn._host.get_domain(instance).AndReturn(domain)
         self.conn._host.has_min_version(mox.IgnoreArg()).AndReturn(True)
 
         domain.blockCommit('vda', 'other-snap.img', 'snap.img', 0, 0)
@@ -12819,7 +12789,7 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
 
         FakeVirtDomain(fake_xml=self.dom_xml)
 
-        self.mox.StubOutWithMock(self.conn, '_lookup_by_name')
+        self.mox.StubOutWithMock(self.conn._host, 'get_domain')
         self.mox.StubOutWithMock(self.conn, '_volume_api')
         self.mox.StubOutWithMock(self.conn, '_volume_snapshot_delete')
 
@@ -12850,7 +12820,7 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
 
         FakeVirtDomain(fake_xml=self.dom_xml)
 
-        self.mox.StubOutWithMock(self.conn, '_lookup_by_name')
+        self.mox.StubOutWithMock(self.conn._host, 'get_domain')
         self.mox.StubOutWithMock(self.conn, '_volume_api')
         self.mox.StubOutWithMock(self.conn, '_volume_snapshot_delete')
 
@@ -12881,7 +12851,7 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
 
         FakeVirtDomain(fake_xml=self.dom_xml)
 
-        self.mox.StubOutWithMock(self.conn, '_lookup_by_name')
+        self.mox.StubOutWithMock(self.conn._host, 'get_domain')
         self.mox.StubOutWithMock(self.conn, '_volume_api')
         self.mox.StubOutWithMock(self.conn._host, 'has_min_version')
 
@@ -12920,14 +12890,13 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(domain, 'XMLDesc')
         domain.XMLDesc(0).AndReturn(self.dom_netdisk_xml)
 
-        self.mox.StubOutWithMock(self.conn, '_lookup_by_name')
+        self.mox.StubOutWithMock(self.conn._host, 'get_domain')
         self.mox.StubOutWithMock(self.conn._host, 'has_min_version')
         self.mox.StubOutWithMock(domain, 'blockRebase')
         self.mox.StubOutWithMock(domain, 'blockCommit')
         self.mox.StubOutWithMock(domain, 'blockJobInfo')
 
-        self.conn._lookup_by_name('instance-%s' % instance['id']).\
-            AndReturn(domain)
+        self.conn._host.get_domain(instance).AndReturn(domain)
         self.conn._host.has_min_version(mox.IgnoreArg()).AndReturn(True)
 
         domain.blockRebase('vdb', 'vdb[1]', 0, 0)
@@ -12962,14 +12931,13 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(domain, 'XMLDesc')
         domain.XMLDesc(0).AndReturn(self.dom_netdisk_xml)
 
-        self.mox.StubOutWithMock(self.conn, '_lookup_by_name')
+        self.mox.StubOutWithMock(self.conn._host, 'get_domain')
         self.mox.StubOutWithMock(self.conn._host, 'has_min_version')
         self.mox.StubOutWithMock(domain, 'blockRebase')
         self.mox.StubOutWithMock(domain, 'blockCommit')
         self.mox.StubOutWithMock(domain, 'blockJobInfo')
 
-        self.conn._lookup_by_name('instance-%s' % instance['id']).\
-            AndReturn(domain)
+        self.conn._host.get_domain(instance).AndReturn(domain)
         self.conn._host.has_min_version(mox.IgnoreArg()).AndReturn(True)
 
         domain.blockCommit('vdb', 'vdb[0]', 'vdb[1]', 0,

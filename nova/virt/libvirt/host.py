@@ -416,3 +416,63 @@ class Host(object):
             return True
         except Exception:
             return False
+
+    def get_domain(self, instance):
+        """Retrieve libvirt domain object for an instance.
+
+        :param instance: an nova.objects.Instance object
+
+        Attempt to lookup the libvirt domain objects
+        corresponding to the Nova instance, based on
+        its name. If not found it will raise an
+        exception.InstanceNotFound exception. On other
+        errors, it will raise a exception.NovaException
+        exception.
+
+        :returns: a libvirt.Domain object
+        """
+        return self.get_domain_by_name(instance.name)
+
+    def get_domain_by_id(self, instance_id):
+        """Retrieve libvirt domain object given an instance id.
+
+        All libvirt error handling should be handled in this method and
+        relevant nova exceptions should be raised in response.
+
+        """
+        try:
+            conn = self.get_connection()
+            return conn.lookupByID(instance_id)
+        except libvirt.libvirtError as ex:
+            error_code = ex.get_error_code()
+            if error_code == libvirt.VIR_ERR_NO_DOMAIN:
+                raise exception.InstanceNotFound(instance_id=instance_id)
+
+            msg = (_("Error from libvirt while looking up %(instance_id)s: "
+                     "[Error Code %(error_code)s] %(ex)s")
+                   % {'instance_id': instance_id,
+                      'error_code': error_code,
+                      'ex': ex})
+            raise exception.NovaException(msg)
+
+    def get_domain_by_name(self, instance_name):
+        """Retrieve libvirt domain object given an instance name.
+
+        All libvirt error handling should be handled in this method and
+        relevant nova exceptions should be raised in response.
+
+        """
+        try:
+            conn = self.get_connection()
+            return conn.lookupByName(instance_name)
+        except libvirt.libvirtError as ex:
+            error_code = ex.get_error_code()
+            if error_code == libvirt.VIR_ERR_NO_DOMAIN:
+                raise exception.InstanceNotFound(instance_id=instance_name)
+
+            msg = (_('Error from libvirt while looking up %(instance_name)s: '
+                     '[Error Code %(error_code)s] %(ex)s') %
+                   {'instance_name': instance_name,
+                    'error_code': error_code,
+                    'ex': ex})
+            raise exception.NovaException(msg)
