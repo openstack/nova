@@ -440,7 +440,7 @@ class FakeNodeDevice(object):
         return self.xml
 
 
-class LibvirtConnTestCase(test.NoDBTestCase):
+class LibvirtConnTestCase(test.TestCase):
 
     REQUIRES_LOCKING = True
 
@@ -6881,7 +6881,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         drvr.plug_vifs(mox.IsA(instance), nw_info)
 
         self.mox.ReplayAll()
-        result = drvr.pre_live_migration(c, instance, vol, nw_info, None)
+        result = drvr.pre_live_migration(
+            c, instance, vol, nw_info, None,
+            migrate_data={"block_migration": False})
 
         target_ret = {
         'graphics_listen_addrs': {'spice': '127.0.0.1', 'vnc': '127.0.0.1'},
@@ -7079,6 +7081,32 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                     migrate_data=migrate_data)
             self.assertTrue(create_image_mock.called)
             self.assertIsInstance(res, dict)
+
+    def test_pre_live_migration_block_migrate_fails(self):
+        bdms = [{
+            'connection_info': {
+                'serial': '12345',
+                u'data': {
+                    'device_path':
+                    u'/dev/disk/by-path/ip-1.2.3.4:3260-iqn.abc.12345.t-lun-X'
+                }
+            },
+            'mount_device': '/dev/sda'}]
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance = objects.Instance(**self.test_instance)
+
+        with contextlib.nested(
+            mock.patch.object(drvr, '_create_images_and_backing'),
+            mock.patch.object(drvr, 'ensure_filtering_rules_for_instance'),
+            mock.patch.object(drvr, 'plug_vifs'),
+            mock.patch.object(drvr, '_connect_volume'),
+            mock.patch.object(driver, 'block_device_info_get_mapping',
+                              return_value=bdms)):
+            self.assertRaises(exception.MigrationError,
+                              drvr.pre_live_migration,
+                              self.context, instance, block_device_info=None,
+                              network_info=[], disk_info={}, migrate_data={})
 
     def test_get_instance_disk_info_works_correctly(self):
         # Test data
