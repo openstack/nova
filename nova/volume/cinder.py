@@ -28,12 +28,14 @@ from keystoneclient import exceptions as keystone_exception
 from keystoneclient import session
 from oslo_config import cfg
 from oslo_log import log as logging
+from oslo_utils import excutils
 from oslo_utils import strutils
 import six
 
 from nova import availability_zones as az
 from nova import exception
 from nova.i18n import _
+from nova.i18n import _LE
 from nova.i18n import _LW
 
 cinder_opts = [
@@ -347,8 +349,32 @@ class API(object):
 
     @translate_volume_exception
     def initialize_connection(self, context, volume_id, connector):
-        return cinderclient(context).volumes.initialize_connection(volume_id,
-                                                                   connector)
+        try:
+            return cinderclient(context).volumes.initialize_connection(
+                volume_id, connector)
+        except cinder_exception.ClientException as ex:
+            with excutils.save_and_reraise_exception():
+                LOG.error(_LE('Initialize connection failed for volume '
+                              '%(vol)s on host %(host)s. Error: %(msg)s '
+                              'Code: %(code)s. Attempting to terminate '
+                              'connection.'),
+                          {'vol': volume_id,
+                           'host': connector.get('host'),
+                           'msg': six.text_type(ex),
+                           'code': ex.code})
+                try:
+                    self.terminate_connection(context, volume_id, connector)
+                except Exception as exc:
+                    LOG.error(_LE('Connection between volume %(vol)s and host '
+                                  '%(host)s might have succeeded, but attempt '
+                                  'to terminate connection has failed. '
+                                  'Validate the connection and determine if '
+                                  'manual cleanup is needed. Error: %(msg)s '
+                                  'Code: %(code)s.'),
+                              {'vol': volume_id,
+                               'host': connector.get('host'),
+                               'msg': six.text_type(exc),
+                               'code': exc.code})
 
     @translate_volume_exception
     def terminate_connection(self, context, volume_id, connector):
