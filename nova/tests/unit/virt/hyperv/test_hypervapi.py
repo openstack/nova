@@ -293,22 +293,6 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
                           self._instance_data)
         self._mox.VerifyAll()
 
-    def test_spawn_cow_image(self):
-        self._test_spawn_instance(True)
-
-    def test_spawn_cow_image_vhdx(self):
-        self._test_spawn_instance(True, vhd_format=constants.DISK_FORMAT_VHDX)
-
-    def test_spawn_no_cow_image(self):
-        self._test_spawn_instance(False)
-
-    def test_spawn_dynamic_memory(self):
-        CONF.set_override('dynamic_memory_ratio', 2.0, 'hyperv')
-        self._test_spawn_instance()
-
-    def test_spawn_no_cow_image_vhdx(self):
-        self._test_spawn_instance(False, vhd_format=constants.DISK_FORMAT_VHDX)
-
     def _setup_spawn_config_drive_mocks(self, use_cdrom):
         instance_metadata.InstanceMetadata(mox.IgnoreArg(),
                                            content=mox.IsA(list),
@@ -343,106 +327,6 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
                                              mox.IsA(int),
                                              mox.IsA(str))
         m.WithSideEffects(self._add_disk)
-
-    def _test_spawn_config_drive(self, use_cdrom, format_error=False):
-        self.flags(force_config_drive=True)
-        self.flags(config_drive_cdrom=use_cdrom, group='hyperv')
-        self.flags(mkisofs_cmd='mkisofs.exe')
-
-        if use_cdrom:
-            expected_disks = 1
-            expected_dvds = 1
-        else:
-            expected_disks = 2
-            expected_dvds = 0
-
-        if format_error:
-            self.assertRaises(vmutils.UnsupportedConfigDriveFormatException,
-                              self._test_spawn_instance,
-                              with_exception=True,
-                              config_drive=True,
-                              use_cdrom=use_cdrom)
-        else:
-            self._test_spawn_instance(expected_disks=expected_disks,
-                                      expected_dvds=expected_dvds,
-                                      config_drive=True,
-                                      use_cdrom=use_cdrom)
-
-    def test_spawn_config_drive(self):
-        self._test_spawn_config_drive(False)
-
-    def test_spawn_config_drive_format_error(self):
-        CONF.set_override('config_drive_format', 'wrong_format')
-        self._test_spawn_config_drive(True, True)
-
-    def test_spawn_config_drive_cdrom(self):
-        self._test_spawn_config_drive(True)
-
-    def test_spawn_no_config_drive(self):
-        self.flags(force_config_drive=False)
-
-        expected_disks = 1
-        expected_dvds = 0
-
-        self._test_spawn_instance(expected_disks=expected_disks,
-                                  expected_dvds=expected_dvds)
-
-    def _test_spawn_nova_net_vif(self, with_port):
-        self.flags(network_api_class='nova.network.api.API')
-        # Reinstantiate driver, as the VIF plugin is loaded during __init__
-        self._conn = driver_hyperv.HyperVDriver(None)
-
-        def setup_vif_mocks():
-            fake_vswitch_path = 'fake vswitch path'
-            fake_vswitch_port = 'fake port'
-
-            m = networkutils.NetworkUtils.get_external_vswitch(
-                CONF.hyperv.vswitch_name)
-            m.AndReturn(fake_vswitch_path)
-
-            m = networkutils.NetworkUtils.vswitch_port_needed()
-            m.AndReturn(with_port)
-
-            if with_port:
-                m = networkutils.NetworkUtils.create_vswitch_port(
-                    fake_vswitch_path, mox.IsA(str))
-                m.AndReturn(fake_vswitch_port)
-                vswitch_conn_data = fake_vswitch_port
-            else:
-                vswitch_conn_data = fake_vswitch_path
-
-            vmutils.VMUtils.set_nic_connection(mox.IsA(str),
-                    mox.IsA(str), vswitch_conn_data)
-
-        self._test_spawn_instance(setup_vif_mocks_func=setup_vif_mocks)
-
-    def test_spawn_nova_net_vif_with_port(self):
-        self._test_spawn_nova_net_vif(True)
-
-    def test_spawn_nova_net_vif_without_port(self):
-        self._test_spawn_nova_net_vif(False)
-
-    def test_spawn_nova_net_vif_no_vswitch_exception(self):
-        self.flags(network_api_class='nova.network.api.API')
-        # Reinstantiate driver, as the VIF plugin is loaded during __init__
-        self._conn = driver_hyperv.HyperVDriver(None)
-
-        def setup_vif_mocks():
-            m = networkutils.NetworkUtils.get_external_vswitch(
-                CONF.hyperv.vswitch_name)
-            m.AndRaise(vmutils.HyperVException(_('fake vswitch not found')))
-
-        self.assertRaises(vmutils.HyperVException, self._test_spawn_instance,
-                          setup_vif_mocks_func=setup_vif_mocks,
-                          with_exception=True)
-
-    def test_spawn_with_metrics_collection(self):
-        self.flags(enable_instance_metrics_collection=True, group='hyperv')
-        self._test_spawn_instance(False)
-
-    def test_spawn_with_ephemeral_storage(self):
-        self._test_spawn_instance(True, expected_disks=2,
-                                  ephemeral_storage=True)
 
     def _check_instance_name(self, vm_name):
         return vm_name == self._instance_data['name']
@@ -1400,12 +1284,6 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
 
     def test_finish_revert_migration_power_off(self):
         self._test_finish_revert_migration(False)
-
-    def test_spawn_no_admin_permissions(self):
-        self.assertRaises(vmutils.HyperVAuthorizationException,
-                          self._test_spawn_instance,
-                          with_exception=True,
-                          admin_permissions=False)
 
     def test_finish_revert_migration_with_ephemeral_storage(self):
         self._test_finish_revert_migration(False, ephemeral_storage=True)
