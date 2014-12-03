@@ -65,6 +65,7 @@ class _TestInstanceObject(object):
         fake_instance['pci_devices'] = []
         fake_instance['user_id'] = self.context.user_id
         fake_instance['project_id'] = self.context.project_id
+        fake_instance['tags'] = []
         return fake_instance
 
     def test_datetime_deserialization(self):
@@ -74,7 +75,7 @@ class _TestInstanceObject(object):
         primitive = inst.obj_to_primitive()
         expected = {'nova_object.name': 'Instance',
                     'nova_object.namespace': 'nova',
-                    'nova_object.version': '1.16',
+                    'nova_object.version': '1.17',
                     'nova_object.data':
                         {'uuid': 'fake-uuid',
                          'launched_at': '1955-11-05T00:00:00Z'},
@@ -90,7 +91,7 @@ class _TestInstanceObject(object):
         primitive = inst.obj_to_primitive()
         expected = {'nova_object.name': 'Instance',
                     'nova_object.namespace': 'nova',
-                    'nova_object.version': '1.16',
+                    'nova_object.version': '1.17',
                     'nova_object.data':
                         {'uuid': 'fake-uuid',
                          'access_ip_v4': '1.2.3.4',

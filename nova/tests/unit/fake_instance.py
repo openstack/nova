@@ -57,6 +57,7 @@ def fake_db_instance(**updates):
         'ephemeral_gb': 0,
         'extra': {'pci_requests': None,
                   'numa_topology': None},
+        'tags': []
         }
 
     for name, field in objects.Instance.fields.items():
