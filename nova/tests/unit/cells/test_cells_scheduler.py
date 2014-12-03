@@ -27,11 +27,11 @@ from nova.compute import vm_states
 from nova import context
 from nova import db
 from nova import exception
+from nova import objects
 from nova.openstack.common import uuidutils
 from nova.scheduler import utils as scheduler_utils
 from nova import test
 from nova.tests.unit.cells import fakes
-from nova.tests.unit import fake_instance
 from nova import utils
 
 CONF = cfg.CONF
@@ -80,7 +80,8 @@ class CellsSchedulerTestCase(test.TestCase):
         for x in xrange(3):
             instance_uuids.append(uuidutils.generate_uuid())
         self.instance_uuids = instance_uuids
-        self.instances = [{'uuid': uuid} for uuid in instance_uuids]
+        self.instances = [objects.Instance(uuid=uuid, id=id)
+                          for id, uuid in enumerate(instance_uuids)]
         self.request_spec = {
                 'instance_uuids': instance_uuids,
                 'instance_properties': self.instances[0],
@@ -197,9 +198,7 @@ class CellsSchedulerTestCase(test.TestCase):
             call_info['image'] = image
             call_info['security_groups'] = security_groups
             call_info['block_device_mapping'] = block_device_mapping
-            instances = [fake_instance.fake_instance_obj(ctxt, **instance)
-                    for instance in self.instances]
-            return instances
+            return self.instances
 
         def fake_rpc_build_instances(ctxt, **build_inst_kwargs):
             call_info['build_inst_kwargs'] = build_inst_kwargs
@@ -222,8 +221,8 @@ class CellsSchedulerTestCase(test.TestCase):
 
         self.assertEqual(self.ctxt, call_info['ctxt'])
         self.assertEqual(self.instance_uuids, call_info['instance_uuids'])
-        self.assertEqual(self.build_inst_kwargs['instances'][0],
-                call_info['instance_properties'])
+        self.assertEqual(self.build_inst_kwargs['instances'][0]['id'],
+                         call_info['instance_properties']['id'])
         self.assertEqual(
             self.build_inst_kwargs['filter_properties']['instance_type'],
             call_info['instance_type'])
@@ -398,8 +397,8 @@ class CellsSchedulerTestCase(test.TestCase):
         # Our cell was selected.
         self.assertEqual(self.ctxt, call_info['ctxt'])
         self.assertEqual(self.instance_uuids, call_info['instance_uuids'])
-        self.assertEqual(self.request_spec['instance_properties'],
-                call_info['instance_properties'])
+        self.assertEqual(self.request_spec['instance_properties']['id'],
+                         call_info['instance_properties']['id'])
         self.assertEqual(self.request_spec['instance_type'],
                 call_info['instance_type'])
         self.assertEqual(self.request_spec['image'], call_info['image'])
@@ -513,8 +512,8 @@ class CellsSchedulerTestCase(test.TestCase):
         # Our cell was selected.
         self.assertEqual(self.ctxt, call_info['ctxt'])
         self.assertEqual(self.instance_uuids, call_info['instance_uuids'])
-        self.assertEqual(self.request_spec['instance_properties'],
-                call_info['instance_properties'])
+        self.assertEqual(self.request_spec['instance_properties']['id'],
+                         call_info['instance_properties']['id'])
         self.assertEqual(self.request_spec['instance_type'],
                 call_info['instance_type'])
         self.assertEqual(self.request_spec['image'], call_info['image'])

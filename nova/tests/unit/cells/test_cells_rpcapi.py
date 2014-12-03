@@ -21,6 +21,7 @@ import six
 
 from nova.cells import rpcapi as cells_rpcapi
 from nova import exception
+from nova import objects
 from nova import test
 from nova.tests.unit import fake_instance
 
@@ -125,17 +126,20 @@ class CellsAPITestCase(test.NoDBTestCase):
     def test_build_instances(self):
         call_info = self._stub_rpc_method('cast', None)
 
+        instances = [objects.Instance(id=1),
+                     objects.Instance(id=2)]
+
         self.cells_rpcapi.build_instances(
-                self.fake_context, instances=['1', '2'],
+                self.fake_context, instances=instances,
                 image={'fake': 'image'}, arg1=1, arg2=2, arg3=3)
 
-        expected_args = {'build_inst_kwargs': {'instances': ['1', '2'],
+        expected_args = {'build_inst_kwargs': {'instances': instances,
                                                'image': {'fake': 'image'},
                                                'arg1': 1,
                                                'arg2': 2,
                                                'arg3': 3}}
         self._check_result(call_info, 'build_instances',
-                expected_args, version='1.30')
+                expected_args, version='1.32')
 
     def test_get_capacities(self):
         capacity_info = {"capacity": "info"}

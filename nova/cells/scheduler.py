@@ -167,7 +167,8 @@ class CellsScheduler(base.Base):
             build_inst_kwargs):
         """Attempt to build instance(s) or send msg to child cell."""
         ctxt = message.ctxt
-        instance_properties = build_inst_kwargs['instances'][0]
+        instance_properties = obj_base.obj_to_primitive(
+            build_inst_kwargs['instances'][0])
         filter_properties = build_inst_kwargs['filter_properties']
         instance_type = filter_properties['instance_type']
         image = build_inst_kwargs['image']

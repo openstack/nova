@@ -104,6 +104,7 @@ class CellsAPI(object):
 
         * 1.30 - Make build_instances() use flavor object
         * 1.31 - Add clean_shutdown to stop, resize, rescue, and shelve
+        * 1.32 - Send objects for instances in build_instances()
     '''
 
     VERSION_ALIASES = {
@@ -149,18 +150,20 @@ class CellsAPI(object):
         """Build instances."""
         build_inst_kwargs = kwargs
         instances = build_inst_kwargs['instances']
-        instances_p = [jsonutils.to_primitive(inst) for inst in instances]
-        build_inst_kwargs['instances'] = instances_p
         build_inst_kwargs['image'] = jsonutils.to_primitive(
                 build_inst_kwargs['image'])
-        version = '1.30'
-        if not self.client.can_send_version(version):
-            version = '1.8'
+        version = '1.32'
+        if not self.client.can_send_version('1.32'):
+            instances_p = [jsonutils.to_primitive(inst) for inst in instances]
+            build_inst_kwargs['instances'] = instances_p
+            version = '1.30'
+        if not self.client.can_send_version('1.30'):
             if 'filter_properties' in build_inst_kwargs:
                 filter_properties = build_inst_kwargs['filter_properties']
                 flavor = filter_properties['instance_type']
                 flavor_p = objects_base.obj_to_primitive(flavor)
                 filter_properties['instance_type'] = flavor_p
+            version = '1.8'
         cctxt = self.client.prepare(version=version)
         cctxt.cast(ctxt, 'build_instances',
                    build_inst_kwargs=build_inst_kwargs)

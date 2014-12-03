@@ -33,6 +33,7 @@ from nova.i18n import _LW
 from nova import manager
 from nova import objects
 from nova.objects import base as base_obj
+from nova.objects import instance as instance_obj
 from nova.openstack.common import log as logging
 from nova.openstack.common import periodic_task
 
@@ -73,7 +74,7 @@ class CellsManager(manager.Manager):
     Scheduling requests get passed to the scheduler class.
     """
 
-    target = oslo_messaging.Target(version='1.31')
+    target = oslo_messaging.Target(version='1.32')
 
     def __init__(self, *args, **kwargs):
         LOG.warning(_LW('The cells feature of Nova is considered experimental '
@@ -206,6 +207,13 @@ class CellsManager(manager.Manager):
             flavor = objects.Flavor(**filter_properties['instance_type'])
             build_inst_kwargs['filter_properties'] = dict(
                 filter_properties, instance_type=flavor)
+        instances = build_inst_kwargs['instances']
+        if not isinstance(instances[0], objects.Instance):
+            # NOTE(danms): Handle pre-1.32 build_instances() call. Remove me
+            # when we bump the RPC API version to 2.0
+            build_inst_kwargs['instances'] = instance_obj._make_instance_list(
+                ctxt, objects.InstanceList(), instances, ['system_metadata',
+                                                          'metadata'])
         our_cell = self.state_manager.get_my_state()
         self.msg_runner.build_instances(ctxt, our_cell, build_inst_kwargs)
 
