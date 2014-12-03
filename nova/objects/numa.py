@@ -21,7 +21,8 @@ from nova.virt import hardware
 
 class NUMACell(base.NovaObject):
     # Version 1.0: Initial version
-    VERSION = '1.0'
+    # Version 1.1: Added pinned_cpus and siblings fields
+    VERSION = '1.1'
 
     fields = {
         'id': fields.IntegerField(read_only=True),
@@ -29,7 +30,20 @@ class NUMACell(base.NovaObject):
         'memory': fields.IntegerField(),
         'cpu_usage': fields.IntegerField(default=0),
         'memory_usage': fields.IntegerField(default=0),
+        'pinned_cpus': fields.SetOfIntegersField(),
+        'siblings': fields.ListOfSetsOfIntegersField()
         }
+
+    def __init__(self, **kwargs):
+        super(NUMACell, self).__init__(**kwargs)
+        if 'pinned_cpus' not in kwargs:
+            self.pinned_cpus = set()
+        if 'siblings' not in kwargs:
+            self.siblings = []
+
+    @property
+    def free_cpus(self):
+        return self.cpuset - self.pinned_cpus or set()
 
     def _to_dict(self):
         return {
@@ -55,14 +69,15 @@ class NUMACell(base.NovaObject):
 
 class NUMATopology(base.NovaObject):
     # Version 1.0: Initial version
-    VERSION = '1.0'
+    # Version 1.1: NUMACell version 1.1
+    VERSION = '1.1'
 
     fields = {
         'cells': fields.ListOfObjectsField('NUMACell'),
         }
 
     obj_relationships = {
-        'NUMACell': [('1.0', '1.0')]
+        'NUMACell': [('1.0', '1.0'), ('1.1', '1.1')]
     }
 
     @classmethod

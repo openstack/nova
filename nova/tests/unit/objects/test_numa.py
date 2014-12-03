@@ -14,7 +14,6 @@
 from nova import objects
 from nova.tests.unit.objects import test_objects
 
-
 fake_obj_numa = objects.NUMATopology(
     cells=[
         objects.NUMACell(
@@ -32,6 +31,21 @@ class _TestNUMA(object):
         d2 = objects.NUMATopology.obj_from_primitive(d1)._to_dict()
 
         self.assertEqual(d1, d2)
+
+    def test_pinning_logic(self):
+        obj = objects.NUMATopology(cells=[
+            objects.NUMACell(
+                id=0, cpuset=set([1, 2]), memory=512,
+                cpu_usage=2, memory_usage=256,
+                pinned_cpus=set([1])),
+            objects.NUMACell(
+                id=1, cpuset=set([3, 4]), memory=512,
+                cpu_usage=1, memory_usage=128,
+                pinned_cpus=set([]))
+            ]
+        )
+        self.assertEqual(set([2]), obj.cells[0].free_cpus)
+        self.assertEqual(set([3, 4]), obj.cells[1].free_cpus)
 
 
 class TestNUMA(test_objects._LocalTest,
