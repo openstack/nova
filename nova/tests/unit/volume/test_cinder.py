@@ -286,6 +286,36 @@ class CinderApiTestCase(test.NoDBTestCase):
 
         self.api.initialize_connection(self.ctx, 'id1', 'connector')
 
+    @mock.patch('nova.volume.cinder.cinderclient')
+    def test_initialize_connection_rollback(self, mock_cinderclient):
+        mock_cinderclient.return_value.volumes.\
+            initialize_connection.side_effect = (
+                cinder_exception.ClientException(500, "500"))
+
+        connector = {'host': 'host1'}
+        ex = self.assertRaises(cinder_exception.ClientException,
+                               self.api.initialize_connection,
+                               self.ctx,
+                               'id1',
+                               connector)
+        self.assertEqual(500, ex.code)
+        mock_cinderclient.return_value.volumes.\
+            terminate_connection.assert_called_once_with('id1', connector)
+
+    @mock.patch('nova.volume.cinder.cinderclient')
+    def test_initialize_connection_no_rollback(self, mock_cinderclient):
+        mock_cinderclient.return_value.volumes.\
+            initialize_connection.side_effect = test.TestingException
+
+        connector = {'host': 'host1'}
+        self.assertRaises(test.TestingException,
+                          self.api.initialize_connection,
+                          self.ctx,
+                          'id1',
+                          connector)
+        self.assertFalse(mock_cinderclient.return_value.volumes.
+            terminate_connection.called)
+
     def test_terminate_connection(self):
         cinder.cinderclient(self.ctx).AndReturn(self.cinderclient)
         self.mox.StubOutWithMock(self.cinderclient.volumes,
