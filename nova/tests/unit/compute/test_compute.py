@@ -779,7 +779,7 @@ class ComputeVolumeTestCase(BaseTestCase):
         # The following methods will be called
         db.block_device_mapping_get_by_volume_id(self.context, 1, []).\
             AndReturn(bdm)
-        self.compute.driver.block_stats(instance['name'], 'vdb').\
+        self.compute.driver.block_stats(instance, 'vdb').\
             AndReturn([1L, 30L, 1L, 20L, None])
         self.compute._get_host_volume_bdms(self.context,
                                            use_slave=True).AndReturn(
@@ -5462,7 +5462,7 @@ class ComputeTestCase(BaseTestCase):
         block_device_info = {
                 'swap': None, 'ephemerals': [], 'block_device_mapping': []}
         self.compute.driver.get_instance_disk_info(
-                instance.name,
+                instance,
                 block_device_info=block_device_info).AndReturn('fake_disk')
         self.compute.compute_rpcapi.pre_live_migration(c,
                 instance, True, 'fake_disk', dest_host,

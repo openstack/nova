@@ -818,12 +818,11 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
-    def get_instance_disk_info(self, instance_name,
+    def get_instance_disk_info(self, instance,
                                block_device_info=None):
         """Retrieve information about actual disk sizes of an instance.
 
-        :param instance_name:
-            name of a nova instance as returned by list_instances()
+        :param instance: nova.objects.Instance
         :param block_device_info:
             Optional; Can be used to filter out devices which are
             actually volumes.
@@ -1069,9 +1068,9 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
-    def block_stats(self, instance_name, disk_id):
+    def block_stats(self, instance, disk_id):
         """Return performance counters associated with the given disk_id on the
-        given instance_name.  These are returned as [rd_req, rd_bytes, wr_req,
+        given instance.  These are returned as [rd_req, rd_bytes, wr_req,
         wr_bytes, errs], where rd indicates read, wr indicates write, req is
         the total number of I/O requests made, bytes is the total number of
         bytes transferred, and errs is the number of requests held up due to a

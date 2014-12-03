@@ -404,7 +404,7 @@ class FakeDriver(driver.ComputeDriver):
     def ensure_filtering_rules_for_instance(self, instance_ref, network_info):
         return
 
-    def get_instance_disk_info(self, instance_name, block_device_info=None):
+    def get_instance_disk_info(self, instance, block_device_info=None):
         return
 
     def live_migration(self, context, instance_ref, dest,
