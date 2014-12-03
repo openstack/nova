@@ -52,7 +52,9 @@ Developer Docs
 API Extensions
 ==============
 
-Go to http://api.openstack.org for information about Compute API extensions.
+Go to the `API Complete Reference`_ for information about Compute API extensions.
+
+.. _`API Complete Reference`: http://developer.openstack.org/api-ref-compute-v2-ext.html
 
 Indices and tables
 ==================
