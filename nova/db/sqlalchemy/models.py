@@ -473,6 +473,7 @@ class QuotaUsage(BASE, NovaBase):
     __tablename__ = 'quota_usages'
     __table_args__ = (
         Index('ix_quota_usages_project_id', 'project_id'),
+        Index('ix_quota_usages_user_id_deleted', 'user_id', 'deleted'),
     )
     id = Column(Integer, primary_key=True)
 
@@ -498,6 +499,7 @@ class Reservation(BASE, NovaBase):
         Index('ix_reservations_project_id', 'project_id'),
         Index('reservations_uuid_idx', 'uuid'),
         Index('reservations_deleted_expire_idx', 'deleted', 'expire'),
+        Index('ix_reservations_user_id_deleted', 'user_id', 'deleted'),
     )
     id = Column(Integer, primary_key=True, nullable=False)
     uuid = Column(String(36), nullable=False)
