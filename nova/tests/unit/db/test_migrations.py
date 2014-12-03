@@ -36,6 +36,7 @@ import glob
 import logging
 import os
 
+from migrate import UniqueConstraint
 from migrate.versioning import repository
 import mock
 from oslo.db.sqlalchemy import test_base
@@ -658,6 +659,67 @@ class NovaMigrationsCheckers(test_migrations.WalkVersionsMixin):
                 ('virtual_interfaces',
                  'virtual_interfaces_instance_uuid_fkey')]:
             self.assertIndexNotExists(engine, table_name, index_name)
+
+    def _pre_upgrade_273(self, engine):
+        if engine.name != 'sqlite':
+            return
+
+        # Drop a variety of unique constraints to ensure that the script
+        # properly readds them back
+        for table_name, constraint_name in [
+                ('compute_nodes', 'uniq_compute_nodes0'
+                                  'host0hypervisor_hostname'),
+                ('fixed_ips', 'uniq_fixed_ips0address0deleted'),
+                ('instance_info_caches', 'uniq_instance_info_caches0'
+                                         'instance_uuid'),
+                ('instance_type_projects', 'uniq_instance_type_projects0'
+                                           'instance_type_id0project_id0'
+                                           'deleted'),
+                ('pci_devices', 'uniq_pci_devices0compute_node_id0'
+                                'address0deleted'),
+                ('virtual_interfaces', 'uniq_virtual_interfaces0'
+                                       'address0deleted')]:
+            table = oslodbutils.get_table(engine, table_name)
+            constraints = [c for c in table.constraints
+                           if c.name == constraint_name]
+            for cons in constraints:
+                # Need to use sqlalchemy-migrate UniqueConstraint
+                cons = UniqueConstraint(*[c.name for c in cons.columns],
+                                        name=cons.name,
+                                        table=table)
+                cons.drop()
+
+    def _check_273(self, engine, data):
+        for src_table, src_column, dst_table, dst_column in [
+                ('fixed_ips', 'instance_uuid', 'instances', 'uuid'),
+                ('block_device_mapping', 'instance_uuid', 'instances', 'uuid'),
+                ('instance_info_caches', 'instance_uuid', 'instances', 'uuid'),
+                ('instance_metadata', 'instance_uuid', 'instances', 'uuid'),
+                ('instance_system_metadata', 'instance_uuid',
+                 'instances', 'uuid'),
+                ('instance_type_projects', 'instance_type_id',
+                 'instance_types', 'id'),
+                ('iscsi_targets', 'volume_id', 'volumes', 'id'),
+                ('reservations', 'usage_id', 'quota_usages', 'id'),
+                ('security_group_instance_association', 'instance_uuid',
+                 'instances', 'uuid'),
+                ('security_group_instance_association', 'security_group_id',
+                 'security_groups', 'id'),
+                ('virtual_interfaces', 'instance_uuid', 'instances', 'uuid'),
+                ('compute_nodes', 'service_id', 'services', 'id'),
+                ('instance_actions', 'instance_uuid', 'instances', 'uuid'),
+                ('instance_faults', 'instance_uuid', 'instances', 'uuid'),
+                ('migrations', 'instance_uuid', 'instances', 'uuid')]:
+            src_table = oslodbutils.get_table(engine, src_table)
+            fkeys = {fk.parent.name: fk.column
+                     for fk in src_table.foreign_keys}
+            self.assertIn(src_column, fkeys)
+            self.assertEqual(fkeys[src_column].table.name, dst_table)
+            self.assertEqual(fkeys[src_column].name, dst_column)
+
+    def _post_downgrade_273(self, engine):
+        # NOTE(johannes): No downgrade implemented, so nothing to check
+        pass
 
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
