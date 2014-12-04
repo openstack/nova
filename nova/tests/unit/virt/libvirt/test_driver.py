@@ -2566,7 +2566,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                               conn._create_domain_and_network,
                               self.context,
                               'xml',
-                              mock_instance, None)
+                              mock_instance, None, None)
 
             mock_teardown.assert_called_with(container_dir='/tmp/rootfs')
 
@@ -7605,7 +7605,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                 libvirt_utils.get_instance_path(instance),
                                 disk_info_json)
         conn._create_domain_and_network(self.context, dummyxml, instance,
-                                        network_info, block_device_info,
+                                        network_info, disk_info,
+                                        block_device_info=block_device_info,
                                         reboot=True, vifs_already_plugged=True)
         self.mox.ReplayAll()
 
@@ -7904,15 +7905,23 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             mock.patch.object(conn, '_attach_pci_devices'),
             mock.patch.object(pci_manager, 'get_instance_pci_devs',
                               return_value='fake_pci_devs'),
+            mock.patch.object(compute_utils, 'get_image_metadata'),
+            mock.patch.object(blockinfo, 'get_disk_info'),
         ) as (_get_existing_domain_xml, _create_domain_and_network,
-              _attach_pci_devices, get_instance_pci_devs):
+              _attach_pci_devices, get_instance_pci_devs, get_image_metadata,
+              get_disk_info):
+            get_image_metadata.return_value = {'bar': 234}
+
+            disk_info = {'foo': 123}
+            get_disk_info.return_value = disk_info
+
             conn.resume(self.context, instance, network_info,
                         block_device_info)
             _get_existing_domain_xml.assert_has_calls([mock.call(instance,
                                             network_info, block_device_info)])
             _create_domain_and_network.assert_has_calls([mock.call(
                                         self.context, dummyxml,
-                                        instance, network_info,
+                                        instance, network_info, disk_info,
                                         block_device_info=block_device_info,
                                         vifs_already_plugged=True)])
             _attach_pci_devices.assert_has_calls([mock.call('fake_dom',
@@ -9318,7 +9327,7 @@ Active:          8381604 kB
             mock.patch.object(conn.firewall_driver, 'prepare_instance_filter'),
             mock.patch.object(conn.firewall_driver, 'apply_instance_filter')):
             conn._create_domain_and_network(self.context, 'xml',
-                                            mock_instance, [])
+                                            mock_instance, [], None)
 
         self.assertEqual('/dev/nbd0', inst_sys_meta['rootfs_device_name'])
         mock_instance.save.assert_not_called()
@@ -9381,7 +9390,7 @@ Active:          8381604 kB
             mock.patch.object(conn.firewall_driver, 'prepare_instance_filter'),
             mock.patch.object(conn.firewall_driver, 'apply_instance_filter')):
             conn._create_domain_and_network(self.context, 'xml',
-                                            mock_instance, [])
+                                            mock_instance, [], None)
 
         self.assertEqual('/dev/nbd0', inst_sys_meta['rootfs_device_name'])
         mock_instance.save.assert_not_called()
@@ -9430,7 +9439,7 @@ Active:          8381604 kB
             mock.patch.object(conn.firewall_driver, 'prepare_instance_filter'),
             mock.patch.object(conn.firewall_driver, 'apply_instance_filter')):
             conn._create_domain_and_network(self.context, 'xml',
-                                            mock_instance, [])
+                                            mock_instance, [], None)
 
         self.assertEqual('/dev/nbd0', inst_sys_meta['rootfs_device_name'])
         mock_instance.save.assert_not_called()
@@ -9886,7 +9895,7 @@ Active:          8381604 kB
                               conn._create_domain_and_network,
                               self.context,
                               'xml',
-                              instance, None)
+                              instance, None, None)
 
     def test_create_without_pause(self):
         self.flags(virt_type='lxc', group='libvirt')
@@ -9907,7 +9916,7 @@ Active:          8381604 kB
               mock.patch.object(conn, 'cleanup')) as (
               _handler, cleanup, firewall_driver, create, plug_vifs):
             domain = conn._create_domain_and_network(self.context, 'xml',
-                                                     instance, None)
+                                                     instance, None, None)
             self.assertEqual(0, create.call_args_list[0][1]['launch_flags'])
             self.assertEqual(0, domain.resume.call_count)
 
@@ -9948,7 +9957,7 @@ Active:          8381604 kB
         @mock.patch.object(conn, 'cleanup')
         def test_create(cleanup, create, fw_driver, plug_vifs):
             domain = conn._create_domain_and_network(self.context, 'xml',
-                                                     instance, vifs,
+                                                     instance, vifs, None,
                                                      power_on=power_on)
             plug_vifs.assert_called_with(instance, vifs)
 
@@ -10057,7 +10066,7 @@ Active:          8381604 kB
 
         mock_volume = mock.MagicMock()
         mock_volume.__getitem__.side_effect = fake_getitem
-        bdi = {'block_device_mapping': [mock_volume]}
+        block_device_info = {'block_device_mapping': [mock_volume]}
         network_info = [network_model.VIF(id='1'),
                         network_model.VIF(id='2', active=True)]
 
@@ -10073,9 +10082,9 @@ Active:          8381604 kB
               prepare_instance_filter, create_domain, apply_instance_filter):
             create_domain.return_value = mock_dom
 
-            domain = conn._create_domain_and_network(self.context, fake_xml,
-                                                     instance, network_info,
-                                                     block_device_info=bdi)
+            domain = conn._create_domain_and_network(
+                    self.context, fake_xml, instance, network_info, None,
+                    block_device_info=block_device_info)
 
             get_encryption_metadata.assert_called_once_with(self.context,
                 conn._volume_api, fake_volume_id, connection_info)
@@ -10902,7 +10911,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             self.assertFalse(inject_files)
 
         def fake_create_domain_and_network(
-            context, xml, instance, network_info,
+            context, xml, instance, network_info, disk_info,
             block_device_info=None, power_on=True, reboot=False,
             vifs_already_plugged=False):
             self.fake_create_domain_called = True
@@ -11045,7 +11054,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         self.stubs.Set(self.libvirtconnection, '_get_guest_xml',
                        lambda *a, **k: None)
         self.stubs.Set(self.libvirtconnection, '_create_domain_and_network',
-                       lambda *a: None)
+                       lambda *a, **kw: None)
         self.stubs.Set(loopingcall, 'FixedIntervalLoopingCall',
                        lambda *a, **k: FakeLoopingCall())
 
