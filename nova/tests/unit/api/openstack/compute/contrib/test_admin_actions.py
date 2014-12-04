@@ -92,8 +92,7 @@ class AdminActionsTestV2(AdminActionsTestV21):
                               fake_auth_context=self.context)
 
     def test_actions(self):
-        actions = ['suspend', 'resume', 'migrate',
-                   'resetNetwork', 'injectNetworkInfo']
+        actions = ['migrate', 'resetNetwork', 'injectNetworkInfo']
         method_translations = {'migrate': 'resize',
                                'resetNetwork': 'reset_network',
                                'injectNetworkInfo': 'inject_network_info'}
@@ -101,8 +100,7 @@ class AdminActionsTestV2(AdminActionsTestV21):
         self._test_actions(actions, method_translations)
 
     def test_actions_raise_conflict_on_invalid_state(self):
-        actions = ['suspend', 'resume', 'migrate',
-                   'os-migrateLive']
+        actions = ['migrate', 'os-migrateLive']
         method_translations = {'migrate': 'resize',
                                'os-migrateLive': 'live_migrate'}
         body_map = {'os-migrateLive':
@@ -117,8 +115,7 @@ class AdminActionsTestV2(AdminActionsTestV21):
             args_map=args_map)
 
     def test_actions_with_non_existed_instance(self):
-        actions = ['suspend', 'resume',
-                   'resetNetwork', 'injectNetworkInfo',
+        actions = ['resetNetwork', 'injectNetworkInfo',
                    'os-resetState', 'migrate', 'os-migrateLive']
         body_map = {'os-resetState': {'state': 'active'},
                     'os-migrateLive':
@@ -130,8 +127,8 @@ class AdminActionsTestV2(AdminActionsTestV21):
                                                      body_map=body_map)
 
     def test_actions_with_locked_instance(self):
-        actions = ['suspend', 'resume', 'migrate',
-                   'resetNetwork', 'injectNetworkInfo', 'os-migrateLive']
+        actions = ['migrate', 'resetNetwork', 'injectNetworkInfo',
+                   'os-migrateLive']
         method_translations = {'migrate': 'resize',
                                'resetNetwork': 'reset_network',
                                'injectNetworkInfo': 'inject_network_info',
