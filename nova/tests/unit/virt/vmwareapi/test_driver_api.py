@@ -1261,7 +1261,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                               side_effect=exception),
             mock.patch.object(vmops, '_time_sleep_wrapper')
         ) as (_fake_wait, _fake_sleep):
-            if exception != error_util.TaskInProgress:
+            if exception != vexc.TaskInProgress:
                 self.assertRaises(exception,
                                   self.conn._vmops._delete_vm_snapshot,
                                   self.instance, fake_vm, snapshot_ref)
@@ -1277,7 +1277,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
 
     def test_snapshot_delete_vm_snapshot_exception_retry(self):
         self.flags(api_retry_count=5, group='vmware')
-        self._snapshot_delete_vm_snapshot_exception(error_util.TaskInProgress,
+        self._snapshot_delete_vm_snapshot_exception(vexc.TaskInProgress,
                                                     5)
 
     def test_reboot(self):

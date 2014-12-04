@@ -30,10 +30,6 @@ class NoRootDiskDefined(vexc.VMwareDriverException):
     msg_fmt = _("No root disk defined.")
 
 
-class TaskInProgress(vexc.VMwareDriverException):
-    msg_fmt = _("Virtual machine is busy.")
-
-
 class PbmDefaultPolicyUnspecified(vexc.VMwareDriverConfigurationException):
     msg_fmt = _("Default PBM policy is required if PBM is enabled.")
 
