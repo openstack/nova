@@ -511,7 +511,8 @@ class VMwareVMOps(object):
         # Set the machine.id parameter of the instance to inject
         # the NIC configuration inside the VM
         if CONF.flat_injected:
-            self._set_machine_id(client_factory, instance, network_info)
+            self._set_machine_id(client_factory, instance, network_info,
+                                vm_ref=vm_ref)
 
         # Set the vnc configuration of the instance, vnc port starts from 5900
         if CONF.vnc_enabled:
@@ -1305,11 +1306,13 @@ class VMwareVMOps(object):
             machine_id_str = machine_id_str + interface_str + '#'
         return machine_id_str
 
-    def _set_machine_id(self, client_factory, instance, network_info):
+    def _set_machine_id(self, client_factory, instance, network_info,
+                        vm_ref=None):
         """Set the machine id of the VM for guest tools to pick up
         and reconfigure the network interfaces.
         """
-        vm_ref = vm_util.get_vm_ref(self._session, instance)
+        if vm_ref is None:
+            vm_ref = vm_util.get_vm_ref(self._session, instance)
 
         machine_id_change_spec = vm_util.get_machine_id_change_spec(
                                  client_factory,
