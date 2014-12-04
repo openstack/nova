@@ -18,8 +18,7 @@ from nova.api.openstack.compute.contrib import admin_actions as \
 from nova.api.openstack.compute.plugins.v3 import lock_server as \
     lock_server_v21
 from nova import exception
-from nova.tests.unit.api.openstack.compute.plugins.v3 import \
-     admin_only_action_common
+from nova.tests.unit.api.openstack.compute import admin_only_action_common
 from nova.tests.unit.api.openstack import fakes
 
 
