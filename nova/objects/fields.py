@@ -434,6 +434,38 @@ class Dict(CompoundFieldType):
                       for key, val in sorted(value.items())]))
 
 
+class DictProxyField(object):
+    """Descriptor allowing us to assign pinning data as a dict of key_types
+
+    This allows us to have an object field that will be a dict of key_type
+    keys, allowing that will convert back to string-keyed dict.
+
+    This will take care of the conversion while the dict field will make sure
+    that we store the raw json-serializable data on the object.
+
+    key_type should return a type that unambiguously responds to six.text_type
+    so that calling key_type on it yields the same thing.
+    """
+    def __init__(self, dict_field_name, key_type=int):
+        self._fld_name = dict_field_name
+        self._key_type = key_type
+
+    def __get__(self, obj, obj_type=None):
+        if obj is None:
+            return self
+        if getattr(obj, self._fld_name) is None:
+            return
+        return dict((self._key_type(k), v)
+                     for k, v in six.iteritems(getattr(obj, self._fld_name)))
+
+    def __set__(self, obj, val):
+        if val is None:
+            setattr(obj, self._fld_name, val)
+        else:
+            setattr(obj, self._fld_name, dict((six.text_type(k), v)
+                                              for k, v in six.iteritems(val)))
+
+
 class Set(CompoundFieldType):
     def coerce(self, obj, attr, value):
         if not isinstance(value, set):
@@ -595,12 +627,20 @@ class DictOfNullableStringsField(AutoTypedField):
     AUTO_TYPE = Dict(String(), nullable=True)
 
 
+class DictOfIntegersField(AutoTypedField):
+    AUTO_TYPE = Dict(Integer())
+
+
 class ListOfStringsField(AutoTypedField):
     AUTO_TYPE = List(String())
 
 
 class SetOfIntegersField(AutoTypedField):
     AUTO_TYPE = Set(Integer())
+
+
+class ListOfSetsOfIntegersField(AutoTypedField):
+    AUTO_TYPE = List(Set(Integer()))
 
 
 class ListOfDictOfNullableStringsField(AutoTypedField):
