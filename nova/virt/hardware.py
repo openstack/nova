@@ -779,7 +779,15 @@ def _numa_fit_instance_cell(host_cell, instance_cell, limit_cell=None):
             len(instance_cell.cpuset) > len(host_cell.cpuset)):
         return None
 
-    if limit_cell:
+    if instance_cell.cpu_pinning is not None:
+        new_instance_cell = _numa_fit_instance_cell_with_pinning(
+            host_cell, instance_cell)
+        if not new_instance_cell:
+            return
+        new_instance_cell.pagesize = instance_cell.pagesize
+        instance_cell = new_instance_cell
+
+    elif limit_cell:
         memory_usage = host_cell.memory_usage + instance_cell.memory
         cpu_usage = host_cell.cpu_usage + len(instance_cell.cpuset)
         if (memory_usage > limit_cell.memory_limit or
@@ -793,9 +801,9 @@ def _numa_fit_instance_cell(host_cell, instance_cell, limit_cell=None):
         if not pagesize:
             return
 
-    return objects.InstanceNUMACell(
-        id=host_cell.id, cpuset=instance_cell.cpuset,
-        memory=instance_cell.memory, pagesize=pagesize)
+    instance_cell.id = host_cell.id
+    instance_cell.pagesize = pagesize
+    return instance_cell
 
 
 class VirtNUMATopology(object):
