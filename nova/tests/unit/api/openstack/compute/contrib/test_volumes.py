@@ -343,6 +343,8 @@ class VolumeApiTestV2(VolumeApiTestV21):
 
 
 class VolumeAttachTestsV21(test.TestCase):
+    validation_error = exception.ValidationError
+
     def setUp(self):
         super(VolumeAttachTestsV21, self).setUp()
         self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
@@ -532,7 +534,7 @@ class VolumeAttachTestsV21(test.TestCase):
         req.headers['content-type'] = 'application/json'
         req.environ['nova.context'] = self.context
 
-        self.assertRaises(webob.exc.HTTPBadRequest, self.attachments.create,
+        self.assertRaises(self.validation_error, self.attachments.create,
                           req, FAKE_UUID, body=body)
 
     def test_attach_volume_without_volumeId(self):
@@ -552,7 +554,21 @@ class VolumeAttachTestsV21(test.TestCase):
         req.headers['content-type'] = 'application/json'
         req.environ['nova.context'] = self.context
 
-        self.assertRaises(webob.exc.HTTPBadRequest, self.attachments.create,
+        self.assertRaises(self.validation_error, self.attachments.create,
+                          req, FAKE_UUID, body=body)
+
+    def test_attach_volume_with_extra_arg(self):
+        body = {'volumeAttachment': {'volumeId': FAKE_UUID_A,
+                                    'device': '/dev/fake',
+                                    'extra': 'extra_arg'}}
+
+        req = webob.Request.blank('/v2/servers/id/os-volume_attachments')
+        req.method = 'POST'
+        req.body = jsonutils.dumps({})
+        req.headers['content-type'] = 'application/json'
+        req.environ['nova.context'] = self.context
+
+        self.assertRaises(self.validation_error, self.attachments.create,
                           req, FAKE_UUID, body=body)
 
     def _test_swap(self, attachments, uuid=FAKE_UUID_A,
@@ -561,8 +577,7 @@ class VolumeAttachTestsV21(test.TestCase):
         self.stubs.Set(compute_api.API,
                        'swap_volume',
                        fake_func)
-        body = body or {'volumeAttachment': {'volumeId': FAKE_UUID_B,
-                                             'device': '/dev/fake'}}
+        body = body or {'volumeAttachment': {'volumeId': FAKE_UUID_B}}
 
         req = webob.Request.blank('/v2/servers/id/os-volume_attachments/uuid')
         req.method = 'PUT'
@@ -598,13 +613,23 @@ class VolumeAttachTestsV21(test.TestCase):
 
     def test_swap_volume_without_volumeId(self):
         body = {'volumeAttachment': {'device': '/dev/fake'}}
-        self.assertRaises(webob.exc.HTTPBadRequest,
+        self.assertRaises(self.validation_error,
+                          self._test_swap,
+                          self.attachments,
+                          body=body)
+
+    def test_swap_volume_with_extra_arg(self):
+        body = {'volumeAttachment': {'volumeId': FAKE_UUID_A,
+                                    'device': '/dev/fake'}}
+
+        self.assertRaises(self.validation_error,
                           self._test_swap,
                           self.attachments,
                           body=body)
 
 
 class VolumeAttachTestsV2(VolumeAttachTestsV21):
+    validation_error = webob.exc.HTTPBadRequest
 
     def _set_up_controller(self):
         ext_mgr = extensions.ExtensionManager()
@@ -618,6 +643,30 @@ class VolumeAttachTestsV2(VolumeAttachTestsV21):
     def test_swap_volume_no_extension(self):
         self.assertRaises(webob.exc.HTTPBadRequest, self._test_swap,
                           self.attachments_no_update)
+
+    @mock.patch.object(compute_api.API, 'attach_volume',
+                       return_value=[])
+    def test_attach_volume_with_extra_arg(self, mock_attach):
+        # NOTE(gmann): V2 does not perform strong input validation
+        # so volume is attached successfully even with extra arg in
+        # request body.
+        body = {'volumeAttachment': {'volumeId': FAKE_UUID_A,
+                                    'device': '/dev/fake',
+                                    'extra': 'extra_arg'}}
+        req = webob.Request.blank('/v2/servers/id/os-volume_attachments')
+        req.method = 'POST'
+        req.body = jsonutils.dumps({})
+        req.headers['content-type'] = 'application/json'
+        req.environ['nova.context'] = self.context
+        result = self.attachments.create(req, FAKE_UUID, body=body)
+        self.assertEqual(result['volumeAttachment']['id'],
+            '00000000-aaaa-aaaa-aaaa-000000000000')
+
+    def test_swap_volume_with_extra_arg(self):
+        # NOTE(gmann): V2 does not perform strong input validation.
+        # Volume is swapped successfully even with extra arg in
+        # request body. So 'pass' this test for V2.
+        pass
 
 
 class VolumeSerializerTest(test.TestCase):

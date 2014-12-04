@@ -295,8 +295,7 @@ class VolumeAttachmentsSampleJsonTest(VolumeAttachmentsSampleBase):
     def test_volume_attachment_update(self):
         self.stubs.Set(cinder.API, 'get', fakes.stub_volume_get)
         subs = {
-            'volume_id': 'a26887c6-c47b-4654-abb5-dfadf7d3f805',
-            'device': '/dev/sdd'
+            'volume_id': 'a26887c6-c47b-4654-abb5-dfadf7d3f805'
         }
         server_id = self._post_server()
         attach_id = 'a26887c6-c47b-4654-abb5-dfadf7d3f803'
