@@ -7067,11 +7067,49 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             try:
                 prev_max = libvirt_driver.MAX_CONSOLE_BYTES
                 libvirt_driver.MAX_CONSOLE_BYTES = 5
-                output = conn.get_console_output(self.context, instance)
+                with mock.patch('os.path.exists', return_value=True):
+                    output = conn.get_console_output(self.context, instance)
             finally:
                 libvirt_driver.MAX_CONSOLE_BYTES = prev_max
 
             self.assertEqual('67890', output)
+
+    def test_get_console_output_file_missing(self):
+        with utils.tempdir() as tmpdir:
+            self.flags(instances_path=tmpdir)
+
+            instance_ref = self.test_instance
+            instance_ref['image_ref'] = 123456
+            instance = objects.Instance(**instance_ref)
+
+            console_log = os.path.join(tmpdir, instance['name'],
+                                       'non-existent.log')
+            fake_dom_xml = """
+                <domain type='kvm'>
+                    <devices>
+                        <disk type='file'>
+                            <source file='filename'/>
+                        </disk>
+                        <console type='file'>
+                            <source path='%s'/>
+                            <target port='0'/>
+                        </console>
+                    </devices>
+                </domain>
+            """ % console_log
+
+            def fake_lookup(id):
+                return FakeVirtDomain(fake_dom_xml)
+
+            self.create_fake_libvirt_mock()
+            libvirt_driver.LibvirtDriver._conn.lookupByName = fake_lookup
+
+            conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+            with mock.patch('os.path.exists', return_value=False):
+                output = conn.get_console_output(self.context, instance)
+
+            self.assertEqual('', output)
 
     def test_get_console_output_pty(self):
         fake_libvirt_utils.files['pty'] = '01234567890'
