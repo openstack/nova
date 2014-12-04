@@ -710,10 +710,12 @@ class _ComputeAPIUnitTestMixIn(object):
 
         cast = True
         commit_quotas = True
+        soft_delete = False
         if self.cell_type != 'api':
             if inst.vm_state == vm_states.RESIZED:
                 self._test_delete_resized_part(inst)
-
+            if inst.vm_state == vm_states.SOFT_DELETED:
+                soft_delete = True
             self.context.elevated().AndReturn(self.context)
             db.service_get_by_compute_host(
                     self.context, inst.host).AndReturn(
@@ -734,7 +736,7 @@ class _ComputeAPIUnitTestMixIn(object):
             if self.cell_type != 'api':
                 self.compute_api._record_action_start(self.context, inst,
                                                       instance_actions.DELETE)
-            if commit_quotas:
+            if commit_quotas or soft_delete:
                 cast_reservations = None
             else:
                 cast_reservations = reservations
