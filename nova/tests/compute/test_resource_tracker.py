@@ -862,8 +862,8 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
         memory_mb = FAKE_VIRT_MEMORY_MB * 2
         root_gb = ephemeral_gb = FAKE_VIRT_LOCAL_GB
         vcpus = FAKE_VIRT_VCPUS * 2
-        claim_topology = self._claim_topology(memory_mb)
-        instance_topology = self._instance_topology(memory_mb)
+        claim_topology = self._claim_topology(3)
+        instance_topology = self._instance_topology(3)
 
         limits = {'memory_mb': memory_mb + FAKE_VIRT_MEMORY_OVERHEAD,
                   'disk_gb': root_gb * 2,

@@ -130,6 +130,7 @@ class ResourceTracker(object):
                              overhead=overhead, limits=limits)
 
         self._set_instance_host_and_node(context, instance_ref)
+        instance_ref['numa_topology'] = claim.claimed_numa_topology
 
         # Mark resources in-use and update stats
         self._update_usage_from_instance(context, self.compute_node,
@@ -593,9 +594,16 @@ class ResourceTracker(object):
                     instance['system_metadata'])
 
         if itype:
+            host_topology = resources.get('numa_topology')
+            if host_topology:
+                host_topology = hardware.VirtNUMAHostTopology.from_json(
+                        host_topology)
             numa_topology = (
                     hardware.VirtNUMAInstanceTopology.get_constraints(
                         itype, image_meta))
+            numa_topology = (
+                    hardware.VirtNUMAHostTopology.fit_instance_to_host(
+                        host_topology, numa_topology))
             usage = self._get_usage_dict(
                         itype, numa_topology=numa_topology)
             if self.pci_tracker:

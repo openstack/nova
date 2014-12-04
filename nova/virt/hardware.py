@@ -1040,12 +1040,11 @@ def instance_topology_from_instance(instance):
             # Remove when request_spec is a proper object itself!
             dict_cells = instance_numa_topology.get('cells')
             if dict_cells:
-                cells = [objects.InstanceNUMACell(id=cell['id'],
-                                                  cpuset=set(cell['cpuset']),
-                                                  memory=cell['memory'])
+                cells = [VirtNUMATopologyCell(cell['id'],
+                                              set(cell['cpuset']),
+                                              cell['memory'])
                          for cell in dict_cells]
-                instance_numa_topology = (
-                        objects.InstanceNUMATopology(cells=cells))
+                instance_numa_topology = VirtNUMAInstanceTopology(cells=cells)
 
     return instance_numa_topology
 

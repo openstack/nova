@@ -317,6 +317,7 @@ class BaseTestCase(test.TestCase):
         inst['updated_at'] = timeutils.utcnow()
         inst['launched_at'] = timeutils.utcnow()
         inst['security_groups'] = []
+        inst['numa_topology'] = None
         inst.update(params)
         if services:
             _create_service_entries(self.context.elevated(),

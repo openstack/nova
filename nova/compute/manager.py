@@ -1404,7 +1404,7 @@ class ComputeManager(manager.Manager):
         rt = self._get_resource_tracker(node)
         try:
             limits = filter_properties.get('limits', {})
-            with rt.instance_claim(context, instance, limits):
+            with rt.instance_claim(context, instance, limits) as inst_claim:
                 # NOTE(russellb) It's important that this validation be done
                 # *after* the resource tracker instance claim, as that is where
                 # the host is set on the instance.
@@ -1419,6 +1419,7 @@ class ComputeManager(manager.Manager):
 
                 instance.vm_state = vm_states.BUILDING
                 instance.task_state = task_states.BLOCK_DEVICE_MAPPING
+                instance.numa_topology = inst_claim.claimed_numa_topology
                 instance.save()
 
                 # Verify that all the BDMs have a device_name set and assign a
@@ -2090,7 +2091,7 @@ class ComputeManager(manager.Manager):
                 extra_usage_info={'image_name': image_name})
         try:
             rt = self._get_resource_tracker(node)
-            with rt.instance_claim(context, instance, limits):
+            with rt.instance_claim(context, instance, limits) as inst_claim:
                 # NOTE(russellb) It's important that this validation be done
                 # *after* the resource tracker instance claim, as that is where
                 # the host is set on the instance.
@@ -2101,6 +2102,7 @@ class ComputeManager(manager.Manager):
                         block_device_mapping) as resources:
                     instance.vm_state = vm_states.BUILDING
                     instance.task_state = task_states.SPAWNING
+                    instance.numa_topology = inst_claim.claimed_numa_topology
                     instance.save(expected_task_state=
                             task_states.BLOCK_DEVICE_MAPPING)
                     block_device_info = resources['block_device_info']

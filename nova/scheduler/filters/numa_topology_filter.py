@@ -28,34 +28,28 @@ class NUMATopologyFilter(filters.BaseHostFilter):
         cpu_ratio = CONF.cpu_allocation_ratio
         request_spec = filter_properties.get('request_spec', {})
         instance = request_spec.get('instance_properties', {})
-        instance_topology = hardware.instance_topology_from_instance(instance)
+        requested_topology = hardware.instance_topology_from_instance(instance)
         host_topology, _fmt = hardware.host_topology_and_format_from_host(
                 host_state)
-        if instance_topology:
-            if host_topology:
-                if not hardware.VirtNUMAHostTopology.can_fit_instances(
-                        host_topology, [instance_topology]):
-                    return False
-
-                limit_cells = []
-                usage_after_instance = (
-                        hardware.VirtNUMAHostTopology.usage_from_instances(
-                            host_topology, [instance_topology]))
-                for cell in usage_after_instance.cells:
-                    max_cell_memory = int(cell.memory * ram_ratio)
-                    max_cell_cpu = len(cell.cpuset) * cpu_ratio
-                    if (cell.memory_usage > max_cell_memory or
-                            cell.cpu_usage > max_cell_cpu):
-                        return False
-                    limit_cells.append(
-                        hardware.VirtNUMATopologyCellLimit(
-                            cell.id, cell.cpuset, cell.memory,
-                            max_cell_cpu, max_cell_memory))
-                host_state.limits['numa_topology'] = (
-                        hardware.VirtNUMALimitTopology(
-                            cells=limit_cells).to_json())
-                return True
-            else:
+        if requested_topology and host_topology:
+            limit_cells = []
+            for cell in host_topology.cells:
+                max_cell_memory = int(cell.memory * ram_ratio)
+                max_cell_cpu = len(cell.cpuset) * cpu_ratio
+                limit_cells.append(hardware.VirtNUMATopologyCellLimit(
+                    cell.id, cell.cpuset, cell.memory,
+                    max_cell_cpu, max_cell_memory))
+            limits = hardware.VirtNUMALimitTopology(cells=limit_cells)
+            instance_topology = (
+                    hardware.VirtNUMAHostTopology.fit_instance_to_host(
+                        host_topology, requested_topology,
+                        limits_topology=limits))
+            if not instance_topology:
                 return False
+            host_state.limits['numa_topology'] = limits.to_json()
+            instance['numa_topology'] = instance_topology.to_json()
+            return True
+        elif requested_topology:
+            return False
         else:
             return True
