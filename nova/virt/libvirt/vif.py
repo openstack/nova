@@ -382,14 +382,7 @@ class LibvirtGenericVIFDriver(object):
         """No manual plugging required."""
         pass
 
-    def plug_ovs_hybrid(self, instance, vif):
-        """Plug using hybrid strategy
-
-        Create a per-VIF linux bridge, then link that bridge to the OVS
-        integration bridge via a veth device, setting up the other end
-        of the veth device just like a normal OVS port.  Then boot the
-        VIF on the linux bridge using standard libvirt mechanisms.
-        """
+    def _plug_bridge_with_port(self, instance, vif, port):
         iface_id = self.get_ovs_interfaceid(vif)
         br_name = self.get_br_name(vif['id'])
         v1_name, v2_name = self.get_veth_pair_names(vif['id'])
@@ -409,9 +402,23 @@ class LibvirtGenericVIFDriver(object):
             linux_net._create_veth_pair(v1_name, v2_name)
             utils.execute('ip', 'link', 'set', br_name, 'up', run_as_root=True)
             utils.execute('brctl', 'addif', br_name, v1_name, run_as_root=True)
-            linux_net.create_ovs_vif_port(self.get_bridge_name(vif),
-                                          v2_name, iface_id, vif['address'],
-                                          instance['uuid'])
+            if port == 'ovs':
+                linux_net.create_ovs_vif_port(self.get_bridge_name(vif),
+                                              v2_name, iface_id,
+                                              vif['address'], instance['uuid'])
+            elif port == 'ivs':
+                linux_net.create_ivs_vif_port(v2_name, iface_id,
+                                              vif['address'], instance['uuid'])
+
+    def plug_ovs_hybrid(self, instance, vif):
+        """Plug using hybrid strategy
+
+        Create a per-VIF linux bridge, then link that bridge to the OVS
+        integration bridge via a veth device, setting up the other end
+        of the veth device just like a normal OVS port.  Then boot the
+        VIF on the linux bridge using standard libvirt mechanisms.
+        """
+        self._plug_bridge_with_port(instance, vif, port='ovs')
 
     def plug_ovs(self, instance, vif):
         if self.get_firewall_required(vif) or vif.is_hybrid_plug_enabled():
@@ -434,27 +441,7 @@ class LibvirtGenericVIFDriver(object):
         of the veth device just like a normal IVS port.  Then boot the
         VIF on the linux bridge using standard libvirt mechanisms.
         """
-        iface_id = self.get_ovs_interfaceid(vif)
-        br_name = self.get_br_name(vif['id'])
-        v1_name, v2_name = self.get_veth_pair_names(vif['id'])
-
-        if not linux_net.device_exists(br_name):
-            utils.execute('brctl', 'addbr', br_name, run_as_root=True)
-            utils.execute('brctl', 'setfd', br_name, 0, run_as_root=True)
-            utils.execute('brctl', 'stp', br_name, 'off', run_as_root=True)
-            utils.execute('tee',
-                          ('/sys/class/net/%s/bridge/multicast_snooping' %
-                           br_name),
-                          process_input='0',
-                          run_as_root=True,
-                          check_exit_code=[0, 1])
-
-        if not linux_net.device_exists(v2_name):
-            linux_net._create_veth_pair(v1_name, v2_name)
-            utils.execute('ip', 'link', 'set', br_name, 'up', run_as_root=True)
-            utils.execute('brctl', 'addif', br_name, v1_name, run_as_root=True)
-            linux_net.create_ivs_vif_port(v2_name, iface_id, vif['address'],
-                                          instance['uuid'])
+        self._plug_bridge_with_port(instance, vif, port='ivs')
 
     def plug_ivs(self, instance, vif):
         if self.get_firewall_required(vif) or vif.is_hybrid_plug_enabled():
