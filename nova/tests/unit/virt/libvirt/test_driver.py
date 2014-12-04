@@ -11844,13 +11844,11 @@ class LibvirtVolumeUsageTestCase(test.NoDBTestCase):
         expected_usage = [{'volume': 1,
                            'instance': self.ins_ref,
                            'rd_bytes': 688640L, 'wr_req': 0L,
-                           'flush_operations': -1L, 'rd_req': 169L,
-                           'wr_bytes': 0L},
+                           'rd_req': 169L, 'wr_bytes': 0L},
                            {'volume': 2,
                             'instance': self.ins_ref,
                             'rd_bytes': 688640L, 'wr_req': 0L,
-                            'flush_operations': -1L, 'rd_req': 169L,
-                            'wr_bytes': 0L}]
+                            'rd_req': 169L, 'wr_bytes': 0L}]
         self.assertEqual(vol_usage, expected_usage)
 
     def test_get_all_volume_usage_device_not_found(self):
