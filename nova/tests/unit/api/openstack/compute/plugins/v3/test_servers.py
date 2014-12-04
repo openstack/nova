@@ -2546,27 +2546,21 @@ class ServersControllerCreateTest(test.TestCase):
         except webob.exc.HTTPForbidden as e:
             self.assertEqual(e.explanation, expected_msg)
 
-    def test_create_instance_above_quota_server_groups(self):
-
-        def fake_reserve(contex, **deltas):
-            if 'server_groups' in deltas:
-                raise exception.OverQuota(overs={})
+    def test_create_instance_with_group_hint(self):
+        ctxt = context.get_admin_context()
+        test_group = objects.InstanceGroup(ctxt)
+        test_group.create()
 
         def fake_instance_destroy(context, uuid, constraint):
             return fakes.stub_instance(1)
 
-        self.stubs.Set(fakes.QUOTAS, 'reserve', fake_reserve)
         self.stubs.Set(db, 'instance_destroy', fake_instance_destroy)
-        self.body['os:scheduler_hints'] = {'group': 'fake_group'}
+        self.body['os:scheduler_hints'] = {'group': test_group.uuid}
         self.req.body = jsonutils.dumps(self.body)
+        server = self.controller.create(self.req, body=self.body).obj['server']
 
-        expected_msg = "Quota exceeded, too many server groups."
-
-        try:
-            self.controller.create(self.req, body=self.body).obj
-            self.fail('expected quota to be exceeded')
-        except webob.exc.HTTPForbidden as e:
-            self.assertEqual(e.explanation, expected_msg)
+        test_group = objects.InstanceGroup.get_by_uuid(ctxt, test_group.uuid)
+        self.assertIn(server['id'], test_group.members)
 
     def test_create_instance_with_neutronv2_port_in_use(self):
         network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'

@@ -1031,45 +1031,11 @@ class API(base.Base):
         if not group_hint:
             return
 
-        if uuidutils.is_uuid_like(group_hint):
-            group = objects.InstanceGroup.get_by_uuid(context, group_hint)
-        else:
-            try:
-                group = objects.InstanceGroup.get_by_name(context, group_hint)
-            except exception.InstanceGroupNotFound:
-                # NOTE(russellb) If the group does not already exist, we need
-                # to automatically create it to be backwards compatible with
-                # old handling of the 'group' scheduler hint.  The policy type
-                # will be 'legacy', indicating that this group was created to
-                # emulate legacy group behavior.
-                quotas = None
-                if check_quota:
-                    quotas = objects.Quotas()
-                    try:
-                        quotas.reserve(context,
-                                       project_id=context.project_id,
-                                       user_id=context.user_id,
-                                       server_groups=1)
-                    except nova.exception.OverQuota:
-                        msg = _("Quota exceeded, too many server groups.")
-                        raise nova.exception.QuotaError(msg)
+        if not uuidutils.is_uuid_like(group_hint):
+            msg = _('Server group scheduler hint must be a UUID.')
+            raise exception.InvalidInput(reason=msg)
 
-                group = objects.InstanceGroup(context)
-                group.name = group_hint
-                group.project_id = context.project_id
-                group.user_id = context.user_id
-                group.policies = ['legacy']
-                try:
-                    group.create()
-                except Exception:
-                    with excutils.save_and_reraise_exception():
-                        if quotas:
-                            quotas.rollback()
-
-                if quotas:
-                    quotas.commit()
-
-        return group
+        return objects.InstanceGroup.get_by_uuid(context, group_hint)
 
     def _create_instance(self, context, instance_type,
                image_href, kernel_id, ramdisk_id,
