@@ -95,6 +95,7 @@ class ServerPasswordTestV2(ServerPasswordTestV21):
         self.fakes_wsgi_app = fakes.wsgi_app
 
 
+@test.skipXmlTest("Nova v2 XML support is disabled")
 class ServerPasswordXmlTestV2(ServerPasswordTestV2):
     content_type = 'application/xml'
 

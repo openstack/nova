@@ -307,6 +307,7 @@ class ExtensionControllerTest(ExtensionTestCase):
         response = request.get_response(app)
         self.assertEqual(404, response.status_int)
 
+    @test.skipXmlTest("Nova v2 XML support is disabled")
     def test_list_extensions_xml(self):
         app = compute.APIRouter(init_only=('servers', 'flavors', 'extensions'))
         request = webob.Request.blank("/fake/extensions")
@@ -332,6 +333,7 @@ class ExtensionControllerTest(ExtensionTestCase):
 
         xmlutil.validate_schema(root, 'extensions')
 
+    @test.skipXmlTest("Nova v2 XML support is disabled")
     def test_get_extension_xml(self):
         app = compute.APIRouter(init_only=('servers', 'flavors', 'extensions'))
         request = webob.Request.blank("/fake/extensions/FOXNSOX")

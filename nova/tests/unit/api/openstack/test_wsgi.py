@@ -43,6 +43,7 @@ class RequestTest(test.NoDBTestCase):
         result = request.get_content_type()
         self.assertEqual(result, "application/json")
 
+    @test.skipXmlTest("Nova v2 XML support is disabled")
     def test_content_type_from_accept(self):
         for content_type in ('application/xml',
                              'application/vnd.openstack.compute+xml',
@@ -53,6 +54,7 @@ class RequestTest(test.NoDBTestCase):
             result = request.best_match_content_type()
             self.assertEqual(result, content_type)
 
+    @test.skipXmlTest("Nova v2 XML support is disabled")
     def test_content_type_from_accept_best(self):
         request = wsgi.Request.blank('/tests/123')
         request.headers["Accept"] = "application/xml, application/json"
@@ -65,6 +67,7 @@ class RequestTest(test.NoDBTestCase):
         result = request.best_match_content_type()
         self.assertEqual(result, "application/xml")
 
+    @test.skipXmlTest("Nova v2 XML support is disabled")
     def test_content_type_from_query_extension(self):
         request = wsgi.Request.blank('/tests/123.xml')
         result = request.best_match_content_type()
@@ -78,6 +81,7 @@ class RequestTest(test.NoDBTestCase):
         result = request.best_match_content_type()
         self.assertEqual(result, "application/json")
 
+    @test.skipXmlTest("Nova v2 XML support is disabled")
     def test_content_type_accept_and_query_extension(self):
         request = wsgi.Request.blank('/tests/123.xml')
         request.headers["Accept"] = "application/json"
@@ -565,6 +569,7 @@ class ResourceTest(test.NoDBTestCase):
                                                  '{"fooAction": true}')
         self.assertEqual(controller._action_foo, method)
 
+    @test.skipXmlTest("Nova v2 XML support is disabled")
     def test_get_method_action_xml(self):
         class Controller(wsgi.Controller):
             @wsgi.action('fooAction')
@@ -578,6 +583,7 @@ class ResourceTest(test.NoDBTestCase):
                                                  '<fooAction>true</fooAction>')
         self.assertEqual(controller._action_foo, method)
 
+    @test.skipXmlTest("Nova v2 XML support is disabled")
     def test_get_method_action_corrupt_xml(self):
         class Controller(wsgi.Controller):
             @wsgi.action('fooAction')
@@ -783,6 +789,7 @@ class ResourceTest(test.NoDBTestCase):
         obj = resource.deserialize(controller.index, 'application/json', 'foo')
         self.assertEqual(obj, 'json')
 
+    @test.skipXmlTest("Nova v2 XML support is disabled")
     def test_deserialize_decorator(self):
         class JSONDeserializer(object):
             def deserialize(self, body):

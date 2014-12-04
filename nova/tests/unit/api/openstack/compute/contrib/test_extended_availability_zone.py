@@ -172,6 +172,7 @@ class ExtendedAvailabilityZoneTestV2(ExtendedAvailabilityZoneTestV21):
         return res
 
 
+@test.skipXmlTest("Nova v2 XML support is disabled")
 class ExtendedAvailabilityZoneXmlTestV2(ExtendedAvailabilityZoneTestV2):
     content_type = 'application/xml'
     prefix = '{%s}' % extended_availability_zone.\

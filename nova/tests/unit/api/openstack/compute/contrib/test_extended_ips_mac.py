@@ -180,6 +180,7 @@ class ExtendedIpsMacTestV2(ExtendedIpsMacTestV21):
         return res
 
 
+@test.skipXmlTest("Nova v2 XML support is disabled")
 class ExtendedIpsMacXmlTest(ExtendedIpsMacTestV2):
     content_type = 'application/xml'
     prefix = '{%s}' % extended_ips_mac.Extended_ips_mac.namespace

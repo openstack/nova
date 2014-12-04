@@ -124,6 +124,7 @@ class ImageSizeTestV2(ImageSizeTestV21):
         return fakes.wsgi_app()
 
 
+@test.skipXmlTest("Nova v2 XML support is disabled")
 class ImageSizeXmlTest(ImageSizeTestV2):
     content_type = 'application/xml'
     prefix = '{%s}' % image_size.Image_size.namespace

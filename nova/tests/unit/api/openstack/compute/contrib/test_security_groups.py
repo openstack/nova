@@ -1735,6 +1735,7 @@ class SecurityGroupsOutputTestV2(SecurityGroupsOutputTestV21):
         return fakes.wsgi_app(init_only=('servers',))
 
 
+@test.skipXmlTest("Nova v2 XML support is disabled")
 class SecurityGroupsOutputXmlTest(SecurityGroupsOutputTestV2):
     content_type = 'application/xml'
 

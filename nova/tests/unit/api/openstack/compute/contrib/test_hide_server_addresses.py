@@ -153,6 +153,7 @@ class HideServerAddressesTestV2(HideServerAddressesTestV21):
         self.wsgi_app = fakes.wsgi_app(init_only=('servers',))
 
 
+@test.skipXmlTest("Nova v2 XML support is disabled")
 class HideAddressesXmlTest(HideServerAddressesTestV2):
     content_type = 'application/xml'
 

@@ -117,6 +117,7 @@ class FlavorRxtxTestV20(FlavorRxtxTestV21):
         return fakes.wsgi_app()
 
 
+@test.skipXmlTest("Nova v2 XML support is disabled")
 class FlavorRxtxXmlTest(FlavorRxtxTestV20):
     content_type = 'application/xml'
 

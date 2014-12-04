@@ -116,6 +116,7 @@ class FlavorDisabledTestV2(FlavorDisabledTestV21):
         return res
 
 
+@test.skipXmlTest("Nova v2 XML support is disabled")
 class FlavorDisabledXmlTest(FlavorDisabledTestV2):
     content_type = 'application/xml'
     prefix = '{%s}' % flavor_disabled.Flavor_disabled.namespace

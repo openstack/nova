@@ -14,6 +14,7 @@
 #    under the License.
 
 from lxml import etree
+from oslo.config import cfg
 from oslo.serialization import jsonutils
 import webob
 
@@ -25,8 +26,6 @@ from nova import objects
 from nova.objects import instance as instance_obj
 from nova import test
 from nova.tests.unit.api.openstack import fakes
-
-from oslo.config import cfg
 
 
 NAME_FMT = cfg.CONF.instance_name_template
@@ -136,6 +135,7 @@ class ExtendedServerAttributesTestV2(ExtendedServerAttributesTestV21):
         return res
 
 
+@test.skipXmlTest("Nova v2 XML support is disabled")
 class ExtendedServerAttributesXmlTest(ExtendedServerAttributesTestV2):
     content_type = 'application/xml'
     ext = extended_server_attributes

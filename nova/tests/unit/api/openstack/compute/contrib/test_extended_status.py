@@ -137,6 +137,7 @@ class ExtendedStatusTestV2(ExtendedStatusTestV21):
         return res
 
 
+@test.skipXmlTest("Nova v2 XML support is disabled")
 class ExtendedStatusXmlTest(ExtendedStatusTestV2):
     content_type = 'application/xml'
     prefix = '{%s}' % extended_status.Extended_status.namespace

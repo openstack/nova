@@ -210,6 +210,7 @@ class CreateserverextTest(test.TestCase):
         self.assertEqual(response.status_int, 202)
         self.assertIsNone(networks)
 
+    @test.skipXmlTest("Nova v2 XML support is disabled")
     def test_create_instance_with_no_networks_xml(self):
         _create_inst = self._create_instance_with_networks_xml
         request, response, networks = _create_inst(networks=None)
@@ -222,6 +223,7 @@ class CreateserverextTest(test.TestCase):
         self.assertEqual(response.status_int, 202)
         self.assertEqual([FAKE_NETWORKS[0]], networks.as_tuples())
 
+    @test.skipXmlTest("Nova v2 XML support is disabled")
     def test_create_instance_with_one_network_xml(self):
         _create_inst = self._create_instance_with_networks_xml
         request, response, networks = _create_inst([FAKE_NETWORKS[0]])
@@ -234,6 +236,7 @@ class CreateserverextTest(test.TestCase):
         self.assertEqual(response.status_int, 202)
         self.assertEqual(FAKE_NETWORKS, networks.as_tuples())
 
+    @test.skipXmlTest("Nova v2 XML support is disabled")
     def test_create_instance_with_two_networks_xml(self):
         _create_inst = self._create_instance_with_networks_xml
         request, response, networks = _create_inst(FAKE_NETWORKS)
@@ -246,6 +249,7 @@ class CreateserverextTest(test.TestCase):
         self.assertEqual(response.status_int, 400)
         self.assertIsNone(networks)
 
+    @test.skipXmlTest("Nova v2 XML support is disabled")
     def test_create_instance_with_duplicate_networks_xml(self):
         _create_inst = self._create_instance_with_networks_xml
         request, response, networks = _create_inst(DUPLICATE_NETWORKS)
@@ -314,6 +318,7 @@ class CreateserverextTest(test.TestCase):
         self.assertEqual([('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', None)],
                          self.networks.as_tuples())
 
+    @test.skipXmlTest("Nova v2 XML support is disabled")
     def test_create_instance_with_network_no_fixed_ip_xml(self):
         body_dict = self._create_networks_request_dict([FAKE_NETWORKS[0]])
         request = self._get_create_request_xml(body_dict)
@@ -372,6 +377,7 @@ class CreateserverextTest(test.TestCase):
         self.assertEqual(res_dict['server'].get('security_groups'),
                          expected_security_group)
 
+    @test.skipXmlTest("Nova v2 XML support is disabled")
     def test_get_server_by_id_verify_security_groups_xml(self):
         self.stubs.Set(db, 'instance_get', fakes.fake_instance_get())
         self.stubs.Set(db, 'instance_get_by_uuid', fakes.fake_instance_get())

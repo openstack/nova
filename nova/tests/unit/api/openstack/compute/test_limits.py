@@ -402,6 +402,7 @@ class LimitMiddlewareTest(BaseLimitTestSuite):
         retryAfter = body["overLimit"]["retryAfter"]
         self.assertEqual(retryAfter, "60")
 
+    @test.skipXmlTest("Nova v2 XML support is disabled")
     def test_limited_request_xml(self):
         # Test a rate-limited (429) response as XML.
         request = webob.Request.blank("/")
