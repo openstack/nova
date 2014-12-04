@@ -92,6 +92,44 @@ class _TestInstanceNUMATopology(object):
             objects.InstanceNUMATopology.get_by_instance_uuid,
             self.context, 'fake_uuid')
 
+    def test_siblings(self):
+        topo = objects.VirtCPUTopology(sockets=1, cores=3, threads=0)
+        inst_cell = objects.InstanceNUMACell(
+                cpuset=set([0, 1, 2]), topology=topo)
+        self.assertEqual([], inst_cell.siblings)
+
+        # One thread actually means no threads
+        topo = objects.VirtCPUTopology(sockets=1, cores=3, threads=1)
+        inst_cell = objects.InstanceNUMACell(
+                cpuset=set([0, 1, 2]), cpu_topology=topo)
+        self.assertEqual([], inst_cell.siblings)
+
+        topo = objects.VirtCPUTopology(sockets=1, cores=2, threads=2)
+        inst_cell = objects.InstanceNUMACell(
+                cpuset=set([0, 1, 2, 3]), cpu_topology=topo)
+        self.assertEqual([set([0, 1]), set([2, 3])], inst_cell.siblings)
+
+        topo = objects.VirtCPUTopology(sockets=1, cores=1, threads=4)
+        inst_cell = objects.InstanceNUMACell(
+                cpuset=set([0, 1, 2, 3]), cpu_topology=topo)
+        self.assertEqual([set([0, 1, 2, 3])], inst_cell.siblings)
+
+    def test_pin(self):
+        inst_cell = objects.InstanceNUMACell(cpuset=set([0, 1, 2, 3]),
+                                             cpu_pinning=None)
+        inst_cell.pin(0, 14)
+        self.assertEqual({0: 14}, inst_cell.cpu_pinning)
+        inst_cell.pin(12, 14)
+        self.assertEqual({0: 14}, inst_cell.cpu_pinning)
+        inst_cell.pin(1, 16)
+        self.assertEqual({0: 14, 1: 16}, inst_cell.cpu_pinning)
+
+    def test_pin_vcpus(self):
+        inst_cell = objects.InstanceNUMACell(cpuset=set([0, 1, 2, 3]),
+                                             cpu_pinning=None)
+        inst_cell.pin_vcpus((0, 14), (1, 15), (2, 16), (3, 17))
+        self.assertEqual({0: 14, 1: 15, 2: 16, 3: 17}, inst_cell.cpu_pinning)
+
 
 class TestInstanceNUMATopology(test_objects._LocalTest,
                                _TestInstanceNUMATopology):
