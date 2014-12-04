@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-12-02 06:15+0000\n"
-"PO-Revision-Date: 2014-12-02 03:10+0000\n"
+"POT-Creation-Date: 2014-12-04 06:15+0000\n"
+"PO-Revision-Date: 2014-12-03 20:55+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: English (United Kingdom) (http://www.transifex.com/projects/p/"
 "nova/language/en_GB/)\n"
@@ -25,16 +25,16 @@ msgstr ""
 msgid "Filter %s returned 0 hosts"
 msgstr "Filter %s returned 0 hosts"
 
-#: nova/wsgi.py:138
+#: nova/wsgi.py:148
 #, python-format
 msgid "%(name)s listening on %(host)s:%(port)s"
 msgstr "%(name)s listening on %(host)s:%(port)s"
 
-#: nova/wsgi.py:241
+#: nova/wsgi.py:253
 msgid "Stopping WSGI server."
 msgstr "Stopping WSGI server."
 
-#: nova/wsgi.py:261
+#: nova/wsgi.py:273
 msgid "WSGI server has stopped."
 msgstr "WSGI server has stopped."
 
@@ -79,30 +79,30 @@ msgid ""
 "Forcing direct route to %(cell_name)s because of 'target_cell' scheduler hint"
 msgstr ""
 
-#: nova/compute/api.py:1548
+#: nova/compute/api.py:1529
 msgid "instance termination disabled"
 msgstr "instance termination disabled"
 
-#: nova/compute/api.py:1562
+#: nova/compute/api.py:1543
 #, python-format
 msgid "Working on deleting snapshot %s from shelved instance..."
 msgstr ""
 
-#: nova/compute/api.py:1632
+#: nova/compute/api.py:1613
 msgid "Instance is already in deleting state, ignoring this request"
 msgstr ""
 
-#: nova/compute/api.py:1668
+#: nova/compute/api.py:1649
 #, python-format
 msgid ""
 "Found an unconfirmed migration during delete, id: %(id)s, status: %(status)s"
 msgstr ""
 
-#: nova/compute/api.py:1678
+#: nova/compute/api.py:1659
 msgid "Instance may have been confirmed during delete"
 msgstr ""
 
-#: nova/compute/api.py:1695
+#: nova/compute/api.py:1676
 #, python-format
 msgid "Migration %s may have been confirmed during delete"
 msgstr ""
@@ -133,70 +133,70 @@ msgid ""
 "finish. Restarting the deletion now."
 msgstr ""
 
-#: nova/compute/manager.py:1003
+#: nova/compute/manager.py:1023
 msgid "Instance found in migrating state during startup. Resetting task_state"
 msgstr "Instance found in migrating state during startup. Resetting task_state"
 
-#: nova/compute/manager.py:1025
+#: nova/compute/manager.py:1045
 msgid "Rebooting instance after nova-compute restart."
 msgstr "Rebooting instance after nova-compute restart."
 
-#: nova/compute/manager.py:1074
+#: nova/compute/manager.py:1094
 #, python-format
 msgid "VM %(state)s (Lifecycle Event)"
 msgstr ""
 
-#: nova/compute/manager.py:2515
+#: nova/compute/manager.py:2535
 msgid "Instance disappeared during terminate"
 msgstr ""
 
-#: nova/compute/manager.py:2559
+#: nova/compute/manager.py:2579
 msgid "Instance is already powered off in the hypervisor when stop is called."
 msgstr ""
 
-#: nova/compute/manager.py:2743
+#: nova/compute/manager.py:2763
 msgid "disk on shared storage, recreating using existing disk"
 msgstr "disk on shared storage, recreating using existing disk"
 
-#: nova/compute/manager.py:2747
+#: nova/compute/manager.py:2767
 #, python-format
 msgid "disk not on shared storage, rebuilding from: '%s'"
 msgstr ""
 
-#: nova/compute/manager.py:2835
+#: nova/compute/manager.py:2855
 #, python-format
 msgid "bringing vm to original state: '%s'"
 msgstr "bringing vm to original state: '%s'"
 
-#: nova/compute/manager.py:2866
+#: nova/compute/manager.py:2886
 #, python-format
 msgid "Detaching from volume api: %s"
 msgstr "Detaching from volume api: %s"
 
-#: nova/compute/manager.py:3382
+#: nova/compute/manager.py:3402
 #, python-format
 msgid "Migration %s is already confirmed"
 msgstr ""
 
-#: nova/compute/manager.py:3402
+#: nova/compute/manager.py:3422
 msgid "Instance is not found during confirmation"
 msgstr ""
 
-#: nova/compute/manager.py:3582
+#: nova/compute/manager.py:3602
 #, python-format
 msgid "Updating instance to original state: '%s'"
 msgstr ""
 
-#: nova/compute/manager.py:5040
+#: nova/compute/manager.py:5057
 msgid "_post_live_migration() is started.."
 msgstr "_post_live_migration() is started.."
 
-#: nova/compute/manager.py:5120
+#: nova/compute/manager.py:5137
 #, python-format
 msgid "Migrating instance to %s finished successfully."
 msgstr ""
 
-#: nova/compute/manager.py:5122
+#: nova/compute/manager.py:5139
 msgid ""
 "You may see the error \"libvirt: QEMU error: Domain not found: no domain "
 "with matching name.\" This error can be safely ignored."
@@ -204,11 +204,11 @@ msgstr ""
 "You may see the error \"libvirt: QEMU error: Domain not found: no domain "
 "with matching name.\" This error can be safely ignored."
 
-#: nova/compute/manager.py:5147
+#: nova/compute/manager.py:5164
 msgid "Post operation of migration started"
 msgstr "Post operation of migration started"
 
-#: nova/compute/manager.py:5410
+#: nova/compute/manager.py:5427
 #, python-format
 msgid ""
 "Found %(migration_count)d unconfirmed migrations older than "
@@ -217,7 +217,7 @@ msgstr ""
 "Found %(migration_count)d unconfirmed migrations older than "
 "%(confirm_window)d seconds"
 
-#: nova/compute/manager.py:5424
+#: nova/compute/manager.py:5441
 #, python-format
 msgid ""
 "Automatically confirming migration %(migration_id)s for instance "
@@ -226,12 +226,12 @@ msgstr ""
 "Automatically confirming migration %(migration_id)s for instance "
 "%(instance_uuid)s"
 
-#: nova/compute/manager.py:5478
+#: nova/compute/manager.py:5495
 #, python-format
 msgid "Error auto-confirming resize: %s. Will retry later."
 msgstr ""
 
-#: nova/compute/manager.py:5526
+#: nova/compute/manager.py:5543
 #, python-format
 msgid ""
 "Running instance usage audit for host %(host)s from %(begin_time)s to "
@@ -240,18 +240,18 @@ msgstr ""
 "Running instance usage audit for host %(host)s from %(begin_time)s to "
 "%(end_time)s. %(number_instances)s instances."
 
-#: nova/compute/manager.py:5574
+#: nova/compute/manager.py:5591
 msgid "Updating bandwidth usage cache"
 msgstr "Updating bandwidth usage cache"
 
-#: nova/compute/manager.py:5752 nova/compute/manager.py:5809
+#: nova/compute/manager.py:5769 nova/compute/manager.py:5826
 #, python-format
 msgid ""
 "During sync_power_state the instance has a pending task (%(task)s). Skip."
 msgstr ""
 "During sync_power_state the instance has a pending task (%(task)s). Skip."
 
-#: nova/compute/manager.py:5796
+#: nova/compute/manager.py:5813
 #, python-format
 msgid ""
 "During the sync_power process the instance has moved from host %(src)s to "
@@ -260,30 +260,30 @@ msgstr ""
 "During the sync_power process the instance has moved from host %(src)s to "
 "host %(dst)s"
 
-#: nova/compute/manager.py:5955
+#: nova/compute/manager.py:5972
 msgid "Reclaiming deleted instance"
 msgstr "Reclaiming deleted instance"
 
-#: nova/compute/manager.py:6042
+#: nova/compute/manager.py:6059
 #, python-format
 msgid ""
 "Powering off instance with name label '%s' which is marked as DELETED but "
 "still present on host."
 msgstr ""
 
-#: nova/compute/manager.py:6060
+#: nova/compute/manager.py:6077
 #, python-format
 msgid ""
 "Destroying instance with name label '%s' which is marked as DELETED but "
 "still present on host."
 msgstr ""
 
-#: nova/compute/manager.py:6106
+#: nova/compute/manager.py:6123
 #, python-format
 msgid "Setting instance back to %(state)s after: %(error)s"
 msgstr ""
 
-#: nova/compute/manager.py:6116
+#: nova/compute/manager.py:6133
 #, python-format
 msgid "Setting instance back to ACTIVE after: %s"
 msgstr ""
@@ -302,7 +302,7 @@ msgstr "Compute_service record updated for %(host)s:%(node)s"
 msgid "nova-conductor connection established successfully"
 msgstr ""
 
-#: nova/db/sqlalchemy/api.py:3285
+#: nova/db/sqlalchemy/api.py:3328
 #, python-format
 msgid ""
 "quota_usages out of sync, updating. project_id: %(project_id)s, user_id: "
@@ -310,7 +310,7 @@ msgid ""
 "usage: %(in_use)s"
 msgstr ""
 
-#: nova/db/sqlalchemy/api.py:5088
+#: nova/db/sqlalchemy/api.py:5131
 #, python-format
 msgid ""
 "Volume(%s) has lower stats then what is in the database. Instance must have "
@@ -341,7 +341,7 @@ msgstr ""
 msgid "Copied %(source_file)s using %(module_str)s"
 msgstr ""
 
-#: nova/network/api.py:226 nova/network/neutronv2/api.py:948
+#: nova/network/api.py:220 nova/network/neutronv2/api.py:948
 #, python-format
 msgid "re-assign floating IP %(address)s from instance %(instance_id)s"
 msgstr "re-assign floating IP %(address)s from instance %(instance_id)s"
@@ -520,11 +520,11 @@ msgstr "The ISCSI initiator name can't be found. Choosing the default one"
 msgid "Spawning new instance"
 msgstr "Spawning new instance"
 
-#: nova/virt/hyperv/vmops.py:331 nova/virt/vmwareapi/vmops.py:523
+#: nova/virt/hyperv/vmops.py:331 nova/virt/vmwareapi/vmops.py:569
 msgid "Using config drive for instance"
 msgstr ""
 
-#: nova/virt/hyperv/vmops.py:344 nova/virt/libvirt/driver.py:3098
+#: nova/virt/hyperv/vmops.py:344 nova/virt/libvirt/driver.py:2772
 #, python-format
 msgid "Creating config drive at %(path)s"
 msgstr "Creating config drive at %(path)s"
@@ -537,98 +537,103 @@ msgstr ""
 msgid "Soft shutdown succeeded."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:952
+#: nova/virt/libvirt/driver.py:498
+#, python-format
+msgid "Connection event '%(enabled)d' reason '%(reason)s'"
+msgstr ""
+
+#: nova/virt/libvirt/driver.py:623
 #, python-format
 msgid ""
 "Unable to use bulk domain list APIs, falling back to slow code path: %(ex)s"
 msgstr ""
 "Unable to use bulk domain list APIs, falling back to slow code path: %(ex)s"
 
-#: nova/virt/libvirt/driver.py:1064
+#: nova/virt/libvirt/driver.py:735
 msgid "Instance destroyed successfully."
 msgstr "Instance destroyed successfully."
 
-#: nova/virt/libvirt/driver.py:1074
+#: nova/virt/libvirt/driver.py:745
 msgid "Instance may be started again."
 msgstr "Instance may be started again."
 
-#: nova/virt/libvirt/driver.py:1084
+#: nova/virt/libvirt/driver.py:755
 msgid "Going to destroy instance again."
 msgstr "Going to destroy instance again."
 
-#: nova/virt/libvirt/driver.py:1727
+#: nova/virt/libvirt/driver.py:1399
 msgid "Beginning live snapshot process"
 msgstr "Beginning live snapshot process"
 
-#: nova/virt/libvirt/driver.py:1730
+#: nova/virt/libvirt/driver.py:1402
 msgid "Beginning cold snapshot process"
 msgstr "Beginning cold snapshot process"
 
-#: nova/virt/libvirt/driver.py:1760
+#: nova/virt/libvirt/driver.py:1432
 msgid "Snapshot extracted, beginning image upload"
 msgstr "Snapshot extracted, beginning image upload"
 
-#: nova/virt/libvirt/driver.py:1772
+#: nova/virt/libvirt/driver.py:1444
 msgid "Snapshot image upload complete"
 msgstr "Snapshot image upload complete"
 
-#: nova/virt/libvirt/driver.py:2282
+#: nova/virt/libvirt/driver.py:1954
 msgid "Instance soft rebooted successfully."
 msgstr "Instance soft rebooted successfully."
 
-#: nova/virt/libvirt/driver.py:2325
+#: nova/virt/libvirt/driver.py:1997
 msgid "Instance shutdown successfully."
 msgstr "Instance shutdown successfully."
 
-#: nova/virt/libvirt/driver.py:2333
+#: nova/virt/libvirt/driver.py:2005
 msgid "Instance may have been rebooted during soft reboot, so return now."
 msgstr "Instance may have been rebooted during soft reboot, so return now."
 
-#: nova/virt/libvirt/driver.py:2402
+#: nova/virt/libvirt/driver.py:2076
 msgid "Instance rebooted successfully."
 msgstr "Instance rebooted successfully."
 
-#: nova/virt/libvirt/driver.py:2445
+#: nova/virt/libvirt/driver.py:2119
 msgid "Instance already shutdown."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2461
+#: nova/virt/libvirt/driver.py:2135
 #, python-format
 msgid "Instance shutdown successfully after %d seconds."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2490
+#: nova/virt/libvirt/driver.py:2164
 #, python-format
 msgid "Instance failed to shutdown in %d seconds."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2648
+#: nova/virt/libvirt/driver.py:2322
 msgid "Instance spawned successfully."
 msgstr "Instance spawned successfully."
 
-#: nova/virt/libvirt/driver.py:2664
+#: nova/virt/libvirt/driver.py:2338
 #, python-format
 msgid "data: %(data)r, fpath: %(fpath)r"
 msgstr "data: %(data)r, fpath: %(fpath)r"
 
-#: nova/virt/libvirt/driver.py:2703 nova/virt/libvirt/driver.py:2730
+#: nova/virt/libvirt/driver.py:2377 nova/virt/libvirt/driver.py:2404
 #, python-format
 msgid "Truncated console log returned, %d bytes ignored"
 msgstr "Truncated console log returned, %d bytes ignored"
 
-#: nova/virt/libvirt/driver.py:2961
+#: nova/virt/libvirt/driver.py:2635
 msgid "Creating image"
 msgstr "Creating image"
 
-#: nova/virt/libvirt/driver.py:3089
+#: nova/virt/libvirt/driver.py:2763
 msgid "Using config drive"
 msgstr "Using config drive"
 
-#: nova/virt/libvirt/driver.py:4085
+#: nova/virt/libvirt/driver.py:3746
 msgid "Configuring timezone for windows instance to localtime"
 msgstr "Configuring timezone for windows instance to localtime"
 
-#: nova/virt/libvirt/driver.py:4973
+#: nova/virt/libvirt/driver.py:4634
 #, python-format
 msgid ""
 "Getting block stats failed, device might have been detached. Instance="
@@ -637,7 +642,7 @@ msgstr ""
 "Getting block stats failed, device might have been detached. Instance="
 "%(instance_name)s Disk=%(disk)s Code=%(errcode)s Error=%(e)s"
 
-#: nova/virt/libvirt/driver.py:4979
+#: nova/virt/libvirt/driver.py:4640
 #, python-format
 msgid ""
 "Could not find domain in libvirt for instance %s. Cannot get block stats for "
@@ -646,26 +651,26 @@ msgstr ""
 "Could not find domain in libvirt for instance %s. Cannot get block stats for "
 "device"
 
-#: nova/virt/libvirt/driver.py:5280
+#: nova/virt/libvirt/driver.py:4941
 #, python-format
 msgid "Instance launched has CPU info: %s"
 msgstr "Instance launched has CPU info: %s"
 
-#: nova/virt/libvirt/driver.py:6068
+#: nova/virt/libvirt/driver.py:5732
 msgid "Instance running successfully."
 msgstr "Instance running successfully."
 
-#: nova/virt/libvirt/driver.py:6422
+#: nova/virt/libvirt/driver.py:6086
 #, python-format
 msgid "Deleting instance files %s"
 msgstr "Deleting instance files %s"
 
-#: nova/virt/libvirt/driver.py:6435
+#: nova/virt/libvirt/driver.py:6099
 #, python-format
 msgid "Deletion of %s failed"
 msgstr "Deletion of %s failed"
 
-#: nova/virt/libvirt/driver.py:6439
+#: nova/virt/libvirt/driver.py:6103
 #, python-format
 msgid "Deletion of %s complete"
 msgstr "Deletion of %s complete"
@@ -743,9 +748,14 @@ msgstr "Removable base files: %s"
 msgid "findmnt tool is not installed"
 msgstr "findmnt tool is not installed"
 
-#: nova/virt/vmwareapi/driver.py:454
+#: nova/virt/vmwareapi/driver.py:457
 #, python-format
 msgid "Invalid cluster or resource pool name : %s"
+msgstr ""
+
+#: nova/virt/vmwareapi/ds_util.py:403
+#, python-format
+msgid "Moved virtual disk from %(src)s to %(dst)s."
 msgstr ""
 
 #: nova/virt/vmwareapi/imagecache.py:162
@@ -758,12 +768,21 @@ msgstr ""
 msgid "Image %s is no longer used. Deleting!"
 msgstr ""
 
-#: nova/virt/vmwareapi/vmops.py:1150 nova/virt/xenapi/vmops.py:1619
+#: nova/virt/vmwareapi/images.py:351
+#, python-format
+msgid "Downloaded image file data %(image_ref)s"
+msgstr ""
+
+#: nova/virt/vmwareapi/images.py:354
+msgid "The imported VM was unregistered"
+msgstr ""
+
+#: nova/virt/vmwareapi/vmops.py:1196 nova/virt/xenapi/vmops.py:1619
 #, python-format
 msgid "Found %(instance_count)d hung reboots older than %(timeout)d seconds"
 msgstr "Found %(instance_count)d hung reboots older than %(timeout)d seconds"
 
-#: nova/virt/vmwareapi/vmops.py:1154 nova/virt/xenapi/vmops.py:1623
+#: nova/virt/vmwareapi/vmops.py:1200 nova/virt/xenapi/vmops.py:1623
 msgid "Automatically hard rebooting"
 msgstr "Automatically hard rebooting"
 
