@@ -636,8 +636,9 @@ class SecurityGroup(BASE, NovaBase):
     """Represents a security group."""
     __tablename__ = 'security_groups'
     __table_args__ = (
-        Index('uniq_security_groups0project_id0name0deleted', 'project_id',
-              'name', 'deleted'),
+        schema.UniqueConstraint('project_id', 'name', 'deleted',
+                                name='uniq_security_groups0project_id0'
+                                     'name0deleted'),
     )
     id = Column(Integer, primary_key=True)
 
