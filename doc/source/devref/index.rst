@@ -39,6 +39,7 @@ Background Concepts for Nova
 
    architecture
    aggregates
+   cells
    threading
    vmstates
    i18n
