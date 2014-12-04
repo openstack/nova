@@ -515,7 +515,7 @@ class VMwareVMOps(object):
 
         # Set the vnc configuration of the instance, vnc port starts from 5900
         if CONF.vnc_enabled:
-            self._get_and_set_vnc_config(client_factory, instance)
+            self._get_and_set_vnc_config(client_factory, instance, vm_ref)
 
         block_device_mapping = []
         if block_device_info is not None:
@@ -1322,11 +1322,9 @@ class VMwareVMOps(object):
                   instance=instance)
 
     @utils.synchronized('vmware.get_and_set_vnc_port')
-    def _get_and_set_vnc_config(self, client_factory, instance):
+    def _get_and_set_vnc_config(self, client_factory, instance, vm_ref):
         """Set the vnc configuration of the VM."""
         port = vm_util.get_vnc_port(self._session)
-        vm_ref = vm_util.get_vm_ref(self._session, instance)
-
         vnc_config_spec = vm_util.get_vnc_config_spec(
                                       client_factory, port)
 
