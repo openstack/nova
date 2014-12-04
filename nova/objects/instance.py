@@ -574,8 +574,6 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
             if self.obj_attr_is_set(field):
                 if field == 'info_cache':
                     self.info_cache.refresh()
-                    # NOTE(danms): Make sure this shows up as touched
-                    self.info_cache = self.info_cache
                 elif self[field] != current[field]:
                     self[field] = current[field]
         self.obj_reset_changes()
