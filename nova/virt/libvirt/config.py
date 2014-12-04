@@ -1432,12 +1432,18 @@ class LibvirtConfigGuestChar(LibvirtConfigGuestCharBase):
         super(LibvirtConfigGuestChar, self).__init__(**kwargs)
 
         self.target_port = None
+        self.target_type = None
 
     def format_dom(self):
         dev = super(LibvirtConfigGuestChar, self).format_dom()
 
-        if self.target_port is not None:
-            dev.append(etree.Element("target", port=str(self.target_port)))
+        if self.target_port is not None or self.target_type is not None:
+            target = etree.Element("target")
+            if self.target_port is not None:
+                target.set("port", str(self.target_port))
+            if self.target_type is not None:
+                target.set("type", self.target_type)
+            dev.append(target)
 
         return dev
 

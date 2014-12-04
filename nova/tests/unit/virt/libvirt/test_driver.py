@@ -2149,6 +2149,75 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual(cfg.devices[4].type, "xen")
 
     @mock.patch.object(objects.Flavor, 'get_by_id')
+    def test_get_guest_config_with_type_kvm_on_s390(self, mock_flavor):
+        self.flags(vnc_enabled=False)
+        self.flags(virt_type='kvm',
+                   use_usb_tablet=False,
+                   group='libvirt')
+
+        host_arch = arch.S390X
+        self._stub_host_capabilities_cpu_arch(host_arch)
+        self._stub_guest_cpu_config_arch(host_arch)
+
+        instance_ref = self._get_flavor_mocked_test_instance(mock_flavor)
+
+        cfg = self._get_guest_config_via_fake_api(instance_ref)
+
+        self.assertIsInstance(cfg.devices[0],
+                              vconfig.LibvirtConfigGuestDisk)
+        self.assertIsInstance(cfg.devices[1],
+                              vconfig.LibvirtConfigGuestDisk)
+        log_file_device = cfg.devices[2]
+        self.assertIsInstance(log_file_device,
+                              vconfig.LibvirtConfigGuestConsole)
+        self.assertEqual("sclplm", log_file_device.target_type)
+        self.assertEqual("file", log_file_device.type)
+        terminal_device = cfg.devices[3]
+        self.assertIsInstance(terminal_device,
+                              vconfig.LibvirtConfigGuestConsole)
+        self.assertEqual("sclp", terminal_device.target_type)
+        self.assertEqual("pty", terminal_device.type)
+        self.assertEqual("s390-ccw-virtio", cfg.os_mach_type)
+        self.assertEqual("s390x", cfg.cpu.arch)
+
+    def _stub_host_capabilities_cpu_arch(self, cpu_arch):
+        def get_host_capabilities_stub(self):
+            cpu = vconfig.LibvirtConfigGuestCPU()
+            cpu.arch = cpu_arch
+
+            caps = vconfig.LibvirtConfigCaps()
+            caps.host = vconfig.LibvirtConfigCapsHost()
+            caps.host.cpu = cpu
+            return caps
+
+        self.stubs.Set(libvirt_driver.LibvirtDriver,
+                       "_get_host_capabilities",
+                       get_host_capabilities_stub)
+
+    def _stub_guest_cpu_config_arch(self, cpu_arch):
+        def get_guest_cpu_config(self):
+            cpu = vconfig.LibvirtConfigGuestCPU()
+            cpu.arch = cpu_arch
+            return cpu
+
+        self.stubs.Set(libvirt_driver.LibvirtDriver,
+                       "_get_guest_cpu_model_config",
+                       get_guest_cpu_config)
+
+    def _get_flavor_mocked_test_instance(self, mock_flavor):
+        instance = objects.Instance(**self.test_instance)
+        flavor = instance.get_flavor()
+        flavor.extra_specs = {}
+        mock_flavor.return_value = flavor
+        return instance
+
+    def _get_guest_config_via_fake_api(self, instance):
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance)
+        return conn._get_guest_config(instance, [], {}, disk_info)
+
+    @mock.patch.object(objects.Flavor, 'get_by_id')
     def test_get_guest_config_with_type_xen_pae_hvm(self, mock_flavor):
         self.flags(vnc_enabled=True)
         self.flags(virt_type='xen',
