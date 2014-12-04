@@ -703,6 +703,27 @@ class _TestObject(object):
         self.assertEqual(set(myobj_fields) | set(myobj3_fields),
                          set(TestSubclassedObject.fields.keys()))
 
+    def test_obj_as_admin(self):
+        obj = MyObj(context=self.context)
+
+        def fake(*args, **kwargs):
+            self.assertTrue(obj._context.is_admin)
+
+        with mock.patch.object(obj, 'obj_reset_changes') as mock_fn:
+            mock_fn.side_effect = fake
+            with obj.obj_as_admin():
+                obj.save()
+            self.assertTrue(mock_fn.called)
+
+        self.assertFalse(obj._context.is_admin)
+
+    def test_obj_as_admin_orphaned(self):
+        def testme():
+            obj = MyObj()
+            with obj.obj_as_admin():
+                pass
+        self.assertRaises(exception.OrphanedObjectError, testme)
+
     def test_get_changes(self):
         obj = MyObj()
         self.assertEqual({}, obj.obj_get_changes())

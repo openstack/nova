@@ -15,6 +15,7 @@
 """Nova common internal object model"""
 
 import collections
+import contextlib
 import copy
 import datetime
 import functools
@@ -617,6 +618,29 @@ class NovaPersistentObject(object):
         'deleted_at': fields.DateTimeField(nullable=True),
         'deleted': fields.BooleanField(default=False),
         }
+
+    @contextlib.contextmanager
+    def obj_as_admin(self):
+        """Context manager to make an object call as an admin.
+
+        This temporarily modifies the context embedded in an object to
+        be elevated() and restores it after the call completes. Example
+        usage:
+
+           with obj.obj_as_admin():
+               obj.save()
+
+        """
+        if self._context is None:
+            raise exception.OrphanedObjectError(method='obj_as_admin',
+                                                objtype=self.obj_name())
+
+        original_context = self._context
+        self._context = self._context.elevated()
+        try:
+            yield
+        finally:
+            self._context = original_context
 
 
 class ObjectListBase(object):
