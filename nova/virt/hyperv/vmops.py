@@ -626,8 +626,8 @@ class VMOps(object):
         remote_log_paths = self._pathutils.get_vm_console_log_paths(
             vm_name, remote_server=dest_host)
 
-        for local_log_path, remote_log_path in (local_log_paths,
-                                                remote_log_paths):
+        for local_log_path, remote_log_path in zip(local_log_paths,
+                                                   remote_log_paths):
             if self._pathutils.exists(local_log_path):
                 self._pathutils.copy(local_log_path,
                                      remote_log_path)
