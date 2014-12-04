@@ -14,6 +14,7 @@
 
 """Bench of utility methods used by filters."""
 
+import collections
 
 from nova.i18n import _LI
 from nova import objects
@@ -31,6 +32,20 @@ def aggregate_values_from_db(context, host, key_name):
         context.elevated(), host, key=key_name)
     aggregate_vals = set(aggr.metadata[key_name] for aggr in aggrlist)
     return aggregate_vals
+
+
+def aggregate_metadata_get_by_host(context, host, key=None):
+    """Returns a dict of all metadata for a specific host."""
+    # TODO(pmurray): DB query in filter is a performance hit. Will need a
+    # general solution here.
+    aggrlist = objects.AggregateList.get_by_host(
+        context.elevated(), host, key=key)
+
+    metadata = collections.defaultdict(set)
+    for aggr in aggrlist:
+        for k, v in aggr.metadata.iteritems():
+            metadata[k].add(v)
+    return metadata
 
 
 def validate_num_values(vals, default=None, cast_to=int, based_on=min):

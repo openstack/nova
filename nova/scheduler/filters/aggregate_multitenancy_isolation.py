@@ -13,9 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova import db
 from nova.openstack.common import log as logging
 from nova.scheduler import filters
+from nova.scheduler.filters import utils
+
 
 LOG = logging.getLogger(__name__)
 
@@ -39,8 +40,9 @@ class AggregateMultiTenancyIsolation(filters.BaseHostFilter):
         tenant_id = props.get('project_id')
 
         context = filter_properties['context']
-        metadata = db.aggregate_metadata_get_by_host(context, host_state.host,
-                                                     key="filter_tenant_id")
+        metadata = utils.aggregate_metadata_get_by_host(context,
+                                                        host_state.host,
+                                                        key="filter_tenant_id")
 
         if metadata != {}:
             if tenant_id not in metadata["filter_tenant_id"]:

@@ -17,7 +17,7 @@ from nova import test
 from nova.tests.unit.scheduler import fakes
 
 
-@mock.patch('nova.db.aggregate_metadata_get_by_host')
+@mock.patch('nova.scheduler.filters.utils.aggregate_metadata_get_by_host')
 class TestAggregateMultitenancyIsolationFilter(test.NoDBTestCase):
 
     def setUp(self):

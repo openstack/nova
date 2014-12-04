@@ -15,9 +15,9 @@
 
 from oslo.config import cfg
 
-from nova import db
 from nova.openstack.common import log as logging
 from nova.scheduler import filters
+from nova.scheduler.filters import utils
 
 LOG = logging.getLogger(__name__)
 
@@ -45,7 +45,7 @@ class AvailabilityZoneFilter(filters.BaseHostFilter):
             return True
 
         context = filter_properties['context']
-        metadata = db.aggregate_metadata_get_by_host(
+        metadata = utils.aggregate_metadata_get_by_host(
                 context, host_state.host, key='availability_zone')
 
         if 'availability_zone' in metadata:
