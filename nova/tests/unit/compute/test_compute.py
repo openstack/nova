@@ -9837,7 +9837,7 @@ class ComputeAPIAggrTestCase(BaseTestCase):
                                                fake_host2)
         aggr2 = self._init_aggregate_with_host(aggr2, None, None, fake_host1)
         metadata = {'availability_zone': 'another_zone'}
-        self.assertRaises(exception.InvalidAggregateAction,
+        self.assertRaises(exception.InvalidAggregateActionUpdate,
                           self.api.update_aggregate,
                           self.context, aggr2['id'], metadata)
 
@@ -9915,7 +9915,7 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         aggr2 = self._init_aggregate_with_host(None, 'fake_aggregate2', None,
                                                fake_host)
         metadata = {'availability_zone': 'another_zone'}
-        self.assertRaises(exception.InvalidAggregateAction,
+        self.assertRaises(exception.InvalidAggregateActionUpdate,
                           self.api.update_aggregate,
                           self.context, aggr2['id'], metadata)
         fake_host2 = values[0][1][1]
@@ -9944,7 +9944,7 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         aggr2 = self._init_aggregate_with_host(None, 'fake_aggregate2', None,
                                                fake_host)
         metadata = {'availability_zone': 'another_zone'}
-        self.assertRaises(exception.InvalidAggregateAction,
+        self.assertRaises(exception.InvalidAggregateActionUpdate,
                           self.api.update_aggregate,
                           self.context, aggr2['id'], metadata)
 
@@ -10061,7 +10061,7 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         aggr2 = self._init_aggregate_with_host(None, 'fake_aggregate2', None,
                                                fake_host)
         metadata = {'availability_zone': 'another_zone'}
-        self.assertRaises(exception.InvalidAggregateAction,
+        self.assertRaises(exception.InvalidAggregateActionUpdateMeta,
                           self.api.update_aggregate_metadata,
                           self.context, aggr2['id'], metadata)
         aggr3 = self._init_aggregate_with_host(None, 'fake_aggregate3',
@@ -10111,7 +10111,7 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         aggr = self.api.create_aggregate(self.context, 'fake_aggregate',
                                          'fake_availability_zone')
         self.api.add_host_to_aggregate(self.context, aggr['id'], 'fake_host')
-        self.assertRaises(exception.InvalidAggregateAction,
+        self.assertRaises(exception.InvalidAggregateActionDelete,
                           self.api.delete_aggregate, self.context, aggr['id'])
 
     def test_add_host_to_aggregate(self):
@@ -10208,7 +10208,7 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         fake_zone2 = "another_zone"
         aggr2 = self.api.create_aggregate(self.context,
                                          'fake_aggregate2', fake_zone2)
-        self.assertRaises(exception.InvalidAggregateAction,
+        self.assertRaises(exception.InvalidAggregateActionAdd,
                           self.api.add_host_to_aggregate,
                           self.context, aggr2['id'], fake_host)
 
@@ -10226,7 +10226,7 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         fake_zone2 = "another_zone"
         aggr2 = self.api.create_aggregate(self.context,
                                          'fake_aggregate2', fake_zone2)
-        self.assertRaises(exception.InvalidAggregateAction,
+        self.assertRaises(exception.InvalidAggregateActionAdd,
                           self.api.add_host_to_aggregate,
                           self.context, aggr2['id'], fake_host)
 
