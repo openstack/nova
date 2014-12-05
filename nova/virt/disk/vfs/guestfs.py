@@ -189,8 +189,8 @@ class VFSGuestFS(vfs.VFS):
         except AttributeError as ex:
             # set_backend_settings method doesn't exist in older
             # libguestfs versions, so nothing we can do but ignore
-            LOG.warn(_LW("Unable to force TCG mode, libguestfs too old? %s"),
-                     ex)
+            LOG.warning(_LW("Unable to force TCG mode, "
+                            "libguestfs too old? %s"), ex)
             pass
 
         try:
@@ -222,7 +222,7 @@ class VFSGuestFS(vfs.VFS):
             try:
                 self.handle.aug_close()
             except RuntimeError as e:
-                LOG.warn(_("Failed to close augeas %s"), e)
+                LOG.warning(_LW("Failed to close augeas %s"), e)
 
             try:
                 self.handle.shutdown()
@@ -230,7 +230,7 @@ class VFSGuestFS(vfs.VFS):
                 # Older libguestfs versions haven't an explicit shutdown
                 pass
             except RuntimeError as e:
-                LOG.warn(_("Failed to shutdown appliance %s"), e)
+                LOG.warning(_LW("Failed to shutdown appliance %s"), e)
 
             try:
                 self.handle.close()
@@ -238,7 +238,7 @@ class VFSGuestFS(vfs.VFS):
                 # Older libguestfs versions haven't an explicit close
                 pass
             except RuntimeError as e:
-                LOG.warn(_("Failed to close guest handle %s"), e)
+                LOG.warning(_LW("Failed to close guest handle %s"), e)
         finally:
             # dereference object and implicitly close()
             self.handle = None

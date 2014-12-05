@@ -441,9 +441,11 @@ class VMUtils(object):
                 disk_found = True
                 break
         if not disk_found:
-            LOG.warn(_LW('Disk not found on controller "%(controller_path)s" '
-                         'with address "%(address)s"'),
-                     {'controller_path': controller_path, 'address': address})
+            LOG.warning(_LW('Disk not found on controller '
+                            '"%(controller_path)s" with '
+                            'address "%(address)s"'),
+                        {'controller_path': controller_path,
+                         'address': address})
 
     def set_nic_connection(self, vm_name, nic_name, vswitch_conn_data):
         nic_data = self._get_nic_data_by_name(nic_name)

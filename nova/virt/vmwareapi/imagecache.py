@@ -40,7 +40,7 @@ from oslo.config import cfg
 from oslo.utils import timeutils
 from oslo.vmware import exceptions as vexc
 
-from nova.i18n import _, _LI
+from nova.i18n import _LI, _LW
 from nova.openstack.common import log as logging
 from nova.virt import imagecache
 from nova.virt.vmwareapi import ds_util
@@ -71,7 +71,7 @@ class ImageCacheManager(imagecache.ImageCacheManager):
                 vexc.FileLockedException) as e:
             # There may be more than one process or thread that tries
             # to delete the file.
-            LOG.warning(_("Unable to delete %(file)s. Exception: %(ex)s"),
+            LOG.warning(_LW("Unable to delete %(file)s. Exception: %(ex)s"),
                         {'file': ds_path, 'ex': e})
         except vexc.FileNotFoundException:
             LOG.debug("File not found: %s", ds_path)

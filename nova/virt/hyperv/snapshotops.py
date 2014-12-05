@@ -21,7 +21,7 @@ import os
 from oslo.config import cfg
 
 from nova.compute import task_states
-from nova.i18n import _
+from nova.i18n import _LW
 from nova.image import glance
 from nova.openstack.common import log as logging
 from nova.virt.hyperv import utilsfactory
@@ -116,8 +116,8 @@ class SnapshotOps(object):
                 self._vmutils.remove_vm_snapshot(snapshot_path)
             except Exception as ex:
                 LOG.exception(ex)
-                LOG.warning(_('Failed to remove snapshot for VM %s')
-                            % instance_name)
+                LOG.warning(_LW('Failed to remove snapshot for VM %s'),
+                            instance_name)
             if export_dir:
                 LOG.debug('Removing directory: %s', export_dir)
                 self._pathutils.rmtree(export_dir)

@@ -36,7 +36,7 @@ from nova.compute import vm_mode
 from nova.console import type as ctype
 from nova import db
 from nova import exception
-from nova.i18n import _
+from nova.i18n import _LW
 from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt import diagnostics
@@ -229,7 +229,7 @@ class FakeDriver(driver.ComputeDriver):
         if key in self.instances:
             del self.instances[key]
         else:
-            LOG.warning(_("Key '%(key)s' not in instances '%(inst)s'") %
+            LOG.warning(_LW("Key '%(key)s' not in instances '%(inst)s'"),
                         {'key': key,
                          'inst': self.instances}, instance=instance)
 

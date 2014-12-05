@@ -116,5 +116,5 @@ class IronicClientWrapper(object):
                 if attempt == num_attempts:
                     LOG.error(msg)
                     raise exception.NovaException(msg)
-                LOG.warning(msg)
+                LOG.warn(msg)
                 time.sleep(CONF.ironic.api_retry_interval)

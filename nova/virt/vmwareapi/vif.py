@@ -19,7 +19,7 @@ from oslo.config import cfg
 from oslo.vmware import exceptions as vexc
 
 from nova import exception
-from nova.i18n import _
+from nova.i18n import _LW
 from nova.network import model
 from nova.openstack.common import log as logging
 from nova.virt.vmwareapi import network_util
@@ -115,8 +115,8 @@ def _get_network_ref_from_opaque(opaque_networks, integration_bridge, bridge):
                     'network-id': network['opaqueNetworkId'],
                     'network-name': network['opaqueNetworkName'],
                     'network-type': network['opaqueNetworkType']}
-    LOG.warning(_("No valid network found in %(opaque)s, from %(bridge)s "
-                  "or %(integration_bridge)s"),
+    LOG.warning(_LW("No valid network found in %(opaque)s, from %(bridge)s "
+                    "or %(integration_bridge)s"),
                 {'opaque': opaque_networks, 'bridge': bridge,
                  'integration_bridge': integration_bridge})
 

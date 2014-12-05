@@ -202,7 +202,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         except exception.InvalidArchitectureName:
             cpu_arch = None
         if not cpu_arch:
-            LOG.warn(_LW("cpu_arch not defined for node '%s'"), node.uuid)
+            LOG.warning(_LW("cpu_arch not defined for node '%s'"), node.uuid)
 
         nodes_extra_specs = {}
 
@@ -230,8 +230,8 @@ class IronicDriver(virt_driver.ComputeDriver):
                 if len(parts) == 2 and parts[0] and parts[1]:
                     nodes_extra_specs[parts[0]] = parts[1]
                 else:
-                    LOG.warn(_LW("Ignoring malformed capability '%s'. "
-                                 "Format should be 'key:val'."), capability)
+                    LOG.warning(_LW("Ignoring malformed capability '%s'. "
+                                    "Format should be 'key:val'."), capability)
 
         vcpus_used = 0
         memory_mb_used = 0
@@ -528,17 +528,17 @@ class IronicDriver(virt_driver.ComputeDriver):
 
         memory_kib = int(node.properties.get('memory_mb', 0)) * 1024
         if memory_kib == 0:
-            LOG.warn(_LW("Warning, memory usage is 0 for "
-                         "%(instance)s on baremetal node %(node)s."),
-                     {'instance': instance.uuid,
-                      'node': instance.node})
+            LOG.warning(_LW("Warning, memory usage is 0 for "
+                            "%(instance)s on baremetal node %(node)s."),
+                        {'instance': instance.uuid,
+                         'node': instance.node})
 
         num_cpu = node.properties.get('cpus', 0)
         if num_cpu == 0:
-            LOG.warn(_LW("Warning, number of cpus is 0 for "
-                         "%(instance)s on baremetal node %(node)s."),
-                     {'instance': instance.uuid,
-                      'node': instance.node})
+            LOG.warning(_LW("Warning, number of cpus is 0 for "
+                            "%(instance)s on baremetal node %(node)s."),
+                        {'instance': instance.uuid,
+                         'node': instance.node})
 
         return hardware.InstanceInfo(state=map_power_state(node.power_state),
                                      max_mem_kb=memory_kib,

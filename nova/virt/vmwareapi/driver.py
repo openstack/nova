@@ -160,8 +160,8 @@ class VMwareVCDriver(driver.ComputeDriver):
         clusters_found = [v.get('name') for k, v in self.dict_mors.iteritems()]
         missing_clusters = set(self._cluster_names) - set(clusters_found)
         if missing_clusters:
-            LOG.warn(_LW("The following clusters could not be found in the "
-                         "vCenter %s") % list(missing_clusters))
+            LOG.warning(_LW("The following clusters could not be found in the "
+                            "vCenter %s"), list(missing_clusters))
 
         # The _resources is used to maintain the vmops, volumeops and vcstate
         # objects per cluster
@@ -252,8 +252,8 @@ class VMwareVCDriver(driver.ComputeDriver):
         # anything if it is.
         instances = self.list_instances()
         if instance['uuid'] not in instances:
-            LOG.warn(_LW('Instance cannot be found in host, or in an unknown'
-                         'state.'), instance=instance)
+            LOG.warning(_LW('Instance cannot be found in host, or in an '
+                            'unknown state.'), instance=instance)
         else:
             state = vm_util.get_vm_state_from_name(self._session,
                                                    instance['uuid'])

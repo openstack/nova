@@ -29,7 +29,7 @@ from nova.compute import vm_mode
 from nova.compute import vm_states
 from nova import context
 from nova import exception
-from nova.i18n import _, _LE, _LI
+from nova.i18n import _, _LE, _LI, _LW
 from nova import objects
 from nova.openstack.common import log as logging
 from nova.pci import whitelist as pci_whitelist
@@ -291,8 +291,8 @@ def to_supported_instances(host_capabilities):
 
             result.append((guestarch, hv_type.XEN, ostype))
         except ValueError:
-            LOG.warning(
-                _("Failed to extract instance support from %s"), capability)
+            LOG.warning(_LW("Failed to extract instance support from %s"),
+                        capability)
 
     return result
 

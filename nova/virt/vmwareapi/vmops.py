@@ -373,7 +373,7 @@ class VMwareVMOps(object):
             # all other exceptions will be raised.
             LOG.warning(_LW("Destination %s already exists! Concurrent moves "
                             "can lead to unexpected results."),
-                      dst_folder_ds_path)
+                        dst_folder_ds_path)
 
     def _cache_sparse_image(self, vi, tmp_image_ds_loc):
         tmp_dir_loc = tmp_image_ds_loc.parent.parent
@@ -859,7 +859,7 @@ class VMwareVMOps(object):
         try:
             vm_ref = vm_util.get_vm_ref_from_name(self._session, instance_name)
             if vm_ref is None:
-                LOG.warning(_('Instance does not exist on backend'),
+                LOG.warning(_LW('Instance does not exist on backend'),
                             instance=instance)
                 return
             lst_properties = ["config.files.vmPathName", "runtime.powerState",
@@ -888,9 +888,9 @@ class VMwareVMOps(object):
                                            "UnregisterVM", vm_ref)
                 LOG.debug("Unregistered the VM", instance=instance)
             except Exception as excep:
-                LOG.warn(_("In vmwareapi:vmops:_destroy_instance, got this "
-                           "exception while un-registering the VM: %s"),
-                         excep)
+                LOG.warning(_LW("In vmwareapi:vmops:_destroy_instance, got "
+                                "this exception while un-registering the VM: "
+                                "%s"), excep)
             # Delete the folder holding the VM related content on
             # the datastore.
             if destroy_disks and vm_ds_path:
@@ -911,9 +911,9 @@ class VMwareVMOps(object):
                               {'datastore_name': vm_ds_path.datastore},
                               instance=instance)
                 except Exception:
-                    LOG.warn(_("In vmwareapi:vmops:_destroy_instance, "
-                               "exception while deleting the VM contents from "
-                               "the disk"), exc_info=True)
+                    LOG.warning(_LW("In vmwareapi:vmops:_destroy_instance, "
+                                    "exception while deleting the VM contents "
+                                    "from the disk"), exc_info=True)
         except Exception as exc:
             LOG.exception(exc, instance=instance)
         finally:
@@ -1158,8 +1158,8 @@ class VMwareVMOps(object):
             self._session._wait_for_task(destroy_task)
             LOG.debug("Destroyed the VM", instance=instance)
         except Exception as excep:
-            LOG.warn(_("In vmwareapi:vmops:confirm_migration, got this "
-                     "exception while destroying the VM: %s"), excep)
+            LOG.warning(_LW("In vmwareapi:vmops:confirm_migration, got this "
+                            "exception while destroying the VM: %s"), excep)
 
     def finish_revert_migration(self, context, instance, network_info,
                                 block_device_info, power_on=True):
@@ -1622,8 +1622,8 @@ class VMwareVMOps(object):
                             str(vi.cache_image_path),
                             str(sized_disk_ds_loc))
                 except Exception as e:
-                    LOG.warning(_("Root disk file creation "
-                                  "failed - %s"), e)
+                    LOG.warning(_LW("Root disk file creation "
+                                    "failed - %s"), e)
                     with excutils.save_and_reraise_exception():
                         LOG.error(_LE('Failed to copy cached '
                                       'image %(source)s to '

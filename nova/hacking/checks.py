@@ -309,7 +309,7 @@ def validate_log_translations(logical_line, physical_line, filename):
         "plugins/xenserver/xenapi/etc/xapi.d" in filename or
         # TODO(Mike_D):Needs to be remove with:
         # I075ab2a522272f2082c292dfedc877abd8ebe328
-            "nova/virt" in filename):
+            "nova/virt/libvirt" in filename):
         return
     if pep8.noqa(physical_line):
         return

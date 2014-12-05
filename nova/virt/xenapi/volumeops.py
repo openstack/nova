@@ -20,7 +20,7 @@ Management class for Storage-related functions (attach, detach, etc).
 from oslo.utils import excutils
 
 from nova import exception
-from nova.i18n import _, _LI
+from nova.i18n import _LI, _LW
 from nova.openstack.common import log as logging
 from nova.virt.xenapi import vm_utils
 from nova.virt.xenapi import volume_utils
@@ -142,8 +142,8 @@ class VolumeOps(object):
         if vbd_ref is None:
             # NOTE(sirp): If we don't find the VBD then it must have been
             # detached previously.
-            LOG.warn(_('Skipping detach because VBD for %s was not found'),
-                     instance_name)
+            LOG.warning(_LW('Skipping detach because VBD for %s was '
+                            'not found'), instance_name)
         else:
             self._detach_vbds_and_srs(vm_ref, [vbd_ref])
             LOG.info(_LI('Mountpoint %(mountpoint)s detached from instance'

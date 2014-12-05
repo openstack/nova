@@ -21,7 +21,7 @@ from oslo.config import cfg
 from oslo.vmware import vim_util as vutil
 import suds
 
-from nova.i18n import _
+from nova.i18n import _LW
 from nova.openstack.common import log as logging
 
 vmware_opts = cfg.IntOpt('maximum_objects', default=100,
@@ -112,8 +112,8 @@ def get_dynamic_properties(vim, mobj, type, property_names):
         # The object may have information useful for logging
         if hasattr(obj_content.objects[0], 'missingSet'):
             for m in obj_content.objects[0].missingSet:
-                LOG.warning(_("Unable to retrieve value for %(path)s "
-                              "Reason: %(reason)s"),
+                LOG.warning(_LW("Unable to retrieve value for %(path)s "
+                                "Reason: %(reason)s"),
                             {'path': m.path,
                              'reason': m.fault.localizedMessage})
     return property_dict

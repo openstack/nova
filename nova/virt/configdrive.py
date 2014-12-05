@@ -175,10 +175,10 @@ def required_by(instance):
     image_prop = utils.instance_sys_meta(instance).get(
         utils.SM_IMAGE_PROP_PREFIX + 'img_config_drive', 'optional')
     if image_prop not in ['optional', 'mandatory']:
-        LOG.warn(_LW('Image config drive option %(image_prop)s is invalid '
-                        'and will be ignored') %
-                        {'image_prop': image_prop},
-                  instance=instance)
+        LOG.warning(_LW('Image config drive option %(image_prop)s is invalid '
+                        'and will be ignored'),
+                    {'image_prop': image_prop},
+                    instance=instance)
 
     return (instance.get('config_drive') or
             'always' == CONF.force_config_drive or
