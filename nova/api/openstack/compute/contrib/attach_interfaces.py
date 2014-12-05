@@ -76,7 +76,7 @@ class InterfaceAttachmentController(object):
             raise exc.HTTPForbidden(explanation=e.format_message())
 
         if port_info['port']['device_id'] != server_id:
-            msg = _("Instance %(instance)s does not have a port with id"
+            msg = _("Instance %(instance)s does not have a port with id "
                     "%(port)s") % {'instance': server_id, 'port': port_id}
             raise exc.HTTPNotFound(explanation=msg)
 

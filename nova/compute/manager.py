@@ -178,7 +178,7 @@ timeout_opts = [
     cfg.IntOpt("instance_build_timeout",
                default=0,
                help="Amount of time in seconds an instance can be in BUILD "
-                    "before going into ERROR status."
+                    "before going into ERROR status. "
                     "Set to 0 to disable."),
     cfg.IntOpt("rescue_timeout",
                default=0,
@@ -198,7 +198,7 @@ running_deleted_opts = [
     cfg.StrOpt("running_deleted_instance_action",
                default="reap",
                help="Action to take if a running deleted instance is detected."
-                    "Valid options are 'noop', 'log', 'shutdown', or 'reap'. "
+                    " Valid options are 'noop', 'log', 'shutdown', or 'reap'. "
                     "Set to 'noop' to take no action."),
     cfg.IntOpt("running_deleted_instance_poll_interval",
                default=1800,

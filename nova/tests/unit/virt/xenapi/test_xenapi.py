@@ -2800,7 +2800,7 @@ class XenAPIDom0IptablesFirewallTestCase(stubs.XenAPITestBase):
         regex = re.compile('\[0\:0\] -A .* -j ACCEPT -p udp --dport 200:299'
                            ' -s 192.168.99.0/24')
         self.assertTrue(len(filter(regex.match, self._out_rules)) > 0,
-                        "Rules were not updated properly."
+                        "Rules were not updated properly. "
                         "The rule for UDP acceptance is missing")
 
     def test_provider_firewall_rules(self):
