@@ -98,7 +98,7 @@ class HostTestCase(test.NoDBTestCase):
                         conn, "getLibVersion",
                         side_effect=fakelibvirt.make_libvirtError(
                             libvirt.libvirtError,
-                            "Conection broken",
+                            "Connection broken",
                             error_code=error,
                             error_domain=domain))):
                 self.assertFalse(hostimpl._test_connection(conn))
