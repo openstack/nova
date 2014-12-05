@@ -8717,7 +8717,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             cpu_0.id = 2 * i
             cpu_0.socket_id = i
             cpu_0.core_id = 0
-            cpu_0.sibling = 2 * i
+            cpu_0.siblings = set([2 * i, 2 * i + 1])
             mempages_0 = vconfig.LibvirtConfigCapsNUMAPages()
             mempages_0.size = 4
             mempages_0.total = 1024 * i
@@ -8725,7 +8725,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             cpu_1.id = 2 * i + 1
             cpu_1.socket_id = i
             cpu_1.core_id = 1
-            cpu_1.sibling = 2 * i + 1
+            cpu_1.siblings = set([2 * i, 2 * i + 1])
             mempages_1 = vconfig.LibvirtConfigCapsNUMAPages()
             mempages_1.size = 2048
             mempages_1.total = 0 + i
@@ -8776,6 +8776,14 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             self.assertEqual(1024, got_topo.cells[1].mempages[0].total)
             self.assertEqual(2048, got_topo.cells[1].mempages[1].size_kb)
             self.assertEqual(1, got_topo.cells[1].mempages[1].total)
+
+            self.assertEqual(expected_topo_dict, got_topo_dict)
+            self.assertEqual(set([]), got_topo.cells[0].pinned_cpus)
+            self.assertEqual(set([]), got_topo.cells[1].pinned_cpus)
+            self.assertEqual(set([]), got_topo.cells[2].pinned_cpus)
+            self.assertEqual(set([]), got_topo.cells[3].pinned_cpus)
+            self.assertEqual([set([0, 1])], got_topo.cells[0].siblings)
+            self.assertEqual([], got_topo.cells[1].siblings)
 
     def test_get_host_numa_topology_empty(self):
         caps = vconfig.LibvirtConfigCaps()
