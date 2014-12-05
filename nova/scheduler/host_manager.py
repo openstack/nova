@@ -40,7 +40,7 @@ host_manager_opts = [
             default=['nova.scheduler.filters.all_filters'],
             help='Filter classes available to the scheduler which may '
                     'be specified more than once.  An entry of '
-                    '"nova.scheduler.filters.standard_filters" '
+                    '"nova.scheduler.filters.all_filters" '
                     'maps to all filters included with nova.'),
     cfg.ListOpt('scheduler_default_filters',
                 default=[
