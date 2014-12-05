@@ -189,11 +189,3 @@ class TestPipeLineFactory(test.NoDBTestCase):
         app = nova.api.auth.pipeline_factory(
             TestPipeLineFactory.FakeLoader(), None, keystone=fake_pipeline)
         self._test_pipeline(fake_pipeline, app)
-
-    def test_pipeline_factory_compatibility_with_v3(self):
-        CONF.set_override('api_rate_limit', True)
-        CONF.set_override('auth_strategy', 'keystone')
-        fake_pipeline = 'test1 ratelimit_v3 test3'
-        app = nova.api.auth.pipeline_factory(
-            TestPipeLineFactory.FakeLoader(), None, keystone=fake_pipeline)
-        self._test_pipeline('test1 test3', app)
