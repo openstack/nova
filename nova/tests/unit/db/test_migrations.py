@@ -43,12 +43,15 @@ from oslo.db.sqlalchemy import test_base
 from oslo.db.sqlalchemy import test_migrations
 from oslo.db.sqlalchemy import utils as oslodbutils
 import sqlalchemy
+from sqlalchemy.engine import reflection
 import sqlalchemy.exc
+from sqlalchemy.sql import null
 
 from nova.db import migration
 from nova.db.sqlalchemy import migrate_repo
 from nova.db.sqlalchemy import migration as sa_migration
 from nova.db.sqlalchemy import utils as db_utils
+from nova import exception
 from nova.i18n import _
 from nova import test
 from nova.tests.unit import conf_fixture
@@ -441,6 +444,102 @@ class NovaMigrationsCheckers(test_migrations.WalkVersionsMixin):
 
     def _post_downgrade_266(self, engine):
         self.assertTableNotExists(engine, 'tags')
+
+    def _pre_upgrade_267(self, engine):
+        # Create a fixed_ips row with a null instance_uuid (if not already
+        # there) to make sure that's not deleted.
+        fixed_ips = oslodbutils.get_table(engine, 'fixed_ips')
+        fake_fixed_ip = {'id': 1}
+        fixed_ips.insert().execute(fake_fixed_ip)
+        # Create an instance record with a valid (non-null) UUID so we make
+        # sure we don't do something stupid and delete valid records.
+        instances = oslodbutils.get_table(engine, 'instances')
+        fake_instance = {'id': 1, 'uuid': 'fake-non-null-uuid'}
+        instances.insert().execute(fake_instance)
+        # Add a null instance_uuid entry for the volumes table
+        # since it doesn't have a foreign key back to the instances table.
+        volumes = oslodbutils.get_table(engine, 'volumes')
+        fake_volume = {'id': '9c3c317e-24db-4d57-9a6f-96e6d477c1da'}
+        volumes.insert().execute(fake_volume)
+
+    def _check_267(self, engine, data):
+        # Make sure the column is non-nullable and the UC exists.
+        fixed_ips = oslodbutils.get_table(engine, 'fixed_ips')
+        self.assertTrue(fixed_ips.c.instance_uuid.nullable)
+        fixed_ip = fixed_ips.select(fixed_ips.c.id == 1).execute().first()
+        self.assertIsNone(fixed_ip.instance_uuid)
+
+        instances = oslodbutils.get_table(engine, 'instances')
+        self.assertFalse(instances.c.uuid.nullable)
+
+        inspector = reflection.Inspector.from_engine(engine)
+        constraints = inspector.get_unique_constraints('instances')
+        constraint_names = [constraint['name'] for constraint in constraints]
+        self.assertIn('uniq_instances0uuid', constraint_names)
+
+        # Make sure the instances record with the valid uuid is still there.
+        instance = instances.select(instances.c.id == 1).execute().first()
+        self.assertIsNotNone(instance)
+
+        # Check that the null entry in the volumes table is still there since
+        # we skipped tables that don't have FK's back to the instances table.
+        volumes = oslodbutils.get_table(engine, 'volumes')
+        self.assertTrue(volumes.c.instance_uuid.nullable)
+        volume = fixed_ips.select(
+            volumes.c.id == '9c3c317e-24db-4d57-9a6f-96e6d477c1da'
+        ).execute().first()
+        self.assertIsNone(volume.instance_uuid)
+
+    def _post_downgrade_267(self, engine):
+        # Make sure the UC is gone and the column is nullable again.
+        instances = oslodbutils.get_table(engine, 'instances')
+        self.assertTrue(instances.c.uuid.nullable)
+
+        inspector = reflection.Inspector.from_engine(engine)
+        constraints = inspector.get_unique_constraints('instances')
+        constraint_names = [constraint['name'] for constraint in constraints]
+        self.assertNotIn('uniq_instances0uuid', constraint_names)
+
+    def test_migration_267(self):
+        # This is separate from test_walk_versions so we can test the case
+        # where there are non-null instance_uuid entries in the database which
+        # cause the 267 migration to fail.
+        engine = self.migrate_engine
+        self.migration_api.version_control(
+            engine, self.REPOSITORY, self.INIT_VERSION)
+        self.migration_api.upgrade(engine, self.REPOSITORY, 266)
+        # Create a consoles record with a null instance_uuid so
+        # we can test that the upgrade fails if that entry is found.
+        # NOTE(mriedem): We use the consoles table since that's the only table
+        # created in the 216 migration with a ForeignKey created on the
+        # instance_uuid table for sqlite.
+        consoles = oslodbutils.get_table(engine, 'consoles')
+        fake_console = {'id': 1}
+        consoles.insert().execute(fake_console)
+
+        # NOTE(mriedem): We handle the 267 migration where we expect to
+        # hit a ValidationError on the consoles table to have
+        # a null instance_uuid entry
+        ex = self.assertRaises(exception.ValidationError,
+                               self.migration_api.upgrade,
+                               engine, self.REPOSITORY, 267)
+
+        self.assertIn("There are 1 records in the "
+                      "'consoles' table where the uuid or "
+                      "instance_uuid column is NULL.",
+                      ex.kwargs['detail'])
+
+        # Remove the consoles entry with the null instance_uuid column.
+        rows = consoles.delete().where(
+            consoles.c['instance_uuid'] == null()).execute().rowcount
+        self.assertEqual(1, rows)
+        # Now run the 267 upgrade again.
+        self.migration_api.upgrade(engine, self.REPOSITORY, 267)
+
+        # Make sure the consoles entry with the null instance_uuid
+        # was deleted.
+        console = consoles.select(consoles.c.id == 1).execute().first()
+        self.assertIsNone(console)
 
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
