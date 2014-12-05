@@ -64,7 +64,7 @@ class VFS(object):
                 # check for capabilities.
                 raise
             else:
-                LOG.info(_LI("Unable to import guestfs"
+                LOG.info(_LI("Unable to import guestfs, "
                              "falling back to VFSLocalFS"))
 
         return importutils.import_object(
