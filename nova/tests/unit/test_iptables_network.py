@@ -233,7 +233,7 @@ class IptablesManagerTestCase(test.NoDBTestCase):
 
         for line in ['*filter',
                      'COMMIT']:
-            self.assertTrue(line in new_lines, "One of iptables key lines"
+            self.assertTrue(line in new_lines, "One of iptables key lines "
                             "went missing.")
 
         self.assertTrue(len(new_lines) > 4, "No iptables rules added")
