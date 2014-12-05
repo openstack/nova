@@ -32,7 +32,7 @@ from nova.compute import task_states
 from nova.compute import vm_states
 from nova import conductor
 from nova import exception
-from nova.i18n import _, _LI
+from nova.i18n import _, _LI, _LW
 from nova import objects
 from nova.objects import base as obj_base
 from nova.openstack.common import log as logging
@@ -111,14 +111,14 @@ class ResourceTracker(object):
 
         # sanity checks:
         if instance_ref['host']:
-            LOG.warning(_("Host field should not be set on the instance until "
-                          "resources have been claimed."),
-                          instance=instance_ref)
+            LOG.warning(_LW("Host field should not be set on the instance "
+                            "until resources have been claimed."),
+                        instance=instance_ref)
 
         if instance_ref['node']:
-            LOG.warning(_("Node field should not be set on the instance "
-                          "until resources have been claimed."),
-                          instance=instance_ref)
+            LOG.warning(_LW("Node field should not be set on the instance "
+                            "until resources have been claimed."),
+                        instance=instance_ref)
 
         # get memory overhead required to build this instance:
         overhead = self.driver.estimate_instance_overhead(instance_ref)
@@ -291,7 +291,7 @@ class ResourceTracker(object):
             try:
                 metrics += monitor.get_metrics(nodename=nodename)
             except Exception:
-                LOG.warn(_("Cannot get the metrics from %s."), monitor)
+                LOG.warning(_LW("Cannot get the metrics from %s."), monitor)
         if metrics:
             metrics_info['nodename'] = nodename
             metrics_info['metrics'] = metrics
@@ -435,7 +435,7 @@ class ResourceTracker(object):
             return self.conductor_api.service_get_by_compute_host(context,
                                                                   self.host)
         except exception.NotFound:
-            LOG.warn(_("No service record for host %s"), self.host)
+            LOG.warning(_LW("No service record for host %s"), self.host)
 
     def _report_hypervisor_resource_view(self, resources):
         """Log the hypervisor's view of free resources.
@@ -638,8 +638,8 @@ class ResourceTracker(object):
 
             # skip migration if instance isn't in a resize state:
             if not self._instance_in_resize_state(instance):
-                LOG.warn(_("Instance not resizing, skipping migration."),
-                         instance_uuid=uuid)
+                LOG.warning(_LW("Instance not resizing, skipping migration."),
+                            instance_uuid=uuid)
                 continue
 
             # filter to most recently updated migration for each instance:
@@ -653,8 +653,8 @@ class ResourceTracker(object):
                 self._update_usage_from_migration(context, instance, None,
                                                   resources, migration)
             except exception.FlavorNotFound:
-                LOG.warn(_("Flavor could not be found, skipping "
-                           "migration."), instance_uuid=uuid)
+                LOG.warning(_LW("Flavor could not be found, skipping "
+                                "migration."), instance_uuid=uuid)
                 continue
 
     def _update_usage_from_instance(self, context, resources, instance):
@@ -743,9 +743,9 @@ class ResourceTracker(object):
         for orphan in orphans:
             memory_mb = orphan['memory_mb']
 
-            LOG.warn(_("Detected running orphan instance: %(uuid)s (consuming "
-                       "%(memory_mb)s MB memory)"),
-                     {'uuid': orphan['uuid'], 'memory_mb': memory_mb})
+            LOG.warning(_LW("Detected running orphan instance: %(uuid)s "
+                            "(consuming %(memory_mb)s MB memory)"),
+                        {'uuid': orphan['uuid'], 'memory_mb': memory_mb})
 
             # just record memory usage for the orphan
             usage = {'memory_mb': memory_mb}

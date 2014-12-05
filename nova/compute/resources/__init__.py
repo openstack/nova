@@ -28,8 +28,8 @@ class ResourceHandler():
     def _log_missing_plugins(self, names):
         for name in names:
             if name not in self._mgr.names():
-                LOG.warn(_LW('Compute resource plugin %s was not loaded') %
-                         name)
+                LOG.warning(_LW('Compute resource plugin %s was not loaded'),
+                            name)
 
     def __init__(self, names, propagate_map_exceptions=False):
         """Initialise the resource handler by loading the plugins.

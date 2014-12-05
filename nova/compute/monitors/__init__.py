@@ -27,7 +27,7 @@ from oslo.config import cfg
 from oslo.utils import timeutils
 import six
 
-from nova.i18n import _
+from nova.i18n import _, _LW
 from nova import loadables
 from nova.openstack.common import log as logging
 
@@ -187,8 +187,8 @@ class ResourceMonitorHandler(loadables.BaseLoader):
                 bad_monitors.append(monitor_name)
 
         if bad_monitors:
-            LOG.warn(_("The following monitors have been disabled: %s"),
-                       ', '.join(bad_monitors))
+            LOG.warning(_LW("The following monitors have been disabled: %s"),
+                        ', '.join(bad_monitors))
 
         return good_monitors
 
