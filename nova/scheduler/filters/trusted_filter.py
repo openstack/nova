@@ -255,6 +255,9 @@ class TrustedFilter(filters.BaseHostFilter):
     def __init__(self):
         self.compute_attestation = ComputeAttestation()
 
+    # The hosts the instances are running on doesn't change within a request
+    run_filter_once_per_request = True
+
     def host_passes(self, host_state, filter_properties):
         instance_type = filter_properties.get('instance_type', {})
         extra = instance_type.get('extra_specs', {})
