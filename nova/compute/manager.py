@@ -3552,8 +3552,10 @@ class ComputeManager(manager.Manager):
             block_device_info = self._get_instance_block_device_info(
                                 context, instance, bdms=bdms)
 
+            destroy_disks = not self._is_instance_storage_shared(context,
+                                                                 instance)
             self.driver.destroy(context, instance, network_info,
-                                block_device_info)
+                                block_device_info, destroy_disks)
 
             self._terminate_volume_connections(context, instance, bdms)
 
