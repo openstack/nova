@@ -56,7 +56,15 @@ instances = {'00000000-0000-0000-0000-0000000000000000':
                   'host': 'fake_instance01',
                   'created_at': datetime.datetime(1955, 11, 5, 0, 0, 0),
                   'updated_at': datetime.datetime(1985, 10, 26, 1, 35, 0),
-                  'hostname': 'fake_instance01'}}
+                  'hostname': 'fake_instance01'},
+             '00000000-0000-0000-0000-0000000000000002':
+                 {'id': 2,
+                  'uuid': '00000000-0000-0000-0000-0000000000000002',
+                  'host': 'fake_instance02',
+                  'created_at': datetime.datetime(1955, 11, 5, 0, 0, 0),
+                  'updated_at': datetime.datetime(1985, 10, 26, 1, 35, 0),
+                  'hostname': 'really_long_fake_instance02_to_test_hostname_'
+                              'truncation_when_too_long'}}
 
 
 addresses = [{"address": "10.0.0.1"},
@@ -117,6 +125,32 @@ networks = [{'id': 0,
              'vpn_public_address': '192.168.1.2',
              'mtu': None,
              'dhcp_server': '192.168.1.1',
+             'enable_dhcp': True,
+             'share_address': False},
+            {'id': 2,
+             'uuid': "cccccccc-cccc-cccc-cccc-cccccccccccc",
+             'label': 'test2',
+             'injected': False,
+             'multi_host': True,
+             'cidr': '192.168.2.0/24',
+             'cidr_v6': '2001:db10::/64',
+             'gateway_v6': '2001:db10::1',
+             'netmask_v6': '64',
+             'netmask': '255.255.255.0',
+             'bridge': 'fa2',
+             'bridge_interface': 'fake_fa2',
+             'gateway': '192.168.2.1',
+             'broadcast': '192.168.2.255',
+             'dns1': '192.168.0.1',
+             'dns2': '192.168.0.2',
+             'dhcp_server': '0.0.0.0',
+             'dhcp_start': '192.168.100.1',
+             'vlan': None,
+             'host': None,
+             'project_id': 'fake_project',
+             'vpn_public_address': '192.168.2.2',
+             'mtu': None,
+             'dhcp_server': '192.168.2.1',
              'enable_dhcp': True,
              'share_address': False}]
 
@@ -190,6 +224,16 @@ fixed_ips = [{'id': 0,
               'virtual_interface_id': 6,
               'default_route': False,
               'instance_uuid': '00000000-0000-0000-0000-0000000000000001',
+              'floating_ips': []},
+             {'id': 7,
+              'network_id': 2,
+              'address': '192.168.2.100',
+              'instance_id': 2,
+              'allocated': True,
+              'leased': False,
+              'virtual_interface_id': 7,
+              'default_route': False,
+              'instance_uuid': '00000000-0000-0000-0000-0000000000000002',
               'floating_ips': []}]
 
 
@@ -255,7 +299,16 @@ vifs = [{'id': 0,
          'address': 'DE:AD:BE:EF:00:06',
          'uuid': '00000000-0000-0000-0000-0000000000000006',
          'network_id': 1,
-         'instance_uuid': '00000000-0000-0000-0000-0000000000000001'}]
+         'instance_uuid': '00000000-0000-0000-0000-0000000000000001'},
+        {'id': 7,
+         'created_at': None,
+         'updated_at': None,
+         'deleted_at': None,
+         'deleted': 0,
+         'address': 'DE:AD:BE:EF:00:07',
+         'uuid': '00000000-0000-0000-0000-0000000000000007',
+         'network_id': 2,
+         'instance_uuid': '00000000-0000-0000-0000-0000000000000002'}]
 
 
 def get_associated(context, network_id, host=None, address=None):
@@ -523,6 +576,16 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
                                                      {'id': 0})[0]
         actual = self.driver._host_dhcp(fixedip)
         self.assertEqual(actual, expected)
+
+    def test_host_dhcp_truncated_hostname(self):
+        expected = ','.join(['DE:AD:BE:EF:00:07',
+                             're-ng_fake_instance02_to_test_hostname_'
+                             'truncation_when_too_long.novalocal',
+                             '192.168.2.100'])
+        fixedip = objects.FixedIPList.get_by_network(self.context,
+                                                     {'id': 2})[0]
+        actual = self.driver._host_dhcp(fixedip)
+        self.assertEqual(expected, actual)
 
     def test_host_dns_without_default_gateway_network(self):
         expected = "192.168.0.100\tfake_instance00.novalocal"
