@@ -709,7 +709,8 @@ class ComputeVolumeTestCase(BaseTestCase):
 
         got_host_bdms = self.compute._get_host_volume_bdms('fake-context')
         mock_get_by_host.assert_called_once_with('fake-context',
-                                                 self.compute.host)
+                                                 self.compute.host,
+                                                 use_slave=False)
         mock_get_by_inst.assert_called_once_with('fake-context',
                                                  'fake-instance-uuid',
                                                  use_slave=False)
