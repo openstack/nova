@@ -3428,7 +3428,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 if not viable_cells_cpus:
                     # We can't contain the instance in a cell - do nothing for
                     # now.
-                    # TODO(ndipanov): Attempt to spread the instance accross
+                    # TODO(ndipanov): Attempt to spread the instance across
                     # NUMA nodes and expose the topology to the instance as an
                     # optimisation
                     return allowed_cpus, None, None, None
