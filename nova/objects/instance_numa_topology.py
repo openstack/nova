@@ -92,6 +92,10 @@ class InstanceNUMACell(base.NovaObject,
 
         return map(set, zip(*[iter(cpu_list)] * threads))
 
+    @property
+    def cpu_pinning_requested(self):
+        return self.cpu_pinning is not None
+
     def pin(self, vcpu, pcpu):
         if vcpu not in self.cpuset:
             return
@@ -202,3 +206,7 @@ class InstanceNUMATopology(base.NovaObject,
         return cls(cells=[
             InstanceNUMACell._from_dict(cell_dict)
             for cell_dict in data_dict.get('cells', [])])
+
+    @property
+    def cpu_pinning_requested(self):
+        return all(cell.cpu_pinning_requested for cell in self.cells)

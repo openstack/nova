@@ -10,6 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
 import uuid
 
 import mock
@@ -139,6 +140,20 @@ class _TestInstanceNUMATopology(object):
     def test_default_behavior(self):
         inst_cell = objects.InstanceNUMACell()
         self.assertEqual(0, len(inst_cell.obj_get_changes()))
+
+    def test_cpu_pinning_requested_cell(self):
+        inst_cell = objects.InstanceNUMACell(cpuset=set([0, 1, 2, 3]),
+                                             cpu_pinning=None)
+        self.assertFalse(inst_cell.cpu_pinning_requested)
+        inst_cell.cpu_pinning = {}
+        self.assertTrue(inst_cell.cpu_pinning_requested)
+
+    def test_cpu_pinning_requested(self):
+        fake_topo_obj = copy.deepcopy(fake_obj_numa_topology)
+        self.assertFalse(fake_topo_obj.cpu_pinning_requested)
+        for cell in fake_topo_obj.cells:
+            cell.cpu_pinning = dict(zip(*map(list, [cell.cpuset] * 2)))
+        self.assertTrue(fake_topo_obj.cpu_pinning_requested)
 
 
 class TestInstanceNUMATopology(test_objects._LocalTest,

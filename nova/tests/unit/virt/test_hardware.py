@@ -1828,3 +1828,56 @@ class CPUPinningTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
                                                 memory=1024, cpu_pinning={})])
         inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo)
         self.assertIsNone(inst_topo)
+
+    def test_cpu_pinning_usage_from_instances(self):
+        host_pin = objects.NUMATopology(
+                cells=[objects.NUMACell(id=0, cpuset=set([0, 1, 2, 3]),
+                                        memory=4096, cpu_usage=0,
+                                        memory_usage=0)])
+        inst_pin_1 = objects.InstanceNUMATopology(
+                cells=[objects.InstanceNUMACell(
+                    cpuset=set([0, 1]), id=0, cpu_pinning={0: 0, 1: 3},
+                    memory=2048)])
+        inst_pin_2 = objects.InstanceNUMATopology(
+                cells = [objects.InstanceNUMACell(
+                    cpuset=set([0, 1]), id=0, cpu_pinning={0: 1, 1: 2},
+                    memory=2048)])
+
+        host_pin = hw.numa_usage_from_instances(
+                host_pin, [inst_pin_1, inst_pin_2])
+        self.assertEqual(set([0, 1, 2, 3]),
+                         host_pin.cells[0].pinned_cpus)
+
+    def test_cpu_pinning_usage_from_instances_free(self):
+        host_pin = objects.NUMATopology(
+            cells=[objects.NUMACell(id=0, cpuset=set([0, 1, 2, 3]),
+                                    memory=4096, cpu_usage=0, memory_usage=0,
+                                    pinned_cpus=set([0, 1, 3]))])
+        inst_pin_1 = objects.InstanceNUMATopology(
+            cells=[objects.InstanceNUMACell(
+                    cpuset=set([0]), memory=1024, cpu_pinning={0: 1}, id=0)])
+        inst_pin_2 = objects.InstanceNUMATopology(
+            cells=[objects.InstanceNUMACell(
+                    cpuset=set([0, 1]), memory=1024, id=0,
+                    cpu_pinning={0: 0, 1: 3})])
+        host_pin = hw.numa_usage_from_instances(
+                host_pin, [inst_pin_1, inst_pin_2], free=True)
+        self.assertEqual(set(), host_pin.cells[0].pinned_cpus)
+
+    def test_host_usage_from_instances_fail(self):
+        host_pin = objects.NUMATopology(
+                cells=[objects.NUMACell(id=0, cpuset=set([0, 1, 2, 3]),
+                                        memory=4096, cpu_usage=0,
+                                        memory_usage=0)])
+        inst_pin_1 = objects.InstanceNUMATopology(
+                cells=[objects.InstanceNUMACell(
+                    cpuset=set([0, 1]), memory=2048, id=0,
+                    cpu_pinning={0: 0, 1: 3})])
+        inst_pin_2 = objects.InstanceNUMATopology(
+                cells = [objects.InstanceNUMACell(
+                    cpuset=set([0, 1]), id=0, memory=2048,
+                    cpu_pinning={0: 0, 1: 2})])
+
+        self.assertRaises(exception.CPUPinningInvalid,
+                hw.numa_usage_from_instances, host_pin,
+                [inst_pin_1, inst_pin_2])

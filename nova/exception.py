@@ -1822,3 +1822,8 @@ class MemoryPageSizeForbidden(Invalid):
 
 class MemoryPageSizeNotSupported(Invalid):
     msg_fmt = _("Page size %(pagesize)s is not supported by the host.")
+
+
+class CPUPinningInvalid(Invalid):
+    msg_fmt = _("Cannot pin/unpin cpus %(requested)s from the following "
+                "pinned set %(pinned)s")
