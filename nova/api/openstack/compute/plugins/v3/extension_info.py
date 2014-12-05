@@ -21,6 +21,20 @@ from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
 
+# V2.1 does not support XML but we need to keep an entry in the
+# /extensions information returned to the user for backwards
+# compatibility
+FAKE_XML_URL = "http://docs.openstack.org/compute/ext/fake_xml"
+FAKE_UPDATED_DATE = "2014-12-03T00:00:00Z"
+
+
+class FakeExtension(object):
+    def __init__(self, name, alias):
+        self.name = name
+        self.alias = alias
+        self.__doc__ = ""
+        self.version = -1
+
 
 class ExtensionInfoController(wsgi.Controller):
 
@@ -32,7 +46,9 @@ class ExtensionInfoController(wsgi.Controller):
         ext_data['name'] = ext.name
         ext_data['alias'] = ext.alias
         ext_data['description'] = ext.__doc__
-        ext_data['version'] = ext.version
+        ext_data['namespace'] = FAKE_XML_URL
+        ext_data['updated'] = FAKE_UPDATED_DATE
+        ext_data['links'] = []
         return ext_data
 
     def _get_extensions(self, context):
