@@ -1481,3 +1481,7 @@ def power_off_instance(session, instance, vm_ref=None):
         LOG.debug("Powered off the VM", instance=instance)
     except vexc.InvalidPowerStateException:
         LOG.debug("VM already powered off", instance=instance)
+
+
+def get_ephemeral_name(id):
+    return 'ephemeral_%d.vmdk' % id

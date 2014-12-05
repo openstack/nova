@@ -1089,6 +1089,10 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
                                                         'fake_policy')
         self.assertIsNone(profile_spec)
 
+    def test_get_ephemeral_name(self):
+        filename = vm_util.get_ephemeral_name(0)
+        self.assertEqual('ephemeral_0.vmdk', filename)
+
 
 @mock.patch.object(driver.VMwareAPISession, 'vim', stubs.fake_vim_prop)
 class VMwareVMUtilGetHostRefTestCase(test.NoDBTestCase):
