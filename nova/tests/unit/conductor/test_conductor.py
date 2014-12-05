@@ -1196,9 +1196,9 @@ class _BaseTaskTestCase(object):
         inst = fake_instance.fake_db_instance(image_ref='image_ref')
         inst_obj = objects.Instance._from_db_object(
             self.context, objects.Instance(), inst, [])
-        flavor = obj_base.obj_to_primitive(flavors.get_default_flavor())
-        flavor['extra_specs'] = 'extra_specs'
-        request_spec = {'instance_type': flavor,
+        flavor = flavors.get_default_flavor()
+        flavor.extra_specs = {'extra_specs': 'fake'}
+        request_spec = {'instance_type': obj_base.obj_to_primitive(flavor),
                         'instance_properties': {}}
         compute_utils.get_image_metadata(
             self.context, self.conductor_manager.image_api,
@@ -1207,7 +1207,7 @@ class _BaseTaskTestCase(object):
         scheduler_utils.build_request_spec(
             self.context, 'image',
             [mox.IsA(objects.Instance)],
-            instance_type=flavor).AndReturn(request_spec)
+            instance_type=mox.IsA(objects.Flavor)).AndReturn(request_spec)
 
         scheduler_utils.setup_instance_group(self.context, request_spec, {})
 
@@ -1222,7 +1222,7 @@ class _BaseTaskTestCase(object):
 
         self.conductor_manager.compute_rpcapi.prep_resize(
             self.context, 'image', mox.IsA(objects.Instance),
-            mox.IsA(dict), 'host1', [], request_spec=request_spec,
+            mox.IsA(objects.Flavor), 'host1', [], request_spec=request_spec,
             filter_properties=filter_properties, node=None)
 
         self.mox.ReplayAll()
@@ -1630,8 +1630,9 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             self.context, None, None, True, True, None, None, None)
 
     def test_migrate_server_fails_with_flavor(self):
+        flavor = flavors.get_flavor_by_name('m1.tiny')
         self.assertRaises(NotImplementedError, self.conductor.migrate_server,
-            self.context, None, None, True, False, "dummy", None, None)
+            self.context, None, None, True, False, flavor, None, None)
 
     def _build_request_spec(self, instance):
         return {

@@ -73,7 +73,7 @@ class CellsManager(manager.Manager):
     Scheduling requests get passed to the scheduler class.
     """
 
-    target = oslo_messaging.Target(version='1.29')
+    target = oslo_messaging.Target(version='1.30')
 
     def __init__(self, *args, **kwargs):
         LOG.warning(_LW('The cells feature of Nova is considered experimental '

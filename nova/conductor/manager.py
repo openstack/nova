@@ -461,7 +461,7 @@ class ComputeTaskManager(base.Base):
     may involve coordinating activities on multiple compute nodes.
     """
 
-    target = messaging.Target(namespace='compute_task', version='1.9')
+    target = messaging.Target(namespace='compute_task', version='1.10')
 
     def __init__(self):
         super(ComputeTaskManager, self).__init__()
@@ -491,6 +491,11 @@ class ComputeTaskManager(base.Base):
             instance = objects.Instance._from_db_object(
                 context, objects.Instance(), instance,
                 expected_attrs=attrs)
+        # NOTE(melwitt): Remove this in version 2.0 of the RPC API
+        if flavor and not isinstance(flavor, objects.Flavor):
+            # Code downstream may expect extra_specs to be populated since it
+            # is receiving an object, so lookup the flavor to ensure this.
+            flavor = objects.Flavor.get_by_id(context, flavor['id'])
         if live and not rebuild and not flavor:
             self._live_migrate(context, instance, scheduler_hint,
                                block_migration, disk_over_commit)
@@ -544,11 +549,6 @@ class ComputeTaskManager(base.Base):
                                                        host_state)
             # context is not serializable
             filter_properties.pop('context', None)
-
-            # TODO(timello): originally, instance_type in request_spec
-            # on compute.api.resize does not have 'extra_specs', so we
-            # remove it for now to keep tests backward compatibility.
-            request_spec['instance_type'].pop('extra_specs', None)
 
             (host, node) = (host_state['host'], host_state['nodename'])
             self.compute_rpcapi.prep_resize(
@@ -622,6 +622,13 @@ class ComputeTaskManager(base.Base):
             requested_networks = objects.NetworkRequestList(
                 objects=[objects.NetworkRequest.from_tuple(t)
                          for t in requested_networks])
+        # TODO(melwitt): Remove this in version 2.0 of the RPC API
+        flavor = filter_properties.get('instance_type')
+        if flavor and not isinstance(flavor, objects.Flavor):
+            # Code downstream may expect extra_specs to be populated since it
+            # is receiving an object, so lookup the flavor to ensure this.
+            flavor = objects.Flavor.get_by_id(context, flavor['id'])
+            filter_properties = dict(filter_properties, instance_type=flavor)
 
         try:
             # check retry policy. Rather ugly use of instances[0]...

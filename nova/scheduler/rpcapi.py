@@ -84,6 +84,8 @@ class SchedulerAPI(object):
         existing methods in 3.x after that point should be done such that they
         can handle the version_cap being set to 3.0.
 
+        * 3.1 - Made select_destinations() send flavor object
+
     '''
 
     VERSION_ALIASES = {
@@ -103,10 +105,14 @@ class SchedulerAPI(object):
                                      serializer=serializer)
 
     def select_destinations(self, ctxt, request_spec, filter_properties):
-        if 'instance_type' in filter_properties:
-            flavor = filter_properties['instance_type']
-            flavor_p = objects_base.obj_to_primitive(flavor)
-            filter_properties = dict(filter_properties, instance_type=flavor_p)
-        cctxt = self.client.prepare()
+        version = '3.1'
+        if not self.client.can_send_version(version):
+            version = '3.0'
+            if 'instance_type' in filter_properties:
+                flavor = filter_properties['instance_type']
+                flavor_p = objects_base.obj_to_primitive(flavor)
+                filter_properties = dict(filter_properties,
+                                         instance_type=flavor_p)
+        cctxt = self.client.prepare(version=version)
         return cctxt.call(ctxt, 'select_destinations',
             request_spec=request_spec, filter_properties=filter_properties)

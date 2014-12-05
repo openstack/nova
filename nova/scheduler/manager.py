@@ -60,7 +60,7 @@ QUOTAS = quota.QUOTAS
 class SchedulerManager(manager.Manager):
     """Chooses a host to run instances on."""
 
-    target = messaging.Target(version='3.0')
+    target = messaging.Target(version='3.1')
 
     def __init__(self, scheduler_driver=None, *args, **kwargs):
         if not scheduler_driver:
@@ -171,6 +171,13 @@ class SchedulerManager(manager.Manager):
         The result should be a list of dicts with 'host', 'nodename' and
         'limits' as keys.
         """
+        # TODO(melwitt): Remove this in version 4.0 of the RPC API
+        flavor = filter_properties.get('instance_type')
+        if flavor and not isinstance(flavor, objects.Flavor):
+            # Code downstream may expect extra_specs to be populated since it
+            # is receiving an object, so lookup the flavor to ensure this.
+            flavor = objects.Flavor.get_by_id(context, flavor['id'])
+            filter_properties = dict(filter_properties, instance_type=flavor)
         dests = self.driver.select_destinations(context, request_spec,
             filter_properties)
         return jsonutils.to_primitive(dests)
