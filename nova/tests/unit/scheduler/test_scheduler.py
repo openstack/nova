@@ -17,23 +17,20 @@
 Tests For Scheduler
 """
 
+import mock
 from mox3 import mox
 from oslo.config import cfg
 
 from nova.compute import api as compute_api
-from nova.compute import utils as compute_utils
-from nova.compute import vm_states
 from nova import context
 from nova import db
 from nova import exception
 from nova.image import glance
-from nova import objects
 from nova import rpc
 from nova.scheduler import driver
 from nova.scheduler import manager
 from nova import servicegroup
 from nova import test
-from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_server_actions
 from nova.tests.unit.image import fake as fake_image
 from nova.tests.unit.objects import test_instance_fault
@@ -75,199 +72,24 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(self.manager.driver,
                 method_name)
 
-    def test_run_instance_exception_puts_instance_in_error_state(self):
-        fake_instance_uuid = 'fake-instance-id'
-        inst = {"vm_state": "", "task_state": ""}
+    def test_select_destination(self):
+        with mock.patch.object(self.manager, 'select_destinations'
+                ) as select_destinations:
+            self.manager.select_destinations(None, None, {})
+            select_destinations.assert_called_once_with(None, None, {})
 
-        self._mox_schedule_method_helper('schedule_run_instance')
-        self.mox.StubOutWithMock(compute_utils, 'add_instance_fault_from_exc')
-        self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
 
-        request_spec = {'instance_properties': inst,
-                        'instance_uuids': [fake_instance_uuid]}
+class SchedulerV3PassthroughTestCase(test.TestCase):
+    def setUp(self):
+        super(SchedulerV3PassthroughTestCase, self).setUp()
+        self.manager = manager.SchedulerManager()
+        self.proxy = manager._SchedulerManagerV3Proxy(self.manager)
 
-        self.manager.driver.schedule_run_instance(self.context,
-                request_spec, None, None, None, None, {}, False).AndRaise(
-                        exception.NoValidHost(reason=""))
-        old, new_ref = db.instance_update_and_get_original(self.context,
-                fake_instance_uuid,
-                {"vm_state": vm_states.ERROR,
-                 "task_state": None}).AndReturn((inst, inst))
-        compute_utils.add_instance_fault_from_exc(self.context,
-                new_ref, mox.IsA(exception.NoValidHost), mox.IgnoreArg())
-
-        self.mox.ReplayAll()
-        self.manager.run_instance(self.context, request_spec,
-                None, None, None, None, {}, False)
-
-    def test_prep_resize_no_valid_host_back_in_active_state(self):
-        fake_instance_uuid = 'fake-instance-id'
-        fake_instance = {'uuid': fake_instance_uuid}
-        inst = {"vm_state": "", "task_state": ""}
-
-        self._mox_schedule_method_helper('select_destinations')
-
-        self.mox.StubOutWithMock(compute_utils, 'add_instance_fault_from_exc')
-        self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
-
-        request_spec = {'instance_type': 'fake_type',
-                        'instance_uuids': [fake_instance_uuid],
-                        'instance_properties': {'uuid': fake_instance_uuid}}
-        kwargs = {
-                'context': self.context,
-                'image': 'fake_image',
-                'request_spec': request_spec,
-                'filter_properties': 'fake_props',
-                'instance': fake_instance,
-                'instance_type': 'fake_type',
-                'reservations': list('fake_res'),
-        }
-        self.manager.driver.select_destinations(
-            self.context, request_spec, 'fake_props').AndRaise(
-                exception.NoValidHost(reason=""))
-        old_ref, new_ref = db.instance_update_and_get_original(self.context,
-                fake_instance_uuid,
-                {"vm_state": vm_states.ACTIVE, "task_state": None}).AndReturn(
-                        (inst, inst))
-        compute_utils.add_instance_fault_from_exc(self.context, new_ref,
-                mox.IsA(exception.NoValidHost), mox.IgnoreArg())
-
-        self.mox.ReplayAll()
-        self.manager.prep_resize(**kwargs)
-
-    def test_prep_resize_no_valid_host_back_in_shutoff_state(self):
-        fake_instance_uuid = 'fake-instance-id'
-        fake_instance = {'uuid': fake_instance_uuid, "vm_state": "stopped"}
-        inst = {"vm_state": "stopped", "task_state": ""}
-
-        self._mox_schedule_method_helper('select_destinations')
-
-        self.mox.StubOutWithMock(compute_utils, 'add_instance_fault_from_exc')
-        self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
-
-        request_spec = {'instance_type': 'fake_type',
-                        'instance_uuids': [fake_instance_uuid],
-                        'instance_properties': {'uuid': fake_instance_uuid}}
-        kwargs = {
-                'context': self.context,
-                'image': 'fake_image',
-                'request_spec': request_spec,
-                'filter_properties': 'fake_props',
-                'instance': fake_instance,
-                'instance_type': 'fake_type',
-                'reservations': list('fake_res'),
-        }
-        self.manager.driver.select_destinations(
-            self.context, request_spec, 'fake_props').AndRaise(
-                exception.NoValidHost(reason=""))
-        old_ref, new_ref = db.instance_update_and_get_original(self.context,
-                fake_instance_uuid,
-                {"vm_state": vm_states.STOPPED, "task_state": None}).AndReturn(
-                        (inst, inst))
-        compute_utils.add_instance_fault_from_exc(self.context, new_ref,
-                mox.IsA(exception.NoValidHost), mox.IgnoreArg())
-
-        self.mox.ReplayAll()
-        self.manager.prep_resize(**kwargs)
-
-    def test_prep_resize_exception_host_in_error_state_and_raise(self):
-        fake_instance_uuid = 'fake-instance-id'
-        fake_instance = {'uuid': fake_instance_uuid}
-
-        self._mox_schedule_method_helper('select_destinations')
-
-        self.mox.StubOutWithMock(compute_utils, 'add_instance_fault_from_exc')
-        self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
-
-        request_spec = {
-            'instance_properties': {'uuid': fake_instance_uuid},
-            'instance_uuids': [fake_instance_uuid]
-        }
-        kwargs = {
-                'context': self.context,
-                'image': 'fake_image',
-                'request_spec': request_spec,
-                'filter_properties': 'fake_props',
-                'instance': fake_instance,
-                'instance_type': 'fake_type',
-                'reservations': list('fake_res'),
-        }
-
-        self.manager.driver.select_destinations(
-            self.context, request_spec, 'fake_props').AndRaise(
-                test.TestingException('something happened'))
-
-        inst = {
-            "vm_state": "",
-            "task_state": "",
-        }
-        old_ref, new_ref = db.instance_update_and_get_original(self.context,
-                fake_instance_uuid,
-                {"vm_state": vm_states.ERROR,
-                 "task_state": None}).AndReturn((inst, inst))
-        compute_utils.add_instance_fault_from_exc(self.context, new_ref,
-                mox.IsA(test.TestingException), mox.IgnoreArg())
-
-        self.mox.ReplayAll()
-
-        self.assertRaises(test.TestingException, self.manager.prep_resize,
-                          **kwargs)
-
-    def test_set_vm_state_and_notify_adds_instance_fault(self):
-        request = {'instance_properties': {'uuid': 'fake-uuid'}}
-        updates = {'vm_state': 'foo'}
-        fake_inst = {'uuid': 'fake-uuid'}
-
-        self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
-        self.mox.StubOutWithMock(db, 'instance_fault_create')
-        self.mox.StubOutWithMock(rpc, 'get_notifier')
-        notifier = self.mox.CreateMockAnything()
-        rpc.get_notifier('scheduler').AndReturn(notifier)
-        db.instance_update_and_get_original(self.context, 'fake-uuid',
-                                            updates).AndReturn((None,
-                                                                fake_inst))
-        db.instance_fault_create(self.context, mox.IgnoreArg()).AndReturn(
-            test_instance_fault.fake_faults['fake-uuid'][0])
-        notifier.error(self.context, 'scheduler.foo', mox.IgnoreArg())
-        self.mox.ReplayAll()
-
-        self.manager._set_vm_state_and_notify('foo', {'vm_state': 'foo'},
-                                              self.context, None, request)
-
-    def test_prep_resize_post_populates_retry(self):
-        self.manager.driver = fakes.FakeFilterScheduler()
-
-        image = 'image'
-        instance_uuid = 'fake-instance-id'
-        instance = fake_instance.fake_db_instance(uuid=instance_uuid)
-
-        instance_properties = {'project_id': 'fake', 'os_type': 'Linux'}
-        instance_type = "m1.tiny"
-        request_spec = {'instance_properties': instance_properties,
-                        'instance_type': instance_type,
-                        'instance_uuids': [instance_uuid]}
-        retry = {'hosts': [], 'num_attempts': 1}
-        filter_properties = {'retry': retry}
-        reservations = None
-
-        hosts = [dict(host='host', nodename='node', limits={})]
-
-        self._mox_schedule_method_helper('select_destinations')
-        self.manager.driver.select_destinations(
-            self.context, request_spec, filter_properties).AndReturn(hosts)
-
-        self.mox.StubOutWithMock(self.manager.compute_rpcapi, 'prep_resize')
-        self.manager.compute_rpcapi.prep_resize(self.context, image,
-                mox.IsA(objects.Instance),
-                instance_type, 'host', reservations, request_spec=request_spec,
-                filter_properties=filter_properties, node='node')
-
-        self.mox.ReplayAll()
-        self.manager.prep_resize(self.context, image, request_spec,
-                filter_properties, instance, instance_type, reservations)
-
-        self.assertEqual([['host', 'node']],
-                         filter_properties['retry']['hosts'])
+    def test_select_destination(self):
+        with mock.patch.object(self.manager, 'select_destinations'
+                ) as select_destinations:
+            self.proxy.select_destinations(None, None, {})
+            select_destinations.assert_called_once_with(None, None, {})
 
 
 class SchedulerTestCase(test.NoDBTestCase):
@@ -341,15 +163,6 @@ class SchedulerDriverBaseTestCase(SchedulerTestCase):
     """Test cases for base scheduler driver class methods
        that will fail if the driver is changed.
     """
-
-    def test_unimplemented_schedule_run_instance(self):
-        fake_request_spec = {'instance_properties':
-                {'uuid': 'uuid'}}
-
-        self.assertRaises(NotImplementedError,
-                         self.driver.schedule_run_instance,
-                         self.context, fake_request_spec, None, None, None,
-                         None, None, False)
 
     def test_unimplemented_select_destinations(self):
         self.assertRaises(NotImplementedError,

@@ -23,14 +23,12 @@ import random
 
 from oslo.config import cfg
 
-from nova.compute import rpcapi as compute_rpcapi
 from nova import exception
-from nova.i18n import _, _LI, _LW
+from nova.i18n import _
 from nova.openstack.common import log as logging
 from nova import rpc
 from nova.scheduler import driver
 from nova.scheduler import scheduler_options
-from nova.scheduler import utils as scheduler_utils
 
 
 CONF = cfg.CONF
@@ -57,80 +55,7 @@ class FilterScheduler(driver.Scheduler):
     def __init__(self, *args, **kwargs):
         super(FilterScheduler, self).__init__(*args, **kwargs)
         self.options = scheduler_options.SchedulerOptions()
-        self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         self.notifier = rpc.get_notifier('scheduler')
-
-    # NOTE(alaski): Remove this method when the scheduler rpc interface is
-    # bumped to 4.x as it is no longer used.
-    def schedule_run_instance(self, context, request_spec,
-                              admin_password, injected_files,
-                              requested_networks, is_first_time,
-                              filter_properties, legacy_bdm_in_spec):
-        """Provisions instances that needs to be scheduled
-
-        Applies filters and weighters on request properties to get a list of
-        compute hosts and calls them to spawn instance(s).
-        """
-        payload = dict(request_spec=request_spec)
-        self.notifier.info(context, 'scheduler.run_instance.start', payload)
-
-        instance_uuids = request_spec.get('instance_uuids')
-        LOG.info(_LI("Attempting to build %(num_instances)d instance(s) "
-                     "uuids: %(instance_uuids)s"),
-                 {'num_instances': len(instance_uuids),
-                  'instance_uuids': instance_uuids})
-        LOG.debug("Request Spec: %s" % request_spec)
-
-        # check retry policy.  Rather ugly use of instance_uuids[0]...
-        # but if we've exceeded max retries... then we really only
-        # have a single instance.
-        scheduler_utils.populate_retry(filter_properties,
-                                       instance_uuids[0])
-        weighed_hosts = self._schedule(context, request_spec,
-                                       filter_properties)
-
-        # NOTE: Pop instance_uuids as individual creates do not need the
-        # set of uuids. Do not pop before here as the upper exception
-        # handler fo NoValidHost needs the uuid to set error state
-        instance_uuids = request_spec.pop('instance_uuids')
-
-        # NOTE(comstud): Make sure we do not pass this through.  It
-        # contains an instance of RpcContext that cannot be serialized.
-        filter_properties.pop('context', None)
-
-        for num, instance_uuid in enumerate(instance_uuids):
-            request_spec['instance_properties']['launch_index'] = num
-
-            try:
-                try:
-                    weighed_host = weighed_hosts.pop(0)
-                    LOG.info(_LI("Choosing host %(weighed_host)s "
-                                 "for instance %(instance_uuid)s"),
-                             {'weighed_host': weighed_host,
-                              'instance_uuid': instance_uuid})
-                except IndexError:
-                    raise exception.NoValidHost(reason="")
-
-                self._provision_resource(context, weighed_host,
-                                         request_spec,
-                                         filter_properties,
-                                         requested_networks,
-                                         injected_files, admin_password,
-                                         is_first_time,
-                                         instance_uuid=instance_uuid,
-                                         legacy_bdm_in_spec=legacy_bdm_in_spec)
-            except Exception as ex:
-                # NOTE(vish): we don't reraise the exception here to make sure
-                #             that all instances in the request get set to
-                #             error properly
-                driver.handle_schedule_error(context, ex, instance_uuid,
-                                             request_spec)
-            # scrub retry host list in case we're scheduling multiple
-            # instances:
-            retry = filter_properties.get('retry', {})
-            retry['hosts'] = []
-
-        self.notifier.info(context, 'scheduler.run_instance.end', payload)
 
     def select_destinations(self, context, request_spec, filter_properties):
         """Selects a filtered set of hosts and nodes."""
@@ -160,42 +85,6 @@ class FilterScheduler(driver.Scheduler):
         self.notifier.info(context, 'scheduler.select_destinations.end',
                            dict(request_spec=request_spec))
         return dests
-
-    def _provision_resource(self, context, weighed_host, request_spec,
-            filter_properties, requested_networks, injected_files,
-            admin_password, is_first_time, instance_uuid=None,
-            legacy_bdm_in_spec=True):
-        """Create the requested resource in this Zone."""
-        # NOTE(vish): add our current instance back into the request spec
-        request_spec['instance_uuids'] = [instance_uuid]
-        payload = dict(request_spec=request_spec,
-                       weighted_host=weighed_host.to_dict(),
-                       instance_id=instance_uuid)
-        self.notifier.info(context,
-                           'scheduler.run_instance.scheduled', payload)
-
-        # Update the metadata if necessary
-        try:
-            updated_instance = driver.instance_update_db(context,
-                                                         instance_uuid)
-        except exception.InstanceNotFound:
-            LOG.warning(_LW("Instance disappeared during scheduling"),
-                        context=context, instance_uuid=instance_uuid)
-
-        else:
-            scheduler_utils.populate_filter_properties(filter_properties,
-                    weighed_host.obj)
-
-            self.compute_rpcapi.run_instance(context,
-                    instance=updated_instance,
-                    host=weighed_host.obj.host,
-                    request_spec=request_spec,
-                    filter_properties=filter_properties,
-                    requested_networks=requested_networks,
-                    injected_files=injected_files,
-                    admin_password=admin_password, is_first_time=is_first_time,
-                    node=weighed_host.obj.nodename,
-                    legacy_bdm_in_spec=legacy_bdm_in_spec)
 
     def _get_configuration_options(self):
         """Fetch options dictionary. Broken out for testing."""

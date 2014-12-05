@@ -67,4 +67,4 @@ class SchedulerRpcAPITestCase(test.NoDBTestCase):
         self._test_scheduler_api('select_destinations', rpc_method='call',
                 request_spec='fake_request_spec',
                 filter_properties='fake_prop',
-                version='3.1')
+                version='4.0')
