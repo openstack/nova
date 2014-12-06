@@ -14,7 +14,7 @@
 
 """Generic linux scsi subsystem utilities."""
 
-from oslo.concurrency import processutils
+from oslo_concurrency import processutils
 
 from nova.i18n import _LW
 from nova.openstack.common import log as logging

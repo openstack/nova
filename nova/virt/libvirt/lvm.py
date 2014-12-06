@@ -21,9 +21,9 @@
 
 import functools
 
-from oslo.concurrency import processutils
 from oslo.config import cfg
 from oslo.utils import units
+from oslo_concurrency import processutils
 import six
 
 from nova import exception

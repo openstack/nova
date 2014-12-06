@@ -30,9 +30,9 @@ import tempfile
 if os.name != 'nt':
     import crypt
 
-from oslo.concurrency import processutils
 from oslo.config import cfg
 from oslo.serialization import jsonutils
+from oslo_concurrency import processutils
 
 from nova import exception
 from nova.i18n import _

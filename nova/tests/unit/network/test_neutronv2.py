@@ -2661,7 +2661,7 @@ class TestNeutronv2WithMock(test.TestCase):
             'fake-user', 'fake-project',
             auth_token='bff4a5a6b9eb4ea2a6efec6eefb77936')
 
-    @mock.patch('oslo.concurrency.lockutils.lock')
+    @mock.patch('oslo_concurrency.lockutils.lock')
     def test_get_instance_nw_info_locks_per_instance(self, mock_lock):
         instance = objects.Instance(uuid=uuid.uuid4())
         api = neutronapi.API()

@@ -21,10 +21,10 @@ import os
 import time
 
 import mock
-from oslo.concurrency import processutils
 from oslo.config import cfg
 from oslo.serialization import jsonutils
 from oslo.utils import importutils
+from oslo_concurrency import processutils
 
 from nova import conductor
 from nova import context

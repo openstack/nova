@@ -15,11 +15,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo.concurrency import processutils
 from oslo.config import cfg
 from oslo import messaging
 from oslo.utils import excutils
 from oslo.utils import importutils
+from oslo_concurrency import processutils
 import six
 
 from nova import context

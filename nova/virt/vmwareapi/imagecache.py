@@ -35,10 +35,10 @@ the timestamp folder will be locked  and the timestamps will be purged.
 This will ensure that a image is not deleted during the spawn.
 """
 
-from oslo.concurrency import lockutils
 from oslo.config import cfg
 from oslo.utils import timeutils
 from oslo.vmware import exceptions as vexc
+from oslo_concurrency import lockutils
 
 from nova.i18n import _LI, _LW
 from nova.openstack.common import log as logging

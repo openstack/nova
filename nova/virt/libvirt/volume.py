@@ -21,9 +21,9 @@ import os
 import time
 import urllib2
 
-from oslo.concurrency import processutils
 from oslo.config import cfg
 from oslo.utils import strutils
+from oslo_concurrency import processutils
 import six
 import six.moves.urllib.parse as urlparse
 

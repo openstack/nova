@@ -24,8 +24,8 @@ import platform
 import re
 
 from lxml import etree
-from oslo.concurrency import processutils
 from oslo.config import cfg
+from oslo_concurrency import processutils
 
 from nova.i18n import _
 from nova.i18n import _LI

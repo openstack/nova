@@ -12,12 +12,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""This modules stubs out functions in oslo.concurrency.processutils."""
+"""This modules stubs out functions in oslo_concurrency.processutils."""
 
 import re
 
 from eventlet import greenthread
-from oslo.concurrency import processutils
+from oslo_concurrency import processutils
 import six
 
 from nova.openstack.common import log as logging

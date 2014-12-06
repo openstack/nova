@@ -21,10 +21,10 @@ import os
 import random
 import sys
 
-from oslo.concurrency import processutils
 from oslo.config import cfg
 from oslo import messaging
 from oslo.utils import importutils
+from oslo_concurrency import processutils
 
 from nova import baserpc
 from nova import conductor
