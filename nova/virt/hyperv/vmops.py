@@ -281,7 +281,9 @@ class VMOps(object):
             if configdrive.required_by(instance):
                 configdrive_path = self._create_config_drive(instance,
                                                              injected_files,
-                                                             admin_password)
+                                                             admin_password,
+                                                             network_info)
+
                 self.attach_config_drive(instance, configdrive_path, vm_gen)
 
             self.power_on(instance)
@@ -366,7 +368,8 @@ class VMOps(object):
 
         return vm_gen
 
-    def _create_config_drive(self, instance, injected_files, admin_password):
+    def _create_config_drive(self, instance, injected_files, admin_password,
+                             network_info):
         if CONF.config_drive_format != 'iso9660':
             raise vmutils.UnsupportedConfigDriveFormatException(
                 _('Invalid config_drive_format "%s"') %
@@ -380,7 +383,8 @@ class VMOps(object):
 
         inst_md = instance_metadata.InstanceMetadata(instance,
                                                      content=injected_files,
-                                                     extra_md=extra_md)
+                                                     extra_md=extra_md,
+                                                     network_info=network_info)
 
         instance_path = self._pathutils.get_instance_dir(
             instance['name'])

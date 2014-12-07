@@ -264,7 +264,8 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
             if configdrive_required:
                 mock_create_config_drive.assert_called_once_with(
                     mock_instance, [mock.sentinel.FILE],
-                    mock.sentinel.PASSWORD)
+                    mock.sentinel.PASSWORD,
+                    mock.sentinel.INFO)
                 mock_attach_config_drive.assert_called_once_with(
                     mock_instance, fake_config_drive_path, fake_vm_gen)
             mock_power_on.assert_called_once_with(mock_instance)
@@ -460,19 +461,23 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
             self.assertRaises(vmutils.UnsupportedConfigDriveFormatException,
                               self._vmops._create_config_drive,
                               mock_instance, [mock.sentinel.FILE],
-                              mock.sentinel.PASSWORD)
+                              mock.sentinel.PASSWORD,
+                              mock.sentinel.NET_INFO)
         elif side_effect is processutils.ProcessExecutionError:
             self.assertRaises(processutils.ProcessExecutionError,
                               self._vmops._create_config_drive,
                               mock_instance, [mock.sentinel.FILE],
-                              mock.sentinel.PASSWORD)
+                              mock.sentinel.PASSWORD,
+                              mock.sentinel.NET_INFO)
         else:
             path = self._vmops._create_config_drive(mock_instance,
                                                     [mock.sentinel.FILE],
-                                                    mock.sentinel.PASSWORD)
+                                                    mock.sentinel.PASSWORD,
+                                                    mock.sentinel.NET_INFO)
             mock_InstanceMetadata.assert_called_once_with(
                 mock_instance, content=[mock.sentinel.FILE],
-                extra_md={'admin_pass': mock.sentinel.PASSWORD})
+                extra_md={'admin_pass': mock.sentinel.PASSWORD},
+                network_info=mock.sentinel.NET_INFO)
             self._vmops._pathutils.get_instance_dir.assert_called_once_with(
                 mock_instance.name)
             mock_ConfigDriveBuilder.assert_called_with(
