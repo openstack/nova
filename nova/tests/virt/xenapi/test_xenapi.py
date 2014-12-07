@@ -928,12 +928,14 @@ iface lo inet loopback
 
 auto eth0
 iface eth0 inet static
+    hwaddress ether DE:AD:BE:EF:00:01
     address 192.168.1.100
     netmask 255.255.255.0
     broadcast 192.168.1.255
     gateway 192.168.1.1
     dns-nameservers 192.168.1.3 192.168.1.4
 iface eth0 inet6 static
+    hwaddress ether DE:AD:BE:EF:00:01
     address 2001:db8:0:1::1
     netmask 64
     gateway 2001:db8:0:1::1

@@ -10,6 +10,7 @@ iface lo inet loopback
 
 auto {{ ifc.name }}
 iface {{ ifc.name }} inet static
+    hwaddress ether {{ ifc.hwaddress }}
     address {{ ifc.address }}
     netmask {{ ifc.netmask }}
     broadcast {{ ifc.broadcast }}
@@ -29,6 +30,7 @@ iface {{ ifc.name }} inet static
 {% endif %}
 {% else %}
 iface {{ ifc.name }} inet6 static
+    hwaddress ether {{ ifc.hwaddress }}
     address {{ ifc.address_v6 }}
     netmask {{ ifc.netmask_v6 }}
 {% if ifc.gateway_v6 %}
