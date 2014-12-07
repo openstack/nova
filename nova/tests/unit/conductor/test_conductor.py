@@ -1447,7 +1447,8 @@ class _BaseTaskTestCase(object):
         instance = self._create_fake_instance_obj()
         instance.vm_state = vm_states.SHELVED_OFFLOADED
         instance.save()
-        filter_properties = {}
+        filter_properties = {'retry': {'num_attempts': 1,
+                                       'hosts': []}}
         system_metadata = instance.system_metadata
 
         self.mox.StubOutWithMock(self.conductor_manager.image_api, 'get')
@@ -1464,7 +1465,11 @@ class _BaseTaskTestCase(object):
                           'limits': {}}])
         self.conductor_manager.compute_rpcapi.unshelve_instance(self.context,
                 instance, 'fake_host', image='fake_image',
-                filter_properties={'limits': {}}, node='fake_node')
+                filter_properties={'limits': {},
+                                   'retry': {'num_attempts': 1,
+                                             'hosts': [['fake_host',
+                                                        'fake_node']]}},
+                                    node='fake_node')
         self.mox.ReplayAll()
 
         system_metadata['shelved_at'] = timeutils.utcnow()
@@ -1501,7 +1506,8 @@ class _BaseTaskTestCase(object):
         instance = self._create_fake_instance_obj()
         instance.vm_state = vm_states.SHELVED_OFFLOADED
         instance.save()
-        filter_properties = {}
+        filter_properties = {'retry': {'num_attempts': 1,
+                                       'hosts': []}}
         system_metadata = instance.system_metadata
 
         self.mox.StubOutWithMock(self.conductor_manager.image_api, 'get')
@@ -1518,7 +1524,11 @@ class _BaseTaskTestCase(object):
                           'limits': {}}])
         self.conductor_manager.compute_rpcapi.unshelve_instance(self.context,
                 instance, 'fake_host', image=None,
-                filter_properties={'limits': {}}, node='fake_node')
+                filter_properties={'limits': {},
+                                   'retry': {'num_attempts': 1,
+                                             'hosts': [['fake_host',
+                                                        'fake_node']]}},
+                node='fake_node')
         self.mox.ReplayAll()
 
         system_metadata['shelved_at'] = timeutils.utcnow()
