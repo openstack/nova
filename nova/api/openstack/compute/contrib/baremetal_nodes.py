@@ -21,7 +21,6 @@ import webob
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 from nova.i18n import _
 from nova.openstack.common import log as logging
 
@@ -58,25 +57,6 @@ CONF.import_opt('compute_driver', 'nova.virt.driver')
 LOG = logging.getLogger(__name__)
 
 
-def _interface_dict(interface_ref):
-    d = {}
-    for f in interface_fields:
-        d[f] = interface_ref.get(f)
-    return d
-
-
-def _make_node_elem(elem):
-    for f in node_fields:
-        elem.set(f)
-    for f in node_ext_fields:
-        elem.set(f)
-
-
-def _make_interface_elem(elem):
-    for f in interface_fields:
-        elem.set(f)
-
-
 def _get_ironic_client():
     """return an Ironic client."""
     # TODO(NobodyCam): Fix insecure setting
@@ -97,31 +77,6 @@ def _no_ironic_proxy(cmd):
                     explanation=_("Command Not supported. Please use Ironic "
                                   "command %(cmd)s to perform this "
                                   "action.") % {'cmd': cmd})
-
-
-class NodeTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        node_elem = xmlutil.TemplateElement('node', selector='node')
-        _make_node_elem(node_elem)
-        ifs_elem = xmlutil.TemplateElement('interfaces')
-        if_elem = xmlutil.SubTemplateElement(ifs_elem, 'interface',
-                                             selector='interfaces')
-        _make_interface_elem(if_elem)
-        node_elem.append(ifs_elem)
-        return xmlutil.MasterTemplate(node_elem, 1)
-
-
-class NodesTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('nodes')
-        node_elem = xmlutil.SubTemplateElement(root, 'node', selector='nodes')
-        _make_node_elem(node_elem)
-        ifs_elem = xmlutil.TemplateElement('interfaces')
-        if_elem = xmlutil.SubTemplateElement(ifs_elem, 'interface',
-                                             selector='interfaces')
-        _make_interface_elem(if_elem)
-        node_elem.append(ifs_elem)
-        return xmlutil.MasterTemplate(root, 1)
 
 
 class BareMetalNodeController(wsgi.Controller):
@@ -145,7 +100,6 @@ class BareMetalNodeController(wsgi.Controller):
                 d[f] = node_ref.get(f)
         return d
 
-    @wsgi.serializers(xml=NodesTemplate)
     def index(self, req):
         context = req.environ['nova.context']
         authorize(context)
@@ -164,7 +118,6 @@ class BareMetalNodeController(wsgi.Controller):
             nodes.append(node)
         return {'nodes': nodes}
 
-    @wsgi.serializers(xml=NodeTemplate)
     def show(self, req, id):
         context = req.environ['nova.context']
         authorize(context)
@@ -184,7 +137,6 @@ class BareMetalNodeController(wsgi.Controller):
             node['interfaces'].append({'address': port.address})
         return {'node': node}
 
-    @wsgi.serializers(xml=NodeTemplate)
     def create(self, req, body):
         _no_ironic_proxy("port-create")
 

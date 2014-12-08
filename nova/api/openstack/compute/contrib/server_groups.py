@@ -21,7 +21,6 @@ from webob import exc
 from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 import nova.exception
 from nova.i18n import _
 from nova.i18n import _LE
@@ -37,94 +36,13 @@ SUPPORTED_POLICIES = ['anti-affinity', 'affinity']
 authorize = extensions.extension_authorizer('compute', 'server_groups')
 
 
-def make_policy(elem):
-    elem.text = str
-
-
-def make_member(elem):
-    elem.text = str
-
-
-def make_group(elem):
-    elem.set('name')
-    elem.set('id')
-    policies = xmlutil.SubTemplateElement(elem, 'policies')
-    policy = xmlutil.SubTemplateElement(policies, 'policy',
-                                        selector='policies')
-    make_policy(policy)
-    members = xmlutil.SubTemplateElement(elem, 'members')
-    member = xmlutil.SubTemplateElement(members, 'member',
-                                        selector='members')
-    make_member(member)
-    elem.append(common.MetadataTemplate())
-
-
-server_group_nsmap = {None: xmlutil.XMLNS_V11, 'atom': xmlutil.XMLNS_ATOM}
+server_group_nsmap = {}
 
 
 def _authorize_context(req):
     context = req.environ['nova.context']
     authorize(context)
     return context
-
-
-class ServerGroupTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('server_group',
-                                       selector='server_group')
-        make_group(root)
-        return xmlutil.MasterTemplate(root, 1, nsmap=server_group_nsmap)
-
-
-class ServerGroupsTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('server_groups')
-        elem = xmlutil.SubTemplateElement(root, 'server_group',
-                                          selector='server_groups')
-        # Note: listing server groups only shows name and uuid
-        make_group(elem)
-        return xmlutil.MasterTemplate(root, 1, nsmap=server_group_nsmap)
-
-
-class ServerGroupXMLDeserializer(wsgi.MetadataXMLDeserializer):
-    """Deserializer to handle xml-formatted server group requests."""
-
-    metadata_deserializer = common.MetadataXMLDeserializer()
-
-    def default(self, string):
-        """Deserialize an xml-formatted server group create request."""
-        dom = xmlutil.safe_minidom_parse_string(string)
-        server_group = self._extract_server_group(dom)
-        return {'body': {'server_group': server_group}}
-
-    def _extract_server_group(self, node):
-        """Marshal the instance attribute of a parsed request."""
-        server_group = {}
-        sg_node = self.find_first_child_named(node, 'server_group')
-        if sg_node is not None:
-            if sg_node.hasAttribute('name'):
-                server_group['name'] = sg_node.getAttribute('name')
-
-            if sg_node.hasAttribute('id'):
-                server_group['id'] = sg_node.getAttribute('id')
-
-            policies = self._extract_policies(sg_node)
-            server_group['policies'] = policies or []
-
-        return server_group
-
-    def _extract_policies(self, server_group_node):
-        """Marshal the server group policies element of a parsed request."""
-        policies_node = self.find_first_child_named(server_group_node,
-                                                    'policies')
-        if policies_node is not None:
-            policy_nodes = self.find_children_named(policies_node,
-                                                    'policy')
-            policies = []
-            if policy_nodes is not None:
-                for node in policy_nodes:
-                    policies.append(node.firstChild.nodeValue)
-            return policies
 
 
 class ServerGroupController(wsgi.Controller):
@@ -210,7 +128,6 @@ class ServerGroupController(wsgi.Controller):
             msg = _("unsupported fields: %s") % subbody.keys()
             raise nova.exception.InvalidInput(reason=msg)
 
-    @wsgi.serializers(xml=ServerGroupTemplate)
     def show(self, req, id):
         """Return data about the given server group."""
         context = _authorize_context(req)
@@ -255,7 +172,6 @@ class ServerGroupController(wsgi.Controller):
 
         return webob.Response(status_int=204)
 
-    @wsgi.serializers(xml=ServerGroupsTemplate)
     def index(self, req):
         """Returns a list of server groups."""
         context = _authorize_context(req)
@@ -270,8 +186,6 @@ class ServerGroupController(wsgi.Controller):
                   for group in limited_list]
         return {'server_groups': result}
 
-    @wsgi.serializers(xml=ServerGroupTemplate)
-    @wsgi.deserializers(xml=ServerGroupXMLDeserializer)
     def create(self, req, body):
         """Creates a new server group."""
         context = _authorize_context(req)
@@ -308,11 +222,6 @@ class ServerGroupController(wsgi.Controller):
             quotas.commit()
 
         return {'server_group': self._format_server_group(context, sg)}
-
-
-class ServerGroupsTemplateElement(xmlutil.TemplateElement):
-    def will_render(self, datum):
-        return "server_groups" in datum
 
 
 class Server_groups(extensions.ExtensionDescriptor):

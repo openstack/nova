@@ -19,8 +19,6 @@ from oslo.utils import timeutils
 from webob import exc
 
 from nova.api.openstack import extensions
-from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 from nova.cloudpipe import pipelib
 from nova import compute
 from nova.compute import utils as compute_utils
@@ -35,26 +33,6 @@ CONF = cfg.CONF
 CONF.import_opt('keys_path', 'nova.crypto')
 
 authorize = extensions.extension_authorizer('compute', 'cloudpipe')
-
-
-class CloudpipeTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('cloudpipe')
-        elem = xmlutil.SubTemplateElement(root, 'instance_id',
-                                          selector='instance_id')
-        elem.text = str
-        return xmlutil.MasterTemplate(root, 1)
-
-
-class CloudpipesTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('cloudpipes')
-        elem1 = xmlutil.SubTemplateElement(root, 'cloudpipe',
-                                           selector='cloudpipes')
-        elem2 = xmlutil.SubTemplateElement(elem1, xmlutil.Selector(0),
-                                           selector=xmlutil.get_items)
-        elem2.text = 1
-        return xmlutil.MasterTemplate(root, 1)
 
 
 class CloudpipeController(object):
@@ -126,7 +104,6 @@ class CloudpipeController(object):
                 rv['state'] = 'invalid'
         return rv
 
-    @wsgi.serializers(xml=CloudpipeTemplate)
     def create(self, req, body):
         """Create a new cloudpipe instance, if none exists.
 
@@ -154,7 +131,6 @@ class CloudpipeController(object):
                 raise exc.HTTPBadRequest(explanation=msg)
         return {'instance_id': instance['uuid']}
 
-    @wsgi.serializers(xml=CloudpipesTemplate)
     def index(self, req):
         """List running cloudpipe instances."""
         context = req.environ['nova.context']

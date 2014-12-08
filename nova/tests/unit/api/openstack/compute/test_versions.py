@@ -16,16 +16,11 @@
 import copy
 import uuid as stdlib_uuid
 
-import feedparser
-from lxml import etree
 from oslo.serialization import jsonutils
 import webob
 
-from nova.api.openstack.compute import versions
 from nova.api.openstack.compute import views
-from nova.api.openstack import xmlutil
 from nova import test
-from nova.tests.unit.api.openstack import common
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import matchers
 
@@ -59,10 +54,6 @@ EXP_VERSIONS = {
             },
         ],
         "media-types": [
-            {
-                "base": "application/xml",
-                "type": "application/vnd.openstack.compute+xml;version=2",
-            },
             {
                 "base": "application/json",
                 "type": "application/vnd.openstack.compute+json;version=2",
@@ -162,11 +153,6 @@ class VersionsTestV20(test.NoDBTestCase):
                 ],
                 "media-types": [
                     {
-                        "base": "application/xml",
-                        "type": "application/"
-                                "vnd.openstack.compute+xml;version=2",
-                    },
-                    {
                         "base": "application/json",
                         "type": "application/"
                                 "vnd.openstack.compute+json;version=2",
@@ -189,131 +175,6 @@ class VersionsTestV20(test.NoDBTestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(404, res.status_int)
 
-    @test.skipXmlTest("Nova v2 XML support is disabled")
-    def test_get_version_2_detail_xml(self):
-        req = webob.Request.blank('/v2/')
-        req.accept = "application/xml"
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 200)
-        self.assertEqual(res.content_type, "application/xml")
-
-        version = etree.XML(res.body)
-        xmlutil.validate_schema(version, 'version')
-
-        expected = EXP_VERSIONS['v2.0']
-        self.assertTrue(version.xpath('/ns:version', namespaces=NS))
-        media_types = version.xpath('ns:media-types/ns:media-type',
-                                    namespaces=NS)
-        self.assertTrue(common.compare_media_types(media_types,
-                                             expected['media-types']))
-        for key in ['id', 'status', 'updated']:
-            self.assertEqual(version.get(key), expected[key])
-        links = version.xpath('atom:link', namespaces=NS)
-        self.assertTrue(common.compare_links(links,
-            [{'rel': 'self', 'href': 'http://localhost/v2/'}]
-            + expected['links']))
-
-    @test.skipXmlTest("Nova v2 XML support is disabled")
-    def test_get_version_list_xml(self):
-        req = webob.Request.blank('/')
-        req.accept = "application/xml"
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 200)
-        self.assertEqual(res.content_type, "application/xml")
-
-        root = etree.XML(res.body)
-        xmlutil.validate_schema(root, 'versions')
-
-        self.assertTrue(root.xpath('/ns:versions', namespaces=NS))
-        versions = root.xpath('ns:version', namespaces=NS)
-        self.assertEqual(len(versions), 2)
-
-        for i, v in enumerate(['v2.0', 'v2.1']):
-            version = versions[i]
-            expected = EXP_VERSIONS[v]
-            for key in ['id', 'status', 'updated']:
-                self.assertEqual(version.get(key), expected[key])
-            (link,) = version.xpath('atom:link', namespaces=NS)
-            self.assertTrue(common.compare_links(link,
-                [{'rel': 'self', 'href': 'http://localhost/%s/' % v}]))
-
-    @test.skipXmlTest("Nova v2 XML support is disabled")
-    def test_get_version_2_detail_atom(self):
-        req = webob.Request.blank('/v2/')
-        req.accept = "application/atom+xml"
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 200)
-        self.assertEqual("application/atom+xml", res.content_type)
-
-        xmlutil.validate_schema(etree.XML(res.body), 'atom')
-
-        f = feedparser.parse(res.body)
-        self.assertEqual(f.feed.title, 'About This Version')
-        self.assertEqual(f.feed.updated, '2011-01-21T11:33:21Z')
-        self.assertEqual(f.feed.id, 'http://localhost/v2/')
-        self.assertEqual(f.feed.author, 'Rackspace')
-        self.assertEqual(f.feed.author_detail.href,
-                         'http://www.rackspace.com/')
-        self.assertEqual(f.feed.links[0]['href'], 'http://localhost/v2/')
-        self.assertEqual(f.feed.links[0]['rel'], 'self')
-
-        self.assertEqual(len(f.entries), 1)
-        entry = f.entries[0]
-        self.assertEqual(entry.id, 'http://localhost/v2/')
-        self.assertEqual(entry.title, 'Version v2.0')
-        self.assertEqual(entry.updated, '2011-01-21T11:33:21Z')
-        self.assertEqual(len(entry.content), 1)
-        self.assertEqual(entry.content[0].value,
-            'Version v2.0 CURRENT (2011-01-21T11:33:21Z)')
-        self.assertEqual(len(entry.links), 2)
-        self.assertEqual(entry.links[0]['href'], 'http://localhost/v2/')
-        self.assertEqual(entry.links[0]['rel'], 'self')
-        self.assertEqual(entry.links[1], {
-            'href': EXP_LINKS['v2.0']['html'],
-            'type': 'text/html',
-            'rel': 'describedby'})
-
-    @test.skipXmlTest("Nova v2 XML support is disabled")
-    def test_get_version_list_atom(self):
-        req = webob.Request.blank('/')
-        req.accept = "application/atom+xml"
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 200)
-        self.assertEqual(res.content_type, "application/atom+xml")
-
-        f = feedparser.parse(res.body)
-        self.assertEqual(f.feed.title, 'Available API Versions')
-        self.assertEqual(f.feed.updated, '2013-07-23T11:33:21Z')
-        self.assertEqual(f.feed.id, 'http://localhost/')
-        self.assertEqual(f.feed.author, 'Rackspace')
-        self.assertEqual(f.feed.author_detail.href,
-                         'http://www.rackspace.com/')
-        self.assertEqual(f.feed.links[0]['href'], 'http://localhost/')
-        self.assertEqual(f.feed.links[0]['rel'], 'self')
-
-        self.assertEqual(len(f.entries), 2)
-        entry = f.entries[0]
-        self.assertEqual(entry.id, 'http://localhost/v2/')
-        self.assertEqual(entry.title, 'Version v2.0')
-        self.assertEqual(entry.updated, '2011-01-21T11:33:21Z')
-        self.assertEqual(len(entry.content), 1)
-        self.assertEqual(entry.content[0].value,
-            'Version v2.0 CURRENT (2011-01-21T11:33:21Z)')
-        self.assertEqual(len(entry.links), 1)
-        self.assertEqual(entry.links[0]['href'], 'http://localhost/v2/')
-        self.assertEqual(entry.links[0]['rel'], 'self')
-
-        entry = f.entries[1]
-        self.assertEqual(entry.id, 'http://localhost/v2/')
-        self.assertEqual(entry.title, 'Version v2.1')
-        self.assertEqual(entry.updated, '2013-07-23T11:33:21Z')
-        self.assertEqual(len(entry.content), 1)
-        self.assertEqual(entry.content[0].value,
-            'Version v2.1 EXPERIMENTAL (2013-07-23T11:33:21Z)')
-        self.assertEqual(len(entry.links), 1)
-        self.assertEqual(entry.links[0]['href'], 'http://localhost/v2/')
-        self.assertEqual(entry.links[0]['rel'], 'self')
-
     def test_multi_choice_image(self):
         req = webob.Request.blank('/images/1')
         req.accept = "application/json"
@@ -333,11 +194,6 @@ class VersionsTestV20(test.NoDBTestCase):
                     },
                 ],
                 "media-types": [
-                    {
-                        "base": "application/xml",
-                        "type": "application/vnd.openstack.compute+xml"
-                                ";version=2"
-                    },
                     {
                         "base": "application/json",
                         "type": "application/vnd.openstack.compute+json"
@@ -366,47 +222,6 @@ class VersionsTestV20(test.NoDBTestCase):
 
         self.assertThat(jsonutils.loads(res.body),
                         matchers.DictMatches(expected))
-
-    @test.skipXmlTest("Nova v2 XML support is disabled")
-    def test_multi_choice_image_xml(self):
-        req = webob.Request.blank('/images/1')
-        req.accept = "application/xml"
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 300)
-        self.assertEqual(res.content_type, "application/xml")
-
-        root = etree.XML(res.body)
-        self.assertTrue(root.xpath('/ns:choices', namespaces=NS))
-        versions = root.xpath('ns:version', namespaces=NS)
-        self.assertEqual(len(versions), 2)
-
-        version = versions[0]
-        self.assertEqual(version.get('id'), 'v2.0')
-        self.assertEqual(version.get('status'), 'CURRENT')
-        media_types = version.xpath('ns:media-types/ns:media-type',
-                                    namespaces=NS)
-        self.assertTrue(common.
-                        compare_media_types(media_types,
-                                            EXP_VERSIONS['v2.0']['media-types']
-                                            ))
-
-        links = version.xpath('atom:link', namespaces=NS)
-        self.assertTrue(common.compare_links(links,
-            [{'rel': 'self', 'href': 'http://localhost/v2/images/1'}]))
-
-        version = versions[1]
-        self.assertEqual(version.get('id'), 'v2.1')
-        self.assertEqual(version.get('status'), 'EXPERIMENTAL')
-        media_types = version.xpath('ns:media-types/ns:media-type',
-                                    namespaces=NS)
-        self.assertTrue(common.
-                        compare_media_types(media_types,
-                                            EXP_VERSIONS['v2.1']['media-types']
-                                            ))
-
-        links = version.xpath('atom:link', namespaces=NS)
-        self.assertTrue(common.compare_links(links,
-            [{'rel': 'self', 'href': 'http://localhost/v2/images/1'}]))
 
     def test_multi_choice_server_atom(self):
         """Make sure multi choice responses do not have content-type
@@ -438,11 +253,6 @@ class VersionsTestV20(test.NoDBTestCase):
                     },
                 ],
                 "media-types": [
-                    {
-                        "base": "application/xml",
-                        "type": "application/vnd.openstack.compute+xml"
-                                ";version=2"
-                    },
                     {
                         "base": "application/json",
                         "type": "application/vnd.openstack.compute+json"
@@ -535,208 +345,6 @@ class VersionsViewBuilderTests(test.NoDBTestCase):
         actual = builder.generate_href('foo')
 
         self.assertEqual(actual, expected)
-
-
-class VersionsSerializerTests(test.NoDBTestCase):
-    def test_versions_list_xml_serializer(self):
-        versions_data = {
-            'versions': [
-                {
-                    "id": "2.7",
-                    "updated": "2011-07-18T11:30:00Z",
-                    "status": "DEPRECATED",
-                    "links": [
-                        {
-                            "rel": "self",
-                            "href": "http://test/v2",
-                        },
-                    ],
-                },
-            ]
-        }
-
-        serializer = versions.VersionsTemplate()
-        response = serializer.serialize(versions_data)
-
-        root = etree.XML(response)
-        xmlutil.validate_schema(root, 'versions')
-
-        self.assertTrue(root.xpath('/ns:versions', namespaces=NS))
-        version_elems = root.xpath('ns:version', namespaces=NS)
-        self.assertEqual(len(version_elems), 1)
-        version = version_elems[0]
-        self.assertEqual(version.get('id'), versions_data['versions'][0]['id'])
-        self.assertEqual(version.get('status'),
-                         versions_data['versions'][0]['status'])
-
-        (link,) = version.xpath('atom:link', namespaces=NS)
-        self.assertTrue(common.compare_links(link, [{
-            'rel': 'self',
-            'href': 'http://test/v2',
-            'type': 'application/atom+xml'}]))
-
-    def test_versions_multi_xml_serializer(self):
-        versions_data = {
-            'choices': [
-                {
-                    "id": "2.7",
-                    "updated": "2011-07-18T11:30:00Z",
-                    "status": "DEPRECATED",
-                    "media-types": EXP_VERSIONS['v2.0']['media-types'],
-                    "links": [
-                        {
-                            "rel": "self",
-                            "href": "http://test/v2/images",
-                        },
-                    ],
-                },
-            ]
-        }
-
-        serializer = versions.ChoicesTemplate()
-        response = serializer.serialize(versions_data)
-
-        root = etree.XML(response)
-        self.assertTrue(root.xpath('/ns:choices', namespaces=NS))
-        (version,) = root.xpath('ns:version', namespaces=NS)
-        self.assertEqual(version.get('id'), versions_data['choices'][0]['id'])
-        self.assertEqual(version.get('status'),
-                         versions_data['choices'][0]['status'])
-
-        media_types = list(version)[0]
-        self.assertEqual(media_types.tag.split('}')[1], "media-types")
-
-        media_types = version.xpath('ns:media-types/ns:media-type',
-                                    namespaces=NS)
-        self.assertTrue(common.compare_media_types(media_types,
-            versions_data['choices'][0]['media-types']))
-
-        (link,) = version.xpath('atom:link', namespaces=NS)
-        self.assertTrue(common.compare_links(link,
-                                       versions_data['choices'][0]['links']))
-
-    def test_versions_list_atom_serializer(self):
-        versions_data = {
-            'versions': [
-                {
-                    "id": "2.9.8",
-                    "updated": "2011-07-20T11:40:00Z",
-                    "status": "CURRENT",
-                    "links": [
-                        {
-                            "rel": "self",
-                            "href": "http://test/2.9.8",
-                        },
-                    ],
-                },
-            ]
-        }
-
-        serializer = versions.VersionsAtomSerializer()
-        response = serializer.serialize(versions_data)
-        f = feedparser.parse(response)
-
-        self.assertEqual(f.feed.title, 'Available API Versions')
-        self.assertEqual(f.feed.updated, '2011-07-20T11:40:00Z')
-        self.assertEqual(f.feed.id, 'http://test/')
-        self.assertEqual(f.feed.author, 'Rackspace')
-        self.assertEqual(f.feed.author_detail.href,
-                         'http://www.rackspace.com/')
-        self.assertEqual(f.feed.links[0]['href'], 'http://test/')
-        self.assertEqual(f.feed.links[0]['rel'], 'self')
-
-        self.assertEqual(len(f.entries), 1)
-        entry = f.entries[0]
-        self.assertEqual(entry.id, 'http://test/2.9.8')
-        self.assertEqual(entry.title, 'Version 2.9.8')
-        self.assertEqual(entry.updated, '2011-07-20T11:40:00Z')
-        self.assertEqual(len(entry.content), 1)
-        self.assertEqual(entry.content[0].value,
-            'Version 2.9.8 CURRENT (2011-07-20T11:40:00Z)')
-        self.assertEqual(len(entry.links), 1)
-        self.assertEqual(entry.links[0]['href'], 'http://test/2.9.8')
-        self.assertEqual(entry.links[0]['rel'], 'self')
-
-    def test_version_detail_atom_serializer(self):
-        versions_data = {
-            "version": {
-                "id": "v2.0",
-                "status": "CURRENT",
-                "updated": "2011-01-21T11:33:21Z",
-                "links": [
-                    {
-                        "rel": "self",
-                        "href": "http://localhost/v2/",
-                    },
-                    {
-                        "rel": "describedby",
-                        "type": "text/html",
-                        "href": EXP_LINKS['v2.0']['html'],
-                    },
-                ],
-                "media-types": [
-                    {
-                        "base": "application/xml",
-                        "type": "application/vnd.openstack.compute+xml"
-                                ";version=2",
-                    },
-                    {
-                        "base": "application/json",
-                        "type": "application/vnd.openstack.compute+json"
-                                ";version=2",
-                    }
-                ],
-            },
-        }
-
-        serializer = versions.VersionAtomSerializer()
-        response = serializer.serialize(versions_data)
-        f = feedparser.parse(response)
-
-        self.assertEqual(f.feed.title, 'About This Version')
-        self.assertEqual(f.feed.updated, '2011-01-21T11:33:21Z')
-        self.assertEqual(f.feed.id, 'http://localhost/v2/')
-        self.assertEqual(f.feed.author, 'Rackspace')
-        self.assertEqual(f.feed.author_detail.href,
-                         'http://www.rackspace.com/')
-        self.assertEqual(f.feed.links[0]['href'], 'http://localhost/v2/')
-        self.assertEqual(f.feed.links[0]['rel'], 'self')
-
-        self.assertEqual(len(f.entries), 1)
-        entry = f.entries[0]
-        self.assertEqual(entry.id, 'http://localhost/v2/')
-        self.assertEqual(entry.title, 'Version v2.0')
-        self.assertEqual(entry.updated, '2011-01-21T11:33:21Z')
-        self.assertEqual(len(entry.content), 1)
-        self.assertEqual(entry.content[0].value,
-             'Version v2.0 CURRENT (2011-01-21T11:33:21Z)')
-        self.assertEqual(len(entry.links), 2)
-        self.assertEqual(entry.links[0]['href'], 'http://localhost/v2/')
-        self.assertEqual(entry.links[0]['rel'], 'self')
-        self.assertEqual(entry.links[1], {
-            'rel': 'describedby',
-            'type': 'text/html',
-            'href': EXP_LINKS['v2.0']['html']})
-
-    def test_multi_choice_image_with_body(self):
-        req = webob.Request.blank('/images/1')
-        req.accept = "application/json"
-        req.method = 'POST'
-        req.content_type = "application/json"
-        req.body = "{\"foo\": \"bar\"}"
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(300, res.status_int)
-        self.assertEqual("application/json", res.content_type)
-
-    def test_get_version_list_with_body(self):
-        req = webob.Request.blank('/')
-        req.accept = "application/json"
-        req.method = 'POST'
-        req.content_type = "application/json"
-        req.body = "{\"foo\": \"bar\"}"
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(200, res.status_int)
-        self.assertEqual("application/json", res.content_type)
 
 
 # NOTE(oomichi): Now version API of v2.0 covers "/"(root).

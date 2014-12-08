@@ -13,8 +13,6 @@
 #    under the License.
 
 from nova.api.openstack import extensions
-from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 from nova import network
 
 
@@ -34,27 +32,6 @@ def _translate_floating_ip_pools_view(pools):
     }
 
 
-def make_float_ip(elem):
-    elem.set('name')
-
-
-class FloatingIPPoolTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('floating_ip_pool',
-                                       selector='floating_ip_pool')
-        make_float_ip(root)
-        return xmlutil.MasterTemplate(root, 1)
-
-
-class FloatingIPPoolsTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('floating_ip_pools')
-        elem = xmlutil.SubTemplateElement(root, 'floating_ip_pool',
-                                          selector='floating_ip_pools')
-        make_float_ip(elem)
-        return xmlutil.MasterTemplate(root, 1)
-
-
 class FloatingIPPoolsController(object):
     """The Floating IP Pool API controller for the OpenStack API."""
 
@@ -62,7 +39,6 @@ class FloatingIPPoolsController(object):
         self.network_api = network.API()
         super(FloatingIPPoolsController, self).__init__()
 
-    @wsgi.serializers(xml=FloatingIPPoolsTemplate)
     def index(self, req):
         """Return a list of pools."""
         context = req.environ['nova.context']

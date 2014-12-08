@@ -42,14 +42,11 @@ class Controller(object):
             meta_dict[key] = value
         return meta_dict
 
-    @wsgi.serializers(xml=common.MetadataTemplate)
     def index(self, req, server_id):
         """Returns the list of metadata for a given instance."""
         context = req.environ['nova.context']
         return {'metadata': self._get_metadata(context, server_id)}
 
-    @wsgi.serializers(xml=common.MetadataTemplate)
-    @wsgi.deserializers(xml=common.MetadataDeserializer)
     def create(self, req, server_id, body):
         try:
             metadata = body['metadata']
@@ -69,8 +66,6 @@ class Controller(object):
 
         return {'metadata': new_metadata}
 
-    @wsgi.serializers(xml=common.MetaItemTemplate)
-    @wsgi.deserializers(xml=common.MetaItemDeserializer)
     def update(self, req, server_id, id, body):
         try:
             meta_item = body['meta']
@@ -98,8 +93,6 @@ class Controller(object):
 
         return {'meta': meta_item}
 
-    @wsgi.serializers(xml=common.MetadataTemplate)
-    @wsgi.deserializers(xml=common.MetadataDeserializer)
     def update_all(self, req, server_id, body):
         try:
             metadata = body['metadata']
@@ -154,7 +147,6 @@ class Controller(object):
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'update metadata', server_id)
 
-    @wsgi.serializers(xml=common.MetaItemTemplate)
     def show(self, req, server_id, id):
         """Return a single metadata item."""
         context = req.environ['nova.context']

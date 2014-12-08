@@ -19,62 +19,12 @@ import webob
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 from nova import exception
 from nova.i18n import _
 from nova import network
 
 
 authorize = extensions.extension_authorizer('compute', 'floating_ip_dns')
-
-
-def make_dns_entry(elem):
-    elem.set('id')
-    elem.set('ip')
-    elem.set('type')
-    elem.set('domain')
-    elem.set('name')
-
-
-def make_domain_entry(elem):
-    elem.set('domain')
-    elem.set('scope')
-    elem.set('project')
-    elem.set('availability_zone')
-
-
-class FloatingIPDNSTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('dns_entry',
-                                       selector='dns_entry')
-        make_dns_entry(root)
-        return xmlutil.MasterTemplate(root, 1)
-
-
-class FloatingIPDNSsTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('dns_entries')
-        elem = xmlutil.SubTemplateElement(root, 'dns_entry',
-                                          selector='dns_entries')
-        make_dns_entry(elem)
-        return xmlutil.MasterTemplate(root, 1)
-
-
-class DomainTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('domain_entry',
-                                       selector='domain_entry')
-        make_domain_entry(root)
-        return xmlutil.MasterTemplate(root, 1)
-
-
-class DomainsTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('domain_entries')
-        elem = xmlutil.SubTemplateElement(root, 'domain_entry',
-                                          selector='domain_entries')
-        make_domain_entry(elem)
-        return xmlutil.MasterTemplate(root, 1)
 
 
 def _translate_dns_entry_view(dns_entry):
@@ -133,7 +83,6 @@ class FloatingIPDNSDomainController(object):
         self.network_api = network.API()
         super(FloatingIPDNSDomainController, self).__init__()
 
-    @wsgi.serializers(xml=DomainsTemplate)
     def index(self, req):
         """Return a list of available DNS domains."""
         context = req.environ['nova.context']
@@ -152,7 +101,6 @@ class FloatingIPDNSDomainController(object):
 
         return _translate_domain_entries_view(domainlist)
 
-    @wsgi.serializers(xml=DomainTemplate)
     def update(self, req, id, body):
         """Add or modify domain entry."""
         context = req.environ['nova.context']
@@ -211,7 +159,6 @@ class FloatingIPDNSEntryController(object):
         self.network_api = network.API()
         super(FloatingIPDNSEntryController, self).__init__()
 
-    @wsgi.serializers(xml=FloatingIPDNSTemplate)
     def show(self, req, domain_id, id):
         """Return the DNS entry that corresponds to domain_id and id."""
         context = req.environ['nova.context']
@@ -242,13 +189,11 @@ class FloatingIPDNSEntryController(object):
             entrylist = [_create_dns_entry(floating_ip, entry, domain)
                          for entry in entries]
             dns_entries = _translate_dns_entries_view(entrylist)
-            return wsgi.ResponseObject(dns_entries,
-                                       xml=FloatingIPDNSsTemplate)
+            return wsgi.ResponseObject(dns_entries)
 
         entry = _create_dns_entry(entries[0], id, domain)
         return _translate_dns_entry_view(entry)
 
-    @wsgi.serializers(xml=FloatingIPDNSTemplate)
     def update(self, req, domain_id, id, body):
         """Add or modify dns entry."""
         context = req.environ['nova.context']

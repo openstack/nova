@@ -19,7 +19,6 @@ from webob import exc
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 from nova.i18n import _
 
 ALIAS = 'OS-DCF'
@@ -43,21 +42,6 @@ def disk_config_from_api(value):
         raise exc.HTTPBadRequest(explanation=msg)
 
 
-class ImageDiskConfigTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('image')
-        root.set('{%s}diskConfig' % XMLNS_DCF, API_DISK_CONFIG)
-        return xmlutil.SlaveTemplate(root, 1, nsmap={ALIAS: XMLNS_DCF})
-
-
-class ImagesDiskConfigTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('images')
-        elem = xmlutil.SubTemplateElement(root, 'image', selector='images')
-        elem.set('{%s}diskConfig' % XMLNS_DCF, API_DISK_CONFIG)
-        return xmlutil.SlaveTemplate(root, 1, nsmap={ALIAS: XMLNS_DCF})
-
-
 class ImageDiskConfigController(wsgi.Controller):
     def _add_disk_config(self, context, images):
         for image in images:
@@ -71,7 +55,7 @@ class ImageDiskConfigController(wsgi.Controller):
     def show(self, req, resp_obj, id):
         context = req.environ['nova.context']
         if 'image' in resp_obj.obj and authorize(context):
-            resp_obj.attach(xml=ImageDiskConfigTemplate())
+            resp_obj.attach()
             image = resp_obj.obj['image']
             self._add_disk_config(context, [image])
 
@@ -79,24 +63,9 @@ class ImageDiskConfigController(wsgi.Controller):
     def detail(self, req, resp_obj):
         context = req.environ['nova.context']
         if 'images' in resp_obj.obj and authorize(context):
-            resp_obj.attach(xml=ImagesDiskConfigTemplate())
+            resp_obj.attach()
             images = resp_obj.obj['images']
             self._add_disk_config(context, images)
-
-
-class ServerDiskConfigTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('server')
-        root.set('{%s}diskConfig' % XMLNS_DCF, API_DISK_CONFIG)
-        return xmlutil.SlaveTemplate(root, 1, nsmap={ALIAS: XMLNS_DCF})
-
-
-class ServersDiskConfigTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('servers')
-        elem = xmlutil.SubTemplateElement(root, 'server', selector='servers')
-        elem.set('{%s}diskConfig' % XMLNS_DCF, API_DISK_CONFIG)
-        return xmlutil.SlaveTemplate(root, 1, nsmap={ALIAS: XMLNS_DCF})
 
 
 class ServerDiskConfigController(wsgi.Controller):
@@ -110,7 +79,7 @@ class ServerDiskConfigController(wsgi.Controller):
 
     def _show(self, req, resp_obj):
         if 'server' in resp_obj.obj:
-            resp_obj.attach(xml=ServerDiskConfigTemplate())
+            resp_obj.attach()
             server = resp_obj.obj['server']
             self._add_disk_config(req, [server])
 
@@ -124,7 +93,7 @@ class ServerDiskConfigController(wsgi.Controller):
     def detail(self, req, resp_obj):
         context = req.environ['nova.context']
         if 'servers' in resp_obj.obj and authorize(context):
-            resp_obj.attach(xml=ServersDiskConfigTemplate())
+            resp_obj.attach()
             servers = resp_obj.obj['servers']
             self._add_disk_config(req, servers)
 

@@ -18,8 +18,6 @@
 import webob.exc
 
 from nova.api.openstack import extensions
-from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 from nova import compute
 from nova import exception
 from nova.i18n import _
@@ -29,72 +27,12 @@ LOG = logging.getLogger(__name__)
 authorize = extensions.extension_authorizer('compute', 'hosts')
 
 
-class HostIndexTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('hosts')
-        elem = xmlutil.SubTemplateElement(root, 'host', selector='hosts')
-        elem.set('host_name')
-        elem.set('service')
-        elem.set('zone')
-
-        return xmlutil.MasterTemplate(root, 1)
-
-
-class HostUpdateTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('host')
-        root.set('host')
-        root.set('status')
-        root.set('maintenance_mode')
-
-        return xmlutil.MasterTemplate(root, 1)
-
-
-class HostActionTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('host')
-        root.set('host')
-        root.set('power_action')
-
-        return xmlutil.MasterTemplate(root, 1)
-
-
-class HostShowTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('host')
-        elem = xmlutil.make_flat_dict('resource', selector='host',
-                                      subselector='resource')
-        root.append(elem)
-
-        return xmlutil.MasterTemplate(root, 1)
-
-
-class HostUpdateDeserializer(wsgi.XMLDeserializer):
-    def default(self, string):
-        node = xmlutil.safe_minidom_parse_string(string)
-
-        updates = {}
-        updates_node = self.find_first_child_named(node, 'updates')
-        if updates_node is not None:
-            maintenance = self.find_first_child_named(updates_node,
-                                                      'maintenance_mode')
-            if maintenance is not None:
-                updates[maintenance.tagName] = self.extract_text(maintenance)
-
-            status = self.find_first_child_named(updates_node, 'status')
-            if status is not None:
-                updates[status.tagName] = self.extract_text(status)
-
-        return dict(body=updates)
-
-
 class HostController(object):
     """The Hosts API controller for the OpenStack API."""
     def __init__(self):
         self.api = compute.HostAPI()
         super(HostController, self).__init__()
 
-    @wsgi.serializers(xml=HostIndexTemplate)
     def index(self, req):
         """Returns a dict in the format:
 
@@ -148,8 +86,6 @@ class HostController(object):
                           'zone': service['availability_zone']})
         return {'hosts': hosts}
 
-    @wsgi.serializers(xml=HostUpdateTemplate)
-    @wsgi.deserializers(xml=HostUpdateDeserializer)
     def update(self, req, id, body):
         """Updates a specified body.
 
@@ -261,15 +197,12 @@ class HostController(object):
             raise webob.exc.HTTPBadRequest(explanation=e.format_message())
         return {"host": host_name, "power_action": result}
 
-    @wsgi.serializers(xml=HostActionTemplate)
     def startup(self, req, id):
         return self._host_power_action(req, host_name=id, action="startup")
 
-    @wsgi.serializers(xml=HostActionTemplate)
     def shutdown(self, req, id):
         return self._host_power_action(req, host_name=id, action="shutdown")
 
-    @wsgi.serializers(xml=HostActionTemplate)
     def reboot(self, req, id):
         return self._host_power_action(req, host_name=id, action="reboot")
 
@@ -322,7 +255,6 @@ class HostController(object):
                                     instance['ephemeral_gb'])
         return project_map
 
-    @wsgi.serializers(xml=HostShowTemplate)
     def show(self, req, id):
         """Shows the physical/usage resource given by hosts.
 

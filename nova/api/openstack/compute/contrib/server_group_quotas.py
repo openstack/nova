@@ -14,7 +14,6 @@
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 from nova import quota
 
 QUOTAS = quota.QUOTAS
@@ -39,27 +38,17 @@ class ExtendedQuotaSetsController(wsgi.Controller):
     @wsgi.extends
     def show(self, req, id, resp_obj):
         # Attach our slave template to the response object
-        resp_obj.attach(xml=ExtendedQuotaSetsTemplate())
+        resp_obj.attach()
 
     @wsgi.extends
     def update(self, req, id, body, resp_obj):
         # Attach our slave template to the response object
-        resp_obj.attach(xml=ExtendedQuotaSetsTemplate())
+        resp_obj.attach()
 
     @wsgi.extends
     def defaults(self, req, id, resp_obj):
         # Attach our slave template to the response object
-        resp_obj.attach(xml=ExtendedQuotaSetsTemplate())
-
-
-class ExtendedQuotaSetsTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('quota_set', selector='quota_set')
-        elem = xmlutil.SubTemplateElement(root, 'server_groups')
-        elem.text = 'server_groups'
-        elem = xmlutil.SubTemplateElement(root, 'server_group_members')
-        elem.text = 'server_group_members'
-        return xmlutil.SlaveTemplate(root, 1)
+        resp_obj.attach()
 
 
 class ExtendedQuotaClassSetsController(wsgi.Controller):
@@ -67,23 +56,12 @@ class ExtendedQuotaClassSetsController(wsgi.Controller):
     @wsgi.extends
     def show(self, req, id, resp_obj):
         # Attach our slave template to the response object
-        resp_obj.attach(xml=ExtendedQuotaClassSetsTemplate())
+        resp_obj.attach()
 
     @wsgi.extends
     def update(self, req, id, body, resp_obj):
         # Attach our slave template to the response object
-        resp_obj.attach(xml=ExtendedQuotaClassSetsTemplate())
-
-
-class ExtendedQuotaClassSetsTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('quota_class_set',
-                                       selector='quota_class_set')
-        elem = xmlutil.SubTemplateElement(root, 'server_groups')
-        elem.text = 'server_groups'
-        elem = xmlutil.SubTemplateElement(root, 'server_group_members')
-        elem.text = 'server_group_members'
-        return xmlutil.SlaveTemplate(root, 1)
+        resp_obj.attach()
 
 
 class Server_group_quotas(extensions.ExtensionDescriptor):

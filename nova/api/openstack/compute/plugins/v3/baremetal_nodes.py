@@ -55,13 +55,6 @@ CONF.import_opt('admin_tenant_name',
 CONF.import_opt('compute_driver', 'nova.virt.driver')
 
 
-def _interface_dict(interface_ref):
-    d = {}
-    for f in interface_fields:
-        d[f] = interface_ref.get(f)
-    return d
-
-
 def _get_ironic_client():
     """return an Ironic client."""
     # TODO(NobodyCam): Fix insecure setting

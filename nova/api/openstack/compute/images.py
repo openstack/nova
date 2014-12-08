@@ -18,7 +18,6 @@ import webob.exc
 from nova.api.openstack import common
 from nova.api.openstack.compute.views import images as views_images
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 from nova import exception
 from nova.i18n import _
 import nova.image
@@ -36,52 +35,7 @@ SUPPORTED_FILTERS = {
 }
 
 
-def make_image(elem, detailed=False):
-    elem.set('name')
-    elem.set('id')
-
-    if detailed:
-        elem.set('updated')
-        elem.set('created')
-        elem.set('status')
-        elem.set('progress')
-        elem.set('minRam')
-        elem.set('minDisk')
-
-        server = xmlutil.SubTemplateElement(elem, 'server', selector='server')
-        server.set('id')
-        xmlutil.make_links(server, 'links')
-
-        elem.append(common.MetadataTemplate())
-
-    xmlutil.make_links(elem, 'links')
-
-
-image_nsmap = {None: xmlutil.XMLNS_V11, 'atom': xmlutil.XMLNS_ATOM}
-
-
-class ImageTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('image', selector='image')
-        make_image(root, detailed=True)
-        return xmlutil.MasterTemplate(root, 1, nsmap=image_nsmap)
-
-
-class MinimalImagesTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('images')
-        elem = xmlutil.SubTemplateElement(root, 'image', selector='images')
-        make_image(elem)
-        xmlutil.make_links(root, 'images_links')
-        return xmlutil.MasterTemplate(root, 1, nsmap=image_nsmap)
-
-
-class ImagesTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('images')
-        elem = xmlutil.SubTemplateElement(root, 'image', selector='images')
-        make_image(elem, detailed=True)
-        return xmlutil.MasterTemplate(root, 1, nsmap=image_nsmap)
+image_nsmap = {}
 
 
 class Controller(wsgi.Controller):
@@ -120,7 +74,6 @@ class Controller(wsgi.Controller):
 
         return filters
 
-    @wsgi.serializers(xml=ImageTemplate)
     def show(self, req, id):
         """Return detailed information about a specific image.
 
@@ -157,7 +110,6 @@ class Controller(wsgi.Controller):
             raise webob.exc.HTTPForbidden(explanation=explanation)
         return webob.exc.HTTPNoContent()
 
-    @wsgi.serializers(xml=MinimalImagesTemplate)
     def index(self, req):
         """Return an index listing of images available to the request.
 
@@ -178,7 +130,6 @@ class Controller(wsgi.Controller):
             raise webob.exc.HTTPBadRequest(explanation=e.format_message())
         return self._view_builder.index(req, images)
 
-    @wsgi.serializers(xml=ImagesTemplate)
     def detail(self, req):
         """Return a detailed index listing of images available to the request.
 

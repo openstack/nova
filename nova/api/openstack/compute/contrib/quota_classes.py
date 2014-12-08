@@ -17,7 +17,6 @@ import webob
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 import nova.context
 from nova import db
 from nova import exception
@@ -33,20 +32,6 @@ EXTENDED_QUOTAS = {'server_groups': 'os-server-group-quotas',
 
 
 authorize = extensions.extension_authorizer('compute', 'quota_classes')
-
-
-class QuotaClassTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('quota_class_set',
-                                       selector='quota_class_set')
-        root.set('id')
-
-        for resource in QUOTAS.resources:
-            if resource not in EXTENDED_QUOTAS:
-                elem = xmlutil.SubTemplateElement(root, resource)
-                elem.text = resource
-
-        return xmlutil.MasterTemplate(root, 1)
 
 
 class QuotaClassSetsController(wsgi.Controller):
@@ -74,7 +59,6 @@ class QuotaClassSetsController(wsgi.Controller):
 
         return dict(quota_class_set=result)
 
-    @wsgi.serializers(xml=QuotaClassTemplate)
     def show(self, req, id):
         context = req.environ['nova.context']
         authorize(context)
@@ -85,7 +69,6 @@ class QuotaClassSetsController(wsgi.Controller):
         except exception.Forbidden:
             raise webob.exc.HTTPForbidden()
 
-    @wsgi.serializers(xml=QuotaClassTemplate)
     def update(self, req, id, body):
         context = req.environ['nova.context']
         authorize(context)

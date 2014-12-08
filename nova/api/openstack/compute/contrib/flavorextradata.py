@@ -24,7 +24,6 @@ attributes.  This extension adds to that list:
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 
 
 authorize = extensions.soft_extension_authorizer('compute', 'flavorextradata')
@@ -41,7 +40,7 @@ class FlavorextradataController(wsgi.Controller):
         if not authorize(req.environ['nova.context']):
             return
         if 'flavor' in resp_obj.obj:
-            resp_obj.attach(xml=FlavorextradatumTemplate())
+            resp_obj.attach()
             self._extend_flavors(req, [resp_obj.obj['flavor']])
 
     @wsgi.extends
@@ -56,7 +55,7 @@ class FlavorextradataController(wsgi.Controller):
     def detail(self, req, resp_obj):
         if not authorize(req.environ['nova.context']):
             return
-        resp_obj.attach(xml=FlavorextradataTemplate())
+        resp_obj.attach()
         self._extend_flavors(req, list(resp_obj.obj['flavors']))
 
 
@@ -73,27 +72,3 @@ class Flavorextradata(extensions.ExtensionDescriptor):
         controller = FlavorextradataController()
         extension = extensions.ControllerExtension(self, 'flavors', controller)
         return [extension]
-
-
-def make_flavor(elem):
-    elem.set('{%s}ephemeral' % Flavorextradata.namespace,
-             '%s:ephemeral' % Flavorextradata.alias)
-
-
-class FlavorextradatumTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('flavor', selector='flavor')
-        make_flavor(root)
-        alias = Flavorextradata.alias
-        namespace = Flavorextradata.namespace
-        return xmlutil.SlaveTemplate(root, 1, nsmap={alias: namespace})
-
-
-class FlavorextradataTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('flavors')
-        elem = xmlutil.SubTemplateElement(root, 'flavor', selector='flavors')
-        make_flavor(elem)
-        alias = Flavorextradata.alias
-        namespace = Flavorextradata.namespace
-        return xmlutil.SlaveTemplate(root, 1, nsmap={alias: namespace})

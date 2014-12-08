@@ -15,27 +15,9 @@
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 from nova import network
 
 authorize = extensions.soft_extension_authorizer('compute', 'extended_vif_net')
-
-
-def make_vif(elem):
-    elem.set('{%s}net_id' % Extended_virtual_interfaces_net.namespace,
-           '%s:net_id' % Extended_virtual_interfaces_net.alias)
-
-
-class ExtendedVirtualInterfaceNetTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('virtual_interfaces',
-                                       selector='virtual_interfaces')
-        elem = xmlutil.SubTemplateElement(root, 'virtual_interface',
-                                          selector='virtual_interfaces')
-        make_vif(elem)
-        return xmlutil.SlaveTemplate(root, 1,
-                             nsmap={Extended_virtual_interfaces_net.alias:
-                                    Extended_virtual_interfaces_net.namespace})
 
 
 class ExtendedServerVIFNetController(wsgi.Controller):
@@ -49,7 +31,7 @@ class ExtendedServerVIFNetController(wsgi.Controller):
         context = req.environ['nova.context']
         if authorize(context):
             # Attach our slave template to the response object
-            resp_obj.attach(xml=ExtendedVirtualInterfaceNetTemplate())
+            resp_obj.attach()
             for vif in resp_obj.obj['virtual_interfaces']:
                 vif1 = self.network_api.get_vif_by_mac_address(context,
                                                            vif['mac_address'])

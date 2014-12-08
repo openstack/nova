@@ -18,7 +18,6 @@ import webob
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 from nova import compute
 from nova import exception
 from nova.i18n import _
@@ -30,25 +29,12 @@ authorize = extensions.extension_authorizer('compute',
         'os-assisted-volume-snapshots')
 
 
-def make_snapshot(elem):
-    elem.set('id')
-    elem.set('volumeId')
-
-
-class SnapshotTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('snapshot', selector='snapshot')
-        make_snapshot(root)
-        return xmlutil.MasterTemplate(root, 1)
-
-
 class AssistedVolumeSnapshotsController(wsgi.Controller):
 
     def __init__(self):
         self.compute_api = compute.API()
         super(AssistedVolumeSnapshotsController, self).__init__()
 
-    @wsgi.serializers(xml=SnapshotTemplate)
     def create(self, req, body):
         """Creates a new snapshot."""
         context = req.environ['nova.context']

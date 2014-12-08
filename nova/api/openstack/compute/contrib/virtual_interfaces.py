@@ -18,7 +18,6 @@
 from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 from nova import compute
 from nova import network
 
@@ -27,16 +26,6 @@ authorize = extensions.extension_authorizer('compute', 'virtual_interfaces')
 
 
 vif_nsmap = {None: wsgi.XMLNS_V11}
-
-
-class VirtualInterfaceTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('virtual_interfaces')
-        elem = xmlutil.SubTemplateElement(root, 'virtual_interface',
-                                          selector='virtual_interfaces')
-        elem.set('id')
-        elem.set('mac_address')
-        return xmlutil.MasterTemplate(root, 1, nsmap=vif_nsmap)
 
 
 def _translate_vif_summary_view(_context, vif):
@@ -67,7 +56,6 @@ class ServerVirtualInterfaceController(object):
         res = [entity_maker(context, vif) for vif in limited_list]
         return {'virtual_interfaces': res}
 
-    @wsgi.serializers(xml=VirtualInterfaceTemplate)
     def index(self, req, server_id):
         """Returns the list of VIFs for a given instance."""
         authorize(req.environ['nova.context'])
