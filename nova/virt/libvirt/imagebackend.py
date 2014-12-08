@@ -539,7 +539,9 @@ class Lvm(Image):
                                   CONF.ephemeral_storage_encryption.key_size,
                                   key)
 
-        @utils.synchronized(base, external=True, lock_path=self.lock_path)
+        filename = os.path.split(base)[-1]
+
+        @utils.synchronized(filename, external=True, lock_path=self.lock_path)
         def create_lvm_image(base, size):
             base_size = disk.get_disk_size(base)
             self.verify_base_size(base, size, base_size=base_size)
