@@ -20,10 +20,10 @@ import os
 
 import mock
 from mox3 import mox
-from oslo.concurrency import processutils
 from oslo.config import cfg
 from oslo.serialization import jsonutils
 from oslo.utils import timeutils
+from oslo_concurrency import processutils
 
 from nova import context
 from nova import db

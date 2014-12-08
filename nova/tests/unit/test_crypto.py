@@ -20,7 +20,7 @@ import os
 
 import mock
 from mox3 import mox
-from oslo.concurrency import processutils
+from oslo_concurrency import processutils
 
 from nova import crypto
 from nova import db

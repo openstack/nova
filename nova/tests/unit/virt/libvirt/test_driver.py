@@ -32,14 +32,14 @@ import fixtures
 from lxml import etree
 import mock
 from mox3 import mox
-from oslo.concurrency import lockutils
-from oslo.concurrency import processutils
 from oslo.config import cfg
 from oslo.serialization import jsonutils
 from oslo.utils import encodeutils
 from oslo.utils import importutils
 from oslo.utils import timeutils
 from oslo.utils import units
+from oslo_concurrency import lockutils
+from oslo_concurrency import processutils
 import six
 
 from nova.api.metadata import base as instance_metadata

@@ -16,8 +16,8 @@
 import functools
 import inspect
 
-from oslo.concurrency import lockutils
 from oslo.utils import excutils
+from oslo_concurrency import lockutils
 
 from nova.db import base
 from nova import hooks

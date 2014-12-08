@@ -23,12 +23,12 @@ import os
 import re
 
 import netaddr
-from oslo.concurrency import processutils
 from oslo.config import cfg
 from oslo.serialization import jsonutils
 from oslo.utils import excutils
 from oslo.utils import importutils
 from oslo.utils import timeutils
+from oslo_concurrency import processutils
 import six
 
 from nova import exception
@@ -1655,7 +1655,7 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
 #            ebtables with --concurrent. In order to do that though we need
 #            libvirt to support this. Additionally since ebtables --concurrent
 #            will hang indefinitely waiting on the lock we need to teach
-#            oslo.concurrency.processutils how to timeout a long running
+#            oslo_concurrency.processutils how to timeout a long running
 #            process first. Once those are complete we can replace all of this
 #            with calls to ebtables --concurrent and a reasonable timeout.
 def _exec_ebtables(*cmd, **kwargs):

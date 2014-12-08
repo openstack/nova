@@ -19,9 +19,9 @@ import time
 import uuid
 
 from neutronclient.common import exceptions as neutron_client_exc
-from oslo.concurrency import lockutils
 from oslo.config import cfg
 from oslo.utils import excutils
+from oslo_concurrency import lockutils
 import six
 
 from nova.api.openstack import extensions

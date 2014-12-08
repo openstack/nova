@@ -15,7 +15,7 @@
 import os
 
 import mock
-from oslo.concurrency import processutils
+from oslo_concurrency import processutils
 
 from nova import exception
 from nova import test

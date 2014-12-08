@@ -15,8 +15,8 @@
 
 from neutronclient.common import exceptions
 from neutronclient.v2_0 import client as clientv20
-from oslo.concurrency import lockutils
 from oslo.config import cfg
+from oslo_concurrency import lockutils
 
 from nova.openstack.common import log as logging
 

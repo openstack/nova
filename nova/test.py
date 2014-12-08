@@ -33,11 +33,11 @@ import shutil
 import uuid
 
 import fixtures
-from oslo.concurrency import lockutils
 from oslo.config import cfg
 from oslo.config import fixture as config_fixture
 from oslo.messaging import conffixture as messaging_conffixture
 from oslo.utils import timeutils
+from oslo_concurrency import lockutils
 from oslotest import moxstubout
 import six
 import testtools

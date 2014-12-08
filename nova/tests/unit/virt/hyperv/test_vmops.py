@@ -16,9 +16,9 @@ import os
 
 from eventlet import timeout as etimeout
 import mock
-from oslo.concurrency import processutils
 from oslo.config import cfg
 from oslo.utils import units
+from oslo_concurrency import processutils
 
 from nova import exception
 from nova.tests.unit import fake_instance

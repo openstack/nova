@@ -21,11 +21,11 @@ import fixtures
 import mock
 from mox3 import mox
 import netaddr
-from oslo.concurrency import processutils
 from oslo.config import cfg
 from oslo.db import exception as db_exc
 from oslo import messaging
 from oslo.utils import importutils
+from oslo_concurrency import processutils
 import six
 
 from nova import context

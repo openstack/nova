@@ -43,7 +43,6 @@ import eventlet
 from eventlet import greenthread
 from eventlet import tpool
 from lxml import etree
-from oslo.concurrency import processutils
 from oslo.config import cfg
 from oslo.serialization import jsonutils
 from oslo.utils import encodeutils
@@ -52,6 +51,7 @@ from oslo.utils import importutils
 from oslo.utils import strutils
 from oslo.utils import timeutils
 from oslo.utils import units
+from oslo_concurrency import processutils
 import six
 
 from nova.api.metadata import base as instance_metadata

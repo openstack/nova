@@ -24,11 +24,11 @@ import re
 
 import mock
 from mox3 import mox
-from oslo.concurrency import lockutils
 from oslo.config import cfg
 from oslo.config import fixture as config_fixture
 from oslo.serialization import jsonutils
 from oslo.utils import importutils
+from oslo_concurrency import lockutils
 
 from nova.compute import api as compute_api
 from nova.compute import arch
