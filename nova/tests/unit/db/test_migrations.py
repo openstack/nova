@@ -109,16 +109,19 @@ class NovaMigrationsCheckers(test_migrations.WalkVersionsMixin):
         self.assertTrue(oslodbutils.index_exists(engine, table_name, index))
 
     def assertIndexMembers(self, engine, table, index, members):
+        # NOTE(johannes): Order of columns can matter. Most SQL databases
+        # can use the leading columns for optimizing queries that don't
+        # include all of the covered columns.
         self.assertIndexExists(engine, table, index)
 
         t = oslodbutils.get_table(engine, table)
         index_columns = None
         for idx in t.indexes:
             if idx.name == index:
-                index_columns = idx.columns.keys()
+                index_columns = [c.name for c in idx.columns]
                 break
 
-        self.assertEqual(sorted(members), sorted(index_columns))
+        self.assertEqual(members, index_columns)
 
     def _skippable_migrations(self):
         special = [
