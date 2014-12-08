@@ -455,31 +455,6 @@ class API(object):
     def get_volume_encryption_metadata(self, context, volume_id):
         return cinderclient(context).volumes.get_encryption_metadata(volume_id)
 
-    @translate_volume_exception
-    def get_volume_metadata(self, context, volume_id):
-        vol = cinderclient(context).volumes.get(volume_id)
-        return vol.metadata
-
-    @translate_volume_exception
-    def delete_volume_metadata(self, context, volume_id, keys):
-        cinderclient(context).volumes.delete_metadata(volume_id, keys)
-
-    @translate_volume_exception
-    def update_volume_metadata(self, context, volume_id,
-                               metadata, delete=False):
-        if delete:
-            # Completely replace volume metadata with one given
-            return cinderclient(context).volumes.update_all_metadata(
-                volume_id, metadata)
-        else:
-            return cinderclient(context).volumes.set_metadata(
-                volume_id, metadata)
-
-    @translate_volume_exception
-    def get_volume_metadata_value(self, context, volume_id, key):
-        vol = cinderclient(context).volumes.get(volume_id)
-        return vol.metadata.get(key)
-
     @translate_snapshot_exception
     def update_snapshot_status(self, context, snapshot_id, status):
         vs = cinderclient(context).volume_snapshots
