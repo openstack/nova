@@ -15,6 +15,7 @@
 #    under the License.
 
 
+import glob
 import os
 import re
 
@@ -100,11 +101,40 @@ def is_physical_function(PciAddress):
         return False
 
 
-def get_ifname_by_pci_address(pci_addr):
-    dev_path = "/sys/bus/pci/devices/%s/net" % (pci_addr)
+def get_ifname_by_pci_address(pci_addr, pf_interface=False):
+    """Get the interface name based on a VF's pci address
+
+    The returned interface name is either the parent PF's or that of the VF
+    itself based on the argument of pf_interface.
+    """
+    if pf_interface:
+        dev_path = "/sys/bus/pci/devices/%s/physfn/net" % (pci_addr)
+    else:
+        dev_path = "/sys/bus/pci/devices/%s/net" % (pci_addr)
     try:
         dev_info = os.listdir(dev_path)
         return dev_info.pop()
     except Exception:
-        LOG.error(_LE("PCI device %s not found") % pci_addr)
-        return None
+        raise exception.PciDeviceNotFoundById(id=pci_addr)
+
+
+def get_vf_num_by_pci_address(pci_addr):
+    """Get the VF number based on a VF's pci address
+
+    A VF is associated with an VF number, which ip link command uses to
+    configure it. This number can be obtained from the PCI device filesystem.
+    """
+    VIRTFN_RE = re.compile("virtfn(\d+)")
+    virtfns_path = "/sys/bus/pci/devices/%s/physfn/virtfn*" % (pci_addr)
+    vf_num = None
+    try:
+        for vf_path in glob.iglob(virtfns_path):
+            if re.search(pci_addr, os.readlink(vf_path)):
+                t = VIRTFN_RE.search(vf_path)
+                vf_num = t.group(1)
+                break
+    except Exception:
+        pass
+    if vf_num is None:
+        raise exception.PciDeviceNotFoundById(id=pci_addr)
+    return vf_num
