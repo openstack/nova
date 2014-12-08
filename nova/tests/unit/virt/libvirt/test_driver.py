@@ -1598,6 +1598,90 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual("hypervclock", cfg.clock.timers[3].name)
         self.assertTrue(cfg.clock.timers[3].present)
 
+        self.assertEqual(3, len(cfg.features))
+        self.assertIsInstance(cfg.features[0],
+                              vconfig.LibvirtConfigGuestFeatureACPI)
+        self.assertIsInstance(cfg.features[1],
+                              vconfig.LibvirtConfigGuestFeatureAPIC)
+        self.assertIsInstance(cfg.features[2],
+                              vconfig.LibvirtConfigGuestFeatureHyperV)
+
+    @mock.patch.object(host.Host, 'has_min_version')
+    @mock.patch.object(objects.Flavor, 'get_by_id')
+    def test_get_guest_config_windows_hyperv_feature1(self,
+                                                      mock_flavor,
+                                                      mock_version):
+        def fake_version(lv_ver=None, hv_ver=None, hv_type=None):
+            if lv_ver == (1, 0, 0) and hv_ver == (1, 1, 0):
+                return True
+            return False
+
+        mock_version.side_effect = fake_version
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = objects.Instance(**self.test_instance)
+        instance_ref['os_type'] = 'windows'
+        flavor = instance_ref.get_flavor()
+        flavor.extra_specs = {}
+        mock_flavor.return_value = flavor
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref)
+        cfg = conn._get_guest_config(instance_ref,
+                                     _fake_network_info(self.stubs, 1),
+                                     {}, disk_info)
+
+        self.assertIsInstance(cfg.clock,
+                              vconfig.LibvirtConfigGuestClock)
+        self.assertEqual(cfg.clock.offset, "localtime")
+
+        self.assertEqual(3, len(cfg.features))
+        self.assertIsInstance(cfg.features[0],
+                              vconfig.LibvirtConfigGuestFeatureACPI)
+        self.assertIsInstance(cfg.features[1],
+                              vconfig.LibvirtConfigGuestFeatureAPIC)
+        self.assertIsInstance(cfg.features[2],
+                              vconfig.LibvirtConfigGuestFeatureHyperV)
+
+        self.assertTrue(cfg.features[2].relaxed)
+        self.assertFalse(cfg.features[2].spinlocks)
+        self.assertFalse(cfg.features[2].vapic)
+
+    @mock.patch.object(host.Host, 'has_min_version')
+    @mock.patch.object(objects.Flavor, 'get_by_id')
+    def test_get_guest_config_windows_hyperv_feature2(self,
+                                                      mock_flavor,
+                                                      mock_version):
+        mock_version.return_value = True
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = objects.Instance(**self.test_instance)
+        instance_ref['os_type'] = 'windows'
+        flavor = instance_ref.get_flavor()
+        flavor.extra_specs = {}
+        mock_flavor.return_value = flavor
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref)
+        cfg = conn._get_guest_config(instance_ref,
+                                     _fake_network_info(self.stubs, 1),
+                                     {}, disk_info)
+
+        self.assertIsInstance(cfg.clock,
+                              vconfig.LibvirtConfigGuestClock)
+        self.assertEqual(cfg.clock.offset, "localtime")
+
+        self.assertEqual(3, len(cfg.features))
+        self.assertIsInstance(cfg.features[0],
+                              vconfig.LibvirtConfigGuestFeatureACPI)
+        self.assertIsInstance(cfg.features[1],
+                              vconfig.LibvirtConfigGuestFeatureAPIC)
+        self.assertIsInstance(cfg.features[2],
+                              vconfig.LibvirtConfigGuestFeatureHyperV)
+
+        self.assertTrue(cfg.features[2].relaxed)
+        self.assertTrue(cfg.features[2].spinlocks)
+        self.assertEqual(8191, cfg.features[2].spinlock_retries)
+        self.assertTrue(cfg.features[2].vapic)
+
     @mock.patch.object(objects.Flavor, 'get_by_id')
     def test_get_guest_config_with_two_nics(self, mock_flavor):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)

@@ -365,6 +365,10 @@ MIN_LIBVIRT_FSFREEZE_VERSION = (1, 2, 5)
 MIN_LIBVIRT_HYPERV_TIMER_VERSION = (1, 2, 2)
 MIN_QEMU_HYPERV_TIMER_VERSION = (2, 0, 0)
 
+MIN_LIBVIRT_HYPERV_FEATURE_VERSION = (1, 0, 0)
+MIN_LIBVIRT_HYPERV_FEATURE_EXTRA_VERSION = (1, 1, 0)
+MIN_QEMU_HYPERV_FEATURE_VERSION = (1, 1, 0)
+
 
 class LibvirtDriver(driver.ComputeDriver):
 
@@ -3665,7 +3669,7 @@ class LibvirtDriver(driver.ComputeDriver):
             tmhyperv.present = True
             clk.add_timer(tmhyperv)
 
-    def _set_features(self, guest, caps, virt_type):
+    def _set_features(self, guest, os_type, caps, virt_type):
         if virt_type == "xen":
             # PAE only makes sense in X86
             if caps.host.cpu.arch in (arch.I686, arch.X86_64):
@@ -3674,6 +3678,23 @@ class LibvirtDriver(driver.ComputeDriver):
         if virt_type not in ("lxc", "uml"):
             guest.features.append(vconfig.LibvirtConfigGuestFeatureACPI())
             guest.features.append(vconfig.LibvirtConfigGuestFeatureAPIC())
+
+        if (virt_type in ("qemu", "kvm") and
+                os_type == 'windows' and
+                self._host.has_min_version(MIN_LIBVIRT_HYPERV_FEATURE_VERSION,
+                                           MIN_QEMU_HYPERV_FEATURE_VERSION)):
+            hv = vconfig.LibvirtConfigGuestFeatureHyperV()
+            hv.relaxed = True
+
+            if self._host.has_min_version(
+                    MIN_LIBVIRT_HYPERV_FEATURE_EXTRA_VERSION):
+                hv.spinlocks = True
+                # Increase spinlock retries - value recommended by
+                # KVM maintainers who certify Windows guests
+                # with Microsoft
+                hv.spinlock_retries = 8191
+                hv.vapic = True
+            guest.features.append(hv)
 
     def _create_serial_console_devices(self, guest, instance, flavor,
                                        image_meta):
@@ -3870,7 +3891,7 @@ class LibvirtDriver(driver.ComputeDriver):
             else:
                 guest.os_boot_dev = blockinfo.get_boot_order(disk_info)
 
-        self._set_features(guest, caps, virt_type)
+        self._set_features(guest, instance.os_type, caps, virt_type)
         self._set_clock(guest, instance.os_type, image_meta, virt_type)
 
         storage_configs = self._get_guest_storage_config(
