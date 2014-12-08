@@ -330,6 +330,11 @@ class VersionNotFoundForAPIMethod(Invalid):
     msg_fmt = _("API version %(version)s is not supported on this method.")
 
 
+class InvalidGlobalAPIVersion(Invalid):
+    msg_fmt = _("Version %(req_ver)s is not supported by the API. Minimum "
+                "is %(min_ver)s and maximum is %(max_ver)s.")
+
+
 # Cannot be templated as the error syntax varies.
 # msg needs to be constructed when raised.
 class InvalidParameterValue(Invalid):
