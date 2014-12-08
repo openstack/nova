@@ -1016,9 +1016,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             self.assertEqual(vconfig.LibvirtConfigCaps, type(caps))
             self.assertNotIn('aes', [x.name for x in caps.host.cpu.features])
 
-    @mock.patch.object(objects.Flavor, 'get_by_id')
     @mock.patch.object(time, "time")
-    def test_get_guest_config(self, time_mock, mock_flavor):
+    def test_get_guest_config(self, time_mock):
         time_mock.return_value = 1234567.89
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -1039,7 +1038,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                 swap=33550336,
                                 extra_specs={})
         instance_ref = objects.Instance(**test_instance)
-        mock_flavor.return_value = flavor
 
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance_ref)
@@ -1047,7 +1045,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         cfg = conn._get_guest_config(instance_ref,
                                      _fake_network_info(self.stubs, 1),
                                      {}, disk_info,
-                                     context=ctxt)
+                                     context=ctxt, flavor=flavor)
 
         self.assertEqual(cfg.uuid, instance_ref["uuid"])
         self.assertEqual(cfg.pae, False)
@@ -1117,18 +1115,16 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual(33550336,
                          cfg.metadata[0].flavor.swap)
 
-    @mock.patch.object(objects.Flavor, 'get_by_id')
-    def test_get_guest_config_lxc(self, mock_flavor):
+    def test_get_guest_config_lxc(self):
         self.flags(virt_type='lxc', group='libvirt')
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         instance_ref = objects.Instance(**self.test_instance)
         flavor = instance_ref.get_flavor()
         flavor.extra_specs = {}
-        mock_flavor.return_value = flavor
 
         cfg = conn._get_guest_config(instance_ref,
                                     _fake_network_info(self.stubs, 1),
-                                    None, {'mapping': {}})
+                                    None, {'mapping': {}}, flavor=flavor)
         self.assertEqual(instance_ref["uuid"], cfg.uuid)
         self.assertEqual(2 * units.Mi, cfg.memory)
         self.assertEqual(1, cfg.vcpus)
@@ -1144,8 +1140,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertIsInstance(cfg.devices[2],
                               vconfig.LibvirtConfigGuestConsole)
 
-    @mock.patch.object(objects.Flavor, 'get_by_id')
-    def test_get_guest_config_lxc_with_id_maps(self, mock_flavor):
+    def test_get_guest_config_lxc_with_id_maps(self):
         self.flags(virt_type='lxc', group='libvirt')
         self.flags(uid_maps=['0:1000:100'], group='libvirt')
         self.flags(gid_maps=['0:1000:100'], group='libvirt')
@@ -1153,11 +1148,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         instance_ref = objects.Instance(**self.test_instance)
         flavor = instance_ref.get_flavor()
         flavor.extra_specs = {}
-        mock_flavor.return_value = flavor
 
         cfg = conn._get_guest_config(instance_ref,
                                      _fake_network_info(self.stubs, 1),
-                                     None, {'mapping': {}})
+                                     None, {'mapping': {}}, flavor=flavor)
         self.assertEqual(instance_ref["uuid"], cfg.uuid)
         self.assertEqual(2 * units.Mi, cfg.memory)
         self.assertEqual(1, cfg.vcpus)
@@ -6557,8 +6551,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual(info[1]['backing_file'], "file")
         self.assertEqual(info[1]['over_committed_disk_size'], 18146236825)
 
-    @mock.patch.object(objects.Flavor, 'get_by_id')
-    def test_spawn_with_network_info(self, mock_flavor):
+    def test_spawn_with_network_info(self):
         # Preparing mocks
         def fake_none(*args, **kwargs):
             return
@@ -6605,8 +6598,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         flavor = instance.get_flavor()
         flavor.extra_specs = {}
 
-        mock_flavor.return_value = flavor
-
         # Mock out the get_info method of the LibvirtDriver so that the polling
         # in the spawn method of the LibvirtDriver returns immediately
         self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, 'get_info')
@@ -6631,7 +6622,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                         fake_none)
 
             conn.spawn(self.context, instance, None, [], 'herp',
-                        network_info=network_info)
+                        network_info=network_info, flavor=flavor)
 
         path = os.path.join(CONF.instances_path, instance['name'])
         if os.path.isdir(path):
