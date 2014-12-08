@@ -37,7 +37,6 @@ from eventlet import greenthread
 from eventlet import patcher
 from eventlet import tpool
 from eventlet import util as eventlet_util
-from oslo.config import cfg
 
 from nova import exception
 from nova.i18n import _
@@ -52,18 +51,6 @@ LOG = logging.getLogger(__name__)
 
 native_threading = patcher.original("threading")
 native_Queue = patcher.original("Queue")
-
-
-libvirt_opts = [
-    cfg.StrOpt('version_cap',
-               default='1.2.2',  # Must always match the version in the gate
-               help='Limit use of features from newer libvirt versions. '
-                    'Defaults to the version that is used for automated '
-                    'testing of OpenStack.'),
-]
-
-CONF = cfg.CONF
-CONF.register_opts(libvirt_opts, 'libvirt')
 
 
 class Host(object):
@@ -414,13 +401,6 @@ class Host(object):
         try:
             if lv_ver is not None:
                 libvirt_version = conn.getLibVersion()
-
-                if CONF.libvirt.version_cap:
-                    libvirt_version_cap = utils.convert_version_to_int(
-                        utils.convert_version_to_tuple(
-                            CONF.libvirt.version_cap))
-                    if libvirt_version > libvirt_version_cap:
-                        libvirt_version = libvirt_version_cap
 
                 if libvirt_version < utils.convert_version_to_int(lv_ver):
                     return False

@@ -23,7 +23,6 @@ import mock
 from nova import exception
 from nova import test
 from nova.tests.unit.virt.libvirt import fakelibvirt
-from nova import utils
 from nova.virt import event
 from nova.virt.libvirt import host
 
@@ -305,23 +304,3 @@ class HostTestCase(test.NoDBTestCase):
         thr2.wait()
         self.assertEqual(self.connect_calls, 1)
         self.assertEqual(self.register_calls, 1)
-
-    def test_min_version_cap(self):
-        conn = fakelibvirt.Connection("qemu:///system")
-        hostimpl = host.Host("qemu:///system")
-
-        with contextlib.nested(
-                mock.patch.object(conn, 'getLibVersion'),
-                mock.patch.object(host.Host, "get_connection",
-                                  return_value=conn),
-        ) as (mock_ver, mock_conn):
-            mock_ver.return_value = utils.convert_version_to_int((1, 5, 0))
-
-            self.flags(version_cap="2.0.0", group="libvirt")
-            self.assertTrue(hostimpl.has_min_version((1, 4, 0)))
-
-            self.flags(version_cap="1.3.0", group="libvirt")
-            self.assertFalse(hostimpl.has_min_version((1, 4, 0)))
-
-            self.flags(version_cap="", group="libvirt")
-            self.assertTrue(hostimpl.has_min_version((1, 4, 0)))
