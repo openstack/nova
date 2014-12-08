@@ -20,14 +20,14 @@ from oslo.config import cfg
 from oslo.serialization import jsonutils
 from oslo.utils import units
 
-from nova import test
+from nova.tests.unit.virt.hyperv import test_base
 from nova.virt.hyperv import constants
 from nova.virt.hyperv import hostops
 
 CONF = cfg.CONF
 
 
-class HostOpsTestCase(test.NoDBTestCase):
+class HostOpsTestCase(test_base.HyperVBaseTestCase):
     """Unit tests for the Hyper-V HostOps class."""
 
     FAKE_ARCHITECTURE = 0
@@ -40,10 +40,10 @@ class HostOpsTestCase(test.NoDBTestCase):
     FAKE_TICK_COUNT = 1000000
 
     def setUp(self):
+        super(HostOpsTestCase, self).setUp()
         self._hostops = hostops.HostOps()
         self._hostops._hostutils = mock.MagicMock()
         self._hostops._pathutils = mock.MagicMock()
-        super(HostOpsTestCase, self).setUp()
 
     def test_get_cpu_info(self):
         mock_processors = mock.MagicMock()

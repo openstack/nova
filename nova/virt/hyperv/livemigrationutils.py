@@ -13,7 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import collections
 import sys
 
 if sys.platform == 'win32':
@@ -121,13 +120,10 @@ class LiveMigrationUtils(object):
         volutils_remote = volumeutilsv2.VolumeUtilsV2(dest_host)
 
         disk_paths_remote = {}
-        iscsi_targets = collections.defaultdict(int)
         for (rasd_rel_path, disk_path) in disk_paths.items():
             target = self._volutils.get_target_from_disk_path(disk_path)
             if target:
                 (target_iqn, target_lun) = target
-
-                iscsi_targets[target_iqn] += 1
 
                 dev_num = volutils_remote.get_device_number_for_target(
                     target_iqn, target_lun)
@@ -139,7 +135,7 @@ class LiveMigrationUtils(object):
                 LOG.debug("Could not retrieve iSCSI target "
                           "from disk path: %s", disk_path)
 
-        return (disk_paths_remote, iscsi_targets)
+        return disk_paths_remote
 
     def _update_planned_vm_disk_resources(self, vmutils_remote, conn_v2_remote,
                                           planned_vm, vm_name,
@@ -229,15 +225,13 @@ class LiveMigrationUtils(object):
         rmt_ip_addr_list = self._get_remote_ip_address_list(conn_v2_remote,
                                                             dest_host)
 
-        iscsi_targets = {}
         planned_vm = None
         disk_paths = self._get_physical_disk_paths(vm_name)
         if disk_paths:
             vmutils_remote = vmutilsv2.VMUtilsV2(dest_host)
-            (disk_paths_remote,
-             iscsi_targets) = self._get_remote_disk_data(vmutils_remote,
-                                                         disk_paths,
-                                                         dest_host)
+            disk_paths_remote = self._get_remote_disk_data(vmutils_remote,
+                                                           disk_paths,
+                                                           dest_host)
 
             planned_vm = self._create_remote_planned_vm(conn_v2_local,
                                                         conn_v2_remote,
@@ -251,6 +245,3 @@ class LiveMigrationUtils(object):
         new_resource_setting_data = self._get_vhd_setting_data(vm)
         self._live_migrate_vm(conn_v2_local, vm, planned_vm, rmt_ip_addr_list,
                               new_resource_setting_data, dest_host)
-
-        # In case the caller wants to log off the targets after migration
-        return iscsi_targets
