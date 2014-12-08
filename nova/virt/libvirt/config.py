@@ -1733,6 +1733,34 @@ class LibvirtConfigGuestFeaturePAE(LibvirtConfigGuestFeature):
                                                            **kwargs)
 
 
+class LibvirtConfigGuestFeatureHyperV(LibvirtConfigGuestFeature):
+
+    # QEMU requires at least this value to be set
+    MIN_SPINLOCK_RETRIES = 4095
+
+    def __init__(self, **kwargs):
+        super(LibvirtConfigGuestFeatureHyperV, self).__init__("hyperv",
+                                                              **kwargs)
+
+        self.relaxed = False
+        self.vapic = False
+        self.spinlocks = False
+        self.spinlock_retries = self.MIN_SPINLOCK_RETRIES
+
+    def format_dom(self):
+        root = super(LibvirtConfigGuestFeatureHyperV, self).format_dom()
+
+        if self.relaxed:
+            root.append(etree.Element("relaxed", state="on"))
+        if self.vapic:
+            root.append(etree.Element("vapic", state="on"))
+        if self.spinlocks:
+            root.append(etree.Element("spinlocks", state="on",
+                                      retries=str(self.spinlock_retries)))
+
+        return root
+
+
 class LibvirtConfigGuest(LibvirtConfigObject):
 
     def __init__(self, **kwargs):
