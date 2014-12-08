@@ -25,9 +25,11 @@ from oslo.utils import timeutils
 from nova.cells import messaging
 from nova.cells import utils as cells_utils
 from nova import context
+from nova import objects
 from nova import test
 from nova.tests.unit.cells import fakes
 from nova.tests.unit import fake_server_actions
+from nova.tests.unit.objects import test_flavor
 
 CONF = cfg.CONF
 CONF.import_opt('compute_topic', 'nova.compute.rpcapi')
@@ -121,6 +123,16 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
         self.mox.ReplayAll()
         self.cells_manager.build_instances(self.ctxt,
                 build_inst_kwargs=build_inst_kwargs)
+
+    def test_build_instances_old_flavor(self):
+        flavor_dict = test_flavor.fake_flavor
+        args = {'filter_properties': {'instance_type': flavor_dict}}
+        with mock.patch.object(self.msg_runner, 'build_instances') as mock_bi:
+            self.cells_manager.build_instances(self.ctxt,
+                                               build_inst_kwargs=args)
+            filter_properties = mock_bi.call_args[0][2]['filter_properties']
+            self.assertIsInstance(filter_properties['instance_type'],
+                                  objects.Flavor)
 
     def test_run_compute_api_method(self):
         # Args should just be silently passed through

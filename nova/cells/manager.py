@@ -197,6 +197,15 @@ class CellsManager(manager.Manager):
         forward the request accordingly.
         """
         # Target is ourselves first.
+        filter_properties = build_inst_kwargs.get('filter_properties')
+        if (filter_properties is not None and
+            not isinstance(filter_properties['instance_type'],
+                           objects.Flavor)):
+            # NOTE(danms): Handle pre-1.30 build_instances() call. Remove me
+            # when we bump the RPC API version to 2.0.
+            flavor = objects.Flavor(**filter_properties['instance_type'])
+            build_inst_kwargs['filter_properties'] = dict(
+                filter_properties, instance_type=flavor)
         our_cell = self.state_manager.get_my_state()
         self.msg_runner.build_instances(ctxt, our_cell, build_inst_kwargs)
 
