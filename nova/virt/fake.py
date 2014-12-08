@@ -144,7 +144,7 @@ class FakeDriver(driver.ComputeDriver):
 
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info=None, block_device_info=None,
-              instance_type=None):
+              flavor=None):
         name = instance['name']
         state = power_state.RUNNING
         fake_instance = FakeInstance(name, state, instance['uuid'])
