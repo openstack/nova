@@ -12,7 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from lxml import etree
 from oslo.serialization import jsonutils
 import webob
 
@@ -115,14 +114,3 @@ class FlavorRxtxTestV20(FlavorRxtxTestV21):
 
     def _get_app(self):
         return fakes.wsgi_app()
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class FlavorRxtxXmlTest(FlavorRxtxTestV20):
-    content_type = 'application/xml'
-
-    def _get_flavor(self, body):
-        return etree.XML(body)
-
-    def _get_flavors(self, body):
-        return etree.XML(body).getchildren()

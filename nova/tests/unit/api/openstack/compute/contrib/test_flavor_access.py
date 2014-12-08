@@ -15,7 +15,6 @@
 
 import datetime
 
-from lxml import etree
 from webob import exc
 
 from nova.api.openstack import api_version_request as api_version
@@ -381,24 +380,3 @@ class FlavorAccessTestV20(FlavorAccessTestV21):
     FlavorActionController = flavor_access_v2.FlavorActionController
     _prefix = "/v2/fake"
     validation_ex = exc.HTTPBadRequest
-
-
-class FlavorAccessSerializerTest(test.NoDBTestCase):
-    def test_serializer_empty(self):
-        serializer = flavor_access_v2.FlavorAccessTemplate()
-        text = serializer.serialize(dict(flavor_access=[]))
-        tree = etree.fromstring(text)
-        self.assertEqual(len(tree), 0)
-
-    def test_serializer(self):
-        expected = ("<?xml version='1.0' encoding='UTF-8'?>\n"
-                    '<flavor_access>'
-                    '<access tenant_id="proj2" flavor_id="2"/>'
-                    '<access tenant_id="proj3" flavor_id="2"/>'
-                    '</flavor_access>')
-        access_list = [{'flavor_id': '2', 'tenant_id': 'proj2'},
-                       {'flavor_id': '2', 'tenant_id': 'proj3'}]
-
-        serializer = flavor_access_v2.FlavorAccessTemplate()
-        text = serializer.serialize(dict(flavor_access=access_list))
-        self.assertEqual(text, expected)

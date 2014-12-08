@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<flavors xmlns="http://docs.openstack.org/compute/api/v1.1">
-  <!-- you cannot mix flavor references (i.e., with only name and id)
-       and specifications (with all attributes) in the same document
-       -->
-  <flavor name="foo" id="foo"/>
-  <flavor name="bar" id="bar" ram="bar" disk="bar" vcpus="bar"/>
-</flavors>

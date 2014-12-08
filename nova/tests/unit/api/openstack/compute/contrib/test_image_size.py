@@ -13,11 +13,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from lxml import etree
 from oslo.serialization import jsonutils
 import webob
 
-from nova.api.openstack.compute.contrib import image_size
 from nova.image import glance
 from nova import test
 from nova.tests.unit.api.openstack import fakes
@@ -122,18 +120,3 @@ class ImageSizeTestV21(test.NoDBTestCase):
 class ImageSizeTestV2(ImageSizeTestV21):
     def _get_app(self):
         return fakes.wsgi_app()
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class ImageSizeXmlTest(ImageSizeTestV2):
-    content_type = 'application/xml'
-    prefix = '{%s}' % image_size.Image_size.namespace
-
-    def _get_image(self, body):
-        return etree.XML(body)
-
-    def _get_images(self, body):
-        return etree.XML(body).getchildren()
-
-    def assertImageSize(self, image, size):
-        self.assertEqual(int(image.get('%ssize' % self.prefix)), size)

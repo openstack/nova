@@ -14,7 +14,6 @@
 
 import datetime
 
-from lxml import etree
 from oslotest import moxstubout
 
 from nova.api.openstack.compute.contrib import migrations as migrations_v2
@@ -121,28 +120,3 @@ class MigrationsTestCaseV21(test.NoDBTestCase):
 
 class MigrationsTestCaseV2(MigrationsTestCaseV21):
     migrations = migrations_v2
-
-
-class MigrationsTemplateTestV2(test.NoDBTestCase):
-    migrations = migrations_v2
-
-    def setUp(self):
-        super(MigrationsTemplateTestV2, self).setUp()
-        self.serializer = self.migrations.MigrationsTemplate()
-
-    def test_index_serialization(self):
-        migrations_out = self.migrations.output(migrations_obj)
-        res_xml = self.serializer.serialize(
-            {'migrations': migrations_out})
-
-        tree = etree.XML(res_xml)
-        children = tree.findall('migration')
-        self.assertEqual(tree.tag, 'migrations')
-        self.assertEqual(2, len(children))
-
-        for idx, child in enumerate(children):
-            self.assertEqual(child.tag, 'migration')
-            migration = migrations_out[idx]
-            for attr in migration.keys():
-                self.assertEqual(str(migration[attr]),
-                                 child.get(attr))

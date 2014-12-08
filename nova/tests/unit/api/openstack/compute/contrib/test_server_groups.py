@@ -13,13 +13,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from lxml import etree
 import webob
 
 from nova.api.openstack.compute.contrib import server_groups
 from nova.api.openstack.compute.plugins.v3 import server_groups as sg_v3
 from nova.api.openstack import extensions
-from nova.api.openstack import wsgi
 from nova import context
 import nova.db
 from nova import exception
@@ -27,7 +25,6 @@ from nova import objects
 from nova.openstack.common import uuidutils
 from nova import test
 from nova.tests.unit.api.openstack import fakes
-from nova.tests.unit import utils
 
 FAKE_UUID1 = 'a47ae74e-ab08-447f-8eee-ffd43fc46c16'
 FAKE_UUID2 = 'c6e6430a-6563-4efa-9542-5e93c9e97d18'
@@ -346,143 +343,3 @@ class ServerGroupTestV2(ServerGroupTestV21):
         ext_mgr = extensions.ExtensionManager()
         ext_mgr.extensions = {}
         self.controller = server_groups.ServerGroupController(ext_mgr)
-
-
-class TestServerGroupXMLDeserializer(test.TestCase):
-
-    def setUp(self):
-        super(TestServerGroupXMLDeserializer, self).setUp()
-        self.deserializer = server_groups.ServerGroupXMLDeserializer()
-
-    def test_create_request(self):
-        serial_request = """
-<server_group name="test">
-</server_group>"""
-        request = self.deserializer.deserialize(serial_request)
-        expected = {
-            "server_group": {
-                "name": "test",
-                "policies": []
-            },
-        }
-        self.assertEqual(request['body'], expected)
-
-    def test_update_request(self):
-        serial_request = """
-<server_group name="test">
-<policies>
-<policy>policy-1</policy>
-<policy>policy-2</policy>
-</policies>
-</server_group>"""
-        request = self.deserializer.deserialize(serial_request)
-        expected = {
-            "server_group": {
-                "name": 'test',
-                "policies": ['policy-1', 'policy-2']
-            },
-        }
-        self.assertEqual(request['body'], expected)
-
-    def test_create_request_no_name(self):
-        serial_request = """
-<server_group>
-</server_group>"""
-        request = self.deserializer.deserialize(serial_request)
-        expected = {
-            "server_group": {
-            "policies": []
-            },
-        }
-        self.assertEqual(request['body'], expected)
-
-    def test_corrupt_xml(self):
-        """Should throw a 400 error on corrupt xml."""
-        self.assertRaises(
-                exception.MalformedRequestBody,
-                self.deserializer.deserialize,
-                utils.killer_xml_body())
-
-
-class TestServerGroupXMLSerializer(test.TestCase):
-    def setUp(self):
-        super(TestServerGroupXMLSerializer, self).setUp()
-        self.namespace = wsgi.XMLNS_V11
-        self.index_serializer = server_groups.ServerGroupsTemplate()
-        self.default_serializer = server_groups.ServerGroupTemplate()
-
-    def _tag(self, elem):
-        tagname = elem.tag
-        self.assertEqual(tagname[0], '{')
-        tmp = tagname.partition('}')
-        namespace = tmp[0][1:]
-        self.assertEqual(namespace, self.namespace)
-        return tmp[2]
-
-    def _verify_server_group(self, raw_group, tree):
-        policies = raw_group['policies']
-        members = raw_group['members']
-        self.assertEqual('server_group', self._tag(tree))
-        self.assertEqual(raw_group['id'], tree.get('id'))
-        self.assertEqual(raw_group['name'], tree.get('name'))
-        self.assertEqual(3, len(tree))
-        for child in tree:
-            child_tag = self._tag(child)
-            if child_tag == 'policies':
-                self.assertEqual(len(policies), len(child))
-                for idx, gr_child in enumerate(child):
-                    self.assertEqual(self._tag(gr_child), 'policy')
-                    self.assertEqual(policies[idx],
-                                     gr_child.text)
-            elif child_tag == 'members':
-                self.assertEqual(len(members), len(child))
-                for idx, gr_child in enumerate(child):
-                    self.assertEqual(self._tag(gr_child), 'member')
-                    self.assertEqual(members[idx],
-                                     gr_child.text)
-            elif child_tag == 'metadata':
-                self.assertEqual(0, len(child))
-
-    def _verify_server_group_brief(self, raw_group, tree):
-        self.assertEqual('server_group', self._tag(tree))
-        self.assertEqual(raw_group['id'], tree.get('id'))
-        self.assertEqual(raw_group['name'], tree.get('name'))
-
-    def test_group_serializer(self):
-        policies = ["policy-1", "policy-2"]
-        members = ["1", "2"]
-        raw_group = dict(
-            id='890',
-            name='name',
-            policies=policies,
-            members=members)
-        sg_group = dict(server_group=raw_group)
-        text = self.default_serializer.serialize(sg_group)
-
-        tree = etree.fromstring(text)
-
-        self._verify_server_group(raw_group, tree)
-
-    def test_groups_serializer(self):
-        policies = ["policy-1", "policy-2",
-                    "policy-3"]
-        members = ["1", "2", "3"]
-        groups = [dict(
-                 id='890',
-                 name='test',
-                 policies=policies[0:2],
-                 members=members[0:2]),
-                 dict(
-                 id='123',
-                 name='default',
-                 policies=policies[2:],
-                 members=members[2:])]
-        sg_groups = dict(server_groups=groups)
-        text = self.index_serializer.serialize(sg_groups)
-
-        tree = etree.fromstring(text)
-
-        self.assertEqual('server_groups', self._tag(tree))
-        self.assertEqual(len(groups), len(tree))
-        for idx, child in enumerate(tree):
-            self._verify_server_group_brief(groups[idx], child)

@@ -14,8 +14,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from xml.dom import minidom
-
 import mock
 from oslo.serialization import jsonutils
 import webob
@@ -23,10 +21,8 @@ import webob.dec
 import webob.exc
 
 import nova.api.openstack
-from nova.api.openstack import common
 from nova.api.openstack import wsgi
 from nova import exception
-from nova import i18n
 from nova.i18n import _
 from nova import test
 
@@ -150,170 +146,7 @@ class TestFaults(test.NoDBTestCase):
             self.assertEqual(response.content_type, "application/json")
             self.assertEqual(expected, actual)
 
-    @test.skipXmlTest("Nova v2 XML support is disabled")
-    def test_raise(self):
-        # Ensure the ability to raise :class:`Fault` in WSGI-ified methods.
-        @webob.dec.wsgify
-        def raiser(req):
-            raise wsgi.Fault(webob.exc.HTTPNotFound(explanation='whut?'))
-
-        req = webob.Request.blank('/.xml')
-        resp = req.get_response(raiser)
-        self.assertEqual(resp.content_type, "application/xml")
-        self.assertEqual(resp.status_int, 404)
-        self.assertIn('whut?', resp.body)
-
-    @test.skipXmlTest("Nova v2 XML support is disabled")
-    def test_raise_403(self):
-        # Ensure the ability to raise :class:`Fault` in WSGI-ified methods.
-        @webob.dec.wsgify
-        def raiser(req):
-            raise wsgi.Fault(webob.exc.HTTPForbidden(explanation='whut?'))
-
-        req = webob.Request.blank('/.xml')
-        resp = req.get_response(raiser)
-        self.assertEqual(resp.content_type, "application/xml")
-        self.assertEqual(resp.status_int, 403)
-        self.assertNotIn('resizeNotAllowed', resp.body)
-        self.assertIn('forbidden', resp.body)
-
-    @test.skipXmlTest("Nova v2 XML support is disabled")
-    def test_raise_localize_explanation(self):
-        msgid = "String with params: %s"
-        params = ('blah', )
-        lazy_gettext = i18n._
-        expl = lazy_gettext(msgid) % params
-
-        @webob.dec.wsgify
-        def raiser(req):
-            raise wsgi.Fault(webob.exc.HTTPNotFound(explanation=expl))
-
-        req = webob.Request.blank('/.xml')
-        resp = req.get_response(raiser)
-        self.assertEqual(resp.content_type, "application/xml")
-        self.assertEqual(resp.status_int, 404)
-        self.assertIn((msgid % params), resp.body)
-
     def test_fault_has_status_int(self):
         # Ensure the status_int is set correctly on faults.
         fault = wsgi.Fault(webob.exc.HTTPBadRequest(explanation='what?'))
         self.assertEqual(fault.status_int, 400)
-
-    @test.skipXmlTest("Nova v2 XML support is disabled")
-    def test_xml_serializer(self):
-        # Ensure that a v1.1 request responds with a v1.1 xmlns.
-        request = webob.Request.blank('/v1.1',
-                                      headers={"Accept": "application/xml"})
-
-        fault = wsgi.Fault(webob.exc.HTTPBadRequest(explanation='scram'))
-        response = request.get_response(fault)
-
-        self.assertIn(common.XML_NS_V11, response.body)
-        self.assertEqual(response.content_type, "application/xml")
-        self.assertEqual(response.status_int, 400)
-
-
-class FaultsXMLSerializationTestV11(test.NoDBTestCase):
-    """Tests covering `nova.api.openstack.faults:Fault` class."""
-
-    def _prepare_xml(self, xml_string):
-        xml_string = xml_string.replace("  ", "")
-        xml_string = xml_string.replace("\n", "")
-        xml_string = xml_string.replace("\t", "")
-        return xml_string
-
-    def test_400_fault(self):
-        metadata = {'attributes': {"badRequest": 'code'}}
-        serializer = wsgi.XMLDictSerializer(metadata=metadata,
-                                            xmlns=common.XML_NS_V11)
-
-        fixture = {
-            "badRequest": {
-                "message": "scram",
-                "code": 400,
-            },
-        }
-
-        output = serializer.serialize(fixture)
-        actual = minidom.parseString(self._prepare_xml(output))
-
-        expected = minidom.parseString(self._prepare_xml("""
-                <badRequest code="400" xmlns="%s">
-                    <message>scram</message>
-                </badRequest>
-            """) % common.XML_NS_V11)
-
-        self.assertEqual(expected.toxml(), actual.toxml())
-
-    def test_413_fault(self):
-        metadata = {'attributes': {"overLimit": 'code'}}
-        serializer = wsgi.XMLDictSerializer(metadata=metadata,
-                                            xmlns=common.XML_NS_V11)
-
-        fixture = {
-            "overLimit": {
-                "message": "sorry",
-                "code": 413,
-                "retryAfter": 4,
-            },
-        }
-
-        output = serializer.serialize(fixture)
-        actual = minidom.parseString(self._prepare_xml(output))
-
-        expected = minidom.parseString(self._prepare_xml("""
-                <overLimit code="413" xmlns="%s">
-                    <message>sorry</message>
-                    <retryAfter>4</retryAfter>
-                </overLimit>
-            """) % common.XML_NS_V11)
-
-        self.assertEqual(expected.toxml(), actual.toxml())
-
-    def test_429_fault(self):
-        metadata = {'attributes': {"overLimit": 'code'}}
-        serializer = wsgi.XMLDictSerializer(metadata=metadata,
-                                            xmlns=common.XML_NS_V11)
-
-        fixture = {
-            "overLimit": {
-                "message": "sorry",
-                "code": 429,
-                "retryAfter": 4,
-            },
-        }
-
-        output = serializer.serialize(fixture)
-        actual = minidom.parseString(self._prepare_xml(output))
-
-        expected = minidom.parseString(self._prepare_xml("""
-                <overLimit code="429" xmlns="%s">
-                    <message>sorry</message>
-                    <retryAfter>4</retryAfter>
-                </overLimit>
-            """) % common.XML_NS_V11)
-
-        self.assertEqual(expected.toxml(), actual.toxml())
-
-    def test_404_fault(self):
-        metadata = {'attributes': {"itemNotFound": 'code'}}
-        serializer = wsgi.XMLDictSerializer(metadata=metadata,
-                                            xmlns=common.XML_NS_V11)
-
-        fixture = {
-            "itemNotFound": {
-                "message": "sorry",
-                "code": 404,
-            },
-        }
-
-        output = serializer.serialize(fixture)
-        actual = minidom.parseString(self._prepare_xml(output))
-
-        expected = minidom.parseString(self._prepare_xml("""
-                <itemNotFound code="404" xmlns="%s">
-                    <message>sorry</message>
-                </itemNotFound>
-            """) % common.XML_NS_V11)
-
-        self.assertEqual(expected.toxml(), actual.toxml())

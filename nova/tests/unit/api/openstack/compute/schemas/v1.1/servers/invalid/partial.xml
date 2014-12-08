@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<servers xmlns="http://docs.openstack.org/compute/api/v1.1">
-  <!-- server refs require the id attr -->
-  <server name="foo"/>
-</servers>

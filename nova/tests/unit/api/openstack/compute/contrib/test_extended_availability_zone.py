@@ -13,11 +13,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from lxml import etree
 from oslo.serialization import jsonutils
 import webob
 
-from nova.api.openstack.compute.contrib import extended_availability_zone
 from nova import availability_zones
 from nova import compute
 from nova.compute import vm_states
@@ -170,16 +168,3 @@ class ExtendedAvailabilityZoneTestV2(ExtendedAvailabilityZoneTestV21):
         req.headers['Accept'] = self.content_type
         res = req.get_response(fakes.wsgi_app(init_only=('servers',)))
         return res
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class ExtendedAvailabilityZoneXmlTestV2(ExtendedAvailabilityZoneTestV2):
-    content_type = 'application/xml'
-    prefix = '{%s}' % extended_availability_zone.\
-                        Extended_availability_zone.namespace
-
-    def _get_server(self, body):
-        return etree.XML(body)
-
-    def _get_servers(self, body):
-        return etree.XML(body).getchildren()

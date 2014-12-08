@@ -22,7 +22,6 @@ import re
 import urllib
 import uuid as uuid_lib
 
-from lxml import etree
 import mock
 from oslo.config import cfg
 from oslo.serialization import jsonutils
@@ -169,11 +168,6 @@ class VersionsSampleJsonTest(ApiSampleTestBaseV2):
         self._verify_response('versions-get-resp', subs, response, 200)
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class VersionsSampleXmlTest(VersionsSampleJsonTest):
-    ctype = 'xml'
-
-
 class ServersSampleBase(ApiSampleTestBaseV2):
     def _post_server(self):
         subs = {
@@ -217,17 +211,7 @@ class ServersSampleJsonTest(ServersSampleBase):
         self._verify_response('servers-details-resp', subs, response, 200)
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class ServersSampleXmlTest(ServersSampleJsonTest):
-    ctype = 'xml'
-
-
 class ServersSampleAllExtensionJsonTest(ServersSampleJsonTest):
-    all_extensions = True
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class ServersSampleAllExtensionXmlTest(ServersSampleXmlTest):
     all_extensions = True
 
 
@@ -235,11 +219,6 @@ class ServersSampleHideAddressesJsonTest(ServersSampleJsonTest):
     extension_name = '.'.join(('nova.api.openstack.compute.contrib',
                                'hide_server_addresses',
                                'Hide_server_addresses'))
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class ServersSampleHideAddressesXMLTest(ServersSampleHideAddressesJsonTest):
-    ctype = 'xml'
 
 
 class ServersSampleMultiStatusJsonTest(ServersSampleBase):
@@ -253,11 +232,6 @@ class ServersSampleMultiStatusJsonTest(ServersSampleBase):
         subs = self._get_regexes()
         subs['id'] = uuid
         self._verify_response('servers-list-resp', subs, response, 200)
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class ServersSampleMultiStatusXMLTest(ServersSampleMultiStatusJsonTest):
-    ctype = 'xml'
 
 
 class ServersMetadataJsonTest(ServersSampleBase):
@@ -321,11 +295,6 @@ class ServersMetadataJsonTest(ServersSampleBase):
         self.assertEqual(response.content, '')
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class ServersMetadataXmlTest(ServersMetadataJsonTest):
-    ctype = 'xml'
-
-
 class ServersIpsJsonTest(ServersSampleBase):
     def test_get(self):
         # Test getting a server's IP information.
@@ -342,11 +311,6 @@ class ServersIpsJsonTest(ServersSampleBase):
         self._verify_response('server-ips-network-resp', subs, response, 200)
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class ServersIpsXmlTest(ServersIpsJsonTest):
-    ctype = 'xml'
-
-
 class ExtensionsSampleJsonTest(ApiSampleTestBaseV2):
     all_extensions = True
 
@@ -354,11 +318,6 @@ class ExtensionsSampleJsonTest(ApiSampleTestBaseV2):
         response = self._do_get('extensions')
         subs = self._get_regexes()
         self._verify_response('extensions-get-resp', subs, response, 200)
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class ExtensionsSampleXmlTest(ExtensionsSampleJsonTest):
-    ctype = 'xml'
 
 
 class FlavorsSampleJsonTest(ApiSampleTestBaseV2):
@@ -372,11 +331,6 @@ class FlavorsSampleJsonTest(ApiSampleTestBaseV2):
         response = self._do_get('flavors')
         subs = self._get_regexes()
         self._verify_response('flavors-list-resp', subs, response, 200)
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class FlavorsSampleXmlTest(FlavorsSampleJsonTest):
-    ctype = 'xml'
 
 
 class HostsSampleJsonTest(ApiSampleTestBaseV2):
@@ -414,17 +368,7 @@ class HostsSampleJsonTest(ApiSampleTestBaseV2):
         self._verify_response('hosts-list-resp', subs, response, 200)
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class HostsSampleXmlTest(HostsSampleJsonTest):
-    ctype = 'xml'
-
-
 class FlavorsSampleAllExtensionJsonTest(FlavorsSampleJsonTest):
-    all_extensions = True
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class FlavorsSampleAllExtensionXmlTest(FlavorsSampleXmlTest):
     all_extensions = True
 
 
@@ -492,21 +436,11 @@ class ImagesSampleJsonTest(ApiSampleTestBaseV2):
         self._verify_response('image-meta-key-put-resp', subs, response, 200)
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class ImagesSampleXmlTest(ImagesSampleJsonTest):
-    ctype = 'xml'
-
-
 class LimitsSampleJsonTest(ApiSampleTestBaseV2):
     def test_limits_get(self):
         response = self._do_get('limits')
         subs = self._get_regexes()
         self._verify_response('limit-get-resp', subs, response, 200)
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class LimitsSampleXmlTest(LimitsSampleJsonTest):
-    ctype = 'xml'
 
 
 class ServersActionsJsonTest(ServersSampleBase):
@@ -577,17 +511,7 @@ class ServersActionsJsonTest(ServersSampleBase):
                                   'meta_val': 'foobar'})
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class ServersActionsXmlTest(ServersActionsJsonTest):
-    ctype = 'xml'
-
-
 class ServersActionsAllJsonTest(ServersActionsJsonTest):
-    all_extensions = True
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class ServersActionsAllXmlTest(ServersActionsXmlTest):
     all_extensions = True
 
 
@@ -612,11 +536,6 @@ class ServerStartStopJsonTest(ServersSampleBase):
         self._test_server_action(uuid, 'os-stop')
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class ServerStartStopXmlTest(ServerStartStopJsonTest):
-    ctype = 'xml'
-
-
 class UserDataJsonTest(ApiSampleTestBaseV2):
     extension_name = "nova.api.openstack.compute.contrib.user_data.User_data"
 
@@ -632,11 +551,6 @@ class UserDataJsonTest(ApiSampleTestBaseV2):
 
         subs.update(self._get_regexes())
         self._verify_response('userdata-post-resp', subs, response, 202)
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class UserDataXmlTest(UserDataJsonTest):
-    ctype = 'xml'
 
 
 class FlavorsExtraDataJsonTest(ApiSampleTestBaseV2):
@@ -681,11 +595,6 @@ class FlavorsExtraDataJsonTest(ApiSampleTestBaseV2):
                               subs, response, 200)
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class FlavorsExtraDataXmlTest(FlavorsExtraDataJsonTest):
-    ctype = 'xml'
-
-
 class FlavorRxtxJsonTest(ApiSampleTestBaseV2):
     extension_name = ('nova.api.openstack.compute.contrib.flavor_rxtx.'
                       'Flavor_rxtx')
@@ -725,11 +634,6 @@ class FlavorRxtxJsonTest(ApiSampleTestBaseV2):
         self._verify_response('flavor-rxtx-post-resp', subs, response, 200)
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class FlavorRxtxXmlTest(FlavorRxtxJsonTest):
-    ctype = 'xml'
-
-
 class FlavorSwapJsonTest(ApiSampleTestBaseV2):
     extension_name = ('nova.api.openstack.compute.contrib.flavor_swap.'
                       'Flavor_swap')
@@ -767,11 +671,6 @@ class FlavorSwapJsonTest(ApiSampleTestBaseV2):
                                  subs)
         subs.update(self._get_regexes())
         self._verify_response('flavor-swap-post-resp', subs, response, 200)
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class FlavorSwapXmlTest(FlavorSwapJsonTest):
-    ctype = 'xml'
 
 
 class SecurityGroupsSampleJsonTest(ServersSampleBase):
@@ -844,11 +743,6 @@ class SecurityGroupsSampleJsonTest(ServersSampleBase):
         self.assertEqual(response.content, '')
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class SecurityGroupsSampleXmlTest(SecurityGroupsSampleJsonTest):
-    ctype = 'xml'
-
-
 class SecurityGroupDefaultRulesSampleJsonTest(ServersSampleBase):
     extension_name = ('nova.api.openstack.compute.contrib'
                       '.security_group_default_rules'
@@ -875,12 +769,6 @@ class SecurityGroupDefaultRulesSampleJsonTest(ServersSampleBase):
                               {}, response, 200)
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class SecurityGroupDefaultRulesSampleXmlTest(
-                                    SecurityGroupDefaultRulesSampleJsonTest):
-    ctype = 'xml'
-
-
 class SchedulerHintsJsonTest(ApiSampleTestBaseV2):
     extension_name = ("nova.api.openstack.compute.contrib.scheduler_hints."
                      "Scheduler_hints")
@@ -896,11 +784,6 @@ class SchedulerHintsJsonTest(ApiSampleTestBaseV2):
         self._verify_response('scheduler-hints-post-resp', subs, response, 202)
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class SchedulerHintsXmlTest(SchedulerHintsJsonTest):
-    ctype = 'xml'
-
-
 class ConsoleOutputSampleJsonTest(ServersSampleBase):
     extension_name = "nova.api.openstack.compute.contrib" + \
                                      ".console_output.Console_output"
@@ -912,11 +795,6 @@ class ConsoleOutputSampleJsonTest(ServersSampleBase):
                                 {'action': 'os-getConsoleOutput'})
         subs = self._get_regexes()
         self._verify_response('console-output-post-resp', subs, response, 200)
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class ConsoleOutputSampleXmlTest(ConsoleOutputSampleJsonTest):
-        ctype = 'xml'
 
 
 class ExtendedServerAttributesJsonTest(ServersSampleBase):
@@ -945,11 +823,6 @@ class ExtendedServerAttributesJsonTest(ServersSampleBase):
         subs['instance_name'] = 'instance-\d{8}'
         subs['hypervisor_hostname'] = r'[\w\.\-]+'
         self._verify_response('servers-detail-resp', subs, response, 200)
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class ExtendedServerAttributesXmlTest(ExtendedServerAttributesJsonTest):
-    ctype = 'xml'
 
 
 class FloatingIpsJsonTest(ApiSampleTestBaseV2):
@@ -1043,16 +916,6 @@ class ExtendedFloatingIpsJsonTest(FloatingIpsJsonTest):
                          "extended_floating_ips.Extended_floating_ips")
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class FloatingIpsXmlTest(FloatingIpsJsonTest):
-    ctype = 'xml'
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class ExtendedFloatingIpsXmlTest(ExtendedFloatingIpsJsonTest):
-    ctype = 'xml'
-
-
 class FloatingIpsBulkJsonTest(ApiSampleTestBaseV2):
     extension_name = "nova.api.openstack.compute.contrib." \
         "floating_ips_bulk.Floating_ips_bulk"
@@ -1121,11 +984,6 @@ class FloatingIpsBulkJsonTest(ApiSampleTestBaseV2):
                               response, 200)
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class FloatingIpsBulkXmlTest(FloatingIpsBulkJsonTest):
-    ctype = 'xml'
-
-
 class KeyPairsSampleJsonTest(ApiSampleTestBaseV2):
     extension_name = "nova.api.openstack.compute.contrib.keypairs.Keypairs"
 
@@ -1180,11 +1038,6 @@ class KeyPairsSampleJsonTest(ApiSampleTestBaseV2):
         self._verify_response('keypairs-get-resp', subs, response, 200)
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class KeyPairsSampleXmlTest(KeyPairsSampleJsonTest):
-    ctype = 'xml'
-
-
 class RescueJsonTest(ServersSampleBase):
     extension_name = ("nova.api.openstack.compute.contrib"
                      ".rescue.Rescue")
@@ -1232,11 +1085,6 @@ class RescueJsonTest(ServersSampleBase):
         self._verify_response('server-get-resp-unrescue', subs, response, 200)
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class RescueXmlTest(RescueJsonTest):
-    ctype = 'xml'
-
-
 class ExtendedRescueWithImageJsonTest(ServersSampleBase):
     extension_name = ("nova.api.openstack.compute.contrib"
                       ".extended_rescue_with_image.Extended_rescue_with_image")
@@ -1273,11 +1121,6 @@ class ExtendedRescueWithImageJsonTest(ServersSampleBase):
         self._verify_response('server-get-resp-rescue', subs, response, 200)
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class ExtendedRescueWithImageXmlTest(ExtendedRescueWithImageJsonTest):
-    ctype = 'xml'
-
-
 class ShelveJsonTest(ServersSampleBase):
     extension_name = "nova.api.openstack.compute.contrib.shelve.Shelve"
 
@@ -1307,11 +1150,6 @@ class ShelveJsonTest(ServersSampleBase):
         self._test_server_action(uuid, 'os-unshelve', 'unshelve')
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class ShelveXmlTest(ShelveJsonTest):
-    ctype = 'xml'
-
-
 class VirtualInterfacesJsonTest(ServersSampleBase):
     extension_name = ("nova.api.openstack.compute.contrib"
                      ".virtual_interfaces.Virtual_interfaces")
@@ -1325,11 +1163,6 @@ class VirtualInterfacesJsonTest(ServersSampleBase):
         subs['mac_addr'] = '(?:[a-f0-9]{2}:){5}[a-f0-9]{2}'
 
         self._verify_response('vifs-list-resp', subs, response, 200)
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class VirtualInterfacesXmlTest(VirtualInterfacesJsonTest):
-    ctype = 'xml'
 
 
 class CloudPipeSampleJsonTest(ApiSampleTestBaseV2):
@@ -1377,11 +1210,6 @@ class CloudPipeSampleJsonTest(ApiSampleTestBaseV2):
         self._verify_response('cloud-pipe-get-resp', subs, response, 200)
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class CloudPipeSampleXmlTest(CloudPipeSampleJsonTest):
-    ctype = "xml"
-
-
 class CloudPipeUpdateJsonTest(ApiSampleTestBaseV2):
     extension_name = ("nova.api.openstack.compute.contrib"
                       ".cloudpipe_update.Cloudpipe_update")
@@ -1402,11 +1230,6 @@ class CloudPipeUpdateJsonTest(ApiSampleTestBaseV2):
                                 subs)
         self.assertEqual(response.status_code, 202)
         self.assertEqual(response.content, "")
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class CloudPipeUpdateXmlTest(CloudPipeUpdateJsonTest):
-    ctype = "xml"
 
 
 class AgentsJsonTest(ApiSampleTestBaseV2):
@@ -1505,11 +1328,6 @@ class AgentsJsonTest(ApiSampleTestBaseV2):
         self.assertEqual(response.status_code, 200)
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class AgentsXmlTest(AgentsJsonTest):
-    ctype = "xml"
-
-
 class FixedIpJsonTest(ApiSampleTestBaseV2):
     extension_name = "nova.api.openstack.compute.contrib.fixed_ips.Fixed_ips"
 
@@ -1593,11 +1411,6 @@ class FixedIpJsonTest(ApiSampleTestBaseV2):
         self._verify_response('fixedips-get-resp', project, response, 200)
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class FixedIpXmlTest(FixedIpJsonTest):
-    ctype = "xml"
-
-
 class AggregatesSampleJsonTest(ServersSampleBase):
     extension_name = "nova.api.openstack.compute.contrib" + \
                                      ".aggregates.Aggregates"
@@ -1668,11 +1481,6 @@ class AggregatesSampleJsonTest(ServersSampleBase):
                               subs, response, 200)
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class AggregatesSampleXmlTest(AggregatesSampleJsonTest):
-    ctype = 'xml'
-
-
 class CertificatesSamplesJsonTest(ApiSampleTestBaseV2):
     extension_name = ("nova.api.openstack.compute.contrib.certificates."
                       "Certificates")
@@ -1689,11 +1497,6 @@ class CertificatesSamplesJsonTest(ApiSampleTestBaseV2):
         self._verify_response('certificate-get-root-resp', subs, response, 200)
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class CertificatesSamplesXmlTest(CertificatesSamplesJsonTest):
-    ctype = 'xml'
-
-
 class UsedLimitsSamplesJsonTest(ApiSampleTestBaseV2):
     extension_name = ("nova.api.openstack.compute.contrib.used_limits."
                       "Used_limits")
@@ -1703,11 +1506,6 @@ class UsedLimitsSamplesJsonTest(ApiSampleTestBaseV2):
         response = self._do_get('limits')
         subs = self._get_regexes()
         self._verify_response('usedlimits-get-resp', subs, response, 200)
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class UsedLimitsSamplesXmlTest(UsedLimitsSamplesJsonTest):
-    ctype = "xml"
 
 
 class UsedLimitsForAdminSamplesJsonTest(ApiSampleTestBaseV2):
@@ -1723,11 +1521,6 @@ class UsedLimitsForAdminSamplesJsonTest(ApiSampleTestBaseV2):
         subs = self._get_regexes()
         return self._verify_response('usedlimitsforadmin-get-resp', subs,
                                      response, 200)
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class UsedLimitsForAdminSamplesXmlTest(UsedLimitsForAdminSamplesJsonTest):
-    ctype = "xml"
 
 
 class MultipleCreateJsonTest(ServersSampleBase):
@@ -1757,11 +1550,6 @@ class MultipleCreateJsonTest(ServersSampleBase):
         subs.update(self._get_regexes())
         self._verify_response('multiple-create-no-resv-post-resp', subs,
                               response, 202)
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class MultipleCreateXmlTest(MultipleCreateJsonTest):
-    ctype = 'xml'
 
 
 class ServicesJsonTest(ApiSampleTestBaseV2):
@@ -1846,11 +1634,6 @@ class ServicesJsonTest(ApiSampleTestBaseV2):
                                      subs, response, 200)
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class ServicesXmlTest(ServicesJsonTest):
-    ctype = 'xml'
-
-
 class ExtendedServicesJsonTest(ApiSampleTestBaseV2):
     """This extension is extending the functionalities of the
     Services extension so the funcionalities introduced by this extension
@@ -1859,12 +1642,6 @@ class ExtendedServicesJsonTest(ApiSampleTestBaseV2):
 
     extension_name = ("nova.api.openstack.compute.contrib."
                       "extended_services.Extended_services")
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class ExtendedServicesXmlTest(ExtendedServicesJsonTest):
-    """This extension is tested in the ServicesXmlTest class."""
-    ctype = 'xml'
 
 
 @mock.patch.object(db, 'service_get_all',
@@ -1904,12 +1681,6 @@ class ExtendedServicesDeleteJsonTest(ApiSampleTestBaseV2):
         response = self._do_delete('os-services/1')
         self.assertEqual(response.status_code, 204)
         self.assertEqual(response.content, "")
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class ExtendedServicesDeleteXmlTest(ExtendedServicesDeleteJsonTest):
-    """This extension is tested in the ExtendedServicesDeleteJsonTest class."""
-    ctype = 'xml'
 
 
 class SimpleTenantUsageSampleJsonTest(ServersSampleBase):
@@ -1954,11 +1725,6 @@ class SimpleTenantUsageSampleJsonTest(ServersSampleBase):
                               response, 200)
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class SimpleTenantUsageSampleXmlTest(SimpleTenantUsageSampleJsonTest):
-    ctype = "xml"
-
-
 class ServerDiagnosticsSamplesJsonTest(ServersSampleBase):
     extension_name = ("nova.api.openstack.compute.contrib.server_diagnostics."
                       "Server_diagnostics")
@@ -1969,11 +1735,6 @@ class ServerDiagnosticsSamplesJsonTest(ServersSampleBase):
         subs = self._get_regexes()
         self._verify_response('server-diagnostics-get-resp', subs,
                               response, 200)
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class ServerDiagnosticsSamplesXmlTest(ServerDiagnosticsSamplesJsonTest):
-    ctype = "xml"
 
 
 class AvailabilityZoneJsonTest(ServersSampleBase):
@@ -1990,11 +1751,6 @@ class AvailabilityZoneJsonTest(ServersSampleBase):
         subs.update(self._get_regexes())
         self._verify_response('availability-zone-post-resp', subs,
                               response, 202)
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class AvailabilityZoneXmlTest(AvailabilityZoneJsonTest):
-    ctype = "xml"
 
 
 class AdminActionsSamplesJsonTest(ServersSampleBase):
@@ -2119,11 +1875,6 @@ class AdminActionsSamplesJsonTest(ServersSampleBase):
         self.assertEqual(response.status_code, 202)
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class AdminActionsSamplesXmlTest(AdminActionsSamplesJsonTest):
-    ctype = 'xml'
-
-
 class ConsolesSampleJsonTests(ServersSampleBase):
     extension_name = ("nova.api.openstack.compute.contrib"
                                      ".consoles.Consoles")
@@ -2179,11 +1930,6 @@ class ConsolesSampleJsonTests(ServersSampleBase):
                               response, 200)
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class ConsolesSampleXmlTests(ConsolesSampleJsonTests):
-        ctype = 'xml'
-
-
 class ConsoleAuthTokensSampleJsonTests(ServersSampleBase):
     extends_name = ("nova.api.openstack.compute.contrib.consoles.Consoles")
     extension_name = ("nova.api.openstack.compute.contrib.console_auth_tokens."
@@ -2217,14 +1963,6 @@ class ConsoleAuthTokensSampleJsonTests(ServersSampleBase):
                               response, 200)
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class ConsoleAuthTokensSampleXmlTests(ConsoleAuthTokensSampleJsonTests):
-    ctype = 'xml'
-
-    def _get_console_url(self, data):
-        return etree.fromstring(data).find('url').text
-
-
 class DeferredDeleteSampleJsonTests(ServersSampleBase):
     extension_name = ("nova.api.openstack.compute.contrib"
                                      ".deferred_delete.Deferred_delete")
@@ -2252,11 +1990,6 @@ class DeferredDeleteSampleJsonTests(ServersSampleBase):
         self.assertEqual(response.content, '')
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class DeferredDeleteSampleXmlTests(DeferredDeleteSampleJsonTests):
-        ctype = 'xml'
-
-
 class QuotasSampleJsonTests(ApiSampleTestBaseV2):
     extension_name = "nova.api.openstack.compute.contrib.quotas.Quotas"
 
@@ -2279,11 +2012,6 @@ class QuotasSampleJsonTests(ApiSampleTestBaseV2):
         self._verify_response('quotas-update-post-resp', {}, response, 200)
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class QuotasSampleXmlTests(QuotasSampleJsonTests):
-    ctype = "xml"
-
-
 class ExtendedQuotasSampleJsonTests(ApiSampleTestBaseV2):
     extends_name = "nova.api.openstack.compute.contrib.quotas.Quotas"
     extension_name = ("nova.api.openstack.compute.contrib"
@@ -2302,11 +2030,6 @@ class ExtendedQuotasSampleJsonTests(ApiSampleTestBaseV2):
                                 {})
         return self._verify_response('quotas-update-post-resp', {},
                                      response, 200)
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class ExtendedQuotasSampleXmlTests(ExtendedQuotasSampleJsonTests):
-    ctype = "xml"
 
 
 class UserQuotasSampleJsonTests(ApiSampleTestBaseV2):
@@ -2339,11 +2062,6 @@ class UserQuotasSampleJsonTests(ApiSampleTestBaseV2):
                                      response, 200)
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class UserQuotasSampleXmlTests(UserQuotasSampleJsonTests):
-    ctype = "xml"
-
-
 class ExtendedIpsSampleJsonTests(ServersSampleBase):
     extension_name = ("nova.api.openstack.compute.contrib"
                       ".extended_ips.Extended_ips")
@@ -2364,11 +2082,6 @@ class ExtendedIpsSampleJsonTests(ServersSampleBase):
         subs['id'] = uuid
         subs['hostid'] = '[a-f0-9]+'
         self._verify_response('servers-detail-resp', subs, response, 200)
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class ExtendedIpsSampleXmlTests(ExtendedIpsSampleJsonTests):
-        ctype = 'xml'
 
 
 class ExtendedIpsMacSampleJsonTests(ServersSampleBase):
@@ -2397,11 +2110,6 @@ class ExtendedIpsMacSampleJsonTests(ServersSampleBase):
         self._verify_response('servers-detail-resp', subs, response, 200)
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class ExtendedIpsMacSampleXmlTests(ExtendedIpsMacSampleJsonTests):
-        ctype = 'xml'
-
-
 class ExtendedStatusSampleJsonTests(ServersSampleBase):
     extension_name = ("nova.api.openstack.compute.contrib"
                       ".extended_status.Extended_status")
@@ -2420,11 +2128,6 @@ class ExtendedStatusSampleJsonTests(ServersSampleBase):
         subs['id'] = uuid
         subs['hostid'] = '[a-f0-9]+'
         self._verify_response('servers-detail-resp', subs, response, 200)
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class ExtendedStatusSampleXmlTests(ExtendedStatusSampleJsonTests):
-        ctype = 'xml'
 
 
 class ExtendedVolumesSampleJsonTests(ServersSampleBase):
@@ -2451,11 +2154,6 @@ class ExtendedVolumesSampleJsonTests(ServersSampleBase):
         self._verify_response('servers-detail-resp', subs, response, 200)
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class ExtendedVolumesSampleXmlTests(ExtendedVolumesSampleJsonTests):
-    ctype = 'xml'
-
-
 class ServerUsageSampleJsonTests(ServersSampleBase):
     extension_name = ("nova.api.openstack.compute.contrib"
                       ".server_usage.Server_usage")
@@ -2474,11 +2172,6 @@ class ServerUsageSampleJsonTests(ServersSampleBase):
         subs['hostid'] = '[a-f0-9]+'
         return self._verify_response('servers-detail-resp', subs,
                                      response, 200)
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class ServerUsageSampleXmlTests(ServerUsageSampleJsonTests):
-        ctype = 'xml'
 
 
 class ExtendedVIFNetSampleJsonTests(ServersSampleBase):
@@ -2505,11 +2198,6 @@ class ExtendedVIFNetSampleJsonTests(ServersSampleBase):
         subs['mac_addr'] = '(?:[a-f0-9]{2}:){5}[a-f0-9]{2}'
 
         self._verify_response('vifs-list-resp', subs, response, 200)
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class ExtendedVIFNetSampleXmlTests(ExtendedIpsSampleJsonTests):
-        ctype = 'xml'
 
 
 class FlavorManageSampleJsonTests(ApiSampleTestBaseV2):
@@ -2540,11 +2228,6 @@ class FlavorManageSampleJsonTests(ApiSampleTestBaseV2):
         self.assertEqual(response.content, '')
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class FlavorManageSampleXmlTests(FlavorManageSampleJsonTests):
-    ctype = "xml"
-
-
 class ServerPasswordSampleJsonTests(ServersSampleBase):
     extension_name = ("nova.api.openstack.compute.contrib.server_password."
                       "Server_password")
@@ -2571,11 +2254,6 @@ class ServerPasswordSampleJsonTests(ServersSampleBase):
         uuid = self._post_server()
         response = self._do_delete('servers/%s/os-server-password' % uuid)
         self.assertEqual(response.status_code, 204)
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class ServerPasswordSampleXmlTests(ServerPasswordSampleJsonTests):
-    ctype = "xml"
 
 
 class DiskConfigJsonTest(ServersSampleBase):
@@ -2641,11 +2319,6 @@ class DiskConfigJsonTest(ServersSampleBase):
         self._verify_response('image-list-resp', subs, response, 200)
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class DiskConfigXmlTest(DiskConfigJsonTest):
-        ctype = 'xml'
-
-
 class OsNetworksJsonTests(ApiSampleTestBaseV2):
     extension_name = ("nova.api.openstack.compute.contrib.os_tenant_networks"
                       ".Os_tenant_networks")
@@ -2679,19 +2352,6 @@ class OsNetworksJsonTests(ApiSampleTestBaseV2):
         net = jsonutils.loads(response.content)
         response = self._do_delete('os-tenant-networks/%s' %
                                                 net["network"]["id"])
-        self.assertEqual(response.status_code, 202)
-        self.assertEqual(response.content, "")
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class OsNetworksXmlTests(OsNetworksJsonTests):
-    ctype = 'xml'
-
-    def test_delete_network(self):
-        response = self._do_post('os-tenant-networks', "networks-post-req", {})
-        net = etree.fromstring(response.content)
-        network_id = net.find('id').text
-        response = self._do_delete('os-tenant-networks/%s' % network_id)
         self.assertEqual(response.status_code, 202)
         self.assertEqual(response.content, "")
 
@@ -2752,11 +2412,6 @@ class NetworksJsonTests(ApiSampleTestBaseV2):
         self.assertEqual(response.content, "")
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class NetworksXmlTests(NetworksJsonTests):
-    ctype = 'xml'
-
-
 class ExtendedNetworksJsonTests(ApiSampleTestBaseV2):
     extends_name = ("nova.api.openstack.compute.contrib."
                     "os_networks.Os_networks")
@@ -2795,11 +2450,6 @@ class ExtendedNetworksJsonTests(ApiSampleTestBaseV2):
                                  'network-create-req', {})
         subs = self._get_regexes()
         self._verify_response('network-create-resp', subs, response, 200)
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class ExtendedNetworksXmlTests(ExtendedNetworksJsonTests):
-    ctype = 'xml'
 
 
 class NetworksAssociateJsonTests(ApiSampleTestBaseV2):
@@ -2855,11 +2505,6 @@ class NetworksAssociateJsonTests(ApiSampleTestBaseV2):
         self.assertEqual(response.content, "")
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class NetworksAssociateXmlTests(NetworksAssociateJsonTests):
-    ctype = 'xml'
-
-
 class FlavorDisabledSampleJsonTests(ApiSampleTestBaseV2):
     extension_name = ("nova.api.openstack.compute.contrib.flavor_disabled."
                       "Flavor_disabled")
@@ -2877,11 +2522,6 @@ class FlavorDisabledSampleJsonTests(ApiSampleTestBaseV2):
         response = self._do_get('flavors/detail')
         subs = self._get_regexes()
         self._verify_response('flavor-detail-get-resp', subs, response, 200)
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class FlavorDisabledSampleXmlTests(FlavorDisabledSampleJsonTests):
-    ctype = "xml"
 
 
 class QuotaClassesSampleJsonTests(ApiSampleTestBaseV2):
@@ -2903,11 +2543,6 @@ class QuotaClassesSampleJsonTests(ApiSampleTestBaseV2):
                                 {})
         self._verify_response('quota-classes-update-post-resp',
                               {}, response, 200)
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class QuotaClassesSampleXmlTests(QuotaClassesSampleJsonTests):
-    ctype = "xml"
 
 
 class CellsSampleJsonTest(ApiSampleTestBaseV2):
@@ -2963,11 +2598,6 @@ class CellsSampleJsonTest(ApiSampleTestBaseV2):
         self._verify_response('cells-get-resp', subs, response, 200)
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class CellsSampleXmlTest(CellsSampleJsonTest):
-    ctype = 'xml'
-
-
 class CellsCapacitySampleJsonTest(ApiSampleTestBaseV2):
     extends_name = ("nova.api.openstack.compute.contrib.cells.Cells")
     extension_name = ("nova.api.openstack.compute.contrib."
@@ -3012,11 +2642,6 @@ class CellsCapacitySampleJsonTest(ApiSampleTestBaseV2):
         self.mox.ReplayAll()
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class CellsCapacitySampleXmlTest(CellsCapacitySampleJsonTest):
-    ctype = 'xml'
-
-
 class BlockDeviceMappingV2BootJsonTest(ServersSampleBase):
     extension_name = ('nova.api.openstack.compute.contrib.'
                       'block_device_mapping_v2_boot.'
@@ -3037,11 +2662,6 @@ class BlockDeviceMappingV2BootJsonTest(ServersSampleBase):
         return self._post_server()
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class BlockDeviceMappingV2BootXmlTest(BlockDeviceMappingV2BootJsonTest):
-    ctype = 'xml'
-
-
 class FloatingIPPoolsSampleJsonTests(ApiSampleTestBaseV2):
     extension_name = ("nova.api.openstack.compute.contrib.floating_ip_pools."
                       "Floating_ip_pools")
@@ -3060,11 +2680,6 @@ class FloatingIPPoolsSampleJsonTests(ApiSampleTestBaseV2):
             'pool2': pool_list[1]
         }
         self._verify_response('floatingippools-list-resp', subs, response, 200)
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class FloatingIPPoolsSampleXmlTests(FloatingIPPoolsSampleJsonTests):
-    ctype = 'xml'
 
 
 class MultinicSampleJsonTest(ServersSampleBase):
@@ -3100,11 +2715,6 @@ class MultinicSampleJsonTest(ServersSampleBase):
         self.assertEqual(response.status_code, 202)
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class MultinicSampleXmlTest(MultinicSampleJsonTest):
-    ctype = "xml"
-
-
 class InstanceUsageAuditLogJsonTest(ApiSampleTestBaseV2):
     extension_name = ("nova.api.openstack.compute.contrib."
                       "instance_usage_audit_log.Instance_usage_audit_log")
@@ -3123,11 +2733,6 @@ class InstanceUsageAuditLogJsonTest(ApiSampleTestBaseV2):
         subs['hostid'] = '[a-f0-9]+'
         self._verify_response('inst-usage-audit-log-index-get-resp',
                               subs, response, 200)
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class InstanceUsageAuditLogXmlTest(InstanceUsageAuditLogJsonTest):
-    ctype = "xml"
 
 
 class FlavorExtraSpecsSampleJsonTests(ApiSampleTestBaseV2):
@@ -3177,11 +2782,6 @@ class FlavorExtraSpecsSampleJsonTests(ApiSampleTestBaseV2):
         self.assertEqual(response.content, '')
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class FlavorExtraSpecsSampleXmlTests(FlavorExtraSpecsSampleJsonTests):
-    ctype = 'xml'
-
-
 class FpingSampleJsonTests(ServersSampleBase):
     extension_name = ("nova.api.openstack.compute.contrib.fping.Fping")
 
@@ -3207,11 +2807,6 @@ class FpingSampleJsonTests(ServersSampleBase):
         self._verify_response('fping-get-details-resp', subs, response, 200)
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class FpingSampleXmlTests(FpingSampleJsonTests):
-    ctype = 'xml'
-
-
 class ExtendedAvailabilityZoneJsonTests(ServersSampleBase):
     extension_name = ("nova.api.openstack.compute.contrib"
                                 ".extended_availability_zone"
@@ -3230,11 +2825,6 @@ class ExtendedAvailabilityZoneJsonTests(ServersSampleBase):
         subs = self._get_regexes()
         subs['hostid'] = '[a-f0-9]+'
         self._verify_response('servers-detail-resp', subs, response, 200)
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class ExtendedAvailabilityZoneXmlTests(ExtendedAvailabilityZoneJsonTests):
-    ctype = 'xml'
 
 
 class EvacuateJsonTest(ServersSampleBase):
@@ -3285,11 +2875,6 @@ class EvacuateJsonTest(ServersSampleBase):
         self._verify_response('server-evacuate-resp', subs, response, 200)
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class EvacuateXmlTest(EvacuateJsonTest):
-    ctype = 'xml'
-
-
 class EvacuateFindHostSampleJsonTest(ServersSampleBase):
     extends_name = ("nova.api.openstack.compute.contrib"
                       ".evacuate.Evacuate")
@@ -3331,11 +2916,6 @@ class EvacuateFindHostSampleJsonTest(ServersSampleBase):
                 orig_sys_metadata=mock.ANY, bdms=mock.ANY, recreate=mock.ANY,
                 on_shared_storage=False, preserve_ephemeral=mock.ANY,
                 host=None)
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class EvacuateFindHostSampleXmlTests(EvacuateFindHostSampleJsonTest):
-    ctype = "xml"
 
 
 class FloatingIpDNSJsonTest(ApiSampleTestBaseV2):
@@ -3415,11 +2995,6 @@ class FloatingIpDNSJsonTest(ApiSampleTestBaseV2):
                               response, 200)
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class FloatingIpDNSXmlTest(FloatingIpDNSJsonTest):
-    ctype = 'xml'
-
-
 class InstanceActionsSampleJsonTest(ApiSampleTestBaseV2):
     extension_name = ('nova.api.openstack.compute.contrib.instance_actions.'
                       'Instance_actions')
@@ -3484,11 +3059,6 @@ class InstanceActionsSampleJsonTest(ApiSampleTestBaseV2):
                               response, 200)
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class InstanceActionsSampleXmlTest(InstanceActionsSampleJsonTest):
-        ctype = 'xml'
-
-
 class ImageSizeSampleJsonTests(ApiSampleTestBaseV2):
     extension_name = ("nova.api.openstack.compute.contrib"
                       ".image_size.Image_size")
@@ -3506,11 +3076,6 @@ class ImageSizeSampleJsonTests(ApiSampleTestBaseV2):
         response = self._do_get('images/detail')
         subs = self._get_regexes()
         self._verify_response('images-details-get-resp', subs, response, 200)
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class ImageSizeSampleXmlTests(ImageSizeSampleJsonTests):
-        ctype = 'xml'
 
 
 class ConfigDriveSampleJsonTest(ServersSampleBase):
@@ -3542,11 +3107,6 @@ class ConfigDriveSampleJsonTest(ServersSampleBase):
         subs['cdrive'] = '.*'
         self._verify_response('servers-config-drive-details-resp',
                               subs, response, 200)
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class ConfigDriveSampleXmlTest(ConfigDriveSampleJsonTest):
-    ctype = 'xml'
 
 
 class FlavorAccessSampleJsonTests(ApiSampleTestBaseV2):
@@ -3632,11 +3192,6 @@ class FlavorAccessSampleJsonTests(ApiSampleTestBaseV2):
                               exp_subs, response, 200)
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class FlavorAccessSampleXmlTests(FlavorAccessSampleJsonTests):
-    ctype = 'xml'
-
-
 @mock.patch.object(service_group_api.API, "service_is_up", lambda _: True)
 class HypervisorsSampleJsonTests(ApiSampleTestBaseV2):
     extension_name = ("nova.api.openstack.compute.contrib.hypervisors."
@@ -3682,11 +3237,6 @@ class HypervisorsSampleJsonTests(ApiSampleTestBaseV2):
         self._verify_response('hypervisors-uptime-resp', subs, response, 200)
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class HypervisorsSampleXmlTests(HypervisorsSampleJsonTests):
-    ctype = "xml"
-
-
 class ExtendedHypervisorsJsonTest(ApiSampleTestBaseV2):
     extends_name = ("nova.api.openstack.compute.contrib."
                     "hypervisors.Hypervisors")
@@ -3704,11 +3254,6 @@ class ExtendedHypervisorsJsonTest(ApiSampleTestBaseV2):
                               subs, response, 200)
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class ExtendedHypervisorsXmlTest(ExtendedHypervisorsJsonTest):
-    ctype = "xml"
-
-
 class HypervisorStatusJsonTest(ApiSampleTestBaseV2):
     extends_name = ("nova.api.openstack.compute.contrib."
                     "hypervisors.Hypervisors")
@@ -3724,11 +3269,6 @@ class HypervisorStatusJsonTest(ApiSampleTestBaseV2):
         subs.update(self._get_regexes())
         self._verify_response('hypervisors-show-with-status-resp',
                               subs, response, 200)
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class HypervisorStatusXmlTest(HypervisorStatusJsonTest):
-    ctype = 'xml'
 
 
 @mock.patch("nova.servicegroup.API.service_is_up", return_value=True)
@@ -3762,11 +3302,6 @@ class HypervisorsCellsSampleJsonTests(ApiSampleTestBaseV2):
         response = self._do_get('os-hypervisors/%s/uptime' % hypervisor_id)
         subs = {'hypervisor_id': hypervisor_id}
         self._verify_response('hypervisors-uptime-resp', subs, response, 200)
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class HypervisorsCellsSampleXmlTests(HypervisorsCellsSampleJsonTests):
-    ctype = "xml"
 
 
 class AttachInterfacesSampleJsonTest(ServersSampleBase):
@@ -3914,11 +3449,6 @@ class AttachInterfacesSampleJsonTest(ServersSampleBase):
         self.assertEqual(response.content, '')
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class AttachInterfacesSampleXmlTest(AttachInterfacesSampleJsonTest):
-    ctype = 'xml'
-
-
 class SnapshotsSampleJsonTests(ApiSampleTestBaseV2):
     extension_name = "nova.api.openstack.compute.contrib.volumes.Volumes"
 
@@ -3977,11 +3507,6 @@ class SnapshotsSampleJsonTests(ApiSampleTestBaseV2):
         self._verify_response('snapshots-show-resp', subs, response, 200)
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class SnapshotsSampleXmlTests(SnapshotsSampleJsonTests):
-    ctype = "xml"
-
-
 class AssistedVolumeSnapshotsJsonTest(ApiSampleTestBaseV2):
     """Assisted volume snapshots."""
     extension_name = ("nova.api.openstack.compute.contrib."
@@ -4020,11 +3545,6 @@ class AssistedVolumeSnapshotsJsonTest(ApiSampleTestBaseV2):
                 % snapshot_id)
         self.assertEqual(response.status_code, 204)
         self.assertEqual(response.content, '')
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class AssistedVolumeSnapshotsXmlTest(AssistedVolumeSnapshotsJsonTest):
-    ctype = "xml"
 
 
 class VolumeAttachmentsSampleBase(ServersSampleBase):
@@ -4129,11 +3649,6 @@ class VolumeAttachmentsSampleJsonTest(VolumeAttachmentsSampleBase):
         self.assertEqual(response.content, '')
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class VolumeAttachmentsSampleXmlTest(VolumeAttachmentsSampleJsonTest):
-    ctype = 'xml'
-
-
 class VolumeAttachUpdateSampleJsonTest(VolumeAttachmentsSampleBase):
     extends_name = ("nova.api.openstack.compute.contrib.volumes.Volumes")
     extension_name = ("nova.api.openstack.compute.contrib."
@@ -4157,11 +3672,6 @@ class VolumeAttachUpdateSampleJsonTest(VolumeAttachmentsSampleBase):
                                 subs)
         self.assertEqual(response.status_code, 202)
         self.assertEqual(response.content, '')
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class VolumeAttachUpdateSampleXmlTest(VolumeAttachUpdateSampleJsonTest):
-    ctype = 'xml'
 
 
 class VolumesSampleJsonTest(ServersSampleBase):
@@ -4269,11 +3779,6 @@ class VolumesSampleJsonTest(ServersSampleBase):
         self.assertEqual(response.content, '')
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class VolumesSampleXmlTest(VolumesSampleJsonTest):
-    ctype = 'xml'
-
-
 class MigrationsSamplesJsonTest(ApiSampleTestBaseV2):
     extension_name = ("nova.api.openstack.compute.contrib.migrations."
                       "Migrations")
@@ -4326,11 +3831,6 @@ class MigrationsSamplesJsonTest(ApiSampleTestBaseV2):
 
         self.assertEqual(response.status_code, 200)
         self._verify_response('migrations-get', subs, response, 200)
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class MigrationsSamplesXmlTest(MigrationsSamplesJsonTest):
-    ctype = 'xml'
 
 
 class PreserveEphemeralOnRebuildJsonTest(ServersSampleBase):
@@ -4388,11 +3888,6 @@ class PreserveEphemeralOnRebuildJsonTest(ServersSampleBase):
         self.assertEqual(response.status_code, 202)
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class PreserveEphemeralOnRebuildXmlTest(PreserveEphemeralOnRebuildJsonTest):
-    ctype = 'xml'
-
-
 class ServerExternalEventsJsonTest(ServersSampleBase):
     extension_name = ('nova.api.openstack.compute.contrib.'
                       'server_external_events.Server_external_events')
@@ -4410,11 +3905,6 @@ class ServerExternalEventsJsonTest(ServersSampleBase):
                                  subs)
         subs.update(self._get_regexes())
         self._verify_response('event-create-resp', subs, response, 200)
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class ServerExternalEventsXmlTest(ServerExternalEventsJsonTest):
-    ctype = 'xml'
 
 
 class ServerGroupsSampleJsonTest(ServersSampleBase):
@@ -4468,31 +3958,12 @@ class ServerGroupsSampleJsonTest(ServersSampleBase):
         self.assertEqual(response.status_code, 204)
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class ServerGroupsSampleXmlTest(ServerGroupsSampleJsonTest):
-    ctype = 'xml'
-
-
 class ServerGroupQuotas_LimitsSampleJsonTest(LimitsSampleJsonTest):
     extension_name = ("nova.api.openstack.compute.contrib."
                       "server_group_quotas.Server_group_quotas")
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class ServerGroupQuotas_LimitsSampleXmlTest(LimitsSampleXmlTest):
-    extension_name = ("nova.api.openstack.compute.contrib."
-                      "server_group_quotas.Server_group_quotas")
-
-
 class ServerGroupQuotas_UsedLimitsSamplesJsonTest(UsedLimitsSamplesJsonTest):
-    extension_name = ("nova.api.openstack.compute.contrib."
-               "server_group_quotas.Server_group_quotas")
-    extends_name = ("nova.api.openstack.compute.contrib.used_limits."
-                    "Used_limits")
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class ServerGroupQuotas_UsedLimitsSamplesXmlTest(UsedLimitsSamplesXmlTest):
     extension_name = ("nova.api.openstack.compute.contrib."
                "server_group_quotas.Server_group_quotas")
     extends_name = ("nova.api.openstack.compute.contrib.used_limits."
@@ -4505,24 +3976,8 @@ class ServerGroupQuotas_QuotasSampleJsonTests(QuotasSampleJsonTests):
     extends_name = "nova.api.openstack.compute.contrib.quotas.Quotas"
 
 
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class ServerGroupQuotas_QuotasSampleXmlTests(QuotasSampleXmlTests):
-    extension_name = ("nova.api.openstack.compute.contrib."
-               "server_group_quotas.Server_group_quotas")
-    extends_name = "nova.api.openstack.compute.contrib.quotas.Quotas"
-
-
 class ServerGroupQuotasQuota_ClassesSampleJsonTests(
            QuotaClassesSampleJsonTests):
-    extension_name = ("nova.api.openstack.compute.contrib."
-              "server_group_quotas.Server_group_quotas")
-    extends_name = ("nova.api.openstack.compute.contrib.quota_classes."
-                    "Quota_classes")
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class ServerGroupQuotas_QuotaClassesSampleXmlTests(
-           QuotaClassesSampleXmlTests):
     extension_name = ("nova.api.openstack.compute.contrib."
               "server_group_quotas.Server_group_quotas")
     extends_name = ("nova.api.openstack.compute.contrib.quota_classes."
@@ -4539,8 +3994,3 @@ class ServerSortKeysJsonTests(ServersSampleBase):
         subs = self._get_regexes()
         self._verify_response('server-sort-keys-list-resp', subs, response,
                               200)
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class ServerSortKeysXmlTests(ServerSortKeysJsonTests):
-    ctype = 'xml'

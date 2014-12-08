@@ -13,7 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from lxml import etree
 import testtools
 import webob.exc
 
@@ -27,7 +26,6 @@ from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_hosts
-from nova.tests.unit import utils
 
 
 def stub_service_get_all(context, disabled=None):
@@ -414,89 +412,3 @@ class HostTestCaseV20(HostTestCaseV21):
 
     def test_list_hosts_with_invalid_service(self):
         pass
-
-
-class HostSerializerTest(test.TestCase):
-    def setUp(self):
-        super(HostSerializerTest, self).setUp()
-        self.deserializer = os_hosts_v2.HostUpdateDeserializer()
-
-    def test_index_serializer(self):
-        serializer = os_hosts_v2.HostIndexTemplate()
-        text = serializer.serialize(fake_hosts.OS_API_HOST_LIST)
-
-        tree = etree.fromstring(text)
-
-        self.assertEqual('hosts', tree.tag)
-        self.assertEqual(len(fake_hosts.HOST_LIST), len(tree))
-        for i in range(len(fake_hosts.HOST_LIST)):
-            self.assertEqual('host', tree[i].tag)
-            self.assertEqual(fake_hosts.HOST_LIST[i]['host_name'],
-                             tree[i].get('host_name'))
-            self.assertEqual(fake_hosts.HOST_LIST[i]['service'],
-                             tree[i].get('service'))
-            self.assertEqual(fake_hosts.HOST_LIST[i]['zone'],
-                             tree[i].get('zone'))
-
-    def test_update_serializer_with_status(self):
-        exemplar = dict(host='host_c1', status='enabled')
-        serializer = os_hosts_v2.HostUpdateTemplate()
-        text = serializer.serialize(exemplar)
-
-        tree = etree.fromstring(text)
-
-        self.assertEqual('host', tree.tag)
-        for key, value in exemplar.items():
-            self.assertEqual(value, tree.get(key))
-
-    def test_update_serializer_with_maintenance_mode(self):
-        exemplar = dict(host='host_c1', maintenance_mode='enabled')
-        serializer = os_hosts_v2.HostUpdateTemplate()
-        text = serializer.serialize(exemplar)
-
-        tree = etree.fromstring(text)
-
-        self.assertEqual('host', tree.tag)
-        for key, value in exemplar.items():
-            self.assertEqual(value, tree.get(key))
-
-    def test_update_serializer_with_maintenance_mode_and_status(self):
-        exemplar = dict(host='host_c1',
-                        maintenance_mode='enabled',
-                        status='enabled')
-        serializer = os_hosts_v2.HostUpdateTemplate()
-        text = serializer.serialize(exemplar)
-
-        tree = etree.fromstring(text)
-
-        self.assertEqual('host', tree.tag)
-        for key, value in exemplar.items():
-            self.assertEqual(value, tree.get(key))
-
-    def test_action_serializer(self):
-        exemplar = dict(host='host_c1', power_action='reboot')
-        serializer = os_hosts_v2.HostActionTemplate()
-        text = serializer.serialize(exemplar)
-
-        tree = etree.fromstring(text)
-
-        self.assertEqual('host', tree.tag)
-        for key, value in exemplar.items():
-            self.assertEqual(value, tree.get(key))
-
-    def test_update_deserializer(self):
-        exemplar = dict(status='enabled', maintenance_mode='disable')
-        intext = """<?xml version='1.0' encoding='UTF-8'?>
-    <updates>
-        <status>enabled</status>
-        <maintenance_mode>disable</maintenance_mode>
-    </updates>"""
-        result = self.deserializer.deserialize(intext)
-
-        self.assertEqual(dict(body=exemplar), result)
-
-    def test_corrupt_xml(self):
-        self.assertRaises(
-                exception.MalformedRequestBody,
-                self.deserializer.deserialize,
-                utils.killer_xml_body())

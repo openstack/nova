@@ -375,29 +375,3 @@ class FlavorsExtraSpecsTestV21(test.TestCase):
 class FlavorsExtraSpecsTestV2(FlavorsExtraSpecsTestV21):
     bad_request = webob.exc.HTTPBadRequest
     flavorextraspecs = flavorextraspecs_v2
-
-
-class FlavorsExtraSpecsXMLSerializerTest(test.TestCase):
-    def test_serializer(self):
-        serializer = flavorextraspecs_v2.ExtraSpecsTemplate()
-        expected = ("<?xml version='1.0' encoding='UTF-8'?>\n"
-                    '<extra_specs><key1>value1</key1></extra_specs>')
-        text = serializer.serialize(dict(extra_specs={"key1": "value1"}))
-        self.assertEqual(text, expected)
-
-    def test_show_update_serializer(self):
-        serializer = flavorextraspecs_v2.ExtraSpecTemplate()
-        expected = ("<?xml version='1.0' encoding='UTF-8'?>\n"
-                    '<extra_spec key="key1">value1</extra_spec>')
-        text = serializer.serialize(dict({"key1": "value1"}))
-        self.assertEqual(text, expected)
-
-    def test_serializer_with_colon_tagname(self):
-        # Our test object to serialize
-        obj = {'extra_specs': {'foo:bar': '999'}}
-        serializer = flavorextraspecs_v2.ExtraSpecsTemplate()
-        expected_xml = (("<?xml version='1.0' encoding='UTF-8'?>\n"
-                    '<extra_specs><foo:bar xmlns:foo="foo">999</foo:bar>'
-                    '</extra_specs>'))
-        result = serializer.serialize(obj)
-        self.assertEqual(expected_xml, result)

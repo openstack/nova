@@ -13,11 +13,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from lxml import etree
 from oslo.serialization import jsonutils
 import webob
 
-from nova.api.openstack.compute.contrib import extended_volumes
 from nova import compute
 from nova import db
 from nova import objects
@@ -91,11 +89,7 @@ class ExtendedVolumesTest(test.TestCase):
         self.assertEqual(res.status_int, 200)
         server = self._get_server(res.body)
         exp_volumes = [{'id': UUID1}, {'id': UUID2}]
-        if self.content_type == 'application/json':
-            actual = server.get('%svolumes_attached' % self.prefix)
-        elif self.content_type == 'application/xml':
-            actual = [dict(elem.items()) for elem in
-                      server.findall('%svolume_attached' % self.prefix)]
+        actual = server.get('%svolumes_attached' % self.prefix)
         self.assertEqual(exp_volumes, actual)
 
     def test_detail(self):
@@ -105,21 +99,5 @@ class ExtendedVolumesTest(test.TestCase):
         self.assertEqual(res.status_int, 200)
         exp_volumes = [{'id': UUID1}, {'id': UUID2}]
         for i, server in enumerate(self._get_servers(res.body)):
-            if self.content_type == 'application/json':
-                actual = server.get('%svolumes_attached' % self.prefix)
-            elif self.content_type == 'application/xml':
-                actual = [dict(elem.items()) for elem in
-                          server.findall('%svolume_attached' % self.prefix)]
+            actual = server.get('%svolumes_attached' % self.prefix)
             self.assertEqual(exp_volumes, actual)
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class ExtendedVolumesXmlTest(ExtendedVolumesTest):
-    content_type = 'application/xml'
-    prefix = '{%s}' % extended_volumes.Extended_volumes.namespace
-
-    def _get_server(self, body):
-        return etree.XML(body)
-
-    def _get_servers(self, body):
-        return etree.XML(body).getchildren()

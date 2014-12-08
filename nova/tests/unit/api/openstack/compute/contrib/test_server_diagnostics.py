@@ -12,13 +12,11 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-from lxml import etree
+
 import mock
 from oslo.serialization import jsonutils
 
 from nova.api.openstack import compute
-from nova.api.openstack.compute.contrib import server_diagnostics
-from nova.api.openstack import wsgi
 from nova.compute import api as compute_api
 from nova import exception
 from nova import test
@@ -100,29 +98,3 @@ class ServerDiagnosticsTestV2(ServerDiagnosticsTestV21):
             osapi_compute_ext_list=['Server_diagnostics'])
 
         self.router = compute.APIRouter(init_only=('servers', 'diagnostics'))
-
-
-class TestServerDiagnosticsXMLSerializer(test.NoDBTestCase):
-    namespace = wsgi.XMLNS_V11
-
-    def _tag(self, elem):
-        tagname = elem.tag
-        self.assertEqual(tagname[0], '{')
-        tmp = tagname.partition('}')
-        namespace = tmp[0][1:]
-        self.assertEqual(namespace, self.namespace)
-        return tmp[2]
-
-    def test_index_serializer(self):
-        serializer = server_diagnostics.ServerDiagnosticsTemplate()
-        exemplar = dict(diag1='foo', diag2='bar')
-        text = serializer.serialize(exemplar)
-
-        tree = etree.fromstring(text)
-
-        self.assertEqual('diagnostics', self._tag(tree))
-        self.assertEqual(len(tree), len(exemplar))
-        for child in tree:
-            tag = self._tag(child)
-            self.assertIn(tag, exemplar)
-            self.assertEqual(child.text, exemplar[tag])

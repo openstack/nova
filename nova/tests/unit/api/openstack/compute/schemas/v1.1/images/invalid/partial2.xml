@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<images xmlns="http://docs.openstack.org/compute/api/v1.1">
-  <!-- an image must be either a ref, with *only* name and id attrs,
-       or fully specified, with name, id, updated, created, status,
-       and a metadata child -->
-  <image name="foo" id="foo" updated="foo"/>
-</images>

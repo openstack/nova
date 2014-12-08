@@ -15,11 +15,9 @@
 
 import itertools
 
-from lxml import etree
 from oslo.serialization import jsonutils
 import webob
 
-from nova.api.openstack import wsgi
 from nova import compute
 from nova.compute import vm_states
 from nova import db
@@ -151,23 +149,3 @@ class HideServerAddressesTestV2(HideServerAddressesTestV21):
                 'nova.api.openstack.compute.contrib.select_extensions'],
             osapi_compute_ext_list=['Hide_server_addresses'])
         self.wsgi_app = fakes.wsgi_app(init_only=('servers',))
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class HideAddressesXmlTest(HideServerAddressesTestV2):
-    content_type = 'application/xml'
-
-    @staticmethod
-    def _get_server(body):
-        return etree.XML(body)
-
-    @staticmethod
-    def _get_servers(body):
-        return etree.XML(body).getchildren()
-
-    @staticmethod
-    def _get_addresses(server):
-        addresses = server.find('{%s}addresses' % wsgi.XMLNS_V11)
-        if addresses is None:
-            return SENTINEL
-        return addresses

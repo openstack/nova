@@ -17,7 +17,6 @@
 import datetime
 import uuid as stdlib_uuid
 
-from lxml import etree
 from oslo.utils import timeutils
 import webob
 
@@ -268,46 +267,3 @@ class ConsolesControllerTestV21(test.NoDBTestCase):
 class ConsolesControllerTestV2(ConsolesControllerTestV21):
     def _set_up_controller(self):
         self.controller = consoles_v2.Controller()
-
-
-class TestConsolesXMLSerializer(test.NoDBTestCase):
-    def test_show(self):
-        fixture = {'console': {'id': 20,
-                               'password': 'fake_password',
-                               'port': 'fake_port',
-                               'host': 'fake_hostname',
-                               'console_type': 'fake_type'}}
-
-        output = consoles_v2.ConsoleTemplate().serialize(fixture)
-        res_tree = etree.XML(output)
-
-        self.assertEqual(res_tree.tag, 'console')
-        self.assertEqual(res_tree.xpath('id')[0].text, '20')
-        self.assertEqual(res_tree.xpath('port')[0].text, 'fake_port')
-        self.assertEqual(res_tree.xpath('host')[0].text, 'fake_hostname')
-        self.assertEqual(res_tree.xpath('password')[0].text, 'fake_password')
-        self.assertEqual(res_tree.xpath('console_type')[0].text, 'fake_type')
-
-    def test_index(self):
-        fixture = {'consoles': [{'console': {'id': 10,
-                                             'console_type': 'fake_type'}},
-                                {'console': {'id': 11,
-                                             'console_type': 'fake_type2'}}]}
-
-        output = consoles_v2.ConsolesTemplate().serialize(fixture)
-        res_tree = etree.XML(output)
-
-        self.assertEqual(res_tree.tag, 'consoles')
-        self.assertEqual(len(res_tree), 2)
-        self.assertEqual(res_tree[0].tag, 'console')
-        self.assertEqual(res_tree[1].tag, 'console')
-        self.assertEqual(len(res_tree[0]), 1)
-        self.assertEqual(res_tree[0][0].tag, 'console')
-        self.assertEqual(len(res_tree[1]), 1)
-        self.assertEqual(res_tree[1][0].tag, 'console')
-        self.assertEqual(res_tree[0][0].xpath('id')[0].text, '10')
-        self.assertEqual(res_tree[1][0].xpath('id')[0].text, '11')
-        self.assertEqual(res_tree[0][0].xpath('console_type')[0].text,
-                         'fake_type')
-        self.assertEqual(res_tree[1][0].xpath('console_type')[0].text,
-                         'fake_type2')

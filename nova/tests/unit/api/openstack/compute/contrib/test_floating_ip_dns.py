@@ -16,7 +16,6 @@
 
 import urllib
 
-from lxml import etree
 import mock
 import webob
 
@@ -398,77 +397,3 @@ class FloatingIpDNSTestV2(FloatingIpDNSTestV21):
 
     def _bad_request(self):
         return webob.exc.HTTPUnprocessableEntity
-
-
-class FloatingIpDNSSerializerTestV2(test.TestCase):
-    floating_ip_dns = fipdns_v2
-
-    def test_domains(self):
-        serializer = self.floating_ip_dns.DomainsTemplate()
-        text = serializer.serialize(dict(
-                domain_entries=[
-                    dict(domain=domain, scope='public', project='testproject'),
-                    dict(domain=domain2, scope='private',
-                         availability_zone='avzone')]))
-
-        tree = etree.fromstring(text)
-        self.assertEqual('domain_entries', tree.tag)
-        self.assertEqual(2, len(tree))
-        self.assertEqual(domain, tree[0].get('domain'))
-        self.assertEqual(domain2, tree[1].get('domain'))
-        self.assertEqual('avzone', tree[1].get('availability_zone'))
-
-    def test_domain_serializer(self):
-        serializer = self.floating_ip_dns.DomainTemplate()
-        text = serializer.serialize(dict(
-                domain_entry=dict(domain=domain,
-                                  scope='public',
-                                  project='testproject')))
-
-        tree = etree.fromstring(text)
-        self.assertEqual('domain_entry', tree.tag)
-        self.assertEqual(domain, tree.get('domain'))
-        self.assertEqual('testproject', tree.get('project'))
-
-    def test_entries_serializer(self):
-        serializer = self.floating_ip_dns.FloatingIPDNSsTemplate()
-        text = serializer.serialize(dict(
-                dns_entries=[
-                    dict(ip=test_ipv4_address,
-                         type='A',
-                         domain=domain,
-                         name=name),
-                    dict(ip=test_ipv4_address2,
-                         type='C',
-                         domain=domain,
-                         name=name2)]))
-
-        tree = etree.fromstring(text)
-        self.assertEqual('dns_entries', tree.tag)
-        self.assertEqual(2, len(tree))
-        self.assertEqual('dns_entry', tree[0].tag)
-        self.assertEqual('dns_entry', tree[1].tag)
-        self.assertEqual(test_ipv4_address, tree[0].get('ip'))
-        self.assertEqual('A', tree[0].get('type'))
-        self.assertEqual(domain, tree[0].get('domain'))
-        self.assertEqual(name, tree[0].get('name'))
-        self.assertEqual(test_ipv4_address2, tree[1].get('ip'))
-        self.assertEqual('C', tree[1].get('type'))
-        self.assertEqual(domain, tree[1].get('domain'))
-        self.assertEqual(name2, tree[1].get('name'))
-
-    def test_entry_serializer(self):
-        serializer = self.floating_ip_dns.FloatingIPDNSTemplate()
-        text = serializer.serialize(dict(
-                dns_entry=dict(
-                    ip=test_ipv4_address,
-                    type='A',
-                    domain=domain,
-                    name=name)))
-
-        tree = etree.fromstring(text)
-
-        self.assertEqual('dns_entry', tree.tag)
-        self.assertEqual(test_ipv4_address, tree.get('ip'))
-        self.assertEqual(domain, tree.get('domain'))
-        self.assertEqual(name, tree.get('name'))

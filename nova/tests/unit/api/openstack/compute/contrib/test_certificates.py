@@ -14,7 +14,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from lxml import etree
 import mock
 from mox3 import mox
 from webob import exc
@@ -122,19 +121,3 @@ class CertificatesTestV2(CertificatesTestV21):
     url = '/v2/fake/os-certificates'
     certificate_show_extension = 'compute_extension:certificates'
     certificate_create_extension = 'compute_extension:certificates'
-
-
-class CertificatesSerializerTest(test.NoDBTestCase):
-    def test_index_serializer(self):
-        serializer = certificates_v2.CertificateTemplate()
-        text = serializer.serialize(dict(
-                certificate=dict(
-                    data='fakecert',
-                    private_key='fakepk'),
-                ))
-
-        tree = etree.fromstring(text)
-
-        self.assertEqual('certificate', tree.tag)
-        self.assertEqual('fakepk', tree.get('private_key'))
-        self.assertEqual('fakecert', tree.get('data'))

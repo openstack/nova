@@ -15,11 +15,9 @@
 
 import datetime
 
-from lxml import etree
 from oslo.serialization import jsonutils
 from oslo.utils import timeutils
 
-from nova.api.openstack.compute.contrib import server_usage
 from nova import compute
 from nova import db
 from nova import exception
@@ -146,15 +144,3 @@ class ServerUsageTestV20(ServerUsageTestV21):
 
     def _get_app(self):
         return fakes.wsgi_app(init_only=('servers',))
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class ServerUsageXmlTest(ServerUsageTestV20):
-    content_type = 'application/xml'
-    prefix = '{%s}' % server_usage.Server_usage.namespace
-
-    def _get_server(self, body):
-        return etree.XML(body)
-
-    def _get_servers(self, body):
-        return etree.XML(body).getchildren()

@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<servers xmlns="http://docs.openstack.org/compute/api/v1.1">
-  <!-- the server specification requires a number of children -->
-  <server name="foo" userId="foo" tenantId="foo" id="foo" updated="1401991486"
-          created="1401991486" hostId="foo" accessIPv4="1.2.3.4"
-          accessIPv6="::1" status="foo"/>
-</servers>

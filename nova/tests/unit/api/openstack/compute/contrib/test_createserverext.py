@@ -14,7 +14,6 @@
 #    under the License.
 
 import base64
-from xml.dom import minidom
 
 from oslo.serialization import jsonutils
 import webob
@@ -143,46 +142,6 @@ class CreateserverextTest(test.TestCase):
         req.body = jsonutils.dumps(body_dict)
         return req
 
-    def _format_xml_request_body(self, body_dict):
-        server = body_dict['server']
-        body_parts = []
-        body_parts.extend([
-            '<?xml version="1.0" encoding="UTF-8"?>',
-            '<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.1"',
-            ' name="%s" imageRef="%s" flavorRef="%s">' % (
-                    server['name'], server['imageRef'], server['flavorRef'])])
-        if 'metadata' in server:
-            metadata = server['metadata']
-            body_parts.append('<metadata>')
-            for item in metadata.iteritems():
-                body_parts.append('<meta key="%s">%s</meta>' % item)
-            body_parts.append('</metadata>')
-        if 'personality' in server:
-            personalities = server['personality']
-            body_parts.append('<personality>')
-            for file in personalities:
-                item = (file['path'], file['contents'])
-                body_parts.append('<file path="%s">%s</file>' % item)
-            body_parts.append('</personality>')
-        if 'networks' in server:
-            networks = server['networks']
-            body_parts.append('<networks>')
-            for network in networks:
-                item = (network['uuid'], network['fixed_ip'])
-                body_parts.append('<network uuid="%s" fixed_ip="%s"></network>'
-                                  % item)
-            body_parts.append('</networks>')
-        body_parts.append('</server>')
-        return ''.join(body_parts)
-
-    def _get_create_request_xml(self, body_dict):
-        req = webob.Request.blank('/v2/fake/os-create-server-ext')
-        req.content_type = 'application/xml'
-        req.accept = 'application/xml'
-        req.method = 'POST'
-        req.body = self._format_xml_request_body(body_dict)
-        return req
-
     def _create_instance_with_networks_json(self, networks):
         body_dict = self._create_networks_request_dict(networks)
         request = self._get_create_request_json(body_dict)
@@ -197,22 +156,8 @@ class CreateserverextTest(test.TestCase):
             init_only=('servers', 'os-create-server-ext')))
         return request, response, self.user_data
 
-    def _create_instance_with_networks_xml(self, networks):
-        body_dict = self._create_networks_request_dict(networks)
-        request = self._get_create_request_xml(body_dict)
-        response = request.get_response(fakes.wsgi_app(
-            init_only=('servers', 'os-create-server-ext')))
-        return request, response, self.networks
-
     def test_create_instance_with_no_networks(self):
         _create_inst = self._create_instance_with_networks_json
-        request, response, networks = _create_inst(networks=None)
-        self.assertEqual(response.status_int, 202)
-        self.assertIsNone(networks)
-
-    @test.skipXmlTest("Nova v2 XML support is disabled")
-    def test_create_instance_with_no_networks_xml(self):
-        _create_inst = self._create_instance_with_networks_xml
         request, response, networks = _create_inst(networks=None)
         self.assertEqual(response.status_int, 202)
         self.assertIsNone(networks)
@@ -223,35 +168,14 @@ class CreateserverextTest(test.TestCase):
         self.assertEqual(response.status_int, 202)
         self.assertEqual([FAKE_NETWORKS[0]], networks.as_tuples())
 
-    @test.skipXmlTest("Nova v2 XML support is disabled")
-    def test_create_instance_with_one_network_xml(self):
-        _create_inst = self._create_instance_with_networks_xml
-        request, response, networks = _create_inst([FAKE_NETWORKS[0]])
-        self.assertEqual(response.status_int, 202)
-        self.assertEqual([FAKE_NETWORKS[0]], networks.as_tuples())
-
     def test_create_instance_with_two_networks(self):
         _create_inst = self._create_instance_with_networks_json
         request, response, networks = _create_inst(FAKE_NETWORKS)
         self.assertEqual(response.status_int, 202)
         self.assertEqual(FAKE_NETWORKS, networks.as_tuples())
 
-    @test.skipXmlTest("Nova v2 XML support is disabled")
-    def test_create_instance_with_two_networks_xml(self):
-        _create_inst = self._create_instance_with_networks_xml
-        request, response, networks = _create_inst(FAKE_NETWORKS)
-        self.assertEqual(response.status_int, 202)
-        self.assertEqual(FAKE_NETWORKS, networks.as_tuples())
-
     def test_create_instance_with_duplicate_networks(self):
         _create_inst = self._create_instance_with_networks_json
-        request, response, networks = _create_inst(DUPLICATE_NETWORKS)
-        self.assertEqual(response.status_int, 400)
-        self.assertIsNone(networks)
-
-    @test.skipXmlTest("Nova v2 XML support is disabled")
-    def test_create_instance_with_duplicate_networks_xml(self):
-        _create_inst = self._create_instance_with_networks_xml
         request, response, networks = _create_inst(DUPLICATE_NETWORKS)
         self.assertEqual(response.status_int, 400)
         self.assertIsNone(networks)
@@ -265,24 +189,8 @@ class CreateserverextTest(test.TestCase):
         self.assertEqual(response.status_int, 400)
         self.assertIsNone(self.networks)
 
-    def test_create_instance_with_network_no_id_xml(self):
-        body_dict = self._create_networks_request_dict([FAKE_NETWORKS[0]])
-        request = self._get_create_request_xml(body_dict)
-        uuid = ' uuid="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"'
-        request.body = request.body.replace(uuid, '')
-        response = request.get_response(fakes.wsgi_app(
-            init_only=('servers', 'os-create-server-ext')))
-        self.assertEqual(response.status_int, 400)
-        self.assertIsNone(self.networks)
-
     def test_create_instance_with_network_invalid_id(self):
         _create_inst = self._create_instance_with_networks_json
-        request, response, networks = _create_inst(INVALID_NETWORKS)
-        self.assertEqual(response.status_int, 400)
-        self.assertIsNone(networks)
-
-    def test_create_instance_with_network_invalid_id_xml(self):
-        _create_inst = self._create_instance_with_networks_xml
         request, response, networks = _create_inst(INVALID_NETWORKS)
         self.assertEqual(response.status_int, 400)
         self.assertIsNone(networks)
@@ -301,28 +209,10 @@ class CreateserverextTest(test.TestCase):
         self.assertEqual(response.status_int, 400)
         self.assertIsNone(networks)
 
-    def test_create_instance_with_network_empty_fixed_ip_xml(self):
-        networks = [('1', '')]
-        _create_inst = self._create_instance_with_networks_xml
-        request, response, networks = _create_inst(networks)
-        self.assertEqual(response.status_int, 400)
-        self.assertIsNone(networks)
-
     def test_create_instance_with_network_no_fixed_ip(self):
         body_dict = self._create_networks_request_dict([FAKE_NETWORKS[0]])
         del body_dict['server']['networks'][0]['fixed_ip']
         request = self._get_create_request_json(body_dict)
-        response = request.get_response(fakes.wsgi_app(
-            init_only=('servers', 'os-create-server-ext')))
-        self.assertEqual(response.status_int, 202)
-        self.assertEqual([('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', None)],
-                         self.networks.as_tuples())
-
-    @test.skipXmlTest("Nova v2 XML support is disabled")
-    def test_create_instance_with_network_no_fixed_ip_xml(self):
-        body_dict = self._create_networks_request_dict([FAKE_NETWORKS[0]])
-        request = self._get_create_request_xml(body_dict)
-        request.body = request.body.replace(' fixed_ip="10.0.1.12"', '')
         response = request.get_response(fakes.wsgi_app(
             init_only=('servers', 'os-create-server-ext')))
         self.assertEqual(response.status_int, 202)
@@ -376,18 +266,3 @@ class CreateserverextTest(test.TestCase):
         expected_security_group = [{"name": "test"}]
         self.assertEqual(res_dict['server'].get('security_groups'),
                          expected_security_group)
-
-    @test.skipXmlTest("Nova v2 XML support is disabled")
-    def test_get_server_by_id_verify_security_groups_xml(self):
-        self.stubs.Set(db, 'instance_get', fakes.fake_instance_get())
-        self.stubs.Set(db, 'instance_get_by_uuid', fakes.fake_instance_get())
-        req = webob.Request.blank('/v2/fake/os-create-server-ext/1')
-        req.headers['Accept'] = 'application/xml'
-        response = req.get_response(fakes.wsgi_app(
-            init_only=('os-create-server-ext', 'servers')))
-        self.assertEqual(response.status_int, 200)
-        dom = minidom.parseString(response.body)
-        server = dom.childNodes[0]
-        sec_groups = server.getElementsByTagName('security_groups')[0]
-        sec_group = sec_groups.getElementsByTagName('security_group')[0]
-        self.assertEqual('test', sec_group.getAttribute("name"))

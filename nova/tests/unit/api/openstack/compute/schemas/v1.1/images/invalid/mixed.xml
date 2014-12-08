@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<images xmlns="http://docs.openstack.org/compute/api/v1.1">
-  <!-- cannot mix refs and specs in the same document -->
-  <image name="foo" id="foo"/>
-  <image name="bar" id="bar" updated="1401991486" created="1401991486"
-         status="foo">
-    <metadata/>
-  </image>
-</images>

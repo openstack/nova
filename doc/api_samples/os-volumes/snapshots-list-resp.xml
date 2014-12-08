@@ -1,6 +1,0 @@
-<?xml version='1.0' encoding='UTF-8'?>
-<snapshots>
-  <snapshot status="available" displayDescription="Default description" displayName="Default name" volumeId="12" id="100" createdAt="2013-02-25 16:27:36.769149" size="100"/>
-  <snapshot status="available" displayDescription="Default description" displayName="Default name" volumeId="12" id="101" createdAt="2013-02-25 16:27:36.769154" size="100"/>
-  <snapshot status="available" displayDescription="Default description" displayName="Default name" volumeId="12" id="102" createdAt="2013-02-25 16:27:36.769157" size="100"/>
-</snapshots>
