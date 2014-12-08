@@ -374,6 +374,10 @@ def load_standard_extensions(ext_mgr, logger, path, package, ext_list=None):
                                 {'ext_name': ext_name, 'exc': exc})
 
         # Update the list of directories we'll explore...
+        # using os.walk 'the caller can modify the dirnames list in-place,
+        # and walk() will only recurse into the subdirectories whose names
+        # remain in dirnames'
+        # https://docs.python.org/2/library/os.html#os.walk
         dirnames[:] = subdirs
 
 
