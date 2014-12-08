@@ -1352,6 +1352,36 @@ class ComputeDriver(object):
         #                 virt layer.
         return False
 
+    def quiesce(self, context, instance, image_meta):
+        """Quiesce the specified instance to prepare for snapshots.
+
+        If the specified instance doesn't support quiescing,
+        InstanceQuiesceNotSupported is raised. When it fails to quiesce by
+        other errors (e.g. agent timeout), NovaException is raised.
+
+        :param context:  request context
+        :param instance: nova.objects.instance.Instance to be quiesced
+        :param image_meta: image object returned by nova.image.glance that
+                           defines the image from which this instance
+                           was created
+        """
+        raise NotImplementedError()
+
+    def unquiesce(self, context, instance, image_meta):
+        """Unquiesce the specified instance after snapshots.
+
+        If the specified instance doesn't support quiescing,
+        InstanceQuiesceNotSupported is raised. When it fails to quiesce by
+        other errors (e.g. agent timeout), NovaException is raised.
+
+        :param context:  request context
+        :param instance: nova.objects.instance.Instance to be unquiesced
+        :param image_meta: image object returned by nova.image.glance that
+                           defines the image from which this instance
+                           was created
+        """
+        raise NotImplementedError()
+
 
 def load_compute_driver(virtapi, compute_driver=None):
     """Load a compute driver module.

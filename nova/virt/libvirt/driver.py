@@ -356,6 +356,8 @@ MIN_QEMU_DISCARD_VERSION = (1, 6, 0)
 REQ_HYPERVISOR_DISCARD = "QEMU"
 # libvirt numa topology support
 MIN_LIBVIRT_NUMA_TOPOLOGY_VERSION = (1, 0, 4)
+# fsFreeze/fsThaw requirement
+MIN_LIBVIRT_FSFREEZE_VERSION = (1, 2, 5)
 
 
 class LibvirtDriver(driver.ComputeDriver):
@@ -1411,8 +1413,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 if live_snapshot:
                     # NOTE(xqueralt): libvirt needs o+x in the temp directory
                     os.chmod(tmpdir, 0o701)
-                    self._live_snapshot(virt_dom, disk_path, out_path,
-                                        image_format)
+                    self._live_snapshot(context, instance, virt_dom, disk_path,
+                                        out_path, image_format, base)
                 else:
                     snapshot_backend.snapshot_extract(out_path, image_format)
             finally:
@@ -1474,7 +1476,55 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return not job_ended
 
-    def _live_snapshot(self, domain, disk_path, out_path, image_format):
+    def _can_quiesce(self, image_meta):
+        if CONF.libvirt.virt_type not in ('kvm', 'qemu'):
+            return (False, _('Only KVM and QEMU are supported'))
+
+        if not self._host.has_min_version(MIN_LIBVIRT_FSFREEZE_VERSION):
+            ver = ".".join([str(x) for x in MIN_LIBVIRT_FSFREEZE_VERSION])
+            return (False, _('Quiescing requires libvirt version %(version)s '
+                             'or greater') % {'version': ver})
+
+        img_meta_prop = image_meta.get('properties', {}) if image_meta else {}
+        hw_qga = img_meta_prop.get('hw_qemu_guest_agent', 'no')
+        if hw_qga.lower() == 'no':
+            return (False, _('QEMU guest agent is not enabled'))
+
+        return (True, None)
+
+    def _set_quiesced(self, context, instance, image_meta, quiesced):
+        supported, reason = self._can_quiesce(image_meta)
+        if not supported:
+            raise exception.InstanceQuiesceNotSupported(
+                instance_id=instance['uuid'], reason=reason)
+
+        try:
+            domain = self._lookup_by_name(instance['name'])
+            if quiesced:
+                domain.fsFreeze()
+            else:
+                domain.fsThaw()
+        except libvirt.libvirtError as ex:
+            error_code = ex.get_error_code()
+            msg = (_('Error from libvirt while quiescing %(instance_name)s: '
+                     '[Error Code %(error_code)s] %(ex)s')
+                   % {'instance_name': instance['name'],
+                      'error_code': error_code, 'ex': ex})
+            raise exception.NovaException(msg)
+
+    def quiesce(self, context, instance, image_meta):
+        """Freeze the guest filesystems to prepare for snapshot.
+
+        The qemu-guest-agent must be setup to execute fsfreeze.
+        """
+        self._set_quiesced(context, instance, image_meta, True)
+
+    def unquiesce(self, context, instance, image_meta):
+        """Thaw the guest filesystems after snapshot."""
+        self._set_quiesced(context, instance, image_meta, False)
+
+    def _live_snapshot(self, context, instance, domain, disk_path, out_path,
+                       image_format, image_meta):
         """Snapshot an instance without downtime."""
         # Save a copy of the domain's persistent XML file
         xml = domain.XMLDesc(
@@ -1499,6 +1549,11 @@ class LibvirtDriver(driver.ComputeDriver):
         libvirt_utils.create_cow_image(src_back_path, disk_delta,
                                        src_disk_size)
 
+        img_meta_prop = image_meta.get('properties', {}) if image_meta else {}
+        require_quiesce = img_meta_prop.get('os_require_quiesce', 'no')
+        if require_quiesce.lower() == 'yes':
+            self.quiesce(context, instance, image_meta)
+
         try:
             # NOTE (rmk): blockRebase cannot be executed on persistent
             #             domains, so we need to temporarily undefine it.
@@ -1521,6 +1576,8 @@ class LibvirtDriver(driver.ComputeDriver):
             libvirt_utils.chown(disk_delta, os.getuid())
         finally:
             self._conn.defineXML(xml)
+            if require_quiesce.lower() == 'yes':
+                self.unquiesce(context, instance, image_meta)
 
         # Convert the delta (CoW) image with a backing file to a flat
         # image with no backing file.

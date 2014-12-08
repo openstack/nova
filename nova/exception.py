@@ -1801,3 +1801,8 @@ class InvalidToken(Invalid):
 
 class InvalidConnectionInfo(Invalid):
     msg_fmt = _("Invalid Connection Info")
+
+
+class InstanceQuiesceNotSupported(Invalid):
+    msg_fmt = _('Quiescing is not supported in instance %(instance_id)s: '
+                '%(reason)s')

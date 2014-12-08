@@ -243,6 +243,12 @@ class FakeVirtDomain(object):
     def destroy(self):
         pass
 
+    def fsFreeze(self, disks=None, flags=0):
+        pass
+
+    def fsThaw(self, disks=None, flags=0):
+        pass
+
 
 class CacheConcurrencyTestCase(test.NoDBTestCase):
     def setUp(self):
@@ -4137,6 +4143,36 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         devices = drvr._get_all_block_devices()
         self.assertEqual(devices, ['/path/to/dev/1', '/path/to/dev/3'])
         mock_list.assert_called_with()
+
+    @mock.patch.object(host.Host, "has_min_version", return_value=True)
+    def test_quiesce(self, mock_has_min_version):
+        self.create_fake_libvirt_mock(lookupByName=self.fake_lookup)
+        with mock.patch.object(FakeVirtDomain, "fsFreeze") as mock_fsfreeze:
+            conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
+            instance = {'name': 'test', 'uuid': 'uuid'}
+            img_meta = {"properties": {"hw_qemu_guest_agent": "yes",
+                                       "os_require_quiesce": "yes"}}
+            self.assertIsNone(conn.quiesce(self.context, instance, img_meta))
+            mock_fsfreeze.assert_called_once_with()
+
+    def test_quiesce_not_supported(self):
+        self.create_fake_libvirt_mock()
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
+        instance = {'name': 'test', 'uuid': 'uuid'}
+        self.assertRaises(exception.InstanceQuiesceNotSupported,
+                      conn.quiesce, self.context, instance, None)
+
+    @mock.patch.object(host.Host, "has_min_version", return_value=True)
+    def test_unquiesce(self, mock_has_min_version):
+        self.create_fake_libvirt_mock(getLibVersion=lambda: 1002005,
+                                      lookupByName=self.fake_lookup)
+        with mock.patch.object(FakeVirtDomain, "fsThaw") as mock_fsthaw:
+            conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
+            instance = {'name': 'test', 'uuid': 'uuid'}
+            img_meta = {"properties": {"hw_qemu_guest_agent": "yes",
+                                       "os_require_quiesce": "yes"}}
+            self.assertIsNone(conn.unquiesce(self.context, instance, img_meta))
+            mock_fsthaw.assert_called_once_with()
 
     def test_snapshot_in_ami_format(self):
         expected_calls = [
@@ -10386,7 +10422,8 @@ Active:          8381604 kB
             mock_size.return_value = 1004009
             mock_backing.return_value = bckfile
 
-            drvr._live_snapshot(mock_dom, srcfile, dstfile, "qcow2")
+            drvr._live_snapshot(self.context, self.test_instance, mock_dom,
+                                srcfile, dstfile, "qcow2", {})
 
             mock_dom.XMLDesc.assert_called_once_with(
                 fakelibvirt.VIR_DOMAIN_XML_INACTIVE |
