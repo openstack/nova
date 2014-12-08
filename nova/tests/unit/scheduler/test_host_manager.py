@@ -18,7 +18,6 @@ Tests For HostManager
 
 import mock
 from oslo.serialization import jsonutils
-from oslo.utils import timeutils
 import six
 
 from nova.compute import task_states
@@ -55,7 +54,6 @@ class HostManagerTestCase(test.NoDBTestCase):
                 'fake-node') for x in xrange(1, 5)]
         self.fake_hosts += [host_manager.HostState('fake_multihost',
                 'fake-node%s' % x) for x in xrange(1, 5)]
-        self.addCleanup(timeutils.clear_time_override)
 
     def test_choose_host_filters_not_found(self):
         self.flags(scheduler_default_filters='FakeFilterClass3')
@@ -342,7 +340,6 @@ class HostManagerChangedNodesTestCase(test.NoDBTestCase):
               host_manager.HostState('host3', 'node3'),
               host_manager.HostState('host4', 'node4')
             ]
-        self.addCleanup(timeutils.clear_time_override)
 
     def test_get_all_host_states(self):
         context = 'fake_context'
