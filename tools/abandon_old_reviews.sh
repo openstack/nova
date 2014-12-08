@@ -33,11 +33,13 @@ function abandon_review {
     shift
     local msg=$@
     echo "Abandoning $gitid"
+    # echo ssh review.openstack.org gerrit review $gitid --abandon --message \"$msg\"
     ssh review.openstack.org gerrit review $gitid --abandon --message \"$msg\"
 }
 
+PROJECTS="(project:openstack/nova OR project:openstack/python-novaclient)"
 
-blocked_reviews=$(ssh review.openstack.org "gerrit query --current-patch-set --format json project:openstack/nova status:open age:4w label:Code-Review<=-2" | jq .currentPatchSet.revision | grep -v null | sed 's/"//g')
+blocked_reviews=$(ssh review.openstack.org "gerrit query --current-patch-set --format json $PROJECTS status:open age:4w label:Code-Review<=-2" | jq .currentPatchSet.revision | grep -v null | sed 's/"//g')
 
 blocked_msg=$(cat <<EOF
 
@@ -62,7 +64,7 @@ done
 
 # then purge all the reviews that are > 4w with no changes and Jenkins has -1ed
 
-failing_reviews=$(ssh review.openstack.org "gerrit query  --current-patch-set --format json project:openstack/nova status:open age:4w NOT label:Verified>=1,jenkins" | jq .currentPatchSet.revision | grep -v null | sed 's/"//g')
+failing_reviews=$(ssh review.openstack.org "gerrit query  --current-patch-set --format json $PROJECTS status:open age:4w NOT label:Verified>=1,jenkins" | jq .currentPatchSet.revision | grep -v null | sed 's/"//g')
 
 failing_msg=$(cat <<EOF
 
