@@ -160,6 +160,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         # old enough to be expired
         the_past = timeutils.utcnow() + datetime.timedelta(hours=1)
         timeutils.set_time_override(override_time=the_past)
+        self.addCleanup(timeutils.clear_time_override)
         ctxt = context.get_admin_context()
         self.compute._reclaim_queued_deletes(ctxt)
 
