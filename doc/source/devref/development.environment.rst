@@ -232,5 +232,5 @@ Refer to HowToContribute_ for information.
 Nova uses the Gerrit code review system. For information on how to submit
 your branch to Gerrit, see GerritWorkflow_.
 
-.. _GerritWorkflow: http://wiki.openstack.org/GerritWorkflow
-.. _HowToContribute: http://wiki.openstack.org/HowToContribute
+.. _GerritWorkflow: http://docs.openstack.org/infra/manual/developers.html#development-workflow
+.. _HowToContribute: http://docs.openstack.org/infra/manual/developers.html
