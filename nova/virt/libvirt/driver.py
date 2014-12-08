@@ -3665,6 +3665,16 @@ class LibvirtDriver(driver.ComputeDriver):
             tmhyperv.present = True
             clk.add_timer(tmhyperv)
 
+    def _set_features(self, guest, caps, virt_type):
+        if virt_type == "xen":
+            # PAE only makes sense in X86
+            if caps.host.cpu.arch in (arch.I686, arch.X86_64):
+                guest.features.append(vconfig.LibvirtConfigGuestFeaturePAE())
+
+        if virt_type not in ("lxc", "uml"):
+            guest.features.append(vconfig.LibvirtConfigGuestFeatureACPI())
+            guest.features.append(vconfig.LibvirtConfigGuestFeatureAPIC())
+
     def _create_serial_console_devices(self, guest, instance, flavor,
                                        image_meta):
         if CONF.serial_console.enabled:
@@ -3837,10 +3847,6 @@ class LibvirtDriver(driver.ComputeDriver):
             if guest.os_type == vm_mode.HVM:
                 guest.os_loader = CONF.libvirt.xen_hvmloader_path
 
-            # PAE only makes sense in X86
-            if caps.host.cpu.arch in (arch.I686, arch.X86_64):
-                guest.features.append(vconfig.LibvirtConfigGuestFeaturePAE())
-
         if virt_type in ("kvm", "qemu"):
             if caps.host.cpu.arch in (arch.I686, arch.X86_64):
                 guest.sysinfo = self._get_guest_config_sysinfo(instance)
@@ -3864,10 +3870,7 @@ class LibvirtDriver(driver.ComputeDriver):
             else:
                 guest.os_boot_dev = blockinfo.get_boot_order(disk_info)
 
-        if virt_type not in ("lxc", "uml"):
-            guest.features.append(vconfig.LibvirtConfigGuestFeatureACPI())
-            guest.features.append(vconfig.LibvirtConfigGuestFeatureAPIC())
-
+        self._set_features(guest, caps, virt_type)
         self._set_clock(guest, instance.os_type, image_meta, virt_type)
 
         storage_configs = self._get_guest_storage_config(
