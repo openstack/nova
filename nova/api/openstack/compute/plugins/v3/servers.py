@@ -508,16 +508,10 @@ class ServersController(wsgi.Controller):
                                                   False)
 
         requested_networks = None
-        # TODO(cyeoh): bp v3-api-core-as-extensions
-        # Replace with an extension point when the os-networks
-        # extension is ported. Currently reworked
-        # to take into account is_neutron
-        # if (self.ext_mgr.is_loaded('os-networks')
-        #        or utils.is_neutron()):
-        #    requested_networks = server_dict.get('networks')
-
-        if utils.is_neutron():
+        if ('os-networks' in self.extension_info.get_extensions()
+                or utils.is_neutron()):
             requested_networks = server_dict.get('networks')
+
         if requested_networks is not None:
             requested_networks = self._get_requested_networks(
                 requested_networks)
