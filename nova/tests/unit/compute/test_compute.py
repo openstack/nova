@@ -11448,3 +11448,8 @@ class ComputeHooksTestCase(test.BaseHookTestCase):
     def test_create_instance_has_hook(self):
         create_func = compute_api.API.create
         self.assert_has_hook('create_instance', create_func)
+
+    def test_build_instance_has_hook(self):
+        build_instance_func = (compute_manager.ComputeManager.
+                               _do_build_and_run_instance)
+        self.assert_has_hook('build_instance', build_instance_func)
