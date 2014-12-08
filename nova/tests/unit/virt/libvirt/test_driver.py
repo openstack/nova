@@ -4164,167 +4164,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                       ("disk", "virtio", "vdb"),
                                       ("disk", "virtio", "vdc")))
 
-    def test_list_instance_domains_fast(self):
-        if not hasattr(libvirt, "VIR_CONNECT_LIST_DOMAINS_ACTIVE"):
-            self.skipTest("libvirt missing VIR_CONNECT_LIST_DOMAINS_ACTIVE")
-
-        vm1 = FakeVirtDomain(id=3, name="instance00000001")
-        vm2 = FakeVirtDomain(id=17, name="instance00000002")
-        vm3 = FakeVirtDomain(name="instance00000003")
-        vm4 = FakeVirtDomain(name="instance00000004")
-
-        def fake_list_all(flags):
-            vms = []
-            if flags & libvirt.VIR_CONNECT_LIST_DOMAINS_ACTIVE:
-                vms.extend([vm1, vm2])
-            if flags & libvirt.VIR_CONNECT_LIST_DOMAINS_INACTIVE:
-                vms.extend([vm3, vm4])
-            return vms
-
-        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
-        libvirt_driver.LibvirtDriver._conn.listAllDomains = fake_list_all
-
-        self.mox.ReplayAll()
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-
-        doms = drvr._list_instance_domains_fast()
-        self.assertEqual(len(doms), 2)
-        self.assertEqual(doms[0].name(), vm1.name())
-        self.assertEqual(doms[1].name(), vm2.name())
-
-        doms = drvr._list_instance_domains_fast(only_running=False)
-        self.assertEqual(len(doms), 4)
-        self.assertEqual(doms[0].name(), vm1.name())
-        self.assertEqual(doms[1].name(), vm2.name())
-        self.assertEqual(doms[2].name(), vm3.name())
-        self.assertEqual(doms[3].name(), vm4.name())
-
-    def test_list_instance_domains_slow(self):
-        vm1 = FakeVirtDomain(id=3, name="instance00000001")
-        vm2 = FakeVirtDomain(id=17, name="instance00000002")
-        vm3 = FakeVirtDomain(name="instance00000003")
-        vm4 = FakeVirtDomain(name="instance00000004")
-        vms = [vm1, vm2, vm3, vm4]
-
-        def fake_get_domain_by_id(self, id):
-            for vm in vms:
-                if vm.ID() == id:
-                    return vm
-            raise exception.InstanceNotFound(instance_id=id)
-
-        def fake_get_domain_by_name(self, name):
-            for vm in vms:
-                if vm.name() == name:
-                    return vm
-            raise exception.InstanceNotFound(instance_id=name)
-
-        def fake_list_doms():
-            # Include one ID that no longer exists
-            return [vm1.ID(), vm2.ID(), 666]
-
-        def fake_list_ddoms():
-            # Include one name that no longer exists and
-            # one dup from running list to show race in
-            # transition from inactive -> running
-            return [vm1.name(), vm3.name(), vm4.name(), "fishfood"]
-
-        self.stubs.Set(host.Host, "get_domain_by_id",
-                       fake_get_domain_by_id)
-        self.stubs.Set(host.Host, "get_domain_by_name",
-                       fake_get_domain_by_name)
-        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
-        libvirt_driver.LibvirtDriver._conn.listDomainsID = fake_list_doms
-        libvirt_driver.LibvirtDriver._conn.listDefinedDomains = fake_list_ddoms
-        libvirt_driver.LibvirtDriver._conn.numOfDomains = lambda: 2
-        libvirt_driver.LibvirtDriver._conn.numOfDefinedDomains = lambda: 2
-
-        self.mox.ReplayAll()
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-
-        doms = drvr._list_instance_domains_slow()
-        self.assertEqual(len(doms), 2)
-        self.assertEqual(doms[0].name(), vm1.name())
-        self.assertEqual(doms[1].name(), vm2.name())
-
-        doms = drvr._list_instance_domains_slow(only_running=False)
-        self.assertEqual(len(doms), 4)
-        self.assertEqual(doms[0].name(), vm1.name())
-        self.assertEqual(doms[1].name(), vm2.name())
-        self.assertEqual(doms[2].name(), vm3.name())
-        self.assertEqual(doms[3].name(), vm4.name())
-
-    def test_list_instance_domains_fallback_no_support(self):
-        vm1 = FakeVirtDomain(id=3, name="instance00000001")
-        vm2 = FakeVirtDomain(id=17, name="instance00000002")
-        vms = [vm1, vm2]
-
-        def fake_get_domain_by_id(self, id):
-            for vm in vms:
-                if vm.ID() == id:
-                    return vm
-            raise exception.InstanceNotFound(instance_id=id)
-
-        def fake_list_doms():
-            return [vm1.ID(), vm2.ID()]
-
-        def fake_list_all(flags):
-            ex = fakelibvirt.make_libvirtError(
-                libvirt.libvirtError,
-                "API is not supported",
-                error_code=libvirt.VIR_ERR_NO_SUPPORT)
-            raise ex
-
-        self.stubs.Set(host.Host, "get_domain_by_id", fake_get_domain_by_id)
-        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
-        libvirt_driver.LibvirtDriver._conn.listDomainsID = fake_list_doms
-        libvirt_driver.LibvirtDriver._conn.numOfDomains = lambda: 2
-        libvirt_driver.LibvirtDriver._conn.listAllDomains = fake_list_all
-
-        self.mox.ReplayAll()
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-
-        doms = drvr._list_instance_domains()
-        self.assertEqual(len(doms), 2)
-        self.assertEqual(doms[0].id, vm1.id)
-        self.assertEqual(doms[1].id, vm2.id)
-
-    @mock.patch.object(libvirt_driver.LibvirtDriver,
-                       "_list_instance_domains_fast")
-    def test_list_instance_domains_filtering(self, mock_list):
-        vm0 = FakeVirtDomain(id=0, name="Domain-0")  # Xen dom-0
-        vm1 = FakeVirtDomain(id=3, name="instance00000001")
-        vm2 = FakeVirtDomain(id=17, name="instance00000002")
-        vm3 = FakeVirtDomain(name="instance00000003")
-        vm4 = FakeVirtDomain(name="instance00000004")
-
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-
-        mock_list.return_value = [vm0, vm1, vm2]
-        doms = drvr._list_instance_domains()
-        self.assertEqual(len(doms), 2)
-        self.assertEqual(doms[0].name(), vm1.name())
-        self.assertEqual(doms[1].name(), vm2.name())
-        mock_list.assert_called_with(True)
-
-        mock_list.return_value = [vm0, vm1, vm2, vm3, vm4]
-        doms = drvr._list_instance_domains(only_running=False)
-        self.assertEqual(len(doms), 4)
-        self.assertEqual(doms[0].name(), vm1.name())
-        self.assertEqual(doms[1].name(), vm2.name())
-        self.assertEqual(doms[2].name(), vm3.name())
-        self.assertEqual(doms[3].name(), vm4.name())
-        mock_list.assert_called_with(False)
-
-        mock_list.return_value = [vm0, vm1, vm2]
-        doms = drvr._list_instance_domains(only_guests=False)
-        self.assertEqual(len(doms), 3)
-        self.assertEqual(doms[0].name(), vm0.name())
-        self.assertEqual(doms[1].name(), vm1.name())
-        self.assertEqual(doms[2].name(), vm2.name())
-        mock_list.assert_called_with(True)
-
-    @mock.patch.object(libvirt_driver.LibvirtDriver,
-                       "_list_instance_domains")
+    @mock.patch.object(host.Host, "list_instance_domains")
     def test_list_instances(self, mock_list):
         vm1 = FakeVirtDomain(id=3, name="instance00000001")
         vm2 = FakeVirtDomain(id=17, name="instance00000002")
@@ -4341,8 +4181,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual(names[3], vm4.name())
         mock_list.assert_called_with(only_running=False)
 
-    @mock.patch.object(libvirt_driver.LibvirtDriver,
-                       "_list_instance_domains")
+    @mock.patch.object(host.Host, "list_instance_domains")
     def test_list_instance_uuids(self, mock_list):
         vm1 = FakeVirtDomain(id=3, name="instance00000001")
         vm2 = FakeVirtDomain(id=17, name="instance00000002")
@@ -4359,8 +4198,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual(uuids[3], vm4.UUIDString())
         mock_list.assert_called_with(only_running=False)
 
-    @mock.patch.object(libvirt_driver.LibvirtDriver,
-                       "_list_instance_domains")
+    @mock.patch.object(host.Host, "list_instance_domains")
     def test_get_all_block_devices(self, mock_list):
         xml = [
             """
@@ -8621,8 +8459,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         # instance disappears
         conn._undefine_domain(instance)
 
-    @mock.patch.object(libvirt_driver.LibvirtDriver,
-                       "_list_instance_domains")
+    @mock.patch.object(host.Host, "list_instance_domains")
     def test_disk_over_committed_size_total(self, mock_list):
         # Ensure destroy calls managedSaveRemove for saved instance.
         class DiagFakeDomain(object):
@@ -8672,8 +8509,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             mock_list.assert_called_with()
             self.assertTrue(mock_info.called)
 
-    @mock.patch.object(libvirt_driver.LibvirtDriver,
-                       "_list_instance_domains")
+    @mock.patch.object(host.Host, "list_instance_domains")
     def test_disk_over_committed_size_total_eperm(self, mock_list):
         # Ensure destroy calls managedSaveRemove for saved instance.
         class DiagFakeDomain(object):
@@ -8724,7 +8560,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual(21474836480, result)
         mock_list.assert_called_with()
 
-    @mock.patch.object(libvirt_driver.LibvirtDriver, "_list_instance_domains",
+    @mock.patch.object(host.Host, "list_instance_domains",
                        return_value=[mock.MagicMock(name='foo')])
     @mock.patch.object(libvirt_driver.LibvirtDriver, "_get_instance_disk_info",
                        side_effect=exception.VolumeBDMPathNotFound(path='bar'))
@@ -9544,8 +9380,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                     'version': '1.0'}
         self.assertEqual(expected, actual.serialize())
 
-    @mock.patch.object(libvirt_driver.LibvirtDriver,
-                       "_list_instance_domains")
+    @mock.patch.object(host.Host, "list_instance_domains")
     def test_failing_vcpu_count(self, mock_list):
         """Domain can fail to return the vcpu description in case it's
         just starting up or shutting down. Make sure None is handled
@@ -9579,8 +9414,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual(5, drvr._get_vcpu_used())
         mock_list.assert_called_with()
 
-    @mock.patch.object(libvirt_driver.LibvirtDriver,
-                       "_list_instance_domains")
+    @mock.patch.object(host.Host, "list_instance_domains")
     def test_failing_vcpu_count_none(self, mock_list):
         """Domain will return zero if the current number of vcpus used
         is None. This is in case of VM state starting up or shutting
@@ -9663,8 +9497,8 @@ Active:          8381604 kB
 
         with contextlib.nested(
                 mock.patch("__builtin__.open", m, create=True),
-                mock.patch.object(libvirt_driver.LibvirtDriver,
-                                  "_list_instance_domains"),
+                mock.patch.object(host.Host,
+                                  "list_instance_domains"),
                 mock.patch.object(libvirt_driver.LibvirtDriver,
                                   "_conn"),
                 mock.patch('sys.platform', 'linux2'),

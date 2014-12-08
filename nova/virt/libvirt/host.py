@@ -36,11 +36,16 @@ from eventlet import greenio
 from eventlet import greenthread
 from eventlet import patcher
 from eventlet import tpool
+from oslo.config import cfg
 
+from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
+from nova.i18n import _LE
+from nova.i18n import _LI
 from nova.i18n import _LW
 from nova.openstack.common import log as logging
+from nova import rpc
 from nova import utils
 from nova.virt import event as virtevent
 
@@ -51,6 +56,10 @@ LOG = logging.getLogger(__name__)
 native_socket = patcher.original('socket')
 native_threading = patcher.original("threading")
 native_Queue = patcher.original("Queue")
+
+CONF = cfg.CONF
+CONF.import_opt('host', 'nova.netconf')
+CONF.import_opt('my_ip', 'nova.netconf')
 
 
 class Host(object):
@@ -67,6 +76,7 @@ class Host(object):
         self._read_only = read_only
         self._conn_event_handler = conn_event_handler
         self._lifecycle_event_handler = lifecycle_event_handler
+        self._skip_list_all_domains = False
 
         self._wrapped_conn = None
         self._wrapped_conn_lock = threading.Lock()
@@ -372,7 +382,7 @@ class Host(object):
 
         return wrapped_conn
 
-    def get_connection(self):
+    def _get_connection(self):
         # multiple concurrent connections are protected by _wrapped_conn_lock
         with self._wrapped_conn_lock:
             wrapped_conn = self._wrapped_conn
@@ -380,6 +390,21 @@ class Host(object):
                 wrapped_conn = self._get_new_connection()
 
         return wrapped_conn
+
+    def get_connection(self):
+        try:
+            conn = self._get_connection()
+        except libvirt.libvirtError as ex:
+            LOG.exception(_LE("Connection to libvirt failed: %s"), ex)
+            payload = dict(ip=CONF.my_ip,
+                           method='_connect',
+                           reason=ex)
+            rpc.get_notifier('compute').error(nova_context.get_admin_context(),
+                                              'compute.libvirt.error',
+                                              payload)
+            raise exception.HypervisorUnavailable(host=CONF.host)
+
+        return conn
 
     @staticmethod
     def _libvirt_error_handler(context, err):
@@ -431,9 +456,9 @@ class Host(object):
 
         :returns: a libvirt.Domain object
         """
-        return self.get_domain_by_name(instance.name)
+        return self._get_domain_by_name(instance.name)
 
-    def get_domain_by_id(self, instance_id):
+    def _get_domain_by_id(self, instance_id):
         """Retrieve libvirt domain object given an instance id.
 
         All libvirt error handling should be handled in this method and
@@ -455,7 +480,7 @@ class Host(object):
                       'ex': ex})
             raise exception.NovaException(msg)
 
-    def get_domain_by_name(self, instance_name):
+    def _get_domain_by_name(self, instance_name):
         """Retrieve libvirt domain object given an instance name.
 
         All libvirt error handling should be handled in this method and
@@ -476,3 +501,75 @@ class Host(object):
                     'error_code': error_code,
                     'ex': ex})
             raise exception.NovaException(msg)
+
+    def _list_instance_domains_fast(self, only_running=True):
+        # The modern (>= 0.9.13) fast way - 1 single API call for all domains
+        flags = libvirt.VIR_CONNECT_LIST_DOMAINS_ACTIVE
+        if not only_running:
+            flags = flags | libvirt.VIR_CONNECT_LIST_DOMAINS_INACTIVE
+        return self.get_connection().listAllDomains(flags)
+
+    def _list_instance_domains_slow(self, only_running=True):
+        # The legacy (< 0.9.13) slow way - O(n) API call for n domains
+        uuids = []
+        doms = []
+        # Redundant numOfDomains check is for libvirt bz #836647
+        if self.get_connection().numOfDomains() > 0:
+            for id in self.get_connection().listDomainsID():
+                try:
+                    dom = self._get_domain_by_id(id)
+                    doms.append(dom)
+                    uuids.append(dom.UUIDString())
+                except exception.InstanceNotFound:
+                    continue
+
+        if only_running:
+            return doms
+
+        for name in self.get_connection().listDefinedDomains():
+            try:
+                dom = self._get_domain_by_name(name)
+                if dom.UUIDString() not in uuids:
+                    doms.append(dom)
+            except exception.InstanceNotFound:
+                continue
+
+        return doms
+
+    def list_instance_domains(self, only_running=True, only_guests=True):
+        """Get a list of libvirt.Domain objects for nova instances
+
+        :param only_running: True to only return running instances
+        :param only_guests: True to filter out any host domain (eg Dom-0)
+
+        Query libvirt to a get a list of all libvirt.Domain objects
+        that correspond to nova instances. If the only_running parameter
+        is true this list will only include active domains, otherwise
+        inactive domains will be included too. If the only_guests parameter
+        is true the list will have any "host" domain (aka Xen Domain-0)
+        filtered out.
+
+        :returns: list of libvirt.Domain objects
+        """
+
+        if not self._skip_list_all_domains:
+            try:
+                alldoms = self._list_instance_domains_fast(only_running)
+            except (libvirt.libvirtError, AttributeError) as ex:
+                LOG.info(_LI("Unable to use bulk domain list APIs, "
+                             "falling back to slow code path: %(ex)s"),
+                         {'ex': ex})
+                self._skip_list_all_domains = True
+
+        if self._skip_list_all_domains:
+            # Old libvirt, or a libvirt driver which doesn't
+            # implement the new API
+            alldoms = self._list_instance_domains_slow(only_running)
+
+        doms = []
+        for dom in alldoms:
+            if only_guests and dom.ID() == 0:
+                continue
+            doms.append(dom)
+
+        return doms
