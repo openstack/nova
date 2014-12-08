@@ -63,10 +63,10 @@ CONF.register_opts(api_opts, api_opts_group)
 # List of v3 API extensions which are considered to form
 # the core API and so must be present
 # TODO(cyeoh): Expand this list as the core APIs are ported to V3
-API_V3_CORE_EXTENSIONS = set(['consoles',
+API_V3_CORE_EXTENSIONS = set(['os-consoles',
                               'extensions',
-                              'flavor-extra-specs',
-                              'flavor-manage',
+                              'os-flavor-extra-specs',
+                              'os-flavor-manage',
                               'flavors',
                               'ips',
                               'os-keypairs',
