@@ -1705,6 +1705,34 @@ class LibvirtConfigGuestNUMATune(LibvirtConfigObject):
         return root
 
 
+class LibvirtConfigGuestFeature(LibvirtConfigObject):
+
+    def __init__(self, name, **kwargs):
+        super(LibvirtConfigGuestFeature, self).__init__(root_name=name,
+                                                        **kwargs)
+
+
+class LibvirtConfigGuestFeatureACPI(LibvirtConfigGuestFeature):
+
+    def __init__(self, **kwargs):
+        super(LibvirtConfigGuestFeatureACPI, self).__init__("acpi",
+                                                            **kwargs)
+
+
+class LibvirtConfigGuestFeatureAPIC(LibvirtConfigGuestFeature):
+
+    def __init__(self, **kwargs):
+        super(LibvirtConfigGuestFeatureAPIC, self).__init__("apic",
+                                                            **kwargs)
+
+
+class LibvirtConfigGuestFeaturePAE(LibvirtConfigGuestFeature):
+
+    def __init__(self, **kwargs):
+        super(LibvirtConfigGuestFeaturePAE, self).__init__("pae",
+                                                           **kwargs)
+
+
 class LibvirtConfigGuest(LibvirtConfigObject):
 
     def __init__(self, **kwargs):
@@ -1722,9 +1750,7 @@ class LibvirtConfigGuest(LibvirtConfigObject):
         self.cpuset = None
         self.cpu = None
         self.cputune = None
-        self.acpi = False
-        self.apic = False
-        self.pae = False
+        self.features = []
         self.clock = None
         self.sysinfo = None
         self.os_type = None
@@ -1791,14 +1817,10 @@ class LibvirtConfigGuest(LibvirtConfigObject):
         root.append(os)
 
     def _format_features(self, root):
-        if any((self.acpi, self.apic, self.pae)):
+        if len(self.features) > 0:
             features = etree.Element("features")
-            if self.acpi:
-                features.append(etree.Element("acpi"))
-            if self.apic:
-                features.append(etree.Element("apic"))
-            if self.pae:
-                features.append(etree.Element("pae"))
+            for feat in self.features:
+                features.append(feat.format_dom())
             root.append(features)
 
     def _format_devices(self, root):

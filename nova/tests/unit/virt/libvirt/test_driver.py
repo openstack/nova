@@ -1054,9 +1054,11 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                      context=ctxt, flavor=flavor)
 
         self.assertEqual(cfg.uuid, instance_ref["uuid"])
-        self.assertEqual(cfg.pae, False)
-        self.assertEqual(cfg.acpi, True)
-        self.assertEqual(cfg.apic, True)
+        self.assertEqual(2, len(cfg.features))
+        self.assertIsInstance(cfg.features[0],
+                              vconfig.LibvirtConfigGuestFeatureACPI)
+        self.assertIsInstance(cfg.features[1],
+                              vconfig.LibvirtConfigGuestFeatureAPIC)
         self.assertEqual(cfg.memory, 6 * units.Ki)
         self.assertEqual(cfg.vcpus, 28)
         self.assertEqual(cfg.os_type, vm_mode.HVM)
@@ -1609,7 +1611,11 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         cfg = conn._get_guest_config(instance_ref,
                                      _fake_network_info(self.stubs, 2),
                                      {}, disk_info)
-        self.assertEqual(cfg.acpi, True)
+        self.assertEqual(2, len(cfg.features))
+        self.assertIsInstance(cfg.features[0],
+                              vconfig.LibvirtConfigGuestFeatureACPI)
+        self.assertIsInstance(cfg.features[1],
+                              vconfig.LibvirtConfigGuestFeatureAPIC)
         self.assertEqual(cfg.memory, 2 * units.Mi)
         self.assertEqual(cfg.vcpus, 1)
         self.assertEqual(cfg.os_type, vm_mode.HVM)
@@ -1678,7 +1684,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                             block_device_info)
         cfg = conn._get_guest_config(instance_ref, [], {}, disk_info,
                                      None, block_device_info)
-        self.assertEqual(cfg.acpi, False)
+        self.assertEqual(0, len(cfg.features))
         self.assertEqual(cfg.memory, 2 * units.Mi)
         self.assertEqual(cfg.vcpus, 1)
         self.assertEqual(cfg.os_type, "uml")
@@ -2380,7 +2386,13 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         self.assertEqual(cfg.os_type, vm_mode.HVM)
         self.assertEqual(cfg.os_loader, CONF.libvirt.xen_hvmloader_path)
-        self.assertEqual(cfg.pae, True)
+        self.assertEqual(3, len(cfg.features))
+        self.assertIsInstance(cfg.features[0],
+                              vconfig.LibvirtConfigGuestFeaturePAE)
+        self.assertIsInstance(cfg.features[1],
+                              vconfig.LibvirtConfigGuestFeatureACPI)
+        self.assertIsInstance(cfg.features[2],
+                              vconfig.LibvirtConfigGuestFeatureAPIC)
 
     @mock.patch.object(objects.Flavor, 'get_by_id')
     def test_get_guest_config_with_type_xen_pae_pvm(self, mock_flavor):
@@ -2403,7 +2415,13 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         cfg = conn._get_guest_config(instance_ref, [], {}, disk_info)
 
         self.assertEqual(cfg.os_type, vm_mode.XEN)
-        self.assertEqual(cfg.pae, True)
+        self.assertEqual(3, len(cfg.features))
+        self.assertIsInstance(cfg.features[0],
+                              vconfig.LibvirtConfigGuestFeaturePAE)
+        self.assertIsInstance(cfg.features[1],
+                              vconfig.LibvirtConfigGuestFeatureACPI)
+        self.assertIsInstance(cfg.features[2],
+                              vconfig.LibvirtConfigGuestFeatureAPIC)
 
     @mock.patch.object(objects.Flavor, 'get_by_id')
     def test_get_guest_config_with_vnc_and_spice(self, mock_flavor):

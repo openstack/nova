@@ -1410,9 +1410,11 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
         obj.os_loader = '/usr/lib/xen/boot/hvmloader'
         obj.os_root = "root=xvda"
         obj.os_cmdline = "console=xvc0"
-        obj.pae = True
-        obj.acpi = True
-        obj.apic = True
+        obj.features = [
+            config.LibvirtConfigGuestFeatureACPI(),
+            config.LibvirtConfigGuestFeatureAPIC(),
+            config.LibvirtConfigGuestFeaturePAE(),
+        ]
 
         disk = config.LibvirtConfigGuestDisk()
         disk.source_type = "file"
@@ -1508,9 +1510,11 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
         obj.os_type = "linux"
         obj.os_boot_dev = ["hd", "cdrom", "fd"]
         obj.os_smbios = config.LibvirtConfigGuestSMBIOS()
-        obj.pae = True
-        obj.acpi = True
-        obj.apic = True
+        obj.features = [
+            config.LibvirtConfigGuestFeatureACPI(),
+            config.LibvirtConfigGuestFeatureAPIC(),
+            config.LibvirtConfigGuestFeaturePAE(),
+        ]
 
         obj.sysinfo = config.LibvirtConfigGuestSysinfo()
         obj.sysinfo.bios_vendor = "Acme"
