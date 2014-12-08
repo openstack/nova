@@ -435,14 +435,14 @@ class API(base.Base):
                       'msg': msg}
 
             if min_count == max_count:
-                LOG.warning(_LW("%(overs)s quota exceeded for %(pid)s,"
-                                " tried to run %(min_count)d instances. "
-                                "%(msg)s"), params)
+                LOG.debug(("%(overs)s quota exceeded for %(pid)s,"
+                           " tried to run %(min_count)d instances. "
+                           "%(msg)s"), params)
             else:
-                LOG.warning(_LW("%(overs)s quota exceeded for %(pid)s,"
-                                " tried to run between %(min_count)d and"
-                                " %(max_count)d instances. %(msg)s"),
-                            params)
+                LOG.debug(("%(overs)s quota exceeded for %(pid)s,"
+                           " tried to run between %(min_count)d and"
+                           " %(max_count)d instances. %(msg)s"),
+                          params)
 
             num_instances = (str(min_count) if min_count == max_count else
                 "%s-%s" % (min_count, max_count))
