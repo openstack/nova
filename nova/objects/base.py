@@ -387,11 +387,19 @@ class NovaObject(object):
 
         def _do_backport(to_version):
             obj = getattr(self, field)
-            if obj:
+            if not obj:
+                return
+            if isinstance(obj, NovaObject):
                 obj.obj_make_compatible(
                     primitive[field]['nova_object.data'],
                     to_version)
                 primitive[field]['nova_object.version'] = to_version
+            elif isinstance(obj, list):
+                for i, element in enumerate(obj):
+                    element.obj_make_compatible(
+                        primitive[field][i]['nova_object.data'],
+                        to_version)
+                    primitive[field][i]['nova_object.version'] = to_version
 
         target_version = utils.convert_version_to_tuple(target_version)
         for index, versions in enumerate(self.obj_relationships[field]):
@@ -442,7 +450,8 @@ class NovaObject(object):
         is not possible for some reason
         """
         for key, field in self.fields.items():
-            if not isinstance(field, fields.ObjectField):
+            if not isinstance(field, (fields.ObjectField,
+                                      fields.ListOfObjectsField)):
                 continue
             if not self.obj_attr_is_set(key):
                 continue

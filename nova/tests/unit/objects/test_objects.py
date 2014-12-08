@@ -53,7 +53,9 @@ class MyObj(base.NovaPersistentObject, base.NovaObject):
               'bar': fields.Field(fields.String()),
               'missing': fields.Field(fields.String()),
               'readonly': fields.Field(fields.Integer(), read_only=True),
-              'rel_object': fields.ObjectField('MyOwnedObject', nullable=True)
+              'rel_object': fields.ObjectField('MyOwnedObject', nullable=True),
+              'rel_objects': fields.ListOfObjectsField('MyOwnedObject',
+                                                       nullable=True),
               }
 
     @staticmethod
@@ -692,8 +694,9 @@ class _TestObject(object):
 
     def test_object_inheritance(self):
         base_fields = base.NovaPersistentObject.fields.keys()
-        myobj_fields = ['foo', 'bar', 'missing',
-                        'readonly', 'rel_object'] + base_fields
+        myobj_fields = (['foo', 'bar', 'missing',
+                         'readonly', 'rel_object', 'rel_objects'] +
+                        base_fields)
         myobj3_fields = ['new_field']
         self.assertTrue(issubclass(TestSubclassedObject, MyObj))
         self.assertEqual(len(myobj_fields), len(MyObj.fields))
@@ -741,7 +744,8 @@ class _TestObject(object):
         obj = MyObj(foo=123)
         self.assertEqual('MyObj(bar=<?>,created_at=<?>,deleted=<?>,'
                          'deleted_at=<?>,foo=123,missing=<?>,readonly=<?>,'
-                         'rel_object=<?>,updated_at=<?>)', repr(obj))
+                         'rel_object=<?>,rel_objects=<?>,updated_at=<?>)',
+                         repr(obj))
 
     def test_obj_make_obj_compatible(self):
         subobj = MyOwnedObject(baz=1)
@@ -807,6 +811,20 @@ class _TestObject(object):
         obj.obj_relationships = {}
         self.assertRaises(exception.ObjectActionError,
                           obj.obj_make_compatible, {}, '1.0')
+
+    def test_obj_make_compatible_handles_list_of_objects(self):
+        subobj = MyOwnedObject(baz=1)
+        obj = MyObj(rel_objects=[subobj])
+        obj.obj_relationships = {'rel_objects': [('1.0', '1.123')]}
+
+        def fake_make_compat(primitive, version):
+            self.assertEqual('1.123', version)
+            self.assertIn('baz', primitive)
+
+        with mock.patch.object(subobj, 'obj_make_compatible') as mock_mc:
+            mock_mc.side_effect = fake_make_compat
+            obj.obj_to_primitive('1.0')
+            self.assertTrue(mock_mc.called)
 
 
 class TestObject(_LocalTest, _TestObject):
@@ -1111,7 +1129,7 @@ object_data = {
     'KeyPairList': '1.0-71132a568cc5d078ba1748a9c02c87b8',
     'Migration': '1.1-67c47726c2c71422058cd9d149d6d3ed',
     'MigrationList': '1.1-8c5f678edc72a592d591a13b35e54353',
-    'MyObj': '1.6-65fc480767fcc4289ce1849e91df9959',
+    'MyObj': '1.6-02b1e712b7ee334fa3fefe024c340977',
     'MyOwnedObject': '1.0-0f3d6c028543d7f3715d121db5b8e298',
     'Network': '1.2-2ea21ede5e45bb80e7b7ac7106915c4e',
     'NetworkList': '1.2-aa4ad23f035b97a41732ea8b3445fc5e',
@@ -1131,7 +1149,7 @@ object_data = {
     'SecurityGroupRuleList': '1.1-667fca3a9928f23d2d10e61962c55f3c',
     'Service': '1.7-82bbfd46a744a9c89bc44b47a1b81683',
     'ServiceList': '1.5-f137850fbd69933a69a03eae572b05f0',
-    'TestSubclassedObject': '1.6-b9be83b5587fbca3c8570aab67cb3d02',
+    'TestSubclassedObject': '1.6-87177ccbefd7a740a9e261f958e15b00',
     'Tag': '1.0-a11531f4e4e3166eef6243d6d58a18bd',
     'TagList': '1.0-e89bf8c8055f1f1d654fb44f0abf1f53',
     'VirtualInterface': '1.0-10fdac4c704102b6d57d6936d6d790d2',
