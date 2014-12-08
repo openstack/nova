@@ -22,3 +22,9 @@
    :platform: Unix
    :synopsis: Infrastructure-as-a-Service Cloud platform.
 """
+
+import os
+
+os.environ['EVENTLET_NO_GREENDNS'] = 'yes'
+
+import eventlet  # noqa
