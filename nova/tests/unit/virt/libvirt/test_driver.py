@@ -1398,6 +1398,27 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 self.assertEqual([instance_cell.id], memnode.nodeset)
                 self.assertEqual("strict", memnode.mode)
 
+    def test_get_cpu_numa_config_from_instance(self):
+        topology = objects.InstanceNUMATopology(cells=[
+            objects.InstanceNUMACell(id=0, cpuset=set([1, 2]), memory=128),
+            objects.InstanceNUMACell(id=1, cpuset=set([3, 4]), memory=128),
+        ])
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        conf = conn._get_cpu_numa_config_from_instance(topology)
+
+        self.assertIsInstance(conf, vconfig.LibvirtConfigGuestCPUNUMA)
+        self.assertEqual(0, conf.cells[0].id)
+        self.assertEqual(set([1, 2]), conf.cells[0].cpus)
+        self.assertEqual(131072, conf.cells[0].memory)
+        self.assertEqual(1, conf.cells[1].id)
+        self.assertEqual(set([3, 4]), conf.cells[1].cpus)
+        self.assertEqual(131072, conf.cells[1].memory)
+
+    def test_get_cpu_numa_config_from_instance_none(self):
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        conf = conn._get_cpu_numa_config_from_instance(None)
+        self.assertIsNone(conf)
+
     @mock.patch.object(objects.Flavor, 'get_by_id')
     def test_get_guest_config_clock(self, mock_flavor):
         self.flags(virt_type='kvm', group='libvirt')
