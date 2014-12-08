@@ -28,7 +28,7 @@ from nova.objects import network_request as objects_network_request
 from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests import fake_block_device
-from nova.tests.fake_instance import fake_instance_obj
+from nova.tests import fake_instance
 
 CONF = cfg.CONF
 
@@ -40,7 +40,7 @@ class ComputeRpcAPITestCase(test.TestCase):
         self.context = context.get_admin_context()
         instance_attr = {'host': 'fake_host',
                          'instance_type_id': 1}
-        self.fake_instance_obj = fake_instance_obj(self.context,
+        self.fake_instance_obj = fake_instance.fake_instance_obj(self.context,
                                                    **instance_attr)
         self.fake_instance = jsonutils.to_primitive(self.fake_instance_obj)
         self.fake_volume_bdm = jsonutils.to_primitive(

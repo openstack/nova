@@ -27,7 +27,7 @@ from nova import context
 from nova.i18n import _
 from nova.objects import flavor as flavor_obj
 from nova import test
-from nova.tests.fake_instance import fake_instance_obj
+from nova.tests import fake_instance
 
 CONF = cfg.CONF
 
@@ -295,7 +295,7 @@ class TestVCPU(test.TestCase):
         self._vcpu._used = 0
         self._flavor = fake_flavor_obj(vcpus=5)
         self._big_flavor = fake_flavor_obj(vcpus=20)
-        self._instance = fake_instance_obj(None)
+        self._instance = fake_instance.fake_instance_obj(None)
 
     def test_reset(self):
         # set vcpu values to something different to test reset
