@@ -3,7 +3,7 @@
 # process, which may cause wedges in the gate later.
 
 pbr>=0.6,!=0.7,<1.0
-SQLAlchemy>=0.8.4,<=0.8.99,>=0.9.7,<=0.9.99
+SQLAlchemy>=0.9.7,<=0.9.99
 anyjson>=0.3.3
 argparse
 boto>=2.32.1
@@ -34,7 +34,7 @@ six>=1.7.0
 stevedore>=1.1.0  # Apache-2.0
 websockify>=0.6.0,<0.7
 wsgiref>=0.1.2
-oslo.concurrency>=0.1.0  # Apache-2.0
+oslo.concurrency>=0.3.0  # Apache-2.0
 oslo.config>=1.4.0  # Apache-2.0
 oslo.serialization>=1.0.0               # Apache-2.0
 oslo.utils>=1.0.0                       # Apache-2.0
