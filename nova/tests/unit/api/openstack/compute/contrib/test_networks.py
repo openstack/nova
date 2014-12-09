@@ -245,44 +245,40 @@ class NetworkCreateExceptionsTestV21(test.TestCase):
         self._setup()
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
+        self.new_network = copy.deepcopy(NEW_NETWORK)
 
     def _setup(self):
         self.controller = networks_v21.NetworkController(self.PassthroughAPI())
 
     def test_network_create_bad_vlan(self):
         req = fakes.HTTPRequest.blank(self.url_prefix + '/os-networks')
-        net = copy.deepcopy(NEW_NETWORK)
-        net['network']['vlan_start'] = 'foo'
+        self.new_network['network']['vlan_start'] = 'foo'
         self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.create, req, net)
+                          self.controller.create, req, self.new_network)
 
     def test_network_create_no_cidr(self):
         req = fakes.HTTPRequest.blank(self.url_prefix + '/os-networks')
-        net = copy.deepcopy(NEW_NETWORK)
-        net['network']['cidr'] = ''
+        self.new_network['network']['cidr'] = ''
         self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.create, req, net)
+                          self.controller.create, req, self.new_network)
 
     def test_network_create_invalid_fixed_cidr(self):
         req = fakes.HTTPRequest.blank(self.url_prefix + '/os-networks')
-        net = copy.deepcopy(NEW_NETWORK)
-        net['network']['fixed_cidr'] = 'foo'
+        self.new_network['network']['fixed_cidr'] = 'foo'
         self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.create, req, net)
+                          self.controller.create, req, self.new_network)
 
     def test_network_create_invalid_start(self):
         req = fakes.HTTPRequest.blank(self.url_prefix + '/os-networks')
-        net = copy.deepcopy(NEW_NETWORK)
-        net['network']['allowed_start'] = 'foo'
+        self.new_network['network']['allowed_start'] = 'foo'
         self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.create, req, net)
+                          self.controller.create, req, self.new_network)
 
     def test_network_create_handle_network_not_created(self):
         req = fakes.HTTPRequest.blank(self.url_prefix + '/os-networks')
-        net = copy.deepcopy(NEW_NETWORK)
-        net['network']['label'] = 'fail_NetworkNotCreated'
+        self.new_network['network']['label'] = 'fail_NetworkNotCreated'
         self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.create, req, net)
+                          self.controller.create, req, self.new_network)
 
     def test_network_create_cidr_conflict(self):
 
@@ -296,10 +292,9 @@ class NetworkCreateExceptionsTestV21(test.TestCase):
         self.stubs.Set(objects.NetworkList, 'get_all', get_all)
 
         req = fakes.HTTPRequest.blank(self.url_prefix + '/os-networks')
-        net = copy.deepcopy(NEW_NETWORK)
-        net['network']['cidr'] = '10.0.0.0/24'
+        self.new_network['network']['cidr'] = '10.0.0.0/24'
         self.assertRaises(webob.exc.HTTPConflict,
-                          self.controller.create, req, net)
+                          self.controller.create, req, self.new_network)
 
 
 class NetworkCreateExceptionsTestV2(NetworkCreateExceptionsTestV21):
@@ -321,6 +316,7 @@ class NetworksTestV21(test.NoDBTestCase):
         self._setup()
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
+        self.new_network = copy.deepcopy(NEW_NETWORK)
 
     def _setup(self):
         self.controller = networks_v21.NetworkController(
@@ -453,7 +449,7 @@ class NetworksTestV21(test.NoDBTestCase):
 
     def test_network_create(self):
         req = fakes.HTTPRequest.blank(self.url_prefix + '/os-networks')
-        res_dict = self.controller.create(req, NEW_NETWORK)
+        res_dict = self.controller.create(req, body=self.new_network)
         self.assertIn('network', res_dict)
         uuid = res_dict['network']['id']
         req = fakes.HTTPRequest.blank(self.url_prefix +
@@ -464,18 +460,16 @@ class NetworksTestV21(test.NoDBTestCase):
 
     def test_network_create_large(self):
         req = fakes.HTTPRequest.blank(self.url_prefix + '/os-networks')
-        large_network = copy.deepcopy(NEW_NETWORK)
-        large_network['network']['cidr'] = '128.0.0.0/4'
-        res_dict = self.controller.create(req, large_network)
+        self.new_network['network']['cidr'] = '128.0.0.0/4'
+        res_dict = self.controller.create(req, self.new_network)
         self.assertEqual(res_dict['network']['cidr'],
-                         large_network['network']['cidr'])
+                         self.new_network['network']['cidr'])
 
     def test_network_create_bad_cidr(self):
         req = fakes.HTTPRequest.blank(self.url_prefix + '/os-networks')
-        net = copy.deepcopy(NEW_NETWORK)
-        net['network']['cidr'] = '128.0.0.0/900'
+        self.new_network['network']['cidr'] = '128.0.0.0/900'
         self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.create, req, net)
+                          self.controller.create, req, self.new_network)
 
     def test_network_neutron_disassociate_not_implemented(self):
         uuid = FAKE_NETWORKS[1]['uuid']
@@ -511,9 +505,8 @@ class NetworksTestV2(NetworksTestV21):
 
         self.stubs.Set(self.controller.network_api, 'create', no_mtu)
         req = fakes.HTTPRequest.blank(self.url_prefix + '/os-networks')
-        net = copy.deepcopy(NEW_NETWORK)
-        net['network']['mtu'] = 9000
-        self.controller.create(req, net)
+        self.new_network['network']['mtu'] = 9000
+        self.controller.create(req, self.new_network)
 
 
 class NetworksAssociateTestV21(test.NoDBTestCase):
