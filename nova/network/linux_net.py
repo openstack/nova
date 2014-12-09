@@ -21,6 +21,7 @@ import calendar
 import inspect
 import os
 import re
+import time
 
 import netaddr
 from oslo.config import cfg
@@ -130,6 +131,9 @@ linux_net_opts = [
     cfg.IntOpt('ebtables_exec_attempts',
                default=3,
                help='Number of times to retry ebtables commands on failure.'),
+    cfg.FloatOpt('ebtables_retry_interval',
+                 default=1.0,
+                 help='Number of seconds to wait between ebtables retries.'),
     ]
 
 CONF = cfg.CONF
@@ -1665,8 +1669,11 @@ def _exec_ebtables(*cmd, **kwargs):
     attempts = CONF.ebtables_exec_attempts
     if attempts <= 0:
         attempts = 1
-    while attempts > 0:
-        attempts -= 1
+    count = 1
+    while count <= attempts:
+        # Updated our counters if needed
+        sleep = CONF.ebtables_retry_interval * count
+        count += 1
         # NOTE(cfb): ebtables reports all errors with a return code of 255.
         #            As such we can't know if we hit a locking error, or some
         #            other error (like a rule doesn't exist) so we have to
@@ -1674,11 +1681,15 @@ def _exec_ebtables(*cmd, **kwargs):
         try:
             _execute(*cmd, check_exit_code=[0], **kwargs)
         except processutils.ProcessExecutionError:
-            if not attempts and check_exit_code:
+            if count > attempts and check_exit_code:
                 LOG.warning(_LW('%s failed. Not Retrying.'), ' '.join(cmd))
                 raise
             else:
-                LOG.warning(_LW('%s failed. Retrying.'), ' '.join(cmd))
+                # We need to sleep a bit before retrying
+                LOG.warning(_LW("%(cmd)s failed. Sleeping %(time)s seconds "
+                                "before retry."),
+                            {'cmd': ' '.join(cmd), 'time': sleep})
+                time.sleep(sleep)
         else:
             # Success
             return
