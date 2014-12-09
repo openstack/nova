@@ -605,6 +605,57 @@ class TcpUdpPortTestCase(APIValidationTestCase):
                                     expected_detail=detail)
 
 
+class CidrFormatTestCase(APIValidationTestCase):
+
+    def setUp(self):
+        super(CidrFormatTestCase, self).setUp()
+        schema = {
+            'type': 'object',
+            'properties': {
+                'foo': {
+                    'type': 'string',
+                    'format': 'cidr',
+                },
+            },
+        }
+
+        @validation.schema(schema)
+        def post(body):
+            return 'Validation succeeded.'
+
+        self.post = post
+
+    def test_validate_cidr(self):
+        self.assertEqual('Validation succeeded.',
+                         self.post(
+                         body={'foo': '192.168.10.0/24'}
+                         ))
+
+    def test_validate_cidr_fails(self):
+        detail = ("Invalid input for field/attribute foo."
+                  " Value: bar."
+                  " 'bar' is not a 'cidr'")
+        self.check_validation_error(self.post,
+                                    body={'foo': 'bar'},
+                                    expected_detail=detail)
+
+        detail = ("Invalid input for field/attribute foo."
+                  " Value: . '' is not a 'cidr'")
+        self.check_validation_error(self.post, body={'foo': ''},
+                                    expected_detail=detail)
+
+        detail = ("Invalid input for field/attribute foo."
+                  " Value: 192.168.1.0. '192.168.1.0' is not a 'cidr'")
+        self.check_validation_error(self.post, body={'foo': '192.168.1.0'},
+                                    expected_detail=detail)
+
+        detail = ("Invalid input for field/attribute foo."
+                  " Value: 192.168.1.0 /24."
+                  " '192.168.1.0 /24' is not a 'cidr'")
+        self.check_validation_error(self.post, body={'foo': '192.168.1.0 /24'},
+                                    expected_detail=detail)
+
+
 class DatetimeTestCase(APIValidationTestCase):
 
     def setUp(self):
