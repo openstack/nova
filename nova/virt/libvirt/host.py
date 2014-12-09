@@ -48,6 +48,7 @@ from nova.openstack.common import log as logging
 from nova import rpc
 from nova import utils
 from nova.virt import event as virtevent
+from nova.virt.libvirt import config as vconfig
 
 libvirt = None
 
@@ -77,6 +78,7 @@ class Host(object):
         self._conn_event_handler = conn_event_handler
         self._lifecycle_event_handler = lifecycle_event_handler
         self._skip_list_all_domains = False
+        self._caps = None
 
         self._wrapped_conn = None
         self._wrapped_conn_lock = threading.Lock()
@@ -573,3 +575,34 @@ class Host(object):
             doms.append(dom)
 
         return doms
+
+    def get_capabilities(self):
+        """Returns an instance of config.LibvirtConfigCaps representing
+           the capabilities of the host.
+        """
+        if not self._caps:
+            xmlstr = self.get_connection().getCapabilities()
+            self._caps = vconfig.LibvirtConfigCaps()
+            self._caps.parse_str(xmlstr)
+            if hasattr(libvirt, 'VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES'):
+                try:
+                    features = self.get_connection().baselineCPU(
+                        [self._caps.host.cpu.to_xml()],
+                        libvirt.VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES)
+                    # FIXME(wangpan): the return value of baselineCPU should be
+                    #                 None or xml string, but libvirt has a bug
+                    #                 of it from 1.1.2 which is fixed in 1.2.0,
+                    #                 this -1 checking should be removed later.
+                    if features and features != -1:
+                        cpu = vconfig.LibvirtConfigCPU()
+                        cpu.parse_str(features)
+                        self._caps.host.cpu.features = cpu.features
+                except libvirt.libvirtError as ex:
+                    error_code = ex.get_error_code()
+                    if error_code == libvirt.VIR_ERR_NO_SUPPORT:
+                        LOG.warn(_LW("URI %(uri)s does not support full set"
+                                     " of host capabilities: " "%(error)s"),
+                                     {'uri': self._uri, 'error': ex})
+                    else:
+                        raise
+        return self._caps
