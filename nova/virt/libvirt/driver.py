@@ -394,8 +394,7 @@ class LibvirtDriver(driver.ComputeDriver):
             self.virtapi,
             get_connection=self._get_connection)
 
-        self.vif_driver = libvirt_vif.LibvirtGenericVIFDriver(
-            self._get_connection)
+        self.vif_driver = libvirt_vif.LibvirtGenericVIFDriver()
 
         self.volume_drivers = driver.driver_dict_from_config(
             CONF.libvirt.volume_drivers, self)

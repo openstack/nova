@@ -82,9 +82,6 @@ def is_vif_model_valid_for_virt(virt_type, vif_model):
 class LibvirtGenericVIFDriver(object):
     """Generic VIF driver for libvirt networking."""
 
-    def __init__(self, get_connection):
-        self.get_connection = get_connection
-
     def _normalize_vif_type(self, vif_type):
         return vif_type.replace('2.1q', '2q')
 
