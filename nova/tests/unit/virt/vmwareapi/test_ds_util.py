@@ -347,17 +347,18 @@ class DsUtilTestCase(test.NoDBTestCase):
     def _test_is_datastore_valid(self, accessible=True,
                                  maintenance_mode="normal",
                                  type="VMFS",
-                                 datastore_regex=None):
+                                 datastore_regex=None,
+                                 ds_types=ds_util.ALL_SUPPORTED_DS_TYPES):
         propdict = {}
         propdict["summary.accessible"] = accessible
         propdict["summary.maintenanceMode"] = maintenance_mode
         propdict["summary.type"] = type
         propdict["summary.name"] = "ds-1"
 
-        return ds_util._is_datastore_valid(propdict, datastore_regex)
+        return ds_util._is_datastore_valid(propdict, datastore_regex, ds_types)
 
     def test_is_datastore_valid(self):
-        for ds_type in ds_util.ALLOWED_DATASTORE_TYPES:
+        for ds_type in ds_util.ALL_SUPPORTED_DS_TYPES:
             self.assertTrue(self._test_is_datastore_valid(True,
                                                           "normal",
                                                           ds_type))
