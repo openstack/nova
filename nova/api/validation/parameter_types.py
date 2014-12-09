@@ -94,6 +94,11 @@ server_id = {
 }
 
 
+image_id = {
+    'type': 'string', 'format': 'uuid'
+}
+
+
 volume_id = {
     'type': 'string', 'format': 'uuid'
 }
