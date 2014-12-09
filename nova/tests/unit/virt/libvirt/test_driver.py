@@ -1398,6 +1398,78 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 self.assertEqual([instance_cell.id], memnode.nodeset)
                 self.assertEqual("strict", memnode.mode)
 
+    @mock.patch.object(objects.Flavor, 'get_by_id')
+    def test_get_guest_config_numa_host_instance_topo_reordered(self,
+                                                                mock_flavor):
+        instance_topology = objects.InstanceNUMATopology(
+                    cells=[objects.InstanceNUMACell(
+                        id=3, cpuset=set([0, 1]), memory=1024),
+                           objects.InstanceNUMACell(
+                        id=0, cpuset=set([2, 3]), memory=1024)])
+        instance_ref = objects.Instance(**self.test_instance)
+        instance_ref.numa_topology = instance_topology
+        flavor = objects.Flavor(memory_mb=2048, vcpus=4, root_gb=496,
+                                ephemeral_gb=8128, swap=33550336, name='fake',
+                                extra_specs={})
+        mock_flavor.return_value = flavor
+
+        caps = vconfig.LibvirtConfigCaps()
+        caps.host = vconfig.LibvirtConfigCapsHost()
+        caps.host.cpu = vconfig.LibvirtConfigCPU()
+        caps.host.cpu.arch = "x86_64"
+        caps.host.topology = self._fake_caps_numa_topology()
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref)
+
+        with contextlib.nested(
+                mock.patch.object(
+                    objects.Flavor, "get_by_id", return_value=flavor),
+                mock.patch.object(
+                    objects.InstanceNUMATopology, "get_by_instance_uuid",
+                    return_value=instance_topology),
+                mock.patch.object(host.Host, 'has_min_version',
+                                  return_value=True),
+                mock.patch.object(
+                    conn, "_get_host_capabilities", return_value=caps),
+                ):
+            cfg = conn._get_guest_config(instance_ref, [], {}, disk_info)
+            self.assertIsNone(cfg.cpuset)
+            # Test that the pinning is correct and limited to allowed only
+            self.assertEqual(0, cfg.cputune.vcpupin[0].id)
+            self.assertEqual(set([6, 7]), cfg.cputune.vcpupin[0].cpuset)
+            self.assertEqual(1, cfg.cputune.vcpupin[1].id)
+            self.assertEqual(set([6, 7]), cfg.cputune.vcpupin[1].cpuset)
+            self.assertEqual(2, cfg.cputune.vcpupin[2].id)
+            self.assertEqual(set([0, 1]), cfg.cputune.vcpupin[2].cpuset)
+            self.assertEqual(3, cfg.cputune.vcpupin[3].id)
+            self.assertEqual(set([0, 1]), cfg.cputune.vcpupin[3].cpuset)
+            self.assertIsNotNone(cfg.cpu.numa)
+
+            self.assertIsInstance(cfg.cputune.emulatorpin,
+                                  vconfig.LibvirtConfigGuestCPUTuneEmulatorPin)
+            self.assertEqual(set([0, 1, 6, 7]), cfg.cputune.emulatorpin.cpuset)
+
+            for index, (instance_cell, numa_cfg_cell) in enumerate(zip(
+                    instance_topology.cells,
+                    cfg.cpu.numa.cells)):
+                self.assertEqual(index, numa_cfg_cell.id)
+                self.assertEqual(instance_cell.cpuset, numa_cfg_cell.cpus)
+                self.assertEqual(instance_cell.memory * units.Ki,
+                                 numa_cfg_cell.memory)
+
+            allnodes = set([cell.id for cell in instance_topology.cells])
+            self.assertEqual(allnodes, set(cfg.numatune.memory.nodeset))
+            self.assertEqual("strict", cfg.numatune.memory.mode)
+
+            for index, (instance_cell, memnode) in enumerate(zip(
+                    instance_topology.cells,
+                    cfg.numatune.memnodes)):
+                self.assertEqual(index, memnode.cellid)
+                self.assertEqual([instance_cell.id], memnode.nodeset)
+                self.assertEqual("strict", memnode.mode)
+
     def test_get_cpu_numa_config_from_instance(self):
         topology = objects.InstanceNUMATopology(cells=[
             objects.InstanceNUMACell(id=0, cpuset=set([1, 2]), memory=128),
