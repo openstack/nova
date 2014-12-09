@@ -397,6 +397,7 @@ class ResourceTracker(object):
         if not self.compute_node:
             # Need to create the ComputeNode record:
             resources['service_id'] = service['id']
+            resources['host'] = self.host
             self._create(context, resources)
             if self.pci_tracker:
                 self.pci_tracker.set_compute_node_id(self.compute_node['id'])

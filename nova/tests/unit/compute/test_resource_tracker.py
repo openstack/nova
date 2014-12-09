@@ -174,6 +174,7 @@ class BaseTestCase(test.TestCase):
         compute = {
             "id": 1,
             "service_id": 1,
+            "host": "fakehost",
             "vcpus": 1,
             "memory_mb": 1,
             "local_gb": 1,

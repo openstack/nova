@@ -207,6 +207,7 @@ class BaseTestCase(test.TestCase):
                                    'stats': '',
                                    'numa_topology': '',
                                    'id': 2,
+                                   'host': 'fake_phyp1',
                                    'host_ip': '127.0.0.1'}]
             return [objects.ComputeNode._from_db_object(
                         context, objects.ComputeNode(), cn)

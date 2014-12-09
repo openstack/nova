@@ -2615,7 +2615,7 @@ class ServiceTestCase(test.TestCase, ModelsObjectComparatorMixin):
                               free_disk_gb=2048, hypervisor_type="xen",
                               hypervisor_version=1, cpu_info="",
                               running_vms=0, current_workload=0,
-                              service_id=service['id'])
+                              service_id=service['id'], host=service['host'])
         compute = db.compute_node_create(self.ctxt, compute_values)
         real_service = db.service_get(self.ctxt, service['id'],
                                       with_compute_node=True)
@@ -6157,6 +6157,7 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
                                  hypervisor_version=1, cpu_info="",
                                  running_vms=0, current_workload=0,
                                  service_id=self.service['id'],
+                                 host=self.service['host'],
                                  disk_available_least=100,
                                  hypervisor_hostname='abracadabra104',
                                  host_ip='127.0.0.1',
@@ -6245,7 +6246,7 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
             compute_node_data = self.compute_node_dict.copy()
             compute_node_data['service_id'] = service['id']
             compute_node_data['stats'] = jsonutils.dumps(self.stats)
-            compute_node_data['hypervisor_hostname'] = 'bm_node_1'
+            compute_node_data['hypervisor_hostname'] = name
             node = db.compute_node_create(self.ctxt, compute_node_data)
 
             node = dict(node.iteritems())

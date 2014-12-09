@@ -256,7 +256,7 @@ COMPUTE_NODES_IO_OPS = [
              disk_available_least=None, free_ram_mb=512, vcpus_used=1,
              free_disk_gb=512, local_gb_used=0, updated_at=None,
              service=dict(host='host1', disabled=False),
-             hypervisor_hostname='node1', host_ip='127.0.0.1',
+             host='host1', hypervisor_hostname='node1', host_ip='127.0.0.1',
              hypervisor_version=0, numa_topology=None,
              stats=jsonutils.dumps({'io_workload': '1'})),
         # host2: num_io_ops=2
@@ -264,7 +264,7 @@ COMPUTE_NODES_IO_OPS = [
              disk_available_least=1024, free_ram_mb=1024, vcpus_used=2,
              free_disk_gb=1024, local_gb_used=0, updated_at=None,
              service=dict(host='host2', disabled=True),
-             hypervisor_hostname='node2', host_ip='127.0.0.1',
+             host='host2', hypervisor_hostname='node2', host_ip='127.0.0.1',
              hypervisor_version=0, numa_topology=None,
              stats=jsonutils.dumps({'io_workload': '2'})),
         # host3: num_io_ops=0, so host3 should win in the case of default
@@ -273,7 +273,7 @@ COMPUTE_NODES_IO_OPS = [
              disk_available_least=3333, free_ram_mb=3072, vcpus_used=1,
              free_disk_gb=3072, local_gb_used=0, updated_at=None,
              service=dict(host='host3', disabled=False),
-             hypervisor_hostname='node3', host_ip='127.0.0.1',
+             host='host3', hypervisor_hostname='node3', host_ip='127.0.0.1',
              hypervisor_version=0, numa_topology=None,
              stats=jsonutils.dumps({'io_workload': '0'})),
         # host4: num_io_ops=4, so host4 should win in the case of positive
@@ -282,11 +282,12 @@ COMPUTE_NODES_IO_OPS = [
              disk_available_least=8192, free_ram_mb=8192, vcpus_used=0,
              free_disk_gb=8888, local_gb_used=0, updated_at=None,
              service=dict(host='host4', disabled=False),
-             hypervisor_hostname='node4', host_ip='127.0.0.1',
+             host='host4', hypervisor_hostname='node4', host_ip='127.0.0.1',
              hypervisor_version=0, numa_topology=None,
              stats=jsonutils.dumps({'io_workload': '4'})),
         # Broken entry
-        dict(id=5, local_gb=1024, memory_mb=1024, vcpus=1, service=None),
+        dict(id=5, local_gb=1024, memory_mb=1024, vcpus=1, service=None,
+             host='fake'),
 ]
 
 

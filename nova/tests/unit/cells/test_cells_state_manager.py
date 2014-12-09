@@ -52,6 +52,7 @@ def _fake_compute_node_get_all(context):
     def _node(host, total_mem, total_disk, free_mem, free_disk):
         service = {'host': host, 'disabled': False}
         return {'service': service,
+                'host': host,
                 'memory_mb': total_mem,
                 'local_gb': total_disk,
                 'free_ram_mb': free_mem,

@@ -346,6 +346,7 @@ class HostTestCaseV21(test.TestCase):
         s_ref = db.service_create(ctxt, dic)
 
         dic = {'service_id': s_ref['id'],
+               'host': s_ref['host'],
                'vcpus': 16, 'memory_mb': 32, 'local_gb': 100,
                'vcpus_used': 16, 'memory_mb_used': 32, 'local_gb_used': 10,
                'hypervisor_type': 'qemu', 'hypervisor_version': 12003,

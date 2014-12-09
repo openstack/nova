@@ -48,6 +48,7 @@ fake_compute_node = {
     'deleted': False,
     'id': 123,
     'service_id': 456,
+    'host': 'fake',
     'vcpus': 4,
     'memory_mb': 4096,
     'local_gb': 1024,
@@ -88,6 +89,23 @@ class _TestComputeNodeObject(object):
         self.mox.StubOutWithMock(db, 'compute_node_get')
         db.compute_node_get(self.context, 123).AndReturn(fake_compute_node)
         self.mox.ReplayAll()
+        compute = compute_node.ComputeNode.get_by_id(self.context, 123)
+        self.compare_obj(compute, fake_compute_node,
+                         subs=self.subs(),
+                         comparators=self.comparators())
+
+    @mock.patch.object(objects.Service, 'get_by_id')
+    @mock.patch.object(db, 'compute_node_get')
+    def test_get_by_id_with_host_field_not_in_db(self, mock_cn_get,
+                                                 mock_obj_svc_get):
+        fake_compute_node_with_no_host = fake_compute_node.copy()
+        host = fake_compute_node_with_no_host.pop('host')
+        fake_service = service.Service(id=123)
+        fake_service.host = host
+
+        mock_cn_get.return_value = fake_compute_node_with_no_host
+        mock_obj_svc_get.return_value = fake_service
+
         compute = compute_node.ComputeNode.get_by_id(self.context, 123)
         self.compare_obj(compute, fake_compute_node,
                          subs=self.subs(),
@@ -230,6 +248,11 @@ class _TestComputeNodeObject(object):
         compute.supported_hv_specs = fake_supported_hv_specs
         primitive = compute.obj_to_primitive(target_version='1.5')
         self.assertNotIn('supported_hv_specs', primitive)
+
+    def test_compat_host(self):
+        compute = compute_node.ComputeNode()
+        primitive = compute.obj_to_primitive(target_version='1.6')
+        self.assertNotIn('host', primitive)
 
 
 class TestComputeNodeObject(test_objects._LocalTest,

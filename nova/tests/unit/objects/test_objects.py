@@ -1077,8 +1077,8 @@ object_data = {
     'BandwidthUsageList': '1.2-5b564cbfd5ae6e106443c086938e7602',
     'BlockDeviceMapping': '1.5-9968ffe513e7672484b0f528b034cd0f',
     'BlockDeviceMappingList': '1.6-ee2ed2eb3f3f2f54d573ccea0ff2eeaa',
-    'ComputeNode': '1.6-d2ea9b8f4a6e95ff6a683266eebddbff',
-    'ComputeNodeList': '1.6-205aa2ea08d49f6ce87df1fcd2407b4e',
+    'ComputeNode': '1.7-e8fe074d1a313267ca0b58c7ec9b3e41',
+    'ComputeNodeList': '1.7-57b97dd41b92f43e53d6dab596cde165',
     'DNSDomain': '1.0-5bdc288d7c3b723ce86ede998fd5c9ba',
     'DNSDomainList': '1.0-cfb3e7e82be661501c31099523154db4',
     'EC2InstanceMapping': '1.0-627baaf4b12c9067200979bdc4558a99',
@@ -1128,8 +1128,8 @@ object_data = {
     'SecurityGroupList': '1.0-528e6448adfeeb78921ebeda499ab72f',
     'SecurityGroupRule': '1.1-a9175baf7664439af1a16c2010b55576',
     'SecurityGroupRuleList': '1.1-667fca3a9928f23d2d10e61962c55f3c',
-    'Service': '1.5-82bbfd46a744a9c89bc44b47a1b81683',
-    'ServiceList': '1.3-4a1a5822dea268d0d7f892f5106bb2e1',
+    'Service': '1.6-82bbfd46a744a9c89bc44b47a1b81683',
+    'ServiceList': '1.4-73d3799b7738fe247942169d67c08ec6',
     'TestSubclassedObject': '1.6-b9be83b5587fbca3c8570aab67cb3d02',
     'Tag': '1.0-a11531f4e4e3166eef6243d6d58a18bd',
     'TagList': '1.0-e89bf8c8055f1f1d654fb44f0abf1f53',
@@ -1155,7 +1155,7 @@ object_relationships = {
     'InstanceNUMACell': {'VirtCPUTopology': '1.0'},
     'MyObj': {'MyOwnedObject': '1.0'},
     'SecurityGroupRule': {'SecurityGroup': '1.1'},
-    'Service': {'ComputeNode': '1.6'},
+    'Service': {'ComputeNode': '1.7'},
     'TestSubclassedObject': {'MyOwnedObject': '1.0'}
 }
 

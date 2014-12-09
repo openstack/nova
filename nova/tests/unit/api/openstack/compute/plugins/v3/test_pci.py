@@ -189,6 +189,7 @@ class PciControlletest(test.NoDBTestCase):
     def _fake_compute_node_get_all(self, context):
         return [dict(id=1,
                      service_id=1,
+                     host='fake',
                      cpu_info='cpu_info',
                      disk_available_least=100)]
 

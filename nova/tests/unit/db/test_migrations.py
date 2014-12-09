@@ -544,6 +544,23 @@ class NovaMigrationsCheckers(test_migrations.WalkVersionsMixin):
         console = consoles.select(consoles.c.id == 1).execute().first()
         self.assertIsNone(console)
 
+    def _check_268(self, engine, data):
+        # We can only assert that the col exists, not the unique constraint
+        # as the engine is running sqlite
+        self.assertColumnExists(engine, 'compute_nodes', 'host')
+        self.assertColumnExists(engine, 'shadow_compute_nodes', 'host')
+        compute_nodes = oslodbutils.get_table(engine, 'compute_nodes')
+        shadow_compute_nodes = oslodbutils.get_table(
+            engine, 'shadow_compute_nodes')
+        self.assertIsInstance(compute_nodes.c.host.type,
+                              sqlalchemy.types.String)
+        self.assertIsInstance(shadow_compute_nodes.c.host.type,
+                              sqlalchemy.types.String)
+
+    def _post_downgrade_268(self, engine):
+        self.assertColumnNotExists(engine, 'compute_nodes', 'host')
+        self.assertColumnNotExists(engine, 'shadow_compute_nodes', 'host')
+
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
                                test_base.DbTestCase):

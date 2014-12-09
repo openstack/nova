@@ -45,6 +45,7 @@ _COMPUTE_NODE_FIXTURES = [
         #                 detach-compute-node-from-service blueprint
         #                 implementation.
         'service_id': 1,
+        'host': 'fake-host',
         'service': None,
         'vcpus': _VIRT_DRIVER_AVAIL_RESOURCES['vcpus'],
         'memory_mb': _VIRT_DRIVER_AVAIL_RESOURCES['memory_mb'],
@@ -724,6 +725,8 @@ class TestSyncComputeNode(BaseTestCase):
         # NOTE(jaypipes): This will go away once
         #                 detach-compute-node-from-service blueprint is done
         expected_resources['service_id'] = 1
+        # NOTE(sbauza): ResourceTracker adds host field
+        expected_resources['host'] = 'fake-host'
         # NOTE(jaypipes): The ERT adds a "stats" field, containing a dictionary
         #                 of stuff that comes from the resource tracker's
         #                 stats_class thing.
