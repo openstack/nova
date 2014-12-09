@@ -33,7 +33,8 @@ class Service(base.NovaPersistentObject, base.NovaObject):
     # Version 1.4: Added use_slave to get_by_compute_host
     # Version 1.5: ComputeNode version 1.6
     # Version 1.6: ComputeNode version 1.7
-    VERSION = '1.6'
+    # Version 1.7: ComputeNode version 1.8
+    VERSION = '1.7'
 
     fields = {
         'id': fields.IntegerField(read_only=True),
@@ -61,6 +62,10 @@ class Service(base.NovaPersistentObject, base.NovaObject):
             self.compute_node.obj_make_compatible(
                     primitive['compute_node']['nova_object.data'], '1.6')
             primitive['compute_node']['nova_object.version'] = '1.6'
+        elif target_version < (1, 7) and 'compute_node' in primitive:
+            self.compute_node.obj_make_compatible(
+                    primitive['compute_node']['nova_object.data'], '1.7')
+            primitive['compute_node']['nova_object.version'] = '1.7'
 
     @staticmethod
     def _do_compute_node(context, service, db_service):
@@ -152,7 +157,8 @@ class ServiceList(base.ObjectListBase, base.NovaObject):
     # Version 1.2: Service version 1.4
     # Version 1.3: Service version 1.5
     # Version 1.4: Service version 1.6
-    VERSION = '1.4'
+    # Version 1.5: Service version 1.7
+    VERSION = '1.5'
 
     fields = {
         'objects': fields.ListOfObjectsField('Service'),
@@ -163,7 +169,8 @@ class ServiceList(base.ObjectListBase, base.NovaObject):
         '1.1': '1.3',
         '1.2': '1.4',
         '1.3': '1.5',
-        '1.4': '1.6'
+        '1.4': '1.6',
+        '1.5': '1.7',
         }
 
     @base.remotable_classmethod

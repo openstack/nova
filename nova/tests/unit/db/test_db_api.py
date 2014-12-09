@@ -6260,6 +6260,62 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self._assertEqualListsOfObjects(expected, result,
                                         ignored_keys=['stats'])
 
+    def test_compute_node_get_all_by_host_with_distinct_hosts(self):
+        # Create another service with another node
+        service2 = self.service_dict.copy()
+        service2['host'] = 'host2'
+        db.service_create(self.ctxt, service2)
+        compute_node_another_host = self.compute_node_dict.copy()
+        compute_node_another_host['stats'] = jsonutils.dumps(self.stats)
+        compute_node_another_host['hypervisor_hostname'] = 'node_2'
+        compute_node_another_host['host'] = 'host2'
+
+        node = db.compute_node_create(self.ctxt, compute_node_another_host)
+
+        result = db.compute_node_get_all_by_host(self.ctxt, 'host1', False)
+        self._assertEqualListsOfObjects([self.item], result)
+        result = db.compute_node_get_all_by_host(self.ctxt, 'host2', False)
+        self._assertEqualListsOfObjects([node], result)
+
+    def test_compute_node_get_all_by_host_with_same_host(self):
+        # Create another node on top of the same service
+        compute_node_same_host = self.compute_node_dict.copy()
+        compute_node_same_host['stats'] = jsonutils.dumps(self.stats)
+        compute_node_same_host['hypervisor_hostname'] = 'node_3'
+
+        node = db.compute_node_create(self.ctxt, compute_node_same_host)
+
+        expected = [self.item, node]
+        result = sorted(db.compute_node_get_all_by_host(
+                        self.ctxt, 'host1', False),
+                        key=lambda n: n['hypervisor_hostname'])
+
+        self._assertEqualListsOfObjects(expected, result,
+                                        ignored_keys=['stats'])
+
+    def test_compute_node_get_all_by_host_not_found(self):
+        self.assertRaises(exception.ComputeHostNotFound,
+                          db.compute_node_get_all_by_host, self.ctxt, 'wrong')
+
+    def test_compute_node_get_by_host_and_nodename(self):
+        # Create another node on top of the same service
+        compute_node_same_host = self.compute_node_dict.copy()
+        compute_node_same_host['stats'] = jsonutils.dumps(self.stats)
+        compute_node_same_host['hypervisor_hostname'] = 'node_2'
+
+        node = db.compute_node_create(self.ctxt, compute_node_same_host)
+
+        expected = node
+        result = db.compute_node_get_by_host_and_nodename(
+            self.ctxt, 'host1', 'node_2')
+
+        self._assertEqualObjects(expected, result)
+
+    def test_compute_node_get_by_host_and_nodename_not_found(self):
+        self.assertRaises(exception.ComputeHostNotFound,
+                          db.compute_node_get_by_host_and_nodename,
+                          self.ctxt, 'host1', 'wrong')
+
     def test_compute_node_get(self):
         compute_node_id = self.item['id']
         node = db.compute_node_get(self.ctxt, compute_node_id)

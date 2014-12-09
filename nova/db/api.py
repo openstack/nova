@@ -181,6 +181,21 @@ def compute_node_get_by_service_id(context, service_id):
     return IMPL.compute_node_get_by_service_id(context, service_id)
 
 
+def compute_node_get_by_host_and_nodename(context, host, nodename):
+    """Get a compute node by its associated host and nodename.
+
+    :param context: The security context (admin)
+    :param host: Name of the host
+    :param nodename: Name of the node
+
+    :returns: Dictionary-like object containing properties of the compute node,
+              including its statistics
+
+    Raises ComputeHostNotFound if host with the given name doesn't exist.
+    """
+    return IMPL.compute_node_get_by_host_and_nodename(context, host, nodename)
+
+
 def compute_node_get_all(context, no_date_fields=False):
     """Get all computeNodes.
 
@@ -194,6 +209,17 @@ def compute_node_get_all(context, no_date_fields=False):
               including corresponding service
     """
     return IMPL.compute_node_get_all(context, no_date_fields)
+
+
+def compute_node_get_all_by_host(context, host, use_slave=False):
+    """Get compute nodes by host name
+
+    :param context: The security context (admin)
+    :param host: Name of the host
+
+    :returns: List of dictionaries each containing compute node properties
+    """
+    return IMPL.compute_node_get_all_by_host(context, host, use_slave)
 
 
 def compute_node_search_by_hypervisor(context, hypervisor_match):

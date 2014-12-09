@@ -506,6 +506,31 @@ def compute_node_get_by_service_id(context, service_id):
 
 
 @require_admin_context
+def compute_node_get_by_host_and_nodename(context, host, nodename):
+    result = model_query(context, models.ComputeNode, read_deleted='no').\
+        filter_by(host=host, hypervisor_hostname=nodename).\
+        first()
+
+    if not result:
+        raise exception.ComputeHostNotFound(host=host)
+
+    return result
+
+
+@require_admin_context
+def compute_node_get_all_by_host(context, host, use_slave=False):
+    result = model_query(context, models.ComputeNode, read_deleted='no',
+                         use_slave=use_slave).\
+        filter_by(host=host).\
+        all()
+
+    if not result:
+        raise exception.ComputeHostNotFound(host=host)
+
+    return result
+
+
+@require_admin_context
 def compute_node_get_all(context, no_date_fields):
 
     # NOTE(msdubov): Using lower-level 'select' queries and joining the tables
