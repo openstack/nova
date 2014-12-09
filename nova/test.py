@@ -25,12 +25,10 @@ import eventlet
 eventlet.monkey_patch(os=False)
 
 import copy
-import gettext
 import inspect
 import logging
 import os
 import shutil
-import uuid
 
 import fixtures
 from oslo.config import cfg
@@ -54,7 +52,6 @@ from nova.openstack.common.fixture import logging as log_fixture
 from nova.openstack.common import log as nova_logging
 from nova import paths
 from nova import rpc
-from nova import service
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit import conf_fixture
 from nova.tests.unit import policy_fixture
@@ -150,34 +147,6 @@ class SampleNetworks(fixtures.Fixture):
                                 dns1=CONF.flat_network_dns)
         for net in db.network_get_all(ctxt):
             network.set_network_host(ctxt, net)
-
-
-class ServiceFixture(fixtures.Fixture):
-    """Run a service as a test fixture."""
-
-    def __init__(self, name, host=None, **kwargs):
-        name = name
-        host = host and host or uuid.uuid4().hex
-        kwargs.setdefault('host', host)
-        kwargs.setdefault('binary', 'nova-%s' % name)
-        self.kwargs = kwargs
-
-    def setUp(self):
-        super(ServiceFixture, self).setUp()
-        self.service = service.Service.create(**self.kwargs)
-        self.service.start()
-        self.addCleanup(self.service.kill)
-
-
-class TranslationFixture(fixtures.Fixture):
-    """Use gettext NullTranslation objects in tests."""
-
-    def setUp(self):
-        super(TranslationFixture, self).setUp()
-        nulltrans = gettext.NullTranslations()
-        gettext_fixture = fixtures.MonkeyPatch('gettext.translation',
-                                               lambda *x, **y: nulltrans)
-        self.gettext_patcher = self.useFixture(gettext_fixture)
 
 
 class TestingException(Exception):
@@ -282,7 +251,7 @@ class TestCase(testtools.TestCase):
 
         self.useFixture(fixtures.NestedTempfile())
         self.useFixture(fixtures.TempHomeDir())
-        self.useFixture(TranslationFixture())
+        self.useFixture(nova_fixtures.TranslationFixture())
         self.useFixture(log_fixture.get_logging_handle_error_fixture())
 
         self.useFixture(nova_fixtures.OutputStreamCapture())
@@ -370,7 +339,8 @@ class TestCase(testtools.TestCase):
             CONF.set_override(k, v, group)
 
     def start_service(self, name, host=None, **kwargs):
-        svc = self.useFixture(ServiceFixture(name, host, **kwargs))
+        svc = self.useFixture(
+            nova_fixtures.ServiceFixture(name, host, **kwargs))
         return svc.service
 
     def assertPublicAPISignatures(self, baseinst, inst):
