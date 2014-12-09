@@ -124,3 +124,24 @@ class TestLogging(testtools.TestCase):
         log.debug("at debug")
         self.assertIn("at info", stdlog.logger.output)
         self.assertIn("at debug", stdlog.logger.output)
+
+
+class TestTimeout(testtools.TestCase):
+    """Tests for our timeout fixture.
+
+    Testing the actual timeout mechanism is beyond the scope of this
+    test, because it's a pretty clear pass through to fixtures'
+    timeout fixture, which tested in their tree.
+
+    """
+    def test_scaling(self):
+        # a bad scaling factor
+        self.assertRaises(ValueError, fixtures.Timeout, 1, 0.5)
+
+        # various things that should work.
+        timeout = fixtures.Timeout(10)
+        self.assertEqual(timeout.test_timeout, 10)
+        timeout = fixtures.Timeout("10")
+        self.assertEqual(timeout.test_timeout, 10)
+        timeout = fixtures.Timeout("10", 2)
+        self.assertEqual(timeout.test_timeout, 20)

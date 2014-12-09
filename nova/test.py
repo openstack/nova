@@ -219,35 +219,12 @@ class TestCase(testtools.TestCase):
 
     TIMEOUT_SCALING_FACTOR = 1
 
-    def _setup_timeouts(self):
-        """Setup per test timeouts.
-
-        In order to avoid test deadlocks we support setting up a test
-        timeout parameter read from the environment. In almost all
-        cases where the timeout is reached this means a deadlock.
-
-        A class level TIMEOUT_SCALING_FACTOR also exists, which allows
-        extremely long tests to specify they need more time.
-        """
-        test_timeout = os.environ.get('OS_TEST_TIMEOUT', 0)
-        try:
-            test_timeout = int(test_timeout)
-        except ValueError:
-            # If timeout value is invalid do not set a timeout.
-            test_timeout = 0
-
-        if self.TIMEOUT_SCALING_FACTOR >= 1:
-            test_timeout *= self.TIMEOUT_SCALING_FACTOR
-        else:
-            raise ValueError('TIMEOUT_SCALING_FACTOR value must be >= 1')
-
-        if test_timeout > 0:
-            self.useFixture(fixtures.Timeout(test_timeout, gentle=True))
-
     def setUp(self):
         """Run before each test method to initialize test environment."""
         super(TestCase, self).setUp()
-        self._setup_timeouts()
+        self.useFixture(nova_fixtures.Timeout(
+            os.environ.get('OS_TEST_TIMEOUT', 0),
+            self.TIMEOUT_SCALING_FACTOR))
 
         self.useFixture(fixtures.NestedTempfile())
         self.useFixture(fixtures.TempHomeDir())
