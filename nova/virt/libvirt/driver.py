@@ -3097,11 +3097,6 @@ class LibvirtDriver(driver.ComputeDriver):
                         raise
         return self._caps
 
-    def _get_host_uuid(self):
-        """Returns a UUID representing the host."""
-        caps = self._get_host_capabilities()
-        return caps.host.uuid
-
     def _get_guest_cpu_model_config(self):
         mode = CONF.libvirt.cpu_mode
         model = CONF.libvirt.cpu_model
@@ -3284,7 +3279,8 @@ class LibvirtDriver(driver.ComputeDriver):
         This is typically from the SMBIOS data, unless it has
         been overridden in /etc/libvirt/libvirtd.conf
         """
-        return self._get_host_uuid()
+        caps = self._get_host_capabilities()
+        return caps.host.uuid
 
     def _get_host_sysinfo_serial_os(self):
         """Get a UUID from the host operating system

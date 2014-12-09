@@ -432,16 +432,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.useFixture(fixtures.MonkeyPatch(
             'nova.virt.libvirt.driver.libvirt_utils',
             fake_libvirt_utils))
-        # Force libvirt to return a host UUID that matches the serial in
-        # nova.tests.unit.fakelibvirt. This is necessary because the host UUID
-        # returned by libvirt becomes the serial whose value is checked for in
-        # test_xml_and_uri_* below.
-        self.useFixture(fixtures.MonkeyPatch(
-            'nova.virt.libvirt.driver.LibvirtDriver._get_host_uuid',
-            lambda _: 'cef19ce0-0ca2-11df-855d-b19fbce37686'))
-        # Prevent test suite trying to find /etc/machine-id
-        # which isn't guaranteed to exist. Instead it will use
-        # the host UUID from libvirt which we mock above
+
         self.flags(sysinfo_serial="hardware", group="libvirt")
 
         self.useFixture(fixtures.MonkeyPatch(
@@ -3129,7 +3120,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.flags(sysinfo_serial="none", group="libvirt")
         self._test_get_guest_config_sysinfo_serial(None)
 
-    @mock.patch.object(libvirt_driver.LibvirtDriver, "_get_host_uuid")
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       "_get_host_sysinfo_serial_hardware")
     def test_get_guest_config_sysinfo_serial_hardware(self, mock_uuid):
         self.flags(sysinfo_serial="hardware", group="libvirt")
 
@@ -3166,7 +3158,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         with contextlib.nested(
                 mock.patch.object(os.path, "exists"),
                 mock.patch.object(libvirt_driver.LibvirtDriver,
-                                  "_get_host_uuid")
+                                  "_get_host_sysinfo_serial_hardware")
         ) as (mock_exists, mock_uuid):
             def fake_exists(filename):
                 if filename == "/etc/machine-id":
@@ -5512,10 +5504,13 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual(tree.find('./uuid').text,
                          instance_ref['uuid'])
 
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       "_get_host_sysinfo_serial_hardware",)
     @mock.patch.object(objects.Flavor, 'get_by_id')
-    def _check_xml_and_uri(self, instance, mock_flavor,
+    def _check_xml_and_uri(self, instance, mock_flavor, mock_serial,
                            expect_ramdisk=False, expect_kernel=False,
                            rescue=None, expect_xen_hvm=False, xen_only=False):
+        mock_serial.return_value = "cef19ce0-0ca2-11df-855d-b19fbce37686"
         instance_ref = objects.Instance(**instance)
 
         xen_vm_mode = vm_mode.XEN
