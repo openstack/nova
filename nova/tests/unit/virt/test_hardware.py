@@ -1404,12 +1404,6 @@ class HelperMethodsTestCase(test.NoDBTestCase):
 
 
 class VirtMemoryPagesTestCase(test.NoDBTestCase):
-    def test_virt_pages_topology(self):
-        pages = hw.VirtPagesTopology(4, 1024, 512)
-        self.assertEqual(4, pages.size_kb)
-        self.assertEqual(1024, pages.total)
-        self.assertEqual(512, pages.used)
-
     def test_cell_instance_pagesize(self):
         cell = objects.InstanceNUMACell(
             id=0, cpuset=set([0]), memory=1024, pagesize=2048)

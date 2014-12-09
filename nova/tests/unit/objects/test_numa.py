@@ -47,6 +47,16 @@ class _TestNUMA(object):
         self.assertEqual(set([2]), obj.cells[0].free_cpus)
         self.assertEqual(set([3, 4]), obj.cells[1].free_cpus)
 
+    def test_pages_topology_wipe(self):
+        pages_topology = objects.NUMAPagesTopology(
+            size_kb=2048, total=1024, used=512)
+
+        self.assertEqual(2048, pages_topology.size_kb)
+        self.assertEqual(1024, pages_topology.total)
+        self.assertEqual(512, pages_topology.used)
+        self.assertEqual(512, pages_topology.free)
+        self.assertEqual(1048576, pages_topology.free_kb)
+
 
 class TestNUMA(test_objects._LocalTest,
                _TestNUMA):
