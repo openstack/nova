@@ -392,7 +392,7 @@ class LibvirtDriver(driver.ComputeDriver):
         self.firewall_driver = firewall.load_driver(
             DEFAULT_FIREWALL_DRIVER,
             self.virtapi,
-            get_connection=self._get_connection)
+            host=self._host)
 
         self.vif_driver = libvirt_vif.LibvirtGenericVIFDriver()
 
