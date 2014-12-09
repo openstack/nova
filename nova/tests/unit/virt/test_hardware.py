@@ -971,6 +971,82 @@ class NUMATopologyTest(test.NoDBTestCase):
                 },
                 "expect": exception.ImageNUMATopologyForbidden,
             },
+            {
+                # NUMA + CPU pinning requested in the flavor
+                "flavor": objects.Flavor(vcpus=4, memory_mb=2048,
+                                         extra_specs={
+                         "hw:numa_nodes": 2, "hw:cpu_policy": "dedicated"
+                }),
+                "image": {
+                },
+                "expect": objects.InstanceNUMATopology(cells=
+                    [
+                        objects.InstanceNUMACell(
+                            id=0, cpuset=set([0, 1]), memory=1024,
+                            cpu_pinning={}),
+                        objects.InstanceNUMACell(
+                            id=1, cpuset=set([2, 3]), memory=1024,
+                            cpu_pinning={})])
+            },
+            {
+                # no NUMA + CPU pinning requested in the flavor
+                "flavor": objects.Flavor(vcpus=4, memory_mb=2048,
+                                         extra_specs={
+                         "hw:cpu_policy": "dedicated"
+                }),
+                "image": {
+                },
+                "expect": objects.InstanceNUMATopology(cells=
+                    [
+                        objects.InstanceNUMACell(
+                            id=0, cpuset=set([0, 1, 2, 3]), memory=2048,
+                            cpu_pinning={})])
+            },
+            {
+                # NUMA + CPU pinning requested in the image
+                "flavor": objects.Flavor(vcpus=4, memory_mb=2048,
+                                         extra_specs={
+                         "hw:numa_nodes": 2
+                }),
+                "image": {
+                    "properties": {
+                        "hw_cpu_policy": "dedicated"}
+                },
+                "expect": objects.InstanceNUMATopology(cells=
+                    [
+                        objects.InstanceNUMACell(
+                            id=0, cpuset=set([0, 1]), memory=1024,
+                            cpu_pinning={}),
+                        objects.InstanceNUMACell(
+                            id=1, cpuset=set([2, 3]), memory=1024,
+                            cpu_pinning={})])
+            },
+            {
+                # no NUMA + CPU pinning requested in the image
+                "flavor": objects.Flavor(vcpus=4, memory_mb=2048,
+                                         extra_specs={}),
+                "image": {
+                    "properties": {
+                        "hw_cpu_policy": "dedicated"}
+                },
+                "expect": objects.InstanceNUMATopology(cells=
+                    [
+                        objects.InstanceNUMACell(
+                            id=0, cpuset=set([0, 1, 2, 3]), memory=2048,
+                            cpu_pinning={})])
+            },
+            {
+                # Invalid CPU pinning override
+                "flavor": objects.Flavor(vcpus=4, memory_mb=2048,
+                                         extra_specs={
+                         "hw:numa_nodes": 2, "hw:cpu_policy": "shared"
+                 }),
+                "image": {
+                    "properties": {
+                        "hw_cpu_policy": "dedicated"}
+                },
+                "expect": exception.ImageCPUPinningForbidden,
+            },
         ]
 
         for testitem in testdata:
@@ -989,12 +1065,16 @@ class NUMATopologyTest(test.NoDBTestCase):
                 self.assertEqual(len(testitem["expect"].cells),
                                  len(topology.cells))
                 for i in range(len(topology.cells)):
+                    self.assertEqual(testitem["expect"].cells[i].id,
+                                     topology.cells[i].id)
                     self.assertEqual(testitem["expect"].cells[i].cpuset,
                                      topology.cells[i].cpuset)
                     self.assertEqual(testitem["expect"].cells[i].memory,
                                      topology.cells[i].memory)
                     self.assertEqual(testitem["expect"].cells[i].pagesize,
                                      topology.cells[i].pagesize)
+                    self.assertEqual(testitem["expect"].cells[i].cpu_pinning,
+                                     topology.cells[i].cpu_pinning)
 
     def test_host_usage_contiguous(self):
         hpages0_4K = objects.NUMAPagesTopology(size_kb=4, total=256, used=0)
