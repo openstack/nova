@@ -28,7 +28,6 @@ import copy
 import inspect
 import logging
 import os
-import shutil
 
 import fixtures
 from oslo.config import cfg
@@ -43,14 +42,11 @@ import testtools
 from nova.api.openstack import wsgi
 from nova import context
 from nova import db
-from nova.db import migration
-from nova.db.sqlalchemy import api as session
 from nova.network import manager as network_manager
 from nova import objects
 from nova.objects import base as objects_base
 from nova.openstack.common.fixture import logging as log_fixture
 from nova.openstack.common import log as nova_logging
-from nova import paths
 from nova import rpc
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit import conf_fixture
@@ -58,14 +54,7 @@ from nova.tests.unit import policy_fixture
 from nova import utils
 
 
-test_opts = [
-    cfg.StrOpt('sqlite_clean_db',
-               default='clean.sqlite',
-               help='File name of clean sqlite db'),
-    ]
-
 CONF = cfg.CONF
-CONF.register_opts(test_opts)
 CONF.import_opt('enabled', 'nova.api.openstack', group='osapi_v3')
 CONF.set_override('use_stderr', False)
 
@@ -76,47 +65,7 @@ nova_logging.setup('nova')
 # tests that run at import time.
 objects.register_all()
 
-_DB_CACHE = None
 _TRUE_VALUES = ('True', 'true', '1', 'yes')
-
-
-class Database(fixtures.Fixture):
-
-    def __init__(self, db_session, db_migrate, sql_connection,
-                    sqlite_db, sqlite_clean_db):
-        self.sql_connection = sql_connection
-        self.sqlite_db = sqlite_db
-        self.sqlite_clean_db = sqlite_clean_db
-
-        self.engine = db_session.get_engine()
-        self.engine.dispose()
-        conn = self.engine.connect()
-        if sql_connection == "sqlite://":
-            if db_migrate.db_version() > db_migrate.db_initial_version():
-                return
-        else:
-            testdb = paths.state_path_rel(sqlite_db)
-            if os.path.exists(testdb):
-                return
-        db_migrate.db_sync()
-        if sql_connection == "sqlite://":
-            conn = self.engine.connect()
-            self._DB = "".join(line for line in conn.connection.iterdump())
-            self.engine.dispose()
-        else:
-            cleandb = paths.state_path_rel(sqlite_clean_db)
-            shutil.copyfile(testdb, cleandb)
-
-    def setUp(self):
-        super(Database, self).setUp()
-
-        if self.sql_connection == "sqlite://":
-            conn = self.engine.connect()
-            conn.connection.executescript(self._DB)
-            self.addCleanup(self.engine.dispose)
-        else:
-            shutil.copyfile(paths.state_path_rel(self.sqlite_clean_db),
-                            paths.state_path_rel(self.sqlite_db))
 
 
 class SampleNetworks(fixtures.Fixture):
@@ -266,14 +215,7 @@ class TestCase(testtools.TestCase):
         rpc.init(CONF)
 
         if self.USES_DB:
-            global _DB_CACHE
-            if not _DB_CACHE:
-                _DB_CACHE = Database(session, migration,
-                        sql_connection=CONF.database.connection,
-                        sqlite_db=CONF.database.sqlite_db,
-                        sqlite_clean_db=CONF.sqlite_clean_db)
-
-            self.useFixture(_DB_CACHE)
+            self.useFixture(nova_fixtures.Database())
 
         # NOTE(danms): Make sure to reset us back to non-remote objects
         # for each test to avoid interactions. Also, backup the object
