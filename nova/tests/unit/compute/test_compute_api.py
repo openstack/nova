@@ -612,11 +612,11 @@ class _ComputeAPIUnitTestMixIn(object):
     def _test_downed_host_part(self, inst, updates, delete_time, delete_type):
         inst.info_cache.delete()
         compute_utils.notify_about_instance_usage(
-                self.compute_api.notifier, self.context, inst,
-                '%s.start' % delete_type)
+            self.compute_api.notifier, self.context, inst,
+            '%s.start' % delete_type)
         self.context.elevated().AndReturn(self.context)
         self.compute_api.network_api.deallocate_for_instance(
-                self.context, inst)
+            self.context, inst)
         state = (delete_types.SOFT_DELETE in delete_type and
                  vm_states.SOFT_DELETED or
                  vm_states.DELETED)
@@ -631,9 +631,9 @@ class _ComputeAPIUnitTestMixIn(object):
         db.instance_destroy(self.context, inst.uuid,
                             constraint=None).AndReturn(fake_inst)
         compute_utils.notify_about_instance_usage(
-                self.compute_api.notifier,
-                self.context, inst, '%s.end' % delete_type,
-                system_metadata=inst.system_metadata)
+            self.compute_api.notifier,
+            self.context, inst, '%s.end' % delete_type,
+            system_metadata=inst.system_metadata)
 
     def _test_delete(self, delete_type, **attrs):
         reservations = ['fake-resv']
@@ -716,15 +716,18 @@ class _ComputeAPIUnitTestMixIn(object):
                 self._test_delete_resized_part(inst)
             if inst.vm_state == vm_states.SOFT_DELETED:
                 soft_delete = True
-            self.context.elevated().AndReturn(self.context)
-            db.service_get_by_compute_host(
-                    self.context, inst.host).AndReturn(
-                            test_service.fake_service)
-            self.compute_api.servicegroup_api.service_is_up(
-                    mox.IsA(objects.Service)).AndReturn(
-                            inst.host != 'down-host')
+            if inst.vm_state != vm_states.SHELVED_OFFLOADED:
+                self.context.elevated().AndReturn(self.context)
+                db.service_get_by_compute_host(
+                        self.context, inst.host).AndReturn(
+                                test_service.fake_service)
+                self.compute_api.servicegroup_api.service_is_up(
+                        mox.IsA(objects.Service)).AndReturn(
+                                inst.host != 'down-host')
 
-            if inst.host == 'down-host':
+            if (inst.host == 'down-host' or
+                    inst.vm_state == vm_states.SHELVED_OFFLOADED):
+
                 self._test_downed_host_part(inst, updates, delete_time,
                                             delete_type)
                 cast = False
@@ -815,7 +818,12 @@ class _ComputeAPIUnitTestMixIn(object):
         self._test_delete(delete_types.SOFT_DELETE)
 
     def test_delete_forced(self):
+        fake_sys_meta = {'shelved_image_id': SHELVED_IMAGE}
         for vm_state in self._get_vm_states():
+            if vm_state in (vm_states.SHELVED, vm_states.SHELVED_OFFLOADED):
+                self._test_delete(delete_types.FORCE_DELETE,
+                                  vm_state=vm_state,
+                                  system_metadata=fake_sys_meta)
             self._test_delete(delete_types.FORCE_DELETE, vm_state=vm_state)
 
     def test_delete_forced_when_task_state_deleting(self):
@@ -842,8 +850,13 @@ class _ComputeAPIUnitTestMixIn(object):
         fake_sys_meta = {'shelved_image_id': SHELVED_IMAGE}
 
         for vm_state in self._get_vm_states():
-            if vm_state in (vm_states.SHELVED, vm_states.SHELVED_OFFLOADED):
+            if vm_state == vm_states.SHELVED:
                 attrs.update({'system_metadata': fake_sys_meta})
+            if vm_state == vm_states.SHELVED_OFFLOADED:
+                # when instance in SHELVED_OFFLOADED state, we assume the
+                # instance cannot be in deleting task state, this is same to
+                # the case that instance.host is down, deleting locally.
+                continue
 
             attrs.update({'vm_state': vm_state, 'task_state': 'deleting'})
             reservations = ['fake-resv']
