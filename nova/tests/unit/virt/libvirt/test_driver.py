@@ -12081,7 +12081,7 @@ class LibvirtVolumeUsageTestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(LibvirtVolumeUsageTestCase, self).setUp()
-        self.conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.c = context.get_admin_context()
 
         self.ins_ref = objects.Instance(
@@ -12099,8 +12099,8 @@ class LibvirtVolumeUsageTestCase(test.NoDBTestCase):
         def fake_block_stats(instance_name, disk):
             return (169L, 688640L, 0L, 0L, -1L)
 
-        self.stubs.Set(self.conn, 'block_stats', fake_block_stats)
-        vol_usage = self.conn.get_all_volume_usage(self.c,
+        self.stubs.Set(self.drvr, 'block_stats', fake_block_stats)
+        vol_usage = self.drvr.get_all_volume_usage(self.c,
               [dict(instance=self.ins_ref, instance_bdms=self.bdms)])
 
         expected_usage = [{'volume': 1,
@@ -12118,7 +12118,7 @@ class LibvirtVolumeUsageTestCase(test.NoDBTestCase):
             raise exception.InstanceNotFound(instance_id="fakedom")
 
         self.stubs.Set(host.Host, 'get_domain', fake_get_domain)
-        vol_usage = self.conn.get_all_volume_usage(self.c,
+        vol_usage = self.drvr.get_all_volume_usage(self.c,
               [dict(instance=self.ins_ref, instance_bdms=self.bdms)])
         self.assertEqual(vol_usage, [])
 
@@ -12172,7 +12172,7 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
     def setUp(self):
         super(LibvirtVolumeSnapshotTestCase, self).setUp()
 
-        self.conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.c = context.get_admin_context()
 
         self.flags(instance_name_template='instance-%s')
@@ -12276,18 +12276,18 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
             'connection_info': '{"fake": "connection_info"}'})
         mock_get_by_volume_id.return_value = fake_bdm
 
-        self.conn._volume_refresh_connection_info(self.c, self.inst,
+        self.drvr._volume_refresh_connection_info(self.c, self.inst,
                                                   self.volume_uuid)
 
         mock_get_by_volume_id.assert_called_once_with(self.c, self.volume_uuid)
         mock_refresh_connection_info.assert_called_once_with(self.c, self.inst,
-            self.conn._volume_api, self.conn)
+            self.drvr._volume_api, self.drvr)
 
     def test_volume_snapshot_create(self, quiesce=True):
         """Test snapshot creation with file-based disk."""
         self.flags(instance_name_template='instance-%s')
-        self.mox.StubOutWithMock(self.conn._host, 'get_domain')
-        self.mox.StubOutWithMock(self.conn, '_volume_api')
+        self.mox.StubOutWithMock(self.drvr._host, 'get_domain')
+        self.mox.StubOutWithMock(self.drvr, '_volume_api')
 
         instance = objects.Instance(**self.inst)
 
@@ -12327,7 +12327,7 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
 
         self.mox.ReplayAll()
 
-        self.conn._volume_snapshot_create(self.c, instance, domain,
+        self.drvr._volume_snapshot_create(self.c, instance, domain,
                                           self.volume_uuid, new_file)
 
         self.mox.VerifyAll()
@@ -12336,8 +12336,8 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
         """Test snapshot creation with libgfapi network disk."""
         self.flags(instance_name_template = 'instance-%s')
         self.flags(qemu_allowed_storage_drivers = ['gluster'], group='libvirt')
-        self.mox.StubOutWithMock(self.conn._host, 'get_domain')
-        self.mox.StubOutWithMock(self.conn, '_volume_api')
+        self.mox.StubOutWithMock(self.drvr._host, 'get_domain')
+        self.mox.StubOutWithMock(self.drvr, '_volume_api')
 
         self.dom_xml = """
               <domain type='kvm'>
@@ -12394,7 +12394,7 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
 
         self.mox.ReplayAll()
 
-        self.conn._volume_snapshot_create(self.c, instance, domain,
+        self.drvr._volume_snapshot_create(self.c, instance, domain,
                                           self.volume_uuid, new_file)
 
         self.mox.VerifyAll()
@@ -12407,31 +12407,31 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
 
         domain = FakeVirtDomain(fake_xml=self.dom_xml)
 
-        self.mox.StubOutWithMock(self.conn._host, 'get_domain')
-        self.mox.StubOutWithMock(self.conn, '_volume_api')
-        self.mox.StubOutWithMock(self.conn, '_volume_snapshot_create')
+        self.mox.StubOutWithMock(self.drvr._host, 'get_domain')
+        self.mox.StubOutWithMock(self.drvr, '_volume_api')
+        self.mox.StubOutWithMock(self.drvr, '_volume_snapshot_create')
 
-        self.conn._host.get_domain(instance).AndReturn(domain)
+        self.drvr._host.get_domain(instance).AndReturn(domain)
 
-        self.conn._volume_snapshot_create(self.c,
+        self.drvr._volume_snapshot_create(self.c,
                                           instance,
                                           domain,
                                           self.volume_uuid,
                                           self.create_info['new_file'])
 
-        self.conn._volume_api.update_snapshot_status(
+        self.drvr._volume_api.update_snapshot_status(
             self.c, self.create_info['snapshot_id'], 'creating')
 
-        self.mox.StubOutWithMock(self.conn._volume_api, 'get_snapshot')
-        self.conn._volume_api.get_snapshot(self.c,
+        self.mox.StubOutWithMock(self.drvr._volume_api, 'get_snapshot')
+        self.drvr._volume_api.get_snapshot(self.c,
             self.create_info['snapshot_id']).AndReturn({'status': 'available'})
-        self.mox.StubOutWithMock(self.conn, '_volume_refresh_connection_info')
-        self.conn._volume_refresh_connection_info(self.c, instance,
+        self.mox.StubOutWithMock(self.drvr, '_volume_refresh_connection_info')
+        self.drvr._volume_refresh_connection_info(self.c, instance,
                                                   self.volume_uuid)
 
         self.mox.ReplayAll()
 
-        self.conn.volume_snapshot_create(self.c, instance, self.volume_uuid,
+        self.drvr.volume_snapshot_create(self.c, instance, self.volume_uuid,
                                          self.create_info)
 
     def test_volume_snapshot_create_outer_failure(self):
@@ -12439,26 +12439,26 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
 
         domain = FakeVirtDomain(fake_xml=self.dom_xml)
 
-        self.mox.StubOutWithMock(self.conn._host, 'get_domain')
-        self.mox.StubOutWithMock(self.conn, '_volume_api')
-        self.mox.StubOutWithMock(self.conn, '_volume_snapshot_create')
+        self.mox.StubOutWithMock(self.drvr._host, 'get_domain')
+        self.mox.StubOutWithMock(self.drvr, '_volume_api')
+        self.mox.StubOutWithMock(self.drvr, '_volume_snapshot_create')
 
-        self.conn._host.get_domain(instance).AndReturn(domain)
+        self.drvr._host.get_domain(instance).AndReturn(domain)
 
-        self.conn._volume_snapshot_create(self.c,
+        self.drvr._volume_snapshot_create(self.c,
                                           instance,
                                           domain,
                                           self.volume_uuid,
                                           self.create_info['new_file']).\
             AndRaise(exception.NovaException('oops'))
 
-        self.conn._volume_api.update_snapshot_status(
+        self.drvr._volume_api.update_snapshot_status(
             self.c, self.create_info['snapshot_id'], 'error')
 
         self.mox.ReplayAll()
 
         self.assertRaises(exception.NovaException,
-                          self.conn.volume_snapshot_create,
+                          self.drvr.volume_snapshot_create,
                           self.c,
                           instance,
                           self.volume_uuid,
@@ -12474,14 +12474,14 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(domain, 'XMLDesc')
         domain.XMLDesc(0).AndReturn(self.dom_xml)
 
-        self.mox.StubOutWithMock(self.conn._host, 'get_domain')
-        self.mox.StubOutWithMock(self.conn._host, 'has_min_version')
+        self.mox.StubOutWithMock(self.drvr._host, 'get_domain')
+        self.mox.StubOutWithMock(self.drvr._host, 'has_min_version')
         self.mox.StubOutWithMock(domain, 'blockRebase')
         self.mox.StubOutWithMock(domain, 'blockCommit')
         self.mox.StubOutWithMock(domain, 'blockJobInfo')
 
-        self.conn._host.get_domain(instance).AndReturn(domain)
-        self.conn._host.has_min_version(mox.IgnoreArg()).AndReturn(True)
+        self.drvr._host.get_domain(instance).AndReturn(domain)
+        self.drvr._host.has_min_version(mox.IgnoreArg()).AndReturn(True)
 
         domain.blockRebase('vda', 'snap.img', 0, 0)
 
@@ -12490,7 +12490,7 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
 
         self.mox.ReplayAll()
 
-        self.conn._volume_snapshot_delete(self.c, instance, self.volume_uuid,
+        self.drvr._volume_snapshot_delete(self.c, instance, self.volume_uuid,
                                           snapshot_id, self.delete_info_1)
 
         self.mox.VerifyAll()
@@ -12505,14 +12505,14 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(domain, 'XMLDesc')
         domain.XMLDesc(0).AndReturn(self.dom_xml)
 
-        self.mox.StubOutWithMock(self.conn._host, 'get_domain')
-        self.mox.StubOutWithMock(self.conn._host, 'has_min_version')
+        self.mox.StubOutWithMock(self.drvr._host, 'get_domain')
+        self.mox.StubOutWithMock(self.drvr._host, 'has_min_version')
         self.mox.StubOutWithMock(domain, 'blockRebase')
         self.mox.StubOutWithMock(domain, 'blockCommit')
         self.mox.StubOutWithMock(domain, 'blockJobInfo')
 
-        self.conn._host.get_domain(instance).AndReturn(domain)
-        self.conn._host.has_min_version(mox.IgnoreArg()).AndReturn(True)
+        self.drvr._host.get_domain(instance).AndReturn(domain)
+        self.drvr._host.has_min_version(mox.IgnoreArg()).AndReturn(True)
 
         domain.blockCommit('vda', 'other-snap.img', 'snap.img', 0, 0)
 
@@ -12521,7 +12521,7 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
 
         self.mox.ReplayAll()
 
-        self.conn._volume_snapshot_delete(self.c, instance, self.volume_uuid,
+        self.drvr._volume_snapshot_delete(self.c, instance, self.volume_uuid,
                                           snapshot_id, self.delete_info_2)
 
         self.mox.VerifyAll()
@@ -12532,26 +12532,26 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
 
         FakeVirtDomain(fake_xml=self.dom_xml)
 
-        self.mox.StubOutWithMock(self.conn._host, 'get_domain')
-        self.mox.StubOutWithMock(self.conn, '_volume_api')
-        self.mox.StubOutWithMock(self.conn, '_volume_snapshot_delete')
+        self.mox.StubOutWithMock(self.drvr._host, 'get_domain')
+        self.mox.StubOutWithMock(self.drvr, '_volume_api')
+        self.mox.StubOutWithMock(self.drvr, '_volume_snapshot_delete')
 
-        self.conn._volume_snapshot_delete(self.c,
+        self.drvr._volume_snapshot_delete(self.c,
                                           instance,
                                           self.volume_uuid,
                                           snapshot_id,
                                           delete_info=self.delete_info_1)
 
-        self.conn._volume_api.update_snapshot_status(
+        self.drvr._volume_api.update_snapshot_status(
             self.c, snapshot_id, 'deleting')
 
-        self.mox.StubOutWithMock(self.conn, '_volume_refresh_connection_info')
-        self.conn._volume_refresh_connection_info(self.c, instance,
+        self.mox.StubOutWithMock(self.drvr, '_volume_refresh_connection_info')
+        self.drvr._volume_refresh_connection_info(self.c, instance,
                                                   self.volume_uuid)
 
         self.mox.ReplayAll()
 
-        self.conn.volume_snapshot_delete(self.c, instance, self.volume_uuid,
+        self.drvr.volume_snapshot_delete(self.c, instance, self.volume_uuid,
                                          snapshot_id,
                                          self.delete_info_1)
 
@@ -12563,24 +12563,24 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
 
         FakeVirtDomain(fake_xml=self.dom_xml)
 
-        self.mox.StubOutWithMock(self.conn._host, 'get_domain')
-        self.mox.StubOutWithMock(self.conn, '_volume_api')
-        self.mox.StubOutWithMock(self.conn, '_volume_snapshot_delete')
+        self.mox.StubOutWithMock(self.drvr._host, 'get_domain')
+        self.mox.StubOutWithMock(self.drvr, '_volume_api')
+        self.mox.StubOutWithMock(self.drvr, '_volume_snapshot_delete')
 
-        self.conn._volume_snapshot_delete(self.c,
+        self.drvr._volume_snapshot_delete(self.c,
                                           instance,
                                           self.volume_uuid,
                                           snapshot_id,
                                           delete_info=self.delete_info_1).\
             AndRaise(exception.NovaException('oops'))
 
-        self.conn._volume_api.update_snapshot_status(
+        self.drvr._volume_api.update_snapshot_status(
             self.c, snapshot_id, 'error_deleting')
 
         self.mox.ReplayAll()
 
         self.assertRaises(exception.NovaException,
-                          self.conn.volume_snapshot_delete,
+                          self.drvr.volume_snapshot_delete,
                           self.c,
                           instance,
                           self.volume_uuid,
@@ -12594,19 +12594,19 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
 
         FakeVirtDomain(fake_xml=self.dom_xml)
 
-        self.mox.StubOutWithMock(self.conn._host, 'get_domain')
-        self.mox.StubOutWithMock(self.conn, '_volume_api')
-        self.mox.StubOutWithMock(self.conn._host, 'has_min_version')
+        self.mox.StubOutWithMock(self.drvr._host, 'get_domain')
+        self.mox.StubOutWithMock(self.drvr, '_volume_api')
+        self.mox.StubOutWithMock(self.drvr._host, 'has_min_version')
 
-        self.conn._host.has_min_version(mox.IgnoreArg()).AndReturn(True)
+        self.drvr._host.has_min_version(mox.IgnoreArg()).AndReturn(True)
 
-        self.conn._volume_api.update_snapshot_status(
+        self.drvr._volume_api.update_snapshot_status(
             self.c, self.snapshot_id, 'error_deleting')
 
         self.mox.ReplayAll()
 
         self.assertRaises(exception.NovaException,
-                          self.conn.volume_snapshot_delete,
+                          self.drvr.volume_snapshot_delete,
                           self.c,
                           instance,
                           self.volume_uuid,
@@ -12633,14 +12633,14 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(domain, 'XMLDesc')
         domain.XMLDesc(0).AndReturn(self.dom_netdisk_xml)
 
-        self.mox.StubOutWithMock(self.conn._host, 'get_domain')
-        self.mox.StubOutWithMock(self.conn._host, 'has_min_version')
+        self.mox.StubOutWithMock(self.drvr._host, 'get_domain')
+        self.mox.StubOutWithMock(self.drvr._host, 'has_min_version')
         self.mox.StubOutWithMock(domain, 'blockRebase')
         self.mox.StubOutWithMock(domain, 'blockCommit')
         self.mox.StubOutWithMock(domain, 'blockJobInfo')
 
-        self.conn._host.get_domain(instance).AndReturn(domain)
-        self.conn._host.has_min_version(mox.IgnoreArg()).AndReturn(True)
+        self.drvr._host.get_domain(instance).AndReturn(domain)
+        self.drvr._host.has_min_version(mox.IgnoreArg()).AndReturn(True)
 
         domain.blockRebase('vdb', 'vdb[1]', 0, 0)
 
@@ -12649,7 +12649,7 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
 
         self.mox.ReplayAll()
 
-        self.conn._volume_snapshot_delete(self.c, instance, self.volume_uuid,
+        self.drvr._volume_snapshot_delete(self.c, instance, self.volume_uuid,
                                           snapshot_id, self.delete_info_1)
 
         self.mox.VerifyAll()
@@ -12674,14 +12674,14 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(domain, 'XMLDesc')
         domain.XMLDesc(0).AndReturn(self.dom_netdisk_xml)
 
-        self.mox.StubOutWithMock(self.conn._host, 'get_domain')
-        self.mox.StubOutWithMock(self.conn._host, 'has_min_version')
+        self.mox.StubOutWithMock(self.drvr._host, 'get_domain')
+        self.mox.StubOutWithMock(self.drvr._host, 'has_min_version')
         self.mox.StubOutWithMock(domain, 'blockRebase')
         self.mox.StubOutWithMock(domain, 'blockCommit')
         self.mox.StubOutWithMock(domain, 'blockJobInfo')
 
-        self.conn._host.get_domain(instance).AndReturn(domain)
-        self.conn._host.has_min_version(mox.IgnoreArg()).AndReturn(True)
+        self.drvr._host.get_domain(instance).AndReturn(domain)
+        self.drvr._host.has_min_version(mox.IgnoreArg()).AndReturn(True)
 
         domain.blockCommit('vdb', 'vdb[0]', 'vdb[1]', 0,
                            fakelibvirt.VIR_DOMAIN_BLOCK_COMMIT_RELATIVE)
@@ -12691,7 +12691,7 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
 
         self.mox.ReplayAll()
 
-        self.conn._volume_snapshot_delete(self.c, instance, self.volume_uuid,
+        self.drvr._volume_snapshot_delete(self.c, instance, self.volume_uuid,
                                           snapshot_id,
                                           self.delete_info_netdisk)
 
