@@ -2606,15 +2606,10 @@ def instance_extra_update_by_uuid(context, instance_uuid, values):
         update(values)
 
 
-def _instance_extra_get_by_instance_uuid_query(context, instance_uuid):
-    return (model_query(context, models.InstanceExtra)
-                         .filter_by(instance_uuid=instance_uuid))
-
-
 def instance_extra_get_by_instance_uuid(context, instance_uuid,
                                         columns=None):
-    query = _instance_extra_get_by_instance_uuid_query(
-        context, instance_uuid)
+    query = model_query(context, models.InstanceExtra).\
+        filter_by(instance_uuid=instance_uuid)
     if columns is None:
         columns = ['numa_topology', 'pci_requests']
     for column in columns:
