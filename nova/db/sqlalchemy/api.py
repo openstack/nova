@@ -5619,19 +5619,14 @@ def action_finish(context, values):
     convert_objects_related_datetimes(values, 'start_time', 'finish_time')
     session = get_session()
     with session.begin():
-        action_ref = model_query(context, models.InstanceAction,
-                                 session=session).\
+        query = model_query(context, models.InstanceAction, session=session).\
                            filter_by(instance_uuid=values['instance_uuid']).\
-                           filter_by(request_id=values['request_id']).\
-                           first()
-
-        if not action_ref:
+                           filter_by(request_id=values['request_id'])
+        if query.update(values) != 1:
             raise exception.InstanceActionNotFound(
                                         request_id=values['request_id'],
                                         instance_uuid=values['instance_uuid'])
-
-        action_ref.update(values)
-    return action_ref
+        return query.one()
 
 
 def actions_get(context, instance_uuid):
