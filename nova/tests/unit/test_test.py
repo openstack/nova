@@ -22,6 +22,7 @@ from oslo import messaging
 from nova.openstack.common import log as logging
 from nova import rpc
 from nova import test
+from nova.tests import fixtures
 
 LOG = logging.getLogger(__name__)
 
@@ -38,7 +39,7 @@ class IsolationTestCase(test.TestCase):
     """
     def test_service_isolation(self):
         self.flags(use_local=True, group='conductor')
-        self.useFixture(test.ServiceFixture('compute'))
+        self.useFixture(fixtures.ServiceFixture('compute'))
 
     def test_rpc_consumer_isolation(self):
         class NeverCalled(object):

@@ -17,12 +17,44 @@
 """Fixtures for Nova tests."""
 from __future__ import absolute_import
 
+import gettext
 import logging
 import os
+import uuid
 
 import fixtures
 
+from nova import service
+
 _TRUE_VALUES = ('True', 'true', '1', 'yes')
+
+
+class ServiceFixture(fixtures.Fixture):
+    """Run a service as a test fixture."""
+
+    def __init__(self, name, host=None, **kwargs):
+        name = name
+        host = host or uuid.uuid4().hex
+        kwargs.setdefault('host', host)
+        kwargs.setdefault('binary', 'nova-%s' % name)
+        self.kwargs = kwargs
+
+    def setUp(self):
+        super(ServiceFixture, self).setUp()
+        self.service = service.Service.create(**self.kwargs)
+        self.service.start()
+        self.addCleanup(self.service.kill)
+
+
+class TranslationFixture(fixtures.Fixture):
+    """Use gettext NullTranslation objects in tests."""
+
+    def setUp(self):
+        super(TranslationFixture, self).setUp()
+        nulltrans = gettext.NullTranslations()
+        gettext_fixture = fixtures.MonkeyPatch('gettext.translation',
+                                               lambda *x, **y: nulltrans)
+        self.gettext_patcher = self.useFixture(gettext_fixture)
 
 
 class NullHandler(logging.Handler):
