@@ -3068,7 +3068,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                   disk_info['type'],
                                   self.disk_cachemode,
                                   inst_type['extra_specs'],
-                                  self._get_hypervisor_version())
+                                  self._host.get_version())
 
     def _get_guest_storage_config(self, instance, image_meta,
                                   disk_info,
@@ -4410,36 +4410,6 @@ class LibvirtDriver(driver.ComputeDriver):
             # Convert it to MB
             return self._get_memory_mb_total() - avail / units.Ki
 
-    def _get_hypervisor_type(self):
-        """Get hypervisor type.
-
-        :returns: hypervisor type (ex. qemu)
-
-        """
-
-        return self._conn.getType()
-
-    def _get_hypervisor_version(self):
-        """Get hypervisor version.
-
-        :returns: hypervisor version (ex. 12003)
-
-        """
-
-        return self._conn.getVersion()
-
-    def _get_hypervisor_hostname(self):
-        """Returns the hostname of the hypervisor."""
-        hostname = self._conn.getHostname()
-        if not hasattr(self, '_hypervisor_hostname'):
-            self._hypervisor_hostname = hostname
-        elif hostname != self._hypervisor_hostname:
-            LOG.error(_LE('Hostname has changed from %(old)s '
-                          'to %(new)s. A restart is required to take effect.'),
-                          {'old': self._hypervisor_hostname,
-                           'new': hostname})
-        return self._hypervisor_hostname
-
     def _get_instance_capabilities(self):
         """Get hypervisor instance capabilities
 
@@ -4734,9 +4704,9 @@ class LibvirtDriver(driver.ComputeDriver):
         data["vcpus_used"] = self._get_vcpu_used()
         data["memory_mb_used"] = self._get_memory_mb_used()
         data["local_gb_used"] = disk_info_dict['used']
-        data["hypervisor_type"] = self._get_hypervisor_type()
-        data["hypervisor_version"] = self._get_hypervisor_version()
-        data["hypervisor_hostname"] = self._get_hypervisor_hostname()
+        data["hypervisor_type"] = self._host.get_driver_type()
+        data["hypervisor_version"] = self._host.get_version()
+        data["hypervisor_hostname"] = self._host.get_hostname()
         data["cpu_info"] = self._get_cpu_info()
 
         disk_free_gb = disk_info_dict['free']
@@ -5620,7 +5590,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                                network_info=network_info)
 
     def get_available_nodes(self, refresh=False):
-        return [self._get_hypervisor_hostname()]
+        return [self._host.get_hostname()]
 
     def get_host_cpu_stats(self):
         """Return the current CPU state of the host."""

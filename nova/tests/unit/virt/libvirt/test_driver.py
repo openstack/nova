@@ -10090,16 +10090,6 @@ Active:          8381604 kB
         for fs in supported_fs:
             self.assertFalse(conn.is_supported_fs_format(fs))
 
-    def test_hypervisor_hostname_caching(self):
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        conn = drvr._conn
-        self.mox.StubOutWithMock(conn, 'getHostname')
-        conn.getHostname().AndReturn('foo')
-        conn.getHostname().AndReturn('bar')
-        self.mox.ReplayAll()
-        self.assertEqual('foo', drvr._get_hypervisor_hostname())
-        self.assertEqual('foo', drvr._get_hypervisor_hostname())
-
     def test_post_live_migration_at_destination_with_block_device_info(self):
         # Preparing mocks
         mock_domain = self.mox.CreateMock(libvirt.virDomain)
@@ -10711,6 +10701,8 @@ class HostStateTestCase(test.NoDBTestCase):
             super(HostStateTestCase.FakeConnection,
                   self).__init__(fake.FakeVirtAPI(), True)
 
+            self._host = host.Host("qemu:///system")
+
         def _get_vcpu_total(self):
             return 1
 
@@ -10732,15 +10724,6 @@ class HostStateTestCase(test.NoDBTestCase):
         def _get_memory_mb_used(self):
             return 88
 
-        def _get_hypervisor_type(self):
-            return 'QEMU'
-
-        def _get_hypervisor_version(self):
-            return 13091
-
-        def _get_hypervisor_hostname(self):
-            return 'compute1'
-
         def get_host_uptime(self):
             return ('10:01:16 up  1:36,  6 users,  '
                     'load average: 0.21, 0.16, 0.19')
@@ -10757,7 +10740,10 @@ class HostStateTestCase(test.NoDBTestCase):
         def _get_host_numa_topology(self):
             return HostStateTestCase.numa_topology
 
-    def test_update_status(self):
+    @mock.patch.object(libvirt, "openAuth")
+    def test_update_status(self, mock_open):
+        mock_open.return_value = fakelibvirt.Connection("qemu:///system")
+
         drvr = HostStateTestCase.FakeConnection()
 
         stats = drvr.get_available_resource("compute1")
@@ -10768,7 +10754,7 @@ class HostStateTestCase(test.NoDBTestCase):
         self.assertEqual(stats["memory_mb_used"], 88)
         self.assertEqual(stats["local_gb_used"], 20)
         self.assertEqual(stats["hypervisor_type"], 'QEMU')
-        self.assertEqual(stats["hypervisor_version"], 13091)
+        self.assertEqual(stats["hypervisor_version"], 9011)
         self.assertEqual(stats["hypervisor_hostname"], 'compute1')
         self.assertEqual(jsonutils.loads(stats["cpu_info"]),
                 {"vendor": "Intel", "model": "pentium",
