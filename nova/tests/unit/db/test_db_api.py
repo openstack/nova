@@ -895,6 +895,19 @@ class AggregateDBApiTestCase(test.TestCase):
                           ctxt, result['id'], _get_fake_aggr_hosts()[0])
 
 
+class SqlAlchemyDbApiNoDbTestCase(test.NoDBTestCase):
+    """No-DB test class for simple test cases that do not require a backend."""
+
+    def test_manual_join_columns_immutable_list(self):
+        # Tests that _manual_join_columns doesn't modify the list passed in.
+        columns_to_join = ['system_metadata', 'test']
+        manual_joins, columns_to_join2 = (
+            sqlalchemy_api._manual_join_columns(columns_to_join))
+        self.assertEqual(['system_metadata'], manual_joins)
+        self.assertEqual(['test'], columns_to_join2)
+        self.assertEqual(['system_metadata', 'test'], columns_to_join)
+
+
 class SqlAlchemyDbApiTestCase(DbTestCase):
     def test_instance_get_all_by_host(self):
         ctxt = context.get_admin_context()
