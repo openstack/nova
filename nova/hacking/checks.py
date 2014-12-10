@@ -73,6 +73,7 @@ string_translation = re.compile(r"[^_]*_\(\s*('|\")")
 underscore_import_check = re.compile(r"(.)*import _(.)*")
 # We need this for cases where they have created their own _ function.
 custom_underscore_check = re.compile(r"(.)*_\s*=\s*(.)*")
+api_version_re = re.compile(r"@.*api_version")
 
 
 class BaseASTChecker(ast.NodeVisitor):
@@ -389,6 +390,13 @@ def check_assert_called_once(logical_line, filename):
             yield (pos, msg)
 
 
+def check_api_version_decorator(logical_line, blank_before, filename):
+    msg = ("N332: the api_version decorator must be the first decorator"
+           " on a method.")
+    if blank_before == 0 and re.match(api_version_re, logical_line):
+        yield(0, msg)
+
+
 class CheckForStrUnicodeExc(BaseASTChecker):
     """Checks for the use of str() or unicode() on an exception.
 
@@ -467,5 +475,6 @@ def factory(register):
     register(check_explicit_underscore_import)
     register(use_jsonutils)
     register(check_assert_called_once)
+    register(check_api_version_decorator)
     register(CheckForStrUnicodeExc)
     register(CheckForTransAdd)
