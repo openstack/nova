@@ -47,8 +47,10 @@ class InstanceNUMACell(base.NovaObject):
         super(InstanceNUMACell, self).__init__(**kwargs)
         if 'cpu_topology' not in kwargs:
             self.cpu_topology = None
+            self.obj_reset_changes(['cpu_topology'])
         if 'cpu_pinning' not in kwargs:
             self.cpu_pinning = None
+            self.obj_reset_changes(['cpu_pinning_raw'])
 
     def __len__(self):
         return len(self.cpuset)
