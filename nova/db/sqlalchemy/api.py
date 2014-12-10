@@ -850,31 +850,31 @@ def floating_ip_bulk_destroy(context, ips):
         for ip_block in _ip_range_splitter(ips):
             # Find any floating IPs that were not auto_assigned and
             # thus need quota released.
-            query = model_query(context, models.FloatingIp).\
+            query = model_query(context, models.FloatingIp, session=session).\
                 filter(models.FloatingIp.address.in_(ip_block)).\
                 filter_by(auto_assigned=False)
-            rows = query.all()
-            for row in rows:
+            for row in query.all():
                 # The count is negative since we release quota by
                 # reserving negative quota.
                 project_id_to_quota_count[row['project_id']] -= 1
             # Delete the floating IPs.
-            model_query(context, models.FloatingIp).\
+            model_query(context, models.FloatingIp, session=session).\
                 filter(models.FloatingIp.address.in_(ip_block)).\
                 soft_delete(synchronize_session='fetch')
-        # Delete the quotas, if needed.
-        for project_id, count in project_id_to_quota_count.iteritems():
-            try:
-                reservations = quota.QUOTAS.reserve(context,
-                                                    project_id=project_id,
-                                                    floating_ips=count)
-                quota.QUOTAS.commit(context,
-                                    reservations,
-                                    project_id=project_id)
-            except Exception:
-                with excutils.save_and_reraise_exception():
-                    LOG.exception(_LE("Failed to update usages bulk "
-                                      "deallocating floating IP"))
+
+    # Delete the quotas, if needed.
+    # Quota update happens in a separate transaction, so previous must have
+    # been committed first.
+    for project_id, count in project_id_to_quota_count.iteritems():
+        try:
+            reservations = quota.QUOTAS.reserve(context,
+                                                project_id=project_id,
+                                                floating_ips=count)
+            quota.QUOTAS.commit(context, reservations, project_id=project_id)
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                LOG.exception(_LE("Failed to update usages bulk "
+                                  "deallocating floating IP"))
 
 
 @require_context
