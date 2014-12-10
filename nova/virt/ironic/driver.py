@@ -886,7 +886,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         ports = ironicclient.call("node.list_ports", node.uuid)
 
         if len(network_info) > len(ports):
-            raise exception.NovaException(_(
+            raise exception.VirtualInterfacePlugException(_(
                 "Ironic node: %(id)s virtual to physical interface count"
                 "  missmatch"
                 " (Vif count: %(vif_count)d, Pif count: %(pif_count)d)")
