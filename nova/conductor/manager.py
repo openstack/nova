@@ -573,6 +573,19 @@ class ComputeTaskManager(base.Base):
     def _live_migrate(self, context, instance, scheduler_hint,
                       block_migration, disk_over_commit):
         destination = scheduler_hint.get("host")
+
+        def _set_vm_state(context, instance, ex, vm_state=None,
+                          task_state=None):
+            request_spec = {'instance_properties': {
+                'uuid': instance['uuid'], },
+            }
+            scheduler_utils.set_vm_state_and_notify(context,
+                'compute_task', 'migrate_server',
+                dict(vm_state=vm_state,
+                     task_state=task_state,
+                     expected_task_state=task_states.MIGRATING,),
+                ex, request_spec, self.db)
+
         try:
             live_migrate.execute(context, instance, destination,
                              block_migration, disk_over_commit)
@@ -590,20 +603,14 @@ class ComputeTaskManager(base.Base):
                 exception.LiveMigrationWithOldNovaNotSafe) as ex:
             with excutils.save_and_reraise_exception():
                 # TODO(johngarbutt) - eventually need instance actions here
-                request_spec = {'instance_properties': {
-                    'uuid': instance['uuid'], },
-                }
-                scheduler_utils.set_vm_state_and_notify(context,
-                        'compute_task', 'migrate_server',
-                        dict(vm_state=instance['vm_state'],
-                             task_state=None,
-                             expected_task_state=task_states.MIGRATING,),
-                        ex, request_spec, self.db)
+                _set_vm_state(context, instance, ex, instance['vm_state'])
         except Exception as ex:
             LOG.error(_LE('Migration of instance %(instance_id)s to host'
                           ' %(dest)s unexpectedly failed.'),
                       {'instance_id': instance['uuid'], 'dest': destination},
                       exc_info=True)
+            _set_vm_state(context, instance, ex, vm_states.ERROR,
+                          instance['task_state'])
             raise exception.MigrationError(reason=six.text_type(ex))
 
     def build_instances(self, context, instances, image, filter_properties,
