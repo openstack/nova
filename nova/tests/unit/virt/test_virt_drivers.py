@@ -409,8 +409,7 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
 
     @catch_notimplementederror
     def test_destroy_instance_nonexistent(self):
-        fake_instance = {'id': 42, 'name': 'I just made this up!',
-                         'uuid': 'bda5fb9e-b347-40e8-8256-42397848cb00'}
+        fake_instance = test_utils.get_test_instance(obj=True)
         network_info = test_utils.get_test_network_info()
         self.connection.destroy(self.ctxt, fake_instance, network_info)
 
@@ -520,9 +519,10 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
 
     @catch_notimplementederror
     def test_get_info_for_unknown_instance(self):
+        fake_instance = test_utils.get_test_instance(obj=True)
         self.assertRaises(exception.NotFound,
                           self.connection.get_info,
-                          {'name': 'I just made this name up'})
+                          fake_instance)
 
     @catch_notimplementederror
     def test_get_diagnostics(self):
