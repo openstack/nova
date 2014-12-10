@@ -33,7 +33,6 @@ import os
 import fixtures
 from oslo.config import cfg
 from oslo.config import fixture as config_fixture
-from oslo.messaging import conffixture as messaging_conffixture
 from oslo.utils import timeutils
 from oslo_concurrency import lockutils
 from oslotest import moxstubout
@@ -48,7 +47,6 @@ from nova import objects
 from nova.objects import base as objects_base
 from nova.openstack.common.fixture import logging as log_fixture
 from nova.openstack.common import log as nova_logging
-from nova import rpc
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit import conf_fixture
 from nova.tests.unit import policy_fixture
@@ -208,10 +206,6 @@ class TestCase(testtools.TestCase):
 
         self.useFixture(nova_fixtures.StandardLogging())
 
-        rpc.add_extra_exmods('nova.test')
-        self.addCleanup(rpc.clear_extra_exmods)
-        self.addCleanup(rpc.cleanup)
-
         # NOTE(sdague): because of the way we were using the lock
         # wrapper we eneded up with a lot of tests that started
         # relying on global external locking being set up for them. We
@@ -231,12 +225,7 @@ class TestCase(testtools.TestCase):
                                 group='oslo_concurrency')
 
         self.useFixture(conf_fixture.ConfFixture(CONF))
-
-        self.messaging_conf = messaging_conffixture.ConfFixture(CONF)
-        self.messaging_conf.transport_driver = 'fake'
-        self.useFixture(self.messaging_conf)
-
-        rpc.init(CONF)
+        self.useFixture(nova_fixtures.RPCFixture('nova.test'))
 
         if self.USES_DB:
             self.useFixture(nova_fixtures.Database())
