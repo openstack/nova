@@ -10,10 +10,10 @@ Preferred way to run the tests
 ------------------------------
 
 The preferred way to run the unit tests is using ``tox``.  See `the
-unit testing section of the Testing wiki page`_ and Nova's HACKING.rst
+unit testing section of the Testing wiki page`_ and `Nova's HACKING.rst`_
 for more information.  Following are some simple examples.
 
-To run the style tests:
+To run the style tests::
 
     tox -e pep8
 
@@ -22,6 +22,7 @@ You can request multiple tests, separated by commas::
     tox -e py27,pep8
 
 .. _the unit testing section of the Testing wiki page: https://wiki.openstack.org/wiki/Testing#Unit_Tests
+.. _Nova's HACKING.rst: http://git.openstack.org/cgit/openstack/nova/tree/HACKING.rst
 
 Running a subset of tests
 -------------------------
@@ -29,21 +30,21 @@ Running a subset of tests
 Instead of running all tests, you can specify an individual directory, file,
 class, or method that contains test code.
 
-To run the tests in the ``nova/tests/scheduler`` directory::
+To run the tests in the ``nova/tests/unit/scheduler`` directory::
 
-    tox -e py27 nova.tests.scheduler
+    tox -e py27 nova.tests.unit.scheduler
 
-To run the tests in the ``nova/tests/virt/libvirt/test_libvirt.py`` file::
+To run the tests in the ``nova/tests/unit/virt/libvirt/test_driver.py`` file::
 
-    tox -e py27 test_libvirt
+    tox -e py27 test_driver
 
 To run the tests in the ``CacheConcurrencyTestCase`` class in
-``nova/tests/virt/libvirt/test_libvirt.py``::
+``nova/tests/unit/virt/libvirt/test_driver.py``::
 
-    tox -e py27  test_libvirt.CacheConcurrencyTestCase
+    tox -e py27  test_driver.CacheConcurrencyTestCase
 
 To run the `ValidateIntegerTestCase.test_invalid_inputs` test method in
-``nova/tests/test_utils.py``::
+``nova/tests/unit/test_utils.py``::
 
     tox -epy27 test_utils.ValidateIntegerTestCase.test_invalid_inputs
 
