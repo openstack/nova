@@ -123,7 +123,8 @@ class FlavorManageTestV21(test.NoDBTestCase):
         self.expected_flavor = self.request_body
 
     def _setup_app(self):
-        return fakes.wsgi_app_v21(init_only=('flavor-manage', 'os-flavor-rxtx',
+        return fakes.wsgi_app_v21(init_only=('os-flavor-manage',
+                                             'os-flavor-rxtx',
                                              'os-flavor-access', 'flavors',
                                              'os-flavor-extra-data'))
 
@@ -395,7 +396,7 @@ class PrivateFlavorManageTestV21(test.TestCase):
         }
 
     def _setup_app(self):
-        return fakes.wsgi_app_v21(init_only=('flavor-manage',
+        return fakes.wsgi_app_v21(init_only=('os-flavor-manage',
                                              'os-flavor-access',
                                              'os-flavor-rxtx', 'flavors',
                                              'os-flavor-extra-data'),

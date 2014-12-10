@@ -21,6 +21,9 @@ from nova.console import api as console_api
 from nova import exception
 
 
+ALIAS = 'os-consoles'
+
+
 def _translate_keys(cons):
     """Coerces a console instance into proper dictionary format."""
     pool = cons['pool']
@@ -95,7 +98,7 @@ class Consoles(extensions.V3APIExtensionBase):
     """Consoles."""
 
     name = "Consoles"
-    alias = "consoles"
+    alias = ALIAS
     version = 1
 
     def get_resources(self):

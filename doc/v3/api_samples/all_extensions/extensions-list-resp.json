@@ -1,7 +1,7 @@
 {
     "extensions": [
         {
-            "alias": "consoles",
+            "alias": "os-consoles",
             "description": "Consoles.",
             "links": [],
             "name": "Consoles",
@@ -17,7 +17,7 @@
             "updated": "2014-12-03T00:00:00Z"
         },
         {
-            "alias": "flavor-extra-specs",
+            "alias": "os-flavor-extra-specs",
             "description": "Flavors extra specs support.",
             "links": [],
             "name": "FlavorsExtraSpecs",
@@ -25,7 +25,7 @@
             "updated": "2014-12-03T00:00:00Z"
         },
         {
-            "alias": "flavor-manage",
+            "alias": "os-flavor-manage",
             "description": "Flavor create/delete API support.",
             "links": [],
             "name": "FlavorManage",
