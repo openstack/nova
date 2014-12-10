@@ -293,7 +293,11 @@ class CloudTestCase(test.TestCase):
                                'pool': 'nova'})
         self.assertEqual(allocate(self.context)['publicIp'], address)
         db.floating_ip_destroy(self.context, address)
-        self.assertRaises(exception.NoMoreFloatingIps,
+
+        # There are no longer any pools since the last one was destroyed above
+        pools = db.floating_ip_get_pools(self.context)
+        self.assertEqual(0, len(pools))
+        self.assertRaises(exception.FloatingIpPoolNotFound,
                           allocate,
                           self.context)
 

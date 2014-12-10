@@ -202,12 +202,26 @@ class FloatingIP(object):
                              'project': context.project_id})
                 raise exception.Forbidden()
 
+    def _floating_ip_pool_exists(self, context, name):
+        """Returns true if the specified floating ip pool exists. Otherwise,
+        returns false.
+        """
+        pools = [pool.get('name') for pool in
+                 self.get_floating_ip_pools(context)]
+        if name in pools:
+            return True
+
+        return False
+
     def allocate_floating_ip(self, context, project_id, auto_assigned=False,
                              pool=None):
         """Gets a floating ip from the pool."""
         # NOTE(tr3buchet): all network hosts in zone now use the same pool
         pool = pool or CONF.default_floating_pool
         use_quota = not auto_assigned
+
+        if not self._floating_ip_pool_exists(context, pool):
+            raise exception.FloatingIpPoolNotFound()
 
         # Check the quota; can't put this in the API because we get
         # called into from other places

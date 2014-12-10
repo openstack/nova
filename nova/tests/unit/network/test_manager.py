@@ -1275,6 +1275,9 @@ class VlanNetworkTestCase(test.TestCase):
         ctxt = context.RequestContext('testuser', 'testproject',
                                       is_admin=False)
 
+        self.stubs.Set(self.network, '_floating_ip_pool_exists',
+                       lambda _x, _y: True)
+
         def fake_allocate_address(*args, **kwargs):
             return {'address': '10.0.0.1', 'project_id': ctxt.project_id}
 
@@ -3324,6 +3327,18 @@ class FloatingIPTestCase(test.TestCase):
                          self.network.get_floating_ips_by_fixed_address(
                              self.context, mock.sentinel.address))
         mock_get.assert_called_once_with(self.context, mock.sentinel.address)
+
+    @mock.patch('nova.db.floating_ip_get_pools')
+    def test_floating_ip_pool_exists(self, floating_ip_get_pools):
+        floating_ip_get_pools.return_value = [{'name': 'public'}]
+        self.assertTrue(self.network._floating_ip_pool_exists(self.context,
+                                                              'public'))
+
+    @mock.patch('nova.db.floating_ip_get_pools')
+    def test_floating_ip_pool_does_not_exist(self, floating_ip_get_pools):
+        floating_ip_get_pools.return_value = []
+        self.assertFalse(self.network._floating_ip_pool_exists(self.context,
+                                                               'public'))
 
 
 class InstanceDNSTestCase(test.TestCase):

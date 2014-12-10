@@ -120,6 +120,7 @@ class QuotaIntegrationTestCase(test.TestCase):
         address = '192.168.0.100'
         db.floating_ip_create(context.get_admin_context(),
                               {'address': address,
+                               'pool': 'nova',
                                'project_id': self.project_id})
         self.assertRaises(exception.QuotaError,
                           self.network.allocate_floating_ip,
@@ -131,6 +132,7 @@ class QuotaIntegrationTestCase(test.TestCase):
         address = '192.168.0.100'
         db.floating_ip_create(context.get_admin_context(),
                               {'address': address,
+                               'pool': 'nova',
                                'project_id': self.project_id})
         # auto allocated addresses should not be counted
         self.assertRaises(exception.NoMoreFloatingIps,
