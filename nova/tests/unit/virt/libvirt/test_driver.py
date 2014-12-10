@@ -10721,7 +10721,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
     """Test for nova.virt.libvirt.libvirt_driver.LibvirtDriver."""
     def setUp(self):
         super(LibvirtDriverTestCase, self).setUp()
-        self.libvirtconnection = libvirt_driver.LibvirtDriver(
+        self.drvr = libvirt_driver.LibvirtDriver(
             fake.FakeVirtAPI(), read_only=True)
         self.context = context.get_admin_context()
 
@@ -10796,12 +10796,12 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             self.checked_shared_storage = True
             return False
 
-        self.stubs.Set(self.libvirtconnection, 'get_instance_disk_info',
+        self.stubs.Set(self.drvr, 'get_instance_disk_info',
                        fake_get_instance_disk_info)
-        self.stubs.Set(self.libvirtconnection, '_destroy', fake_destroy)
-        self.stubs.Set(self.libvirtconnection, 'get_host_ip_addr',
+        self.stubs.Set(self.drvr, '_destroy', fake_destroy)
+        self.stubs.Set(self.drvr, 'get_host_ip_addr',
                        fake_get_host_ip_addr)
-        self.stubs.Set(self.libvirtconnection, '_is_storage_shared_with',
+        self.stubs.Set(self.drvr, '_is_storage_shared_with',
                        fake_is_storage_shared)
         self.stubs.Set(utils, 'execute', fake_execute)
         self.stubs.Set(os.path, 'exists', fake_os_path_exists)
@@ -10811,7 +10811,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         flavor_obj = objects.Flavor(**flavor)
 
         self.assertRaises(AssertionError,
-                          self.libvirtconnection.migrate_disk_and_power_off,
+                          self.drvr.migrate_disk_and_power_off,
                           context.get_admin_context(), ins_ref, '10.0.0.2',
                           flavor_obj, None)
 
@@ -10843,23 +10843,23 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         def fake_execute(*args, **kwargs):
             pass
 
-        self.stubs.Set(self.libvirtconnection, 'get_instance_disk_info',
+        self.stubs.Set(self.drvr, 'get_instance_disk_info',
                        fake_get_instance_disk_info)
-        self.stubs.Set(self.libvirtconnection, '_destroy', fake_destroy)
-        self.stubs.Set(self.libvirtconnection, 'get_host_ip_addr',
+        self.stubs.Set(self.drvr, '_destroy', fake_destroy)
+        self.stubs.Set(self.drvr, 'get_host_ip_addr',
                        fake_get_host_ip_addr)
         self.stubs.Set(utils, 'execute', fake_execute)
 
         ins_ref = self._create_instance()
 
         # dest is different host case
-        out = self.libvirtconnection.migrate_disk_and_power_off(
+        out = self.drvr.migrate_disk_and_power_off(
                context.get_admin_context(), ins_ref, '10.0.0.2',
                flavor_obj, None)
         self.assertEqual(out, disk_info_text)
 
         # dest is same host case
-        out = self.libvirtconnection.migrate_disk_and_power_off(
+        out = self.drvr.migrate_disk_and_power_off(
                context.get_admin_context(), ins_ref, '10.0.0.1',
                flavor_obj, None)
         self.assertEqual(out, disk_info_text)
@@ -10957,10 +10957,10 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         def fake_execute(*args, **kwargs):
             pass
 
-        self.stubs.Set(self.libvirtconnection, 'get_instance_disk_info',
+        self.stubs.Set(self.drvr, 'get_instance_disk_info',
                        fake_get_instance_disk_info)
-        self.stubs.Set(self.libvirtconnection, '_destroy', fake_destroy)
-        self.stubs.Set(self.libvirtconnection, 'get_host_ip_addr',
+        self.stubs.Set(self.drvr, '_destroy', fake_destroy)
+        self.stubs.Set(self.drvr, 'get_host_ip_addr',
                        fake_get_host_ip_addr)
         self.stubs.Set(utils, 'execute', fake_execute)
 
@@ -10970,7 +10970,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
 
         # Migration is not implemented for LVM backed instances
         self.assertRaises(exception.MigrationPreCheckError,
-              self.libvirtconnection.migrate_disk_and_power_off,
+              self.drvr.migrate_disk_and_power_off,
               None, ins_ref, '10.0.0.1', flavor_obj, None)
 
     def test_migrate_disk_and_power_off_resize_error(self):
@@ -10980,7 +10980,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
 
         self.assertRaises(
             exception.InstanceFaultRollback,
-            self.libvirtconnection.migrate_disk_and_power_off,
+            self.drvr.migrate_disk_and_power_off,
             'ctx', instance, '10.0.0.1', flavor_obj, None)
 
     @mock.patch('nova.virt.driver.block_device_info_get_ephemerals')
@@ -11034,7 +11034,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
 
         self.assertRaises(
             exception.InstanceFaultRollback,
-            self.libvirtconnection.migrate_disk_and_power_off,
+            self.drvr.migrate_disk_and_power_off,
             'ctx', instance, '10.0.0.1', flavor_obj, None)
 
         # Old flavor, eph is 20, real disk is 3, target is 4
@@ -11051,23 +11051,23 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             else:
                 return hardware.InstanceInfo(state=power_state.SHUTDOWN)
 
-        self.stubs.Set(self.libvirtconnection, 'get_info',
+        self.stubs.Set(self.drvr, 'get_info',
                        fake_get_info)
 
         # instance not found case
         self.assertRaises(exception.InstanceNotFound,
-                self.libvirtconnection._wait_for_running,
+                self.drvr._wait_for_running,
                     {'name': 'not_found',
                      'uuid': 'not_found_uuid'})
 
         # instance is running case
         self.assertRaises(loopingcall.LoopingCallDone,
-                self.libvirtconnection._wait_for_running,
+                self.drvr._wait_for_running,
                     {'name': 'running',
                      'uuid': 'running_uuid'})
 
         # else case
-        self.libvirtconnection._wait_for_running({'name': 'else',
+        self.drvr._wait_for_running({'name': 'else',
                                                   'uuid': 'other_uuid'})
 
     def test_disk_size_from_instance_disk_info(self):
@@ -11075,22 +11075,22 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
 
         info = {'path': '/path/disk'}
         self.assertEqual(10 * units.Gi,
-            self.libvirtconnection._disk_size_from_instance(inst, info))
+            self.drvr._disk_size_from_instance(inst, info))
 
         info = {'path': '/path/disk.local'}
         self.assertEqual(20 * units.Gi,
-            self.libvirtconnection._disk_size_from_instance(inst, info))
+            self.drvr._disk_size_from_instance(inst, info))
 
         info = {'path': '/path/disk.swap'}
         self.assertEqual(0,
-            self.libvirtconnection._disk_size_from_instance(inst, info))
+            self.drvr._disk_size_from_instance(inst, info))
 
     @mock.patch('nova.utils.execute')
     def test_disk_raw_to_qcow2(self, mock_execute):
         path = '/test/disk'
         _path_qcow = path + '_qcow'
 
-        self.libvirtconnection._disk_raw_to_qcow2(path)
+        self.drvr._disk_raw_to_qcow2(path)
         mock_execute.assert_has_calls([
             mock.call('qemu-img', 'convert', '-f', 'raw',
                       '-O', 'qcow2', path, _path_qcow),
@@ -11101,7 +11101,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         path = '/test/disk'
         _path_raw = path + '_raw'
 
-        self.libvirtconnection._disk_qcow2_to_raw(path)
+        self.drvr._disk_qcow2_to_raw(path)
         mock_execute.assert_has_calls([
             mock.call('qemu-img', 'convert', '-f', 'qcow2',
                       '-O', 'raw', path, _path_raw),
@@ -11111,7 +11111,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
     def test_disk_resize_raw(self, mock_extend):
         info = {'type': 'raw', 'path': '/test/disk'}
 
-        self.libvirtconnection._disk_resize(info, 50)
+        self.drvr._disk_resize(info, 50)
         mock_extend.assert_called_once_with(info['path'], 50, use_cow=False)
 
     @mock.patch('nova.virt.disk.api.can_resize_image')
@@ -11123,15 +11123,15 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
 
         with contextlib.nested(
                 mock.patch.object(
-                    self.libvirtconnection, '_disk_qcow2_to_raw'),
+                    self.drvr, '_disk_qcow2_to_raw'),
                 mock.patch.object(
-                    self.libvirtconnection, '_disk_raw_to_qcow2'))\
+                    self.drvr, '_disk_raw_to_qcow2'))\
         as (mock_disk_qcow2_to_raw, mock_disk_raw_to_qcow2):
 
             mock_can_resize.return_value = True
             mock_is_partitionless.return_value = True
 
-            self.libvirtconnection._disk_resize(info, 50)
+            self.drvr._disk_resize(info, 50)
 
             mock_disk_qcow2_to_raw.assert_called_once_with(info['path'])
             mock_extend.assert_called_once_with(
@@ -11190,25 +11190,25 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             self.fake_disk_resize_called = True
 
         self.flags(use_cow_images=True)
-        self.stubs.Set(self.libvirtconnection, '_disk_resize',
+        self.stubs.Set(self.drvr, '_disk_resize',
                        fake_disk_resize)
-        self.stubs.Set(self.libvirtconnection, '_get_guest_xml', fake_to_xml)
-        self.stubs.Set(self.libvirtconnection, 'plug_vifs', fake_plug_vifs)
-        self.stubs.Set(self.libvirtconnection, '_create_image',
+        self.stubs.Set(self.drvr, '_get_guest_xml', fake_to_xml)
+        self.stubs.Set(self.drvr, 'plug_vifs', fake_plug_vifs)
+        self.stubs.Set(self.drvr, '_create_image',
                        fake_create_image)
-        self.stubs.Set(self.libvirtconnection, '_create_domain_and_network',
+        self.stubs.Set(self.drvr, '_create_domain_and_network',
                        fake_create_domain_and_network)
-        self.stubs.Set(self.libvirtconnection, '_enable_hairpin',
+        self.stubs.Set(self.drvr, '_enable_hairpin',
                        fake_enable_hairpin)
         self.stubs.Set(utils, 'execute', fake_execute)
         fw = base_firewall.NoopFirewallDriver()
-        self.stubs.Set(self.libvirtconnection, 'firewall_driver', fw)
-        self.stubs.Set(self.libvirtconnection, 'get_info',
+        self.stubs.Set(self.drvr, 'firewall_driver', fw)
+        self.stubs.Set(self.drvr, 'get_info',
                        fake_get_info)
 
         ins_ref = self._create_instance()
 
-        self.libvirtconnection.finish_migration(
+        self.drvr.finish_migration(
                       context.get_admin_context(), None, ins_ref,
                       disk_info_text, [], None,
                       resize_instance, None, power_on)
@@ -11258,16 +11258,16 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                         block_device_info=None):
             return ""
 
-        self.stubs.Set(self.libvirtconnection, '_get_guest_xml', fake_to_xml)
-        self.stubs.Set(self.libvirtconnection, 'plug_vifs', fake_plug_vifs)
+        self.stubs.Set(self.drvr, '_get_guest_xml', fake_to_xml)
+        self.stubs.Set(self.drvr, 'plug_vifs', fake_plug_vifs)
         self.stubs.Set(utils, 'execute', fake_execute)
         fw = base_firewall.NoopFirewallDriver()
-        self.stubs.Set(self.libvirtconnection, 'firewall_driver', fw)
-        self.stubs.Set(self.libvirtconnection, '_create_domain',
+        self.stubs.Set(self.drvr, 'firewall_driver', fw)
+        self.stubs.Set(self.drvr, '_create_domain',
                        fake_create_domain)
-        self.stubs.Set(self.libvirtconnection, '_enable_hairpin',
+        self.stubs.Set(self.drvr, '_enable_hairpin',
                        fake_enable_hairpin)
-        self.stubs.Set(self.libvirtconnection, 'get_info',
+        self.stubs.Set(self.drvr, 'get_info',
                        fake_get_info)
         self.stubs.Set(compute_utils, 'get_image_metadata', lambda *a: None)
 
@@ -11281,7 +11281,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             f = open(libvirt_xml_path, 'w')
             f.close()
 
-            self.libvirtconnection.finish_revert_migration(
+            self.drvr.finish_revert_migration(
                                        context.get_admin_context(), ins_ref,
                                        [], None, power_on)
             self.assertTrue(self.fake_create_domain_called)
@@ -11308,9 +11308,9 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(utils, 'execute')
 
         self.stubs.Set(blockinfo, 'get_disk_info', lambda *a: None)
-        self.stubs.Set(self.libvirtconnection, '_get_guest_xml',
+        self.stubs.Set(self.drvr, '_get_guest_xml',
                        lambda *a, **k: None)
-        self.stubs.Set(self.libvirtconnection, '_create_domain_and_network',
+        self.stubs.Set(self.drvr, '_create_domain_and_network',
                        lambda *a, **kw: None)
         self.stubs.Set(loopingcall, 'FixedIntervalLoopingCall',
                        lambda *a, **k: FakeLoopingCall())
@@ -11327,7 +11327,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
 
         self.mox.ReplayAll()
 
-        self.libvirtconnection.finish_revert_migration(context, {}, [])
+        self.drvr.finish_revert_migration(context, {}, [])
 
     def test_finish_revert_migration_after_crash(self):
         self._test_finish_revert_migration_after_crash(backup_made=True)
@@ -11365,17 +11365,17 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(shutil, 'rmtree')
         shutil.rmtree('/fake/inst')
         self.mox.ReplayAll()
-        self.libvirtconnection._cleanup_failed_migration('/fake/inst')
+        self.drvr._cleanup_failed_migration('/fake/inst')
 
     def test_confirm_migration(self):
         ins_ref = self._create_instance()
 
-        self.mox.StubOutWithMock(self.libvirtconnection, "_cleanup_resize")
-        self.libvirtconnection._cleanup_resize(ins_ref,
+        self.mox.StubOutWithMock(self.drvr, "_cleanup_resize")
+        self.drvr._cleanup_resize(ins_ref,
                              _fake_network_info(self.stubs, 1))
 
         self.mox.ReplayAll()
-        self.libvirtconnection.confirm_migration("migration_ref", ins_ref,
+        self.drvr.confirm_migration("migration_ref", ins_ref,
                                             _fake_network_info(self.stubs, 1))
 
     def test_cleanup_resize_same_host(self):
@@ -11396,7 +11396,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                       attempts=5)
 
         self.mox.ReplayAll()
-        self.libvirtconnection._cleanup_resize(ins_ref,
+        self.drvr._cleanup_resize(ins_ref,
                                             _fake_network_info(self.stubs, 1))
 
     def test_cleanup_resize_not_same_host(self):
@@ -11417,11 +11417,11 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             pass
 
         self.stubs.Set(os.path, 'exists', fake_os_path_exists)
-        self.stubs.Set(self.libvirtconnection, '_undefine_domain',
+        self.stubs.Set(self.drvr, '_undefine_domain',
                        fake_undefine_domain)
-        self.stubs.Set(self.libvirtconnection, 'unplug_vifs',
+        self.stubs.Set(self.drvr, 'unplug_vifs',
                        fake_unplug_vifs)
-        self.stubs.Set(self.libvirtconnection.firewall_driver,
+        self.stubs.Set(self.drvr.firewall_driver,
                        'unfilter_instance', fake_unfilter_instance)
 
         self.mox.StubOutWithMock(libvirt_utils, 'get_instance_path')
@@ -11433,7 +11433,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                       attempts=5)
 
         self.mox.ReplayAll()
-        self.libvirtconnection._cleanup_resize(ins_ref,
+        self.drvr._cleanup_resize(ins_ref,
                                             _fake_network_info(self.stubs, 1))
 
     def test_get_instance_disk_info_exception(self):
@@ -11452,7 +11452,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         self.stubs.Set(host.Host, 'get_domain',
                        fake_get_domain)
         self.assertRaises(exception.InstanceNotFound,
-            self.libvirtconnection.get_instance_disk_info,
+            self.drvr.get_instance_disk_info,
             instance)
 
     @mock.patch('os.path.exists')
@@ -11463,7 +11463,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         exists.return_value = True
         listlvs.return_value = ['fake-uuid_foo',
                                 'other-uuid_foo']
-        disks = self.libvirtconnection._lvm_disks(instance)
+        disks = self.drvr._lvm_disks(instance)
         self.assertEqual(['/dev/vols/fake-uuid_foo'], disks)
 
     def test_is_booted_from_volume(self):
@@ -11498,12 +11498,12 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         image_backend.path = disk_params[0]
 
         with mock.patch.object(
-                self.libvirtconnection.image_backend,
+                self.drvr.image_backend,
                 'image',
                 return_value=image_backend):
             self.flags(inject_partition=0, group='libvirt')
 
-            self.libvirtconnection._inject_data(**driver_params)
+            self.drvr._inject_data(**driver_params)
 
             if called:
                 disk_inject_data.assert_called_once_with(
@@ -11622,7 +11622,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         network_info = _fake_network_info(self.stubs, 1)
         domain = FakeVirtDomain()
         self.mox.StubOutWithMock(host.Host, 'get_domain')
-        self.mox.StubOutWithMock(self.libvirtconnection.firewall_driver,
+        self.mox.StubOutWithMock(self.drvr.firewall_driver,
                                  'setup_basic_filtering')
         self.mox.StubOutWithMock(domain, 'attachDeviceFlags')
         self.mox.StubOutWithMock(domain, 'info')
@@ -11630,7 +11630,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
 
         host.Host.get_domain(instance).AndReturn(domain)
         if method == 'attach_interface':
-            self.libvirtconnection.firewall_driver.setup_basic_filtering(
+            self.drvr.firewall_driver.setup_basic_filtering(
                 instance, [network_info[0]])
 
         fake_flavor = instance.get_flavor()
@@ -11641,13 +11641,13 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             fake_image_meta = {'id': instance['image_ref']}
         elif method == 'detach_interface':
             fake_image_meta = None
-        expected = self.libvirtconnection.vif_driver.get_config(
+        expected = self.drvr.vif_driver.get_config(
             instance, network_info[0], fake_image_meta, fake_flavor,
             CONF.libvirt.virt_type)
 
-        self.mox.StubOutWithMock(self.libvirtconnection.vif_driver,
+        self.mox.StubOutWithMock(self.drvr.vif_driver,
                                  'get_config')
-        self.libvirtconnection.vif_driver.get_config(
+        self.drvr.vif_driver.get_config(
             instance, network_info[0],
             fake_image_meta,
             mox.IsA(objects.Flavor),
@@ -11660,10 +11660,10 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
 
         self.mox.ReplayAll()
         if method == 'attach_interface':
-            self.libvirtconnection.attach_interface(
+            self.drvr.attach_interface(
                 instance, fake_image_meta, network_info[0])
         elif method == 'detach_interface':
-            self.libvirtconnection.detach_interface(
+            self.drvr.detach_interface(
                 instance, network_info[0])
         self.mox.VerifyAll()
 
@@ -11714,16 +11714,16 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                     "</devices></domain>")
         network_info = _fake_network_info(self.stubs, 1)
 
-        self.mox.StubOutWithMock(self.libvirtconnection,
+        self.mox.StubOutWithMock(self.drvr,
                                      '_get_existing_domain_xml')
         self.mox.StubOutWithMock(libvirt_utils, 'write_to_file')
         self.mox.StubOutWithMock(imagebackend.Backend, 'image')
         self.mox.StubOutWithMock(imagebackend.Image, 'cache')
-        self.mox.StubOutWithMock(self.libvirtconnection, '_get_guest_xml')
-        self.mox.StubOutWithMock(self.libvirtconnection, '_destroy')
-        self.mox.StubOutWithMock(self.libvirtconnection, '_create_domain')
+        self.mox.StubOutWithMock(self.drvr, '_get_guest_xml')
+        self.mox.StubOutWithMock(self.drvr, '_destroy')
+        self.mox.StubOutWithMock(self.drvr, '_create_domain')
 
-        self.libvirtconnection._get_existing_domain_xml(mox.IgnoreArg(),
+        self.drvr._get_existing_domain_xml(mox.IgnoreArg(),
                         mox.IgnoreArg()).MultipleTimes().AndReturn(dummyxml)
         libvirt_utils.write_to_file(mox.IgnoreArg(), mox.IgnoreArg())
         libvirt_utils.write_to_file(mox.IgnoreArg(), mox.IgnoreArg(),
@@ -11749,20 +11749,20 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                                 size=None, user_id=mox.IgnoreArg())
 
         image_meta = {'id': 'fake', 'name': 'fake'}
-        self.libvirtconnection._get_guest_xml(mox.IgnoreArg(), instance,
+        self.drvr._get_guest_xml(mox.IgnoreArg(), instance,
                                     network_info, mox.IgnoreArg(),
                                     image_meta, rescue=mox.IgnoreArg(),
                                     write_to_disk=mox.IgnoreArg()
                                     ).AndReturn(dummyxml)
 
-        self.libvirtconnection._destroy(instance)
-        self.libvirtconnection._create_domain(mox.IgnoreArg())
+        self.drvr._destroy(instance)
+        self.drvr._create_domain(mox.IgnoreArg())
 
         self.mox.ReplayAll()
 
         rescue_password = 'fake_password'
 
-        self.libvirtconnection.rescue(self.context, instance,
+        self.drvr.rescue(self.context, instance,
                     network_info, image_meta, rescue_password)
         self.mox.VerifyAll()
 
@@ -11784,18 +11784,18 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                     "</devices></domain>")
         network_info = _fake_network_info(self.stubs, 1)
 
-        self.mox.StubOutWithMock(self.libvirtconnection,
+        self.mox.StubOutWithMock(self.drvr,
                                     '_get_existing_domain_xml')
         self.mox.StubOutWithMock(libvirt_utils, 'write_to_file')
         self.mox.StubOutWithMock(imagebackend.Backend, 'image')
         self.mox.StubOutWithMock(imagebackend.Image, 'cache')
         self.mox.StubOutWithMock(instance_metadata.InstanceMetadata,
                                                             '__init__')
-        self.mox.StubOutWithMock(self.libvirtconnection, '_get_guest_xml')
-        self.mox.StubOutWithMock(self.libvirtconnection, '_destroy')
-        self.mox.StubOutWithMock(self.libvirtconnection, '_create_domain')
+        self.mox.StubOutWithMock(self.drvr, '_get_guest_xml')
+        self.mox.StubOutWithMock(self.drvr, '_destroy')
+        self.mox.StubOutWithMock(self.drvr, '_create_domain')
 
-        self.libvirtconnection._get_existing_domain_xml(mox.IgnoreArg(),
+        self.drvr._get_existing_domain_xml(mox.IgnoreArg(),
                     mox.IgnoreArg()).MultipleTimes().AndReturn(dummyxml)
         libvirt_utils.write_to_file(mox.IgnoreArg(), mox.IgnoreArg())
         libvirt_utils.write_to_file(mox.IgnoreArg(), mox.IgnoreArg(),
@@ -11827,19 +11827,19 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                                             extra_md=mox.IgnoreArg(),
                                             network_info=mox.IgnoreArg())
         image_meta = {'id': 'fake', 'name': 'fake'}
-        self.libvirtconnection._get_guest_xml(mox.IgnoreArg(), instance,
+        self.drvr._get_guest_xml(mox.IgnoreArg(), instance,
                                 network_info, mox.IgnoreArg(),
                                 image_meta, rescue=mox.IgnoreArg(),
                                 write_to_disk=mox.IgnoreArg()
                                 ).AndReturn(dummyxml)
-        self.libvirtconnection._destroy(instance)
-        self.libvirtconnection._create_domain(mox.IgnoreArg())
+        self.drvr._destroy(instance)
+        self.drvr._create_domain(mox.IgnoreArg())
 
         self.mox.ReplayAll()
 
         rescue_password = 'fake_password'
 
-        self.libvirtconnection.rescue(self.context, instance, network_info,
+        self.drvr.rescue(self.context, instance, network_info,
                                                 image_meta, rescue_password)
         self.mox.VerifyAll()
 
@@ -11854,13 +11854,12 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
     @mock.patch('nova.virt.libvirt.utils.get_instance_path')
     def test_delete_instance_files(self, get_instance_path, exists, exe,
                                    shutil):
-        lv = self.libvirtconnection
         get_instance_path.return_value = '/path'
         instance = objects.Instance(uuid='fake-uuid', id=1)
 
         exists.side_effect = [False, False, True, False]
 
-        result = lv.delete_instance_files(instance)
+        result = self.drvr.delete_instance_files(instance)
         get_instance_path.assert_called_with(instance)
         exe.assert_called_with('mv', '/path', '/path_del')
         shutil.assert_called_with('/path_del')
@@ -11872,14 +11871,13 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
     @mock.patch('nova.virt.libvirt.utils.get_instance_path')
     def test_delete_instance_files_resize(self, get_instance_path, exists,
                                           exe, shutil):
-        lv = self.libvirtconnection
         get_instance_path.return_value = '/path'
         instance = objects.Instance(uuid='fake-uuid', id=1)
 
         nova.utils.execute.side_effect = [Exception(), None]
         exists.side_effect = [False, False, True, False]
 
-        result = lv.delete_instance_files(instance)
+        result = self.drvr.delete_instance_files(instance)
         get_instance_path.assert_called_with(instance)
         expected = [mock.call('mv', '/path', '/path_del'),
                     mock.call('mv', '/path_resize', '/path_del')]
@@ -11893,13 +11891,12 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
     @mock.patch('nova.virt.libvirt.utils.get_instance_path')
     def test_delete_instance_files_failed(self, get_instance_path, exists, exe,
                                           shutil):
-        lv = self.libvirtconnection
         get_instance_path.return_value = '/path'
         instance = objects.Instance(uuid='fake-uuid', id=1)
 
         exists.side_effect = [False, False, True, True]
 
-        result = lv.delete_instance_files(instance)
+        result = self.drvr.delete_instance_files(instance)
         get_instance_path.assert_called_with(instance)
         exe.assert_called_with('mv', '/path', '/path_del')
         shutil.assert_called_with('/path_del')
@@ -11911,14 +11908,13 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
     @mock.patch('nova.virt.libvirt.utils.get_instance_path')
     def test_delete_instance_files_mv_failed(self, get_instance_path, exists,
                                              exe, shutil):
-        lv = self.libvirtconnection
         get_instance_path.return_value = '/path'
         instance = objects.Instance(uuid='fake-uuid', id=1)
 
         nova.utils.execute.side_effect = Exception()
         exists.side_effect = [True, True]
 
-        result = lv.delete_instance_files(instance)
+        result = self.drvr.delete_instance_files(instance)
         get_instance_path.assert_called_with(instance)
         expected = [mock.call('mv', '/path', '/path_del'),
                     mock.call('mv', '/path_resize', '/path_del')] * 2
@@ -11931,14 +11927,13 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
     @mock.patch('nova.virt.libvirt.utils.get_instance_path')
     def test_delete_instance_files_resume(self, get_instance_path, exists,
                                              exe, shutil):
-        lv = self.libvirtconnection
         get_instance_path.return_value = '/path'
         instance = objects.Instance(uuid='fake-uuid', id=1)
 
         nova.utils.execute.side_effect = Exception()
         exists.side_effect = [False, False, True, False]
 
-        result = lv.delete_instance_files(instance)
+        result = self.drvr.delete_instance_files(instance)
         get_instance_path.assert_called_with(instance)
         expected = [mock.call('mv', '/path', '/path_del'),
                     mock.call('mv', '/path_resize', '/path_del')] * 2
@@ -11951,14 +11946,13 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
     @mock.patch('nova.virt.libvirt.utils.get_instance_path')
     def test_delete_instance_files_none(self, get_instance_path, exists,
                                         exe, shutil):
-        lv = self.libvirtconnection
         get_instance_path.return_value = '/path'
         instance = objects.Instance(uuid='fake-uuid', id=1)
 
         nova.utils.execute.side_effect = Exception()
         exists.side_effect = [False, False, False, False]
 
-        result = lv.delete_instance_files(instance)
+        result = self.drvr.delete_instance_files(instance)
         get_instance_path.assert_called_with(instance)
         expected = [mock.call('mv', '/path', '/path_del'),
                     mock.call('mv', '/path_resize', '/path_del')] * 2
@@ -11972,14 +11966,13 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
     @mock.patch('nova.virt.libvirt.utils.get_instance_path')
     def test_delete_instance_files_concurrent(self, get_instance_path, exists,
                                               exe, shutil):
-        lv = self.libvirtconnection
         get_instance_path.return_value = '/path'
         instance = objects.Instance(uuid='fake-uuid', id=1)
 
         nova.utils.execute.side_effect = [Exception(), Exception(), None]
         exists.side_effect = [False, False, True, False]
 
-        result = lv.delete_instance_files(instance)
+        result = self.drvr.delete_instance_files(instance)
         get_instance_path.assert_called_with(instance)
         expected = [mock.call('mv', '/path', '/path_del'),
                     mock.call('mv', '/path_resize', '/path_del')]
@@ -12000,7 +11993,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         CONF.libvirt.uid_maps = ["0:10000:1", "1:20000:10"]
         CONF.libvirt.gid_maps = ["0:10000:1", "1:20000:10"]
 
-        idmaps = self.libvirtconnection._get_guest_idmaps()
+        idmaps = self.drvr._get_guest_idmaps()
 
         self.assertEqual(len(idmaps), 4)
         self._assert_on_id_map(idmaps[0],
@@ -12020,7 +12013,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         CONF.libvirt.uid_maps = ["0:10000:1", "1:20000:10"]
         CONF.libvirt.gid_maps = ["0:10000:1", "1:20000:10"]
 
-        idmaps = self.libvirtconnection._get_guest_idmaps()
+        idmaps = self.drvr._get_guest_idmaps()
 
         self.assertEqual(0, len(idmaps))
 
@@ -12029,7 +12022,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         CONF.libvirt.uid_maps = ["0:10000:1", "1:20000:10"]
         CONF.libvirt.gid_maps = []
 
-        idmaps = self.libvirtconnection._get_guest_idmaps()
+        idmaps = self.drvr._get_guest_idmaps()
 
         self.assertEqual(2, len(idmaps))
         self._assert_on_id_map(idmaps[0],
@@ -12044,7 +12037,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         CONF.libvirt.uid_maps = []
         CONF.libvirt.gid_maps = ["0:10000:1", "1:20000:10"]
 
-        idmaps = self.libvirtconnection._get_guest_idmaps()
+        idmaps = self.drvr._get_guest_idmaps()
 
         self.assertEqual(2, len(idmaps))
         self._assert_on_id_map(idmaps[0],
