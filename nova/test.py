@@ -55,6 +55,7 @@ from nova.openstack.common import log as nova_logging
 from nova import paths
 from nova import rpc
 from nova import service
+from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit import conf_fixture
 from nova.tests.unit import policy_fixture
 from nova import utils
@@ -274,57 +275,6 @@ class TestCase(testtools.TestCase):
         if test_timeout > 0:
             self.useFixture(fixtures.Timeout(test_timeout, gentle=True))
 
-    def _setup_logging(self):
-        """Setup Logging redirection for tests.
-
-        There are a number of things we want to handle with logging in tests:
-
-        * Redirect the logging to somewhere that we can test or dump it later.
-
-        * Ensure that as many DEBUG messages as possible are actually
-          executed, to ensure they are actually syntactically valid
-          (they often have not been).
-
-        * Ensure that we create useful output for tests that doesn't
-          overwhelm the testing system (which means we can't capture
-          the 100 MB of debug logging on every run).
-
-        To do this we create a logger fixture at the root level, which
-        defaults to INFO and create a Null Logger at DEBUG which lets
-        us execute log messages at DEBUG but not keep the output.
-
-        To support local debugging OS_DEBUG=True can be set in the
-        environment, which will print out the full debug logging.
-
-        There are also a set of overrides for particularly verbose
-        modules to be even less than INFO.
-
-        """
-        # set root logger to debug
-        root = logging.getLogger()
-        root.setLevel(logging.DEBUG)
-
-        # supports collecting debug level for local runs
-        if os.environ.get('OS_DEBUG') in _TRUE_VALUES:
-            level = logging.DEBUG
-        else:
-            level = logging.INFO
-
-        # Collect logs
-        fs = '%(asctime)s %(levelname)s [%(name)s] %(message)s'
-        self.useFixture(fixtures.FakeLogger(format=fs, level=None))
-        root.handlers[0].setLevel(level)
-
-        if level > logging.DEBUG:
-            # Just attempt to format debug level logs, but don't save them
-            handler = NullHandler()
-            self.useFixture(fixtures.LogHandler(handler, nuke_handlers=False))
-            handler.setLevel(logging.DEBUG)
-
-            # Don't log every single DB migration step
-            logging.getLogger(
-                'migrate.versioning.api').setLevel(logging.WARNING)
-
     def setUp(self):
         """Run before each test method to initialize test environment."""
         super(TestCase, self).setUp()
@@ -335,18 +285,13 @@ class TestCase(testtools.TestCase):
         self.useFixture(TranslationFixture())
         self.useFixture(log_fixture.get_logging_handle_error_fixture())
 
-        if os.environ.get('OS_STDOUT_CAPTURE') in _TRUE_VALUES:
-            stdout = self.useFixture(fixtures.StringStream('stdout')).stream
-            self.useFixture(fixtures.MonkeyPatch('sys.stdout', stdout))
-        if os.environ.get('OS_STDERR_CAPTURE') in _TRUE_VALUES:
-            stderr = self.useFixture(fixtures.StringStream('stderr')).stream
-            self.useFixture(fixtures.MonkeyPatch('sys.stderr', stderr))
+        self.useFixture(nova_fixtures.OutputStreamCapture())
+
+        self.useFixture(nova_fixtures.StandardLogging())
 
         rpc.add_extra_exmods('nova.test')
         self.addCleanup(rpc.clear_extra_exmods)
         self.addCleanup(rpc.cleanup)
-
-        self._setup_logging()
 
         # NOTE(sdague): because of the way we were using the lock
         # wrapper we eneded up with a lot of tests that started
