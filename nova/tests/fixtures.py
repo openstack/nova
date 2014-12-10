@@ -160,3 +160,32 @@ class OutputStreamCapture(fixtures.Fixture):
     @property
     def stdout(self):
         return self.out._details["stdout"].as_text()
+
+
+class Timeout(fixtures.Fixture):
+    """Setup per test timeouts.
+
+    In order to avoid test deadlocks we support setting up a test
+    timeout parameter read from the environment. In almost all
+    cases where the timeout is reached this means a deadlock.
+
+    A class level TIMEOUT_SCALING_FACTOR also exists, which allows
+    extremely long tests to specify they need more time.
+    """
+
+    def __init__(self, timeout, scaling=1):
+        super(Timeout, self).__init__()
+        try:
+            self.test_timeout = int(timeout)
+        except ValueError:
+            # If timeout value is invalid do not set a timeout.
+            self.test_timeout = 0
+        if scaling >= 1:
+            self.test_timeout *= scaling
+        else:
+            raise ValueError('scaling value must be >= 1')
+
+    def setUp(self):
+        super(Timeout, self).setUp()
+        if self.test_timeout > 0:
+            self.useFixture(fixtures.Timeout(self.test_timeout, gentle=True))
