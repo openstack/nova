@@ -192,71 +192,58 @@ def _retry_on_deadlock(f):
     return wrapped
 
 
-def model_query(context, model, *args, **kwargs):
+def model_query(context, model,
+                args=None,
+                session=None,
+                use_slave=False,
+                read_deleted=None,
+                project_only=False):
     """Query helper that accounts for context's `read_deleted` field.
 
-    :param context: context to query under
-    :param use_slave: If true, use slave_connection
-    :param session: if present, the session to use
-    :param read_deleted: if present, overrides context's read_deleted field.
-    :param project_only: if present and context is user-type, then restrict
-            query to match the context's project_id. If set to 'allow_none',
-            restriction includes project_id = None.
-    :param base_model: Where model_query is passed a "model" parameter which is
-            not a subclass of NovaBase, we should pass an extra base_model
-            parameter that is a subclass of NovaBase and corresponds to the
-            model parameter.
+    :param context:     NovaContext of the query.
+    :param model:       Model to query. Must be a subclass of ModelBase.
+    :param args:        Arguments to query. If None - model is used.
+    :param session:     If present, the session to use.
+    :param use_slave:   If true, use a slave connection to the DB if creating a
+                        session.
+    :param read_deleted: If not None, overrides context's read_deleted field.
+                        Permitted values are 'no', which does not return
+                        deleted values; 'only', which only returns deleted
+                        values; and 'yes', which does not filter deleted
+                        values.
+    :param project_only: If set and context is user-type, then restrict
+                        query to match the context's project_id. If set to
+                        'allow_none', restriction includes project_id = None.
     """
 
-    # We pass a function here rather than a value so we can lazily evaluate
-    # get_session. In all cases we want to use the default value even if we've
-    # been explicitly passed a value of None
-    def _default(kwarg, default):
-        val = kwargs.get(kwarg)
-        if val is None:
-            return default()
-        return val
+    if session is None:
+        if CONF.database.slave_connection == '':
+            use_slave = False
+        session = get_session(use_slave=use_slave)
 
-    use_slave = _default('use_slave', lambda: False)
+    if read_deleted is None:
+        read_deleted = context.read_deleted
 
-    # Can't use a slave if it's not specified
-    if CONF.database.slave_connection == '':
-        use_slave = False
-
-    session = _default('session', lambda: get_session(use_slave=use_slave))
-    read_deleted = _default('read_deleted', lambda: context.read_deleted)
-    project_only = _default('project_only', lambda: False)
-
-    # No default for base_model; it's handled below
-    base_model = kwargs.get('base_model')
-
-    def issubclassof_nova_base(obj):
-        return isinstance(obj, type) and issubclass(obj, models.NovaBase)
-
-    if issubclassof_nova_base(model):
-        base_model = model
-    elif not issubclassof_nova_base(base_model):
-        raise ValueError(_("model or base_model parameter should be "
-                           "subclass of NovaBase"))
-
-    query = session.query(model, *args)
-
-    default_deleted_value = base_model.__mapper__.c.deleted.default.arg
-    if read_deleted == 'no':
-        query = query.filter(base_model.deleted == default_deleted_value)
-    elif read_deleted == 'yes':
-        pass  # omit the filter to include deleted and active
-    elif read_deleted == 'only':
-        query = query.filter(base_model.deleted != default_deleted_value)
+    query_kwargs = {}
+    if 'no' == read_deleted:
+        query_kwargs['deleted'] = False
+    elif 'only' == read_deleted:
+        query_kwargs['deleted'] = True
+    elif 'yes' == read_deleted:
+        pass
     else:
         raise ValueError(_("Unrecognized read_deleted value '%s'")
                            % read_deleted)
 
+    query = sqlalchemyutils.model_query(model, session, args, **query_kwargs)
+
+    # We can't use oslo.db model_query's project_id here, as it doesn't allow
+    # us to return both our projects and unowned projects.
     if nova.context.is_user_context(context) and project_only:
         if project_only == 'allow_none':
             query = query.\
-                filter(or_(base_model.project_id == context.project_id,
-                           base_model.project_id == null()))
+                filter(or_(model.project_id == context.project_id,
+                           model.project_id == null()))
         else:
             query = query.filter_by(project_id=context.project_id)
 
@@ -648,20 +635,20 @@ def compute_node_delete(context, compute_id):
 def compute_node_statistics(context):
     """Compute statistics over all compute nodes."""
     result = model_query(context,
-                         func.count(models.ComputeNode.id),
-                         func.sum(models.ComputeNode.vcpus),
-                         func.sum(models.ComputeNode.memory_mb),
-                         func.sum(models.ComputeNode.local_gb),
-                         func.sum(models.ComputeNode.vcpus_used),
-                         func.sum(models.ComputeNode.memory_mb_used),
-                         func.sum(models.ComputeNode.local_gb_used),
-                         func.sum(models.ComputeNode.free_ram_mb),
-                         func.sum(models.ComputeNode.free_disk_gb),
-                         func.sum(models.ComputeNode.current_workload),
-                         func.sum(models.ComputeNode.running_vms),
-                         func.sum(models.ComputeNode.disk_available_least),
-                         base_model=models.ComputeNode,
-                         read_deleted="no").\
+                         models.ComputeNode, (
+                             func.count(models.ComputeNode.id),
+                             func.sum(models.ComputeNode.vcpus),
+                             func.sum(models.ComputeNode.memory_mb),
+                             func.sum(models.ComputeNode.local_gb),
+                             func.sum(models.ComputeNode.vcpus_used),
+                             func.sum(models.ComputeNode.memory_mb_used),
+                             func.sum(models.ComputeNode.local_gb_used),
+                             func.sum(models.ComputeNode.free_ram_mb),
+                             func.sum(models.ComputeNode.free_disk_gb),
+                             func.sum(models.ComputeNode.current_workload),
+                             func.sum(models.ComputeNode.running_vms),
+                             func.sum(models.ComputeNode.disk_available_least),
+                         ), read_deleted="no").\
                          filter(models.Service.disabled == false()).\
                          filter(
                             models.Service.id ==
@@ -733,8 +720,8 @@ def floating_ip_get(context, id):
 @require_context
 def floating_ip_get_pools(context):
     pools = []
-    for result in model_query(context, models.FloatingIp.pool,
-                              base_model=models.FloatingIp).distinct():
+    for result in model_query(context, models.FloatingIp,
+                              (models.FloatingIp.pool,)).distinct():
         pools.append({'name': result[0]})
     return pools
 
@@ -1195,9 +1182,8 @@ def fixed_ip_disassociate_all_by_timeout(context, host, time):
         host_filter = or_(and_(models.Instance.host == host,
                                models.Network.multi_host == true()),
                           models.Network.host == host)
-        result = model_query(context, models.FixedIp.id,
-                             base_model=models.FixedIp, read_deleted="no",
-                             session=session).\
+        result = model_query(context, models.FixedIp, (models.FixedIp.id,),
+                             read_deleted="no", session=session).\
                 filter(models.FixedIp.allocated == false()).\
                 filter(models.FixedIp.updated_at < time).\
                 join((models.Network,
@@ -1371,9 +1357,8 @@ def fixed_ip_update(context, address, values):
 
 def _fixed_ip_count_by_project(context, project_id, session=None):
     nova.context.authorize_project_context(context, project_id)
-    return model_query(context, models.FixedIp.id,
-                       base_model=models.FixedIp, read_deleted="no",
-                       session=session).\
+    return model_query(context, models.FixedIp, (models.FixedIp.id,),
+                       read_deleted="no", session=session).\
                 join((models.Instance,
                       models.Instance.uuid == models.FixedIp.instance_uuid)).\
                 filter(models.Instance.project_id == project_id).\
@@ -1619,11 +1604,11 @@ def instance_create(context, values):
 
 def _instance_data_get_for_user(context, project_id, user_id, session=None):
     result = model_query(context,
-                         func.count(models.Instance.id),
-                         func.sum(models.Instance.vcpus),
-                         func.sum(models.Instance.memory_mb),
-                         base_model=models.Instance,
-                         session=session).\
+                         models.Instance, (
+                             func.count(models.Instance.id),
+                             func.sum(models.Instance.vcpus),
+                             func.sum(models.Instance.memory_mb),
+                         ), session=session).\
                      filter_by(project_id=project_id)
     if user_id:
         result = result.filter_by(user_id=user_id).first()
@@ -2048,15 +2033,15 @@ def _tag_instance_filter(context, query, filters):
             or_query = subq if or_query is None else or_(or_query, subq)
 
         elif filter_name.startswith('tag:'):
-            subq = model_query(context, model_uuid,
-                session=query.session, base_model=model_metadata).\
+            subq = model_query(context, model_metadata, (model_uuid,),
+                session=query.session).\
                 filter_by(key=tag_name).\
                 filter(model_metadata.value.in_(tag_val))
             query = query.filter(model.uuid.in_(subq))
 
     if or_query is not None:
-        subq = model_query(context, model_uuid,
-                session=query.session, base_model=model_metadata).\
+        subq = model_query(context, model_metadata, (model_uuid,),
+                session=query.session).\
                 filter(or_query)
         query = query.filter(model.uuid.in_(subq))
 
@@ -2276,8 +2261,8 @@ def _instance_get_all_uuids_by_host(context, host, session=None):
     allows you to specify a session object as a kwarg.
     """
     uuids = []
-    for tuple in model_query(context, models.Instance.uuid, read_deleted="no",
-                             base_model=models.Instance, session=session).\
+    for tuple in model_query(context, models.Instance, (models.Instance.uuid,),
+                             read_deleted="no", session=session).\
                 filter_by(host=host).\
                 all():
         uuids.append(tuple[0])
@@ -2337,8 +2322,8 @@ def instance_floating_address_get_all(context, instance_uuid):
         raise exception.InvalidUUID(uuid=instance_uuid)
 
     floating_ips = model_query(context,
-                               models.FloatingIp.address,
-                               base_model=models.FloatingIp).\
+                               models.FloatingIp,
+                               (models.FloatingIp.address,)).\
         join(models.FloatingIp.fixed_ip).\
         filter_by(instance_uuid=instance_uuid)
 
@@ -2919,8 +2904,8 @@ def network_get_all_by_host(context, host):
     fixed_host_filter = or_(models.FixedIp.host == host,
             and_(models.FixedIp.instance_uuid != null(),
                  models.Instance.host == host))
-    fixed_ip_query = model_query(context, models.FixedIp.network_id,
-                                 base_model=models.FixedIp,
+    fixed_ip_query = model_query(context, models.FixedIp,
+                                 (models.FixedIp.network_id,),
                                  session=session).\
                      outerjoin((models.Instance,
                                 models.Instance.uuid ==
@@ -2997,9 +2982,9 @@ def quota_get(context, project_id, resource, user_id=None):
 def quota_get_all_by_project_and_user(context, project_id, user_id):
     nova.context.authorize_project_context(context, project_id)
 
-    user_quotas = model_query(context, models.ProjectUserQuota.resource,
-                       models.ProjectUserQuota.hard_limit,
-                       base_model=models.ProjectUserQuota).\
+    user_quotas = model_query(context, models.ProjectUserQuota,
+                              (models.ProjectUserQuota.resource,
+                               models.ProjectUserQuota.hard_limit)).\
                    filter_by(project_id=project_id).\
                    filter_by(user_id=user_id).\
                    all()
@@ -4601,8 +4586,9 @@ def flavor_get_all(context, inactive=False, filters=None,
 
 
 def _flavor_get_id_from_flavor_query(context, flavor_id, session=None):
-    return model_query(context, models.InstanceTypes.id, read_deleted="no",
-                       session=session, base_model=models.InstanceTypes).\
+    return model_query(context, models.InstanceTypes,
+                       (models.InstanceTypes.id,),
+                       read_deleted="no", session=session).\
                 filter_by(flavorid=flavor_id)
 
 
@@ -6106,8 +6092,8 @@ def _instance_group_id(context, group_uuid, session=None):
     """Returns the group database ID for the group UUID."""
 
     result = model_query(context,
-                         models.InstanceGroup.id,
-                         base_model=models.InstanceGroup,
+                         models.InstanceGroup,
+                         (models.InstanceGroup.id,),
                          session=session).\
                 filter_by(uuid=group_uuid).\
                 first()
@@ -6172,8 +6158,8 @@ def instance_group_member_delete(context, group_uuid, instance_id):
 def instance_group_members_get(context, group_uuid):
     id = _instance_group_id(context, group_uuid)
     instances = model_query(context,
-                            models.InstanceGroupMember.instance_id,
-                            base_model=models.InstanceGroupMember).\
+                            models.InstanceGroupMember,
+                            (models.InstanceGroupMember.instance_id,)).\
                     filter_by(group_id=id).all()
     return [instance[0] for instance in instances]
 
@@ -6232,8 +6218,8 @@ def instance_group_policy_delete(context, group_uuid, policy):
 def instance_group_policies_get(context, group_uuid):
     id = _instance_group_id(context, group_uuid)
     policies = model_query(context,
-                           models.InstanceGroupPolicy.policy,
-                           base_model=models.InstanceGroupPolicy).\
+                           models.InstanceGroupPolicy,
+                           (models.InstanceGroupPolicy.policy,)).\
                     filter_by(group_id=id).all()
     return [policy[0] for policy in policies]
 
