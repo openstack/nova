@@ -21,6 +21,7 @@ import fixtures as fx
 from oslo.config import cfg
 import testtools
 
+from nova.db.sqlalchemy import api as session
 from nova.tests.unit import conf_fixture
 from nova.tests import fixtures
 
@@ -145,3 +146,36 @@ class TestTimeout(testtools.TestCase):
         self.assertEqual(timeout.test_timeout, 10)
         timeout = fixtures.Timeout("10", 2)
         self.assertEqual(timeout.test_timeout, 20)
+
+
+class TestDatabaseFixture(testtools.TestCase):
+    def test_fixture_reset(self):
+        # because this sets up reasonable db connection strings
+        self.useFixture(conf_fixture.ConfFixture())
+        self.useFixture(fixtures.Database())
+        engine = session.get_engine()
+        conn = engine.connect()
+        result = conn.execute("select * from instance_types")
+        rows = result.fetchall()
+        self.assertEqual(len(rows), 5, "Rows %s" % rows)
+
+        # insert a 6th instance type, column 5 below is an int id
+        # which has a constraint on it, so if new standard instance
+        # types are added you have to bump it.
+        conn.execute("insert into instance_types VALUES "
+                     "(NULL, NULL, NULL, 't1.test', 6, 4096, 2, 0, NULL, '87'"
+                     ", 1.0, 40, 0, 0, 1, 0)")
+        result = conn.execute("select * from instance_types")
+        rows = result.fetchall()
+        self.assertEqual(len(rows), 6, "Rows %s" % rows)
+
+        # reset by invoking the fixture again
+        #
+        # NOTE(sdague): it's important to reestablish the db
+        # connection because otherwise we have a reference to the old
+        # in mem db.
+        self.useFixture(fixtures.Database())
+        conn = engine.connect()
+        result = conn.execute("select * from instance_types")
+        rows = result.fetchall()
+        self.assertEqual(len(rows), 5, "Rows %s" % rows)

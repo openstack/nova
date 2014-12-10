@@ -23,10 +23,16 @@ import os
 import uuid
 
 import fixtures
+from oslo.config import cfg
 
+from nova.db import migration
+from nova.db.sqlalchemy import api as session
 from nova import service
 
 _TRUE_VALUES = ('True', 'true', '1', 'yes')
+
+CONF = cfg.CONF
+DB_SCHEMA = ""
 
 
 class ServiceFixture(fixtures.Fixture):
@@ -189,3 +195,25 @@ class Timeout(fixtures.Fixture):
         super(Timeout, self).setUp()
         if self.test_timeout > 0:
             self.useFixture(fixtures.Timeout(self.test_timeout, gentle=True))
+
+
+class Database(fixtures.Fixture):
+    def _cache_schema(self):
+        global DB_SCHEMA
+        if not DB_SCHEMA:
+            engine = session.get_engine()
+            conn = engine.connect()
+            migration.db_sync()
+            DB_SCHEMA = "".join(line for line in conn.connection.iterdump())
+            engine.dispose()
+
+    def reset(self):
+        self._cache_schema()
+        engine = session.get_engine()
+        engine.dispose()
+        conn = engine.connect()
+        conn.connection.executescript(DB_SCHEMA)
+
+    def setUp(self):
+        super(Database, self).setUp()
+        self.reset()
