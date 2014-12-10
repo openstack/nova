@@ -32,6 +32,7 @@ from oslo.db.sqlalchemy import session as db_session
 from oslo.db.sqlalchemy import utils as sqlalchemyutils
 from oslo.utils import excutils
 from oslo.utils import timeutils
+import retrying
 import six
 from sqlalchemy import and_
 from sqlalchemy import Boolean
@@ -1104,6 +1105,9 @@ def fixed_ip_associate(context, address, instance_uuid, network_id=None,
 
 
 @require_admin_context
+@_retry_on_deadlock
+@retrying.retry(stop_max_attempt_number=5, retry_on_exception=
+                lambda exc: isinstance(exc, exception.FixedIpAssociateFailed))
 def fixed_ip_associate_pool(context, network_id, instance_uuid=None,
                             host=None):
     if instance_uuid and not uuidutils.is_uuid_like(instance_uuid):
@@ -1119,22 +1123,34 @@ def fixed_ip_associate_pool(context, network_id, instance_uuid=None,
                                filter_by(reserved=False).\
                                filter_by(instance_uuid=None).\
                                filter_by(host=None).\
-                               with_lockmode('update').\
                                first()
-        # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
-        #             then this has concurrency issues
+
         if not fixed_ip_ref:
             raise exception.NoMoreFixedIps(net=network_id)
 
+        params = {}
         if fixed_ip_ref['network_id'] is None:
-            fixed_ip_ref['network'] = network_id
-
+            params['network_id'] = network_id
         if instance_uuid:
-            fixed_ip_ref['instance_uuid'] = instance_uuid
-
+            params['instance_uuid'] = instance_uuid
         if host:
-            fixed_ip_ref['host'] = host
-        session.add(fixed_ip_ref)
+            params['host'] = host
+
+        rows_updated = model_query(context, models.FixedIp, session=session,
+                                   read_deleted="no").\
+            filter_by(id=fixed_ip_ref['id']).\
+            filter_by(network_id=fixed_ip_ref['network_id']).\
+            filter_by(reserved=False).\
+            filter_by(instance_uuid=None).\
+            filter_by(host=None).\
+            filter_by(address=fixed_ip_ref['address']).\
+            update(params, synchronize_session='evaluate')
+
+        if not rows_updated:
+            LOG.debug('The row was updated in a concurrent transaction, '
+                      'we will fetch another row')
+            raise exception.FixedIpAssociateFailed(net=network_id)
+
     return fixed_ip_ref
 
 
