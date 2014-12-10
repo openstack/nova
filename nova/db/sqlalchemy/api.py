@@ -922,15 +922,13 @@ def floating_ip_fixed_ip_associate(context, floating_address,
 @require_context
 @_retry_on_deadlock
 def floating_ip_deallocate(context, address):
-    session = get_session()
-    with session.begin():
-        return model_query(context, models.FloatingIp, session=session).\
-            filter_by(address=address).\
-            filter(models.FloatingIp.project_id != null()).\
-            update({'project_id': None,
-                    'host': None,
-                    'auto_assigned': False},
-                   synchronize_session=False)
+    return model_query(context, models.FloatingIp).\
+        filter_by(address=address).\
+        filter(models.FloatingIp.project_id != null()).\
+        update({'project_id': None,
+                'host': None,
+                'auto_assigned': False},
+               synchronize_session=False)
 
 
 @require_context
