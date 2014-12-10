@@ -13,10 +13,13 @@
 #    under the License.
 
 from oslo.serialization import jsonutils
+import webob
 
 from nova.api.openstack.compute import plugins
 from nova.api.openstack.compute.plugins.v3 import access_ips
-from nova.api.openstack.compute.plugins.v3 import servers
+from nova.api.openstack.compute.plugins.v3 import servers as servers_v21
+from nova.api.openstack.compute import servers as servers_v20
+from nova.api.openstack import extensions as extensions_v20
 from nova.api.openstack import wsgi
 from nova.compute import api as compute_api
 from nova import db
@@ -27,9 +30,9 @@ from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit.image import fake
 
 
-class AccessIPsExtTest(test.NoDBTestCase):
+class AccessIPsExtTestV21(test.NoDBTestCase):
     def setUp(self):
-        super(AccessIPsExtTest, self).setUp()
+        super(AccessIPsExtTestV21, self).setUp()
         self.access_ips_ext = access_ips.AccessIPs(None)
 
     def _test(self, func):
@@ -155,9 +158,11 @@ class AccessIPsExtTest(test.NoDBTestCase):
         self._test_with_ipv6_blank(self.access_ips_ext.server_rebuild)
 
 
-class AccessIPsExtAPIValidationTest(test.TestCase):
+class AccessIPsExtAPIValidationTestV21(test.TestCase):
+    validation_error = exception.ValidationError
+
     def setUp(self):
-        super(AccessIPsExtAPIValidationTest, self).setUp()
+        super(AccessIPsExtAPIValidationTestV21, self).setUp()
 
         def fake_save(context, **kwargs):
             pass
@@ -165,12 +170,22 @@ class AccessIPsExtAPIValidationTest(test.TestCase):
         def fake_rebuild(*args, **kwargs):
             pass
 
-        ext_info = plugins.LoadedExtensionInfo()
-        self.controller = servers.ServersController(extension_info=ext_info)
+        self._set_up_controller()
         fake.stub_out_image_service(self.stubs)
         self.stubs.Set(db, 'instance_get_by_uuid', fakes.fake_instance_get())
         self.stubs.Set(instance_obj.Instance, 'save', fake_save)
         self.stubs.Set(compute_api.API, 'rebuild', fake_rebuild)
+
+    def _set_up_controller(self):
+        ext_info = plugins.LoadedExtensionInfo()
+        self.controller = servers_v21.ServersController(
+                            extension_info=ext_info)
+
+    # Note(gmann): V2.1 has Access IP as separate extension. This class tests
+    # calls controller directly so Access IPs will not be present in server
+    # response. Those are being tested in AccessIPsExtTest class.
+    def _verify_update_access_ip(self, res_dict, params):
+        pass
 
     def _test_create(self, params):
         body = {
@@ -181,12 +196,12 @@ class AccessIPsExtAPIValidationTest(test.TestCase):
             },
         }
         body['server'].update(params)
-
         req = fakes.HTTPRequestV3.blank('/servers')
         req.method = 'POST'
         req.headers['content-type'] = 'application/json'
         req.body = jsonutils.dumps(body)
-        self.controller.create(req, body=body)
+        res_dict = self.controller.create(req, body=body).obj
+        return res_dict
 
     def _test_update(self, params):
         body = {
@@ -199,7 +214,8 @@ class AccessIPsExtAPIValidationTest(test.TestCase):
         req.method = 'PUT'
         req.headers['content-type'] = 'application/json'
         req.body = jsonutils.dumps(body)
-        self.controller.update(req, fakes.FAKE_UUID, body=body)
+        res_dict = self.controller.update(req, fakes.FAKE_UUID, body=body)
+        self._verify_update_access_ip(res_dict, params)
 
     def _test_rebuild(self, params):
         body = {
@@ -218,9 +234,19 @@ class AccessIPsExtAPIValidationTest(test.TestCase):
         params = {access_ips.AccessIPs.v4_key: '192.168.0.10'}
         self._test_create(params)
 
+    def test_create_server_with_access_ip_pass_disabled(self):
+        # test with admin passwords disabled See lp bug 921814
+        self.flags(enable_instance_password=False)
+        params = {access_ips.AccessIPs.v4_key: '192.168.0.10',
+                  access_ips.AccessIPs.v6_key: '2001:db8::9abc'}
+        res = self._test_create(params)
+
+        server = res['server']
+        self.assertNotIn("admin_password", server)
+
     def test_create_server_with_invalid_access_ipv4(self):
         params = {access_ips.AccessIPs.v4_key: '1.1.1.1.1.1'}
-        self.assertRaises(exception.ValidationError, self._test_create, params)
+        self.assertRaises(self.validation_error, self._test_create, params)
 
     def test_create_server_with_access_ipv6(self):
         params = {access_ips.AccessIPs.v6_key: '2001:db8::9abc'}
@@ -228,7 +254,7 @@ class AccessIPsExtAPIValidationTest(test.TestCase):
 
     def test_create_server_with_invalid_access_ipv6(self):
         params = {access_ips.AccessIPs.v6_key: 'fe80:::::::'}
-        self.assertRaises(exception.ValidationError, self._test_create, params)
+        self.assertRaises(self.validation_error, self._test_create, params)
 
     def test_update_server_with_access_ipv4(self):
         params = {access_ips.AccessIPs.v4_key: '192.168.0.10'}
@@ -236,7 +262,7 @@ class AccessIPsExtAPIValidationTest(test.TestCase):
 
     def test_update_server_with_invalid_access_ipv4(self):
         params = {access_ips.AccessIPs.v4_key: '1.1.1.1.1.1'}
-        self.assertRaises(exception.ValidationError, self._test_update, params)
+        self.assertRaises(self.validation_error, self._test_update, params)
 
     def test_update_server_with_access_ipv6(self):
         params = {access_ips.AccessIPs.v6_key: '2001:db8::9abc'}
@@ -244,7 +270,7 @@ class AccessIPsExtAPIValidationTest(test.TestCase):
 
     def test_update_server_with_invalid_access_ipv6(self):
         params = {access_ips.AccessIPs.v6_key: 'fe80:::::::'}
-        self.assertRaises(exception.ValidationError, self._test_update, params)
+        self.assertRaises(self.validation_error, self._test_update, params)
 
     def test_rebuild_server_with_access_ipv4(self):
         params = {access_ips.AccessIPs.v4_key: '192.168.0.10'}
@@ -252,7 +278,7 @@ class AccessIPsExtAPIValidationTest(test.TestCase):
 
     def test_rebuild_server_with_invalid_access_ipv4(self):
         params = {access_ips.AccessIPs.v4_key: '1.1.1.1.1.1'}
-        self.assertRaises(exception.ValidationError, self._test_rebuild,
+        self.assertRaises(self.validation_error, self._test_rebuild,
                           params)
 
     def test_rebuild_server_with_access_ipv6(self):
@@ -261,13 +287,46 @@ class AccessIPsExtAPIValidationTest(test.TestCase):
 
     def test_rebuild_server_with_invalid_access_ipv6(self):
         params = {access_ips.AccessIPs.v6_key: 'fe80:::::::'}
-        self.assertRaises(exception.ValidationError, self._test_rebuild,
+        self.assertRaises(self.validation_error, self._test_rebuild,
                           params)
 
 
-class AccessIPsControllerTest(test.NoDBTestCase):
+class AccessIPsExtAPIValidationTestV2(AccessIPsExtAPIValidationTestV21):
+    validation_error = webob.exc.HTTPBadRequest
+
+    def _set_up_controller(self):
+        self.ext_mgr = extensions_v20.ExtensionManager()
+        self.ext_mgr.extensions = {}
+        self.controller = servers_v20.Controller(self.ext_mgr)
+
+    def _verify_update_access_ip(self, res_dict, params):
+        for key, value in params.items():
+            value = value or ''
+            self.assertEqual(res_dict['server'][key], value)
+
+    # Note(gmann): Below tests are only valid for V2 as
+    # V2.1 has strong input validation and does not allow
+    # None or blank access ips.
+    def test_update_server_access_ipv4_none(self):
+        params = {access_ips.AccessIPs.v4_key: None}
+        self._test_update(params)
+
+    def test_update_server_access_ipv4_blank(self):
+        params = {access_ips.AccessIPs.v4_key: ''}
+        self._test_update(params)
+
+    def test_update_server_access_ipv6_none(self):
+        params = {access_ips.AccessIPs.v6_key: None}
+        self._test_update(params)
+
+    def test_update_server_access_ipv6_blank(self):
+        params = {access_ips.AccessIPs.v6_key: ''}
+        self._test_update(params)
+
+
+class AccessIPsControllerTestV21(test.NoDBTestCase):
     def setUp(self):
-        super(AccessIPsControllerTest, self).setUp()
+        super(AccessIPsControllerTestV21, self).setUp()
         self.controller = access_ips.AccessIPsController()
 
     def _test_with_access_ips(self, func, kwargs={'id': 'fake'}):
