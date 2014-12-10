@@ -46,6 +46,7 @@ from nova.tests.unit import fake_instance
 from nova.tests.unit.objects import test_instance_fault
 from nova.tests.unit.objects import test_instance_info_cache
 from nova import utils
+from nova.virt import event as virtevent
 from nova.virt import hardware
 
 
@@ -58,6 +59,23 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         super(ComputeManagerUnitTestCase, self).setUp()
         self.compute = importutils.import_object(CONF.compute_manager)
         self.context = context.RequestContext('fake', 'fake')
+
+    @mock.patch.object(manager.ComputeManager, '_sync_instance_power_state')
+    @mock.patch.object(objects.Instance, 'get_by_uuid')
+    def test_handle_lifecycle_event(self, mock_get, mock_sync):
+        event_map = {virtevent.EVENT_LIFECYCLE_STOPPED: power_state.SHUTDOWN,
+                     virtevent.EVENT_LIFECYCLE_STARTED: power_state.RUNNING,
+                     virtevent.EVENT_LIFECYCLE_PAUSED: power_state.PAUSED,
+                     virtevent.EVENT_LIFECYCLE_RESUMED: power_state.RUNNING}
+        event = mock.Mock()
+        event.get_instance_uuid.return_value = mock.sentinel.uuid
+        for transition, pwr_state in event_map.iteritems():
+            event.get_transition.return_value = transition
+            self.compute.handle_lifecycle_event(event)
+            mock_get.assert_called_with(mock.ANY, mock.sentinel.uuid,
+                                        expected_attrs=[])
+            mock_sync.assert_called_with(mock.ANY, mock_get.return_value,
+                                         pwr_state)
 
     def test_allocate_network_succeeds_after_retries(self):
         self.flags(network_allocate_retries=8)
@@ -966,6 +984,18 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             self.context, instances[0], ignore_missing_network_data=False)
         self.mox.ReplayAll()
         self.compute._instance_usage_audit(self.context)
+
+    @mock.patch.object(objects.InstanceList, 'get_by_host')
+    def test_sync_power_states(self, mock_get):
+        instance = mock.Mock()
+        mock_get.return_value = [instance]
+        with mock.patch.object(self.compute._sync_power_pool,
+                               'spawn_n') as mock_spawn:
+            self.compute._sync_power_states(mock.sentinel.context)
+            mock_get.assert_called_with(mock.sentinel.context,
+                                        self.compute.host, expected_attrs=[],
+                                        use_slave=True)
+            mock_spawn.assert_called_once_with(mock.ANY, instance)
 
     def _get_sync_instance(self, power_state, vm_state, task_state=None,
                            shutdown_terminate=False):

@@ -1098,7 +1098,8 @@ class ComputeManager(manager.Manager):
                  instance_uuid=event.get_instance_uuid())
         context = nova.context.get_admin_context(read_deleted='yes')
         instance = objects.Instance.get_by_uuid(context,
-                                                event.get_instance_uuid())
+                                                event.get_instance_uuid(),
+                                                expected_attrs=[])
         vm_power_state = None
         if event.get_transition() == virtevent.EVENT_LIFECYCLE_STOPPED:
             vm_power_state = power_state.SHUTDOWN
@@ -5744,9 +5745,9 @@ class ComputeManager(manager.Manager):
         loop, one database record at a time, checking if the hypervisor has the
         same power state as is in the database.
         """
-        db_instances = objects.InstanceList.get_by_host(context,
-                                                             self.host,
-                                                             use_slave=True)
+        db_instances = objects.InstanceList.get_by_host(context, self.host,
+                                                        expected_attrs=[],
+                                                        use_slave=True)
 
         num_vm_instances = self.driver.get_num_instances()
         num_db_instances = len(db_instances)
