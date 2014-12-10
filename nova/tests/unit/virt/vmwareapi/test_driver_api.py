@@ -1116,7 +1116,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
             self._check_vm_info(info, power_state.RUNNING)
             self.assertTrue(self.exception)
 
-    def _spawn_attach_volume_vmdk(self, set_image_ref=True, vc_support=False):
+    def _spawn_attach_volume_vmdk(self, set_image_ref=True):
         self._create_instance(set_image_ref=set_image_ref)
         self.mox.StubOutWithMock(block_device, 'volume_in_mapping')
         self.mox.StubOutWithMock(v_driver, 'block_device_info_get_mapping')
@@ -1124,15 +1124,14 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         root_disk = [{'connection_info': connection_info}]
         v_driver.block_device_info_get_mapping(
                 mox.IgnoreArg()).AndReturn(root_disk)
-        if vc_support:
-            self.mox.StubOutWithMock(volumeops.VMwareVolumeOps,
-                                     '_get_res_pool_of_vm')
-            volumeops.VMwareVolumeOps._get_res_pool_of_vm(
-                     mox.IgnoreArg()).AndReturn('fake_res_pool')
-            self.mox.StubOutWithMock(volumeops.VMwareVolumeOps,
-                                     '_relocate_vmdk_volume')
-            volumeops.VMwareVolumeOps._relocate_vmdk_volume(mox.IgnoreArg(),
-                     'fake_res_pool', mox.IgnoreArg())
+        self.mox.StubOutWithMock(volumeops.VMwareVolumeOps,
+                                 '_get_res_pool_of_vm')
+        volumeops.VMwareVolumeOps._get_res_pool_of_vm(
+                 mox.IgnoreArg()).AndReturn('fake_res_pool')
+        self.mox.StubOutWithMock(volumeops.VMwareVolumeOps,
+                                 '_relocate_vmdk_volume')
+        volumeops.VMwareVolumeOps._relocate_vmdk_volume(mox.IgnoreArg(),
+                 'fake_res_pool', mox.IgnoreArg())
         self.mox.StubOutWithMock(volumeops.VMwareVolumeOps,
                                  'attach_volume')
         volumeops.VMwareVolumeOps.attach_volume(connection_info,
@@ -2448,10 +2447,10 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                           self.instance, 'fake_dest', flavor, None)
 
     def test_spawn_attach_volume_vmdk(self):
-        self._spawn_attach_volume_vmdk(vc_support=True)
+        self._spawn_attach_volume_vmdk()
 
     def test_spawn_attach_volume_vmdk_no_image_ref(self):
-        self._spawn_attach_volume_vmdk(set_image_ref=False, vc_support=True)
+        self._spawn_attach_volume_vmdk(set_image_ref=False)
 
     def test_pause(self):
         # Tests that the VMwareVCDriver does not implement the pause method.
