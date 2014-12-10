@@ -4089,50 +4089,6 @@ class FixedIPTestCase(BaseInstanceTypeTestCase):
         self.assertIn('instance', fixed_ip.__dict__)
         self.assertEqual(instance_uuid, fixed_ip.instance.uuid)
 
-    def test_fixed_ip_get_by_address_detailed_not_found_exception(self):
-        self.assertRaises(exception.FixedIpNotFoundForAddress,
-                          db.fixed_ip_get_by_address_detailed, self.ctxt,
-                          '192.168.1.5')
-
-    def test_fixed_ip_get_by_address_with_data_error_exception(self):
-        self.mock_db_query_first_to_raise_data_error_exception()
-        self.assertRaises(exception.FixedIpInvalid,
-                          db.fixed_ip_get_by_address_detailed, self.ctxt,
-                          '192.168.1.6')
-
-    def test_fixed_ip_get_by_address_detailed_sucsess(self):
-        address = '192.168.1.5'
-        instance_uuid = self._create_instance()
-        network_id = db.network_create_safe(self.ctxt, {})['id']
-        param = {
-            'reserved': False,
-            'deleted': 0,
-            'leased': False,
-            'host': '127.0.0.1',
-            'address': address,
-            'allocated': False,
-            'instance_uuid': instance_uuid,
-            'network_id': network_id,
-            'virtual_interface_id': None
-        }
-        db.fixed_ip_create(self.ctxt, param)
-
-        fixed_ip_data = db.fixed_ip_get_by_address_detailed(self.ctxt, address)
-        # fixed ip check here
-        ignored_keys = ['created_at', 'id', 'deleted_at', 'updated_at']
-        self._assertEqualObjects(param, fixed_ip_data[0], ignored_keys)
-
-        # network model check here
-        network_data = db.network_get(self.ctxt, network_id)
-        self._assertEqualObjects(network_data, fixed_ip_data[1])
-
-        # Instance check here
-        instance_data = db.instance_get_by_uuid(self.ctxt, instance_uuid)
-        ignored_keys = ['info_cache', 'system_metadata',
-                        'security_groups', 'metadata',
-                        'pci_devices']  # HOW ????
-        self._assertEqualObjects(instance_data, fixed_ip_data[2], ignored_keys)
-
     def test_fixed_ip_update_not_found_for_address(self):
         self.assertRaises(exception.FixedIpNotFoundForAddress,
                           db.fixed_ip_update, self.ctxt,
