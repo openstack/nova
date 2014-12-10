@@ -35,21 +35,25 @@ host.libvirt = libvirt
 
 class HostTestCase(test.NoDBTestCase):
 
+    def setUp(self):
+        super(HostTestCase, self).setUp()
+
+        self.useFixture(fakelibvirt.FakeLibvirtFixture())
+        self.host = host.Host("qemu:///system")
+
     def test_close_callback(self):
         self.close_callback = None
 
         def set_close_callback(cb, opaque):
             self.close_callback = cb
 
-        conn = fakelibvirt.Connection("qemu:///system")
-        hostimpl = host.Host("qemu:///system")
         with contextlib.nested(
-            mock.patch.object(hostimpl, "_connect", return_value=conn),
-            mock.patch.object(conn, "registerCloseCallback",
+            mock.patch.object(fakelibvirt.virConnect,
+                              "registerCloseCallback",
                               side_effect=set_close_callback)):
 
             # verify that the driver registers for the close callback
-            hostimpl.get_connection()
+            self.host.get_connection()
             self.assertTrue(self.close_callback)
 
     def test_close_callback_bad_signature(self):
@@ -57,14 +61,12 @@ class HostTestCase(test.NoDBTestCase):
            even when registerCloseCallback method has a different
            number of arguments in the libvirt python library.
         '''
-        conn = fakelibvirt.Connection("qemu:///system")
-        hostimpl = host.Host("qemu:///system")
         with contextlib.nested(
-            mock.patch.object(hostimpl, "_connect", return_value=conn),
-            mock.patch.object(conn, "registerCloseCallback",
+            mock.patch.object(fakelibvirt.virConnect,
+                              "registerCloseCallback",
                               side_effect=TypeError('dd'))):
 
-            connection = hostimpl.get_connection()
+            connection = self.host.get_connection()
             self.assertTrue(connection)
 
     def test_close_callback_not_defined(self):
@@ -72,14 +74,12 @@ class HostTestCase(test.NoDBTestCase):
            even when registerCloseCallback method missing from
            the libvirt python library.
         '''
-        conn = fakelibvirt.Connection("qemu:///system")
-        hostimpl = host.Host("qemu:///system")
         with contextlib.nested(
-            mock.patch.object(hostimpl, "_connect", return_value=conn),
-            mock.patch.object(conn, "registerCloseCallback",
+            mock.patch.object(fakelibvirt.virConnect,
+                              "registerCloseCallback",
                               side_effect=AttributeError('dd'))):
 
-            connection = hostimpl.get_connection()
+            connection = self.host.get_connection()
             self.assertTrue(connection)
 
     def test_broken_connection(self):
@@ -88,26 +88,22 @@ class HostTestCase(test.NoDBTestCase):
                 (libvirt.VIR_ERR_SYSTEM_ERROR, libvirt.VIR_FROM_RPC),
                 (libvirt.VIR_ERR_INTERNAL_ERROR, libvirt.VIR_FROM_RPC)):
 
-            conn = fakelibvirt.Connection("qemu:///system")
-            hostimpl = host.Host("qemu:///system")
+            conn = self.host._connect("qemu:///system", False)
             with contextlib.nested(
                     mock.patch.object(
-                        hostimpl, "_connect", return_value=conn),
-                    mock.patch.object(
-                        conn, "getLibVersion",
+                        fakelibvirt.virConnect, "getLibVersion",
                         side_effect=fakelibvirt.make_libvirtError(
                             libvirt.libvirtError,
                             "Connection broken",
                             error_code=error,
                             error_domain=domain))):
-                self.assertFalse(hostimpl._test_connection(conn))
+                self.assertFalse(self.host._test_connection(conn))
 
     @mock.patch.object(host, 'LOG')
     def test_connect_auth_cb_exception(self, log_mock):
-        hostimpl = host.Host("qemu:///system")
         creds = dict(authname='nova', password='verybadpass')
         self.assertRaises(exception.NovaException,
-                          hostimpl._connect_auth_cb, creds, False)
+                          self.host._connect_auth_cb, creds, False)
         self.assertEqual(0, len(log_mock.method_calls),
                          'LOG should not be used in _connect_auth_cb.')
 
@@ -160,6 +156,7 @@ class HostTestCase(test.NoDBTestCase):
 
         hostimpl = host.Host("qemu:///system",
                              lifecycle_event_handler=handler)
+        conn = hostimpl.get_connection()
 
         hostimpl._init_events_pipe()
         fake_dom_xml = """
@@ -172,10 +169,9 @@ class HostTestCase(test.NoDBTestCase):
                   </devices>
                 </domain>
             """
-        conn = fakelibvirt.Connection("qemu:///system")
         dom = fakelibvirt.Domain(conn,
                                  fake_dom_xml,
-                                 "cef19ce0-0ca2-11df-855d-b19fbce37686")
+                                 False)
 
         hostimpl._event_lifecycle_callback(conn,
                                            dom,
@@ -240,16 +236,15 @@ class HostTestCase(test.NoDBTestCase):
         self.assertNotIn(uuid, hostimpl._events_delayed.keys())
 
     def test_get_connection_serial(self):
-        def get_conn_currency(hostimpl):
-            hostimpl.get_connection().getLibVersion()
-
-        self.conn = fakelibvirt.Connection("qemu:///system")
+        def get_conn_currency(host):
+            host.get_connection().getLibVersion()
 
         def connect_with_block(*a, **k):
             # enough to allow another connect to run
             eventlet.sleep(0)
             self.connect_calls += 1
-            return self.conn
+            return fakelibvirt.openAuth("qemu:///system",
+                                        [[], lambda: 1, None], 0)
 
         def fake_register(*a, **k):
             self.register_calls += 1
@@ -257,29 +252,27 @@ class HostTestCase(test.NoDBTestCase):
         self.connect_calls = 0
         self.register_calls = 0
 
-        hostimpl = host.Host("qemu:///system")
-
-        self.stubs.Set(hostimpl, "_connect",
+        self.stubs.Set(self.host, "_connect",
                        connect_with_block)
-        self.stubs.Set(self.conn, 'domainEventRegisterAny', fake_register)
+        self.stubs.Set(fakelibvirt.virConnect,
+                       'domainEventRegisterAny', fake_register)
 
         # call serially
-        get_conn_currency(hostimpl)
-        get_conn_currency(hostimpl)
+        get_conn_currency(self.host)
+        get_conn_currency(self.host)
         self.assertEqual(self.connect_calls, 1)
         self.assertEqual(self.register_calls, 1)
 
     def test_get_connection_concurrency(self):
-        def get_conn_currency(hostimpl):
-            hostimpl.get_connection().getLibVersion()
-
-        self.conn = fakelibvirt.Connection("qemu:///system")
+        def get_conn_currency(host):
+            host.get_connection().getLibVersion()
 
         def connect_with_block(*a, **k):
             # enough to allow another connect to run
             eventlet.sleep(0)
             self.connect_calls += 1
-            return self.conn
+            return fakelibvirt.openAuth("qemu:///system",
+                                        [[], lambda: 1, None], 0)
 
         def fake_register(*a, **k):
             self.register_calls += 1
@@ -287,15 +280,14 @@ class HostTestCase(test.NoDBTestCase):
         self.connect_calls = 0
         self.register_calls = 0
 
-        hostimpl = host.Host("qemu:///system")
-
-        self.stubs.Set(hostimpl, "_connect",
+        self.stubs.Set(self.host, "_connect",
                        connect_with_block)
-        self.stubs.Set(self.conn, 'domainEventRegisterAny', fake_register)
+        self.stubs.Set(fakelibvirt.virConnect,
+                       'domainEventRegisterAny', fake_register)
 
         # call concurrently
-        thr1 = eventlet.spawn(get_conn_currency, hostimpl)
-        thr2 = eventlet.spawn(get_conn_currency, hostimpl)
+        thr1 = eventlet.spawn(get_conn_currency, self.host)
+        thr2 = eventlet.spawn(get_conn_currency, self.host)
 
         # let threads run
         eventlet.sleep(0)
