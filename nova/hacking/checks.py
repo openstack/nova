@@ -133,7 +133,7 @@ def import_no_db_in_virt(logical_line, filename):
 
 
 def no_db_session_in_public_api(logical_line, filename):
-    if "db/api.py" in filename or "db/sqlalchemy/api.py" in filename:
+    if "db/api.py" in filename:
         if session_check.match(logical_line):
             yield (0, "N309: public db api methods may not accept session")
 
