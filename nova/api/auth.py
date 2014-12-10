@@ -160,12 +160,5 @@ class NovaKeystoneContext(wsgi.Middleware):
     def _get_roles(self, req):
         """Get the list of roles."""
 
-        if 'X_ROLES' in req.headers:
-            roles = req.headers.get('X_ROLES', '')
-        else:
-            # Fallback to deprecated role header:
-            roles = req.headers.get('X_ROLE', '')
-            if roles:
-                LOG.warning(_LW("Sourcing roles from deprecated X-Role HTTP "
-                                "header"))
+        roles = req.headers.get('X_ROLES', '')
         return [r.strip() for r in roles.split(',')]
