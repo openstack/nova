@@ -3426,11 +3426,10 @@ class LibvirtDriver(driver.ComputeDriver):
             id_maps.extend(gid_maps)
         return id_maps
 
-    def _get_cpu_numa_config_from_instance(self, context, instance):
-        instance_topology = hardware.instance_topology_from_instance(instance)
-        if instance_topology:
+    def _get_cpu_numa_config_from_instance(self, instance_numa_topology):
+        if instance_numa_topology:
             guest_cpu_numa = vconfig.LibvirtConfigGuestCPUNUMA()
-            for instance_cell in instance_topology.cells:
+            for instance_cell in instance_numa_topology.cells:
                 guest_cell = vconfig.LibvirtConfigGuestCPUNUMACell()
                 guest_cell.id = instance_cell.id
                 guest_cell.cpus = instance_cell.cpuset
@@ -3438,7 +3437,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 guest_cpu_numa.cells.append(guest_cell)
             return guest_cpu_numa
 
-    def _get_guest_numa_config(self, context, instance, flavor,
+    def _get_guest_numa_config(self, instance_numa_topology, flavor,
                                allowed_cpus=None):
         """Returns the config objects for the guest NUMA specs.
 
@@ -3470,10 +3469,10 @@ class LibvirtDriver(driver.ComputeDriver):
         """
         topology = self._get_host_numa_topology()
         # We have instance NUMA so translate it to the config class
-        guest_cpu_numa = self._get_cpu_numa_config_from_instance(
-                context, instance)
+        guest_cpu_numa_config = self._get_cpu_numa_config_from_instance(
+                instance_numa_topology)
 
-        if not guest_cpu_numa:
+        if not guest_cpu_numa_config:
             # No NUMA topology defined for instance
             vcpus = flavor.vcpus
             memory = flavor.memory_mb
@@ -3508,10 +3507,10 @@ class LibvirtDriver(driver.ComputeDriver):
                 numa_memnodes = []
 
                 for host_cell in topology.cells:
-                    for guest_cell in guest_cpu_numa.cells:
-                        if guest_cell.id == host_cell.id:
+                    for guest_config_cell in guest_cpu_numa_config.cells:
+                        if guest_config_cell.id == host_cell.id:
                             node = vconfig.LibvirtConfigGuestNUMATuneMemNode()
-                            node.cellid = guest_cell.id
+                            node.cellid = guest_config_cell.id
                             node.nodeset = [host_cell.id]
                             node.mode = "strict"
                             numa_memnodes.append(node)
@@ -3520,7 +3519,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
                             allpcpus.extend(host_cell.cpuset)
 
-                            for cpu in guest_cell.cpus:
+                            for cpu in guest_config_cell.cpus:
                                 pin_cpuset = (
                                     vconfig.LibvirtConfigGuestCPUTuneVCPUPin())
                                 pin_cpuset.id = cpu
@@ -3552,14 +3551,15 @@ class LibvirtDriver(driver.ComputeDriver):
 
                 # normalize cell.id
                 for i, (cell, memnode) in enumerate(
-                                                zip(guest_cpu_numa.cells,
-                                                    guest_numa_tune.memnodes)):
+                                            zip(guest_cpu_numa_config.cells,
+                                                guest_numa_tune.memnodes)):
                     cell.id = i
                     memnode.cellid = i
 
-                return None, guest_cpu_tune, guest_cpu_numa, guest_numa_tune
+                return (None, guest_cpu_tune, guest_cpu_numa_config,
+                        guest_numa_tune)
             else:
-                return allowed_cpus, None, guest_cpu_numa, None
+                return allowed_cpus, None, guest_cpu_numa_config, None
 
     def _get_guest_os_type(self, virt_type):
         """Returns the guest OS type based on virt type."""
@@ -3756,7 +3756,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
         cpuset, cputune, guest_cpu_numa, guest_numa_tune = \
             self._get_guest_numa_config(
-                context, instance, flavor, allowed_cpus)
+                instance.numa_topology, flavor, allowed_cpus)
+
         guest.cpuset = cpuset
         guest.cputune = cputune
         guest.numatune = guest_numa_tune
