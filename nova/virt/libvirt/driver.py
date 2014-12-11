@@ -30,6 +30,7 @@ import errno
 import functools
 import glob
 import mmap
+import operator
 import os
 import random
 import shutil
@@ -3504,16 +3505,17 @@ class LibvirtDriver(driver.ComputeDriver):
                 allpcpus = []
 
                 numa_mem = vconfig.LibvirtConfigGuestNUMATuneMemory()
-                numa_memnodes = []
+                numa_memnodes = [vconfig.LibvirtConfigGuestNUMATuneMemNode()
+                                 for _ in guest_cpu_numa_config.cells]
 
                 for host_cell in topology.cells:
-                    for guest_config_cell in guest_cpu_numa_config.cells:
+                    for guest_node_id, guest_config_cell in enumerate(
+                            guest_cpu_numa_config.cells):
                         if guest_config_cell.id == host_cell.id:
-                            node = vconfig.LibvirtConfigGuestNUMATuneMemNode()
+                            node = numa_memnodes[guest_node_id]
                             node.cellid = guest_config_cell.id
                             node.nodeset = [host_cell.id]
                             node.mode = "strict"
-                            numa_memnodes.append(node)
 
                             numa_mem.nodeset.append(host_cell.id)
 
@@ -3545,6 +3547,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 emulatorpin = vconfig.LibvirtConfigGuestCPUTuneEmulatorPin()
                 emulatorpin.cpuset = set(allpcpus)
                 guest_cpu_tune.emulatorpin = emulatorpin
+                # Sort the vcpupin list per vCPU id for human-friendlier XML
+                guest_cpu_tune.vcpupin.sort(key=operator.attrgetter("id"))
 
                 guest_numa_tune.memory = numa_mem
                 guest_numa_tune.memnodes = numa_memnodes
