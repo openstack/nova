@@ -318,16 +318,21 @@ class ComputeCellsAPI(compute_api.API):
 
     @wrap_check_policy
     @check_instance_cell
-    def shelve(self, context, instance):
+    def shelve(self, context, instance, clean_shutdown=True):
         """Shelve the given instance."""
-        self._cast_to_cells(context, instance, 'shelve')
+        super(ComputeCellsAPI, self).shelve(context, instance,
+                clean_shutdown=clean_shutdown)
+        self._cast_to_cells(context, instance, 'shelve',
+                clean_shutdown=clean_shutdown)
 
     @wrap_check_policy
     @check_instance_cell
-    def shelve_offload(self, context, instance):
+    def shelve_offload(self, context, instance, clean_shutdown=True):
         """Offload the shelved instance."""
-        super(ComputeCellsAPI, self).shelve_offload(context, instance)
-        self._cast_to_cells(context, instance, 'shelve_offload')
+        super(ComputeCellsAPI, self).shelve_offload(context, instance,
+                clean_shutdown=clean_shutdown)
+        self._cast_to_cells(context, instance, 'shelve_offload',
+                clean_shutdown=clean_shutdown)
 
     @wrap_check_policy
     @check_instance_cell
