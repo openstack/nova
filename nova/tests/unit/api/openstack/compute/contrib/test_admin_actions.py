@@ -90,190 +90,27 @@ class AdminActionsTestV2(AdminActionsTestV21):
                               fake_auth_context=self.context)
 
     def test_actions(self):
-        actions = ['migrate', 'resetNetwork', 'injectNetworkInfo']
-        method_translations = {'migrate': 'resize',
-                               'resetNetwork': 'reset_network',
+        actions = ['resetNetwork', 'injectNetworkInfo']
+        method_translations = {'resetNetwork': 'reset_network',
                                'injectNetworkInfo': 'inject_network_info'}
 
         self._test_actions(actions, method_translations)
 
-    def test_actions_raise_conflict_on_invalid_state(self):
-        actions = ['migrate', 'os-migrateLive']
-        method_translations = {'migrate': 'resize',
-                               'os-migrateLive': 'live_migrate'}
-        body_map = {'os-migrateLive':
-                        {'host': 'hostname',
-                         'block_migration': False,
-                         'disk_over_commit': False}}
-        args_map = {'os-migrateLive': ((False, False, 'hostname'), {})}
-
-        self._test_actions_raise_conflict_on_invalid_state(actions,
-            method_translations=method_translations,
-            body_map=body_map,
-            args_map=args_map)
-
     def test_actions_with_non_existed_instance(self):
         actions = ['resetNetwork', 'injectNetworkInfo',
-                   'os-resetState', 'migrate', 'os-migrateLive']
-        body_map = {'os-resetState': {'state': 'active'},
-                    'os-migrateLive':
-                                  {'host': 'hostname',
-                                   'block_migration': False,
-                                   'disk_over_commit': False}}
+                   'os-resetState']
+        body_map = {'os-resetState': {'state': 'active'}}
 
         self._test_actions_with_non_existed_instance(actions,
                                                      body_map=body_map)
 
     def test_actions_with_locked_instance(self):
-        actions = ['migrate', 'resetNetwork', 'injectNetworkInfo',
-                   'os-migrateLive']
-        method_translations = {'migrate': 'resize',
-                               'resetNetwork': 'reset_network',
-                               'injectNetworkInfo': 'inject_network_info',
-                               'os-migrateLive': 'live_migrate'}
-        args_map = {'os-migrateLive': ((False, False, 'hostname'), {})}
-        body_map = {'os-migrateLive': {'host': 'hostname',
-                                       'block_migration': False,
-                                       'disk_over_commit': False}}
+        actions = ['resetNetwork', 'injectNetworkInfo']
+        method_translations = {'resetNetwork': 'reset_network',
+                               'injectNetworkInfo': 'inject_network_info'}
 
         self._test_actions_with_locked_instance(actions,
-            method_translations=method_translations,
-            body_map=body_map,
-            args_map=args_map)
-
-    def _test_migrate_exception(self, exc_info, expected_result):
-        self.mox.StubOutWithMock(self.compute_api, 'resize')
-        instance = self._stub_instance_get()
-        self.compute_api.resize(self.context, instance).AndRaise(exc_info)
-
-        self.mox.ReplayAll()
-
-        res = self._make_request('/servers/%s/action' % instance['uuid'],
-                                 {'migrate': None})
-        self.assertEqual(expected_result, res.status_int)
-
-    def _test_migrate_live_succeeded(self, param):
-        self.mox.StubOutWithMock(self.compute_api, 'live_migrate')
-        instance = self._stub_instance_get()
-        self.compute_api.live_migrate(self.context, instance, False,
-                                      False, 'hostname')
-
-        self.mox.ReplayAll()
-
-        res = self._make_request('/servers/%s/action' % instance['uuid'],
-                                 {'os-migrateLive': param})
-        self.assertEqual(202, res.status_int)
-
-    def test_migrate_live_enabled(self):
-        param = {'host': 'hostname',
-                 'block_migration': False,
-                 'disk_over_commit': False}
-        self._test_migrate_live_succeeded(param)
-
-    def test_migrate_live_enabled_with_string_param(self):
-        param = {'host': 'hostname',
-                 'block_migration': "False",
-                 'disk_over_commit': "False"}
-        self._test_migrate_live_succeeded(param)
-
-    def test_migrate_live_missing_dict_param(self):
-        body = {'os-migrateLive': {'dummy': 'hostname',
-                                   'block_migration': False,
-                                   'disk_over_commit': False}}
-        res = self._make_request('/servers/FAKE/action', body)
-        self.assertEqual(400, res.status_int)
-
-    def test_migrate_live_with_invalid_block_migration(self):
-        body = {'os-migrateLive': {'host': 'hostname',
-                                   'block_migration': "foo",
-                                   'disk_over_commit': False}}
-        res = self._make_request('/servers/FAKE/action', body)
-        self.assertEqual(400, res.status_int)
-
-    def test_migrate_live_with_invalid_disk_over_commit(self):
-        body = {'os-migrateLive': {'host': 'hostname',
-                                   'block_migration': False,
-                                   'disk_over_commit': "foo"}}
-        res = self._make_request('/servers/FAKE/action', body)
-        self.assertEqual(400, res.status_int)
-
-    def _test_migrate_live_failed_with_exception(self, fake_exc,
-                                                 uuid=None,
-                                                 expected_status_code=400,
-                                                 check_response=True):
-        self.mox.StubOutWithMock(self.compute_api, 'live_migrate')
-
-        instance = self._stub_instance_get(uuid=uuid)
-        self.compute_api.live_migrate(self.context, instance, False,
-                                      False, 'hostname').AndRaise(fake_exc)
-
-        self.mox.ReplayAll()
-
-        res = self._make_request('/servers/%s/action' % instance.uuid,
-                                 {'os-migrateLive':
-                                  {'host': 'hostname',
-                                   'block_migration': False,
-                                   'disk_over_commit': False}})
-        self.assertEqual(expected_status_code, res.status_int)
-        if check_response:
-            self.assertIn(unicode(fake_exc), res.body)
-
-    def test_migrate_live_compute_service_unavailable(self):
-        self._test_migrate_live_failed_with_exception(
-            exception.ComputeServiceUnavailable(host='host'))
-
-    def test_migrate_live_invalid_hypervisor_type(self):
-        self._test_migrate_live_failed_with_exception(
-            exception.InvalidHypervisorType())
-
-    def test_migrate_live_invalid_cpu_info(self):
-        self._test_migrate_live_failed_with_exception(
-            exception.InvalidCPUInfo(reason=""))
-
-    def test_migrate_live_unable_to_migrate_to_self(self):
-        uuid = uuidutils.generate_uuid()
-        self._test_migrate_live_failed_with_exception(
-                exception.UnableToMigrateToSelf(instance_id=uuid,
-                                                host='host'),
-                uuid=uuid)
-
-    def test_migrate_live_destination_hypervisor_too_old(self):
-        self._test_migrate_live_failed_with_exception(
-            exception.DestinationHypervisorTooOld())
-
-    def test_migrate_live_no_valid_host(self):
-        self._test_migrate_live_failed_with_exception(
-            exception.NoValidHost(reason=''))
-
-    def test_migrate_live_invalid_local_storage(self):
-        self._test_migrate_live_failed_with_exception(
-            exception.InvalidLocalStorage(path='', reason=''))
-
-    def test_migrate_live_invalid_shared_storage(self):
-        self._test_migrate_live_failed_with_exception(
-            exception.InvalidSharedStorage(path='', reason=''))
-
-    def test_migrate_live_hypervisor_unavailable(self):
-        self._test_migrate_live_failed_with_exception(
-            exception.HypervisorUnavailable(host=""))
-
-    def test_migrate_live_instance_not_running(self):
-        self._test_migrate_live_failed_with_exception(
-            exception.InstanceNotRunning(instance_id=""))
-
-    def test_migrate_live_migration_pre_check_error(self):
-        self._test_migrate_live_failed_with_exception(
-            exception.MigrationPreCheckError(reason=''))
-
-    def test_migrate_live_migration_with_old_nova_not_safe(self):
-        self._test_migrate_live_failed_with_exception(
-            exception.LiveMigrationWithOldNovaNotSafe(server=''))
-
-    def test_migrate_live_migration_with_unexpected_error(self):
-        self._test_migrate_live_failed_with_exception(
-            exception.MigrationError(reason=''),
-            expected_status_code=500,
-            check_response=False)
+            method_translations=method_translations)
 
 
 class ResetStateTestsV21(test.NoDBTestCase):
