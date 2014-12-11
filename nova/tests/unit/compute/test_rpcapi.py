@@ -343,21 +343,32 @@ class ComputeRpcAPITestCase(test.TestCase):
         self._test_compute_api('rescue_instance', 'cast',
             instance=self.fake_instance_obj, rescue_password='pw',
             version='3.9')
-
-    def test_rescue_instance_with_rescue_image_ref_passed(self):
+        self.flags(compute='3.24', group='upgrade_levels')
         self._test_compute_api('rescue_instance', 'cast',
             instance=self.fake_instance_obj, rescue_password='pw',
             rescue_image_ref='fake_image_ref', version='3.24')
+        self.flags(compute='3.37', group='upgrade_levels')
+        self._test_compute_api('rescue_instance', 'cast',
+            instance=self.fake_instance_obj, rescue_password='pw',
+            rescue_image_ref='fake_image_ref',
+            clean_shutdown=True, version='3.37')
 
     def test_reset_network(self):
         self._test_compute_api('reset_network', 'cast',
                 instance=self.fake_instance_obj)
 
     def test_resize_instance(self):
+        self.flags(compute='3.0', group='upgrade_levels')
         self._test_compute_api('resize_instance', 'cast',
                 instance=self.fake_instance_obj, migration={'id': 'fake_id'},
                 image='image', instance_type={'id': 1},
-                reservations=list('fake_res'))
+                reservations=list('fake_res'), version='3.0')
+        self.flags(compute='3.37', group='upgrade_levels')
+        self._test_compute_api('resize_instance', 'cast',
+                instance=self.fake_instance_obj, migration={'id': 'fake_id'},
+                image='image', instance_type={'id': 1},
+                reservations=list('fake_res'),
+                clean_shutdown=True, version='3.37')
 
     def test_resume_instance(self):
         self._test_compute_api('resume_instance', 'cast',
@@ -407,12 +418,22 @@ class ComputeRpcAPITestCase(test.TestCase):
                 instance=self.fake_instance_obj)
 
     def test_stop_instance_cast(self):
+        self.flags(compute='3.0', group='upgrade_levels')
         self._test_compute_api('stop_instance', 'cast',
-                instance=self.fake_instance_obj)
+                instance=self.fake_instance_obj, version='3.0')
+        self.flags(compute='3.37', group='upgrade_levels')
+        self._test_compute_api('stop_instance', 'cast',
+                instance=self.fake_instance_obj,
+                clean_shutdown=True, version='3.37')
 
     def test_stop_instance_call(self):
+        self.flags(compute='3.0', group='upgrade_levels')
         self._test_compute_api('stop_instance', 'call',
-                instance=self.fake_instance_obj)
+                instance=self.fake_instance_obj, version='3.0')
+        self.flags(compute='3.37', group='upgrade_levels')
+        self._test_compute_api('stop_instance', 'call',
+                instance=self.fake_instance_obj,
+                clean_shutdown=True, version='3.37')
 
     def test_suspend_instance(self):
         self._test_compute_api('suspend_instance', 'cast',
@@ -432,12 +453,24 @@ class ComputeRpcAPITestCase(test.TestCase):
                 instance=self.fake_instance_obj, version='3.11')
 
     def test_shelve_instance(self):
+        self.flags(compute='3.0', group='upgrade_levels')
         self._test_compute_api('shelve_instance', 'cast',
-                instance=self.fake_instance_obj, image_id='image_id')
+                instance=self.fake_instance_obj, image_id='image_id',
+                version='3.0')
+        self.flags(compute='3.37', group='upgrade_levels')
+        self._test_compute_api('shelve_instance', 'cast',
+                instance=self.fake_instance_obj, image_id='image_id',
+                clean_shutdown=True, version='3.37')
 
     def test_shelve_offload_instance(self):
+        self.flags(compute='3.0', group='upgrade_levels')
         self._test_compute_api('shelve_offload_instance', 'cast',
-                instance=self.fake_instance_obj)
+                instance=self.fake_instance_obj,
+                version='3.0')
+        self.flags(compute='3.37', group='upgrade_levels')
+        self._test_compute_api('shelve_offload_instance', 'cast',
+                instance=self.fake_instance_obj,
+                clean_shutdown=True, version='3.37')
 
     def test_unshelve_instance(self):
         self._test_compute_api('unshelve_instance', 'cast',

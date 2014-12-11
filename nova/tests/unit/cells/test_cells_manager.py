@@ -656,11 +656,13 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
     def test_stop_instance(self):
         self.mox.StubOutWithMock(self.msg_runner, 'stop_instance')
         self.msg_runner.stop_instance(self.ctxt, 'fake-instance',
-                                      do_cast='meow')
+                                      do_cast='meow',
+                                      clean_shutdown='purr')
         self.mox.ReplayAll()
         self.cells_manager.stop_instance(self.ctxt,
                                          instance='fake-instance',
-                                         do_cast='meow')
+                                         do_cast='meow',
+                                         clean_shutdown='purr')
 
     def test_cell_create(self):
         values = 'values'
