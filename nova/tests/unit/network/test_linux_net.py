@@ -17,6 +17,7 @@ import calendar
 import contextlib
 import datetime
 import os
+import time
 
 import mock
 from mox3 import mox
@@ -1192,10 +1193,14 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
     def test_exec_ebtables_fail_all(self):
         executes = []
 
+        def fake_sleep(interval):
+            pass
+
         def fake_execute(*args, **kwargs):
             executes.append(args)
             raise processutils.ProcessExecutionError('error')
 
+        self.stubs.Set(time, 'sleep', fake_sleep)
         self.stubs.Set(self.driver, '_execute', fake_execute)
         self.assertRaises(processutils.ProcessExecutionError,
                           self.driver._exec_ebtables, 'fake')
@@ -1206,6 +1211,9 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
     def test_exec_ebtables_fail_once(self):
         executes = []
 
+        def fake_sleep(interval):
+            pass
+
         def fake_execute(*args, **kwargs):
             executes.append(args)
             if len(executes) == 1:
@@ -1213,6 +1221,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
             else:
                 return "", ""
 
+        self.stubs.Set(time, 'sleep', fake_sleep)
         self.stubs.Set(self.driver, '_execute', fake_execute)
         self.driver._exec_ebtables('fake')
         self.assertEqual(2, len(executes))
