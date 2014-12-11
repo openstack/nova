@@ -44,6 +44,7 @@ from nova import context as nova_context
 from nova import exception
 from nova.i18n import _, _LE, _LI, _LW
 from nova import utils
+from nova import version
 from nova.virt import configdrive
 from nova.virt import diagnostics
 from nova.virt import driver
@@ -242,8 +243,37 @@ class VMwareVMOps(object):
             datastore.ref,
             str(uploaded_iso_path))
 
-    def build_virtual_machine(self, instance, image_info, dc_info, datastore,
-                              network_info, extra_specs):
+    def _get_instance_metadata(self, context, instance):
+        flavor = instance.flavor
+        return ('name:%s\n'
+                'userid:%s\n'
+                'username:%s\n'
+                'projectid:%s\n'
+                'projectname:%s\n'
+                'flavor:name:%s\n'
+                'flavor:memory_mb:%s\n'
+                'flavor:vcpus:%s\n'
+                'flavor:ephemeral_gb:%s\n'
+                'flavor:root_gb:%s\n'
+                'flavor:swap:%s\n'
+                'imageid:%s\n'
+                'package:%s\n') % (instance.display_name,
+                                   context.user_id,
+                                   context.user_name,
+                                   context.project_id,
+                                   context.project_name,
+                                   flavor.name,
+                                   flavor.memory_mb,
+                                   flavor.vcpus,
+                                   flavor.ephemeral_gb,
+                                   flavor.root_gb,
+                                   flavor.swap,
+                                   instance.image_ref,
+                                   version.version_string_with_package())
+
+    def build_virtual_machine(self, instance, image_info,
+                              dc_info, datastore, network_info, extra_specs,
+                              metadata):
         vif_infos = vmwarevif.get_vif_info(self._session,
                                            self._cluster,
                                            utils.is_neutron(),
@@ -263,7 +293,8 @@ class VMwareVMOps(object):
                                                  vif_infos,
                                                  extra_specs,
                                                  image_info.os_type,
-                                                 profile_spec=profile_spec)
+                                                 profile_spec=profile_spec,
+                                                 metadata=metadata)
         # Create the VM
         vm_ref = vm_util.create_vm(self._session, instance, dc_info.vmFolder,
                                    config_spec, self._root_resource_pool)
@@ -565,6 +596,7 @@ class VMwareVMOps(object):
         vi = self._get_vm_config_info(instance, image_info,
                                       extra_specs.storage_policy)
 
+        metadata = self._get_instance_metadata(context, instance)
         # Creates the virtual machine. The virtual machine reference returned
         # is unique within Virtual Center.
         vm_ref = self.build_virtual_machine(instance,
@@ -572,7 +604,8 @@ class VMwareVMOps(object):
                                             vi.dc_info,
                                             vi.datastore,
                                             network_info,
-                                            extra_specs)
+                                            extra_specs,
+                                            metadata)
 
         # Cache the vm_ref. This saves a remote call to the VC. This uses the
         # instance uuid.

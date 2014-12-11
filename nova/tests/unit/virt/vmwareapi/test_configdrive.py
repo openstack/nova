@@ -122,7 +122,10 @@ class ConfigDriveTestCase(test.NoDBTestCase):
         vmwareapi_fake.cleanup()
         nova.tests.unit.image.fake.FakeImageService_reset()
 
-    def _spawn_vm(self, injected_files=None, admin_password=None,
+    @mock.patch.object(vmops.VMwareVMOps, '_get_instance_metadata',
+                       return_value='fake_metadata')
+    def _spawn_vm(self, fake_get_instance_meta,
+                  injected_files=None, admin_password=None,
                   block_device_info=None):
 
         injected_files = injected_files or []
