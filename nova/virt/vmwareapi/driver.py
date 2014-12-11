@@ -190,10 +190,7 @@ class VMwareVCDriver(driver.ComputeDriver):
         else:
             version = vim_util.get_vc_version(self._session)
             pbm_wsdl_loc = pbm.get_pbm_wsdl_location(version)
-        # TODO(garyk): Update this with oslo.vmware method. The session.pbm
-        # is lazy loaded so this enables us to update this entry on the fly
-        self._session._pbm_wsdl_loc = pbm_wsdl_loc
-        self._session._pbm = None
+        self._session.pbm_wsdl_loc_set(pbm_wsdl_loc)
 
     def _validate_configuration(self):
         if CONF.vmware.use_linked_clone is None:
