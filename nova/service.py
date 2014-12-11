@@ -331,9 +331,14 @@ class WSGIService(object):
         self.manager = self._get_manager()
         self.loader = loader or wsgi.Loader()
         self.app = self.loader.load_app(name)
+        # inherit all compute_api worker counts from osapi_compute
+        if name.startswith('openstack_compute_api'):
+            wname = 'osapi_compute'
+        else:
+            wname = name
         self.host = getattr(CONF, '%s_listen' % name, "0.0.0.0")
         self.port = getattr(CONF, '%s_listen_port' % name, 0)
-        self.workers = (getattr(CONF, '%s_workers' % name, None) or
+        self.workers = (getattr(CONF, '%s_workers' % wname, None) or
                         processutils.get_worker_count())
         if self.workers and self.workers < 1:
             worker_name = '%s_workers' % name
