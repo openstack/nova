@@ -110,6 +110,10 @@ class InstanceNUMATopology(base.NovaObject):
         'cells': obj_fields.ListOfObjectsField('InstanceNUMACell'),
         }
 
+    obj_relationships = {
+        'cells': [('1.0', '1.0')],
+    }
+
     @classmethod
     def obj_from_primitive(cls, primitive):
         if 'nova_object.name' in primitive:
