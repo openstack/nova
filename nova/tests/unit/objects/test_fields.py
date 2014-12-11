@@ -250,6 +250,28 @@ class TestCPUFeaturePolicy(TestField):
         self.assertRaises(ValueError, self.field.stringify, 'disallow')
 
 
+class TestDiskBus(TestField):
+    def setUp(self):
+        super(TestDiskBus, self).setUp()
+        self.field = fields.DiskBusField()
+        self.coerce_good_values = [('fdc', 'fdc'),
+                                   ('ide', 'ide'),
+                                   ('sata', 'sata'),
+                                   ('scsi', 'scsi'),
+                                   ('usb', 'usb'),
+                                   ('virtio', 'virtio'),
+                                   ('xen', 'xen')]
+        self.coerce_bad_values = ['acme']
+        self.to_primitive_values = self.coerce_good_values[0:1]
+        self.from_primitive_values = self.coerce_good_values[0:1]
+
+    def test_stringify(self):
+        self.assertEqual("'ide'", self.field.stringify('ide'))
+
+    def test_stringify_invalid(self):
+        self.assertRaises(ValueError, self.field.stringify, 'acme')
+
+
 class TestHVType(TestField):
     def setUp(self):
         super(TestHVType, self).setUp()
@@ -266,6 +288,115 @@ class TestHVType(TestField):
 
     def test_stringify(self):
         self.assertEqual("'xen'", self.field.stringify('xen'))
+
+    def test_stringify_invalid(self):
+        self.assertRaises(ValueError, self.field.stringify, 'acme')
+
+
+class TestOSType(TestField):
+    def setUp(self):
+        super(TestOSType, self).setUp()
+        self.field = fields.OSTypeField()
+        self.coerce_good_values = [('linux', 'linux'),
+                                   ('windows', 'windows'),
+                                   ('WINDOWS', 'windows')]
+        self.coerce_bad_values = ['acme']
+        self.to_primitive_values = self.coerce_good_values[0:1]
+        self.from_primitive_values = self.coerce_good_values[0:1]
+
+    def test_stringify(self):
+        self.assertEqual("'linux'", self.field.stringify('linux'))
+
+    def test_stringify_invalid(self):
+        self.assertRaises(ValueError, self.field.stringify, 'acme')
+
+
+class TestRNGModel(TestField):
+    def setUp(self):
+        super(TestRNGModel, self).setUp()
+        self.field = fields.RNGModelField()
+        self.coerce_good_values = [('virtio', 'virtio'), ]
+        self.coerce_bad_values = ['acme']
+        self.to_primitive_values = self.coerce_good_values[0:1]
+        self.from_primitive_values = self.coerce_good_values[0:1]
+
+    def test_stringify(self):
+        self.assertEqual("'virtio'", self.field.stringify('virtio'))
+
+    def test_stringify_invalid(self):
+        self.assertRaises(ValueError, self.field.stringify, 'acme')
+
+
+class TestSCSIModel(TestField):
+    def setUp(self):
+        super(TestSCSIModel, self).setUp()
+        self.field = fields.SCSIModelField()
+        self.coerce_good_values = [('buslogic', 'buslogic'),
+                                   ('ibmvscsi', 'ibmvscsi'),
+                                   ('lsilogic', 'lsilogic'),
+                                   ('lsisas1068', 'lsisas1068'),
+                                   ('lsisas1078', 'lsisas1078'),
+                                   ('virtio-scsi', 'virtio-scsi'),
+                                   ('vmpvscsi', 'vmpvscsi'),
+                                   ('lsilogicsas', 'lsisas1068'),
+                                   ('paravirtual', 'vmpvscsi')]
+        self.coerce_bad_values = ['acme']
+        self.to_primitive_values = self.coerce_good_values[0:1]
+        self.from_primitive_values = self.coerce_good_values[0:1]
+
+    def test_stringify(self):
+        self.assertEqual("'vmpvscsi'", self.field.stringify('vmpvscsi'))
+
+    def test_stringify_invalid(self):
+        self.assertRaises(ValueError, self.field.stringify, 'acme')
+
+
+class TestVideoModel(TestField):
+    def setUp(self):
+        super(TestVideoModel, self).setUp()
+        self.field = fields.VideoModelField()
+        self.coerce_good_values = [('cirrus', 'cirrus'),
+                                   ('qxl', 'qxl'),
+                                   ('vga', 'vga'),
+                                   ('vmvga', 'vmvga'),
+                                   ('xen', 'xen')]
+
+        self.coerce_bad_values = ['acme']
+        self.to_primitive_values = self.coerce_good_values[0:1]
+        self.from_primitive_values = self.coerce_good_values[0:1]
+
+    def test_stringify(self):
+        self.assertEqual("'cirrus'", self.field.stringify('cirrus'))
+
+    def test_stringify_invalid(self):
+        self.assertRaises(ValueError, self.field.stringify, 'acme')
+
+
+class TestVIFModel(TestField):
+    def setUp(self):
+        super(TestVIFModel, self).setUp()
+        self.field = fields.VIFModelField()
+        self.coerce_good_values = [('virtio', 'virtio'),
+                                   ('ne2k_pci', 'ne2k_pci'),
+                                   ('pcnet', 'pcnet'),
+                                   ('rtl8139', 'rtl8139'),
+                                   ('e1000', 'e1000'),
+                                   ('e1000e', 'e1000e'),
+                                   ('netfront', 'netfront'),
+                                   ('spapr-vlan', 'spapr-vlan'),
+                                   ('VirtualE1000', 'e1000'),
+                                   ('VirtualE1000e', 'e1000e'),
+                                   ('VirtualPCNet32', 'pcnet'),
+                                   ('VirtualSriovEthernetCard', 'sriov'),
+                                   ('VirtualVmxnet', 'vmxnet'),
+                                   ('VirtualVmxnet3', 'vmxnet3'),
+                                  ]
+        self.coerce_bad_values = ['acme']
+        self.to_primitive_values = self.coerce_good_values[0:1]
+        self.from_primitive_values = self.coerce_good_values[0:1]
+
+    def test_stringify(self):
+        self.assertEqual("'e1000'", self.field.stringify('e1000'))
 
     def test_stringify_invalid(self):
         self.assertRaises(ValueError, self.field.stringify, 'acme')
@@ -288,6 +419,25 @@ class TestVMMode(TestField):
 
     def test_stringify(self):
         self.assertEqual("'hvm'", self.field.stringify('hvm'))
+
+    def test_stringify_invalid(self):
+        self.assertRaises(ValueError, self.field.stringify, 'acme')
+
+
+class TestWatchdogAction(TestField):
+    def setUp(self):
+        super(TestWatchdogAction, self).setUp()
+        self.field = fields.WatchdogActionField()
+        self.coerce_good_values = [('none', 'none'),
+                                   ('pause', 'pause'),
+                                   ('poweroff', 'poweroff'),
+                                   ('reset', 'reset')]
+        self.coerce_bad_values = ['acme']
+        self.to_primitive_values = self.coerce_good_values[0:1]
+        self.from_primitive_values = self.coerce_good_values[0:1]
+
+    def test_stringify(self):
+        self.assertEqual("'reset'", self.field.stringify('reset'))
 
     def test_stringify_invalid(self):
         self.assertRaises(ValueError, self.field.stringify, 'acme')
