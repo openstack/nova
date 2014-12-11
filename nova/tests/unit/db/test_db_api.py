@@ -1907,6 +1907,29 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.create_instance_with_args(context=context2, hostname='h2')
         self.flags(osapi_compute_unique_server_name_scope=None)
 
+    @mock.patch('nova.db.sqlalchemy.api.undefer')
+    @mock.patch('nova.db.sqlalchemy.api.joinedload')
+    def test_instance_get_all_by_filters_extra_columns(self,
+                                                       mock_joinedload,
+                                                       mock_undefer):
+        db.instance_get_all_by_filters_sort(
+            self.ctxt, {},
+            columns_to_join=['info_cache', 'extra.pci_requests'])
+        mock_joinedload.assert_called_once_with('info_cache')
+        mock_undefer.assert_called_once_with('extra.pci_requests')
+
+    @mock.patch('nova.db.sqlalchemy.api.undefer')
+    @mock.patch('nova.db.sqlalchemy.api.joinedload')
+    def test_instance_get_active_by_window_extra_columns(self,
+                                                         mock_joinedload,
+                                                         mock_undefer):
+        now = datetime.datetime(2013, 10, 10, 17, 16, 37, 156701)
+        db.instance_get_active_by_window_joined(
+            self.ctxt, now,
+            columns_to_join=['info_cache', 'extra.pci_requests'])
+        mock_joinedload.assert_called_once_with('info_cache')
+        mock_undefer.assert_called_once_with('extra.pci_requests')
+
     def test_instance_get_all_by_filters_with_meta(self):
         inst = self.create_instance_with_args()
         for inst in db.instance_get_all_by_filters(self.ctxt, {}):

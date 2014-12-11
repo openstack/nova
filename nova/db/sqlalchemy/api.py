@@ -1916,7 +1916,10 @@ def instance_get_all_by_filters_sort(context, filters, limit=None, marker=None,
 
     query_prefix = session.query(models.Instance)
     for column in columns_to_join_new:
-        query_prefix = query_prefix.options(joinedload(column))
+        if 'extra.' in column:
+            query_prefix = query_prefix.options(undefer(column))
+        else:
+            query_prefix = query_prefix.options(joinedload(column))
 
     # Note: order_by is done in the sqlalchemy.utils.py paginate_query(),
     # no need to do it here as well
@@ -2244,7 +2247,10 @@ def instance_get_active_by_window_joined(context, begin, end=None,
             _manual_join_columns(columns_to_join))
 
     for column in columns_to_join_new:
-        query = query.options(joinedload(column))
+        if 'extra.' in column:
+            query = query.options(undefer(column))
+        else:
+            query = query.options(joinedload(column))
 
     query = query.filter(or_(models.Instance.terminated_at == null(),
                              models.Instance.terminated_at > begin))
