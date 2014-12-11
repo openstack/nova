@@ -1887,7 +1887,7 @@ class API(base.Base):
         """Force delete an instance in any vm_state/task_state."""
         self._delete_instance(context, instance, delete_types.FORCE_DELETE)
 
-    def force_stop(self, context, instance, do_cast=True):
+    def force_stop(self, context, instance, do_cast=True, clean_shutdown=True):
         LOG.debug("Going to try to stop instance", instance=instance)
 
         instance.task_state = task_states.POWERING_OFF
@@ -1896,15 +1896,16 @@ class API(base.Base):
 
         self._record_action_start(context, instance, instance_actions.STOP)
 
-        self.compute_rpcapi.stop_instance(context, instance, do_cast=do_cast)
+        self.compute_rpcapi.stop_instance(context, instance, do_cast=do_cast,
+                                          clean_shutdown=clean_shutdown)
 
     @check_instance_lock
     @check_instance_host
     @check_instance_cell
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.ERROR])
-    def stop(self, context, instance, do_cast=True):
+    def stop(self, context, instance, do_cast=True, clean_shutdown=True):
         """Stop an instance."""
-        self.force_stop(context, instance, do_cast)
+        self.force_stop(context, instance, do_cast, clean_shutdown)
 
     @check_instance_lock
     @check_instance_host
