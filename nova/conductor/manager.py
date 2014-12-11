@@ -466,7 +466,8 @@ class ComputeTaskManager(base.Base):
                                    exception.InvalidSharedStorage,
                                    exception.HypervisorUnavailable,
                                    exception.InstanceNotRunning,
-                                   exception.MigrationPreCheckError)
+                                   exception.MigrationPreCheckError,
+                                   exception.LiveMigrationWithOldNovaNotSafe)
     def migrate_server(self, context, instance, scheduler_hint, live, rebuild,
             flavor, block_migration, disk_over_commit, reservations=None):
         if instance and not isinstance(instance, nova_object.NovaObject):
@@ -570,7 +571,8 @@ class ComputeTaskManager(base.Base):
                 exception.InvalidSharedStorage,
                 exception.HypervisorUnavailable,
                 exception.InstanceNotRunning,
-                exception.MigrationPreCheckError) as ex:
+                exception.MigrationPreCheckError,
+                exception.LiveMigrationWithOldNovaNotSafe) as ex:
             with excutils.save_and_reraise_exception():
                 # TODO(johngarbutt) - eventually need instance actions here
                 request_spec = {'instance_properties': {

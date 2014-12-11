@@ -1679,6 +1679,10 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         ex = exc.HypervisorUnavailable(host='dummy')
         self._test_migrate_server_deals_with_expected_exceptions(ex)
 
+    def test_migrate_server_deals_with_LiveMigrationWithOldNovaNotSafe(self):
+        ex = exc.LiveMigrationWithOldNovaNotSafe(server='dummy')
+        self._test_migrate_server_deals_with_expected_exceptions(ex)
+
     def test_migrate_server_deals_with_unexpected_exceptions(self):
         instance = fake_instance.fake_db_instance()
         inst_obj = objects.Instance._from_db_object(
