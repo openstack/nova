@@ -30,6 +30,7 @@ from oslo_config import cfg
 from oslo_db import api as oslo_db_api
 from oslo_db import exception as db_exc
 from oslo_db.sqlalchemy import test_base
+from oslo_db.sqlalchemy import update_match
 from oslo_db.sqlalchemy import utils as sqlalchemyutils
 from oslo_serialization import jsonutils
 from oslo_utils import timeutils
@@ -2517,7 +2518,7 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         # Make sure instance faults is deleted as well
         self.assertEqual(0, len(faults[uuid]))
 
-    def test_instance_update_with_and_get_original(self):
+    def test_instance_update_and_get_original(self):
         instance = self.create_instance_with_args(vm_state='building')
         (old_ref, new_ref) = db.instance_update_and_get_original(self.ctxt,
                             instance['uuid'], {'vm_state': 'needscoffee'})
@@ -2572,6 +2573,19 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
         # 4. the "old" object is detached from this Session.
         self.assertTrue(old_insp.detached)
+
+    def test_instance_update_and_get_original_conflict_check_race(self):
+        instance = self.create_instance_with_args()
+
+        # Reproduce the conditions of a race between fetching and updating the
+        # instance by making update_on_match fail for no discernable reason.
+        with mock.patch.object(update_match, 'update_on_match',
+                        side_effect=update_match.NoRowsMatched):
+            self.assertRaises(exception.InstanceUpdateConflict,
+                              db.instance_update_and_get_original,
+                              self.ctxt,
+                              instance['uuid'],
+                              {'metadata': {'mk1': 'mv3'}})
 
     def test_instance_update_unique_name(self):
         context1 = context.RequestContext('user1', 'p1')
