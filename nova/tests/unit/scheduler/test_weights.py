@@ -46,12 +46,12 @@ class RamWeigherTestCase(test.NoDBTestCase):
     def setUp(self):
         super(RamWeigherTestCase, self).setUp()
         self.weight_handler = weights.HostWeightHandler()
-        self.weight_classes = [ram.RAMWeigher]
+        self.weighers = [ram.RAMWeigher()]
 
     def _get_weighed_host(self, hosts, weight_properties=None):
         if weight_properties is None:
             weight_properties = {}
-        return self.weight_handler.get_weighed_objects(self.weight_classes,
+        return self.weight_handler.get_weighed_objects(self.weighers,
                 hosts, weight_properties)[0]
 
     def _get_all_hosts(self):
@@ -118,7 +118,7 @@ class RamWeigherTestCase(test.NoDBTestCase):
         # negativehost: free_ram_mb=-512
 
         # so, host4 should win
-        weights = self.weight_handler.get_weighed_objects(self.weight_classes,
+        weights = self.weight_handler.get_weighed_objects(self.weighers,
                                                           hostinfo_list, {})
 
         weighed_host = weights[0]
@@ -135,13 +135,14 @@ class MetricsWeigherTestCase(test.NoDBTestCase):
     def setUp(self):
         super(MetricsWeigherTestCase, self).setUp()
         self.weight_handler = weights.HostWeightHandler()
-        self.weight_classes = [metrics.MetricsWeigher]
+        self.weighers = [metrics.MetricsWeigher()]
 
     def _get_weighed_host(self, hosts, setting, weight_properties=None):
         if not weight_properties:
             weight_properties = {}
         self.flags(weight_setting=setting, group='metrics')
-        return self.weight_handler.get_weighed_objects(self.weight_classes,
+        self.weighers[0]._parse_setting()
+        return self.weight_handler.get_weighed_objects(self.weighers,
                 hosts, weight_properties)[0]
 
     def _get_all_hosts(self):
@@ -227,7 +228,7 @@ class MetricsWeigherTestCase(test.NoDBTestCase):
             self.assertIn(item, weigher.setting)
 
     def test_parse_setting(self):
-        weigher = self.weight_classes[0]()
+        weigher = self.weighers[0]
         self._check_parsing_result(weigher,
                                    ['foo=1'],
                                    [('foo', 1.0)])
@@ -270,12 +271,12 @@ class IoOpsWeigherTestCase(test.NoDBTestCase):
     def setUp(self):
         super(IoOpsWeigherTestCase, self).setUp()
         self.weight_handler = weights.HostWeightHandler()
-        self.weight_classes = [io_ops.IoOpsWeigher]
+        self.weighers = [io_ops.IoOpsWeigher()]
 
     def _get_weighed_host(self, hosts, io_ops_weight_multiplier):
         if io_ops_weight_multiplier is not None:
             self.flags(io_ops_weight_multiplier=io_ops_weight_multiplier)
-        return self.weight_handler.get_weighed_objects(self.weight_classes,
+        return self.weight_handler.get_weighed_objects(self.weighers,
                                                        hosts, {})[0]
 
     def _get_all_hosts(self):

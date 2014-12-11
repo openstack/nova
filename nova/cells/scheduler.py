@@ -73,11 +73,13 @@ class CellsScheduler(base.Base):
         self.compute_api = compute.API()
         self.compute_task_api = conductor.ComputeTaskAPI()
         self.filter_handler = filters.CellFilterHandler()
-        self.filter_classes = self.filter_handler.get_matching_classes(
+        filter_classes = self.filter_handler.get_matching_classes(
                 CONF.cells.scheduler_filter_classes)
+        self.filters = [cls() for cls in filter_classes]
         self.weight_handler = weights.CellWeightHandler()
-        self.weigher_classes = self.weight_handler.get_matching_classes(
+        weigher_classes = self.weight_handler.get_matching_classes(
                 CONF.cells.scheduler_weight_classes)
+        self.weighers = [cls() for cls in weigher_classes]
 
     def _create_instances_here(self, ctxt, instance_uuids, instance_properties,
             instance_type, image, security_groups, block_device_mapping):
@@ -142,8 +144,7 @@ class CellsScheduler(base.Base):
 
     def _grab_target_cells(self, filter_properties):
         cells = self._get_possible_cells()
-        cells = self.filter_handler.get_filtered_objects(self.filter_classes,
-                                                         cells,
+        cells = self.filter_handler.get_filtered_objects(self.filters, cells,
                                                          filter_properties)
         # NOTE(comstud): I know this reads weird, but the 'if's are nested
         # this way to optimize for the common case where 'cells' is a list
@@ -156,7 +157,7 @@ class CellsScheduler(base.Base):
             raise exception.NoCellsAvailable()
 
         weighted_cells = self.weight_handler.get_weighed_objects(
-                self.weigher_classes, cells, filter_properties)
+                self.weighers, cells, filter_properties)
         LOG.debug("Weighted cells: %(weighted_cells)s",
                   {'weighted_cells': weighted_cells})
         target_cells = [cell.obj for cell in weighted_cells]

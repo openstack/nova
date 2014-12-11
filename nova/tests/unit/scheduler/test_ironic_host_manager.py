@@ -207,6 +207,9 @@ class IronicHostManagerTestFilters(test.NoDBTestCase):
 
     def setUp(self):
         super(IronicHostManagerTestFilters, self).setUp()
+        self.flags(scheduler_available_filters=['%s.%s' % (__name__, cls) for
+                                                cls in ['FakeFilterClass1',
+                                                        'FakeFilterClass2']])
         self.host_manager = ironic_host_manager.IronicHostManager()
         self.fake_hosts = [ironic_host_manager.IronicNodeState(
                 'fake_host%s' % x, 'fake-node') for x in range(1, 5)]
@@ -215,20 +218,17 @@ class IronicHostManagerTestFilters(test.NoDBTestCase):
 
     def test_choose_host_filters_not_found(self):
         self.flags(scheduler_default_filters='FakeFilterClass3')
-        self.host_manager.filter_classes = [FakeFilterClass1,
-                FakeFilterClass2]
         self.assertRaises(exception.SchedulerHostFilterNotFound,
                 self.host_manager._choose_host_filters, None)
 
     def test_choose_host_filters(self):
         self.flags(scheduler_default_filters=['FakeFilterClass2'])
-        self.host_manager.filter_classes = [FakeFilterClass1,
-                FakeFilterClass2]
 
         # Test we returns 1 correct function
-        filter_classes = self.host_manager._choose_host_filters(None)
-        self.assertEqual(1, len(filter_classes))
-        self.assertEqual('FakeFilterClass2', filter_classes[0].__name__)
+        host_filters = self.host_manager._choose_host_filters(None)
+        self.assertEqual(1, len(host_filters))
+        self.assertEqual('FakeFilterClass2',
+                         host_filters[0].__class__.__name__)
 
     def _mock_get_filtered_hosts(self, info, specified_filters=None):
         self.mox.StubOutWithMock(self.host_manager, '_choose_host_filters')
@@ -243,7 +243,7 @@ class IronicHostManagerTestFilters(test.NoDBTestCase):
 
         self.stubs.Set(FakeFilterClass1, '_filter_one', fake_filter_one)
         self.host_manager._choose_host_filters(specified_filters).AndReturn(
-                [FakeFilterClass1])
+                [FakeFilterClass1()])
 
     def _verify_result(self, info, result, filters=True):
         for x in info['got_fprops']:
