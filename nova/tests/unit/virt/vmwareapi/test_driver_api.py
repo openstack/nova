@@ -1802,48 +1802,75 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
     def test_attach_vmdk_disk_to_vm(self):
         self._create_vm()
         connection_info = self._test_vmdk_connection_info('vmdk')
-        mount_point = '/dev/vdc'
 
-        # create fake backing info
-        volume_device = vmwareapi_fake.DataObject()
-        volume_device.backing = vmwareapi_fake.DataObject()
-        volume_device.backing.fileName = 'fake_path'
+        adapter_type = constants.DEFAULT_ADAPTER_TYPE
+        disk_type = constants.DEFAULT_DISK_TYPE
+        path_and_type = ('fake-path', adapter_type, disk_type)
+        with contextlib.nested(
+            mock.patch.object(vm_util, 'get_vm_ref',
+                              return_value=mock.sentinel.vm_ref),
+            mock.patch.object(volumeops.VMwareVolumeOps, '_get_volume_ref'),
+            mock.patch.object(vm_util, 'get_vmdk_path_and_adapter_type',
+                              return_value=path_and_type),
+            mock.patch.object(volumeops.VMwareVolumeOps, 'attach_disk_to_vm'),
+            mock.patch.object(volumeops.VMwareVolumeOps,
+                              '_update_volume_details')
+        ) as (get_vm_ref, get_volume_ref, get_vmdk_path_and_adapter_type,
+              attach_disk_to_vm, update_volume_details):
+            self.conn.attach_volume(None, connection_info, self.instance,
+                                    '/dev/vdc')
 
-        self.mox.StubOutWithMock(volumeops.VMwareVolumeOps,
-                                 '_get_vmdk_base_volume_device')
-        volumeops.VMwareVolumeOps._get_vmdk_base_volume_device(
-                mox.IgnoreArg()).AndReturn(volume_device)
-        self.mox.StubOutWithMock(volumeops.VMwareVolumeOps,
-                                 'attach_disk_to_vm')
-        volumeops.VMwareVolumeOps.attach_disk_to_vm(mox.IgnoreArg(),
-                self.instance, mox.IgnoreArg(), mox.IgnoreArg(),
-                vmdk_path='fake_path')
-        self.mox.ReplayAll()
-        self.conn.attach_volume(None, connection_info, self.instance,
-                                mount_point)
+            get_vm_ref.assert_called_once_with(self.conn._session,
+                                               self.instance)
+            get_volume_ref.assert_called_once_with(
+                connection_info['data']['volume'])
+            self.assertTrue(get_vmdk_path_and_adapter_type.called)
+            attach_disk_to_vm.assert_called_once_with(mock.sentinel.vm_ref,
+                self.instance, adapter_type, disk_type, vmdk_path='fake-path')
+            update_volume_details.assert_called_once_with(
+                mock.sentinel.vm_ref, self.instance,
+                connection_info['data']['volume_id'])
 
     def test_detach_vmdk_disk_from_vm(self):
         self._create_vm()
         connection_info = self._test_vmdk_connection_info('vmdk')
-        mount_point = '/dev/vdc'
-        self.mox.StubOutWithMock(volumeops.VMwareVolumeOps,
-                                 '_get_volume_uuid')
-        volumeops.VMwareVolumeOps._get_volume_uuid(mox.IgnoreArg(),
-                'volume-fake-id').AndReturn('fake_disk_uuid')
-        self.mox.StubOutWithMock(vm_util, 'get_vmdk_backed_disk_device')
-        vm_util.get_vmdk_backed_disk_device(mox.IgnoreArg(),
-                'fake_disk_uuid').AndReturn('fake_device')
-        self.mox.StubOutWithMock(volumeops.VMwareVolumeOps,
-                                 '_consolidate_vmdk_volume')
-        volumeops.VMwareVolumeOps._consolidate_vmdk_volume(self.instance,
-                 mox.IgnoreArg(), 'fake_device', mox.IgnoreArg())
-        self.mox.StubOutWithMock(volumeops.VMwareVolumeOps,
-                                 'detach_disk_from_vm')
-        volumeops.VMwareVolumeOps.detach_disk_from_vm(mox.IgnoreArg(),
-                self.instance, mox.IgnoreArg())
-        self.mox.ReplayAll()
-        self.conn.detach_volume(connection_info, self.instance, mount_point,
-                                encryption=None)
+
+        adapter_type = constants.DEFAULT_ADAPTER_TYPE
+        disk_type = constants.DEFAULT_DISK_TYPE
+        path_and_type = ('fake-path', adapter_type, disk_type)
+        with contextlib.nested(
+            mock.patch.object(vm_util, 'get_vm_ref',
+                              return_value=mock.sentinel.vm_ref),
+            mock.patch.object(volumeops.VMwareVolumeOps, '_get_volume_ref',
+                              return_value=mock.sentinel.volume_ref),
+            mock.patch.object(volumeops.VMwareVolumeOps,
+                              '_get_vmdk_backed_disk_device',
+                              return_value=mock.sentinel.disk_device),
+            mock.patch.object(vm_util, 'get_vmdk_path_and_adapter_type',
+                              return_value=path_and_type),
+            mock.patch.object(volumeops.VMwareVolumeOps,
+                              '_consolidate_vmdk_volume'),
+            mock.patch.object(volumeops.VMwareVolumeOps,
+                              'detach_disk_from_vm')
+        ) as (get_vm_ref, get_volume_ref, get_vmdk_backed_disk_device,
+              get_vmdk_path_and_adapter_type, consolidate_vmdk_volume,
+              detach_disk_from_vm):
+            self.conn.detach_volume(connection_info, self.instance,
+                                    '/dev/vdc', encryption=None)
+
+            get_vm_ref.assert_called_once_with(self.conn._session,
+                                               self.instance)
+            get_volume_ref.assert_called_once_with(
+                connection_info['data']['volume'])
+            get_vmdk_backed_disk_device.assert_called_once_with(
+                mock.sentinel.vm_ref, connection_info['data'])
+            self.assertTrue(get_vmdk_path_and_adapter_type.called)
+            consolidate_vmdk_volume.assert_called_once_with(self.instance,
+                mock.sentinel.vm_ref, mock.sentinel.disk_device,
+                mock.sentinel.volume_ref, adapter_type=adapter_type,
+                disk_type=disk_type)
+            detach_disk_from_vm.assert_called_once_with(mock.sentinel.vm_ref,
+                self.instance, mock.sentinel.disk_device)
 
     def test_volume_attach_iscsi(self):
         self._create_vm()
