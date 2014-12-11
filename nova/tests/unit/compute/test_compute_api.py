@@ -2603,7 +2603,8 @@ class _ComputeAPIUnitTestMixIn(object):
         self._test_create_db_entry_for_new_instance_with_cinder_error(
             expected_exception=exception.InvalidVolume)
 
-    def _test_rescue(self, vm_state):
+    def _test_rescue(self, vm_state=vm_states.ACTIVE, rescue_password=None,
+                     rescue_image=None, clean_shutdown=True):
         instance = self._create_instance_obj(params={'vm_state': vm_state})
         bdms = []
         with contextlib.nested(
@@ -2619,7 +2620,10 @@ class _ComputeAPIUnitTestMixIn(object):
             bdm_get_by_instance_uuid, volume_backed_inst, instance_save,
             record_action_start, rpcapi_rescue_instance
         ):
-            self.compute_api.rescue(self.context, instance)
+            self.compute_api.rescue(self.context, instance,
+                                    rescue_password=rescue_password,
+                                    rescue_image_ref=rescue_image,
+                                    clean_shutdown=clean_shutdown)
             # assert field values set on the instance object
             self.assertEqual(task_states.RESCUING, instance.task_state)
             # assert our mock calls
@@ -2631,17 +2635,28 @@ class _ComputeAPIUnitTestMixIn(object):
             record_action_start.assert_called_once_with(
                 self.context, instance, instance_actions.RESCUE)
             rpcapi_rescue_instance.assert_called_once_with(
-                self.context, instance=instance, rescue_password=None,
-                rescue_image_ref=None)
+                self.context, instance=instance,
+                rescue_password=rescue_password,
+                rescue_image_ref=rescue_image,
+                clean_shutdown=clean_shutdown)
 
     def test_rescue_active(self):
-        self._test_rescue(vm_state=vm_states.ACTIVE)
+        self._test_rescue()
 
     def test_rescue_stopped(self):
         self._test_rescue(vm_state=vm_states.STOPPED)
 
     def test_rescue_error(self):
         self._test_rescue(vm_state=vm_states.ERROR)
+
+    def test_rescue_with_password(self):
+        self._test_rescue(rescue_password='fake-password')
+
+    def test_rescue_with_image(self):
+        self._test_rescue(rescue_image='fake-image')
+
+    def test_rescue_forced_shutdown(self):
+        self._test_rescue(clean_shutdown=False)
 
     def test_unrescue(self):
         instance = self._create_instance_obj(

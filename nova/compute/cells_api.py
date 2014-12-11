@@ -301,14 +301,16 @@ class ComputeCellsAPI(compute_api.API):
 
     @check_instance_cell
     def rescue(self, context, instance, rescue_password=None,
-               rescue_image_ref=None):
+               rescue_image_ref=None, clean_shutdown=True):
         """Rescue the given instance."""
         super(ComputeCellsAPI, self).rescue(context, instance,
                 rescue_password=rescue_password,
-                rescue_image_ref=rescue_image_ref)
+                rescue_image_ref=rescue_image_ref,
+                clean_shutdown=clean_shutdown)
         self._cast_to_cells(context, instance, 'rescue',
                 rescue_password=rescue_password,
-                rescue_image_ref=rescue_image_ref)
+                rescue_image_ref=rescue_image_ref,
+                clean_shutdown=clean_shutdown)
 
     @check_instance_cell
     def unrescue(self, context, instance):
