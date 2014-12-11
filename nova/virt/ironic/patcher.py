@@ -21,6 +21,8 @@ Helper classes for Ironic HTTP PATCH creation.
 """
 
 from oslo_config import cfg
+from oslo_serialization import jsonutils
+import six
 
 CONF = cfg.CONF
 CONF.import_opt('default_ephemeral_format', 'nova.virt.driver')
@@ -78,6 +80,28 @@ class GenericDriverFields(object):
             patch.append({'path': '/instance_info/preserve_ephemeral',
                           'op': 'add', 'value': str(preserve_ephemeral)})
 
+        capabilities = {}
+
+        # read the flavor and get the extra_specs value.
+        extra_specs = flavor.get('extra_specs')
+
+        # scan through the extra_specs values and ignore the keys
+        # not starting with keyword 'capabilities'.
+
+        for key, val in six.iteritems(extra_specs):
+            if not key.startswith('capabilities:'):
+                continue
+
+            # split the extra_spec key to remove the keyword
+            # 'capabilities' and get the actual key.
+
+            capabilities_string, capabilities_key = key.split(':', 1)
+            if capabilities_key:
+                capabilities[capabilities_key] = val
+
+        if capabilities:
+            patch.append({'path': '/instance_info/capabilities',
+                          'op': 'add', 'value': jsonutils.dumps(capabilities)})
         return patch
 
     def get_cleanup_patch(self, instance, network_info, flavor):
