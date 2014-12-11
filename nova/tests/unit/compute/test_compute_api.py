@@ -1234,7 +1234,9 @@ class _ComputeAPIUnitTestMixIn(object):
             self.context, delta, fake_inst).AndReturn(fake_quotas)
 
         exc = exception.UnexpectedTaskStateError(
-            actual=task_states.RESIZE_REVERTING, expected=None)
+            instance_uuid=fake_inst['uuid'],
+            actual={'task_state': task_states.RESIZE_REVERTING},
+            expected={'task_state': [None]})
         fake_inst.save(expected_task_state=[None]).AndRaise(exc)
 
         fake_quotas.rollback()

@@ -459,8 +459,9 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
     def test_instance_update_expected_exceptions(self):
         errors = (exc.InvalidUUID(uuid='foo'),
                   exc.InstanceNotFound(instance_id=1),
-                  exc.UnexpectedTaskStateError(expected='foo',
-                                               actual='bar'))
+                  exc.UnexpectedTaskStateError(instance_uuid='fake_uuid',
+                                               expected={'task_state': 'foo'},
+                                               actual={'task_state': 'bar'}))
         self._test_expected_exceptions(
             'instance_update', self.conductor.instance_update,
             errors, None, {'foo': 'bar'}, None)
