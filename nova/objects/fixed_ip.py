@@ -58,24 +58,19 @@ class FixedIP(obj_base.NovaPersistentObject, obj_base.NovaObject):
         'floating_ips': fields.ObjectField('FloatingIPList'),
         }
 
+    obj_relationships = {
+        'instance': [('1.0', '1.13'), ('1.2', '1.14'), ('1.3', '1.15'),
+                     ('1.6', '1.16')],
+        'network': [('1.0', '1.2')],
+        'virtual_interface': [('1.1', '1.0')],
+        'floating_ips': [('1.5', '1.7')],
+    }
+
     def obj_make_compatible(self, primitive, target_version):
+        super(FixedIP, self).obj_make_compatible(primitive, target_version)
         target_version = utils.convert_version_to_tuple(target_version)
-        if target_version < (1, 5) and 'floating_ips' in primitive:
-            del primitive['floating_ips']
         if target_version < (1, 4) and 'default_route' in primitive:
             del primitive['default_route']
-        if target_version < (1, 4) and 'instance' in primitive:
-            self.instance.obj_make_compatible(
-                    primitive['instance']['nova_object.data'], '1.15')
-            primitive['instance']['nova_object.version'] = '1.15'
-        if target_version < (1, 3) and 'instance' in primitive:
-            self.instance.obj_make_compatible(
-                    primitive['instance']['nova_object.data'], '1.14')
-            primitive['instance']['nova_object.version'] = '1.14'
-        if target_version < (1, 2) and 'instance' in primitive:
-            self.instance.obj_make_compatible(
-                    primitive['instance']['nova_object.data'], '1.13')
-            primitive['instance']['nova_object.version'] = '1.13'
 
     @staticmethod
     def _from_db_object(context, fixedip, db_fixedip, expected_attrs=None):

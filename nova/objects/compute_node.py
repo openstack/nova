@@ -29,7 +29,7 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
     # Version 1.3: Added stats field
     # Version 1.4: Added host ip field
     # Version 1.5: Added numa_topology field
-    # Version 1.6: Added supported_instances
+    # Version 1.6: Added supported_hv_specs
     # Version 1.7: Added host field
     # Version 1.8: Added get_by_host_and_nodename()
     VERSION = '1.8'
@@ -62,12 +62,15 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
         'supported_hv_specs': fields.ListOfObjectsField('HVSpec'),
         }
 
+    obj_relationships = {
+        'supported_hv_specs': [('1.6', '1.0')],
+    }
+
     def obj_make_compatible(self, primitive, target_version):
+        super(ComputeNode, self).obj_make_compatible(primitive, target_version)
         target_version = utils.convert_version_to_tuple(target_version)
         if target_version < (1, 7) and 'host' in primitive:
             del primitive['host']
-        if target_version < (1, 6) and 'supported_hv_specs' in primitive:
-            del primitive['supported_hv_specs']
         if target_version < (1, 5) and 'numa_topology' in primitive:
             del primitive['numa_topology']
         if target_version < (1, 4) and 'host_ip' in primitive:
