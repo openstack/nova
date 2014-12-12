@@ -39,6 +39,7 @@ from nova.network import linux_net
 from nova.network import manager as network_manager
 from nova.network import model as net_model
 from nova import objects
+from nova.objects import network as network_obj
 from nova.objects import quotas as quotas_obj
 from nova.objects import virtual_interface as vif_obj
 from nova.openstack.common import log as logging
@@ -634,68 +635,48 @@ class FlatNetworkTestCase(test.TestCase):
         addresses = driver.get_entries_by_address("10.0.0.10", zone1)
         self.assertEqual(len(addresses), 0)
 
-    @mock.patch('nova.objects.quotas.Quotas.reserve')
-    def test_instance_dns(self, reserve):
-        self.stubs.Set(self.network,
-                '_do_trigger_security_group_members_refresh_for_instance',
-                lambda *a, **kw: None)
-        fixedip = dict(test_fixed_ip.fake_fixed_ip,
-                       address='192.168.0.101')
-        self.mox.StubOutWithMock(db, 'network_get_by_uuid')
-        self.mox.StubOutWithMock(db, 'network_update')
-        self.mox.StubOutWithMock(db, 'fixed_ip_associate_pool')
-        self.mox.StubOutWithMock(db,
-                              'virtual_interface_get_by_instance_and_network')
-        self.mox.StubOutWithMock(db, 'fixed_ip_update')
-        self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
-        self.mox.StubOutWithMock(self.network, 'get_instance_nw_info')
+    def test_allocate_fixed_ip_instance_dns(self):
+        # Test DNS entries are created when allocating a fixed IP.
+        # Allocate a fixed IP to an instance. Ensure that dns entries have been
+        # created for the instance's name and uuid.
 
-        db.fixed_ip_associate_pool(mox.IgnoreArg(),
-                                   mox.IgnoreArg(),
-                                   instance_uuid=mox.IgnoreArg(),
-                                   host=None
-                                   ).AndReturn(fixedip)
+        network = network_obj.Network._from_db_object(
+            self.context, network_obj.Network(), test_network.fake_network)
+        network.save = mock.MagicMock()
 
-        db.virtual_interface_get_by_instance_and_network(mox.IgnoreArg(),
-                mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(vifs[0])
+        # Create a minimal instance object
+        instance_params = {
+            'display_name': HOST,
+            'security_groups': []
+        }
+        instance = fake_instance.fake_instance_obj(
+             context.RequestContext('ignore', 'ignore'),
+             expected_attrs=instance_params.keys(), **instance_params)
+        instance.save = mock.MagicMock()
 
-        db.fixed_ip_update(mox.IgnoreArg(),
-                           mox.IgnoreArg(),
-                           mox.IgnoreArg())
+        # We don't specify a specific address, so we should get a FixedIP
+        # automatically allocated from the pool. Fix its value here.
+        fip = objects.FixedIP(address='192.168.0.101')
+        fip.save = mock.MagicMock()
 
-        inst = fake_inst(display_name=HOST, uuid=FAKEUUID)
-        db.instance_get_by_uuid(self.context,
-                                mox.IgnoreArg(), use_slave=False,
-                                columns_to_join=['info_cache',
-                                                 'security_groups']
-                                ).AndReturn(inst)
-
-        db.network_get_by_uuid(mox.IgnoreArg(),
-                               mox.IgnoreArg()
-                               ).AndReturn(dict(test_network.fake_network,
-                                                **networks[0]))
-        db.network_update(mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg())
-
-        self.network.get_instance_nw_info(mox.IgnoreArg(), mox.IgnoreArg(),
-                                          mox.IgnoreArg(), mox.IgnoreArg())
-        self.mox.ReplayAll()
-        self.network.add_fixed_ip_to_instance(self.context, FAKEUUID, HOST,
-                                              networks[0]['uuid'])
+        with mock.patch.object(objects.Instance, 'get_by_uuid',
+                               return_value=instance),\
+             mock.patch.object(objects.FixedIP, 'associate_pool',
+                               return_value=fip):
+            self.network.allocate_fixed_ip(self.context, FAKEUUID, network)
 
         instance_manager = self.network.instance_dns_manager
+        expected_addresses = ['192.168.0.101']
+
+        # Assert that we have a correct entry by instance display name
         addresses = instance_manager.get_entries_by_name(HOST,
                                              self.network.instance_dns_domain)
-        self.assertEqual(len(addresses), 1)
-        self.assertEqual(addresses[0], fixedip['address'])
+        self.assertEqual(expected_addresses, addresses)
+
+        # Assert that we have a correct entry by instance uuid
         addresses = instance_manager.get_entries_by_name(FAKEUUID,
                                               self.network.instance_dns_domain)
-        self.assertEqual(len(addresses), 1)
-        self.assertEqual(addresses[0], fixedip['address'])
-        exp_project, exp_user = quotas_obj.ids_from_instance(self.context,
-                                                             inst)
-        reserve.assert_called_once_with(self.context, fixed_ips=1,
-                                        project_id=exp_project,
-                                        user_id=exp_user)
+        self.assertEqual(expected_addresses, addresses)
 
     def test_allocate_floating_ip(self):
         self.assertIsNone(self.network.allocate_floating_ip(self.context,
