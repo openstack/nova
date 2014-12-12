@@ -5017,7 +5017,7 @@ class ComputeTestCase(BaseTestCase):
                     self.context, instance, bdms='fake_bdms')
             mock_terminate_vol_conn.assert_called_once_with(self.context,
                     instance, 'fake_bdms')
-            mock_get_power_off_values.assert_caleld_once_with(self.context,
+            mock_get_power_off_values.assert_called_once_with(self.context,
                     instance, clean_shutdown)
             self.assertEqual(migration.dest_compute, instance.host)
             self.compute.terminate_instance(self.context, instance, [], [])

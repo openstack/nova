@@ -8513,7 +8513,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             result = drvr._get_disk_over_committed_size_total()
             self.assertEqual(result, 10653532160)
             mock_list.assert_called_with()
-            mock_info.assert_called()
+            self.assertTrue(mock_info.called)
 
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        "_list_instance_domains")
@@ -9631,20 +9631,17 @@ Active:          8381604 kB
         dom_mock.ID.assert_called_once_with()
         lookup_mock.assert_called_once_with(instance['name'])
 
-    @mock.patch.object(fake_libvirt_utils, 'get_instance_path')
     @mock.patch.object(encodeutils, 'safe_decode')
-    def test_create_domain(self, mock_safe_decode, mock_get_inst_path):
+    def test_create_domain(self, mock_safe_decode):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         mock_domain = mock.MagicMock()
         mock_instance = mock.MagicMock()
-        mock_get_inst_path.return_value = '/tmp/'
 
         domain = conn._create_domain(domain=mock_domain,
                                      instance=mock_instance)
 
         self.assertEqual(mock_domain, domain)
-        mock_get_inst_path.assertHasCalls([mock.call(mock_instance)])
-        mock_domain.createWithFlags.assertHasCalls([mock.call(0)])
+        mock_domain.createWithFlags.assert_has_calls([mock.call(0)])
         self.assertEqual(2, mock_safe_decode.call_count)
 
     @mock.patch('nova.virt.disk.api.clean_lxc_namespace')
@@ -9682,7 +9679,7 @@ Active:          8381604 kB
                                             mock_instance, [], None)
 
         self.assertEqual('/dev/nbd0', inst_sys_meta['rootfs_device_name'])
-        mock_instance.save.assert_not_called()
+        self.assertFalse(mock_instance.called)
         mock_get_inst_path.assert_has_calls([mock.call(mock_instance)])
         mock_ensure_tree.assert_has_calls([mock.call('/tmp/rootfs')])
         conn.image_backend.image.assert_has_calls([mock.call(mock_instance,
@@ -9745,7 +9742,7 @@ Active:          8381604 kB
                                             mock_instance, [], None)
 
         self.assertEqual('/dev/nbd0', inst_sys_meta['rootfs_device_name'])
-        mock_instance.save.assert_not_called()
+        self.assertFalse(mock_instance.called)
         mock_get_inst_path.assert_has_calls([mock.call(mock_instance)])
         mock_ensure_tree.assert_has_calls([mock.call('/tmp/rootfs')])
         conn.image_backend.image.assert_has_calls([mock.call(mock_instance,
@@ -9794,7 +9791,7 @@ Active:          8381604 kB
                                             mock_instance, [], None)
 
         self.assertEqual('/dev/nbd0', inst_sys_meta['rootfs_device_name'])
-        mock_instance.save.assert_not_called()
+        self.assertFalse(mock_instance.called)
         mock_get_inst_path.assert_has_calls([mock.call(mock_instance)])
         mock_ensure_tree.assert_has_calls([mock.call('/tmp/rootfs')])
         conn.image_backend.image.assert_has_calls([mock.call(mock_instance,

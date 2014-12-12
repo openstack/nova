@@ -291,18 +291,6 @@ class HackingTestCase(test.NoDBTestCase):
                          self._run_check(code, checker, filename)]
         self.assertEqual(expected_errors or [], actual_errors)
 
-    def test_assert_called_once(self):
-
-        checker = checks.check_assert_called_once
-        code = """
-               mock = Mock()
-               mock.method(1, 2, 3, test='wow')
-               mock.method.assert_called_once()
-               """
-        errors = [(3, 11, 'N327')]
-        self._assert_has_errors(code, checker, expected_errors=errors,
-                                filename='nova/tests/test_assert.py')
-
     def test_str_unicode_exception(self):
 
         checker = checks.CheckForStrUnicodeExc
