@@ -16,9 +16,7 @@ from nova.objects import base
 from nova.objects import fields
 
 
-# TODO(berrange): Remove NovaObjectDictCompat
-class Tag(base.NovaObject,
-          base.NovaObjectDictCompat):
+class Tag(base.NovaObject):
     # Version 1.0: Initial version
     VERSION = '1.0'
 
@@ -30,7 +28,7 @@ class Tag(base.NovaObject,
     @staticmethod
     def _from_db_object(context, tag, db_tag):
         for key in tag.fields:
-            tag[key] = db_tag[key]
+            setattr(tag, key, db_tag[key])
         tag.obj_reset_changes()
         tag._context = context
         return tag
