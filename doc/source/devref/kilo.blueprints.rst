@@ -223,7 +223,8 @@ Kilo
   * Contributors looking for something to work on
   * People looking for what they can expect in the next release
 
-
+Note that the specific priorities for Kilo can be found here:
+http://specs.openstack.org/openstack/nova-specs/priorities/kilo-priorities.html
 
 Examples
 ---------
