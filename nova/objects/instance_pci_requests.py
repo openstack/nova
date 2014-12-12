@@ -18,7 +18,9 @@ from nova.objects import fields
 from nova import utils
 
 
-class InstancePCIRequest(base.NovaObject):
+# TODO(berrange): Remove NovaObjectDictCompat
+class InstancePCIRequest(base.NovaObject,
+                         base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     # Version 1.1: Add request_id
     VERSION = '1.1'
@@ -49,7 +51,9 @@ class InstancePCIRequest(base.NovaObject):
             del primitive['request_id']
 
 
-class InstancePCIRequests(base.NovaObject):
+# TODO(berrange): Remove NovaObjectDictCompat
+class InstancePCIRequests(base.NovaObject,
+                          base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     # Version 1.1: InstancePCIRequest 1.1
     VERSION = '1.1'

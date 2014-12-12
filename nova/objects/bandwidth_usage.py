@@ -15,7 +15,9 @@ from nova.objects import base
 from nova.objects import fields
 
 
-class BandwidthUsage(base.NovaPersistentObject, base.NovaObject):
+# TODO(berrange): Remove NovaObjectDictCompat
+class BandwidthUsage(base.NovaPersistentObject, base.NovaObject,
+                     base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     # Version 1.1: Add use_slave to get_by_instance_uuid_and_mac
     # Version 1.2: Add update_cells to create
@@ -63,7 +65,9 @@ class BandwidthUsage(base.NovaPersistentObject, base.NovaObject):
         self._from_db_object(context, self, db_bw_usage)
 
 
-class BandwidthUsageList(base.ObjectListBase, base.NovaObject):
+# TODO(berrange): Remove NovaObjectDictCompat
+class BandwidthUsageList(base.ObjectListBase, base.NovaObject,
+                         base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     # Version 1.1: Add use_slave to get_by_uuids
     # Version 1.2: BandwidthUsage <= version 1.2

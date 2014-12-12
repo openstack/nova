@@ -22,7 +22,9 @@ from nova.objects import fields
 OPTIONAL_FIELDS = ['extra_specs', 'projects']
 
 
-class Flavor(base.NovaPersistentObject, base.NovaObject):
+# TODO(berrange): Remove NovaObjectDictCompat
+class Flavor(base.NovaPersistentObject, base.NovaObject,
+             base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     # Version 1.1: Added save_projects(), save_extra_specs(), removed
     #              remoteable from save()
@@ -248,7 +250,9 @@ class Flavor(base.NovaPersistentObject, base.NovaObject):
         db.flavor_destroy(context, self.name)
 
 
-class FlavorList(base.ObjectListBase, base.NovaObject):
+# TODO(berrange): Remove NovaObjectDictCompat
+class FlavorList(base.ObjectListBase, base.NovaObject,
+                 base.NovaObjectDictCompat):
     VERSION = '1.1'
 
     fields = {

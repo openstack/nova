@@ -22,7 +22,9 @@ from nova.openstack.common import uuidutils
 from nova import utils
 
 
-class InstanceGroup(base.NovaPersistentObject, base.NovaObject):
+# TODO(berrange): Remove NovaObjectDictCompat
+class InstanceGroup(base.NovaPersistentObject, base.NovaObject,
+                    base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     # Version 1.1: String attributes updated to support unicode
     # Version 1.2: Use list/dict helpers for policies, metadetails, members
@@ -194,7 +196,9 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject):
         return len(instances)
 
 
-class InstanceGroupList(base.ObjectListBase, base.NovaObject):
+# TODO(berrange): Remove NovaObjectDictCompat
+class InstanceGroupList(base.ObjectListBase, base.NovaObject,
+                        base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     #              InstanceGroup <= version 1.3
     # Version 1.1: InstanceGroup <= version 1.4

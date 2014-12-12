@@ -22,7 +22,9 @@ from nova.objects import fields
 from nova import utils
 
 
-class ComputeNode(base.NovaPersistentObject, base.NovaObject):
+# TODO(berrange): Remove NovaObjectDictCompat
+class ComputeNode(base.NovaPersistentObject, base.NovaObject,
+                  base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     # Version 1.1: Added get_by_service_id()
     # Version 1.2: String attributes updated to support unicode
@@ -219,7 +221,9 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
         return self._cached_service
 
 
-class ComputeNodeList(base.ObjectListBase, base.NovaObject):
+# TODO(berrange): Remove NovaObjectDictCompat
+class ComputeNodeList(base.ObjectListBase, base.NovaObject,
+                      base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     #              ComputeNode <= version 1.2
     # Version 1.1 ComputeNode version 1.3

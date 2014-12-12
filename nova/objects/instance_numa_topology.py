@@ -21,7 +21,9 @@ from nova.objects import fields as obj_fields
 from nova.virt import hardware
 
 
-class InstanceNUMACell(base.NovaObject):
+# TODO(berrange): Remove NovaObjectDictCompat
+class InstanceNUMACell(base.NovaObject,
+                       base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     # Version 1.1: Add pagesize field
     # Version 1.2: Add cpu_pinning_raw and topology fields
@@ -97,7 +99,9 @@ class InstanceNUMACell(base.NovaObject):
             self.pin(vcpu, pcpu)
 
 
-class InstanceNUMATopology(base.NovaObject):
+# TODO(berrange): Remove NovaObjectDictCompat
+class InstanceNUMATopology(base.NovaObject,
+                           base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     # Version 1.1: Takes into account pagesize
     VERSION = '1.1'

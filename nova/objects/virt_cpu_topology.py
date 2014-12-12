@@ -14,7 +14,9 @@ from nova.objects import base
 from nova.objects import fields
 
 
-class VirtCPUTopology(base.NovaObject):
+# TODO(berrange): Remove NovaObjectDictCompat
+class VirtCPUTopology(base.NovaObject,
+                      base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     VERSION = '1.0'
 

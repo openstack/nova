@@ -36,7 +36,9 @@ def _expected_cols(expected_attrs):
                  if attr in _BLOCK_DEVICE_OPTIONAL_JOINED_FIELD]
 
 
-class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject):
+# TODO(berrange): Remove NovaObjectDictCompat
+class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject,
+                         base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     # Version 1.1: Add instance_uuid to get_by_volume_id method
     # Version 1.2: Instance version 1.14
@@ -194,7 +196,9 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject):
         self.obj_reset_changes(fields=['instance'])
 
 
-class BlockDeviceMappingList(base.ObjectListBase, base.NovaObject):
+# TODO(berrange): Remove NovaObjectDictCompat
+class BlockDeviceMappingList(base.ObjectListBase, base.NovaObject,
+                             base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     # Version 1.1: BlockDeviceMapping <= version 1.1
     # Version 1.2: Added use_slave to get_by_instance_uuid

@@ -18,7 +18,9 @@ from nova.objects import base
 from nova.objects import fields
 
 
-class SecurityGroup(base.NovaPersistentObject, base.NovaObject):
+# TODO(berrange): Remove NovaObjectDictCompat
+class SecurityGroup(base.NovaPersistentObject, base.NovaObject,
+                    base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     # Version 1.1: String attributes updated to support unicode
     VERSION = '1.1'
@@ -70,7 +72,9 @@ class SecurityGroup(base.NovaPersistentObject, base.NovaObject):
                              db.security_group_get(context, self.id))
 
 
-class SecurityGroupList(base.ObjectListBase, base.NovaObject):
+# TODO(berrange): Remove NovaObjectDictCompat
+class SecurityGroupList(base.ObjectListBase, base.NovaObject,
+                        base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     #              SecurityGroup <= version 1.1
     VERSION = '1.0'

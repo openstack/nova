@@ -47,7 +47,8 @@ class MyOwnedObject(base.NovaPersistentObject, base.NovaObject):
     fields = {'baz': fields.Field(fields.Integer())}
 
 
-class MyObj(base.NovaPersistentObject, base.NovaObject):
+class MyObj(base.NovaPersistentObject, base.NovaObject,
+            base.NovaObjectDictCompat):
     VERSION = '1.6'
     fields = {'foo': fields.Field(fields.Integer(), default=1),
               'bar': fields.Field(fields.String()),
@@ -207,7 +208,7 @@ class TestMetaclass(test.TestCase):
 class TestObjToPrimitive(test.TestCase):
 
     def test_obj_to_primitive_list(self):
-        class MyObjElement(base.NovaObject):
+        class MyObjElement(base.NovaObject, base.NovaObjectDictCompat):
             fields = {'foo': fields.IntegerField()}
 
             def __init__(self, foo):
@@ -238,7 +239,7 @@ class TestObjToPrimitive(test.TestCase):
                          base.obj_to_primitive(mylist))
 
     def test_obj_to_primitive_with_ip_addr(self):
-        class TestObject(base.NovaObject):
+        class TestObject(base.NovaObject, base.NovaObjectDictCompat):
             fields = {'addr': fields.IPAddressField(),
                       'cidr': fields.IPNetworkField()}
 

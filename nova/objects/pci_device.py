@@ -26,7 +26,9 @@ from nova import utils
 LOG = logging.getLogger(__name__)
 
 
-class PciDevice(base.NovaPersistentObject, base.NovaObject):
+# TODO(berrange): Remove NovaObjectDictCompat
+class PciDevice(base.NovaPersistentObject, base.NovaObject,
+                base.NovaObjectDictCompat):
 
     """Object to represent a PCI device on a compute node.
 
@@ -173,7 +175,9 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
                 self._from_db_object(context, self, db_pci)
 
 
-class PciDeviceList(base.ObjectListBase, base.NovaObject):
+# TODO(berrange): Remove NovaObjectDictCompat
+class PciDeviceList(base.ObjectListBase, base.NovaObject,
+                    base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     #              PciDevice <= 1.1
     # Version 1.1: PciDevice 1.2

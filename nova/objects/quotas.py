@@ -46,7 +46,9 @@ def ids_from_server_group(context, server_group):
     return ids_from_instance(context, server_group)
 
 
-class Quotas(base.NovaObject):
+# TODO(berrange): Remove NovaObjectDictCompat
+class Quotas(base.NovaObject,
+             base.NovaObjectDictCompat):
     # Version 1.0: initial version
     # Version 1.1: Added create_limit() and update_limit()
     # Version 1.2: Added limit_check() and count()

@@ -21,7 +21,9 @@ from nova.objects import fields
 OPTIONAL_ATTRS = ['parent_group', 'grantee_group']
 
 
-class SecurityGroupRule(base.NovaPersistentObject, base.NovaObject):
+# TODO(berrange): Remove NovaObjectDictCompat
+class SecurityGroupRule(base.NovaPersistentObject, base.NovaObject,
+                        base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     # Version 1.1: Added create() and set id as read_only
     VERSION = '1.1'
@@ -82,7 +84,9 @@ class SecurityGroupRule(base.NovaPersistentObject, base.NovaObject):
         return cls._from_db_object(context, cls(), db_rule)
 
 
-class SecurityGroupRuleList(base.ObjectListBase, base.NovaObject):
+# TODO(berrange): Remove NovaObjectDictCompat
+class SecurityGroupRuleList(base.ObjectListBase, base.NovaObject,
+                            base.NovaObjectDictCompat):
     fields = {
         'objects': fields.ListOfObjectsField('SecurityGroupRule'),
         }

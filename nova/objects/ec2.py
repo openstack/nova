@@ -18,7 +18,9 @@ from nova.objects import base
 from nova.objects import fields
 
 
-class EC2InstanceMapping(base.NovaPersistentObject, base.NovaObject):
+# TODO(berrange): Remove NovaObjectDictCompat
+class EC2InstanceMapping(base.NovaPersistentObject, base.NovaObject,
+                         base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     VERSION = '1.0'
 
@@ -56,7 +58,9 @@ class EC2InstanceMapping(base.NovaPersistentObject, base.NovaObject):
             return cls._from_db_object(context, cls(), db_imap)
 
 
-class EC2VolumeMapping(base.NovaPersistentObject, base.NovaObject):
+# TODO(berrange): Remove NovaObjectDictCompat
+class EC2VolumeMapping(base.NovaPersistentObject, base.NovaObject,
+                       base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     VERSION = '1.0'
 
@@ -94,7 +98,9 @@ class EC2VolumeMapping(base.NovaPersistentObject, base.NovaObject):
             return cls._from_db_object(context, cls(context), db_vmap)
 
 
-class EC2SnapshotMapping(base.NovaPersistentObject, base.NovaObject):
+# TODO(berrange): Remove NovaObjectDictCompat
+class EC2SnapshotMapping(base.NovaPersistentObject, base.NovaObject,
+                         base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     VERSION = '1.0'
 
@@ -132,7 +138,9 @@ class EC2SnapshotMapping(base.NovaPersistentObject, base.NovaObject):
             return cls._from_db_object(context, cls(context), db_smap)
 
 
-class S3ImageMapping(base.NovaPersistentObject, base.NovaObject):
+# TODO(berrange): Remove NovaObjectDictCompat
+class S3ImageMapping(base.NovaPersistentObject, base.NovaObject,
+                     base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     VERSION = '1.0'
 
