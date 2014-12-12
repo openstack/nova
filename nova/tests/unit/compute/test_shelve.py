@@ -10,7 +10,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import iso8601
 import mock
 from mox3 import mox
 from oslo.config import cfg
@@ -20,11 +19,8 @@ from nova.compute import claims
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova import db
-from nova import objects
-from nova.objects import base as obj_base
 from nova.tests.unit.compute import test_compute
 from nova.tests.unit.image import fake as fake_image
-from nova import utils
 
 CONF = cfg.CONF
 CONF.import_opt('shelved_offload_time', 'nova.compute.manager')
@@ -48,24 +44,17 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
     def _shelve_instance(self, shelved_offload_time, clean_shutdown=True):
         CONF.set_override('shelved_offload_time', shelved_offload_time)
         instance = self._create_fake_instance_obj()
-        db_instance = obj_base.obj_to_primitive(instance)
         image_id = 'fake_image_id'
         host = 'fake-mini'
         cur_time = timeutils.utcnow()
         timeutils.set_time_override(cur_time)
         instance.task_state = task_states.SHELVING
         instance.save()
-        sys_meta = dict(instance.system_metadata)
-        sys_meta['shelved_at'] = timeutils.strtime(at=cur_time)
-        sys_meta['shelved_image_id'] = image_id
-        sys_meta['shelved_host'] = host
-        db_instance['system_metadata'] = utils.dict_to_metadata(sys_meta)
 
         self.mox.StubOutWithMock(self.compute, '_notify_about_instance_usage')
         self.mox.StubOutWithMock(self.compute.driver, 'snapshot')
         self.mox.StubOutWithMock(self.compute.driver, 'power_off')
         self.mox.StubOutWithMock(self.compute, '_get_power_state')
-        self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
 
         self.compute._notify_about_instance_usage(self.context, instance,
                 'shelve.start')
@@ -80,20 +69,40 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         self.compute.driver.snapshot(self.context, instance, 'fake_image_id',
                 mox.IgnoreArg())
 
-        update_values = {'power_state': 123,
-                         'vm_state': vm_states.SHELVED,
-                         'task_state': None,
-                         'expected_task_state': [task_states.SHELVING,
-                                task_states.SHELVING_IMAGE_UPLOADING],
-                         'system_metadata': sys_meta}
-        if CONF.shelved_offload_time == 0:
-            update_values['task_state'] = task_states.SHELVING_OFFLOADING
-        db.instance_update_and_get_original(self.context, instance['uuid'],
-                 update_values, update_cells=False,
-                 columns_to_join=['metadata', 'system_metadata', 'info_cache',
-                                  'security_groups'],
-                ).AndReturn((db_instance,
-                                                db_instance))
+        tracking = {'last_state': instance.vm_state}
+
+        def check_save(expected_task_state=None):
+            self.assertEqual(123, instance.power_state)
+            if tracking['last_state'] == vm_states.ACTIVE:
+                if CONF.shelved_offload_time == 0:
+                    self.assertEqual(task_states.SHELVING_OFFLOADING,
+                                     instance.task_state)
+                else:
+                    self.assertIsNone(instance.task_state)
+                self.assertEqual(vm_states.SHELVED, instance.vm_state)
+                self.assertEqual([task_states.SHELVING,
+                                  task_states.SHELVING_IMAGE_UPLOADING],
+                                 expected_task_state)
+                self.assertIn('shelved_at', instance.system_metadata)
+                self.assertEqual(image_id,
+                                 instance.system_metadata['shelved_image_id'])
+                self.assertEqual(host,
+                                 instance.system_metadata['shelved_host'])
+                tracking['last_state'] = instance.vm_state
+            elif (tracking['last_state'] == vm_states.SHELVED and
+                  CONF.shelved_offload_time == 0):
+                self.assertIsNone(instance.host)
+                self.assertIsNone(instance.node)
+                self.assertIsNone(instance.task_state)
+                self.assertEqual(vm_states.SHELVED_OFFLOADED,
+                                 instance.vm_state)
+                self.assertEqual([task_states.SHELVING,
+                                  task_states.SHELVING_OFFLOADING],
+                                 expected_task_state)
+                tracking['last_state'] = instance.vm_state
+            else:
+                self.fail('Unexpected save!')
+
         self.compute._notify_about_instance_usage(self.context,
                                                   instance, 'shelve.end')
         if CONF.shelved_offload_time == 0:
@@ -102,24 +111,14 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
             self.compute.driver.power_off(instance, 0, 0)
             self.compute._get_power_state(self.context,
                                           instance).AndReturn(123)
-            db.instance_update_and_get_original(self.context,
-                              instance['uuid'],
-                              {'power_state': 123, 'host': None, 'node': None,
-                               'vm_state': vm_states.SHELVED_OFFLOADED,
-                               'task_state': None,
-                               'expected_task_state': [task_states.SHELVING,
-                                           task_states.SHELVING_OFFLOADING]},
-                              update_cells=False,
-                              columns_to_join=['metadata', 'system_metadata',
-                                               'info_cache',
-                                               'security_groups'],
-                              ).AndReturn((db_instance, db_instance))
             self.compute._notify_about_instance_usage(self.context, instance,
                                                       'shelve_offload.end')
         self.mox.ReplayAll()
 
-        self.compute.shelve_instance(self.context, instance,
-                image_id=image_id, clean_shutdown=clean_shutdown)
+        with mock.patch.object(instance, 'save') as mock_save:
+            mock_save.side_effect = check_save
+            self.compute.shelve_instance(self.context, instance,
+                    image_id=image_id, clean_shutdown=clean_shutdown)
 
     def test_shelve(self):
         self._shelve_instance(-1)
@@ -134,20 +133,12 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         instance = self._create_fake_instance_obj()
         instance.task_state = task_states.SHELVING
         instance.save()
-        db_instance = obj_base.obj_to_primitive(instance)
-        host = 'fake-mini'
         cur_time = timeutils.utcnow()
         timeutils.set_time_override(cur_time)
-        sys_meta = dict(instance.system_metadata)
-        sys_meta['shelved_at'] = timeutils.strtime(at=cur_time)
-        sys_meta['shelved_image_id'] = None
-        sys_meta['shelved_host'] = host
-        db_instance['system_metadata'] = utils.dict_to_metadata(sys_meta)
 
         self.mox.StubOutWithMock(self.compute, '_notify_about_instance_usage')
         self.mox.StubOutWithMock(self.compute.driver, 'power_off')
         self.mox.StubOutWithMock(self.compute, '_get_power_state')
-        self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
 
         self.compute._notify_about_instance_usage(self.context, instance,
                 'shelve_offload.start')
@@ -159,22 +150,15 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
             self.compute.driver.power_off(instance, 0, 0)
         self.compute._get_power_state(self.context,
                 instance).AndReturn(123)
-        db.instance_update_and_get_original(self.context, instance['uuid'],
-                {'power_state': 123, 'host': None, 'node': None,
-                 'vm_state': vm_states.SHELVED_OFFLOADED,
-                 'task_state': None,
-                 'expected_task_state': [task_states.SHELVING,
-                    task_states.SHELVING_OFFLOADING]},
-                 update_cells=False,
-                 columns_to_join=['metadata', 'system_metadata',
-                                  'info_cache', 'security_groups'],
-                 ).AndReturn((db_instance, db_instance))
         self.compute._notify_about_instance_usage(self.context, instance,
                 'shelve_offload.end')
         self.mox.ReplayAll()
 
-        self.compute.shelve_offload_instance(self.context, instance,
-                                             clean_shutdown=clean_shutdown)
+        with mock.patch.object(instance, 'save'):
+            self.compute.shelve_offload_instance(self.context, instance,
+                                                 clean_shutdown=clean_shutdown)
+        self.assertEqual(vm_states.SHELVED_OFFLOADED, instance.vm_state)
+        self.assertIsNone(instance.task_state)
 
     def test_shelve_offload(self):
         self._shelve_offload()
@@ -183,60 +167,58 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         self._shelve_offload(clean_shutdown=False)
 
     def test_unshelve(self):
-        db_instance = self._create_fake_instance()
-        instance = objects.Instance.get_by_uuid(
-            self.context, db_instance['uuid'],
-            expected_attrs=['metadata', 'system_metadata'])
+        instance = self._create_fake_instance_obj()
         instance.task_state = task_states.UNSHELVING
         instance.save()
         image = {'id': 'fake_id'}
-        host = 'fake-mini'
         node = test_compute.NODENAME
         limits = {}
         filter_properties = {'limits': limits}
-        cur_time = timeutils.utcnow()
-        cur_time_tz = cur_time.replace(tzinfo=iso8601.iso8601.Utc())
-        timeutils.set_time_override(cur_time)
-        sys_meta = dict(instance.system_metadata)
-        sys_meta['shelved_at'] = timeutils.strtime(at=cur_time)
-        sys_meta['shelved_image_id'] = image['id']
-        sys_meta['shelved_host'] = host
 
         self.mox.StubOutWithMock(self.compute, '_notify_about_instance_usage')
         self.mox.StubOutWithMock(self.compute, '_prep_block_device')
         self.mox.StubOutWithMock(self.compute.driver, 'spawn')
         self.mox.StubOutWithMock(self.compute, '_get_power_state')
         self.mox.StubOutWithMock(self.rt, 'instance_claim')
-        self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
         self.mox.StubOutWithMock(self.compute.network_api,
                                  'migrate_instance_finish')
 
         self.deleted_image_id = None
-
-        db_instance['extra'] = None
 
         def fake_delete(self2, ctxt, image_id):
             self.deleted_image_id = image_id
 
         def fake_claim(context, instance, limits):
             instance.host = self.compute.host
-            return claims.Claim(context, db_instance,
+            return claims.Claim(context, instance,
                                 self.rt, _fake_resources())
+
+        tracking = {
+            'last_state': instance.task_state,
+            'spawned': False,
+        }
+
+        def check_save(expected_task_state=None):
+            if tracking['last_state'] == task_states.UNSHELVING:
+                if tracking['spawned']:
+                    self.assertIsNone(instance.task_state)
+                else:
+                    self.assertEqual(task_states.SPAWNING, instance.task_state)
+                    tracking['spawned'] = True
+                tracking['last_state'] == instance.task_state
+            elif tracking['last_state'] == task_states.SPAWNING:
+                self.assertEqual(vm_states.ACTIVE, instance.vm_state)
+                tracking['last_state'] == instance.task_state
+            else:
+                self.fail('Unexpected save!')
 
         fake_image.stub_out_image_service(self.stubs)
         self.stubs.Set(fake_image._FakeImageService, 'delete', fake_delete)
 
         self.compute._notify_about_instance_usage(self.context, instance,
                 'unshelve.start')
-        db.instance_update_and_get_original(self.context, instance['uuid'],
-                {'task_state': task_states.SPAWNING},
-                update_cells=False,
-                columns_to_join=['metadata', 'system_metadata'],
-                ).AndReturn((db_instance, db_instance))
         self.compute._prep_block_device(self.context, instance,
                 mox.IgnoreArg(), do_check_attach=False).AndReturn('fake_bdm')
-        db_instance['key_data'] = None
-        db_instance['auto_disk_config'] = None
         self.compute.network_api.migrate_instance_finish(
                 self.context, instance, {'source_compute': '',
                                          'dest_compute': self.compute.host})
@@ -246,42 +228,33 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                 block_device_info='fake_bdm',
                 flavor=None)
         self.compute._get_power_state(self.context, instance).AndReturn(123)
-        db.instance_update_and_get_original(self.context, instance['uuid'],
-                {'power_state': 123,
-                 'vm_state': vm_states.ACTIVE,
-                 'task_state': None,
-                 'image_ref': instance['image_ref'],
-                 'key_data': None,
-                 'host': self.compute.host,  # rt.instance_claim set this
-                 'auto_disk_config': False,
-                 'expected_task_state': task_states.SPAWNING,
-                 'launched_at': cur_time_tz},
-                 update_cells=False,
-                 columns_to_join=['metadata', 'system_metadata']
-                 ).AndReturn((db_instance,
-                              dict(db_instance,
-                                   host=self.compute.host,
-                                   metadata={})))
         self.compute._notify_about_instance_usage(self.context, instance,
                 'unshelve.end')
         self.mox.ReplayAll()
 
         with mock.patch.object(self.rt, 'instance_claim',
-                               side_effect=fake_claim):
-            self.compute.unshelve_instance(self.context, instance, image=image,
-                    filter_properties=filter_properties, node=node)
+                               side_effect=fake_claim), \
+                 mock.patch.object(instance, 'save') as mock_save:
+            mock_save.side_effect = check_save
+            self.compute.unshelve_instance(
+                self.context, instance, image=image,
+                filter_properties=filter_properties,
+                node=node)
         self.assertEqual(image['id'], self.deleted_image_id)
         self.assertEqual(instance.host, self.compute.host)
 
+        self.assertEqual(123, instance.power_state)
+        self.assertEqual(vm_states.ACTIVE, instance.vm_state)
+        self.assertIsNone(instance.task_state)
+        self.assertIsNone(instance.key_data)
+        self.assertEqual(self.compute.host, instance.host)
+        self.assertFalse(instance.auto_disk_config)
+
     def test_unshelve_volume_backed(self):
         instance = self._create_fake_instance_obj()
-        db_instance = obj_base.obj_to_primitive(instance)
         node = test_compute.NODENAME
         limits = {}
         filter_properties = {'limits': limits}
-        cur_time = timeutils.utcnow()
-        cur_time_tz = cur_time.replace(tzinfo=iso8601.iso8601.Utc())
-        timeutils.set_time_override(cur_time)
         instance.task_state = task_states.UNSHELVING
         instance.save()
 
@@ -290,27 +263,36 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         self.mox.StubOutWithMock(self.compute.driver, 'spawn')
         self.mox.StubOutWithMock(self.compute, '_get_power_state')
         self.mox.StubOutWithMock(self.rt, 'instance_claim')
-        self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
         self.mox.StubOutWithMock(self.compute.network_api,
                                  'migrate_instance_finish')
 
+        tracking = {'last_state': instance.task_state}
+
+        def check_save(expected_task_state=None):
+            if tracking['last_state'] == task_states.UNSHELVING:
+                self.assertEqual(task_states.SPAWNING, instance.task_state)
+                tracking['last_state'] = instance.task_state
+            elif tracking['last_state'] == task_states.SPAWNING:
+                self.assertEqual(123, instance.power_state)
+                self.assertEqual(vm_states.ACTIVE, instance.vm_state)
+                self.assertIsNone(instance.task_state)
+                self.assertIsNone(instance.key_data)
+                self.assertFalse(instance.auto_disk_config)
+                self.assertIsNone(instance.task_state)
+                tracking['last_state'] = instance.task_state
+            else:
+                self.fail('Unexpected save!')
+
         self.compute._notify_about_instance_usage(self.context, instance,
                 'unshelve.start')
-        db.instance_update_and_get_original(self.context, instance['uuid'],
-                {'task_state': task_states.SPAWNING},
-                update_cells=False,
-                columns_to_join=['metadata', 'system_metadata',
-                                 'info_cache', 'security_groups']
-                ).AndReturn((db_instance, db_instance))
+
         self.compute._prep_block_device(self.context, instance,
                 mox.IgnoreArg(), do_check_attach=False).AndReturn('fake_bdm')
-        db_instance['key_data'] = None
-        db_instance['auto_disk_config'] = None
         self.compute.network_api.migrate_instance_finish(
                 self.context, instance, {'source_compute': '',
                                          'dest_compute': self.compute.host})
         self.rt.instance_claim(self.context, instance, limits).AndReturn(
-                claims.Claim(self.context, db_instance, self.rt,
+                claims.Claim(self.context, instance, self.rt,
                              _fake_resources()))
         self.compute.driver.spawn(self.context, instance, None,
                 injected_files=[], admin_password=None,
@@ -318,24 +300,14 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                 block_device_info='fake_bdm',
                 flavor=None)
         self.compute._get_power_state(self.context, instance).AndReturn(123)
-        db.instance_update_and_get_original(self.context, instance['uuid'],
-                {'power_state': 123,
-                 'vm_state': vm_states.ACTIVE,
-                 'task_state': None,
-                 'key_data': None,
-                 'auto_disk_config': False,
-                 'expected_task_state': task_states.SPAWNING,
-                 'launched_at': cur_time_tz},
-                 update_cells=False,
-                 columns_to_join=['metadata', 'system_metadata',
-                                  'info_cache', 'security_groups']
-                 ).AndReturn((db_instance, db_instance))
         self.compute._notify_about_instance_usage(self.context, instance,
                 'unshelve.end')
         self.mox.ReplayAll()
 
-        self.compute.unshelve_instance(self.context, instance, image=None,
-                filter_properties=filter_properties, node=node)
+        with mock.patch.object(instance, 'save') as mock_save:
+            mock_save.side_effect = check_save
+            self.compute.unshelve_instance(self.context, instance, image=None,
+                    filter_properties=filter_properties, node=node)
 
     def test_shelved_poll_none_exist(self):
         self.mox.StubOutWithMock(self.compute.driver, 'destroy')
@@ -404,7 +376,6 @@ class ShelveComputeAPITestCase(test_compute.BaseTestCase):
 
         self.compute_api.shelve(self.context, instance)
 
-        instance.refresh()
         self.assertEqual(instance.task_state, task_states.SHELVING)
 
         db.instance_destroy(self.context, instance['uuid'])
@@ -417,14 +388,12 @@ class ShelveComputeAPITestCase(test_compute.BaseTestCase):
 
         self.compute_api.shelve(self.context, instance)
 
-        instance.refresh()
         instance.task_state = None
         instance.vm_state = vm_states.SHELVED
         instance.save()
 
         self.compute_api.unshelve(self.context, instance)
 
-        instance.refresh()
         self.assertEqual(instance.task_state, task_states.UNSHELVING)
 
         db.instance_destroy(self.context, instance['uuid'])
