@@ -19,6 +19,7 @@ from oslo.serialization import jsonutils
 
 from nova.api.openstack import compute
 from nova.compute import api as compute_api
+from nova.compute import flavors
 from nova import db
 from nova import objects
 from nova import test
@@ -100,6 +101,7 @@ class DiskConfigTestCaseV21(test.TestCase):
                     'vm_state': '',
                     'auto_disk_config': inst_['auto_disk_config'],
                     'security_groups': inst_['security_groups'],
+                    'instance_type': flavors.get_default_flavor(),
                     })
 
             def fake_instance_get_for_create(context, id_, *args, **kwargs):

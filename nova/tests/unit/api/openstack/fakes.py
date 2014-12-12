@@ -529,6 +529,9 @@ def stub_instance(id, user_id=None, project_id=None, host=None,
         "cell_name": "",
         "architecture": "",
         "os_type": "",
+        "extra": {"numa_topology": None,
+                  "pci_requests": None,
+              },
         "cleaned": cleaned}
 
     instance.update(info_cache)
