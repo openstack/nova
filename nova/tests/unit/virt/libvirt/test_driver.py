@@ -2212,8 +2212,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         _lookup_by_name.return_value = dom
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance = objects.Instance(**self.test_instance)
         return conn._get_serial_ports_from_instance(
-            {'name': 'fake_instance'}, mode=mode)
+            instance, mode=mode)
 
     @mock.patch.object(objects.Flavor, 'get_by_id')
     def test_get_guest_config_with_type_xen(self, mock_flavor):
@@ -4243,7 +4244,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.create_fake_libvirt_mock(lookupByName=self.fake_lookup)
         with mock.patch.object(FakeVirtDomain, "fsFreeze") as mock_fsfreeze:
             conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
-            instance = {'name': 'test', 'uuid': 'uuid'}
+            instance = objects.Instance(**self.test_instance)
             img_meta = {"properties": {"hw_qemu_guest_agent": "yes",
                                        "os_require_quiesce": "yes"}}
             self.assertIsNone(conn.quiesce(self.context, instance, img_meta))
@@ -4252,7 +4253,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     def test_quiesce_not_supported(self):
         self.create_fake_libvirt_mock()
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
-        instance = {'name': 'test', 'uuid': 'uuid'}
+        instance = objects.Instance(**self.test_instance)
         self.assertRaises(exception.InstanceQuiesceNotSupported,
                       conn.quiesce, self.context, instance, None)
 
@@ -4262,7 +4263,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                       lookupByName=self.fake_lookup)
         with mock.patch.object(FakeVirtDomain, "fsThaw") as mock_fsthaw:
             conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
-            instance = {'name': 'test', 'uuid': 'uuid'}
+            instance = objects.Instance(**self.test_instance)
             img_meta = {"properties": {"hw_qemu_guest_agent": "yes",
                                        "os_require_quiesce": "yes"}}
             self.assertIsNone(conn.unquiesce(self.context, instance, img_meta))
@@ -7832,8 +7833,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         context = None
-        instance = {"name": "instancename", "id": "instanceid",
-                    "uuid": "875a8070-d0b9-4949-8b31-104d125c9a64"}
+        instance = objects.Instance(**self.test_instance)
         network_info = []
 
         self.mox.StubOutWithMock(conn, '_lookup_by_name')
@@ -8130,8 +8130,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             self.reboot_create_called = True
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        instance = {"name": "instancename", "id": "instanceid",
-                    "uuid": "875a8070-d0b9-4949-8b31-104d125c9a64"}
+        instance = objects.Instance(**self.test_instance)
         self.stubs.Set(conn, '_lookup_by_name', fake_lookup_by_name)
         self.stubs.Set(conn, '_create_domain', fake_create_domain)
         result = conn._clean_shutdown(instance, timeout, retry_interval)
@@ -8312,8 +8311,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.stubs.Set(conn, '_delete_instance_files',
                        fake_delete_instance_files)
 
-        instance = {"name": "instancename", "id": "instanceid",
-                    "uuid": "875a8070-d0b9-4949-8b31-104d125c9a64"}
+        instance = objects.Instance(**self.test_instance)
         conn.destroy(self.context, instance, [])
 
     @mock.patch.object(rbd_utils, 'RBDDriver')
@@ -8350,8 +8348,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.stubs.Set(conn, 'get_info', fake_get_info)
         self.stubs.Set(conn, '_delete_instance_files',
                        fake_delete_instance_files)
-        instance = {"name": "instancename", "id": "instanceid",
-                    "uuid": "875a8070-d0b9-4949-8b31-104d125c9a64"}
+        instance = objects.Instance(**self.test_instance)
         conn.destroy(self.context, instance, [])
 
     def test_destroy_undefines_no_attribute_with_managed_save(self):
@@ -8379,8 +8376,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.stubs.Set(conn, 'get_info', fake_get_info)
         self.stubs.Set(conn, '_delete_instance_files',
                        fake_delete_instance_files)
-        instance = {"name": "instancename", "id": "instanceid",
-                    "uuid": "875a8070-d0b9-4949-8b31-104d125c9a64"}
+        instance = objects.Instance(**self.test_instance)
         conn.destroy(self.context, instance, [])
 
     def test_destroy_undefines_no_attribute_no_managed_save(self):
@@ -8407,8 +8403,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.stubs.Set(conn, 'get_info', fake_get_info)
         self.stubs.Set(conn, '_delete_instance_files',
                        fake_delete_instance_files)
-        instance = {"name": "instancename", "id": "instanceid",
-                    "uuid": "875a8070-d0b9-4949-8b31-104d125c9a64"}
+        instance = objects.Instance(**self.test_instance)
         conn.destroy(self.context, instance, [])
 
     def test_destroy_timed_out(self):
@@ -8427,8 +8422,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.stubs.Set(conn, '_lookup_by_name', fake_lookup_by_name)
         self.stubs.Set(libvirt.libvirtError, 'get_error_code',
                 fake_get_error_code)
-        instance = {"name": "instancename", "id": "instanceid",
-                    "uuid": "875a8070-d0b9-4949-8b31-104d125c9a64"}
+        instance = objects.Instance(**self.test_instance)
         self.assertRaises(exception.InstancePowerOffFailure,
                 conn.destroy, self.context, instance, [])
 
@@ -8448,8 +8442,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.stubs.Set(conn, '_lookup_by_name', fake_lookup_by_name)
-        instance = {"name": "instancename", "id": "instanceid",
-                    "uuid": "875a8070-d0b9-4949-8b31-104d125c9a64"}
+        instance = objects.Instance(**self.test_instance)
         # NOTE(vish): verifies destroy doesn't raise if the instance disappears
         conn._destroy(instance)
 
@@ -8465,7 +8458,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         self.mox.ReplayAll()
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        instance = {'name': 'test'}
+        instance = objects.Instance(**self.test_instance)
 
         # NOTE(wenjianhn): verifies undefine doesn't raise if the
         # instance disappears
@@ -8869,7 +8862,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         libvirt_driver.LibvirtDriver._conn.lookupByName = fake_lookup_name
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        actual = conn.get_diagnostics({"name": "testvirt"})
+        instance = objects.Instance(**self.test_instance)
+        actual = conn.get_diagnostics(instance)
         expect = {'vda_read': 688640L,
                   'vda_read_req': 169L,
                   'vda_write': 0L,
@@ -8898,8 +8892,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         diags_time = datetime.datetime(2012, 11, 22, 12, 00, 10)
         timeutils.set_time_override(diags_time)
 
-        actual = conn.get_instance_diagnostics({"name": "testvirt",
-                                                "launched_at": lt})
+        instance.launched_at = lt
+        actual = conn.get_instance_diagnostics(instance)
         expected = {'config_drive': False,
                     'cpu_details': [],
                     'disk_details': [{'errors_count': 0,
@@ -8986,7 +8980,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         libvirt_driver.LibvirtDriver._conn.lookupByName = fake_lookup_name
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        actual = conn.get_diagnostics({"name": "testvirt"})
+        instance = objects.Instance(**self.test_instance)
+        actual = conn.get_diagnostics(instance)
         expect = {'cpu0_time': 15340000000L,
                   'cpu1_time': 1640000000L,
                   'cpu2_time': 3040000000L,
@@ -9009,8 +9004,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         diags_time = datetime.datetime(2012, 11, 22, 12, 00, 10)
         timeutils.set_time_override(diags_time)
 
-        actual = conn.get_instance_diagnostics({"name": "testvirt",
-                                                "launched_at": lt})
+        instance.launched_at = lt
+        actual = conn.get_instance_diagnostics(instance)
         expected = {'config_drive': False,
                     'cpu_details': [{'time': 15340000000L},
                                     {'time': 1640000000L},
@@ -9089,7 +9084,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         libvirt_driver.LibvirtDriver._conn.lookupByName = fake_lookup_name
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        actual = conn.get_diagnostics({"name": "testvirt"})
+        instance = objects.Instance(**self.test_instance)
+        actual = conn.get_diagnostics(instance)
         expect = {'cpu0_time': 15340000000L,
                   'cpu1_time': 1640000000L,
                   'cpu2_time': 3040000000L,
@@ -9114,8 +9110,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         diags_time = datetime.datetime(2012, 11, 22, 12, 00, 10)
         timeutils.set_time_override(diags_time)
 
-        actual = conn.get_instance_diagnostics({"name": "testvirt",
-                                                "launched_at": lt})
+        instance.launched_at = lt
+        actual = conn.get_instance_diagnostics(instance)
         expected = {'config_drive': False,
                     'cpu_details': [{'time': 15340000000L},
                                     {'time': 1640000000L},
@@ -9197,7 +9193,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         libvirt_driver.LibvirtDriver._conn.lookupByName = fake_lookup_name
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        actual = conn.get_diagnostics({"name": "testvirt"})
+        instance = objects.Instance(**self.test_instance)
+        actual = conn.get_diagnostics(instance)
         expect = {'cpu0_time': 15340000000L,
                   'cpu1_time': 1640000000L,
                   'cpu2_time': 3040000000L,
@@ -9228,8 +9225,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         diags_time = datetime.datetime(2012, 11, 22, 12, 00, 10)
         timeutils.set_time_override(diags_time)
 
-        actual = conn.get_instance_diagnostics({"name": "testvirt",
-                                                "launched_at": lt})
+        instance.launched_at = lt
+        actual = conn.get_instance_diagnostics(instance)
         expected = {'config_drive': False,
                     'cpu_details': [{'time': 15340000000L},
                                     {'time': 1640000000L},
@@ -9319,7 +9316,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         libvirt_driver.LibvirtDriver._conn.lookupByName = fake_lookup_name
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        actual = conn.get_diagnostics({"name": "testvirt"})
+        instance = objects.Instance(**self.test_instance)
+        actual = conn.get_diagnostics(instance)
         expect = {'cpu0_time': 15340000000L,
                   'cpu1_time': 1640000000L,
                   'cpu2_time': 3040000000L,
@@ -9352,8 +9350,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         diags_time = datetime.datetime(2012, 11, 22, 12, 00, 10)
         timeutils.set_time_override(diags_time)
 
-        actual = conn.get_instance_diagnostics({"name": "testvirt",
-                                                "launched_at": lt})
+        instance.launched_at = lt
+        actual = conn.get_instance_diagnostics(instance)
         expected = {'config_drive': False,
                     'cpu_details': [{'time': 15340000000L},
                                     {'time': 1640000000L},
