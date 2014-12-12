@@ -39,11 +39,10 @@ def build_request_spec(ctxt, image, instances, instance_type=None):
         instance_type = flavors.extract_flavor(instance)
     # NOTE(comstud): This is a bit ugly, but will get cleaned up when
     # we're passing an InstanceType internal object.
-    extra_specs = db.flavor_extra_specs_get(ctxt,
-                                                   instance_type['flavorid'])
+    extra_specs = db.flavor_extra_specs_get(ctxt, instance_type['flavorid'])
     instance_type['extra_specs'] = extra_specs
     request_spec = {
-            'image': image,
+            'image': image or {},
             'instance_properties': instance,
             'instance_type': instance_type,
             'num_instances': len(instances),
