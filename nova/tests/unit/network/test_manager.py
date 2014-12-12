@@ -40,7 +40,6 @@ from nova.network import manager as network_manager
 from nova.network import model as net_model
 from nova import objects
 from nova.objects import network as network_obj
-from nova.objects import quotas as quotas_obj
 from nova.objects import virtual_interface as vif_obj
 from nova.openstack.common import log as logging
 from nova import quota
@@ -486,110 +485,55 @@ class FlatNetworkTestCase(test.TestCase):
         for i, vif in enumerate(nw_info):
             self.assertEqual(vif['network']['bridge'], objs[i].network.bridge)
 
-    @mock.patch('nova.objects.quotas.Quotas.reserve')
-    def test_add_fixed_ip_instance_using_id_without_vpn(self, reserve):
-        self.stubs.Set(self.network,
-                '_do_trigger_security_group_members_refresh_for_instance',
-                lambda *a, **kw: None)
-        self.mox.StubOutWithMock(db, 'network_get')
-        self.mox.StubOutWithMock(db, 'network_update')
-        self.mox.StubOutWithMock(db, 'fixed_ip_associate_pool')
-        self.mox.StubOutWithMock(db,
-                              'virtual_interface_get_by_instance_and_network')
-        self.mox.StubOutWithMock(db, 'fixed_ip_update')
-        self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
-        self.mox.StubOutWithMock(self.network, 'get_instance_nw_info')
+    @mock.patch.object(objects.Network, 'get_by_id')
+    def test_add_fixed_ip_instance_using_id_without_vpn(self, get_by_id):
+        # Allocate a fixed ip from a network and assign it to an instance.
+        # Network is given by network id.
 
-        fixed = dict(test_fixed_ip.fake_fixed_ip,
-                     address='192.168.0.101')
-        db.fixed_ip_associate_pool(mox.IgnoreArg(),
-                                   mox.IgnoreArg(),
-                                   instance_uuid=mox.IgnoreArg(),
-                                   host=None).AndReturn(fixed)
+        network_id = networks[0]['id']
 
-        db.virtual_interface_get_by_instance_and_network(mox.IgnoreArg(),
-                mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(vifs[0])
+        with mock.patch.object(self.network,
+                               'allocate_fixed_ip') as allocate_fixed_ip:
+            self.network.add_fixed_ip_to_instance(self.context, FAKEUUID, HOST,
+                                                  network_id)
 
-        db.fixed_ip_update(mox.IgnoreArg(),
-                           mox.IgnoreArg(),
-                           mox.IgnoreArg())
+        # Assert that we fetched the network by id, not uuid
+        get_by_id.assert_called_once_with(self.context,
+                network_id, project_only='allow_none')
 
-        inst = fake_inst(display_name=HOST, uuid=FAKEUUID)
-        db.instance_get_by_uuid(self.context,
-                                mox.IgnoreArg(), use_slave=False,
-                                columns_to_join=['info_cache',
-                                                 'security_groups']
-                                ).AndReturn(inst)
+        # Assert that we called allocate_fixed_ip for the given network and
+        # instance. We should not have requested a specific address from the
+        # network.
+        allocate_fixed_ip.assert_called_once_with(self.context, FAKEUUID,
+                                                  get_by_id.return_value,
+                                                  address=None)
 
-        db.network_get(mox.IgnoreArg(),
-                       mox.IgnoreArg(),
-                       project_only=mox.IgnoreArg()
-                       ).AndReturn(dict(test_network.fake_network,
-                                        **networks[0]))
-        db.network_update(mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg())
+    @mock.patch.object(objects.Network, 'get_by_uuid')
+    def test_add_fixed_ip_instance_using_uuid_without_vpn(self, get_by_uuid):
+        # Allocate a fixed ip from a network and assign it to an instance.
+        # Network is given by network uuid.
 
-        self.network.get_instance_nw_info(mox.IgnoreArg(), mox.IgnoreArg(),
-                                          mox.IgnoreArg(), mox.IgnoreArg())
-        self.mox.ReplayAll()
-        self.network.add_fixed_ip_to_instance(self.context, FAKEUUID, HOST,
-                                              networks[0]['id'])
-        exp_project, exp_user = quotas_obj.ids_from_instance(self.context,
-                                                             inst)
-        reserve.assert_called_once_with(self.context, fixed_ips=1,
-                                        project_id=exp_project,
-                                        user_id=exp_user)
+        network_uuid = networks[0]['uuid']
 
-    @mock.patch('nova.objects.quotas.Quotas.reserve')
-    def test_add_fixed_ip_instance_using_uuid_without_vpn(self, reserve):
-        self.stubs.Set(self.network,
-                '_do_trigger_security_group_members_refresh_for_instance',
-                lambda *a, **kw: None)
-        self.mox.StubOutWithMock(db, 'network_get_by_uuid')
-        self.mox.StubOutWithMock(db, 'network_update')
-        self.mox.StubOutWithMock(db, 'fixed_ip_associate_pool')
-        self.mox.StubOutWithMock(db,
-                              'virtual_interface_get_by_instance_and_network')
-        self.mox.StubOutWithMock(db, 'fixed_ip_update')
-        self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
-        self.mox.StubOutWithMock(self.network, 'get_instance_nw_info')
+        with mock.patch.object(self.network,
+                               'allocate_fixed_ip') as allocate_fixed_ip,\
+             mock.patch.object(self.context, 'elevated',
+                               return_value=mock.sentinel.elevated):
+            self.network.add_fixed_ip_to_instance(self.context, FAKEUUID, HOST,
+                                                  network_uuid)
 
-        fixed = dict(test_fixed_ip.fake_fixed_ip,
-                     address='192.168.0.101')
-        db.fixed_ip_associate_pool(mox.IgnoreArg(),
-                                   mox.IgnoreArg(),
-                                   instance_uuid=mox.IgnoreArg(),
-                                   host=None).AndReturn(fixed)
+        # Assert that we fetched the network by uuid, not id, and with elevated
+        # context
+        get_by_uuid.assert_called_once_with(mock.sentinel.elevated,
+                                            network_uuid)
 
-        db.virtual_interface_get_by_instance_and_network(mox.IgnoreArg(),
-                mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(vifs[0])
-
-        db.fixed_ip_update(mox.IgnoreArg(),
-                           mox.IgnoreArg(),
-                           mox.IgnoreArg())
-
-        inst = fake_inst(display_name=HOST, uuid=FAKEUUID)
-        db.instance_get_by_uuid(self.context,
-                                mox.IgnoreArg(), use_slave=False,
-                                columns_to_join=['info_cache',
-                                                 'security_groups']
-                                ).AndReturn(inst)
-
-        db.network_get_by_uuid(mox.IgnoreArg(),
-                               mox.IgnoreArg()
-                               ).AndReturn(dict(test_network.fake_network,
-                                                **networks[0]))
-        db.network_update(mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg())
-
-        self.network.get_instance_nw_info(mox.IgnoreArg(), mox.IgnoreArg(),
-                                          mox.IgnoreArg(), mox.IgnoreArg())
-        self.mox.ReplayAll()
-        self.network.add_fixed_ip_to_instance(self.context, FAKEUUID, HOST,
-                                              networks[0]['uuid'])
-        exp_project, exp_user = quotas_obj.ids_from_instance(self.context,
-                                                             inst)
-        reserve.assert_called_once_with(self.context, fixed_ips=1,
-                                        project_id=exp_project,
-                                        user_id=exp_user)
+        # Assert that we called allocate_fixed_ip for the given network and
+        # instance. We should not have requested a specific address from the
+        # network.
+        allocate_fixed_ip.assert_called_once_with(self.context,
+                                                  FAKEUUID,
+                                                  get_by_uuid.return_value,
+                                                  address=None)
 
     def test_mini_dns_driver(self):
         zone1 = "example.org"
