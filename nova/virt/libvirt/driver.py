@@ -1488,8 +1488,8 @@ class LibvirtDriver(driver.ComputeDriver):
                              'or greater') % {'version': ver})
 
         img_meta_prop = image_meta.get('properties', {}) if image_meta else {}
-        hw_qga = img_meta_prop.get('hw_qemu_guest_agent', 'no')
-        if hw_qga.lower() == 'no':
+        hw_qga = img_meta_prop.get('hw_qemu_guest_agent', '')
+        if not strutils.bool_from_string(hw_qga):
             return (False, _('QEMU guest agent is not enabled'))
 
         return (True, None)
@@ -1552,8 +1552,9 @@ class LibvirtDriver(driver.ComputeDriver):
                                        src_disk_size)
 
         img_meta_prop = image_meta.get('properties', {}) if image_meta else {}
-        require_quiesce = img_meta_prop.get('os_require_quiesce', 'no')
-        if require_quiesce.lower() == 'yes':
+        require_quiesce = strutils.bool_from_string(
+            img_meta_prop.get('os_require_quiesce', ''))
+        if require_quiesce:
             self.quiesce(context, instance, image_meta)
 
         try:
@@ -1578,7 +1579,7 @@ class LibvirtDriver(driver.ComputeDriver):
             libvirt_utils.chown(disk_delta, os.getuid())
         finally:
             self._conn.defineXML(xml)
-            if require_quiesce.lower() == 'yes':
+            if require_quiesce:
                 self.unquiesce(context, instance, image_meta)
 
         # Convert the delta (CoW) image with a backing file to a flat
@@ -3717,8 +3718,8 @@ class LibvirtDriver(driver.ComputeDriver):
     def _set_qemu_guest_agent(self, guest, flavor, instance, img_meta_prop):
         qga_enabled = False
         # Enable qga only if the 'hw_qemu_guest_agent' is equal to yes
-        hw_qga = img_meta_prop.get('hw_qemu_guest_agent', 'no')
-        if hw_qga.lower() == 'yes':
+        hw_qga = img_meta_prop.get('hw_qemu_guest_agent', '')
+        if strutils.bool_from_string(hw_qga):
             LOG.debug("Qemu guest agent is enabled through image "
                       "metadata", instance=instance)
             qga_enabled = True
@@ -3726,7 +3727,7 @@ class LibvirtDriver(driver.ComputeDriver):
             self._add_qga_device(guest, instance)
         rng_is_virtio = img_meta_prop.get('hw_rng_model') == 'virtio'
         rng_allowed_str = flavor.extra_specs.get('hw_rng:allowed', '')
-        rng_allowed = rng_allowed_str.lower() == 'true'
+        rng_allowed = strutils.bool_from_string(rng_allowed_str)
         if rng_is_virtio and rng_allowed:
             self._add_rng_device(guest, flavor)
 
