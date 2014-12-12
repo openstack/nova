@@ -149,9 +149,7 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject,
         return self.metadata.get('availability_zone', None)
 
 
-# TODO(berrange): Remove NovaObjectDictCompat
-class AggregateList(base.ObjectListBase, base.NovaObject,
-                    base.NovaObjectDictCompat):
+class AggregateList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Added key argument to get_by_host()
     #              Aggregate <= version 1.1

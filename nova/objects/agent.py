@@ -70,9 +70,7 @@ class Agent(base.NovaPersistentObject, base.NovaObject,
         self.obj_reset_changes()
 
 
-# TODO(berrange): Remove NovaObjectDictCompat
-class AgentList(base.ObjectListBase, base.NovaObject,
-                base.NovaObjectDictCompat):
+class AgentList(base.ObjectListBase, base.NovaObject):
     VERSION = '1.0'
 
     fields = {

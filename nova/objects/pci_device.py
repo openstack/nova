@@ -175,9 +175,7 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject,
                 self._from_db_object(context, self, db_pci)
 
 
-# TODO(berrange): Remove NovaObjectDictCompat
-class PciDeviceList(base.ObjectListBase, base.NovaObject,
-                    base.NovaObjectDictCompat):
+class PciDeviceList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     #              PciDevice <= 1.1
     # Version 1.1: PciDevice 1.2

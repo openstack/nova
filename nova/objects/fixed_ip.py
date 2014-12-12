@@ -199,9 +199,7 @@ class FixedIP(obj_base.NovaPersistentObject, obj_base.NovaObject,
         self.obj_reset_changes(['instance_uuid', 'instance'])
 
 
-# TODO(berrange): Remove NovaObjectDictCompat
-class FixedIPList(obj_base.ObjectListBase, obj_base.NovaObject,
-                  obj_base.NovaObjectDictCompat):
+class FixedIPList(obj_base.ObjectListBase, obj_base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Added get_by_network()
     # Version 1.2: FixedIP <= version 1.2

@@ -80,9 +80,7 @@ class VirtualInterface(base.NovaPersistentObject, base.NovaObject,
         db.virtual_interface_delete_by_instance(context, instance_uuid)
 
 
-# TODO(berrange): Remove NovaObjectDictCompat
-class VirtualInterfaceList(base.ObjectListBase, base.NovaObject,
-                           base.NovaObjectDictCompat):
+class VirtualInterfaceList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     VERSION = '1.0'
     fields = {

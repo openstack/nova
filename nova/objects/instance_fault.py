@@ -89,9 +89,7 @@ class InstanceFault(base.NovaPersistentObject, base.NovaObject,
                 LOG.exception(_LE("Failed to notify cells of instance fault"))
 
 
-# TODO(berrange): Remove NovaObjectDictCompat
-class InstanceFaultList(base.ObjectListBase, base.NovaObject,
-                        base.NovaObjectDictCompat):
+class InstanceFaultList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     #              InstanceFault <= version 1.1
     # Version 1.1: InstanceFault version 1.2

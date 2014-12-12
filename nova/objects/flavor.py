@@ -250,9 +250,7 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
         db.flavor_destroy(context, self.name)
 
 
-# TODO(berrange): Remove NovaObjectDictCompat
-class FlavorList(base.ObjectListBase, base.NovaObject,
-                 base.NovaObjectDictCompat):
+class FlavorList(base.ObjectListBase, base.NovaObject):
     VERSION = '1.1'
 
     fields = {

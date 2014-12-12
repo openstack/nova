@@ -72,9 +72,7 @@ class SecurityGroup(base.NovaPersistentObject, base.NovaObject,
                              db.security_group_get(context, self.id))
 
 
-# TODO(berrange): Remove NovaObjectDictCompat
-class SecurityGroupList(base.ObjectListBase, base.NovaObject,
-                        base.NovaObjectDictCompat):
+class SecurityGroupList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     #              SecurityGroup <= version 1.1
     VERSION = '1.0'

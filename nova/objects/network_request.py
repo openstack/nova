@@ -57,9 +57,7 @@ class NetworkRequest(obj_base.NovaObject,
             return cls(network_id=network_id, address=address)
 
 
-# TODO(berrange): Remove NovaObjectDictCompat
-class NetworkRequestList(obj_base.ObjectListBase, obj_base.NovaObject,
-                         obj_base.NovaObjectDictCompat):
+class NetworkRequestList(obj_base.ObjectListBase, obj_base.NovaObject):
     fields = {
         'objects': fields.ListOfObjectsField('NetworkRequest'),
         }

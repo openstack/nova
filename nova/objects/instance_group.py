@@ -196,9 +196,7 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject,
         return len(instances)
 
 
-# TODO(berrange): Remove NovaObjectDictCompat
-class InstanceGroupList(base.ObjectListBase, base.NovaObject,
-                        base.NovaObjectDictCompat):
+class InstanceGroupList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     #              InstanceGroup <= version 1.3
     # Version 1.1: InstanceGroup <= version 1.4

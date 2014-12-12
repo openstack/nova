@@ -65,9 +65,7 @@ class KeyPair(base.NovaPersistentObject, base.NovaObject,
         db.key_pair_destroy(context, self.user_id, self.name)
 
 
-# TODO(berrange): Remove NovaObjectDictCompat
-class KeyPairList(base.ObjectListBase, base.NovaObject,
-                  base.NovaObjectDictCompat):
+class KeyPairList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     #              KeyPair <= version 1.1
     VERSION = '1.0'

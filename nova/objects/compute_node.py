@@ -221,9 +221,7 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject,
         return self._cached_service
 
 
-# TODO(berrange): Remove NovaObjectDictCompat
-class ComputeNodeList(base.ObjectListBase, base.NovaObject,
-                      base.NovaObjectDictCompat):
+class ComputeNodeList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     #              ComputeNode <= version 1.2
     # Version 1.1 ComputeNode version 1.3
