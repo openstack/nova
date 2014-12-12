@@ -311,8 +311,11 @@ class ISCSIVolumeDriver(object):
             time.sleep(CONF.hyperv.volume_attach_retry_interval)
 
         if not mounted_disk_path:
-            raise exception.NotFound(_('Unable to find a mounted disk '
-                                       'for target_iqn: %s') % target_iqn)
+            raise exception.NotFound(_('Unable to find a mounted disk for '
+                                       'target_iqn: %s. Please ensure that '
+                                       'the host\'s SAN policy is set to '
+                                       '"OfflineAll" or "OfflineShared"') %
+                                     target_iqn)
         return mounted_disk_path
 
     def get_target_from_disk_path(self, physical_drive_path):
