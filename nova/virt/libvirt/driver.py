@@ -1473,7 +1473,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                    update_task_state)
 
     def _generic_snapshot(self, context, snapshot_name, snapshot_backend,
-                          disk_path, live_snapshot,  virt_dom, state,
+                          disk_path, live_snapshot, virt_dom, state,
                           image_format, instance, image_href, metadata,
                           image_service, update_task_state):
         snapshot_directory = CONF.libvirt_snapshots_directory
@@ -1998,6 +1998,8 @@ class LibvirtDriver(driver.ComputeDriver):
                                                           service,
                                                           image_id,
                                                           instance)
+        instance_dir = libvirt_utils.get_instance_path(instance)
+        fileutils.ensure_tree(instance_dir)
 
         disk_info = blockinfo.get_disk_info(CONF.libvirt_type,
                                             instance,
@@ -2016,7 +2018,6 @@ class LibvirtDriver(driver.ComputeDriver):
         # NOTE (rmk): Re-populate any missing backing files.
         disk_info_json = self.get_instance_disk_info(instance['name'], xml,
                                                      block_device_info)
-        instance_dir = libvirt_utils.get_instance_path(instance)
         self._create_images_and_backing(context, instance, instance_dir,
                                         disk_info_json)
 
