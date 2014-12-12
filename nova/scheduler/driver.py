@@ -115,16 +115,6 @@ class Scheduler(object):
                 for service in services
                 if self.servicegroup_api.service_is_up(service)]
 
-    # NOTE(alaski): Remove this method when the scheduler rpc interface is
-    # bumped to 4.x as it is no longer used.
-    def schedule_run_instance(self, context, request_spec,
-                              admin_password, injected_files,
-                              requested_networks, is_first_time,
-                              filter_properties, legacy_bdm_in_spec):
-        """Must override schedule_run_instance method for scheduler to work."""
-        msg = _("Driver must implement schedule_run_instance")
-        raise NotImplementedError(msg)
-
     def select_destinations(self, context, request_spec, filter_properties):
         """Must override select_destinations method.
 
