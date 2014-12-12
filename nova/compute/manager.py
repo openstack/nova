@@ -1251,8 +1251,10 @@ class ComputeManager(manager.Manager):
             # If we get an instance without it, re-fetch so that the call
             # to network_api (which requires it for instance_type) will
             # succeed.
+            attrs = ['system_metadata']
             instance = objects.Instance.get_by_uuid(context,
                                                     instance['uuid'],
+                                                    expected_attrs=attrs,
                                                     use_slave=use_slave)
 
         network_info = self.network_api.get_instance_nw_info(context,

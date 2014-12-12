@@ -6131,8 +6131,7 @@ class ComputeTestCase(BaseTestCase):
         # subsequent call so we don't need it, but keep this to make sure it
         # does the right thing.
         db.instance_get_by_uuid(self.context, fake_inst['uuid'],
-                                columns_to_join=['info_cache',
-                                                 'security_groups'],
+                                columns_to_join=['system_metadata'],
                                 use_slave=False
                                 ).AndReturn(fake_inst)
         self.compute.network_api.get_instance_nw_info(self.context,

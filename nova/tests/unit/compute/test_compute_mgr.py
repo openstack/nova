@@ -14,6 +14,7 @@
 
 import contextlib
 import time
+import uuid
 
 from cinderclient import exceptions as cinder_exception
 from eventlet import event as eventlet_event
@@ -3045,6 +3046,16 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 fake_spawn()
         except Exception as e:
             self.assertIsInstance(e, exception.BuildAbortException)
+
+    @mock.patch('nova.objects.Instance.get_by_uuid')
+    def test_get_instance_nw_info_properly_queries_for_sysmeta(self,
+                                                               mock_get):
+        instance = objects.Instance(uuid=uuid.uuid4().hex)
+        with mock.patch.object(self.compute, 'network_api'):
+            self.compute._get_instance_nw_info(self.context, instance)
+        mock_get.assert_called_once_with(self.context, instance.uuid,
+                                         expected_attrs=['system_metadata'],
+                                         use_slave=False)
 
     def test_build_networks_if_not_allocated(self):
         instance = fake_instance.fake_instance_obj(self.context,
