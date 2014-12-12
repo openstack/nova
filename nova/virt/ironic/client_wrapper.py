@@ -50,10 +50,18 @@ class IronicClientWrapper(object):
             if not hasattr(ironic, 'client'):
                 ironic.client = importutils.import_module(
                                                     'ironicclient.client')
+        self._cached_client = None
+
+    def _invalidate_cached_client(self):
+        """Tell the wrapper to invalidate the cached ironic-client."""
+        self._cached_client = None
 
     def _get_client(self):
-        # TODO(deva): save and reuse existing client & auth token
-        #             until it expires or is no longer valid
+        # If we've already constructed a valid, authed client, just return
+        # that.
+        if self._cached_client is not None:
+            return self._cached_client
+
         auth_token = CONF.ironic.admin_auth_token
         if auth_token is None:
             kwargs = {'os_username': CONF.ironic.admin_username,
@@ -69,6 +77,10 @@ class IronicClientWrapper(object):
 
         try:
             cli = ironic.client.get_client(CONF.ironic.api_version, **kwargs)
+            # Cache the client so we don't have to reconstruct and
+            # reauthenticate it every time we need it.
+            self._cached_client = cli
+
         except ironic.exc.Unauthorized:
             msg = _("Unable to authenticate Ironic client.")
             LOG.error(msg)
@@ -105,16 +117,28 @@ class IronicClientWrapper(object):
 
         for attempt in range(1, num_attempts + 1):
             client = self._get_client()
+
             try:
                 return self._multi_getattr(client, method)(*args, **kwargs)
+            except ironic.exc.Unauthorized:
+                # In this case, the authorization token of the cached
+                # ironic-client probably expired. So invalidate the cached
+                # client and the next try will start with a fresh one.
+                self._invalidate_cached_client()
+                LOG.debug("The Ironic client became unauthorized. "
+                          "Will attempt to reauthorize and try again.")
             except retry_excs:
-                msg = (_("Error contacting Ironic server for '%(method)s'. "
-                         "Attempt %(attempt)d of %(total)d")
-                       % {'method': method,
-                          'attempt': attempt,
-                          'total': num_attempts})
-                if attempt == num_attempts:
-                    LOG.error(msg)
-                    raise exception.NovaException(msg)
-                LOG.warn(msg)
-                time.sleep(CONF.ironic.api_retry_interval)
+                pass
+
+            # We want to perform this logic for all exception cases listed
+            # above.
+            msg = (_("Error contacting Ironic server for "
+                     "'%(method)s'. Attempt %(attempt)d of %(total)d") %
+                        {'method': method,
+                         'attempt': attempt,
+                         'total': num_attempts})
+            if attempt == num_attempts:
+                LOG.error(msg)
+                raise exception.NovaException(msg)
+            LOG.warning(msg)
+            time.sleep(CONF.ironic.api_retry_interval)
