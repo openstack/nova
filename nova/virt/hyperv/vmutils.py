@@ -325,7 +325,7 @@ class VMUtils(object):
                                     'res_sub_type':
                                     self._PHYS_DISK_RES_SUB_TYPE,
                                     'res_sub_type_virt':
-                                    self._DISK_RES_SUB_TYPE,
+                                    self._DISK_DRIVE_RES_SUB_TYPE,
                                     'parent':
                                     scsi_controller_path.replace("'", "''")})
         return volumes
