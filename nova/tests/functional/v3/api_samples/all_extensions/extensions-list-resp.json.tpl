@@ -90,7 +90,7 @@
         },
         {
             "alias": "os-admin-actions",
-            "description": "Enable admin-only server actions\n\n    Actions include: pause, unpause, suspend, resume, migrate,\n    reset_network, inject_network_info, lock, unlock, create_backup\n    ",
+            "description": "Enable admin-only server actions\n\n    Actions include: resetNetwork, injectNetworkInfo, os-resetState\n    ",
             "links": [],
             "name": "AdminActions",
             "namespace": "http://docs.openstack.org/compute/ext/fake_xml",
