@@ -3230,7 +3230,7 @@ class API(base.Base):
 
     @check_instance_lock
     @check_instance_cell
-    @check_instance_state(vm_state=[vm_states.ACTIVE])
+    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.PAUSED])
     def live_migrate(self, context, instance, block_migration,
                      disk_over_commit, host_name):
         """Migrate a server lively to a new host."""

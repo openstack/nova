@@ -5261,7 +5261,6 @@ class ComputeManager(manager.Manager):
         finally:
             instance.host = self.host
             instance.power_state = current_power_state
-            instance.vm_state = vm_states.ACTIVE
             instance.task_state = None
             instance.node = node_name
             instance.save(expected_task_state=task_states.MIGRATING)
@@ -5288,7 +5287,6 @@ class ComputeManager(manager.Manager):
             if not none, contains implementation specific data.
 
         """
-        instance.vm_state = vm_states.ACTIVE
         instance.task_state = None
         instance.save(expected_task_state=[task_states.MIGRATING])
 

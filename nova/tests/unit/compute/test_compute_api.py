@@ -33,6 +33,7 @@ from nova.compute import task_states
 from nova.compute import utils as compute_utils
 from nova.compute import vm_mode
 from nova.compute import vm_states
+from nova import conductor
 from nova import context
 from nova import db
 from nova import exception
@@ -1694,6 +1695,36 @@ class _ComputeAPIUnitTestMixIn(object):
         self.compute_api.unpause(self.context, instance)
         self.assertEqual(vm_states.PAUSED, instance.vm_state)
         self.assertEqual(task_states.UNPAUSING, instance.task_state)
+
+    def test_live_migrate_active_vm_state(self):
+        instance = self._create_instance_obj()
+        self._live_migrate_instance(instance)
+
+    def test_live_migrate_paused_vm_state(self):
+        paused_state = dict(vm_state=vm_states.PAUSED)
+        instance = self._create_instance_obj(params=paused_state)
+        self._live_migrate_instance(instance)
+
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch.object(objects.InstanceAction, 'action_start')
+    def _live_migrate_instance(self, instance, _save, _action):
+        # TODO(gilliard): This logic is upside-down (different
+        # behaviour depending on which class this method is mixed-into. Once
+        # we have cellsv2 we can remove this kind of logic from this test
+        if self.cell_type == 'api':
+            api = self.compute_api.cells_rpcapi
+        else:
+            api = conductor.api.ComputeTaskAPI
+        with mock.patch.object(api, 'live_migrate_instance') as task:
+            self.compute_api.live_migrate(self.context, instance,
+                                          block_migration=True,
+                                          disk_over_commit=True,
+                                          host_name='fake_dest_host')
+            self.assertEqual(task_states.MIGRATING, instance.task_state)
+            task.assert_called_once_with(self.context, instance,
+                                         'fake_dest_host',
+                                         block_migration=True,
+                                         disk_over_commit=True)
 
     def test_swap_volume_volume_api_usage(self):
         # This test ensures that volume_id arguments are passed to volume_api

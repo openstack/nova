@@ -478,7 +478,7 @@ class ComputeTaskManager(base.Base):
                                    exception.InvalidLocalStorage,
                                    exception.InvalidSharedStorage,
                                    exception.HypervisorUnavailable,
-                                   exception.InstanceNotRunning,
+                                   exception.InstanceInvalidState,
                                    exception.MigrationPreCheckError,
                                    exception.LiveMigrationWithOldNovaNotSafe,
                                    exception.UnsupportedPolicyException)
@@ -614,7 +614,7 @@ class ComputeTaskManager(base.Base):
                 exception.InvalidLocalStorage,
                 exception.InvalidSharedStorage,
                 exception.HypervisorUnavailable,
-                exception.InstanceNotRunning,
+                exception.InstanceInvalidState,
                 exception.MigrationPreCheckError,
                 exception.LiveMigrationWithOldNovaNotSafe) as ex:
             with excutils.save_and_reraise_exception():

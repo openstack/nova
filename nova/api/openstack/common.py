@@ -103,6 +103,7 @@ _STATE_MAP = {
     },
     vm_states.PAUSED: {
         'default': 'PAUSED',
+        task_states.MIGRATING: 'MIGRATING',
     },
     vm_states.SUSPENDED: {
         'default': 'SUSPENDED',
