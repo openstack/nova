@@ -276,6 +276,7 @@ class CellsManager(manager.Manager):
                 ret_services.append(service)
         return ret_services
 
+    @oslo_messaging.expected_exceptions(exception.CellRoutingInconsistency)
     def service_get_by_compute_host(self, ctxt, host_name):
         """Return a service entry for a compute host in a certain cell."""
         cell_name, host_name = cells_utils.split_cell_and_item(host_name)
@@ -320,6 +321,7 @@ class CellsManager(manager.Manager):
             cell_service_id)
         self.msg_runner.service_delete(ctxt, cell_name, service_id)
 
+    @oslo_messaging.expected_exceptions(exception.CellRoutingInconsistency)
     def proxy_rpc_to_manager(self, ctxt, topic, rpc_message, call, timeout):
         """Proxy an RPC message as-is to a manager."""
         compute_topic = CONF.compute_topic

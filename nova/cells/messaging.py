@@ -346,6 +346,11 @@ class _TargetedMessage(_BaseMessage):
                 target_cell = '%s%s%s' % (self.our_path_part,
                                           _PATH_CELL_SEP,
                                           target_cell.name)
+        # NOTE(alaski): This occurs when hosts are specified with no cells
+        # routing information.
+        if target_cell is None:
+            reason = _('No cell given in routing path.')
+            raise exception.CellRoutingInconsistency(reason=reason)
         self.target_cell = target_cell
         self.base_attrs_to_json.append('target_cell')
 
