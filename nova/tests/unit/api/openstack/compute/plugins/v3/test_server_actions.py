@@ -449,7 +449,7 @@ class ServerActionsControllerTest(test.TestCase):
         body = {
             "rebuild": {
                 "imageRef": self._image_href,
-                "admin_password": "asdf",
+                "adminPass": "asdf",
             },
         }
 
@@ -458,6 +458,19 @@ class ServerActionsControllerTest(test.TestCase):
 
         self.assertEqual(body['server']['image']['id'], '2')
         self.assertNotIn('adminPass', body['server'])
+
+    def test_rebuild_server_with_extra_arg(self):
+        body = {
+            "rebuild": {
+                "imageRef": self._image_href,
+                "extra_arg": "asdf",
+            },
+        }
+
+        req = fakes.HTTPRequestV3.blank('')
+        self.assertRaises(exception.ValidationError,
+                          self.controller._action_rebuild,
+                          req, FAKE_UUID, body=body)
 
     def test_rebuild_server_not_found(self):
         def server_not_found(self, instance_id,

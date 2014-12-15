@@ -89,9 +89,7 @@ base_rebuild = {
                 'preserve_ephemeral': parameter_types.boolean,
             },
             'required': ['imageRef'],
-            # TODO(oomichi): ditto, enable here after all extension schema
-            # patches are merged.
-            # 'additionalProperties': False,
+            'additionalProperties': False,
         },
     },
     'required': ['rebuild'],
