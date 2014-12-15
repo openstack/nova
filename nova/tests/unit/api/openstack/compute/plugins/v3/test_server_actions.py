@@ -644,6 +644,23 @@ class ServerActionsControllerTest(test.TestCase):
                           self.controller._action_resize,
                           req, FAKE_UUID, body=body)
 
+    def test_resize_server_with_extra_arg(self):
+        body = dict(resize=dict(flavorRef="http://localhost/3",
+                                extra_arg="extra_arg"))
+
+        req = fakes.HTTPRequestV3.blank(self.url)
+        self.assertRaises(exception.ValidationError,
+                          self.controller._action_resize,
+                          req, FAKE_UUID, body=body)
+
+    def test_resize_server_invalid_flavor_ref(self):
+        body = dict(resize=dict(flavorRef=1.2))
+
+        req = fakes.HTTPRequestV3.blank(self.url)
+        self.assertRaises(exception.ValidationError,
+                          self.controller._action_resize,
+                          req, FAKE_UUID, body=body)
+
     def test_resize_with_server_not_found(self):
         body = dict(resize=dict(flavorRef="http://localhost/3"))
 
