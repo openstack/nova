@@ -69,9 +69,7 @@ base_update = {
             'properties': {
                 'name': parameter_types.name,
             },
-            # TODO(oomichi): ditto, enable here after all extension schema
-            # patches are merged.
-            # 'additionalProperties': False,
+            'additionalProperties': False,
         },
     },
     'required': ['server'],
