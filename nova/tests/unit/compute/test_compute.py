@@ -10556,7 +10556,7 @@ class ComputeReschedulingTestCase(BaseTestCase):
     def test_reschedule_success(self):
         retry = dict(num_attempts=1)
         filter_properties = dict(retry=retry)
-        request_spec = {'instance_uuids': ['foo', 'bar']}
+        request_spec = {'num_instances': 1}
         try:
             raise test.TestingException("just need an exception")
         except test.TestingException:
@@ -10566,7 +10566,6 @@ class ComputeReschedulingTestCase(BaseTestCase):
 
         self.assertTrue(self._reschedule(filter_properties=filter_properties,
             request_spec=request_spec, exc_info=exc_info))
-        self.assertEqual(1, len(request_spec['instance_uuids']))
         self.assertEqual(self.updated_task_state, self.expected_task_state)
         self.assertEqual(exc_str, filter_properties['retry']['exc'])
 

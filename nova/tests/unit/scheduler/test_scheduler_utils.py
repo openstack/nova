@@ -66,8 +66,9 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
                                                           [instance])
         self.assertIsInstance(request_spec['instance_properties'], dict)
 
-    def _test_set_vm_state_and_notify(self, request_spec,
-                                      expected_uuids):
+    def test_set_vm_state_and_notify(self):
+        expected_uuid = 'fake-uuid'
+        request_spec = dict(instance_properties=dict(uuid='other-uuid'))
         updates = dict(vm_state='fake-vm-state')
         service = 'fake-service'
         method = 'fake-method'
@@ -86,48 +87,37 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
         new_ref = 'new_ref'
         inst_obj = 'inst_obj'
 
-        for _uuid in expected_uuids:
-            db.instance_update_and_get_original(
-                    self.context, _uuid, updates,
-                    columns_to_join=['system_metadata']).AndReturn(
-                            (old_ref, new_ref))
-            notifications.send_update(self.context, old_ref, inst_obj,
-                                      service=service)
-            compute_utils.add_instance_fault_from_exc(
-                    self.context,
-                    new_ref, exc_info, mox.IsA(tuple))
+        db.instance_update_and_get_original(
+            self.context, expected_uuid, updates,
+            columns_to_join=['system_metadata']).AndReturn((old_ref, new_ref))
+        notifications.send_update(self.context, old_ref, inst_obj,
+                                  service=service)
+        compute_utils.add_instance_fault_from_exc(
+                self.context,
+                new_ref, exc_info, mox.IsA(tuple))
 
-            payload = dict(request_spec=request_spec,
-                           instance_properties=request_spec.get(
-                               'instance_properties', {}),
-                           instance_id=_uuid,
-                           state='fake-vm-state',
-                           method=method,
-                           reason=exc_info)
-            event_type = '%s.%s' % (service, method)
-            notifier.error(self.context, event_type, payload)
+        payload = dict(request_spec=request_spec,
+                       instance_properties=request_spec.get(
+                           'instance_properties', {}),
+                       instance_id=expected_uuid,
+                       state='fake-vm-state',
+                       method=method,
+                       reason=exc_info)
+        event_type = '%s.%s' % (service, method)
+        notifier.error(self.context, event_type, payload)
 
         self.mox.ReplayAll()
 
         with mock.patch.object(objects.Instance, '_from_db_object',
                                return_value=inst_obj):
             scheduler_utils.set_vm_state_and_notify(self.context,
+                                                    expected_uuid,
                                                     service,
                                                     method,
                                                     updates,
                                                     exc_info,
                                                     request_spec,
                                                     db)
-
-    def test_set_vm_state_and_notify_rs_uuids(self):
-        expected_uuids = ['1', '2', '3']
-        request_spec = dict(instance_uuids=expected_uuids)
-        self._test_set_vm_state_and_notify(request_spec, expected_uuids)
-
-    def test_set_vm_state_and_notify_uuid_from_instance_props(self):
-        expected_uuids = ['fake-uuid']
-        request_spec = dict(instance_properties=dict(uuid='fake-uuid'))
-        self._test_set_vm_state_and_notify(request_spec, expected_uuids)
 
     def _test_populate_filter_props(self, host_state_obj=True,
                                     with_retry=True,
@@ -262,7 +252,7 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
             scheduler_utils._SUPPORTS_ANTI_AFFINITY = None
             scheduler_utils._SUPPORTS_AFFINITY = None
             group_info = scheduler_utils._get_group_details(
-                self.context, ['fake_uuid'], group_hosts)
+                self.context, 'fake_uuid', group_hosts)
             self.assertEqual(
                 (set(['hostA', 'hostB']), [policy]),
                 group_info)
@@ -277,10 +267,10 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
         scheduler_utils._SUPPORTS_ANTI_AFFINITY = None
         scheduler_utils._SUPPORTS_AFFINITY = None
         group_info = scheduler_utils._get_group_details(self.context,
-                                                        ['fake-uuid'])
+                                                        'fake-uuid')
         self.assertIsNone(group_info)
 
-    def test_get_group_details_with_no_instance_uuids(self):
+    def test_get_group_details_with_no_instance_uuid(self):
         self.flags(scheduler_default_filters=['fake'])
         scheduler_utils._SUPPORTS_ANTI_AFFINITY = None
         scheduler_utils._SUPPORTS_AFFINITY = None
@@ -312,7 +302,7 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
             scheduler_utils._SUPPORTS_AFFINITY = None
             self.assertRaises(exception.NoValidHost,
                               scheduler_utils._get_group_details,
-                              self.context, ['fake-uuid'])
+                              self.context, 'fake-uuid')
 
     def test_get_group_details_with_filter_not_configured(self):
         policies = ['anti-affinity', 'affinity']
@@ -323,12 +313,12 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
     def test_setup_instance_group_in_filter_properties(self, mock_ggd):
         mock_ggd.return_value = scheduler_utils.GroupDetails(
             hosts=set(['hostA', 'hostB']), policies=['policy'])
-        spec = {'instance_uuids': ['fake-uuid']}
+        spec = {'instance_properties': {'uuid': 'fake-uuid'}}
         filter_props = {'group_hosts': ['hostC']}
 
         scheduler_utils.setup_instance_group(self.context, spec, filter_props)
 
-        mock_ggd.assert_called_once_with(self.context, ['fake-uuid'],
+        mock_ggd.assert_called_once_with(self.context, 'fake-uuid',
                                          ['hostC'])
         expected_filter_props = {'group_updated': True,
                                  'group_hosts': set(['hostA', 'hostB']),
@@ -338,12 +328,12 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
     @mock.patch.object(scheduler_utils, '_get_group_details')
     def test_setup_instance_group_with_no_group(self, mock_ggd):
         mock_ggd.return_value = None
-        spec = {'instance_uuids': ['fake-uuid']}
+        spec = {'instance_properties': {'uuid': 'fake-uuid'}}
         filter_props = {'group_hosts': ['hostC']}
 
         scheduler_utils.setup_instance_group(self.context, spec, filter_props)
 
-        mock_ggd.assert_called_once_with(self.context, ['fake-uuid'],
+        mock_ggd.assert_called_once_with(self.context, 'fake-uuid',
                                          ['hostC'])
         self.assertNotIn('group_updated', filter_props)
         self.assertNotIn('group_policies', filter_props)
@@ -352,7 +342,7 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
     @mock.patch.object(scheduler_utils, '_get_group_details')
     def test_setup_instance_group_with_filter_not_configured(self, mock_ggd):
         mock_ggd.side_effect = exception.NoValidHost(reason='whatever')
-        spec = {'instance_uuids': ['fake-uuid']}
+        spec = {'instance_properties': {'uuid': 'fake-uuid'}}
         filter_props = {'group_hosts': ['hostC']}
 
         self.assertRaises(exception.NoValidHost,
