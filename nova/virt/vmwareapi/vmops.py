@@ -1086,9 +1086,11 @@ class VMwareVMOps(object):
     def _resize_vm(self, vm_ref, flavor):
         """Resizes the VM according to the flavor."""
         client_factory = self._session.vim.client.factory
+        extra_specs = self._get_extra_specs(flavor)
         vm_resize_spec = vm_util.get_vm_resize_spec(client_factory,
                                                     int(flavor['vcpus']),
-                                                    int(flavor['memory_mb']))
+                                                    int(flavor['memory_mb']),
+                                                    extra_specs)
         vm_util.reconfigure_vm(self._session, vm_ref, vm_resize_spec)
 
     def _resize_disk(self, instance, vm_ref, vmdk, flavor):
@@ -1205,9 +1207,14 @@ class VMwareVMOps(object):
         vm_util.power_off_instance(self._session, instance, vm_ref)
         client_factory = self._session.vim.client.factory
         # Reconfigure the VM properties
+        flavor = objects.Flavor.get_by_id(
+            nova_context.get_admin_context(read_deleted='yes'),
+            instance.instance_type_id)
+        extra_specs = self._get_extra_specs(flavor)
         vm_resize_spec = vm_util.get_vm_resize_spec(client_factory,
                                                     int(instance.vcpus),
-                                                    int(instance.memory_mb))
+                                                    int(instance.memory_mb),
+                                                    extra_specs)
         vm_util.reconfigure_vm(self._session, vm_ref, vm_resize_spec)
 
         # Reconfigure the disks if necessary

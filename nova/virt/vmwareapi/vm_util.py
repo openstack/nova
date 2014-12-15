@@ -135,6 +135,32 @@ def _iface_id_option_value(client_factory, iface_id, port_index):
     return opt
 
 
+def _get_allocation_info(client_factory, extra_specs):
+    allocation = client_factory.create('ns0:ResourceAllocationInfo')
+    if extra_specs.cpu_limits.cpu_limit:
+        allocation.limit = extra_specs.cpu_limits.cpu_limit
+    else:
+        # Set as 'umlimited'
+        allocation.limit = -1
+    if extra_specs.cpu_limits.cpu_reservation:
+        allocation.reservation = extra_specs.cpu_limits.cpu_reservation
+    else:
+        allocation.reservation = 0
+    shares = client_factory.create('ns0:SharesInfo')
+    if extra_specs.cpu_limits.cpu_shares_level:
+        shares.level = extra_specs.cpu_limits.cpu_shares_level
+        if (shares.level == 'custom' and
+            extra_specs.cpu_limits.cpu_shares_share):
+            shares.shares = extra_specs.cpu_limits.cpu_shares_share
+        else:
+            shares.shares = 0
+    else:
+        shares.level = 'normal'
+        shares.shares = 0
+    allocation.shares = shares
+    return allocation
+
+
 def get_vm_create_spec(client_factory, instance, name, data_store_name,
                        vif_infos, extra_specs,
                        os_type=constants.DEFAULT_OS_TYPE,
@@ -175,21 +201,8 @@ def get_vm_create_spec(client_factory, instance, name, data_store_name,
 
     # Configure cpu information
     if extra_specs.has_cpu_limits():
-        allocation = client_factory.create('ns0:ResourceAllocationInfo')
-        if extra_specs.cpu_limits.cpu_limit:
-            allocation.limit = extra_specs.cpu_limits.cpu_limit
-        if extra_specs.cpu_limits.cpu_reservation:
-            allocation.reservation = extra_specs.cpu_limits.cpu_reservation
-        if extra_specs.cpu_limits.cpu_shares_level:
-            shares = client_factory.create('ns0:SharesInfo')
-            shares.level = extra_specs.cpu_limits.cpu_shares_level
-            if (shares.level == 'custom' and
-                extra_specs.cpu_limits.cpu_shares_share):
-                shares.shares = extra_specs.cpu_limits.cpu_shares_share
-            else:
-                shares.shares = 0
-            allocation.shares = shares
-        config_spec.cpuAllocation = allocation
+        config_spec.cpuAllocation = _get_allocation_info(client_factory,
+                                                         extra_specs)
 
     vif_spec_list = []
     for vif_info in vif_infos:
@@ -226,11 +239,13 @@ def get_vm_create_spec(client_factory, instance, name, data_store_name,
     return config_spec
 
 
-def get_vm_resize_spec(client_factory, vcpus, memory_mb):
+def get_vm_resize_spec(client_factory, vcpus, memory_mb, extra_specs):
     """Provides updates for a VM spec."""
     resize_spec = client_factory.create('ns0:VirtualMachineConfigSpec')
     resize_spec.numCPUs = vcpus
     resize_spec.memoryMB = memory_mb
+    resize_spec.cpuAllocation = _get_allocation_info(client_factory,
+                                                     extra_specs)
     return resize_spec
 
 
