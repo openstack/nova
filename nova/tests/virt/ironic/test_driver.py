@@ -659,12 +659,22 @@ class IronicDriverTestCase(test.NoDBTestCase):
     @mock.patch.object(objects.Flavor, 'get_by_id')
     @mock.patch.object(FAKE_CLIENT.node, 'update')
     def test__cleanup_deploy_good(self, mock_update, mock_flavor):
+        self._get_by_id_reads_deleted = False
+
+        def side_effect(context, id):
+            self._get_by_id_reads_deleted = context._read_deleted == 'yes'
+
+        mock_flavor.side_effect = side_effect
         mock_flavor.return_value = ironic_utils.get_test_flavor(extra_specs={})
         node = ironic_utils.get_test_node(driver='fake',
                                           instance_uuid='fake-id')
         instance = fake_instance.fake_instance_obj(self.ctx,
                                                    node=node.uuid)
         self.driver._cleanup_deploy(self.ctx, node, instance, None)
+
+        self.assertTrue(self._get_by_id_reads_deleted,
+                        'Flavor.get_by_id was not called with '
+                        'read_deleted set in the context')
         expected_patch = [{'path': '/instance_uuid', 'op': 'remove'}]
         mock_update.assert_called_once_with(node.uuid, expected_patch)
 
