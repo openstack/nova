@@ -367,6 +367,13 @@ class HackingTestCase(test.NoDBTestCase):
         self._assert_has_errors(code, checks.check_api_version_decorator,
                                 expected_errors=[(2, 0, "N332")])
 
+    def test_oslo_namespace_imports_check(self):
+        code = """
+               from oslo.concurrency import processutils
+               """
+        self._assert_has_errors(code, checks.check_oslo_namespace_imports,
+                                expected_errors=[(1, 0, "N333")])
+
     def test_trans_add(self):
 
         checker = checks.CheckForTransAdd
