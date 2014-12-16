@@ -27,6 +27,16 @@ class MicroversionsTest(test.NoDBTestCase):
 
     header_name = 'X-OpenStack-Nova-API-Version'
 
+    def _test_microversions(self, app, req, ret_code, ret_header=None):
+        req.environ['CONTENT_TYPE'] = "application/json"
+
+        res = req.get_response(app)
+        self.assertEqual(ret_code, res.status_int)
+        if ret_header:
+            self.assertEqual(ret_header,
+                             res.headers[self.header_name])
+        return res
+
     @mock.patch("nova.api.openstack.APIRouterV21.api_extension_namespace",
                 return_value='nova.api.v3.test_extensions')
     def test_microversions_no_header(self, mock_namespace):
@@ -287,3 +297,33 @@ class MicroversionsTest(test.NoDBTestCase):
             self.assertIn(param, expected_res)
             self.assertEqual(expected_res[param], resp_json[param])
         self.assertEqual(3, len(resp_json))
+
+    @mock.patch("nova.api.openstack.api_version_request.max_api_version")
+    @mock.patch("nova.api.openstack.APIRouterV21.api_extension_namespace",
+                return_value='nova.api.v3.test_extensions')
+    def _test_microversions_actions(self, ret_code, ret_header, req_header,
+                                    mock_namespace,
+                                    mock_maxver):
+        mock_maxver.return_value = api_version.APIVersionRequest("2.3")
+
+        app = fakes.wsgi_app_v21(init_only='test-microversions')
+        req = fakes.HTTPRequest.blank('/v2/fake/microversions3/1/action')
+        if req_header:
+            req.headers = {self.header_name: req_header}
+        req.method = 'POST'
+        req.body = jsonutils.dumps({'foo': None})
+
+        res = self._test_microversions(app, req, ret_code,
+                                       ret_header=ret_header)
+        if ret_code == 202:
+            resp_json = jsonutils.loads(res.body)
+            self.assertEqual({'foo': 'bar'}, resp_json)
+
+    def test_microversions_actions(self):
+        self._test_microversions_actions(202, "2.1", "2.1")
+
+    def test_microversions_actions_too_high(self):
+        self._test_microversions_actions(404, "2.3", "2.3")
+
+    def test_microversions_actions_no_header(self):
+        self._test_microversions_actions(202, "2.1", None)
