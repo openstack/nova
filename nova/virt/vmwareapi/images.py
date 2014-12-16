@@ -30,7 +30,6 @@ from nova import image
 from nova.openstack.common import log as logging
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import io_util
-from nova.virt.vmwareapi import read_write_util
 
 # NOTE(mdbooth): We use use_linked_clone below, but don't have to import it
 # because nova.virt.vmwareapi.driver is imported first. In fact, it is not
@@ -203,7 +202,7 @@ def upload_iso_to_datastore(iso_path, instance, **kwargs):
     LOG.debug("Uploading iso %s to datastore", iso_path,
               instance=instance)
     with open(iso_path, 'r') as iso_file:
-        write_file_handle = read_write_util.VMwareHTTPWriteFile(
+        write_file_handle = rw_handles.FileWriteHandle(
             kwargs.get("host"),
             kwargs.get("port"),
             kwargs.get("data_center_name"),
@@ -238,8 +237,8 @@ def fetch_image(context, instance, host, port, dc_name, ds_name, file_path,
     metadata = IMAGE_API.get(context, image_ref)
     file_size = int(metadata['size'])
     read_iter = IMAGE_API.download(context, image_ref)
-    read_file_handle = read_write_util.GlanceFileRead(read_iter)
-    write_file_handle = read_write_util.VMwareHTTPWriteFile(
+    read_file_handle = rw_handles.ImageReadHandle(read_iter)
+    write_file_handle = rw_handles.FileWriteHandle(
         host, port, dc_name, ds_name, cookies, file_path, file_size)
     start_transfer(context, read_file_handle, file_size,
                    write_file_handle=write_file_handle)

@@ -19,13 +19,13 @@ import contextlib
 
 import mock
 from oslo.utils import units
+from oslo.vmware import rw_handles
 
 from nova import exception
 from nova import test
 import nova.tests.unit.image.fake
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import images
-from nova.virt.vmwareapi import read_write_util
 
 
 class VMwareImagesTestCase(test.NoDBTestCase):
@@ -61,9 +61,9 @@ class VMwareImagesTestCase(test.NoDBTestCase):
             return write_file_handle
 
         with contextlib.nested(
-             mock.patch.object(read_write_util, 'GlanceFileRead',
+             mock.patch.object(rw_handles, 'ImageReadHandle',
                                side_effect=fake_read_handle),
-             mock.patch.object(read_write_util, 'VMwareHTTPWriteFile',
+             mock.patch.object(rw_handles, 'FileWriteHandle',
                                side_effect=fake_write_handle),
              mock.patch.object(images, 'start_transfer'),
              mock.patch.object(images.IMAGE_API, 'get',
