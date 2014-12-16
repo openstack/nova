@@ -66,7 +66,7 @@ class ConsoleAuthTokens(extensions.V3APIExtensionBase):
 
     def get_resources(self):
         controller = ConsoleAuthTokensController()
-        ext = extensions.ResourceExtension('os-console-auth-tokens',
+        ext = extensions.ResourceExtension(ALIAS,
                                            controller)
         return [ext]
 

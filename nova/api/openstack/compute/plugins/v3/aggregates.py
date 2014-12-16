@@ -209,7 +209,7 @@ class Aggregates(extensions.V3APIExtensionBase):
 
     def get_resources(self):
         resources = [extensions.ResourceExtension(
-                                            self.alias,
+                                            ALIAS,
                                             AggregateController(),
                                             member_actions={'action': 'POST'})]
         return resources
