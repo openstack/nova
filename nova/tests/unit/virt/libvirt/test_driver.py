@@ -6991,6 +6991,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         instance_ref = self.test_instance
         instance_ref['image_ref'] = 123456  # we send an int to test sha1 call
         instance = objects.Instance(**instance_ref)
+        image_meta = {}
         flavor = instance.get_flavor()
         flavor.extra_specs = {}
 
@@ -7017,7 +7018,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                         'cache',
                         fake_none)
 
-            drvr.spawn(self.context, instance, None, [], 'herp',
+            drvr.spawn(self.context, instance, image_meta, [], 'herp',
                         network_info=network_info, flavor=flavor)
 
         path = os.path.join(CONF.instances_path, instance['name'])
@@ -7045,6 +7046,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         instance_ref = self.test_instance
         instance_ref['image_ref'] = 1
         instance = objects.Instance(**instance_ref)
+        image_meta = {}
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.stubs.Set(drvr, '_get_guest_xml', fake_none)
@@ -7052,7 +7054,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.stubs.Set(drvr, '_create_domain_and_network', fake_none)
         self.stubs.Set(drvr, 'get_info', fake_get_info)
 
-        drvr.spawn(self.context, instance, None, [], None)
+        drvr.spawn(self.context, instance, image_meta, [], None)
         self.assertTrue(self.create_image_called)
 
         drvr.spawn(self.context,
@@ -7095,8 +7097,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         instance_ref['root_device_name'] = '/dev/vda'
         instance_ref['uuid'] = uuidutils.generate_uuid()
         instance = objects.Instance(**instance_ref)
+        image_meta = {}
 
-        drvr.spawn(self.context, instance, None, [], None,
+        drvr.spawn(self.context, instance, image_meta, [], None,
                    block_device_info=block_device_info)
         self.assertFalse(self.cache_called_for_disk)
 
@@ -7106,8 +7109,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         instance_ref['root_device_name'] = '/dev/vda'
         instance_ref['uuid'] = uuidutils.generate_uuid()
         instance = objects.Instance(**instance_ref)
+        image_meta = {}
 
-        drvr.spawn(self.context, instance, None, [], None,
+        drvr.spawn(self.context, instance, image_meta, [], None,
                    block_device_info=block_device_info)
         self.assertFalse(self.cache_called_for_disk)
 
@@ -7115,7 +7119,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         instance_ref['image_ref'] = 'my_fake_image'
         instance_ref['uuid'] = uuidutils.generate_uuid()
         instance = objects.Instance(**instance_ref)
-        drvr.spawn(self.context, instance, None, [], None)
+        drvr.spawn(self.context, instance, image_meta, [], None)
         self.assertTrue(self.cache_called_for_disk)
 
     def test_start_lxc_from_volume(self):
@@ -7182,6 +7186,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         instance_ref['uuid'] = uuidutils.generate_uuid()
         instance_ref['system_metadata']['image_disk_format'] = 'qcow2'
         inst_obj = objects.Instance(**instance_ref)
+        image_meta = {}
 
         flavor = inst_obj.get_flavor()
         flavor.extra_specs = {}
@@ -7207,7 +7212,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             mock.patch.object(objects.Flavor, 'get_by_id',
                               return_value=flavor)):
 
-            drvr.spawn(self.context, inst_obj, None, [], None,
+            drvr.spawn(self.context, inst_obj, image_meta, [], None,
                        network_info=[],
                        block_device_info=block_device_info)
             self.assertEqual('/dev/nbd1',
@@ -7250,8 +7255,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         instance = objects.Instance(**instance_ref)
         instance['pci_devices'] = objects.PciDeviceList(
             objects=[objects.PciDevice(address='0000:00:00.0')])
+        image_meta = {}
 
-        drvr.spawn(self.context, instance, None, [], None)
+        drvr.spawn(self.context, instance, image_meta, [], None)
 
     def test_chown_disk_config_for_instance(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -11459,10 +11465,11 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                        fake_get_info)
 
         ins_ref = self._create_instance()
+        image_meta = {}
 
         self.drvr.finish_migration(
                       context.get_admin_context(), None, ins_ref,
-                      disk_info_text, [], None,
+                      disk_info_text, [], image_meta,
                       resize_instance, None, power_on)
         self.assertTrue(self.fake_create_domain_called)
         self.assertEqual(
@@ -11482,6 +11489,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         .finish_revert_migration.
         """
         powered_on = power_on
+
         self.fake_create_domain_called = False
 
         def fake_execute(*args, **kwargs):
@@ -11521,7 +11529,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                        fake_enable_hairpin)
         self.stubs.Set(self.drvr, 'get_info',
                        fake_get_info)
-        self.stubs.Set(compute_utils, 'get_image_metadata', lambda *a: None)
+        self.stubs.Set(compute_utils, 'get_image_metadata', lambda *a: {})
 
         with utils.tempdir() as tmpdir:
             self.flags(instances_path=tmpdir)

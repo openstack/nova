@@ -315,8 +315,10 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
 
     @catch_notimplementederror
     def test_rescue(self):
+        image_meta = {}
         instance_ref, network_info = self._get_running_instance()
-        self.connection.rescue(self.ctxt, instance_ref, network_info, None, '')
+        self.connection.rescue(self.ctxt, instance_ref, network_info,
+                               image_meta, '')
 
     @catch_notimplementederror
     def test_unrescue_unrescued_instance(self):
@@ -325,8 +327,10 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
 
     @catch_notimplementederror
     def test_unrescue_rescued_instance(self):
+        image_meta = {}
         instance_ref, network_info = self._get_running_instance()
-        self.connection.rescue(self.ctxt, instance_ref, network_info, None, '')
+        self.connection.rescue(self.ctxt, instance_ref, network_info,
+                               image_meta, '')
         self.connection.unrescue(instance_ref, network_info)
 
     @catch_notimplementederror
