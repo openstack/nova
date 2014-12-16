@@ -308,7 +308,9 @@ class IronicDriver(virt_driver.ComputeDriver):
         if flavor is None:
             # TODO(mrda): It would be better to use instance.get_flavor() here
             # but right now that doesn't include extra_specs which are required
-            flavor = objects.Flavor.get_by_id(context,
+            # NOTE(pmurray): Flavor may have been deleted
+            ctxt = context.elevated(read_deleted="yes")
+            flavor = objects.Flavor.get_by_id(ctxt,
                                               instance['instance_type_id'])
         patch = patcher.create(node).get_cleanup_patch(instance, network_info,
                                                        flavor)
