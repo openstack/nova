@@ -846,23 +846,6 @@ def instance_group_get_all_by_project_id(context, project_id):
     return IMPL.instance_group_get_all_by_project_id(context, project_id)
 
 
-def instance_group_metadata_add(context, group_uuid, metadata,
-                                set_delete=False):
-    """Add metadata to the group."""
-    return IMPL.instance_group_metadata_add(context, group_uuid, metadata,
-                                            set_delete)
-
-
-def instance_group_metadata_delete(context, group_uuid, key):
-    """Delete metadata from the group."""
-    return IMPL.instance_group_metadata_delete(context, group_uuid, key)
-
-
-def instance_group_metadata_get(context, group_uuid):
-    """Get the metadata from the group."""
-    return IMPL.instance_group_metadata_get(context, group_uuid)
-
-
 def instance_group_members_add(context, group_uuid, members,
                                set_delete=False):
     """Add members to the group."""
