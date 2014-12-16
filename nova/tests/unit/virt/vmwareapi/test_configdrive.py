@@ -82,6 +82,9 @@ class ConfigDriveTestCase(test.NoDBTestCase):
         }
         self.test_instance = fake_instance.fake_instance_obj(self.context,
                                                              **instance_values)
+        self.test_instance.flavor = objects.Flavor(vcpus=4, memory_mb=8192,
+                                                   ephemeral_gb=0, swap=0,
+                                                   extra_specs={})
 
         (image_service, image_id) = glance.get_remote_image_service(context,
                                     image_ref)

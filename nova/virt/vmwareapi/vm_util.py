@@ -1571,3 +1571,19 @@ def get_ephemerals(session, vm_ref):
                 if 'ephemeral' in device.backing.fileName:
                     devices.append(device)
     return devices
+
+
+def get_swap(session, vm_ref):
+    hardware_devices = session._call_method(vim_util,
+            "get_dynamic_property", vm_ref, "VirtualMachine",
+            "config.hardware.device")
+
+    if hardware_devices.__class__.__name__ == "ArrayOfVirtualDevice":
+        hardware_devices = hardware_devices.VirtualDevice
+
+    for device in hardware_devices:
+        if (device.__class__.__name__ == "VirtualDisk" and
+                device.backing.__class__.__name__ ==
+                    "VirtualDiskFlatVer2BackingInfo" and
+                'swap' in device.backing.fileName):
+            return device

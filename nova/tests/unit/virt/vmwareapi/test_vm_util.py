@@ -1411,6 +1411,37 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         expected.extraConfig.append(extra_config)
         self.assertEqual(expected, result)
 
+    def test_get_swap(self):
+        vm_ref = 'fake-vm-ref'
+
+        # Root disk
+        controller_key = 1000
+        root_disk = fake.VirtualDisk()
+        root_disk.controllerKey = controller_key
+        disk_backing = fake.VirtualDiskFlatVer2BackingInfo()
+        disk_backing.fileName = '[test_datastore] uuid/uuid.vmdk'
+        root_disk.capacityInBytes = 1048576
+        root_disk.backing = disk_backing
+
+        # Swap disk
+        swap_disk = fake.VirtualDisk()
+        swap_disk.controllerKey = controller_key
+        disk_backing = fake.VirtualDiskFlatVer2BackingInfo()
+        disk_backing.fileName = "swap"
+        swap_disk.capacityInBytes = 1024
+        swap_disk.backing = disk_backing
+        devices = [root_disk, swap_disk]
+
+        session = fake.FakeSession()
+        with mock.patch.object(session, '_call_method',
+                               return_value=devices) as mock_call:
+            device = vm_util.get_swap(session, vm_ref)
+
+            mock_call.assert_called_once_with(mock.ANY,
+                "get_dynamic_property", vm_ref, "VirtualMachine",
+                "config.hardware.device")
+            self.assertEqual(swap_disk, device)
+
 
 @mock.patch.object(driver.VMwareAPISession, 'vim', stubs.fake_vim_prop)
 class VMwareVMUtilGetHostRefTestCase(test.NoDBTestCase):

@@ -557,8 +557,8 @@ class VMwareVMOps(object):
                           instance=vi.instance)
                 self._delete_datastore_file(str(tmp_dir_loc), vi.dc_info.ref)
 
-    def _create_and_attach_ephemeral_disk(self, instance, vm_ref, dc_info,
-                                          size, adapter_type, path):
+    def _create_and_attach_thin_disk(self, instance, vm_ref, dc_info, size,
+                                     adapter_type, path):
         disk_type = constants.DISK_TYPE_THIN
         vm_util.create_virtual_disk(
                 self._session, dc_info.ref,
@@ -583,19 +583,42 @@ class VMwareVMOps(object):
                 filename = vm_util.get_ephemeral_name(idx)
                 path = str(ds_obj.DatastorePath(datastore.name, folder,
                                                 filename))
-                self._create_and_attach_ephemeral_disk(instance, vm_ref,
-                                                       dc_info, size,
-                                                       at, path)
+                self._create_and_attach_thin_disk(instance, vm_ref, dc_info,
+                                                  size, at, path)
+
         # There may be block devices defined but no ephemerals. In this case
         # we need to allocate a ephemeral disk if required
         if not ephemerals and instance.ephemeral_gb:
             size = instance.ephemeral_gb * units.Mi
             filename = vm_util.get_ephemeral_name(0)
             path = str(ds_obj.DatastorePath(datastore.name, folder,
-                                            filename))
-            self._create_and_attach_ephemeral_disk(instance, vm_ref,
-                                                   dc_info, size,
-                                                   adapter_type, path)
+                                             filename))
+            self._create_and_attach_thin_disk(instance, vm_ref, dc_info, size,
+                                              adapter_type, path)
+
+    def _create_swap(self, bdi, instance, vm_ref, dc_info, datastore,
+                     folder, adapter_type):
+        swap = None
+        filename = "swap.vmdk"
+        path = str(ds_obj.DatastorePath(datastore.name, folder, filename))
+        if bdi is not None:
+            swap = driver.block_device_info_get_swap(bdi)
+            if driver.swap_is_usable(swap):
+                size = swap['swap_size'] * units.Ki
+                self._create_and_attach_thin_disk(instance, vm_ref, dc_info,
+                                                  size, adapter_type, path)
+            else:
+                # driver.block_device_info_get_swap returns
+                # {'device_name': None, 'swap_size': 0} if swap is None
+                # in block_device_info.  If block_device_info does not contain
+                # a swap device, we need to reset swap to None, so we can
+                # extract the swap_size from the instance's flavor.
+                swap = None
+
+        size = instance.flavor.swap * units.Ki
+        if not swap and size > 0:
+            self._create_and_attach_thin_disk(instance, vm_ref, dc_info, size,
+                                              adapter_type, path)
 
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info, block_device_info=None):
@@ -678,6 +701,8 @@ class VMwareVMOps(object):
         self._create_ephemeral(block_device_info, instance, vm_ref,
                                vi.dc_info, vi.datastore, instance.uuid,
                                vi.ii.adapter_type)
+        self._create_swap(block_device_info, instance, vm_ref, vi.dc_info,
+                          vi.datastore, instance.uuid, vi.ii.adapter_type)
 
         if configdrive.required_by(instance):
             self._configure_config_drive(
@@ -1176,12 +1201,17 @@ class VMwareVMOps(object):
                                               vmdk.adapter_type,
                                               vmdk.disk_type, vmdk.path)
 
-    def _remove_ephemerals(self, vm_ref):
+    def _remove_ephemerals_and_swap(self, vm_ref):
         devices = vm_util.get_ephemerals(self._session, vm_ref)
+        swap = vm_util.get_swap(self._session, vm_ref)
+        if swap is not None:
+            devices.append(swap)
+
         if devices:
             vm_util.detach_devices_from_vm(self._session, vm_ref, devices)
 
-    def _resize_create_ephemerals(self, vm_ref, instance, block_device_info):
+    def _resize_create_ephemerals_and_swap(self, vm_ref, instance,
+                                           block_device_info):
         vmdk = vm_util.get_vmdk_info(self._session, vm_ref,
                                      uuid=instance.uuid)
         ds_ref = vmdk.device.backing.datastore
@@ -1190,6 +1220,8 @@ class VMwareVMOps(object):
         folder = ds_obj.DatastorePath.parse(vmdk.path).dirname
         self._create_ephemeral(block_device_info, instance, vm_ref,
                                dc_info, datastore, folder, vmdk.adapter_type)
+        self._create_swap(block_device_info, instance, vm_ref, dc_info,
+                          datastore, folder, vmdk.adapter_type)
 
     def migrate_disk_and_power_off(self, context, instance, dest,
                                    flavor):
@@ -1235,8 +1267,8 @@ class VMwareVMOps(object):
                                        step=3,
                                        total_steps=RESIZE_TOTAL_STEPS)
 
-        # 4. Purge ephemeral disks
-        self._remove_ephemerals(vm_ref)
+        # 4. Purge ephemeral and swap disks
+        self._remove_ephemerals_and_swap(vm_ref)
         self._update_instance_progress(context, instance,
                                        step=4,
                                        total_steps=RESIZE_TOTAL_STEPS)
@@ -1298,8 +1330,9 @@ class VMwareVMOps(object):
                                               vmdk.adapter_type,
                                               vmdk.disk_type, vmdk.path)
         # Reconfigure ephemerals
-        self._remove_ephemerals(vm_ref)
-        self._resize_create_ephemerals(vm_ref, instance, block_device_info)
+        self._remove_ephemerals_and_swap(vm_ref)
+        self._resize_create_ephemerals_and_swap(vm_ref, instance,
+                                                block_device_info)
         if power_on:
             vm_util.power_on_instance(self._session, instance)
 
@@ -1310,7 +1343,8 @@ class VMwareVMOps(object):
         vm_ref = vm_util.get_vm_ref(self._session, instance)
 
         # 5. Update ephemerals if necessary
-        self._resize_create_ephemerals(vm_ref, instance, block_device_info)
+        self._resize_create_ephemerals_and_swap(vm_ref, instance,
+                                                block_device_info)
 
         self._update_instance_progress(context, instance,
                                        step=5,
