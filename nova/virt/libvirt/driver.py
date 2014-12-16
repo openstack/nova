@@ -6166,13 +6166,17 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def default_device_names_for_instance(self, instance, root_device_name,
                                           *block_device_lists):
+        image_meta = utils.get_image_from_system_metadata(
+            instance.system_metadata)
+
         ephemerals, swap, block_device_mapping = block_device_lists[:3]
 
         blockinfo.default_device_names(CONF.libvirt.virt_type,
                                        nova_context.get_admin_context(),
                                        instance, root_device_name,
                                        ephemerals, swap,
-                                       block_device_mapping)
+                                       block_device_mapping,
+                                       image_meta)
 
     def is_supported_fs_format(self, fs_type):
         return fs_type in [disk.FS_FORMAT_EXT2, disk.FS_FORMAT_EXT3,

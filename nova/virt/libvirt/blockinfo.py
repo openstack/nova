@@ -430,7 +430,8 @@ def get_root_info(virt_type, image_meta, root_bdm, disk_bus, cdrom_bus,
 
 
 def default_device_names(virt_type, context, instance, root_device_name,
-                         ephemerals, swap, block_device_mapping):
+                         ephemerals, swap, block_device_mapping,
+                         image_meta):
 
     block_device_info = {
         'root_device_name': root_device_name,
@@ -446,7 +447,7 @@ def default_device_names(virt_type, context, instance, root_device_name,
                 block_device_mapping))
     }
 
-    get_disk_info(virt_type, instance, block_device_info)
+    get_disk_info(virt_type, instance, block_device_info, image_meta)
 
     for driver_bdm in itertools.chain(block_device_info['ephemerals'],
                                [block_device_info['swap']] if
