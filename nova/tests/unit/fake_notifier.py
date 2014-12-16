@@ -15,8 +15,8 @@
 import collections
 import functools
 
-import anyjson
 from oslo import messaging
+from oslo.serialization import jsonutils
 
 from nova import rpc
 
@@ -54,7 +54,7 @@ class FakeNotifier(object):
         # NOTE(sileht): simulate the kombu serializer
         # this permit to raise an exception if something have not
         # been serialized correctly
-        anyjson.serialize(payload)
+        jsonutils.to_primitive(payload)
         msg = FakeMessage(self.publisher_id, priority, event_type, payload)
         NOTIFICATIONS.append(msg)
 
