@@ -14,6 +14,7 @@
 #    under the License.
 
 import mock
+from oslo import messaging
 
 from nova.conductor import api as conductor_api
 from nova import context
@@ -100,6 +101,25 @@ class SchedulerClientTestCase(test.TestCase):
         self.assertIsNotNone(self.client.queryclient.instance)
         mock_select_destinations.assert_called_once_with(
             'ctxt', 'fake_spec', 'fake_prop')
+
+    @mock.patch.object(scheduler_query_client.SchedulerQueryClient,
+                       'select_destinations',
+                       side_effect=messaging.MessagingTimeout())
+    def test_select_destinations_timeout(self, mock_select_destinations):
+        # check if the scheduler service times out properly
+        fake_args = ['ctxt', 'fake_spec', 'fake_prop']
+        self.assertRaises(messaging.MessagingTimeout,
+                          self.client.select_destinations, *fake_args)
+        mock_select_destinations.assert_has_calls([mock.call(*fake_args)] * 2)
+
+    @mock.patch.object(scheduler_query_client.SchedulerQueryClient,
+                       'select_destinations', side_effect=[
+                           messaging.MessagingTimeout(), mock.DEFAULT])
+    def test_select_destinations_timeout_once(self, mock_select_destinations):
+        # scenario: the scheduler service times out & recovers after failure
+        fake_args = ['ctxt', 'fake_spec', 'fake_prop']
+        self.client.select_destinations(*fake_args)
+        mock_select_destinations.assert_has_calls([mock.call(*fake_args)] * 2)
 
     @mock.patch.object(scheduler_report_client.SchedulerReportClient,
                        'update_resource_stats')

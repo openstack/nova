@@ -17,6 +17,8 @@ import functools
 
 from oslo.utils import importutils
 
+from nova.scheduler import utils
+
 
 class LazyLoader(object):
 
@@ -44,6 +46,7 @@ class SchedulerClient(object):
         self.reportclient = LazyLoader(importutils.import_class(
             'nova.scheduler.client.report.SchedulerReportClient'))
 
+    @utils.retry_select_destinations
     def select_destinations(self, context, request_spec, filter_properties):
         return self.queryclient.select_destinations(
             context, request_spec, filter_properties)
