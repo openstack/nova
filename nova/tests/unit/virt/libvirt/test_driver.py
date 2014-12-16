@@ -5212,12 +5212,15 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                           instance,
                           "/dev/sda")
 
+    @mock.patch('nova.utils.get_image_from_system_metadata')
     @mock.patch('nova.virt.libvirt.blockinfo.get_info_from_bdm')
     @mock.patch('nova.virt.libvirt.host.Host.get_domain')
     def test_attach_volume_with_vir_domain_affect_live_flag(self,
-            mock_get_domain, mock_get_info):
+            mock_get_domain, mock_get_info, get_image):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instance = objects.Instance(**self.test_instance)
+        image_meta = {}
+        get_image.return_value = image_meta
         mock_dom = mock.MagicMock()
         mock_get_domain.return_value = mock_dom
 
@@ -5249,7 +5252,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                    device_type=bdm['device_type'])
 
                 mock_get_domain.assert_called_with(instance)
-                mock_get_info.assert_called_with(CONF.libvirt.virt_type, bdm)
+                mock_get_info.assert_called_with(CONF.libvirt.virt_type,
+                                                 image_meta, bdm)
                 mock_connect_volume.assert_called_with(
                     connection_info, disk_info)
                 mock_get_volume_config.assert_called_with(
@@ -6602,7 +6606,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         self.stubs.Set(drvr, '_create_images_and_backing', fake_none)
 
-        inst_ref = {'id': 'foo'}
+        instance = objects.Instance(**self.test_instance)
         c = context.get_admin_context()
         nw_info = FakeNetworkInfo()
 
@@ -6620,10 +6624,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             drvr._connect_volume(v['connection_info'],
                                  disk_info)
         self.mox.StubOutWithMock(drvr, 'plug_vifs')
-        drvr.plug_vifs(mox.IsA(inst_ref), nw_info)
+        drvr.plug_vifs(mox.IsA(instance), nw_info)
 
         self.mox.ReplayAll()
-        result = drvr.pre_live_migration(c, inst_ref, vol, nw_info, None)
+        result = drvr.pre_live_migration(c, instance, vol, nw_info, None)
 
         target_res = {'graphics_listen_addrs': {'spice': '127.0.0.1',
                                                 'vnc': '127.0.0.1'}}
@@ -6641,11 +6645,11 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         self.stubs.Set(configdrive, 'required_by', fake_true)
 
-        inst_ref = {'id': 'foo'}
+        instance = objects.Instance(**self.test_instance)
         c = context.get_admin_context()
 
         self.assertRaises(exception.NoLiveMigrationForConfigDriveInLibVirt,
-                          drvr.pre_live_migration, c, inst_ref, vol, None,
+                          drvr.pre_live_migration, c, instance, vol, None,
                           None, {'is_shared_instance_path': False,
                                  'is_shared_block_storage': False})
 
@@ -6697,7 +6701,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     def test_pre_live_migration_plug_vifs_retry_fails(self):
         self.flags(live_migration_retry_count=3)
-        instance = {'name': 'test', 'uuid': 'uuid'}
+        instance = objects.Instance(**self.test_instance)
 
         def fake_plug_vifs(instance, network_info):
             raise processutils.ProcessExecutionError()
@@ -6713,7 +6717,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     def test_pre_live_migration_plug_vifs_retry_works(self):
         self.flags(live_migration_retry_count=3)
         called = {'count': 0}
-        instance = {'name': 'test', 'uuid': 'uuid'}
+        instance = objects.Instance(**self.test_instance)
 
         def fake_plug_vifs(instance, network_info):
             called['count'] += 1
@@ -10409,7 +10413,7 @@ Active:          8381604 kB
             yield
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        instance = objects.Instance(id=1, uuid='fake-uuid')
+        instance = objects.Instance(**self.test_instance)
 
         with contextlib.nested(
               mock.patch.object(drvr, '_lxc_disk_handler',
@@ -10451,7 +10455,7 @@ Active:          8381604 kB
         prepare.side_effect = fake_prepare
         drvr = libvirt_driver.LibvirtDriver(virtapi, False)
 
-        instance = objects.Instance(id=1, uuid='fake-uuid')
+        instance = objects.Instance(**self.test_instance)
         vifs = [{'id': 'vif1', 'active': False},
                 {'id': 'vif2', 'active': False}]
 

@@ -697,15 +697,20 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
                     {'dev': 'vdo', 'type': 'disk',
                      'bus': 'scsi', 'boot_index': '2'}]
 
+        image_meta = {}
         for bdm, expected in zip(bdms, expected):
             self.assertEqual(expected,
-                             blockinfo.get_info_from_bdm('kvm', bdm, {}))
+                             blockinfo.get_info_from_bdm('kvm',
+                                                         image_meta,
+                                                         bdm))
 
         # Test that passed bus and type are considered
         bdm = {'device_name': '/dev/vda'}
         expected = {'dev': 'vda', 'type': 'disk', 'bus': 'ide'}
         self.assertEqual(
-            expected, blockinfo.get_info_from_bdm('kvm', bdm, {},
+            expected, blockinfo.get_info_from_bdm('kvm',
+                                                  image_meta,
+                                                  bdm,
                                                   disk_bus='ide',
                                                   dev_type='disk'))
 
@@ -714,8 +719,10 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
         with mock.patch.object(blockinfo,
                                'get_disk_bus_for_device_type',
                                return_value='ide') as get_bus:
-            blockinfo.get_info_from_bdm('kvm', bdm, {})
-            get_bus.assert_called_once_with('kvm', None, 'cdrom')
+            blockinfo.get_info_from_bdm('kvm',
+                                        image_meta,
+                                        bdm)
+            get_bus.assert_called_once_with('kvm', image_meta, 'cdrom')
 
         # Test that missing device is defaulted as expected
         bdm = {'disk_bus': 'ide', 'device_type': 'cdrom'}
@@ -725,7 +732,11 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
                                'find_disk_dev_for_disk_bus',
                                return_value='vdd') as find_dev:
             got = blockinfo.get_info_from_bdm(
-                'kvm', bdm, mapping, assigned_devices=['vdb', 'vdc'])
+                'kvm',
+                image_meta,
+                bdm,
+                mapping,
+                assigned_devices=['vdb', 'vdc'])
             find_dev.assert_called_once_with(
                 {'root': {'dev': 'vda'},
                  'vdb': {'dev': 'vdb'},
@@ -766,27 +777,31 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
 
     @mock.patch('nova.virt.libvirt.blockinfo.get_info_from_bdm')
     def test_get_root_info_bdm(self, mock_get_info):
+        image_meta = {}
         root_bdm = {'mount_device': '/dev/vda',
                     'disk_bus': 'scsi',
                     'device_type': 'disk'}
         # No root_device_name
-        blockinfo.get_root_info('kvm', None, root_bdm, 'virtio', 'ide')
-        mock_get_info.assert_called_once_with('kvm', root_bdm, {}, 'virtio')
+        blockinfo.get_root_info('kvm', image_meta, root_bdm, 'virtio', 'ide')
+        mock_get_info.assert_called_once_with('kvm', image_meta,
+                                              root_bdm, 'virtio')
         mock_get_info.reset_mock()
         # Both device names
-        blockinfo.get_root_info('kvm', None, root_bdm, 'virtio', 'ide',
+        blockinfo.get_root_info('kvm', image_meta, root_bdm, 'virtio', 'ide',
                                 root_device_name='sda')
-        mock_get_info.assert_called_once_with('kvm', root_bdm, {}, 'virtio')
+        mock_get_info.assert_called_once_with('kvm', image_meta,
+                                              root_bdm, 'virtio')
         mock_get_info.reset_mock()
         # Missing device names
         del root_bdm['mount_device']
-        blockinfo.get_root_info('kvm', None, root_bdm, 'virtio', 'ide',
+        blockinfo.get_root_info('kvm', image_meta, root_bdm, 'virtio', 'ide',
                                 root_device_name='sda')
         mock_get_info.assert_called_once_with('kvm',
+                                              image_meta,
                                               {'device_name': 'sda',
                                                'disk_bus': 'scsi',
                                                'device_type': 'disk'},
-                                              {}, 'virtio')
+                                              'virtio')
 
     def test_get_boot_order_simple(self):
         disk_info = {

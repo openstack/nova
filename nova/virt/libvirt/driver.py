@@ -968,6 +968,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def attach_volume(self, context, connection_info, instance, mountpoint,
                       disk_bus=None, device_type=None, encryption=None):
+        image_meta = utils.get_image_from_system_metadata(
+            instance.system_metadata)
         virt_dom = self._host.get_domain(instance)
         disk_dev = mountpoint.rpartition("/")[2]
         bdm = {
@@ -996,7 +998,8 @@ class LibvirtDriver(driver.ComputeDriver):
                         "required.") % ver
                 raise exception.Invalid(msg)
 
-        disk_info = blockinfo.get_info_from_bdm(CONF.libvirt.virt_type, bdm)
+        disk_info = blockinfo.get_info_from_bdm(CONF.libvirt.virt_type,
+                                                image_meta, bdm)
         self._connect_volume(connection_info, disk_info)
         conf = self._get_volume_config(connection_info, disk_info)
         self._set_cache_mode(conf)
@@ -4053,7 +4056,8 @@ class LibvirtDriver(driver.ComputeDriver):
                                      cpu_time_ns=dom_info[4],
                                      id=virt_dom.ID())
 
-    def _create_domain_setup_lxc(self, instance, block_device_info, disk_info):
+    def _create_domain_setup_lxc(self, instance, image_meta,
+                                 block_device_info, disk_info):
         inst_path = libvirt_utils.get_instance_path(instance)
         block_device_mapping = driver.block_device_info_get_mapping(
                                                   block_device_info)
@@ -4064,7 +4068,7 @@ class LibvirtDriver(driver.ComputeDriver):
             root_disk = block_device.get_root_bdm(block_device_mapping)
             disk_path = root_disk['connection_info']['data']['device_path']
             disk_info = blockinfo.get_info_from_bdm(
-                                            CONF.libvirt.virt_type, root_disk)
+                CONF.libvirt.virt_type, image_meta, root_disk)
             self._connect_volume(root_disk['connection_info'], disk_info)
 
             # Get the system metadata from the instance
@@ -4110,7 +4114,8 @@ class LibvirtDriver(driver.ComputeDriver):
             disk.teardown_container(container_dir=container_dir)
 
     @contextlib.contextmanager
-    def _lxc_disk_handler(self, instance, block_device_info, disk_info):
+    def _lxc_disk_handler(self, instance, image_meta,
+                          block_device_info, disk_info):
         """Context manager to handle the pre and post instance boot,
            LXC specific disk operations.
 
@@ -4124,7 +4129,8 @@ class LibvirtDriver(driver.ComputeDriver):
             yield
             return
 
-        self._create_domain_setup_lxc(instance, block_device_info, disk_info)
+        self._create_domain_setup_lxc(instance, image_meta,
+                                      block_device_info, disk_info)
 
         try:
             yield
@@ -4186,6 +4192,8 @@ class LibvirtDriver(driver.ComputeDriver):
         """Do required network setup and create domain."""
         block_device_mapping = driver.block_device_info_get_mapping(
             block_device_info)
+        image_meta = utils.get_image_from_system_metadata(
+            instance.system_metadata)
 
         for vol in block_device_mapping:
             connection_info = vol['connection_info']
@@ -4220,8 +4228,8 @@ class LibvirtDriver(driver.ComputeDriver):
                                                            network_info)
                 self.firewall_driver.prepare_instance_filter(instance,
                                                              network_info)
-                with self._lxc_disk_handler(instance, block_device_info,
-                                            disk_info):
+                with self._lxc_disk_handler(instance, image_meta,
+                                            block_device_info, disk_info):
                     domain = self._create_domain(
                         xml, instance=instance,
                         launch_flags=launch_flags,
@@ -5308,6 +5316,9 @@ class LibvirtDriver(driver.ComputeDriver):
                     'is_shared_instance_path', True)
             is_block_migration = migrate_data.get('block_migration', True)
 
+        image_meta = utils.get_image_from_system_metadata(
+            instance.system_metadata)
+
         if not (is_shared_instance_path and is_shared_block_storage):
             # NOTE(mikal): live migration of instances using config drive is
             # not supported because of a bug in libvirt (read only devices
@@ -5347,7 +5358,7 @@ class LibvirtDriver(driver.ComputeDriver):
         for vol in block_device_mapping:
             connection_info = vol['connection_info']
             disk_info = blockinfo.get_info_from_bdm(
-                CONF.libvirt.virt_type, vol)
+                CONF.libvirt.virt_type, image_meta, vol)
             self._connect_volume(connection_info, disk_info)
 
         # We call plug_vifs before the compute manager calls

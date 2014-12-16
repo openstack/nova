@@ -345,7 +345,8 @@ def get_config_drive_type():
     return config_drive_type
 
 
-def get_info_from_bdm(virt_type, bdm, mapping=None, disk_bus=None,
+def get_info_from_bdm(virt_type, image_meta, bdm,
+                      mapping=None, disk_bus=None,
                       dev_type=None, allowed_types=None,
                       assigned_devices=None):
     mapping = mapping or {}
@@ -361,7 +362,8 @@ def get_info_from_bdm(virt_type, bdm, mapping=None, disk_bus=None,
         if device_name:
             bdm_bus = get_disk_bus_for_disk_dev(virt_type, device_name)
         else:
-            bdm_bus = get_disk_bus_for_device_type(virt_type, None, bdm_type)
+            bdm_bus = get_disk_bus_for_device_type(virt_type, image_meta,
+                                                   bdm_type)
 
     if not device_name:
         if assigned_devices:
@@ -426,7 +428,8 @@ def get_root_info(virt_type, image_meta, root_bdm, disk_bus, cdrom_bus,
         if not get_device_name(root_bdm) and root_device_name:
             root_bdm = root_bdm.copy()
             root_bdm['device_name'] = root_device_name
-        return get_info_from_bdm(virt_type, root_bdm, {}, disk_bus)
+        return get_info_from_bdm(virt_type, image_meta,
+                                 root_bdm, disk_bus)
 
 
 def default_device_names(virt_type, context, instance, root_device_name,
@@ -545,14 +548,15 @@ def get_disk_mapping(virt_type, instance,
     for idx, eph in enumerate(driver.block_device_info_get_ephemerals(
             block_device_info)):
         eph_info = get_info_from_bdm(
-            virt_type, eph, mapping, disk_bus,
+            virt_type, image_meta, eph, mapping, disk_bus,
             assigned_devices=pre_assigned_device_names)
         mapping[get_eph_disk(idx)] = eph_info
         update_bdm(eph, eph_info)
 
     swap = driver.block_device_info_get_swap(block_device_info)
     if swap and swap.get('swap_size', 0) > 0:
-        swap_info = get_info_from_bdm(virt_type, swap, mapping, disk_bus)
+        swap_info = get_info_from_bdm(virt_type, image_meta,
+                                      swap, mapping, disk_bus)
         mapping['disk.swap'] = swap_info
         update_bdm(swap, swap_info)
     elif inst_type['swap'] > 0:
@@ -567,7 +571,7 @@ def get_disk_mapping(virt_type, instance,
 
     for vol in block_device_mapping:
         vol_info = get_info_from_bdm(
-            virt_type, vol, mapping,
+            virt_type, image_meta, vol, mapping,
             assigned_devices=pre_assigned_device_names)
         mapping[block_device.prepend_dev(vol_info['dev'])] = vol_info
         update_bdm(vol, vol_info)
