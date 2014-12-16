@@ -481,8 +481,9 @@ def update_bdm(bdm, info):
 
 def get_disk_mapping(virt_type, instance,
                      disk_bus, cdrom_bus,
+                     image_meta,
                      block_device_info=None,
-                     image_meta=None, rescue=False):
+                     rescue=False):
     """Determine how to map default disks to the virtual machine.
 
        This is about figuring out whether the default 'disk',
@@ -604,8 +605,9 @@ def get_disk_info(virt_type, instance, image_meta,
     cdrom_bus = get_disk_bus_for_device_type(virt_type, image_meta, "cdrom")
     mapping = get_disk_mapping(virt_type, instance,
                                disk_bus, cdrom_bus,
+                               image_meta,
                                block_device_info,
-                               image_meta, rescue)
+                               rescue)
 
     return {'disk_bus': disk_bus,
             'cdrom_bus': cdrom_bus,
