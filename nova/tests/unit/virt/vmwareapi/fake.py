@@ -20,7 +20,6 @@ A fake VMware VI API implementation.
 """
 
 import collections
-import pprint
 
 from oslo.serialization import jsonutils
 from oslo.utils import units
@@ -44,12 +43,6 @@ _array_types = {}
 _vim_map = {}
 
 LOG = logging.getLogger(__name__)
-
-
-def log_db_contents(msg=None):
-    """Log DB Contents."""
-    LOG.debug("%(text)s: _db_content => %(content)s",
-              {'text': msg or "", 'content': pprint.pformat(_db_content)})
 
 
 def reset():
