@@ -447,7 +447,7 @@ def default_device_names(virt_type, context, instance, root_device_name,
                 block_device_mapping))
     }
 
-    get_disk_info(virt_type, instance, block_device_info, image_meta)
+    get_disk_info(virt_type, instance, image_meta, block_device_info)
 
     for driver_bdm in itertools.chain(block_device_info['ephemerals'],
                                [block_device_info['swap']] if
@@ -585,8 +585,8 @@ def get_disk_mapping(virt_type, instance,
     return mapping
 
 
-def get_disk_info(virt_type, instance, block_device_info=None,
-                  image_meta=None, rescue=False):
+def get_disk_info(virt_type, instance, image_meta,
+                  block_device_info=None, rescue=False):
     """Determine guest disk mapping info.
 
        This is a wrapper around get_disk_mapping, which
