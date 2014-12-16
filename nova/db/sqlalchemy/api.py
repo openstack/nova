@@ -2009,11 +2009,14 @@ def instance_get_all_by_filters_sort(context, filters, limit=None, marker=None,
             marker = _instance_get_by_uuid(context, marker, session=session)
         except exception.InstanceNotFound:
             raise exception.MarkerNotFound(marker)
-    query_prefix = sqlalchemyutils.paginate_query(query_prefix,
-                           models.Instance, limit,
-                           sort_keys,
-                           marker=marker,
-                           sort_dirs=sort_dirs)
+    try:
+        query_prefix = sqlalchemyutils.paginate_query(query_prefix,
+                               models.Instance, limit,
+                               sort_keys,
+                               marker=marker,
+                               sort_dirs=sort_dirs)
+    except db_exc.InvalidSortKey:
+        raise exception.InvalidSortKey()
 
     return _instances_fill_metadata(context, query_prefix.all(), manual_joins)
 
@@ -2189,7 +2192,8 @@ def process_sort_params(sort_keys, sort_dirs,
                         to the processed list
     :returns: list of sort keys, list of sort directions
     :raise exception.InvalidInput: If more sort directions than sort keys
-                                   are specified
+                                   are specified or if an invalid sort
+                                   direction is specified
     """
     # Determine direction to use for when adding default keys
     if sort_dirs and len(sort_dirs) != 0:
@@ -2206,7 +2210,13 @@ def process_sort_params(sort_keys, sort_dirs,
     # If a list of directions is not provided, use the default sort direction
     # for all provided keys
     if sort_dirs:
-        result_dirs = list(sort_dirs)
+        result_dirs = []
+        # Verify sort direction
+        for sort_dir in sort_dirs:
+            if sort_dir not in ('asc', 'desc'):
+                msg = _("Unknown sort direction, must be 'desc' or 'asc'")
+                raise exception.InvalidInput(reason=msg)
+            result_dirs.append(sort_dir)
     else:
         result_dirs = [default_dir_value for _sort_key in result_keys]
 

@@ -406,6 +406,15 @@ class NotDbApiTestCase(DbTestCase):
                     marker = insts[-1]['uuid']
                     self.assertEqual(correct[-1]['uuid'], marker)
 
+    def test_instance_get_all_by_filters_sort_key_invalid(self):
+        '''InvalidSortKey raised if an invalid key is given.'''
+        for keys in [['foo'], ['uuid', 'foo']]:
+            self.assertRaises(exception.InvalidSortKey,
+                              db.instance_get_all_by_filters_sort,
+                              self.context,
+                              filters={},
+                              sort_keys=keys)
+
     def test_convert_objects_related_datetimes(self):
 
         t1 = timeutils.utcnow()
@@ -1107,6 +1116,14 @@ class ProcessSortParamTestCase(test.TestCase):
                           sqlalchemy_api.process_sort_params,
                           ['key1', 'key2'],
                           ['asc', 'desc', 'desc'])
+
+    def test_process_sort_params_invalid_sort_dir(self):
+        '''InvalidInput raised if invalid directions are given.'''
+        for dirs in [['foo'], ['asc', 'foo'], ['asc', 'desc', 'foo']]:
+            self.assertRaises(exception.InvalidInput,
+                              sqlalchemy_api.process_sort_params,
+                              ['key'],
+                              dirs)
 
 
 class MigrationTestCase(test.TestCase):
