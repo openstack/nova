@@ -28,6 +28,7 @@ from nova import context
 from nova import objects
 from nova import test
 from nova.tests.unit.cells import fakes
+from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_server_actions
 from nova.tests.unit.objects import test_flavor
 
@@ -116,7 +117,8 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
         self.cells_manager._update_our_parents(self.ctxt)
 
     def test_build_instances(self):
-        build_inst_kwargs = {'instances': [1, 2]}
+        build_inst_kwargs = {'instances': [objects.Instance(),
+                                           objects.Instance()]}
         self.mox.StubOutWithMock(self.msg_runner, 'build_instances')
         our_cell = self.msg_runner.state_manager.get_my_state()
         self.msg_runner.build_instances(self.ctxt, our_cell, build_inst_kwargs)
@@ -126,13 +128,22 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
 
     def test_build_instances_old_flavor(self):
         flavor_dict = test_flavor.fake_flavor
-        args = {'filter_properties': {'instance_type': flavor_dict}}
+        args = {'filter_properties': {'instance_type': flavor_dict},
+                'instances': [objects.Instance()]}
         with mock.patch.object(self.msg_runner, 'build_instances') as mock_bi:
             self.cells_manager.build_instances(self.ctxt,
                                                build_inst_kwargs=args)
             filter_properties = mock_bi.call_args[0][2]['filter_properties']
             self.assertIsInstance(filter_properties['instance_type'],
                                   objects.Flavor)
+
+    def test_build_instances_old_instances(self):
+        args = {'instances': [fake_instance.fake_db_instance()]}
+        with mock.patch.object(self.msg_runner, 'build_instances') as mock_bi:
+            self.cells_manager.build_instances(self.ctxt,
+                                               build_inst_kwargs=args)
+            self.assertIsInstance(mock_bi.call_args[0][2]['instances'][0],
+                                  objects.Instance)
 
     def test_run_compute_api_method(self):
         # Args should just be silently passed through
