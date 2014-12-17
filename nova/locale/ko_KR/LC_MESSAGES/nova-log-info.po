@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-12-04 06:15+0000\n"
-"PO-Revision-Date: 2014-12-03 20:55+0000\n"
+"POT-Creation-Date: 2014-12-17 06:15+0000\n"
+"PO-Revision-Date: 2014-12-14 03:11+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: Korean (Korea) (http://www.transifex.com/projects/p/nova/"
 "language/ko_KR/)\n"
@@ -19,7 +19,7 @@ msgstr ""
 "Generated-By: Babel 1.3\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
-#: nova/filters.py:84
+#: nova/filters.py:79
 #, python-format
 msgid "Filter %s returned 0 hosts"
 msgstr ""
@@ -46,17 +46,17 @@ msgstr "%(url)s이(가) HTTP %(status)d(으)로 리턴되었음"
 msgid "V3 API has been disabled by configuration"
 msgstr ""
 
-#: nova/api/openstack/wsgi.py:681
+#: nova/api/openstack/wsgi.py:720
 #, python-format
 msgid "Fault thrown: %s"
 msgstr "처리된 결함: %s"
 
-#: nova/api/openstack/wsgi.py:684
+#: nova/api/openstack/wsgi.py:723
 #, python-format
 msgid "HTTP exception thrown: %s"
 msgstr "HTTP 예외 처리: %s"
 
-#: nova/cells/messaging.py:1134
+#: nova/cells/messaging.py:1135
 #, python-format
 msgid ""
 "Forcing a sync of instances, project_id=%(projid_str)s, updated_since="
@@ -65,7 +65,7 @@ msgstr ""
 "인스턴스의 동기화 강제 실행, project_id=%(projid_str)s, updated_since="
 "%(since_str)s"
 
-#: nova/cells/scheduler.py:239
+#: nova/cells/scheduler.py:241
 #, python-format
 msgid ""
 "No cells available when scheduling.  Will retry in %(sleep_time)s second(s)"
@@ -78,7 +78,7 @@ msgid ""
 "Forcing direct route to %(cell_name)s because of 'target_cell' scheduler hint"
 msgstr ""
 
-#: nova/compute/api.py:1529
+#: nova/compute/api.py:1530
 msgid "instance termination disabled"
 msgstr "인스턴스 종료 사용 안함"
 
@@ -87,31 +87,37 @@ msgstr "인스턴스 종료 사용 안함"
 msgid "Working on deleting snapshot %s from shelved instance..."
 msgstr ""
 
-#: nova/compute/api.py:1613
+#: nova/compute/api.py:1615
 msgid "Instance is already in deleting state, ignoring this request"
 msgstr ""
 
-#: nova/compute/api.py:1649
+#: nova/compute/api.py:1660
 #, python-format
 msgid ""
 "Found an unconfirmed migration during delete, id: %(id)s, status: %(status)s"
 msgstr ""
 
-#: nova/compute/api.py:1659
+#: nova/compute/api.py:1670
 msgid "Instance may have been confirmed during delete"
 msgstr ""
 
-#: nova/compute/api.py:1676
+#: nova/compute/api.py:1687
 #, python-format
 msgid "Migration %s may have been confirmed during delete"
 msgstr ""
 
-#: nova/compute/manager.py:285
+#: nova/compute/api.py:1744
+msgid ""
+"instance is in SHELVED_OFFLOADED state, cleanup the instance's info from "
+"database."
+msgstr ""
+
+#: nova/compute/manager.py:286
 #, python-format
 msgid "Task possibly preempted: %s"
 msgstr ""
 
-#: nova/compute/manager.py:745
+#: nova/compute/manager.py:746
 #, python-format
 msgid ""
 "Deleting instance as its host (%(instance_host)s) is not equal to our host "
@@ -120,83 +126,83 @@ msgstr ""
 "호스트 자격의 인스턴스(%(instance_host)s) 삭제가 해당 호스트 (%(our_host)s)과"
 "(와) 같지 않습니다."
 
-#: nova/compute/manager.py:760
+#: nova/compute/manager.py:761
 msgid ""
 "Instance has been marked deleted already, removing it from the hypervisor."
 msgstr ""
 
-#: nova/compute/manager.py:904
+#: nova/compute/manager.py:905
 msgid ""
 "Service started deleting the instance during the previous run, but did not "
 "finish. Restarting the deletion now."
 msgstr ""
 
-#: nova/compute/manager.py:1023
+#: nova/compute/manager.py:1030
 msgid "Instance found in migrating state during startup. Resetting task_state"
 msgstr ""
 "시작 중에 마이그레이션 상태의 인스턴스를 찾았습니다. task_state를 재설정하는 "
 "중"
 
-#: nova/compute/manager.py:1045
+#: nova/compute/manager.py:1052
 msgid "Rebooting instance after nova-compute restart."
 msgstr "nova-compute 다시 시작 후에 인스턴스 다시 부팅 중입니다. "
 
-#: nova/compute/manager.py:1094
+#: nova/compute/manager.py:1102
 #, python-format
 msgid "VM %(state)s (Lifecycle Event)"
 msgstr ""
 
-#: nova/compute/manager.py:2535
+#: nova/compute/manager.py:2557
 msgid "Instance disappeared during terminate"
 msgstr ""
 
-#: nova/compute/manager.py:2579
+#: nova/compute/manager.py:2601
 msgid "Instance is already powered off in the hypervisor when stop is called."
 msgstr ""
 
-#: nova/compute/manager.py:2763
+#: nova/compute/manager.py:2785
 msgid "disk on shared storage, recreating using existing disk"
 msgstr "공유 스토리지의 디스크, 기존 디스크를 사용하여 재작성 중"
 
-#: nova/compute/manager.py:2767
+#: nova/compute/manager.py:2789
 #, python-format
 msgid "disk not on shared storage, rebuilding from: '%s'"
 msgstr ""
 
-#: nova/compute/manager.py:2855
+#: nova/compute/manager.py:2877
 #, python-format
 msgid "bringing vm to original state: '%s'"
 msgstr "VM을 원래 상태로 만드는 중: '%s'"
 
-#: nova/compute/manager.py:2886
+#: nova/compute/manager.py:2908
 #, python-format
 msgid "Detaching from volume api: %s"
 msgstr "볼륨 api에서 분리 중: %s"
 
-#: nova/compute/manager.py:3402
+#: nova/compute/manager.py:3428
 #, python-format
 msgid "Migration %s is already confirmed"
 msgstr ""
 
-#: nova/compute/manager.py:3422
+#: nova/compute/manager.py:3449
 msgid "Instance is not found during confirmation"
 msgstr ""
 
-#: nova/compute/manager.py:3602
+#: nova/compute/manager.py:3629
 #, python-format
 msgid "Updating instance to original state: '%s'"
 msgstr ""
 
-#: nova/compute/manager.py:5057
+#: nova/compute/manager.py:5084
 msgid "_post_live_migration() is started.."
 msgstr "_post_live_migration()이 시작됩니다. "
 
-#: nova/compute/manager.py:5137
+#: nova/compute/manager.py:5164
 #, python-format
 msgid "Migrating instance to %s finished successfully."
 msgstr ""
 
-#: nova/compute/manager.py:5139
+#: nova/compute/manager.py:5166
 msgid ""
 "You may see the error \"libvirt: QEMU error: Domain not found: no domain "
 "with matching name.\" This error can be safely ignored."
@@ -204,11 +210,11 @@ msgstr ""
 "오류 \"libvirt: QEMU 오류: 도메인을 찾을 수 없음: 일치하는 이름의 도메인이 없"
 "음.\" 이 오류는 무시해도 무방합니다."
 
-#: nova/compute/manager.py:5164
+#: nova/compute/manager.py:5191
 msgid "Post operation of migration started"
 msgstr "마이그레이션의 사후 오퍼레이션이 시작했음"
 
-#: nova/compute/manager.py:5427
+#: nova/compute/manager.py:5454
 #, python-format
 msgid ""
 "Found %(migration_count)d unconfirmed migrations older than "
@@ -217,7 +223,7 @@ msgstr ""
 "%(confirm_window)d초 이상 미확정 상태인 %(migration_count)d개의 마이그레이션 "
 "발견함"
 
-#: nova/compute/manager.py:5441
+#: nova/compute/manager.py:5468
 #, python-format
 msgid ""
 "Automatically confirming migration %(migration_id)s for instance "
@@ -226,12 +232,12 @@ msgstr ""
 "%(instance_uuid)s 인스턴스에 대한 %(migration_id)s 마이그레이션을 자동으로 확"
 "인 중"
 
-#: nova/compute/manager.py:5495
+#: nova/compute/manager.py:5522
 #, python-format
 msgid "Error auto-confirming resize: %s. Will retry later."
 msgstr ""
 
-#: nova/compute/manager.py:5543
+#: nova/compute/manager.py:5570
 #, python-format
 msgid ""
 "Running instance usage audit for host %(host)s from %(begin_time)s to "
@@ -240,17 +246,17 @@ msgstr ""
 "%(begin_time)s에서 %(end_time)s. %(number_instances)s 인스턴스까지 %(host)s "
 "호스트에 대한 인스턴스 사용 감사를 실행하는 중입니다. "
 
-#: nova/compute/manager.py:5591
+#: nova/compute/manager.py:5618
 msgid "Updating bandwidth usage cache"
 msgstr "대역폭 사용 캐시 업데이트"
 
-#: nova/compute/manager.py:5769 nova/compute/manager.py:5826
+#: nova/compute/manager.py:5799 nova/compute/manager.py:5856
 #, python-format
 msgid ""
 "During sync_power_state the instance has a pending task (%(task)s). Skip."
 msgstr ""
 
-#: nova/compute/manager.py:5813
+#: nova/compute/manager.py:5843
 #, python-format
 msgid ""
 "During the sync_power process the instance has moved from host %(src)s to "
@@ -259,40 +265,40 @@ msgstr ""
 "sync_power 프로세스 중에 %(src)s 호스트에서 %(dst)s 호스트로 인스턴스가 이동"
 "되었습니다."
 
-#: nova/compute/manager.py:5972
+#: nova/compute/manager.py:6002
 msgid "Reclaiming deleted instance"
 msgstr "재확보가 인스턴스를 삭제했음"
 
-#: nova/compute/manager.py:6059
+#: nova/compute/manager.py:6089
 #, python-format
 msgid ""
 "Powering off instance with name label '%s' which is marked as DELETED but "
 "still present on host."
 msgstr ""
 
-#: nova/compute/manager.py:6077
+#: nova/compute/manager.py:6107
 #, python-format
 msgid ""
 "Destroying instance with name label '%s' which is marked as DELETED but "
 "still present on host."
 msgstr ""
 
-#: nova/compute/manager.py:6123
+#: nova/compute/manager.py:6153
 #, python-format
 msgid "Setting instance back to %(state)s after: %(error)s"
 msgstr ""
 
-#: nova/compute/manager.py:6133
+#: nova/compute/manager.py:6163
 #, python-format
 msgid "Setting instance back to ACTIVE after: %s"
 msgstr ""
 
-#: nova/compute/resource_tracker.py:403
+#: nova/compute/resource_tracker.py:404
 #, python-format
 msgid "Compute_service record created for %(host)s:%(node)s"
 msgstr "Compute_service 레코드가 %(host)s:%(node)s에 대해 작성됨"
 
-#: nova/compute/resource_tracker.py:410
+#: nova/compute/resource_tracker.py:411
 #, python-format
 msgid "Compute_service record updated for %(host)s:%(node)s"
 msgstr "Compute_service 레코드가 %(host)s:%(node)s에 대해 업데이트됨"
@@ -301,7 +307,7 @@ msgstr "Compute_service 레코드가 %(host)s:%(node)s에 대해 업데이트됨
 msgid "nova-conductor connection established successfully"
 msgstr ""
 
-#: nova/db/sqlalchemy/api.py:3328
+#: nova/db/sqlalchemy/api.py:3334
 #, python-format
 msgid ""
 "quota_usages out of sync, updating. project_id: %(project_id)s, user_id: "
@@ -309,7 +315,7 @@ msgid ""
 "usage: %(in_use)s"
 msgstr ""
 
-#: nova/db/sqlalchemy/api.py:5131
+#: nova/db/sqlalchemy/api.py:5138
 #, python-format
 msgid ""
 "Volume(%s) has lower stats then what is in the database. Instance must have "
@@ -340,7 +346,7 @@ msgstr ""
 msgid "Copied %(source_file)s using %(module_str)s"
 msgstr ""
 
-#: nova/network/api.py:220 nova/network/neutronv2/api.py:948
+#: nova/network/api.py:220 nova/network/neutronv2/api.py:1040
 #, python-format
 msgid "re-assign floating IP %(address)s from instance %(instance_id)s"
 msgstr "%(instance_id)s에서 부동 IP %(address)s 재지정"
@@ -355,12 +361,12 @@ msgstr "네트워크 드라이버 '%s' 로드 중"
 msgid "Floating IP %s is not associated. Ignore."
 msgstr ""
 
-#: nova/network/floating_ips.py:535
+#: nova/network/floating_ips.py:549
 #, python-format
 msgid "Starting migration network for instance %s"
 msgstr ""
 
-#: nova/network/floating_ips.py:571
+#: nova/network/floating_ips.py:585
 #, python-format
 msgid "Finishing migration network for instance %s"
 msgstr ""
@@ -370,7 +376,7 @@ msgstr ""
 msgid "deleted %s"
 msgstr ""
 
-#: nova/network/neutronv2/api.py:532
+#: nova/network/neutronv2/api.py:624
 #, python-format
 msgid "Unable to reset device ID for port %s"
 msgstr ""
@@ -448,18 +454,7 @@ msgstr "쓰레드가 죽기를 기다려서, 지웁니다. "
 msgid "Waiting on %d children to exit"
 msgstr "%d 하위에서 종료하기를 대기 중임"
 
-#: nova/scheduler/filter_scheduler.py:78
-#, python-format
-msgid ""
-"Attempting to build %(num_instances)d instance(s) uuids: %(instance_uuids)s"
-msgstr ""
-
-#: nova/scheduler/filter_scheduler.py:107
-#, python-format
-msgid "Choosing host %(weighed_host)s for instance %(instance_uuid)s"
-msgstr ""
-
-#: nova/scheduler/host_manager.py:422
+#: nova/scheduler/host_manager.py:429
 #, python-format
 msgid "Removing dead compute node %(host)s:%(node)s from scheduler"
 msgstr ""
@@ -470,7 +465,7 @@ msgstr ""
 msgid "Compute_service record updated for %s"
 msgstr ""
 
-#: nova/scheduler/filters/utils.py:50
+#: nova/scheduler/filters/utils.py:65
 #, python-format
 msgid "%(num_values)d values found, of which the minimum value will be used."
 msgstr ""
@@ -480,7 +475,7 @@ msgstr ""
 msgid "preserve multipath_id %s"
 msgstr ""
 
-#: nova/virt/driver.py:1377
+#: nova/virt/driver.py:1388
 #, python-format
 msgid "Loading compute driver '%s'"
 msgstr "계산 드라이버 '%s' 로드 중"
@@ -509,7 +504,7 @@ msgid "NBD mount error: %s"
 msgstr "NBD 마운트 오류: %s"
 
 #: nova/virt/disk/vfs/api.py:67
-msgid "Unable to import guestfsfalling back to VFSLocalFS"
+msgid "Unable to import guestfs, falling back to VFSLocalFS"
 msgstr ""
 
 #: nova/virt/hyperv/basevolumeutils.py:71
@@ -520,11 +515,11 @@ msgstr "ISCSI 개시자 이름을 찾을 수 없습니다. 기본 이름 선택 
 msgid "Spawning new instance"
 msgstr "새 인스턴스 파생 중"
 
-#: nova/virt/hyperv/vmops.py:331 nova/virt/vmwareapi/vmops.py:569
+#: nova/virt/hyperv/vmops.py:331 nova/virt/vmwareapi/vmops.py:616
 msgid "Using config drive for instance"
 msgstr ""
 
-#: nova/virt/hyperv/vmops.py:344 nova/virt/libvirt/driver.py:2772
+#: nova/virt/hyperv/vmops.py:344 nova/virt/libvirt/driver.py:2854
 #, python-format
 msgid "Creating config drive at %(path)s"
 msgstr "%(path)s에 구성 드라이브 작성 중"
@@ -533,114 +528,120 @@ msgstr "%(path)s에 구성 드라이브 작성 중"
 msgid "Got request to destroy instance"
 msgstr ""
 
-#: nova/virt/hyperv/vmops.py:447
+#: nova/virt/hyperv/vmops.py:444
 msgid "Soft shutdown succeeded."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:498
+#: nova/virt/libvirt/driver.py:506
 #, python-format
 msgid "Connection event '%(enabled)d' reason '%(reason)s'"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:623
+#: nova/virt/libvirt/driver.py:631
 #, python-format
 msgid ""
 "Unable to use bulk domain list APIs, falling back to slow code path: %(ex)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:735
+#: nova/virt/libvirt/driver.py:743
 msgid "Instance destroyed successfully."
 msgstr "인스턴스가 영구 삭제되었습니다. "
 
-#: nova/virt/libvirt/driver.py:745
+#: nova/virt/libvirt/driver.py:753
 msgid "Instance may be started again."
 msgstr "인스턴스가 다시 시작됩니다."
 
-#: nova/virt/libvirt/driver.py:755
+#: nova/virt/libvirt/driver.py:763
 msgid "Going to destroy instance again."
 msgstr "인스턴스를 다시 영구 삭제하려 합니다."
 
-#: nova/virt/libvirt/driver.py:1399
+#: nova/virt/libvirt/driver.py:1407
 msgid "Beginning live snapshot process"
 msgstr "라이브 스냅샷 프로세스 시작 중"
 
-#: nova/virt/libvirt/driver.py:1402
+#: nova/virt/libvirt/driver.py:1410
 msgid "Beginning cold snapshot process"
 msgstr "콜드 스냅샷 프로세스 시작 중"
 
-#: nova/virt/libvirt/driver.py:1432
+#: nova/virt/libvirt/driver.py:1440
 msgid "Snapshot extracted, beginning image upload"
 msgstr "스냅샷 추출, 이미지 업로드 시작 중"
 
-#: nova/virt/libvirt/driver.py:1444
+#: nova/virt/libvirt/driver.py:1452
 msgid "Snapshot image upload complete"
 msgstr "스냅샷 이미지 업로드 완료"
 
-#: nova/virt/libvirt/driver.py:1954
+#: nova/virt/libvirt/driver.py:2017
 msgid "Instance soft rebooted successfully."
 msgstr "인스턴스가 소프트 리부트되었습니다. "
 
-#: nova/virt/libvirt/driver.py:1997
+#: nova/virt/libvirt/driver.py:2060
 msgid "Instance shutdown successfully."
 msgstr "인스턴스가 시스템 종료되었습니다. "
 
-#: nova/virt/libvirt/driver.py:2005
+#: nova/virt/libvirt/driver.py:2068
 msgid "Instance may have been rebooted during soft reboot, so return now."
 msgstr ""
 "인스턴스가 소프트 리부트 중에 다시 부팅되었을 수 있으므로, 지금 리턴합니다. "
 
-#: nova/virt/libvirt/driver.py:2076
+#: nova/virt/libvirt/driver.py:2141
 msgid "Instance rebooted successfully."
 msgstr "인스턴스가 다시 부트되었습니다. "
 
-#: nova/virt/libvirt/driver.py:2119
+#: nova/virt/libvirt/driver.py:2184
 msgid "Instance already shutdown."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2135
+#: nova/virt/libvirt/driver.py:2200
 #, python-format
 msgid "Instance shutdown successfully after %d seconds."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2164
+#: nova/virt/libvirt/driver.py:2229
 #, python-format
 msgid "Instance failed to shutdown in %d seconds."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2322
+#: nova/virt/libvirt/driver.py:2397
 msgid "Instance spawned successfully."
 msgstr "인스턴스가 파생되었습니다. "
 
-#: nova/virt/libvirt/driver.py:2338
+#: nova/virt/libvirt/driver.py:2413
 #, python-format
 msgid "data: %(data)r, fpath: %(fpath)r"
 msgstr "데이터: %(data)r, fpath: %(fpath)r"
 
-#: nova/virt/libvirt/driver.py:2377 nova/virt/libvirt/driver.py:2404
+#: nova/virt/libvirt/driver.py:2448
+msgid ""
+"Instance is configured with a file console, but the backing file is not "
+"(yet?) present"
+msgstr ""
+
+#: nova/virt/libvirt/driver.py:2459 nova/virt/libvirt/driver.py:2486
 #, python-format
 msgid "Truncated console log returned, %d bytes ignored"
 msgstr "잘린 콘솔 로그가 리턴되었으며, %d 바이트는 무시됨"
 
-#: nova/virt/libvirt/driver.py:2635
+#: nova/virt/libvirt/driver.py:2717
 msgid "Creating image"
 msgstr "이미지 작성 중"
 
-#: nova/virt/libvirt/driver.py:2763
+#: nova/virt/libvirt/driver.py:2845
 msgid "Using config drive"
 msgstr "구성 드라이브 사용 중"
 
-#: nova/virt/libvirt/driver.py:3746
+#: nova/virt/libvirt/driver.py:3848
 msgid "Configuring timezone for windows instance to localtime"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:4634
+#: nova/virt/libvirt/driver.py:4740
 #, python-format
 msgid ""
 "Getting block stats failed, device might have been detached. Instance="
 "%(instance_name)s Disk=%(disk)s Code=%(errcode)s Error=%(e)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:4640
+#: nova/virt/libvirt/driver.py:4746
 #, python-format
 msgid ""
 "Could not find domain in libvirt for instance %s. Cannot get block stats for "
@@ -649,26 +650,26 @@ msgstr ""
 "%s 인스턴스에 대한 libvirt에서 도메인을 찾을 수 없습니다. 디바이스의 블록 통"
 "계를 가져올 수 없음"
 
-#: nova/virt/libvirt/driver.py:4941
+#: nova/virt/libvirt/driver.py:5046
 #, python-format
 msgid "Instance launched has CPU info: %s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:5732
+#: nova/virt/libvirt/driver.py:5837
 msgid "Instance running successfully."
 msgstr "인스턴스가 정상적으로 실행 중입니다. "
 
-#: nova/virt/libvirt/driver.py:6086
+#: nova/virt/libvirt/driver.py:6195
 #, python-format
 msgid "Deleting instance files %s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:6099
+#: nova/virt/libvirt/driver.py:6208
 #, python-format
 msgid "Deletion of %s failed"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:6103
+#: nova/virt/libvirt/driver.py:6212
 #, python-format
 msgid "Deletion of %s complete"
 msgstr ""
@@ -742,7 +743,7 @@ msgstr "손상된 기본 파일: %s"
 msgid "Removable base files: %s"
 msgstr "제거 가능한 기본 파일: %s"
 
-#: nova/virt/libvirt/utils.py:513
+#: nova/virt/libvirt/utils.py:525
 msgid "findmnt tool is not installed"
 msgstr ""
 
@@ -751,7 +752,7 @@ msgstr ""
 msgid "Invalid cluster or resource pool name : %s"
 msgstr ""
 
-#: nova/virt/vmwareapi/ds_util.py:403
+#: nova/virt/vmwareapi/ds_util.py:418
 #, python-format
 msgid "Moved virtual disk from %(src)s to %(dst)s."
 msgstr ""
@@ -775,16 +776,16 @@ msgstr ""
 msgid "The imported VM was unregistered"
 msgstr ""
 
-#: nova/virt/vmwareapi/vmops.py:1196 nova/virt/xenapi/vmops.py:1619
+#: nova/virt/vmwareapi/vmops.py:1243 nova/virt/xenapi/vmops.py:1619
 #, python-format
 msgid "Found %(instance_count)d hung reboots older than %(timeout)d seconds"
 msgstr "%(timeout)d 초 이상 %(instance_count)d 정지된 재부트 발견"
 
-#: nova/virt/vmwareapi/vmops.py:1200 nova/virt/xenapi/vmops.py:1623
+#: nova/virt/vmwareapi/vmops.py:1247 nova/virt/xenapi/vmops.py:1623
 msgid "Automatically hard rebooting"
 msgstr "자동으로 하드 재부팅 중"
 
-#: nova/virt/vmwareapi/volumeops.py:446
+#: nova/virt/vmwareapi/volumeops.py:451
 #, python-format
 msgid ""
 "The volume's backing has been relocated to %s. Need to consolidate backing "
