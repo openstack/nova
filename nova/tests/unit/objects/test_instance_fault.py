@@ -77,13 +77,13 @@ class _TestInstanceFault(object):
     @mock.patch('nova.db.instance_fault_create')
     def _test_create(self, update_cells, mock_create, cells_fault_create):
         mock_create.return_value = fake_faults['fake-uuid'][1]
-        fault = instance_fault.InstanceFault()
+        fault = instance_fault.InstanceFault(context=self.context)
         fault.instance_uuid = 'fake-uuid'
         fault.code = 456
         fault.message = 'foo'
         fault.details = 'you screwed up'
         fault.host = 'myhost'
-        fault.create(self.context)
+        fault.create()
         self.assertEqual(2, fault.id)
         mock_create.assert_called_once_with(self.context,
                                             {'instance_uuid': 'fake-uuid',
