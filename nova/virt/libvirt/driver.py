@@ -25,6 +25,7 @@ Supports KVM, LXC, QEMU, UML, and XEN.
 
 """
 
+import collections
 import contextlib
 import errno
 import functools
@@ -287,6 +288,9 @@ DISABLE_REASON_UNDEFINED = 'None'
 
 # Guest config console string
 CONSOLE = "console=tty0 console=ttyS0"
+
+GuestNumaConfig = collections.namedtuple(
+    'GuestNumaConfig', ['cpuset', 'cputune', 'numaconfig', 'numatune'])
 
 
 def patch_tpool_proxy():
@@ -3490,13 +3494,13 @@ class LibvirtDriver(driver.ComputeDriver):
                     # TODO(ndipanov): Attempt to spread the instance across
                     # NUMA nodes and expose the topology to the instance as an
                     # optimisation
-                    return allowed_cpus, None, None, None
+                    return GuestNumaConfig(allowed_cpus, None, None, None)
                 else:
                     pin_cpuset = random.choice(viable_cells_cpus)
-                    return pin_cpuset, None, None, None
+                    return GuestNumaConfig(pin_cpuset, None, None, None)
             else:
                 # We have no NUMA topology in the host either
-                return allowed_cpus, None, None, None
+                return GuestNumaConfig(allowed_cpus, None, None, None)
         else:
             if topology:
                 # Now get the CpuTune configuration from the numa_topology
@@ -3560,10 +3564,12 @@ class LibvirtDriver(driver.ComputeDriver):
                     cell.id = i
                     memnode.cellid = i
 
-                return (None, guest_cpu_tune, guest_cpu_numa_config,
-                        guest_numa_tune)
+                return GuestNumaConfig(None, guest_cpu_tune,
+                                       guest_cpu_numa_config,
+                                       guest_numa_tune)
             else:
-                return allowed_cpus, None, guest_cpu_numa_config, None
+                return GuestNumaConfig(allowed_cpus, None,
+                                       guest_cpu_numa_config, None)
 
     def _get_guest_os_type(self, virt_type):
         """Returns the guest OS type based on virt type."""
@@ -3758,13 +3764,12 @@ class LibvirtDriver(driver.ComputeDriver):
         guest.vcpus = flavor.vcpus
         allowed_cpus = hardware.get_vcpu_pin_set()
 
-        cpuset, cputune, guest_cpu_numa, guest_numa_tune = \
-            self._get_guest_numa_config(
+        guest_numa_config = self._get_guest_numa_config(
                 instance.numa_topology, flavor, allowed_cpus)
 
-        guest.cpuset = cpuset
-        guest.cputune = cputune
-        guest.numatune = guest_numa_tune
+        guest.cpuset = guest_numa_config.cpuset
+        guest.cputune = guest_numa_config.cputune
+        guest.numatune = guest_numa_config.numatune
 
         guest.metadata.append(self._get_guest_config_meta(context,
                                                           instance,
@@ -3781,7 +3786,7 @@ class LibvirtDriver(driver.ComputeDriver):
                         int(flavor.extra_specs[key]))
 
         guest.cpu = self._get_guest_cpu_config(
-                flavor, image_meta, guest_cpu_numa)
+                flavor, image_meta, guest_numa_config.numaconfig)
 
         if 'root' in disk_mapping:
             root_device_name = block_device.prepend_dev(
