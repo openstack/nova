@@ -98,7 +98,7 @@ class NUMAPagesTopology(base.NovaObject):
 class NUMATopology(base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Update NUMACell to 1.1
-    # Version 1.1: Update NUMACell to 1.2
+    # Version 1.2: Update NUMACell to 1.2
     VERSION = '1.2'
 
     fields = {
