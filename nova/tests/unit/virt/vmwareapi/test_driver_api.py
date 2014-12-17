@@ -2439,8 +2439,9 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
 
     def test_get_instance_disk_info_is_implemented(self):
         # Ensure that the method has been implemented in the driver
+        instance = objects.Instance()
         try:
-            disk_info = self.conn.get_instance_disk_info('fake_instance_name')
+            disk_info = self.conn.get_instance_disk_info(instance)
             self.assertIsNone(disk_info)
         except NotImplementedError:
             self.fail("test_get_instance_disk_info() should not raise "

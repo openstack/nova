@@ -32,6 +32,7 @@ from nova import context
 from nova import db
 from nova import exception
 from nova.image import glance
+from nova import objects
 from nova.openstack.common import fileutils
 from nova import test
 from nova.tests.unit import fake_network
@@ -478,9 +479,10 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
         self._mox.VerifyAll()
 
     def test_get_instance_disk_info_is_implemented(self):
+        instance = objects.Instance()
         # Ensure that the method has been implemented in the driver
         try:
-            disk_info = self._conn.get_instance_disk_info('fake_instance_name')
+            disk_info = self._conn.get_instance_disk_info(instance)
             self.assertIsNone(disk_info)
         except NotImplementedError:
             self.fail("test_get_instance_disk_info() should not raise "
