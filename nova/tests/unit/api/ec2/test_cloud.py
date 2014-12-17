@@ -3208,7 +3208,7 @@ class CloudTestCaseNeutronProxy(test.NoDBTestCase):
         self.assertTrue(delete(self.context, 'testgrp'))
 
 
-class FormatMappingTestCase(test.TestCase):
+class FormatMappingTestCase(test.NoDBTestCase):
 
     def test_format_mapping(self):
         properties = {'block_device_mapping':
