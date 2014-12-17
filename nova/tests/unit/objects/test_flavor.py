@@ -86,13 +86,13 @@ class _TestFlavor(object):
             remove.assert_called_once_with(elevated, '123', '456')
 
     def test_create(self):
-        flavor = flavor_obj.Flavor()
+        flavor = flavor_obj.Flavor(context=self.context)
         flavor.name = 'm1.foo'
         flavor.extra_specs = fake_flavor['extra_specs']
 
         with mock.patch.object(db, 'flavor_create') as create:
             create.return_value = fake_flavor
-            flavor.create(self.context)
+            flavor.create()
 
         self.assertEqual(self.context, flavor._context)
         # NOTE(danms): Orphan this to avoid lazy-loads
@@ -101,7 +101,7 @@ class _TestFlavor(object):
 
     def test_create_with_projects(self):
         context = self.context.elevated()
-        flavor = flavor_obj.Flavor()
+        flavor = flavor_obj.Flavor(context=context)
         flavor.name = 'm1.foo'
         flavor.extra_specs = fake_flavor['extra_specs']
         flavor.projects = ['project-1', 'project-2']
@@ -115,7 +115,7 @@ class _TestFlavor(object):
             methods['flavor_access_get_by_flavor_id'].return_value = [
                 {'project_id': 'project-1'},
                 {'project_id': 'project-2'}]
-            flavor.create(context)
+            flavor.create()
             methods['flavor_create'].assert_called_once_with(
                 context,
                 {'name': 'm1.foo',
@@ -199,9 +199,9 @@ class _TestFlavor(object):
         self.assertRaises(exception.ObjectActionError, flavor.save)
 
     def test_destroy(self):
-        flavor = flavor_obj.Flavor(id=123, name='foo')
+        flavor = flavor_obj.Flavor(context=self.context, id=123, name='foo')
         with mock.patch.object(db, 'flavor_destroy') as destroy:
-            flavor.destroy(self.context)
+            flavor.destroy()
             destroy.assert_called_once_with(self.context, flavor.name)
 
     def test_load_projects(self):
