@@ -49,10 +49,10 @@ class _TestKeyPairObject(object):
                            {'name': 'foo-keypair',
                             'public_key': 'keydata'}).AndReturn(fake_keypair)
         self.mox.ReplayAll()
-        keypair_obj = keypair.KeyPair()
+        keypair_obj = keypair.KeyPair(context=self.context)
         keypair_obj.name = 'foo-keypair'
         keypair_obj.public_key = 'keydata'
-        keypair_obj.create(self.context)
+        keypair_obj.create()
         self.compare_obj(keypair_obj, fake_keypair)
 
     def test_recreate_fails(self):
@@ -61,10 +61,10 @@ class _TestKeyPairObject(object):
                            {'name': 'foo-keypair',
                             'public_key': 'keydata'}).AndReturn(fake_keypair)
         self.mox.ReplayAll()
-        keypair_obj = keypair.KeyPair()
+        keypair_obj = keypair.KeyPair(context=self.context)
         keypair_obj.name = 'foo-keypair'
         keypair_obj.public_key = 'keydata'
-        keypair_obj.create(self.context)
+        keypair_obj.create()
         self.assertRaises(exception.ObjectActionError, keypair_obj.create,
                           self.context)
 
@@ -72,11 +72,11 @@ class _TestKeyPairObject(object):
         self.mox.StubOutWithMock(db, 'key_pair_destroy')
         db.key_pair_destroy(self.context, 'fake-user', 'foo-keypair')
         self.mox.ReplayAll()
-        keypair_obj = keypair.KeyPair()
+        keypair_obj = keypair.KeyPair(context=self.context)
         keypair_obj.id = 123
         keypair_obj.user_id = 'fake-user'
         keypair_obj.name = 'foo-keypair'
-        keypair_obj.destroy(self.context)
+        keypair_obj.destroy()
 
     def test_destroy_by_name(self):
         self.mox.StubOutWithMock(db, 'key_pair_destroy')
