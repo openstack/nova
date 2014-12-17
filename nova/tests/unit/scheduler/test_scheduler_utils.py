@@ -32,6 +32,7 @@ from nova import rpc
 from nova.scheduler import utils as scheduler_utils
 from nova import test
 from nova.tests.unit import fake_instance
+from nova.tests.unit.objects import test_flavor
 
 CONF = cfg.CONF
 
@@ -42,10 +43,33 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
         super(SchedulerUtilsTestCase, self).setUp()
         self.context = 'fake-context'
 
-    def test_build_request_spec_without_image(self):
+    @mock.patch('nova.objects.Flavor.get_by_flavor_id')
+    def test_build_request_spec_requeries_extra_specs(self, mock_get):
+        flavor = objects.Flavor(**test_flavor.fake_flavor)
+        flavor.extra_specs = {'hw:numa_cpus.1': '1985'}
+        instance = objects.Instance(id=0, uuid=uuid.uuid4().hex,
+                                    system_metadata={})
+        with mock.patch.object(instance, 'save'):
+            instance.set_flavor(flavor.obj_clone())
+        flavor.extra_specs = {'second': '2015', 'third': '1885'}
+        mock_get.return_value = flavor
+        request_spec = scheduler_utils.build_request_spec(self.context,
+                                                          None,
+                                                          [instance])
+        mock_get.assert_called_once_with(self.context,
+                                         flavor.flavorid)
+        self.assertEqual({'hw:numa_cpus.1': '1985',
+                          'second': '2015',
+                          'third': '1885'},
+                         request_spec['instance_type']['extra_specs'])
+
+    @mock.patch('nova.objects.Flavor.get_by_flavor_id')
+    def test_build_request_spec_without_image(self, mock_get):
         image = None
         instance = {'uuid': 'fake-uuid'}
-        instance_type = {'flavorid': 'fake-id'}
+        instance_type = objects.Flavor(**test_flavor.fake_flavor)
+
+        mock_get.return_value = objects.Flavor(extra_specs={})
 
         self.mox.StubOutWithMock(flavors, 'extract_flavor')
         flavors.extract_flavor(mox.IgnoreArg()).AndReturn(instance_type)
@@ -56,9 +80,12 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
         self.assertEqual({}, request_spec['image'])
 
     @mock.patch.object(flavors, 'extract_flavor')
-    def test_build_request_spec_with_object(self, extract_flavor):
-        instance_type = {'flavorid': 'fake-id'}
+    @mock.patch('nova.objects.Flavor.get_by_flavor_id')
+    def test_build_request_spec_with_object(self, mock_get, extract_flavor):
+        instance_type = objects.Flavor(**test_flavor.fake_flavor)
         instance = fake_instance.fake_instance_obj(self.context)
+
+        mock_get.return_value = objects.Flavor(extra_specs={})
 
         extract_flavor.return_value = instance_type
 
