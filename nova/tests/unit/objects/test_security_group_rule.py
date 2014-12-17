@@ -62,7 +62,7 @@ class _TestSecurityGroupRuleObject(object):
     @mock.patch.object(db, 'security_group_rule_create',
                        return_value=fake_rule)
     def test_create(self, db_mock):
-        rule = objects.SecurityGroupRule()
+        rule = objects.SecurityGroupRule(context=self.context)
         rule.protocol = 'tcp'
         secgroup = objects.SecurityGroup()
         secgroup.id = 123
@@ -70,7 +70,7 @@ class _TestSecurityGroupRuleObject(object):
         parentgroup.id = 223
         rule.grantee_group = secgroup
         rule.parent_group = parentgroup
-        rule.create(self.context)
+        rule.create()
         updates = db_mock.call_args[0][1]
         self.assertEqual(fake_rule['id'], rule.id)
         self.assertEqual(updates['group_id'], rule.grantee_group.id)
@@ -79,8 +79,8 @@ class _TestSecurityGroupRuleObject(object):
     @mock.patch.object(db, 'security_group_rule_create',
                        return_value=fake_rule)
     def test_set_id_failure(self, db_mock):
-        rule = objects.SecurityGroupRule()
-        rule.create(self.context)
+        rule = objects.SecurityGroupRule(context=self.context)
+        rule.create()
         self.assertRaises(exception.ReadOnlyFieldError, setattr,
                           rule, 'id', 124)
 
