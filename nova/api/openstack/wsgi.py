@@ -113,6 +113,8 @@ class Request(webob.Request):
     def __init__(self, *args, **kwargs):
         super(Request, self).__init__(*args, **kwargs)
         self._extension_data = {'db_items': {}}
+        if not hasattr(self, 'api_version_request'):
+            self.api_version_request = api_version.APIVersionRequest()
 
     def cache_db_items(self, key, items, item_key='id'):
         """Allow API methods to store objects from a DB query to be
@@ -742,6 +744,7 @@ class Resource(wsgi.Application):
     wrapped in Fault() to provide API friendly error responses.
 
     """
+    support_api_request_version = False
 
     def __init__(self, controller, action_peek=None, inherits=None,
                  **deserializers):
@@ -924,15 +927,16 @@ class Resource(wsgi.Application):
     def __call__(self, request):
         """WSGI method that controls (de)serialization and method dispatch."""
 
-        # Set the version of the API requested based on the header
-        try:
-            request.set_api_version_request()
-        except exception.InvalidAPIVersionString as e:
-            return Fault(webob.exc.HTTPBadRequest(
-                explanation=e.format_message()))
-        except exception.InvalidGlobalAPIVersion as e:
-            return Fault(webob.exc.HTTPNotAcceptable(
-                explanation=e.format_message()))
+        if self.support_api_request_version:
+            # Set the version of the API requested based on the header
+            try:
+                request.set_api_version_request()
+            except exception.InvalidAPIVersionString as e:
+                return Fault(webob.exc.HTTPBadRequest(
+                    explanation=e.format_message()))
+            except exception.InvalidGlobalAPIVersion as e:
+                return Fault(webob.exc.HTTPNotAcceptable(
+                    explanation=e.format_message()))
 
         # Identify the action, its arguments, and the requested
         # content type
@@ -1050,6 +1054,11 @@ class Resource(wsgi.Application):
                 # Headers must be utf-8 strings
                 response.headers[hdr] = utils.utf8(str(val))
 
+            if not request.api_version_request.is_null():
+                response.headers['X-OpenStack-Compute-API-Version'] = \
+                    request.api_version_request.get_string()
+                response.headers['Vary'] = 'X-OpenStack-Compute-API-Version'
+
         return response
 
     def get_method(self, request, action, content_type, body):
@@ -1103,6 +1112,10 @@ class Resource(wsgi.Application):
             # about the exception to the user so it looks as if
             # the method is simply not implemented.
             return Fault(webob.exc.HTTPNotFound())
+
+
+class ResourceV21(Resource):
+    support_api_request_version = True
 
 
 def action(name):
@@ -1359,6 +1372,12 @@ class Fault(webob.exc.HTTPException):
             retry = self.wrapped_exc.headers.get('Retry-After', None)
             if retry:
                 fault_data[fault_name]['retryAfter'] = retry
+
+        if not req.api_version_request.is_null():
+            self.wrapped_exc.headers['X-OpenStack-Compute-API-Version'] = \
+                req.api_version_request.get_string()
+            self.wrapped_exc.headers['Vary'] = \
+              'X-OpenStack-Compute-API-Version'
 
         # 'code' is an attribute on the fault tag itself
         metadata = {'attributes': {fault_name: 'code'}}
