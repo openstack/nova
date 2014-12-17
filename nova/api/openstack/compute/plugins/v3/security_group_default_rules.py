@@ -38,7 +38,7 @@ class SecurityGroupDefaultRulesController(sg.SecurityGroupControllerBase):
         self.security_group_api = (
             openstack_driver.get_openstack_security_group_driver())
 
-    @extensions.expected_errors((400, 501))
+    @extensions.expected_errors((400, 409, 501))
     def create(self, req, body):
         context = sg._authorize_context(req)
         authorize(context)
@@ -62,7 +62,7 @@ class SecurityGroupDefaultRulesController(sg.SecurityGroupControllerBase):
 
         if self.security_group_api.default_rule_exists(context, values):
             msg = _('This default rule already exists.')
-            raise exc.HTTPBadRequest(explanation=msg)
+            raise exc.HTTPConflict(explanation=msg)
         security_group_rule = self.security_group_api.add_default_rules(
             context, [values])[0]
         fmt_rule = self._format_security_group_default_rule(
