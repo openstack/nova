@@ -233,10 +233,7 @@ class EC2KeystoneAuth(wsgi.Middleware):
                                     verify=verify, cert=cert)
         status_code = response.status_code
         if status_code != 200:
-            if status_code == 401:
-                msg = response.reason
-            else:
-                msg = _("Failure communicating with keystone")
+            msg = response.reason
             return faults.ec2_error_response(request_id, "AuthFailure", msg,
                                              status=status_code)
         result = response.json()
@@ -251,7 +248,7 @@ class EC2KeystoneAuth(wsgi.Middleware):
                      in result['access']['user']['roles']]
         except (AttributeError, KeyError) as e:
             LOG.error(_LE("Keystone failure: %s"), e)
-            msg = _("Failure communicating with keystone")
+            msg = _("Failure parsing response from keystone: %s") % e
             return faults.ec2_error_response(request_id, "AuthFailure", msg,
                                              status=400)
 
