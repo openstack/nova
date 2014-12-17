@@ -36,12 +36,12 @@ class _TestEC2InstanceMapping(object):
             test.assertEqual(db[field], obj[field])
 
     def test_create(self):
-        imap = ec2_obj.EC2InstanceMapping()
+        imap = ec2_obj.EC2InstanceMapping(context=self.context)
         imap.uuid = 'fake-uuid-2'
 
         with mock.patch.object(db, 'ec2_instance_create') as create:
             create.return_value = fake_map
-            imap.create(self.context)
+            imap.create()
 
         self.assertEqual(self.context, imap._context)
         imap._context = None
@@ -77,12 +77,12 @@ class _TestEC2VolumeMapping(object):
             test.assertEqual(db[field], obj[field])
 
     def test_create(self):
-        vmap = ec2_obj.EC2VolumeMapping()
+        vmap = ec2_obj.EC2VolumeMapping(context=self.context)
         vmap.uuid = 'fake-uuid-2'
 
         with mock.patch.object(db, 'ec2_volume_create') as create:
             create.return_value = fake_map
-            vmap.create(self.context)
+            vmap.create()
 
         self.assertEqual(self.context, vmap._context)
         vmap._context = None
@@ -118,12 +118,12 @@ class _TestEC2SnapshotMapping(object):
             test.assertEqual(db[field], obj[field])
 
     def test_create(self):
-        smap = ec2_obj.EC2SnapshotMapping()
+        smap = ec2_obj.EC2SnapshotMapping(context=self.context)
         smap.uuid = 'fake-uuid-2'
 
         with mock.patch.object(db, 'ec2_snapshot_create') as create:
             create.return_value = fake_map
-            smap.create(self.context)
+            smap.create()
 
         self.assertEqual(self.context, smap._context)
         smap._context = None
@@ -159,12 +159,12 @@ class _TestS3ImageMapping(object):
             test.assertEqual(db[field], obj[field])
 
     def test_create(self):
-        s3imap = ec2_obj.S3ImageMapping()
+        s3imap = ec2_obj.S3ImageMapping(context=self.context)
         s3imap.uuid = 'fake-uuid-2'
 
         with mock.patch.object(db, 's3_image_create') as create:
             create.return_value = fake_map
-            s3imap.create(self.context)
+            s3imap.create()
 
         self.assertEqual(self.context, s3imap._context)
         s3imap._context = None
