@@ -67,7 +67,7 @@ class _TestVirtualInterface(object):
             self._compare(self, fake_vif, vif)
 
     def test_create(self):
-        vif = vif_obj.VirtualInterface()
+        vif = vif_obj.VirtualInterface(context=self.context)
         vif.address = '00:00:00:00:00:00'
         vif.network_id = 123
         vif.instance_uuid = 'fake-uuid'
@@ -75,7 +75,7 @@ class _TestVirtualInterface(object):
 
         with mock.patch.object(db, 'virtual_interface_create') as create:
             create.return_value = fake_vif
-            vif.create(self.context)
+            vif.create()
 
         self.assertEqual(self.context, vif._context)
         vif._context = None
