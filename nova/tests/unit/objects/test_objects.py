@@ -73,7 +73,7 @@ class MyObj(base.NovaPersistentObject, base.NovaObject,
 
     @base.remotable_classmethod
     def query(cls, context):
-        obj = cls(foo=1, bar='bar')
+        obj = cls(context=context, foo=1, bar='bar')
         obj.obj_reset_changes()
         return obj
 
@@ -588,7 +588,7 @@ class _TestObject(object):
         obj = MyObj.query(self.context)
         obj.foo = 123
         self.assertEqual(obj.obj_what_changed(), set(['foo']))
-        obj.save(self.context)
+        obj.save()
         self.assertEqual(obj.obj_what_changed(), set([]))
         self.assertEqual(obj.foo, 123)
         self.assertRemotes()
@@ -597,7 +597,7 @@ class _TestObject(object):
         obj = MyObj.query(self.context)
         obj.foo = 123
         self.assertEqual(obj.obj_what_changed(), set(['foo']))
-        obj.refresh(self.context)
+        obj.refresh()
         self.assertEqual(obj.obj_what_changed(), set([]))
         self.assertEqual(obj.foo, 321)
         self.assertEqual(obj.bar, 'refreshed')
