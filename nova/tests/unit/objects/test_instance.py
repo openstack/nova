@@ -695,36 +695,39 @@ class _TestInstanceObject(object):
         fake_inst = fake_instance.fake_db_instance(**vals)
         db.instance_create(self.context, vals).AndReturn(fake_inst)
         self.mox.ReplayAll()
-        inst = instance.Instance(host='foo-host', memory_mb=128,
+        inst = instance.Instance(context=self.context,
+                                 host='foo-host', memory_mb=128,
                                  system_metadata={'foo': 'bar'})
-        inst.create(self.context)
+        inst.create()
 
     def test_create(self):
         self.mox.StubOutWithMock(db, 'instance_create')
         db.instance_create(self.context, {'extra': {}}).AndReturn(
             self.fake_instance)
         self.mox.ReplayAll()
-        inst = instance.Instance()
-        inst.create(self.context)
+        inst = instance.Instance(context=self.context)
+        inst.create()
         self.assertEqual(self.fake_instance['id'], inst.id)
 
     def test_create_with_values(self):
-        inst1 = instance.Instance(user_id=self.context.user_id,
+        inst1 = instance.Instance(context=self.context,
+                                  user_id=self.context.user_id,
                                   project_id=self.context.project_id,
                                   host='foo-host')
-        inst1.create(self.context)
+        inst1.create()
         self.assertEqual(inst1.host, 'foo-host')
         inst2 = instance.Instance.get_by_uuid(self.context, inst1.uuid)
         self.assertEqual(inst2.host, 'foo-host')
 
     def test_create_with_extras(self):
-        inst = instance.Instance(uuid=self.fake_instance['uuid'],
+        inst = instance.Instance(context=self.context,
+            uuid=self.fake_instance['uuid'],
             numa_topology=test_instance_numa_topology.fake_obj_numa_topology,
             pci_requests=objects.InstancePCIRequests(
                 requests=[
                     objects.InstancePCIRequest(count=123,
                                                spec=[])]))
-        inst.create(self.context)
+        inst.create()
         self.assertIsNotNone(inst.numa_topology)
         self.assertIsNotNone(inst.pci_requests)
         got_numa_topo = objects.InstanceNUMATopology.get_by_instance_uuid(
@@ -736,10 +739,11 @@ class _TestInstanceObject(object):
         self.assertEqual(123, got_pci_requests.requests[0].count)
 
     def test_recreate_fails(self):
-        inst = instance.Instance(user_id=self.context.user_id,
+        inst = instance.Instance(context=self.context,
+                                 user_id=self.context.user_id,
                                  project_id=self.context.project_id,
                                  host='foo-host')
-        inst.create(self.context)
+        inst.create()
         self.assertRaises(exception.ObjectActionError, inst.create,
                           self.context)
 
@@ -762,9 +766,10 @@ class _TestInstanceObject(object):
             secgroups.objects.append(secgroup)
         info_cache = instance_info_cache.InstanceInfoCache()
         info_cache.network_info = network_model.NetworkInfo()
-        inst = instance.Instance(host='foo-host', security_groups=secgroups,
+        inst = instance.Instance(context=self.context,
+                                 host='foo-host', security_groups=secgroups,
                                  info_cache=info_cache)
-        inst.create(self.context)
+        inst.create()
 
     def test_destroy_stubbed(self):
         self.mox.StubOutWithMock(db, 'instance_destroy')
@@ -774,8 +779,9 @@ class _TestInstanceObject(object):
         db.instance_destroy(self.context, 'fake-uuid',
                             constraint=None).AndReturn(fake_inst)
         self.mox.ReplayAll()
-        inst = instance.Instance(id=1, uuid='fake-uuid', host='foo')
-        inst.destroy(self.context)
+        inst = instance.Instance(context=self.context, id=1, uuid='fake-uuid',
+                                 host='foo')
+        inst.destroy()
         self.assertEqual(timeutils.normalize_time(inst.deleted_at),
                          timeutils.normalize_time(deleted_at))
         self.assertTrue(inst.deleted)
@@ -784,8 +790,9 @@ class _TestInstanceObject(object):
         values = {'user_id': self.context.user_id,
                   'project_id': self.context.project_id}
         db_inst = db.instance_create(self.context, values)
-        inst = instance.Instance(id=db_inst['id'], uuid=db_inst['uuid'])
-        inst.destroy(self.context)
+        inst = instance.Instance(context=self.context, id=db_inst['id'],
+                                 uuid=db_inst['uuid'])
+        inst.destroy()
         self.assertRaises(exception.InstanceNotFound,
                           db.instance_get_by_uuid, self.context,
                           db_inst['uuid'])
