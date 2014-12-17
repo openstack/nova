@@ -439,11 +439,9 @@ class NotDbApiTestCase(DbTestCase):
         self.assertRaises(ValueError, sqlalchemy_api.model_query,
                           self.context, models.Instance, read_deleted="foo")
 
-        # Check either model or base_model is a subclass of NovaBase
-        self.assertRaises(ValueError, sqlalchemy_api.model_query,
+        # Check model is a valid model
+        self.assertRaises(TypeError, sqlalchemy_api.model_query,
                           self.context, "")
-        self.assertRaises(ValueError, sqlalchemy_api.model_query,
-                          self.context, "", base_model="")
 
     @mock.patch.object(sqlalchemy_api, 'get_session')
     def test_model_query_use_slave_false(self, mock_get_session):
