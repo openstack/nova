@@ -17,6 +17,7 @@
 import base64
 import os
 import re
+import sys
 
 from oslo.config import cfg
 from oslo import messaging
@@ -57,6 +58,41 @@ CONF.import_opt('network_api_class', 'nova.network')
 CONF.import_opt('reclaim_instance_interval', 'nova.compute.manager')
 
 LOG = logging.getLogger(__name__)
+
+CREATE_EXCEPTIONS = {
+    exception.InvalidMetadataSize: exc.HTTPRequestEntityTooLarge,
+    exception.ImageNotFound: exc.HTTPBadRequest,
+    exception.FlavorNotFound: exc.HTTPBadRequest,
+    exception.KeypairNotFound: exc.HTTPBadRequest,
+    exception.ConfigDriveInvalidValue: exc.HTTPBadRequest,
+    exception.ImageNotActive: exc.HTTPBadRequest,
+    exception.FlavorDiskTooSmall: exc.HTTPBadRequest,
+    exception.FlavorMemoryTooSmall: exc.HTTPBadRequest,
+    exception.NetworkNotFound: exc.HTTPBadRequest,
+    exception.PortNotFound: exc.HTTPBadRequest,
+    exception.FixedIpAlreadyInUse: exc.HTTPBadRequest,
+    exception.SecurityGroupNotFound: exc.HTTPBadRequest,
+    exception.InstanceUserDataTooLarge: exc.HTTPBadRequest,
+    exception.InstanceUserDataMalformed: exc.HTTPBadRequest,
+    exception.ImageNUMATopologyIncomplete: exc.HTTPBadRequest,
+    exception.ImageNUMATopologyForbidden: exc.HTTPBadRequest,
+    exception.ImageNUMATopologyAsymmetric: exc.HTTPBadRequest,
+    exception.ImageNUMATopologyCPUOutOfRange: exc.HTTPBadRequest,
+    exception.ImageNUMATopologyCPUDuplicates: exc.HTTPBadRequest,
+    exception.ImageNUMATopologyCPUsUnassigned: exc.HTTPBadRequest,
+    exception.ImageNUMATopologyMemoryOutOfRange: exc.HTTPBadRequest,
+    exception.PortInUse: exc.HTTPConflict,
+    exception.InstanceExists: exc.HTTPConflict,
+    exception.NoUniqueMatch: exc.HTTPConflict,
+    exception.Invalid: exc.HTTPBadRequest,
+}
+
+CREATE_EXCEPTIONS_MSGS = {
+    exception.ImageNotFound: _("Can not find requested image"),
+    exception.FlavorNotFound: _("Invalid flavorRef provided."),
+    exception.KeypairNotFound: _("Invalid key_name provided."),
+    exception.ConfigDriveInvalidValue: _("Invalid config_drive provided."),
+}
 
 
 class Controller(wsgi.Controller):
@@ -318,14 +354,6 @@ class Controller(wsgi.Controller):
         except TypeError:
             return None
 
-    def _validate_user_data(self, user_data):
-        """Check if the user_data is encoded properly."""
-        if not user_data:
-            return
-        if self._decode_base64(user_data) is None:
-            expl = _('Userdata content cannot be decoded')
-            raise exc.HTTPBadRequest(explanation=expl)
-
     def _validate_access_ipv4(self, address):
         if not netutils.is_valid_ipv4(address):
             expl = _('accessIPv4 is not proper IPv4 format')
@@ -341,6 +369,118 @@ class Controller(wsgi.Controller):
         context = req.environ['nova.context']
         instance = self._get_server(context, req, id)
         return self._view_builder.show(req, instance)
+
+    def _extract(self, server_dict, ext_name, key):
+        if self.ext_mgr.is_loaded(ext_name):
+            return server_dict.get(key)
+        return None
+
+    def _validate_user_data(self, user_data):
+        if user_data and self._decode_base64(user_data) is None:
+            expl = _('Userdata content cannot be decoded')
+            raise exc.HTTPBadRequest(explanation=expl)
+        return user_data
+
+    def _extract_bdm(self, server_dict):
+        legacy_bdm = True
+        block_device_mapping = None
+        block_device_mapping_v2 = None
+        if not self.ext_mgr.is_loaded('os-volumes'):
+            return legacy_bdm, None
+        block_device_mapping = server_dict.get('block_device_mapping', [])
+        if not isinstance(block_device_mapping, list):
+            msg = _('block_device_mapping must be a list')
+            raise exc.HTTPBadRequest(explanation=msg)
+        for bdm in block_device_mapping:
+            try:
+                block_device.validate_device_name(bdm.get("device_name"))
+                block_device.validate_and_default_volume_size(bdm)
+            except exception.InvalidBDMFormat as e:
+                raise exc.HTTPBadRequest(explanation=e.format_message())
+
+            if 'delete_on_termination' in bdm:
+                bdm['delete_on_termination'] = strutils.bool_from_string(
+                    bdm['delete_on_termination'])
+
+        if self.ext_mgr.is_loaded('os-block-device-mapping-v2-boot'):
+            # Consider the new data format for block device mapping
+            block_device_mapping_v2 = server_dict.get(
+                'block_device_mapping_v2', [])
+            # NOTE (ndipanov):  Disable usage of both legacy and new
+            #                   block device format in the same request
+            if block_device_mapping and block_device_mapping_v2:
+                expl = _('Using different block_device_mapping syntaxes '
+                         'is not allowed in the same request.')
+                raise exc.HTTPBadRequest(explanation=expl)
+
+            if not isinstance(block_device_mapping_v2, list):
+                msg = _('block_device_mapping_v2 must be a list')
+                raise exc.HTTPBadRequest(explanation=msg)
+
+            # Assume legacy format
+            legacy_bdm = not bool(block_device_mapping_v2)
+
+            try:
+                block_device_mapping_v2 = [
+                    block_device.BlockDeviceDict.from_api(bdm_dict)
+                    for bdm_dict in block_device_mapping_v2]
+            except exception.InvalidBDMFormat as e:
+                raise exc.HTTPBadRequest(explanation=e.format_message())
+
+        bdm = (block_device_mapping or block_device_mapping_v2)
+        return legacy_bdm, bdm
+
+    @staticmethod
+    def _resolve_exception(matches):
+        """We want the most specific exception class."""
+        while len(matches) > 1:
+            first = matches[0]
+            second = matches[1]
+            if issubclass(first, second):
+                del matches[1]
+            else:
+                del matches[0]
+        return matches[0]
+
+    @staticmethod
+    def _handle_create_exception(*exc_info):
+        """The `CREATE_EXCEPTIONS` dict containing the relationships between
+        the nova exceptions and the webob exception classes to be raised is
+        defined at the top of this file.
+        """
+        error = exc_info[1]
+        err_cls = error.__class__
+        cls_to_raise = CREATE_EXCEPTIONS.get(err_cls)
+        if cls_to_raise is None:
+            # The error is a subclass of one of the dict keys
+            to_raise = [val for key, val in CREATE_EXCEPTIONS.items()
+                        if isinstance(error, key)]
+            if len(to_raise) > 1:
+                cls_to_raise = Controller._resolve_exception(to_raise)
+            elif not to_raise:
+                # Not any of the expected exceptions, so re-raise
+                six.reraise(*exc_info)
+            else:
+                cls_to_raise = to_raise[0]
+
+        for key, val in CREATE_EXCEPTIONS_MSGS.items():
+            if isinstance(error, key):
+                raise cls_to_raise(explanation=CREATE_EXCEPTIONS_MSGS[key])
+        raise cls_to_raise(explanation=error.format_message())
+
+    def _determine_requested_networks(self, server_dict):
+        requested_networks = None
+        if (self.ext_mgr.is_loaded('os-networks')
+                or utils.is_neutron()):
+            requested_networks = server_dict.get('networks')
+
+        if requested_networks is not None:
+            if not isinstance(requested_networks, list):
+                expl = _('Bad networks format')
+                raise exc.HTTPBadRequest(explanation=expl)
+            requested_networks = self._get_requested_networks(
+                requested_networks)
+        return requested_networks
 
     @wsgi.response(202)
     def create(self, req, body):
@@ -382,17 +522,7 @@ class Controller(wsgi.Controller):
 
         sg_names = list(set(sg_names))
 
-        requested_networks = None
-        if (self.ext_mgr.is_loaded('os-networks')
-                or utils.is_neutron()):
-            requested_networks = server_dict.get('networks')
-
-        if requested_networks is not None:
-            if not isinstance(requested_networks, list):
-                expl = _('Bad networks format')
-                raise exc.HTTPBadRequest(explanation=expl)
-            requested_networks = self._get_requested_networks(
-                requested_networks)
+        requested_networks = self._determine_requested_networks(server_dict)
 
         (access_ip_v4, ) = server_dict.get('accessIPv4'),
         if access_ip_v4 is not None:
@@ -402,72 +532,16 @@ class Controller(wsgi.Controller):
         if access_ip_v6 is not None:
             self._validate_access_ipv6(access_ip_v6)
 
-        try:
-            flavor_id = self._flavor_id_from_req_data(body)
-        except ValueError as error:
-            msg = _("Invalid flavorRef provided.")
-            raise exc.HTTPBadRequest(explanation=msg)
+        flavor_id = self._flavor_id_from_req_data(body)
 
         # optional openstack extensions:
-        key_name = None
-        if self.ext_mgr.is_loaded('os-keypairs'):
-            key_name = server_dict.get('key_name')
-
-        user_data = None
-        if self.ext_mgr.is_loaded('os-user-data'):
-            user_data = server_dict.get('user_data')
+        key_name = self._extract(server_dict, 'os-keypairs', 'key_name')
+        availability_zone = self._extract(server_dict, 'os-availability-zone',
+                                          'availability_zone')
+        user_data = self._extract(server_dict, 'os-user-data', 'user_data')
         self._validate_user_data(user_data)
 
-        availability_zone = None
-        if self.ext_mgr.is_loaded('os-availability-zone'):
-            availability_zone = server_dict.get('availability_zone')
-
-        block_device_mapping = None
-        block_device_mapping_v2 = None
-        legacy_bdm = True
-        if self.ext_mgr.is_loaded('os-volumes'):
-            block_device_mapping = server_dict.get('block_device_mapping', [])
-            if not isinstance(block_device_mapping, list):
-                msg = _('block_device_mapping must be a list')
-                raise exc.HTTPBadRequest(explanation=msg)
-            for bdm in block_device_mapping:
-                try:
-                    block_device.validate_device_name(bdm.get("device_name"))
-                    block_device.validate_and_default_volume_size(bdm)
-                except exception.InvalidBDMFormat as e:
-                    raise exc.HTTPBadRequest(explanation=e.format_message())
-
-                if 'delete_on_termination' in bdm:
-                    bdm['delete_on_termination'] = strutils.bool_from_string(
-                        bdm['delete_on_termination'])
-
-            if self.ext_mgr.is_loaded('os-block-device-mapping-v2-boot'):
-                # Consider the new data format for block device mapping
-                block_device_mapping_v2 = server_dict.get(
-                    'block_device_mapping_v2', [])
-                # NOTE (ndipanov):  Disable usage of both legacy and new
-                #                   block device format in the same request
-                if block_device_mapping and block_device_mapping_v2:
-                    expl = _('Using different block_device_mapping syntaxes '
-                             'is not allowed in the same request.')
-                    raise exc.HTTPBadRequest(explanation=expl)
-
-                if not isinstance(block_device_mapping_v2, list):
-                    msg = _('block_device_mapping_v2 must be a list')
-                    raise exc.HTTPBadRequest(explanation=msg)
-
-                # Assume legacy format
-                legacy_bdm = not bool(block_device_mapping_v2)
-
-                try:
-                    block_device_mapping_v2 = [
-                        block_device.BlockDeviceDict.from_api(bdm_dict)
-                        for bdm_dict in block_device_mapping_v2]
-                except exception.InvalidBDMFormat as e:
-                    raise exc.HTTPBadRequest(explanation=e.format_message())
-
-        block_device_mapping = (block_device_mapping or
-                                block_device_mapping_v2)
+        legacy_bdm, block_device_mapping = self._extract_bdm(server_dict)
 
         ret_resv_id = False
         # min_count and max_count are optional.  If they exist, they may come
@@ -501,9 +575,8 @@ class Controller(wsgi.Controller):
         if self.ext_mgr.is_loaded('OS-SCH-HNT'):
             scheduler_hints = server_dict.get('scheduler_hints', {})
 
-        check_server_group_quota = \
-            self.ext_mgr.is_loaded('os-server-group-quotas')
-
+        check_server_group_quota = self.ext_mgr.is_loaded(
+                'os-server-group-quotas')
         try:
             _get_inst_type = flavors.get_flavor_by_flavor_id
             inst_type = _get_inst_type(flavor_id, ctxt=context,
@@ -537,21 +610,6 @@ class Controller(wsgi.Controller):
             raise exc.HTTPForbidden(
                 explanation=error.format_message(),
                 headers={'Retry-After': 0})
-        except exception.InvalidMetadataSize as error:
-            raise exc.HTTPRequestEntityTooLarge(
-                explanation=error.format_message())
-        except exception.ImageNotFound as error:
-            msg = _("Can not find requested image")
-            raise exc.HTTPBadRequest(explanation=msg)
-        except exception.FlavorNotFound as error:
-            msg = _("Invalid flavorRef provided.")
-            raise exc.HTTPBadRequest(explanation=msg)
-        except exception.KeypairNotFound as error:
-            msg = _("Invalid key_name provided.")
-            raise exc.HTTPBadRequest(explanation=msg)
-        except exception.ConfigDriveInvalidValue:
-            msg = _("Invalid config_drive provided.")
-            raise exc.HTTPBadRequest(explanation=msg)
         except messaging.RemoteError as err:
             msg = "%(err_type)s: %(err_msg)s" % {'err_type': err.exc_type,
                                                  'err_msg': err.value}
@@ -559,30 +617,9 @@ class Controller(wsgi.Controller):
         except UnicodeDecodeError as error:
             msg = "UnicodeError: %s" % error
             raise exc.HTTPBadRequest(explanation=msg)
-        except (exception.ImageNotActive,
-                exception.FlavorDiskTooSmall,
-                exception.FlavorMemoryTooSmall,
-                exception.NetworkNotFound,
-                exception.PortNotFound,
-                exception.FixedIpAlreadyInUse,
-                exception.SecurityGroupNotFound,
-                exception.InstanceUserDataTooLarge,
-                exception.InstanceUserDataMalformed) as error:
-            raise exc.HTTPBadRequest(explanation=error.format_message())
-        except (exception.ImageNUMATopologyIncomplete,
-                exception.ImageNUMATopologyForbidden,
-                exception.ImageNUMATopologyAsymmetric,
-                exception.ImageNUMATopologyCPUOutOfRange,
-                exception.ImageNUMATopologyCPUDuplicates,
-                exception.ImageNUMATopologyCPUsUnassigned,
-                exception.ImageNUMATopologyMemoryOutOfRange) as error:
-            raise exc.HTTPBadRequest(explanation=error.format_message())
-        except (exception.PortInUse,
-                exception.InstanceExists,
-                exception.NoUniqueMatch) as error:
-            raise exc.HTTPConflict(explanation=error.format_message())
-        except exception.Invalid as error:
-            raise exc.HTTPBadRequest(explanation=error.format_message())
+        except Exception as error:
+            # The remaining cases can be handled in a standard fashion.
+            self._handle_create_exception(*sys.exc_info())
 
         # If the caller wanted a reservation_id, return it
         if ret_resv_id:
@@ -833,8 +870,11 @@ class Controller(wsgi.Controller):
         except (TypeError, KeyError):
             msg = _("Missing flavorRef attribute")
             raise exc.HTTPBadRequest(explanation=msg)
-
-        return common.get_id_from_href(flavor_ref)
+        try:
+            return common.get_id_from_href(flavor_ref)
+        except ValueError:
+            msg = _("Invalid flavorRef provided.")
+            raise exc.HTTPBadRequest(explanation=msg)
 
     @wsgi.response(202)
     @wsgi.action('changePassword')
