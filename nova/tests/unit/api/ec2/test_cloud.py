@@ -47,7 +47,7 @@ from nova.image import s3
 from nova.network import api as network_api
 from nova.network import base_api as base_network_api
 from nova.network import model
-from nova.network import neutronv2
+from nova.network.neutronv2 import api as neutronapi
 from nova import objects
 from nova.objects import base as obj_base
 from nova.openstack.common import log as logging
@@ -3150,8 +3150,8 @@ class CloudTestCaseNeutronProxy(test.NoDBTestCase):
         super(CloudTestCaseNeutronProxy, self).setUp()
         cfg.CONF.set_override('security_group_api', 'neutron')
         self.cloud = cloud.CloudController()
-        self.original_client = neutronv2.get_client
-        neutronv2.get_client = test_neutron.get_client
+        self.original_client = neutronapi.get_client
+        neutronapi.get_client = test_neutron.get_client
         self.user_id = 'fake'
         self.project_id = 'fake'
         self.context = context.RequestContext(self.user_id,
@@ -3159,7 +3159,7 @@ class CloudTestCaseNeutronProxy(test.NoDBTestCase):
                                               is_admin=True)
 
     def tearDown(self):
-        neutronv2.get_client = self.original_client
+        neutronapi.get_client = self.original_client
         test_neutron.get_client()._reset()
         super(CloudTestCaseNeutronProxy, self).tearDown()
 
