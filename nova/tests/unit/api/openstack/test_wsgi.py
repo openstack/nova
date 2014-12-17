@@ -209,6 +209,16 @@ class RequestTest(test.NoDBTestCase):
         self.assertEqual(api_version.APIVersionRequest("2.14"),
                          request.api_version_request)
 
+    @mock.patch("nova.api.openstack.api_version_request.max_api_version")
+    def test_api_version_request_header_latest(self, mock_maxver):
+        mock_maxver.return_value = api_version.APIVersionRequest("3.5")
+
+        request = wsgi.Request.blank('/')
+        request.headers = {'X-OpenStack-Compute-API-Version': 'latest'}
+        request.set_api_version_request()
+        self.assertEqual(api_version.APIVersionRequest("3.5"),
+                         request.api_version_request)
+
     def test_api_version_request_header_invalid(self):
         request = wsgi.Request.blank('/')
         request.headers = {'X-OpenStack-Compute-API-Version': '2.1.3'}
