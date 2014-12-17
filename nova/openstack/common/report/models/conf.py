@@ -43,7 +43,7 @@ class ConfigModel(mwdv.ModelWithDefaultViews):
 
         def opt_value(opt_obj, value):
             if opt_obj['opt'].secret:
-                return '*******'
+                return '***'
             else:
                 return value
 

@@ -397,7 +397,7 @@ class ProcessLauncher(object):
                 self.running = True
                 self.sigcaught = None
         except eventlet.greenlet.GreenletExit:
-            LOG.info(_LI("Wait called after thread killed.  Cleaning up."))
+            LOG.info(_LI("Wait called after thread killed. Cleaning up."))
 
         self.stop()
 
@@ -434,8 +434,8 @@ class Service(object):
     def start(self):
         pass
 
-    def stop(self):
-        self.tg.stop()
+    def stop(self, graceful=False):
+        self.tg.stop(graceful)
         self.tg.wait()
         # Signal that service cleanup is done:
         if not self._done.ready():

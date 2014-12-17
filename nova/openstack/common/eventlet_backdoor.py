@@ -25,7 +25,6 @@ import socket
 import sys
 import traceback
 
-import eventlet
 import eventlet.backdoor
 import greenlet
 from oslo.config import cfg
