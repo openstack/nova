@@ -2705,6 +2705,10 @@ class LibvirtDriver(driver.ComputeDriver):
         # Lookup the filesystem type if required
         os_type_with_default = disk.get_fs_type_for_os_type(
                                                           instance['os_type'])
+        # Generate a file extension based on the file system
+        # type and the mkfs commands configured if any
+        file_extension = disk.get_file_extension_for_os_type(
+                                                          os_type_with_default)
 
         ephemeral_gb = instance['ephemeral_gb']
         if 'disk.local' in disk_mapping:
@@ -2713,7 +2717,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                    fs_label='ephemeral0',
                                    os_type=instance["os_type"],
                                    is_block_dev=disk_image.is_block_dev)
-            fname = "ephemeral_%s_%s" % (ephemeral_gb, os_type_with_default)
+            fname = "ephemeral_%s_%s" % (ephemeral_gb, file_extension)
             size = ephemeral_gb * units.Gi
             disk_image.cache(fetch_func=fn,
                              context=context,
@@ -2735,7 +2739,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                    os_type=instance["os_type"],
                                    is_block_dev=disk_image.is_block_dev)
             size = eph['size'] * units.Gi
-            fname = "ephemeral_%s_%s" % (eph['size'], os_type_with_default)
+            fname = "ephemeral_%s_%s" % (eph['size'], file_extension)
             disk_image.cache(fetch_func=fn,
                              context=context,
                              filename=fname,
