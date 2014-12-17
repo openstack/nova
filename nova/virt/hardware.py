@@ -17,6 +17,7 @@ import itertools
 
 from oslo.config import cfg
 from oslo.serialization import jsonutils
+from oslo.utils import units
 import six
 
 from nova import context
@@ -867,6 +868,21 @@ def numa_fit_instance_to_host(
                 return objects.InstanceNUMATopology(cells=cells)
 
 
+def _numa_pagesize_usage_from_cell(hostcell, instancecell, sign):
+    topo = []
+    for pages in hostcell.mempages:
+        if pages.size_kb == instancecell.pagesize:
+            topo.append(objects.NUMAPagesTopology(
+                size_kb=pages.size_kb,
+                total=pages.total,
+                used=max(0, pages.used +
+                         instancecell.memory * units.Ki /
+                         pages.size_kb * sign)))
+        else:
+            topo.append(pages)
+    return topo
+
+
 def numa_usage_from_instances(host, instances, free=False):
     """Get host topology usage
 
@@ -889,16 +905,21 @@ def numa_usage_from_instances(host, instances, free=False):
     for hostcell in host.cells:
         memory_usage = hostcell.memory_usage
         cpu_usage = hostcell.cpu_usage
+        mempages = hostcell.mempages
         for instance in instances:
             for instancecell in instance.cells:
                 if instancecell.id == hostcell.id:
                     memory_usage = (
                             memory_usage + sign * instancecell.memory)
                     cpu_usage = cpu_usage + sign * len(instancecell.cpuset)
+                    if instancecell.pagesize and instancecell.pagesize > 0:
+                        mempages = _numa_pagesize_usage_from_cell(
+                            hostcell, instancecell, sign)
 
         cell = objects.NUMACell(
             id=hostcell.id, cpuset=hostcell.cpuset, memory=hostcell.memory,
-            cpu_usage=max(0, cpu_usage), memory_usage=max(0, memory_usage))
+            cpu_usage=max(0, cpu_usage), memory_usage=max(0, memory_usage),
+            mempages=mempages)
 
         cells.append(cell)
 

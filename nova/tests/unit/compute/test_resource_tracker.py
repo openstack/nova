@@ -46,9 +46,9 @@ FAKE_VIRT_MEMORY_WITH_OVERHEAD = (
         FAKE_VIRT_MEMORY_MB + FAKE_VIRT_MEMORY_OVERHEAD)
 FAKE_VIRT_NUMA_TOPOLOGY = objects.NUMATopology(
         cells=[objects.NUMACell(id=0, cpuset=set([1, 2]), memory=3072,
-                                cpu_usage=0, memory_usage=0),
+                                cpu_usage=0, memory_usage=0, mempages=[]),
                objects.NUMACell(id=1, cpuset=set([3, 4]), memory=3072,
-                                cpu_usage=0, memory_usage=0)])
+                                cpu_usage=0, memory_usage=0, mempages=[])])
 FAKE_VIRT_NUMA_TOPOLOGY_OVERHEAD = hardware.VirtNUMALimitTopology(
         cells=[hardware.VirtNUMATopologyCellLimit(
                     0, set([1, 2]), 3072, 4, 10240),
@@ -726,7 +726,7 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
             cells=[objects.InstanceNUMACell(
                 id=0, cpuset=set([1]), memory=mem),
                    objects.InstanceNUMACell(
-                id=1, cpuset=set([3]), memory=mem)])
+                       id=1, cpuset=set([3]), memory=mem)])
 
     def _claim_topology(self, mem, cpus=1):
         if self.tracker.driver.numa_topology is None:
@@ -735,10 +735,10 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
         return objects.NUMATopology(
             cells=[objects.NUMACell(
                        id=0, cpuset=set([1, 2]), memory=3072, cpu_usage=cpus,
-                       memory_usage=mem),
+                       memory_usage=mem, mempages=[]),
                    objects.NUMACell(
                        id=1, cpuset=set([3, 4]), memory=3072, cpu_usage=cpus,
-                       memory_usage=mem)])
+                       memory_usage=mem, mempages=[])])
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid',
                 return_value=objects.InstancePCIRequests(requests=[]))

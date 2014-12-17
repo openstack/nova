@@ -123,9 +123,11 @@ class ClaimTestCase(test.NoDBTestCase):
             'vcpus_used': 0,
             'numa_topology': objects.NUMATopology(
                 cells=[objects.NUMACell(id=1, cpuset=set([1, 2]), memory=512,
-                                        memory_usage=0, cpu_usage=0),
+                                        memory_usage=0, cpu_usage=0,
+                                        mempages=[]),
                        objects.NUMACell(id=2, cpuset=set([3, 4]), memory=512,
-                                        memory_usage=0, cpu_usage=0)]
+                                        memory_usage=0, cpu_usage=0,
+                                        mempages=[])]
                 )._to_json()
         }
         if values:
