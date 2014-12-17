@@ -78,7 +78,7 @@ class _TestSecurityGroupObject(object):
         secgroup = security_group.SecurityGroup._from_db_object(
             self.context, security_group.SecurityGroup(), fake_secgroup)
         secgroup.description = 'foobar'
-        secgroup.save(self.context)
+        secgroup.save()
         self.assertEqual(self._fix_deleted(updated_secgroup),
                          dict(secgroup.items()))
         self.assertEqual(secgroup.obj_what_changed(), set())
@@ -89,7 +89,7 @@ class _TestSecurityGroupObject(object):
         self.mox.ReplayAll()
         secgroup = security_group.SecurityGroup._from_db_object(
             self.context, security_group.SecurityGroup(), fake_secgroup)
-        secgroup.save(self.context)
+        secgroup.save()
 
     def test_refresh(self):
         updated_secgroup = dict(fake_secgroup, description='changed')
@@ -98,7 +98,7 @@ class _TestSecurityGroupObject(object):
         self.mox.ReplayAll()
         secgroup = security_group.SecurityGroup._from_db_object(
             self.context, security_group.SecurityGroup(), fake_secgroup)
-        secgroup.refresh(self.context)
+        secgroup.refresh()
         self.assertEqual(self._fix_deleted(updated_secgroup),
                          dict(secgroup.items()))
         self.assertEqual(secgroup.obj_what_changed(), set())
