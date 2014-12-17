@@ -51,7 +51,7 @@ disk_opts = [
     # NOTE(yamahata): ListOpt won't work because the command may include a
     #                 comma. For example:
     #
-    #                 mkfs.ext3 -O dir_index,extent -E stride=8,stripe-width=16
+    #                 mkfs.ext4 -O dir_index,extent -E stride=8,stripe-width=16
     #                           --label %(fs_label)s %(target)s
     #
     #                 list arguments are comma separated and there is no way to
@@ -90,7 +90,8 @@ SUPPORTED_FS_TO_EXTEND = (
     FS_FORMAT_EXT3,
     FS_FORMAT_EXT4)
 
-_DEFAULT_FS_BY_OSTYPE = {'linux': FS_FORMAT_EXT3,
+_DEFAULT_FILE_SYSTEM = FS_FORMAT_VFAT
+_DEFAULT_FS_BY_OSTYPE = {'linux': FS_FORMAT_EXT4,
                          'windows': FS_FORMAT_NTFS}
 
 for s in CONF.virt_mkfs:
@@ -115,7 +116,8 @@ def get_file_extension_for_os_type(os_type, specified_fs=None):
         if not specified_fs:
             specified_fs = CONF.default_ephemeral_format
             if not specified_fs:
-                specified_fs = _DEFAULT_FS_BY_OSTYPE.get(os_type, 'ext3')
+                specified_fs = _DEFAULT_FS_BY_OSTYPE.get(os_type,
+                                                         _DEFAULT_FILE_SYSTEM)
         extension = specified_fs
     return utils.get_hash_str(extension)[:7]
 
@@ -137,7 +139,8 @@ def mkfs(os_type, fs_label, target, run_as_root=True, specified_fs=None):
         if not specified_fs:
             specified_fs = CONF.default_ephemeral_format
             if not specified_fs:
-                specified_fs = _DEFAULT_FS_BY_OSTYPE.get(os_type, 'ext3')
+                specified_fs = _DEFAULT_FS_BY_OSTYPE.get(os_type,
+                                                         _DEFAULT_FILE_SYSTEM)
 
         utils.mkfs(specified_fs, target, fs_label, run_as_root=run_as_root)
 

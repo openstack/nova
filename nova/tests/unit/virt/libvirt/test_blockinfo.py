@@ -68,7 +68,7 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
     def test_volume_in_mapping(self):
         swap = {'device_name': '/dev/sdb',
                 'swap_size': 1}
-        ephemerals = [{'device_type': 'disk', 'guest_format': 'ext3',
+        ephemerals = [{'device_type': 'disk', 'guest_format': 'ext4',
                        'device_name': '/dev/sdc1', 'size': 10},
                       {'disk_bus': 'ide', 'guest_format': None,
                        'device_name': '/dev/sdd', 'size': 10}]
@@ -372,7 +372,7 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
 
         block_device_info = {
             'ephemerals': [
-                {'device_type': 'disk', 'guest_format': 'ext3',
+                {'device_type': 'disk', 'guest_format': 'ext4',
                  'device_name': '/dev/vdb', 'size': 10},
                 {'disk_bus': 'ide', 'guest_format': None,
                  'device_name': '/dev/vdc', 'size': 10},
@@ -389,7 +389,7 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
             'disk': {'bus': 'virtio', 'dev': 'vda',
                      'type': 'disk', 'boot_index': '1'},
             'disk.eph0': {'bus': 'virtio', 'dev': 'vdb',
-                          'type': 'disk', 'format': 'ext3'},
+                          'type': 'disk', 'format': 'ext4'},
             'disk.eph1': {'bus': 'ide', 'dev': 'vdc', 'type': 'disk'},
             'disk.eph2': {'bus': 'virtio', 'dev': 'vdd', 'type': 'floppy'},
             'disk.swap': {'bus': 'virtio', 'dev': 'vde', 'type': 'disk'},
@@ -525,7 +525,7 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
             'swap': {'device_name': '/dev/vdy',
                      'swap_size': 10},
             'ephemerals': [
-                {'device_type': 'disk', 'guest_format': 'ext3',
+                {'device_type': 'disk', 'guest_format': 'ext4',
                  'device_name': '/dev/vdb', 'size': 10},
                 {'disk_bus': 'ide', 'guest_format': None,
                  'device_name': '/dev/vdc', 'size': 10},
@@ -548,7 +548,7 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
             '/dev/vda': {'bus': 'virtio', 'dev': 'vda',
                          'type': 'disk', 'boot_index': '2'},
             'disk.eph0': {'bus': 'virtio', 'dev': 'vdb',
-                          'type': 'disk', 'format': 'ext3'},
+                          'type': 'disk', 'format': 'ext4'},
             'disk.eph1': {'bus': 'ide', 'dev': 'vdc', 'type': 'disk'},
             'disk.swap': {'bus': 'virtio', 'dev': 'vdy', 'type': 'disk'},
             'root': {'bus': 'virtio', 'dev': 'vdf',
@@ -672,7 +672,7 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
     def test_get_info_from_bdm(self):
         bdms = [{'device_name': '/dev/vds', 'device_type': 'disk',
                  'disk_bus': 'usb', 'swap_size': 4},
-                {'device_type': 'disk', 'guest_format': 'ext3',
+                {'device_type': 'disk', 'guest_format': 'ext4',
                  'device_name': '/dev/vdb', 'size': 2},
                 {'disk_bus': 'ide', 'guest_format': None,
                  'device_name': '/dev/vdc', 'size': 3},
@@ -690,7 +690,7 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
                  'delete_on_termination': True}]
         expected = [{'dev': 'vds', 'type': 'disk', 'bus': 'usb'},
                     {'dev': 'vdb', 'type': 'disk',
-                     'bus': 'virtio', 'format': 'ext3'},
+                     'bus': 'virtio', 'format': 'ext4'},
                     {'dev': 'vdc', 'type': 'disk', 'bus': 'ide'},
                     {'dev': 'sdr', 'type': 'cdrom',
                      'bus': 'scsi', 'boot_index': '1'},
@@ -814,7 +814,7 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
                 '/dev/fda': {'bus': 'fdc', 'dev': 'fda',
                              'type': 'floppy', 'boot_index': '2'},
                 'disk.eph0': {'bus': 'virtio', 'dev': 'vdb',
-                              'type': 'disk', 'format': 'ext3'},
+                              'type': 'disk', 'format': 'ext4'},
                 'disk.eph1': {'bus': 'ide', 'dev': 'vdc', 'type': 'disk'},
                 'disk.swap': {'bus': 'virtio', 'dev': 'vdy', 'type': 'disk'},
                 'root': {'bus': 'virtio', 'dev': 'vdf',
