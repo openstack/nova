@@ -11559,8 +11559,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
     def _test_inject_data(self, driver_params, disk_params,
                           disk_inject_data, inj_network,
                           called=True):
-        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
-
         class ImageBackend(object):
             path = '/path'
 
@@ -11577,12 +11575,12 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         image_backend.path = disk_params[0]
 
         with mock.patch.object(
-                conn.image_backend,
+                self.libvirtconnection.image_backend,
                 'image',
                 return_value=image_backend):
             self.flags(inject_partition=0, group='libvirt')
 
-            conn._inject_data(**driver_params)
+            self.libvirtconnection._inject_data(**driver_params)
 
             if called:
                 disk_inject_data.assert_called_once_with(
@@ -12079,9 +12077,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         CONF.libvirt.virt_type = "lxc"
         CONF.libvirt.uid_maps = ["0:10000:1", "1:20000:10"]
         CONF.libvirt.gid_maps = ["0:10000:1", "1:20000:10"]
-        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
 
-        idmaps = conn._get_guest_idmaps()
+        idmaps = self.libvirtconnection._get_guest_idmaps()
 
         self.assertEqual(len(idmaps), 4)
         self._assert_on_id_map(idmaps[0],
@@ -12100,9 +12097,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
     def test_get_id_maps_not_lxc(self):
         CONF.libvirt.uid_maps = ["0:10000:1", "1:20000:10"]
         CONF.libvirt.gid_maps = ["0:10000:1", "1:20000:10"]
-        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
 
-        idmaps = conn._get_guest_idmaps()
+        idmaps = self.libvirtconnection._get_guest_idmaps()
 
         self.assertEqual(0, len(idmaps))
 
@@ -12110,9 +12106,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         self.flags(virt_type="lxc", group="libvirt")
         CONF.libvirt.uid_maps = ["0:10000:1", "1:20000:10"]
         CONF.libvirt.gid_maps = []
-        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
 
-        idmaps = conn._get_guest_idmaps()
+        idmaps = self.libvirtconnection._get_guest_idmaps()
 
         self.assertEqual(2, len(idmaps))
         self._assert_on_id_map(idmaps[0],
@@ -12126,9 +12121,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         self.flags(virt_type="lxc", group="libvirt")
         CONF.libvirt.uid_maps = []
         CONF.libvirt.gid_maps = ["0:10000:1", "1:20000:10"]
-        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
 
-        idmaps = conn._get_guest_idmaps()
+        idmaps = self.libvirtconnection._get_guest_idmaps()
 
         self.assertEqual(2, len(idmaps))
         self._assert_on_id_map(idmaps[0],
