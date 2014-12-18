@@ -89,6 +89,10 @@ DEFAULT_API_VERSION = "2.1"
 # name of attribute to keep version method information
 VER_METHOD_ATTR = 'versioned_methods'
 
+# Name of header used by clients to request a specific version
+# of the REST API
+API_VERSION_REQUEST_HEADER = 'X-OpenStack-Compute-API-Version'
+
 
 # TODO(dims): Temporary, we already deprecated the v2 XML API in
 # Juno, we should remove this before Kilo
@@ -237,8 +241,8 @@ class Request(webob.Request):
 
     def set_api_version_request(self):
         """Set API version request based on the request header information."""
-        if 'X-OpenStack-Compute-API-Version' in self.headers:
-            hdr_string = self.headers['X-OpenStack-Compute-API-Version']
+        if API_VERSION_REQUEST_HEADER in self.headers:
+            hdr_string = self.headers[API_VERSION_REQUEST_HEADER]
             # 'latest' is a special keyword which is equivalent to requesting
             # the maximum version of the API supported
             if hdr_string == 'latest':
@@ -1061,9 +1065,9 @@ class Resource(wsgi.Application):
                 response.headers[hdr] = utils.utf8(str(val))
 
             if not request.api_version_request.is_null():
-                response.headers['X-OpenStack-Compute-API-Version'] = \
+                response.headers[API_VERSION_REQUEST_HEADER] = \
                     request.api_version_request.get_string()
-                response.headers['Vary'] = 'X-OpenStack-Compute-API-Version'
+                response.headers['Vary'] = API_VERSION_REQUEST_HEADER
 
         return response
 
@@ -1380,10 +1384,10 @@ class Fault(webob.exc.HTTPException):
                 fault_data[fault_name]['retryAfter'] = retry
 
         if not req.api_version_request.is_null():
-            self.wrapped_exc.headers['X-OpenStack-Compute-API-Version'] = \
+            self.wrapped_exc.headers[API_VERSION_REQUEST_HEADER] = \
                 req.api_version_request.get_string()
             self.wrapped_exc.headers['Vary'] = \
-              'X-OpenStack-Compute-API-Version'
+              API_VERSION_REQUEST_HEADER
 
         # 'code' is an attribute on the fault tag itself
         metadata = {'attributes': {fault_name: 'code'}}
