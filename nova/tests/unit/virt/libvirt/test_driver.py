@@ -5905,7 +5905,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 disk_available_mb=0)
 
         self.mox.StubOutWithMock(conn, "get_instance_disk_info")
-        conn.get_instance_disk_info(instance["name"],
+        conn.get_instance_disk_info(instance,
                                     block_device_info=None).AndReturn(
                                         '[{"virt_disk_size":2}]')
 
@@ -6659,7 +6659,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     def test_get_instance_disk_info_works_correctly(self):
         # Test data
-        instance_ref = objects.Instance(**self.test_instance)
+        instance = objects.Instance(**self.test_instance)
         dummyxml = ("<domain type='kvm'><name>instance-0000000a</name>"
                     "<devices>"
                     "<disk type='file'><driver name='qemu' type='raw'/>"
@@ -6676,7 +6676,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         vdmock.XMLDesc(0).AndReturn(dummyxml)
 
         def fake_lookup(instance_name):
-            if instance_name == instance_ref['name']:
+            if instance_name == instance.name:
                 return vdmock
         self.create_fake_libvirt_mock(lookupByName=fake_lookup)
 
@@ -6704,7 +6704,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         self.mox.ReplayAll()
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        info = conn.get_instance_disk_info(instance_ref['name'])
+        info = conn.get_instance_disk_info(instance)
         info = jsonutils.loads(info)
         self.assertEqual(info[0]['type'], 'raw')
         self.assertEqual(info[0]['path'], '/test/disk')
@@ -6743,7 +6743,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     def test_get_instance_disk_info_excludes_volumes(self):
         # Test data
-        instance_ref = objects.Instance(**self.test_instance)
+        instance = objects.Instance(**self.test_instance)
         dummyxml = ("<domain type='kvm'><name>instance-0000000a</name>"
                     "<devices>"
                     "<disk type='file'><driver name='qemu' type='raw'/>"
@@ -6766,7 +6766,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         vdmock.XMLDesc(0).AndReturn(dummyxml)
 
         def fake_lookup(instance_name):
-            if instance_name == instance_ref['name']:
+            if instance_name == instance.name:
                 return vdmock
         self.create_fake_libvirt_mock(lookupByName=fake_lookup)
 
@@ -6798,7 +6798,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                   {'connection_info': conn_info, 'mount_device': '/dev/vdc'},
                   {'connection_info': conn_info, 'mount_device': '/dev/vdd'}]}
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        info = conn.get_instance_disk_info(instance_ref['name'],
+        info = conn.get_instance_disk_info(instance,
                                            block_device_info=info)
         info = jsonutils.loads(info)
         self.assertEqual(info[0]['type'], 'raw')
@@ -11036,7 +11036,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                                               instance, '10.0.0.1',
                                               flavor_obj, None)
 
-        mock_get_disk_info.assert_called_once_with(instance.name,
+        mock_get_disk_info.assert_called_once_with(instance,
                                                    block_device_info=None)
         self.assertTrue(get_host_ip_addr.called)
         mock_destroy.assert_called_once_with(instance)
@@ -11548,7 +11548,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                                             _fake_network_info(self.stubs, 1))
 
     def test_get_instance_disk_info_exception(self):
-        instance_name = "fake-instance-name"
+        instance = self._create_instance()
 
         class FakeExceptionDomain(FakeVirtDomain):
             def __init__(self):
@@ -11564,7 +11564,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                        fake_lookup_by_name)
         self.assertRaises(exception.InstanceNotFound,
             self.libvirtconnection.get_instance_disk_info,
-            instance_name)
+            instance)
 
     @mock.patch('os.path.exists')
     @mock.patch('nova.virt.libvirt.lvm.list_volumes')

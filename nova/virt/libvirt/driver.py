@@ -903,7 +903,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _detach_encrypted_volumes(self, instance):
         """Detaches encrypted volumes attached to instance."""
-        disks = jsonutils.loads(self.get_instance_disk_info(instance['name']))
+        disks = jsonutils.loads(self.get_instance_disk_info(instance))
         encrypted_volumes = filter(dmcrypt.is_encrypted,
                                    [disk['path'] for disk in disks])
         for path in encrypted_volumes:
@@ -4721,7 +4721,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
                 LOG.debug("Trying to get stats for the volume %s",
                           volume_id)
-                vol_stats = self.block_stats(instance['name'], mountpoint)
+                vol_stats = self.block_stats(instance, mountpoint)
 
                 if vol_stats:
                     stats = dict(volume=volume_id,
@@ -4739,21 +4739,21 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return vol_usage
 
-    def block_stats(self, instance_name, disk_id):
+    def block_stats(self, instance, disk_id):
         """Note that this function takes an instance name."""
         try:
-            domain = self._lookup_by_name(instance_name)
+            domain = self._lookup_by_name(instance.name)
             return domain.blockStats(disk_id)
         except libvirt.libvirtError as e:
             errcode = e.get_error_code()
             LOG.info(_LI('Getting block stats failed, device might have '
                          'been detached. Instance=%(instance_name)s '
                          'Disk=%(disk)s Code=%(errcode)s Error=%(e)s'),
-                     {'instance_name': instance_name, 'disk': disk_id,
+                     {'instance_name': instance.name, 'disk': disk_id,
                       'errcode': errcode, 'e': e})
         except exception.InstanceNotFound:
             LOG.info(_LI('Could not find domain in libvirt for instance %s. '
-                         'Cannot get block stats for device'), instance_name)
+                         'Cannot get block stats for device'), instance.name)
 
     def get_console_pool_info(self, console_type):
         # TODO(mdragon): console proxy should be implemented for libvirt,
@@ -4986,7 +4986,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         if (dest_check_data.get('is_volume_backed') and
                 not bool(jsonutils.loads(
-                    self.get_instance_disk_info(instance['name'],
+                    self.get_instance_disk_info(instance,
                                                 block_device_info)))):
             # pylint: disable E1120
             return True
@@ -5011,7 +5011,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if available_mb:
             available = available_mb * units.Mi
 
-        ret = self.get_instance_disk_info(instance['name'],
+        ret = self.get_instance_disk_info(instance,
                                           block_device_info=block_device_info)
         disk_infos = jsonutils.loads(ret)
 
@@ -5612,23 +5612,23 @@ class LibvirtDriver(driver.ComputeDriver):
                               'over_committed_disk_size': over_commit_size})
         return jsonutils.dumps(disk_info)
 
-    def get_instance_disk_info(self, instance_name,
+    def get_instance_disk_info(self, instance,
                                block_device_info=None):
         try:
-            dom = self._lookup_by_name(instance_name)
+            dom = self._lookup_by_name(instance.name)
             xml = dom.XMLDesc(0)
         except libvirt.libvirtError as ex:
             error_code = ex.get_error_code()
             msg = (_('Error from libvirt while getting description of '
                      '%(instance_name)s: [Error Code %(error_code)s] '
                      '%(ex)s') %
-                   {'instance_name': instance_name,
+                   {'instance_name': instance.name,
                     'error_code': error_code,
                     'ex': ex})
             LOG.warn(msg)
-            raise exception.InstanceNotFound(instance_id=instance_name)
+            raise exception.InstanceNotFound(instance_id=instance.name)
 
-        return self._get_instance_disk_info(instance_name, xml,
+        return self._get_instance_disk_info(instance.name, xml,
                                             block_device_info)
 
     def _get_disk_over_committed_size_total(self):
@@ -5757,7 +5757,7 @@ class LibvirtDriver(driver.ComputeDriver):
             raise exception.InstanceFaultRollback(
                 exception.ResizeError(reason=reason))
 
-        disk_info_text = self.get_instance_disk_info(instance['name'],
+        disk_info_text = self.get_instance_disk_info(instance,
                 block_device_info=block_device_info)
         disk_info = jsonutils.loads(disk_info_text)
 

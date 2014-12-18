@@ -538,7 +538,7 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
     @catch_notimplementederror
     def test_block_stats(self):
         instance_ref, network_info = self._get_running_instance()
-        stats = self.connection.block_stats(instance_ref['name'], 'someid')
+        stats = self.connection.block_stats(instance_ref, 'someid')
         self.assertEqual(len(stats), 5)
 
     @catch_notimplementederror
@@ -760,7 +760,7 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
     def test_get_instance_disk_info(self):
         # This should be implemented by any driver that supports live migrate.
         instance_ref, network_info = self._get_running_instance()
-        self.connection.get_instance_disk_info(instance_ref['name'],
+        self.connection.get_instance_disk_info(instance_ref,
                                                block_device_info={})
 
 

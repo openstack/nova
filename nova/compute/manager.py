@@ -4670,7 +4670,7 @@ class ComputeManager(manager.Manager):
             if '/dev/' in mp:
                 mp = mp[5:]
             try:
-                vol_stats = self.driver.block_stats(instance.name, mp)
+                vol_stats = self.driver.block_stats(instance, mp)
             except NotImplementedError:
                 pass
 
@@ -5007,7 +5007,7 @@ class ComputeManager(manager.Manager):
                 block_device_info = self._get_instance_block_device_info(
                     context, instance)
                 disk = self.driver.get_instance_disk_info(
-                    instance.name, block_device_info=block_device_info)
+                    instance, block_device_info=block_device_info)
             else:
                 disk = None
 
