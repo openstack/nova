@@ -2399,3 +2399,13 @@ class LibvirtConfigMemoryBalloonTest(LibvirtConfigBaseTest):
         </memballoon>"""
 
         self.assertXmlEqual(expected_xml, xml)
+
+    def test_config_memory_balloon_no_period(self):
+        balloon = config.LibvirtConfigMemoryBalloon()
+        balloon.model = 'fake_virtio'
+
+        xml = balloon.to_xml()
+        expected_xml = """
+        <memballoon model='fake_virtio' />"""
+
+        self.assertXmlEqual(expected_xml, xml)
