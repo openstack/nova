@@ -59,6 +59,11 @@ def build_request_spec(ctxt, image, instances, instance_type=None):
 
     if instance_type is None:
         instance_type = flavors.extract_flavor(instance)
+        # NOTE(danms): This won't have extra_specs, so fill in the gaps
+        _instance_type = objects.Flavor.get_by_flavor_id(
+            ctxt, instance_type['flavorid'])
+        instance_type.extra_specs = instance_type.get('extra_specs', {})
+        instance_type.extra_specs.update(_instance_type.extra_specs)
 
     if isinstance(instance_type, objects.Flavor):
         instance_type = obj_base.obj_to_primitive(instance_type)

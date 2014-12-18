@@ -1248,6 +1248,7 @@ class _BaseTaskTestCase(object):
             system_metadata=system_metadata,
             expected_attrs=['system_metadata']) for i in xrange(2)]
         instance_type = flavors.extract_flavor(instances[0])
+        instance_type['extra_specs'] = {}
         instance_type_p = jsonutils.to_primitive(instance_type)
         instance_properties = jsonutils.to_primitive(instances[0])
 
