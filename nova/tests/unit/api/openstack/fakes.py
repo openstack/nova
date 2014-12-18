@@ -277,6 +277,7 @@ class HTTPRequestV3(os_wsgi.Request):
         kwargs['base_url'] = 'http://localhost/v3'
         use_admin_context = kwargs.pop('use_admin_context', False)
         out = os_wsgi.Request.blank(*args, **kwargs)
+        out.api_version_request = api_version.APIVersionRequest("2.1")
         out.environ['nova.context'] = FakeRequestContext('fake_user', 'fake',
                 is_admin=use_admin_context)
         return out

@@ -25,6 +25,7 @@ from nova import context as context_maker
 from nova import db
 from nova import exception
 from nova import test
+from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_hosts
 from nova.tests.unit import utils
 
@@ -127,11 +128,6 @@ def _create_instance_dict(**kwargs):
     return inst
 
 
-class FakeRequest(object):
-    environ = {"nova.context": context_maker.get_admin_context()}
-    GET = {}
-
-
 class FakeRequestWithNovaZone(object):
     environ = {"nova.context": context_maker.get_admin_context()}
     GET = {"zone": "nova"}
@@ -173,7 +169,7 @@ class HostTestCaseV21(test.TestCase):
         super(HostTestCaseV21, self).setUp()
         self.controller = self.Controller()
         self.hosts_api = self.controller.api
-        self.req = FakeRequest()
+        self.req = fakes.HTTPRequest.blank('', use_admin_context=True)
 
         self._setup_stubs()
 

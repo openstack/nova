@@ -27,9 +27,9 @@ from nova import exception
 from nova.network import api as network_api
 from nova import objects
 from nova import test
+from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_network_cache_model
 
-import webob
 from webob import exc
 
 
@@ -157,7 +157,7 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
                        side_effect=exception.InstanceNotFound(instance_id=''))
     def _test_instance_not_found(self, url, func, args, mock_get, kwargs=None,
                                  method='GET'):
-        req = webob.Request.blank(url)
+        req = fakes.HTTPRequest.blank(url)
         req.method = method
         req.headers['content-type'] = 'application/json'
         req.environ['nova.context'] = self.context
@@ -184,7 +184,7 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
             kwargs={'body': {'interfaceAttachment': {}}}, method='POST')
 
     def test_show(self):
-        req = webob.Request.blank(self.url + '/show')
+        req = fakes.HTTPRequest.blank(self.url + '/show')
         req.method = 'POST'
         req.body = jsonutils.dumps({})
         req.headers['content-type'] = 'application/json'
@@ -194,7 +194,7 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
         self.assertEqual(self.expected_show, result)
 
     def test_show_invalid(self):
-        req = webob.Request.blank(self.url + '/show')
+        req = fakes.HTTPRequest.blank(self.url + '/show')
         req.method = 'POST'
         req.body = jsonutils.dumps({})
         req.headers['content-type'] = 'application/json'
@@ -207,7 +207,7 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
     @mock.patch.object(network_api.API, 'show_port',
                        side_effect=exception.Forbidden)
     def test_show_forbidden(self, show_port_mock):
-        req = webob.Request.blank(self.url + '/show')
+        req = fakes.HTTPRequest.blank(self.url + '/show')
         req.method = 'POST'
         req.body = jsonutils.dumps({})
         req.headers['content-type'] = 'application/json'
@@ -220,7 +220,7 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
     def test_delete(self):
         self.stubs.Set(compute_api.API, 'detach_interface',
                        fake_detach_interface)
-        req = webob.Request.blank(self.url + '/delete')
+        req = fakes.HTTPRequest.blank(self.url + '/delete')
         req.method = 'DELETE'
         req.body = jsonutils.dumps({})
         req.headers['content-type'] = 'application/json'
@@ -244,7 +244,7 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
         self.stubs.Set(compute_api.API,
                        'detach_interface',
                        fake_detach_interface_from_locked_server)
-        req = webob.Request.blank(self.url + '/delete')
+        req = fakes.HTTPRequest.blank(self.url + '/delete')
         req.method = 'POST'
         req.body = jsonutils.dumps({})
         req.headers['content-type'] = 'application/json'
@@ -259,7 +259,7 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
     def test_delete_interface_not_found(self):
         self.stubs.Set(compute_api.API, 'detach_interface',
                        fake_detach_interface)
-        req = webob.Request.blank(self.url + '/delete')
+        req = fakes.HTTPRequest.blank(self.url + '/delete')
         req.method = 'DELETE'
         req.body = jsonutils.dumps({})
         req.headers['content-type'] = 'application/json'
@@ -279,7 +279,7 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
         self.stubs.Set(compute_api.API,
                        'attach_interface',
                        fake_attach_interface_to_locked_server)
-        req = webob.Request.blank(self.url + '/attach')
+        req = fakes.HTTPRequest.blank(self.url + '/attach')
         req.method = 'POST'
         req.body = jsonutils.dumps({})
         req.headers['content-type'] = 'application/json'
@@ -291,7 +291,7 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
     def test_attach_interface_without_network_id(self):
         self.stubs.Set(compute_api.API, 'attach_interface',
                        fake_attach_interface)
-        req = webob.Request.blank(self.url + '/attach')
+        req = fakes.HTTPRequest.blank(self.url + '/attach')
         req.method = 'POST'
         req.body = jsonutils.dumps({})
         req.headers['content-type'] = 'application/json'
@@ -304,7 +304,7 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
     def test_attach_interface_with_network_id(self):
         self.stubs.Set(compute_api.API, 'attach_interface',
                        fake_attach_interface)
-        req = webob.Request.blank(self.url + '/attach')
+        req = fakes.HTTPRequest.blank(self.url + '/attach')
         req.method = 'POST'
         req.body = jsonutils.dumps({'interfaceAttachment':
                                    {'net_id': FAKE_NET_ID2}})
@@ -318,7 +318,7 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
     def _attach_interface_bad_request_case(self, body):
         self.stubs.Set(compute_api.API, 'attach_interface',
                        fake_attach_interface)
-        req = webob.Request.blank(self.url + '/attach')
+        req = fakes.HTTPRequest.blank(self.url + '/attach')
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers['content-type'] = 'application/json'
@@ -330,7 +330,7 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
     def _attach_interface_not_found_case(self, body):
         self.stubs.Set(compute_api.API, 'attach_interface',
                        fake_attach_interface)
-        req = webob.Request.blank(self.url + '/attach')
+        req = fakes.HTTPRequest.blank(self.url + '/attach')
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers['content-type'] = 'application/json'
@@ -372,7 +372,7 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
 
         self.stubs.Set(compute_api.API, 'attach_interface',
                        fake_attach_interface_invalid_state)
-        req = webob.Request.blank(self.url + '/attach')
+        req = fakes.HTTPRequest.blank(self.url + '/attach')
         req.method = 'POST'
         req.body = jsonutils.dumps({'interfaceAttachment':
                                     {'net_id': FAKE_NET_ID1}})
@@ -390,7 +390,7 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
 
         self.stubs.Set(compute_api.API, 'detach_interface',
                        fake_detach_interface_invalid_state)
-        req = webob.Request.blank(self.url + '/attach')
+        req = fakes.HTTPRequest.blank(self.url + '/attach')
         req.method = 'DELETE'
         req.body = jsonutils.dumps({})
         req.headers['content-type'] = 'application/json'
@@ -402,7 +402,7 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
                           FAKE_NET_ID1)
 
     def test_attach_interface_invalid_fixed_ip(self):
-        req = webob.Request.blank(self.url + '/attach')
+        req = fakes.HTTPRequest.blank(self.url + '/attach')
         req.method = 'POST'
         body = {
             'interfaceAttachment': {
@@ -426,7 +426,7 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
         get_mock.return_value = fake_instance
         attach_mock.side_effect = exception.FixedIpAlreadyInUse(
             address='10.0.2.2', instance_uuid=FAKE_UUID1)
-        req = webob.Request.blank(self.url + '/attach')
+        req = fakes.HTTPRequest.blank(self.url + '/attach')
         req.method = 'POST'
         req.body = jsonutils.dumps({})
         req.headers['content-type'] = 'application/json'
@@ -449,7 +449,7 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
         get_mock.return_value = fake_instance
         attach_mock.side_effect = exception.PortInUse(
             port_id=FAKE_PORT_ID1)
-        req = webob.Request.blank(self.url + '/attach')
+        req = fakes.HTTPRequest.blank(self.url + '/attach')
         req.method = 'POST'
         req.body = jsonutils.dumps({})
         req.headers['content-type'] = 'application/json'
@@ -466,7 +466,7 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
     def _test_attach_interface_with_invalid_parameter(self, param):
         self.stubs.Set(compute_api.API, 'attach_interface',
                        fake_attach_interface)
-        req = webob.Request.blank(self.url + '/attach')
+        req = fakes.HTTPRequest.blank(self.url + '/attach')
         req.method = 'POST'
         req.body = jsonutils.dumps({'interface_attachment': param})
         req.headers['content-type'] = 'application/json'

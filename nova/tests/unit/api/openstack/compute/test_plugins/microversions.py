@@ -18,7 +18,8 @@ import webob
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-
+from nova.api import validation
+from nova.tests.unit.api.openstack.compute.test_plugins import dummy_schema
 
 ALIAS = 'test-microversions'
 
@@ -57,6 +58,22 @@ class MicroversionsController2(wsgi.Controller):
         return data
 
 
+class MicroversionsController3(wsgi.Controller):
+
+    @wsgi.Controller.api_version("2.1")
+    @validation.schema(dummy_schema.dummy)
+    def create(self, req, body):
+        data = {'param': 'create_val1'}
+        return data
+
+    @wsgi.Controller.api_version("2.1")
+    @validation.schema(dummy_schema.dummy, "2.3", "2.8")
+    @validation.schema(dummy_schema.dummy2, "2.9")
+    def update(self, req, id, body):
+        data = {'param': 'update_val1'}
+        return data
+
+
 class Microversions(extensions.V3APIExtensionBase):
     """Basic Microversions Extension."""
 
@@ -69,7 +86,9 @@ class Microversions(extensions.V3APIExtensionBase):
                                             MicroversionsController())
         res2 = extensions.ResourceExtension('microversions2',
                                             MicroversionsController2())
-        return [res1, res2]
+        res3 = extensions.ResourceExtension('microversions3',
+                                            MicroversionsController3())
+        return [res1, res2, res3]
 
     def get_controller_extensions(self):
         return []

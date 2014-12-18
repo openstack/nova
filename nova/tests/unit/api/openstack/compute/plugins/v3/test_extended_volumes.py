@@ -319,7 +319,7 @@ class ExtendedVolumesTest(test.TestCase):
     def _test_swap(self, uuid=UUID1, body=None):
         body = body or {'swap_volume_attachment': {'old_volume_id': uuid,
                                                    'new_volume_id': UUID2}}
-        req = webob.Request.blank('/v2/fake/servers/%s/action' % UUID1)
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/%s/action' % UUID1)
         req.method = 'PUT'
         req.body = jsonutils.dumps({})
         req.headers['content-type'] = 'application/json'
