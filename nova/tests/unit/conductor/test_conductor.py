@@ -1348,7 +1348,7 @@ class _BaseTaskTestCase(object):
         exception = exc.NoValidHost(reason='fake-reason')
         self.mox.StubOutWithMock(scheduler_utils, 'build_request_spec')
         self.mox.StubOutWithMock(scheduler_utils, 'setup_instance_group')
-        self.mox.StubOutWithMock(scheduler_driver, 'handle_schedule_error')
+        self.mox.StubOutWithMock(scheduler_utils, 'set_vm_state_and_notify')
         self.mox.StubOutWithMock(self.conductor_manager.scheduler_client,
                 'select_destinations')
 
@@ -1359,9 +1359,10 @@ class _BaseTaskTestCase(object):
                 self.context, spec,
                 {'retry': {'num_attempts': 1,
                            'hosts': []}}).AndRaise(exception)
-        for instance in instances:
-            scheduler_driver.handle_schedule_error(self.context, exception,
-                    instance.uuid, spec)
+        updates = {'vm_state': vm_states.ERROR, 'task_state': None}
+        scheduler_utils.set_vm_state_and_notify(
+                self.context, 'compute_task', 'build_instances', updates,
+                exception, spec, self.conductor_manager.db)
         self.mox.ReplayAll()
 
         # build_instances() is a cast, we need to wait for it to complete
