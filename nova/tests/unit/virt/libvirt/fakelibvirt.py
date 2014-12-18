@@ -12,10 +12,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from lxml import etree
-
 import time
 import uuid
+
+import fixtures
+from lxml import etree
+import mock
 
 from nova.compute import arch
 from nova.i18n import _
@@ -1106,3 +1108,27 @@ virDomain = Domain
 
 
 virConnect = Connection
+
+
+class FakeLibvirtFixture(fixtures.Fixture):
+    """This fixture patches the libvirt.openAuth method so that it
+    always returns an instance of fakelibvirt.virConnect. This
+    ensures the tests don't mistakenly connect to a real libvirt
+    daemon instance which would lead to non-deterministic behaviour.
+    """
+
+    def setUp(self):
+        super(FakeLibvirtFixture, self).setUp()
+
+        try:
+            import libvirt
+
+            patcher = mock.patch.object(
+                libvirt, "openAuth",
+                return_value=virConnect("qemu:///system"))
+            patcher.start()
+            self.addCleanup(patcher.stop)
+        except ImportError:
+            # If we can't import libvirt, the tests will use
+            # fakelibvirt regardless, so nothing todo here
+            pass
