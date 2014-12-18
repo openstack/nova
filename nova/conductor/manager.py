@@ -440,9 +440,9 @@ class ConductorManager(manager.Manager):
                 # Avoid demand-loading anything
                 continue
             if (not oldobj.obj_attr_is_set(name) or
-                    oldobj[name] != objinst[name]):
+                    getattr(oldobj, name) != getattr(objinst, name)):
                 updates[name] = field.to_primitive(objinst, name,
-                                                   objinst[name])
+                                                   getattr(objinst, name))
         # This is safe since a field named this would conflict with the
         # method anyway
         updates['obj_what_changed'] = objinst.obj_what_changed()
