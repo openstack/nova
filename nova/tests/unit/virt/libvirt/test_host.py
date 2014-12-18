@@ -14,8 +14,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import contextlib
-
 import eventlet
 from eventlet import greenthread
 import mock
@@ -41,63 +39,53 @@ class HostTestCase(test.NoDBTestCase):
         self.useFixture(fakelibvirt.FakeLibvirtFixture())
         self.host = host.Host("qemu:///system")
 
-    def test_close_callback(self):
+    @mock.patch.object(fakelibvirt.virConnect, "registerCloseCallback")
+    def test_close_callback(self, mock_close):
         self.close_callback = None
 
         def set_close_callback(cb, opaque):
             self.close_callback = cb
 
-        with contextlib.nested(
-            mock.patch.object(fakelibvirt.virConnect,
-                              "registerCloseCallback",
-                              side_effect=set_close_callback)):
+        mock_close.side_effect = set_close_callback
+        # verify that the driver registers for the close callback
+        self.host.get_connection()
+        self.assertTrue(self.close_callback)
 
-            # verify that the driver registers for the close callback
-            self.host.get_connection()
-            self.assertTrue(self.close_callback)
-
-    def test_close_callback_bad_signature(self):
+    @mock.patch.object(fakelibvirt.virConnect, "registerCloseCallback")
+    def test_close_callback_bad_signature(self, mock_close):
         '''Validates that a connection to libvirt exist,
            even when registerCloseCallback method has a different
            number of arguments in the libvirt python library.
         '''
-        with contextlib.nested(
-            mock.patch.object(fakelibvirt.virConnect,
-                              "registerCloseCallback",
-                              side_effect=TypeError('dd'))):
+        mock_close.side_effect = TypeError('dd')
+        connection = self.host.get_connection()
+        self.assertTrue(connection)
 
-            connection = self.host.get_connection()
-            self.assertTrue(connection)
-
-    def test_close_callback_not_defined(self):
+    @mock.patch.object(fakelibvirt.virConnect, "registerCloseCallback")
+    def test_close_callback_not_defined(self, mock_close):
         '''Validates that a connection to libvirt exist,
            even when registerCloseCallback method missing from
            the libvirt python library.
         '''
-        with contextlib.nested(
-            mock.patch.object(fakelibvirt.virConnect,
-                              "registerCloseCallback",
-                              side_effect=AttributeError('dd'))):
+        mock_close.side_effect = AttributeError('dd')
 
-            connection = self.host.get_connection()
-            self.assertTrue(connection)
+        connection = self.host.get_connection()
+        self.assertTrue(connection)
 
-    def test_broken_connection(self):
+    @mock.patch.object(fakelibvirt.virConnect, "getLibVersion")
+    def test_broken_connection(self, mock_ver):
         for (error, domain) in (
                 (libvirt.VIR_ERR_SYSTEM_ERROR, libvirt.VIR_FROM_REMOTE),
                 (libvirt.VIR_ERR_SYSTEM_ERROR, libvirt.VIR_FROM_RPC),
                 (libvirt.VIR_ERR_INTERNAL_ERROR, libvirt.VIR_FROM_RPC)):
 
             conn = self.host._connect("qemu:///system", False)
-            with contextlib.nested(
-                    mock.patch.object(
-                        fakelibvirt.virConnect, "getLibVersion",
-                        side_effect=fakelibvirt.make_libvirtError(
-                            libvirt.libvirtError,
-                            "Connection broken",
-                            error_code=error,
-                            error_domain=domain))):
-                self.assertFalse(self.host._test_connection(conn))
+            mock_ver.side_effect = fakelibvirt.make_libvirtError(
+                libvirt.libvirtError,
+                "Connection broken",
+                error_code=error,
+                error_domain=domain)
+            self.assertFalse(self.host._test_connection(conn))
 
     @mock.patch.object(host, 'LOG')
     def test_connect_auth_cb_exception(self, log_mock):
@@ -235,7 +223,9 @@ class HostTestCase(test.NoDBTestCase):
         gt_mock.cancel.assert_called_once_with()
         self.assertNotIn(uuid, hostimpl._events_delayed.keys())
 
-    def test_get_connection_serial(self):
+    @mock.patch.object(fakelibvirt.virConnect, "domainEventRegisterAny")
+    @mock.patch.object(host.Host, "_connect")
+    def test_get_connection_serial(self, mock_conn, mock_event):
         def get_conn_currency(host):
             host.get_connection().getLibVersion()
 
@@ -252,10 +242,8 @@ class HostTestCase(test.NoDBTestCase):
         self.connect_calls = 0
         self.register_calls = 0
 
-        self.stubs.Set(self.host, "_connect",
-                       connect_with_block)
-        self.stubs.Set(fakelibvirt.virConnect,
-                       'domainEventRegisterAny', fake_register)
+        mock_conn.side_effect = connect_with_block
+        mock_event.side_effect = fake_register
 
         # call serially
         get_conn_currency(self.host)
@@ -263,7 +251,9 @@ class HostTestCase(test.NoDBTestCase):
         self.assertEqual(self.connect_calls, 1)
         self.assertEqual(self.register_calls, 1)
 
-    def test_get_connection_concurrency(self):
+    @mock.patch.object(fakelibvirt.virConnect, "domainEventRegisterAny")
+    @mock.patch.object(host.Host, "_connect")
+    def test_get_connection_concurrency(self, mock_conn, mock_event):
         def get_conn_currency(host):
             host.get_connection().getLibVersion()
 
@@ -280,10 +270,8 @@ class HostTestCase(test.NoDBTestCase):
         self.connect_calls = 0
         self.register_calls = 0
 
-        self.stubs.Set(self.host, "_connect",
-                       connect_with_block)
-        self.stubs.Set(fakelibvirt.virConnect,
-                       'domainEventRegisterAny', fake_register)
+        mock_conn.side_effect = connect_with_block
+        mock_event.side_effect = fake_register
 
         # call concurrently
         thr1 = eventlet.spawn(get_conn_currency, self.host)
