@@ -1818,3 +1818,7 @@ class MemoryPageSizeInvalid(Invalid):
 
 class MemoryPageSizeForbidden(Invalid):
     msg_fmt = _("Page size %(pagesize)s forbidden against '%(against)s'")
+
+
+class MemoryPageSizeNotSupported(Invalid):
+    msg_fmt = _("Page size %(pagesize)s is not supported by the host.")

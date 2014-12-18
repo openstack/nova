@@ -11,6 +11,7 @@
 #    under the License.
 
 
+from nova import exception
 from nova import objects
 from nova.tests.unit.objects import test_objects
 
@@ -56,6 +57,24 @@ class _TestNUMA(object):
         self.assertEqual(512, pages_topology.used)
         self.assertEqual(512, pages_topology.free)
         self.assertEqual(1048576, pages_topology.free_kb)
+
+    def test_can_fit_hugepages(self):
+        cell = objects.NUMACell(
+            id=0, cpuset=set([1, 2]), memory=1024,
+            mempages=[
+                objects.NUMAPagesTopology(
+                    size_kb=4, total=1548736, used=0),
+                objects.NUMAPagesTopology(
+                    size_kb=2048, total=513, used=0)])  # 1,002G
+
+        pagesize = 2048
+
+        self.assertTrue(cell.can_fit_hugepages(pagesize, 2 ** 20))
+        self.assertFalse(cell.can_fit_hugepages(pagesize, 2 ** 21))
+        self.assertFalse(cell.can_fit_hugepages(pagesize, 2 ** 19 + 1))
+        self.assertRaises(
+            exception.MemoryPageSizeNotSupported,
+            cell.can_fit_hugepages, 12345, 2 ** 20)
 
 
 class TestNUMA(test_objects._LocalTest,
