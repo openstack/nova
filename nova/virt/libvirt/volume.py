@@ -16,6 +16,7 @@
 
 """Volume drivers for libvirt."""
 
+import errno
 import glob
 import os
 import re
@@ -31,6 +32,7 @@ import six.moves.urllib.parse as urlparse
 from nova import exception
 from nova.i18n import _
 from nova.i18n import _LE
+from nova.i18n import _LI
 from nova.i18n import _LW
 from nova.openstack.common import log as logging
 from nova.openstack.common import loopingcall
@@ -38,6 +40,7 @@ from nova import paths
 from nova.storage import linuxscsi
 from nova import utils
 from nova.virt.libvirt import config as vconfig
+from nova.virt.libvirt import quobyte
 from nova.virt.libvirt import remotefs
 from nova.virt.libvirt import utils as libvirt_utils
 
@@ -93,6 +96,12 @@ volume_opts = [
                 default=[],
                 help='Protocols listed here will be accessed directly '
                      'from QEMU. Currently supported protocols: [gluster]'),
+    cfg.StrOpt('quobyte_mount_point_base',
+               default=paths.state_path_def('mnt'),
+               help='Directory where the Quobyte volume is mounted on the '
+                    'compute node'),
+    cfg.StrOpt('quobyte_client_cfg',
+               help='Path to a Quobyte Client configuration file.'),
     cfg.StrOpt('iscsi_transport',
                default=None,
                help='The iSCSI transport to use to connect to target in case '
@@ -1351,3 +1360,82 @@ class LibvirtGPFSVolumeDriver(LibvirtBaseVolumeDriver):
         conf.source_type = "file"
         conf.source_path = connection_info['data']['device_path']
         return conf
+
+
+class LibvirtQuobyteVolumeDriver(LibvirtBaseVolumeDriver):
+    """Class implements libvirt part of volume driver for Quobyte."""
+
+    def __init__(self, connection):
+        """Create back-end to Quobyte."""
+        super(LibvirtQuobyteVolumeDriver,
+              self).__init__(connection, is_block_dev=False)
+
+    def get_config(self, connection_info, disk_info):
+        conf = super(LibvirtQuobyteVolumeDriver,
+                     self).get_config(connection_info, disk_info)
+        data = connection_info['data']
+        conf.source_protocol = quobyte.SOURCE_PROTOCOL
+        conf.source_type = quobyte.SOURCE_TYPE
+        conf.driver_cache = quobyte.DRIVER_CACHE
+        conf.driver_io = quobyte.DRIVER_IO
+        conf.driver_format = data.get('format', 'raw')
+
+        quobyte_volume = self._normalize_url(data['export'])
+        path = os.path.join(self._get_mount_point_for_share(quobyte_volume),
+                            data['name'])
+        conf.source_path = path
+
+        return conf
+
+    @utils.synchronized('connect_volume')
+    def connect_volume(self, connection_info, disk_info):
+        """Connect the volume."""
+        data = connection_info['data']
+        quobyte_volume = self._normalize_url(data['export'])
+        mount_path = self._get_mount_point_for_share(quobyte_volume)
+        mounted = libvirt_utils.is_mounted(mount_path,
+                                           quobyte.SOURCE_PROTOCOL
+                                           + '@' + quobyte_volume)
+        if mounted:
+            try:
+                os.stat(mount_path)
+            except OSError as exc:
+                if exc.errno == errno.ENOTCONN:
+                    mounted = False
+                    LOG.info(_LI('Fixing previous mount %s which was not'
+                                 ' unmounted correctly.'), mount_path)
+                    quobyte.umount_volume(mount_path)
+
+        if not mounted:
+            quobyte.mount_volume(quobyte_volume,
+                                 mount_path,
+                                 CONF.libvirt.quobyte_client_cfg)
+
+        quobyte.validate_volume(mount_path)
+
+    @utils.synchronized('connect_volume')
+    def disconnect_volume(self, connection_info, disk_dev):
+        """Disconnect the volume."""
+
+        quobyte_volume = self._normalize_url(connection_info['data']['export'])
+        mount_path = self._get_mount_point_for_share(quobyte_volume)
+
+        if libvirt_utils.is_mounted(mount_path, 'quobyte@' + quobyte_volume):
+            quobyte.umount_volume(mount_path)
+        else:
+            LOG.info(_LI("Trying to disconnected unmounted volume at %s"),
+                     mount_path)
+
+    def _normalize_url(self, export):
+        protocol = quobyte.SOURCE_PROTOCOL + "://"
+        if export.startswith(protocol):
+            export = export[len(protocol):]
+        return export
+
+    def _get_mount_point_for_share(self, quobyte_volume):
+        """Return mount point for Quobyte volume.
+
+        :param quobyte_volume: Example: storage-host/openstack-volumes
+        """
+        return os.path.join(CONF.libvirt.quobyte_mount_point_base,
+                            utils.get_hash_str(quobyte_volume))

@@ -31,6 +31,7 @@ from nova.tests.unit.virt.libvirt import fake_libvirt_utils
 from nova.tests.unit.virt.libvirt import fakelibvirt
 from nova import utils
 from nova.virt.libvirt import host
+from nova.virt.libvirt import quobyte
 from nova.virt.libvirt import utils as libvirt_utils
 from nova.virt.libvirt import volume
 
@@ -1472,3 +1473,177 @@ Setting up iSCSI targets: unused
         tree = conf.format_dom()
         self.assertEqual('file', tree.get('type'))
         self.assertEqual('fake_serial', tree.find('./serial').text)
+
+    @mock.patch.object(quobyte, 'validate_volume')
+    @mock.patch.object(quobyte, 'mount_volume')
+    @mock.patch.object(libvirt_utils, 'is_mounted', return_value=False)
+    def test_libvirt_quobyte_driver_mount(self,
+                                          mock_is_mounted,
+                                          mock_mount_volume,
+                                          mock_validate_volume
+                                          ):
+        mnt_base = '/mnt'
+        self.flags(quobyte_mount_point_base=mnt_base, group='libvirt')
+
+        libvirt_driver = volume.LibvirtQuobyteVolumeDriver(self.fake_conn)
+        export_string = 'quobyte://192.168.1.1/volume-00001'
+        quobyte_volume = '192.168.1.1/volume-00001'
+        export_mnt_base = os.path.join(mnt_base,
+                                       utils.get_hash_str(quobyte_volume))
+        file_path = os.path.join(export_mnt_base, self.name)
+
+        connection_info = {'data': {'export': export_string,
+                                    'name': self.name}}
+        libvirt_driver.connect_volume(connection_info, self.disk_info)
+
+        conf = libvirt_driver.get_config(connection_info, self.disk_info)
+        tree = conf.format_dom()
+
+        self._assertFileTypeEquals(tree, file_path)
+
+        mock_mount_volume.assert_called_once_with(quobyte_volume,
+                                                  export_mnt_base,
+                                                  mock.ANY)
+        mock_validate_volume.assert_called_with(export_mnt_base)
+
+    @mock.patch.object(quobyte, 'validate_volume')
+    @mock.patch.object(quobyte, 'umount_volume')
+    @mock.patch.object(libvirt_utils, 'is_mounted', return_value=True)
+    def test_libvirt_quobyte_driver_umount(self, mock_is_mounted,
+                                           mock_umount_volume,
+                                           mock_validate_volume):
+        mnt_base = '/mnt'
+        self.flags(quobyte_mount_point_base=mnt_base, group='libvirt')
+
+        libvirt_driver = volume.LibvirtQuobyteVolumeDriver(self.fake_conn)
+        export_string = 'quobyte://192.168.1.1/volume-00001'
+        quobyte_volume = '192.168.1.1/volume-00001'
+        export_mnt_base = os.path.join(mnt_base,
+                                       utils.get_hash_str(quobyte_volume))
+        file_path = os.path.join(export_mnt_base, self.name)
+
+        connection_info = {'data': {'export': export_string,
+                                    'name': self.name}}
+        libvirt_driver.connect_volume(connection_info, self.disk_info)
+
+        conf = libvirt_driver.get_config(connection_info, self.disk_info)
+        tree = conf.format_dom()
+        self._assertFileTypeEquals(tree, file_path)
+
+        libvirt_driver.disconnect_volume(connection_info, "vde")
+
+        mock_validate_volume.assert_called_once_with(export_mnt_base)
+        mock_umount_volume.assert_called_once_with(export_mnt_base)
+
+    @mock.patch.object(quobyte, 'validate_volume')
+    @mock.patch.object(quobyte, 'umount_volume')
+    def test_libvirt_quobyte_driver_already_mounted(self,
+                                                    mock_umount_volume,
+                                                    mock_validate_volume
+                                                    ):
+        mnt_base = '/mnt'
+        self.flags(quobyte_mount_point_base=mnt_base, group='libvirt')
+
+        libvirt_driver = volume.LibvirtQuobyteVolumeDriver(self.fake_conn)
+        export_string = 'quobyte://192.168.1.1/volume-00001'
+        quobyte_volume = '192.168.1.1/volume-00001'
+        export_mnt_base = os.path.join(mnt_base,
+                                       utils.get_hash_str(quobyte_volume))
+        file_path = os.path.join(export_mnt_base, self.name)
+
+        connection_info = {'data': {'export': export_string,
+                                    'name': self.name}}
+
+        libvirt_driver.connect_volume(connection_info, self.disk_info)
+
+        conf = libvirt_driver.get_config(connection_info, self.disk_info)
+        tree = conf.format_dom()
+        self._assertFileTypeEquals(tree, file_path)
+        libvirt_driver.disconnect_volume(connection_info, "vde")
+
+        expected_commands = [
+            ('findmnt', '--target', export_mnt_base,
+             '--source', "quobyte@" + quobyte_volume),
+            ('findmnt', '--target', export_mnt_base,
+             '--source', "quobyte@" + quobyte_volume),
+            ]
+        self.assertEqual(expected_commands, self.executes)
+
+        mock_umount_volume.assert_called_once_with(export_mnt_base)
+        mock_validate_volume.assert_called_once_with(export_mnt_base)
+
+    @mock.patch.object(quobyte, 'validate_volume')
+    @mock.patch.object(quobyte, 'mount_volume')
+    @mock.patch.object(libvirt_utils, 'is_mounted', return_value=False)
+    def test_libvirt_quobyte_driver_qcow2(self, mock_is_mounted,
+                                          mock_mount_volume,
+                                          mock_validate_volume
+                                          ):
+        mnt_base = '/mnt'
+        self.flags(quobyte_mount_point_base=mnt_base, group='libvirt')
+        libvirt_driver = volume.LibvirtQuobyteVolumeDriver(self.fake_conn)
+        export_string = 'quobyte://192.168.1.1/volume-00001'
+        name = 'volume-00001'
+        image_format = 'qcow2'
+        quobyte_volume = '192.168.1.1/volume-00001'
+
+        connection_info = {'data': {'export': export_string,
+                                    'name': name,
+                                    'format': image_format}}
+
+        export_mnt_base = os.path.join(mnt_base,
+                                       utils.get_hash_str(quobyte_volume))
+
+        libvirt_driver.connect_volume(connection_info, self.disk_info)
+        conf = libvirt_driver.get_config(connection_info, self.disk_info)
+        tree = conf.format_dom()
+        self.assertEqual(tree.get('type'), 'file')
+        self.assertEqual(tree.find('./driver').get('type'), 'qcow2')
+
+        (mock_mount_volume.
+         assert_called_once_with('192.168.1.1/volume-00001',
+                                 export_mnt_base,
+                                 mock.ANY))
+        mock_validate_volume.assert_called_with(export_mnt_base)
+
+        libvirt_driver.disconnect_volume(connection_info, "vde")
+
+    def test_libvirt_quobyte_driver_mount_non_quobyte_volume(self):
+        mnt_base = '/mnt'
+        self.flags(quobyte_mount_point_base=mnt_base, group='libvirt')
+
+        libvirt_driver = volume.LibvirtQuobyteVolumeDriver(self.fake_conn)
+        export_string = 'quobyte://192.168.1.1/volume-00001'
+
+        connection_info = {'data': {'export': export_string,
+                                    'name': self.name}}
+
+        def exe_side_effect(*cmd, **kwargs):
+            if cmd == mock.ANY:
+                raise exception.NovaException()
+
+        with mock.patch.object(quobyte,
+                               'validate_volume') as mock_execute:
+            mock_execute.side_effect = exe_side_effect
+            self.assertRaises(exception.NovaException,
+                              libvirt_driver.connect_volume,
+                              connection_info,
+                              self.disk_info)
+
+    def test_libvirt_quobyte_driver_normalize_url_with_protocol(self):
+        mnt_base = '/mnt'
+        self.flags(quobyte_mount_point_base=mnt_base, group='libvirt')
+
+        libvirt_driver = volume.LibvirtQuobyteVolumeDriver(self.fake_conn)
+        export_string = 'quobyte://192.168.1.1/volume-00001'
+        self.assertEqual(libvirt_driver._normalize_url(export_string),
+                         "192.168.1.1/volume-00001")
+
+    def test_libvirt_quobyte_driver_normalize_url_without_protocol(self):
+        mnt_base = '/mnt'
+        self.flags(quobyte_mount_point_base=mnt_base, group='libvirt')
+
+        libvirt_driver = volume.LibvirtQuobyteVolumeDriver(self.fake_conn)
+        export_string = '192.168.1.1/volume-00001'
+        self.assertEqual(libvirt_driver._normalize_url(export_string),
+                         "192.168.1.1/volume-00001")
