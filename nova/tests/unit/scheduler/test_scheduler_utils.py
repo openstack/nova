@@ -84,11 +84,14 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
 
         old_ref = 'old_ref'
         new_ref = 'new_ref'
+        inst_obj = 'inst_obj'
 
         for _uuid in expected_uuids:
             db.instance_update_and_get_original(
-                    self.context, _uuid, updates).AndReturn((old_ref, new_ref))
-            notifications.send_update(self.context, old_ref, new_ref,
+                    self.context, _uuid, updates,
+                    columns_to_join=['system_metadata']).AndReturn(
+                            (old_ref, new_ref))
+            notifications.send_update(self.context, old_ref, inst_obj,
                                       service=service)
             compute_utils.add_instance_fault_from_exc(
                     self.context,
@@ -106,13 +109,15 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
 
         self.mox.ReplayAll()
 
-        scheduler_utils.set_vm_state_and_notify(self.context,
-                                                service,
-                                                method,
-                                                updates,
-                                                exc_info,
-                                                request_spec,
-                                                db)
+        with mock.patch.object(objects.Instance, '_from_db_object',
+                               return_value=inst_obj):
+            scheduler_utils.set_vm_state_and_notify(self.context,
+                                                    service,
+                                                    method,
+                                                    updates,
+                                                    exc_info,
+                                                    request_spec,
+                                                    db)
 
     def test_set_vm_state_and_notify_rs_uuids(self):
         expected_uuids = ['1', '2', '3']

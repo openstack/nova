@@ -97,9 +97,16 @@ def set_vm_state_and_notify(context, service, method, updates, ex,
                         instance_uuid=instance_uuid)
 
             # update instance state and notify on the transition
+            # NOTE(hanlind): the send_update() call below is going to want to
+            # know about the flavor, so we need to join the appropriate things
+            # here and objectify the results.
             (old_ref, new_ref) = db.instance_update_and_get_original(
-                    context, instance_uuid, updates)
-            notifications.send_update(context, old_ref, new_ref,
+                    context, instance_uuid, updates,
+                    columns_to_join=['system_metadata'])
+            inst_obj = objects.Instance._from_db_object(
+                    context, objects.Instance(), new_ref,
+                    expected_attrs=['system_metadata'])
+            notifications.send_update(context, old_ref, inst_obj,
                     service=service)
             compute_utils.add_instance_fault_from_exc(context,
                     new_ref, ex, sys.exc_info())
