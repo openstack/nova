@@ -570,7 +570,8 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
                           self._test_object_action, True, True)
 
     def test_object_action_copies_object(self):
-        class TestObject(obj_base.NovaObject):
+        class TestObject(obj_base.NovaObject,
+                         obj_base.NovaObjectDictCompat):
             fields = {'dict': fields.DictOfStringsField()}
 
             def touch_dict(self, context):

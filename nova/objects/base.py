@@ -272,7 +272,7 @@ class NovaObject(object):
         self._changed_fields = set()
         self._context = context
         for key in kwargs.keys():
-            self[key] = kwargs[key]
+            setattr(self, key, kwargs[key])
 
     def __repr__(self):
         return '%s(%s)' % (
@@ -518,8 +518,8 @@ class NovaObject(object):
         changes = set(self._changed_fields)
         for field in self.fields:
             if (self.obj_attr_is_set(field) and
-                    isinstance(self[field], NovaObject) and
-                    self[field].obj_what_changed()):
+                    isinstance(getattr(self, field), NovaObject) and
+                    getattr(self, field).obj_what_changed()):
                 changes.add(field)
         return changes
 
@@ -527,7 +527,7 @@ class NovaObject(object):
         """Returns a dict of changed fields and their new values."""
         changes = {}
         for key in self.obj_what_changed():
-            changes[key] = self[key]
+            changes[key] = getattr(self, key)
         return changes
 
     def obj_reset_changes(self, fields=None):
@@ -556,6 +556,19 @@ class NovaObject(object):
     @property
     def obj_fields(self):
         return self.fields.keys() + self.obj_extra_fields
+
+
+class NovaObjectDictCompat(object):
+    """Mix-in to provide dictionary key access compat
+
+    If an object needs to support attribute access using
+    dictionary items instead of object attributes, inherit
+    from this class. This should only be used as a temporary
+    measure until all callers are converted to use modern
+    attribute access.
+
+    NOTE(berrange) This class will eventually be deleted.
+    """
 
     # dictish syntactic sugar
     def iteritems(self):
@@ -605,7 +618,7 @@ class NovaObject(object):
         if value != NotSpecifiedSentinel and not self.obj_attr_is_set(key):
             return value
         else:
-            return self[key]
+            return getattr(self, key)
 
     def update(self, updates):
         """For backwards-compatibility with dict-base objects.
@@ -613,7 +626,7 @@ class NovaObject(object):
         NOTE(danms): May be removed in the future.
         """
         for key, value in updates.items():
-            self[key] = value
+            setattr(self, key, value)
 
 
 class NovaPersistentObject(object):

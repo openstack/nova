@@ -24,7 +24,9 @@ from nova.openstack.common import log as logging
 LOG = logging.getLogger(__name__)
 
 
-class InstanceInfoCache(base.NovaPersistentObject, base.NovaObject):
+# TODO(berrange): Remove NovaObjectDictCompat
+class InstanceInfoCache(base.NovaPersistentObject, base.NovaObject,
+                        base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     # Version 1.1: Converted network_info to store the model.
     # Version 1.2: Added new() and update_cells kwarg to save().

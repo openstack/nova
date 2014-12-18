@@ -21,7 +21,9 @@ from nova.objects import fields
 FLOATING_IP_OPTIONAL_ATTRS = ['fixed_ip']
 
 
-class FloatingIP(obj_base.NovaPersistentObject, obj_base.NovaObject):
+# TODO(berrange): Remove NovaObjectDictCompat
+class FloatingIP(obj_base.NovaPersistentObject, obj_base.NovaObject,
+                 obj_base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     # Version 1.1: Added _get_addresses_by_instance_uuid()
     # Version 1.2: FixedIP <= version 1.2
@@ -160,7 +162,9 @@ class FloatingIP(obj_base.NovaPersistentObject, obj_base.NovaObject):
         self._from_db_object(context, self, db_floatingip)
 
 
-class FloatingIPList(obj_base.ObjectListBase, obj_base.NovaObject):
+# TODO(berrange): Remove NovaObjectDictCompat
+class FloatingIPList(obj_base.ObjectListBase, obj_base.NovaObject,
+                     obj_base.NovaObjectDictCompat):
     # Version 1.3: FloatingIP 1.2
     # Version 1.4: FloatingIP 1.3
     # Version 1.5: FloatingIP 1.4

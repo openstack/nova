@@ -19,7 +19,9 @@ from nova.objects import base
 from nova.objects import fields
 
 
-class Migration(base.NovaPersistentObject, base.NovaObject):
+# TODO(berrange): Remove NovaObjectDictCompat
+class Migration(base.NovaPersistentObject, base.NovaObject,
+                base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     # Version 1.1: String attributes updated to support unicode
     VERSION = '1.1'
@@ -78,7 +80,9 @@ class Migration(base.NovaPersistentObject, base.NovaObject):
         return objects.Instance.get_by_uuid(self._context, self.instance_uuid)
 
 
-class MigrationList(base.ObjectListBase, base.NovaObject):
+# TODO(berrange): Remove NovaObjectDictCompat
+class MigrationList(base.ObjectListBase, base.NovaObject,
+                    base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     #              Migration <= 1.1
     # Version 1.1: Added use_slave to get_unconfirmed_by_dest_compute

@@ -19,7 +19,9 @@ from nova.objects import fields
 from nova.virt import hardware
 
 
-class NUMACell(base.NovaObject):
+# TODO(berrange): Remove NovaObjectDictCompat
+class NUMACell(base.NovaObject,
+               base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     # Version 1.1: Added pinned_cpus and siblings fields
     # Version 1.2: Added mempages field
@@ -74,7 +76,9 @@ class NUMACell(base.NovaObject):
                    mempages=[])
 
 
-class NUMAPagesTopology(base.NovaObject):
+# TODO(berrange): Remove NovaObjectDictCompat
+class NUMAPagesTopology(base.NovaObject,
+                        base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     VERSION = '1.0'
 
@@ -95,7 +99,9 @@ class NUMAPagesTopology(base.NovaObject):
         return self.free * self.size_kb
 
 
-class NUMATopology(base.NovaObject):
+# TODO(berrange): Remove NovaObjectDictCompat
+class NUMATopology(base.NovaObject,
+                   base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     # Version 1.1: Update NUMACell to 1.1
     # Version 1.2: Update NUMACell to 1.2

@@ -20,7 +20,9 @@ from nova.objects import base
 from nova.objects import fields
 
 
-class Aggregate(base.NovaPersistentObject, base.NovaObject):
+# TODO(berrange): Remove NovaObjectDictCompat
+class Aggregate(base.NovaPersistentObject, base.NovaObject,
+                base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     # Version 1.1: String attributes updated to support unicode
     VERSION = '1.1'
@@ -147,7 +149,9 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject):
         return self.metadata.get('availability_zone', None)
 
 
-class AggregateList(base.ObjectListBase, base.NovaObject):
+# TODO(berrange): Remove NovaObjectDictCompat
+class AggregateList(base.ObjectListBase, base.NovaObject,
+                    base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     # Version 1.1: Added key argument to get_by_host()
     #              Aggregate <= version 1.1

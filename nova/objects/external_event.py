@@ -28,7 +28,9 @@ EVENT_NAMES = [
 EVENT_STATUSES = ['failed', 'completed', 'in-progress']
 
 
-class InstanceExternalEvent(obj_base.NovaObject):
+# TODO(berrange): Remove NovaObjectDictCompat
+class InstanceExternalEvent(obj_base.NovaObject,
+                            obj_base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     #              Supports network-changed and vif-plugged
     VERSION = '1.0'

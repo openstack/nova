@@ -26,7 +26,9 @@ FIXED_IP_OPTIONAL_ATTRS = ['instance', 'network', 'virtual_interface',
                            'floating_ips']
 
 
-class FixedIP(obj_base.NovaPersistentObject, obj_base.NovaObject):
+# TODO(berrange): Remove NovaObjectDictCompat
+class FixedIP(obj_base.NovaPersistentObject, obj_base.NovaObject,
+              obj_base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     # Version 1.1: Added virtual_interface field
     # Version 1.2: Instance version 1.14
@@ -197,7 +199,9 @@ class FixedIP(obj_base.NovaPersistentObject, obj_base.NovaObject):
         self.obj_reset_changes(['instance_uuid', 'instance'])
 
 
-class FixedIPList(obj_base.ObjectListBase, obj_base.NovaObject):
+# TODO(berrange): Remove NovaObjectDictCompat
+class FixedIPList(obj_base.ObjectListBase, obj_base.NovaObject,
+                  obj_base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     # Version 1.1: Added get_by_network()
     # Version 1.2: FixedIP <= version 1.2

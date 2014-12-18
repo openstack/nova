@@ -19,7 +19,9 @@ from nova.objects import base
 from nova.objects import fields
 
 
-class VirtualInterface(base.NovaPersistentObject, base.NovaObject):
+# TODO(berrange): Remove NovaObjectDictCompat
+class VirtualInterface(base.NovaPersistentObject, base.NovaObject,
+                       base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     VERSION = '1.0'
 
@@ -78,7 +80,9 @@ class VirtualInterface(base.NovaPersistentObject, base.NovaObject):
         db.virtual_interface_delete_by_instance(context, instance_uuid)
 
 
-class VirtualInterfaceList(base.ObjectListBase, base.NovaObject):
+# TODO(berrange): Remove NovaObjectDictCompat
+class VirtualInterfaceList(base.ObjectListBase, base.NovaObject,
+                           base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     VERSION = '1.0'
     fields = {

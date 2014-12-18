@@ -20,7 +20,9 @@ from nova.objects import base
 from nova.objects import fields
 
 
-class InstanceAction(base.NovaPersistentObject, base.NovaObject):
+# TODO(berrange): Remove NovaObjectDictCompat
+class InstanceAction(base.NovaPersistentObject, base.NovaObject,
+                     base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     # Version 1.1: String attributes updated to support unicode
     VERSION = '1.1'
@@ -91,7 +93,9 @@ class InstanceAction(base.NovaPersistentObject, base.NovaObject):
         self._from_db_object(context, self, db_action)
 
 
-class InstanceActionList(base.ObjectListBase, base.NovaObject):
+# TODO(berrange): Remove NovaObjectDictCompat
+class InstanceActionList(base.ObjectListBase, base.NovaObject,
+                         base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     #              InstanceAction <= version 1.1
     VERSION = '1.0'
@@ -109,7 +113,9 @@ class InstanceActionList(base.ObjectListBase, base.NovaObject):
         return base.obj_make_list(context, cls(), InstanceAction, db_actions)
 
 
-class InstanceActionEvent(base.NovaPersistentObject, base.NovaObject):
+# TODO(berrange): Remove NovaObjectDictCompat
+class InstanceActionEvent(base.NovaPersistentObject, base.NovaObject,
+                          base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     # Version 1.1: event_finish_with_failure decorated with serialize_args
     VERSION = '1.1'
@@ -199,7 +205,9 @@ class InstanceActionEvent(base.NovaPersistentObject, base.NovaObject):
         self.finish_with_failure(context, exc_val=None, exc_tb=None)
 
 
-class InstanceActionEventList(base.ObjectListBase, base.NovaObject):
+# TODO(berrange): Remove NovaObjectDictCompat
+class InstanceActionEventList(base.ObjectListBase, base.NovaObject,
+                              base.NovaObjectDictCompat):
     fields = {
         'objects': fields.ListOfObjectsField('InstanceActionEvent'),
         }

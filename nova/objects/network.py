@@ -40,7 +40,9 @@ CONF = cfg.CONF
 CONF.register_opts(network_opts)
 
 
-class Network(obj_base.NovaPersistentObject, obj_base.NovaObject):
+# TODO(berrange): Remove NovaObjectDictCompat
+class Network(obj_base.NovaPersistentObject, obj_base.NovaObject,
+              obj_base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     # Version 1.1: Added in_use_on_host()
     # Version 1.2: Added mtu, dhcp_server, enable_dhcp, share_address
@@ -203,7 +205,9 @@ class Network(obj_base.NovaPersistentObject, obj_base.NovaObject):
             self._from_db_object(context, self, db_network)
 
 
-class NetworkList(obj_base.ObjectListBase, obj_base.NovaObject):
+# TODO(berrange): Remove NovaObjectDictCompat
+class NetworkList(obj_base.ObjectListBase, obj_base.NovaObject,
+                  obj_base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     # Version 1.1: Added get_by_project()
     # Version 1.2: Network <= version 1.2

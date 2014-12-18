@@ -16,7 +16,9 @@ from nova.objects import base
 from nova.objects import fields
 
 
-class Tag(base.NovaObject):
+# TODO(berrange): Remove NovaObjectDictCompat
+class Tag(base.NovaObject,
+          base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     VERSION = '1.0'
 
@@ -43,7 +45,9 @@ class Tag(base.NovaObject):
         db.instance_tag_delete(context, resource_id, name)
 
 
-class TagList(base.ObjectListBase, base.NovaObject):
+# TODO(berrange): Remove NovaObjectDictCompat
+class TagList(base.ObjectListBase, base.NovaObject,
+              base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     VERSION = '1.0'
 

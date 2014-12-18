@@ -67,7 +67,9 @@ def _expected_cols(expected_attrs):
     return simple_cols + complex_cols
 
 
-class Instance(base.NovaPersistentObject, base.NovaObject):
+# TODO(berrange): Remove NovaObjectDictCompat
+class Instance(base.NovaPersistentObject, base.NovaObject,
+               base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     # Version 1.1: Added info_cache
     # Version 1.2: Added security_groups
@@ -699,7 +701,9 @@ def _make_instance_list(context, inst_list, db_inst_list, expected_attrs):
     return inst_list
 
 
-class InstanceList(base.ObjectListBase, base.NovaObject):
+# TODO(berrange): Remove NovaObjectDictCompat
+class InstanceList(base.ObjectListBase, base.NovaObject,
+                   base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     # Version 1.1: Added use_slave to get_by_host
     #              Instance <= version 1.9

@@ -24,7 +24,9 @@ from nova.openstack.common import log as logging
 LOG = logging.getLogger(__name__)
 
 
-class Service(base.NovaPersistentObject, base.NovaObject):
+# TODO(berrange): Remove NovaObjectDictCompat
+class Service(base.NovaPersistentObject, base.NovaObject,
+              base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     # Version 1.1: Added compute_node nested object
     # Version 1.2: String attributes updated to support unicode
@@ -135,7 +137,9 @@ class Service(base.NovaPersistentObject, base.NovaObject):
         db.service_destroy(context, self.id)
 
 
-class ServiceList(base.ObjectListBase, base.NovaObject):
+# TODO(berrange): Remove NovaObjectDictCompat
+class ServiceList(base.ObjectListBase, base.NovaObject,
+                  base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     #              Service <= version 1.2
     # Version 1.1  Service version 1.3
