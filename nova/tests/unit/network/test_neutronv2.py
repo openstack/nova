@@ -1781,14 +1781,6 @@ class TestNeutronv2(TestNeutronv2Base):
         self.mox.ReplayAll()
         return address
 
-    def test_get_instance_uuids_by_ip_filter(self):
-        self._mock_list_ports()
-        filters = {'ip': '^10\\.0\\.1\\.2$'}
-        api = neutronapi.API()
-        result = api.get_instance_uuids_by_ip_filter(self.context, filters)
-        self.assertEqual(self.instance2['uuid'], result[0]['instance_uuid'])
-        self.assertEqual(self.instance['uuid'], result[1]['instance_uuid'])
-
     def test_get_fixed_ip_by_address_fails_for_no_ports(self):
         address = self._mock_list_ports(port_data=[])
         api = neutronapi.API()

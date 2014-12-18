@@ -219,10 +219,6 @@ class NetworkRpcAPITestCase(test.NoDBTestCase):
         self._test_network_api('validate_networks', rpc_method='call',
                 networks={})
 
-    def test_get_instance_uuids_by_ip_filter(self):
-        self._test_network_api('get_instance_uuids_by_ip_filter',
-                rpc_method='call', filters={})
-
     def test_get_dns_domains(self):
         self._test_network_api('get_dns_domains', rpc_method='call')
 

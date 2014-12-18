@@ -414,14 +414,6 @@ class API(base_api.NetworkAPI):
         pass
 
     @wrap_check_policy
-    def get_instance_uuids_by_ip_filter(self, context, filters):
-        """Returns a list of dicts in the form of
-        {'instance_uuid': uuid, 'ip': ip} that matched the ip_filter
-        """
-        return self.network_rpcapi.get_instance_uuids_by_ip_filter(context,
-                                                                   filters)
-
-    @wrap_check_policy
     def get_dns_domains(self, context):
         """Returns a list of available dns domains.
         These can be used to create DNS entries for floating ips.
