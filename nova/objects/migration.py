@@ -80,9 +80,7 @@ class Migration(base.NovaPersistentObject, base.NovaObject,
         return objects.Instance.get_by_uuid(self._context, self.instance_uuid)
 
 
-# TODO(berrange): Remove NovaObjectDictCompat
-class MigrationList(base.ObjectListBase, base.NovaObject,
-                    base.NovaObjectDictCompat):
+class MigrationList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     #              Migration <= 1.1
     # Version 1.1: Added use_slave to get_unconfirmed_by_dest_compute

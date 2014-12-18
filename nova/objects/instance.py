@@ -701,9 +701,7 @@ def _make_instance_list(context, inst_list, db_inst_list, expected_attrs):
     return inst_list
 
 
-# TODO(berrange): Remove NovaObjectDictCompat
-class InstanceList(base.ObjectListBase, base.NovaObject,
-                   base.NovaObjectDictCompat):
+class InstanceList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Added use_slave to get_by_host
     #              Instance <= version 1.9

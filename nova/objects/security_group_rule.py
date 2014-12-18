@@ -84,9 +84,7 @@ class SecurityGroupRule(base.NovaPersistentObject, base.NovaObject,
         return cls._from_db_object(context, cls(), db_rule)
 
 
-# TODO(berrange): Remove NovaObjectDictCompat
-class SecurityGroupRuleList(base.ObjectListBase, base.NovaObject,
-                            base.NovaObjectDictCompat):
+class SecurityGroupRuleList(base.ObjectListBase, base.NovaObject):
     fields = {
         'objects': fields.ListOfObjectsField('SecurityGroupRule'),
         }

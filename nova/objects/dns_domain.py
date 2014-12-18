@@ -58,9 +58,7 @@ class DNSDomain(base.NovaPersistentObject, base.NovaObject,
         db.dnsdomain_unregister(context, domain)
 
 
-# TODO(berrange): Remove NovaObjectDictCompat
-class DNSDomainList(base.ObjectListBase, base.NovaObject,
-                    base.NovaObjectDictCompat):
+class DNSDomainList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     VERSION = '1.0'
     fields = {

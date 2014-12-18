@@ -196,9 +196,7 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject,
         self.obj_reset_changes(fields=['instance'])
 
 
-# TODO(berrange): Remove NovaObjectDictCompat
-class BlockDeviceMappingList(base.ObjectListBase, base.NovaObject,
-                             base.NovaObjectDictCompat):
+class BlockDeviceMappingList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: BlockDeviceMapping <= version 1.1
     # Version 1.2: Added use_slave to get_by_instance_uuid

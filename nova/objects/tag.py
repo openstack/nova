@@ -45,9 +45,7 @@ class Tag(base.NovaObject,
         db.instance_tag_delete(context, resource_id, name)
 
 
-# TODO(berrange): Remove NovaObjectDictCompat
-class TagList(base.ObjectListBase, base.NovaObject,
-              base.NovaObjectDictCompat):
+class TagList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     VERSION = '1.0'
 

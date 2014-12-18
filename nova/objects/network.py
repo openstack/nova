@@ -205,9 +205,7 @@ class Network(obj_base.NovaPersistentObject, obj_base.NovaObject,
             self._from_db_object(context, self, db_network)
 
 
-# TODO(berrange): Remove NovaObjectDictCompat
-class NetworkList(obj_base.ObjectListBase, obj_base.NovaObject,
-                  obj_base.NovaObjectDictCompat):
+class NetworkList(obj_base.ObjectListBase, obj_base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Added get_by_project()
     # Version 1.2: Network <= version 1.2

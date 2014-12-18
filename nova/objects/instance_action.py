@@ -93,9 +93,7 @@ class InstanceAction(base.NovaPersistentObject, base.NovaObject,
         self._from_db_object(context, self, db_action)
 
 
-# TODO(berrange): Remove NovaObjectDictCompat
-class InstanceActionList(base.ObjectListBase, base.NovaObject,
-                         base.NovaObjectDictCompat):
+class InstanceActionList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     #              InstanceAction <= version 1.1
     VERSION = '1.0'
@@ -205,9 +203,7 @@ class InstanceActionEvent(base.NovaPersistentObject, base.NovaObject,
         self.finish_with_failure(context, exc_val=None, exc_tb=None)
 
 
-# TODO(berrange): Remove NovaObjectDictCompat
-class InstanceActionEventList(base.ObjectListBase, base.NovaObject,
-                              base.NovaObjectDictCompat):
+class InstanceActionEventList(base.ObjectListBase, base.NovaObject):
     fields = {
         'objects': fields.ListOfObjectsField('InstanceActionEvent'),
         }

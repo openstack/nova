@@ -162,9 +162,7 @@ class FloatingIP(obj_base.NovaPersistentObject, obj_base.NovaObject,
         self._from_db_object(context, self, db_floatingip)
 
 
-# TODO(berrange): Remove NovaObjectDictCompat
-class FloatingIPList(obj_base.ObjectListBase, obj_base.NovaObject,
-                     obj_base.NovaObjectDictCompat):
+class FloatingIPList(obj_base.ObjectListBase, obj_base.NovaObject):
     # Version 1.3: FloatingIP 1.2
     # Version 1.4: FloatingIP 1.3
     # Version 1.5: FloatingIP 1.4

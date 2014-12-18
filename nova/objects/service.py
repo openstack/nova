@@ -137,9 +137,7 @@ class Service(base.NovaPersistentObject, base.NovaObject,
         db.service_destroy(context, self.id)
 
 
-# TODO(berrange): Remove NovaObjectDictCompat
-class ServiceList(base.ObjectListBase, base.NovaObject,
-                  base.NovaObjectDictCompat):
+class ServiceList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     #              Service <= version 1.2
     # Version 1.1  Service version 1.3
