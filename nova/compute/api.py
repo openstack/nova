@@ -1963,7 +1963,7 @@ class API(base.Base):
 
         The results will be sorted based on the list of sort keys in the
         'sort_keys' parameter (first value is primary sort key, second value is
-        seconardy sort ket, etc.). For each sort key, the associated sort
+        secondary sort ket, etc.). For each sort key, the associated sort
         direction is based on the list of sort directions in the 'sort_dirs'
         parameter.
         """
