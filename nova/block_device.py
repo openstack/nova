@@ -384,6 +384,9 @@ def validate_and_default_volume_size(bdm):
             bdm['volume_size'] = utils.validate_integer(
                 bdm['volume_size'], 'volume_size', min_value=0)
         except exception.InvalidInput:
+            # NOTE: We can remove this validation code after removing
+            # Nova v2.0 API code because v2.1 API validates this case
+            # already at its REST API layer.
             raise exception.InvalidBDMFormat(
                 details=_("Invalid volume_size."))
 

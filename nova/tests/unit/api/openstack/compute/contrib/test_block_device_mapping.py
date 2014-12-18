@@ -37,6 +37,7 @@ CONF = cfg.CONF
 
 
 class BlockDeviceMappingTestV21(test.TestCase):
+    validation_error = exception.ValidationError
 
     def _setup_controller(self):
         ext_info = plugins.LoadedExtensionInfo()
@@ -158,7 +159,7 @@ class BlockDeviceMappingTestV21(test.TestCase):
         self.stubs.Set(compute_api.API, 'create', create)
 
         params = {block_device_mapping.ATTRIBUTE_NAME: self.bdm}
-        self.assertRaises(exc.HTTPBadRequest,
+        self.assertRaises(self.validation_error,
                           self._test_create, params, no_image=True)
 
     @mock.patch.object(compute_api.API, 'create')
@@ -179,7 +180,7 @@ class BlockDeviceMappingTestV21(test.TestCase):
         self.stubs.Set(compute_api.API, 'create', create)
 
         params = {block_device_mapping.ATTRIBUTE_NAME: self.bdm}
-        self.assertRaises(exc.HTTPBadRequest,
+        self.assertRaises(self.validation_error,
                           self._test_create, params, no_image=True)
 
     def test_create_instance_with_device_name_too_long(self):
@@ -194,7 +195,7 @@ class BlockDeviceMappingTestV21(test.TestCase):
         self.stubs.Set(compute_api.API, 'create', create)
 
         params = {block_device_mapping.ATTRIBUTE_NAME: self.bdm}
-        self.assertRaises(exc.HTTPBadRequest,
+        self.assertRaises(self.validation_error,
                           self._test_create, params, no_image=True)
 
     def test_create_instance_with_space_in_device_name(self):
@@ -210,7 +211,7 @@ class BlockDeviceMappingTestV21(test.TestCase):
         self.stubs.Set(compute_api.API, 'create', create)
 
         params = {block_device_mapping.ATTRIBUTE_NAME: self.bdm}
-        self.assertRaises(exc.HTTPBadRequest,
+        self.assertRaises(self.validation_error,
                           self._test_create, params, no_image=True)
 
     def test_create_instance_with_invalid_size(self):
@@ -225,7 +226,7 @@ class BlockDeviceMappingTestV21(test.TestCase):
         self.stubs.Set(compute_api.API, 'create', create)
 
         params = {block_device_mapping.ATTRIBUTE_NAME: self.bdm}
-        self.assertRaises(exc.HTTPBadRequest,
+        self.assertRaises(self.validation_error,
                           self._test_create, params, no_image=True)
 
     def test_create_instance_bdm(self):
@@ -332,6 +333,7 @@ class BlockDeviceMappingTestV21(test.TestCase):
 
 
 class BlockDeviceMappingTestV2(BlockDeviceMappingTestV21):
+    validation_error = exc.HTTPBadRequest
 
     def _setup_controller(self):
         self.ext_mgr = extensions.ExtensionManager()
