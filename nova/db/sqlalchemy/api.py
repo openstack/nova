@@ -1718,6 +1718,10 @@ def instance_destroy(context, instance_uuid, constraint=None):
         model_query(context, models.InstanceExtra, session=session).\
                 filter_by(instance_uuid=instance_uuid).\
                 soft_delete()
+        model_query(context, models.InstanceSystemMetadata, session=session).\
+                filter_by(instance_uuid=instance_uuid).\
+                soft_delete()
+
     return instance_ref
 
 

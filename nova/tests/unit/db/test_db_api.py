@@ -2699,7 +2699,8 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def test_instance_destroy(self):
         ctxt = context.get_admin_context()
         values = {
-            'metadata': {'key': 'value'}
+            'metadata': {'key': 'value'},
+            'system_metadata': {'key': 'value'}
         }
         inst_uuid = self.create_instance_with_args(**values)['uuid']
         db.instance_destroy(ctxt, inst_uuid)
@@ -2708,6 +2709,9 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
                           db.instance_get, ctxt, inst_uuid)
         self.assertIsNone(db.instance_info_cache_get(ctxt, inst_uuid))
         self.assertEqual({}, db.instance_metadata_get(ctxt, inst_uuid))
+        ctxt.read_deleted = 'yes'
+        self.assertEqual(values['system_metadata'],
+                         db.instance_system_metadata_get(ctxt, inst_uuid))
 
     def test_instance_destroy_already_destroyed(self):
         ctxt = context.get_admin_context()
