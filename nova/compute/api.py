@@ -822,7 +822,7 @@ class API(base.Base):
 
         config_drive = self._check_config_drive(config_drive)
 
-        if key_data is None and key_name:
+        if key_data is None and key_name is not None:
             key_pair = objects.KeyPair.get_by_name(context,
                                                    context.user_id,
                                                    key_name)

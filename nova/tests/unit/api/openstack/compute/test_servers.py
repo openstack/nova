@@ -2289,6 +2289,15 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.create, self.req, self.body)
 
+    @mock.patch('nova.compute.api.API.create',
+                side_effect=exception.KeypairNotFound(name='',
+                                                      user_id=1))
+    def test_create_instance_empty_key_name(self, mock_create):
+        self.body['server']['key_name'] = ''
+        self.req.body = jsonutils.dumps(self.body)
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.create, self.req, self.body)
+
     def test_create_instance_valid_key_name(self):
         self.body['server']['key_name'] = 'key'
         self.req.body = jsonutils.dumps(self.body)
