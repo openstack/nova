@@ -49,6 +49,7 @@ def register_all():
     __import__('nova.objects.network_request')
     __import__('nova.objects.numa')
     __import__('nova.objects.pci_device')
+    __import__('nova.objects.pci_device_pool')
     __import__('nova.objects.tag')
     __import__('nova.objects.quotas')
     __import__('nova.objects.security_group')

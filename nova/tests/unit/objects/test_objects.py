@@ -1096,8 +1096,8 @@ object_data = {
     'BandwidthUsageList': '1.2-5b564cbfd5ae6e106443c086938e7602',
     'BlockDeviceMapping': '1.5-9968ffe513e7672484b0f528b034cd0f',
     'BlockDeviceMappingList': '1.6-ee2ed2eb3f3f2f54d573ccea0ff2eeaa',
-    'ComputeNode': '1.8-117273c242796142ef637d39a9270a6a',
-    'ComputeNodeList': '1.8-c22863c12a4d6f5edca61d2d62ed5896',
+    'ComputeNode': '1.9-d59bebd3176d86f0f7ea02086732a0d4',
+    'ComputeNodeList': '1.9-4fdeaf7dce98f5736f0ed239c9265c65',
     'DNSDomain': '1.0-5bdc288d7c3b723ce86ede998fd5c9ba',
     'DNSDomainList': '1.0-cfb3e7e82be661501c31099523154db4',
     'EC2InstanceMapping': '1.0-627baaf4b12c9067200979bdc4558a99',
@@ -1141,6 +1141,8 @@ object_data = {
     'NUMATopology': '1.2-790f6bdff85bf6e5677f409f3a4f1c6a',
     'PciDevice': '1.2-29e35c3199f3b98ce66e5d1212612818',
     'PciDeviceList': '1.1-2896df4f5b06579e5f35adba5fcae9db',
+    'PciDevicePool': '1.0-d6ed1abe611c9947345a44155abe6f11',
+    'PciDevicePoolList': '1.0-d31e08e0ff620a4df7cc2014b6c50da8',
     'Quotas': '1.2-36098cf2143e6535873c3fa3d6fe56f7',
     'QuotasNoOp': '1.2-164c628906b170fd946a7672e85e4935',
     'S3ImageMapping': '1.0-9225943a44a91ad0349b9fd8bd3f3ce2',
@@ -1150,9 +1152,11 @@ object_data = {
     'SecurityGroupRuleList': '1.1-667fca3a9928f23d2d10e61962c55f3c',
     'Service': '1.7-82bbfd46a744a9c89bc44b47a1b81683',
     'ServiceList': '1.5-f137850fbd69933a69a03eae572b05f0',
-    'TestSubclassedObject': '1.6-87177ccbefd7a740a9e261f958e15b00',
+    'Service': '1.8-82bbfd46a744a9c89bc44b47a1b81683',
+    'ServiceList': '1.6-f8bd332b71ff1c3a86b88b6070072fd4',
     'Tag': '1.0-a11531f4e4e3166eef6243d6d58a18bd',
     'TagList': '1.0-e89bf8c8055f1f1d654fb44f0abf1f53',
+    'TestSubclassedObject': '1.6-87177ccbefd7a740a9e261f958e15b00',
     'VirtualInterface': '1.0-10fdac4c704102b6d57d6936d6d790d2',
     'VirtualInterfaceList': '1.0-accbf02628a8063c1d885077a2bf49b6',
     'VirtCPUTopology': '1.0-fc694de72e20298f7c6bab1083fd4563',
@@ -1161,6 +1165,7 @@ object_data = {
 
 object_relationships = {
     'BlockDeviceMapping': {'Instance': '1.17'},
+    'ComputeNode': {'PciDevicePoolList': '1.0'},
     'FixedIP': {'Instance': '1.17', 'Network': '1.2',
                 'VirtualInterface': '1.0',
                 'FloatingIPList': '1.7'},
@@ -1175,7 +1180,7 @@ object_relationships = {
     'InstanceNUMACell': {'VirtCPUTopology': '1.0'},
     'MyObj': {'MyOwnedObject': '1.0'},
     'SecurityGroupRule': {'SecurityGroup': '1.1'},
-    'Service': {'ComputeNode': '1.8'},
+    'Service': {'ComputeNode': '1.9'},
     'TestSubclassedObject': {'MyOwnedObject': '1.0'}
 }
 

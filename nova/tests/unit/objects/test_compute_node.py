@@ -22,6 +22,7 @@ from nova import objects
 from nova.objects import compute_node
 from nova.objects import hv_spec
 from nova.objects import service
+from nova.tests.unit import fake_pci_device_pools
 from nova.tests.unit.objects import test_objects
 
 NOW = timeutils.utcnow().replace(microsecond=0)
@@ -41,6 +42,7 @@ fake_supported_hv_specs = [fake_hv_spec]
 # for backward compatibility, each supported instance object
 # is stored as a list in the database
 fake_supported_hv_specs_db_format = jsonutils.dumps([fake_hv_spec.to_list()])
+fake_pci = jsonutils.dumps(fake_pci_device_pools.fake_pool_list_primitive)
 fake_compute_node = {
     'created_at': NOW,
     'updated_at': None,
@@ -69,6 +71,7 @@ fake_compute_node = {
     'host_ip': fake_host_ip,
     'numa_topology': fake_numa_topology_db_format,
     'supported_instances': fake_supported_hv_specs_db_format,
+    'pci_stats': fake_pci,
     }
 # FIXME(sbauza) : For compatibility checking, to be removed once we are sure
 # that all computes are running latest DB version with host field in it.
@@ -81,13 +84,26 @@ class _TestComputeNodeObject(object):
         obj_val = [inst.to_list() for inst in obj_val]
         self.json_comparator(expected, obj_val)
 
+    def pci_device_pools_comparator(self, expected, obj_val):
+        obj_val = obj_val.obj_to_primitive()
+        self.json_loads_comparator(expected, obj_val)
+
+    def json_loads_comparator(self, expected, obj_val):
+        # NOTE(edleafe): This is necessary because the dumps() version of the
+        # PciDevicePoolList doesn't maintain ordering, so the output string
+        # doesn't always match.
+        self.assertEqual(jsonutils.loads(expected), obj_val)
+
     def comparators(self):
         return {'stats': self.json_comparator,
                 'host_ip': self.str_comparator,
-                'supported_hv_specs': self.supported_hv_specs_comparator}
+                'supported_hv_specs': self.supported_hv_specs_comparator,
+                'pci_device_pools': self.pci_device_pools_comparator,
+                }
 
     def subs(self):
-        return {'supported_hv_specs': 'supported_instances'}
+        return {'supported_hv_specs': 'supported_instances',
+                'pci_device_pools': 'pci_stats'}
 
     def test_get_by_id(self):
         self.mox.StubOutWithMock(db, 'compute_node_get')
@@ -324,6 +340,12 @@ class _TestComputeNodeObject(object):
         compute = compute_node.ComputeNode()
         primitive = compute.obj_to_primitive(target_version='1.6')
         self.assertNotIn('host', primitive)
+
+    def test_compat_pci_device_pools(self):
+        compute = compute_node.ComputeNode()
+        compute.pci_device_pools = fake_pci_device_pools.fake_pool_list
+        primitive = compute.obj_to_primitive(target_version='1.8')
+        self.assertNotIn('pci_device_pools', primitive)
 
 
 class TestComputeNodeObject(test_objects._LocalTest,

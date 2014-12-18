@@ -35,7 +35,8 @@ class Service(base.NovaPersistentObject, base.NovaObject,
     # Version 1.5: ComputeNode version 1.6
     # Version 1.6: ComputeNode version 1.7
     # Version 1.7: ComputeNode version 1.8
-    VERSION = '1.7'
+    # Version 1.8: ComputeNode version 1.9
+    VERSION = '1.8'
 
     fields = {
         'id': fields.IntegerField(read_only=True),
@@ -51,7 +52,7 @@ class Service(base.NovaPersistentObject, base.NovaObject,
 
     obj_relationships = {
         'compute_node': [('1.1', '1.4'), ('1.3', '1.5'), ('1.5', '1.6'),
-                         ('1.7', '1.8')],
+                         ('1.7', '1.8'), ('1.8', '1.9')],
     }
 
     @staticmethod
@@ -145,7 +146,8 @@ class ServiceList(base.ObjectListBase, base.NovaObject):
     # Version 1.3: Service version 1.5
     # Version 1.4: Service version 1.6
     # Version 1.5: Service version 1.7
-    VERSION = '1.5'
+    # Version 1.6: Service version 1.8
+    VERSION = '1.6'
 
     fields = {
         'objects': fields.ListOfObjectsField('Service'),
@@ -158,6 +160,7 @@ class ServiceList(base.ObjectListBase, base.NovaObject):
         '1.3': '1.5',
         '1.4': '1.6',
         '1.5': '1.7',
+        '1.6': '1.8',
         }
 
     @base.remotable_classmethod
