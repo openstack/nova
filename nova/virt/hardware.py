@@ -630,6 +630,33 @@ class VirtNUMATopologyCellLimit(VirtNUMATopologyCell):
         return cls(cell_id, cpuset, memory, cpu_limit, memory_limit)
 
 
+def _numa_cell_supports_pagesize_request(host_cell, inst_cell):
+    """Determines whether the cell can accept the request.
+
+    :param host_cell: host cell to fit the instance cell onto
+    :param inst_cell: instance cell we want to fit
+
+    :returns: The page size able to be handled by host_cell
+    """
+    avail_pagesize = [page.size_kb for page in host_cell.mempages]
+    avail_pagesize.sort(reverse=True)
+
+    def verify_pagesizes(host_cell, inst_cell, avail_pagesize):
+        inst_cell_mem = inst_cell.memory * units.Ki
+        for pagesize in avail_pagesize:
+            if host_cell.can_fit_hugepages(pagesize, inst_cell_mem):
+                return pagesize
+
+    if inst_cell.pagesize == MEMPAGES_SMALL:
+        return verify_pagesizes(host_cell, inst_cell, avail_pagesize[-1:])
+    elif inst_cell.pagesize == MEMPAGES_LARGE:
+        return verify_pagesizes(host_cell, inst_cell, avail_pagesize[:-1])
+    elif inst_cell.pagesize == MEMPAGES_ANY:
+        return verify_pagesizes(host_cell, inst_cell, avail_pagesize)
+    else:
+        return verify_pagesizes(host_cell, inst_cell, [inst_cell.pagesize])
+
+
 def _numa_fit_instance_cell(host_cell, instance_cell, limit_cell=None):
     """Check if a instance cell can fit and set it's cell id
 
@@ -655,9 +682,17 @@ def _numa_fit_instance_cell(host_cell, instance_cell, limit_cell=None):
         if (memory_usage > limit_cell.memory_limit or
                 cpu_usage > limit_cell.cpu_limit):
             return None
+
+    pagesize = None
+    if instance_cell.pagesize:
+        pagesize = _numa_cell_supports_pagesize_request(
+            host_cell, instance_cell)
+        if not pagesize:
+            return
+
     return objects.InstanceNUMACell(
         id=host_cell.id, cpuset=instance_cell.cpuset,
-        memory=instance_cell.memory)
+        memory=instance_cell.memory, pagesize=pagesize)
 
 
 class VirtNUMATopology(object):
