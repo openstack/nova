@@ -1685,31 +1685,16 @@ class ServersControllerUpdateTest(ControllerTest):
         self.assertRaises(exception.ValidationError, self.controller.update,
                           req, FAKE_UUID, body=body)
 
-    def test_update_server_admin_password_ignored(self):
+    def test_update_server_admin_password_extra_arg(self):
         inst_dict = dict(name='server_test', admin_password='bacon')
         body = dict(server=inst_dict)
-
-        def server_update(context, id, params):
-            filtered_dict = {
-                'display_name': 'server_test',
-            }
-            self.assertEqual(params, filtered_dict)
-            filtered_dict['uuid'] = id
-            return filtered_dict
-
-        self.stubs.Set(db, 'instance_update', server_update)
-        # FIXME (comstud)
-        #        self.stubs.Set(db, 'instance_get',
-        #                return_server_with_attributes(name='server_test'))
 
         req = fakes.HTTPRequest.blank('/fake/servers/%s' % FAKE_UUID)
         req.method = 'PUT'
         req.content_type = "application/json"
         req.body = jsonutils.dumps(body)
-        res_dict = self.controller.update(req, FAKE_UUID, body=body)
-
-        self.assertEqual(res_dict['server']['id'], FAKE_UUID)
-        self.assertEqual(res_dict['server']['name'], 'server_test')
+        self.assertRaises(exception.ValidationError, self.controller.update,
+                          req, FAKE_UUID, body=body)
 
     def test_update_server_not_found(self):
         def fake_get(*args, **kwargs):
