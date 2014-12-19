@@ -2300,6 +2300,9 @@ class LibvirtDriver(driver.ComputeDriver):
         rescue_files = os.path.join(instance_dir, "*.rescue")
         for rescue_file in glob.iglob(rescue_files):
             libvirt_utils.file_delete(rescue_file)
+        # cleanup rescue volume
+        lvm.remove_volumes([lvmdisk for lvmdisk in self._lvm_disks(instance)
+                                if lvmdisk.endswith('.rescue')])
 
     def poll_rebooting_instances(self, timeout, instances):
         pass
