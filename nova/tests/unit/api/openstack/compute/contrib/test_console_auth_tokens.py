@@ -16,16 +16,17 @@
 import copy
 
 from oslo.config import cfg
-from oslo.serialization import jsonutils
 import webob
 
+from nova.api.openstack.compute.contrib import console_auth_tokens \
+    as console_auth_tokens_v2
+from nova.api.openstack.compute.plugins.v3 import console_auth_tokens \
+    as console_auth_tokens_v21
 from nova.consoleauth import rpcapi as consoleauth_rpcapi
-from nova import context
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 
 CONF = cfg.CONF
-CONF.import_opt('osapi_compute_ext_list', 'nova.api.openstack.compute.contrib')
 
 _FAKE_CONNECT_INFO = {'instance_uuid': 'fake_instance_uuid',
                       'host': 'fake_host',
@@ -49,8 +50,7 @@ def _fake_check_token_unauthorized(self, context, token):
 
 
 class ConsoleAuthTokensExtensionTestV21(test.TestCase):
-
-    _FAKE_URL = '/v2/fake/os-console-auth-tokens/1'
+    controller_class = console_auth_tokens_v21
 
     _EXPECTED_OUTPUT = {'console': {'instance_uuid': 'fake_instance_uuid',
                                     'host': 'fake_host',
@@ -63,53 +63,27 @@ class ConsoleAuthTokensExtensionTestV21(test.TestCase):
         self.stubs.Set(consoleauth_rpcapi.ConsoleAuthAPI, 'check_token',
                        _fake_check_token)
 
-        self._set_up_wsgi_app()
-
-    def _set_up_wsgi_app(self):
-        self.app = fakes.wsgi_app_v21(
-                        init_only=('os-console-auth-tokens'),
-                        fake_auth_context=self._get_admin_context())
-
-    def _get_admin_context(self):
-        ctxt = context.get_admin_context()
-        ctxt.user_id = 'fake'
-        ctxt.project_id = 'fake'
-        return ctxt
-
-    def _create_request(self):
-        req = webob.Request.blank(self._FAKE_URL)
-        req.method = "GET"
-        req.headers["content-type"] = "application/json"
-        return req
+        self.controller = self.controller_class.ConsoleAuthTokensController()
 
     def test_get_console_connect_info(self):
-        req = self._create_request()
-        res = req.get_response(self.app)
-        self.assertEqual(200, res.status_int)
-        output = jsonutils.loads(res.body)
+        req = fakes.HTTPRequest.blank('', use_admin_context=True)
+        output = self.controller.show(req, fakes.FAKE_UUID)
         self.assertEqual(self._EXPECTED_OUTPUT, output)
 
     def test_get_console_connect_info_token_not_found(self):
         self.stubs.Set(consoleauth_rpcapi.ConsoleAuthAPI, 'check_token',
                        _fake_check_token_not_found)
-        req = self._create_request()
-        res = req.get_response(self.app)
-        self.assertEqual(404, res.status_int)
+        req = fakes.HTTPRequest.blank('', use_admin_context=True)
+        self.assertRaises(webob.exc.HTTPNotFound,
+                          self.controller.show, req, fakes.FAKE_UUID)
 
     def test_get_console_connect_info_unauthorized_console_type(self):
         self.stubs.Set(consoleauth_rpcapi.ConsoleAuthAPI, 'check_token',
                        _fake_check_token_unauthorized)
-        req = self._create_request()
-        res = req.get_response(self.app)
-        self.assertEqual(401, res.status_int)
+        req = fakes.HTTPRequest.blank('', use_admin_context=True)
+        self.assertRaises(webob.exc.HTTPUnauthorized,
+                          self.controller.show, req, fakes.FAKE_UUID)
 
 
 class ConsoleAuthTokensExtensionTestV2(ConsoleAuthTokensExtensionTestV21):
-    def _set_up_wsgi_app(self):
-        self.flags(
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Console_auth_tokens'])
-
-        self.app = fakes.wsgi_app(init_only=('os-console-auth-tokens',),
-                                  fake_auth_context=self._get_admin_context())
+    controller_class = console_auth_tokens_v2
