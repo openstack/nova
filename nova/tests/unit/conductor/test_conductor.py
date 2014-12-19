@@ -1264,7 +1264,6 @@ class _BaseTaskTestCase(object):
         spec = {'image': {'fake_data': 'should_pass_silently'},
                 'instance_properties': jsonutils.to_primitive(instances[0]),
                 'instance_type': instance_type_p,
-                'instance_uuids': [inst.uuid for inst in instances],
                 'num_instances': 2}
         scheduler_utils.setup_instance_group(self.context, spec, {})
         self.conductor_manager.scheduler_client.select_destinations(
@@ -1287,7 +1286,6 @@ class _BaseTaskTestCase(object):
                     'image': {'fake_data': 'should_pass_silently'},
                     'instance_properties': instance_properties,
                     'instance_type': instance_type_p,
-                    'instance_uuids': [inst.uuid for inst in instances],
                     'num_instances': 2},
                 filter_properties={'retry': {'num_attempts': 1,
                                              'hosts': [['host1', 'node1']]},
@@ -1313,7 +1311,6 @@ class _BaseTaskTestCase(object):
                     'image': {'fake_data': 'should_pass_silently'},
                     'instance_properties': instance_properties,
                     'instance_type': instance_type_p,
-                    'instance_uuids': [inst.uuid for inst in instances],
                     'num_instances': 2},
                 filter_properties={'limits': [],
                                    'retry': {'num_attempts': 1,
@@ -1361,9 +1358,10 @@ class _BaseTaskTestCase(object):
                 {'retry': {'num_attempts': 1,
                            'hosts': []}}).AndRaise(exception)
         updates = {'vm_state': vm_states.ERROR, 'task_state': None}
-        scheduler_utils.set_vm_state_and_notify(
-                self.context, 'compute_task', 'build_instances', updates,
-                exception, spec, self.conductor_manager.db)
+        for instance in instances:
+            scheduler_utils.set_vm_state_and_notify(
+                self.context, instance.uuid, 'compute_task', 'build_instances',
+                updates, exception, spec, self.conductor_manager.db)
         self.mox.ReplayAll()
 
         # build_instances() is a cast, we need to wait for it to complete
@@ -1638,6 +1636,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                              'disk_over_commit').AndRaise(ex)
 
         scheduler_utils.set_vm_state_and_notify(self.context,
+                inst_obj.uuid,
                 'compute_task', 'migrate_server',
                 {'vm_state': vm_states.ACTIVE,
                  'task_state': None,
@@ -1668,6 +1667,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                              'disk_over_commit').AndRaise(ex)
 
         scheduler_utils.set_vm_state_and_notify(self.context,
+                inst_obj.uuid,
                 'compute_task', 'migrate_server',
                 {'vm_state': vm_states.ACTIVE,
                  'task_state': None,
@@ -1702,7 +1702,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
              'block_migration', 'disk_over_commit')
 
         request_spec = self._build_request_spec(inst_obj)
-        mock_set_state.assert_called_once_with(self.context, 'compute_task',
+        mock_set_state.assert_called_once_with(self.context, inst_obj.uuid,
+                'compute_task',
                 'migrate_server',
                  dict(vm_state=inst_obj.vm_state,
                       task_state=None,
@@ -1738,6 +1739,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                 'uuid': instance['uuid'], },
         }
         mock_set_state.assert_called_once_with(self.context,
+                        instance['uuid'],
                         'compute_task', 'migrate_server',
                         dict(vm_state=vm_states.ERROR,
                              task_state=inst_obj.task_state,
@@ -1749,13 +1751,13 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         self.mox.StubOutWithMock(scheduler_utils,
                                  'set_vm_state_and_notify')
         scheduler_utils.set_vm_state_and_notify(
-                self.context, 'compute_task', 'method', 'updates',
+                self.context, 1, 'compute_task', 'method', 'updates',
                 'ex', 'request_spec', self.conductor.db)
 
         self.mox.ReplayAll()
 
         self.conductor._set_vm_state_and_notify(
-                self.context, 'method', 'updates', 'ex', 'request_spec')
+                self.context, 1, 'method', 'updates', 'ex', 'request_spec')
 
     def test_cold_migrate_no_valid_host_back_in_active_state(self):
         flavor = flavors.get_flavor_by_name('m1.tiny')
@@ -1800,6 +1802,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                    'task_state': None}
 
         self.conductor._set_vm_state_and_notify(self.context,
+                                                inst_obj.uuid,
                                                 'migrate_server',
                                                 updates, exc_info,
                                                 request_spec)
@@ -1861,6 +1864,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                    'task_state': None}
 
         self.conductor._set_vm_state_and_notify(self.context,
+                                                inst_obj.uuid,
                                                 'migrate_server',
                                                 updates, exc_info,
                                                 request_spec)
@@ -1898,10 +1902,11 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                               return_value=request_spec),
             mock.patch.object(scheduler_utils, 'setup_instance_group',
                               return_value=False),
+            mock.patch.object(self.conductor, '_set_vm_state_and_notify'),
             mock.patch.object(self.conductor.scheduler_client,
                               'select_destinations',
                               side_effect=exc.NoValidHost(reason=""))
-        ) as (image_mock, brs_mock, sig_mock, select_dest_mock):
+        ) as (image_mock, brs_mock, sig_mock, set_vm_mock, select_dest_mock):
             nvh = self.assertRaises(exc.NoValidHost,
                                     self.conductor._cold_migrate, self.context,
                                     inst_obj, flavor, filter_props, [resvs])
@@ -1969,6 +1974,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                    'task_state': None}
 
         self.conductor._set_vm_state_and_notify(self.context,
+                                                inst_obj.uuid,
                                                 'migrate_server',
                                                 updates, exc_info,
                                                 request_spec)
@@ -2008,10 +2014,11 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                               return_value=request_spec),
             mock.patch.object(scheduler_utils, 'setup_instance_group',
                               return_value=False),
+            mock.patch.object(self.conductor, '_set_vm_state_and_notify'),
             mock.patch.object(self.conductor.scheduler_client,
                               'select_destinations',
                               side_effect=exc.NoValidHost(reason=""))
-        ) as (image_mock, brs_mock, sig_mock, select_dest_mock):
+        ) as (image_mock, brs_mock, sig_mock, vm_st_mock, select_dest_mock):
             nvh = self.assertRaises(exc.NoValidHost,
                                     self.conductor._cold_migrate, self.context,
                                     inst_obj, flavor_new, filter_props,

@@ -83,7 +83,7 @@ class CellsSchedulerTestCase(test.TestCase):
         self.instances = [objects.Instance(uuid=uuid, id=id)
                           for id, uuid in enumerate(instance_uuids)]
         self.request_spec = {
-                'instance_uuids': instance_uuids,
+                'num_instances': len(instance_uuids),
                 'instance_properties': self.instances[0],
                 'instance_type': 'fake_type',
                 'image': 'fake_image'}
@@ -162,7 +162,7 @@ class CellsSchedulerTestCase(test.TestCase):
 
         def fake_build_request_spec(ctxt, image, instances):
             request_spec = {
-                    'instance_uuids': [inst['uuid'] for inst in instances],
+                    'num_instances': len(instances),
                     'image': image}
             return request_spec
 
@@ -205,7 +205,7 @@ class CellsSchedulerTestCase(test.TestCase):
 
         def fake_build_request_spec(ctxt, image, instances):
             request_spec = {
-                    'instance_uuids': [inst['uuid'] for inst in instances],
+                    'num_instances': len(instances),
                     'image': image}
             return request_spec
 
@@ -253,7 +253,7 @@ class CellsSchedulerTestCase(test.TestCase):
 
         def fake_build_request_spec(ctxt, image, instances):
             request_spec = {
-                    'instance_uuids': [inst['uuid'] for inst in instances],
+                    'num_instances': len(instances),
                     'image': image}
             return request_spec
 
@@ -297,7 +297,7 @@ class CellsSchedulerTestCase(test.TestCase):
 
         def fake_build_request_spec(ctxt, image, instances):
             request_spec = {
-                    'instance_uuids': [inst['uuid'] for inst in instances],
+                    'num_instances': len(instances),
                     'image': image}
             return request_spec
 
@@ -369,7 +369,7 @@ class CellsSchedulerTestCase(test.TestCase):
 
         def fake_build_request_spec(ctxt, image, instances):
             request_spec = {
-                    'instance_uuids': [inst['uuid'] for inst in instances],
+                    'num_instances': len(instances),
                     'instance_properties': instances[0],
                     'image': image,
                     'instance_type': 'fake_type'}
@@ -484,7 +484,7 @@ class CellsSchedulerTestCase(test.TestCase):
 
         def fake_build_request_spec(ctxt, image, instances):
             request_spec = {
-                    'instance_uuids': [inst['uuid'] for inst in instances],
+                    'num_instances': len(instances),
                     'instance_properties': instances[0],
                     'image': image,
                     'instance_type': 'fake_type'}

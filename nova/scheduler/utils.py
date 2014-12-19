@@ -72,15 +72,12 @@ def build_request_spec(ctxt, image, instances, instance_type=None):
             'image': image or {},
             'instance_properties': instance,
             'instance_type': instance_type,
-            'num_instances': len(instances),
-            # NOTE(alaski): This should be removed as logic moves from the
-            # scheduler to conductor.  Provides backwards compatibility now.
-            'instance_uuids': [inst['uuid'] for inst in instances]}
+            'num_instances': len(instances)}
     return jsonutils.to_primitive(request_spec)
 
 
-def set_vm_state_and_notify(context, service, method, updates, ex,
-                            request_spec, db):
+def set_vm_state_and_notify(context, instance_uuid, service, method, updates,
+                            ex, request_spec, db):
     """changes VM state and notifies."""
     LOG.warning(_LW("Failed to %(service)s_%(method)s: %(ex)s"),
                 {'service': service, 'method': method, 'ex': ex})
@@ -88,43 +85,35 @@ def set_vm_state_and_notify(context, service, method, updates, ex,
     vm_state = updates['vm_state']
     properties = request_spec.get('instance_properties', {})
     # NOTE(vish): We shouldn't get here unless we have a catastrophic
-    #             failure, so just set all instances to error. if uuid
-    #             is not set, instance_uuids will be set to [None], this
-    #             is solely to preserve existing behavior and can
-    #             be removed along with the 'if instance_uuid:' if we can
-    #             verify that uuid is always set.
-    uuids = [properties.get('uuid')]
+    #             failure, so just set the instance to its internal state
     notifier = rpc.get_notifier(service)
-    for instance_uuid in request_spec.get('instance_uuids') or uuids:
-        if instance_uuid:
-            state = vm_state.upper()
-            LOG.warning(_LW('Setting instance to %s state.'), state,
-                        instance_uuid=instance_uuid)
+    state = vm_state.upper()
+    LOG.warning(_LW('Setting instance to %s state.'), state,
+                instance_uuid=instance_uuid)
 
-            # update instance state and notify on the transition
-            # NOTE(hanlind): the send_update() call below is going to want to
-            # know about the flavor, so we need to join the appropriate things
-            # here and objectify the results.
-            (old_ref, new_ref) = db.instance_update_and_get_original(
-                    context, instance_uuid, updates,
-                    columns_to_join=['system_metadata'])
-            inst_obj = objects.Instance._from_db_object(
-                    context, objects.Instance(), new_ref,
-                    expected_attrs=['system_metadata'])
-            notifications.send_update(context, old_ref, inst_obj,
-                    service=service)
-            compute_utils.add_instance_fault_from_exc(context,
-                    new_ref, ex, sys.exc_info())
+    # update instance state and notify on the transition
+    # NOTE(hanlind): the send_update() call below is going to want to
+    # know about the flavor, so we need to join the appropriate things
+    # here and objectify the results.
+    (old_ref, new_ref) = db.instance_update_and_get_original(
+        context, instance_uuid, updates,
+        columns_to_join=['system_metadata'])
+    inst_obj = objects.Instance._from_db_object(
+        context, objects.Instance(), new_ref,
+        expected_attrs=['system_metadata'])
+    notifications.send_update(context, old_ref, inst_obj, service=service)
+    compute_utils.add_instance_fault_from_exc(context,
+            new_ref, ex, sys.exc_info())
 
-        payload = dict(request_spec=request_spec,
-                        instance_properties=properties,
-                        instance_id=instance_uuid,
-                        state=vm_state,
-                        method=method,
-                        reason=ex)
+    payload = dict(request_spec=request_spec,
+                    instance_properties=properties,
+                    instance_id=instance_uuid,
+                    state=vm_state,
+                    method=method,
+                    reason=ex)
 
-        event_type = '%s.%s' % (service, method)
-        notifier.error(context, event_type, payload)
+    event_type = '%s.%s' % (service, method)
+    notifier.error(context, event_type, payload)
 
 
 def populate_filter_properties(filter_properties, host_state):
@@ -261,12 +250,12 @@ _SUPPORTS_AFFINITY = None
 _SUPPORTS_ANTI_AFFINITY = None
 
 
-def _get_group_details(context, instance_uuids, user_group_hosts=None):
+def _get_group_details(context, instance_uuid, user_group_hosts=None):
     """Provide group_hosts and group_policies sets related to instances if
     those instances are belonging to a group and if corresponding filters are
     enabled.
 
-    :param instance_uuids: list of instance uuids
+    :param instance_uuid: UUID of the instance to check
     :param user_group_hosts: Hosts from the group or empty set
 
     :returns: None or namedtuple GroupDetails
@@ -281,15 +270,12 @@ def _get_group_details(context, instance_uuids, user_group_hosts=None):
             'ServerGroupAntiAffinityFilter')
     _supports_server_groups = any((_SUPPORTS_AFFINITY,
                                    _SUPPORTS_ANTI_AFFINITY))
-    if not _supports_server_groups or not instance_uuids:
+    if not _supports_server_groups or not instance_uuid:
         return
 
     try:
-        # NOTE(sbauza) If there are multiple instance UUIDs, it's a boot
-        # request and they will all be in the same group, so it's safe to
-        # only check the first one.
         group = objects.InstanceGroup.get_by_instance_uuid(context,
-                                                           instance_uuids[0])
+                                                           instance_uuid)
     except exception.InstanceGroupNotFound:
         return
 
@@ -318,8 +304,11 @@ def setup_instance_group(context, request_spec, filter_properties):
     :param filter_properties: Filter properties
     """
     group_hosts = filter_properties.get('group_hosts')
-    instance_uuids = request_spec.get('instance_uuids')
-    group_info = _get_group_details(context, instance_uuids, group_hosts)
+    # NOTE(sbauza) If there are multiple instance UUIDs, it's a boot
+    # request and they will all be in the same group, so it's safe to
+    # only check the first one.
+    instance_uuid = request_spec.get('instance_properties', {}).get('uuid')
+    group_info = _get_group_details(context, instance_uuid, group_hosts)
     if group_info is not None:
         filter_properties['group_updated'] = True
         filter_properties['group_hosts'] = group_info.hosts

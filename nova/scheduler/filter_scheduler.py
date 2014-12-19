@@ -107,7 +107,6 @@ class FilterScheduler(driver.Scheduler):
         elevated = context.elevated()
         instance_properties = request_spec['instance_properties']
         instance_type = request_spec.get("instance_type", None)
-        instance_uuids = request_spec.get("instance_uuids", None)
 
         update_group_hosts = filter_properties.get('group_updated', False)
 
@@ -132,10 +131,7 @@ class FilterScheduler(driver.Scheduler):
         hosts = self._get_all_host_states(elevated)
 
         selected_hosts = []
-        if instance_uuids:
-            num_instances = len(instance_uuids)
-        else:
-            num_instances = request_spec.get('num_instances', 1)
+        num_instances = request_spec.get('num_instances', 1)
         for num in xrange(num_instances):
             # Filter local hosts based on requirements ...
             hosts = self.host_manager.get_filtered_hosts(hosts,

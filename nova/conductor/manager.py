@@ -532,7 +532,8 @@ class ComputeTaskManager(base.Base):
             if not vm_state:
                 vm_state = vm_states.ACTIVE
             updates = {'vm_state': vm_state, 'task_state': None}
-            self._set_vm_state_and_notify(context, 'migrate_server',
+            self._set_vm_state_and_notify(context, instance.uuid,
+                                          'migrate_server',
                                           updates, ex, request_spec)
             quotas.rollback()
 
@@ -559,14 +560,15 @@ class ComputeTaskManager(base.Base):
             with excutils.save_and_reraise_exception():
                 updates = {'vm_state': instance['vm_state'],
                            'task_state': None}
-                self._set_vm_state_and_notify(context, 'migrate_server',
+                self._set_vm_state_and_notify(context, instance.uuid,
+                                              'migrate_server',
                                               updates, ex, request_spec)
                 quotas.rollback()
 
-    def _set_vm_state_and_notify(self, context, method, updates, ex,
-                                 request_spec):
+    def _set_vm_state_and_notify(self, context, instance_uuid, method, updates,
+                                 ex, request_spec):
         scheduler_utils.set_vm_state_and_notify(
-                context, 'compute_task', method, updates,
+                context, instance_uuid, 'compute_task', method, updates,
                 ex, request_spec, self.db)
 
     def _live_migrate(self, context, instance, scheduler_hint,
@@ -579,6 +581,7 @@ class ComputeTaskManager(base.Base):
                 'uuid': instance['uuid'], },
             }
             scheduler_utils.set_vm_state_and_notify(context,
+                instance.uuid,
                 'compute_task', 'migrate_server',
                 dict(vm_state=vm_state,
                      task_state=task_state,
@@ -646,8 +649,10 @@ class ComputeTaskManager(base.Base):
                     request_spec, filter_properties)
         except Exception as exc:
             updates = {'vm_state': vm_states.ERROR, 'task_state': None}
-            self._set_vm_state_and_notify(context, 'build_instances', updates,
-                                          exc, request_spec)
+            for instance in instances:
+                self._set_vm_state_and_notify(
+                    context, instance.uuid, 'build_instances', updates,
+                    exc, request_spec)
             return
 
         for (instance, host) in itertools.izip(instances, hosts):
@@ -782,7 +787,7 @@ class ComputeTaskManager(base.Base):
                     host = hosts.pop(0)['host']
                 except exception.NoValidHost as ex:
                     with excutils.save_and_reraise_exception():
-                        self._set_vm_state_and_notify(context,
+                        self._set_vm_state_and_notify(context, instance.uuid,
                                 'rebuild_server',
                                 {'vm_state': instance.vm_state,
                                  'task_state': None}, ex, request_spec)

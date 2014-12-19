@@ -1599,8 +1599,6 @@ class ComputeManager(manager.Manager):
                       instance_uuid=instance_uuid)
             return
 
-        request_spec['instance_uuids'] = [instance_uuid]
-
         LOG.debug("Re-scheduling %(method)s: attempt %(num)d",
                   {'method': reschedule_method.func_name,
                    'num': retry['num_attempts']}, instance_uuid=instance_uuid)
