@@ -105,6 +105,7 @@ class CellsAPI(object):
         * 1.30 - Make build_instances() use flavor object
         * 1.31 - Add clean_shutdown to stop, resize, rescue, and shelve
         * 1.32 - Send objects for instances in build_instances()
+        * 1.33 - Add clean_shutdown to resize_instance()
     '''
 
     VERSION_ALIASES = {
@@ -551,14 +552,22 @@ class CellsAPI(object):
         cctxt.cast(ctxt, 'soft_delete_instance', instance=instance)
 
     def resize_instance(self, ctxt, instance, extra_instance_updates,
-                       scheduler_hint, flavor, reservations):
+                       scheduler_hint, flavor, reservations,
+                       clean_shutdown=True):
         if not CONF.cells.enable:
             return
         flavor_p = jsonutils.to_primitive(flavor)
-        cctxt = self.client.prepare(version='1.20')
-        cctxt.cast(ctxt, 'resize_instance',
-                   instance=instance, flavor=flavor_p,
-                   extra_instance_updates=extra_instance_updates)
+        version = '1.33'
+        msg_args = {'instance': instance,
+                    'flavor': flavor_p,
+                    'extra_instance_updates': extra_instance_updates,
+                    'clean_shutdown': clean_shutdown}
+        if not self.client.can_send_version(version):
+            del msg_args['clean_shutdown']
+            version = '1.20'
+
+        cctxt = self.client.prepare(version=version)
+        cctxt.cast(ctxt, 'resize_instance', **msg_args)
 
     def live_migrate_instance(self, ctxt, instance, host_name,
                               block_migration, disk_over_commit):

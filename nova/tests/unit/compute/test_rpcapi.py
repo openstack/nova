@@ -281,13 +281,22 @@ class ComputeRpcAPITestCase(test.TestCase):
                 migrate_data=None, version='3.19')
 
     def test_prep_resize(self):
+        self.flags(compute='3.0', group='upgrade_levels')
         self._test_compute_api('prep_resize', 'cast',
                 instance=self.fake_instance_obj, instance_type='fake_type',
                 image='fake_image', host='host',
                 reservations=list('fake_res'),
                 request_spec='fake_spec',
                 filter_properties={'fakeprop': 'fakeval'},
-                node='node')
+                node='node', version='3.0')
+        self.flags(compute='3.38', group='upgrade_levels')
+        self._test_compute_api('prep_resize', 'cast',
+                instance=self.fake_instance_obj, instance_type='fake_type',
+                image='fake_image', host='host',
+                reservations=list('fake_res'),
+                request_spec='fake_spec',
+                filter_properties={'fakeprop': 'fakeval'},
+                node='node', clean_shutdown=True, version='3.38')
 
     def test_reboot_instance(self):
         self.maxDiff = None

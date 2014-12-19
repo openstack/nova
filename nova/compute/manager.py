@@ -588,7 +588,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='3.37')
+    target = messaging.Target(version='3.38')
 
     # How long to wait in seconds before re-issuing a shutdown
     # signal to a instance during power off.  The overall
@@ -3642,7 +3642,8 @@ class ComputeManager(manager.Manager):
             quotas.commit()
 
     def _prep_resize(self, context, image, instance, instance_type,
-            quotas, request_spec, filter_properties, node):
+            quotas, request_spec, filter_properties, node,
+            clean_shutdown=True):
 
         if not filter_properties:
             filter_properties = {}
@@ -3675,14 +3676,16 @@ class ComputeManager(manager.Manager):
             LOG.audit(_('Migrating'), context=context, instance=instance)
             self.compute_rpcapi.resize_instance(
                     context, instance, claim.migration, image,
-                    instance_type, quotas.reservations)
+                    instance_type, quotas.reservations,
+                    clean_shutdown)
 
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
     @wrap_instance_fault
     def prep_resize(self, context, image, instance, instance_type,
-                    reservations, request_spec, filter_properties, node):
+                    reservations, request_spec, filter_properties, node,
+                    clean_shutdown=True):
         """Initiates the process of moving a running instance to another host.
 
         Possibly changes the RAM and disk size in the process.
@@ -3706,7 +3709,7 @@ class ComputeManager(manager.Manager):
                 self._prep_resize(context, image, instance,
                                   instance_type, quotas,
                                   request_spec, filter_properties,
-                                  node)
+                                  node, clean_shutdown)
             # NOTE(dgenin): This is thrown in LibvirtDriver when the
             #               instance to be migrated is backed by LVM.
             #               Remove when LVM migration is implemented.

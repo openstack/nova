@@ -461,7 +461,7 @@ class ComputeTaskManager(base.Base):
     may involve coordinating activities on multiple compute nodes.
     """
 
-    target = messaging.Target(namespace='compute_task', version='1.10')
+    target = messaging.Target(namespace='compute_task', version='1.11')
 
     def __init__(self):
         super(ComputeTaskManager, self).__init__()
@@ -482,7 +482,8 @@ class ComputeTaskManager(base.Base):
                                    exception.MigrationPreCheckError,
                                    exception.LiveMigrationWithOldNovaNotSafe)
     def migrate_server(self, context, instance, scheduler_hint, live, rebuild,
-            flavor, block_migration, disk_over_commit, reservations=None):
+            flavor, block_migration, disk_over_commit, reservations=None,
+            clean_shutdown=True):
         if instance and not isinstance(instance, nova_object.NovaObject):
             # NOTE(danms): Until v2 of the RPC API, we need to tolerate
             # old-world instance objects here
@@ -505,12 +506,12 @@ class ComputeTaskManager(base.Base):
                                              instance_uuid):
                 self._cold_migrate(context, instance, flavor,
                                    scheduler_hint['filter_properties'],
-                                   reservations)
+                                   reservations, clean_shutdown)
         else:
             raise NotImplementedError()
 
     def _cold_migrate(self, context, instance, flavor, filter_properties,
-                      reservations):
+                      reservations, clean_shutdown):
         image_ref = instance.image_ref
         image = compute_utils.get_image_metadata(
             context, self.image_api, image_ref, instance)
@@ -555,7 +556,8 @@ class ComputeTaskManager(base.Base):
                 context, image, instance,
                 flavor, host,
                 reservations, request_spec=request_spec,
-                filter_properties=filter_properties, node=node)
+                filter_properties=filter_properties, node=node,
+                clean_shutdown=clean_shutdown)
         except Exception as ex:
             with excutils.save_and_reraise_exception():
                 updates = {'vm_state': instance['vm_state'],

@@ -1309,13 +1309,21 @@ class CellsTargetedMethodsTestCase(test.TestCase):
     def test_unpause_instance(self):
         self._test_instance_action_method('unpause', (), {}, (), {}, False)
 
-    def test_resize_instance(self):
+    def _test_resize_instance(self, clean_shutdown=True):
         kwargs = dict(flavor=dict(id=42, flavorid='orangemocchafrappuccino'),
-                      extra_instance_updates=dict(cow='moo'))
-        expected_kwargs = dict(flavor_id='orangemocchafrappuccino', cow='moo')
+                      extra_instance_updates=dict(cow='moo'),
+                      clean_shutdown=clean_shutdown)
+        expected_kwargs = dict(flavor_id='orangemocchafrappuccino', cow='moo',
+                               clean_shutdown=clean_shutdown)
         self._test_instance_action_method('resize', (), kwargs,
                                           (), expected_kwargs,
                                           False)
+
+    def test_resize_instance(self):
+        self._test_resize_instance()
+
+    def test_resize_instance_forced_shutdown(self):
+        self._test_resize_instance(clean_shutdown=False)
 
     def test_live_migrate_instance(self):
         kwargs = dict(block_migration='fake-block-mig',
