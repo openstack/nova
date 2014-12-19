@@ -295,7 +295,7 @@ class Hosts(extensions.V3APIExtensionBase):
     version = 1
 
     def get_resources(self):
-        resources = [extensions.ResourceExtension('os-hosts',
+        resources = [extensions.ResourceExtension(ALIAS,
                 HostController(),
                 member_actions={"startup": "GET", "shutdown": "GET",
                         "reboot": "GET"})]

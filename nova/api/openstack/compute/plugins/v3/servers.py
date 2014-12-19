@@ -44,6 +44,7 @@ from nova.openstack.common import uuidutils
 from nova import policy
 from nova import utils
 
+ALIAS = 'servers'
 
 CONF = cfg.CONF
 CONF.import_opt('enable_instance_password',
@@ -1108,7 +1109,7 @@ class Servers(extensions.V3APIExtensionBase):
     """Servers."""
 
     name = "Servers"
-    alias = "servers"
+    alias = ALIAS
     version = 1
 
     def get_resources(self):
@@ -1116,7 +1117,7 @@ class Servers(extensions.V3APIExtensionBase):
         collection_actions = {'detail': 'GET'}
         resources = [
             extensions.ResourceExtension(
-                'servers',
+                ALIAS,
                 ServersController(extension_info=self.extension_info),
                 member_name='server', collection_actions=collection_actions,
                 member_actions=member_actions)]

@@ -502,10 +502,10 @@ class SecurityGroups(extensions.V3APIExtensionBase):
         return [secgrp_output_ext, secgrp_act_ext]
 
     def get_resources(self):
-        secgrp_ext = extensions.ResourceExtension('os-security-groups',
+        secgrp_ext = extensions.ResourceExtension(ALIAS,
                                                   SecurityGroupController())
         server_secgrp_ext = extensions.ResourceExtension(
-            'os-security-groups',
+            ALIAS,
             controller=ServerSecurityGroupController(),
             parent=dict(member_name='server', collection_name='servers'))
         secgrp_rules_ext = extensions.ResourceExtension(

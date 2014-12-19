@@ -59,7 +59,7 @@ class Migrations(extensions.V3APIExtensionBase):
 
     def get_resources(self):
         resources = []
-        resource = extensions.ResourceExtension('os-migrations',
+        resource = extensions.ResourceExtension(ALIAS,
                                                 MigrationsController())
         resources.append(resource)
         return resources

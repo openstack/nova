@@ -77,7 +77,7 @@ class Certificates(extensions.V3APIExtensionBase):
 
     def get_resources(self):
         resources = [
-            extensions.ResourceExtension('os-certificates',
+            extensions.ResourceExtension(ALIAS,
                                          CertificatesController(),
                                          member_actions={})]
         return resources

@@ -18,7 +18,7 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.openstack.common import log as logging
 
-
+ALIAS = 'extensions'
 LOG = logging.getLogger(__name__)
 
 # V2.1 does not support XML but we need to keep an entry in the
@@ -93,13 +93,13 @@ class ExtensionInfo(extensions.V3APIExtensionBase):
     """Extension information."""
 
     name = "Extensions"
-    alias = "extensions"
+    alias = ALIAS
     version = 1
 
     def get_resources(self):
         resources = [
             extensions.ResourceExtension(
-                'extensions', ExtensionInfoController(self.extension_info),
+                ALIAS, ExtensionInfoController(self.extension_info),
                 member_name='extension')]
         return resources
 

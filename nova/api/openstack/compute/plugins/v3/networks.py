@@ -202,7 +202,7 @@ class Networks(extensions.V3APIExtensionBase):
         member_actions = {'action': 'POST'}
         collection_actions = {'add': 'POST'}
         res = extensions.ResourceExtension(
-            'os-networks', NetworkController(),
+            ALIAS, NetworkController(),
             member_actions=member_actions,
             collection_actions=collection_actions)
         return [res]
