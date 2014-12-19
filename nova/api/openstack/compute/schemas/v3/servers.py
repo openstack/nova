@@ -107,9 +107,7 @@ base_resize = {
                 'flavorRef': parameter_types.flavor_ref,
             },
             'required': ['flavorRef'],
-            # TODO(gmann): enable here after all extension schema
-            # patches are merged.
-            # 'additionalProperties': False,
+            'additionalProperties': False,
         },
     },
     'required': ['resize'],
