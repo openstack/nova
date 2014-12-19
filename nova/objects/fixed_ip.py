@@ -62,7 +62,7 @@ class FixedIP(obj_base.NovaPersistentObject, obj_base.NovaObject,
 
     obj_relationships = {
         'instance': [('1.0', '1.13'), ('1.2', '1.14'), ('1.3', '1.15'),
-                     ('1.6', '1.16')],
+                     ('1.6', '1.16'), ('1.7', '1.17')],
         'network': [('1.0', '1.2')],
         'virtual_interface': [('1.1', '1.0')],
         'floating_ips': [('1.5', '1.7')],
