@@ -76,16 +76,10 @@ class ServerGroupQuotasTestV21(test.TestCase):
     def setUp(self):
         super(ServerGroupQuotasTestV21, self).setUp()
         self._setup_controller()
-        self.app = self._get_app()
+        self.req = fakes.HTTPRequest.blank('')
 
     def _setup_controller(self):
         self.controller = sg_v3.ServerGroupController()
-
-    def _get_app(self):
-        return fakes.wsgi_app_v21(init_only=('os-server-groups',))
-
-    def _get_url(self):
-        return '/v2/fake'
 
     def _setup_quotas(self):
         pass
@@ -97,46 +91,42 @@ class ServerGroupQuotasTestV21(test.TestCase):
 
     def test_create_server_group_normal(self):
         self._setup_quotas()
-        req = fakes.HTTPRequest.blank('/v2/fake/os-server-groups')
         sgroup = server_group_template()
         policies = ['anti-affinity']
         sgroup['policies'] = policies
-        res_dict = self.controller.create(req, {'server_group': sgroup})
+        res_dict = self.controller.create(self.req, {'server_group': sgroup})
         self.assertEqual(res_dict['server_group']['name'], 'test')
         self.assertTrue(uuidutils.is_uuid_like(res_dict['server_group']['id']))
         self.assertEqual(res_dict['server_group']['policies'], policies)
 
     def test_create_server_group_quota_limit(self):
         self._setup_quotas()
-        req = fakes.HTTPRequest.blank('/v2/fake/os-server-groups')
         sgroup = server_group_template()
         policies = ['anti-affinity']
         sgroup['policies'] = policies
         # Start by creating as many server groups as we're allowed to.
         for i in range(CONF.quota_server_groups):
-            self.controller.create(req, {'server_group': sgroup})
+            self.controller.create(self.req, {'server_group': sgroup})
 
         # Then, creating a server group should fail.
         self.assertRaises(webob.exc.HTTPForbidden,
                           self.controller.create,
-                          req, {'server_group': sgroup})
+                          self.req, {'server_group': sgroup})
 
     def test_delete_server_group_by_admin(self):
         self._setup_quotas()
         sgroup = server_group_template()
         policies = ['anti-affinity']
         sgroup['policies'] = policies
-        req = fakes.HTTPRequest.blank('/v2/fake/os-server-groups')
-        res = self.controller.create(req, {'server_group': sgroup})
+        res = self.controller.create(self.req, {'server_group': sgroup})
         sg_id = res['server_group']['id']
-        context = req.environ['nova.context']
+        context = self.req.environ['nova.context']
 
         self._assert_server_groups_in_use(context.project_id,
                                           context.user_id, 1)
 
         # Delete the server group we've just created.
-        req = fakes.HTTPRequest.blank('/v2/fake/os-server-groups/%s' % sg_id,
-                                      use_admin_context=True)
+        req = fakes.HTTPRequest.blank('', use_admin_context=True)
         self.controller.delete(req, sg_id)
 
         # Make sure the quota in use has been released.
@@ -160,8 +150,7 @@ class ServerGroupQuotasTestV21(test.TestCase):
         self.stubs.Set(nova.db, 'instance_group_get',
                        return_server_group)
 
-        req = fakes.HTTPRequest.blank('/v2/fake/os-server-groups/123')
-        resp = self.controller.delete(req, '123')
+        resp = self.controller.delete(self.req, '123')
         self.assertTrue(self.called)
 
         # NOTE: on v2.1, http status code is set as wsgi_code of API
@@ -183,6 +172,3 @@ class ServerGroupQuotasTestV2(ServerGroupQuotasTestV21):
         self.ext_mgr.is_loaded('os-server-group-quotas').MultipleTimes()\
                                                         .AndReturn(True)
         self.mox.ReplayAll()
-
-    def _get_app(self):
-        return fakes.wsgi_app(init_only=('os-server-groups',))
