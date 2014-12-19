@@ -3876,7 +3876,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
             # PAE only makes sense in X86
             if caps.host.cpu.arch in (arch.I686, arch.X86_64):
-                guest.pae = True
+                guest.features.append(vconfig.LibvirtConfigGuestFeaturePAE())
 
         if virt_type in ("kvm", "qemu"):
             if caps.host.cpu.arch in (arch.I686, arch.X86_64):
@@ -3902,7 +3902,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 guest.os_boot_dev = blockinfo.get_boot_order(disk_info)
 
         if virt_type not in ("lxc", "uml"):
-            guest.acpi = guest.apic = True
+            guest.features.append(vconfig.LibvirtConfigGuestFeatureACPI())
+            guest.features.append(vconfig.LibvirtConfigGuestFeatureAPIC())
 
         self._set_clock(guest, instance.os_type, image_meta, virt_type)
 
