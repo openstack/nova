@@ -1577,8 +1577,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 else:
                     self.assertEqual(2, len(cfg.clock.timers))
 
+    @mock.patch.object(host.Host, 'has_min_version')
     @mock.patch.object(objects.Flavor, 'get_by_id')
-    def test_get_guest_config_windows(self, mock_flavor):
+    def test_get_guest_config_windows(self, mock_flavor, mock_version):
+        mock_version.return_value = False
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         instance_ref = objects.Instance(**self.test_instance)
         instance_ref['os_type'] = 'windows'
@@ -1595,6 +1597,41 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertIsInstance(cfg.clock,
                               vconfig.LibvirtConfigGuestClock)
         self.assertEqual(cfg.clock.offset, "localtime")
+
+        self.assertEqual(3, len(cfg.clock.timers), cfg.clock.timers)
+        self.assertEqual("pit", cfg.clock.timers[0].name)
+        self.assertEqual("rtc", cfg.clock.timers[1].name)
+        self.assertEqual("hpet", cfg.clock.timers[2].name)
+        self.assertFalse(cfg.clock.timers[2].present)
+
+    @mock.patch.object(host.Host, 'has_min_version')
+    @mock.patch.object(objects.Flavor, 'get_by_id')
+    def test_get_guest_config_windows_timer(self, mock_flavor, mock_version):
+        mock_version.return_value = True
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = objects.Instance(**self.test_instance)
+        instance_ref['os_type'] = 'windows'
+        flavor = instance_ref.get_flavor()
+        flavor.extra_specs = {}
+        mock_flavor.return_value = flavor
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref)
+        cfg = conn._get_guest_config(instance_ref,
+                                     _fake_network_info(self.stubs, 1),
+                                     {}, disk_info)
+
+        self.assertIsInstance(cfg.clock,
+                              vconfig.LibvirtConfigGuestClock)
+        self.assertEqual(cfg.clock.offset, "localtime")
+
+        self.assertEqual(4, len(cfg.clock.timers), cfg.clock.timers)
+        self.assertEqual("pit", cfg.clock.timers[0].name)
+        self.assertEqual("rtc", cfg.clock.timers[1].name)
+        self.assertEqual("hpet", cfg.clock.timers[2].name)
+        self.assertFalse(cfg.clock.timers[2].present)
+        self.assertEqual("hypervclock", cfg.clock.timers[3].name)
+        self.assertTrue(cfg.clock.timers[3].present)
 
     @mock.patch.object(objects.Flavor, 'get_by_id')
     def test_get_guest_config_with_two_nics(self, mock_flavor):

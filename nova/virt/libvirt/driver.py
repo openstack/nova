@@ -365,6 +365,10 @@ MIN_LIBVIRT_NUMA_TOPOLOGY_VERSION = (1, 0, 4)
 # fsFreeze/fsThaw requirement
 MIN_LIBVIRT_FSFREEZE_VERSION = (1, 2, 5)
 
+# Hyper-V paravirtualized time source
+MIN_LIBVIRT_HYPERV_TIMER_VERSION = (1, 2, 2)
+MIN_QEMU_HYPERV_TIMER_VERSION = (2, 0, 0)
+
 
 class LibvirtDriver(driver.ComputeDriver):
 
@@ -3629,9 +3633,9 @@ class LibvirtDriver(driver.ComputeDriver):
         guest.set_clock(clk)
 
         if virt_type == "kvm":
-            self._set_kvm_timers(clk, image_meta)
+            self._set_kvm_timers(clk, os_type, image_meta)
 
-    def _set_kvm_timers(self, clk, image_meta):
+    def _set_kvm_timers(self, clk, os_type, image_meta):
         # TODO(berrange) One day this should be per-guest
         # OS type configurable
         tmpit = vconfig.LibvirtConfigGuestTimer()
@@ -3653,6 +3657,18 @@ class LibvirtDriver(driver.ComputeDriver):
             tmhpet.name = "hpet"
             tmhpet.present = False
             clk.add_timer(tmhpet)
+
+        # With new enough QEMU we can provide Windows guests
+        # with the paravirtualized hyperv timer source. This
+        # is the windows equiv of kvm-clock, allowing Windows
+        # guests to accurately keep time.
+        if (os_type == 'windows' and
+            self._host.has_min_version(MIN_LIBVIRT_HYPERV_TIMER_VERSION,
+                                       MIN_QEMU_HYPERV_TIMER_VERSION)):
+            tmhyperv = vconfig.LibvirtConfigGuestTimer()
+            tmhyperv.name = "hypervclock"
+            tmhyperv.present = True
+            clk.add_timer(tmhyperv)
 
     def _create_serial_console_devices(self, guest, instance, flavor,
                                        image_meta):
