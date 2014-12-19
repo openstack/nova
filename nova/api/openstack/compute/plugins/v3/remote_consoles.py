@@ -123,7 +123,7 @@ class RemoteConsolesController(wsgi.Controller):
 
         return {'console': {'type': console_type, 'url': output['url']}}
 
-    @extensions.expected_errors((404, 409, 501))
+    @extensions.expected_errors((400, 404, 409, 501))
     @wsgi.action('os-getSerialConsole')
     @validation.schema(remote_consoles.get_serial_console)
     def get_serial_console(self, req, id, body):
@@ -142,6 +142,11 @@ class RemoteConsolesController(wsgi.Controller):
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
         except exception.InstanceNotReady as e:
             raise webob.exc.HTTPConflict(explanation=e.format_message())
+        except (exception.ConsoleTypeUnavailable,
+                exception.ImageSerialPortNumberInvalid,
+                exception.ImageSerialPortNumberExceedFlavorValue,
+                exception.SocketPortRangeExhaustedException) as e:
+            raise webob.exc.HTTPBadRequest(explanation=e.format_message())
         except NotImplementedError:
             msg = _("Unable to get serial console, "
                     "functionality not implemented")
