@@ -15,8 +15,42 @@
 Common parameter types for validating request Body.
 
 """
-
 import copy
+import re
+import unicodedata
+
+
+def _is_printable(char):
+    """determine if a unicode code point is printable.
+
+    This checks if the character is either "other" (mostly control
+    codes), or a non-horizontal space. All characters that don't match
+    those criteria are considered printable; that is: letters;
+    combining marks; numbers; punctuation; symbols; (horizontal) space
+    separators.
+    """
+    category = unicodedata.category(char)
+    return (not category.startswith("C") and
+            (not category.startswith("Z") or category == "Zs"))
+
+
+def _get_all_chars():
+    for i in range(0xFFFF):
+        yield unichr(i)
+
+# build a regex that matches all printable characters. This allows
+# spaces in the middle of the name. Also note that the regexp below
+# deliberately allows the empty string. This is so only the constraint
+# which enforces a minimum length for the name is triggered when an
+# empty string is tested. Otherwise it is not deterministic which
+# constraint fails and this causes issues for some unittests when
+# PYTHONHASHSEED is set randomly.
+_printable = ''.join(c for c in _get_all_chars() if _is_printable(c))
+_printable_ws = ''.join(c for c in _get_all_chars()
+                        if unicodedata.category(c) == "Zs")
+
+valid_name_regex = '^(?![%s])[%s]*(?<![%s])$' % (
+    re.escape(_printable_ws), re.escape(_printable), re.escape(_printable_ws))
 
 
 boolean = {
@@ -64,15 +98,7 @@ name = {
     # stored in the DB and Nova specific parameters.
     # This definition is used for all their parameters.
     'type': 'string', 'minLength': 1, 'maxLength': 255,
-
-    # NOTE: Allow to some spaces in middle of name.
-    # Also note that the regexp below deliberately allows and
-    # empty string. This is so only the constraint above
-    # which enforces a minimum length for the name is triggered
-    # when an empty string is tested. Otherwise it is not
-    # deterministic which constraint fails and this causes issues
-    # for some unittests when PYTHONHASHSEED is set randomly.
-    'pattern': '^(?! )[a-zA-Z0-9. _-]*(?<! )$',
+    'pattern': valid_name_regex,
 }
 
 

@@ -218,7 +218,7 @@ class FlavorManageTestV21(test.NoDBTestCase):
         self.assertEqual(res.status_code, 400)
 
     def test_create_invalid_name(self):
-        self.request_body['flavor']['name'] = 'bad !@#!$% name'
+        self.request_body['flavor']['name'] = 'bad !@#!$%\x00 name'
         self._create_flavor_bad_request_case(self.request_body)
 
     def test_create_flavor_name_is_whitespace(self):

@@ -21,7 +21,7 @@ base_create = {
         'server': {
             'type': 'object',
             'properties': {
-                'name': parameter_types.name,
+                'name': parameter_types.hostname,
                 'imageRef': parameter_types.image_ref,
                 'flavorRef': parameter_types.flavor_ref,
                 'adminPass': parameter_types.admin_password,
@@ -67,7 +67,7 @@ base_update = {
         'server': {
             'type': 'object',
             'properties': {
-                'name': parameter_types.name,
+                'name': parameter_types.hostname,
             },
             'additionalProperties': False,
         },
@@ -82,7 +82,7 @@ base_rebuild = {
         'rebuild': {
             'type': 'object',
             'properties': {
-                'name': parameter_types.name,
+                'name': parameter_types.hostname,
                 'imageRef': parameter_types.image_ref,
                 'adminPass': parameter_types.admin_password,
                 'metadata': parameter_types.metadata,

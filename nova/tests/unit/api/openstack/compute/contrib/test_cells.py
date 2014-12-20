@@ -268,8 +268,8 @@ class CellsTestV21(BaseCellsTest):
         self.assertRaises(self.bad_request,
             self.controller.create, req, body=body)
 
-    def test_cell_create_name_with_bang_raises(self):
-        body = {'cell': {'name': 'moo!cow',
+    def test_cell_create_name_with_invalid_character_raises(self):
+        body = {'cell': {'name': 'moo\x00cow',
                          'username': 'fred',
                          'password': 'secret',
                          'rpc_host': 'r3.example.org',
@@ -683,6 +683,18 @@ class CellsTestV21(BaseCellsTest):
 class CellsTestV2(CellsTestV21):
     cell_extension = 'compute_extension:cells'
     bad_request = exc.HTTPBadRequest
+
+    def test_cell_create_name_with_invalid_character_raises(self):
+        body = {'cell': {'name': 'moo!cow',
+                         'username': 'fred',
+                         'password': 'secret',
+                         'rpc_host': 'r3.example.org',
+                         'type': 'parent'}}
+
+        req = self._get_request("cells")
+        req.environ['nova.context'] = self.context
+        self.assertRaises(self.bad_request,
+            self.controller.create, req, body=body)
 
     def _get_cell_controller(self, ext_mgr):
         return cells_ext_v2.Controller(ext_mgr)
