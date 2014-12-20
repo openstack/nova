@@ -48,7 +48,6 @@ from nova.objects import fields
 from nova.objects import quotas as quotas_obj
 from nova import quota
 from nova import rpc
-from nova.scheduler import driver as scheduler_driver
 from nova.scheduler import utils as scheduler_utils
 from nova import test
 from nova.tests.unit import cast_as_call
@@ -2035,7 +2034,6 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                 'instance_properties': instances[0]}
         self.mox.StubOutWithMock(scheduler_utils, 'build_request_spec')
         self.mox.StubOutWithMock(scheduler_utils, 'setup_instance_group')
-        self.mox.StubOutWithMock(scheduler_driver, 'handle_schedule_error')
         self.mox.StubOutWithMock(self.conductor_manager.scheduler_client,
                 'select_destinations')
         self.mox.StubOutWithMock(self.conductor_manager.compute_rpcapi,
