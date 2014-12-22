@@ -17,6 +17,7 @@ import datetime
 import uuid
 
 from oslo.serialization import jsonutils
+from oslo.utils import netutils
 from oslo.utils import timeutils
 import routes
 import six
@@ -176,7 +177,7 @@ def stub_out_instance_quota(stubs, allowed, quota, resource='instances'):
 def stub_out_networking(stubs):
     def get_my_ip():
         return '127.0.0.1'
-    stubs.Set(nova.netconf, '_get_my_ip', get_my_ip)
+    stubs.Set(netutils, 'get_my_ipv4', get_my_ip)
 
 
 def stub_out_compute_api_snapshot(stubs):
