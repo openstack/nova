@@ -196,8 +196,8 @@ def get_client(context, admin=False):
 class API(base_api.NetworkAPI):
     """API for interacting with the neutron 2.x API."""
 
-    def __init__(self):
-        super(API, self).__init__()
+    def __init__(self, skip_policy_check=False):
+        super(API, self).__init__(skip_policy_check=skip_policy_check)
         self.last_neutron_extension_sync = None
         self.extensions = {}
 

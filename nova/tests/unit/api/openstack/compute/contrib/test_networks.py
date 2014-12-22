@@ -121,7 +121,7 @@ class FakeNetworkAPI(object):
     _sentinel = object()
     _vlan_is_disabled = False
 
-    def __init__(self):
+    def __init__(self, skip_policy_check=False):
         self.networks = copy.deepcopy(FAKE_NETWORKS)
 
     def disable_vlan(self):

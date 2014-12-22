@@ -222,7 +222,8 @@ def policy_decorator(scope):
     def outer(func):
         @functools.wraps(func)
         def wrapped(self, context, target, *args, **kwargs):
-            check_policy(context, func.__name__, target, scope)
+            if not self.skip_policy_check:
+                check_policy(context, func.__name__, target, scope)
             return func(self, context, target, *args, **kwargs)
         return wrapped
     return outer
@@ -266,12 +267,15 @@ class API(base.Base):
     """API for interacting with the compute manager."""
 
     def __init__(self, image_api=None, network_api=None, volume_api=None,
-                 security_group_api=None, **kwargs):
+                 security_group_api=None, skip_policy_check=False, **kwargs):
+        self.skip_policy_check = skip_policy_check
         self.image_api = image_api or image.API()
-        self.network_api = network_api or network.API()
+        self.network_api = network_api or network.API(
+            skip_policy_check=skip_policy_check)
         self.volume_api = volume_api or volume.API()
         self.security_group_api = (security_group_api or
-            openstack_driver.get_openstack_security_group_driver())
+            openstack_driver.get_openstack_security_group_driver(
+                skip_policy_check=skip_policy_check))
         self.consoleauth_rpcapi = consoleauth_rpcapi.ConsoleAuthAPI()
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         self._compute_task_api = None
@@ -1398,7 +1402,8 @@ class API(base.Base):
         target = {'project_id': context.project_id,
                   'user_id': context.user_id,
                   'availability_zone': availability_zone}
-        check_policy(context, 'create', target)
+        if not self.skip_policy_check:
+            check_policy(context, 'create', target)
 
         if requested_networks and len(requested_networks):
             check_policy(context, 'create:attach_network', target)
@@ -1944,7 +1949,8 @@ class API(base.Base):
         except exception.InvalidID:
             raise exception.InstanceNotFound(instance_id=instance_id)
 
-        check_policy(context, 'get', instance)
+        if not self.skip_policy_check:
+            check_policy(context, 'get', instance)
 
         if not want_objects:
             instance = obj_base.obj_to_primitive(instance)
@@ -1974,7 +1980,8 @@ class API(base.Base):
             'user_id': context.user_id,
         }
 
-        check_policy(context, "get_all", target)
+        if not self.skip_policy_check:
+            check_policy(context, "get_all", target)
 
         if search_opts is None:
             search_opts = {}
@@ -3771,8 +3778,9 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
     # The nova security group api does not use a uuid for the id.
     id_is_uuid = False
 
-    def __init__(self, **kwargs):
+    def __init__(self, skip_policy_check=False, **kwargs):
         super(SecurityGroupAPI, self).__init__(**kwargs)
+        self.skip_policy_check = skip_policy_check
         self.security_group_rpcapi = compute_rpcapi.SecurityGroupAPI()
 
     def validate_property(self, value, property, allowed):
