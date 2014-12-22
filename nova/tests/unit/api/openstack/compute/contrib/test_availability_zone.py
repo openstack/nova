@@ -99,7 +99,6 @@ CONF = cfg.CONF
 
 class AvailabilityZoneApiTestV21(test.NoDBTestCase):
     availability_zone = az_v21
-    url = '/v2/fake/os-availability-zone'
 
     def setUp(self):
         super(AvailabilityZoneApiTestV21, self).setUp()
@@ -108,31 +107,27 @@ class AvailabilityZoneApiTestV21(test.NoDBTestCase):
         self.stubs.Set(availability_zones, 'set_availability_zones',
                        fake_set_availability_zones)
         self.stubs.Set(servicegroup.API, 'service_is_up', fake_service_is_up)
-
-    def _get_wsgi_instance(self):
-        return fakes.wsgi_app_v21(init_only=('os-availability-zone',
-                                             'servers'))
+        self.controller = self.availability_zone.AvailabilityZoneController()
 
     def test_filtered_availability_zones(self):
-        az = self.availability_zone.AvailabilityZoneController()
         zones = ['zone1', 'internal']
         expected = [{'zoneName': 'zone1',
                     'zoneState': {'available': True},
                      "hosts": None}]
-        result = az._get_filtered_availability_zones(zones, True)
+        result = self.controller._get_filtered_availability_zones(zones, True)
         self.assertEqual(result, expected)
 
         expected = [{'zoneName': 'zone1',
                     'zoneState': {'available': False},
                      "hosts": None}]
-        result = az._get_filtered_availability_zones(zones, False)
+        result = self.controller._get_filtered_availability_zones(zones,
+                                                                  False)
         self.assertEqual(result, expected)
 
     def test_availability_zone_index(self):
-        req = webob.Request.blank(self.url)
-        resp = req.get_response(self._get_wsgi_instance())
-        self.assertEqual(resp.status_int, 200)
-        resp_dict = jsonutils.loads(resp.body)
+        req = webob.Request.blank('')
+        req.environ['nova.context'] = context.get_admin_context()
+        resp_dict = self.controller.index(req)
 
         self.assertIn('availabilityZoneInfo', resp_dict)
         zones = resp_dict['availabilityZoneInfo']
@@ -175,13 +170,9 @@ class AvailabilityZoneApiTestV21(test.NoDBTestCase):
             self.assertEqual(zone['zoneName'], name)
             self.assertEqual(zone['zoneState'], status)
 
-        availabilityZone = self.availability_zone.AvailabilityZoneController()
-
-        req_url = self.url + '/detail'
-        req = webob.Request.blank(req_url)
-        req.method = 'GET'
+        req = webob.Request.blank('')
         req.environ['nova.context'] = context.get_admin_context()
-        resp_dict = availabilityZone.detail(req)
+        resp_dict = self.controller.detail(req)
 
         self.assertIn('availabilityZoneInfo', resp_dict)
         zones = resp_dict['availabilityZoneInfo']
@@ -241,13 +232,10 @@ class AvailabilityZoneApiTestV21(test.NoDBTestCase):
                              'zoneName': 'nova'}]}
         self.stubs.Set(availability_zones, 'get_availability_zones',
                        fake_get_availability_zones)
-        availabilityZone = self.availability_zone.AvailabilityZoneController()
 
-        req_url = self.url + '/detail'
-        req = webob.Request.blank(req_url)
-        req.method = 'GET'
+        req = webob.Request.blank('')
         req.environ['nova.context'] = context.get_admin_context()
-        resp_dict = availabilityZone.detail(req)
+        resp_dict = self.controller.detail(req)
 
         self.assertThat(resp_dict,
                         matchers.DictMatches(expected_response))
@@ -255,9 +243,6 @@ class AvailabilityZoneApiTestV21(test.NoDBTestCase):
 
 class AvailabilityZoneApiTestV2(AvailabilityZoneApiTestV21):
     availability_zone = az_v2
-
-    def _get_wsgi_instance(self):
-        return fakes.wsgi_app()
 
 
 class ServersControllerCreateTestV21(test.TestCase):
