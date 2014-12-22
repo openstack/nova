@@ -739,8 +739,15 @@ class VirtNUMATopology(object):
 
 
 def _numa_get_flavor_or_image_prop(flavor, image_meta, propname):
+    """Return the value of propname from flavor or image
+
+    :param flavor: a Flavor object or dict of instance type information
+    :param image_meta: a dict of image information
+
+    :returns: a value or None
+    """
     flavor_val = flavor.get('extra_specs', {}).get("hw:" + propname)
-    image_val = image_meta.get("hw_" + propname)
+    image_val = (image_meta or {}).get("properties", {}).get("hw_" + propname)
 
     if flavor_val is not None:
         if image_val is not None:

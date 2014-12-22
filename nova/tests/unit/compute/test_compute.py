@@ -7292,9 +7292,14 @@ class ComputeAPITestCase(BaseTestCase):
     def test_create_with_numa_topology(self, numa_constraints_mock):
         inst_type = flavors.get_default_flavor()
         # This is what the stubbed out method will return
-        fake_image_props = {'kernel_id': 'fake_kernel_id',
-                            'ramdisk_id': 'fake_ramdisk_id',
-                            'something_else': 'meow'}
+        fake_image_props = {'status': 'active',
+                            'name': 'fake_name',
+                            'min_ram': None,
+                            'id': 1,
+                            'min_disk': None,
+                            'properties': {'kernel_id': 'fake_kernel_id',
+                                           'something_else': 'meow',
+                                           'ramdisk_id': 'fake_ramdisk_id'}}
 
         numa_topology = objects.InstanceNUMATopology(
             cells=[objects.InstanceNUMACell(
