@@ -14,6 +14,7 @@
 
 import urllib
 
+from oslo.utils import netutils
 import webob
 
 from nova.api.openstack import extensions
@@ -22,7 +23,6 @@ from nova.api.openstack import xmlutil
 from nova import exception
 from nova.i18n import _
 from nova import network
-from nova import utils
 
 
 authorize = extensions.extension_authorizer('compute', 'floating_ip_dns')
@@ -220,7 +220,7 @@ class FloatingIPDNSEntryController(object):
 
         floating_ip = None
         # Check whether id is a valid ipv4/ipv6 address.
-        if utils.is_valid_ipv4(id) or utils.is_valid_ipv6(id):
+        if netutils.is_valid_ip(id):
             floating_ip = id
 
         try:

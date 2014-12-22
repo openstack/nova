@@ -15,6 +15,7 @@
 
 """Custom SQLAlchemy types."""
 
+from oslo.utils import netutils
 import netaddr
 from sqlalchemy.dialects import postgresql
 from sqlalchemy import types
@@ -39,7 +40,7 @@ class IPAddress(types.TypeDecorator):
             return value
         # NOTE(maurosr): The purpose here is to convert ipv6 to the shortened
         # form, not validate it.
-        elif utils.is_valid_ipv6(value):
+        elif netutils.is_valid_ipv6(value):
             return utils.get_shortened_ipv6(value)
         return value
 

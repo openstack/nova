@@ -28,6 +28,7 @@ from oslo.config import cfg
 from oslo.serialization import jsonutils
 from oslo.utils import excutils
 from oslo.utils import importutils
+from oslo.utils import netutils
 from oslo.utils import strutils
 from oslo.utils import timeutils
 from oslo.utils import units
@@ -1986,8 +1987,8 @@ class VMOps(object):
             raise exception.MigrationPreCheckError(reason=msg)
 
         pifkey = pifs.keys()[0]
-        if not (utils.is_valid_ipv4(pifs[pifkey]['IP']) or
-                utils.is_valid_ipv6(pifs[pifkey]['IPv6'])):
+        if not (netutils.is_valid_ipv4(pifs[pifkey]['IP']) or
+                netutils.is_valid_ipv6(pifs[pifkey]['IPv6'])):
             msg = (_('PIF %s does not contain IP address')
                    % pifs[pifkey]['uuid'])
             raise exception.MigrationPreCheckError(reason=msg)

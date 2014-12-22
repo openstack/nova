@@ -20,13 +20,13 @@ import sys
 import glanceclient.exc
 import mock
 from oslo.config import cfg
+from oslo.utils import netutils
 import testtools
 
 from nova import context
 from nova import exception
 from nova.image import glance
 from nova import test
-from nova import utils
 
 CONF = cfg.CONF
 NOW_GLANCE_FORMAT = "2010-10-11T10:30:22.000000"
@@ -200,7 +200,7 @@ class TestGetImageService(test.NoDBTestCase):
 
 
 class TestCreateGlanceClient(test.NoDBTestCase):
-    @mock.patch('nova.utils.is_valid_ipv6')
+    @mock.patch('oslo.utils.netutils.is_valid_ipv6')
     @mock.patch('glanceclient.Client')
     def test_headers_passed_glanceclient(self, init_mock, ipv6_mock):
         self.flags(auth_strategy='keystone')
@@ -1167,7 +1167,7 @@ class TestGlanceUrl(test.NoDBTestCase):
         generated_url = glance.generate_glance_url()
         glance_host = CONF.glance.host
         # ipv6 address, need to wrap it with '[]'
-        if utils.is_valid_ipv6(glance_host):
+        if netutils.is_valid_ipv6(glance_host):
             glance_host = '[%s]' % glance_host
         http_url = "http://%s:%d" % (glance_host, CONF.glance.port)
         self.assertEqual(generated_url, http_url)
@@ -1177,7 +1177,7 @@ class TestGlanceUrl(test.NoDBTestCase):
         generated_url = glance.generate_glance_url()
         glance_host = CONF.glance.host
         # ipv6 address, need to wrap it with '[]'
-        if utils.is_valid_ipv6(glance_host):
+        if netutils.is_valid_ipv6(glance_host):
             glance_host = '[%s]' % glance_host
         https_url = "https://%s:%d" % (glance_host, CONF.glance.port)
         self.assertEqual(generated_url, https_url)

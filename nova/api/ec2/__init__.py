@@ -21,6 +21,7 @@ Starting point for routing EC2 requests.
 from oslo.config import cfg
 from oslo.serialization import jsonutils
 from oslo.utils import importutils
+from oslo.utils import netutils
 from oslo.utils import timeutils
 import requests
 import six
@@ -40,7 +41,6 @@ from nova.i18n import _LW
 from nova.openstack.common import context as common_context
 from nova.openstack.common import log as logging
 from nova.openstack.common import memorycache
-from nova import utils
 from nova import wsgi
 
 
@@ -442,7 +442,7 @@ class Validator(wsgi.Middleware):
         'image_id': validator.validate_ec2_id,
         'attribute': validator.validate_str(),
         'image_location': validator.validate_image_path,
-        'public_ip': utils.is_valid_ipv4,
+        'public_ip': netutils.is_valid_ipv4,
         'region_name': validator.validate_str(),
         'group_name': validator.validate_str(max_length=255),
         'group_description': validator.validate_str(max_length=255),
