@@ -1399,6 +1399,26 @@ class _BaseTaskTestCase(object):
             self.context, instance)
         self.assertEqual(instance.vm_state, vm_states.ERROR)
 
+    def test_unshelve_offloaded_instance_image_id_is_none(self):
+
+        instance = self._create_fake_instance_obj()
+        instance.vm_state = vm_states.SHELVED_OFFLOADED
+        instance.task_state = task_states.UNSHELVING
+        # 'shelved_image_id' is None for volumebacked instance
+        instance.system_metadata['shelved_image_id'] = None
+
+        with contextlib.nested(
+            mock.patch.object(self.conductor_manager,
+                              '_schedule_instances'),
+            mock.patch.object(self.conductor_manager.compute_rpcapi,
+                              'unshelve_instance'),
+        ) as (schedule_mock, unshelve_mock):
+            schedule_mock.return_value = [{'host': 'fake_host',
+                                           'nodename': 'fake_node',
+                                           'limits': {}}]
+            self.conductor_manager.unshelve_instance(self.context, instance)
+            self.assertEqual(1, unshelve_mock.call_count)
+
     def test_unshelve_instance_schedule_and_rebuild(self):
         db_instance = jsonutils.to_primitive(self._create_fake_instance())
         instance = objects.Instance.get_by_uuid(self.context,

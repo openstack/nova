@@ -672,19 +672,26 @@ class ComputeTaskManager(base.Base):
             if snapshot_id:
                 self._delete_image(context, snapshot_id)
         elif instance.vm_state == vm_states.SHELVED_OFFLOADED:
+            image = None
             image_id = sys_meta.get('shelved_image_id')
-            with compute_utils.EventReporter(
-                context, 'get_image_info', instance.uuid):
-                try:
-                    image = safe_image_show(context, image_id)
-                except exception.ImageNotFound:
-                    instance.vm_state = vm_states.ERROR
-                    instance.save()
-                    reason = _('Unshelve attempted but the image %s '
-                               'cannot be found.') % image_id
-                    LOG.error(reason, instance=instance)
-                    raise exception.UnshelveException(
-                        instance_id=instance.uuid, reason=reason)
+            # No need to check for image if image_id is None as
+            # "shelved_image_id" key is not set for volume backed
+            # instance during the shelve process
+            if image_id:
+                with compute_utils.EventReporter(
+                    context, 'get_image_info', instance.uuid):
+                    try:
+                        image = safe_image_show(context, image_id)
+                    except exception.ImageNotFound:
+                        instance.vm_state = vm_states.ERROR
+                        instance.save()
+
+                        reason = _('Unshelve attempted but the image %s '
+                                   'cannot be found.') % image_id
+
+                        LOG.error(reason, instance=instance)
+                        raise exception.UnshelveException(
+                            instance_id=instance.uuid, reason=reason)
 
             try:
                 with compute_utils.EventReporter(context, 'schedule_instances',
