@@ -43,7 +43,14 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
     spoofing, IP spoofing, and ARP spoofing.
     """
 
-    def __init__(self, virtapi, get_connection, **kwargs):
+    def __init__(self, virtapi, host, **kwargs):
+        """Create an NWFilter firewall driver
+
+        :param virtapi: nova.virt.virtapi.VirtAPI instance
+        :param host: nova.virt.libvirt.host.Host instance
+        :param kwargs: currently unused
+        """
+
         super(NWFilterFirewall, self).__init__(virtapi)
         global libvirt
         if libvirt is None:
@@ -52,7 +59,7 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
             except ImportError:
                 LOG.warn(_LW("Libvirt module could not be loaded. "
                              "NWFilterFirewall will not work correctly."))
-        self._libvirt_get_connection = get_connection
+        self._host = host
         self.static_filters_configured = False
         self.handle_security_groups = False
 
@@ -61,7 +68,7 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
         pass
 
     def _get_connection(self):
-        return self._libvirt_get_connection()
+        return self._host.get_connection()
     _conn = property(_get_connection)
 
     def nova_no_nd_reflection_filter(self):
@@ -299,8 +306,19 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
 
 class IptablesFirewallDriver(base_firewall.IptablesFirewallDriver):
     def __init__(self, virtapi, execute=None, **kwargs):
+        """Create an IP tables firewall driver instance
+
+        :param virtapi: nova.virt.virtapi.VirtAPI instance
+        :param execute: unused, pass None
+        :param kwargs: extra arguments
+
+        The @kwargs parameter must contain a key 'host' that
+        maps to an instance of the nova.virt.libvirt.host.Host
+        class.
+        """
+
         super(IptablesFirewallDriver, self).__init__(virtapi, **kwargs)
-        self.nwfilter = NWFilterFirewall(virtapi, kwargs['get_connection'])
+        self.nwfilter = NWFilterFirewall(virtapi, kwargs['host'])
 
     def setup_basic_filtering(self, instance, network_info):
         """Set up provider rules and basic NWFilter."""
