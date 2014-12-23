@@ -6983,7 +6983,6 @@ class Ec2TestCase(test.TestCase):
             except exception.NotFound as exc:
                 self.assertIn(six.text_type(value), six.text_type(exc))
 
-        check_exc_format(db.get_ec2_instance_id_by_uuid, 'fake')
         check_exc_format(db.get_instance_uuid_by_ec2_id, 123456)
         check_exc_format(db.ec2_snapshot_get_by_ec2_id, 123456)
         check_exc_format(db.ec2_snapshot_get_by_uuid, 'fake')
@@ -7053,20 +7052,10 @@ class Ec2TestCase(test.TestCase):
                           db.ec2_instance_get_by_uuid,
                           self.ctxt, 12345)
 
-    def test_get_ec2_instance_id_by_uuid(self):
-        inst = db.ec2_instance_create(self.ctxt, 'fake-uuid')
-        inst_id = db.get_ec2_instance_id_by_uuid(self.ctxt, 'fake-uuid')
-        self.assertEqual(inst['id'], inst_id)
-
     def test_get_instance_uuid_by_ec2_id(self):
         inst = db.ec2_instance_create(self.ctxt, 'fake-uuid')
         inst_uuid = db.get_instance_uuid_by_ec2_id(self.ctxt, inst['id'])
         self.assertEqual(inst_uuid, 'fake-uuid')
-
-    def test_get_ec2_instance_id_by_uuid_not_found(self):
-        self.assertRaises(exception.InstanceNotFound,
-                          db.get_ec2_instance_id_by_uuid,
-                          self.ctxt, 'uuid-not-present')
 
     def test_get_instance_uuid_by_ec2_id_not_found(self):
         self.assertRaises(exception.InstanceNotFound,
