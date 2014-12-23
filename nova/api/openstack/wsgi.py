@@ -719,11 +719,7 @@ class ResourceExceptionHandler(object):
             raise Fault(exception.ConvertedException(
                     code=ex_value.code,
                     explanation=ex_value.format_message()))
-
-        # Under python 2.6, TypeError's exception value is actually a string,
-        # so test # here via ex_type instead:
-        # http://bugs.python.org/issue7853
-        elif issubclass(ex_type, TypeError):
+        elif isinstance(ex_value, TypeError):
             exc_info = (ex_type, ex_value, ex_traceback)
             LOG.error(_LE('Exception handling resource: %s'), ex_value,
                       exc_info=exc_info)

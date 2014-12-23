@@ -1040,9 +1040,7 @@ def propset_dict(propset):
     if propset is None:
         return {}
 
-    # TODO(hartsocks): once support for Python 2.6 is dropped
-    # change to {[(prop.name, prop.val) for prop in propset]}
-    return dict([(prop.name, prop.val) for prop in propset])
+    return {prop.name: prop.val for prop in propset}
 
 
 def get_vmdk_backed_disk_uuid(hardware_devices, volume_uuid):
