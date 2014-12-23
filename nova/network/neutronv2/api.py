@@ -689,7 +689,7 @@ class API(base_api.NetworkAPI):
         # NOTE(danms): This is an inner method intended to be called
         # by other code that updates instance nwinfo. It *must* be
         # called with the refresh_cache-%(instance_uuid) lock held!
-        LOG.debug('get_instance_nw_info()', instance=instance)
+        LOG.debug('_get_instance_nw_info()', instance=instance)
         nw_info = self._build_network_info_model(context, instance, networks,
                                                  port_ids, admin_client)
         return network_model.NetworkInfo.hydrate(nw_info)
@@ -848,8 +848,7 @@ class API(base_api.NetworkAPI):
         Return the number of instances than can be successfully allocated
         with the requested network configuration.
         """
-        LOG.debug('validate_networks() for %s',
-                  requested_networks)
+        LOG.debug('validate_networks() for %s', requested_networks)
 
         neutron = get_client(context)
         ports_needed_per_instance = 0
