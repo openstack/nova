@@ -407,6 +407,16 @@ class ResourceTracker(object):
 
         else:
             # just update the record:
+
+            # TODO(sbauza): Juno compute nodes are missing the host field and
+            # the Juno ResourceTracker does not set this field, even if
+            # the ComputeNode object can show it.
+            # Unfortunately, as we're not yet using ComputeNode.save(), we need
+            # to add this field in the resources dict until the RT is using
+            # the ComputeNode.save() method for populating the table.
+            # tl;dr: To be removed once RT is using ComputeNode.save()
+            resources['host'] = self.host
+
             self._update(context, resources)
             LOG.info(_LI('Compute_service record updated for '
                          '%(host)s:%(node)s'),
