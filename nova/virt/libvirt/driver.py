@@ -572,7 +572,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def instance_exists(self, instance):
         """Efficient override of base instance_exists method."""
         try:
-            self._lookup_by_name(instance.name)
+            self._get_domain(instance)
             return True
         except exception.NovaException:
             return False
@@ -688,7 +688,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _destroy(self, instance):
         try:
-            virt_dom = self._lookup_by_name(instance['name'])
+            virt_dom = self._get_domain(instance)
         except exception.InstanceNotFound:
             virt_dom = None
 
@@ -779,7 +779,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _undefine_domain(self, instance):
         try:
-            virt_dom = self._lookup_by_name(instance['name'])
+            virt_dom = self._get_domain(instance)
         except exception.InstanceNotFound:
             virt_dom = None
         if virt_dom:
@@ -917,7 +917,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         :param mode: Should be a value in (None, bind, connect)
         """
-        virt_dom = self._lookup_by_name(instance['name'])
+        virt_dom = self._get_domain(instance)
         xml = virt_dom.XMLDesc(0)
         tree = etree.fromstring(xml)
         for serial in tree.findall("./devices/serial"):
@@ -1051,8 +1051,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def attach_volume(self, context, connection_info, instance, mountpoint,
                       disk_bus=None, device_type=None, encryption=None):
-        instance_name = instance.name
-        virt_dom = self._lookup_by_name(instance_name)
+        virt_dom = self._get_domain(instance)
         disk_dev = mountpoint.rpartition("/")[2]
         bdm = {
             'device_name': disk_dev,
@@ -1158,8 +1157,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def swap_volume(self, old_connection_info,
                     new_connection_info, instance, mountpoint, resize_to):
-        instance_name = instance['name']
-        virt_dom = self._lookup_by_name(instance_name)
+        virt_dom = self._get_domain(instance)
         disk_dev = mountpoint.rpartition("/")[2]
         xml = self._get_disk_xml(virt_dom.XMLDesc(0), disk_dev)
         if not xml:
@@ -1196,7 +1194,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def _get_existing_domain_xml(self, instance, network_info,
                                  block_device_info=None):
         try:
-            virt_dom = self._lookup_by_name(instance['name'])
+            virt_dom = self._get_domain(instance)
             xml = virt_dom.XMLDesc(0)
         except exception.InstanceNotFound:
             disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
@@ -1209,10 +1207,9 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def detach_volume(self, connection_info, instance, mountpoint,
                       encryption=None):
-        instance_name = instance.name
         disk_dev = mountpoint.rpartition("/")[2]
         try:
-            virt_dom = self._lookup_by_name(instance_name)
+            virt_dom = self._get_domain(instance)
             xml = self._get_disk_xml(virt_dom.XMLDesc(0), disk_dev)
             if not xml:
                 raise exception.DiskNotFound(location=disk_dev)
@@ -1252,7 +1249,7 @@ class LibvirtDriver(driver.ComputeDriver):
         self._disconnect_volume(connection_info, disk_dev)
 
     def attach_interface(self, instance, image_meta, vif):
-        virt_dom = self._lookup_by_name(instance['name'])
+        virt_dom = self._get_domain(instance)
         flavor = objects.Flavor.get_by_id(
             nova_context.get_admin_context(read_deleted='yes'),
             instance['instance_type_id'])
@@ -1274,7 +1271,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     instance_uuid=instance['uuid'])
 
     def detach_interface(self, instance, vif):
-        virt_dom = self._lookup_by_name(instance['name'])
+        virt_dom = self._get_domain(instance)
         flavor = objects.Flavor.get_by_id(
             nova_context.get_admin_context(read_deleted='yes'),
             instance['instance_type_id'])
@@ -1330,7 +1327,7 @@ class LibvirtDriver(driver.ComputeDriver):
         This command only works with qemu 0.14+
         """
         try:
-            virt_dom = self._lookup_by_name(instance['name'])
+            virt_dom = self._get_domain(instance)
         except exception.InstanceNotFound:
             raise exception.InstanceNotRunning(instance_id=instance['uuid'])
 
@@ -1508,7 +1505,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 instance_id=instance['uuid'], reason=reason)
 
         try:
-            domain = self._lookup_by_name(instance['name'])
+            domain = self._get_domain(instance)
             if quiesced:
                 domain.fsFreeze()
             else:
@@ -1756,7 +1753,7 @@ class LibvirtDriver(driver.ComputeDriver):
                   {'c_info': create_info}, instance=instance)
 
         try:
-            virt_dom = self._lookup_by_name(instance.name)
+            virt_dom = self._get_domain(instance)
         except exception.InstanceNotFound:
             raise exception.InstanceNotRunning(instance_id=instance.uuid)
 
@@ -1834,7 +1831,7 @@ class LibvirtDriver(driver.ComputeDriver):
             raise exception.NovaException(msg)
 
         try:
-            virt_dom = self._lookup_by_name(instance.name)
+            virt_dom = self._get_domain(instance)
         except exception.InstanceNotFound:
             raise exception.InstanceNotRunning(instance_id=instance.uuid)
 
@@ -2038,7 +2035,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         :returns: True if the reboot succeeded
         """
-        dom = self._lookup_by_name(instance["name"])
+        dom = self._get_domain(instance)
         state = LIBVIRT_POWER_STATE[dom.info()[0]]
         old_domid = dom.ID()
         # NOTE(vish): This check allows us to reboot an instance that
@@ -2051,7 +2048,7 @@ class LibvirtDriver(driver.ComputeDriver):
         self._prepare_pci_devices_for_use(
             pci_manager.get_instance_pci_devs(instance, 'all'))
         for x in xrange(CONF.libvirt.wait_soft_reboot_seconds):
-            dom = self._lookup_by_name(instance["name"])
+            dom = self._get_domain(instance)
             state = LIBVIRT_POWER_STATE[dom.info()[0]]
             new_domid = dom.ID()
 
@@ -2150,12 +2147,12 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def pause(self, instance):
         """Pause VM instance."""
-        dom = self._lookup_by_name(instance['name'])
+        dom = self._get_domain(instance)
         dom.suspend()
 
     def unpause(self, instance):
         """Unpause paused VM instance."""
-        dom = self._lookup_by_name(instance['name'])
+        dom = self._get_domain(instance)
         dom.resume()
 
     def _clean_shutdown(self, instance, timeout, retry_interval):
@@ -2175,7 +2172,7 @@ class LibvirtDriver(driver.ComputeDriver):
                            power_state.CRASHED]
 
         try:
-            dom = self._lookup_by_name(instance["name"])
+            dom = self._get_domain(instance)
         except exception.InstanceNotFound:
             # If the instance has gone then we don't need to
             # wait for it to shutdown
@@ -2195,7 +2192,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         for sec in six.moves.range(timeout):
 
-            dom = self._lookup_by_name(instance["name"])
+            dom = self._get_domain(instance)
             (state, _max_mem, _mem, _cpus, _t) = dom.info()
             state = LIBVIRT_POWER_STATE[state]
 
@@ -2249,7 +2246,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def suspend(self, instance):
         """Suspend the specified instance."""
-        dom = self._lookup_by_name(instance.name)
+        dom = self._get_domain(instance)
         self._detach_pci_devices(dom,
             pci_manager.get_instance_pci_devs(instance))
         self._detach_sriov_ports(instance, dom)
@@ -2280,7 +2277,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # Check if the instance is running already and avoid doing
         # anything if it is.
         try:
-            domain = self._lookup_by_name(instance.name)
+            domain = self._get_domain(instance)
             state = LIBVIRT_POWER_STATE[domain.info()[0]]
 
             ignored_states = (power_state.RUNNING,
@@ -2347,7 +2344,7 @@ class LibvirtDriver(driver.ComputeDriver):
         instance_dir = libvirt_utils.get_instance_path(instance)
         unrescue_xml_path = os.path.join(instance_dir, 'unrescue.xml')
         xml = libvirt_utils.load_file(unrescue_xml_path)
-        virt_dom = self._lookup_by_name(instance.name)
+        virt_dom = self._get_domain(instance)
         self._destroy(instance)
         self._create_domain(xml, virt_dom)
         libvirt_utils.file_delete(unrescue_xml_path)
@@ -2421,7 +2418,7 @@ class LibvirtDriver(driver.ComputeDriver):
         return fpath
 
     def get_console_output(self, context, instance):
-        virt_dom = self._lookup_by_name(instance.name)
+        virt_dom = self._get_domain(instance)
         xml = virt_dom.XMLDesc(0)
         tree = etree.fromstring(xml)
 
@@ -2497,7 +2494,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def get_vnc_console(self, context, instance):
         def get_vnc_port_for_instance(instance_name):
-            virt_dom = self._lookup_by_name(instance_name)
+            virt_dom = self._get_domain(instance)
             xml = virt_dom.XMLDesc(0)
             dom = minidom.parseString(xml)
 
@@ -2515,7 +2512,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def get_spice_console(self, context, instance):
         def get_spice_ports_for_instance(instance_name):
-            virt_dom = self._lookup_by_name(instance_name)
+            virt_dom = self._get_domain(instance)
             xml = virt_dom.XMLDesc(0)
             # TODO(sleepsonthefloor): use etree instead of minidom
             dom = minidom.parseString(xml)
@@ -4068,6 +4065,23 @@ class LibvirtDriver(driver.ComputeDriver):
                   {'xml': xml}, instance=instance)
         return xml
 
+    def _get_domain(self, instance):
+        """Retrieve libvirt domain object for an instance.
+
+        :param instance: an nova.objects.Instance object
+
+        Attempt to lookup the libvirt domain objects
+        corresponding to the Nova instance, based on
+        its name. If not found it will raise an
+        exception.InstanceNotFound exception. On other
+        errors, it will raise a exception.NovaException
+        exception.
+
+        :returns: a libvirt.Domain object
+        """
+
+        return self._lookup_by_name(instance.name)
+
     def _lookup_by_id(self, instance_id):
         """Retrieve libvirt domain object given an instance id.
 
@@ -4118,7 +4132,7 @@ class LibvirtDriver(driver.ComputeDriver):
         libvirt error is.
 
         """
-        virt_dom = self._lookup_by_name(instance['name'])
+        virt_dom = self._get_domain(instance)
         try:
             dom_info = virt_dom.info()
         except libvirt.libvirtError as ex:
@@ -4787,7 +4801,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def block_stats(self, instance, disk_id):
         """Note that this function takes an instance name."""
         try:
-            domain = self._lookup_by_name(instance.name)
+            domain = self._get_domain(instance)
             return domain.blockStats(disk_id)
         except libvirt.libvirtError as e:
             errcode = e.get_error_code()
@@ -5299,7 +5313,7 @@ class LibvirtDriver(driver.ComputeDriver):
             flagvals = [getattr(libvirt, x.strip()) for x in flaglist]
             logical_sum = reduce(lambda x, y: x | y, flagvals)
 
-            dom = self._lookup_by_name(instance["name"])
+            dom = self._get_domain(instance)
 
             pre_live_migrate_data = (migrate_data or {}).get(
                                         'pre_live_migration_result', {})
@@ -5660,7 +5674,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def get_instance_disk_info(self, instance,
                                block_device_info=None):
         try:
-            dom = self._lookup_by_name(instance.name)
+            dom = self._get_domain(instance)
             xml = dom.XMLDesc(0)
         except libvirt.libvirtError as ex:
             error_code = ex.get_error_code()
@@ -6061,7 +6075,7 @@ class LibvirtDriver(driver.ComputeDriver):
         return result
 
     def get_diagnostics(self, instance):
-        domain = self._lookup_by_name(instance['name'])
+        domain = self._get_domain(instance)
         output = {}
         # get cpu time, might launch an exception if the method
         # is not supported by the underlying hypervisor being
@@ -6117,7 +6131,7 @@ class LibvirtDriver(driver.ComputeDriver):
         return output
 
     def get_instance_diagnostics(self, instance):
-        domain = self._lookup_by_name(instance['name'])
+        domain = self._get_domain(instance)
         xml = domain.XMLDesc(0)
         xml_doc = etree.fromstring(xml)
 
