@@ -24,6 +24,7 @@ topologies.  All of the network commands are issued to a subclass of
 
 """
 
+import collections
 import datetime
 import functools
 import itertools
@@ -585,7 +586,7 @@ class NetworkManager(manager.Manager):
 
         nw_info = network_model.NetworkInfo()
 
-        vifs = {}
+        vifs = collections.OrderedDict()
         for fixed_ip in fixed_ips:
             vif = fixed_ip.virtual_interface
             if not vif:
