@@ -950,7 +950,8 @@ class _ComputeAPIUnitTestMixIn(object):
                                   system_metadata=fake_sys_meta)
             self._test_delete('force_delete', vm_state=vm_state)
 
-    def test_delete_fast_if_host_not_set(self):
+    @mock.patch.object(objects.InstanceInfoCache, 'delete')
+    def test_delete_fast_if_host_not_set(self, mock_delete):
         inst = self._create_instance_obj()
         inst.host = ''
         quotas = quotas_obj.Quotas(self.context)
@@ -994,6 +995,7 @@ class _ComputeAPIUnitTestMixIn(object):
                                             tzinfo=iso8601.iso8601.Utc())
             updates['deleted_at'] = delete_time
             updates['deleted'] = True
+            inst.save()
             fake_inst = fake_instance.fake_db_instance(**updates)
             db.instance_destroy(self.context, inst.uuid,
                                 constraint='constraint').AndReturn(fake_inst)
@@ -1004,9 +1006,11 @@ class _ComputeAPIUnitTestMixIn(object):
 
         self.mox.ReplayAll()
 
-        self.compute_api.delete(self.context, inst)
-        for k, v in updates.items():
-            self.assertEqual(inst[k], v)
+        with mock.patch.object(self.compute_api.network_api,
+                               'deallocate_for_instance'):
+            self.compute_api.delete(self.context, inst)
+            for k, v in updates.items():
+                self.assertEqual(inst[k], v)
 
     def test_local_delete_with_deleted_volume(self):
         bdms = [objects.BlockDeviceMapping(
@@ -2785,6 +2789,56 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
     def test_resize_same_flavor_fails(self):
         self.assertRaises(exception.CannotResizeToSameFlavor,
                           self._test_resize, same_flavor=True)
+
+    @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
+    @mock.patch('nova.context.RequestContext.elevated')
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch.object(quota.QUOTAS, 'reserve')
+    @mock.patch.object(objects.InstanceInfoCache, 'delete')
+    @mock.patch.object(compute_utils, 'notify_about_instance_usage')
+    @mock.patch.object(objects.BlockDeviceMapping, 'destroy')
+    @mock.patch.object(objects.Instance, 'destroy')
+    def test_delete_volume_backed_instance_in_error_state(
+            self, mock_instance_destroy, bdm_destroy,
+            notify_about_instance_usage, mock_delete,
+            mock_reserve, mock_save, mock_elevated,
+            bdm_get_by_instance_uuid):
+        volume_id = uuidutils.generate_uuid()
+        bdms = [objects.BlockDeviceMapping(
+                **fake_block_device.FakeDbBlockDeviceDict(
+                {'id': 42, 'volume_id': volume_id,
+                 'source_type': 'volume', 'destination_type': 'volume',
+                 'delete_on_termination': False}))]
+        reservations = ['fake-resv']
+
+        delete_time = datetime.datetime(1955, 11, 5, 9, 30,
+                                        tzinfo=iso8601.iso8601.Utc())
+        updates = {'deleted_at': delete_time,
+                   'deleted': True}
+        fake_inst = fake_instance.fake_instance_obj(self.context, **updates)
+        mock_instance_destroy.return_value = fake_inst
+        bdm_get_by_instance_uuid.return_value = bdms
+        mock_reserve.return_value = reservations
+        mock_elevated.return_value = self.context
+
+        params = {'host': '', 'vm_state': vm_states.ERROR}
+        inst = self._create_instance_obj(params=params)
+        inst._context = self.context
+        connector = {'ip': '127.0.0.1', 'initiator': 'iqn.fake'}
+
+        with mock.patch.object(self.compute_api.network_api,
+                               'deallocate_for_instance') as mock_deallocate, \
+            mock.patch.object(self.compute_api.volume_api,
+                              'terminate_connection') as mock_terminate_conn, \
+            mock.patch.object(self.compute_api.volume_api,
+                              'detach') as mock_detach:
+            self.compute_api.delete(self.context, inst)
+
+        mock_deallocate.assert_called_once_with(self.context, inst)
+        mock_detach.assert_called_once_with(self.context, volume_id)
+        mock_terminate_conn.assert_called_once_with(self.context,
+                                                    volume_id, connector)
+        bdm_destroy.assert_called_once_with()
 
 
 class ComputeAPIAPICellUnitTestCase(_ComputeAPIUnitTestMixIn,

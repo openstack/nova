@@ -1488,12 +1488,10 @@ class ServersControllerDeleteTest(ControllerTest):
         super(ServersControllerDeleteTest, self).setUp()
         self.server_delete_called = False
 
-        def instance_destroy_mock(*args, **kwargs):
+        def mock_local_delete(*args, **kwargs):
             self.server_delete_called = True
-            deleted_at = timeutils.utcnow()
-            return fake_instance.fake_db_instance(deleted_at=deleted_at)
 
-        self.stubs.Set(db, 'instance_destroy', instance_destroy_mock)
+        self.stubs.Set(compute_api.API, '_local_delete', mock_local_delete)
 
     def _create_delete_request(self, uuid):
         fakes.stub_out_instance_quota(self.stubs, 0, 10)
@@ -1501,20 +1499,35 @@ class ServersControllerDeleteTest(ControllerTest):
         req.method = 'DELETE'
         return req
 
-    def _delete_server_instance(self, uuid=FAKE_UUID):
-        req = self._create_delete_request(uuid)
-        self.stubs.Set(db, 'instance_get_by_uuid',
-                fakes.fake_instance_get(vm_state=vm_states.ACTIVE))
-        self.controller.delete(req, uuid)
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch.object(objects.Service, 'get_by_compute_host')
+    @mock.patch('nova.servicegroup.API.service_is_up')
+    @mock.patch.object(compute_api.compute_rpcapi.ComputeAPI,
+                       'terminate_instance')
+    def test_delete_server_instance(self, mock_terminate_instance,
+                                    mock_up, mock_service, mock_save):
+        """Test delete instance which is in active state
 
-    def test_delete_server_instance(self):
-        self._delete_server_instance()
-        self.assertTrue(self.server_delete_called)
+        In this case delete api does not call _local_delete and makes
+        an rpc call to terminate_instance.
+        """
+        req = self._create_delete_request(FAKE_UUID)
+        self.stubs.Set(db, 'instance_get_by_uuid',
+                fakes.fake_instance_get(vm_state=vm_states.ACTIVE,
+                                        host='fake-host'))
+        self.controller.delete(req, FAKE_UUID)
+        self.assertFalse(self.server_delete_called)
+        self.assertTrue(mock_terminate_instance.called)
 
     def test_delete_server_instance_not_found(self):
-        self.assertRaises(webob.exc.HTTPNotFound,
-                          self._delete_server_instance,
-                          uuid='non-existent-uuid')
+        """Test delete instance which does not exist
+
+        In this case delete will raise exception before calling compute
+        api's delete method.
+        """
+        req = self._create_delete_request('non-existent-uuid')
+        self.assertRaises(webob.exc.HTTPNotFound, self.controller.delete,
+                          req, 'non-existent-uuid')
 
     def test_delete_locked_server(self):
         req = self._create_delete_request(FAKE_UUID)
@@ -1526,10 +1539,16 @@ class ServersControllerDeleteTest(ControllerTest):
         self.assertRaises(webob.exc.HTTPConflict, self.controller.delete,
                           req, FAKE_UUID)
 
-    def test_delete_server_instance_while_building(self):
-        fakes.stub_out_instance_quota(self.stubs, 0, 10)
-        request = self._create_delete_request(FAKE_UUID)
-        self.controller.delete(request, FAKE_UUID)
+    @mock.patch.object(objects.Instance, 'save')
+    def test_delete_server_instance_while_building(self, mock_save):
+        """Test delete instance when it is in building state
+
+        In this case instance.host will not be assigned, so delete api will
+        delete the server using _local_delete instead of making rpc call to
+        terminate_instance.
+        """
+        req = self._create_delete_request(FAKE_UUID)
+        self.controller.delete(req, FAKE_UUID)
 
         self.assertTrue(self.server_delete_called)
 
@@ -1574,37 +1593,42 @@ class ServersControllerDeleteTest(ControllerTest):
         # but since the host is down, api should remove the instance anyway.
         self.assertTrue(self.server_delete_called)
 
-    def test_delete_server_instance_while_resize(self):
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch.object(objects.Service, 'get_by_compute_host')
+    @mock.patch('nova.servicegroup.API.service_is_up')
+    @mock.patch.object(compute_api.compute_rpcapi.ComputeAPI,
+                       'terminate_instance')
+    def test_delete_server_instance_while_resize(self, mock_terminate_instance,
+                                                 mock_up, mock_service,
+                                                 mock_save):
+        """Test delete instance while resizing
+
+        In this case instance.host is set to either source or destination so
+        delete api will make an rpc call to terminate_instance.
+        """
         req = self._create_delete_request(FAKE_UUID)
         self.stubs.Set(db, 'instance_get_by_uuid',
-            fakes.fake_instance_get(vm_state=vm_states.ACTIVE,
-                                    task_state=task_states.RESIZE_PREP))
+                fakes.fake_instance_get(vm_state=vm_states.ACTIVE,
+                                        task_state=task_states.RESIZE_PREP,
+                                        host='fake-host'))
 
         self.controller.delete(req, FAKE_UUID)
-        # Delete shoud be allowed in any case, even during resizing,
+        # Delete should be allowed in any case, even during resizing,
         # because it may get stuck.
-        self.assertTrue(self.server_delete_called)
+        self.assertTrue(mock_terminate_instance.called)
 
     def test_delete_server_instance_if_not_launched(self):
         self.flags(reclaim_instance_interval=3600)
         req = fakes.HTTPRequest.blank('/fake/servers/%s' % FAKE_UUID)
         req.method = 'DELETE'
 
-        self.server_delete_called = False
-
         self.stubs.Set(db, 'instance_get_by_uuid',
             fakes.fake_instance_get(launched_at=None))
-
-        def instance_destroy_mock(*args, **kwargs):
-            self.server_delete_called = True
-            deleted_at = timeutils.utcnow()
-            return fake_instance.fake_db_instance(deleted_at=deleted_at)
-        self.stubs.Set(db, 'instance_destroy', instance_destroy_mock)
 
         self.controller.delete(req, FAKE_UUID)
         # delete() should be called for instance which has never been active,
         # even if reclaim_instance_interval has been set.
-        self.assertEqual(self.server_delete_called, True)
+        self.assertTrue(self.server_delete_called)
 
 
 class ServersControllerRebuildInstanceTest(ControllerTest):

@@ -10585,7 +10585,8 @@ class ComputePolicyTestCase(BaseTestCase):
         rules = {"compute:delete": []}
         self.policy.set_rules(rules)
 
-        self.compute_api.delete(self.context, instance)
+        with mock.patch.object(self.compute_api, '_local_delete'):
+            self.compute_api.delete(self.context, instance)
 
     def test_create_fail(self):
         rules = {"compute:create": [["false:false"]]}
