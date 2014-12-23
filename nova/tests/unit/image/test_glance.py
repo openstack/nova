@@ -15,7 +15,6 @@
 
 
 import datetime
-import sys
 
 import glanceclient.exc
 import mock
@@ -1199,8 +1198,6 @@ class TestGlanceApiServers(test.NoDBTestCase):
             if i > 2:
                 break
 
-    # Python 2.6 can not parse ipv6 address correctly
-    @testtools.skipIf(sys.version_info < (2, 7), "py27 or greater only")
     def test_get_ipv6_api_servers(self):
         self.flags(api_servers=['[2001:2012:1:f101::1]:9292',
                                 'https://[2010:2013:1:f122::1]:9293',
