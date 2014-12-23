@@ -27,8 +27,11 @@ class FakeCinderClient(object):
         def get(self, volume_id):
             return {'id': volume_id}
 
-        def list(self, detailed):
-            return [{'id': 'id1'}, {'id': 'id2'}]
+        def list(self, detailed, search_opts=None):
+            if search_opts is not None and 'id' in search_opts:
+                return [{'id': search_opts['id']}]
+            else:
+                return [{'id': 'id1'}, {'id': 'id2'}]
 
         def create(self, *args, **kwargs):
             return {'id': 'created_id'}
@@ -127,6 +130,15 @@ class CinderApiTestCase(test.NoDBTestCase):
         self.mox.ReplayAll()
 
         self.assertEqual(['id1', 'id2'], self.api.get_all(self.ctx))
+
+    def test_get_all_with_search(self):
+        cinder.cinderclient(self.ctx).AndReturn(self.cinderclient)
+        cinder._untranslate_volume_summary_view(self.ctx,
+                                                {'id': 'id1'}).AndReturn('id1')
+        self.mox.ReplayAll()
+
+        self.assertEqual(['id1'], self.api.get_all(self.ctx,
+                                                   search_opts={'id': 'id1'}))
 
     def test_check_attach_volume_status_error(self):
         volume = {'id': 'fake', 'status': 'error'}

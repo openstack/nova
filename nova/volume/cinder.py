@@ -286,7 +286,9 @@ class API(object):
 
     def get_all(self, context, search_opts=None):
         search_opts = search_opts or {}
-        items = cinderclient(context).volumes.list(detailed=True)
+        items = cinderclient(context).volumes.list(detailed=True,
+                                                   search_opts=search_opts)
+
         rval = []
 
         for item in items:
