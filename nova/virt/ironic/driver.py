@@ -76,11 +76,11 @@ opts = [
                help='Ironic keystone tenant name.'),
     cfg.IntOpt('api_max_retries',
                default=60,
-               help=('How many retries when a request does conflict.')),
+               help='How many retries when a request does conflict.'),
     cfg.IntOpt('api_retry_interval',
                default=2,
-               help=('How often to retry in seconds when a request '
-                     'does conflict')),
+               help='How often to retry in seconds when a request '
+                    'does conflict'),
     ]
 
 ironic_group = cfg.OptGroup(name='ironic',

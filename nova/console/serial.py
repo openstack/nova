@@ -43,12 +43,12 @@ serial_opts = [
                help='Location of serial console proxy.'),
     cfg.StrOpt('listen',
                default='127.0.0.1',
-               help=('IP address on which instance serial console '
-                     'should listen')),
+               help='IP address on which instance serial console '
+                    'should listen'),
     cfg.StrOpt('proxyclient_address',
                default='127.0.0.1',
-               help=('The address to which proxy clients '
-                     '(like nova-serialproxy) should connect')),
+               help='The address to which proxy clients '
+                    '(like nova-serialproxy) should connect'),
     ]
 
 CONF = cfg.CONF

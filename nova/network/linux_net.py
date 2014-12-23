@@ -119,8 +119,8 @@ linux_net_opts = [
                     'always be on the bottom.'),
     cfg.StrOpt('iptables_drop_action',
                default='DROP',
-               help=('The table that iptables to jump to when a packet is '
-                     'to be dropped.')),
+               help='The table that iptables to jump to when a packet is '
+                    'to be dropped.'),
     cfg.IntOpt('ovs_vsctl_timeout',
                default=120,
                help='Amount of time, in seconds, that ovs_vsctl should wait '

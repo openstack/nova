@@ -46,8 +46,8 @@ quota_opts = [
                help='Number of floating IPs allowed per project'),
     cfg.IntOpt('quota_fixed_ips',
                default=-1,
-               help=('Number of fixed IPs allowed per project (this should be '
-                     'at least the number of instances allowed)')),
+               help='Number of fixed IPs allowed per project (this should be '
+                    'at least the number of instances allowed)'),
     cfg.IntOpt('quota_metadata_items',
                default=128,
                help='Number of metadata items allowed per instance'),

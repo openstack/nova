@@ -32,9 +32,9 @@ from nova import wsgi
 auth_opts = [
     cfg.BoolOpt('api_rate_limit',
                 default=False,
-                help=('Whether to use per-user rate limiting for the api. '
-                      'This option is only used by v2 api. Rate limiting '
-                      'is removed from v3 api.')),
+                help='Whether to use per-user rate limiting for the api. '
+                     'This option is only used by v2 api. Rate limiting '
+                     'is removed from v3 api.'),
     cfg.StrOpt('auth_strategy',
                default='keystone',
                help='The strategy to use for auth: noauth or keystone.'),
