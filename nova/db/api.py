@@ -416,11 +416,6 @@ def floating_ip_update(context, address, values):
     return IMPL.floating_ip_update(context, address, values)
 
 
-def dnsdomain_list(context):
-    """Get a list of all zones in our database, public and private."""
-    return IMPL.dnsdomain_list(context)
-
-
 def dnsdomain_get_all(context):
     """Get a list of all dnsdomains in our database."""
     return IMPL.dnsdomain_get_all(context)

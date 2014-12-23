@@ -1055,12 +1055,6 @@ def dnsdomain_unregister(context, fqdomain):
                  delete()
 
 
-@require_context
-def dnsdomain_list(context):
-    query = model_query(context, models.DNSDomain, read_deleted="no")
-    return [row.domain for row in query.all()]
-
-
 def dnsdomain_get_all(context):
     return model_query(context, models.DNSDomain, read_deleted="no").all()
 
