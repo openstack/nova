@@ -64,7 +64,7 @@ class LimitsController(object):
         project_id = req.params.get('tenant_id', context.project_id)
         quotas = QUOTAS.get_project_quotas(context, project_id,
                                            usages=False)
-        abs_limits = dict((k, v['limit']) for k, v in quotas.items())
+        abs_limits = {k: v['limit'] for k, v in quotas.items()}
         rate_limits = req.environ.get("nova.limits", [])
 
         builder = self._get_view_builder(req)
@@ -101,7 +101,7 @@ def create_resource():
 class Limit(object):
     """Stores information about a limit for HTTP requests."""
 
-    UNITS = dict([(v, k) for k, v in utils.TIME_UNITS.items()])
+    UNITS = {v: k for k, v in utils.TIME_UNITS.items()}
 
     def __init__(self, verb, uri, regex, value, unit):
         """Initialize a new `Limit`.

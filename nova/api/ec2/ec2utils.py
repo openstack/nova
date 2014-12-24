@@ -440,8 +440,8 @@ def dict_from_dotted_str(items):
 
 
 def search_opts_from_filters(filters):
-    return dict((f['name'].replace('-', '_'), f['value']['1'])
-                for f in filters if f['value']['1']) if filters else {}
+    return {f['name'].replace('-', '_'): f['value']['1']
+            for f in filters if f['value']['1']} if filters else {}
 
 
 def regex_from_ec2_regex(ec2_re):

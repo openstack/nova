@@ -85,7 +85,7 @@ class PciDeviceStats(object):
         if not devspec:
             return
         tags = devspec.get_tags()
-        pool = dict((k, dev.get(k)) for k in self.pool_keys)
+        pool = {k: dev.get(k) for k in self.pool_keys}
         if tags:
             pool.update(tags)
         return pool
@@ -217,7 +217,7 @@ class PciDeviceStats(object):
         # 'devices' shouldn't be part of stats
         pools = []
         for pool in self.pools:
-            tmp = dict((k, v) for k, v in pool.iteritems() if k != 'devices')
+            tmp = {k: v for k, v in pool.iteritems() if k != 'devices'}
             pools.append(tmp)
         return iter(pools)
 

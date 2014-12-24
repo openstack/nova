@@ -1658,7 +1658,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                     'overallCpuUsage': 0, 'powerState': 'poweredOn',
                     'cpuReservation': 0, 'overallCpuDemand': 0,
                     'numVirtualDisks': 1, 'hostMemoryUsage': 141}
-        expected = dict([('vmware:' + k, v) for k, v in expected.items()])
+        expected = {'vmware:' + k: v for k, v in expected.items()}
         self.assertThat(
                 self.conn.get_diagnostics({'name': 1, 'uuid': self.uuid,
                                            'node': self.instance_node}),

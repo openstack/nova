@@ -86,9 +86,7 @@ class BlockDeviceDict(dict):
         if bdm_dict.get('device_name'):
             bdm_dict['device_name'] = prepend_dev(bdm_dict['device_name'])
         # NOTE (ndipanov): Never default db fields
-        self.update(
-            dict((field, None)
-                 for field in self._fields - do_not_default))
+        self.update({field: None for field in self._fields - do_not_default})
         self.update(list(bdm_dict.iteritems()))
 
     def _validate(self, bdm_dict):
@@ -139,8 +137,8 @@ class BlockDeviceDict(dict):
         non_computable_fields = set(['boot_index', 'disk_bus',
                                      'guest_format', 'device_type'])
 
-        new_bdm = dict((fld, val) for fld, val in legacy_bdm.iteritems()
-                        if fld in copy_over_fields)
+        new_bdm = {fld: val for fld, val in legacy_bdm.iteritems()
+                   if fld in copy_over_fields}
 
         virt_name = legacy_bdm.get('virtual_name')
 
@@ -203,8 +201,8 @@ class BlockDeviceDict(dict):
         copy_over_fields |= (bdm_db_only_fields |
                              bdm_db_inherited_fields)
 
-        legacy_block_device = dict((field, self.get(field))
-            for field in copy_over_fields if field in self)
+        legacy_block_device = {field: self.get(field)
+            for field in copy_over_fields if field in self}
 
         source_type = self.get('source_type')
         destination_type = self.get('destination_type')

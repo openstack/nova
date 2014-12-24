@@ -94,8 +94,8 @@ class VMUtils(object):
                             constants.HYPERV_VM_STATE_SUSPENDED: 32769}
 
     def __init__(self, host='.'):
-        self._enabled_states_map = dict((v, k) for k, v in
-                                        self._vm_power_states_map.iteritems())
+        self._enabled_states_map = {v: k for k, v in
+                                    self._vm_power_states_map.iteritems()}
         if sys.platform == 'win32':
             self._init_hyperv_wmi_conn(host)
             self._conn_cimv2 = wmi.WMI(moniker='//%s/root/cimv2' % host)

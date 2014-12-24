@@ -47,10 +47,10 @@ class ConsoleAuthTokensController(wsgi.Controller):
                               "accessible"))
 
         return {'console':
-                dict([(i, connect_info[i])
-                     for i in ['instance_uuid', 'host', 'port',
-                               'internal_access_path']
-                     if i in connect_info])}
+                {i: connect_info[i]
+                 for i in ['instance_uuid', 'host', 'port',
+                           'internal_access_path']
+                 if i in connect_info}}
 
 
 class Console_auth_tokens(extensions.ExtensionDescriptor):

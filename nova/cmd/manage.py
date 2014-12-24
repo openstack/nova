@@ -536,8 +536,8 @@ class NetworkCommands(object):
                dns1=None, dns2=None, project_id=None, priority=None,
                uuid=None, fixed_cidr=None):
         """Creates fixed ips for host by range."""
-        kwargs = dict(((k, v) for k, v in locals().iteritems()
-                       if v and k != "self"))
+        kwargs = {k: v for k, v in locals().iteritems()
+                  if v and k != "self"}
         if multi_host is not None:
             kwargs['multi_host'] = multi_host == 'T'
         net_manager = importutils.import_object(CONF.network_manager)

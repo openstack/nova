@@ -47,6 +47,7 @@ Nova Specific Commandments
 - [N334] Change assertTrue/False(A in/not in B, message) to the more specific
   assertIn/NotIn(A, B, message)
 - [N335] Check for usage of deprecated assertRaisesRegexp
+- [N336] Must use a dict comprehension instead of a dict constructor with a sequence of key-value pairs.
 
 Creating Unit Tests
 -------------------

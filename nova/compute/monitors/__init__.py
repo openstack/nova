@@ -152,8 +152,7 @@ class ResourceMonitorHandler(loadables.BaseLoader):
         """
         monitor_classes = self.get_matching_classes(
              CONF.compute_available_monitors)
-        monitor_class_map = dict((cls.__name__, cls)
-                                 for cls in monitor_classes)
+        monitor_class_map = {cls.__name__: cls for cls in monitor_classes}
         monitor_cls_names = CONF.compute_monitors
         good_monitors = []
         bad_monitors = []

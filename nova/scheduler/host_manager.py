@@ -283,8 +283,7 @@ class HostManager(object):
         self.filter_handler = filters.HostFilterHandler()
         filter_classes = self.filter_handler.get_matching_classes(
                 CONF.scheduler_available_filters)
-        self.filter_cls_map = dict(
-                (cls.__name__, cls) for cls in filter_classes)
+        self.filter_cls_map = {cls.__name__: cls for cls in filter_classes}
         self.filter_obj_map = {}
         self.weight_handler = weights.HostWeightHandler()
         weigher_classes = self.weight_handler.get_matching_classes(
@@ -372,7 +371,7 @@ class HostManager(object):
         if ignore_hosts or force_hosts or force_nodes:
             # NOTE(deva): we can't assume "host" is unique because
             #             one host may have many nodes.
-            name_to_cls_map = dict([((x.host, x.nodename), x) for x in hosts])
+            name_to_cls_map = {(x.host, x.nodename): x for x in hosts}
             if ignore_hosts:
                 _strip_ignore_hosts(name_to_cls_map, ignore_hosts)
                 if not name_to_cls_map:

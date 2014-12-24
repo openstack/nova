@@ -274,8 +274,8 @@ class ManagedObject(object):
         return prefix + "-" + str(self.__class__._counter)
 
     def __repr__(self):
-        return jsonutils.dumps(dict([(elem.name, elem.val)
-                                for elem in self.propSet]))
+        return jsonutils.dumps({elem.name: elem.val
+                                for elem in self.propSet})
 
 
 class DataObject(object):

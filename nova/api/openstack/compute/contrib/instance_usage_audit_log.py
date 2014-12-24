@@ -100,11 +100,11 @@ class InstanceUsageAuditLogController(object):
                 running_hosts.add(tlog['host'])
             total_errors += tlog['errors']
             total_items += tlog['task_items']
-        log = dict((tl['host'], dict(state=tl['state'],
-                                  instances=tl['task_items'],
-                                  errors=tl['errors'],
-                                  message=tl['message']))
-                  for tl in task_logs)
+        log = {tl['host']: dict(state=tl['state'],
+                                instances=tl['task_items'],
+                                errors=tl['errors'],
+                                message=tl['message'])
+               for tl in task_logs}
         missing_hosts = hosts - seen_hosts
         overall_status = "%s hosts done. %s errors." % (
                     'ALL' if len(done_hosts) == len(hosts)

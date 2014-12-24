@@ -704,7 +704,7 @@ class ComputeManager(manager.Manager):
         driver_instances = self.driver.list_instances()
         instances = objects.InstanceList.get_by_filters(context, filters,
                                                         use_slave=True)
-        name_map = dict((instance.name, instance) for instance in instances)
+        name_map = {instance.name: instance for instance in instances}
         local_instances = []
         for driver_instance in driver_instances:
             instance = name_map.get(driver_instance)

@@ -347,7 +347,7 @@ class ExtendedQuotasTestV21(BaseQuotaSetsTest):
         if usages:
             return self.fake_quotas
         else:
-            return dict((k, v['limit']) for k, v in self.fake_quotas.items())
+            return {k: v['limit'] for k, v in self.fake_quotas.items()}
 
     def fake_get_settable_quotas(self, context, project_id, user_id=None):
         return {

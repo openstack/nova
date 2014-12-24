@@ -537,8 +537,7 @@ class API(base_api.NetworkAPI):
             extensions_list = neutron.list_extensions()['extensions']
             self.last_neutron_extension_sync = time.time()
             self.extensions.clear()
-            self.extensions = dict((ext['name'], ext)
-                                   for ext in extensions_list)
+            self.extensions = {ext['name']: ext for ext in extensions_list}
 
     def _has_port_binding_extension(self, context, refresh_cache=False,
                                     neutron=None):
@@ -1099,12 +1098,12 @@ class API(base_api.NetworkAPI):
 
     def _setup_pools_dict(self, client):
         pools = self._get_floating_ip_pools(client)
-        return dict([(i['id'], i) for i in pools])
+        return {i['id']: i for i in pools}
 
     def _setup_ports_dict(self, client, project_id=None):
         search_opts = {'tenant_id': project_id} if project_id else {}
         ports = client.list_ports(**search_opts)['ports']
-        return dict([(p['id'], p) for p in ports])
+        return {p['id']: p for p in ports}
 
     def get_floating_ip(self, context, id):
         """Return floating ip object given the floating ip id."""

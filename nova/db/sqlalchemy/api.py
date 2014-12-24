@@ -659,8 +659,8 @@ def compute_node_statistics(context):
     fields = ('count', 'vcpus', 'memory_mb', 'local_gb', 'vcpus_used',
               'memory_mb_used', 'local_gb_used', 'free_ram_mb', 'free_disk_gb',
               'current_workload', 'running_vms', 'disk_available_least')
-    return dict((field, int(result[idx] or 0))
-                for idx, field in enumerate(fields))
+    return {field: int(result[idx] or 0)
+            for idx, field in enumerate(fields)}
 
 
 ###################
@@ -3481,8 +3481,8 @@ def quota_reserve(context, resources, project_quotas, user_quotas, deltas,
             usages = project_usages
         else:
             usages = user_usages
-        usages = dict((k, dict(in_use=v['in_use'], reserved=v['reserved']))
-                      for k, v in usages.items())
+        usages = {k: dict(in_use=v['in_use'], reserved=v['reserved'])
+                  for k, v in usages.items()}
         LOG.debug('Raise OverQuota exception because: '
                   'project_quotas: %(project_quotas)s, '
                   'user_quotas: %(user_quotas)s, deltas: %(deltas)s, '
@@ -4503,8 +4503,8 @@ def _dict_with_extra_specs(inst_type_query):
 
     """
     inst_type_dict = dict(inst_type_query)
-    extra_specs = dict([(x['key'], x['value'])
-                        for x in inst_type_query['extra_specs']])
+    extra_specs = {x['key']: x['value']
+                   for x in inst_type_query['extra_specs']}
     inst_type_dict['extra_specs'] = extra_specs
     return inst_type_dict
 
@@ -4711,7 +4711,7 @@ def _flavor_extra_specs_get_query(context, flavor_id, session=None):
 @require_context
 def flavor_extra_specs_get(context, flavor_id):
     rows = _flavor_extra_specs_get_query(context, flavor_id).all()
-    return dict([(row['key'], row['value']) for row in rows])
+    return {row['key']: row['value'] for row in rows}
 
 
 @require_context
@@ -4835,7 +4835,7 @@ def _instance_metadata_get_query(context, instance_uuid, session=None):
 @require_context
 def instance_metadata_get(context, instance_uuid):
     rows = _instance_metadata_get_query(context, instance_uuid).all()
-    return dict((row['key'], row['value']) for row in rows)
+    return {row['key']: row['value'] for row in rows}
 
 
 @require_context
@@ -4901,7 +4901,7 @@ def _instance_system_metadata_get_query(context, instance_uuid, session=None):
 @require_context
 def instance_system_metadata_get(context, instance_uuid):
     rows = _instance_system_metadata_get_query(context, instance_uuid).all()
-    return dict((row['key'], row['value']) for row in rows)
+    return {row['key']: row['value'] for row in rows}
 
 
 @require_context
@@ -5417,7 +5417,7 @@ def aggregate_metadata_get(context, aggregate_id):
                        models.AggregateMetadata).\
                        filter_by(aggregate_id=aggregate_id).all()
 
-    return dict([(r['key'], r['value']) for r in rows])
+    return {r['key']: r['value'] for r in rows}
 
 
 @require_aggregate_exists

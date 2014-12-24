@@ -164,8 +164,8 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(quota.QUOTAS, "reserve")
 
         quotas = {'instances': 1, 'cores': 1, 'ram': 1}
-        usages = dict((r, {'in_use': 1, 'reserved': 1}) for r in
-                    ['instances', 'cores', 'ram'])
+        usages = {r: {'in_use': 1, 'reserved': 1} for r in
+                  ['instances', 'cores', 'ram']}
         quota_exception = exception.OverQuota(quotas=quotas,
             usages=usages, overs=['instances'])
 

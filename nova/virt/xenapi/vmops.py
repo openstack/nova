@@ -2143,7 +2143,7 @@ class VMOps(object):
             sr_ref = vm_utils.safe_find_sr(self._session)
         vm_vdis = vm_utils.get_instance_vdis_for_sr(self._session,
                                                     vm_ref, sr_ref)
-        return dict((vdi, destination_sr_ref) for vdi in vm_vdis)
+        return {vdi: destination_sr_ref for vdi in vm_vdis}
 
     def _call_live_migrate_command(self, command_name, vm_ref, migrate_data):
         """unpack xapi specific parameters, and call a live migrate command."""

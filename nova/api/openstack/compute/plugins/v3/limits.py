@@ -34,7 +34,7 @@ class LimitsController(wsgi.Controller):
         project_id = req.params.get('tenant_id', context.project_id)
         quotas = QUOTAS.get_project_quotas(context, project_id,
                                            usages=False)
-        abs_limits = dict((k, v['limit']) for k, v in quotas.items())
+        abs_limits = {k: v['limit'] for k, v in quotas.items()}
         rate_limits = req.environ.get("nova.limits", [])
 
         builder = self._get_view_builder(req)

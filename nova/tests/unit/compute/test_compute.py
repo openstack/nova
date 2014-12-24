@@ -5815,10 +5815,10 @@ class ComputeTestCase(BaseTestCase):
         self.assertIsNone(instances[0]['task_state'])
 
     def _fill_fault(self, values):
-        extra = dict([(x, None) for x in ['created_at',
-                                          'deleted_at',
-                                          'updated_at',
-                                          'deleted']])
+        extra = {x: None for x in ['created_at',
+                                   'deleted_at',
+                                   'updated_at',
+                                   'deleted']}
         extra['id'] = 1
         extra['details'] = ''
         extra.update(values)
@@ -7579,8 +7579,8 @@ class ComputeAPITestCase(BaseTestCase):
 
         instance.refresh()
         self.assertEqual(instance.task_state, task_states.REBUILDING)
-        sys_meta = dict([(k, v) for k, v in instance.system_metadata.items()
-                         if not k.startswith('instance_type')])
+        sys_meta = {k: v for k, v in instance.system_metadata.items()
+                    if not k.startswith('instance_type')}
         self.assertEqual(sys_meta,
                 {'image_kernel_id': 'fake_kernel_id',
                 'image_min_disk': '1',
