@@ -862,6 +862,10 @@ class NoFloatingIpInterface(NotFound):
     msg_fmt = _("Interface %(interface)s not found.")
 
 
+class FloatingIpAllocateFailed(NovaException):
+    msg_fmt = _("Floating IP allocate failed.")
+
+
 class CannotDisassociateAutoAssignedFloatingIP(NovaException):
     ec2_code = "UnsupportedOperation"
     msg_fmt = _("Cannot disassociate auto assigned floating ip")
