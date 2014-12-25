@@ -165,6 +165,11 @@ class Image(object):
         info.driver_name = driver_name
         info.source_path = self.path
 
+        self.disk_qos(info, extra_specs)
+
+        return info
+
+    def disk_qos(self, info, extra_specs):
         tune_items = ['disk_read_bytes_sec', 'disk_read_iops_sec',
             'disk_write_bytes_sec', 'disk_write_iops_sec',
             'disk_total_bytes_sec', 'disk_total_iops_sec']
@@ -173,7 +178,6 @@ class Image(object):
             if len(scope) > 1 and scope[0] == 'quota':
                 if scope[1] in tune_items:
                     setattr(info, scope[1], value)
-        return info
 
     def libvirt_fs_info(self, target, driver_type=None):
         """Get `LibvirtConfigGuestFilesys` filled for this image.
@@ -729,6 +733,9 @@ class Rbd(Image):
         if auth_enabled:
             info.auth_secret_type = 'ceph'
             info.auth_secret_uuid = CONF.libvirt.rbd_secret_uuid
+
+        self.disk_qos(info, extra_specs)
+
         return info
 
     def _can_fallocate(self):
