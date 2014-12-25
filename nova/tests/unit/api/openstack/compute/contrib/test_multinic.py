@@ -14,9 +14,10 @@
 #    under the License.
 
 import mock
-from oslo_serialization import jsonutils
 import webob
 
+from nova.api.openstack.compute.contrib import multinic as multinic_v2
+from nova.api.openstack.compute.plugins.v3 import multinic as multinic_v21
 from nova import compute
 from nova import exception
 from nova import objects
@@ -53,6 +54,9 @@ def compute_api_get(self, context, instance_id, want_objects=False,
 
 
 class FixedIpTestV21(test.NoDBTestCase):
+    controller_class = multinic_v21
+    validation_error = exception.ValidationError
+
     def setUp(self):
         super(FixedIpTestV21, self).setUp()
         fakes.stub_out_networking(self.stubs)
@@ -62,37 +66,30 @@ class FixedIpTestV21(test.NoDBTestCase):
         self.stubs.Set(compute.api.API, "remove_fixed_ip",
                        compute_api_remove_fixed_ip)
         self.stubs.Set(compute.api.API, 'get', compute_api_get)
-        self.app = self._get_app()
-
-    def _get_app(self):
-        return fakes.wsgi_app_v21(init_only=('servers', 'os-multinic'))
-
-    def _get_url(self):
-        return '/v2/fake'
+        self.controller = self.controller_class.MultinicController()
+        self.fake_req = fakes.HTTPRequest.blank('')
 
     def test_add_fixed_ip(self):
         global last_add_fixed_ip
         last_add_fixed_ip = (None, None)
 
         body = dict(addFixedIp=dict(networkId='test_net'))
-        req = webob.Request.blank(
-            self._get_url() + '/servers/%s/action' % UUID)
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers['content-type'] = 'application/json'
-
-        resp = req.get_response(self.app)
-        self.assertEqual(resp.status_int, 202)
+        resp = self.controller._add_fixed_ip(self.fake_req, UUID, body=body)
+        # NOTE: on v2.1, http status code is set as wsgi_code of API
+        # method instead of status_int in a response object.
+        if isinstance(self.controller,
+                      multinic_v21.MultinicController):
+            status_int = self.controller._add_fixed_ip.wsgi_code
+        else:
+            status_int = resp.status_int
+        self.assertEqual(status_int, 202)
         self.assertEqual(last_add_fixed_ip, (UUID, 'test_net'))
 
     def _test_add_fixed_ip_bad_request(self, body):
-        req = webob.Request.blank(
-            self._get_url() + '/servers/%s/action' % UUID)
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers['content-type'] = 'application/json'
-        resp = req.get_response(self.app)
-        self.assertEqual(400, resp.status_int)
+        self.assertRaises(self.validation_error,
+                          self.controller._add_fixed_ip,
+                          self.fake_req,
+                          UUID, body=body)
 
     def test_add_fixed_ip_empty_network_id(self):
         body = {'addFixedIp': {'network_id': ''}}
@@ -107,14 +104,7 @@ class FixedIpTestV21(test.NoDBTestCase):
         last_add_fixed_ip = (None, None)
 
         body = dict(addFixedIp=dict())
-        req = webob.Request.blank(
-            self._get_url() + '/servers/%s/action' % UUID)
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers['content-type'] = 'application/json'
-
-        resp = req.get_response(self.app)
-        self.assertEqual(resp.status_int, 400)
+        self._test_add_fixed_ip_bad_request(body)
         self.assertEqual(last_add_fixed_ip, (None, None))
 
     @mock.patch.object(compute.api.API, 'add_fixed_ip')
@@ -122,28 +112,25 @@ class FixedIpTestV21(test.NoDBTestCase):
         mock_add_fixed_ip.side_effect = exception.NoMoreFixedIps(net='netid')
 
         body = dict(addFixedIp=dict(networkId='test_net'))
-        req = webob.Request.blank(
-            self._get_url() + '/servers/%s/action' % UUID)
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers['content-type'] = 'application/json'
-
-        resp = req.get_response(self.app)
-        self.assertEqual(resp.status_int, 400)
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller._add_fixed_ip,
+                          self.fake_req,
+                          UUID, body=body)
 
     def test_remove_fixed_ip(self):
         global last_remove_fixed_ip
         last_remove_fixed_ip = (None, None)
 
         body = dict(removeFixedIp=dict(address='10.10.10.1'))
-        req = webob.Request.blank(
-            self._get_url() + '/servers/%s/action' % UUID)
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers['content-type'] = 'application/json'
-
-        resp = req.get_response(self.app)
-        self.assertEqual(resp.status_int, 202)
+        resp = self.controller._remove_fixed_ip(self.fake_req, UUID, body=body)
+        # NOTE: on v2.1, http status code is set as wsgi_code of API
+        # method instead of status_int in a response object.
+        if isinstance(self.controller,
+                      multinic_v21.MultinicController):
+            status_int = self.controller._remove_fixed_ip.wsgi_code
+        else:
+            status_int = resp.status_int
+        self.assertEqual(status_int, 202)
         self.assertEqual(last_remove_fixed_ip, (UUID, '10.10.10.1'))
 
     def test_remove_fixed_ip_no_address(self):
@@ -151,52 +138,34 @@ class FixedIpTestV21(test.NoDBTestCase):
         last_remove_fixed_ip = (None, None)
 
         body = dict(removeFixedIp=dict())
-        req = webob.Request.blank(
-            self._get_url() + '/servers/%s/action' % UUID)
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers['content-type'] = 'application/json'
-
-        resp = req.get_response(self.app)
-        self.assertEqual(resp.status_int, 400)
+        self.assertRaises(self.validation_error,
+                          self.controller._remove_fixed_ip,
+                          self.fake_req,
+                          UUID, body=body)
         self.assertEqual(last_remove_fixed_ip, (None, None))
 
     def test_remove_fixed_ip_invalid_address(self):
-        body = {'remove_fixed_ip': {'address': ''}}
-        req = webob.Request.blank(
-            self._get_url() + '/servers/%s/action' % UUID)
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers['content-type'] = 'application/json'
-        resp = req.get_response(self.app)
-        self.assertEqual(400, resp.status_int)
+        body = {'removeFixedIp': {'address': ''}}
+        self.assertRaises(self.validation_error,
+                          self.controller._remove_fixed_ip,
+                          self.fake_req,
+                          UUID, body=body)
 
     @mock.patch.object(compute.api.API, 'remove_fixed_ip',
         side_effect=exception.FixedIpNotFoundForSpecificInstance(
             instance_uuid=UUID, ip='10.10.10.1'))
     def test_remove_fixed_ip_not_found(self, _remove_fixed_ip):
 
-        body = {'remove_fixed_ip': {'address': '10.10.10.1'}}
-        req = webob.Request.blank(
-            self._get_url() + '/servers/%s/action' % UUID)
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers['content-type'] = 'application/json'
-
-        resp = req.get_response(self.app)
-        self.assertEqual(400, resp.status_int)
+        body = {'removeFixedIp': {'address': '10.10.10.1'}}
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller._remove_fixed_ip,
+                          self.fake_req,
+                          UUID, body=body)
 
 
 class FixedIpTestV2(FixedIpTestV21):
-    def setUp(self):
-        super(FixedIpTestV2, self).setUp()
-        self.flags(
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Multinic'])
-
-    def _get_app(self):
-        return fakes.wsgi_app(init_only=('servers',))
+    controller_class = multinic_v2
+    validation_error = webob.exc.HTTPBadRequest
 
     def test_remove_fixed_ip_invalid_address(self):
         # NOTE(cyeoh): This test is disabled for the V2 API because it is
