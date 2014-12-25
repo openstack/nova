@@ -212,6 +212,9 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
                 LOG.exception(_("Neutron Error adding rules to security "
                                 "group %s"), name)
                 self.raise_over_quota(unicode(e))
+            elif e.status_code == 400:
+                LOG.exception(_("Neutron Error: %s"), six.text_type(e))
+                self.raise_invalid_property(six.text_type(e))
             else:
                 LOG.exception(_("Neutron Error:"))
                 raise exc_info[0], exc_info[1], exc_info[2]
