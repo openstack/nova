@@ -14,9 +14,11 @@
 
 import mock
 from oslo_config import cfg
-from oslo_serialization import jsonutils
 import webob
 
+from nova.api.openstack.compute.contrib import rescue as rescue_v2
+from nova.api.openstack.compute.plugins.v3 import rescue as rescue_v21
+from nova.api.openstack import extensions
 from nova import compute
 from nova import exception
 from nova import test
@@ -24,6 +26,7 @@ from nova.tests.unit.api.openstack import fakes
 
 CONF = cfg.CONF
 CONF.import_opt('password_length', 'nova.utils')
+UUID = '70f6db34-de8d-4fbd-aafb-4065bdfa6114'
 
 
 def rescue(self, context, instance, rescue_password=None,
@@ -36,23 +39,22 @@ def unrescue(self, context, instance):
 
 
 def fake_compute_get(*args, **kwargs):
-    uuid = '70f6db34-de8d-4fbd-aafb-4065bdfa6114'
-    return {'id': 1, 'uuid': uuid}
+
+    return {'id': 1, 'uuid': UUID}
 
 
 class RescueTestV21(test.NoDBTestCase):
-    _prefix = '/v2/fake'
-
     def setUp(self):
         super(RescueTestV21, self).setUp()
 
         self.stubs.Set(compute.api.API, "get", fake_compute_get)
         self.stubs.Set(compute.api.API, "rescue", rescue)
         self.stubs.Set(compute.api.API, "unrescue", unrescue)
-        self.app = self._get_app()
+        self.controller = self._set_up_controller()
+        self.fake_req = fakes.HTTPRequest.blank('')
 
-    def _get_app(self):
-        return fakes.wsgi_app_v21(init_only=('servers', 'os-rescue'))
+    def _set_up_controller(self):
+        return rescue_v21.RescueController()
 
     def test_rescue_from_locked_server(self):
         def fake_rescue_from_locked_server(self, context,
@@ -63,37 +65,19 @@ class RescueTestV21(test.NoDBTestCase):
                        'rescue',
                        fake_rescue_from_locked_server)
         body = {"rescue": {"adminPass": "AABBCC112233"}}
-        req = webob.Request.blank(self._prefix + '/servers/test_inst/action')
-        req.method = "POST"
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
-
-        resp = req.get_response(self.app)
-        self.assertEqual(resp.status_int, 409)
+        self.assertRaises(webob.exc.HTTPConflict,
+                          self.controller._rescue,
+                          self.fake_req, UUID, body=body)
 
     def test_rescue_with_preset_password(self):
         body = {"rescue": {"adminPass": "AABBCC112233"}}
-        req = webob.Request.blank(self._prefix + '/servers/test_inst/action')
-        req.method = "POST"
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
-
-        resp = req.get_response(self.app)
-        self.assertEqual(resp.status_int, 200)
-        resp_json = jsonutils.loads(resp.body)
-        self.assertEqual("AABBCC112233", resp_json['adminPass'])
+        resp = self.controller._rescue(self.fake_req, UUID, body=body)
+        self.assertEqual("AABBCC112233", resp['adminPass'])
 
     def test_rescue_generates_password(self):
         body = dict(rescue=None)
-        req = webob.Request.blank(self._prefix + '/servers/test_inst/action')
-        req.method = "POST"
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
-
-        resp = req.get_response(self.app)
-        self.assertEqual(resp.status_int, 200)
-        resp_json = jsonutils.loads(resp.body)
-        self.assertEqual(CONF.password_length, len(resp_json['adminPass']))
+        resp = self.controller._rescue(self.fake_req, UUID, body=body)
+        self.assertEqual(CONF.password_length, len(resp['adminPass']))
 
     def test_rescue_of_rescued_instance(self):
         body = dict(rescue=None)
@@ -102,23 +86,21 @@ class RescueTestV21(test.NoDBTestCase):
             raise exception.InstanceInvalidState('fake message')
 
         self.stubs.Set(compute.api.API, "rescue", fake_rescue)
-        req = webob.Request.blank(self._prefix + '/servers/test_inst/action')
-        req.method = "POST"
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
-
-        resp = req.get_response(self.app)
-        self.assertEqual(resp.status_int, 409)
+        self.assertRaises(webob.exc.HTTPConflict,
+                          self.controller._rescue,
+                          self.fake_req, UUID, body=body)
 
     def test_unrescue(self):
         body = dict(unrescue=None)
-        req = webob.Request.blank(self._prefix + '/servers/test_inst/action')
-        req.method = "POST"
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
-
-        resp = req.get_response(self.app)
-        self.assertEqual(resp.status_int, 202)
+        resp = self.controller._unrescue(self.fake_req, UUID, body=body)
+        # NOTE: on v2.1, http status code is set as wsgi_code of API
+        # method instead of status_int in a response object.
+        if isinstance(self.controller,
+                      rescue_v21.RescueController):
+            status_int = self.controller._unrescue.wsgi_code
+        else:
+            status_int = resp.status_int
+        self.assertEqual(202, status_int)
 
     def test_unrescue_from_locked_server(self):
         def fake_unrescue_from_locked_server(self, context,
@@ -130,13 +112,9 @@ class RescueTestV21(test.NoDBTestCase):
                        fake_unrescue_from_locked_server)
 
         body = dict(unrescue=None)
-        req = webob.Request.blank(self._prefix + '/servers/test_inst/action')
-        req.method = "POST"
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
-
-        resp = req.get_response(self.app)
-        self.assertEqual(resp.status_int, 409)
+        self.assertRaises(webob.exc.HTTPConflict,
+                          self.controller._unrescue,
+                          self.fake_req, UUID, body=body)
 
     def test_unrescue_of_active_instance(self):
         body = dict(unrescue=None)
@@ -145,13 +123,9 @@ class RescueTestV21(test.NoDBTestCase):
             raise exception.InstanceInvalidState('fake message')
 
         self.stubs.Set(compute.api.API, "unrescue", fake_unrescue)
-        req = webob.Request.blank(self._prefix + '/servers/test_inst/action')
-        req.method = "POST"
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
-
-        resp = req.get_response(self.app)
-        self.assertEqual(resp.status_int, 409)
+        self.assertRaises(webob.exc.HTTPConflict,
+                          self.controller._unrescue,
+                          self.fake_req, UUID, body=body)
 
     def test_rescue_raises_unrescuable(self):
         body = dict(rescue=None)
@@ -160,27 +134,16 @@ class RescueTestV21(test.NoDBTestCase):
             raise exception.InstanceNotRescuable('fake message')
 
         self.stubs.Set(compute.api.API, "rescue", fake_rescue)
-        req = webob.Request.blank(self._prefix + '/servers/test_inst/action')
-        req.method = "POST"
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
-
-        resp = req.get_response(self.app)
-        self.assertEqual(resp.status_int, 400)
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller._rescue,
+                          self.fake_req, UUID, body=body)
 
     @mock.patch('nova.compute.api.API.rescue')
     def test_rescue_with_image_specified(self, mock_compute_api_rescue):
         instance = fake_compute_get()
         body = {"rescue": {"adminPass": "ABC123",
                            "rescue_image_ref": "img-id"}}
-        req = webob.Request.blank(self._prefix + '/servers/test_inst/action')
-        req.method = "POST"
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
-
-        resp = req.get_response(self.app)
-        self.assertEqual(resp.status_int, 200)
-        resp_json = jsonutils.loads(resp.body)
+        resp_json = self.controller._rescue(self.fake_req, UUID, body=body)
         self.assertEqual("ABC123", resp_json['adminPass'])
 
         mock_compute_api_rescue.assert_called_with(mock.ANY, instance,
@@ -192,14 +155,7 @@ class RescueTestV21(test.NoDBTestCase):
         instance = fake_compute_get()
         body = {"rescue": {"adminPass": "ABC123"}}
 
-        req = webob.Request.blank(self._prefix + '/servers/test_inst/action')
-        req.method = "POST"
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
-
-        resp = req.get_response(self.app)
-        self.assertEqual(resp.status_int, 200)
-        resp_json = jsonutils.loads(resp.body)
+        resp_json = self.controller._rescue(self.fake_req, UUID, body=body)
         self.assertEqual("ABC123", resp_json['adminPass'])
 
         mock_compute_api_rescue.assert_called_with(mock.ANY, instance,
@@ -208,56 +164,33 @@ class RescueTestV21(test.NoDBTestCase):
 
     def test_rescue_with_none(self):
         body = dict(rescue=None)
-        req = webob.Request.blank(self._prefix + '/servers/test_inst/action')
-        req.method = "POST"
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
-
-        resp = req.get_response(self.app)
-        self.assertEqual(200, resp.status_int)
+        resp = self.controller._rescue(self.fake_req, UUID, body=body)
+        self.assertEqual(CONF.password_length, len(resp['adminPass']))
 
     def test_rescue_with_empty_dict(self):
         body = dict(rescue=dict())
-        req = webob.Request.blank(self._prefix + '/servers/test_inst/action')
-        req.method = "POST"
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
-
-        resp = req.get_response(self.app)
-        self.assertEqual(200, resp.status_int)
+        resp = self.controller._rescue(self.fake_req, UUID, body=body)
+        self.assertEqual(CONF.password_length, len(resp['adminPass']))
 
     def test_rescue_disable_password(self):
         self.flags(enable_instance_password=False)
         body = dict(rescue=None)
-        req = webob.Request.blank(self._prefix + '/servers/test_inst/action')
-        req.method = "POST"
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
-
-        resp = req.get_response(self.app)
-        self.assertEqual(200, resp.status_int)
-        resp_json = jsonutils.loads(resp.body)
+        resp_json = self.controller._rescue(self.fake_req, UUID, body=body)
         self.assertNotIn('adminPass', resp_json)
 
     def test_rescue_with_invalid_property(self):
         body = {"rescue": {"test": "test"}}
-        req = webob.Request.blank(self._prefix + '/servers/test_inst/action')
-        req.method = "POST"
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
-
-        resp = req.get_response(self.app)
-        self.assertEqual(400, resp.status_int)
+        self.assertRaises(exception.ValidationError,
+                          self.controller._rescue,
+                          self.fake_req, UUID, body=body)
 
 
 class RescueTestV20(RescueTestV21):
 
-    def _get_app(self):
-        self.flags(
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=None)
-        return fakes.wsgi_app(init_only=('servers',))
+    def _set_up_controller(self):
+        ext_mgr = extensions.ExtensionManager()
+        ext_mgr.extensions = {'os-extended-rescue-with-image': 'fake'}
+        return rescue_v2.RescueController(ext_mgr)
 
     def test_rescue_with_invalid_property(self):
         # NOTE(cyeoh): input validation in original v2 code does not
