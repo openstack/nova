@@ -15,9 +15,11 @@
 
 from lxml import etree
 from oslo.config import cfg
-from oslo.serialization import jsonutils
-import webob
 
+from nova.api.openstack.compute.contrib import server_password \
+    as server_password_v2
+from nova.api.openstack.compute.plugins.v3 import server_password \
+    as server_password_v21
 from nova.api.metadata import password
 from nova import compute
 from nova import test
@@ -31,6 +33,8 @@ CONF.import_opt('osapi_compute_ext_list', 'nova.api.openstack.compute.contrib')
 
 class ServerPasswordTestV21(test.TestCase):
     content_type = 'application/json'
+    server_password = server_password_v21
+    delete_call = 'self.controller.clear'
 
     def setUp(self):
         super(ServerPasswordTestV21, self).setUp()
@@ -43,7 +47,8 @@ class ServerPasswordTestV21(test.TestCase):
                 system_metadata={},
                 expected_attrs=['system_metadata']))
         self.password = 'fakepass'
-        self.fakes_wsgi_app = fakes.wsgi_app_v21
+        self.controller = self.server_password.ServerPasswordController()
+        self.fake_req = fakes.HTTPRequest.blank('')
 
         def fake_extract_password(instance):
             return self.password
@@ -55,44 +60,21 @@ class ServerPasswordTestV21(test.TestCase):
         self.stubs.Set(password, 'extract_password', fake_extract_password)
         self.stubs.Set(password, 'convert_password', fake_convert_password)
 
-    def _make_request(self, url, method='GET'):
-        req = webob.Request.blank(url)
-        req.headers['Accept'] = self.content_type
-        req.method = method
-        res = req.get_response(
-                self.fakes_wsgi_app(init_only=('servers',
-                                               'os-server-password')))
-        return res
-
-    def _get_pass(self, body):
-        return jsonutils.loads(body).get('password')
-
     def test_get_password(self):
-        url = '/v2/fake/servers/fake/os-server-password'
-        res = self._make_request(url)
-
-        self.assertEqual(res.status_int, 200)
-        self.assertEqual(self._get_pass(res.body), 'fakepass')
+        res = self.controller.index(self.fake_req, 'fake')
+        self.assertEqual(res['password'], 'fakepass')
 
     def test_reset_password(self):
-        url = '/v2/fake/servers/fake/os-server-password'
-        res = self._make_request(url, 'DELETE')
-        self.assertEqual(res.status_int, 204)
+        eval(self.delete_call)(self.fake_req, 'fake')
+        self.assertEqual(eval(self.delete_call).wsgi_code, 204)
 
-        res = self._make_request(url)
-        self.assertEqual(res.status_int, 200)
-        self.assertEqual(self._get_pass(res.body), '')
+        res = self.controller.index(self.fake_req, 'fake')
+        self.assertEqual(res['password'], '')
 
 
 class ServerPasswordTestV2(ServerPasswordTestV21):
-
-    def setUp(self):
-        super(ServerPasswordTestV2, self).setUp()
-        self.flags(
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Server_password'])
-        self.fakes_wsgi_app = fakes.wsgi_app
+    server_password = server_password_v2
+    delete_call = 'self.controller.delete'
 
 
 @test.skipXmlTest("Nova v2 XML support is disabled")
