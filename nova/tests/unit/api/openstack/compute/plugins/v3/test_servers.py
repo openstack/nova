@@ -1746,7 +1746,7 @@ class ServerStatusTest(test.TestCase):
         req = fakes.HTTPRequestV3.blank('/servers/1234/action')
         self.assertRaises(exception.PolicyNotAuthorized,
                 self.controller._action_reboot, req, '1234',
-                {'reboot': {'type': 'HARD'}})
+                body={'reboot': {'type': 'HARD'}})
 
     def test_rebuild(self):
         response = self._get_with_state(vm_states.ACTIVE,
