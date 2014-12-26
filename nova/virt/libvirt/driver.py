@@ -906,7 +906,7 @@ class LibvirtDriver(driver.ComputeDriver):
             vg = os.path.join('/dev', CONF.libvirt.images_volume_group)
             if not os.path.exists(vg):
                 return []
-            pattern = '%s_' % instance['uuid']
+            pattern = '%s_' % instance.uuid
 
             def belongs_to_instance(disk):
                 return disk.startswith(pattern)
@@ -971,7 +971,7 @@ class LibvirtDriver(driver.ComputeDriver):
             utils.execute('rm', '-rf', target, delay_on_retry=True,
                           attempts=5)
 
-        if instance['host'] != CONF.host:
+        if instance.host != CONF.host:
             self._undefine_domain(instance)
             self.unplug_vifs(instance, network_info)
             self.firewall_driver.unfilter_instance(instance, network_info)
@@ -1214,7 +1214,7 @@ class LibvirtDriver(driver.ComputeDriver):
         virt_dom = self._host.get_domain(instance)
         flavor = objects.Flavor.get_by_id(
             nova_context.get_admin_context(read_deleted='yes'),
-            instance['instance_type_id'])
+            instance.instance_type_id)
         self.vif_driver.plug(instance, vif)
         self.firewall_driver.setup_basic_filtering(instance, [vif])
         cfg = self.vif_driver.get_config(instance, vif, image_meta,
@@ -1230,13 +1230,13 @@ class LibvirtDriver(driver.ComputeDriver):
                      instance=instance, exc_info=True)
             self.vif_driver.unplug(instance, vif)
             raise exception.InterfaceAttachFailed(
-                    instance_uuid=instance['uuid'])
+                    instance_uuid=instance.uuid)
 
     def detach_interface(self, instance, vif):
         virt_dom = self._host.get_domain(instance)
         flavor = objects.Flavor.get_by_id(
             nova_context.get_admin_context(read_deleted='yes'),
-            instance['instance_type_id'])
+            instance.instance_type_id)
         cfg = self.vif_driver.get_config(instance, vif, None, flavor,
                                          CONF.libvirt.virt_type)
         try:
@@ -1256,22 +1256,22 @@ class LibvirtDriver(driver.ComputeDriver):
                 LOG.error(_LE('detaching network adapter failed.'),
                          instance=instance, exc_info=True)
                 raise exception.InterfaceDetachFailed(
-                        instance_uuid=instance['uuid'])
+                        instance_uuid=instance.uuid)
 
     def _create_snapshot_metadata(self, base, instance, img_fmt, snp_name):
         metadata = {'is_public': False,
                     'status': 'active',
                     'name': snp_name,
                     'properties': {
-                                   'kernel_id': instance['kernel_id'],
+                                   'kernel_id': instance.kernel_id,
                                    'image_location': 'snapshot',
                                    'image_state': 'available',
-                                   'owner_id': instance['project_id'],
-                                   'ramdisk_id': instance['ramdisk_id'],
+                                   'owner_id': instance.project_id,
+                                   'ramdisk_id': instance.ramdisk_id,
                                    }
                     }
-        if instance['os_type']:
-            metadata['properties']['os_type'] = instance['os_type']
+        if instance.os_type:
+            metadata['properties']['os_type'] = instance.os_type
 
         # NOTE(vish): glance forces ami disk format to be ami
         if base.get('disk_format') == 'ami':
@@ -1291,9 +1291,9 @@ class LibvirtDriver(driver.ComputeDriver):
         try:
             virt_dom = self._host.get_domain(instance)
         except exception.InstanceNotFound:
-            raise exception.InstanceNotRunning(instance_id=instance['uuid'])
+            raise exception.InstanceNotRunning(instance_id=instance.uuid)
 
-        base_image_ref = instance['image_ref']
+        base_image_ref = instance.image_ref
 
         base = compute_utils.get_image_metadata(
             context, self._image_api, base_image_ref, instance)
@@ -1465,7 +1465,7 @@ class LibvirtDriver(driver.ComputeDriver):
         supported, reason = self._can_quiesce(image_meta)
         if not supported:
             raise exception.InstanceQuiesceNotSupported(
-                instance_id=instance['uuid'], reason=reason)
+                instance_id=instance.uuid, reason=reason)
 
         try:
             domain = self._host.get_domain(instance)
@@ -1477,7 +1477,7 @@ class LibvirtDriver(driver.ComputeDriver):
             error_code = ex.get_error_code()
             msg = (_('Error from libvirt while quiescing %(instance_name)s: '
                      '[Error Code %(error_code)s] %(ex)s')
-                   % {'instance_name': instance['name'],
+                   % {'instance_name': instance.name,
                       'error_code': error_code, 'ex': ex})
             raise exception.NovaException(msg)
 
@@ -2091,7 +2091,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                   write_to_disk=True)
 
         # NOTE (rmk): Re-populate any missing backing files.
-        disk_info_json = self._get_instance_disk_info(instance['name'], xml,
+        disk_info_json = self._get_instance_disk_info(instance.name, xml,
                                                       block_device_info)
 
         if context.auth_token is not None:
@@ -2507,7 +2507,7 @@ class LibvirtDriver(driver.ComputeDriver):
             # question is not actually listening for connections.
             raise exception.ConsoleTypeUnavailable(console_type='spice')
 
-        ports = get_spice_ports_for_instance(instance['name'])
+        ports = get_spice_ports_for_instance(instance.name)
         host = CONF.spice.server_proxyclient_address
 
         return ctype.ConsoleSpice(host=host, port=ports[0], tlsPort=ports[1])
@@ -2628,7 +2628,7 @@ class LibvirtDriver(driver.ComputeDriver):
         """
         # Handles the partition need to be used.
         target_partition = None
-        if not instance['kernel_id']:
+        if not instance.kernel_id:
             target_partition = CONF.libvirt.inject_partition
             if target_partition == 0:
                 target_partition = None
@@ -2637,7 +2637,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         # Handles the key injection.
         if CONF.libvirt.inject_key and instance.get('key_data'):
-            key = str(instance['key_data'])
+            key = str(instance.key_data)
         else:
             key = None
 
@@ -2658,7 +2658,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 instance,
                 'disk' + suffix,
                 image_type)
-            img_id = instance['image_ref']
+            img_id = instance.image_ref
 
             if not injection_image.check_image_exists():
                 LOG.warn(_LW('Image %s not found on disk storage. '
@@ -2710,9 +2710,9 @@ class LibvirtDriver(driver.ComputeDriver):
             self._get_console_log_path(instance), '', 7)
 
         if not disk_images:
-            disk_images = {'image_id': instance['image_ref'],
-                           'kernel_id': instance['kernel_id'],
-                           'ramdisk_id': instance['ramdisk_id']}
+            disk_images = {'image_id': instance.image_ref,
+                           'kernel_id': instance.kernel_id,
+                           'ramdisk_id': instance.ramdisk_id}
 
         if disk_images['kernel_id']:
             fname = imagecache.get_cache_fname(disk_images, 'kernel_id')
@@ -2720,16 +2720,16 @@ class LibvirtDriver(driver.ComputeDriver):
                                 context=context,
                                 filename=fname,
                                 image_id=disk_images['kernel_id'],
-                                user_id=instance['user_id'],
-                                project_id=instance['project_id'])
+                                user_id=instance.user_id,
+                                project_id=instance.project_id)
             if disk_images['ramdisk_id']:
                 fname = imagecache.get_cache_fname(disk_images, 'ramdisk_id')
                 raw('ramdisk').cache(fetch_func=libvirt_utils.fetch_image,
                                      context=context,
                                      filename=fname,
                                      image_id=disk_images['ramdisk_id'],
-                                     user_id=instance['user_id'],
-                                     project_id=instance['project_id'])
+                                     user_id=instance.user_id,
+                                     project_id=instance.project_id)
 
         inst_type = instance.get_flavor()
 
@@ -2738,7 +2738,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # create a base image.
         if not booted_from_volume:
             root_fname = imagecache.get_cache_fname(disk_images, 'image_id')
-            size = instance['root_gb'] * units.Gi
+            size = instance.root_gb * units.Gi
 
             if size == 0 or suffix == '.rescue':
                 size = None
@@ -2758,23 +2758,22 @@ class LibvirtDriver(driver.ComputeDriver):
                           filename=root_fname,
                           size=size,
                           image_id=disk_images['image_id'],
-                          user_id=instance['user_id'],
-                          project_id=instance['project_id'])
+                          user_id=instance.user_id,
+                          project_id=instance.project_id)
 
         # Lookup the filesystem type if required
-        os_type_with_default = disk.get_fs_type_for_os_type(
-                                                          instance['os_type'])
+        os_type_with_default = disk.get_fs_type_for_os_type(instance.os_type)
         # Generate a file extension based on the file system
         # type and the mkfs commands configured if any
         file_extension = disk.get_file_extension_for_os_type(
                                                           os_type_with_default)
 
-        ephemeral_gb = instance['ephemeral_gb']
+        ephemeral_gb = instance.ephemeral_gb
         if 'disk.local' in disk_mapping:
             disk_image = image('disk.local')
             fn = functools.partial(self._create_ephemeral,
                                    fs_label='ephemeral0',
-                                   os_type=instance["os_type"],
+                                   os_type=instance.os_type,
                                    is_block_dev=disk_image.is_block_dev)
             fname = "ephemeral_%s_%s" % (ephemeral_gb, file_extension)
             size = ephemeral_gb * units.Gi
@@ -2795,7 +2794,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
             fn = functools.partial(self._create_ephemeral,
                                    fs_label='ephemeral%d' % idx,
-                                   os_type=instance["os_type"],
+                                   os_type=instance.os_type,
                                    is_block_dev=disk_image.is_block_dev)
             size = eph['size'] * units.Gi
             fname = "ephemeral_%s_%s" % (eph['size'], file_extension)
@@ -2944,8 +2943,8 @@ class LibvirtDriver(driver.ComputeDriver):
     def _prepare_args_for_get_config(self, context, instance):
         with utils.temporary_mutation(context, read_deleted="yes"):
             flavor = objects.Flavor.get_by_id(context,
-                instance['instance_type_id'])
-        image_ref = instance['image_ref']
+                instance.instance_type_id)
+        image_ref = instance.image_ref
         image_meta = compute_utils.get_image_metadata(
                             context, self._image_api, image_ref, instance)
         return flavor, image_meta
@@ -3277,7 +3276,7 @@ class LibvirtDriver(driver.ComputeDriver):
         sysinfo.system_version = version.version_string_with_package()
 
         sysinfo.system_serial = self._sysinfo_serial_func()
-        sysinfo.system_uuid = instance['uuid']
+        sysinfo.system_uuid = instance.uuid
 
         return sysinfo
 
@@ -3300,12 +3299,12 @@ class LibvirtDriver(driver.ComputeDriver):
 
         meta = vconfig.LibvirtConfigGuestMetaNovaInstance()
         meta.package = version.version_string_with_package()
-        meta.name = instance["display_name"]
+        meta.name = instance.display_name
         meta.creationTime = time.time()
 
-        if instance["image_ref"] not in ("", None):
+        if instance.image_ref not in ("", None):
             meta.roottype = "image"
-            meta.rootid = instance["image_ref"]
+            meta.rootid = instance.image_ref
 
         if context is not None:
             ometa = vconfig.LibvirtConfigGuestMetaNovaOwner()
@@ -3606,7 +3605,7 @@ class LibvirtDriver(driver.ComputeDriver):
             guest.os_cmdline = ("root=%s %s" % (root_device_name, CONSOLE))
             if virt_type == "qemu":
                 guest.os_cmdline += " no_timer_check"
-        if instance['ramdisk_id']:
+        if instance.ramdisk_id:
             guest.os_initrd = os.path.join(inst_path, "ramdisk")
         # we only support os_command_line with images with an explicit
         # kernel set and don't want to break nova if there's an
@@ -3769,7 +3768,7 @@ class LibvirtDriver(driver.ComputeDriver):
         qga.type = "unix"
         qga.target_name = "org.qemu.guest_agent.0"
         qga.source_path = ("/var/lib/libvirt/qemu/%s.%s.sock" %
-                          ("org.qemu.guest_agent.0", instance['name']))
+                          ("org.qemu.guest_agent.0", instance.name))
         guest.add_device(qga)
 
     def _add_rng_device(self, guest, flavor):
@@ -3838,7 +3837,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if flavor is not None:
             return flavor
         with utils.temporary_mutation(ctxt, read_deleted="yes"):
-            return objects.Flavor.get_by_id(ctxt, instance['instance_type_id'])
+            return objects.Flavor.get_by_id(ctxt, instance.instance_type_id)
 
     def _configure_guest_by_virt_type(self, guest, virt_type, caps, instance,
                                       image_meta, flavor, root_device_name):
@@ -3869,7 +3868,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if rescue:
             self._set_guest_for_rescue(rescue, guest, inst_path, virt_type,
                                        root_device_name)
-        elif instance['kernel_id']:
+        elif instance.kernel_id:
             self._set_guest_for_inst_kernel(instance, guest, inst_path,
                                             virt_type, root_device_name,
                                             image_meta)
@@ -3974,8 +3973,8 @@ class LibvirtDriver(driver.ComputeDriver):
         virt_type = CONF.libvirt.virt_type
         guest = vconfig.LibvirtConfigGuest()
         guest.virt_type = virt_type
-        guest.name = instance['name']
-        guest.uuid = instance['uuid']
+        guest.name = instance.name
+        guest.uuid = instance.uuid
         # We are using default unit for memory: KiB
         guest.memory = flavor.memory_mb * units.Ki
         guest.vcpus = flavor.vcpus
@@ -4198,11 +4197,11 @@ class LibvirtDriver(driver.ComputeDriver):
         except libvirt.libvirtError as ex:
             error_code = ex.get_error_code()
             if error_code == libvirt.VIR_ERR_NO_DOMAIN:
-                raise exception.InstanceNotFound(instance_id=instance['name'])
+                raise exception.InstanceNotFound(instance_id=instance.name)
 
             msg = (_('Error from libvirt while getting domain info for '
                      '%(instance_name)s: [Error Code %(error_code)s] %(ex)s') %
-                   {'instance_name': instance['name'],
+                   {'instance_name': instance.name,
                     'error_code': error_code,
                     'ex': ex})
             raise exception.NovaException(msg)
@@ -5111,7 +5110,7 @@ class LibvirtDriver(driver.ComputeDriver):
                         'Disk of instance is too large(available'
                         ' on destination host:%(available)s '
                         '< need:%(necessary)s)') %
-                      {'instance_uuid': instance['uuid'],
+                      {'instance_uuid': instance.uuid,
                        'available': available,
                        'necessary': necessary})
             raise exception.MigrationPreCheckError(reason=reason)
@@ -5462,19 +5461,19 @@ class LibvirtDriver(driver.ComputeDriver):
     def _fetch_instance_kernel_ramdisk(self, context, instance):
         """Download kernel and ramdisk for instance in instance directory."""
         instance_dir = libvirt_utils.get_instance_path(instance)
-        if instance['kernel_id']:
+        if instance.kernel_id:
             libvirt_utils.fetch_image(context,
                                       os.path.join(instance_dir, 'kernel'),
-                                      instance['kernel_id'],
-                                      instance['user_id'],
-                                      instance['project_id'])
-            if instance['ramdisk_id']:
+                                      instance.kernel_id,
+                                      instance.user_id,
+                                      instance.project_id)
+            if instance.ramdisk_id:
                 libvirt_utils.fetch_image(context,
                                           os.path.join(instance_dir,
                                                        'ramdisk'),
-                                          instance['ramdisk_id'],
-                                          instance['user_id'],
-                                          instance['project_id'])
+                                          instance.ramdisk_id,
+                                          instance.user_id,
+                                          instance.project_id)
 
     def rollback_live_migration_at_destination(self, context, instance,
                                                network_info,
@@ -5643,10 +5642,10 @@ class LibvirtDriver(driver.ComputeDriver):
                 if cache_name.startswith('ephemeral'):
                     image.cache(fetch_func=self._create_ephemeral,
                                 fs_label=cache_name,
-                                os_type=instance["os_type"],
+                                os_type=instance.os_type,
                                 filename=cache_name,
                                 size=info['virt_disk_size'],
-                                ephemeral_size=instance['ephemeral_gb'])
+                                ephemeral_size=instance.ephemeral_gb)
                 elif cache_name.startswith('swap'):
                     inst_type = instance.get_flavor()
                     swap_mb = inst_type.swap
@@ -5658,9 +5657,9 @@ class LibvirtDriver(driver.ComputeDriver):
                     image.cache(fetch_func=libvirt_utils.fetch_image,
                                 context=context,
                                 filename=cache_name,
-                                image_id=instance['image_ref'],
-                                user_id=instance['user_id'],
-                                project_id=instance['project_id'],
+                                image_id=instance.image_ref,
+                                user_id=instance.user_id,
+                                project_id=instance.project_id,
                                 size=info['virt_disk_size'])
 
         # if image has kernel and ramdisk, just download
@@ -5702,7 +5701,7 @@ class LibvirtDriver(driver.ComputeDriver):
         """
         # Define migrated instance, otherwise, suspend/destroy does not work.
         dom_list = self._conn.listDefinedDomains()
-        if instance["name"] not in dom_list:
+        if instance.name not in dom_list:
             image_meta = utils.get_image_from_system_metadata(
                 instance.system_metadata)
             # In case of block migration, destination does not have
@@ -6022,9 +6021,9 @@ class LibvirtDriver(driver.ComputeDriver):
         """
         fname = os.path.basename(info['path'])
         if fname == 'disk':
-            size = instance['root_gb']
+            size = instance.root_gb
         elif fname == 'disk.local':
-            size = instance['ephemeral_gb']
+            size = instance.ephemeral_gb
         else:
             size = 0
         return size * units.Gi
@@ -6244,7 +6243,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         (state, max_mem, mem, num_cpu, cpu_time) = domain.info()
         config_drive = configdrive.required_by(instance)
-        launched_at = timeutils.normalize_time(instance['launched_at'])
+        launched_at = timeutils.normalize_time(instance.launched_at)
         uptime = timeutils.delta_seconds(launched_at,
                                          timeutils.utcnow())
         diags = diagnostics.Diagnostics(state=power_state.STATE_MAP[state],
