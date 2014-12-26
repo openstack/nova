@@ -10,6 +10,9 @@
 #  License for the specific language governing permissions and limitations
 #  under the License.
 
+from nova.api.validation import parameter_types
+
+
 add_fixed_ip = {
     'type': 'object',
     'properties': {
@@ -38,13 +41,7 @@ remove_fixed_ip = {
         'removeFixedIp': {
             'type': 'object',
             'properties': {
-                'address': {
-                    'type': 'string',
-                    'oneOf': [
-                        {'format': 'ipv4'},
-                        {'format': 'ipv6'}
-                    ],
-                },
+                'address': parameter_types.ip_address
             },
             'required': ['address'],
             'additionalProperties': False,
