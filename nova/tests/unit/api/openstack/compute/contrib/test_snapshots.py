@@ -13,18 +13,25 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo.serialization import jsonutils
+import mock
 import webob
 
-from nova import context
+from nova.api.openstack.compute.contrib import volumes as volumes_v2
+from nova.api.openstack.compute.plugins.v3 import volumes as volumes_v21
+from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.volume import cinder
 
+FAKE_UUID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
 
-class SnapshotApiTest(test.NoDBTestCase):
+
+class SnapshotApiTestV21(test.NoDBTestCase):
+    controller = volumes_v21.SnapshotController()
+    validation_error = exception.ValidationError
+
     def setUp(self):
-        super(SnapshotApiTest, self).setUp()
+        super(SnapshotApiTestV21, self).setUp()
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
         self.stubs.Set(cinder.API, "create_snapshot",
@@ -37,115 +44,83 @@ class SnapshotApiTest(test.NoDBTestCase):
         self.stubs.Set(cinder.API, "get_all_snapshots",
                        fakes.stub_snapshot_get_all)
         self.stubs.Set(cinder.API, "get", fakes.stub_volume_get)
-        self.flags(
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Volumes'])
+        self.req = fakes.HTTPRequest.blank('')
 
-        self.context = context.get_admin_context()
-        self.app = fakes.wsgi_app(init_only=('os-snapshots',))
+    def _test_snapshot_create(self, force):
+        snapshot = {"volume_id": '12',
+                    "force": force,
+                    "display_name": "Snapshot Test Name",
+                    "display_description": "Snapshot Test Desc"}
+        body = dict(snapshot=snapshot)
+        resp_dict = self.controller.create(self.req, body=body)
+        self.assertIn('snapshot', resp_dict)
+        self.assertEqual(snapshot['display_name'],
+                         resp_dict['snapshot']['displayName'])
+        self.assertEqual(snapshot['display_description'],
+                         resp_dict['snapshot']['displayDescription'])
+        self.assertEqual(snapshot['volume_id'],
+                         resp_dict['snapshot']['volumeId'])
 
     def test_snapshot_create(self):
-        snapshot = {"volume_id": 12,
-                "force": False,
-                "display_name": "Snapshot Test Name",
-                "display_description": "Snapshot Test Desc"}
-        body = dict(snapshot=snapshot)
-        req = webob.Request.blank('/v2/fake/os-snapshots')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers['content-type'] = 'application/json'
-
-        resp = req.get_response(self.app)
-        self.assertEqual(resp.status_int, 200)
-        resp_dict = jsonutils.loads(resp.body)
-        self.assertIn('snapshot', resp_dict)
-        self.assertEqual(resp_dict['snapshot']['displayName'],
-                        snapshot['display_name'])
-        self.assertEqual(resp_dict['snapshot']['displayDescription'],
-                        snapshot['display_description'])
-        self.assertEqual(resp_dict['snapshot']['volumeId'],
-                         snapshot['volume_id'])
+        self._test_snapshot_create(False)
 
     def test_snapshot_create_force(self):
-        snapshot = {"volume_id": 12,
-                "force": True,
-                "display_name": "Snapshot Test Name",
-                "display_description": "Snapshot Test Desc"}
-        body = dict(snapshot=snapshot)
-        req = webob.Request.blank('/v2/fake/os-snapshots')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers['content-type'] = 'application/json'
+        self._test_snapshot_create(True)
 
-        resp = req.get_response(self.app)
-        self.assertEqual(resp.status_int, 200)
-
-        resp_dict = jsonutils.loads(resp.body)
-        self.assertIn('snapshot', resp_dict)
-        self.assertEqual(resp_dict['snapshot']['displayName'],
-                        snapshot['display_name'])
-        self.assertEqual(resp_dict['snapshot']['displayDescription'],
-                        snapshot['display_description'])
-        self.assertEqual(resp_dict['snapshot']['volumeId'],
-                         snapshot['volume_id'])
-
-        # Test invalid force paramter
-        snapshot = {"volume_id": 12,
-                "force": '**&&^^%%$$##@@'}
-        body = dict(snapshot=snapshot)
-        req = webob.Request.blank('/v2/fake/os-snapshots')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers['content-type'] = 'application/json'
-
-        resp = req.get_response(self.app)
-        self.assertEqual(resp.status_int, 400)
+    def test_snapshot_create_invalid_force_param(self):
+        body = {'snapshot': {'volume_id': '1',
+                             'force': '**&&^^%%$$##@@'}}
+        self.assertRaises(self.validation_error,
+                          self.controller.create, self.req, body=body)
 
     def test_snapshot_delete(self):
-        snapshot_id = 123
-        req = webob.Request.blank('/v2/fake/os-snapshots/%d' % snapshot_id)
-        req.method = 'DELETE'
+        snapshot_id = '123'
+        result = self.controller.delete(self.req, snapshot_id)
 
-        resp = req.get_response(self.app)
-        self.assertEqual(resp.status_int, 202)
+        # NOTE: on v2.1, http status code is set as wsgi_code of API
+        # method instead of status_int in a response object.
+        if isinstance(self.controller, volumes_v21.SnapshotController):
+            status_int = self.controller.delete.wsgi_code
+        else:
+            status_int = result.status_int
+        self.assertEqual(202, status_int)
+
+    @mock.patch.object(cinder.API, 'delete_snapshot',
+        side_effect=exception.SnapshotNotFound(snapshot_id=FAKE_UUID))
+    def test_delete_snapshot_not_exists(self, mock_mr):
+        self.assertRaises(webob.exc.HTTPNotFound, self.controller.delete,
+                self.req, FAKE_UUID)
 
     def test_snapshot_delete_invalid_id(self):
-        snapshot_id = -1
-        req = webob.Request.blank('/v2/fake/os-snapshots/%d' % snapshot_id)
-        req.method = 'DELETE'
-
-        resp = req.get_response(self.app)
-        self.assertEqual(resp.status_int, 404)
+        self.assertRaises(webob.exc.HTTPNotFound, self.controller.delete,
+                self.req, '-1')
 
     def test_snapshot_show(self):
-        snapshot_id = 123
-        req = webob.Request.blank('/v2/fake/os-snapshots/%d' % snapshot_id)
-        req.method = 'GET'
-        resp = req.get_response(self.app)
-
-        self.assertEqual(resp.status_int, 200)
-        resp_dict = jsonutils.loads(resp.body)
+        snapshot_id = '123'
+        resp_dict = self.controller.show(self.req, snapshot_id)
         self.assertIn('snapshot', resp_dict)
         self.assertEqual(resp_dict['snapshot']['id'], str(snapshot_id))
 
     def test_snapshot_show_invalid_id(self):
-        snapshot_id = -1
-        req = webob.Request.blank('/v2/fake/os-snapshots/%d' % snapshot_id)
-        req.method = 'GET'
-        resp = req.get_response(self.app)
-        self.assertEqual(resp.status_int, 404)
+        self.assertRaises(webob.exc.HTTPNotFound, self.controller.show,
+                self.req, '-1')
 
     def test_snapshot_detail(self):
-        req = webob.Request.blank('/v2/fake/os-snapshots/detail')
-        req.method = 'GET'
-        resp = req.get_response(self.app)
-        self.assertEqual(resp.status_int, 200)
-
-        resp_dict = jsonutils.loads(resp.body)
+        resp_dict = self.controller.detail(self.req)
         self.assertIn('snapshots', resp_dict)
         resp_snapshots = resp_dict['snapshots']
         self.assertEqual(len(resp_snapshots), 3)
 
         resp_snapshot = resp_snapshots.pop()
         self.assertEqual(resp_snapshot['id'], 102)
+
+    def test_snapshot_index(self):
+        resp_dict = self.controller.index(self.req)
+        self.assertIn('snapshots', resp_dict)
+        resp_snapshots = resp_dict['snapshots']
+        self.assertEqual(3, len(resp_snapshots))
+
+
+class SnapshotApiTestV2(SnapshotApiTestV21):
+    controller = volumes_v2.SnapshotController()
+    validation_error = webob.exc.HTTPBadRequest
