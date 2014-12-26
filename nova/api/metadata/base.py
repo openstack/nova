@@ -132,15 +132,15 @@ class InstanceMetadata():
             capi = conductor.API()
 
         self.availability_zone = ec2utils.get_availability_zone_by_host(
-                instance['host'], capi)
+                instance.host, capi)
 
         self.security_groups = objects.SecurityGroupList.get_by_instance(
             ctxt, instance)
 
         self.mappings = _format_instance_mapping(ctxt, instance)
 
-        if instance.get('user_data', None) is not None:
-            self.userdata_raw = base64.b64decode(instance['user_data'])
+        if instance.user_data is not None:
+            self.userdata_raw = base64.b64decode(instance.user_data)
         else:
             self.userdata_raw = None
 
@@ -154,7 +154,7 @@ class InstanceMetadata():
 
         self.password = password.extract_password(instance)
 
-        self.uuid = instance.get('uuid')
+        self.uuid = instance.uuid
 
         self.content = {}
         self.files = []
