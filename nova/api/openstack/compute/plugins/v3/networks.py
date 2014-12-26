@@ -17,8 +17,10 @@
 import netaddr
 from webob import exc
 
+from nova.api.openstack.compute.schemas.v3 import networks as schema
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+from nova.api import validation
 from nova import exception
 from nova.i18n import _
 from nova import network
@@ -133,33 +135,17 @@ class NetworkController(wsgi.Controller):
             raise exc.HTTPNotFound(explanation=msg)
 
     @extensions.expected_errors((400, 409, 501))
+    @validation.schema(schema.create)
     def create(self, req, body):
         context = req.environ['nova.context']
         authorize(context)
 
-        def bad(e):
-            return exc.HTTPBadRequest(explanation=e)
-
-        if not (body and body.get("network")):
-            raise bad(_("Missing network in body"))
-
         params = body["network"]
-        if not params.get("label"):
-            raise bad(_("Network label is required"))
 
         cidr = params.get("cidr") or params.get("cidr_v6")
-        if not cidr:
-            raise bad(_("Network cidr or cidr_v6 is required"))
-
-        if params.get("project_id") == "":
-            params["project_id"] = None
 
         params["num_networks"] = 1
-        try:
-            params["network_size"] = netaddr.IPNetwork(cidr).size
-        except netaddr.AddrFormatError:
-            msg = _('%s is not a valid ip network') % cidr
-            raise exc.HTTPBadRequest(explanation=msg)
+        params["network_size"] = netaddr.IPNetwork(cidr).size
 
         try:
             network = self.network_api.create(context, **params)[0]
