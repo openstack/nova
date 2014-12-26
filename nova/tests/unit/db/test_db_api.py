@@ -5527,22 +5527,20 @@ class NetworkTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertEqual(2, network_new.vlan)
 
     def test_network_set_host_nonexistent_network(self):
-        self.assertRaises(exception.NetworkNotFound,
-            db.network_set_host, self.ctxt, 123456, 'nonexistent')
+        self.assertEqual(0, db.network_set_host(
+            self.ctxt, 123456, 'nonexistent'))
 
-    def test_network_set_host_with_initially_no_host(self):
+    def test_network_set_host_already_set(self):
         values = {'host': 'example.com', 'project_id': 'project1'}
         network = db.network_create_safe(self.ctxt, values)
-        self.assertEqual(
-            db.network_set_host(self.ctxt, network.id, 'new.example.com'),
-            'example.com')
+        self.assertEqual(0, db.network_set_host(
+            self.ctxt, network.id, 'new.example.com'))
 
-    def test_network_set_host(self):
+    def test_network_set_host_with_initially_no_host(self):
         values = {'project_id': 'project1'}
         network = db.network_create_safe(self.ctxt, values)
-        self.assertEqual(
-            db.network_set_host(self.ctxt, network.id, 'example.com'),
-            'example.com')
+        self.assertEqual(1, db.network_set_host(
+            self.ctxt, network.id, 'example.com'))
         self.assertEqual('example.com',
             db.network_get(self.ctxt, network.id).host)
 
