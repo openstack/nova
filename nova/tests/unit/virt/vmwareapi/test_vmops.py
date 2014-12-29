@@ -176,19 +176,25 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     def test_get_valid_vms_from_retrieve_result(self):
         ops = vmops.VMwareVMOps(mock.Mock(), mock.Mock(), mock.Mock())
         fake_objects = vmwareapi_fake.FakeRetrieveResult()
-        fake_objects.add_object(vmwareapi_fake.VirtualMachine())
-        fake_objects.add_object(vmwareapi_fake.VirtualMachine())
-        fake_objects.add_object(vmwareapi_fake.VirtualMachine())
+        fake_objects.add_object(vmwareapi_fake.VirtualMachine(
+            name=uuidutils.generate_uuid()))
+        fake_objects.add_object(vmwareapi_fake.VirtualMachine(
+            name=uuidutils.generate_uuid()))
+        fake_objects.add_object(vmwareapi_fake.VirtualMachine(
+            name=uuidutils.generate_uuid()))
         vms = ops._get_valid_vms_from_retrieve_result(fake_objects)
         self.assertEqual(3, len(vms))
 
     def test_get_valid_vms_from_retrieve_result_with_invalid(self):
         ops = vmops.VMwareVMOps(mock.Mock(), mock.Mock(), mock.Mock())
         fake_objects = vmwareapi_fake.FakeRetrieveResult()
-        fake_objects.add_object(vmwareapi_fake.VirtualMachine())
-        invalid_vm1 = vmwareapi_fake.VirtualMachine()
+        fake_objects.add_object(vmwareapi_fake.VirtualMachine(
+            name=uuidutils.generate_uuid()))
+        invalid_vm1 = vmwareapi_fake.VirtualMachine(
+            name=uuidutils.generate_uuid())
         invalid_vm1.set('runtime.connectionState', 'orphaned')
-        invalid_vm2 = vmwareapi_fake.VirtualMachine()
+        invalid_vm2 = vmwareapi_fake.VirtualMachine(
+            name=uuidutils.generate_uuid())
         invalid_vm2.set('runtime.connectionState', 'inaccessible')
         fake_objects.add_object(invalid_vm1)
         fake_objects.add_object(invalid_vm2)

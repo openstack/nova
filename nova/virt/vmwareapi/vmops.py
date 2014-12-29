@@ -1469,7 +1469,8 @@ class VMwareVMOps(object):
                     elif prop.name == "runtime.connectionState":
                         conn_state = prop.val
                 # Ignoring the orphaned or inaccessible VMs
-                if conn_state not in ["orphaned", "inaccessible"]:
+                if (conn_state not in ["orphaned", "inaccessible"] and
+                    uuidutils.is_uuid_like(vm_name)):
                     lst_vm_names.append(vm_name)
             if token:
                 retrieve_result = self._session._call_method(vim_util,
