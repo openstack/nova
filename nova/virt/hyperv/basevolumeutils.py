@@ -21,6 +21,7 @@ and storage repositories
 """
 
 import abc
+import re
 import sys
 
 if sys.platform == 'win32':
@@ -41,6 +42,7 @@ class BaseVolumeUtils(object):
         if sys.platform == 'win32':
             self._conn_wmi = wmi.WMI(moniker='//%s/root/wmi' % host)
             self._conn_cimv2 = wmi.WMI(moniker='//%s/root/cimv2' % host)
+        self._drive_number_regex = re.compile(r'DeviceID=\"[^,]*\\(\d+)\"')
 
     @abc.abstractmethod
     def login_storage_target(self, target_lun, target_iqn, target_portal):
@@ -93,14 +95,9 @@ class BaseVolumeUtils(object):
         return block_device.strip_dev(mount_device) in block_device_list
 
     def _get_drive_number_from_disk_path(self, disk_path):
-        # TODO(pnavarro) replace with regex
-        start_device_id = disk_path.find('"', disk_path.find('DeviceID'))
-        end_device_id = disk_path.find('"', start_device_id + 1)
-        device_id = disk_path[start_device_id + 1:end_device_id]
-        drive_number = device_id[device_id.find("\\") + 2:]
-        if drive_number == 'NODRIVE':
-            return None
-        return int(drive_number)
+        drive_number = self._drive_number_regex.findall(disk_path)
+        if drive_number:
+            return int(drive_number[0])
 
     def get_session_id_from_mounted_disk(self, physical_drive_path):
         drive_number = self._get_drive_number_from_disk_path(
@@ -108,9 +105,7 @@ class BaseVolumeUtils(object):
         if not drive_number:
             return None
 
-        initiator_sessions = self._conn_wmi.query("SELECT * FROM "
-                                                  "MSiSCSIInitiator_Session"
-                                                  "Class")
+        initiator_sessions = self._conn_wmi.MSiSCSIInitiator_SessionClass()
         for initiator_session in initiator_sessions:
             devices = initiator_session.Devices
             for device in devices:
@@ -119,10 +114,8 @@ class BaseVolumeUtils(object):
                     return initiator_session.SessionId
 
     def _get_devices_for_target(self, target_iqn):
-        initiator_sessions = self._conn_wmi.query("SELECT * FROM "
-                                                  "MSiSCSIInitiator_Session"
-                                                  "Class WHERE TargetName='%s'"
-                                                  % target_iqn)
+        initiator_sessions = self._conn_wmi.MSiSCSIInitiator_SessionClass(
+            TargetName=target_iqn)
         if not initiator_sessions:
             return []
 
