@@ -1663,6 +1663,10 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         xenapi_fake.create_vm(instance['name'], 'Running')
         flavor = {"root_gb": 80, 'ephemeral_gb': 0}
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
+        vm_ref = vm_utils.lookup(conn._session, instance['name'])
+        self.mox.StubOutWithMock(volume_utils, 'is_booted_from_volume')
+        volume_utils.is_booted_from_volume(conn._session, vm_ref)
+        self.mox.ReplayAll()
         conn.migrate_disk_and_power_off(self.context, instance,
                                         '127.0.0.1', flavor, None)
 
@@ -1698,6 +1702,10 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         instance = db.instance_create(self.context, values)
         xenapi_fake.create_vm(instance['name'], 'Running')
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
+        vm_ref = vm_utils.lookup(conn._session, instance['name'])
+        self.mox.StubOutWithMock(volume_utils, 'is_booted_from_volume')
+        volume_utils.is_booted_from_volume(conn._session, vm_ref)
+        self.mox.ReplayAll()
         conn.migrate_disk_and_power_off(self.context, instance,
                                         '127.0.0.1', flavor, None)
 
@@ -1727,6 +1735,7 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests,
                               product_version=(4, 0, 0),
                               product_brand='XenServer')
+        self.mox.StubOutWithMock(volume_utils, 'is_booted_from_volume')
 
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         network_info = fake_network.fake_get_instance_nw_info(self.stubs)

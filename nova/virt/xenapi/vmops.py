@@ -216,6 +216,9 @@ class VMOps(object):
         block_device_mapping = virt_driver.block_device_info_get_mapping(
                 block_device_info)
         for vol in block_device_mapping:
+            if vol['mount_device'] == instance['root_device_name']:
+                # NOTE(alaski): The root device should be attached already
+                continue
             connection_info = vol['connection_info']
             mount_device = vol['mount_device'].rpartition("/")[2]
             self._volumeops.attach_volume(connection_info,
@@ -266,15 +269,39 @@ class VMOps(object):
 
         def create_disks_step(undo_mgr, disk_image_type, image_meta,
                               name_label):
+            import_root = True
+            root_vol_vdi = None
+            if block_device_info:
+                LOG.debug("Block device information present: %s",
+                          block_device_info, instance=instance)
+                # NOTE(alaski): Follows the basic procedure of
+                # vm_utils.get_vdis_for_instance() used by spawn()
+                for bdm in block_device_info['block_device_mapping']:
+                    if bdm['mount_device'] == instance['root_device_name']:
+                        connection_info = bdm['connection_info']
+                        _sr, root_vol_vdi = self._volumeops.connect_volume(
+                                connection_info)
+                        import_root = False
+                        break
+
             # TODO(johngarbutt) clean up if this is not run
-            vdis = vm_utils.import_all_migrated_disks(self._session,
-                                                      instance)
+            vdis = vm_utils.import_all_migrated_disks(self._session, instance,
+                                                      import_root=import_root)
+
+            if root_vol_vdi:
+                vol_vdi_ref = self._session.call_xenapi('VDI.get_by_uuid',
+                        root_vol_vdi)
+                vdis['root'] = dict(uuid=root_vol_vdi, file=None,
+                        ref=vol_vdi_ref, osvol=True)
 
             def undo_create_disks():
                 eph_vdis = vdis['ephemerals']
                 root_vdi = vdis['root']
                 vdi_refs = [vdi['ref'] for vdi in eph_vdis.values()]
-                vdi_refs.append(root_vdi['ref'])
+                if not root_vdi.get('osvol', False):
+                    vdi_refs.append(root_vdi['ref'])
+                else:
+                    self._volumeops.safe_cleanup_from_vdis(root_vdi['ref'])
                 vm_utils.safe_destroy_vdis(self._session, vdi_refs)
 
             undo_mgr.undo_with(undo_create_disks)
@@ -1048,8 +1075,9 @@ class VMOps(object):
         def power_down_and_transfer_leaf_vhds(root_vdi_uuid,
                                               ephemeral_vdi_uuids=None):
             self._resize_ensure_vm_is_shutdown(instance, vm_ref)
-            vm_utils.migrate_vhd(self._session, instance, root_vdi_uuid,
-                                 dest, sr_path, 0)
+            if root_vdi_uuid is not None:
+                vm_utils.migrate_vhd(self._session, instance, root_vdi_uuid,
+                                     dest, sr_path, 0)
             if ephemeral_vdi_uuids:
                 for ephemeral_disk_number, ephemeral_vdi_uuid in enumerate(
                             ephemeral_vdi_uuids, start=1):
@@ -1060,6 +1088,23 @@ class VMOps(object):
         self._apply_orig_vm_name_label(instance, vm_ref)
         try:
             label = "%s-snapshot" % instance['name']
+
+            if volume_utils.is_booted_from_volume(self._session, vm_ref):
+                LOG.debug('Not snapshotting root disk since it is a volume',
+                        instance=instance)
+                # NOTE(alaski): This is done twice to match the number of
+                # defined steps.
+                fake_step_to_show_snapshot_complete()
+                fake_step_to_show_snapshot_complete()
+                # NOTE(alaski): This is set to None to avoid transferring the
+                # VHD in power_down_and_transfer_leaf_vhds.
+                active_root_vdi_uuid = None
+                # snapshot and transfer all ephemeral disks
+                # then power down and transfer any diffs since
+                # the snapshots were taken
+                transfer_ephemeral_disks_then_all_leaf_vdis()
+                return
+
             with vm_utils.snapshot_attached_here(
                     self._session, instance, vm_ref, label) as root_vdi_uuids:
                 # NOTE(johngarbutt) snapshot attached here will delete

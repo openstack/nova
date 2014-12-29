@@ -230,3 +230,23 @@ class FindVBDTestCase(stubs.XenAPITestBaseNoDB):
         self.assertIsNone(result)
         session.VM.get_VBDs.assert_called_once_with("vm_ref")
         session.VBD.get_userdevice.assert_called_once_with("a")
+
+
+class BootedFromVolumeTestCase(stubs.XenAPITestBaseNoDB):
+    def test_booted_from_volume(self):
+        session = mock.Mock()
+        session.VM.get_VBDs.return_value = ['vbd_ref']
+        session.VBD.get_userdevice.return_value = '0'
+        session.VBD.get_other_config.return_value = {'osvol': True}
+        booted_from_volume = volume_utils.is_booted_from_volume(session,
+                'vm_ref')
+        self.assertTrue(booted_from_volume)
+
+    def test_not_booted_from_volume(self):
+        session = mock.Mock()
+        session.VM.get_VBDs.return_value = ['vbd_ref']
+        session.VBD.get_userdevice.return_value = '0'
+        session.VBD.get_other_config.return_value = {}
+        booted_from_volume = volume_utils.is_booted_from_volume(session,
+                'vm_ref')
+        self.assertFalse(booted_from_volume)

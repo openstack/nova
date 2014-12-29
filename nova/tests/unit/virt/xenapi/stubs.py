@@ -314,7 +314,7 @@ class FakeSessionForVolumeFailedTests(FakeSessionForVolumeTests):
 def stub_out_migration_methods(stubs):
     fakesr = fake.create_sr()
 
-    def fake_import_all_migrated_disks(session, instance):
+    def fake_import_all_migrated_disks(session, instance, import_root=True):
         vdi_ref = fake.create_vdi(instance['name'], fakesr)
         vdi_rec = fake.get_record('VDI', vdi_ref)
         vdi_rec['other_config']['nova_disk_type'] = 'root'
