@@ -1019,7 +1019,7 @@ class VMwareVMOps(object):
         """
         vm_ref = vm_util.get_vm_ref(self._session, instance)
 
-        self.power_off(instance)
+        vm_util.power_off_instance(self._session, instance, vm_ref)
         instance_name = instance.uuid + self._rescue_suffix
         self.spawn(context, instance, image_meta,
                    None, None, network_info,
@@ -1117,7 +1117,7 @@ class VMwareVMOps(object):
         host_ref = self._get_host_ref_from_name(dest)
 
         # 1. Power off the instance
-        self.power_off(instance)
+        vm_util.power_off_instance(self._session, instance, vm_ref)
         self._update_instance_progress(context, instance,
                                        step=1,
                                        total_steps=RESIZE_TOTAL_STEPS)
