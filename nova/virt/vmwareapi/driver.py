@@ -28,7 +28,6 @@ from oslo.vmware import exceptions as vexc
 from oslo.vmware import pbm
 from oslo.vmware import vim
 from oslo.vmware import vim_util
-import suds
 
 from nova import exception
 from nova.i18n import _, _LI, _LW
@@ -214,15 +213,7 @@ class VMwareVCDriver(driver.ComputeDriver):
             self._session._create_session()
 
     def cleanup_host(self, host):
-        # NOTE(hartsocks): we lean on the init_host to force the vim object
-        # to not be None.
-        vim = self._session.vim
-        service_content = vim.service_content
-        session_manager = service_content.sessionManager
-        try:
-            vim.client.service.Logout(session_manager)
-        except suds.WebFault:
-            LOG.debug("No vSphere session was open during cleanup_host.")
+        self._session.logout()
 
     def _register_openstack_extension(self):
         # Register an 'OpenStack' extension in vCenter
