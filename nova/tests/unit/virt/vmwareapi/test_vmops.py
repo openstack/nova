@@ -173,29 +173,6 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         ops._create_folder_if_missing(ds_name, ds_ref, 'folder')
         mock_mkdir.assert_called_with(ops._session, path, dc)
 
-    @mock.patch.object(ds_util, 'file_exists', return_value=True)
-    def test_check_if_folder_file_exists_with_existing(self,
-                                                       mock_exists):
-        ops = vmops.VMwareVMOps(mock.Mock(), mock.Mock(), mock.Mock())
-        ops._create_folder_if_missing = mock.Mock()
-        mock_ds_ref = mock.Mock()
-        ops._check_if_folder_file_exists(mock.Mock(), mock_ds_ref, "datastore",
-                                         "folder", "some_file")
-        ops._create_folder_if_missing.assert_called_once_with('datastore',
-                                                              mock_ds_ref,
-                                                              'vmware_base')
-
-    @mock.patch.object(ds_util, 'file_exists', return_value=False)
-    def test_check_if_folder_file_exists_no_existing(self, mock_exists):
-        ops = vmops.VMwareVMOps(mock.Mock(), mock.Mock(), mock.Mock())
-        ops._create_folder_if_missing = mock.Mock()
-        mock_ds_ref = mock.Mock()
-        ops._check_if_folder_file_exists(mock.Mock(), mock_ds_ref, "datastore",
-                                         "folder", "some_file")
-        ops._create_folder_if_missing.assert_called_once_with('datastore',
-                                                              mock_ds_ref,
-                                                              'vmware_base')
-
     def test_get_valid_vms_from_retrieve_result(self):
         ops = vmops.VMwareVMOps(mock.Mock(), mock.Mock(), mock.Mock())
         fake_objects = vmwareapi_fake.FakeRetrieveResult()
