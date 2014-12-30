@@ -44,4 +44,4 @@ class VolumeUtilsTestCase(test.TestCase):
         # Start test
         self.mox.ReplayAll()
         result = volumeutils.get_iscsi_initiator()
-        self.assertIsNone(result)
+        self.assertEqual('', result)
