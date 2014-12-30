@@ -1131,14 +1131,16 @@ class VMwareVMOps(object):
         instance.progress = progress
         instance.save()
 
-    def _resize_vm(self, vm_ref, flavor):
+    def _resize_vm(self, context, instance, vm_ref, flavor):
         """Resizes the VM according to the flavor."""
         client_factory = self._session.vim.client.factory
         extra_specs = self._get_extra_specs(flavor)
+        metadata = self._get_instance_metadata(context, instance)
         vm_resize_spec = vm_util.get_vm_resize_spec(client_factory,
                                                     int(flavor['vcpus']),
                                                     int(flavor['memory_mb']),
-                                                    extra_specs)
+                                                    extra_specs,
+                                                    metadata=metadata)
         vm_util.reconfigure_vm(self._session, vm_ref, vm_resize_spec)
 
     def _resize_disk(self, instance, vm_ref, vmdk, flavor):
@@ -1211,7 +1213,7 @@ class VMwareVMOps(object):
                                        total_steps=RESIZE_TOTAL_STEPS)
 
         # 2. Reconfigure the VM properties
-        self._resize_vm(vm_ref, flavor)
+        self._resize_vm(context, instance, vm_ref, flavor)
 
         self._update_instance_progress(context, instance,
                                        step=2,
@@ -1256,10 +1258,12 @@ class VMwareVMOps(object):
         client_factory = self._session.vim.client.factory
         # Reconfigure the VM properties
         extra_specs = self._get_extra_specs(instance.flavor)
+        metadata = self._get_instance_metadata(context, instance)
         vm_resize_spec = vm_util.get_vm_resize_spec(client_factory,
                                                     int(instance.vcpus),
                                                     int(instance.memory_mb),
-                                                    extra_specs)
+                                                    extra_specs,
+                                                    metadata=metadata)
         vm_util.reconfigure_vm(self._session, vm_ref, vm_resize_spec)
 
         # Reconfigure the disks if necessary
