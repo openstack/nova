@@ -13,7 +13,7 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-from oslo.serialization import jsonutils
+import mock
 import webob
 
 from nova.api.openstack.compute.plugins.v3 import admin_password \
@@ -28,84 +28,69 @@ def fake_get(self, context, id, expected_attrs=None, want_objects=False):
     return {'uuid': id}
 
 
-def fake_get_non_existent(self, context, id, expected_attrs=None,
-                          want_objects=False):
-    raise exception.InstanceNotFound(instance_id=id)
-
-
 def fake_set_admin_password(self, context, instance, password=None):
     pass
 
 
-def fake_set_admin_password_failed(self, context, instance, password=None):
-    raise exception.InstancePasswordSetFailed(instance=instance, reason='')
-
-
-def fake_set_admin_password_not_implemented(self, context, instance,
-                                            password=None):
-    raise NotImplementedError()
-
-
 class AdminPasswordTestV21(test.NoDBTestCase):
-    plugin = admin_password_v21
 
     def setUp(self):
         super(AdminPasswordTestV21, self).setUp()
         self.stubs.Set(compute_api.API, 'set_admin_password',
                        fake_set_admin_password)
         self.stubs.Set(compute_api.API, 'get', fake_get)
-        self.app = fakes.wsgi_app_v21(init_only=('servers',
-                                                 self.plugin.ALIAS))
-
-    def _make_request(self, body):
-        req = webob.Request.blank('/v2/fake/servers/1/action')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.content_type = 'application/json'
-        res = req.get_response(self.app)
-        return res
+        self.controller = admin_password_v21.AdminPasswordController()
+        self.fake_req = fakes.HTTPRequest.blank('')
 
     def test_change_password(self):
         body = {'changePassword': {'adminPass': 'test'}}
-        res = self._make_request(body)
-        self.assertEqual(res.status_int, 202)
+        self.controller.change_password(self.fake_req, '1', body=body)
+        self.assertEqual(self.controller.change_password.wsgi_code, 202)
 
     def test_change_password_empty_string(self):
         body = {'changePassword': {'adminPass': ''}}
-        res = self._make_request(body)
-        self.assertEqual(res.status_int, 202)
+        self.controller.change_password(self.fake_req, '1', body=body)
+        self.assertEqual(self.controller.change_password.wsgi_code, 202)
 
-    def test_change_password_with_non_implement(self):
+    @mock.patch('nova.compute.api.API.set_admin_password',
+                side_effect=NotImplementedError())
+    def test_change_password_with_non_implement(self, mock_set_admin_password):
         body = {'changePassword': {'adminPass': 'test'}}
-        self.stubs.Set(compute_api.API, 'set_admin_password',
-                       fake_set_admin_password_not_implemented)
-        res = self._make_request(body)
-        self.assertEqual(res.status_int, 501)
+        self.assertRaises(webob.exc.HTTPNotImplemented,
+                          self.controller.change_password,
+                          self.fake_req, '1', body=body)
 
-    def test_change_password_with_non_existed_instance(self):
+    @mock.patch('nova.compute.api.API.get',
+                side_effect=exception.InstanceNotFound(instance_id='1'))
+    def test_change_password_with_non_existed_instance(self, mock_get):
         body = {'changePassword': {'adminPass': 'test'}}
-        self.stubs.Set(compute_api.API, 'get', fake_get_non_existent)
-        res = self._make_request(body)
-        self.assertEqual(res.status_int, 404)
+        self.assertRaises(webob.exc.HTTPNotFound,
+                          self.controller.change_password,
+                          self.fake_req, '1', body=body)
 
     def test_change_password_with_non_string_password(self):
         body = {'changePassword': {'adminPass': 1234}}
-        res = self._make_request(body)
-        self.assertEqual(res.status_int, 400)
+        self.assertRaises(exception.ValidationError,
+                          self.controller.change_password,
+                          self.fake_req, '1', body=body)
 
-    def test_change_password_failed(self):
+    @mock.patch('nova.compute.api.API.set_admin_password',
+                side_effect=exception.InstancePasswordSetFailed(instance="1",
+                                                                reason=''))
+    def test_change_password_failed(self, mock_set_admin_password):
         body = {'changePassword': {'adminPass': 'test'}}
-        self.stubs.Set(compute_api.API, 'set_admin_password',
-                       fake_set_admin_password_failed)
-        res = self._make_request(body)
-        self.assertEqual(res.status_int, 409)
+        self.assertRaises(webob.exc.HTTPConflict,
+                          self.controller.change_password,
+                          self.fake_req, '1', body=body)
 
     def test_change_password_without_admin_password(self):
         body = {'changPassword': {}}
-        res = self._make_request(body)
-        self.assertEqual(res.status_int, 400)
+        self.assertRaises(exception.ValidationError,
+                          self.controller.change_password,
+                          self.fake_req, '1', body=body)
 
     def test_change_password_none(self):
         body = {'changePassword': None}
-        res = self._make_request(body)
-        self.assertEqual(res.status_int, 400)
+        self.assertRaises(exception.ValidationError,
+                          self.controller.change_password,
+                          self.fake_req, '1', body=body)
