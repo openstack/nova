@@ -350,9 +350,12 @@ class VMwareVolumeOps(object):
         if device_name is None:
             raise exception.StorageError(
                 reason=_("Unable to find iSCSI Target"))
-
-        vmdk = vm_util.get_vmdk_info(self._session, vm_ref)
-        adapter_type = adapter_type or vmdk.adapter_type
+        if adapter_type is None:
+            # Get the vmdk file name that the VM is pointing to
+            hardware_devices = self._session._call_method(
+                vim_util, "get_dynamic_property", vm_ref,
+                "VirtualMachine", "config.hardware.device")
+            adapter_type = vm_util.get_scsi_adapter_type(hardware_devices)
 
         self.attach_disk_to_vm(vm_ref, instance,
                                adapter_type, 'rdmp',

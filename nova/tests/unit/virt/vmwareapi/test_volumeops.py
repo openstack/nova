@@ -216,9 +216,6 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
                                     'volume_id': 'volume-fake-id'}}
         vm_ref = 'fake-vm-ref'
         default_adapter_type = constants.DEFAULT_ADAPTER_TYPE
-        vmdk_info = vm_util.VmdkInfo('fake-path', default_adapter_type,
-                                     constants.DISK_TYPE_PREALLOCATED, 1024,
-                                     'fake-device')
         adapter_type = adapter_type or default_adapter_type
 
         with contextlib.nested(
@@ -226,10 +223,10 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
             mock.patch.object(self._volumeops, '_iscsi_discover_target',
                               return_value=(mock.sentinel.device_name,
                                             mock.sentinel.uuid)),
-            mock.patch.object(vm_util, 'get_vmdk_info',
-                              return_value=vmdk_info),
+            mock.patch.object(vm_util, 'get_scsi_adapter_type',
+                              return_value=adapter_type),
             mock.patch.object(self._volumeops, 'attach_disk_to_vm')
-        ) as (get_vm_ref, iscsi_discover_target, get_vmdk_info,
+        ) as (get_vm_ref, iscsi_discover_target, get_scsi_adapter_type,
               attach_disk_to_vm):
             self._volumeops.attach_volume(connection_info, self._instance,
                                           adapter_type)
@@ -238,7 +235,8 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
                                                self._instance)
             iscsi_discover_target.assert_called_once_with(
                 connection_info['data'])
-            self.assertTrue(get_vmdk_info.called)
+            if adapter_type is None:
+                self.assertTrue(get_scsi_adapter_type.called)
             attach_disk_to_vm.assert_called_once_with(vm_ref,
                 self._instance, adapter_type, 'rdmp',
                 device_name=mock.sentinel.device_name)
