@@ -17,6 +17,7 @@
 """Matcher classes to be used inside of the testtools assertThat framework."""
 
 import pprint
+import StringIO
 
 from lxml import etree
 from testtools import content
@@ -233,6 +234,27 @@ class XMLMismatch(object):
         }
 
 
+class XMLDocInfoMismatch(XMLMismatch):
+    """XML version or encoding doesn't match."""
+
+    def __init__(self, state, expected_doc_info, actual_doc_info):
+        super(XMLDocInfoMismatch, self).__init__(state)
+        self.expected_doc_info = expected_doc_info
+        self.actual_doc_info = actual_doc_info
+
+    def describe(self):
+        return ("%(path)s: XML information mismatch(version, encoding) "
+                "expected version %(expected_version)s, "
+                "expected encoding %(expected_encoding)s; "
+                "actual version %(actual_version)s, "
+                "actual encoding %(actual_encoding)s" %
+                {'path': self.path,
+                 'expected_version': self.expected_doc_info['version'],
+                 'expected_encoding': self.expected_doc_info['encoding'],
+                 'actual_version': self.actual_doc_info['version'],
+                 'actual_encoding': self.actual_doc_info['encoding']})
+
+
 class XMLTagMismatch(XMLMismatch):
     """XML tags don't match."""
 
@@ -371,23 +393,60 @@ class XMLMatchState(object):
 class XMLMatches(object):
     """Compare XML strings.  More complete than string comparison."""
 
-    def __init__(self, expected):
+    SKIP_TAGS = (etree.Comment, etree.ProcessingInstruction)
+
+    def __init__(self, expected, allow_mixed_nodes=False,
+                 skip_empty_text_nodes=True, skip_values=('DONTCARE',)):
         self.expected_xml = expected
-        self.expected = etree.fromstring(expected)
+        self.expected = etree.parse(StringIO.StringIO(expected))
+        self.allow_mixed_nodes = allow_mixed_nodes
+        self.skip_empty_text_nodes = skip_empty_text_nodes
+        self.skip_values = set(skip_values)
 
     def __str__(self):
         return 'XMLMatches(%r)' % self.expected_xml
 
     def match(self, actual_xml):
-        actual = etree.fromstring(actual_xml)
+        actual = etree.parse(StringIO.StringIO(actual_xml))
 
         state = XMLMatchState(self.expected_xml, actual_xml)
-        result = self._compare_node(self.expected, actual, state, None)
+        expected_doc_info = self._get_xml_docinfo(self.expected)
+        actual_doc_info = self._get_xml_docinfo(actual)
+        if expected_doc_info != actual_doc_info:
+            return XMLDocInfoMismatch(state, expected_doc_info,
+                                      actual_doc_info)
+        result = self._compare_node(self.expected.getroot(),
+                                    actual.getroot(), state, None)
 
         if result is False:
             return XMLMismatch(state)
         elif result is not True:
             return result
+
+    @staticmethod
+    def _get_xml_docinfo(xml_document):
+        return {'version': xml_document.docinfo.xml_version,
+                'encoding': xml_document.docinfo.encoding}
+
+    def _compare_text_nodes(self, expected, actual, state):
+        expected_text = [expected.text]
+        expected_text.extend(child.tail for child in expected)
+        actual_text = [actual.text]
+        actual_text.extend(child.tail for child in actual)
+        if self.skip_empty_text_nodes:
+            expected_text = [text for text in expected_text
+                             if text and not text.isspace()]
+            actual_text = [text for text in actual_text
+                           if text and not text.isspace()]
+        if self.skip_values.intersection(
+                        expected_text + actual_text):
+            return
+        if self.allow_mixed_nodes:
+            # lets sort text nodes because they can be mixed
+            expected_text = sorted(expected_text)
+            actual_text = sorted(actual_text)
+        if expected_text != actual_text:
+            return XMLTextValueMismatch(state, expected_text, actual_text)
 
     def _compare_node(self, expected, actual, state, idx):
         """Recursively compares nodes within the XML tree."""
@@ -410,57 +469,62 @@ class XMLMatches(object):
                 expected_value = expected.attrib[key]
                 actual_value = actual.attrib[key]
 
-                if 'DONTCARE' in (expected_value, actual_value):
+                if self.skip_values.intersection(
+                        [expected_value, actual_value]):
                     continue
                 elif expected_value != actual_value:
                     return XMLAttrValueMismatch(state, key, expected_value,
                                                 actual_value)
 
+            # Compare text nodes
+            text_nodes_mismatch = self._compare_text_nodes(
+                expected, actual, state)
+            if text_nodes_mismatch:
+                return text_nodes_mismatch
+
             # Compare the contents of the node
-            if len(expected) == 0 and len(actual) == 0:
-                # No children, compare text values
-                if ('DONTCARE' not in (expected.text, actual.text) and
-                        expected.text != actual.text):
-                    return XMLTextValueMismatch(state, expected.text,
-                                                actual.text)
-            else:
-                expected_idx = 0
-                actual_idx = 0
-                while (expected_idx < len(expected) and
-                       actual_idx < len(actual)):
-                    # Ignore comments and processing instructions
-                    # TODO(Vek): may interpret PIs in the future, to
-                    # allow for, say, arbitrary ordering of some
-                    # elements
-                    if (expected[expected_idx].tag in
-                            (etree.Comment, etree.ProcessingInstruction)):
-                        expected_idx += 1
+            matched_actual_child_idxs = set()
+            # first_actual_child_idx - pointer to next actual child
+            # used with allow_mixed_nodes=False ONLY
+            # prevent to visit actual child nodes twice
+            first_actual_child_idx = 0
+            for expected_child in expected:
+                if expected_child.tag in self.SKIP_TAGS:
+                    continue
+                related_actual_child_idx = None
+
+                if self.allow_mixed_nodes:
+                    first_actual_child_idx = 0
+                for actual_child_idx in range(
+                        first_actual_child_idx, len(actual)):
+                    if actual[actual_child_idx].tag in self.SKIP_TAGS:
+                        first_actual_child_idx += 1
                         continue
-
+                    if actual_child_idx in matched_actual_child_idxs:
+                        continue
                     # Compare the nodes
-                    result = self._compare_node(expected[expected_idx],
-                                                actual[actual_idx], state,
-                                                actual_idx)
+                    result = self._compare_node(expected_child,
+                                                actual[actual_child_idx],
+                                                state, actual_child_idx)
+                    first_actual_child_idx += 1
                     if result is not True:
-                        return result
-
-                    # Step on to comparing the next nodes...
-                    expected_idx += 1
-                    actual_idx += 1
-
-                # Make sure we consumed all nodes in actual
-                if actual_idx < len(actual):
-                    return XMLUnexpectedChild(state, actual[actual_idx].tag,
-                                              actual_idx)
-
-                # Make sure we consumed all nodes in expected
-                if expected_idx < len(expected):
-                    for node in expected[expected_idx:]:
-                        if (node.tag in
-                                (etree.Comment, etree.ProcessingInstruction)):
+                        if self.allow_mixed_nodes:
                             continue
-
-                        return XMLExpectedChild(state, node.tag, actual_idx)
-
+                        else:
+                            return result
+                    else:  # nodes match
+                        related_actual_child_idx = actual_child_idx
+                        break
+                if related_actual_child_idx is not None:
+                    matched_actual_child_idxs.add(actual_child_idx)
+                else:
+                    return XMLExpectedChild(state, expected_child.tag,
+                                            actual_child_idx + 1)
+            # Make sure we consumed all nodes in actual
+            for actual_child_idx, actual_child in enumerate(actual):
+                if (actual_child.tag not in self.SKIP_TAGS and
+                        actual_child_idx not in matched_actual_child_idxs):
+                    return XMLUnexpectedChild(state, actual_child.tag,
+                                              actual_child_idx)
         # The nodes match
         return True
