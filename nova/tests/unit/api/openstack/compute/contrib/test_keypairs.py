@@ -63,10 +63,12 @@ def db_key_pair_create_duplicate(context, keypair):
 
 class KeypairsTestV21(test.TestCase):
     base_url = '/v2/fake'
+    validation_error = exception.ValidationError
 
-    def _setup_app(self):
-        self.app = fakes.wsgi_app_v21(init_only=('os-keypairs', 'servers'))
-        self.app_server = self.app
+    def _setup_app_and_controller(self):
+        self.app_server = fakes.wsgi_app_v21(init_only=('os-keypairs',
+                                                        'servers'))
+        self.controller = keypairs_v21.KeypairController()
 
     def setUp(self):
         super(KeypairsTestV21, self).setUp()
@@ -83,39 +85,32 @@ class KeypairsTestV21(test.TestCase):
             osapi_compute_extension=[
                 'nova.api.openstack.compute.contrib.select_extensions'],
             osapi_compute_ext_list=['Keypairs'])
-        self._setup_app()
+        self._setup_app_and_controller()
 
     def test_keypair_list(self):
-        req = webob.Request.blank(self.base_url + '/os-keypairs')
-        res = req.get_response(self.app)
-        self.assertEqual(res.status_int, 200)
-        res_dict = jsonutils.loads(res.body)
+        req = fakes.HTTPRequest.blank('')
+        res_dict = self.controller.index(req)
         response = {'keypairs': [{'keypair': dict(keypair_data, name='FAKE')}]}
         self.assertEqual(res_dict, response)
 
     def test_keypair_create(self):
         body = {'keypair': {'name': 'create_test'}}
-        req = webob.Request.blank(self.base_url + '/os-keypairs')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers['Content-Type'] = 'application/json'
-        res = req.get_response(self.app)
-        self.assertEqual(res.status_int, 200)
-        res_dict = jsonutils.loads(res.body)
+        req = fakes.HTTPRequest.blank('')
+        res_dict = self.controller.create(req, body=body)
         self.assertTrue(len(res_dict['keypair']['fingerprint']) > 0)
         self.assertTrue(len(res_dict['keypair']['private_key']) > 0)
 
-    def _test_keypair_create_bad_request_case(self, body):
-        req = webob.Request.blank(self.base_url + '/os-keypairs')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers['Content-Type'] = 'application/json'
-        res = req.get_response(self.app)
-        self.assertEqual(res.status_int, 400)
+    def _test_keypair_create_bad_request_case(self,
+                                              body,
+                                              exception):
+        req = fakes.HTTPRequest.blank('')
+        self.assertRaises(exception,
+                          self.controller.create, req, body=body)
 
     def test_keypair_create_with_empty_name(self):
         body = {'keypair': {'name': ''}}
-        self._test_keypair_create_bad_request_case(body)
+        self._test_keypair_create_bad_request_case(body,
+                                                   self.validation_error)
 
     def test_keypair_create_with_name_too_long(self):
         body = {
@@ -123,7 +118,8 @@ class KeypairsTestV21(test.TestCase):
                 'name': 'a' * 256
             }
         }
-        self._test_keypair_create_bad_request_case(body)
+        self._test_keypair_create_bad_request_case(body,
+                                                   self.validation_error)
 
     def test_keypair_create_with_non_alphanumeric_name(self):
         body = {
@@ -131,7 +127,8 @@ class KeypairsTestV21(test.TestCase):
                 'name': 'test/keypair'
             }
         }
-        self._test_keypair_create_bad_request_case(body)
+        self._test_keypair_create_bad_request_case(body,
+                                                   webob.exc.HTTPBadRequest)
 
     def test_keypair_import_bad_key(self):
         body = {
@@ -140,11 +137,13 @@ class KeypairsTestV21(test.TestCase):
                 'public_key': 'ssh-what negative',
             },
         }
-        self._test_keypair_create_bad_request_case(body)
+        self._test_keypair_create_bad_request_case(body,
+                                                   webob.exc.HTTPBadRequest)
 
     def test_keypair_create_with_invalid_keypair_body(self):
         body = {'alpha': {'name': 'create_test'}}
-        self._test_keypair_create_bad_request_case(body)
+        self._test_keypair_create_bad_request_case(body,
+                                                   self.validation_error)
 
     def test_keypair_import(self):
         body = {
@@ -161,15 +160,9 @@ class KeypairsTestV21(test.TestCase):
                               'bHkXa6OciiJDvkRzJXzf',
             },
         }
-
-        req = webob.Request.blank(self.base_url + '/os-keypairs')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers['Content-Type'] = 'application/json'
-        res = req.get_response(self.app)
-        self.assertEqual(res.status_int, 200)
+        req = fakes.HTTPRequest.blank('')
+        res_dict = self.controller.create(req, body=body)
         # FIXME(ja): sholud we check that public_key was sent to create?
-        res_dict = jsonutils.loads(res.body)
         self.assertTrue(len(res_dict['keypair']['fingerprint']) > 0)
         self.assertNotIn('private_key', res_dict['keypair'])
 
@@ -195,16 +188,10 @@ class KeypairsTestV21(test.TestCase):
             },
         }
 
-        req = webob.Request.blank(self.base_url + '/os-keypairs')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers['Content-Type'] = 'application/json'
-        res = req.get_response(self.app)
-        self.assertEqual(res.status_int, 403)
-        res_dict = jsonutils.loads(res.body)
-        self.assertEqual(
-            "Quota exceeded, too many key pairs.",
-            res_dict['forbidden']['message'])
+        req = fakes.HTTPRequest.blank('')
+        ex = self.assertRaises(webob.exc.HTTPForbidden,
+                               self.controller.create, req, body=body)
+        self.assertIn('Quota exceeded, too many key pairs.', ex.explanation)
 
     def test_keypair_create_quota_limit(self):
 
@@ -219,53 +206,39 @@ class KeypairsTestV21(test.TestCase):
             },
         }
 
-        req = webob.Request.blank(self.base_url + '/os-keypairs')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers['Content-Type'] = 'application/json'
-        res = req.get_response(self.app)
-        self.assertEqual(res.status_int, 403)
-        res_dict = jsonutils.loads(res.body)
-        self.assertEqual(
-            "Quota exceeded, too many key pairs.",
-            res_dict['forbidden']['message'])
+        req = fakes.HTTPRequest.blank('')
+        ex = self.assertRaises(webob.exc.HTTPForbidden,
+                               self.controller.create, req, body=body)
+        self.assertIn('Quota exceeded, too many key pairs.', ex.explanation)
 
     def test_keypair_create_duplicate(self):
         self.stubs.Set(db, "key_pair_create", db_key_pair_create_duplicate)
         body = {'keypair': {'name': 'create_duplicate'}}
-        req = webob.Request.blank(self.base_url + '/os-keypairs')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers['Content-Type'] = 'application/json'
-        res = req.get_response(self.app)
-        self.assertEqual(res.status_int, 409)
-        res_dict = jsonutils.loads(res.body)
-        self.assertEqual(
-            "Key pair 'create_duplicate' already exists.",
-            res_dict['conflictingRequest']['message'])
+        req = fakes.HTTPRequest.blank('')
+        ex = self.assertRaises(webob.exc.HTTPConflict,
+                               self.controller.create, req, body=body)
+        self.assertIn("Key pair 'create_duplicate' already exists.",
+                      ex.explanation)
 
     def test_keypair_delete(self):
-        req = webob.Request.blank(self.base_url + '/os-keypairs/FAKE')
-        req.method = 'DELETE'
-        req.headers['Content-Type'] = 'application/json'
-        res = req.get_response(self.app)
-        self.assertEqual(res.status_int, 202)
+        req = fakes.HTTPRequest.blank('')
+        self.controller.delete(req, 'FAKE')
 
     def test_keypair_get_keypair_not_found(self):
-        req = webob.Request.blank(self.base_url + '/os-keypairs/DOESNOTEXIST')
-        res = req.get_response(self.app)
-        self.assertEqual(res.status_int, 404)
+        req = fakes.HTTPRequest.blank('')
+        self.assertRaises(webob.exc.HTTPNotFound,
+                          self.controller.show, req, 'DOESNOTEXIST')
 
     def test_keypair_delete_not_found(self):
 
         def db_key_pair_get_not_found(context, user_id, name):
             raise exception.KeypairNotFound(user_id=user_id, name=name)
 
-        self.stubs.Set(db, "key_pair_get",
+        self.stubs.Set(db, "key_pair_destroy",
                        db_key_pair_get_not_found)
-        req = webob.Request.blank(self.base_url + '/os-keypairs/WHAT')
-        res = req.get_response(self.app)
-        self.assertEqual(res.status_int, 404)
+        req = fakes.HTTPRequest.blank('')
+        self.assertRaises(webob.exc.HTTPNotFound,
+                          self.controller.delete, req, 'FAKE')
 
     def test_keypair_show(self):
 
@@ -275,12 +248,8 @@ class KeypairsTestV21(test.TestCase):
 
         self.stubs.Set(db, "key_pair_get", _db_key_pair_get)
 
-        req = webob.Request.blank(self.base_url + '/os-keypairs/FAKE')
-        req.method = 'GET'
-        req.headers['Content-Type'] = 'application/json'
-        res = req.get_response(self.app)
-        res_dict = jsonutils.loads(res.body)
-        self.assertEqual(res.status_int, 200)
+        req = fakes.HTTPRequest.blank('')
+        res_dict = self.controller.show(req, 'FAKE')
         self.assertEqual('foo', res_dict['keypair']['name'])
         self.assertEqual('XXX', res_dict['keypair']['public_key'])
         self.assertEqual('YYY', res_dict['keypair']['fingerprint'])
@@ -292,11 +261,9 @@ class KeypairsTestV21(test.TestCase):
 
         self.stubs.Set(db, "key_pair_get", _db_key_pair_get)
 
-        req = webob.Request.blank(self.base_url + '/os-keypairs/FAKE')
-        req.method = 'GET'
-        req.headers['Content-Type'] = 'application/json'
-        res = req.get_response(self.app)
-        self.assertEqual(res.status_int, 404)
+        req = fakes.HTTPRequest.blank('')
+        self.assertRaises(webob.exc.HTTPNotFound,
+                          self.controller.show, req, 'FAKE')
 
     def test_show_server(self):
         self.stubs.Set(db, 'instance_get',
@@ -332,7 +299,6 @@ class KeypairsTestV21(test.TestCase):
 class KeypairPolicyTestV21(test.TestCase):
     KeyPairController = keypairs_v21.KeypairController()
     policy_path = 'compute_extension:v3:os-keypairs'
-    base_url = '/v2/fake'
 
     def setUp(self):
         super(KeypairPolicyTestV21, self).setUp()
@@ -354,7 +320,7 @@ class KeypairPolicyTestV21(test.TestCase):
         rules = {self.policy_path + ':index':
                      common_policy.parse_rule('role:admin')}
         policy.set_rules(rules)
-        req = fakes.HTTPRequest.blank(self.base_url + '/os-keypairs')
+        req = fakes.HTTPRequest.blank('')
         self.assertRaises(exception.Forbidden,
                           self.KeyPairController.index,
                           req)
@@ -363,7 +329,7 @@ class KeypairPolicyTestV21(test.TestCase):
         rules = {self.policy_path + ':index':
                      common_policy.parse_rule('')}
         policy.set_rules(rules)
-        req = fakes.HTTPRequest.blank(self.base_url + '/os-keypairs')
+        req = fakes.HTTPRequest.blank('')
         res = self.KeyPairController.index(req)
         self.assertIn('keypairs', res)
 
@@ -371,7 +337,7 @@ class KeypairPolicyTestV21(test.TestCase):
         rules = {self.policy_path + ':show':
                      common_policy.parse_rule('role:admin')}
         policy.set_rules(rules)
-        req = fakes.HTTPRequest.blank(self.base_url + '/os-keypairs/FAKE')
+        req = fakes.HTTPRequest.blank('')
         self.assertRaises(exception.Forbidden,
                           self.KeyPairController.show,
                           req, 'FAKE')
@@ -380,7 +346,7 @@ class KeypairPolicyTestV21(test.TestCase):
         rules = {self.policy_path + ':show':
                      common_policy.parse_rule('')}
         policy.set_rules(rules)
-        req = fakes.HTTPRequest.blank(self.base_url + '/os-keypairs/FAKE')
+        req = fakes.HTTPRequest.blank('')
         res = self.KeyPairController.show(req, 'FAKE')
         self.assertIn('keypair', res)
 
@@ -389,7 +355,7 @@ class KeypairPolicyTestV21(test.TestCase):
         rules = {self.policy_path + ':create':
                      common_policy.parse_rule('role:admin')}
         policy.set_rules(rules)
-        req = fakes.HTTPRequest.blank(self.base_url + '/os-keypairs')
+        req = fakes.HTTPRequest.blank('')
         req.method = 'POST'
         self.assertRaises(exception.Forbidden,
                           self.KeyPairController.create,
@@ -400,7 +366,7 @@ class KeypairPolicyTestV21(test.TestCase):
         rules = {self.policy_path + ':create':
                      common_policy.parse_rule('')}
         policy.set_rules(rules)
-        req = fakes.HTTPRequest.blank(self.base_url + '/os-keypairs')
+        req = fakes.HTTPRequest.blank('')
         req.method = 'POST'
         res = self.KeyPairController.create(req, body=body)
         self.assertIn('keypair', res)
@@ -409,7 +375,7 @@ class KeypairPolicyTestV21(test.TestCase):
         rules = {self.policy_path + ':delete':
                      common_policy.parse_rule('role:admin')}
         policy.set_rules(rules)
-        req = fakes.HTTPRequest.blank(self.base_url + '/os-keypairs/FAKE')
+        req = fakes.HTTPRequest.blank('')
         req.method = 'DELETE'
         self.assertRaises(exception.Forbidden,
                           self.KeyPairController.delete,
@@ -419,7 +385,7 @@ class KeypairPolicyTestV21(test.TestCase):
         rules = {self.policy_path + ':delete':
                      common_policy.parse_rule('')}
         policy.set_rules(rules)
-        req = fakes.HTTPRequest.blank(self.base_url + '/os-keypairs/FAKE')
+        req = fakes.HTTPRequest.blank('')
         req.method = 'DELETE'
         res = self.KeyPairController.delete(req, 'FAKE')
 
@@ -491,10 +457,11 @@ class KeypairsXMLSerializerTest(test.TestCase):
 
 
 class KeypairsTestV2(KeypairsTestV21):
+    validation_error = webob.exc.HTTPBadRequest
 
-    def _setup_app(self):
-        self.app = fakes.wsgi_app(init_only=('os-keypairs',))
+    def _setup_app_and_controller(self):
         self.app_server = fakes.wsgi_app(init_only=('servers',))
+        self.controller = keypairs_v2.KeypairController()
 
 
 class KeypairPolicyTestV2(KeypairPolicyTestV21):
