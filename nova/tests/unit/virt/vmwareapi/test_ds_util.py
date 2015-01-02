@@ -58,6 +58,32 @@ class DsUtilTestCase(test.NoDBTestCase):
             _wait_for_task.assert_has_calls([
                    mock.call('fake_delete_task')])
 
+    def test_file_copy(self):
+        def fake_call_method(module, method, *args, **kwargs):
+            self.assertEqual('CopyDatastoreFile_Task', method)
+            src_name = kwargs.get('sourceName')
+            self.assertEqual('[ds] fake/path/src_file', src_name)
+            src_dc_ref = kwargs.get('sourceDatacenter')
+            self.assertEqual('fake-src-dc-ref', src_dc_ref)
+            dst_name = kwargs.get('destinationName')
+            self.assertEqual('[ds] fake/path/dst_file', dst_name)
+            dst_dc_ref = kwargs.get('destinationDatacenter')
+            self.assertEqual('fake-dst-dc-ref', dst_dc_ref)
+            return 'fake_copy_task'
+
+        with contextlib.nested(
+            mock.patch.object(self.session, '_wait_for_task'),
+            mock.patch.object(self.session, '_call_method',
+                              fake_call_method)
+        ) as (_wait_for_task, _call_method):
+            src_ds_path = ds_util.DatastorePath('ds', 'fake/path', 'src_file')
+            dst_ds_path = ds_util.DatastorePath('ds', 'fake/path', 'dst_file')
+            ds_util.file_copy(self.session,
+                              str(src_ds_path), 'fake-src-dc-ref',
+                              str(dst_ds_path), 'fake-dst-dc-ref')
+            _wait_for_task.assert_has_calls([
+                   mock.call('fake_copy_task')])
+
     def test_file_move(self):
         def fake_call_method(module, method, *args, **kwargs):
             self.assertEqual('MoveDatastoreFile_Task', method)
