@@ -40,9 +40,9 @@ class FakeResponse(wsgi.ResponseObject):
     pass
 
 
-class PciServerControllerTest(test.NoDBTestCase):
+class PciServerControllerTestV21(test.NoDBTestCase):
     def setUp(self):
-        super(PciServerControllerTest, self).setUp()
+        super(PciServerControllerTestV21, self).setUp()
         self.controller = pci.PciServerController()
         self.fake_obj = {'server': {'addresses': {},
                                     'id': 'fb08',
@@ -82,7 +82,7 @@ class PciServerControllerTest(test.NoDBTestCase):
             return self.inst
 
         resp = FakeResponse(self.fake_obj, '')
-        req = fakes.HTTPRequestV3.blank('/os-pci/1', use_admin_context=True)
+        req = fakes.HTTPRequest.blank('/os-pci/1', use_admin_context=True)
         self.stubs.Set(req, 'get_db_instance', fake_get_db_instance)
         self.controller.show(req, resp, '1')
         self.assertEqual([{'id': 1}],
@@ -93,7 +93,7 @@ class PciServerControllerTest(test.NoDBTestCase):
             return self.inst
 
         resp = FakeResponse(self.fake_list, '')
-        req = fakes.HTTPRequestV3.blank('/os-pci/detail',
+        req = fakes.HTTPRequest.blank('/os-pci/detail',
                                         use_admin_context=True)
         self.stubs.Set(req, 'get_db_instance', fake_get_db_instance)
         self.controller.detail(req, resp)
@@ -101,9 +101,9 @@ class PciServerControllerTest(test.NoDBTestCase):
                          resp.obj['servers'][0]['os-pci:pci_devices'])
 
 
-class PciHypervisorControllerTest(test.NoDBTestCase):
+class PciHypervisorControllerTestV21(test.NoDBTestCase):
     def setUp(self):
-        super(PciHypervisorControllerTest, self).setUp()
+        super(PciHypervisorControllerTestV21, self).setUp()
         self.controller = pci.PciHypervisorController()
         self.fake_objs = dict(hypervisors=[
             dict(id=1,
@@ -124,7 +124,7 @@ class PciHypervisorControllerTest(test.NoDBTestCase):
                 fake_compute_node['pci_stats'])
             return fake_compute_node
 
-        req = fakes.HTTPRequestV3.blank('/os-hypervisors/1',
+        req = fakes.HTTPRequest.blank('/os-hypervisors/1',
                                         use_admin_context=True)
         resp = FakeResponse(self.fake_obj, '')
         self.stubs.Set(req, 'get_db_compute_node', fake_get_db_compute_node)
@@ -141,7 +141,7 @@ class PciHypervisorControllerTest(test.NoDBTestCase):
                 fake_compute_node['pci_stats'])
             return fake_compute_node
 
-        req = fakes.HTTPRequestV3.blank('/os-hypervisors/detail',
+        req = fakes.HTTPRequest.blank('/os-hypervisors/detail',
                                         use_admin_context=True)
         resp = FakeResponse(self.fake_objs, '')
         self.stubs.Set(req, 'get_db_compute_node', fake_get_db_compute_node)
@@ -153,9 +153,9 @@ class PciHypervisorControllerTest(test.NoDBTestCase):
                          resp.obj['hypervisors'][0]['os-pci:pci_stats'][0])
 
 
-class PciControlletest(test.NoDBTestCase):
+class PciControlletestV21(test.NoDBTestCase):
     def setUp(self):
-        super(PciControlletest, self).setUp()
+        super(PciControlletestV21, self).setUp()
         self.controller = pci.PciController()
 
     def test_show(self):
@@ -163,7 +163,7 @@ class PciControlletest(test.NoDBTestCase):
             return test_pci_device.fake_db_dev
 
         self.stubs.Set(db, 'pci_device_get_by_id', fake_pci_device_get_by_id)
-        req = fakes.HTTPRequestV3.blank('/os-pci/1', use_admin_context=True)
+        req = fakes.HTTPRequest.blank('/os-pci/1', use_admin_context=True)
         result = self.controller.show(req, '1')
         dist = {'pci_device': {'address': 'a',
                                'compute_node_id': 1,
@@ -183,7 +183,7 @@ class PciControlletest(test.NoDBTestCase):
             raise exception.PciDeviceNotFoundById(id=id)
 
         self.stubs.Set(db, 'pci_device_get_by_id', fake_pci_device_get_by_id)
-        req = fakes.HTTPRequestV3.blank('/os-pci/0', use_admin_context=True)
+        req = fakes.HTTPRequest.blank('/os-pci/0', use_admin_context=True)
         self.assertRaises(exc.HTTPNotFound, self.controller.show, req, '0')
 
     def _fake_compute_node_get_all(self, context):
@@ -202,7 +202,7 @@ class PciControlletest(test.NoDBTestCase):
         self.stubs.Set(db, 'pci_device_get_all_by_node',
                        self._fake_pci_device_get_all_by_node)
 
-        req = fakes.HTTPRequestV3.blank('/os-pci', use_admin_context=True)
+        req = fakes.HTTPRequest.blank('/os-pci', use_admin_context=True)
         result = self.controller.index(req)
         dist = {'pci_devices': [test_pci_device.fake_db_dev,
                                 test_pci_device.fake_db_dev_1]}
@@ -221,7 +221,7 @@ class PciControlletest(test.NoDBTestCase):
                        self._fake_compute_node_get_all)
         self.stubs.Set(db, 'pci_device_get_all_by_node',
                        self._fake_pci_device_get_all_by_node)
-        req = fakes.HTTPRequestV3.blank('/os-pci/detail',
+        req = fakes.HTTPRequest.blank('/os-pci/detail',
                                         use_admin_context=True)
         result = self.controller.detail(req)
         dist = {'pci_devices': [test_pci_device.fake_db_dev,
