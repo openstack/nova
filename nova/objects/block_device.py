@@ -69,7 +69,7 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject,
 
     obj_relationships = {
         'instance': [('1.0', '1.13'), ('1.2', '1.14'), ('1.3', '1.15'),
-                     ('1.4', '1.16')],
+                     ('1.4', '1.16'), ('1.5', '1.17')],
     }
 
     @staticmethod
