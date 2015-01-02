@@ -49,7 +49,7 @@ def network_dict(context, network, extended):
             if extended:
                 fields += extended_fields
         # TODO(mriedem): Remove the NovaObject type check once the
-        # neutronv2 API is returning Network objects from get/get_all.
+        # network.create API is returning objects.
         is_obj = isinstance(network, base_obj.NovaObject)
         result = {}
         for field in fields:
@@ -58,14 +58,18 @@ def network_dict(context, network, extended):
             # before the objects conversion.
             if is_obj and isinstance(network.fields[field].AUTO_TYPE,
                                      obj_fields.IPAddress):
-                val = network.get(field)
+                # NOTE(danms): Here, network should be an object, which could
+                # have come from neutron and thus be missing most of the
+                # attributes. Providing a default to get() avoids trying to
+                # lazy-load missing attributes.
+                val = network.get(field, None)
                 if val is not None:
-                    result[field] = str(network.get(field))
+                    result[field] = str(val)
                 else:
                     result[field] = val
             else:
                 # It's either not an object or it's not an IPAddress field.
-                result[field] = network.get(field)
+                result[field] = network.get(field, None)
         uuid = network.get('uuid')
         if uuid:
             result['id'] = uuid

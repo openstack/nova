@@ -2553,7 +2553,8 @@ class TestNeutronv2(TestNeutronv2Base):
         self.moxed_client.list_networks().AndReturn({'networks': []})
         self.mox.ReplayAll()
         networks = api.get_all(self.context)
-        self.assertEqual(networks, [])
+        self.assertIsInstance(networks, objects.NetworkList)
+        self.assertEqual(0, len(networks))
 
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
     def test_get_port_vnic_info_1(self, mock_get_client):
@@ -2933,6 +2934,33 @@ class TestNeutronv2WithMock(test.TestCase):
     def test_show_port_forbidden(self):
         self._test_show_port_exceptions(exceptions.Unauthorized,
                                         exception.Forbidden)
+
+    def test_get_network(self):
+        api = neutronapi.API()
+        with mock.patch.object(client.Client, 'show_network') as mock_show:
+            mock_show.return_value = {
+                'network': {'id': 'fake-uuid', 'name': 'fake-network'}
+            }
+            net_obj = api.get(self.context, 'fake-uuid')
+            self.assertEqual('fake-network', net_obj.label)
+            self.assertEqual('fake-network', net_obj.name)
+            self.assertEqual('fake-uuid', net_obj.uuid)
+
+    def test_get_all_networks(self):
+        api = neutronapi.API()
+        with mock.patch.object(client.Client, 'list_networks') as mock_list:
+            mock_list.return_value = {
+                'networks': [
+                    {'id': 'fake-uuid1', 'name': 'fake-network1'},
+                    {'id': 'fake-uuid2', 'name': 'fake-network2'},
+                    ]}
+            net_objs = api.get_all(self.context)
+            self.assertIsInstance(net_objs, objects.NetworkList)
+            self.assertEqual(2, len(net_objs))
+            self.assertEqual(('fake-uuid1', 'fake-network1'),
+                             (net_objs[0].uuid, net_objs[0].name))
+            self.assertEqual(('fake-uuid2', 'fake-network2'),
+                             (net_objs[1].uuid, net_objs[1].name))
 
 
 class TestNeutronv2ModuleMethods(test.TestCase):

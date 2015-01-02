@@ -57,9 +57,12 @@ authorize = extensions.extension_authorizer('compute', 'os-tenant-networks')
 
 
 def network_dict(network):
-    return {"id": network.get("uuid") or network.get("id"),
-                        "cidr": str(network.get("cidr")),
-                        "label": network.get("label")}
+    # NOTE(danms): Here, network should be an object, which could have come
+    # from neutron and thus be missing most of the attributes. Providing a
+    # default to get() avoids trying to lazy-load missing attributes.
+    return {"id": network.get("uuid", None) or network.get("id", None),
+                        "cidr": str(network.get("cidr", None)),
+                        "label": network.get("label", None)}
 
 
 class NetworkController(object):
