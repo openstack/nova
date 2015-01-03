@@ -75,6 +75,10 @@ underscore_import_check = re.compile(r"(.)*import _(.)*")
 custom_underscore_check = re.compile(r"(.)*_\s*=\s*(.)*")
 api_version_re = re.compile(r"@.*api_version")
 
+# TODO(dims): When other oslo libraries switch over non-namespace'd
+# imports, we need to add them to the regexp below.
+oslo_namespace_imports = re.compile(r"from[\s]*oslo[.](concurrency)")
+
 
 class BaseASTChecker(ast.NodeVisitor):
     """Provides a simple framework for writing AST-based checks.
@@ -445,6 +449,14 @@ class CheckForTransAdd(BaseASTChecker):
         super(CheckForTransAdd, self).generic_visit(node)
 
 
+def check_oslo_namespace_imports(logical_line, blank_before, filename):
+    if re.match(oslo_namespace_imports, logical_line):
+        msg = ("N333: '%s' must be used instead of '%s'.") % (
+               logical_line.replace('oslo.', 'oslo_'),
+               logical_line)
+        yield(0, msg)
+
+
 def factory(register):
     register(import_no_db_in_virt)
     register(no_db_session_in_public_api)
@@ -466,3 +478,4 @@ def factory(register):
     register(check_api_version_decorator)
     register(CheckForStrUnicodeExc)
     register(CheckForTransAdd)
+    register(check_oslo_namespace_imports)

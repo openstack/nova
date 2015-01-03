@@ -45,6 +45,7 @@ Nova Specific Commandments
 - [N330] Validate that LOG.warning messages use _LW.
 - [N331] Change LOG.warn on LOG.warning.
 - [N332] Check that the api_version decorator is the first decorator on a method
+- [N333] Check for oslo library imports use the non-namespaced packages
 
 Creating Unit Tests
 -------------------
