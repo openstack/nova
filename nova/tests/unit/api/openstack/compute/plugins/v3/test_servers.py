@@ -231,6 +231,24 @@ class ServersControllerTest(ControllerTest):
         res = self.controller._get_requested_networks(requested_networks)
         self.assertEqual([(None, None, port, None)], res.as_tuples())
 
+    def test_requested_networks_with_duplicate_networks(self):
+        # duplicate networks are allowed only for nova neutron v2.0
+        network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+        requested_networks = [{'uuid': network}, {'uuid': network}]
+        self.assertRaises(
+            webob.exc.HTTPBadRequest,
+            self.controller._get_requested_networks,
+            requested_networks)
+
+    def test_requested_networks_with_neutronv2_and_duplicate_networks(self):
+        # duplicate networks are allowed only for nova neutron v2.0
+        self.flags(network_api_class='nova.network.neutronv2.api.API')
+        network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+        requested_networks = [{'uuid': network}, {'uuid': network}]
+        res = self.controller._get_requested_networks(requested_networks)
+        self.assertEqual([(network, None, None, None),
+                          (network, None, None, None)], res.as_tuples())
+
     def test_requested_networks_neutronv2_enabled_conflict_on_fixed_ip(self):
         self.flags(network_api_class='nova.network.neutronv2.api.API')
         network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
