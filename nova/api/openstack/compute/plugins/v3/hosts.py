@@ -72,8 +72,8 @@ class HostController(wsgi.Controller):
         |     'service': 'scheduler',
         |     'zone': 'internal'},
         |    {'host_name': 'vol1.host.com',
-        |     'service': 'volume'},
-        |     'zone': 'internal']}
+        |     'service': 'volume',
+        |     'zone': 'internal'}]}
 
         """
         context = req.environ['nova.context']
