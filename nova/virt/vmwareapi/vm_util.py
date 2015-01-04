@@ -1433,3 +1433,25 @@ def power_off_instance(session, instance, vm_ref=None):
 
 def get_ephemeral_name(id):
     return 'ephemeral_%d.vmdk' % id
+
+
+def _detach_and_delete_devices_config_spec(client_factory, devices):
+    config_spec = client_factory.create('ns0:VirtualMachineConfigSpec')
+    device_config_spec = []
+    for device in devices:
+        virtual_device_config = client_factory.create(
+                                'ns0:VirtualDeviceConfigSpec')
+        virtual_device_config.operation = "remove"
+        virtual_device_config.device = device
+        virtual_device_config.fileOperation = "destroy"
+        device_config_spec.append(virtual_device_config)
+    config_spec.deviceChange = device_config_spec
+    return config_spec
+
+
+def detach_devices_from_vm(session, vm_ref, devices):
+    """Detach specified devices from VM."""
+    client_factory = session.vim.client.factory
+    config_spec = _detach_and_delete_devices_config_spec(
+        client_factory, devices)
+    reconfigure_vm(session, vm_ref, config_spec)
