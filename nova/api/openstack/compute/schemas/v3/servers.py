@@ -49,16 +49,11 @@ base_create = {
                 }
             },
             'required': ['name', 'flavorRef'],
-            # TODO(oomichi): After all extension schema patches are merged,
-            # this code should be enabled. If enabling before merger, API
-            # extension parameters would be considered as bad parameters.
-            # 'additionalProperties': False,
+            'additionalProperties': False,
         },
     },
     'required': ['server'],
-    # TODO(oomichi): Now v3 code will be used for v2.1 only and v2.1 needs
-    # to allow additionalProperties for some extensions.
-    # 'additionalProperties': False,
+    'additionalProperties': False,
 }
 
 base_update = {
