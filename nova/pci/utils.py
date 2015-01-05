@@ -85,10 +85,10 @@ def get_function_by_ifname(ifname):
         return None, False
 
 
-def is_physical_function(PciAddress):
+def is_physical_function(pci_addr):
     dev_path = "/sys/bus/pci/devices/%(d)s:%(b)s:%(s)s.%(f)s/" % {
-        "d": PciAddress.domain, "b": PciAddress.bus,
-        "s": PciAddress.slot, "f": PciAddress.func}
+        "d": pci_addr.domain, "b": pci_addr.bus,
+        "s": pci_addr.slot, "f": pci_addr.func}
     try:
         dev_info = os.listdir(dev_path)
         for dev_file in dev_info:
