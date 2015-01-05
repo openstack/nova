@@ -37,6 +37,7 @@ from oslo.config import cfg
 from oslo import messaging
 from oslo.utils import excutils
 from oslo.utils import importutils
+from oslo.utils import netutils
 from oslo.utils import strutils
 from oslo.utils import timeutils
 
@@ -1510,7 +1511,7 @@ class NetworkManager(manager.Manager):
             # check if the fixed IP address is valid and
             # it actually belongs to the network
             if address is not None:
-                if not utils.is_valid_ip_address(address):
+                if not netutils.is_valid_ip(address):
                     raise exception.FixedIpInvalid(address=address)
 
                 fixed_ip_ref = objects.FixedIP.get_by_address(

@@ -25,6 +25,7 @@ from oslo.config import cfg
 from oslo.db import exception as db_exc
 from oslo import messaging
 from oslo.utils import importutils
+from oslo.utils import netutils
 from oslo_concurrency import processutils
 import six
 
@@ -2711,7 +2712,7 @@ class AllocateTestCase(test.TestCase):
             project_id=project_id, macs=None)
         self.assertEqual(1, len(nw_info))
         fixed_ip = nw_info.fixed_ips()[0]['address']
-        self.assertTrue(utils.is_valid_ipv4(fixed_ip))
+        self.assertTrue(netutils.is_valid_ipv4(fixed_ip))
         self.network.deallocate_for_instance(self.context,
                 instance=inst)
 

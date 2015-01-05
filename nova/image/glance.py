@@ -27,6 +27,7 @@ import glanceclient
 import glanceclient.exc
 from oslo.config import cfg
 from oslo.serialization import jsonutils
+from oslo.utils import netutils
 from oslo.utils import timeutils
 import six
 import six.moves.urllib.parse as urlparse
@@ -35,7 +36,6 @@ from nova import exception
 from nova.i18n import _, _LE
 import nova.image.download as image_xfers
 from nova.openstack.common import log as logging
-from nova import utils
 
 
 glance_opts = [
@@ -79,7 +79,7 @@ CONF.import_group('ssl', 'nova.openstack.common.sslutils')
 def generate_glance_url():
     """Generate the URL to glance."""
     glance_host = CONF.glance.host
-    if utils.is_valid_ipv6(glance_host):
+    if netutils.is_valid_ipv6(glance_host):
         glance_host = '[%s]' % glance_host
     return "%s://%s:%d" % (CONF.glance.protocol, glance_host,
                            CONF.glance.port)
@@ -140,7 +140,7 @@ def _create_glance_client(context, host, port, use_ssl, version=1):
         # header 'X-Auth-Token' and 'token'
         params['token'] = context.auth_token
         params['identity_headers'] = generate_identity_headers(context)
-    if utils.is_valid_ipv6(host):
+    if netutils.is_valid_ipv6(host):
         # if so, it is ipv6 address, need to wrap it with '[]'
         host = '[%s]' % host
     endpoint = '%s://%s:%s' % (scheme, host, port)

@@ -492,25 +492,6 @@ def is_int_like(val):
         return False
 
 
-def is_valid_ipv4(address):
-    """Verify that address represents a valid IPv4 address."""
-    try:
-        return netaddr.valid_ipv4(address)
-    except (ValueError, netaddr.AddrFormatError):
-        return False
-
-
-def is_valid_ipv6(address):
-    try:
-        return netaddr.valid_ipv6(address)
-    except (ValueError, netaddr.AddrFormatError):
-        return False
-
-
-def is_valid_ip_address(address):
-    return is_valid_ipv4(address) or is_valid_ipv6(address)
-
-
 def is_valid_ipv6_cidr(address):
     try:
         netaddr.IPNetwork(address, version=6).cidr

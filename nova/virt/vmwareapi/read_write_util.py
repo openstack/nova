@@ -24,10 +24,10 @@ import httplib
 import urllib
 import urllib2
 
+from oslo.utils import netutils
 import six.moves.urllib.parse as urlparse
 
 from nova.openstack.common import log as logging
-from nova import utils
 
 LOG = logging.getLogger(__name__)
 
@@ -107,7 +107,7 @@ class VMwareHTTPFile(object):
         raise NotImplementedError()
 
     def _get_base_url(self, scheme, host, file_path):
-        if utils.is_valid_ipv6(host):
+        if netutils.is_valid_ipv6(host):
             base_url = "%s://[%s]/folder/%s" % (scheme, host,
                                                 urllib.pathname2url(file_path))
         else:

@@ -20,6 +20,7 @@ import re
 
 from oslo.config import cfg
 from oslo import messaging
+from oslo.utils import netutils
 from oslo.utils import strutils
 from oslo.utils import timeutils
 import six
@@ -750,12 +751,12 @@ class Controller(wsgi.Controller):
             raise exc.HTTPBadRequest(explanation=expl)
 
     def _validate_access_ipv4(self, address):
-        if not utils.is_valid_ipv4(address):
+        if not netutils.is_valid_ipv4(address):
             expl = _('accessIPv4 is not proper IPv4 format')
             raise exc.HTTPBadRequest(explanation=expl)
 
     def _validate_access_ipv6(self, address):
-        if not utils.is_valid_ipv6(address):
+        if not netutils.is_valid_ipv6(address):
             expl = _('accessIPv6 is not proper IPv6 format')
             raise exc.HTTPBadRequest(explanation=expl)
 
