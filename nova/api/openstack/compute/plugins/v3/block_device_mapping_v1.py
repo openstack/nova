@@ -18,9 +18,9 @@
 from oslo.utils import strutils
 from webob import exc
 
+from nova.api.openstack.compute.schemas.v3 import block_device_mapping_v1 as \
+    schema_block_device_mapping
 from nova.api.openstack import extensions
-from nova import block_device
-from nova import exception
 from nova.i18n import _
 
 ALIAS = "os-block-device-mapping-v1"
@@ -54,17 +54,7 @@ class BlockDeviceMappingV1(extensions.V3APIExtensionBase):
                      'is not allowed in the same request.')
             raise exc.HTTPBadRequest(explanation=expl)
 
-        if not isinstance(block_device_mapping, list):
-            msg = _('block_device_mapping must be a list')
-            raise exc.HTTPBadRequest(explanation=msg)
-
         for bdm in block_device_mapping:
-            try:
-                block_device.validate_device_name(bdm.get("device_name"))
-                block_device.validate_and_default_volume_size(bdm)
-            except exception.InvalidBDMFormat as e:
-                raise exc.HTTPBadRequest(explanation=e.format_message())
-
             if 'delete_on_termination' in bdm:
                 bdm['delete_on_termination'] = strutils.bool_from_string(
                     bdm['delete_on_termination'])
@@ -73,3 +63,6 @@ class BlockDeviceMappingV1(extensions.V3APIExtensionBase):
             create_kwargs['block_device_mapping'] = block_device_mapping
             # Sets the legacy_bdm flag if we got a legacy block device mapping.
             create_kwargs['legacy_bdm'] = True
+
+    def get_server_create_schema(self):
+        return schema_block_device_mapping.server_create

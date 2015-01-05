@@ -35,6 +35,7 @@ CONF = cfg.CONF
 
 
 class BlockDeviceMappingTestV21(test.TestCase):
+    validation_error = exception.ValidationError
 
     def _setup_controller(self):
         ext_info = plugins.LoadedExtensionInfo()
@@ -55,16 +56,11 @@ class BlockDeviceMappingTestV21(test.TestCase):
         fake.stub_out_image_service(self.stubs)
         self.volume_id = fakes.FAKE_UUID
         self.bdm = [{
-            'id': 1,
             'no_device': None,
-            'virtual_name': None,
-            'snapshot_id': None,
+            'virtual_name': 'root',
             'volume_id': self.volume_id,
-            'status': 'active',
             'device_name': 'vda',
-            'delete_on_termination': False,
-            'volume_image_metadata':
-                {'test_key': 'test_value'}
+            'delete_on_termination': False
         }]
 
     def _get_servers_body(self, no_image=False):
@@ -119,7 +115,12 @@ class BlockDeviceMappingTestV21(test.TestCase):
         """
         self.mox.StubOutWithMock(compute_api.API, '_validate_bdm')
         self.mox.StubOutWithMock(compute_api.API, '_get_bdm_image_metadata')
-        volume = self.bdm[0]
+        volume = {
+            'id': 1,
+            'status': 'active',
+            'volume_image_metadata':
+                {'test_key': 'test_value'}
+        }
         compute_api.API._validate_bdm(mox.IgnoreArg(),
                 mox.IgnoreArg(), mox.IgnoreArg(),
                 mox.IgnoreArg()).AndReturn(True)
@@ -157,11 +158,8 @@ class BlockDeviceMappingTestV21(test.TestCase):
     @mock.patch('nova.compute.api.API._get_bdm_image_metadata')
     def test_create_instance_non_bootable_volume_fails(self, fake_bdm_meta):
         bdm = [{
-            'id': 1,
-            'bootable': False,
             'volume_id': self.volume_id,
-            'status': 'active',
-            'device_name': 'vda',
+            'device_name': 'vda'
         }]
         params = {'block_device_mapping': bdm}
         fake_bdm_meta.side_effect = exception.InvalidBDMVolumeNotBootable(id=1)
@@ -169,6 +167,7 @@ class BlockDeviceMappingTestV21(test.TestCase):
                           self._test_create, params, no_image=True)
 
     def test_create_instance_with_device_name_not_string(self):
+        self.bdm[0]['device_name'] = 123
         old_create = compute_api.API.create
         self.params = {'block_device_mapping': self.bdm}
 
@@ -177,13 +176,32 @@ class BlockDeviceMappingTestV21(test.TestCase):
             return old_create(*args, **kwargs)
 
         self.stubs.Set(compute_api.API, 'create', create)
-        self.assertRaises(exc.HTTPBadRequest,
+        self.assertRaises(self.validation_error,
+                          self._test_create, self.params)
+
+    def test_create_instance_with_snapshot_volume_id_none(self):
+        old_create = compute_api.API.create
+        bdm = [{
+            'no_device': None,
+            'snapshot_id': None,
+            'volume_id': None,
+            'device_name': 'vda',
+            'delete_on_termination': False
+        }]
+        self.params = {'block_device_mapping': bdm}
+
+        def create(*args, **kwargs):
+            self.assertEqual(kwargs['block_device_mapping'], bdm)
+            return old_create(*args, **kwargs)
+
+        self.stubs.Set(compute_api.API, 'create', create)
+        self.assertRaises(self.validation_error,
                           self._test_create, self.params)
 
     @mock.patch.object(compute_api.API, 'create')
     def test_create_instance_with_bdm_param_not_list(self, mock_create):
         self.params = {'block_device_mapping': '/dev/vdb'}
-        self.assertRaises(exc.HTTPBadRequest,
+        self.assertRaises(self.validation_error,
                           self._test_create, self.params)
 
     def test_create_instance_with_device_name_empty(self):
@@ -196,7 +214,7 @@ class BlockDeviceMappingTestV21(test.TestCase):
             return old_create(*args, **kwargs)
 
         self.stubs.Set(compute_api.API, 'create', create)
-        self.assertRaises(exc.HTTPBadRequest,
+        self.assertRaises(self.validation_error,
                           self._test_create, params)
 
     def test_create_instance_with_device_name_too_long(self):
@@ -209,7 +227,7 @@ class BlockDeviceMappingTestV21(test.TestCase):
             return old_create(*args, **kwargs)
 
         self.stubs.Set(compute_api.API, 'create', create)
-        self.assertRaises(exc.HTTPBadRequest,
+        self.assertRaises(self.validation_error,
                           self._test_create, params)
 
     def test_create_instance_with_space_in_device_name(self):
@@ -223,11 +241,11 @@ class BlockDeviceMappingTestV21(test.TestCase):
             return old_create(*args, **kwargs)
 
         self.stubs.Set(compute_api.API, 'create', create)
-        self.assertRaises(exc.HTTPBadRequest,
+        self.assertRaises(self.validation_error,
                           self._test_create, params)
 
     def test_create_instance_with_invalid_size(self):
-        bdm = [{'delete_on_termination': 1,
+        bdm = [{'delete_on_termination': True,
                 'device_name': 'vda',
                 'volume_size': "hello world",
                 'volume_id': '11111111-1111-1111-1111-111111111111'}]
@@ -239,30 +257,30 @@ class BlockDeviceMappingTestV21(test.TestCase):
             return old_create(*args, **kwargs)
 
         self.stubs.Set(compute_api.API, 'create', create)
-        self.assertRaises(exc.HTTPBadRequest,
+        self.assertRaises(self.validation_error,
                           self._test_create, params)
 
     def test_create_instance_with_bdm_delete_on_termination(self):
-        bdm = [{'device_name': 'foo1', 'volume_id': 'fake_vol',
-                'delete_on_termination': 1},
-               {'device_name': 'foo2', 'volume_id': 'fake_vol',
+        bdm = [{'device_name': 'foo1', 'volume_id': fakes.FAKE_UUID,
+                'delete_on_termination': 'True'},
+               {'device_name': 'foo2', 'volume_id': fakes.FAKE_UUID,
                 'delete_on_termination': True},
-               {'device_name': 'foo3', 'volume_id': 'fake_vol',
+               {'device_name': 'foo3', 'volume_id': fakes.FAKE_UUID,
                 'delete_on_termination': 'invalid'},
-               {'device_name': 'foo4', 'volume_id': 'fake_vol',
-                'delete_on_termination': 0},
-               {'device_name': 'foo5', 'volume_id': 'fake_vol',
+               {'device_name': 'foo4', 'volume_id': fakes.FAKE_UUID,
+                'delete_on_termination': False},
+               {'device_name': 'foo5', 'volume_id': fakes.FAKE_UUID,
                 'delete_on_termination': False}]
         expected_bdm = [
-            {'device_name': 'foo1', 'volume_id': 'fake_vol',
+            {'device_name': 'foo1', 'volume_id': fakes.FAKE_UUID,
              'delete_on_termination': True},
-            {'device_name': 'foo2', 'volume_id': 'fake_vol',
+            {'device_name': 'foo2', 'volume_id': fakes.FAKE_UUID,
              'delete_on_termination': True},
-            {'device_name': 'foo3', 'volume_id': 'fake_vol',
+            {'device_name': 'foo3', 'volume_id': fakes.FAKE_UUID,
              'delete_on_termination': False},
-            {'device_name': 'foo4', 'volume_id': 'fake_vol',
+            {'device_name': 'foo4', 'volume_id': fakes.FAKE_UUID,
              'delete_on_termination': False},
-            {'device_name': 'foo5', 'volume_id': 'fake_vol',
+            {'device_name': 'foo5', 'volume_id': fakes.FAKE_UUID,
              'delete_on_termination': False}]
         params = {'block_device_mapping': bdm}
         old_create = compute_api.API.create
@@ -286,8 +304,8 @@ class BlockDeviceMappingTestV21(test.TestCase):
                           'osapi_v3')
         controller = servers_v3.ServersController(extension_info=ext_info)
         bdm = [{'device_name': 'foo1',
-                'volume_id': 'fake_vol',
-                'delete_on_termination': 1}]
+                'volume_id': fakes.FAKE_UUID,
+                'delete_on_termination': True}]
 
         expected_legacy_flag = True
 
@@ -320,6 +338,7 @@ class BlockDeviceMappingTestV21(test.TestCase):
 
 
 class BlockDeviceMappingTestV2(BlockDeviceMappingTestV21):
+    validation_error = exc.HTTPBadRequest
 
     def _setup_controller(self):
         self.ext_mgr = extensions.ExtensionManager()
@@ -349,7 +368,7 @@ class BlockDeviceMappingTestV2(BlockDeviceMappingTestV21):
                               'os-block-device-mapping-v2-boot': 'fake'}
         controller = servers_v2.Controller(self.ext_mgr)
         bdm = [{'device_name': 'foo1',
-                'volume_id': 'fake_vol',
+                'volume_id': fakes.FAKE_UUID,
                 'delete_on_termination': 1}]
 
         expected_legacy_flag = True
