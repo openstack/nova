@@ -507,17 +507,4 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
 
 
 class ServersTestV3(client.TestOpenStackClientV3Mixin, ServersTest):
-    _force_delete_parameter = 'forceDelete'
     _api_version = 'v3'
-    _image_ref_parameter = 'imageRef'
-    _flavor_ref_parameter = 'flavorRef'
-    _access_ipv4_parameter = None
-    _access_ipv6_parameter = None
-
-    def _get_access_ips_params(self):
-        return {}
-
-    def _verify_access_ips(self, server):
-        # NOTE(alexxu): access_ips was demoted as extensions in v3 api.
-        # So skips verifying access_ips
-        pass
