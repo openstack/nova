@@ -13,12 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from lxml import etree
 from oslo.serialization import jsonutils
 import webob
 
 from nova.api.openstack.compute.contrib import extended_ips_mac
-from nova.api.openstack import xmlutil
 from nova import compute
 from nova import objects
 from nova.objects import instance as instance_obj
@@ -178,20 +176,3 @@ class ExtendedIpsMacTestV2(ExtendedIpsMacTestV21):
         req.headers['Accept'] = self.content_type
         res = req.get_response(fakes.wsgi_app(init_only=('servers',)))
         return res
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class ExtendedIpsMacXmlTest(ExtendedIpsMacTestV2):
-    content_type = 'application/xml'
-    prefix = '{%s}' % extended_ips_mac.Extended_ips_mac.namespace
-
-    def _get_server(self, body):
-        return etree.XML(body)
-
-    def _get_servers(self, body):
-        return etree.XML(body).getchildren()
-
-    def _get_ips(self, server):
-        for network in server.find('{%s}addresses' % xmlutil.XMLNS_V11):
-            for ip in network:
-                yield ip

@@ -17,7 +17,6 @@
 import contextlib
 import uuid
 
-from lxml import etree
 import mock
 from oslo.serialization import jsonutils
 import webob
@@ -887,50 +886,3 @@ class ExtendedFloatingIpTestV2(ExtendedFloatingIpTestV21):
             osapi_compute_extension=[
                 'nova.api.openstack.compute.contrib.select_extensions'],
             osapi_compute_ext_list=['Floating_ips', 'Extended_floating_ips'])
-
-
-class FloatingIpSerializerTestV2(test.TestCase):
-    def test_default_serializer(self):
-        serializer = fips_v2.FloatingIPTemplate()
-        text = serializer.serialize(dict(
-                floating_ip=dict(
-                    instance_id=1,
-                    ip='10.10.10.10',
-                    fixed_ip='10.0.0.1',
-                    id=1)))
-
-        tree = etree.fromstring(text)
-
-        self.assertEqual('floating_ip', tree.tag)
-        self.assertEqual('1', tree.get('instance_id'))
-        self.assertEqual('10.10.10.10', tree.get('ip'))
-        self.assertEqual('10.0.0.1', tree.get('fixed_ip'))
-        self.assertEqual('1', tree.get('id'))
-
-    def test_index_serializer(self):
-        serializer = fips_v2.FloatingIPsTemplate()
-        text = serializer.serialize(dict(
-                floating_ips=[
-                    dict(instance_id=1,
-                         ip='10.10.10.10',
-                         fixed_ip='10.0.0.1',
-                         id=1),
-                    dict(instance_id=None,
-                         ip='10.10.10.11',
-                         fixed_ip=None,
-                         id=2)]))
-
-        tree = etree.fromstring(text)
-
-        self.assertEqual('floating_ips', tree.tag)
-        self.assertEqual(2, len(tree))
-        self.assertEqual('floating_ip', tree[0].tag)
-        self.assertEqual('floating_ip', tree[1].tag)
-        self.assertEqual('1', tree[0].get('instance_id'))
-        self.assertEqual('None', tree[1].get('instance_id'))
-        self.assertEqual('10.10.10.10', tree[0].get('ip'))
-        self.assertEqual('10.10.10.11', tree[1].get('ip'))
-        self.assertEqual('10.0.0.1', tree[0].get('fixed_ip'))
-        self.assertEqual('None', tree[1].get('fixed_ip'))
-        self.assertEqual('1', tree[0].get('id'))
-        self.assertEqual('2', tree[1].get('id'))

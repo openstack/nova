@@ -13,12 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from lxml import etree
 from oslo.config import cfg
 from oslo.serialization import jsonutils
 import webob
 
-from nova.api.openstack.compute.contrib import extended_server_attributes
 from nova import compute
 from nova import db
 from nova import exception
@@ -133,16 +131,3 @@ class ExtendedServerAttributesTestV2(ExtendedServerAttributesTestV21):
         req.headers['Accept'] = self.content_type
         res = req.get_response(fakes.wsgi_app(init_only=('servers',)))
         return res
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class ExtendedServerAttributesXmlTest(ExtendedServerAttributesTestV2):
-    content_type = 'application/xml'
-    ext = extended_server_attributes
-    prefix = '{%s}' % ext.Extended_server_attributes.namespace
-
-    def _get_server(self, body):
-        return etree.XML(body)
-
-    def _get_servers(self, body):
-        return etree.XML(body).getchildren()

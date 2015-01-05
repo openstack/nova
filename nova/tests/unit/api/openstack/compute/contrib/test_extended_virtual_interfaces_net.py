@@ -13,12 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from lxml import etree
 from oslo.serialization import jsonutils
 import webob
 
 from nova.api.openstack.compute.contrib import extended_virtual_interfaces_net
-from nova.api.openstack import wsgi
 from nova import compute
 from nova import network
 from nova import test
@@ -102,23 +100,3 @@ class ExtendedServerVIFNetTest(test.NoDBTestCase):
 
         self.assertEqual(res.status_int, 200)
         self.assertVIFs(self._get_vifs(res.body))
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class ExtendedServerVIFNetSerializerXmlTest(ExtendedServerVIFNetTest):
-    content_type = 'application/xml'
-    prefix = "{%s}" % extended_virtual_interfaces_net. \
-                        Extended_virtual_interfaces_net.namespace
-
-    def setUp(self):
-        super(ExtendedServerVIFNetSerializerXmlTest, self).setUp()
-        self.namespace = wsgi.XMLNS_V11
-        self.serializer = extended_virtual_interfaces_net. \
-            ExtendedVirtualInterfaceNetTemplate()
-
-    def _get_vifs(self, body):
-        return etree.XML(body).getchildren()
-
-    def _get_net_id(self, vifs):
-        for vif in vifs:
-            yield vif.attrib['%snet_id' % self.prefix]

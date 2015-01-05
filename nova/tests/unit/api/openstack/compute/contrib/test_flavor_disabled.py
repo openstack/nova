@@ -12,11 +12,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from lxml import etree
 from oslo.serialization import jsonutils
 import webob
 
-from nova.api.openstack.compute.contrib import flavor_disabled
 from nova.compute import flavors
 from nova import test
 from nova.tests.unit.api.openstack import fakes
@@ -114,15 +112,3 @@ class FlavorDisabledTestV2(FlavorDisabledTestV21):
         req.headers['Accept'] = self.content_type
         res = req.get_response(fakes.wsgi_app())
         return res
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class FlavorDisabledXmlTest(FlavorDisabledTestV2):
-    content_type = 'application/xml'
-    prefix = '{%s}' % flavor_disabled.Flavor_disabled.namespace
-
-    def _get_flavor(self, body):
-        return etree.XML(body)
-
-    def _get_flavors(self, body):
-        return etree.XML(body).getchildren()

@@ -16,14 +16,12 @@
 
 import copy
 
-from lxml import etree
 import mock
 import webob
 
 from nova.api.openstack.compute.contrib import quotas as quotas_v2
 from nova.api.openstack.compute.plugins.v3 import quota_sets as quotas_v21
 from nova.api.openstack import extensions
-from nova.api.openstack import wsgi
 from nova import context as context_maker
 from nova import exception
 from nova import quota
@@ -321,71 +319,6 @@ class QuotaSetsTestV21(BaseQuotaSetsTest):
         res = self.controller.delete(self.req, 1234)
         self.mox.VerifyAll()
         self.assertEqual(202, self.get_delete_status_int(res))
-
-
-class QuotaXMLSerializerTest(test.TestCase):
-    def setUp(self):
-        super(QuotaXMLSerializerTest, self).setUp()
-        self.serializer = quotas_v2.QuotaTemplate()
-        self.deserializer = wsgi.XMLDeserializer()
-
-    def test_serializer(self):
-        exemplar = dict(quota_set=dict(
-                id='project_id',
-                metadata_items=10,
-                injected_file_path_bytes=255,
-                injected_file_content_bytes=20,
-                ram=50,
-                floating_ips=60,
-                fixed_ips=-1,
-                instances=70,
-                injected_files=80,
-                security_groups=10,
-                security_group_rules=20,
-                key_pairs=100,
-                cores=90))
-        text = self.serializer.serialize(exemplar)
-
-        tree = etree.fromstring(text)
-
-        self.assertEqual('quota_set', tree.tag)
-        self.assertEqual('project_id', tree.get('id'))
-        self.assertEqual(len(exemplar['quota_set']) - 1, len(tree))
-        for child in tree:
-            self.assertIn(child.tag, exemplar['quota_set'])
-            self.assertEqual(int(child.text), exemplar['quota_set'][child.tag])
-
-    def test_deserializer(self):
-        exemplar = dict(quota_set=dict(
-                metadata_items='10',
-                injected_file_content_bytes='20',
-                ram='50',
-                floating_ips='60',
-                fixed_ips='-1',
-                instances='70',
-                injected_files='80',
-                security_groups='10',
-                security_group_rules='20',
-                key_pairs='100',
-                cores='90'))
-        intext = ("<?xml version='1.0' encoding='UTF-8'?>\n"
-                  '<quota_set>'
-                  '<metadata_items>10</metadata_items>'
-                  '<injected_file_content_bytes>20'
-                  '</injected_file_content_bytes>'
-                  '<ram>50</ram>'
-                  '<floating_ips>60</floating_ips>'
-                  '<fixed_ips>-1</fixed_ips>'
-                  '<instances>70</instances>'
-                  '<injected_files>80</injected_files>'
-                  '<security_groups>10</security_groups>'
-                  '<security_group_rules>20</security_group_rules>'
-                  '<key_pairs>100</key_pairs>'
-                  '<cores>90</cores>'
-                  '</quota_set>')
-
-        result = self.deserializer.deserialize(intext)['body']
-        self.assertEqual(result, exemplar)
 
 
 class ExtendedQuotasTestV21(BaseQuotaSetsTest):

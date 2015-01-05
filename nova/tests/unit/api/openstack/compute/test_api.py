@@ -13,7 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from lxml import etree
 from oslo.serialization import jsonutils
 import webob
 import webob.dec
@@ -62,19 +61,6 @@ class APITest(test.NoDBTestCase):
 
         jsonutils.loads(res.body)
 
-    @test.skipXmlTest("Nova v2 XML support is disabled")
-    def test_vendor_content_type_xml(self):
-        ctype = 'application/vnd.openstack.compute+xml'
-
-        req = webob.Request.blank('/')
-        req.headers['Accept'] = ctype
-
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 200)
-        self.assertEqual(res.content_type, ctype)
-
-        etree.XML(res.body)
-
     def test_exceptions_are_converted_to_faults_webob_exc(self):
         @webob.dec.wsgify
         def raise_webob_exc(req):
@@ -106,18 +92,6 @@ class APITest(test.NoDBTestCase):
         api = self._wsgi_app(fail)
         resp = webob.Request.blank('/').get_response(api)
         self.assertIn('{"computeFault', resp.body)
-        self.assertEqual(resp.status_int, 500, resp.body)
-
-    @test.skipXmlTest("Nova v2 XML support is disabled")
-    def test_exceptions_are_converted_to_faults_exception_xml(self):
-        @webob.dec.wsgify
-        def fail(req):
-            raise Exception("Threw an exception")
-
-        # api.application = fail
-        api = self._wsgi_app(fail)
-        resp = webob.Request.blank('/.xml').get_response(api)
-        self.assertIn('<computeFault', resp.body)
         self.assertEqual(resp.status_int, 500, resp.body)
 
     def _do_test_exception_safety_reflected_in_faults(self, expose):

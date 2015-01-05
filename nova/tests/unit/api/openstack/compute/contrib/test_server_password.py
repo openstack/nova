@@ -13,7 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from lxml import etree
 from oslo.config import cfg
 
 from nova.api.openstack.compute.contrib import server_password \
@@ -75,12 +74,3 @@ class ServerPasswordTestV21(test.TestCase):
 class ServerPasswordTestV2(ServerPasswordTestV21):
     server_password = server_password_v2
     delete_call = 'self.controller.delete'
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class ServerPasswordXmlTestV2(ServerPasswordTestV2):
-    content_type = 'application/xml'
-
-    def _get_pass(self, body):
-        # NOTE(vish): first element is password
-        return etree.XML(body).text or ''

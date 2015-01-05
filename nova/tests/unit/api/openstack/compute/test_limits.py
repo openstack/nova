@@ -19,9 +19,7 @@ Tests dealing with HTTP rate-limiting.
 
 import httplib
 import StringIO
-from xml.dom import minidom
 
-from lxml import etree
 import mock
 from oslo.serialization import jsonutils
 import six
@@ -31,7 +29,6 @@ from nova.api.openstack.compute import limits
 from nova.api.openstack.compute.plugins.v3 import limits as limits_v3
 from nova.api.openstack.compute import views
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 import nova.context
 from nova import test
 from nova.tests.unit.api.openstack import fakes
@@ -401,31 +398,6 @@ class LimitMiddlewareTest(BaseLimitTestSuite):
         self.assertIn("retryAfter", body["overLimit"])
         retryAfter = body["overLimit"]["retryAfter"]
         self.assertEqual(retryAfter, "60")
-
-    @test.skipXmlTest("Nova v2 XML support is disabled")
-    def test_limited_request_xml(self):
-        # Test a rate-limited (429) response as XML.
-        request = webob.Request.blank("/")
-        response = request.get_response(self.app)
-        self.assertEqual(200, response.status_int)
-
-        request = webob.Request.blank("/")
-        request.accept = "application/xml"
-        response = request.get_response(self.app)
-        self.assertEqual(response.status_int, 429)
-
-        root = minidom.parseString(response.body).childNodes[0]
-        expected = "Only 1 GET request(s) can be made to * every minute."
-
-        self.assertIsNotNone(root.attributes.getNamedItem("retryAfter"))
-        retryAfter = root.attributes.getNamedItem("retryAfter").value
-        self.assertEqual(retryAfter, "60")
-
-        details = root.getElementsByTagName("details")
-        self.assertEqual(details.length, 1)
-
-        value = details.item(0).firstChild.data.strip()
-        self.assertEqual(value, expected)
 
 
 class LimitTest(BaseLimitTestSuite):
@@ -930,88 +902,3 @@ class LimitsViewBuilderTest(test.NoDBTestCase):
         rate_limits = []
         output = self.view_builder.build(rate_limits, abs_limits)
         self.assertThat(output, matchers.DictMatches(expected_limits))
-
-
-class LimitsXMLSerializationTest(test.NoDBTestCase):
-    def test_xml_declaration(self):
-        serializer = limits.LimitsTemplate()
-
-        fixture = {"limits": {
-                   "rate": [],
-                   "absolute": {}}}
-
-        output = serializer.serialize(fixture)
-        has_dec = output.startswith("<?xml version='1.0' encoding='UTF-8'?>")
-        self.assertTrue(has_dec)
-
-    def test_index(self):
-        serializer = limits.LimitsTemplate()
-        fixture = {
-            "limits": {
-                   "rate": [{
-                         "uri": "*",
-                         "regex": ".*",
-                         "limit": [{
-                              "value": 10,
-                              "verb": "POST",
-                              "remaining": 2,
-                              "unit": "MINUTE",
-                              "next-available": "2011-12-15T22:42:45Z"}]},
-                          {"uri": "*/servers",
-                           "regex": "^/servers",
-                           "limit": [{
-                              "value": 50,
-                              "verb": "POST",
-                              "remaining": 10,
-                              "unit": "DAY",
-                              "next-available": "2011-12-15T22:42:45Z"}]}],
-                    "absolute": {"maxServerMeta": 1,
-                                 "maxImageMeta": 1,
-                                 "maxPersonality": 5,
-                                 "maxPersonalitySize": 10240}}}
-
-        output = serializer.serialize(fixture)
-        root = etree.XML(output)
-        xmlutil.validate_schema(root, 'limits')
-
-        # verify absolute limits
-        absolutes = root.xpath('ns:absolute/ns:limit', namespaces=NS)
-        self.assertEqual(len(absolutes), 4)
-        for limit in absolutes:
-            name = limit.get('name')
-            value = limit.get('value')
-            self.assertEqual(value, str(fixture['limits']['absolute'][name]))
-
-        # verify rate limits
-        rates = root.xpath('ns:rates/ns:rate', namespaces=NS)
-        self.assertEqual(len(rates), 2)
-        for i, rate in enumerate(rates):
-            for key in ['uri', 'regex']:
-                self.assertEqual(rate.get(key),
-                                 str(fixture['limits']['rate'][i][key]))
-            rate_limits = rate.xpath('ns:limit', namespaces=NS)
-            self.assertEqual(len(rate_limits), 1)
-            for j, limit in enumerate(rate_limits):
-                for key in ['verb', 'value', 'remaining', 'unit',
-                            'next-available']:
-                    self.assertEqual(limit.get(key),
-                         str(fixture['limits']['rate'][i]['limit'][j][key]))
-
-    def test_index_no_limits(self):
-        serializer = limits.LimitsTemplate()
-
-        fixture = {"limits": {
-                   "rate": [],
-                   "absolute": {}}}
-
-        output = serializer.serialize(fixture)
-        root = etree.XML(output)
-        xmlutil.validate_schema(root, 'limits')
-
-        # verify absolute limits
-        absolutes = root.xpath('ns:absolute/ns:limit', namespaces=NS)
-        self.assertEqual(len(absolutes), 0)
-
-        # verify rate limits
-        rates = root.xpath('ns:rates/ns:rate', namespaces=NS)
-        self.assertEqual(len(rates), 0)

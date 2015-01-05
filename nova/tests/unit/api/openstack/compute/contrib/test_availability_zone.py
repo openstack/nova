@@ -14,7 +14,6 @@
 
 import datetime
 
-from lxml import etree
 from oslo.config import cfg
 from oslo.serialization import jsonutils
 import webob
@@ -436,62 +435,3 @@ class ServersControllerCreateTestV2(ServersControllerCreateTestV21):
         # NOTE: v2.0 API does not check this bad request case.
         # So we skip this test for v2.0 API.
         pass
-
-
-class AvailabilityZoneSerializerTest(test.NoDBTestCase):
-    def test_availability_zone_index_detail_serializer(self):
-        def _verify_zone(zone_dict, tree):
-            self.assertEqual(tree.tag, 'availabilityZone')
-            self.assertEqual(zone_dict['zoneName'], tree.get('name'))
-            self.assertEqual(str(zone_dict['zoneState']['available']),
-                             tree[0].get('available'))
-
-            for _idx, host_child in enumerate(tree[1]):
-                self.assertIn(host_child.get('name'), zone_dict['hosts'])
-                svcs = zone_dict['hosts'][host_child.get('name')]
-                for _idx, svc_child in enumerate(host_child[0]):
-                    self.assertIn(svc_child.get('name'), svcs)
-                    svc = svcs[svc_child.get('name')]
-                    self.assertEqual(len(svc_child), 1)
-
-                    self.assertEqual(str(svc['available']),
-                                     svc_child[0].get('available'))
-                    self.assertEqual(str(svc['active']),
-                                     svc_child[0].get('active'))
-                    self.assertEqual(str(svc['updated_at']),
-                                     svc_child[0].get('updated_at'))
-
-        serializer = az_v2.AvailabilityZonesTemplate()
-        raw_availability_zones = \
-            [{'zoneName': 'zone-1',
-              'zoneState': {'available': True},
-              'hosts': {'fake_host-1': {
-                            'nova-compute': {'active': True, 'available': True,
-                                'updated_at':
-                                    datetime.datetime(
-                                        2012, 12, 26, 14, 45, 25)}}}},
-             {'zoneName': 'internal',
-              'zoneState': {'available': True},
-              'hosts': {'fake_host-1': {
-                            'nova-sched': {'active': True, 'available': True,
-                                'updated_at':
-                                    datetime.datetime(
-                                        2012, 12, 26, 14, 45, 25)}},
-                        'fake_host-2': {
-                            'nova-network': {'active': True,
-                                             'available': False,
-                                             'updated_at':
-                                    datetime.datetime(
-                                        2012, 12, 26, 14, 45, 24)}}}},
-             {'zoneName': 'zone-2',
-              'zoneState': {'available': False},
-              'hosts': None}]
-
-        text = serializer.serialize(
-                  dict(availabilityZoneInfo=raw_availability_zones))
-        tree = etree.fromstring(text)
-
-        self.assertEqual('availabilityZones', tree.tag)
-        self.assertEqual(len(raw_availability_zones), len(tree))
-        for idx, child in enumerate(tree):
-            _verify_zone(raw_availability_zones[idx], child)

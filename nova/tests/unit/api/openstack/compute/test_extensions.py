@@ -15,7 +15,6 @@
 #    under the License.
 
 import iso8601
-from lxml import etree
 from oslo.config import cfg
 from oslo.serialization import jsonutils
 import webob
@@ -24,7 +23,6 @@ from nova.api.openstack import compute
 from nova.api.openstack.compute import extensions as compute_extensions
 from nova.api.openstack import extensions as base_extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 from nova import exception
 import nova.policy
 from nova import test
@@ -306,53 +304,6 @@ class ExtensionControllerTest(ExtensionTestCase):
         request = webob.Request.blank("/fake/extensions/4")
         response = request.get_response(app)
         self.assertEqual(404, response.status_int)
-
-    @test.skipXmlTest("Nova v2 XML support is disabled")
-    def test_list_extensions_xml(self):
-        app = compute.APIRouter(init_only=('servers', 'flavors', 'extensions'))
-        request = webob.Request.blank("/fake/extensions")
-        request.accept = "application/xml"
-        response = request.get_response(app)
-        self.assertEqual(200, response.status_int)
-
-        root = etree.XML(response.body)
-        self.assertEqual(root.tag.split('extensions')[0], NS)
-
-        # Make sure we have all the extensions, extras extensions being OK.
-        exts = root.findall('{0}extension'.format(NS))
-        self.assertTrue(len(exts) >= len(self.ext_list))
-
-        # Make sure that at least Fox in Sox is correct.
-        (fox_ext, ) = [x for x in exts if x.get('alias') == 'FOXNSOX']
-        self.assertEqual(fox_ext.get('name'), 'Fox In Socks')
-        self.assertEqual(fox_ext.get('namespace'),
-            'http://www.fox.in.socks/api/ext/pie/v1.0')
-        self.assertEqual(fox_ext.get('updated'), '2011-01-22T13:25:27-06:00')
-        self.assertEqual(fox_ext.findtext('{0}description'.format(NS)),
-            'The Fox In Socks Extension.')
-
-        xmlutil.validate_schema(root, 'extensions')
-
-    @test.skipXmlTest("Nova v2 XML support is disabled")
-    def test_get_extension_xml(self):
-        app = compute.APIRouter(init_only=('servers', 'flavors', 'extensions'))
-        request = webob.Request.blank("/fake/extensions/FOXNSOX")
-        request.accept = "application/xml"
-        response = request.get_response(app)
-        self.assertEqual(200, response.status_int)
-        xml = response.body
-
-        root = etree.XML(xml)
-        self.assertEqual(root.tag.split('extension')[0], NS)
-        self.assertEqual(root.get('alias'), 'FOXNSOX')
-        self.assertEqual(root.get('name'), 'Fox In Socks')
-        self.assertEqual(root.get('namespace'),
-            'http://www.fox.in.socks/api/ext/pie/v1.0')
-        self.assertEqual(root.get('updated'), '2011-01-22T13:25:27-06:00')
-        self.assertEqual(root.findtext('{0}description'.format(NS)),
-            'The Fox In Socks Extension.')
-
-        xmlutil.validate_schema(root, 'extension')
 
 
 class ResourceExtensionTest(ExtensionTestCase):
@@ -638,87 +589,6 @@ class ControllerExtensionTest(ExtensionTestCase):
         response = request.get_response(app)
         self.assertEqual(200, response.status_int)
         self.assertEqual(extension_body, response.body)
-
-
-class ExtensionsXMLSerializerTest(test.TestCase):
-
-    def test_serialize_extension(self):
-        serializer = base_extensions.ExtensionTemplate()
-        data = {'extension': {
-          'name': 'ext1',
-          'namespace': 'http://docs.rack.com/servers/api/ext/pie/v1.0',
-          'alias': 'RS-PIE',
-          'updated': '2011-01-22T13:25:27-06:00',
-          'description': 'Adds the capability to share an image.',
-          'links': [{'rel': 'describedby',
-                     'type': 'application/pdf',
-                     'href': 'http://docs.rack.com/servers/api/ext/cs.pdf'},
-                    {'rel': 'describedby',
-                     'type': 'application/vnd.sun.wadl+xml',
-                     'href': 'http://docs.rack.com/servers/api/ext/cs.wadl'}]}}
-
-        xml = serializer.serialize(data)
-        root = etree.XML(xml)
-        ext_dict = data['extension']
-        self.assertEqual(root.findtext('{0}description'.format(NS)),
-            ext_dict['description'])
-
-        for key in ['name', 'namespace', 'alias', 'updated']:
-            self.assertEqual(root.get(key), ext_dict[key])
-
-        link_nodes = root.findall('{0}link'.format(ATOMNS))
-        self.assertEqual(len(link_nodes), 2)
-        for i, link in enumerate(ext_dict['links']):
-            for key, value in link.items():
-                self.assertEqual(link_nodes[i].get(key), value)
-
-        xmlutil.validate_schema(root, 'extension')
-
-    def test_serialize_extensions(self):
-        serializer = base_extensions.ExtensionsTemplate()
-        data = {"extensions": [{
-                "name": "Public Image Extension",
-                "namespace": "http://foo.com/api/ext/pie/v1.0",
-                "alias": "RS-PIE",
-                "updated": "2011-01-22T13:25:27-06:00",
-                "description": "Adds the capability to share an image.",
-                "links": [{"rel": "describedby",
-                            "type": "application/pdf",
-                            "href": "http://foo.com/api/ext/cs-pie.pdf"},
-                           {"rel": "describedby",
-                            "type": "application/vnd.sun.wadl+xml",
-                            "href": "http://foo.com/api/ext/cs-pie.wadl"}]},
-                {"name": "Cloud Block Storage",
-                 "namespace": "http://foo.com/api/ext/cbs/v1.0",
-                 "alias": "RS-CBS",
-                 "updated": "2011-01-12T11:22:33-06:00",
-                 "description": "Allows mounting cloud block storage.",
-                 "links": [{"rel": "describedby",
-                             "type": "application/pdf",
-                             "href": "http://foo.com/api/ext/cs-cbs.pdf"},
-                            {"rel": "describedby",
-                             "type": "application/vnd.sun.wadl+xml",
-                             "href": "http://foo.com/api/ext/cs-cbs.wadl"}]}]}
-
-        xml = serializer.serialize(data)
-        root = etree.XML(xml)
-        ext_elems = root.findall('{0}extension'.format(NS))
-        self.assertEqual(len(ext_elems), 2)
-        for i, ext_elem in enumerate(ext_elems):
-            ext_dict = data['extensions'][i]
-            self.assertEqual(ext_elem.findtext('{0}description'.format(NS)),
-                ext_dict['description'])
-
-            for key in ['name', 'namespace', 'alias', 'updated']:
-                self.assertEqual(ext_elem.get(key), ext_dict[key])
-
-            link_nodes = ext_elem.findall('{0}link'.format(ATOMNS))
-            self.assertEqual(len(link_nodes), 2)
-            for i, link in enumerate(ext_dict['links']):
-                for key, value in link.items():
-                    self.assertEqual(link_nodes[i].get(key), value)
-
-        xmlutil.validate_schema(root, 'extensions')
 
 
 class ExtensionControllerIdFormatTest(test.TestCase):

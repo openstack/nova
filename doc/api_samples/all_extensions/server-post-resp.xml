@@ -1,9 +1,0 @@
-<?xml version='1.0' encoding='UTF-8'?>
-<server xmlns:OS-DCF="http://docs.openstack.org/compute/ext/disk_config/api/v1.1" xmlns:atom="http://www.w3.org/2005/Atom" xmlns="http://docs.openstack.org/compute/api/v1.1" id="f3053932-a09d-446d-ba6e-4303b6725317" adminPass="phFnce4H8pnP" OS-DCF:diskConfig="AUTO">
-  <metadata/>
-  <atom:link href="http://openstack.example.com/v2/openstack/servers/f3053932-a09d-446d-ba6e-4303b6725317" rel="self"/>
-  <atom:link href="http://openstack.example.com/openstack/servers/f3053932-a09d-446d-ba6e-4303b6725317" rel="bookmark"/>
-  <security_groups>
-    <security_group name="default"/>
-  </security_groups>
-</server>

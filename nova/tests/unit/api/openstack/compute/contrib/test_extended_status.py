@@ -13,11 +13,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from lxml import etree
 from oslo.serialization import jsonutils
 import webob
 
-from nova.api.openstack.compute.contrib import extended_status
 from nova import compute
 from nova import db
 from nova import exception
@@ -135,15 +133,3 @@ class ExtendedStatusTestV2(ExtendedStatusTestV21):
         req.headers['Accept'] = self.content_type
         res = req.get_response(fakes.wsgi_app(init_only=('servers',)))
         return res
-
-
-@test.skipXmlTest("Nova v2 XML support is disabled")
-class ExtendedStatusXmlTest(ExtendedStatusTestV2):
-    content_type = 'application/xml'
-    prefix = '{%s}' % extended_status.Extended_status.namespace
-
-    def _get_server(self, body):
-        return etree.XML(body)
-
-    def _get_servers(self, body):
-        return etree.XML(body).getchildren()

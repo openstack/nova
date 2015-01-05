@@ -1,8 +1,0 @@
-<?xml version='1.0' encoding='UTF-8'?>
-<server_group xmlns:atom="http://www.w3.org/2005/Atom" xmlns="http://docs.openstack.org/compute/api/v1.1" id="5bbcc3c4-1da2-4437-a48a-66f15b1b13f9" name="test">
-  <policies>
-  <policy>anti-affinity</policy>
-  </policies>
-  <members/>
-  <metadata/>
-</server_group>

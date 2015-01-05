@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<flavors xmlns="http://docs.openstack.org/compute/api/v1.1">
-  <!-- a flavor can either have *only* name and id, or needs to also
-       have disk and vcpus in addition to ram -->
-  <flavor name="foo" id="foo" ram="foo"/>
-</flavors>

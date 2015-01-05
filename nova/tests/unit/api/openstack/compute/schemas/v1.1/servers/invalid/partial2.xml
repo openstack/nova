@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<servers xmlns="http://docs.openstack.org/compute/api/v1.1">
-  <!-- server tags must either be refs, with *only* name and id, or
-       full specifications, with loads more detail -->
-  <server name="foo" id="foo" updated="foo"/>
-</servers>

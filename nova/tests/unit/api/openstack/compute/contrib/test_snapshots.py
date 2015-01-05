@@ -13,12 +13,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from lxml import etree
 from oslo.serialization import jsonutils
-from oslo.utils import timeutils
 import webob
 
-from nova.api.openstack.compute.contrib import volumes
 from nova import context
 from nova import test
 from nova.tests.unit.api.openstack import fakes
@@ -152,58 +149,3 @@ class SnapshotApiTest(test.NoDBTestCase):
 
         resp_snapshot = resp_snapshots.pop()
         self.assertEqual(resp_snapshot['id'], 102)
-
-
-class SnapshotSerializerTest(test.NoDBTestCase):
-    def _verify_snapshot(self, snap, tree):
-        self.assertEqual(tree.tag, 'snapshot')
-
-        for attr in ('id', 'status', 'size', 'createdAt',
-                     'displayName', 'displayDescription', 'volumeId'):
-            self.assertEqual(str(snap[attr]), tree.get(attr))
-
-    def test_snapshot_show_create_serializer(self):
-        serializer = volumes.SnapshotTemplate()
-        raw_snapshot = dict(
-            id='snap_id',
-            status='snap_status',
-            size=1024,
-            createdAt=timeutils.utcnow(),
-            displayName='snap_name',
-            displayDescription='snap_desc',
-            volumeId='vol_id',
-            )
-        text = serializer.serialize(dict(snapshot=raw_snapshot))
-
-        tree = etree.fromstring(text)
-
-        self._verify_snapshot(raw_snapshot, tree)
-
-    def test_snapshot_index_detail_serializer(self):
-        serializer = volumes.SnapshotsTemplate()
-        raw_snapshots = [dict(
-                id='snap1_id',
-                status='snap1_status',
-                size=1024,
-                createdAt=timeutils.utcnow(),
-                displayName='snap1_name',
-                displayDescription='snap1_desc',
-                volumeId='vol1_id',
-                ),
-                       dict(
-                id='snap2_id',
-                status='snap2_status',
-                size=1024,
-                createdAt=timeutils.utcnow(),
-                displayName='snap2_name',
-                displayDescription='snap2_desc',
-                volumeId='vol2_id',
-                )]
-        text = serializer.serialize(dict(snapshots=raw_snapshots))
-
-        tree = etree.fromstring(text)
-
-        self.assertEqual('snapshots', tree.tag)
-        self.assertEqual(len(raw_snapshots), len(tree))
-        for idx, child in enumerate(tree):
-            self._verify_snapshot(raw_snapshots[idx], child)

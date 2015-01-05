@@ -13,8 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from lxml import etree
-
 from nova.api.openstack.compute.contrib import floating_ip_pools as fipp_v2
 from nova.api.openstack.compute.plugins.v3 import floating_ip_pools as\
                                                       fipp_v21
@@ -60,24 +58,3 @@ class FloatingIpPoolTestV21(test.NoDBTestCase):
 
 class FloatingIpPoolTestV2(FloatingIpPoolTestV21):
     floating_ip_pools = fipp_v2
-
-
-class FloatingIpPoolSerializerTestV2(test.NoDBTestCase):
-    floating_ip_pools = fipp_v2
-
-    def test_index_serializer(self):
-        serializer = self.floating_ip_pools.FloatingIPPoolsTemplate()
-        text = serializer.serialize(dict(
-                floating_ip_pools=[
-                    dict(name='nova'),
-                    dict(name='other')
-                ]))
-
-        tree = etree.fromstring(text)
-
-        self.assertEqual('floating_ip_pools', tree.tag)
-        self.assertEqual(2, len(tree))
-        self.assertEqual('floating_ip_pool', tree[0].tag)
-        self.assertEqual('floating_ip_pool', tree[1].tag)
-        self.assertEqual('nova', tree[0].get('name'))
-        self.assertEqual('other', tree[1].get('name'))

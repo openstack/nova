@@ -13,12 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from lxml import etree
 import webob
 
 from nova.api.openstack.compute.contrib import virtual_interfaces as vi20
 from nova.api.openstack.compute.plugins.v3 import virtual_interfaces as vi21
-from nova.api.openstack import wsgi
 from nova import compute
 from nova.compute import api as compute_api
 from nova import context
@@ -92,38 +90,3 @@ class ServerVirtualInterfaceTestV20(ServerVirtualInterfaceTestV21):
 
     def _set_controller(self):
         self.controller = vi20.ServerVirtualInterfaceController()
-
-
-class ServerVirtualInterfaceSerializerTestV20(test.NoDBTestCase):
-    def setUp(self):
-        super(ServerVirtualInterfaceSerializerTestV20, self).setUp()
-        self.namespace = wsgi.XMLNS_V11
-        self.serializer = vi20.VirtualInterfaceTemplate()
-
-    def _tag(self, elem):
-        tagname = elem.tag
-        self.assertEqual(tagname[0], '{')
-        tmp = tagname.partition('}')
-        namespace = tmp[0][1:]
-        self.assertEqual(namespace, self.namespace)
-        return tmp[2]
-
-    def test_serializer(self):
-        raw_vifs = [dict(
-                id='uuid1',
-                mac_address='aa:bb:cc:dd:ee:ff'),
-                    dict(
-                id='uuid2',
-                mac_address='bb:aa:dd:cc:ff:ee')]
-        vifs = dict(virtual_interfaces=raw_vifs)
-        text = self.serializer.serialize(vifs)
-
-        tree = etree.fromstring(text)
-
-        self.assertEqual('virtual_interfaces', self._tag(tree))
-        self.assertEqual(len(raw_vifs), len(tree))
-        for idx, child in enumerate(tree):
-            self.assertEqual('virtual_interface', self._tag(child))
-            self.assertEqual(raw_vifs[idx]['id'], child.get('id'))
-            self.assertEqual(raw_vifs[idx]['mac_address'],
-                             child.get('mac_address'))
