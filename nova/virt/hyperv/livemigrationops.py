@@ -25,6 +25,7 @@ import nova.conf
 from nova.objects import migrate_data as migrate_data_obj
 from nova.virt.hyperv import imagecache
 from nova.virt.hyperv import pathutils
+from nova.virt.hyperv import serialconsoleops
 from nova.virt.hyperv import vmops
 from nova.virt.hyperv import volumeops
 
@@ -38,6 +39,7 @@ class LiveMigrationOps(object):
         self._pathutils = pathutils.PathUtils()
         self._vmops = vmops.VMOps()
         self._volumeops = volumeops.VolumeOps()
+        self._serial_console_ops = serialconsoleops.SerialConsoleOps()
         self._imagecache = imagecache.ImageCache()
         self._vmutils = utilsfactory.get_vmutils()
 
@@ -48,8 +50,13 @@ class LiveMigrationOps(object):
         instance_name = instance_ref["name"]
 
         try:
-            self._vmops.copy_vm_console_logs(instance_name, dest)
             self._vmops.copy_vm_dvd_disks(instance_name, dest)
+
+            # We must make sure that the console log workers are stopped,
+            # otherwise we won't be able to delete / move VM log files.
+            self._serial_console_ops.stop_console_handler(instance_name)
+
+            self._pathutils.copy_vm_console_logs(instance_name, dest)
             self._livemigrutils.live_migrate_vm(instance_name,
                                                 dest)
         except Exception:
@@ -85,8 +92,6 @@ class LiveMigrationOps(object):
                                            network_info, block_migration):
         LOG.debug("post_live_migration_at_destination called",
                   instance=instance_ref)
-        self._vmops.log_vm_serial_output(instance_ref['name'],
-                                         instance_ref['uuid'])
 
     def check_can_live_migrate_destination(self, ctxt, instance_ref,
                                            src_compute_info, dst_compute_info,

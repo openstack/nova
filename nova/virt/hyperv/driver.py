@@ -34,6 +34,7 @@ from nova.virt.hyperv import hostops
 from nova.virt.hyperv import livemigrationops
 from nova.virt.hyperv import migrationops
 from nova.virt.hyperv import rdpconsoleops
+from nova.virt.hyperv import serialconsoleops
 from nova.virt.hyperv import snapshotops
 from nova.virt.hyperv import vmops
 from nova.virt.hyperv import volumeops
@@ -111,6 +112,7 @@ class HyperVDriver(driver.ComputeDriver):
         self._livemigrationops = livemigrationops.LiveMigrationOps()
         self._migrationops = migrationops.MigrationOps()
         self._rdpconsoleops = rdpconsoleops.RDPConsoleOps()
+        self._serialconsoleops = serialconsoleops.SerialConsoleOps()
 
     def _check_minimum_windows_version(self):
         if not utilsfactory.get_hostutils().check_min_windows_version(6, 2):
@@ -124,10 +126,9 @@ class HyperVDriver(driver.ComputeDriver):
             raise exception.HypervisorTooOld(version='6.2')
 
     def init_host(self, host):
-        self._vmops.restart_vm_log_writers()
+        self._serialconsoleops.start_console_handlers()
         event_handler = eventhandler.InstanceEventHandler(
-            state_change_callback=self.emit_event,
-            running_state_callback=self._vmops.log_vm_serial_output)
+            state_change_callback=self.emit_event)
         event_handler.start_listener()
 
     def list_instance_uuids(self):
@@ -320,8 +321,11 @@ class HyperVDriver(driver.ComputeDriver):
     def get_rdp_console(self, context, instance):
         return self._rdpconsoleops.get_rdp_console(instance)
 
+    def get_serial_console(self, context, instance):
+        return self._serialconsoleops.get_serial_console(instance.name)
+
     def get_console_output(self, context, instance):
-        return self._vmops.get_console_output(instance)
+        return self._serialconsoleops.get_console_output(instance.name)
 
     def attach_interface(self, instance, image_meta, vif):
         return self._vmops.attach_interface(instance, vif)

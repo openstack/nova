@@ -72,3 +72,7 @@ SERIAL_CONSOLE_BUFFER_SIZE = 4 * units.Ki
 
 SERIAL_PORT_TYPE_RO = 'ro'
 SERIAL_PORT_TYPE_RW = 'rw'
+
+# The default serial console port number used for
+# logging and interactive sessions.
+DEFAULT_SERIAL_CONSOLE_PORT = 1
