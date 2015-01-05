@@ -263,10 +263,11 @@ class HTTPRequest(os_wsgi.Request):
     def blank(*args, **kwargs):
         kwargs['base_url'] = 'http://localhost/v2'
         use_admin_context = kwargs.pop('use_admin_context', False)
+        version = kwargs.pop('version', os_wsgi.DEFAULT_API_VERSION)
         out = os_wsgi.Request.blank(*args, **kwargs)
         out.environ['nova.context'] = FakeRequestContext('fake_user', 'fake',
                 is_admin=use_admin_context)
-        out.api_version_request = api_version.APIVersionRequest("2.1")
+        out.api_version_request = api_version.APIVersionRequest(version)
         return out
 
 
@@ -276,8 +277,9 @@ class HTTPRequestV3(os_wsgi.Request):
     def blank(*args, **kwargs):
         kwargs['base_url'] = 'http://localhost/v3'
         use_admin_context = kwargs.pop('use_admin_context', False)
+        version = kwargs.pop('version', os_wsgi.DEFAULT_API_VERSION)
         out = os_wsgi.Request.blank(*args, **kwargs)
-        out.api_version_request = api_version.APIVersionRequest("2.1")
+        out.api_version_request = api_version.APIVersionRequest(version)
         out.environ['nova.context'] = FakeRequestContext('fake_user', 'fake',
                 is_admin=use_admin_context)
         return out
