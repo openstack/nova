@@ -16,8 +16,7 @@ from nova.api.openstack.compute.contrib import admin_actions as \
     suspend_server_v2
 from nova.api.openstack.compute.plugins.v3 import suspend_server as \
     suspend_server_v21
-from nova.tests.unit.api.openstack.compute.plugins.v3 import \
-     admin_only_action_common
+from nova.tests.unit.api.openstack.compute import admin_only_action_common
 from nova.tests.unit.api.openstack import fakes
 
 

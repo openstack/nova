@@ -24,8 +24,7 @@ from nova import exception
 from nova import objects
 from nova.openstack.common import uuidutils
 from nova import test
-from nova.tests.unit.api.openstack.compute.plugins.v3 import \
-     admin_only_action_common
+from nova.tests.unit.api.openstack.compute import admin_only_action_common
 from nova.tests.unit.api.openstack import fakes
 
 
