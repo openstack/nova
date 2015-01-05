@@ -1269,6 +1269,35 @@ class LibvirtConfigGuestInterfaceTest(LibvirtConfigBaseTest):
             </interface>""")
 
 
+class LibvirtConfigGuestFeatureTest(LibvirtConfigBaseTest):
+
+    def test_feature_hyperv_relaxed(self):
+
+        obj = config.LibvirtConfigGuestFeatureHyperV()
+        obj.relaxed = True
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+          <hyperv>
+            <relaxed state="on"/>
+          </hyperv>""")
+
+    def test_feature_hyperv_all(self):
+
+        obj = config.LibvirtConfigGuestFeatureHyperV()
+        obj.relaxed = True
+        obj.vapic = True
+        obj.spinlocks = True
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+          <hyperv>
+            <relaxed state="on"/>
+            <vapic state="on"/>
+            <spinlocks state="on" retries="4095"/>
+          </hyperv>""")
+
+
 class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
 
     def test_config_lxc(self):
