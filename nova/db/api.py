@@ -728,11 +728,6 @@ def instance_get_all_by_host_and_not_type(context, host, type_id=None):
     return IMPL.instance_get_all_by_host_and_not_type(context, host, type_id)
 
 
-def instance_get_floating_address(context, instance_id):
-    """Get the first floating ip address of an instance."""
-    return IMPL.instance_get_floating_address(context, instance_id)
-
-
 def instance_floating_address_get_all(context, instance_uuid):
     """Get all floating ip addresses of an instance."""
     return IMPL.instance_floating_address_get_all(context, instance_uuid)

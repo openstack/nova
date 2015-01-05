@@ -2320,29 +2320,6 @@ def instance_get_all_by_host_and_not_type(context, host, type_id=None):
                    filter(models.Instance.instance_type_id != type_id).all())
 
 
-# NOTE(jkoelker) This is only being left here for compat with floating
-#                ips. Currently the network_api doesn't return floaters
-#                in network_info. Once it starts return the model. This
-#                function and its call in compute/manager.py on 1829 can
-#                go away
-@require_context
-def instance_get_floating_address(context, instance_id):
-    instance = instance_get(context, instance_id)
-    fixed_ips = fixed_ip_get_by_instance(context, instance['uuid'])
-
-    if not fixed_ips:
-        return None
-
-    # NOTE(tr3buchet): this only gets the first fixed_ip
-    # won't find floating ips associated with other fixed_ips
-    floating_ips = floating_ip_get_by_fixed_address(context,
-                                                    fixed_ips[0]['address'])
-    if not floating_ips:
-        return None
-    # NOTE(vish): this just returns the first floating ip
-    return floating_ips[0]['address']
-
-
 @require_context
 def instance_floating_address_get_all(context, instance_uuid):
     if not uuidutils.is_uuid_like(instance_uuid):
