@@ -964,7 +964,7 @@ def get_vm_state_from_name(session, vm_name):
 
 def get_stats_from_cluster(session, cluster):
     """Get the aggregate resource stats of a cluster."""
-    cpu_info = {'vcpus': 0, 'cores': 0, 'vendor': [], 'model': []}
+    vcpus = 0
     mem_info = {'total': 0, 'free': 0}
     # Get the Host and Resource Pool Managed Object Refs
     prop_dict = session._call_method(vim_util, "get_dynamic_properties",
@@ -985,10 +985,7 @@ def get_stats_from_cluster(session, cluster):
                     runtime_summary.connectionState == "connected"):
                     # Total vcpus is the sum of all pCPUs of individual hosts
                     # The overcommitment ratio is factored in by the scheduler
-                    cpu_info['vcpus'] += hardware_summary.numCpuThreads
-                    cpu_info['cores'] += hardware_summary.numCpuCores
-                    cpu_info['vendor'].append(hardware_summary.vendor)
-                    cpu_info['model'].append(hardware_summary.cpuModel)
+                    vcpus += hardware_summary.numCpuThreads
 
         res_mor = prop_dict.get('resourcePool')
         if res_mor:
@@ -1000,7 +997,7 @@ def get_stats_from_cluster(session, cluster):
                 # overallUsage is the hypervisor's view of memory usage by VM's
                 consumed = int(res_usage.overallUsage / units.Mi)
                 mem_info['free'] = mem_info['total'] - consumed
-    stats = {'cpu': cpu_info, 'mem': mem_info}
+    stats = {'vcpus': vcpus, 'mem': mem_info}
     return stats
 
 

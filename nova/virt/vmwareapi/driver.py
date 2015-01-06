@@ -428,7 +428,11 @@ class VMwareVCDriver(driver.ComputeDriver):
                'hypervisor_type': host_stats['hypervisor_type'],
                'hypervisor_version': host_stats['hypervisor_version'],
                'hypervisor_hostname': host_stats['hypervisor_hostname'],
-               'cpu_info': jsonutils.dumps(host_stats['cpu_info']),
+                # The VMWare driver manages multiple hosts, so there are
+                # likely many different CPU models in use. As such it is
+                # impossible to provide any meaningful info on the CPU
+                # model of the "host"
+               'cpu_info': None,
                'supported_instances': jsonutils.dumps(
                    host_stats['supported_instances']),
                'numa_topology': None,

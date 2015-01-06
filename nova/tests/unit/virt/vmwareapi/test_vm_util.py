@@ -100,22 +100,14 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         session = fake.FakeSession()
         with mock.patch.object(session, '_call_method', fake_call_method):
             result = vm_util.get_stats_from_cluster(session, "cluster1")
-            cpu_info = {}
             mem_info = {}
             if connection_state == "connected" and not maintenance_mode:
-                cpu_info['vcpus'] = 32
-                cpu_info['cores'] = 16
-                cpu_info['vendor'] = ["Intel", "Intel"]
-                cpu_info['model'] = ["Intel(R) Xeon(R)",
-                                     "Intel(R) Xeon(R)"]
+                vcpus = 32
             else:
-                cpu_info['vcpus'] = 16
-                cpu_info['cores'] = 8
-                cpu_info['vendor'] = ["Intel"]
-                cpu_info['model'] = ["Intel(R) Xeon(R)"]
+                vcpus = 16
             mem_info['total'] = 5120
             mem_info['free'] = 3072
-            expected_stats = {'cpu': cpu_info, 'mem': mem_info}
+            expected_stats = {'vcpus': vcpus, 'mem': mem_info}
             self.assertEqual(expected_stats, result)
 
     def test_get_stats_from_cluster_hosts_connected_and_active(self):

@@ -69,11 +69,7 @@ class VCState(object):
         stats = vm_util.get_stats_from_cluster(self._session, self._cluster)
         about_info = self._session._call_method(vim_util, "get_about_info")
         data = {}
-        data["vcpus"] = stats['cpu']['vcpus']
-        data["cpu_info"] = {"vendor": stats['cpu']['vendor'],
-                            "model": stats['cpu']['model'],
-                            "topology": {"cores": stats['cpu']['cores'],
-                                         "threads": stats['cpu']['vcpus']}}
+        data["vcpus"] = stats['vcpus']
         data["disk_total"] = capacity / units.Gi
         data["disk_available"] = freespace / units.Gi
         data["disk_used"] = data["disk_total"] - data["disk_available"]
