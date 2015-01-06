@@ -1570,3 +1570,144 @@ class VirtMemoryPagesTestCase(test.NoDBTestCase):
         self.assertEqual(
             2048,
             hw._numa_cell_supports_pagesize_request(host_cell, inst_cell))
+
+
+class _CPUPinningTestCaseBase(object):
+    def assertEqualTopology(self, expected, got):
+        for attr in ('sockets', 'cores', 'threads'):
+            self.assertEqual(getattr(expected, attr), getattr(got, attr),
+                             "Mismatch on %s" % attr)
+
+    def assertInstanceCellPinned(self, instance_cell, cell_ids=None):
+        default_cell_id = 0
+
+        self.assertIsNotNone(instance_cell)
+        if cell_ids is None:
+            self.assertEqual(default_cell_id, instance_cell.id)
+        else:
+            self.assertIn(instance_cell.id, cell_ids)
+
+        self.assertEqual(len(instance_cell.cpuset),
+                         len(instance_cell.cpu_pinning))
+
+
+class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
+    def test_get_pinning_inst_too_large_cpu(self):
+        host_pin = objects.NUMACell(id=0, cpuset=set([0, 1, 2]),
+                                    memory=2048, memory_usage=0)
+        inst_pin = objects.InstanceNUMACell(cpuset=set([0, 1, 2, 3]),
+                                            memory=2048)
+
+        inst_pin = hw._numa_fit_instance_cell_with_pinning(host_pin, inst_pin)
+        self.assertIsNone(inst_pin)
+
+    def test_get_pinning_inst_too_large_mem(self):
+        host_pin = objects.NUMACell(id=0, cpuset=set([0, 1, 2]),
+                                    memory=2048, memory_usage=1024)
+        inst_pin = objects.InstanceNUMACell(cpuset=set([0, 1, 2]),
+                                            memory=2048)
+
+        inst_pin = hw._numa_fit_instance_cell_with_pinning(host_pin, inst_pin)
+        self.assertIsNone(inst_pin)
+
+    def test_get_pinning_inst_not_avail(self):
+        host_pin = objects.NUMACell(id=0, cpuset=set([0, 1, 2, 3]),
+                                    memory=2048, memory_usage=0,
+                                    pinned_cpus=set([0]))
+        inst_pin = objects.InstanceNUMACell(cpuset=set([0, 1, 2, 3]),
+                                            memory=2048)
+
+        inst_pin = hw._numa_fit_instance_cell_with_pinning(host_pin, inst_pin)
+        self.assertIsNone(inst_pin)
+
+    def test_get_pinning_no_sibling_fits_empty(self):
+        host_pin = objects.NUMACell(id=0, cpuset=set([0, 1, 2]),
+                                    memory=2048, memory_usage=0)
+        inst_pin = objects.InstanceNUMACell(cpuset=set([0, 1, 2]), memory=2048)
+
+        inst_pin = hw._numa_fit_instance_cell_with_pinning(host_pin, inst_pin)
+        self.assertInstanceCellPinned(inst_pin)
+
+    def test_get_pinning_no_sibling_fits_w_usage(self):
+        host_pin = objects.NUMACell(id=0, cpuset=set([0, 1, 2, 3]),
+                                    memory=2048, memory_usage=0,
+                                    pinned_cpus=set([1]))
+        inst_pin = objects.InstanceNUMACell(cpuset=set([0, 1, 2]), memory=1024)
+
+        inst_pin = hw._numa_fit_instance_cell_with_pinning(host_pin, inst_pin)
+        self.assertInstanceCellPinned(inst_pin)
+
+    def test_get_pinning_instance_siblings_fits(self):
+        host_pin = objects.NUMACell(id=0, cpuset=set([0, 1, 2, 3]),
+                                    memory=2048, memory_usage=0)
+        topo = objects.VirtCPUTopology(sockets=1, cores=2, threads=2)
+        inst_pin = objects.InstanceNUMACell(
+                cpuset=set([0, 1, 2, 3]), memory=2048, cpu_topology=topo)
+
+        inst_pin = hw._numa_fit_instance_cell_with_pinning(host_pin, inst_pin)
+        self.assertInstanceCellPinned(inst_pin)
+        self.assertEqualTopology(topo, inst_pin.cpu_topology)
+
+    def test_get_pinning_instance_siblings_host_siblings_fits_empty(self):
+        host_pin = objects.NUMACell(id=0, cpuset=set([0, 1, 2, 3]),
+                                    memory=2048, memory_usage=0,
+                                    siblings=[set([0, 1]), set([2, 3])])
+        topo = objects.VirtCPUTopology(sockets=1, cores=2, threads=2)
+        inst_pin = objects.InstanceNUMACell(
+                cpuset=set([0, 1, 2, 3]), memory=2048, cpu_topology=topo)
+
+        inst_pin = hw._numa_fit_instance_cell_with_pinning(host_pin, inst_pin)
+        self.assertInstanceCellPinned(inst_pin)
+        self.assertEqualTopology(topo, inst_pin.cpu_topology)
+
+    def test_get_pinning_instance_siblings_host_siblings_fits_w_usage(self):
+        host_pin = objects.NUMACell(
+                id=0,
+                cpuset=set([0, 1, 2, 3, 4, 5, 6, 7]),
+                memory=4096, memory_usage=0,
+                pinned_cpus=set([1, 2, 5, 6]),
+                siblings=[set([0, 1, 2, 3]), set([4, 5, 6, 7])])
+        topo = objects.VirtCPUTopology(sockets=1, cores=2, threads=2)
+        inst_pin = objects.InstanceNUMACell(
+                cpuset=set([0, 1, 2, 3]), memory=2048, cpu_topology=topo)
+
+        inst_pin = hw._numa_fit_instance_cell_with_pinning(host_pin, inst_pin)
+        self.assertInstanceCellPinned(inst_pin)
+        self.assertEqualTopology(topo, inst_pin.cpu_topology)
+
+    def test_get_pinning_instance_siblings_host_siblings_fails(self):
+        host_pin = objects.NUMACell(
+                id=0, cpuset=set([0, 1, 2, 3, 4, 5, 6, 7]),
+                memory=4096, memory_usage=0,
+                siblings=[set([0, 1]), set([2, 3]), set([4, 5]), set([6, 7])])
+        topo = objects.VirtCPUTopology(sockets=1, cores=2, threads=4)
+        inst_pin = objects.InstanceNUMACell(
+                cpuset=set([0, 1, 2, 3, 4, 5, 6, 7]), memory=2048,
+                cpu_topology=topo)
+
+        inst_pin = hw._numa_fit_instance_cell_with_pinning(host_pin, inst_pin)
+        self.assertIsNone(inst_pin)
+
+    def test_get_pinning_host_siblings_fit_single_core(self):
+        host_pin = objects.NUMACell(
+                id=0, cpuset=set([0, 1, 2, 3, 4, 5, 6, 7]),
+                memory=4096, memory_usage=0,
+                siblings=[set([0, 1, 2, 3]), set([4, 5, 6, 7])])
+        inst_pin = objects.InstanceNUMACell(cpuset=set([0, 1, 2, 3]),
+                                            memory=2048)
+
+        inst_pin = hw._numa_fit_instance_cell_with_pinning(host_pin, inst_pin)
+        self.assertInstanceCellPinned(inst_pin)
+        got_topo = objects.VirtCPUTopology(sockets=1, cores=1, threads=4)
+        self.assertEqualTopology(got_topo, inst_pin.cpu_topology)
+
+    def test_get_pinning_host_siblings_fit(self):
+        host_pin = objects.NUMACell(id=0, cpuset=set([0, 1, 2, 3]),
+                                    memory=4096, memory_usage=0,
+                                    siblings=[set([0, 1]), set([2, 3])])
+        inst_pin = objects.InstanceNUMACell(cpuset=set([0, 1, 2, 3]),
+                                            memory=2048)
+        inst_pin = hw._numa_fit_instance_cell_with_pinning(host_pin, inst_pin)
+        self.assertInstanceCellPinned(inst_pin)
+        got_topo = objects.VirtCPUTopology(sockets=1, cores=2, threads=2)
+        self.assertEqualTopology(got_topo, inst_pin.cpu_topology)

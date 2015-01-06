@@ -657,6 +657,109 @@ def _numa_cell_supports_pagesize_request(host_cell, inst_cell):
         return verify_pagesizes(host_cell, inst_cell, [inst_cell.pagesize])
 
 
+def _pack_instance_onto_cores(available_siblings, instance_cell, host_cell_id):
+    """Pack an instance onto a set of siblings
+
+    :param available_siblings: list of sets of CPU id's - available
+                               siblings per core
+    :param instance_cell: An instance of objects.InstanceNUMACell describing
+                          the pinning requirements of the instance
+
+    :returns: An instance of objects.InstanceNUMACell containing the pinning
+              information, and potentially a new topology to be exposed to the
+              instance. None if there is no valid way to satisfy the sibling
+              requirements for the instance.
+
+    This method will calculate the pinning for the given instance and it's
+    topology, making sure that hyperthreads of the instance match up with
+    those of the host when the pinning takes effect.
+    """
+
+    # We build up a data structure 'can_pack' that answers the question:
+    # 'Given the number of threads I want to pack, give me a list of all
+    # the available sibling sets that can accomodate it'
+    can_pack = collections.defaultdict(list)
+    for sib in available_siblings:
+        for threads_no in range(1, len(sib) + 1):
+            can_pack[threads_no].append(sib)
+
+    def _can_pack_instance_cell(instance_cell, threads_per_core, cores_list):
+        """Determines if instance cell can fit an avail set of cores."""
+
+        if threads_per_core * len(cores_list) < len(instance_cell):
+            return False
+        if instance_cell.siblings:
+            return instance_cell.cpu_topology.threads <= threads_per_core
+        else:
+            return len(instance_cell) % threads_per_core == 0
+
+    # We iterate over the can_pack dict in descending order of cores that
+    # can be packed - an attempt to get even distribution over time
+    for cores_per_sib, sib_list in sorted(
+            (t for t in can_pack.items()), reverse=True):
+        if _can_pack_instance_cell(instance_cell,
+                                   cores_per_sib, sib_list):
+            sliced_sibs = map(lambda s: list(s)[:cores_per_sib], sib_list)
+            if instance_cell.siblings:
+                pinning = zip(itertools.chain(*instance_cell.siblings),
+                              itertools.chain(*sliced_sibs))
+            else:
+                pinning = zip(sorted(instance_cell.cpuset),
+                              itertools.chain(*sliced_sibs))
+
+            topology = (instance_cell.cpu_topology or
+                        objects.VirtCPUTopology(sockets=1,
+                                                cores=len(sliced_sibs),
+                                                threads=cores_per_sib))
+            instance_cell.pin_vcpus(*pinning)
+            instance_cell.cpu_topology = topology
+            instance_cell.id = host_cell_id
+            return instance_cell
+
+
+def _numa_fit_instance_cell_with_pinning(host_cell, instance_cell):
+    """Figure out if cells can be pinned to a host cell and return details
+
+    :param host_cell: objects.NUMACell instance - the host cell that
+                      the isntance should be pinned to
+    :param instance_cell: objects.InstanceNUMACell instance without any
+                          pinning information
+
+    :returns: objects.InstanceNUMACell instance with pinning information,
+              or None if instance cannot be pinned to the given host
+    """
+    if (host_cell.avail_cpus < len(instance_cell.cpuset) or
+        host_cell.avail_memory < instance_cell.memory):
+        # If we do not have enough CPUs available or not enough memory
+        # on the host cell, we quit early (no oversubscription).
+        return
+
+    if host_cell.siblings:
+        # Instance requires hyperthreading in it's topology
+        if instance_cell.cpu_topology and instance_cell.siblings:
+            return _pack_instance_onto_cores(host_cell.free_siblings,
+                                             instance_cell, host_cell.id)
+
+        else:
+            # Try to pack the instance cell in one core
+            largest_free_sibling_set = sorted(
+                host_cell.free_siblings, key=len)[-1]
+            if (len(instance_cell.cpuset) <=
+                    len(largest_free_sibling_set)):
+                return _pack_instance_onto_cores(
+                    [largest_free_sibling_set], instance_cell, host_cell.id)
+
+            # We can't to pack it onto one core so try with avail siblings
+            else:
+                return _pack_instance_onto_cores(
+                    host_cell.free_siblings, instance_cell, host_cell.id)
+    else:
+        # Straightforward to pin to available cpus when there is no
+        # hyperthreading on the host
+        return _pack_instance_onto_cores(
+            [host_cell.free_cpus], instance_cell, host_cell.id)
+
+
 def _numa_fit_instance_cell(host_cell, instance_cell, limit_cell=None):
     """Check if a instance cell can fit and set it's cell id
 
