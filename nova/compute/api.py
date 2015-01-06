@@ -829,7 +829,7 @@ class API(base.Base):
                     boot_meta.get('properties', {})))
 
         numa_topology = hardware.numa_get_constraints(
-                instance_type, boot_meta.get('properties', {}))
+                instance_type, boot_meta)
 
         system_metadata = flavors.save_flavor_info(
             dict(), instance_type)

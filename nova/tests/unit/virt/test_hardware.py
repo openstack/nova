@@ -877,7 +877,8 @@ class NUMATopologyTest(test.NoDBTestCase):
                     "hw:numa_nodes": 2,
                 }),
                 "image": {
-                    "hw_numa_nodes": 4,
+                    "properties": {
+                        "hw_numa_nodes": 4}
                 },
                 "expect": exception.ImageNUMATopologyForbidden,
             },
