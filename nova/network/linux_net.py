@@ -877,7 +877,10 @@ def initialize_gateway_device(dev, network_ref):
     for line in out.split('\n'):
         fields = line.split()
         if fields and fields[0] == 'inet':
-            ip_params = fields[1:-1]
+            if fields[-2] in ('secondary', 'dynamic'):
+                ip_params = fields[1:-2]
+            else:
+                ip_params = fields[1:-1]
             old_ip_params.append(ip_params)
             if ip_params[0] != full_ip:
                 new_ip_params.append(ip_params)

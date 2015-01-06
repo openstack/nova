@@ -937,6 +937,29 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         ]
         self._test_initialize_gateway(existing, expected)
 
+    def test_initialize_gateway_ip_with_dynamic_flag(self):
+        existing = ("2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> "
+            "    mtu 1500 qdisc pfifo_fast state UNKNOWN qlen 1000\n"
+            "    link/ether de:ad:be:ef:be:ef brd ff:ff:ff:ff:ff:ff\n"
+            "    inet 192.168.0.1/24 brd 192.168.0.255 scope global "
+            "dynamic eth0\n"
+            "    inet6 dead::beef:dead:beef:dead/64 scope link\n"
+            "    valid_lft forever preferred_lft forever\n")
+        expected = [
+            ('sysctl', '-n', 'net.ipv4.ip_forward'),
+            ('ip', 'addr', 'show', 'dev', 'eth0', 'scope', 'global'),
+            ('ip', 'route', 'show', 'dev', 'eth0'),
+            ('ip', 'addr', 'del', '192.168.0.1/24',
+             'brd', '192.168.0.255', 'scope', 'global', 'dev', 'eth0'),
+            ('ip', 'addr', 'add', '192.168.1.1/24',
+             'brd', '192.168.1.255', 'dev', 'eth0'),
+            ('ip', 'addr', 'add', '192.168.0.1/24',
+             'brd', '192.168.0.255', 'scope', 'global', 'dev', 'eth0'),
+            ('ip', '-f', 'inet6', 'addr', 'change',
+             '2001:db8::/64', 'dev', 'eth0'),
+        ]
+        self._test_initialize_gateway(existing, expected)
+
     def test_initialize_gateway_resets_route(self):
         routes = ("default via 192.168.0.1 dev eth0\n"
                   "192.168.100.0/24 via 192.168.0.254 dev eth0 proto static\n")
