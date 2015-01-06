@@ -37,6 +37,7 @@ from nova import objects
 from nova.objects import base as obj_base
 from nova.openstack.common import log as logging
 from nova.pci import manager as pci_manager
+from nova.pci import whitelist as pci_whitelist
 from nova import rpc
 from nova.scheduler import client as scheduler_client
 from nova import utils
@@ -73,6 +74,7 @@ class ResourceTracker(object):
         self.host = host
         self.driver = driver
         self.pci_tracker = None
+        self.pci_filter = pci_whitelist.get_pci_devices_filter()
         self.nodename = nodename
         self.compute_node = None
         self.stats = importutils.import_object(CONF.compute_stats_class)
@@ -336,8 +338,17 @@ class ResourceTracker(object):
         if 'pci_passthrough_devices' in resources:
             if not self.pci_tracker:
                 self.pci_tracker = pci_manager.PciDevTracker()
-            self.pci_tracker.set_hvdevs(jsonutils.loads(resources.pop(
-                'pci_passthrough_devices')))
+
+            devs = []
+            for dev in jsonutils.loads(resources.pop(
+                'pci_passthrough_devices')):
+                if dev['dev_type'] == 'type-PF':
+                    continue
+
+                if self.pci_filter.device_assignable(dev):
+                    devs.append(dev)
+
+            self.pci_tracker.set_hvdevs(devs)
 
         # Grab all instances assigned to this node:
         instances = objects.InstanceList.get_by_host_and_node(

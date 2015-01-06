@@ -32,7 +32,6 @@ from nova import exception
 from nova.i18n import _, _LE, _LI, _LW
 from nova import objects
 from nova.openstack.common import log as logging
-from nova.pci import whitelist as pci_whitelist
 from nova.virt.xenapi import pool_states
 from nova.virt.xenapi import vm_utils
 
@@ -147,7 +146,6 @@ class HostState(object):
         super(HostState, self).__init__()
         self._session = session
         self._stats = {}
-        self._pci_device_filter = pci_whitelist.get_pci_devices_filter()
         self.update_status()
 
     def _get_passthrough_devices(self):
@@ -155,10 +153,9 @@ class HostState(object):
 
         We use a plugin to get the output of the lspci command runs on dom0.
         From this list we will extract pci devices that are using the pciback
-        kernel driver. Then we compare this list to the pci whitelist to get
-        a new list of pci devices that can be used for pci passthrough.
+        kernel driver.
 
-        :returns: a list of pci devices available for pci passthrough.
+        :returns: a list of pci devices on the node
         """
         def _compile_hex(pattern):
             """Return a compiled regular expression pattern into which we have
@@ -217,9 +214,7 @@ class HostState(object):
         for dev_string_info in pci_list:
             if "Driver:\tpciback" in dev_string_info:
                 new_dev = _parse_pci_device_string(dev_string_info)
-
-                if self._pci_device_filter.device_assignable(new_dev):
-                    passthrough_devices.append(new_dev)
+                passthrough_devices.append(new_dev)
 
         return passthrough_devices
 
