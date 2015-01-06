@@ -390,6 +390,19 @@ The Filter Scheduler weighs hosts based on the config option
   hosts. If the multiplier is positive, the weigher prefer choosing heavy
   workload compute hosts, the weighing has the opposite effect of the default.
 
+* |ServerGroupSoftAffinityWeigher| The weigher can compute the weight based
+  on the number of instances that run on the same server group. The largest
+  weight defines the preferred host for the new instance. For the multiplier
+  only a positive value is meaningful for the calculation as a negative value
+  would mean that the affinity weigher would prefer non collocating placement.
+
+* |ServerGroupSoftAntiAffinityWeigher| The weigher can compute the weight based
+  on the number of instances that run on the same server group as a negative
+  value. The largest weight defines the preferred host for the new instance.
+  For the multiplier only a positive value is meaningful for the calculation as
+  a negative value would mean that the anti-affinity weigher would prefer
+  collocating placement.
+
 Filter Scheduler makes a local list of acceptable hosts by repeated filtering and
 weighing. Each time it chooses a host, it virtually consumes resources on it,
 so subsequent selections can adjust accordingly. It is useful if the customer
@@ -440,3 +453,5 @@ in :mod:`nova.tests.scheduler`.
 .. |MetricsFilter| replace:: :class:`MetricsFilter <nova.scheduler.filters.metrics_filter.MetricsFilter>`
 .. |MetricsWeigher| replace:: :class:`MetricsWeigher <nova.scheduler.weights.metrics.MetricsWeigher>`
 .. |IoOpsWeigher| replace:: :class:`IoOpsWeigher <nova.scheduler.weights.io_ops.IoOpsWeigher>`
+.. |ServerGroupSoftAffinityWeigher| replace:: :class:`ServerGroupSoftAffinityWeigher <nova.scheduler.weights.affinity.ServerGroupSoftAffinityWeigher>`
+.. |ServerGroupSoftAntiAffinityWeigher| replace:: :class:`ServerGroupSoftAntiAffinityWeigher <nova.scheduler.weights.affinity.ServerGroupSoftAntiAffinityWeigher>`
