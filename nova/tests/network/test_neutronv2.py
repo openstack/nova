@@ -1863,6 +1863,9 @@ class TestNeutronv2(TestNeutronv2Base):
                     'instance': ({'uuid': self.port_data2[idx]['device_id']}
                                  if fip_data['port_id']
                                  else None)}
+        if expected['instance'] is not None:
+            expected['fixed_ip']['instance_uuid'] = \
+                expected['instance']['uuid']
         return expected
 
     def _test_get_floating_ip(self, fip_data, idx=0, by_address=False):
