@@ -1152,6 +1152,9 @@ class API(base_api.NetworkAPI):
         if fip['port_id']:
             instance_uuid = port_dict[fip['port_id']]['device_id']
             result['instance'] = {'uuid': instance_uuid}
+            # TODO(mriedem): remove this workaround once the get_floating_ip*
+            # API methods are converted to use nova objects.
+            result['fixed_ip']['instance_uuid'] = instance_uuid
         else:
             result['instance'] = None
         return result
