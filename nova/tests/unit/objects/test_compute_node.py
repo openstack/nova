@@ -185,13 +185,13 @@ class _TestComputeNodeObject(object):
                 'supported_instances': fake_supported_hv_specs_db_format,
             }).AndReturn(fake_compute_node)
         self.mox.ReplayAll()
-        compute = compute_node.ComputeNode()
+        compute = compute_node.ComputeNode(context=self.context)
         compute.service_id = 456
         compute.stats = fake_stats
         # NOTE (pmurray): host_ip is coerced to an IPAddress
         compute.host_ip = fake_host_ip
         compute.supported_hv_specs = fake_supported_hv_specs
-        compute.create(self.context)
+        compute.create()
         self.compare_obj(compute, fake_compute_node,
                          subs=self.subs(),
                          comparators=self.comparators())
@@ -201,9 +201,9 @@ class _TestComputeNodeObject(object):
         db.compute_node_create(self.context, {'service_id': 456}).AndReturn(
             fake_compute_node)
         self.mox.ReplayAll()
-        compute = compute_node.ComputeNode()
+        compute = compute_node.ComputeNode(context=self.context)
         compute.service_id = 456
-        compute.create(self.context)
+        compute.create()
         self.assertRaises(exception.ObjectActionError, compute.create,
                           self.context)
 
@@ -218,14 +218,14 @@ class _TestComputeNodeObject(object):
                 'supported_instances': fake_supported_hv_specs_db_format,
             }).AndReturn(fake_compute_node)
         self.mox.ReplayAll()
-        compute = compute_node.ComputeNode()
+        compute = compute_node.ComputeNode(context=self.context)
         compute.id = 123
         compute.vcpus_used = 3
         compute.stats = fake_stats
         # NOTE (pmurray): host_ip is coerced to an IPAddress
         compute.host_ip = fake_host_ip
         compute.supported_hv_specs = fake_supported_hv_specs
-        compute.save(self.context)
+        compute.save()
         self.compare_obj(compute, fake_compute_node,
                          subs=self.subs(),
                          comparators=self.comparators())
@@ -233,8 +233,8 @@ class _TestComputeNodeObject(object):
     @mock.patch.object(db, 'compute_node_create',
                        return_value=fake_compute_node)
     def test_set_id_failure(self, db_mock):
-        compute = compute_node.ComputeNode()
-        compute.create(self.context)
+        compute = compute_node.ComputeNode(context=self.context)
+        compute.create()
         self.assertRaises(exception.ReadOnlyFieldError, setattr,
                           compute, 'id', 124)
 
@@ -242,9 +242,9 @@ class _TestComputeNodeObject(object):
         self.mox.StubOutWithMock(db, 'compute_node_delete')
         db.compute_node_delete(self.context, 123)
         self.mox.ReplayAll()
-        compute = compute_node.ComputeNode()
+        compute = compute_node.ComputeNode(context=self.context)
         compute.id = 123
-        compute.destroy(self.context)
+        compute.destroy()
 
     def test_service(self):
         self.mox.StubOutWithMock(service.Service, 'get_by_id')
