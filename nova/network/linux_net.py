@@ -178,7 +178,7 @@ class IptablesRule(object):
     def __ne__(self, other):
         return not self == other
 
-    def __str__(self):
+    def __repr__(self):
         if self.wrap:
             chain = '%s-%s' % (binary_name, self.chain)
         else:
