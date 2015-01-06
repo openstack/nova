@@ -131,6 +131,35 @@ class DsUtilTestCase(test.NoDBTestCase):
             _wait_for_task.assert_has_calls([
                    mock.call('fake_move_task')])
 
+    def test_disk_copy(self):
+        with contextlib.nested(
+            mock.patch.object(self.session, '_wait_for_task'),
+            mock.patch.object(self.session, '_call_method',
+                              return_value=mock.sentinel.cm)
+        ) as (_wait_for_task, _call_method):
+            ds_util.disk_copy(self.session, mock.sentinel.dc_ref,
+                              mock.sentinel.source_ds, mock.sentinel.dest_ds)
+            _wait_for_task.assert_called_once_with(mock.sentinel.cm)
+            _call_method.assert_called_once_with(
+                    mock.ANY, 'CopyVirtualDisk_Task', 'VirtualDiskManager',
+                    sourceName='sentinel.source_ds',
+                    destDatacenter=mock.sentinel.dc_ref,
+                    sourceDatacenter=mock.sentinel.dc_ref, force=False,
+                    destName='sentinel.dest_ds')
+
+    def test_disk_delete(self):
+        with contextlib.nested(
+            mock.patch.object(self.session, '_wait_for_task'),
+            mock.patch.object(self.session, '_call_method',
+                              return_value=mock.sentinel.cm)
+        ) as (_wait_for_task, _call_method):
+            ds_util.disk_delete(self.session,
+                                'fake-dc-ref', '[ds] tmp/disk.vmdk')
+            _wait_for_task.assert_called_once_with(mock.sentinel.cm)
+            _call_method.assert_called_once_with(
+                    mock.ANY, 'DeleteVirtualDisk_Task', 'VirtualDiskManager',
+                    datacenter='fake-dc-ref', name='[ds] tmp/disk.vmdk')
+
     def test_mkdir(self):
         def fake_call_method(module, method, *args, **kwargs):
             self.assertEqual('MakeDirectory', method)
