@@ -19,8 +19,6 @@ import six
 from webob import exc
 
 from nova.api.openstack import extensions
-from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 from nova.compute import flavors
 from nova import exception
 from nova.i18n import _
@@ -28,21 +26,6 @@ from nova import objects
 from nova import utils
 
 authorize = extensions.extension_authorizer('compute', 'flavorextraspecs')
-
-
-class ExtraSpecsTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        extra_specs_dict = xmlutil.make_flat_dict('extra_specs', colon_ns=True)
-        return xmlutil.MasterTemplate(extra_specs_dict, 1)
-
-
-class ExtraSpecTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        sel = xmlutil.Selector(xmlutil.get_items, 0)
-        root = xmlutil.TemplateElement('extra_spec', selector=sel)
-        root.set('key', 0)
-        root.text = 1
-        return xmlutil.MasterTemplate(root, 1)
 
 
 class FlavorExtraSpecsController(object):
@@ -85,14 +68,12 @@ class FlavorExtraSpecsController(object):
             except exception.InvalidInput as error:
                 raise exc.HTTPBadRequest(explanation=error.format_message())
 
-    @wsgi.serializers(xml=ExtraSpecsTemplate)
     def index(self, req, flavor_id):
         """Returns the list of extra specs for a given flavor."""
         context = req.environ['nova.context']
         authorize(context, action='index')
         return self._get_extra_specs(context, flavor_id)
 
-    @wsgi.serializers(xml=ExtraSpecsTemplate)
     def create(self, req, flavor_id, body):
         context = req.environ['nova.context']
         authorize(context, action='create')
@@ -109,7 +90,6 @@ class FlavorExtraSpecsController(object):
             raise exc.HTTPNotFound(explanation=error.format_message())
         return body
 
-    @wsgi.serializers(xml=ExtraSpecTemplate)
     def update(self, req, flavor_id, id, body):
         context = req.environ['nova.context']
         authorize(context, action='update')
@@ -130,7 +110,6 @@ class FlavorExtraSpecsController(object):
             raise exc.HTTPNotFound(explanation=error.format_message())
         return body
 
-    @wsgi.serializers(xml=ExtraSpecTemplate)
     def show(self, req, flavor_id, id):
         """Return a single extra spec item."""
         context = req.environ['nova.context']

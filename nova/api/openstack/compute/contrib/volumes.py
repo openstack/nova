@@ -22,7 +22,6 @@ from webob import exc
 from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 from nova import compute
 from nova import exception
 from nova.i18n import _
@@ -84,82 +83,6 @@ def _translate_volume_summary_view(context, vol):
     return d
 
 
-def make_volume(elem):
-    elem.set('id')
-    elem.set('status')
-    elem.set('size')
-    elem.set('availabilityZone')
-    elem.set('createdAt')
-    elem.set('displayName')
-    elem.set('displayDescription')
-    elem.set('volumeType')
-    elem.set('snapshotId')
-
-    attachments = xmlutil.SubTemplateElement(elem, 'attachments')
-    attachment = xmlutil.SubTemplateElement(attachments, 'attachment',
-                                            selector='attachments')
-    make_attachment(attachment)
-
-    # Attach metadata node
-    elem.append(common.MetadataTemplate())
-
-
-class VolumeTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('volume', selector='volume')
-        make_volume(root)
-        return xmlutil.MasterTemplate(root, 1)
-
-
-class VolumesTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('volumes')
-        elem = xmlutil.SubTemplateElement(root, 'volume', selector='volumes')
-        make_volume(elem)
-        return xmlutil.MasterTemplate(root, 1)
-
-
-class CommonDeserializer(wsgi.MetadataXMLDeserializer):
-    """Common deserializer to handle xml-formatted volume requests.
-
-       Handles standard volume attributes as well as the optional metadata
-       attribute
-    """
-
-    metadata_deserializer = common.MetadataXMLDeserializer()
-
-    def _extract_volume(self, node):
-        """Marshal the volume attribute of a parsed request."""
-        vol = {}
-        volume_node = self.find_first_child_named(node, 'volume')
-
-        attributes = ['display_name', 'display_description', 'size',
-                      'volume_type', 'availability_zone']
-        for attr in attributes:
-            if volume_node.getAttribute(attr):
-                vol[attr] = volume_node.getAttribute(attr)
-
-        metadata_node = self.find_first_child_named(volume_node, 'metadata')
-        if metadata_node is not None:
-            vol['metadata'] = self.extract_metadata(metadata_node)
-
-        return vol
-
-
-class CreateDeserializer(CommonDeserializer):
-    """Deserializer to handle xml-formatted create volume requests.
-
-       Handles standard volume attributes as well as the optional metadata
-       attribute
-    """
-
-    def default(self, string):
-        """Deserialize an xml-formatted volume create request."""
-        dom = xmlutil.safe_minidom_parse_string(string)
-        vol = self._extract_volume(dom)
-        return {'body': {'volume': vol}}
-
-
 class VolumeController(wsgi.Controller):
     """The Volumes API controller for the OpenStack API."""
 
@@ -167,7 +90,6 @@ class VolumeController(wsgi.Controller):
         self.volume_api = volume.API()
         super(VolumeController, self).__init__()
 
-    @wsgi.serializers(xml=VolumeTemplate)
     def show(self, req, id):
         """Return data about the given volume."""
         context = req.environ['nova.context']
@@ -193,12 +115,10 @@ class VolumeController(wsgi.Controller):
             raise exc.HTTPNotFound(explanation=e.format_message())
         return webob.Response(status_int=202)
 
-    @wsgi.serializers(xml=VolumesTemplate)
     def index(self, req):
         """Returns a summary list of volumes."""
         return self._items(req, entity_maker=_translate_volume_summary_view)
 
-    @wsgi.serializers(xml=VolumesTemplate)
     def detail(self, req):
         """Returns a detailed list of volumes."""
         return self._items(req, entity_maker=_translate_volume_detail_view)
@@ -213,8 +133,6 @@ class VolumeController(wsgi.Controller):
         res = [entity_maker(context, vol) for vol in limited_list]
         return {'volumes': res}
 
-    @wsgi.serializers(xml=VolumeTemplate)
-    @wsgi.deserializers(xml=CreateDeserializer)
     def create(self, req, body):
         """Creates a new volume."""
         context = req.environ['nova.context']
@@ -297,30 +215,6 @@ def _translate_attachment_summary_view(volume_id, instance_uuid, mountpoint):
     return d
 
 
-def make_attachment(elem):
-    elem.set('id')
-    elem.set('serverId')
-    elem.set('volumeId')
-    elem.set('device')
-
-
-class VolumeAttachmentTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('volumeAttachment',
-                                       selector='volumeAttachment')
-        make_attachment(root)
-        return xmlutil.MasterTemplate(root, 1)
-
-
-class VolumeAttachmentsTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('volumeAttachments')
-        elem = xmlutil.SubTemplateElement(root, 'volumeAttachment',
-                                          selector='volumeAttachments')
-        make_attachment(elem)
-        return xmlutil.MasterTemplate(root, 1)
-
-
 class VolumeAttachmentController(wsgi.Controller):
     """The volume attachment API controller for the OpenStack API.
 
@@ -335,7 +229,6 @@ class VolumeAttachmentController(wsgi.Controller):
         self.ext_mgr = ext_mgr
         super(VolumeAttachmentController, self).__init__()
 
-    @wsgi.serializers(xml=VolumeAttachmentsTemplate)
     def index(self, req, server_id):
         """Returns the list of volume attachments for a given instance."""
         context = req.environ['nova.context']
@@ -343,7 +236,6 @@ class VolumeAttachmentController(wsgi.Controller):
         return self._items(req, server_id,
                            entity_maker=_translate_attachment_summary_view)
 
-    @wsgi.serializers(xml=VolumeAttachmentTemplate)
     def show(self, req, server_id, id):
         """Return data about the given volume attachment."""
         context = req.environ['nova.context']
@@ -381,7 +273,6 @@ class VolumeAttachmentController(wsgi.Controller):
                     "not in proper format (%s)") % volume_id
             raise exc.HTTPBadRequest(explanation=msg)
 
-    @wsgi.serializers(xml=VolumeAttachmentTemplate)
     def create(self, req, server_id, body):
         """Attach a volume to an instance."""
         context = req.environ['nova.context']
@@ -585,32 +476,6 @@ def _translate_snapshot_summary_view(context, vol):
     return d
 
 
-def make_snapshot(elem):
-    elem.set('id')
-    elem.set('status')
-    elem.set('size')
-    elem.set('createdAt')
-    elem.set('displayName')
-    elem.set('displayDescription')
-    elem.set('volumeId')
-
-
-class SnapshotTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('snapshot', selector='snapshot')
-        make_snapshot(root)
-        return xmlutil.MasterTemplate(root, 1)
-
-
-class SnapshotsTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('snapshots')
-        elem = xmlutil.SubTemplateElement(root, 'snapshot',
-                                          selector='snapshots')
-        make_snapshot(elem)
-        return xmlutil.MasterTemplate(root, 1)
-
-
 class SnapshotController(wsgi.Controller):
     """The Snapshots API controller for the OpenStack API."""
 
@@ -618,7 +483,6 @@ class SnapshotController(wsgi.Controller):
         self.volume_api = volume.API()
         super(SnapshotController, self).__init__()
 
-    @wsgi.serializers(xml=SnapshotTemplate)
     def show(self, req, id):
         """Return data about the given snapshot."""
         context = req.environ['nova.context']
@@ -644,12 +508,10 @@ class SnapshotController(wsgi.Controller):
             raise exc.HTTPNotFound(explanation=e.format_message())
         return webob.Response(status_int=202)
 
-    @wsgi.serializers(xml=SnapshotsTemplate)
     def index(self, req):
         """Returns a summary list of snapshots."""
         return self._items(req, entity_maker=_translate_snapshot_summary_view)
 
-    @wsgi.serializers(xml=SnapshotsTemplate)
     def detail(self, req):
         """Returns a detailed list of snapshots."""
         return self._items(req, entity_maker=_translate_snapshot_detail_view)
@@ -664,7 +526,6 @@ class SnapshotController(wsgi.Controller):
         res = [entity_maker(context, snapshot) for snapshot in limited_list]
         return {'snapshots': res}
 
-    @wsgi.serializers(xml=SnapshotTemplate)
     def create(self, req, body):
         """Creates a new snapshot."""
         context = req.environ['nova.context']

@@ -25,7 +25,6 @@ import webob.exc
 
 import nova.api.openstack
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 from nova import exception
 from nova.i18n import _
 from nova.i18n import _LE
@@ -95,42 +94,8 @@ class ExtensionDescriptor(object):
 
         return nsmap
 
-    @classmethod
-    def xmlname(cls, name):
-        """Synthesize element and attribute names."""
 
-        return '{%s}%s' % (cls.namespace, name)
-
-
-def make_ext(elem):
-    elem.set('name')
-    elem.set('namespace')
-    elem.set('alias')
-    elem.set('updated')
-
-    desc = xmlutil.SubTemplateElement(elem, 'description')
-    desc.text = 'description'
-
-    xmlutil.make_links(elem, 'links')
-
-
-ext_nsmap = {None: xmlutil.XMLNS_COMMON_V10, 'atom': xmlutil.XMLNS_ATOM}
-
-
-class ExtensionTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('extension', selector='extension')
-        make_ext(root)
-        return xmlutil.MasterTemplate(root, 1, nsmap=ext_nsmap)
-
-
-class ExtensionsTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('extensions')
-        elem = xmlutil.SubTemplateElement(root, 'extension',
-                                          selector='extensions')
-        make_ext(elem)
-        return xmlutil.MasterTemplate(root, 1, nsmap=ext_nsmap)
+ext_nsmap = {}
 
 
 class ExtensionsController(wsgi.Resource):
@@ -149,14 +114,12 @@ class ExtensionsController(wsgi.Resource):
         ext_data['links'] = []  # TODO(dprince): implement extension links
         return ext_data
 
-    @wsgi.serializers(xml=ExtensionsTemplate)
     def index(self, req):
         extensions = []
         for ext in self.extension_manager.sorted_extensions():
             extensions.append(self._translate(ext))
         return dict(extensions=extensions)
 
-    @wsgi.serializers(xml=ExtensionTemplate)
     def show(self, req, id):
         try:
             # NOTE(dprince): the extensions alias is used as the 'id' for show

@@ -14,7 +14,6 @@
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 from nova import quota
 
 
@@ -26,13 +25,6 @@ ALIAS = "os-used-limits"
 authorize = extensions.soft_extension_authorizer('compute', 'used_limits')
 authorize_for_admin = extensions.extension_authorizer('compute',
                                                       'used_limits_for_admin')
-
-
-class UsedLimitsTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('limits', selector='limits')
-        root.set('{%s}usedLimits' % XMLNS, '%s:usedLimits' % ALIAS)
-        return xmlutil.SlaveTemplate(root, 1, nsmap={ALIAS: XMLNS})
 
 
 class UsedLimitsController(wsgi.Controller):
@@ -49,7 +41,7 @@ class UsedLimitsController(wsgi.Controller):
 
     @wsgi.extends
     def index(self, req, resp_obj):
-        resp_obj.attach(xml=UsedLimitsTemplate())
+        resp_obj.attach()
         context = req.environ['nova.context']
         project_id = self._project_id(context, req)
         quotas = QUOTAS.get_project_quotas(context, project_id, usages=True)

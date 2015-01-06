@@ -18,24 +18,8 @@
 from nova.api.openstack.compute import servers
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 
 authorize = extensions.soft_extension_authorizer('compute', 'config_drive')
-
-
-class ServerConfigDriveTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('server')
-        root.set('config_drive', 'config_drive')
-        return xmlutil.SlaveTemplate(root, 1)
-
-
-class ServersConfigDriveTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('servers')
-        elem = xmlutil.SubTemplateElement(root, 'server', selector='servers')
-        elem.set('config_drive', 'config_drive')
-        return xmlutil.SlaveTemplate(root, 1)
 
 
 class Controller(servers.Controller):
@@ -49,7 +33,7 @@ class Controller(servers.Controller):
 
     def _show(self, req, resp_obj):
         if 'server' in resp_obj.obj:
-            resp_obj.attach(xml=ServerConfigDriveTemplate())
+            resp_obj.attach()
             server = resp_obj.obj['server']
             self._add_config_drive(req, [server])
 
@@ -63,7 +47,7 @@ class Controller(servers.Controller):
     def detail(self, req, resp_obj):
         context = req.environ['nova.context']
         if 'servers' in resp_obj.obj and authorize(context):
-            resp_obj.attach(xml=ServersConfigDriveTemplate())
+            resp_obj.attach()
             servers = resp_obj.obj['servers']
             self._add_config_drive(req, servers)
 

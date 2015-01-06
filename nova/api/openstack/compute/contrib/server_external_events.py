@@ -16,7 +16,6 @@ import webob
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 from nova import compute
 from nova import exception
 from nova.i18n import _
@@ -30,41 +29,12 @@ authorize = extensions.extension_authorizer('compute',
                                             'os-server-external-events')
 
 
-class EventTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('events')
-        elem1 = xmlutil.SubTemplateElement(root, 'event', selector='events')
-        elem2 = xmlutil.SubTemplateElement(elem1, xmlutil.Selector(0),
-                                           selector=xmlutil.get_items)
-        elem2.text = 1
-        return xmlutil.MasterTemplate(root, 1)
-
-
-class EventDeserializer(wsgi.MetadataXMLDeserializer):
-    def _extract_event(self, event_node):
-        event = {}
-        for key in ('name', 'tag', 'server_uuid', 'status'):
-            node = self.find_first_child_named(event_node, key)
-            event[key] = self.extract_text(node)
-        return event
-
-    def default(self, string):
-        events = []
-        dom = xmlutil.safe_minidom_parse_string(string)
-        events_node = self.find_first_child_named(dom, 'events')
-        for event_node in self.find_children_named(events_node, 'event'):
-            events.append(self._extract_event(event_node))
-        return {'body': {'events': events}}
-
-
 class ServerExternalEventsController(wsgi.Controller):
 
     def __init__(self):
         self.compute_api = compute.API()
         super(ServerExternalEventsController, self).__init__()
 
-    @wsgi.deserializers(xml=EventDeserializer)
-    @wsgi.serializers(xml=EventTemplate)
     def create(self, req, body):
         """Creates a new instance event."""
         context = req.environ['nova.context']

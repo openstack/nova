@@ -17,7 +17,6 @@ import webob
 from webob import exc
 
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 from nova.console import api as console_api
 from nova import exception
 
@@ -44,47 +43,12 @@ def _translate_detail_keys(cons):
     return dict(console=info)
 
 
-class ConsoleTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('console', selector='console')
-
-        id_elem = xmlutil.SubTemplateElement(root, 'id', selector='id')
-        id_elem.text = xmlutil.Selector()
-
-        port_elem = xmlutil.SubTemplateElement(root, 'port', selector='port')
-        port_elem.text = xmlutil.Selector()
-
-        host_elem = xmlutil.SubTemplateElement(root, 'host', selector='host')
-        host_elem.text = xmlutil.Selector()
-
-        passwd_elem = xmlutil.SubTemplateElement(root, 'password',
-                                                 selector='password')
-        passwd_elem.text = xmlutil.Selector()
-
-        constype_elem = xmlutil.SubTemplateElement(root, 'console_type',
-                                                   selector='console_type')
-        constype_elem.text = xmlutil.Selector()
-
-        return xmlutil.MasterTemplate(root, 1)
-
-
-class ConsolesTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('consoles')
-        console = xmlutil.SubTemplateElement(root, 'console',
-                                             selector='consoles')
-        console.append(ConsoleTemplate())
-
-        return xmlutil.MasterTemplate(root, 1)
-
-
 class Controller(object):
     """The Consoles controller for the OpenStack API."""
 
     def __init__(self):
         self.console_api = console_api.API()
 
-    @wsgi.serializers(xml=ConsolesTemplate)
     def index(self, req, server_id):
         """Returns a list of consoles for this instance."""
         consoles = self.console_api.get_consoles(
@@ -102,7 +66,6 @@ class Controller(object):
         except exception.InstanceNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
 
-    @wsgi.serializers(xml=ConsoleTemplate)
     def show(self, req, server_id, id):
         """Shows in-depth information on a specific console."""
         try:

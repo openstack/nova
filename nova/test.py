@@ -39,7 +39,6 @@ from oslotest import moxstubout
 import six
 import testtools
 
-from nova.api.openstack import wsgi
 from nova import context
 from nova import db
 from nova.network import manager as network_manager
@@ -148,12 +147,6 @@ class skipIf(object):
         else:
             raise TypeError('skipUnless can be used only with functions or '
                             'classes')
-
-
-class skipXmlTest(skipIf):
-    def __init__(self, reason):
-        super(skipXmlTest, self).__init__(wsgi.DISABLE_XML_V2_API,
-                                          reason)
 
 
 def _patch_mock_to_raise_for_invalid_assert_calls():

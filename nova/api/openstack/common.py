@@ -23,8 +23,6 @@ import six.moves.urllib.parse as urlparse
 import webob
 from webob import exc
 
-from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 from nova.compute import task_states
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
@@ -417,78 +415,6 @@ def raise_http_conflict_for_instance_invalid_state(exc, action, server_id):
         msg = _("Instance %(server_id)s is in an invalid state for "
                 "'%(action)s'") % {'action': action, 'server_id': server_id}
     raise webob.exc.HTTPConflict(explanation=msg)
-
-
-class MetadataDeserializer(wsgi.MetadataXMLDeserializer):
-    def deserialize(self, text):
-        dom = xmlutil.safe_minidom_parse_string(text)
-        metadata_node = self.find_first_child_named(dom, "metadata")
-        metadata = self.extract_metadata(metadata_node)
-        return {'body': {'metadata': metadata}}
-
-
-class MetaItemDeserializer(wsgi.MetadataXMLDeserializer):
-    def deserialize(self, text):
-        dom = xmlutil.safe_minidom_parse_string(text)
-        metadata_item = self.extract_metadata(dom)
-        return {'body': {'meta': metadata_item}}
-
-
-class MetadataXMLDeserializer(wsgi.XMLDeserializer):
-
-    def extract_metadata(self, metadata_node):
-        """Marshal the metadata attribute of a parsed request."""
-        if metadata_node is None:
-            return {}
-        metadata = {}
-        for meta_node in self.find_children_named(metadata_node, "meta"):
-            key = meta_node.getAttribute("key")
-            metadata[key] = self.extract_text(meta_node)
-        return metadata
-
-    def _extract_metadata_container(self, datastring):
-        dom = xmlutil.safe_minidom_parse_string(datastring)
-        metadata_node = self.find_first_child_named(dom, "metadata")
-        metadata = self.extract_metadata(metadata_node)
-        return {'body': {'metadata': metadata}}
-
-    def create(self, datastring):
-        return self._extract_metadata_container(datastring)
-
-    def update_all(self, datastring):
-        return self._extract_metadata_container(datastring)
-
-    def update(self, datastring):
-        dom = xmlutil.safe_minidom_parse_string(datastring)
-        metadata_item = self.extract_metadata(dom)
-        return {'body': {'meta': metadata_item}}
-
-
-metadata_nsmap = {None: xmlutil.XMLNS_V11}
-
-
-class MetaItemTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        sel = xmlutil.Selector('meta', xmlutil.get_items, 0)
-        root = xmlutil.TemplateElement('meta', selector=sel)
-        root.set('key', 0)
-        root.text = 1
-        return xmlutil.MasterTemplate(root, 1, nsmap=metadata_nsmap)
-
-
-class MetadataTemplateElement(xmlutil.TemplateElement):
-    def will_render(self, datum):
-        return True
-
-
-class MetadataTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = MetadataTemplateElement('metadata', selector='metadata')
-        elem = xmlutil.SubTemplateElement(root, 'meta',
-                                          selector=xmlutil.get_items)
-        elem.set('key', 0)
-        elem.text = 1
-        return xmlutil.MasterTemplate(root, 1, nsmap=metadata_nsmap)
 
 
 def check_snapshots_enabled(f):

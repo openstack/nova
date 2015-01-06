@@ -20,7 +20,6 @@ import webob
 from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 from nova import compute
 from nova.compute import utils as compute_utils
 from nova import exception
@@ -33,31 +32,6 @@ from nova.openstack.common import uuidutils
 
 LOG = logging.getLogger(__name__)
 authorize = extensions.extension_authorizer('compute', 'floating_ips')
-
-
-def make_float_ip(elem):
-    elem.set('id')
-    elem.set('ip')
-    elem.set('pool')
-    elem.set('fixed_ip')
-    elem.set('instance_id')
-
-
-class FloatingIPTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('floating_ip',
-                                       selector='floating_ip')
-        make_float_ip(root)
-        return xmlutil.MasterTemplate(root, 1)
-
-
-class FloatingIPsTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('floating_ips')
-        elem = xmlutil.SubTemplateElement(root, 'floating_ip',
-                                          selector='floating_ips')
-        make_float_ip(elem)
-        return xmlutil.MasterTemplate(root, 1)
 
 
 def _translate_floating_ip_view(floating_ip):
@@ -108,7 +82,6 @@ class FloatingIPController(object):
         self.network_api = network.API()
         super(FloatingIPController, self).__init__()
 
-    @wsgi.serializers(xml=FloatingIPTemplate)
     def show(self, req, id):
         """Return data about the given floating ip."""
         context = req.environ['nova.context']
@@ -122,7 +95,6 @@ class FloatingIPController(object):
 
         return _translate_floating_ip_view(floating_ip)
 
-    @wsgi.serializers(xml=FloatingIPsTemplate)
     def index(self, req):
         """Return a list of floating ips allocated to a project."""
         context = req.environ['nova.context']
@@ -132,7 +104,6 @@ class FloatingIPController(object):
 
         return _translate_floating_ips_view(floating_ips)
 
-    @wsgi.serializers(xml=FloatingIPTemplate)
     def create(self, req, body=None):
         context = req.environ['nova.context']
         authorize(context)

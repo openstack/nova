@@ -19,7 +19,6 @@ import webob
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 import nova.context
 from nova import exception
 from nova.i18n import _
@@ -38,19 +37,6 @@ EXTENDED_QUOTAS = {'server_groups': 'os-server-group-quotas',
 authorize_update = extensions.extension_authorizer('compute', 'quotas:update')
 authorize_show = extensions.extension_authorizer('compute', 'quotas:show')
 authorize_delete = extensions.extension_authorizer('compute', 'quotas:delete')
-
-
-class QuotaTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('quota_set', selector='quota_set')
-        root.set('id')
-
-        for resource in QUOTAS.resources:
-            if resource not in EXTENDED_QUOTAS:
-                elem = xmlutil.SubTemplateElement(root, resource)
-                elem.text = resource
-
-        return xmlutil.MasterTemplate(root, 1)
 
 
 class QuotaSetsController(wsgi.Controller):
@@ -113,7 +99,6 @@ class QuotaSetsController(wsgi.Controller):
         else:
             return dict((k, v['limit']) for k, v in values.items())
 
-    @wsgi.serializers(xml=QuotaTemplate)
     def show(self, req, id):
         context = req.environ['nova.context']
         authorize_show(context)
@@ -128,7 +113,6 @@ class QuotaSetsController(wsgi.Controller):
         except exception.Forbidden:
             raise webob.exc.HTTPForbidden()
 
-    @wsgi.serializers(xml=QuotaTemplate)
     def update(self, req, id, body):
         context = req.environ['nova.context']
         authorize_update(context)
@@ -206,7 +190,6 @@ class QuotaSetsController(wsgi.Controller):
         values = self._get_quotas(context, id, user_id=user_id)
         return self._format_quota_set(None, values)
 
-    @wsgi.serializers(xml=QuotaTemplate)
     def defaults(self, req, id):
         context = req.environ['nova.context']
         authorize_show(context)
