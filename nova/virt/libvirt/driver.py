@@ -4301,13 +4301,9 @@ class LibvirtDriver(driver.ComputeDriver):
                 continue
             except Exception:
                 continue
-            ret = doc.findall('./devices/disk')
-            for node in ret:
-                if node.get('type') != 'block':
-                    continue
-                for child in node.getchildren():
-                    if child.tag == 'source':
-                        devices.append(child.get('dev'))
+            sources = doc.findall("./devices/disk[@type='block']/source")
+            for source in sources:
+                devices.append(source.get('dev'))
         return devices
 
     def _get_interfaces(self, xml):
