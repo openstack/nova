@@ -108,7 +108,7 @@ class IronicHostManagerChangedNodesTestCase(test.NoDBTestCase):
     @mock.patch.object(ironic_host_manager.IronicNodeState, '__init__')
     def test_create_ironic_node_state(self, init_mock):
         init_mock.return_value = None
-        compute = {'cpu_info': 'baremetal cpu'}
+        compute = {'hypervisor_type': 'ironic'}
         host_state = self.host_manager.host_state_cls('fake-host', 'fake-node',
                                                       compute=compute)
         self.assertIs(ironic_host_manager.IronicNodeState, type(host_state))
