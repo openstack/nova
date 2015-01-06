@@ -291,7 +291,7 @@ def compare_obj(test, obj, db_obj, subs=None, allow_missing=None,
     for key in obj.fields:
         if key in allow_missing and not obj.obj_attr_is_set(key):
             continue
-        obj_val = obj[key]
+        obj_val = getattr(obj, key)
         db_key = subs.get(key, key)
         db_val = db_obj[db_key]
         if isinstance(obj_val, datetime.datetime):

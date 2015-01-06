@@ -72,8 +72,8 @@ class _TestTagList(object):
 
         for obj, fake in zip(tag_list_obj, tag_list):
             self.assertIsInstance(obj, tag.Tag)
-            self.assertEqual(obj['tag'], fake['tag'])
-            self.assertEqual(obj['resource_id'], fake['resource_id'])
+            self.assertEqual(obj.tag, fake['tag'])
+            self.assertEqual(obj.resource_id, fake['resource_id'])
 
     @mock.patch('nova.db.instance_tag_get_by_instance_uuid')
     def test_get_by_resource_id(self, get_by_inst):
