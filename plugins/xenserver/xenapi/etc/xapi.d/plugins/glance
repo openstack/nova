@@ -91,13 +91,13 @@ def _download_tarball_and_verify(request, staging_path):
 
     if etag is None:
         msg = "No ETag found for comparison to checksum %(checksum)s"
-        logging.info(msg % locals())
+        logging.info(msg % {'checksum': checksum})
     elif checksum != etag:
         msg = 'ETag %(etag)s does not match computed md5sum %(checksum)s'
-        raise RetryableError(msg % locals())
+        raise RetryableError(msg % {'checksum': checksum, 'etag': etag})
     else:
         msg = "Verified image checksum %(checksum)s"
-        logging.info(msg % locals())
+        logging.info(msg % {'checksum': checksum})
 
 
 def _download_tarball(sr_path, staging_path, image_id, glance_host,
@@ -111,14 +111,16 @@ def _download_tarball(sr_path, staging_path, image_id, glance_host,
         scheme = 'http'
 
     url = ("%(scheme)s://%(glance_host)s:%(glance_port)d/v1/images/"
-           "%(image_id)s" % locals())
+           "%(image_id)s" % {'scheme': scheme, 'glance_host': glance_host,
+                             'glance_port': glance_port,
+                             'image_id': image_id})
     logging.info("Downloading %s" % url)
 
     request = urllib2.Request(url, headers=extra_headers)
     try:
         _download_tarball_and_verify(request, staging_path)
     except Exception:
-        logging.exception('Failed to retrieve %(url)s' % locals())
+        logging.exception('Failed to retrieve %(url)s' % {'url': url})
         raise
 
 
@@ -151,7 +153,7 @@ def _upload_tarball(staging_path, image_id, glance_host, glance_port,
             conn = httplib.HTTPConnection(glance_host, glance_port)
         conn.connect()
     except Exception, error:
-        logging.exception('Failed to connect %(url)s' % locals())
+        logging.exception('Failed to connect %(url)s' % {'url': url})
         raise RetryableError(error)
 
     try:
@@ -191,7 +193,7 @@ def _upload_tarball(staging_path, image_id, glance_host, glance_port,
                 conn.putheader(header, value)
             conn.endheaders()
         except Exception, error:
-            logging.exception('Failed to upload %(url)s' % locals())
+            logging.exception('Failed to upload %(url)s' % {'url': url})
             raise RetryableError(error)
 
         callback_data = {'bytes_written': 0}
