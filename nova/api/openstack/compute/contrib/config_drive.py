@@ -33,7 +33,6 @@ class Controller(servers.Controller):
 
     def _show(self, req, resp_obj):
         if 'server' in resp_obj.obj:
-            resp_obj.attach()
             server = resp_obj.obj['server']
             self._add_config_drive(req, [server])
 
@@ -47,7 +46,6 @@ class Controller(servers.Controller):
     def detail(self, req, resp_obj):
         context = req.environ['nova.context']
         if 'servers' in resp_obj.obj and authorize(context):
-            resp_obj.attach()
             servers = resp_obj.obj['servers']
             self._add_config_drive(req, servers)
 

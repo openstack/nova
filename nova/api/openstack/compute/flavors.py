@@ -25,9 +25,6 @@ from nova.i18n import _
 from nova import utils
 
 
-flavor_nsmap = {}
-
-
 class Controller(wsgi.Controller):
     """Flavor controller for the OpenStack API."""
 

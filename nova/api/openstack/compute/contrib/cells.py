@@ -25,7 +25,6 @@ from webob import exc
 
 from nova.api.openstack import common
 from nova.api.openstack import extensions
-from nova.api.openstack import wsgi
 from nova.cells import rpcapi as cells_rpcapi
 from nova.compute import api as compute
 from nova import exception
@@ -38,9 +37,6 @@ CONF.import_opt('name', 'nova.cells.opts', group='cells')
 CONF.import_opt('capabilities', 'nova.cells.opts', group='cells')
 
 authorize = extensions.extension_authorizer('compute', 'cells')
-
-
-cell_nsmap = {None: wsgi.XMLNS_V10}
 
 
 def _filter_keys(item, keys):

@@ -61,9 +61,6 @@ LOG = logging.getLogger(__name__)
 XML_WARNING = False
 
 
-server_nsmap = {}
-
-
 class Controller(wsgi.Controller):
     """The Server API base controller class for the OpenStack API."""
 

@@ -33,37 +33,6 @@ class ExtendedLimitsController(wsgi.Controller):
             quotas.get('server_group_members').get('limit')
 
 
-class ExtendedQuotaSetsController(wsgi.Controller):
-
-    @wsgi.extends
-    def show(self, req, id, resp_obj):
-        # Attach our slave template to the response object
-        resp_obj.attach()
-
-    @wsgi.extends
-    def update(self, req, id, body, resp_obj):
-        # Attach our slave template to the response object
-        resp_obj.attach()
-
-    @wsgi.extends
-    def defaults(self, req, id, resp_obj):
-        # Attach our slave template to the response object
-        resp_obj.attach()
-
-
-class ExtendedQuotaClassSetsController(wsgi.Controller):
-
-    @wsgi.extends
-    def show(self, req, id, resp_obj):
-        # Attach our slave template to the response object
-        resp_obj.attach()
-
-    @wsgi.extends
-    def update(self, req, id, body, resp_obj):
-        # Attach our slave template to the response object
-        resp_obj.attach()
-
-
 class Server_group_quotas(extensions.ExtensionDescriptor):
     """Adds quota support to server groups."""
 
@@ -77,11 +46,5 @@ class Server_group_quotas(extensions.ExtensionDescriptor):
         extension_list = [extensions.ControllerExtension(self,
                                      'limits',
                                      ExtendedLimitsController()),
-                          extensions.ControllerExtension(self,
-                                     'os-quota-sets',
-                                     ExtendedQuotaSetsController()),
-                          extensions.ControllerExtension(self,
-                                     'os-quota-class-sets',
-                                     ExtendedQuotaClassSetsController()),
                      ]
         return extension_list

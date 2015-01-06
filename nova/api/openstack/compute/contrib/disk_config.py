@@ -55,7 +55,6 @@ class ImageDiskConfigController(wsgi.Controller):
     def show(self, req, resp_obj, id):
         context = req.environ['nova.context']
         if 'image' in resp_obj.obj and authorize(context):
-            resp_obj.attach()
             image = resp_obj.obj['image']
             self._add_disk_config(context, [image])
 
@@ -63,7 +62,6 @@ class ImageDiskConfigController(wsgi.Controller):
     def detail(self, req, resp_obj):
         context = req.environ['nova.context']
         if 'images' in resp_obj.obj and authorize(context):
-            resp_obj.attach()
             images = resp_obj.obj['images']
             self._add_disk_config(context, images)
 
@@ -79,7 +77,6 @@ class ServerDiskConfigController(wsgi.Controller):
 
     def _show(self, req, resp_obj):
         if 'server' in resp_obj.obj:
-            resp_obj.attach()
             server = resp_obj.obj['server']
             self._add_disk_config(req, [server])
 
@@ -93,7 +90,6 @@ class ServerDiskConfigController(wsgi.Controller):
     def detail(self, req, resp_obj):
         context = req.environ['nova.context']
         if 'servers' in resp_obj.obj and authorize(context):
-            resp_obj.attach()
             servers = resp_obj.obj['servers']
             self._add_disk_config(req, servers)
 

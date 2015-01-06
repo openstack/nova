@@ -29,8 +29,6 @@ class ImageSizeController(wsgi.Controller):
     def show(self, req, resp_obj, id):
         context = req.environ["nova.context"]
         if authorize(context):
-            # Attach our slave template to the response object
-            resp_obj.attach()
             image_resp = resp_obj.obj['image']
             # image guaranteed to be in the cache due to the core API adding
             # it in its 'show' method
@@ -41,8 +39,6 @@ class ImageSizeController(wsgi.Controller):
     def detail(self, req, resp_obj):
         context = req.environ['nova.context']
         if authorize(context):
-            # Attach our slave template to the response object
-            resp_obj.attach()
             images_resp = list(resp_obj.obj['images'])
             # images guaranteed to be in the cache due to the core API adding
             # it in its 'detail' method

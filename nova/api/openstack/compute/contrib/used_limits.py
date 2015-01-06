@@ -41,7 +41,6 @@ class UsedLimitsController(wsgi.Controller):
 
     @wsgi.extends
     def index(self, req, resp_obj):
-        resp_obj.attach()
         context = req.environ['nova.context']
         project_id = self._project_id(context, req)
         quotas = QUOTAS.get_project_quotas(context, project_id, usages=True)
