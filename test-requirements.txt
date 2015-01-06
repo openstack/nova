@@ -13,7 +13,6 @@ mox>=0.5.3
 mox3>=0.7.0
 MySQL-python
 psycopg2
-pylint>=1.3.0  # GNU GPL v2
 python-ironicclient>=0.2.1
 python-subunit>=0.0.18
 requests-mock>=0.5.1  # Apache-2.0

@@ -39,5 +39,3 @@ nosetests.xml
 nova/tests/cover/*
 nova/vcsversion.py
 tools/conf/nova.conf*
-tools/lintstack.head.py
-tools/pylint_exceptions
