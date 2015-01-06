@@ -55,9 +55,6 @@ QUOTAS = quota.QUOTAS
 LIMITS_PREFIX = "limits."
 
 
-limits_nsmap = {}
-
-
 class LimitsController(object):
     """Controller for accessing limits in the OpenStack API."""
 

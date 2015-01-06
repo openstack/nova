@@ -43,8 +43,6 @@ class ExtendedIpsMacController(wsgi.Controller):
     def show(self, req, resp_obj, id):
         context = req.environ['nova.context']
         if authorize(context):
-            # Attach our slave template to the response object
-            resp_obj.attach()
             server = resp_obj.obj['server']
             db_instance = req.get_db_instance(server['id'])
             # server['id'] is guaranteed to be in the cache due to
@@ -55,8 +53,6 @@ class ExtendedIpsMacController(wsgi.Controller):
     def detail(self, req, resp_obj):
         context = req.environ['nova.context']
         if authorize(context):
-            # Attach our slave template to the response object
-            resp_obj.attach()
             servers = list(resp_obj.obj['servers'])
             for server in servers:
                 db_instance = req.get_db_instance(server['id'])

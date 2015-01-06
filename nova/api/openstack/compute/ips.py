@@ -22,9 +22,6 @@ from nova.api.openstack import wsgi
 from nova.i18n import _
 
 
-network_nsmap = {}
-
-
 class Controller(wsgi.Controller):
     """The servers addresses API controller for the OpenStack API."""
 

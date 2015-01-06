@@ -65,8 +65,6 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
                     ret['__content__'] = node.text
                 if node.tag:
                     ret['__tag__'] = node.tag
-                if node.nsmap:
-                    ret['__nsmap__'] = node.nsmap
                 for element in node:
                     ret.setdefault(node.tag, [])
                     ret[node.tag].append(to_dict(element))

@@ -40,7 +40,6 @@ class FlavorextradataController(wsgi.Controller):
         if not authorize(req.environ['nova.context']):
             return
         if 'flavor' in resp_obj.obj:
-            resp_obj.attach()
             self._extend_flavors(req, [resp_obj.obj['flavor']])
 
     @wsgi.extends
@@ -55,7 +54,6 @@ class FlavorextradataController(wsgi.Controller):
     def detail(self, req, resp_obj):
         if not authorize(req.environ['nova.context']):
             return
-        resp_obj.attach()
         self._extend_flavors(req, list(resp_obj.obj['flavors']))
 
 

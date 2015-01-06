@@ -18,7 +18,6 @@ from webob import exc
 
 from nova.api.openstack.compute.contrib import security_groups as sg
 from nova.api.openstack import extensions
-from nova.api.openstack import wsgi
 from nova import exception
 from nova.i18n import _
 from nova.network.security_group import openstack_driver
@@ -26,8 +25,6 @@ from nova.network.security_group import openstack_driver
 
 authorize = extensions.extension_authorizer('compute',
                                             'security_group_default_rules')
-
-sg_nsmap = {None: wsgi.XMLNS_V11}
 
 
 class SecurityGroupDefaultRulesController(sg.SecurityGroupControllerBase):

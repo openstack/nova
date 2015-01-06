@@ -51,10 +51,6 @@ class ExtensionDescriptor(object):
 
     # Description comes from the docstring for the class
 
-    # The XML namespace for the extension, e.g.,
-    # 'http://www.fox.in.socks/api/ext/pie/v1.0'
-    namespace = None
-
     # The timestamp when the extension was last updated, e.g.,
     # '2011-01-22T19:25:27Z'
     updated = None
@@ -81,21 +77,6 @@ class ExtensionDescriptor(object):
         """
         controller_exts = []
         return controller_exts
-
-    @classmethod
-    def nsmap(cls):
-        """Synthesize a namespace map from extension."""
-
-        # Start with a base nsmap
-        nsmap = ext_nsmap.copy()
-
-        # Add the namespace for the extension
-        nsmap[cls.alias] = cls.namespace
-
-        return nsmap
-
-
-ext_nsmap = {}
 
 
 class ExtensionsController(wsgi.Resource):

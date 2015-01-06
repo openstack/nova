@@ -45,8 +45,6 @@ def _authorize_context(req):
     authorize(context)
     return context
 
-sg_nsmap = {None: wsgi.XMLNS_V11}
-
 
 @contextlib.contextmanager
 def translate_exceptions():
@@ -455,7 +453,6 @@ class SecurityGroupsOutputController(wsgi.Controller):
         if not softauth(req.environ['nova.context']):
             return
         if 'server' in resp_obj.obj:
-            resp_obj.attach()
             self._extend_servers(req, [resp_obj.obj['server']])
 
     @wsgi.extends
@@ -470,7 +467,6 @@ class SecurityGroupsOutputController(wsgi.Controller):
     def detail(self, req, resp_obj):
         if not softauth(req.environ['nova.context']):
             return
-        resp_obj.attach()
         self._extend_servers(req, list(resp_obj.obj['servers']))
 
 

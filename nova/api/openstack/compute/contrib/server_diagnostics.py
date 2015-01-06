@@ -17,14 +17,12 @@ import webob.exc
 
 from nova.api.openstack import common
 from nova.api.openstack import extensions
-from nova.api.openstack import wsgi
 from nova import compute
 from nova import exception
 from nova.i18n import _
 
 
 authorize = extensions.extension_authorizer('compute', 'server_diagnostics')
-sd_nsmap = {None: wsgi.XMLNS_V11}
 
 
 class ServerDiagnosticsController(object):

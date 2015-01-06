@@ -35,9 +35,6 @@ SUPPORTED_FILTERS = {
 }
 
 
-image_nsmap = {}
-
-
 class Controller(wsgi.Controller):
     """Base controller for retrieving/displaying images."""
 

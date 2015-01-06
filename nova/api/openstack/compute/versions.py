@@ -72,9 +72,6 @@ VERSIONS = {
 }
 
 
-version_nsmap = {}
-
-
 class Versions(wsgi.Resource):
     def __init__(self):
         super(Versions, self).__init__(None)

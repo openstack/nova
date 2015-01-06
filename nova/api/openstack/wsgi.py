@@ -36,9 +36,6 @@ from nova import utils
 from nova import wsgi
 
 
-XMLNS_V10 = 'http://docs.rackspacecloud.com/servers/api/v1.0'
-XMLNS_V11 = 'http://docs.openstack.org/compute/api/v1.1'
-
 LOG = logging.getLogger(__name__)
 
 _SUPPORTED_CONTENT_TYPES = (

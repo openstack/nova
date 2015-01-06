@@ -87,8 +87,6 @@ class FlavorActionController(wsgi.Controller):
     def show(self, req, resp_obj, id):
         context = req.environ['nova.context']
         if soft_authorize(context):
-            # Attach our slave template to the response object
-            resp_obj.attach()
             db_flavor = req.get_db_flavor(id)
 
             self._extend_flavor(resp_obj.obj['flavor'], db_flavor)
@@ -97,9 +95,6 @@ class FlavorActionController(wsgi.Controller):
     def detail(self, req, resp_obj):
         context = req.environ['nova.context']
         if soft_authorize(context):
-            # Attach our slave template to the response object
-            resp_obj.attach()
-
             flavors = list(resp_obj.obj['flavors'])
             for flavor_rval in flavors:
                 db_flavor = req.get_db_flavor(flavor_rval['id'])
@@ -109,9 +104,6 @@ class FlavorActionController(wsgi.Controller):
     def create(self, req, body, resp_obj):
         context = req.environ['nova.context']
         if soft_authorize(context):
-            # Attach our slave template to the response object
-            resp_obj.attach()
-
             db_flavor = req.get_db_flavor(resp_obj.obj['flavor']['id'])
 
             self._extend_flavor(resp_obj.obj['flavor'], db_flavor)

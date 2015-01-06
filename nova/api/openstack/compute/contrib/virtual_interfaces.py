@@ -17,15 +17,11 @@
 
 from nova.api.openstack import common
 from nova.api.openstack import extensions
-from nova.api.openstack import wsgi
 from nova import compute
 from nova import network
 
 
 authorize = extensions.extension_authorizer('compute', 'virtual_interfaces')
-
-
-vif_nsmap = {None: wsgi.XMLNS_V11}
 
 
 def _translate_vif_summary_view(_context, vif):

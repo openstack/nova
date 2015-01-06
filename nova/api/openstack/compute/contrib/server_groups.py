@@ -36,9 +36,6 @@ SUPPORTED_POLICIES = ['anti-affinity', 'affinity']
 authorize = extensions.extension_authorizer('compute', 'server_groups')
 
 
-server_group_nsmap = {}
-
-
 def _authorize_context(req):
     context = req.environ['nova.context']
     authorize(context)
