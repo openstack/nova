@@ -50,10 +50,10 @@ class _TestAggregateObject(object):
         db.aggregate_create(self.context, {'name': 'foo'},
                             metadata={'one': 'two'}).AndReturn(fake_aggregate)
         self.mox.ReplayAll()
-        agg = aggregate.Aggregate()
+        agg = aggregate.Aggregate(context=self.context)
         agg.name = 'foo'
         agg.metadata = {'one': 'two'}
-        agg.create(self.context)
+        agg.create()
         self.compare_obj(agg, fake_aggregate, subs=SUBS)
 
     def test_recreate_fails(self):
@@ -61,10 +61,10 @@ class _TestAggregateObject(object):
         db.aggregate_create(self.context, {'name': 'foo'},
                             metadata={'one': 'two'}).AndReturn(fake_aggregate)
         self.mox.ReplayAll()
-        agg = aggregate.Aggregate()
+        agg = aggregate.Aggregate(context=self.context)
         agg.name = 'foo'
         agg.metadata = {'one': 'two'}
-        agg.create(self.context)
+        agg.create()
         self.assertRaises(exception.ObjectActionError, agg.create,
                           self.context)
 
@@ -73,10 +73,10 @@ class _TestAggregateObject(object):
         db.aggregate_update(self.context, 123, {'name': 'baz'}).AndReturn(
             fake_aggregate)
         self.mox.ReplayAll()
-        agg = aggregate.Aggregate()
+        agg = aggregate.Aggregate(context=self.context)
         agg.id = 123
         agg.name = 'baz'
-        agg.save(self.context)
+        agg.save()
         self.compare_obj(agg, fake_aggregate, subs=SUBS)
 
     def test_save_and_create_no_hosts(self):
@@ -116,9 +116,9 @@ class _TestAggregateObject(object):
         self.mox.StubOutWithMock(db, 'aggregate_delete')
         db.aggregate_delete(self.context, 123)
         self.mox.ReplayAll()
-        agg = aggregate.Aggregate()
+        agg = aggregate.Aggregate(context=self.context)
         agg.id = 123
-        agg.destroy(self.context)
+        agg.destroy()
 
     def test_add_host(self):
         self.mox.StubOutWithMock(db, 'aggregate_host_add')
