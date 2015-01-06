@@ -9854,6 +9854,155 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                     'version': '1.0'}
         self.assertEqual(expected, actual.serialize())
 
+    @mock.patch.object(timeutils, 'utcnow')
+    @mock.patch.object(host.Host, 'get_domain')
+    def test_diagnostic_full_with_multiple_interfaces(self, mock_get_domain,
+                                                      mock_utcnow):
+        xml = """
+                <domain type='kvm'>
+                    <devices>
+                        <disk type='file'>
+                            <source file='filename'/>
+                            <target dev='vda' bus='virtio'/>
+                        </disk>
+                        <disk type='block'>
+                            <source dev='/path/to/dev/1'/>
+                            <target dev='vdb' bus='virtio'/>
+                        </disk>
+                        <interface type='network'>
+                            <mac address='52:54:00:a4:38:38'/>
+                            <source network='default'/>
+                            <target dev='vnet0'/>
+                        </interface>
+                        <interface type="bridge">
+                            <mac address="53:55:00:a5:39:39"/>
+                            <model type="virtio"/>
+                            <target dev="br0"/>
+                        </interface>
+                    </devices>
+                </domain>
+            """
+
+        class DiagFakeDomain(FakeVirtDomain):
+
+            def __init__(self):
+                super(DiagFakeDomain, self).__init__(fake_xml=xml)
+
+            def vcpus(self):
+                return ([(0, 1, 15340000000L, 0),
+                         (1, 1, 1640000000L, 0),
+                         (2, 1, 3040000000L, 0),
+                         (3, 1, 1420000000L, 0)],
+                        [(True, False),
+                         (True, False),
+                         (True, False),
+                         (True, False)])
+
+            def blockStats(self, path):
+                return (169L, 688640L, 0L, 0L, -1L)
+
+            def interfaceStats(self, path):
+                return (4408L, 82L, 0L, 0L, 0L, 0L, 0L, 0L)
+
+            def memoryStats(self):
+                return {'actual': 220160L, 'rss': 200164L}
+
+            def maxMemory(self):
+                return 280160L
+
+        def fake_get_domain(self):
+            return DiagFakeDomain()
+
+        mock_get_domain.side_effect = fake_get_domain
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance = objects.Instance(**self.test_instance)
+        actual = drvr.get_diagnostics(instance)
+        expect = {'cpu0_time': 15340000000L,
+                  'cpu1_time': 1640000000L,
+                  'cpu2_time': 3040000000L,
+                  'cpu3_time': 1420000000L,
+                  'vda_read': 688640L,
+                  'vda_read_req': 169L,
+                  'vda_write': 0L,
+                  'vda_write_req': 0L,
+                  'vda_errors': -1L,
+                  'vdb_read': 688640L,
+                  'vdb_read_req': 169L,
+                  'vdb_write': 0L,
+                  'vdb_write_req': 0L,
+                  'vdb_errors': -1L,
+                  'memory': 280160L,
+                  'memory-actual': 220160L,
+                  'memory-rss': 200164L,
+                  'vnet0_rx': 4408L,
+                  'vnet0_rx_drop': 0L,
+                  'vnet0_rx_errors': 0L,
+                  'vnet0_rx_packets': 82L,
+                  'vnet0_tx': 0L,
+                  'vnet0_tx_drop': 0L,
+                  'vnet0_tx_errors': 0L,
+                  'vnet0_tx_packets': 0L,
+                  'br0_rx': 4408L,
+                  'br0_rx_drop': 0L,
+                  'br0_rx_errors': 0L,
+                  'br0_rx_packets': 82L,
+                  'br0_tx': 0L,
+                  'br0_tx_drop': 0L,
+                  'br0_tx_errors': 0L,
+                  'br0_tx_packets': 0L,
+                  }
+        self.assertEqual(actual, expect)
+
+        lt = datetime.datetime(2012, 11, 22, 12, 00, 00)
+        diags_time = datetime.datetime(2012, 11, 22, 12, 00, 10)
+        mock_utcnow.return_value = diags_time
+
+        instance.launched_at = lt
+        actual = drvr.get_instance_diagnostics(instance)
+        expected = {'config_drive': False,
+                    'cpu_details': [{'time': 15340000000L},
+                                    {'time': 1640000000L},
+                                    {'time': 3040000000L},
+                                    {'time': 1420000000L}],
+                    'disk_details': [{'errors_count': 0,
+                                      'id': '',
+                                      'read_bytes': 688640L,
+                                      'read_requests': 169L,
+                                      'write_bytes': 0L,
+                                      'write_requests': 0L},
+                                     {'errors_count': 0,
+                                      'id': '',
+                                      'read_bytes': 688640L,
+                                      'read_requests': 169L,
+                                      'write_bytes': 0L,
+                                      'write_requests': 0L}],
+                    'driver': 'libvirt',
+                    'hypervisor_os': 'linux',
+                    'memory_details': {'maximum': 2048, 'used': 1234},
+                    'nic_details': [{'mac_address': '52:54:00:a4:38:38',
+                                     'rx_drop': 0L,
+                                     'rx_errors': 0L,
+                                     'rx_octets': 4408L,
+                                     'rx_packets': 82L,
+                                     'tx_drop': 0L,
+                                     'tx_errors': 0L,
+                                     'tx_octets': 0L,
+                                     'tx_packets': 0L},
+                                    {'mac_address': '53:55:00:a5:39:39',
+                                     'rx_drop': 0L,
+                                     'rx_errors': 0L,
+                                     'rx_octets': 4408L,
+                                     'rx_packets': 82L,
+                                     'tx_drop': 0L,
+                                     'tx_errors': 0L,
+                                     'tx_octets': 0L,
+                                     'tx_packets': 0L}],
+                    'state': 'running',
+                    'uptime': 10.,
+                    'version': '1.0'}
+        self.assertEqual(expected, actual.serialize())
+
     @mock.patch.object(host.Host, "list_instance_domains")
     def test_failing_vcpu_count(self, mock_list):
         """Domain can fail to return the vcpu description in case it's

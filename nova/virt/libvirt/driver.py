@@ -6170,14 +6170,10 @@ class LibvirtDriver(driver.ComputeDriver):
                 pass
 
         # Update mac addresses of interface if stats have been reported
-        if len(diags.nic_details) > 0:
-            ret = xml_doc.findall('./devices/interface')
-            index = 0
-            for node in ret:
-                for child in node.getchildren():
-                    if child.tag == 'mac':
-                        diags.nic_details[index].mac_address = child.get(
-                            'address')
+        if diags.nic_details:
+            nodes = xml_doc.findall('./devices/interface/mac')
+            for index, node in enumerate(nodes):
+                diags.nic_details[index].mac_address = node.get('address')
         return diags
 
     def instance_on_disk(self, instance):
