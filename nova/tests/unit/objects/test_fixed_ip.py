@@ -200,8 +200,8 @@ class _TestFixedIPObject(object):
     @mock.patch('nova.db.fixed_ip_create')
     def test_create(self, create):
         create.return_value = fake_fixed_ip
-        fixedip = fixed_ip.FixedIP(address='1.2.3.4')
-        fixedip.create(self.context)
+        fixedip = fixed_ip.FixedIP(context=self.context, address='1.2.3.4')
+        fixedip.create()
         create.assert_called_once_with(
             self.context, {'address': '1.2.3.4'})
         self._compare(fixedip, fake_fixed_ip)
