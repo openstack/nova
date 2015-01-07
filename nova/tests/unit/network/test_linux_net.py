@@ -340,6 +340,47 @@ def get_associated(context, network_id, host=None, address=None):
     return result
 
 
+class LinuxNetworkUtilsTestCase(test.NoDBTestCase):
+    def test_is_pid_cmdline_correct(self):
+        # Negative general case
+        fake_open = mock.mock_open(read_data='no-such-process')
+        with mock.patch.object(linux_net, 'open', fake_open, create=True):
+            self.assertFalse(linux_net.is_pid_cmdline_correct(1, "foo"),
+                             "foo should not be in 'no-such-process'")
+
+        # Negative case that would be a thing we would want to skip
+        fake_open = mock.mock_open(
+            read_data=('/usr/sbin/dnsmasq '
+                       '--conf-file=/var/run/NetworkManager/dnsmasq.conf'))
+        with mock.patch.object(linux_net, 'open', fake_open, create=True):
+            self.assertFalse(
+                linux_net.is_pid_cmdline_correct(1, "nova-br100.conf"),
+                "nova-br100.conf should not have been found")
+
+        # Positive matching case
+        fake_open = mock.mock_open(
+            read_data=('/usr/sbin/dnsmasq '
+                       '--dhcp-hostsfile='
+                       '/opt/stack/data/nova/networks/nova-br100.conf'))
+        with mock.patch.object(linux_net, 'open', fake_open, create=True):
+            self.assertTrue(
+                linux_net.is_pid_cmdline_correct(1, "nova-br100.conf"),
+                'nova-br100.conf should have been found')
+
+        # Negative case. This would match except we throw an IOError/OSError
+        # because the file couldn't be read or opened, this should then fail.
+        for err in (IOError, OSError):
+            fake_open = mock.mock_open(
+                read_data=('/usr/sbin/dnsmasq '
+                           '--dhcp-hostsfile='
+                           '/opt/stack/data/nova/networks/nova-br100.conf'))
+            fake_open.side_effect = err
+            with mock.patch.object(linux_net, 'open', fake_open, create=True):
+                self.assertFalse(
+                    linux_net.is_pid_cmdline_correct(1, "nova-br100.conf"),
+                    'nova-br100.conf should not have been found')
+
+
 class LinuxNetworkTestCase(test.NoDBTestCase):
 
     REQUIRES_LOCKING = True
