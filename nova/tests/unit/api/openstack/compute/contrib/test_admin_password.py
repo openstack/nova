@@ -144,7 +144,3 @@ class AdminPasswordTestV2(AdminPasswordTestV21):
 
     def _check_status(self, expected_status, res, controller_method):
         self.assertEqual(expected_status, res.status_int)
-
-    def test_change_password_adminpass_none(self):
-        # TODO(eliqiao): need to handle adminpass is None in v2 api
-        pass
