@@ -305,7 +305,7 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
         ) as (get_group, get_hosts):
             scheduler_utils._SUPPORTS_ANTI_AFFINITY = None
             scheduler_utils._SUPPORTS_AFFINITY = None
-            self.assertRaises(exception.NoValidHost,
+            self.assertRaises(exception.UnsupportedPolicyException,
                               scheduler_utils._get_group_details,
                               self.context, 'fake-uuid')
 

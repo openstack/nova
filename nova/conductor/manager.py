@@ -479,7 +479,8 @@ class ComputeTaskManager(base.Base):
                                    exception.HypervisorUnavailable,
                                    exception.InstanceNotRunning,
                                    exception.MigrationPreCheckError,
-                                   exception.LiveMigrationWithOldNovaNotSafe)
+                                   exception.LiveMigrationWithOldNovaNotSafe,
+                                   exception.UnsupportedPolicyException)
     def migrate_server(self, context, instance, scheduler_hint, live, rebuild,
             flavor, block_migration, disk_over_commit, reservations=None,
             clean_shutdown=True):
@@ -521,15 +522,15 @@ class ComputeTaskManager(base.Base):
         quotas = objects.Quotas.from_reservations(context,
                                                   reservations,
                                                   instance=instance)
-        scheduler_utils.setup_instance_group(context, request_spec,
-                                             filter_properties)
         try:
+            scheduler_utils.setup_instance_group(context, request_spec,
+                                                 filter_properties)
             scheduler_utils.populate_retry(filter_properties, instance['uuid'])
             hosts = self.scheduler_client.select_destinations(
                     context, request_spec, filter_properties)
             host_state = hosts[0]
         except exception.NoValidHost as ex:
-            vm_state = instance['vm_state']
+            vm_state = instance.vm_state
             if not vm_state:
                 vm_state = vm_states.ACTIVE
             updates = {'vm_state': vm_state, 'task_state': None}
@@ -544,6 +545,16 @@ class ComputeTaskManager(base.Base):
             else:
                 msg = _("No valid host found for resize")
             raise exception.NoValidHost(reason=msg)
+        except exception.UnsupportedPolicyException as ex:
+            with excutils.save_and_reraise_exception():
+                vm_state = instance.vm_state
+                if not vm_state:
+                    vm_state = vm_states.ACTIVE
+                updates = {'vm_state': vm_state, 'task_state': None}
+                self._set_vm_state_and_notify(context, instance.uuid,
+                                              'migrate_server',
+                                              updates, ex, request_spec)
+                quotas.rollback()
 
         try:
             scheduler_utils.populate_filter_properties(filter_properties,
@@ -560,7 +571,7 @@ class ComputeTaskManager(base.Base):
                 clean_shutdown=clean_shutdown)
         except Exception as ex:
             with excutils.save_and_reraise_exception():
-                updates = {'vm_state': instance['vm_state'],
+                updates = {'vm_state': instance.vm_state,
                            'task_state': None}
                 self._set_vm_state_and_notify(context, instance.uuid,
                                               'migrate_server',
@@ -607,7 +618,7 @@ class ComputeTaskManager(base.Base):
                 exception.LiveMigrationWithOldNovaNotSafe) as ex:
             with excutils.save_and_reraise_exception():
                 # TODO(johngarbutt) - eventually need instance actions here
-                _set_vm_state(context, instance, ex, instance['vm_state'])
+                _set_vm_state(context, instance, ex, instance.vm_state)
         except Exception as ex:
             LOG.error(_LE('Migration of instance %(instance_id)s to host'
                           ' %(dest)s unexpectedly failed.'),
@@ -624,8 +635,6 @@ class ComputeTaskManager(base.Base):
         #                 2.0 of the RPC API.
         request_spec = scheduler_utils.build_request_spec(context, image,
                                                           instances)
-        scheduler_utils.setup_instance_group(context, request_spec,
-                                             filter_properties)
         # TODO(danms): Remove this in version 2.0 of the RPC API
         if (requested_networks and
                 not isinstance(requested_networks,
@@ -642,6 +651,8 @@ class ComputeTaskManager(base.Base):
             filter_properties = dict(filter_properties, instance_type=flavor)
 
         try:
+            scheduler_utils.setup_instance_group(context, request_spec,
+                                                 filter_properties)
             # check retry policy. Rather ugly use of instances[0]...
             # but if we've exceeded max retries... then we really only
             # have a single instance.
@@ -748,7 +759,8 @@ class ComputeTaskManager(base.Base):
                     self.compute_rpcapi.unshelve_instance(
                             context, instance, host, image=image,
                             filter_properties=filter_properties, node=node)
-            except exception.NoValidHost:
+            except (exception.NoValidHost,
+                    exception.UnsupportedPolicyException):
                 instance.task_state = None
                 instance.save()
                 LOG.warning(_LW("No valid host found for unshelve instance"),
@@ -781,9 +793,9 @@ class ComputeTaskManager(base.Base):
                 request_spec = scheduler_utils.build_request_spec(context,
                                                                   image_ref,
                                                                   [instance])
-                scheduler_utils.setup_instance_group(context, request_spec,
-                                                     filter_properties)
                 try:
+                    scheduler_utils.setup_instance_group(context, request_spec,
+                                                         filter_properties)
                     hosts = self.scheduler_client.select_destinations(context,
                                                             request_spec,
                                                             filter_properties)
@@ -795,6 +807,15 @@ class ComputeTaskManager(base.Base):
                                 {'vm_state': instance.vm_state,
                                  'task_state': None}, ex, request_spec)
                         LOG.warning(_LW("No valid host found for rebuild"),
+                                    instance=instance)
+                except exception.UnsupportedPolicyException as ex:
+                    with excutils.save_and_reraise_exception():
+                        self._set_vm_state_and_notify(context, instance.uuid,
+                                'rebuild_server',
+                                {'vm_state': instance.vm_state,
+                                 'task_state': None}, ex, request_spec)
+                        LOG.warning(_LW("Server with unsupported policy "
+                                        "cannot be rebuilt"),
                                     instance=instance)
 
             self.compute_rpcapi.rebuild_instance(context,

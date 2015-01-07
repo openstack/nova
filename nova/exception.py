@@ -1838,3 +1838,7 @@ class CPUPinningInvalid(Invalid):
 class ImageCPUPinningForbidden(Invalid):
     msg_fmt = _("Image property 'hw_cpu_policy' is not permitted to override "
                 "CPU pinning policy set against the flavor")
+
+
+class UnsupportedPolicyException(Invalid):
+    msg_fmt = _("ServerGroup policy is not supported: %(reason)s")
