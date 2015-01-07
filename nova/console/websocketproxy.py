@@ -21,6 +21,7 @@ Leverages websockify.py by Joel Martin
 import Cookie
 import socket
 
+import urlparse
 import websockify
 
 from nova.consoleauth import rpcapi as consoleauth_rpcapi
@@ -43,6 +44,15 @@ class NovaWebSocketProxy(websockify.WebSocketProxy):
         # fd with parent and/or siblings, which would be bad
         from eventlet import hubs
         hubs.use_hub()
+
+        # Verify Origin header to prevent XSS attack
+        verify_host = self.headers.getheader('Host')
+        origin_url = self.headers.getheader('Origin')
+        origin_parsed = urlparse(origin_url)
+        verify_origin = origin_parsed.netloc
+        if verify_host != verify_origin:
+            LOG.audit("Invalid Origin Header %s", origin_url)
+            raise Exception(_("Invalid Origin Header"))
 
         cookie = Cookie.SimpleCookie()
         cookie.load(self.headers.getheader('cookie'))
