@@ -394,6 +394,13 @@ class Host(object):
         return wrapped_conn
 
     def get_connection(self):
+        """Returns a connection to the hypervisor
+
+        This method should be used to create and return a well
+        configured connection to the hypervisor.
+
+        :returns: a libvirt.virConnect object
+        """
         try:
             conn = self._get_connection()
         except libvirt.libvirtError as ex:
