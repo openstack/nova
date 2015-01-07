@@ -2,7 +2,7 @@
 # of appearance. Changing the order has an impact on the overall integration
 # process, which may cause wedges in the gate later.
 
-hacking>=0.9.2,<0.10
+hacking>=0.10.0,<0.11
 coverage>=3.6
 discover
 feedparser
