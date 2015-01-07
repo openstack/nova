@@ -584,8 +584,14 @@ class Host(object):
         return doms
 
     def get_capabilities(self):
-        """Returns an instance of config.LibvirtConfigCaps representing
-           the capabilities of the host.
+        """Returns the host capabilities information
+
+        Returns an instance of config.LibvirtConfigCaps representing
+        the capabilities of the host.
+
+        Note: The result is cached in the member attribute _caps.
+
+        :returns: a config.LibvirtConfigCaps object
         """
         if not self._caps:
             xmlstr = self.get_connection().getCapabilities()
