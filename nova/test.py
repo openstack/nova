@@ -198,6 +198,7 @@ class TestCase(testtools.TestCase):
         self.useFixture(nova_fixtures.OutputStreamCapture())
 
         self.useFixture(nova_fixtures.StandardLogging())
+        self.useFixture(nova_fixtures.WarningsFixture())
 
         # NOTE(sdague): because of the way we were using the lock
         # wrapper we eneded up with a lot of tests that started

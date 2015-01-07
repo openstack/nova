@@ -21,6 +21,7 @@ import gettext
 import logging
 import os
 import uuid
+import warnings
 
 import fixtures
 from oslo.config import cfg
@@ -235,3 +236,15 @@ class RPCFixture(fixtures.Fixture):
         self.messaging_conf.transport_driver = 'fake'
         self.useFixture(self.messaging_conf)
         rpc.init(CONF)
+
+
+class WarningsFixture(fixtures.Fixture):
+    """Filters out warnings during test runs."""
+
+    def setUp(self):
+        super(WarningsFixture, self).setUp()
+        # NOTE(sdague): Make deprecation warnings only happen once. Otherwise
+        # this gets kind of crazy given the way that upstream python libs use
+        # this.
+        warnings.simplefilter("once", DeprecationWarning)
+        self.addCleanup(warnings.resetwarnings)
