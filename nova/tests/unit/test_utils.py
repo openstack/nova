@@ -954,3 +954,76 @@ class ConstantTimeCompareTestCase(test.NoDBTestCase):
         self.assertTrue(utils.constant_time_compare("abcd1234", "abcd1234"))
         self.assertFalse(utils.constant_time_compare("abcd1234", "a"))
         self.assertFalse(utils.constant_time_compare("abcd1234", "ABCD234"))
+
+
+class ResourceFilterTestCase(test.NoDBTestCase):
+    def _assert_filtering(self, res_list, filts, expected_tags):
+        actual_tags = utils.filter_and_format_resource_metadata('instance',
+                res_list, filts, 'metadata')
+        self.assertEqual(expected_tags, actual_tags)
+
+    def test_filter_and_format_resource_metadata(self):
+        # Create some tags
+        # One overlapping pair, and one different key value pair
+        # i1 : foo=bar, bax=wibble
+        # i2 : foo=bar, baz=quux
+
+        # resources
+        i1 = {
+                'uuid': '1',
+                'metadata': {'foo': 'bar', 'bax': 'wibble'},
+            }
+        i2 = {
+                'uuid': '2',
+                'metadata': {'foo': 'bar', 'baz': 'quux'},
+            }
+
+        # Resources list
+        rl = [i1, i2]
+
+        # tags
+        i11 = {'instance_id': '1', 'key': 'foo', 'value': 'bar'}
+        i12 = {'instance_id': '1', 'key': 'bax', 'value': 'wibble'}
+        i21 = {'instance_id': '2', 'key': 'foo', 'value': 'bar'}
+        i22 = {'instance_id': '2', 'key': 'baz', 'value': 'quux'}
+
+        # No filter
+        self._assert_filtering(rl, [], [i11, i12, i21, i22])
+        self._assert_filtering(rl, {}, [i11, i12, i21, i22])
+
+        # Key search
+
+        # Both should have tags with key 'foo' and value 'bar'
+        self._assert_filtering(rl, {'key': 'foo', 'value': 'bar'}, [i11, i21])
+
+        # Both should have tags with key 'foo'
+        self._assert_filtering(rl, {'key': 'foo'}, [i11, i21])
+
+        # Only i2 should have tags with key 'baz' and value 'quux'
+        self._assert_filtering(rl, {'key': 'baz', 'value': 'quux'}, [i22])
+
+        # Only i2 should have tags with value 'quux'
+        self._assert_filtering(rl, {'value': 'quux'}, [i22])
+
+        # Empty list should be returned when no tags match
+        self._assert_filtering(rl, {'key': 'split', 'value': 'banana'}, [])
+
+        # Multiple values
+
+        # Only i2 should have tags with key 'baz' and values in the set
+        # ['quux', 'wibble']
+        self._assert_filtering(rl, {'key': 'baz', 'value': ['quux', 'wibble']},
+                [i22])
+
+        # But when specified as two different filters, no tags should be
+        # returned. This is because, the filter will mean "return tags which
+        # have (key=baz AND value=quux) AND (key=baz AND value=wibble)
+        self._assert_filtering(rl, [{'key': 'baz', 'value': 'quux'},
+            {'key': 'baz', 'value': 'wibble'}], [])
+
+        # Test for regex
+        self._assert_filtering(rl, {'value': '\\Aqu..*\\Z(?s)'}, [i22])
+
+        # Make sure bug #1365887 is fixed
+        i1['metadata']['key3'] = 'a'
+        self._assert_filtering(rl, {'value': 'banana'}, [])
