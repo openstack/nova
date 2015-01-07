@@ -1570,10 +1570,13 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 else:
                     self.assertEqual(2, len(cfg.clock.timers))
 
+    @mock.patch.object(libvirt_utils, 'get_arch')
     @mock.patch.object(host.Host, 'has_min_version')
     @mock.patch.object(objects.Flavor, 'get_by_id')
-    def test_get_guest_config_windows(self, mock_flavor, mock_version):
+    def test_get_guest_config_windows(self, mock_flavor, mock_version,
+                                      mock_get_arch):
         mock_version.return_value = False
+        mock_get_arch.return_value = arch.I686
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         instance_ref = objects.Instance(**self.test_instance)
         instance_ref['os_type'] = 'windows'
@@ -1597,10 +1600,13 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual("hpet", cfg.clock.timers[2].name)
         self.assertFalse(cfg.clock.timers[2].present)
 
+    @mock.patch.object(libvirt_utils, 'get_arch')
     @mock.patch.object(host.Host, 'has_min_version')
     @mock.patch.object(objects.Flavor, 'get_by_id')
-    def test_get_guest_config_windows_timer(self, mock_flavor, mock_version):
+    def test_get_guest_config_windows_timer(self, mock_flavor, mock_version,
+                                            mock_get_arch):
         mock_version.return_value = True
+        mock_get_arch.return_value = arch.I686
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         instance_ref = objects.Instance(**self.test_instance)
         instance_ref['os_type'] = 'windows'
