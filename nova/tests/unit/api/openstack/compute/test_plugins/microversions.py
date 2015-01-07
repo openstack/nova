@@ -74,6 +74,22 @@ class MicroversionsController3(wsgi.Controller):
         return data
 
 
+class MicroversionsController4(wsgi.Controller):
+
+    @wsgi.Controller.api_version("2.1")
+    def _create(self, req):
+        data = {'param': 'controller4_val1'}
+        return data
+
+    @wsgi.Controller.api_version("2.2")  # noqa
+    def _create(self, req):
+        data = {'param': 'controller4_val2'}
+        return data
+
+    def create(self, req, body):
+        return self._create(req)
+
+
 class Microversions(extensions.V3APIExtensionBase):
     """Basic Microversions Extension."""
 
@@ -88,7 +104,9 @@ class Microversions(extensions.V3APIExtensionBase):
                                             MicroversionsController2())
         res3 = extensions.ResourceExtension('microversions3',
                                             MicroversionsController3())
-        return [res1, res2, res3]
+        res4 = extensions.ResourceExtension('microversions4',
+                                            MicroversionsController4())
+        return [res1, res2, res3, res4]
 
     def get_controller_extensions(self):
         return []
