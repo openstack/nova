@@ -198,7 +198,6 @@ class TestCase(testtools.TestCase):
         self.useFixture(nova_fixtures.OutputStreamCapture())
 
         self.useFixture(nova_fixtures.StandardLogging())
-        self.useFixture(nova_fixtures.WarningsFixture())
 
         # NOTE(sdague): because of the way we were using the lock
         # wrapper we eneded up with a lot of tests that started
@@ -223,6 +222,10 @@ class TestCase(testtools.TestCase):
 
         if self.USES_DB:
             self.useFixture(nova_fixtures.Database())
+
+        # NOTE(blk-u): WarningsFixture must be after the Database fixture
+        # because sqlalchemy-migrate messes with the warnings filters.
+        self.useFixture(nova_fixtures.WarningsFixture())
 
         # NOTE(danms): Make sure to reset us back to non-remote objects
         # for each test to avoid interactions. Also, backup the object
