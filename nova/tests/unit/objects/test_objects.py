@@ -513,7 +513,7 @@ class _TestObject(object):
         class Foo(base.NovaObject):
             fields = {'foobar': fields.Field(fields.Integer())}
         obj = Foo()
-        with self.assertRaisesRegexp(NotImplementedError, ".*foobar.*"):
+        with self.assertRaisesRegex(NotImplementedError, ".*foobar.*"):
             obj.foobar
 
     def test_loaded_in_primitive(self):
