@@ -840,6 +840,10 @@ class TestSyncComputeNode(BaseTestCase):
         expected_resources['id'] = 1
         expected_resources['stats'] = '{}'
 
+        # TODO(sbauza): Remove this once RT is using ComputeNode.save() for
+        # updating the resources
+        expected_resources['host'] = 'fake-host'
+
         self.rt.ext_resources_handler.reset_resources(resources,
                                                       self.rt.driver)
         # This emulates the behavior that occurs in the
