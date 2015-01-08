@@ -167,7 +167,7 @@ class ViewBuilder(common.ViewBuilder):
         host = instance.get("host")
         project = str(instance.get("project_id"))
         if host:
-            sha_hash = hashlib.sha224(project + host)  # pylint: disable=E1101
+            sha_hash = hashlib.sha224(project + host)
             return sha_hash.hexdigest()
 
     def _get_addresses(self, request, instance):

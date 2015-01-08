@@ -112,7 +112,6 @@ class AttestationService(object):
                                    headers=headers, cert=self.cert,
                                    verify=self.verify)
             status_code = res.status_code
-            # pylint: disable=E1101
             if status_code in (requests.codes.OK,
                                requests.codes.CREATED,
                                requests.codes.ACCEPTED,

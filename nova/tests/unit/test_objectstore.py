@@ -81,11 +81,11 @@ class S3APITestCase(test.NoDBTestCase):
 
         self.conn.get_http_connection = get_http_connection
 
-    def _ensure_no_buckets(self, buckets):  # pylint: disable=C0111
+    def _ensure_no_buckets(self, buckets):
         self.assertEqual(len(buckets), 0, "Bucket list was not empty")
         return True
 
-    def _ensure_one_bucket(self, buckets, name):  # pylint: disable=C0111
+    def _ensure_one_bucket(self, buckets, name):
         self.assertEqual(len(buckets), 1,
                          "Bucket list didn't have exactly one element in it")
         self.assertEqual(buckets[0].name, name, "Wrong name")

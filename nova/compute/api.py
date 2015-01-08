@@ -3059,7 +3059,7 @@ class API(base.Base):
                     context, instance=instance,
                     old_volume_id=old_volume['id'],
                     new_volume_id=new_volume['id'])
-        except Exception:  # pylint: disable=W0702
+        except Exception:
             with excutils.save_and_reraise_exception():
                 self.volume_api.roll_detaching(context, old_volume['id'])
                 self.volume_api.unreserve_volume(context, new_volume['id'])

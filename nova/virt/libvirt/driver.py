@@ -5061,7 +5061,6 @@ class LibvirtDriver(driver.ComputeDriver):
                 not bool(jsonutils.loads(
                     self.get_instance_disk_info(instance,
                                                 block_device_info)))):
-            # pylint: disable E1120
             return True
 
         return False

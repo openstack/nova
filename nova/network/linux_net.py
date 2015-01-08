@@ -1087,7 +1087,7 @@ def restart_dhcp(context, dev, network_ref, fixedips):
                 _execute('kill', '-HUP', pid, run_as_root=True)
                 _add_dnsmasq_accept_rules(dev)
                 return
-            except Exception as exc:  # pylint: disable=W0703
+            except Exception as exc:
                 LOG.error(_LE('Hupping dnsmasq threw %s'), exc)
         else:
             LOG.debug('Pid %d is stale, relaunching dnsmasq', pid)
@@ -1167,7 +1167,7 @@ interface %s
         if conffile in out:
             try:
                 _execute('kill', pid, run_as_root=True)
-            except Exception as exc:  # pylint: disable=W0703
+            except Exception as exc:
                 LOG.error(_LE('killing radvd threw %s'), exc)
         else:
             LOG.debug('Pid %d is stale, relaunching radvd', pid)

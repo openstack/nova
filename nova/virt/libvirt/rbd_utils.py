@@ -207,7 +207,6 @@ class RBDDriver(object):
                   dict(pool=pool, img=image, snap=snapshot))
         with RADOSClient(self, str(pool)) as src_client:
             with RADOSClient(self) as dest_client:
-                # pylint: disable E1101
                 rbd.RBD().clone(src_client.ioctx,
                                      image.encode('utf-8'),
                                      snapshot.encode('utf-8'),
@@ -260,7 +259,6 @@ class RBDDriver(object):
             def belongs_to_instance(disk):
                 return disk.startswith(instance['uuid'])
 
-            # pylint: disable=E1101
             volumes = rbd.RBD().list(client.ioctx)
             for volume in filter(belongs_to_instance, volumes):
                 try:

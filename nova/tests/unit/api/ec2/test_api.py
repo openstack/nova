@@ -268,7 +268,6 @@ class ApiEc2TestCase(test.TestCase):
         self.mox.StubOutWithMock(self.ec2, 'new_http_connection')
         self.http = FakeHttplibConnection(
                 self.app, '%s:8773' % (self.host), False)
-        # pylint: disable=E1103
         if versionutils.is_compatible('2.14', boto.Version, same_major=False):
             self.ec2.new_http_connection(host or self.host, 8773,
                 is_secure).AndReturn(self.http)

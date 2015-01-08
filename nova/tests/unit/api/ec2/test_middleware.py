@@ -42,12 +42,12 @@ def conditional_forbid(req):
 
 class LockoutTestCase(test.NoDBTestCase):
     """Test case for the Lockout middleware."""
-    def setUp(self):  # pylint: disable=C0103
+    def setUp(self):
         super(LockoutTestCase, self).setUp()
         timeutils.set_time_override()
         self.lockout = ec2.Lockout(conditional_forbid)
 
-    def tearDown(self):  # pylint: disable=C0103
+    def tearDown(self):
         timeutils.clear_time_override()
         super(LockoutTestCase, self).tearDown()
 
