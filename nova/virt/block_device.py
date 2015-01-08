@@ -252,7 +252,7 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
                         context, connection_info, instance,
                         self['mount_device'], disk_bus=self['disk_bus'],
                         device_type=self['device_type'], encryption=encryption)
-            except Exception:  # pylint: disable=W0702
+            except Exception:
                 with excutils.save_and_reraise_exception():
                     LOG.exception(_LE("Driver failed to attach volume "
                                       "%(volume_id)s at %(mountpoint)s"),

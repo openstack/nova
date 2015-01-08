@@ -104,7 +104,7 @@ class DbDriver(api.ServiceGroupDriver):
                 LOG.error(_LE('Recovered model server connection!'))
 
         # TODO(vish): this should probably only catch connection errors
-        except Exception:  # pylint: disable=W0702
+        except Exception:
             if not getattr(service, 'model_disconnected', False):
                 service.model_disconnected = True
                 LOG.exception(_LE('model server went away'))

@@ -754,7 +754,7 @@ def floating_ip_bulk_create(context, ips, want_result=True):
     session = get_session()
     with session.begin():
         try:
-            tab = models.FloatingIp().__table__  # pylint: disable=E1101
+            tab = models.FloatingIp().__table__
             session.execute(tab.insert(), ips)
         except db_exc.DBDuplicateEntry as e:
             raise exception.FloatingIpExists(address=e.value)
@@ -1150,7 +1150,7 @@ def fixed_ip_bulk_create(context, ips):
     engine = get_engine()
     with engine.begin() as conn:
         try:
-            tab = models.FixedIp.__table__  # pylint: disable=E1101
+            tab = models.FixedIp.__table__
             conn.execute(tab.insert(), ips)
         except db_exc.DBDuplicateEntry as e:
             raise exception.FixedIpExists(address=e.value)
@@ -2796,10 +2796,6 @@ def network_get_all_by_uuids(context, network_uuids, project_only):
             raise exception.NetworkNotFound(network_id=network_uuid)
 
     return result
-
-# NOTE(vish): pylint complains because of the long method name, but
-#             it fits with the names of the rest of the methods
-# pylint: disable=C0103
 
 
 @require_admin_context

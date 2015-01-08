@@ -1399,12 +1399,12 @@ class NetworkManager(manager.Manager):
         network.destroy()
 
     @property
-    def _bottom_reserved_ips(self):  # pylint: disable=R0201
+    def _bottom_reserved_ips(self):
         """Number of reserved ips at the bottom of the range."""
         return 2  # network, gateway
 
     @property
-    def _top_reserved_ips(self):  # pylint: disable=R0201
+    def _top_reserved_ips(self):
         """Number of reserved ips at the top of the range."""
         return 1  # broadcast
 

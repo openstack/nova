@@ -4601,7 +4601,7 @@ class ComputeManager(manager.Manager):
         try:
             bdm.attach(context, instance, self.volume_api, self.driver,
                        do_check_attach=False, do_driver_attach=True)
-        except Exception:  # pylint: disable=W0702
+        except Exception:
             with excutils.save_and_reraise_exception():
                 LOG.exception(_LE("Failed to attach %(volume_id)s "
                                   "at %(mountpoint)s"),
@@ -4645,7 +4645,7 @@ class ComputeManager(manager.Manager):
                             'volume %(volume_id)s from %(mp)s: %(err)s'),
                         {'volume_id': volume_id, 'mp': mp, 'err': err},
                         instance=instance)
-        except Exception:  # pylint: disable=W0702
+        except Exception:
             with excutils.save_and_reraise_exception():
                 LOG.exception(_LE('Failed to detach volume %(volume_id)s '
                                   'from %(mp)s'),
@@ -4722,7 +4722,7 @@ class ComputeManager(manager.Manager):
                 resize_to = new_vol_size
             self.driver.swap_volume(old_cinfo, new_cinfo, instance, mountpoint,
                                     resize_to)
-        except Exception:  # pylint: disable=W0702
+        except Exception:
             failed = True
             with excutils.save_and_reraise_exception():
                 if new_cinfo:
