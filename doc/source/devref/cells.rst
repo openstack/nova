@@ -12,8 +12,11 @@
       under the License.
 
 
-Cells V2 Manifesto
-==================
+Cells V2
+========
+
+Manifesto
+~~~~~~~~~
 
 Problem
 -------
@@ -119,3 +122,50 @@ going on (all the extra synchronization of data). The new proposed cellsv2
 organization avoids both of these problems by letting things live where they
 should, teaching nova to natively find the right db, queue, and compute node to
 handle a given request.
+
+
+Database split
+~~~~~~~~~~~~~~
+
+As mentioned above there is a split between global data and data that is local
+to a cell.
+
+The following is a breakdown of what data can uncontroversially considered
+global versus local to a cell.  Missing data will be filled in as consensus is
+reached on the data that is more difficult to cleanly place.  The missing data
+is mostly concerned with scheduling and networking.
+
+Global (API-level) Tables
+-------------------------
+
+instance_types
+instance_type_projects
+instance_type_extra_specs
+quotas
+project_user_quotas
+quota_classes
+quota_usages
+security_groups
+security_group_rules
+security_group_default_rules
+provider_fw_rules
+key_pairs
+migrations
+networks
+tags
+
+Cell-level Tables
+-----------------
+
+instances
+instance_info_caches
+instance_extra
+instance_metadata
+instance_system_metadata
+instance_faults
+instance_actions
+instance_actions_events
+instance_id_mappings
+pci_devices
+block_device_mapping
+virtual_interfaces
