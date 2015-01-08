@@ -1711,3 +1711,120 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
         self.assertInstanceCellPinned(inst_pin)
         got_topo = objects.VirtCPUTopology(sockets=1, cores=2, threads=2)
         self.assertEqualTopology(got_topo, inst_pin.cpu_topology)
+
+
+class CPUPinningTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
+    def test_host_numa_fit_instance_to_host_single_cell(self):
+        host_topo = objects.NUMATopology(
+                cells=[objects.NUMACell(id=0, cpuset=set([0, 1]), memory=2048,
+                                        memory_usage=0),
+                       objects.NUMACell(id=1, cpuset=set([2, 3]), memory=2048,
+                                        memory_usage=0)]
+                )
+        inst_topo = objects.InstanceNUMATopology(
+                cells=[objects.InstanceNUMACell(
+                    cpuset=set([0, 1]), memory=2048, cpu_pinning={})])
+
+        inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo)
+
+        for cell in inst_topo.cells:
+            self.assertInstanceCellPinned(cell, cell_ids=(0, 1))
+
+    def test_host_numa_fit_instance_to_host_single_cell_w_usage(self):
+        host_topo = objects.NUMATopology(
+                cells=[objects.NUMACell(id=0, cpuset=set([0, 1]),
+                                        pinned_cpus=set([0]), memory=2048,
+                                        memory_usage=0),
+                       objects.NUMACell(id=1, cpuset=set([2, 3]), memory=2048,
+                                        memory_usage=0)])
+        inst_topo = objects.InstanceNUMATopology(
+                cells=[objects.InstanceNUMACell(
+                    cpuset=set([0, 1]), memory=2048, cpu_pinning={})])
+
+        inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo)
+
+        for cell in inst_topo.cells:
+            self.assertInstanceCellPinned(cell, cell_ids=(1,))
+
+    def test_host_numa_fit_instance_to_host_single_cell_fail(self):
+        host_topo = objects.NUMATopology(
+                cells=[objects.NUMACell(id=0, cpuset=set([0, 1]), memory=2048,
+                                        pinned_cpus=set([0]), memory_usage=0),
+                       objects.NUMACell(id=1, cpuset=set([2, 3]), memory=2048,
+                                        pinned_cpus=set([2]), memory_usage=0)])
+        inst_topo = objects.InstanceNUMATopology(
+                cells=[objects.InstanceNUMACell(cpuset=set([0, 1]),
+                                                memory=2048,
+                                                cpu_pinning={})])
+
+        inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo)
+        self.assertIsNone(inst_topo)
+
+    def test_host_numa_fit_instance_to_host_fit(self):
+        host_topo = objects.NUMATopology(
+                cells=[objects.NUMACell(id=0, cpuset=set([0, 1, 2, 3]),
+                                        memory=2048, memory_usage=0),
+                       objects.NUMACell(id=1, cpuset=set([4, 5, 6, 7]),
+                                        memory=2048, memory_usage=0)])
+        inst_topo = objects.InstanceNUMATopology(
+                cells=[objects.InstanceNUMACell(cpuset=set([0, 1]),
+                                                memory=2048, cpu_pinning={}),
+                       objects.InstanceNUMACell(cpuset=set([2, 3]),
+                                                memory=2048, cpu_pinning={})])
+        inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo)
+
+        for cell in inst_topo.cells:
+            self.assertInstanceCellPinned(cell, cell_ids=(0, 1))
+
+    def test_host_numa_fit_instance_to_host_barely_fit(self):
+        host_topo = objects.NUMATopology(
+                cells=[objects.NUMACell(id=0, cpuset=set([0, 1, 2, 3]),
+                                        memory=2048, pinned_cpus=set([0]),
+                                        memory_usage=0),
+                       objects.NUMACell(id=1, cpuset=set([4, 5, 6, 7]),
+                                        memory=2048, memory_usage=0,
+                                        pinned_cpus=set([4, 5, 6])),
+                       objects.NUMACell(id=2, cpuset=set([8, 9, 10, 11]),
+                                        memory=2048, memory_usage=0,
+                                        pinned_cpus=set([10, 11]))])
+        inst_topo = objects.InstanceNUMATopology(
+                cells=[objects.InstanceNUMACell(cpuset=set([0, 1]),
+                                                memory=2048, cpu_pinning={}),
+                       objects.InstanceNUMACell(cpuset=set([2, 3]),
+                                                memory=2048, cpu_pinning={})])
+        inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo)
+
+        for cell in inst_topo.cells:
+            self.assertInstanceCellPinned(cell, cell_ids=(0, 2))
+
+    def test_host_numa_fit_instance_to_host_fail_capacity(self):
+        host_topo = objects.NUMATopology(
+                cells=[objects.NUMACell(id=0, cpuset=set([0, 1, 2, 3]),
+                                        memory=4096, memory_usage=0,
+                                        pinned_cpus=set([0])),
+                       objects.NUMACell(id=1, cpuset=set([4, 5, 6, 7]),
+                                        memory=4096, memory_usage=0,
+                                        pinned_cpus=set([4, 5, 6]))])
+        inst_topo = objects.InstanceNUMATopology(
+                cells=[objects.InstanceNUMACell(cpuset=set([0, 1]),
+                                                memory=2048, cpu_pinning={}),
+                       objects.InstanceNUMACell(cpuset=set([2, 3]),
+                                                memory=2048, cpu_pinning={})])
+        inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo)
+        self.assertIsNone(inst_topo)
+
+    def test_host_numa_fit_instance_to_host_fail_topology(self):
+        host_topo = objects.NUMATopology(
+                cells=[objects.NUMACell(id=0, cpuset=set([0, 1, 2, 3]),
+                                        memory=4096, memory_usage=0),
+                       objects.NUMACell(id=1, cpuset=set([4, 5, 6, 7]),
+                                        memory=4096, memory_usage=0)])
+        inst_topo = objects.InstanceNUMATopology(
+                cells=[objects.InstanceNUMACell(cpuset=set([0, 1]),
+                                                memory=1024, cpu_pinning={}),
+                       objects.InstanceNUMACell(cpuset=set([2, 3]),
+                                                memory=1024, cpu_pinning={}),
+                       objects.InstanceNUMACell(cpuset=set([4, 5]),
+                                                memory=1024, cpu_pinning={})])
+        inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo)
+        self.assertIsNone(inst_topo)
