@@ -35,6 +35,7 @@ from oslo.utils import timeutils
 import six
 from sqlalchemy import Column
 from sqlalchemy.dialects import sqlite
+from sqlalchemy import inspect
 from sqlalchemy import Integer
 from sqlalchemy import MetaData
 from sqlalchemy.orm import query
@@ -2414,6 +2415,37 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
             self.ctxt, instance['uuid'], {'metadata': {'mk1': 'mv3'}})
         meta = utils.metadata_to_dict(new_ref['metadata'])
         self.assertEqual(meta, {'mk1': 'mv3'})
+
+    def test_instance_update_and_get_original_no_conflict_on_session(self):
+        session = get_session()
+        # patch get_session so that we may inspect it outside of the
+        # method; once enginefacade is implemented, this can be simplified
+        with mock.patch("nova.db.sqlalchemy.api.get_session", lambda: session):
+            instance = self.create_instance_with_args()
+            (old_ref, new_ref) = db.instance_update_and_get_original(
+                self.ctxt, instance['uuid'], {'metadata': {'mk1': 'mv3'}})
+
+        # test some regular persisted fields
+        self.assertEqual(old_ref.uuid, new_ref.uuid)
+        self.assertEqual(old_ref.project_id, new_ref.project_id)
+
+        # after a copy operation, we can assert:
+
+        # 1. the two states have their own InstanceState
+        old_insp = inspect(old_ref)
+        new_insp = inspect(new_ref)
+        self.assertNotEqual(old_insp, new_insp)
+
+        # 2. only one of the objects is still in our Session
+        self.assertIs(new_insp.session, session)
+        self.assertIsNone(old_insp.session)
+
+        # 3. The "new" object remains persistent and ready
+        # for updates
+        self.assertTrue(new_insp.persistent)
+
+        # 4. the "old" object is detached from this Session.
+        self.assertTrue(old_insp.detached)
 
     def test_instance_update_unique_name(self):
         context1 = context.RequestContext('user1', 'p1')

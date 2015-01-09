@@ -44,6 +44,35 @@ class NovaBase(models.SoftDeleteMixin,
                models.ModelBase):
     metadata = None
 
+    def __copy__(self):
+        """Implement a safe copy.copy().
+
+        SQLAlchemy-mapped objects travel with an object
+        called an InstanceState, which is pegged to that object
+        specifically and tracks everything about that object.  It's
+        critical within all attribute operations, including gets
+        and deferred loading.   This object definitely cannot be
+        shared among two instances, and must be handled.
+
+        The copy routine here makes use of session.merge() which
+        already essentially implements a "copy" style of operation,
+        which produces a new instance with a new InstanceState and copies
+        all the data along mapped attributes without using any SQL.
+
+        The mode we are using here has the caveat that the given object
+        must be "clean", e.g. that it has no database-loaded state
+        that has been updated and not flushed.   This is a good thing,
+        as creating a copy of an object including non-flushed, pending
+        database state is probably not a good idea; neither represents
+        what the actual row looks like, and only one should be flushed.
+
+        """
+        session = orm.Session()
+
+        copy = session.merge(self, load=False)
+        session.expunge(copy)
+        return copy
+
     def save(self, session=None):
         from nova.db.sqlalchemy import api
 
