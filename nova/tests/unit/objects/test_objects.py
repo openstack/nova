@@ -208,7 +208,7 @@ class TestMetaclass(test.TestCase):
 class TestObjToPrimitive(test.TestCase):
 
     def test_obj_to_primitive_list(self):
-        class MyObjElement(base.NovaObject, base.NovaObjectDictCompat):
+        class MyObjElement(base.NovaObject):
             fields = {'foo': fields.IntegerField()}
 
             def __init__(self, foo):
@@ -239,7 +239,7 @@ class TestObjToPrimitive(test.TestCase):
                          base.obj_to_primitive(mylist))
 
     def test_obj_to_primitive_with_ip_addr(self):
-        class TestObject(base.NovaObject, base.NovaObjectDictCompat):
+        class TestObject(base.NovaObject):
             fields = {'addr': fields.IPAddressField(),
                       'cidr': fields.IPNetworkField()}
 

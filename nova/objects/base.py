@@ -818,8 +818,9 @@ def obj_to_primitive(obj):
         return [obj_to_primitive(x) for x in obj]
     elif isinstance(obj, NovaObject):
         result = {}
-        for key, value in obj.iteritems():
-            result[key] = obj_to_primitive(value)
+        for key in obj.obj_fields:
+            if obj.obj_attr_is_set(key) or key in obj.obj_extra_fields:
+                result[key] = obj_to_primitive(getattr(obj, key))
         return result
     elif isinstance(obj, netaddr.IPAddress):
         return str(obj)
