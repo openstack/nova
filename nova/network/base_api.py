@@ -238,6 +238,19 @@ class NetworkAPI(base.Base):
 
     def get_instance_nw_info(self, context, instance, **kwargs):
         """Returns all network info related to an instance."""
+        with lockutils.lock('refresh_cache-%s' % instance.uuid):
+            result = self._get_instance_nw_info(context, instance, **kwargs)
+            # NOTE(comstud): Don't update API cell with new info_cache every
+            # time we pull network info for an instance.  The periodic healing
+            # of info_cache causes too many cells messages.  Healing the API
+            # will happen separately.
+            update_instance_cache_with_nw_info(self, context, instance,
+                                               nw_info=result,
+                                               update_cells=False)
+        return result
+
+    def _get_instance_nw_info(self, context, instance, **kwargs):
+        """Template method, so a subclass can implement for neutron/network."""
         raise NotImplementedError()
 
     def create_pci_requests_for_sriov_ports(self, context,

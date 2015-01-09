@@ -535,6 +535,20 @@ class ApiTestCase(test.TestCase):
             self.context, instance,
             {'source_compute': None, 'dest_compute': 'fake_compute_source'})
 
+    @mock.patch('oslo_concurrency.lockutils.lock')
+    @mock.patch.object(api.API, '_get_instance_nw_info')
+    @mock.patch('nova.network.base_api.update_instance_cache_with_nw_info')
+    def test_get_instance_nw_info(self, mock_update, mock_get, mock_lock):
+        fake_result = mock.sentinel.get_nw_info_result
+        mock_get.return_value = fake_result
+        instance = fake_instance.fake_instance_obj(self.context)
+        result = self.network_api.get_instance_nw_info(self.context, instance)
+        mock_get.assert_called_once_with(self.context, instance)
+        mock_update.assert_called_once_with(self.network_api, self.context,
+                                            instance, nw_info=fake_result,
+                                            update_cells=False)
+        self.assertEqual(fake_result, result)
+
 
 @mock.patch('nova.network.api.API')
 @mock.patch('nova.db.instance_info_cache_update', return_value=fake_info_cache)
