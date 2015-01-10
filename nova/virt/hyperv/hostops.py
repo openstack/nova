@@ -90,9 +90,17 @@ class HostOps(object):
 
     def _get_hypervisor_version(self):
         """Get hypervisor version.
-        :returns: hypervisor version (ex. 12003)
+        :returns: hypervisor version (ex. 6003)
         """
-        version = self._hostutils.get_windows_version().replace('.', '')
+
+        # NOTE(claudiub): The hypervisor_version will be stored in the database
+        # as an Integer and it will be used by the scheduler, if required by
+        # the image property 'hypervisor_version_requires'.
+        # The hypervisor_version will then be converted back to a version
+        # by splitting the int in groups of 3 digits.
+        # E.g.: hypervisor_version 6003 is converted to '6.3'.
+        version = self._hostutils.get_windows_version().split('.')
+        version = int(version[0]) * 1000 + int(version[1])
         LOG.debug('Windows version: %s ', version)
         return version
 
