@@ -92,7 +92,16 @@ volume_opts = [
     cfg.ListOpt('qemu_allowed_storage_drivers',
                 default=[],
                 help='Protocols listed here will be accessed directly '
-                     'from QEMU. Currently supported protocols: [gluster]')
+                     'from QEMU. Currently supported protocols: [gluster]'),
+    cfg.StrOpt('iscsi_transport',
+               default=None,
+               help='The iSCSI transport to use to connect to target in case '
+                    'offload support is desired. Supported transports are '
+                    'be2iscsi, bnx2i, cxgb3i, cxgb4i, qla4xx and ocs. '
+                    'Default format is transport_name.hwaddress and can be '
+                    'generated manually or via iscsiadm -m iface'),
+                    # iser is also supported, but use LibvirtISERVolumeDriver
+                    # instead
     ]
 
 CONF = cfg.CONF
@@ -283,6 +292,13 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
                                                        is_block_dev=True)
         self.num_scan_tries = CONF.libvirt.num_iscsi_scan_tries
         self.use_multipath = CONF.libvirt.iscsi_use_multipath
+        if CONF.libvirt.iscsi_transport:
+            self.transport = CONF.libvirt.iscsi_transport
+        else:
+            self.transport = 'default'
+
+    def _get_transport(self):
+            return self.transport
 
     def _run_iscsiadm(self, iscsi_properties, iscsi_command, **kwargs):
         check_exit_code = kwargs.pop('check_exit_code', 0)
@@ -380,7 +396,11 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
         # TODO(justinsb): This retry-with-delay is a pattern, move to utils?
         tries = 0
         disk_dev = disk_info['dev']
-        while not os.path.exists(host_device):
+
+        # Check host_device only when transport is used, since otherwise it is
+        # directly derived from properties. Only needed for unit tests
+        while ((self._get_transport() != "default" and not host_device)
+          or not os.path.exists(host_device)):
             if tries >= self.num_scan_tries:
                 raise exception.NovaException(_("iSCSI device not found at %s")
                                               % (host_device))
@@ -392,8 +412,14 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
             # The rescan isn't documented as being necessary(?), but it helps
             self._run_iscsiadm(iscsi_properties, ("--rescan",))
 
+            # For offloaded open-iscsi transports, host_device cannot be
+            # guessed unlike iscsi_tcp where it can be obtained from
+            # properties, so try and get it again.
+            if not host_device and self._get_transport() != "default":
+                host_device = self._get_host_device(iscsi_properties)
+
             tries = tries + 1
-            if not os.path.exists(host_device):
+            if not host_device or not os.path.exists(host_device):
                 time.sleep(tries ** 2)
 
         if tries != 0:
@@ -437,11 +463,14 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
 
         # NOTE(vish): Only disconnect from the target if no luns from the
         #             target are in use.
-        device_prefix = ("/dev/disk/by-path/ip-%s-iscsi-%s-lun-" %
+        device_byname = ("ip-%s-iscsi-%s-lun-" %
                          (iscsi_properties['target_portal'],
                           iscsi_properties['target_iqn']))
         devices = self.connection._get_all_block_devices()
-        devices = [dev for dev in devices if dev.startswith(device_prefix)]
+        devices = [dev for dev in devices if (device_byname in dev
+                                              and
+                                              dev.startswith(
+                                                        '/dev/disk/by-path/'))]
         if not devices:
             self._disconnect_from_iscsi_portal(iscsi_properties)
         elif host_device not in devices:
@@ -507,6 +536,10 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
                 entry_ip_iqn = entry.split("-lun-")[0]
                 if entry_ip_iqn[:3] == "ip-":
                     entry_ip_iqn = entry_ip_iqn[3:]
+                elif entry_ip_iqn[:4] == "pci-":
+                    # Look at an offset of len('pci-0000:00:00.0')
+                    offset = entry_ip_iqn.find("ip-", 16, 21)
+                    entry_ip_iqn = entry_ip_iqn[(offset + 3):]
                 if (ip_iqn != entry_ip_iqn):
                     continue
                 entry_real_path = os.path.realpath("/dev/disk/by-path/%s" %
@@ -636,7 +669,13 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
             devices = list(os.walk('/dev/disk/by-path'))[0][-1]
         except IndexError:
             return []
-        return [entry for entry in devices if entry.startswith("ip-")]
+        iscsi_devs = []
+        for entry in devices:
+            if (entry.startswith("ip-") or
+                    (entry.startswith('pci-') and 'ip-' in entry)):
+                iscsi_devs.append(entry)
+
+        return iscsi_devs
 
     def _delete_mpath(self, iscsi_properties, multipath_device, ips_iqns):
         entries = self._get_iscsi_devices()
@@ -700,14 +739,27 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
     def _rescan_multipath(self):
         self._run_multipath(['-r'], check_exit_code=[0, 1, 21])
 
-    def _get_host_device(self, iscsi_properties):
-        return ("/dev/disk/by-path/ip-%s-iscsi-%s-lun-%s" %
-                (iscsi_properties['target_portal'],
-                 iscsi_properties['target_iqn'],
-                 iscsi_properties.get('target_lun', 0)))
+    def _get_host_device(self, transport_properties):
+        """Find device path in devtemfs."""
+        device = ("ip-%s-iscsi-%s-lun-%s" %
+                  (transport_properties['target_portal'],
+                   transport_properties['target_iqn'],
+                   transport_properties.get('target_lun', 0)))
+        if self._get_transport() == "default":
+            return ("/dev/disk/by-path/%s" % device)
+        else:
+            host_device = None
+            look_for_device = glob.glob('/dev/disk/by-path/*%s' % device)
+            if look_for_device:
+                host_device = look_for_device[0]
+            return host_device
 
     def _reconnect(self, iscsi_properties):
-        self._run_iscsiadm(iscsi_properties, ('--op', 'new'))
+        # Note: iscsiadm does not support changing iface.iscsi_ifacename
+        # via --op update, so we do this at creation time
+        self._run_iscsiadm(iscsi_properties,
+                           ('--interface', self._get_transport(),
+                            '--op', 'new'))
 
 
 class LibvirtISERVolumeDriver(LibvirtISCSIVolumeDriver):
@@ -717,6 +769,9 @@ class LibvirtISERVolumeDriver(LibvirtISCSIVolumeDriver):
         self.num_scan_tries = CONF.libvirt.num_iser_scan_tries
         self.use_multipath = CONF.libvirt.iser_use_multipath
 
+    def _get_transport(self):
+        return 'iser'
+
     def _get_multipath_iqn(self, multipath_device):
         entries = self._get_iscsi_devices()
         for entry in entries:
@@ -725,22 +780,6 @@ class LibvirtISERVolumeDriver(LibvirtISCSIVolumeDriver):
             if entry_multipath == multipath_device:
                 return entry.split("iser-")[1].split("-lun")[0]
         return None
-
-    def _get_host_device(self, iser_properties):
-        time.sleep(1)
-        host_device = None
-        device = ("ip-%s-iscsi-%s-lun-%s" %
-                  (iser_properties['target_portal'],
-                   iser_properties['target_iqn'],
-                   iser_properties.get('target_lun', 0)))
-        look_for_device = glob.glob('/dev/disk/by-path/*%s' % device)
-        if look_for_device:
-            host_device = look_for_device[0]
-        return host_device
-
-    def _reconnect(self, iser_properties):
-        self._run_iscsiadm(iser_properties,
-                           ('--interface', 'iser', '--op', 'new'))
 
 
 class LibvirtNFSVolumeDriver(LibvirtBaseVolumeDriver):
