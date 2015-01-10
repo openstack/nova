@@ -12,8 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import sys
-
+import fixtures
 import mock
 
 from nova import exception
@@ -23,11 +22,11 @@ from nova.virt.disk.vfs import guestfs as vfsimpl
 
 
 class VirtDiskVFSGuestFSTest(test.NoDBTestCase):
-
     def setUp(self):
         super(VirtDiskVFSGuestFSTest, self).setUp()
-        sys.modules['guestfs'] = fakeguestfs
-        vfsimpl.guestfs = fakeguestfs
+        self.useFixture(
+                fixtures.MonkeyPatch('nova.virt.disk.vfs.guestfs.guestfs',
+                                     fakeguestfs))
 
     def _do_test_appliance_setup_inspect(self, forcetcg):
         if forcetcg:
