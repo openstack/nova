@@ -19,7 +19,7 @@ Unit Tests for nova.cert.rpcapi
 import contextlib
 
 import mock
-from oslo.config import cfg
+from oslo_config import cfg
 
 from nova.cert import rpcapi as cert_rpcapi
 from nova import context

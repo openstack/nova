@@ -14,20 +14,20 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import oslo.config.cfg
-from oslo.utils import importutils
+import oslo_config.cfg
+from oslo_utils import importutils
 
 _volume_opts = [
-    oslo.config.cfg.StrOpt('volume_api_class',
+    oslo_config.cfg.StrOpt('volume_api_class',
                                      default='nova.volume.cinder.API',
                                      help='The full class name of the '
                                           'volume API class to use'),
 ]
 
-oslo.config.cfg.CONF.register_opts(_volume_opts)
+oslo_config.cfg.CONF.register_opts(_volume_opts)
 
 
 def API():
-    volume_api_class = oslo.config.cfg.CONF.volume_api_class
+    volume_api_class = oslo_config.cfg.CONF.volume_api_class
     cls = importutils.import_class(volume_api_class)
     return cls()

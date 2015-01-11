@@ -18,7 +18,7 @@
 WSGI middleware for OpenStack API controllers.
 """
 
-from oslo.config import cfg
+from oslo_config import cfg
 import routes
 import stevedore
 import webob.dec

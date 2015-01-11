@@ -15,7 +15,7 @@
 
 import copy
 
-from oslo.utils import timeutils
+from oslo_utils import timeutils
 from webob import exc
 
 from nova.api.openstack.compute.contrib import cells as cells_ext_v2

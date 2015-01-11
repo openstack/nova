@@ -19,7 +19,7 @@ generators for generating the model in
 :mod:`openstack.common.report.models.conf`.
 """
 
-from oslo.config import cfg
+from oslo_config import cfg
 
 from nova.openstack.common.report.models import conf as cm
 

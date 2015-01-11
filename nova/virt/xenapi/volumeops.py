@@ -17,7 +17,7 @@
 Management class for Storage-related functions (attach, detach, etc).
 """
 
-from oslo.utils import excutils
+from oslo_utils import excutils
 
 from nova import exception
 from nova.i18n import _LI, _LW

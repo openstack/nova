@@ -16,8 +16,8 @@
 
 """Tests for the testing base code."""
 
-from oslo.config import cfg
-from oslo import messaging
+from oslo_config import cfg
+import oslo_messaging as messaging
 
 from nova.openstack.common import log as logging
 from nova import rpc

@@ -18,7 +18,7 @@ Tests For CellsScheduler
 import copy
 import time
 
-from oslo.config import cfg
+from oslo_config import cfg
 
 from nova import block_device
 from nova.cells import filters

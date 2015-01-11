@@ -17,7 +17,7 @@
 """
 Utility functions for ESX Networking.
 """
-from oslo.vmware import exceptions as vexc
+from oslo_vmware import exceptions as vexc
 
 from nova import exception
 from nova.i18n import _

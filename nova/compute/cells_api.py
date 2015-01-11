@@ -16,7 +16,7 @@
 
 """Compute API that proxies via Cells Service."""
 
-from oslo import messaging
+import oslo_messaging as messaging
 
 from nova import availability_zones
 from nova import block_device

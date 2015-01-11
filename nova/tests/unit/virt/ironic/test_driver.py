@@ -17,8 +17,8 @@
 
 from ironicclient import exc as ironic_exception
 import mock
-from oslo.config import cfg
-from oslo.serialization import jsonutils
+from oslo_config import cfg
+from oslo_serialization import jsonutils
 
 from nova.api.metadata import base as instance_metadata
 from nova.compute import power_state as nova_states

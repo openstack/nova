@@ -14,7 +14,7 @@
 #    under the License.
 
 import mock
-from oslo import messaging
+import oslo_messaging as messaging
 
 from nova.conductor import api as conductor_api
 from nova import context

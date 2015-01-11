@@ -16,7 +16,7 @@
 
 """Module for VNC Proxying."""
 
-from oslo.config import cfg
+from oslo_config import cfg
 
 
 vnc_opts = [

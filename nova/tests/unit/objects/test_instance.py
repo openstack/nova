@@ -18,8 +18,8 @@ import iso8601
 import mock
 from mox3 import mox
 import netaddr
-from oslo.serialization import jsonutils
-from oslo.utils import timeutils
+from oslo_serialization import jsonutils
+from oslo_utils import timeutils
 
 from nova.cells import rpcapi as cells_rpcapi
 from nova.compute import flavors

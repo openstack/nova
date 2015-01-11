@@ -23,8 +23,8 @@ import uuid
 
 import mock
 from mox3 import mox
-from oslo.config import cfg
-from oslo.utils import units
+from oslo_config import cfg
+from oslo_utils import units
 
 from nova.api.metadata import base as instance_metadata
 from nova.compute import power_state

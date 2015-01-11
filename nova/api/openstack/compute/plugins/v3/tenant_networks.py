@@ -16,7 +16,7 @@
 
 import netaddr
 import netaddr.core as netexc
-from oslo.config import cfg
+from oslo_config import cfg
 import six
 from webob import exc
 

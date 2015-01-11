@@ -16,7 +16,7 @@
 """
 Weigh cells by memory needed in a way that spreads instances.
 """
-from oslo.config import cfg
+from oslo_config import cfg
 
 from nova.cells import weights
 

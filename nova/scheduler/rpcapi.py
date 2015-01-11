@@ -16,8 +16,8 @@
 Client side of the scheduler manager RPC API.
 """
 
-from oslo.config import cfg
-from oslo import messaging
+from oslo_config import cfg
+import oslo_messaging as messaging
 
 from nova.objects import base as objects_base
 from nova import rpc

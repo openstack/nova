@@ -15,7 +15,7 @@
 
 """The legacy block device mappings extension."""
 
-from oslo.utils import strutils
+from oslo_utils import strutils
 from webob import exc
 
 from nova.api.openstack.compute.schemas.v3 import block_device_mapping_v1 as \

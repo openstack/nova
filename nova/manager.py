@@ -51,7 +51,7 @@ This module provides Manager, a base class for managers.
 
 """
 
-from oslo.config import cfg
+from oslo_config import cfg
 
 from nova.db import base
 from nova.openstack.common import log as logging

@@ -17,7 +17,7 @@
 
 """VIF drivers for XenAPI."""
 
-from oslo.config import cfg
+from oslo_config import cfg
 
 from nova.i18n import _
 from nova.virt.xenapi import network_utils

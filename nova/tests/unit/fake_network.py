@@ -13,8 +13,8 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-from oslo.config import cfg
-from oslo.serialization import jsonutils
+from oslo_config import cfg
+from oslo_serialization import jsonutils
 
 from nova.compute import api as compute_api
 from nova.compute import manager as compute_manager

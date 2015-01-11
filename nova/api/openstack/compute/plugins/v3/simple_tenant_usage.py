@@ -16,7 +16,7 @@
 import datetime
 
 import iso8601
-from oslo.utils import timeutils
+from oslo_utils import timeutils
 import six
 import six.moves.urllib.parse as urlparse
 from webob import exc

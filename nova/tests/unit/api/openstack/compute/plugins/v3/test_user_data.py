@@ -18,8 +18,8 @@ import base64
 import datetime
 import uuid
 
-from oslo.config import cfg
-from oslo.serialization import jsonutils
+from oslo_config import cfg
+from oslo_serialization import jsonutils
 
 from nova.api.openstack.compute import plugins
 from nova.api.openstack.compute.plugins.v3 import servers

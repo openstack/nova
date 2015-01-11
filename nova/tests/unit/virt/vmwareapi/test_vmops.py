@@ -15,8 +15,8 @@
 import contextlib
 
 import mock
-from oslo.utils import units
-from oslo.vmware import exceptions as vexc
+from oslo_utils import units
+from oslo_vmware import exceptions as vexc
 
 from nova.compute import power_state
 from nova import context

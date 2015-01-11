@@ -19,8 +19,8 @@
 Scheduler base class that all Schedulers should inherit from
 """
 
-from oslo.config import cfg
-from oslo.utils import importutils
+from oslo_config import cfg
+from oslo_utils import importutils
 
 from nova import db
 from nova.i18n import _

@@ -13,7 +13,7 @@
 #   under the License.
 
 import mock
-from oslo.config import cfg
+from oslo_config import cfg
 
 from nova.api.openstack import common
 from nova.api.openstack.compute.contrib import rescue

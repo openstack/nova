@@ -18,11 +18,11 @@ See http://docs.openstack.org/developer/oslo.i18n/usage.html .
 
 """
 
-from oslo import i18n
+import oslo_i18n
 
 DOMAIN = 'nova'
 
-_translators = i18n.TranslatorFactory(domain=DOMAIN)
+_translators = oslo_i18n.TranslatorFactory(domain=DOMAIN)
 
 # The primary translation function using the well-known name "_"
 _ = _translators.primary
@@ -39,8 +39,8 @@ _LC = _translators.log_critical
 
 
 def translate(value, user_locale):
-    return i18n.translate(value, user_locale)
+    return oslo_i18n.translate(value, user_locale)
 
 
 def get_available_languages():
-    return i18n.get_available_languages(DOMAIN)
+    return oslo_i18n.get_available_languages(DOMAIN)

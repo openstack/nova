@@ -22,12 +22,12 @@ import collections
 import copy
 import functools
 
-from oslo.config import cfg
-from oslo.utils import excutils
-from oslo.utils import units
-from oslo.vmware import exceptions as vexc
-from oslo.vmware.objects import datastore as ds_obj
-from oslo.vmware import pbm
+from oslo_config import cfg
+from oslo_utils import excutils
+from oslo_utils import units
+from oslo_vmware import exceptions as vexc
+from oslo_vmware.objects import datastore as ds_obj
+from oslo_vmware import pbm
 
 from nova import exception
 from nova.i18n import _, _LI, _LW

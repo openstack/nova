@@ -13,7 +13,7 @@
 #    under the License.
 
 import mock
-from oslo.serialization import jsonutils
+from oslo_serialization import jsonutils
 import webob
 
 from nova.api.openstack.compute.contrib import server_external_events \

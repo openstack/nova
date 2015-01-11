@@ -21,7 +21,7 @@ import copy
 
 from keystoneclient import auth
 from keystoneclient import service_catalog
-from oslo.utils import timeutils
+from oslo_utils import timeutils
 import six
 
 from nova import exception

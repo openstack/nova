@@ -15,8 +15,8 @@
 
 import uuid
 
-from oslo.db.sqlalchemy import test_base
-from oslo.db.sqlalchemy import utils as oslodbutils
+from oslo_db.sqlalchemy import test_base
+from oslo_db.sqlalchemy import utils as oslodbutils
 import sqlalchemy
 from sqlalchemy import Integer, String
 from sqlalchemy import MetaData, Table, Column

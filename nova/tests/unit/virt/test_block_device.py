@@ -15,7 +15,7 @@
 import contextlib
 
 import mock
-from oslo.serialization import jsonutils
+from oslo_serialization import jsonutils
 
 from nova import block_device
 from nova import context

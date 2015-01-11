@@ -15,7 +15,7 @@
 Request Body limiting middleware.
 
 """
-from oslo.middleware import sizelimit
+from oslo_middleware import sizelimit
 
 
 # TODO(ekudryashova): Remove below aliases when grenade jobs

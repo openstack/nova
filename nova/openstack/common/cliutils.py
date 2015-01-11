@@ -20,8 +20,8 @@ import os
 import sys
 import textwrap
 
-from oslo.utils import encodeutils
-from oslo.utils import strutils
+from oslo_utils import encodeutils
+from oslo_utils import strutils
 import prettytable
 import six
 from six import moves

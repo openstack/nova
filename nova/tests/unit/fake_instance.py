@@ -15,7 +15,7 @@
 import datetime
 import uuid
 
-from oslo.serialization import jsonutils
+from oslo_serialization import jsonutils
 
 from nova import objects
 from nova.objects import fields

@@ -15,7 +15,7 @@
 
 import datetime
 
-from oslo.utils import timeutils
+from oslo_utils import timeutils
 
 from nova.api.openstack.compute.contrib import instance_usage_audit_log as ial
 from nova.api.openstack.compute.plugins.v3 import instance_usage_audit_log as \

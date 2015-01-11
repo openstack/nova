@@ -16,8 +16,8 @@
 Client side of the consoleauth RPC API.
 """
 
-from oslo.config import cfg
-from oslo import messaging
+from oslo_config import cfg
+import oslo_messaging as messaging
 
 from nova import rpc
 

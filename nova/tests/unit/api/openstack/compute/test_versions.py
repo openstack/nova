@@ -16,7 +16,7 @@
 import copy
 import uuid as stdlib_uuid
 
-from oslo.serialization import jsonutils
+from oslo_serialization import jsonutils
 import webob
 
 from nova.api.openstack.compute import views

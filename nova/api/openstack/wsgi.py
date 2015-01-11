@@ -19,8 +19,8 @@ import inspect
 import math
 import time
 
-from oslo.serialization import jsonutils
-from oslo.utils import strutils
+from oslo_serialization import jsonutils
+from oslo_utils import strutils
 import six
 import webob
 

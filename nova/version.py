@@ -31,7 +31,7 @@ def _load_config():
     # this module
     import ConfigParser
 
-    from oslo.config import cfg
+    from oslo_config import cfg
 
     from nova.openstack.common import log as logging
 

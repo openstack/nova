@@ -23,7 +23,7 @@ import datetime
 from xml.dom import minidom
 
 from lxml import etree
-from oslo.utils import encodeutils
+from oslo_utils import encodeutils
 import six
 
 from nova.api.ec2 import ec2utils

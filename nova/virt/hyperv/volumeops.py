@@ -22,8 +22,8 @@ import os
 import re
 import time
 
-from oslo.config import cfg
-from oslo.utils import excutils
+from oslo_config import cfg
+from oslo_utils import excutils
 
 from nova import exception
 from nova.i18n import _, _LE, _LW

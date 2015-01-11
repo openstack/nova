@@ -17,7 +17,7 @@
 Claim objects for use with resource tracking.
 """
 
-from oslo.serialization import jsonutils
+from oslo_serialization import jsonutils
 
 from nova import context
 from nova import exception

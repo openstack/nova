@@ -42,7 +42,7 @@ from nova.openstack.common import uuidutils
 from nova.virt import virtapi
 from nova.virt.xenapi import driver as xenapi_driver
 from nova.virt.xenapi import vm_utils
-from oslo.config import cfg
+from oslo_config import cfg
 
 cli_opts = [
     cfg.BoolOpt('dry-run',

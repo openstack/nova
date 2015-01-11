@@ -17,8 +17,8 @@ import uuid
 import mock
 from neutronclient.common import exceptions as n_exc
 from neutronclient.neutron import v2_0 as neutronv20
-from oslo.config import cfg
-from oslo.serialization import jsonutils
+from oslo_config import cfg
+from oslo_serialization import jsonutils
 import webob
 
 from nova.api.openstack.compute.contrib import security_groups

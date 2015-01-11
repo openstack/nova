@@ -26,12 +26,12 @@ import threading
 import time
 import uuid
 
-from oslo.config import cfg
-from oslo.db import exception as db_exc
-from oslo.db.sqlalchemy import session as db_session
-from oslo.db.sqlalchemy import utils as sqlalchemyutils
-from oslo.utils import excutils
-from oslo.utils import timeutils
+from oslo_config import cfg
+from oslo_db import exception as db_exc
+from oslo_db.sqlalchemy import session as db_session
+from oslo_db.sqlalchemy import utils as sqlalchemyutils
+from oslo_utils import excutils
+from oslo_utils import timeutils
 import retrying
 import six
 from sqlalchemy import and_

@@ -26,7 +26,7 @@ in the configuration file as the followings:
     The final weight would be name1.value * 1.0 + name2.value * -1.0.
 """
 
-from oslo.config import cfg
+from oslo_config import cfg
 
 from nova import exception
 from nova.scheduler import utils

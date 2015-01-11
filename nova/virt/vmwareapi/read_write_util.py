@@ -22,8 +22,8 @@ Collection of classes to handle image upload/download to/from Image service
 
 import urllib
 
-from oslo.utils import netutils
-from oslo.vmware import rw_handles
+from oslo_utils import netutils
+from oslo_vmware import rw_handles
 
 
 class VMwareHTTPReadFile(rw_handles.FileHandle):

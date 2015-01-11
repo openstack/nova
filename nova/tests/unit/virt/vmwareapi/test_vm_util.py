@@ -19,8 +19,8 @@ import contextlib
 import re
 
 import mock
-from oslo.vmware import exceptions as vexc
-from oslo.vmware import pbm
+from oslo_vmware import exceptions as vexc
+from oslo_vmware import pbm
 
 from nova import context
 from nova import exception

@@ -18,8 +18,8 @@ If a child cell hasn't sent capacity or capability updates in a while,
 downgrade its likelihood of being chosen for scheduling requests.
 """
 
-from oslo.config import cfg
-from oslo.utils import timeutils
+from oslo_config import cfg
+from oslo_utils import timeutils
 
 from nova.cells import weights
 from nova.i18n import _LW

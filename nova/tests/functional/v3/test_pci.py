@@ -13,7 +13,7 @@
 #    under the License.
 
 import mock
-from oslo.serialization import jsonutils
+from oslo_serialization import jsonutils
 
 from nova import db
 from nova.tests.functional.v3 import api_sample_base

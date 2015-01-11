@@ -28,13 +28,13 @@ from xml.dom import minidom
 from xml.parsers import expat
 
 from eventlet import greenthread
-from oslo.config import cfg
-from oslo.utils import excutils
-from oslo.utils import importutils
-from oslo.utils import strutils
-from oslo.utils import timeutils
-from oslo.utils import units
 from oslo_concurrency import processutils
+from oslo_config import cfg
+from oslo_utils import excutils
+from oslo_utils import importutils
+from oslo_utils import strutils
+from oslo_utils import timeutils
+from oslo_utils import units
 import six
 import six.moves.urllib.parse as urlparse
 

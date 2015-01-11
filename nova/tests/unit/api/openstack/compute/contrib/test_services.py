@@ -18,7 +18,7 @@ import datetime
 
 import iso8601
 import mock
-from oslo.utils import timeutils
+from oslo_utils import timeutils
 import webob.exc
 
 from nova.api.openstack.compute.contrib import services as services_v2

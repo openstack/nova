@@ -14,7 +14,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo.utils import timeutils
+from oslo_utils import timeutils
 
 from nova.api.openstack import common
 from nova.image import glance

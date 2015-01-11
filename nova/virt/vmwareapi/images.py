@@ -19,10 +19,10 @@ Utility functions for Image transfer and manipulation.
 
 import os
 
-from oslo.config import cfg
-from oslo.utils import strutils
-from oslo.utils import units
-from oslo.vmware import rw_handles
+from oslo_config import cfg
+from oslo_utils import strutils
+from oslo_utils import units
+from oslo_vmware import rw_handles
 
 from nova import exception
 from nova.i18n import _LI

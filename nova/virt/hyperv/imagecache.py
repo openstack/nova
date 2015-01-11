@@ -17,9 +17,9 @@ Image caching and management.
 """
 import os
 
-from oslo.config import cfg
-from oslo.utils import excutils
-from oslo.utils import units
+from oslo_config import cfg
+from oslo_utils import excutils
+from oslo_utils import units
 
 from nova.i18n import _
 from nova.openstack.common import log as logging

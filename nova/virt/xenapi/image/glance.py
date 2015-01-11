@@ -16,7 +16,7 @@
 import functools
 import sys
 
-from oslo.config import cfg
+from oslo_config import cfg
 
 from nova.compute import utils as compute_utils
 from nova import exception

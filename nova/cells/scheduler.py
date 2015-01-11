@@ -19,7 +19,7 @@ Cells Scheduler
 import copy
 import time
 
-from oslo.config import cfg
+from oslo_config import cfg
 
 from nova.cells import filters
 from nova.cells import weights

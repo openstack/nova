@@ -24,12 +24,12 @@ import os
 import time
 
 import decorator
-from oslo.config import cfg
-from oslo.utils import excutils
-from oslo.utils import strutils
-from oslo.utils import units
-from oslo.vmware import exceptions as vexc
 from oslo_concurrency import lockutils
+from oslo_config import cfg
+from oslo_utils import excutils
+from oslo_utils import strutils
+from oslo_utils import units
+from oslo_vmware import exceptions as vexc
 
 from nova.api.metadata import base as instance_metadata
 from nova import compute

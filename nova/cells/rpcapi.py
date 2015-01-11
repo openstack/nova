@@ -23,9 +23,9 @@ services.  That communication is handled by the cells driver via the
 messging module.
 """
 
-from oslo.config import cfg
-from oslo import messaging
-from oslo.serialization import jsonutils
+from oslo_config import cfg
+import oslo_messaging as messaging
+from oslo_serialization import jsonutils
 
 from nova import exception
 from nova.i18n import _LE

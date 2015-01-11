@@ -15,7 +15,7 @@
 
 import functools
 
-from oslo.utils import importutils
+from oslo_utils import importutils
 
 from nova.scheduler import utils
 

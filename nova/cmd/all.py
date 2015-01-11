@@ -26,7 +26,7 @@ continue attempting to launch the rest of the services.
 
 import sys
 
-from oslo.config import cfg
+from oslo_config import cfg
 
 from nova import config
 from nova.i18n import _LE

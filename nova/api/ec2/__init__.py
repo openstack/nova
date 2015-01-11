@@ -20,11 +20,11 @@ Starting point for routing EC2 requests.
 
 import hashlib
 
-from oslo.config import cfg
-from oslo.serialization import jsonutils
-from oslo.utils import importutils
-from oslo.utils import netutils
-from oslo.utils import timeutils
+from oslo_config import cfg
+from oslo_serialization import jsonutils
+from oslo_utils import importutils
+from oslo_utils import netutils
+from oslo_utils import timeutils
 import requests
 import six
 import webob

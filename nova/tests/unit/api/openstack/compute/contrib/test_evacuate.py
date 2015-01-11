@@ -14,7 +14,7 @@
 
 import uuid
 
-from oslo.config import cfg
+from oslo_config import cfg
 import webob
 
 from nova.api.openstack.compute.contrib import evacuate as evacuate_v2

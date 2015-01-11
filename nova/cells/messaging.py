@@ -30,12 +30,12 @@ import sys
 import traceback
 
 from eventlet import queue
-from oslo.config import cfg
-from oslo import messaging
-from oslo.serialization import jsonutils
-from oslo.utils import excutils
-from oslo.utils import importutils
-from oslo.utils import timeutils
+from oslo_config import cfg
+import oslo_messaging as messaging
+from oslo_serialization import jsonutils
+from oslo_utils import excutils
+from oslo_utils import importutils
+from oslo_utils import timeutils
 import six
 
 from nova.cells import state as cells_state

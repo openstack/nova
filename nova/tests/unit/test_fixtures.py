@@ -18,7 +18,7 @@ import logging
 import sys
 
 import fixtures as fx
-from oslo.config import cfg
+from oslo_config import cfg
 import testtools
 
 from nova.db.sqlalchemy import api as session

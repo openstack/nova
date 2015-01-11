@@ -14,7 +14,7 @@
 #    under the License.
 
 import mock
-from oslo.config import cfg
+from oslo_config import cfg
 
 from nova.tests.unit import fake_instance
 from nova.tests.unit.virt.hyperv import test_base

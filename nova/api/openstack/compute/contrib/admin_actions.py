@@ -15,7 +15,7 @@
 import os.path
 import traceback
 
-from oslo.utils import strutils
+from oslo_utils import strutils
 import six
 import webob
 from webob import exc

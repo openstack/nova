@@ -18,8 +18,8 @@ Management class for migration / resize operations.
 """
 import os
 
-from oslo.utils import excutils
-from oslo.utils import units
+from oslo_utils import excutils
+from oslo_utils import units
 
 from nova import exception
 from nova.i18n import _, _LE

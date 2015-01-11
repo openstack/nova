@@ -15,7 +15,7 @@
 
 """Handles ConsoleProxy API requests."""
 
-from oslo.config import cfg
+from oslo_config import cfg
 
 from nova.compute import rpcapi as compute_rpcapi
 from nova.console import rpcapi as console_rpcapi

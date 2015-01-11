@@ -15,8 +15,8 @@
 
 import mock
 from mox3 import mox
-from oslo.config import cfg
-from oslo.serialization import jsonutils
+from oslo_config import cfg
+from oslo_serialization import jsonutils
 import webob
 
 from nova.api.openstack.compute.contrib import security_groups as secgroups_v2

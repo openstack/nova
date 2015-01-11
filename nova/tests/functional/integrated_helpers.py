@@ -21,7 +21,7 @@ import random
 import string
 import uuid
 
-from oslo.config import cfg
+from oslo_config import cfg
 
 from nova import crypto
 import nova.image.glance

@@ -21,7 +21,7 @@ Helper methods to deal with images.
 
 import re
 
-from oslo.utils import strutils
+from oslo_utils import strutils
 
 from nova.openstack.common._i18n import _
 

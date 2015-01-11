@@ -24,8 +24,8 @@ import uuid
 import warnings
 
 import fixtures
-from oslo.config import cfg
-from oslo.messaging import conffixture as messaging_conffixture
+from oslo_config import cfg
+from oslo_messaging import conffixture as messaging_conffixture
 
 from nova.db import migration
 from nova.db.sqlalchemy import api as session

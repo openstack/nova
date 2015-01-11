@@ -18,7 +18,7 @@
 WSGI middleware for OpenStack Compute API.
 """
 
-from oslo.config import cfg
+from oslo_config import cfg
 
 import nova.api.openstack
 from nova.api.openstack.compute import consoles

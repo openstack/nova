@@ -14,7 +14,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo.utils import importutils
+from oslo_utils import importutils
 
 # Importing full names to not pollute the namespace and cause possible
 # collisions with use of 'from nova.compute import <foo>' elsewhere.

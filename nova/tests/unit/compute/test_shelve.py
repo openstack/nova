@@ -12,8 +12,8 @@
 
 import mock
 from mox3 import mox
-from oslo.config import cfg
-from oslo.utils import timeutils
+from oslo_config import cfg
+from oslo_utils import timeutils
 
 from nova.compute import claims
 from nova.compute import task_states

@@ -21,10 +21,10 @@ import string
 import uuid
 
 import mock
-from oslo.config import cfg
-from oslo.serialization import jsonutils
-from oslo.utils import encodeutils
-from oslo.utils import importutils
+from oslo_config import cfg
+from oslo_serialization import jsonutils
+from oslo_utils import encodeutils
+from oslo_utils import importutils
 import six
 import testtools
 

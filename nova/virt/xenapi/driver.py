@@ -25,9 +25,9 @@ A driver for XenServer or Xen Cloud Platform.
 
 import math
 
-from oslo.config import cfg
-from oslo.serialization import jsonutils
-from oslo.utils import units
+from oslo_config import cfg
+from oslo_serialization import jsonutils
+from oslo_utils import units
 import six.moves.urllib.parse as urlparse
 
 from nova.i18n import _, _LE, _LW

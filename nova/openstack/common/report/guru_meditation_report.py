@@ -56,7 +56,7 @@ import os
 import signal
 import sys
 
-from oslo.utils import timeutils
+from oslo_utils import timeutils
 
 from nova.openstack.common.report.generators import conf as cgen
 from nova.openstack.common.report.generators import threading as tgen

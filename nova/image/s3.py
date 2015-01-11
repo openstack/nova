@@ -26,8 +26,8 @@ import tempfile
 import boto.s3.connection
 import eventlet
 from lxml import etree
-from oslo.config import cfg
 from oslo_concurrency import processutils
+from oslo_config import cfg
 
 from nova.api.ec2 import ec2utils
 import nova.cert.rpcapi

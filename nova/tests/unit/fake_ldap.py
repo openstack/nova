@@ -23,7 +23,7 @@ library to work with nova.
 
 import fnmatch
 
-from oslo.serialization import jsonutils
+from oslo_serialization import jsonutils
 
 
 class Store(object):

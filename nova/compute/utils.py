@@ -18,8 +18,8 @@ import itertools
 import string
 import traceback
 
-from oslo.config import cfg
-from oslo.utils import encodeutils
+from oslo_config import cfg
+from oslo_utils import encodeutils
 
 from nova import block_device
 from nova.compute import power_state

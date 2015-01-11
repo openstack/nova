@@ -15,7 +15,7 @@
 import traceback
 
 import mock
-from oslo.utils import timeutils
+from oslo_utils import timeutils
 
 from nova import db
 from nova.objects import instance_action

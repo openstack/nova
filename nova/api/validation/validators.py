@@ -21,7 +21,7 @@ import re
 
 import jsonschema
 import netaddr
-from oslo.utils import timeutils
+from oslo_utils import timeutils
 import rfc3986
 import six
 

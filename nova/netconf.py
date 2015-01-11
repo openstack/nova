@@ -17,8 +17,8 @@
 
 import socket
 
-from oslo.config import cfg
-from oslo.utils import netutils
+from oslo_config import cfg
+from oslo_utils import netutils
 
 CONF = cfg.CONF
 

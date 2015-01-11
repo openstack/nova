@@ -20,10 +20,10 @@ import base64
 import os
 import posixpath
 
-from oslo.config import cfg
-from oslo.serialization import jsonutils
-from oslo.utils import importutils
-from oslo.utils import timeutils
+from oslo_config import cfg
+from oslo_serialization import jsonutils
+from oslo_utils import importutils
+from oslo_utils import timeutils
 
 from nova.api.ec2 import ec2utils
 from nova.api.metadata import password

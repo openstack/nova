@@ -21,9 +21,9 @@ A fake VMware VI API implementation.
 
 import collections
 
-from oslo.serialization import jsonutils
-from oslo.utils import units
-from oslo.vmware import exceptions as vexc
+from oslo_serialization import jsonutils
+from oslo_utils import units
+from oslo_vmware import exceptions as vexc
 
 from nova import exception
 from nova.openstack.common import log as logging

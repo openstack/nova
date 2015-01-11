@@ -24,9 +24,9 @@ import os
 import sys
 import traceback
 
-from oslo.config import cfg
-from oslo.serialization import jsonutils
-from oslo.utils import importutils
+from oslo_config import cfg
+from oslo_serialization import jsonutils
+from oslo_utils import importutils
 
 from nova.conductor import rpcapi as conductor_rpcapi
 from nova import config

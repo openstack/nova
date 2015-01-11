@@ -16,7 +16,7 @@
 Fake nodes for Ironic host manager tests.
 """
 
-from oslo.serialization import jsonutils
+from oslo_serialization import jsonutils
 
 
 COMPUTE_NODES = [

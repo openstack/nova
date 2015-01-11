@@ -18,7 +18,7 @@ import os
 import tempfile
 
 from mox3 import mox
-from oslo.config import cfg
+from oslo_config import cfg
 
 from nova import context
 from nova.openstack.common import fileutils

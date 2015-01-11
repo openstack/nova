@@ -10,7 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo.config import cfg
+from oslo_config import cfg
 
 from nova.compute import power_state
 from nova.compute import rpcapi as compute_rpcapi

@@ -18,7 +18,7 @@ import abc
 import functools
 import os
 
-from oslo.utils import importutils
+from oslo_utils import importutils
 import six
 import webob.dec
 import webob.exc

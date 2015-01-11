@@ -13,7 +13,7 @@
 #    under the License.
 
 import mock
-from oslo.utils import units
+from oslo_utils import units
 
 from nova import test
 from nova.virt.hyperv import constants

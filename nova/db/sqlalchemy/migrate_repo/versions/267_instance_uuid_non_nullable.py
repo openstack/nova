@@ -13,7 +13,7 @@
 #    under the License.
 
 from migrate import UniqueConstraint
-from oslo.db.sqlalchemy import utils
+from oslo_db.sqlalchemy import utils
 from sqlalchemy import MetaData
 from sqlalchemy.sql import null
 

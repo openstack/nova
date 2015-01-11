@@ -18,9 +18,9 @@ import collections
 import functools
 import sys
 
-from oslo.config import cfg
-from oslo import messaging
-from oslo.serialization import jsonutils
+from oslo_config import cfg
+import oslo_messaging as messaging
+from oslo_serialization import jsonutils
 
 from nova.compute import flavors
 from nova.compute import utils as compute_utils

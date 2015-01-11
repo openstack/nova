@@ -26,8 +26,8 @@ from cinderclient import exceptions as cinder_exception
 from cinderclient.v1 import client as v1_client
 from keystoneclient import exceptions as keystone_exception
 from keystoneclient import session
-from oslo.config import cfg
-from oslo.utils import strutils
+from oslo_config import cfg
+from oslo_utils import strutils
 import six.moves.urllib.parse as urlparse
 
 from nova import availability_zones as az

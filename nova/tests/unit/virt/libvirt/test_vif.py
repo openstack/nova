@@ -16,8 +16,8 @@ import contextlib
 
 from lxml import etree
 import mock
-from oslo.config import cfg
 from oslo_concurrency import processutils
+from oslo_config import cfg
 
 from nova import exception
 from nova.network import linux_net

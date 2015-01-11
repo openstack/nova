@@ -14,7 +14,7 @@
 
 import os
 
-from oslo.config import cfg
+from oslo_config import cfg
 
 from nova.api.openstack import API_V3_CORE_EXTENSIONS  # noqa
 from nova import test

@@ -19,8 +19,8 @@ import copy
 import datetime
 
 import mock
-from oslo.config import cfg
-from oslo.utils import timeutils
+from oslo_config import cfg
+from oslo_utils import timeutils
 
 from nova.cells import messaging
 from nova.cells import utils as cells_utils

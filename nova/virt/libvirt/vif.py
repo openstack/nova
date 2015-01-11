@@ -19,8 +19,8 @@
 
 import copy
 
-from oslo.config import cfg
 from oslo_concurrency import processutils
+from oslo_config import cfg
 
 from nova import exception
 from nova.i18n import _

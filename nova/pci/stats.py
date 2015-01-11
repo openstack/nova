@@ -16,7 +16,7 @@
 
 import copy
 
-from oslo.serialization import jsonutils
+from oslo_serialization import jsonutils
 
 from nova import exception
 from nova.i18n import _LE

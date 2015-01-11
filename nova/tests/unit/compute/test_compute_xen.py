@@ -12,8 +12,8 @@
 
 """Tests for expectations of behaviour from the Xen driver."""
 
-from oslo.config import cfg
-from oslo.utils import importutils
+from oslo_config import cfg
+from oslo_utils import importutils
 
 from nova.compute import power_state
 from nova import context

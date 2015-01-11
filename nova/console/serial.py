@@ -16,7 +16,7 @@
 
 import socket
 
-from oslo.config import cfg
+from oslo_config import cfg
 import six.moves
 
 from nova import exception

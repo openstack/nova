@@ -40,12 +40,12 @@ from eventlet import greenthread
 import eventlet.semaphore
 import eventlet.timeout
 from keystoneclient import exceptions as keystone_exception
-from oslo.config import cfg
-from oslo import messaging
-from oslo.serialization import jsonutils
-from oslo.utils import excutils
-from oslo.utils import strutils
-from oslo.utils import timeutils
+from oslo_config import cfg
+import oslo_messaging as messaging
+from oslo_serialization import jsonutils
+from oslo_utils import excutils
+from oslo_utils import strutils
+from oslo_utils import timeutils
 import six
 
 from nova import block_device

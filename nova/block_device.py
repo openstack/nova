@@ -15,8 +15,8 @@
 
 import re
 
-from oslo.config import cfg
-from oslo.utils import strutils
+from oslo_config import cfg
+from oslo_utils import strutils
 
 from nova import exception
 from nova.i18n import _

@@ -18,8 +18,8 @@ import datetime
 
 import glanceclient.exc
 import mock
-from oslo.config import cfg
-from oslo.utils import netutils
+from oslo_config import cfg
+from oslo_utils import netutils
 import testtools
 
 from nova import context
@@ -199,7 +199,7 @@ class TestGetImageService(test.NoDBTestCase):
 
 
 class TestCreateGlanceClient(test.NoDBTestCase):
-    @mock.patch('oslo.utils.netutils.is_valid_ipv6')
+    @mock.patch('oslo_utils.netutils.is_valid_ipv6')
     @mock.patch('glanceclient.Client')
     def test_headers_passed_glanceclient(self, init_mock, ipv6_mock):
         self.flags(auth_strategy='keystone')

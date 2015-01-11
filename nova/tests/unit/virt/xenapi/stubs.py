@@ -18,7 +18,7 @@ import random
 import sys
 
 import fixtures
-from oslo.serialization import jsonutils
+from oslo_serialization import jsonutils
 
 from nova import test
 import nova.tests.unit.image.fake

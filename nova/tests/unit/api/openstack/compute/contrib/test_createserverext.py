@@ -15,7 +15,7 @@
 
 import base64
 
-from oslo.serialization import jsonutils
+from oslo_serialization import jsonutils
 import webob
 
 from nova.compute import api as compute_api

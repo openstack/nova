@@ -14,7 +14,7 @@
 
 import urllib
 
-from oslo.serialization import jsonutils
+from oslo_serialization import jsonutils
 import requests
 
 from nova.openstack.common import log as logging

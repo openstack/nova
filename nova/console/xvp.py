@@ -19,9 +19,9 @@ import os
 import signal
 
 import jinja2
-from oslo.config import cfg
-from oslo.utils import excutils
 from oslo_concurrency import processutils
+from oslo_config import cfg
+from oslo_utils import excutils
 
 from nova import context
 from nova import db

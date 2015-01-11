@@ -15,8 +15,8 @@
 
 import datetime
 
-from oslo.serialization import jsonutils
-from oslo.utils import timeutils
+from oslo_serialization import jsonutils
+from oslo_utils import timeutils
 
 from nova import compute
 from nova import db

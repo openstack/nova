@@ -16,8 +16,8 @@
 import os
 import re
 
-from oslo.serialization import jsonutils
-from oslo.utils import importutils
+from oslo_serialization import jsonutils
+from oslo_utils import importutils
 import six
 
 from nova import test

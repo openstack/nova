@@ -14,8 +14,8 @@
 
 import datetime
 
-from oslo.config import cfg
-from oslo.serialization import jsonutils
+from oslo_config import cfg
+from oslo_serialization import jsonutils
 import webob
 
 from nova.api.openstack.compute.contrib import availability_zone as az_v2

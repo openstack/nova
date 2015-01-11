@@ -23,10 +23,10 @@ import urllib
 import uuid as uuid_lib
 
 import mock
-from oslo.config import cfg
-from oslo.serialization import jsonutils
-from oslo.utils import importutils
-from oslo.utils import timeutils
+from oslo_config import cfg
+from oslo_serialization import jsonutils
+from oslo_utils import importutils
+from oslo_utils import timeutils
 
 from nova.api.metadata import password
 from nova.api.openstack.compute.contrib import fping

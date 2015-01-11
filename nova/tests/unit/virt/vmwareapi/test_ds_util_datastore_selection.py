@@ -14,7 +14,7 @@
 import collections
 import re
 
-from oslo.utils import units
+from oslo_utils import units
 
 from nova import test
 from nova.virt.vmwareapi import ds_util

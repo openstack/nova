@@ -16,7 +16,7 @@
 """
 Exception classes specific for the VMware driver.
 """
-from oslo.vmware import exceptions as vexc
+from oslo_vmware import exceptions as vexc
 
 from nova.i18n import _
 

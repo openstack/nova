@@ -13,7 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo.config import cfg
+from oslo_config import cfg
 
 # Import extensions to pull in osapi_compute_extension CONF option used below.
 from nova.openstack.common import log as logging

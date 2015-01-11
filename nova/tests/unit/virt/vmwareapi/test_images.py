@@ -18,8 +18,8 @@ Test suite for images.
 import contextlib
 
 import mock
-from oslo.utils import units
-from oslo.vmware import rw_handles
+from oslo_utils import units
+from oslo_vmware import rw_handles
 
 from nova import exception
 from nova import test
@@ -93,8 +93,8 @@ class VMwareImagesTestCase(test.NoDBTestCase):
         mock_image_service.show.return_value = metadata
         mock_get_remote_image_service.return_value = [mock_image_service, 'i']
 
-    @mock.patch('oslo.vmware.rw_handles.ImageReadHandle')
-    @mock.patch('oslo.vmware.rw_handles.VmdkWriteHandle')
+    @mock.patch('oslo_vmware.rw_handles.ImageReadHandle')
+    @mock.patch('oslo_vmware.rw_handles.VmdkWriteHandle')
     def test_fetch_image_stream_optimized(self,
                                           mock_write_class,
                                           mock_read_class):

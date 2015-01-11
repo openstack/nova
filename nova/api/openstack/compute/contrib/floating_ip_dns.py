@@ -14,7 +14,7 @@
 
 import urllib
 
-from oslo.utils import netutils
+from oslo_utils import netutils
 import webob
 
 from nova.api.openstack import extensions

@@ -13,8 +13,8 @@
 #    under the License.
 
 import mock
-from oslo.serialization import jsonutils
-from oslo.utils import timeutils
+from oslo_serialization import jsonutils
+from oslo_utils import timeutils
 
 from nova import db
 from nova import exception

@@ -15,7 +15,7 @@
 #    under the License.
 
 import mock
-from oslo.serialization import jsonutils
+from oslo_serialization import jsonutils
 import webob
 import webob.dec
 import webob.exc
@@ -29,7 +29,7 @@ from nova import test
 class TestFaultWrapper(test.NoDBTestCase):
     """Tests covering `nova.api.openstack:FaultWrapper` class."""
 
-    @mock.patch('oslo.i18n.translate')
+    @mock.patch('oslo_i18n.translate')
     @mock.patch('nova.i18n.get_available_languages')
     def test_safe_exception_translated(self, mock_languages, mock_translate):
         def fake_translate(value, locale):

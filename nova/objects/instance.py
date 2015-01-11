@@ -14,9 +14,9 @@
 
 import copy
 
-from oslo.config import cfg
-from oslo.serialization import jsonutils
-from oslo.utils import timeutils
+from oslo_config import cfg
+from oslo_serialization import jsonutils
+from oslo_utils import timeutils
 
 from nova.cells import opts as cells_opts
 from nova.cells import rpcapi as cells_rpcapi

@@ -11,7 +11,7 @@
 #    under the License.
 
 import mock
-from oslo.config import cfg
+from oslo_config import cfg
 
 from nova.scheduler.filters import affinity_filter
 from nova import test

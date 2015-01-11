@@ -16,8 +16,8 @@
 
 """Define APIs for the servicegroup access."""
 
-from oslo.config import cfg
-from oslo.utils import importutils
+from oslo_config import cfg
+from oslo_utils import importutils
 
 from nova.i18n import _, _LW
 from nova.openstack.common import log as logging

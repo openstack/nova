@@ -22,7 +22,7 @@ import eventlet
 import eventlet.green
 import eventlet.greenio
 import eventlet.wsgi
-from oslo.config import cfg
+from oslo_config import cfg
 import webob
 
 from nova.consoleauth import rpcapi as consoleauth_rpcapi

@@ -17,8 +17,8 @@
 Management class for Storage-related functions (attach, detach, etc).
 """
 
-from oslo.config import cfg
-from oslo.vmware import vim_util as vutil
+from oslo_config import cfg
+from oslo_vmware import vim_util as vutil
 
 from nova.compute import vm_states
 from nova import exception

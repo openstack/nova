@@ -19,7 +19,7 @@
 import sys
 import traceback
 
-from oslo.config import cfg
+from oslo_config import cfg
 
 from nova.conductor import rpcapi as conductor_rpcapi
 from nova import config

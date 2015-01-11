@@ -16,8 +16,8 @@
 
 import sys
 
-from oslo.config import cfg
 from oslo_concurrency import processutils
+from oslo_config import cfg
 
 from nova import config
 from nova import objects

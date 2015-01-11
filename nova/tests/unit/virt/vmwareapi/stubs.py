@@ -20,7 +20,7 @@ Stubouts for the test suite
 import contextlib
 
 import mock
-from oslo.vmware import exceptions as vexc
+from oslo_vmware import exceptions as vexc
 
 from nova import db
 from nova.tests.unit import test_flavors

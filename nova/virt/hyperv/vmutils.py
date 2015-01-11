@@ -25,7 +25,7 @@ import uuid
 if sys.platform == 'win32':
     import wmi
 
-from oslo.config import cfg
+from oslo_config import cfg
 
 from nova import exception
 from nova.i18n import _, _LW

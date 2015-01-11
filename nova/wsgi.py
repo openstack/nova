@@ -27,8 +27,8 @@ import sys
 import eventlet
 import eventlet.wsgi
 import greenlet
-from oslo.config import cfg
-from oslo.utils import excutils
+from oslo_config import cfg
+from oslo_utils import excutils
 from paste import deploy
 import routes.middleware
 import webob.dec

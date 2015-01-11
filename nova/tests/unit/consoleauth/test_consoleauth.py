@@ -19,7 +19,7 @@ Tests for Consoleauth Code.
 """
 
 from mox3 import mox
-from oslo.utils import timeutils
+from oslo_utils import timeutils
 
 from nova.consoleauth import manager
 from nova import context

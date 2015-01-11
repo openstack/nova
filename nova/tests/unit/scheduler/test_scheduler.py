@@ -18,7 +18,7 @@ Tests For Scheduler
 """
 
 import mock
-from oslo.config import cfg
+from oslo_config import cfg
 
 from nova.compute import api as compute_api
 from nova import context

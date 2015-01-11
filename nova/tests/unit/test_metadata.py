@@ -27,8 +27,8 @@ except ImportError:
     import pickle
 
 import mock
-from oslo.config import cfg
-from oslo.serialization import jsonutils
+from oslo_config import cfg
+from oslo_serialization import jsonutils
 import webob
 
 from nova.api.metadata import base

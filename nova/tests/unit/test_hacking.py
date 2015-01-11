@@ -444,6 +444,20 @@ class HackingTestCase(test.NoDBTestCase):
         self._assert_has_errors(code, checks.check_oslo_namespace_imports,
                                 expected_errors=[(1, 0, "N333")])
 
+    def test_oslo_namespace_imports_check_2(self):
+        code = """
+               from oslo import i18n
+               """
+        self._assert_has_errors(code, checks.check_oslo_namespace_imports,
+                                expected_errors=[(1, 0, "N333")])
+
+    def test_oslo_namespace_imports_check_3(self):
+        code = """
+               import oslo.messaging
+               """
+        self._assert_has_errors(code, checks.check_oslo_namespace_imports,
+                                expected_errors=[(1, 0, "N333")])
+
     def test_oslo_assert_raises_regexp(self):
         code = """
                self.assertRaisesRegexp(ValueError,

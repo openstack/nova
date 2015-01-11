@@ -15,7 +15,7 @@
 import __builtin__
 import StringIO
 
-from oslo.config import cfg
+from oslo_config import cfg
 
 from nova import test
 from nova import version

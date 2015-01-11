@@ -15,8 +15,8 @@
 
 import datetime
 
-from oslo.config import cfg
-from oslo.serialization import jsonutils
+from oslo_config import cfg
+from oslo_serialization import jsonutils
 
 from nova.api.openstack import compute
 from nova.api.openstack.compute import plugins

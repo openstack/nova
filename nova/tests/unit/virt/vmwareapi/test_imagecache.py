@@ -16,8 +16,8 @@ import contextlib
 import datetime
 
 import mock
-from oslo.config import cfg
-from oslo.utils import timeutils
+from oslo_config import cfg
+from oslo_utils import timeutils
 
 from nova import objects
 from nova import test

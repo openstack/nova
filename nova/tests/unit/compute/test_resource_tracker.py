@@ -18,9 +18,9 @@
 import uuid
 
 import mock
-from oslo.config import cfg
-from oslo.serialization import jsonutils
-from oslo.utils import timeutils
+from oslo_config import cfg
+from oslo_serialization import jsonutils
+from oslo_utils import timeutils
 
 from nova.compute import flavors
 from nova.compute import resource_tracker

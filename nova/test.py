@@ -31,10 +31,10 @@ import mock
 import os
 
 import fixtures
-from oslo.config import cfg
-from oslo.config import fixture as config_fixture
-from oslo.utils import timeutils
 from oslo_concurrency import lockutils
+from oslo_config import cfg
+from oslo_config import fixture as config_fixture
+from oslo_utils import timeutils
 from oslotest import moxstubout
 import six
 import testtools
