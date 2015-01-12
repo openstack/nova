@@ -58,8 +58,6 @@ CONF.import_opt('reclaim_instance_interval', 'nova.compute.manager')
 
 LOG = logging.getLogger(__name__)
 
-XML_WARNING = False
-
 
 class Controller(wsgi.Controller):
     """The Server API base controller class for the OpenStack API."""
