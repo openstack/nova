@@ -28,7 +28,7 @@ Guidelines for writing new hacking checks
  - Keep the test method code in the source file ordered based
    on the N3xx value.
  - List the new rule in the top level HACKING.rst file
- - Add test cases for each new rule to nova/tests/test_hacking.py
+ - Add test cases for each new rule to nova/tests/unit/test_hacking.py
 
 """
 
