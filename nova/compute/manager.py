@@ -3818,7 +3818,10 @@ class ComputeManager(manager.Manager):
                                                   instance=instance)
         with self._error_out_instance_on_exception(context, instance,
                                                    quotas=quotas):
-            if not instance_type:
+            # Code downstream may expect extra_specs to be populated since it
+            # is receiving an object, so lookup the flavor to ensure this.
+            if (not instance_type or
+                not isinstance(instance_type, objects.Flavor)):
                 instance_type = objects.Flavor.get_by_id(
                     context, migration['new_instance_type_id'])
 

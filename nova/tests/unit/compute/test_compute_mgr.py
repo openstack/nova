@@ -3298,7 +3298,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         self.instance = fake_instance.fake_instance_obj(self.context,
                 vm_state=vm_states.ACTIVE,
                 expected_attrs=['metadata', 'system_metadata', 'info_cache'])
-        self.migration = objects.Migration(context=self.context.elevated())
+        self.migration = objects.Migration(context=self.context.elevated(),
+                                           new_instance_type_id=7)
         self.migration.status = 'migrating'
         fake_server_actions.stub_out_action_events(self.stubs)
 
@@ -3345,10 +3346,13 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                               return_value=None),
             mock.patch.object(objects.BlockDeviceMappingList,
                               'get_by_instance_uuid',
+                              return_value=None),
+            mock.patch.object(objects.Flavor,
+                              'get_by_id',
                               return_value=None)
         ) as (meth, fault_create, instance_update,
               migration_save, migration_obj_as_admin, nw_info, save_inst,
-              notify, vol_block_info, bdm):
+              notify, vol_block_info, bdm, flavor):
             fault_create.return_value = (
                 test_instance_fault.fake_faults['fake-uuid'][0])
             self.assertRaises(
