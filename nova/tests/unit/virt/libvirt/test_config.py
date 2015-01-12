@@ -2445,3 +2445,65 @@ class LibvirtConfigMemoryBalloonTest(LibvirtConfigBaseTest):
         <memballoon model='fake_virtio' />"""
 
         self.assertXmlEqual(expected_xml, xml)
+
+
+class LibvirtConfigSecretTest(LibvirtConfigBaseTest):
+
+    def test_config_secret_volume(self):
+        secret = config.LibvirtConfigSecret()
+        secret.ephemeral = True
+        secret.private = True
+        secret.description = 'sample desc'
+        secret.uuid = 'c7a5fdbd-edaf-9455-926a-d65c16db1809'
+        secret.usage_type = 'volume'
+        secret.usage_id = 'sample_volume'
+
+        xml = secret.to_xml()
+        expected_xml = """
+        <secret ephemeral="yes" private="yes">
+          <description>sample desc</description>
+          <uuid>c7a5fdbd-edaf-9455-926a-d65c16db1809</uuid>
+          <usage type="volume">
+            <volume>sample_volume</volume>
+          </usage>
+        </secret>"""
+
+        self.assertXmlEqual(expected_xml, xml)
+
+    def test_config_secret_ceph(self):
+        secret = config.LibvirtConfigSecret()
+        secret.ephemeral = True
+        secret.private = True
+        secret.description = 'sample desc'
+        secret.usage_type = 'ceph'
+        secret.usage_id = 'sample_name'
+
+        xml = secret.to_xml()
+        expected_xml = """
+        <secret ephemeral="yes" private="yes">
+          <description>sample desc</description>
+          <usage type="ceph">
+            <name>sample_name</name>
+          </usage>
+        </secret>"""
+
+        self.assertXmlEqual(expected_xml, xml)
+
+    def test_config_secret_iscsi(self):
+        secret = config.LibvirtConfigSecret()
+        secret.ephemeral = True
+        secret.private = True
+        secret.description = 'sample desc'
+        secret.usage_type = 'iscsi'
+        secret.usage_id = 'sample_target'
+
+        xml = secret.to_xml()
+        expected_xml = """
+        <secret ephemeral="yes" private="yes">
+          <description>sample desc</description>
+          <usage type="iscsi">
+            <target>sample_target</target>
+          </usage>
+        </secret>"""
+
+        self.assertXmlEqual(expected_xml, xml)

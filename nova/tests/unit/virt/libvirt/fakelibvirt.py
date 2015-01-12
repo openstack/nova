@@ -145,6 +145,7 @@ VIR_ERR_SYSTEM_ERROR = 900
 VIR_ERR_INTERNAL_ERROR = 950
 VIR_ERR_CONFIG_UNSUPPORTED = 951
 VIR_ERR_NO_NODE_DEVICE = 667
+VIR_ERR_NO_SECRET = 66
 
 # Readonly
 VIR_CONNECT_RO = 1
@@ -164,6 +165,12 @@ VIR_DOMAIN_BLOCK_COMMIT_RELATIVE = 4
 
 VIR_CONNECT_LIST_DOMAINS_ACTIVE = 1
 VIR_CONNECT_LIST_DOMAINS_INACTIVE = 2
+
+# secret type
+VIR_SECRET_USAGE_TYPE_NONE = 0
+VIR_SECRET_USAGE_TYPE_VOLUME = 1
+VIR_SECRET_USAGE_TYPE_CEPH = 2
+VIR_SECRET_USAGE_TYPE_ISCSI = 3
 
 
 def _parse_disk_info(element):
@@ -1110,6 +1117,12 @@ class Connection(object):
                     <feature name='vme'/>
                     <feature policy='require' name='aes'/>
                   </cpu>"""
+
+    def secretLookupByUsage(self, usage_type_obj, usage_id):
+        pass
+
+    def secretDefineXML(self, xml):
+        pass
 
 
 def openAuth(uri, auth, flags):

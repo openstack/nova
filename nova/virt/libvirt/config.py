@@ -2179,3 +2179,40 @@ class LibvirtConfigGuestMetaNovaOwner(LibvirtConfigObject):
             project.set("uuid", self.projectid)
             meta.append(project)
         return meta
+
+
+class LibvirtConfigSecret(LibvirtConfigObject):
+
+    def __init__(self):
+        super(LibvirtConfigSecret,
+              self).__init__(root_name="secret")
+        self.ephemeral = False
+        self.private = False
+        self.description = None
+        self.uuid = None
+        self.usage_type = None
+        self.usage_id = None
+
+    def get_yes_no_str(self, value):
+        if value:
+            return 'yes'
+        return 'no'
+
+    def format_dom(self):
+        root = super(LibvirtConfigSecret, self).format_dom()
+        root.set("ephemeral", self.get_yes_no_str(self.ephemeral))
+        root.set("private", self.get_yes_no_str(self.private))
+        if self.description is not None:
+            root.append(self._text_node("description", str(self.description)))
+        if self.uuid is not None:
+            root.append(self._text_node("uuid", str(self.uuid)))
+        usage = self._new_node("usage")
+        usage.set("type", self.usage_type)
+        if self.usage_type == 'ceph':
+            usage.append(self._text_node('name', str(self.usage_id)))
+        elif self.usage_type == 'iscsi':
+            usage.append(self._text_node('target', str(self.usage_id)))
+        elif self.usage_type == 'volume':
+            usage.append(self._text_node('volume', str(self.usage_id)))
+        root.append(usage)
+        return root
