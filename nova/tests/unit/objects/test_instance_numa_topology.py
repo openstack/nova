@@ -46,17 +46,23 @@ fake_old_db_topology = dict(fake_db_topology)  # copy
 fake_old_db_topology['numa_topology'] = jsonutils.dumps(fake_numa_topology)
 
 
+def get_fake_obj_numa_topology(context):
+    fake_obj_numa_topology_cpy = fake_obj_numa_topology.obj_clone()
+    fake_obj_numa_topology_cpy._context = context
+    return fake_obj_numa_topology_cpy
+
+
 class _TestInstanceNUMATopology(object):
     @mock.patch('nova.db.instance_extra_update_by_uuid')
     def test_create(self, mock_update):
-        topo_obj = fake_obj_numa_topology
+        topo_obj = get_fake_obj_numa_topology(self.context)
         topo_obj.instance_uuid = fake_db_topology['instance_uuid']
-        topo_obj.create(self.context)
+        topo_obj.create()
         self.assertEqual(1, len(mock_update.call_args_list))
 
     @mock.patch('nova.db.instance_extra_update_by_uuid')
     def test_save(self, mock_update):
-        topo_obj = fake_obj_numa_topology
+        topo_obj = get_fake_obj_numa_topology(self.context)
         topo_obj.instance_uuid = fake_db_topology['instance_uuid']
         topo_obj._save(self.context)
         self.assertEqual(1, len(mock_update.call_args_list))
