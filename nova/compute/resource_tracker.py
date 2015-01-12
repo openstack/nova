@@ -336,7 +336,9 @@ class ResourceTracker(object):
     def _update_available_resource(self, context, resources):
         if 'pci_passthrough_devices' in resources:
             if not self.pci_tracker:
-                self.pci_tracker = pci_manager.PciDevTracker()
+                n_id = self.compute_node['id'] if self.compute_node else None
+                self.pci_tracker = pci_manager.PciDevTracker(context,
+                                                             node_id=n_id)
             self.pci_tracker.set_hvdevs(jsonutils.loads(resources.pop(
                 'pci_passthrough_devices')))
 

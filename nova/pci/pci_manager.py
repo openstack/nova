@@ -18,7 +18,7 @@ import collections
 
 from nova.compute import task_states
 from nova.compute import vm_states
-from nova import context
+from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
 from nova import objects
@@ -41,7 +41,7 @@ class PciDevTracker(object):
     information is updated to DB when devices information is changed.
     """
 
-    def __init__(self, node_id=None):
+    def __init__(self, context, node_id=None):
         """Create a pci device tracker.
 
         If a node_id is passed in, it will fetch pci devices information
@@ -279,7 +279,7 @@ def get_instance_pci_devs(inst, request_id=None):
     if isinstance(inst, objects.Instance):
         pci_devices = inst.pci_devices
     else:
-        ctxt = context.get_admin_context()
+        ctxt = nova_context.get_admin_context()
         pci_devices = objects.PciDeviceList.get_by_instance_uuid(
             ctxt, inst['uuid'])
     return [device for device in pci_devices if
