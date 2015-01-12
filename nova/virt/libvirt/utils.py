@@ -20,13 +20,13 @@
 
 import errno
 import os
-import platform
 import re
 
 from lxml import etree
 from oslo.config import cfg
 from oslo_concurrency import processutils
 
+from nova.compute import arch
 from nova.i18n import _
 from nova.i18n import _LI
 from nova.i18n import _LW
@@ -501,11 +501,11 @@ def get_arch(image_meta):
     :returns: guest (or host) architecture
     """
     if image_meta:
-        arch = image_meta.get('properties', {}).get('architecture')
-        if arch is not None:
-            return arch
+        image_arch = image_meta.get('properties', {}).get('architecture')
+        if image_arch is not None:
+            return image_arch
 
-    return platform.processor()
+    return arch.from_host()
 
 
 def is_mounted(mount_path, source=None):
