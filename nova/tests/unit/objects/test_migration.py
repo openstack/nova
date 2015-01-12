@@ -78,9 +78,9 @@ class _TestMigrationObject(object):
         db.migration_create(ctxt, {'source_compute': 'foo'}).AndReturn(
             fake_migration)
         self.mox.ReplayAll()
-        mig = migration.Migration()
+        mig = migration.Migration(context=ctxt)
         mig.source_compute = 'foo'
-        mig.create(ctxt)
+        mig.create()
         self.assertEqual(fake_migration['dest_compute'], mig.dest_compute)
 
     def test_recreate_fails(self):
@@ -90,9 +90,9 @@ class _TestMigrationObject(object):
         db.migration_create(ctxt, {'source_compute': 'foo'}).AndReturn(
             fake_migration)
         self.mox.ReplayAll()
-        mig = migration.Migration()
+        mig = migration.Migration(context=ctxt)
         mig.source_compute = 'foo'
-        mig.create(ctxt)
+        mig.create()
         self.assertRaises(exception.ObjectActionError, mig.create,
                           self.context)
 
@@ -103,10 +103,10 @@ class _TestMigrationObject(object):
         db.migration_update(ctxt, 123, {'source_compute': 'foo'}
                             ).AndReturn(fake_migration)
         self.mox.ReplayAll()
-        mig = migration.Migration()
+        mig = migration.Migration(context=ctxt)
         mig.id = 123
         mig.source_compute = 'foo'
-        mig.save(ctxt)
+        mig.save()
         self.assertEqual(fake_migration['dest_compute'], mig.dest_compute)
 
     def test_instance(self):
