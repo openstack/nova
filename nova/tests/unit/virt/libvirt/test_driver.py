@@ -61,7 +61,6 @@ from nova.openstack.common import uuidutils
 from nova.pci import manager as pci_manager
 from nova import test
 from nova.tests.unit import fake_block_device
-from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_network
 import nova.tests.unit.image.fake
 from nova.tests.unit import matchers
@@ -5038,8 +5037,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     def test_attach_invalid_volume_type(self):
         self.create_fake_libvirt_mock()
         libvirt_driver.LibvirtDriver._conn.lookupByName = self.fake_lookup
-        instance = fake_instance.fake_instance_obj(
-            self.context, **self.test_instance)
+        instance = objects.Instance(**self.test_instance)
         self.mox.ReplayAll()
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.assertRaises(exception.VolumeDriverNotFound,
@@ -5052,8 +5050,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.flags(virt_type='fake_type', group='libvirt')
         self.create_fake_libvirt_mock()
         libvirt_driver.LibvirtDriver._conn.lookupByName = self.fake_lookup
-        instance = fake_instance.fake_instance_obj(
-            self.context, **self.test_instance)
+        instance = objects.Instance(**self.test_instance)
         self.mox.ReplayAll()
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.assertRaises(exception.InvalidHypervisorType,
@@ -5071,8 +5068,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.flags(virt_type='qemu', group='libvirt')
         self.create_fake_libvirt_mock()
         libvirt_driver.LibvirtDriver._conn.lookupByName = self.fake_lookup
-        instance = fake_instance.fake_instance_obj(
-            self.context, **self.test_instance)
+        instance = objects.Instance(**self.test_instance)
         self.mox.ReplayAll()
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.stubs.Set(self.conn, "getLibVersion", get_lib_version_stub)
@@ -5090,7 +5086,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     def test_attach_volume_with_vir_domain_affect_live_flag(self,
             mock_get_domain, mock_get_info):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        instance = fake_instance.fake_instance_obj(mock.sentinel.ctx)
+        instance = objects.Instance(**self.test_instance)
         mock_dom = mock.MagicMock()
         mock_get_domain.return_value = mock_dom
 
@@ -5136,7 +5132,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     def test_detach_volume_with_vir_domain_affect_live_flag(self,
             mock_get_domain, mock_get_disk_xml):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        instance = fake_instance.fake_instance_obj(mock.sentinel.ctx)
+        instance = objects.Instance(**self.test_instance)
         mock_dom = mock.MagicMock()
         mock_xml = \
             """
@@ -6276,8 +6272,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         # migrateToURI is used instead.
 
         # Preparing data
-        instance_ref = fake_instance.fake_instance_obj(
-            self.context, **self.test_instance)
+        instance_ref = objects.Instance(**self.test_instance)
 
         # Preparing mocks
         vdmock = self.mox.CreateMock(libvirt.virDomain)
@@ -7692,7 +7687,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         with mock.patch.object(fake_domain, 'destroy',
                side_effect=destroy_side_effect) as mock_domain_destroy:
             mock_get_domain.return_value = fake_domain
-            instance = fake_instance.fake_instance_obj(self.context)
+            instance = objects.Instance(**self.test_instance)
 
             conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
             network_info = []
@@ -7712,7 +7707,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     def test_destroy_lxc_calls_teardown_container_when_no_domain(self,
             mock_get_domain, mock_teardown_container, mock_cleanup):
         self.flags(virt_type='lxc', group='libvirt')
-        instance = fake_instance.fake_instance_obj(self.context)
+        instance = objects.Instance(**self.test_instance)
         inf_exception = exception.InstanceNotFound(instance_id=instance.name)
         mock_get_domain.side_effect = inf_exception
 
@@ -7852,10 +7847,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.stubs.Set(conn._host, 'get_domain', fake_get_domain)
         self.stubs.Set(conn, '_hard_reboot', fake_hard_reboot)
-        instance_details = {"name": "instancename", "id": 1,
-                            "uuid": "875a8070-d0b9-4949-8b31-104d125c9a64"}
-        instance = fake_instance.fake_instance_obj(
-            self.context, **instance_details)
+        instance = objects.Instance(**self.test_instance)
         network_info = _fake_network_info(self.stubs, 1)
 
         conn.resume_state_on_host_boot(self.context, instance, network_info,
@@ -7890,9 +7882,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     def test_resume_state_on_host_boot_with_instance_not_found_on_driver(self):
         called = {'count': 0}
-        instance_details = {'name': 'test'}
-        instance = fake_instance.fake_instance_obj(
-            self.context, **instance_details)
+        instance = objects.Instance(**self.test_instance)
 
         def fake_get_domain(instance):
             raise exception.InstanceNotFound(instance_id='fake')
@@ -9632,7 +9622,7 @@ Active:          8381604 kB
 
     @mock.patch('nova.virt.libvirt.host.Host.get_domain')
     def test_get_domain_info_with_more_return(self, mock_get_domain):
-        instance = fake_instance.fake_instance_obj(mock.sentinel.ctx)
+        instance = objects.Instance(**self.test_instance)
         dom_mock = mock.MagicMock()
         dom_mock.info.return_value = [
             1, 2048, 737, 8, 12345, 888888
@@ -10386,7 +10376,7 @@ Active:          8381604 kB
     @mock.patch('nova.virt.libvirt.blockinfo.get_info_from_bdm')
     def test_create_with_bdm(self, get_info_from_bdm, get_encryption_metadata):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        instance = fake_instance.fake_instance_obj(mock.sentinel.ctx)
+        instance = objects.Instance(**self.test_instance)
         mock_dom = mock.MagicMock()
         mock_encryption_meta = mock.MagicMock()
         get_encryption_metadata.return_value = mock_encryption_meta
@@ -10692,7 +10682,7 @@ Active:          8381604 kB
         mock_mkstemp.return_value = (-1,
                                      '/tmp/{0}/file'.format(instance_uuid))
         driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        instance = fake_instance.fake_instance_obj(self.context)
+        instance = objects.Instance(**self.test_instance)
         temp_file = driver.check_instance_shared_storage_local(self.context,
                                                                instance)
         self.assertEqual('/tmp/{0}/file'.format(instance_uuid),
@@ -10701,7 +10691,7 @@ Active:          8381604 kB
     def test_check_instance_shared_storage_local_rbd(self):
         self.flags(images_type='rbd', group='libvirt')
         driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        instance = fake_instance.fake_instance_obj(self.context)
+        instance = objects.Instance(**self.test_instance)
         self.assertIsNone(driver.
                           check_instance_shared_storage_local(self.context,
                                                               instance))
