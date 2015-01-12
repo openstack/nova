@@ -20,7 +20,6 @@ from oslo_log import log as logging
 
 from nova.compute import task_states
 from nova.compute import vm_states
-from nova import context
 from nova import exception
 from nova.i18n import _LW
 from nova import objects
@@ -43,7 +42,7 @@ class PciDevTracker(object):
     information is updated to DB when devices information is changed.
     """
 
-    def __init__(self, node_id=None):
+    def __init__(self, context, node_id=None):
         """Create a pci device tracker.
 
         If a node_id is passed in, it will fetch pci devices information

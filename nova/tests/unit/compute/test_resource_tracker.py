@@ -233,6 +233,10 @@ class BaseTestCase(test.TestCase):
                        'flavor_get', self._fake_flavor_get)
 
         self.host = 'fakehost'
+        self.compute = self._create_compute_node()
+        self.updated = False
+        self.deleted = False
+        self.update_call_count = 0
 
     def _create_compute_node(self, values=None):
         compute = {
@@ -427,6 +431,13 @@ class BaseTestCase(test.TestCase):
         # only used in the subsequent notification:
         return (instance, instance)
 
+    def _fake_compute_node_update(self, ctx, compute_node_id, values,
+            prune_stats=False):
+        self.update_call_count += 1
+        self.updated = True
+        self.compute.update(values)
+        return self.compute
+
     def _driver(self):
         return FakeVirtDriver()
 
@@ -440,6 +451,7 @@ class BaseTestCase(test.TestCase):
         driver = self._driver()
 
         tracker = resource_tracker.ResourceTracker(host, driver, node)
+        tracker.compute_node = self._create_compute_node()
         tracker.ext_resources_handler = \
             resources.ResourceHandler(RESOURCE_NAMES, True)
         return tracker
@@ -512,6 +524,8 @@ class MissingServiceTestCase(BaseTestCase):
         self.tracker = self._tracker()
 
     def test_missing_service(self):
+        self.tracker.compute_node = None
+        self.tracker._get_service = mock.Mock(return_value=None)
         self.tracker.update_available_resource(self.context)
         self.assertTrue(self.tracker.disabled)
 
@@ -543,6 +557,7 @@ class MissingComputeNodeTestCase(BaseTestCase):
         raise exception.ComputeHostNotFound(host=host)
 
     def test_create_compute_node(self):
+        self.tracker.compute_node = None
         self.tracker.update_available_resource(self.context)
         self.assertTrue(self.created)
 
@@ -557,10 +572,6 @@ class BaseTrackerTestCase(BaseTestCase):
         # setup plumbing for a working resource tracker with required
         # database models and a compatible compute driver:
         super(BaseTrackerTestCase, self).setUp()
-
-        self.updated = False
-        self.deleted = False
-        self.update_call_count = 0
 
         self.tracker = self._tracker()
         self._migrations = {}
@@ -582,11 +593,12 @@ class BaseTrackerTestCase(BaseTestCase):
         patcher = pci_fakes.fake_pci_whitelist()
         self.addCleanup(patcher.stop)
 
+        self.stubs.Set(self.tracker.scheduler_client, 'update_resource_stats',
+                self._fake_compute_node_update)
         self._init_tracker()
         self.limits = self._limits()
 
     def _fake_service_get_by_compute_host(self, ctx, host):
-        self.compute = self._create_compute_node()
         self.service = self._create_service(host, compute=self.compute)
         return self.service
 
@@ -721,7 +733,8 @@ class SchedulerClientTrackerTestCase(BaseTrackerTestCase):
 
     def setUp(self):
         super(SchedulerClientTrackerTestCase, self).setUp()
-        self.tracker.scheduler_client.update_resource_stats = mock.Mock()
+        self.tracker.scheduler_client.update_resource_stats = mock.Mock(
+                side_effect=self._fake_compute_node_update)
 
     def test_create_resource(self):
         self.tracker._write_ext_resources = mock.Mock()
