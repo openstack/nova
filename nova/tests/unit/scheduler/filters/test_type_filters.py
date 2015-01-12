@@ -42,17 +42,80 @@ class TestTypeFilter(test.NoDBTestCase):
         self.assertFalse(self.filt_cls.host_passes(host, filter_properties))
 
     @mock.patch('nova.scheduler.filters.utils.aggregate_values_from_key')
-    def test_aggregate_type_filter(self, agg_mock):
+    def test_aggregate_type_filter_no_metadata(self, agg_mock):
+        self.filt_cls = type_filter.AggregateTypeAffinityFilter()
+
+        filter_properties = {'context': mock.sentinel.ctx,
+                             'instance_type': {'name': 'fake1'}}
+        host = fakes.FakeHostState('fake_host', 'fake_node', {})
+
+        # tests when no instance_type is defined for aggregate
+        agg_mock.return_value = set([])
+        # True as no instance_type set for aggregate
+        self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
+        agg_mock.assert_called_once_with(host, 'instance_type')
+
+    @mock.patch('nova.scheduler.filters.utils.aggregate_values_from_key')
+    def test_aggregate_type_filter_single_instance_type(self, agg_mock):
         self.filt_cls = type_filter.AggregateTypeAffinityFilter()
 
         filter_properties = {'context': mock.sentinel.ctx,
                              'instance_type': {'name': 'fake1'}}
         filter2_properties = {'context': mock.sentinel.ctx,
-                             'instance_type': {'name': 'fake2'}}
+                              'instance_type': {'name': 'fake2'}}
         host = fakes.FakeHostState('fake_host', 'fake_node', {})
+
+        # tests when a single instance_type is defined for an aggregate
+        # using legacy single value syntax
         agg_mock.return_value = set(['fake1'])
-        # True since no aggregates
+
+        # True as instance_type is allowed for aggregate
         self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
-        agg_mock.assert_called_once_with(host, 'instance_type')
-        # False since type matches aggregate, metadata
+
+        # False as instance_type is not allowed for aggregate
         self.assertFalse(self.filt_cls.host_passes(host, filter2_properties))
+
+    @mock.patch('nova.scheduler.filters.utils.aggregate_values_from_key')
+    def test_aggregate_type_filter_multi_aggregate(self, agg_mock):
+        self.filt_cls = type_filter.AggregateTypeAffinityFilter()
+
+        filter_properties = {'context': mock.sentinel.ctx,
+                             'instance_type': {'name': 'fake1'}}
+        filter2_properties = {'context': mock.sentinel.ctx,
+                              'instance_type': {'name': 'fake2'}}
+        filter3_properties = {'context': mock.sentinel.ctx,
+                              'instance_type': {'name': 'fake3'}}
+        host = fakes.FakeHostState('fake_host', 'fake_node', {})
+
+        # tests when a single instance_type is defined for multiple aggregates
+        # using legacy single value syntax
+        agg_mock.return_value = set(['fake1', 'fake2'])
+
+        # True as instance_type is allowed for first aggregate
+        self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
+        # True as instance_type is allowed for second aggregate
+        self.assertTrue(self.filt_cls.host_passes(host, filter2_properties))
+        # False as instance_type is not allowed for aggregates
+        self.assertFalse(self.filt_cls.host_passes(host, filter3_properties))
+
+    @mock.patch('nova.scheduler.filters.utils.aggregate_values_from_key')
+    def test_aggregate_type_filter_multi_instance_type(self, agg_mock):
+        self.filt_cls = type_filter.AggregateTypeAffinityFilter()
+
+        filter_properties = {'context': mock.sentinel.ctx,
+                             'instance_type': {'name': 'fake1'}}
+        filter2_properties = {'context': mock.sentinel.ctx,
+                              'instance_type': {'name': 'fake2'}}
+        filter3_properties = {'context': mock.sentinel.ctx,
+                              'instance_type': {'name': 'fake3'}}
+        host = fakes.FakeHostState('fake_host', 'fake_node', {})
+
+        # tests when multiple instance_types are defined for aggregate
+        agg_mock.return_value = set(['fake1,fake2'])
+
+        # True as instance_type is allowed for aggregate
+        self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
+        # True as instance_type is allowed for aggregate
+        self.assertTrue(self.filt_cls.host_passes(host, filter2_properties))
+        # False as instance_type is not allowed for aggregate
+        self.assertFalse(self.filt_cls.host_passes(host, filter3_properties))

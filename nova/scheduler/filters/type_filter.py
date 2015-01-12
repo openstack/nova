@@ -54,6 +54,8 @@ class AggregateTypeAffinityFilter(filters.BaseHostFilter):
         aggregate_vals = utils.aggregate_values_from_key(
             host_state, 'instance_type')
 
-        if not aggregate_vals:
-            return True
-        return instance_type['name'] in aggregate_vals
+        for val in aggregate_vals:
+            if (instance_type['name'] in
+                    [x.strip() for x in val.split(',')]):
+                return True
+        return not aggregate_vals

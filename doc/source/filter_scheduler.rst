@@ -142,6 +142,11 @@ There are some standard filter classes to use (:mod:`nova.scheduler.filters`):
 * |TypeAffinityFilter| - Only passes hosts that are not already running an
   instance of the requested type.
 * |AggregateTypeAffinityFilter| - limits instance_type by aggregate.
+   This filter passes hosts if no instance_type key is set or
+   the instance_type aggregate metadata value contains the name of the
+   instance_type requested. The value of the instance_type metadata entry is
+   a string that may contain either a single instance_type name or a comma
+   separated list of instance_type names. e.g. 'm1.nano' or "m1.nano,m1.small"
 * |ServerGroupAntiAffinityFilter| - This filter implements anti-affinity for a
   server group.  First you must create a server group with a policy of
   'anti-affinity' via the server groups API.  Then, when you boot a new server,
