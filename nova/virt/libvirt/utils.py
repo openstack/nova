@@ -223,13 +223,37 @@ def pick_disk_driver_name(hypervisor_version, is_block_dev=False):
         else:
             # 4002000 == 4.2.0
             if hypervisor_version >= 4002000:
-                return 'qemu'
-            # 4000000 == 4.0.0
-            elif hypervisor_version > 4000000:
-                return "tap2"
-            else:
-                return "tap"
-
+                try:
+                    execute('xend', 'status',
+                            run_as_root=True, check_exit_code=True)
+                except OSError as exc:
+                    if exc.errno == errno.ENOENT:
+                        LOG.debug("xend is not found")
+                        # libvirt will try to use libxl toolstack
+                        return 'qemu'
+                    else:
+                        raise
+                except processutils.ProcessExecutionError as exc:
+                    LOG.debug("xend is not started")
+                    # libvirt will try to use libxl toolstack
+                    return 'qemu'
+            # libvirt will use xend/xm toolstack
+            try:
+                out, err = execute('tap-ctl', 'check', check_exit_code=False)
+                if out == 'ok\n':
+                    # 4000000 == 4.0.0
+                    if hypervisor_version > 4000000:
+                        return "tap2"
+                    else:
+                        return "tap"
+                else:
+                    LOG.info(_LI("tap-ctl check: %s"), out)
+            except OSError as exc:
+                if exc.errno == errno.ENOENT:
+                    LOG.debug("tap-ctl tool is not installed")
+                else:
+                    raise
+            return "file"
     elif CONF.libvirt.virt_type in ('kvm', 'qemu'):
         return "qemu"
     else:

@@ -336,31 +336,70 @@ ID        TAG                 VM SIZE                DATE       VM CLOCK
     def test_pick_disk_driver_name(self):
         type_map = {'kvm': ([True, 'qemu'], [False, 'qemu'], [None, 'qemu']),
                     'qemu': ([True, 'qemu'], [False, 'qemu'], [None, 'qemu']),
-                    'xen': ([True, 'phy'], [False, 'qemu'], [None, 'qemu']),
                     'uml': ([True, None], [False, None], [None, None]),
                     'lxc': ([True, None], [False, None], [None, None])}
+        # NOTE(aloga): Xen is tested in test_pick_disk_driver_name_xen
 
+        version = 1005001
         for (virt_type, checks) in type_map.iteritems():
-            if virt_type == "xen":
-                # NOTE(aloga): Xen is tested in test_pick_disk_driver_name_xen
-                version = 4004000
-            else:
-                version = 1005001
-
             self.flags(virt_type=virt_type, group='libvirt')
             for (is_block_dev, expected_result) in checks:
                 result = libvirt_utils.pick_disk_driver_name(version,
                                                              is_block_dev)
                 self.assertEqual(result, expected_result)
 
-    def test_pick_disk_driver_name_xen(self):
-        version_map = ((4000000, "tap"),
-                       (4001000, "tap2"),
-                       (4002000, "qemu"))
+    @mock.patch('nova.utils.execute')
+    def test_pick_disk_driver_name_xen(self, mock_execute):
+
+        def side_effect(*args, **kwargs):
+            if args == ('tap-ctl', 'check'):
+                if mock_execute.blktap is True:
+                    return ('ok\n', '')
+                elif mock_execute.blktap is False:
+                    return ('some error\n', '')
+                else:
+                    raise OSError(2, "No such file or directory")
+            elif args == ('xend', 'status'):
+                if mock_execute.xend is True:
+                    return ('', '')
+                elif mock_execute.xend is False:
+                    raise processutils.ProcessExecutionError("error")
+                else:
+                    raise OSError(2, "No such file or directory")
+            raise Exception('Unexpected call')
+        mock_execute.side_effect = side_effect
+
         self.flags(virt_type="xen", group='libvirt')
-        for ver, drv in version_map:
-            result = libvirt_utils.pick_disk_driver_name(ver, False)
-            self.assertEqual(drv, result)
+        versions = [4000000, 4001000, 4002000, 4003000, 4005000]
+        for version in versions:
+            # block dev
+            result = libvirt_utils.pick_disk_driver_name(version, True)
+            self.assertEqual(result, "phy")
+            self.assertFalse(mock_execute.called)
+            mock_execute.reset_mock()
+            # file dev
+            for blktap in True, False, None:
+                mock_execute.blktap = blktap
+                for xend in True, False, None:
+                    mock_execute.xend = xend
+                    result = libvirt_utils.pick_disk_driver_name(version,
+                                                                 False)
+                    # qemu backend supported only by libxl which is
+                    # production since xen 4.2. libvirt use libxl if
+                    # xend service not started.
+                    if version >= 4002000 and xend is not True:
+                        self.assertEqual(result, 'qemu')
+                    elif blktap:
+                        if version == 4000000:
+                            self.assertEqual(result, 'tap')
+                        else:
+                            self.assertEqual(result, 'tap2')
+                    else:
+                        self.assertEqual(result, 'file')
+                    # default is_block_dev False
+                    self.assertEqual(result,
+                        libvirt_utils.pick_disk_driver_name(version))
+                    mock_execute.reset_mock()
 
     @mock.patch('os.path.exists', return_value=True)
     @mock.patch('nova.utils.execute')
