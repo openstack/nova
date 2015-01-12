@@ -732,6 +732,11 @@ class NetworkMissingPhysicalNetwork(NovaException):
     msg_fmt = _("Physical network is missing for network %(network_uuid)s")
 
 
+class VifDetailsMissingVhostuserSockPath(Invalid):
+    msg_fmt = _("vhostuser_sock_path not present in vif_details"
+                " for vif %(vif_id)s")
+
+
 class DatastoreNotFound(NotFound):
     msg_fmt = _("Could not find the datastore reference(s) which the VM uses.")
 

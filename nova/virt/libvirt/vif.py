@@ -19,6 +19,7 @@
 
 import copy
 
+import os
 from oslo_concurrency import processutils
 from oslo_config import cfg
 
@@ -329,6 +330,24 @@ class LibvirtGenericVIFDriver(object):
 
         return conf
 
+    def get_config_vhostuser(self, instance, vif, image_meta,
+                              inst_type, virt_type):
+        conf = self.get_base_config(instance, vif, image_meta,
+                                    inst_type, virt_type)
+        vif_details = vif['details']
+        mode = vif_details.get(network_model.VIF_DETAILS_VHOSTUSER_MODE,
+                               'server')
+        path = vif_details.get(network_model.VIF_DETAILS_VHOSTUSER_DIR)
+        if path is None:
+            raise exception.VifDetailsMissingVhostuserSockPath(
+                                                        vif_id=vif['id'])
+
+        designer.set_vif_host_backend_vhostuser_config(
+                                            conf,
+                                            mode,
+                                            os.path.join(path, vif['id']))
+        return conf
+
     def get_config(self, instance, vif, image_meta,
                    inst_type, virt_type):
         vif_type = vif['type']
@@ -510,6 +529,9 @@ class LibvirtGenericVIFDriver(object):
         except processutils.ProcessExecutionError:
             LOG.exception(_LE("Failed while plugging vif"), instance=instance)
 
+    def plug_vhostuser(self, instance, vif):
+        pass
+
     def plug(self, instance, vif):
         vif_type = vif['type']
 
@@ -662,6 +684,9 @@ class LibvirtGenericVIFDriver(object):
         except processutils.ProcessExecutionError:
             LOG.exception(_LE("Failed while unplugging vif"),
                           instance=instance)
+
+    def unplug_vhostuser(self, instance, vif):
+        pass
 
     def unplug(self, instance, vif):
         vif_type = vif['type']

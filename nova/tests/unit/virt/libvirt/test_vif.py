@@ -261,6 +261,20 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                                    type=network_model.VIF_TYPE_IOVISOR,
                                    devname='tap-xxx-yyy-zzz',
                                    ovs_interfaceid=None)
+    vif_vhostuser = network_model.VIF(id='vif-xxx-yyy-zzz',
+              address='ca:fe:de:ad:be:ef',
+              network=network_bridge,
+              type=network_model.VIF_TYPE_VHOSTUSER,
+              details = {network_model.VIF_DETAILS_VHOSTUSER_MODE: 'client',
+                         network_model.VIF_DETAILS_VHOSTUSER_DIR: '/tmp'}
+              )
+
+    vif_vhostuser_no_path = network_model.VIF(id='vif-xxx-yyy-zzz',
+          address='ca:fe:de:ad:be:ef',
+          network=network_bridge,
+          type=network_model.VIF_TYPE_VHOSTUSER,
+          details = {network_model.VIF_DETAILS_VHOSTUSER_MODE: 'client'}
+          )
 
     instance = {
         'name': 'instance-name',
@@ -1022,3 +1036,27 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         self.assertTrue(type_id_found)
         self.assertTrue(typeversion_id_found)
         self.assertTrue(instance_id_found)
+
+    def test_vhostuser_driver(self):
+        d = vif.LibvirtGenericVIFDriver()
+        xml = self._get_instance_xml(d, self.vif_vhostuser)
+        node = self._get_node(xml)
+        self.assertEqual(node.get("type"),
+                         network_model.VIF_TYPE_VHOSTUSER)
+
+        self._assertTypeEquals(node, network_model.VIF_TYPE_VHOSTUSER,
+                               "source", "mode", "client")
+        self._assertTypeEquals(node, network_model.VIF_TYPE_VHOSTUSER,
+                               "source", "path", "/tmp/vif-xxx-yyy-zzz")
+        self._assertTypeEquals(node, network_model.VIF_TYPE_VHOSTUSER,
+                               "source", "type", "unix")
+        self._assertMacEquals(node, self.vif_vhostuser)
+        self._assertModel(xml, network_model.VIF_MODEL_VIRTIO)
+
+    def test_vhostuser_driver_no_path(self):
+        d = vif.LibvirtGenericVIFDriver()
+
+        self.assertRaises(exception.VifDetailsMissingVhostuserSockPath,
+                          self._get_instance_xml,
+                          d,
+                          self.vif_vhostuser_no_path)

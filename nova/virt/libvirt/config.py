@@ -1127,6 +1127,9 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
         self.filtername = None
         self.filterparams = []
         self.driver_name = None
+        self.vhostuser_mode = None
+        self.vhostuser_path = None
+        self.vhostuser_type = None
         self.vif_inbound_peak = None
         self.vif_inbound_burst = None
         self.vif_inbound_average = None
@@ -1165,6 +1168,10 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
             addr_elem.set("function", "0x%s" % (func))
             source_elem.append(addr_elem)
             dev.append(source_elem)
+        elif self.net_type == "vhostuser":
+            dev.append(etree.Element("source", type=self.vhostuser_type,
+                                     mode=self.vhostuser_mode,
+                                     path=self.vhostuser_path))
         else:
             dev.append(etree.Element("source", bridge=self.source_dev))
 

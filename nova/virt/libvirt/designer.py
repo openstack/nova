@@ -142,6 +142,16 @@ def set_vif_host_backend_direct_config(conf, devname):
     conf.model = "virtio"
 
 
+def set_vif_host_backend_vhostuser_config(conf, mode, path):
+    """Populate a LibvirtConfigGuestInterface instance
+    with host backend details for vhostuser socket.
+    """
+    conf.net_type = "vhostuser"
+    conf.vhostuser_type = "unix"
+    conf.vhostuser_mode = mode
+    conf.vhostuser_path = path
+
+
 def set_vif_bandwidth_config(conf, inst_type):
     """Config vif inbound/outbound bandwidth limit. parameters are
     set in instance_type_extra_specs table, key is in  the format
