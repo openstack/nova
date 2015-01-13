@@ -38,7 +38,6 @@ import os
 
 from migrate.versioning import repository
 import mock
-from oslo.config import cfg
 from oslo.db.sqlalchemy import test_base
 from oslo.db.sqlalchemy import test_migrations
 from oslo.db.sqlalchemy import utils as oslodbutils
@@ -54,7 +53,6 @@ from nova.db.sqlalchemy import utils as db_utils
 from nova import exception
 from nova.i18n import _
 from nova import test
-from nova.tests.unit import conf_fixture
 
 
 LOG = logging.getLogger(__name__)
@@ -87,7 +85,6 @@ class NovaMigrationsCheckers(test_migrations.WalkVersionsMixin):
 
     def setUp(self):
         super(NovaMigrationsCheckers, self).setUp()
-        self.useFixture(conf_fixture.ConfFixture(cfg.CONF))
         # NOTE(viktors): We should reduce log output because it causes issues,
         #                when we run tests with testr
         migrate_log = logging.getLogger('migrate')
@@ -563,11 +560,13 @@ class NovaMigrationsCheckers(test_migrations.WalkVersionsMixin):
 
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
+                               test.TestCase,
                                test_base.DbTestCase):
     pass
 
 
 class TestNovaMigrationsMySQL(NovaMigrationsCheckers,
+                              test.TestCase,
                               test_base.MySQLOpportunisticTestCase):
     def test_innodb_tables(self):
         with mock.patch.object(sa_migration, 'get_engine',
@@ -593,6 +592,7 @@ class TestNovaMigrationsMySQL(NovaMigrationsCheckers,
 
 
 class TestNovaMigrationsPostgreSQL(NovaMigrationsCheckers,
+                                   test.TestCase,
                                    test_base.PostgreSQLOpportunisticTestCase):
     pass
 
