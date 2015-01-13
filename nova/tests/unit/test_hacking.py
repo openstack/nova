@@ -131,6 +131,54 @@ class HackingTestCase(test.NoDBTestCase):
         self.assertEqual(
             len(list(checks.assert_equal_none("self.assertIsNone()"))), 0)
 
+    def test_assert_true_or_false_with_in_or_not_in(self):
+        self.assertEqual(len(list(checks.assert_equal_none(
+            "self.assertEqual(A, None)"))), 1)
+        self.assertEqual(len(list(checks.assert_true_or_false_with_in(
+            "self.assertTrue(A in B)"))), 1)
+
+        self.assertEqual(len(list(checks.assert_true_or_false_with_in(
+            "self.assertFalse(A in B)"))), 1)
+
+        self.assertEqual(len(list(checks.assert_true_or_false_with_in(
+            "self.assertTrue(A not in B)"))), 1)
+
+        self.assertEqual(len(list(checks.assert_true_or_false_with_in(
+            "self.assertFalse(A not in B)"))), 1)
+
+        self.assertEqual(len(list(checks.assert_true_or_false_with_in(
+            "self.assertTrue(A in B, 'some message')"))), 1)
+
+        self.assertEqual(len(list(checks.assert_true_or_false_with_in(
+            "self.assertFalse(A in B, 'some message')"))), 1)
+
+        self.assertEqual(len(list(checks.assert_true_or_false_with_in(
+            "self.assertTrue(A not in B, 'some message')"))), 1)
+
+        self.assertEqual(len(list(checks.assert_true_or_false_with_in(
+            "self.assertFalse(A not in B, 'some message')"))), 1)
+
+        self.assertEqual(len(list(checks.assert_true_or_false_with_in(
+            "self.assertTrue(A in 'some string with spaces')"))), 1)
+
+        self.assertEqual(len(list(checks.assert_true_or_false_with_in(
+            "self.assertTrue(A in 'some string with spaces')"))), 1)
+
+        self.assertEqual(len(list(checks.assert_true_or_false_with_in(
+            "self.assertTrue(A in ['1', '2', '3'])"))), 1)
+
+        self.assertEqual(len(list(checks.assert_true_or_false_with_in(
+            "self.assertTrue(A in [1, 2, 3])"))), 1)
+
+        self.assertEqual(len(list(checks.assert_true_or_false_with_in(
+            "self.assertTrue(any(A > 5 for A in B))"))), 0)
+
+        self.assertEqual(len(list(checks.assert_true_or_false_with_in(
+            "self.assertTrue(any(A > 5 for A in B), 'some message')"))), 0)
+
+        self.assertEqual(len(list(checks.assert_true_or_false_with_in(
+            "self.assertFalse(some in list1 and some2 in list2)"))), 0)
+
     def test_no_translate_debug_logs(self):
         self.assertEqual(len(list(checks.no_translate_debug_logs(
             "LOG.debug(_('foo'))", "nova/scheduler/foo.py"))), 1)

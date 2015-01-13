@@ -54,6 +54,22 @@ asse_equal_end_with_none_re = re.compile(
                            r"assertEqual\(.*?,\s+None\)$")
 asse_equal_start_with_none_re = re.compile(
                            r"assertEqual\(None,")
+# NOTE(snikitin): Next two regexes weren't united to one for more readability.
+#                 asse_true_false_with_in_or_not_in regex checks
+#                 assertTrue/False(A in B) cases where B argument has no spaces
+#                 asse_true_false_with_in_or_not_in_spaces regex checks cases
+#                 where B argument has spaces and starts/ends with [, ', ".
+#                 For example: [1, 2, 3], "some string", 'another string'.
+#                 We have to separate these regexes to escape a false positives
+#                 results. B argument should have spaces only if it starts
+#                 with [, ", '. Otherwise checking of string
+#                 "assertFalse(A in B and C in D)" will be false positives.
+#                 In this case B argument is "B and C in D".
+asse_true_false_with_in_or_not_in = re.compile(r"assert(True|False)\("
+                    r"(\w|[][.'\"])+( not)? in (\w|[][.'\",])+(, .*)?\)")
+asse_true_false_with_in_or_not_in_spaces = re.compile(r"assert(True|False)"
+                    r"\((\w|[][.'\"])+( not)? in [\[|'|\"](\w|[][.'\", ])+"
+                    r"[\[|'|\"](, .*)?\)")
 conf_attribute_set_re = re.compile(r"CONF\.[a-z0-9_.]+\s*=\s*\w")
 log_translation = re.compile(
     r"(.)*LOG\.(audit|error|critical)\(\s*('|\")")
@@ -447,6 +463,21 @@ def check_oslo_namespace_imports(logical_line, blank_before, filename):
         yield(0, msg)
 
 
+def assert_true_or_false_with_in(logical_line):
+    """Check for assertTrue/False(A in B), assertTrue/False(A not in B),
+    assertTrue/False(A in B, message) or assertTrue/False(A not in B, message)
+    sentences.
+
+    N334
+    """
+    res = (asse_true_false_with_in_or_not_in.search(logical_line) or
+           asse_true_false_with_in_or_not_in_spaces.search(logical_line))
+    if res:
+        yield (0, "N334: Use assertIn/NotIn(A, B) rather than "
+                  "assertTrue/False(A in/not in B) when checking collection "
+                  "contents.")
+
+
 def factory(register):
     register(import_no_db_in_virt)
     register(no_db_session_in_public_api)
@@ -468,3 +499,4 @@ def factory(register):
     register(CheckForStrUnicodeExc)
     register(CheckForTransAdd)
     register(check_oslo_namespace_imports)
+    register(assert_true_or_false_with_in)

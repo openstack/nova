@@ -75,7 +75,7 @@ class FindTargetIDTestCase(BaseTestCase):
     def test_find_target_id_updates_memo(self):
         memo = dict()
         idmapshift.find_target_id(0, self.uid_maps, idmapshift.NOBODY_ID, memo)
-        self.assertTrue(0 in memo)
+        self.assertIn(0, memo)
         self.assertEqual(10000, memo[0])
 
     def test_find_target_guest_id_greater_than_count(self):

@@ -180,7 +180,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
         self.assertNotIn(unexpected, image_cache_manager.originals)
 
         self.assertEqual(1, len(image_cache_manager.back_swap_images))
-        self.assertTrue('swap_1000' in image_cache_manager.back_swap_images)
+        self.assertIn('swap_1000', image_cache_manager.back_swap_images)
 
     def test_list_backing_images_small(self):
         self.stubs.Set(os, 'listdir',
@@ -875,8 +875,8 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
         image_cache_manager._age_and_verify_swap_images(None, '/tmp_age_test')
         self.assertEqual(1, len(expected_exist))
         self.assertEqual(1, len(expected_remove))
-        self.assertTrue('swap_128' in expected_exist)
-        self.assertTrue('swap_256' in expected_remove)
+        self.assertIn('swap_128', expected_exist)
+        self.assertIn('swap_256', expected_remove)
 
 
 class VerifyChecksumTestCase(test.NoDBTestCase):

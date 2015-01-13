@@ -2654,8 +2654,8 @@ class XenAPIDom0IptablesFirewallTestCase(stubs.XenAPITestBase):
                           self._in_rules)
         for rule in in_rules:
             if 'nova' not in rule:
-                self.assertTrue(rule in self._out_rules,
-                                'Rule went missing: %s' % rule)
+                self.assertIn(rule, self._out_rules,
+                              'Rule went missing: %s' % rule)
 
         instance_chain = None
         for rule in self._out_rules:

@@ -286,8 +286,8 @@ class IptablesFirewallTestCase(test.NoDBTestCase):
                           self.in_rules)
         for rule in in_rules:
             if 'nova' not in rule:
-                self.assertTrue(rule in self.out_rules,
-                                'Rule went missing: %s' % rule)
+                self.assertIn(rule, self.out_rules,
+                              'Rule went missing: %s' % rule)
 
         instance_chain = None
         for rule in self.out_rules:
@@ -573,9 +573,9 @@ class NWFilterTestCase(test.NoDBTestCase):
             self.recursive_depends[name] = []
             for f in dom.getElementsByTagName('filterref'):
                 ref = f.getAttribute('filter')
-                self.assertTrue(ref in self.defined_filters,
-                                ('%s referenced filter that does ' +
-                                'not yet exist: %s') % (name, ref))
+                self.assertIn(ref, self.defined_filters,
+                              ('%s referenced filter that does ' +
+                              'not yet exist: %s') % (name, ref))
                 dependencies = [ref] + self.recursive_depends[ref]
                 self.recursive_depends[name] += dependencies
 
@@ -598,14 +598,14 @@ class NWFilterTestCase(test.NoDBTestCase):
             else:
                 required_not_list.append('allow-dhcp-server')
             for required in requiredlist:
-                self.assertTrue(required in
-                                self.recursive_depends[instance_filter],
-                                "Instance's filter does not include %s" %
-                                required)
+                self.assertIn(required,
+                              self.recursive_depends[instance_filter],
+                              "Instance's filter does not include %s" %
+                              required)
             for required_not in required_not_list:
-                self.assertFalse(required_not in
-                    self.recursive_depends[instance_filter],
-                    "Instance filter includes %s" % required_not)
+                self.assertNotIn(required_not,
+                                 self.recursive_depends[instance_filter],
+                                 "Instance filter includes %s" % required_not)
 
         network_info = _fake_network_info(self.stubs, 1)
         # since there is one (network_info) there is one vif

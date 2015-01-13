@@ -284,9 +284,9 @@ class ApiEc2TestCase(test.TestCase):
 
         # Any request should be fine
         self.ec2.get_all_instances()
-        self.assertTrue(self.ec2.APIVersion in self.http.getresponsebody(),
-                        'The version in the xmlns of the response does '
-                        'not match the API version given in the request.')
+        self.assertIn(self.ec2.APIVersion, self.http.getresponsebody(),
+                      'The version in the xmlns of the response does '
+                      'not match the API version given in the request.')
 
     def test_describe_instances(self):
         """Test that, after creating a user and a project, the describe

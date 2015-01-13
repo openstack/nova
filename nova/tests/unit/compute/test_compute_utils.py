@@ -487,8 +487,8 @@ class UsageInfoTestCase(test.TestCase):
                      'state', 'state_description',
                      'bandwidth', 'audit_period_beginning',
                      'audit_period_ending', 'image_meta'):
-            self.assertTrue(attr in payload,
-                            msg="Key %s not in payload" % attr)
+            self.assertIn(attr, payload,
+                          "Key %s not in payload" % attr)
         self.assertEqual(payload['image_meta'],
                 {'md_key1': 'val1', 'md_key2': 'val2'})
         image_ref_url = "%s/images/1" % glance.generate_glance_url()
@@ -528,8 +528,7 @@ class UsageInfoTestCase(test.TestCase):
                      'state', 'state_description',
                      'bandwidth', 'audit_period_beginning',
                      'audit_period_ending', 'image_meta'):
-            self.assertTrue(attr in payload,
-                            msg="Key %s not in payload" % attr)
+            self.assertIn(attr, payload, "Key %s not in payload" % attr)
         self.assertEqual(payload['image_meta'],
                 {'md_key1': 'val1', 'md_key2': 'val2'})
         image_ref_url = "%s/images/1" % glance.generate_glance_url()
@@ -559,8 +558,7 @@ class UsageInfoTestCase(test.TestCase):
                      'state', 'state_description',
                      'bandwidth', 'audit_period_beginning',
                      'audit_period_ending', 'image_meta'):
-            self.assertTrue(attr in payload,
-                            msg="Key %s not in payload" % attr)
+            self.assertIn(attr, payload, "Key %s not in payload" % attr)
         self.assertEqual(payload['image_meta'], {})
         image_ref_url = "%s/images/1" % glance.generate_glance_url()
         self.assertEqual(payload['image_ref_url'], image_ref_url)
@@ -595,8 +593,7 @@ class UsageInfoTestCase(test.TestCase):
         self.assertEqual(str(payload['instance_flavor_id']), str(flavor_id))
         for attr in ('display_name', 'created_at', 'launched_at',
                      'state', 'state_description', 'image_meta'):
-            self.assertTrue(attr in payload,
-                            msg="Key %s not in payload" % attr)
+            self.assertIn(attr, payload, "Key %s not in payload" % attr)
         self.assertEqual(payload['image_meta'],
                 {'md_key1': 'val1', 'md_key2': 'val2'})
         self.assertEqual(payload['image_name'], 'fake_name')
