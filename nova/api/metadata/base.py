@@ -27,6 +27,7 @@ from oslo.utils import timeutils
 
 from nova.api.ec2 import ec2utils
 from nova.api.metadata import password
+from nova import availability_zones as az
 from nova import block_device
 from nova import conductor
 from nova import context
@@ -122,8 +123,8 @@ class InstanceMetadata():
         else:
             capi = conductor.API()
 
-        self.availability_zone = ec2utils.get_availability_zone_by_host(
-                instance.host, capi)
+        self.availability_zone = az.get_instance_availability_zone(ctxt,
+                                                                   instance)
 
         self.security_groups = objects.SecurityGroupList.get_by_instance(
             ctxt, instance)
