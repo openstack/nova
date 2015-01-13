@@ -950,7 +950,7 @@ class VMOps(object):
             transfer_vhd_to_dest(new_vdi_ref, new_vdi_uuid)
         except Exception as error:
             LOG.exception(_LE("_migrate_disk_resizing_down failed. "
-                              "Restoring orig vm due_to: %s."), error,
+                              "Restoring orig vm"),
                           instance=instance)
             undo_mgr._rollback()
             raise exception.InstanceFaultRollback(error)
@@ -1733,8 +1733,8 @@ class VMOps(object):
         try:
             raw_console_data = self._session.call_plugin('console',
                     'get_console_log', {'dom_id': dom_id})
-        except self._session.XenAPI.Failure as exc:
-            LOG.exception(exc)
+        except self._session.XenAPI.Failure:
+            LOG.exception(_LE("Guest does not have a console available"))
             msg = _("Guest does not have a console available")
             raise exception.NovaException(msg)
 
@@ -2057,8 +2057,8 @@ class VMOps(object):
                                                      destref,
                                                      nwref,
                                                      options)
-        except self._session.XenAPI.Failure as exc:
-            LOG.exception(exc)
+        except self._session.XenAPI.Failure:
+            LOG.exception(_LE('Migrate Receive failed'))
             msg = _('Migrate Receive failed')
             raise exception.MigrationPreCheckError(reason=msg)
         return migrate_data
@@ -2114,8 +2114,8 @@ class VMOps(object):
                 config_value = self._make_plugin_call('config_file',
                                                       'get_val',
                                                       key='relax-xsm-sr-check')
-            except Exception as exc:
-                LOG.exception(exc)
+            except Exception:
+                LOG.exception(_LE('Plugin config_file get_val failed'))
             self.cached_xsm_sr_relaxed = config_value == "true"
             return self.cached_xsm_sr_relaxed
 
@@ -2202,8 +2202,8 @@ class VMOps(object):
                 try:
                     self._call_live_migrate_command(
                         "VM.migrate_send", vm_ref, migrate_data)
-                except self._session.XenAPI.Failure as exc:
-                    LOG.exception(exc)
+                except self._session.XenAPI.Failure:
+                    LOG.exception(_LE('Migrate Send failed'))
                     raise exception.MigrationError(
                         reason=_('Migrate Send failed'))
 

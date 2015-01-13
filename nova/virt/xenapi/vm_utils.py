@@ -315,8 +315,8 @@ def destroy_vm(session, instance, vm_ref):
     """Destroys a VM record."""
     try:
         session.VM.destroy(vm_ref)
-    except session.XenAPI.Failure as exc:
-        LOG.exception(exc)
+    except session.XenAPI.Failure:
+        LOG.exception(_LE('Destroy VM failed'))
         return
 
     LOG.debug("VM destroyed", instance=instance)
@@ -331,8 +331,8 @@ def clean_shutdown_vm(session, instance, vm_ref):
     LOG.debug("Shutting down VM (cleanly)", instance=instance)
     try:
         session.call_xenapi('VM.clean_shutdown', vm_ref)
-    except session.XenAPI.Failure as exc:
-        LOG.exception(exc)
+    except session.XenAPI.Failure:
+        LOG.exception(_LE('Shutting down VM (cleanly) failed.'))
         return False
     return True
 
@@ -346,8 +346,8 @@ def hard_shutdown_vm(session, instance, vm_ref):
     LOG.debug("Shutting down VM (hard)", instance=instance)
     try:
         session.call_xenapi('VM.hard_shutdown', vm_ref)
-    except session.XenAPI.Failure as exc:
-        LOG.exception(exc)
+    except session.XenAPI.Failure:
+        LOG.exception(_LE('Shutting down VM (hard) failed'))
         return False
     return True
 
@@ -400,7 +400,7 @@ def unplug_vbd(session, vbd_ref, this_vm_ref):
                          {'vbd_ref': vbd_ref, 'num_attempt': num_attempt,
                           'max_attempts': max_attempts, 'err': err})
             else:
-                LOG.exception(exc)
+                LOG.exception(_LE('Unable to unplug VBD'))
                 raise exception.StorageError(
                         reason=_('Unable to unplug VBD %s') % vbd_ref)
 
@@ -414,8 +414,8 @@ def destroy_vbd(session, vbd_ref):
     """Destroy VBD from host database."""
     try:
         session.call_xenapi('VBD.destroy', vbd_ref)
-    except session.XenAPI.Failure as exc:
-        LOG.exception(exc)
+    except session.XenAPI.Failure:
+        LOG.exception(_LE('Unable to destroy VBD'))
         raise exception.StorageError(
                 reason=_('Unable to destroy VBD %s') % vbd_ref)
 
@@ -1684,8 +1684,8 @@ def lookup_vm_vdis(session, vm_ref):
                 if not vbd_other_config.get('osvol'):
                     # This is not an attached volume
                     vdi_refs.append(vdi_ref)
-            except session.XenAPI.Failure as exc:
-                LOG.exception(exc)
+            except session.XenAPI.Failure:
+                LOG.exception(_LE('"Look for the VDIs failed'))
     return vdi_refs
 
 

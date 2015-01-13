@@ -31,7 +31,7 @@ from oslo_vmware.objects import datastore as ds_obj
 from oslo_vmware import pbm
 
 from nova import exception
-from nova.i18n import _, _LI, _LW
+from nova.i18n import _, _LE, _LI, _LW
 from nova.network import model as network_model
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import vim_util
@@ -1279,8 +1279,8 @@ def destroy_vm(session, instance, vm_ref=None):
                                             vm_ref)
         session._wait_for_task(destroy_task)
         LOG.info(_LI("Destroyed the VM"), instance=instance)
-    except Exception as exc:
-        LOG.exception(exc, instance=instance)
+    except Exception:
+        LOG.exception(_LE('Destroy VM failed'), instance=instance)
 
 
 def create_virtual_disk(session, dc_ref, adapter_type, disk_type,

@@ -25,7 +25,7 @@ from eventlet import queue
 from oslo_log import log as logging
 
 from nova import exception
-from nova.i18n import _
+from nova.i18n import _, _LE
 from nova import image
 
 LOG = logging.getLogger(__name__)
@@ -180,7 +180,7 @@ class IOThread(object):
                     greenthread.sleep(IO_THREAD_SLEEP_TIME)
                 except Exception as exc:
                     self.stop()
-                    LOG.exception(exc)
+                    LOG.exception(_LE('Read/Write data failed'))
                     self.done.send_exception(exc)
 
         greenthread.spawn(_inner)

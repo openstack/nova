@@ -29,7 +29,7 @@ from oslo_utils import units
 from oslo_vmware import rw_handles
 
 from nova import exception
-from nova.i18n import _, _LI
+from nova.i18n import _, _LE, _LI
 from nova import image
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import io_util
@@ -199,7 +199,7 @@ def start_transfer(context, read_file_handle, data_size,
         write_thread.stop()
 
         # Log and raise the exception.
-        LOG.exception(exc)
+        LOG.exception(_LE('Transfer data failed'))
         raise exception.NovaException(exc)
     finally:
         # No matter what, try closing the read and write handles, if it so

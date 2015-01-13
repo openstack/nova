@@ -26,7 +26,7 @@ from oslo_config import cfg
 from oslo_log import log as logging
 
 from nova import exception
-from nova.i18n import _, _LW
+from nova.i18n import _, _LE, _LW
 
 xenapi_volume_utils_opts = [
     cfg.IntOpt('introduce_vdi_retry_wait',
@@ -159,8 +159,8 @@ def introduce_vdi(session, sr_ref, vdi_uuid=None, target_lun=None):
             greenthread.sleep(CONF.xenserver.introduce_vdi_retry_wait)
             session.call_xenapi("SR.scan", sr_ref)
             vdi_ref = _get_vdi_ref(session, sr_ref, vdi_uuid, target_lun)
-    except session.XenAPI.Failure as exc:
-        LOG.exception(exc)
+    except session.XenAPI.Failure:
+        LOG.exception(_LE('Unable to introduce VDI on SR'))
         raise exception.StorageError(
                 reason=_('Unable to introduce VDI on SR %s') % sr_ref)
 
@@ -174,8 +174,8 @@ def introduce_vdi(session, sr_ref, vdi_uuid=None, target_lun=None):
     try:
         vdi_rec = session.call_xenapi("VDI.get_record", vdi_ref)
         LOG.debug(vdi_rec)
-    except session.XenAPI.Failure as exc:
-        LOG.exception(exc)
+    except session.XenAPI.Failure:
+        LOG.exception(_LE('Unable to get record of VDI'))
         raise exception.StorageError(
                 reason=_('Unable to get record of VDI %s on') % vdi_ref)
 
@@ -196,8 +196,8 @@ def introduce_vdi(session, sr_ref, vdi_uuid=None, target_lun=None):
                                     vdi_rec['location'],
                                     vdi_rec['xenstore_data'],
                                     vdi_rec['sm_config'])
-    except session.XenAPI.Failure as exc:
-        LOG.exception(exc)
+    except session.XenAPI.Failure:
+        LOG.exception(_LE('Unable to introduce VDI for SR'))
         raise exception.StorageError(
                 reason=_('Unable to introduce VDI for SR %s') % sr_ref)
 
@@ -294,8 +294,8 @@ def find_sr_from_vbd(session, vbd_ref):
     try:
         vdi_ref = session.call_xenapi("VBD.get_VDI", vbd_ref)
         sr_ref = session.call_xenapi("VDI.get_SR", vdi_ref)
-    except session.XenAPI.Failure as exc:
-        LOG.exception(exc)
+    except session.XenAPI.Failure:
+        LOG.exception(_LE('Unable to find SR from VBD'))
         raise exception.StorageError(
                 reason=_('Unable to find SR from VBD %s') % vbd_ref)
     return sr_ref
@@ -305,8 +305,8 @@ def find_sr_from_vdi(session, vdi_ref):
     """Find the SR reference from the VDI reference."""
     try:
         sr_ref = session.call_xenapi("VDI.get_SR", vdi_ref)
-    except session.XenAPI.Failure as exc:
-        LOG.exception(exc)
+    except session.XenAPI.Failure:
+        LOG.exception(_LE('Unable to find SR from VDI'))
         raise exception.StorageError(
                 reason=_('Unable to find SR from VDI %s') % vdi_ref)
     return sr_ref
