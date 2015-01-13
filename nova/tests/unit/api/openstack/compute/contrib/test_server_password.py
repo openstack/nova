@@ -15,11 +15,11 @@
 
 from oslo.config import cfg
 
+from nova.api.metadata import password
 from nova.api.openstack.compute.contrib import server_password \
     as server_password_v2
 from nova.api.openstack.compute.plugins.v3 import server_password \
     as server_password_v21
-from nova.api.metadata import password
 from nova import compute
 from nova import test
 from nova.tests.unit.api.openstack import fakes

@@ -26,8 +26,8 @@ eventlet.monkey_patch(os=False)
 
 import copy
 import inspect
-import mock
 import logging
+import mock
 import os
 
 import fixtures

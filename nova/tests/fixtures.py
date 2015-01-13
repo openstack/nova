@@ -26,9 +26,10 @@ import warnings
 import fixtures
 from oslo.config import cfg
 from oslo.messaging import conffixture as messaging_conffixture
+
 from nova.db import migration
-from nova import rpc
 from nova.db.sqlalchemy import api as session
+from nova import rpc
 from nova import service
 
 _TRUE_VALUES = ('True', 'true', '1', 'yes')

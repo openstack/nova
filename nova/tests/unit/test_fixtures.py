@@ -22,8 +22,8 @@ from oslo.config import cfg
 import testtools
 
 from nova.db.sqlalchemy import api as session
-from nova.tests.unit import conf_fixture
 from nova.tests import fixtures
+from nova.tests.unit import conf_fixture
 
 CONF = cfg.CONF
 
