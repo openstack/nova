@@ -234,16 +234,6 @@ def no_vi_headers(physical_line, line_number, lines):
             return 0, "N314: Don't put vi configuration in source files"
 
 
-def no_author_tags(physical_line):
-    for regex in author_tag_re:
-        if regex.match(physical_line):
-            physical_line = physical_line.lower()
-            pos = physical_line.find('moduleauthor')
-            if pos < 0:
-                pos = physical_line.find('author')
-            return pos, "N315: Don't use author tags"
-
-
 def assert_true_instance(logical_line):
     """Check for assertTrue(isinstance(a, b)) sentences
 
@@ -465,7 +455,6 @@ def factory(register):
     register(import_no_virt_driver_config_deps)
     register(capital_cfg_help)
     register(no_vi_headers)
-    register(no_author_tags)
     register(assert_true_instance)
     register(assert_equal_type)
     register(assert_equal_none)

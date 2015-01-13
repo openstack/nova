@@ -106,18 +106,6 @@ class HackingTestCase(test.NoDBTestCase):
             "Test end string for vi",
             15, lines))
 
-    def test_no_author_tags(self):
-        self.assertIsInstance(checks.no_author_tags("# author: jogo"), tuple)
-        self.assertIsInstance(checks.no_author_tags("# @author: jogo"), tuple)
-        self.assertIsInstance(checks.no_author_tags("# @Author: jogo"), tuple)
-        self.assertIsInstance(checks.no_author_tags("# Author: jogo"), tuple)
-        self.assertIsInstance(checks.no_author_tags(".. moduleauthor:: jogo"),
-                              tuple)
-        self.assertIsNone(checks.no_author_tags("# authorization of this"))
-        self.assertEqual(2, checks.no_author_tags("# author: jogo")[0])
-        self.assertEqual(2, checks.no_author_tags("# Author: jogo")[0])
-        self.assertEqual(3, checks.no_author_tags(".. moduleauthor:: jogo")[0])
-
     def test_assert_true_instance(self):
         self.assertEqual(len(list(checks.assert_true_instance(
             "self.assertTrue(isinstance(e, "
