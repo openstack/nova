@@ -337,15 +337,11 @@ class LibvirtGenericVIFDriver(object):
         vif_details = vif['details']
         mode = vif_details.get(network_model.VIF_DETAILS_VHOSTUSER_MODE,
                                'server')
-        path = vif_details.get(network_model.VIF_DETAILS_VHOSTUSER_DIR)
-        if path is None:
+        sock_path = vif_details.get(network_model.VIF_DETAILS_VHOSTUSER_SOCKET)
+        if sock_path is None:
             raise exception.VifDetailsMissingVhostuserSockPath(
                                                         vif_id=vif['id'])
-
-        designer.set_vif_host_backend_vhostuser_config(
-                                            conf,
-                                            mode,
-                                            os.path.join(path, vif['id']))
+        designer.set_vif_host_backend_vhostuser_config(conf, mode, sock_path)
         return conf
 
     def get_config(self, instance, vif, image_meta,
@@ -530,7 +526,17 @@ class LibvirtGenericVIFDriver(object):
             LOG.exception(_LE("Failed while plugging vif"), instance=instance)
 
     def plug_vhostuser(self, instance, vif):
-        pass
+        ovs_plug = vif['details'].get(
+                                network_model.VIF_DETAILS_VHOSTUSER_OVS_PLUG,
+                                False)
+        if ovs_plug:
+            iface_id = self.get_ovs_interfaceid(vif)
+            port_name = os.path.basename(
+                    vif['details'][network_model.VIF_DETAILS_VHOSTUSER_SOCKET])
+            linux_net.create_ovs_vif_port(self.get_bridge_name(vif),
+                                          port_name, iface_id, vif['address'],
+                                          instance['uuid'])
+            linux_net.ovs_set_vhostuser_port_type(port_name)
 
     def plug(self, instance, vif):
         vif_type = vif['type']
@@ -686,7 +692,14 @@ class LibvirtGenericVIFDriver(object):
                           instance=instance)
 
     def unplug_vhostuser(self, instance, vif):
-        pass
+        ovs_plug = vif['details'].get(
+                        network_model.VIF_DETAILS_VHOSTUSER_OVS_PLUG,
+                        False)
+        if ovs_plug:
+            port_name = os.path.basename(
+                    vif['details'][network_model.VIF_DETAILS_VHOSTUSER_SOCKET])
+            linux_net.delete_ovs_vif_port(self.get_bridge_name(vif),
+                                          port_name)
 
     def unplug(self, instance, vif):
         vif_type = vif['type']

@@ -1366,6 +1366,10 @@ def delete_ovs_vif_port(bridge, dev):
     delete_net_dev(dev)
 
 
+def ovs_set_vhostuser_port_type(dev):
+    _ovs_vsctl(['--', 'set', 'Interface', dev, 'type=dpdkvhostuser'])
+
+
 def create_ivs_vif_port(dev, iface_id, mac, instance_id):
     utils.execute('ivs-ctl', 'add-port',
                    dev, run_as_root=True)

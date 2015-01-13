@@ -1267,3 +1267,13 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         self.driver._exec_ebtables('fake')
         self.assertEqual(2, len(executes))
         self.mox.UnsetStubs()
+
+    def test_ovs_set_vhostuser_type(self):
+        calls = [
+                 mock.call('ovs-vsctl', '--timeout=120', '--', 'set',
+                           'Interface', 'fake-dev', 'type=dpdkvhostuser',
+                           run_as_root=True)
+                 ]
+        with mock.patch.object(utils, 'execute', return_value=('', '')) as ex:
+            linux_net.ovs_set_vhostuser_port_type('fake-dev')
+            ex.assert_has_calls(calls)
