@@ -318,6 +318,16 @@ class LibvirtGenericVIFDriver(object):
 
         return conf
 
+    def get_config_tap(self, instance, vif, image_meta,
+                       inst_type, virt_type):
+        conf = self.get_base_config(instance, vif, image_meta,
+                                    inst_type, virt_type)
+
+        dev = self.get_vif_devname(vif)
+        designer.set_vif_host_backend_ethernet_config(conf, dev)
+
+        return conf
+
     def get_config_mlnx_direct(self, instance, vif, image_meta,
                                inst_type, virt_type):
         conf = self.get_base_config(instance, vif, image_meta,
@@ -535,6 +545,13 @@ class LibvirtGenericVIFDriver(object):
         except processutils.ProcessExecutionError:
             LOG.exception(_LE("Failed while plugging vif"), instance=instance)
 
+    def plug_tap(self, instance, vif):
+        """Plug a VIF_TYPE_TAP virtual interface."""
+        dev = self.get_vif_devname(vif)
+        mac = vif['details'].get(network_model.VIF_DETAILS_TAP_MAC_ADDRESS)
+        linux_net.create_tap_dev(dev, mac)
+        linux_net._set_device_mtu(dev)
+
     def plug_vhostuser(self, instance, vif):
         ovs_plug = vif['details'].get(
                                 network_model.VIF_DETAILS_VHOSTUSER_OVS_PLUG,
@@ -716,6 +733,15 @@ class LibvirtGenericVIFDriver(object):
         try:
             utils.execute('mm-ctl', '--unbind-port', port_id,
                           run_as_root=True)
+            linux_net.delete_net_dev(dev)
+        except processutils.ProcessExecutionError:
+            LOG.exception(_LE("Failed while unplugging vif"),
+                          instance=instance)
+
+    def unplug_tap(self, instance, vif):
+        """Unplug a VIF_TYPE_TAP virtual interface."""
+        dev = self.get_vif_devname(vif)
+        try:
             linux_net.delete_net_dev(dev)
         except processutils.ProcessExecutionError:
             LOG.exception(_LE("Failed while unplugging vif"),
