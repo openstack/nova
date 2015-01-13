@@ -26,9 +26,12 @@ from sqlalchemy.sql import null
 from nova.db.sqlalchemy import api as db_session
 from nova import exception
 from nova.i18n import _
+from nova.openstack.common import log as logging
 
 INIT_VERSION = 215
 _REPOSITORY = None
+
+LOG = logging.getLogger(__name__)
 
 get_engine = db_session.get_engine
 
@@ -53,7 +56,7 @@ def db_version():
     repository = _find_migrate_repo()
     try:
         return versioning_api.db_version(get_engine(), repository)
-    except versioning_exceptions.DatabaseNotControlledError:
+    except versioning_exceptions.DatabaseNotControlledError as exc:
         meta = sqlalchemy.MetaData()
         engine = get_engine()
         meta.reflect(bind=engine)
@@ -62,6 +65,7 @@ def db_version():
             db_version_control(INIT_VERSION)
             return versioning_api.db_version(get_engine(), repository)
         else:
+            LOG.exception(exc)
             # Some pre-Essex DB's may not be version controlled.
             # Require them to upgrade using Essex first.
             raise exception.NovaException(
