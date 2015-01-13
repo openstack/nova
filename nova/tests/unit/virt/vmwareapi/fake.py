@@ -1354,6 +1354,8 @@ class FakeVim(object):
         vm_ref = args[0]
         _get_vm_mdo(vm_ref)
         del _db_content["VirtualMachine"][vm_ref]
+        task_mdo = create_task(method, "success")
+        return task_mdo.obj
 
     def _search_ds(self, method, *args, **kwargs):
         """Searches the datastore for a file."""
