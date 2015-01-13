@@ -285,7 +285,7 @@ class FlavorsTestV21(test.TestCase):
     def test_get_flavor_detail_with_limit(self):
         url = self._prefix + '/flavors/detail?limit=1'
         req = self.fake_request.blank(url)
-        response = self.controller.index(req)
+        response = self.controller.detail(req)
         response_list = response["flavors"]
         response_links = response["flavors_links"]
 
@@ -293,6 +293,9 @@ class FlavorsTestV21(test.TestCase):
             {
                 "id": "1",
                 "name": "flavor 1",
+                "ram": "256",
+                "disk": "10",
+                "vcpus": "",
                 "links": [
                     {
                         "rel": "self",
@@ -307,11 +310,14 @@ class FlavorsTestV21(test.TestCase):
                 ],
             },
         ]
+        self._set_expected_body(expected_flavors[0], ephemeral='20',
+                                swap='10', disabled=False)
+
         self.assertEqual(response_list, expected_flavors)
         self.assertEqual(response_links[0]['rel'], 'next')
 
         href_parts = urlparse.urlparse(response_links[0]['href'])
-        self.assertEqual('/' + self._rspv + '/flavors', href_parts.path)
+        self.assertEqual('/' + self._rspv + '/flavors/detail', href_parts.path)
         params = urlparse.parse_qs(href_parts.query)
         self.assertThat({'limit': ['1'], 'marker': ['1']},
                         matchers.DictMatches(params))
