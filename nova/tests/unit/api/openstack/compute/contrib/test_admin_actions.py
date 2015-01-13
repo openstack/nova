@@ -198,7 +198,9 @@ class AdminActionsTestV2(AdminActionsTestV21):
         self.assertEqual(400, res.status_int)
 
     def _test_migrate_live_failed_with_exception(self, fake_exc,
-                                                 uuid=None):
+                                                 uuid=None,
+                                                 expected_status_code=400,
+                                                 check_response=True):
         self.mox.StubOutWithMock(self.compute_api, 'live_migrate')
 
         instance = self._stub_instance_get(uuid=uuid)
@@ -212,8 +214,9 @@ class AdminActionsTestV2(AdminActionsTestV21):
                                   {'host': 'hostname',
                                    'block_migration': False,
                                    'disk_over_commit': False}})
-        self.assertEqual(400, res.status_int)
-        self.assertIn(unicode(fake_exc), res.body)
+        self.assertEqual(expected_status_code, res.status_int)
+        if check_response:
+            self.assertIn(unicode(fake_exc), res.body)
 
     def test_migrate_live_compute_service_unavailable(self):
         self._test_migrate_live_failed_with_exception(
@@ -265,6 +268,12 @@ class AdminActionsTestV2(AdminActionsTestV21):
     def test_migrate_live_migration_with_old_nova_not_safe(self):
         self._test_migrate_live_failed_with_exception(
             exception.LiveMigrationWithOldNovaNotSafe(server=''))
+
+    def test_migrate_live_migration_with_unexpected_error(self):
+        self._test_migrate_live_failed_with_exception(
+            exception.MigrationError(reason=''),
+            expected_status_code=500,
+            check_response=False)
 
 
 class ResetStateTestsV21(test.NoDBTestCase):

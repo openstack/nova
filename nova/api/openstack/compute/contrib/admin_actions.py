@@ -367,7 +367,7 @@ class AdminActionsController(wsgi.Controller):
                         "failed") % {'id': id, 'host': host}
             LOG.exception(msg)
             # Return messages from scheduler
-            raise exc.HTTPBadRequest(explanation=msg)
+            raise exc.HTTPInternalServerError(explanation=msg)
 
         return webob.Response(status_int=202)
 
