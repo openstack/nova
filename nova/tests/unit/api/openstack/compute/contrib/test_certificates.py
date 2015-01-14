@@ -41,6 +41,7 @@ class CertificatesTestV21(test.NoDBTestCase):
         super(CertificatesTestV21, self).setUp()
         self.context = context.RequestContext('fake', 'fake')
         self.controller = self.certificates.CertificatesController()
+        self.req = fakes.HTTPRequest.blank('')
 
     def test_translate_certificate_view(self):
         pk, cert = 'fakepk', 'fakecert'
@@ -56,8 +57,7 @@ class CertificatesTestV21(test.NoDBTestCase):
 
         self.mox.ReplayAll()
 
-        req = fakes.HTTPRequest.blank(self.url + '/root')
-        res_dict = self.controller.show(req, 'root')
+        res_dict = self.controller.show(self.req, 'root')
 
         response = {'certificate': {'data': 'fakeroot', 'private_key': None}}
         self.assertEqual(res_dict, response)
@@ -68,9 +68,8 @@ class CertificatesTestV21(test.NoDBTestCase):
             common_policy.parse_rule("!")
         }
         policy.set_rules(rules)
-        req = fakes.HTTPRequest.blank(self.url + '/root')
         exc = self.assertRaises(exception.PolicyNotAuthorized,
-                                self.controller.show, req, 'root')
+                                self.controller.show, self.req, 'root')
         self.assertIn(self.certificate_show_extension,
                       exc.format_message())
 
@@ -85,8 +84,7 @@ class CertificatesTestV21(test.NoDBTestCase):
 
         self.mox.ReplayAll()
 
-        req = fakes.HTTPRequest.blank(self.url)
-        res_dict = self.controller.create(req)
+        res_dict = self.controller.create(self.req)
 
         response = {
             'certificate': {'data': 'fakecert',
@@ -100,20 +98,18 @@ class CertificatesTestV21(test.NoDBTestCase):
             common_policy.parse_rule("!")
         }
         policy.set_rules(rules)
-        req = fakes.HTTPRequest.blank(self.url)
         exc = self.assertRaises(exception.PolicyNotAuthorized,
-                                self.controller.create, req)
+                                self.controller.create, self.req)
         self.assertIn(self.certificate_create_extension,
                       exc.format_message())
 
     @mock.patch.object(rpcapi.CertAPI, 'fetch_ca',
                 side_effect=exception.CryptoCAFileNotFound(project='fake'))
     def test_non_exist_certificates_show(self, mock_fetch_ca):
-        req = fakes.HTTPRequest.blank(self.url + '/root')
         self.assertRaises(
             exc.HTTPNotFound,
             self.controller.show,
-            req, 'root')
+            self.req, 'root')
 
 
 class CertificatesTestV2(CertificatesTestV21):

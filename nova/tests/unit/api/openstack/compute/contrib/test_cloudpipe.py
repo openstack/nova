@@ -67,6 +67,7 @@ class CloudpipeTestV21(test.NoDBTestCase):
         self.stubs.Set(self.controller.compute_api, "get_all",
                        compute_api_get_all_empty)
         self.stubs.Set(utils, 'vpn_ping', utils_vpn_ping)
+        self.req = fakes.HTTPRequest.blank('')
 
     def test_cloudpipe_list_no_network(self):
 
@@ -77,8 +78,7 @@ class CloudpipeTestV21(test.NoDBTestCase):
                        fake_get_nw_info_for_instance)
         self.stubs.Set(self.controller.compute_api, "get_all",
                        compute_api_get_all)
-        req = fakes.HTTPRequest.blank(self.url)
-        res_dict = self.controller.index(req)
+        res_dict = self.controller.index(self.req)
         response = {'cloudpipes': [{'project_id': project_id,
                                     'instance_id': uuid,
                                     'created_at': '1981-10-20T00:00:00Z'}]}
@@ -100,8 +100,7 @@ class CloudpipeTestV21(test.NoDBTestCase):
                        network_api_get)
         self.stubs.Set(self.controller.compute_api, "get_all",
                        compute_api_get_all)
-        req = fakes.HTTPRequest.blank(self.url)
-        res_dict = self.controller.index(req)
+        res_dict = self.controller.index(self.req)
         response = {'cloudpipes': [{'project_id': project_id,
                                     'internal_ip': '192.168.1.100',
                                     'public_ip': '127.0.0.1',
@@ -118,8 +117,7 @@ class CloudpipeTestV21(test.NoDBTestCase):
         self.stubs.Set(self.controller.cloudpipe, 'launch_vpn_instance',
                        launch_vpn_instance)
         body = {'cloudpipe': {'project_id': project_id}}
-        req = fakes.HTTPRequest.blank(self.url)
-        res_dict = self.controller.create(req, body=body)
+        res_dict = self.controller.create(self.req, body=body)
 
         response = {'instance_id': uuid}
         self.assertEqual(res_dict, response)
