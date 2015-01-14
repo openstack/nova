@@ -261,7 +261,8 @@ def errors_out_migration(function):
                     return
                 migration.status = 'error'
                 try:
-                    migration.save(context.elevated())
+                    with migration.obj_as_admin():
+                        migration.save()
                 except Exception:
                     LOG.debug('Error setting migration status '
                               'for instance %s.',
@@ -3481,7 +3482,8 @@ class ComputeManager(manager.Manager):
                                           network_info)
 
             migration.status = 'confirmed'
-            migration.save(context.elevated())
+            with migration.obj_as_admin():
+                migration.save()
 
             rt = self._get_resource_tracker(migration.source_node)
             rt.drop_resize_claim(context, instance, old_instance_type)
@@ -3556,7 +3558,8 @@ class ComputeManager(manager.Manager):
             self._terminate_volume_connections(context, instance, bdms)
 
             migration.status = 'reverted'
-            migration.save(context.elevated())
+            with migration.obj_as_admin():
+                migration.save()
 
             rt = self._get_resource_tracker(instance.node)
             rt.drop_resize_claim(context, instance)
@@ -3792,7 +3795,8 @@ class ComputeManager(manager.Manager):
             network_info = self._get_instance_nw_info(context, instance)
 
             migration.status = 'migrating'
-            migration.save(context.elevated())
+            with migration.obj_as_admin():
+                migration.save()
 
             instance.task_state = task_states.RESIZE_MIGRATING
             instance.save(expected_task_state=task_states.RESIZE_PREP)
@@ -3821,7 +3825,8 @@ class ComputeManager(manager.Manager):
                                                     migration_p)
 
             migration.status = 'post-migrating'
-            migration.save(context.elevated())
+            with migration.obj_as_admin():
+                migration.save()
 
             instance.host = migration.dest_compute
             instance.node = migration.dest_node
@@ -3908,7 +3913,8 @@ class ComputeManager(manager.Manager):
                                             old_instance_type)
 
         migration.status = 'finished'
-        migration.save(context.elevated())
+        with migration.obj_as_admin():
+            migration.save()
 
         instance.vm_state = vm_states.RESIZED
         instance.task_state = None
@@ -4558,12 +4564,13 @@ class ComputeManager(manager.Manager):
 
             # NOTE(vish): create bdm here to avoid race condition
             bdm = objects.BlockDeviceMapping(
+                    context=context,
                     source_type='volume', destination_type='volume',
                     instance_uuid=instance.uuid,
                     volume_id=volume_id or 'reserved',
                     device_name=device_name,
                     disk_bus=disk_bus, device_type=device_type)
-            bdm.create(context)
+            bdm.create()
 
             if return_bdm_object:
                 return bdm
@@ -4590,7 +4597,7 @@ class ComputeManager(manager.Manager):
                 return self._attach_volume(context, instance, driver_bdm)
             except Exception:
                 with excutils.save_and_reraise_exception():
-                    bdm.destroy(context)
+                    bdm.destroy()
 
         do_attach_volume(context, instance, driver_bdm)
 
@@ -5461,7 +5468,8 @@ class ComputeManager(manager.Manager):
                      {'migration_id': migration['id'], 'reason': reason},
                      **kwargs)
             migration.status = 'error'
-            migration.save(context.elevated())
+            with migration.obj_as_admin():
+                migration.save()
 
         for migration in migrations:
             instance_uuid = migration.instance_uuid
@@ -6287,4 +6295,4 @@ class ComputeManager(manager.Manager):
                 if success:
                     instance.cleaned = True
                 with utils.temporary_mutation(context, read_deleted='yes'):
-                    instance.save(context)
+                    instance.save()
