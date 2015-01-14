@@ -68,19 +68,18 @@ class ConsoleOutputExtensionTestV21(test.NoDBTestCase):
                        fake_get_console_output)
         self.stubs.Set(compute_api.API, 'get', fake_get)
         self.controller = self.controller_class.ConsoleOutputController()
+        self.req = fakes.HTTPRequest.blank('')
 
     def _get_console_output(self, length_dict=None):
         length_dict = length_dict or {}
         body = {'os-getConsoleOutput': length_dict}
-        req = fakes.HTTPRequest.blank('')
-        return self.controller.get_console_output(req, fakes.FAKE_UUID,
+        return self.controller.get_console_output(self.req, fakes.FAKE_UUID,
                                                     body=body)
 
     def _check_console_output_failure(self, exception, body):
-        req = fakes.HTTPRequest.blank('')
         self.assertRaises(exception,
                           self.controller.get_console_output,
-                          req, fakes.FAKE_UUID, body=body)
+                          self.req, fakes.FAKE_UUID, body=body)
 
     def test_get_text_console_instance_action(self):
         output = self._get_console_output()
