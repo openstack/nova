@@ -8095,6 +8095,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     def test_hard_reboot(self):
         called = {'count': 0}
+        self.context.auth_token = True  # any non-None value will suffice
         instance = objects.Instance(**self.test_instance)
         network_info = _fake_network_info(self.stubs, 1)
         block_device_info = None

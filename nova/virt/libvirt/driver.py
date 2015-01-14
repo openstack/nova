@@ -2095,7 +2095,12 @@ class LibvirtDriver(driver.ComputeDriver):
 
         # Convert the system metadata to image metadata
         image_meta = utils.get_image_from_system_metadata(system_meta)
-        if not image_meta:
+        # NOTE(stpierre): In certain cases -- e.g., when booting a
+        #                 guest to restore its state after restarting
+        #                 Nova compute -- the context is not
+        #                 populated, which causes this (and
+        #                 _create_images_and_backing below) to error.
+        if not image_meta and context.auth_token is not None:
             image_ref = instance.get('image_ref')
             image_meta = compute_utils.get_image_metadata(context,
                                                           self._image_api,
@@ -2123,8 +2128,10 @@ class LibvirtDriver(driver.ComputeDriver):
         # NOTE (rmk): Re-populate any missing backing files.
         disk_info_json = self._get_instance_disk_info(instance['name'], xml,
                                                       block_device_info)
-        self._create_images_and_backing(context, instance, instance_dir,
-                                        disk_info_json)
+
+        if context.auth_token is not None:
+            self._create_images_and_backing(context, instance, instance_dir,
+                                            disk_info_json)
 
         # Initialize all the necessary networking, block devices and
         # start the instance.
