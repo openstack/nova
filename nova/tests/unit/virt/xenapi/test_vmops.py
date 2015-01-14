@@ -63,6 +63,8 @@ class VMOpsTestCase(VMOpsTestBase):
     def setUp(self):
         super(VMOpsTestCase, self).setUp()
         self._setup_mock_vmops()
+        self.context = context.RequestContext('user', 'project')
+        self.instance = fake_instance.fake_instance_obj(self.context)
 
     def _setup_mock_vmops(self, product_brand=None, product_version=None):
         self._session = self._get_mock_session(product_brand, product_version)
@@ -140,6 +142,44 @@ class VMOpsTestCase(VMOpsTestBase):
 
         self.assertRaises(exception.InstanceNotFound,
                 self._vmops._get_vm_opaque_ref, instance)
+
+    @mock.patch.object(vm_utils, 'destroy_vm')
+    @mock.patch.object(vm_utils, 'clean_shutdown_vm')
+    @mock.patch.object(vm_utils, 'hard_shutdown_vm')
+    def test_clean_shutdown_no_bdm_on_destroy(self, hard_shutdown_vm,
+            clean_shutdown_vm, destroy_vm):
+        vm_ref = 'vm_ref'
+        self._vmops._destroy(self.instance, vm_ref, destroy_disks=False)
+        hard_shutdown_vm.assert_called_once_with(self._vmops._session,
+                self.instance, vm_ref)
+        self.assertEqual(0, clean_shutdown_vm.call_count)
+
+    @mock.patch.object(vm_utils, 'destroy_vm')
+    @mock.patch.object(vm_utils, 'clean_shutdown_vm')
+    @mock.patch.object(vm_utils, 'hard_shutdown_vm')
+    def test_clean_shutdown_with_bdm_on_destroy(self, hard_shutdown_vm,
+            clean_shutdown_vm, destroy_vm):
+        vm_ref = 'vm_ref'
+        block_device_info = {'block_device_mapping': ['fake']}
+        self._vmops._destroy(self.instance, vm_ref, destroy_disks=False,
+                block_device_info=block_device_info)
+        clean_shutdown_vm.assert_called_once_with(self._vmops._session,
+                self.instance, vm_ref)
+        self.assertEqual(0, hard_shutdown_vm.call_count)
+
+    @mock.patch.object(vm_utils, 'destroy_vm')
+    @mock.patch.object(vm_utils, 'clean_shutdown_vm', return_value=False)
+    @mock.patch.object(vm_utils, 'hard_shutdown_vm')
+    def test_clean_shutdown_with_bdm_failed_on_destroy(self, hard_shutdown_vm,
+            clean_shutdown_vm, destroy_vm):
+        vm_ref = 'vm_ref'
+        block_device_info = {'block_device_mapping': ['fake']}
+        self._vmops._destroy(self.instance, vm_ref, destroy_disks=False,
+                block_device_info=block_device_info)
+        clean_shutdown_vm.assert_called_once_with(self._vmops._session,
+                self.instance, vm_ref)
+        hard_shutdown_vm.assert_called_once_with(self._vmops._session,
+                self.instance, vm_ref)
 
 
 class InjectAutoDiskConfigTestCase(VMOpsTestBase):
