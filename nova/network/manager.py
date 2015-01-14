@@ -853,15 +853,14 @@ class NetworkManager(manager.Manager):
                            user_id=quota_user)
             cleanup.append(functools.partial(quotas.rollback, context))
         except exception.OverQuota as exc:
-            quotas = exc.kwargs['quotas']
-            headroom = exc.kwargs['headroom']
-            allowed = quotas['fixed_ips']
-            used = allowed - headroom['fixed_ips']
+            usages = exc.kwargs['usages']
+            used = (usages['fixed_ips']['in_use'] +
+                    usages['fixed_ips']['reserved'])
             LOG.warning(_LW("Quota exceeded for project %(pid)s, tried to "
                             "allocate fixed IP. %(used)s of %(allowed)s are "
                             "in use or are already reserved."),
                         {'pid': quota_project, 'used': used,
-                         'allowed': allowed},
+                         'allowed': exc.kwargs['quotas']['fixed_ips']},
                         instance_uuid=instance_id)
             raise exception.FixedIpLimitExceeded()
 
