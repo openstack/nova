@@ -12,7 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo.serialization import jsonutils
 import webob
 
 from nova.api.openstack.compute import plugins
@@ -176,6 +175,8 @@ class AccessIPsExtAPIValidationTestV21(test.TestCase):
         self.stubs.Set(instance_obj.Instance, 'save', fake_save)
         self.stubs.Set(compute_api.API, 'rebuild', fake_rebuild)
 
+        self.req = fakes.HTTPRequest.blank('')
+
     def _set_up_controller(self):
         ext_info = plugins.LoadedExtensionInfo()
         self.controller = servers_v21.ServersController(
@@ -196,11 +197,7 @@ class AccessIPsExtAPIValidationTestV21(test.TestCase):
             },
         }
         body['server'].update(params)
-        req = fakes.HTTPRequestV3.blank('/servers')
-        req.method = 'POST'
-        req.headers['content-type'] = 'application/json'
-        req.body = jsonutils.dumps(body)
-        res_dict = self.controller.create(req, body=body).obj
+        res_dict = self.controller.create(self.req, body=body).obj
         return res_dict
 
     def _test_update(self, params):
@@ -210,11 +207,7 @@ class AccessIPsExtAPIValidationTestV21(test.TestCase):
         }
         body['server'].update(params)
 
-        req = fakes.HTTPRequestV3.blank('/servers')
-        req.method = 'PUT'
-        req.headers['content-type'] = 'application/json'
-        req.body = jsonutils.dumps(body)
-        res_dict = self.controller.update(req, fakes.FAKE_UUID, body=body)
+        res_dict = self.controller.update(self.req, fakes.FAKE_UUID, body=body)
         self._verify_update_access_ip(res_dict, params)
 
     def _test_rebuild(self, params):
@@ -224,11 +217,7 @@ class AccessIPsExtAPIValidationTestV21(test.TestCase):
             },
         }
         body['rebuild'].update(params)
-        req = fakes.HTTPRequestV3.blank('/servers')
-        req.method = 'PUT'
-        req.headers['content-type'] = 'application/json'
-        req.body = jsonutils.dumps(body)
-        self.controller._action_rebuild(req, fakes.FAKE_UUID, body=body)
+        self.controller._action_rebuild(self.req, fakes.FAKE_UUID, body=body)
 
     def test_create_server_with_access_ipv4(self):
         params = {access_ips.AccessIPs.v4_key: '192.168.0.10'}
