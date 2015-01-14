@@ -1084,8 +1084,17 @@ class DbQuotaDriverTestCase(test.TestCase):
                 injected_file_path_bytes=dict(in_use=0, reserved=0),
                 )
 
+        def fake_quota_get_all(context, project_id):
+            self.calls.append('quota_get_all')
+            self.assertEqual(project_id, 'test_project')
+            return [sqa_models.ProjectUserQuota(resource='instances',
+                                                hard_limit=5),
+                    sqa_models.ProjectUserQuota(resource='cores',
+                                                hard_limit=2)]
+
         self.stubs.Set(db, 'quota_get_all_by_project', fake_qgabp)
         self.stubs.Set(db, 'quota_usage_get_all_by_project', fake_qugabp)
+        self.stubs.Set(db, 'quota_get_all', fake_quota_get_all)
 
         self._stub_quota_class_get_all_by_name()
         self._stub_quota_class_get_default()
@@ -1173,6 +1182,107 @@ class DbQuotaDriverTestCase(test.TestCase):
                     limit=10,
                     in_use=0,
                     reserved=0,
+                    ),
+                ))
+
+    def test_get_project_quotas_with_remains(self):
+        self.maxDiff = None
+        self._stub_get_by_project()
+        result = self.driver.get_project_quotas(
+            FakeContext('test_project', 'test_class'),
+            quota.QUOTAS._resources, 'test_project', remains=True)
+
+        self.assertEqual(self.calls, [
+                'quota_get_all_by_project',
+                'quota_usage_get_all_by_project',
+                'quota_class_get_all_by_name',
+                'quota_class_get_default',
+                'quota_get_all',
+                ])
+        self.assertEqual(result, dict(
+                instances=dict(
+                    limit=5,
+                    in_use=2,
+                    reserved=2,
+                    remains=0,
+                    ),
+                cores=dict(
+                    limit=10,
+                    in_use=4,
+                    reserved=4,
+                    remains=8,
+                    ),
+                ram=dict(
+                    limit=25 * 1024,
+                    in_use=10 * 1024,
+                    reserved=0,
+                    remains=25 * 1024,
+                    ),
+                floating_ips=dict(
+                    limit=10,
+                    in_use=2,
+                    reserved=0,
+                    remains=10,
+                    ),
+                fixed_ips=dict(
+                    limit=10,
+                    in_use=0,
+                    reserved=0,
+                    remains=10,
+                    ),
+                metadata_items=dict(
+                    limit=64,
+                    in_use=0,
+                    reserved=0,
+                    remains=64,
+                    ),
+                injected_files=dict(
+                    limit=2,
+                    in_use=0,
+                    reserved=0,
+                    remains=2,
+                    ),
+                injected_file_content_bytes=dict(
+                    limit=5 * 1024,
+                    in_use=0,
+                    reserved=0,
+                    remains=5 * 1024,
+                    ),
+                injected_file_path_bytes=dict(
+                    limit=127,
+                    in_use=0,
+                    reserved=0,
+                    remains=127,
+                    ),
+                security_groups=dict(
+                    limit=10,
+                    in_use=0,
+                    reserved=0,
+                    remains=10,
+                    ),
+                security_group_rules=dict(
+                    limit=20,
+                    in_use=0,
+                    reserved=0,
+                    remains=20,
+                    ),
+                key_pairs=dict(
+                    limit=100,
+                    in_use=0,
+                    reserved=0,
+                    remains=100,
+                    ),
+                server_groups=dict(
+                    limit=10,
+                    in_use=0,
+                    reserved=0,
+                    remains=10,
+                    ),
+                server_group_members=dict(
+                    limit=10,
+                    in_use=0,
+                    reserved=0,
+                    remains=10,
                     ),
                 ))
 
