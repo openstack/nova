@@ -3231,6 +3231,27 @@ class TestNeutronv2WithMock(test.TestCase):
             self.assertEqual(('fake-uuid2', 'fake-network2'),
                              (net_objs[1].uuid, net_objs[1].name))
 
+    @mock.patch.object(neutronapi.API, "_refresh_neutron_extensions_cache")
+    @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
+    def test_update_instance_vnic_index(self, mock_get_client,
+                                        mock_refresh_extensions):
+        api = neutronapi.API()
+        api.extensions = set([constants.VNIC_INDEX_EXT])
+        mock_client = mock_get_client()
+        mock_client.update_port.return_value = 'port'
+
+        instance = {'project_id': '9d049e4b60b64716978ab415e6fbd5c0',
+                    'uuid': str(uuid.uuid4()),
+                    'display_name': 'test_instance',
+                    'availability_zone': 'nova',
+                    'host': 'some_host'}
+        instance = objects.Instance(**instance)
+        vif = {'id': 'fake-port-id'}
+        api.update_instance_vnic_index(self.context, instance, vif, 7)
+        port_req_body = {'port': {'vnic_index': 7}}
+        mock_client.update_port.assert_called_once_with('fake-port-id',
+                                                        port_req_body)
+
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
     def test_update_port_bindings_for_instance_same_host(self,
                                                          get_client_mock):

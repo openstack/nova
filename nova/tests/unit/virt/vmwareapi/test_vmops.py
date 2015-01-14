@@ -1255,6 +1255,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         self.assertEqual(expected_methods, recorded_methods)
 
     @mock.patch(
+        'nova.virt.vmwareapi.vmops.VMwareVMOps._update_vnic_index')
+    @mock.patch(
         'nova.virt.vmwareapi.vmops.VMwareVMOps._configure_config_drive')
     @mock.patch('nova.virt.vmwareapi.ds_util.get_datastore')
     @mock.patch(
@@ -1290,6 +1292,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                    mock_get_datacenter_ref_and_name,
                    mock_get_datastore,
                    mock_configure_config_drive,
+                   mock_update_vnic_index,
                    block_device_info=None,
                    extra_specs=None,
                    config_drive=False):
@@ -1426,6 +1429,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 mock_configure_config_drive.assert_called_once_with(
                         self._instance, 'fake_vm_ref', self._dc_info,
                         self._ds, 'fake_files', 'password')
+            mock_update_vnic_index.assert_called_once_with(
+                        self._context, self._instance, network_info)
 
     @mock.patch.object(ds_util, 'get_datastore')
     @mock.patch.object(vmops.VMwareVMOps, 'get_datacenter_ref_and_name')
@@ -2108,6 +2113,9 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                               mock_get_attach_port_index,
                               mock_get_network_attach_config_spec,
                               mock_reconfigure_vm):
+        _network_api = mock.Mock()
+        self._vmops._network_api = _network_api
+
         vif_info = vif.get_vif_dict(self._session, self._cluster,
                                     'VirtualE1000',
                                     utils.is_neutron(),
@@ -2121,6 +2129,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         mock_reconfigure_vm.assert_called_once_with(self._session,
                                                     'fake-ref',
                                                     'fake-attach-spec')
+        _network_api.update_instance_vnic_index(mock.ANY,
+            self._instance, self._network_values, 1)
 
     @mock.patch.object(vif, 'get_network_device', return_value='device')
     @mock.patch.object(vm_util, 'reconfigure_vm')
@@ -2133,6 +2143,9 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                               mock_get_network_detach_config_spec,
                               mock_reconfigure_vm,
                               mock_get_network_device):
+        _network_api = mock.Mock()
+        self._vmops._network_api = _network_api
+
         with mock.patch.object(self._session, '_call_method',
                                return_value='hardware-devices'):
             self._vmops.detach_interface(self._instance, self._network_values)
@@ -2143,6 +2156,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         mock_reconfigure_vm.assert_called_once_with(self._session,
                                                     'fake-ref',
                                                     'fake-detach-spec')
+        _network_api.update_instance_vnic_index(mock.ANY,
+            self._instance, self._network_values, None)
 
     @mock.patch.object(vm_util, 'get_vm_ref', return_value='fake-ref')
     def test_get_mks_console(self, mock_get_vm_ref):
