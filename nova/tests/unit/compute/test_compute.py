@@ -7382,10 +7382,14 @@ class ComputeAPITestCase(BaseTestCase):
                 image_href='some-fake-image',
                 security_group=['testgroup'])
         try:
-            self.assertEqual(len(db.security_group_get_by_instance(
-                             self.context, ref[0]['uuid'])), 1)
-            group = db.security_group_get(self.context, group['id'])
-            self.assertEqual(1, len(group['instances']))
+            groups_for_instance = db.security_group_get_by_instance(
+                             self.context, ref[0]['uuid'])
+            self.assertEqual(1, len(groups_for_instance))
+            self.assertEqual(group.id, groups_for_instance[0].id)
+            group_with_instances = db.security_group_get(self.context,
+                                          group.id,
+                                          columns_to_join=['instances'])
+            self.assertEqual(1, len(group_with_instances.instances))
         finally:
             db.security_group_destroy(self.context, group['id'])
             db.instance_destroy(self.context, ref[0]['uuid'])
