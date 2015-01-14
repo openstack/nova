@@ -237,6 +237,14 @@ class RPCFixture(fixtures.Fixture):
         self.messaging_conf.transport_driver = 'fake'
         self.useFixture(self.messaging_conf)
         rpc.init(CONF)
+        # NOTE(sdague): the polling behavior in oslo.messaging <=
+        # 1.5.1 fake driver is less than optimal, as by default the
+        # polling will wait for a full second even if there are no
+        # events available. Turning this down speeds up the tests
+        # substantially.
+        self.useFixture(fixtures.MonkeyPatch(
+            'oslo.messaging._executors.base.POLL_TIMEOUT',
+            0.001))
 
 
 class WarningsFixture(fixtures.Fixture):
