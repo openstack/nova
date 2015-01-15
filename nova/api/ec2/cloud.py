@@ -826,12 +826,13 @@ class CloudController(object):
         v['size'] = volume['size']
         v['availabilityZone'] = volume['availability_zone']
         v['createTime'] = volume['created_at']
-        if volume['attach_status'] == 'attached':
-            v['attachmentSet'] = [{'attachTime': volume['attach_time'],
+        if v['status'] == 'in-use':
+            v['attachmentSet'] = [{'attachTime': volume.get('attach_time'),
                                    'deleteOnTermination': False,
                                    'device': volume['mountpoint'],
                                    'instanceId': instance_ec2_id,
-                                   'status': 'attached',
+                                   'status': self._get_volume_attach_status(
+                                                                    volume),
                                    'volumeId': v['volumeId']}]
         else:
             v['attachmentSet'] = [{}]
@@ -1114,7 +1115,7 @@ class CloudController(object):
             ebs = {'volumeId': ec2utils.id_to_ec2_vol_id(volume_id),
                    'deleteOnTermination': bdm.delete_on_termination,
                    'attachTime': vol['attach_time'] or '',
-                   'status': vol['attach_status'], }
+                   'status': self._get_volume_attach_status(vol), }
             res = {'deviceName': bdm.device_name,
                    'ebs': ebs, }
             mapping.append(res)
@@ -1122,6 +1123,12 @@ class CloudController(object):
         if mapping:
             result['blockDeviceMapping'] = mapping
         result['rootDeviceType'] = root_device_type
+
+    @staticmethod
+    def _get_volume_attach_status(volume):
+        return (volume['status']
+                if volume['status'] in ('attaching', 'detaching') else
+                volume['attach_status'])
 
     @staticmethod
     def _format_instance_root_device_name(instance, result):

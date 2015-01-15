@@ -36,6 +36,7 @@ from nova.tests.unit import cast_as_call
 from nova.tests.unit import fake_network
 from nova.tests.unit import fake_notifier
 from nova.tests.unit import fake_utils
+from nova.tests.unit import fake_volume
 from nova.tests.unit.image import fake
 from nova.tests.unit import matchers
 from nova import volume
@@ -286,13 +287,24 @@ class CinderCloudTestCase(test.TestCase):
                   'instance_type': CONF.default_flavor,
                   'max_count': 1}
         ec2_instance_id = self._run_instance(**kwargs)
+
+        # NOTE(ft): Since fake attach action is very fast, we replace it to
+        # empty function to check EC2 API results at 'attaching' stage
+        self.stubs.Set(fake_volume.API, 'attach',
+                       lambda *args, **kwargs: None)
+
         resp = self.cloud.attach_volume(self.context,
                                         vol1['volumeId'],
                                         ec2_instance_id,
                                         '/dev/sde')
-        # Here,the status should be 'attaching',but it can be 'attached' in
-        # unittest scenario if the attach action is very fast.
-        self.assertIn(resp['status'], ('attaching', 'attached'))
+
+        self.assertEqual('attaching', resp['status'])
+        resp = self.cloud.describe_volumes(self.context, [vol1['volumeId']])
+        volume = resp['volumeSet'][0]
+        self.assertEqual('in-use', volume['status'])
+        self.assertThat({'status': 'attaching',
+                         'volumeId': vol1['volumeId']},
+                         matchers.IsSubDictOf(volume['attachmentSet'][0]))
 
     def test_volume_status_of_detaching_volume(self):
         """Test the volume's status in response when detaching a volume."""
@@ -308,13 +320,25 @@ class CinderCloudTestCase(test.TestCase):
                   'block_device_mapping': [{'device_name': '/dev/sdb',
                                             'volume_id': vol1_uuid,
                                             'delete_on_termination': True}]}
-        self._run_instance(**kwargs)
+        ec2_instance_id = self._run_instance(**kwargs)
+
+        # NOTE(ft): Since fake detach action is very fast, we replace it to
+        # empty function to check EC2 API results at 'detaching' stage
+        self.stubs.Set(fake_volume.API, 'detach',
+                       lambda *args, **kwargs: None)
+
         resp = self.cloud.detach_volume(self.context,
                                         vol1['volumeId'])
 
-        # Here,the status should be 'detaching',but it can be 'detached' in
-        # unittest scenario if the detach action is very fast.
-        self.assertIn(resp['status'], ('detaching', 'detached'))
+        self.assertEqual('detaching', resp['status'])
+        resp = self.cloud.describe_volumes(self.context, [vol1['volumeId']])
+        volume = resp['volumeSet'][0]
+        self.assertEqual('in-use', volume['status'])
+        self.assertThat({'status': 'detaching',
+                         'volumeId': vol1['volumeId'],
+                         'device': '/dev/sdb',
+                         'instanceId': ec2_instance_id},
+                         matchers.IsSubDictOf(volume['attachmentSet'][0]))
 
     def test_describe_snapshots(self):
         # Makes sure describe_snapshots works and filters results.
@@ -657,6 +681,35 @@ class CinderCloudTestCase(test.TestCase):
             matchers.IsSubDictOf(result))
 
         self._tearDownBlockDeviceMapping(instances, volumes)
+
+    def test_format_instance_bdm_while_attaching_volume(self):
+        # NOTE(ft): Since instance bdm is deleted immediatly by detach
+        # operation call, no test for 'detaching' stage is required
+        vol = self.cloud.create_volume(self.context, size=1)
+
+        kwargs = {'image_id': 'ami-1',
+                  'instance_type': CONF.default_flavor,
+                  'max_count': 1}
+        ec2_instance_id = self._run_instance(**kwargs)
+
+        # NOTE(ft): Since fake attach action is very fast, we replace it to
+        # empty function to check EC2 API results at 'attaching' stage
+        self.stubs.Set(fake_volume.API, 'attach',
+                       lambda *args, **kwargs: None)
+
+        self.cloud.attach_volume(self.context, vol['volumeId'],
+                                 ec2_instance_id, '/dev/sde')
+
+        resp = self.cloud.describe_instances(self.context,
+                                             instance_id=['ami-1'])
+        resp = resp['reservationSet'][0]
+        self.assertEqual(1, len(resp['instancesSet']))
+        inst = resp['instancesSet'][0]
+        self.assertThat({'deviceName': '/dev/sde',
+                         'ebs': {'deleteOnTermination': False,
+                                 'status': 'attaching',
+                                 'volumeId': vol['volumeId']}},
+                        matchers.IsSubDictOf(inst['blockDeviceMapping'][0]))
 
     def _setUpImageSet(self, create_volumes_and_snapshots=False):
         self.flags(max_local_block_devices=-1)
