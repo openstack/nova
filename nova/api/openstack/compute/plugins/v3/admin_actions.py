@@ -91,8 +91,7 @@ class AdminActionsController(wsgi.Controller):
 class AdminActions(extensions.V3APIExtensionBase):
     """Enable admin-only server actions
 
-    Actions include: pause, unpause, suspend, resume, migrate,
-    reset_network, inject_network_info, lock, unlock, create_backup
+    Actions include: resetNetwork, injectNetworkInfo, os-resetState
     """
 
     name = "AdminActions"
