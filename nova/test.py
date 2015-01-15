@@ -32,6 +32,7 @@ import os
 import shutil
 import sys
 import uuid
+import warnings
 
 import fixtures
 from oslo.config import cfg
@@ -322,6 +323,9 @@ class TestCase(testtools.TestCase):
         CONF.set_override('enabled', True, 'osapi_v3')
         CONF.set_override('force_dhcp_release', False)
         CONF.set_override('periodic_enable', False)
+        # We don't need to kill ourselves in deprecation floods. Give
+        # me a ping, Vasily. One ping only, please.
+        warnings.simplefilter("once", DeprecationWarning)
 
     def _restore_obj_registry(self):
         objects_base.NovaObject._obj_classes = self._base_test_obj_backup
