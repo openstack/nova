@@ -14,7 +14,7 @@
 
 
 from nova import exception
-from nova.i18n import _, _LE
+from nova.i18n import _LE
 from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
@@ -31,7 +31,6 @@ class LoadedExtensionInfo(object):
             return False
 
         alias = ext.alias
-        LOG.audit(_("Loaded extension %s"), alias)
 
         if alias in self.extensions:
             raise exception.NovaException("Found duplicate extension: %s"
