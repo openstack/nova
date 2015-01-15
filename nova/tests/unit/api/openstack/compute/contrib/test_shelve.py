@@ -34,10 +34,6 @@ def fake_instance_get_by_uuid(context, instance_id,
         **{'name': 'fake', 'project_id': '%s_unequal' % context.project_id})
 
 
-def fake_auth_context(context):
-    return True
-
-
 class ShelvePolicyTestV21(test.NoDBTestCase):
     plugin = shelve_v21
     prefix = 'v3:os-shelve:'
@@ -56,19 +52,8 @@ class ShelvePolicyTestV21(test.NoDBTestCase):
         self.assertRaises(exception.Forbidden, self.controller._shelve,
                 self.req, str(uuid.uuid4()), {})
 
-    def test_shelve_allowed(self):
-        rules = {'compute:get': common_policy.parse_rule(''),
-                 'compute_extension:%sshelve' % self.prefix:
-                     common_policy.parse_rule('')}
-        policy.set_rules(rules)
-
-        self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
-        self.assertRaises(exception.Forbidden, self.controller._shelve,
-                self.req, str(uuid.uuid4()), {})
-
     def test_shelve_locked_server(self):
         self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
-        self.stubs.Set(self.plugin, 'auth_shelve', fake_auth_context)
         self.stubs.Set(compute_api.API, 'shelve',
                        fakes.fake_actions_to_locked_server)
         self.assertRaises(webob.exc.HTTPConflict, self.controller._shelve,
@@ -82,19 +67,8 @@ class ShelvePolicyTestV21(test.NoDBTestCase):
         self.assertRaises(exception.Forbidden, self.controller._unshelve,
                 self.req, str(uuid.uuid4()), {})
 
-    def test_unshelve_allowed(self):
-        rules = {'compute:get': common_policy.parse_rule(''),
-                 'compute_extension:%sunshelve' % self.prefix:
-                 common_policy.parse_rule('')}
-        policy.set_rules(rules)
-
-        self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
-        self.assertRaises(exception.Forbidden, self.controller._unshelve,
-                self.req, str(uuid.uuid4()), {})
-
     def test_unshelve_locked_server(self):
         self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
-        self.stubs.Set(self.plugin, 'auth_unshelve', fake_auth_context)
         self.stubs.Set(compute_api.API, 'unshelve',
                        fakes.fake_actions_to_locked_server)
         self.assertRaises(webob.exc.HTTPConflict, self.controller._unshelve,
@@ -109,20 +83,8 @@ class ShelvePolicyTestV21(test.NoDBTestCase):
                 self.controller._shelve_offload, self.req,
                 str(uuid.uuid4()), {})
 
-    def test_shelve_offload_allowed(self):
-        rules = {'compute:get': common_policy.parse_rule(''),
-                 'compute_extension:%s%s' % (self.prefix, self.offload):
-                     common_policy.parse_rule('')}
-        policy.set_rules(rules)
-
-        self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
-        self.assertRaises(exception.Forbidden,
-                self.controller._shelve_offload,
-                self.req, str(uuid.uuid4()), {})
-
     def test_shelve_offload_locked_server(self):
         self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
-        self.stubs.Set(self.plugin, 'auth_shelve_offload', fake_auth_context)
         self.stubs.Set(compute_api.API, 'shelve_offload',
                        fakes.fake_actions_to_locked_server)
         self.assertRaises(webob.exc.HTTPConflict,
@@ -134,3 +96,76 @@ class ShelvePolicyTestV2(ShelvePolicyTestV21):
     plugin = shelve_v2
     prefix = ''
     offload = 'shelveOffload'
+
+    # These 3 cases are covered in ShelvePolicyEnforcementV21
+    def test_shelve_allowed(self):
+        rules = {'compute:get': common_policy.parse_rule(''),
+                 'compute_extension:%sshelve' % self.prefix:
+                     common_policy.parse_rule('')}
+        policy.set_rules(rules)
+        self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
+        self.assertRaises(exception.Forbidden, self.controller._shelve,
+                self.req, str(uuid.uuid4()), {})
+
+    def test_unshelve_allowed(self):
+        rules = {'compute:get': common_policy.parse_rule(''),
+                 'compute_extension:%sunshelve' % self.prefix:
+                 common_policy.parse_rule('')}
+        policy.set_rules(rules)
+
+        self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
+        self.assertRaises(exception.Forbidden, self.controller._unshelve,
+                self.req, str(uuid.uuid4()), {})
+
+    def test_shelve_offload_allowed(self):
+        rules = {'compute:get': common_policy.parse_rule(''),
+                 'compute_extension:%s%s' % (self.prefix, self.offload):
+                     common_policy.parse_rule('')}
+        policy.set_rules(rules)
+
+        self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
+        self.assertRaises(exception.Forbidden,
+                self.controller._shelve_offload,
+                self.req,
+                str(uuid.uuid4()), {})
+
+
+class ShelvePolicyEnforcementV21(test.NoDBTestCase):
+
+    def setUp(self):
+        super(ShelvePolicyEnforcementV21, self).setUp()
+        self.controller = shelve_v21.ShelveController()
+        self.req = fakes.HTTPRequest.blank('')
+
+    def test_shelve_policy_failed(self):
+        rule_name = "compute_extension:v3:os-shelve:shelve"
+        self.policy.set_rules({rule_name: "project:non_fake"})
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.controller._shelve, self.req, fakes.FAKE_UUID,
+            body={'shelve': {}})
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+            exc.format_message())
+
+    def test_shelve_offload_policy_failed(self):
+        rule_name = "compute_extension:v3:os-shelve:shelve_offload"
+        self.policy.set_rules({rule_name: "project:non_fake"})
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.controller._shelve_offload, self.req, fakes.FAKE_UUID,
+            body={'shelve_offload': {}})
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+            exc.format_message())
+
+    def test_unshelve_policy_failed(self):
+        rule_name = "compute_extension:v3:os-shelve:unshelve"
+        self.policy.set_rules({rule_name: "project:non_fake"})
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.controller._unshelve, self.req, fakes.FAKE_UUID,
+            body={'unshelve': {}})
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+            exc.format_message())
