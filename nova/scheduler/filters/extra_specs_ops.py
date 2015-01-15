@@ -16,12 +16,13 @@
 import operator
 
 # 1. The following operations are supported:
-#   =, s==, s!=, s>=, s>, s<=, s<, <in>, <or>, ==, !=, >=, <=
+#   =, s==, s!=, s>=, s>, s<=, s<, <in>, <all-in>, <or>, ==, !=, >=, <=
 # 2. Note that <or> is handled in a different way below.
 # 3. If the first word in the extra_specs is not one of the operators,
 #   it is ignored.
 _op_methods = {'=': lambda x, y: float(x) >= float(y),
                '<in>': lambda x, y: y in x,
+               '<all-in>': lambda x, y: all(val in x for val in y),
                '==': lambda x, y: float(x) == float(y),
                '!=': lambda x, y: float(x) != float(y),
                '>=': lambda x, y: float(x) >= float(y),
@@ -59,7 +60,8 @@ def match(value, req):
                 break
         return False
 
-    if words and method(value, words[0]):
-        return True
-
+    if words:
+        if op == '<all-in>':  # requires a list not a string
+            return method(value, words)
+        return method(value, words[0])
     return False
