@@ -2802,6 +2802,25 @@ class ServersControllerCreateTest(test.TestCase):
         test_group = objects.InstanceGroup.get_by_uuid(ctxt, test_group.uuid)
         self.assertIn(server['id'], test_group.members)
 
+    def test_resolve_exception(self):
+        class AA(object):
+            pass
+
+        class BB(AA):
+            pass
+
+        class CC(BB):
+            pass
+
+        list1 = [AA, BB, CC]
+        list2 = [BB, AA, CC]
+        list3 = [CC, AA]
+        list4 = [CC, BB, AA]
+        for test_list in [list1, list2, list3, list4]:
+            result = self.controller._resolve_exception(test_list)
+            # Since CC is the most specific, we always expect that returned.
+            self.assertEqual(result, CC)
+
 
 class ServersControllerCreateTestWithMock(test.TestCase):
     image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
