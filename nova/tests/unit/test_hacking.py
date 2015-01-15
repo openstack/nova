@@ -410,6 +410,16 @@ class HackingTestCase(test.NoDBTestCase):
         self._assert_has_errors(code, checks.check_oslo_namespace_imports,
                                 expected_errors=[(1, 0, "N333")])
 
+    def test_oslo_assert_raises_regexp(self):
+        code = """
+               self.assertRaisesRegexp(ValueError,
+                                       "invalid literal for.*XYZ'$",
+                                       int,
+                                       'XYZ')
+               """
+        self._assert_has_errors(code, checks.assert_raises_regexp,
+                                expected_errors=[(1, 0, "N335")])
+
     def test_trans_add(self):
 
         checker = checks.CheckForTransAdd

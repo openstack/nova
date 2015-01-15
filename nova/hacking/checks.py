@@ -70,6 +70,7 @@ asse_true_false_with_in_or_not_in = re.compile(r"assert(True|False)\("
 asse_true_false_with_in_or_not_in_spaces = re.compile(r"assert(True|False)"
                     r"\((\w|[][.'\"])+( not)? in [\[|'|\"](\w|[][.'\", ])+"
                     r"[\[|'|\"](, .*)?\)")
+asse_raises_regexp = re.compile(r"assertRaisesRegexp\(")
 conf_attribute_set_re = re.compile(r"CONF\.[a-z0-9_.]+\s*=\s*\w")
 log_translation = re.compile(
     r"(.)*LOG\.(audit|error|critical)\(\s*('|\")")
@@ -478,6 +479,17 @@ def assert_true_or_false_with_in(logical_line):
                   "contents.")
 
 
+def assert_raises_regexp(logical_line):
+    """Check for usage of deprecated assertRaisesRegexp
+
+    N335
+    """
+    res = asse_raises_regexp.search(logical_line)
+    if res:
+        yield (0, "N335: assertRaisesRegex must be used instead "
+                  "of assertRaisesRegexp")
+
+
 def factory(register):
     register(import_no_db_in_virt)
     register(no_db_session_in_public_api)
@@ -489,6 +501,7 @@ def factory(register):
     register(assert_true_instance)
     register(assert_equal_type)
     register(assert_equal_none)
+    register(assert_raises_regexp)
     register(no_translate_debug_logs)
     register(no_setting_conf_directly_in_tests)
     register(validate_log_translations)

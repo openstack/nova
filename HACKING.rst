@@ -46,6 +46,7 @@ Nova Specific Commandments
 - [N333] Check for oslo library imports use the non-namespaced packages
 - [N334] Change assertTrue/False(A in/not in B, message) to the more specific
   assertIn/NotIn(A, B, message)
+- [N335] Check for usage of deprecated assertRaisesRegexp
 
 Creating Unit Tests
 -------------------

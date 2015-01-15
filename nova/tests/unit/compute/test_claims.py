@@ -172,14 +172,14 @@ class ClaimTestCase(test.NoDBTestCase):
 
     def test_disk_insufficient(self, mock_get):
         limits = {'disk_gb': 45}
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
                 exception.ComputeResourcesUnavailable,
                 "disk",
                 self._claim, limits=limits, root_gb=10, ephemeral_gb=40)
 
     def test_disk_and_memory_insufficient(self, mock_get):
         limits = {'disk_gb': 45, 'memory_mb': 8192}
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
                 exception.ComputeResourcesUnavailable,
                 "memory.*disk",
                 self._claim, limits=limits, root_gb=10, ephemeral_gb=40,
