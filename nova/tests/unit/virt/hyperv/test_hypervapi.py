@@ -22,7 +22,7 @@ import time
 import uuid
 
 import mock
-import mox
+from mox3 import mox
 from oslo.config import cfg
 from oslo.utils import units
 

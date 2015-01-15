@@ -19,7 +19,7 @@ import uuid
 from cinderclient import exceptions as cinder_exception
 from eventlet import event as eventlet_event
 import mock
-import mox
+from mox3 import mox
 from oslo.config import cfg
 from oslo import messaging
 from oslo.utils import importutils
@@ -128,10 +128,12 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
     def test_allocate_network_maintains_context(self):
         # override tracker with a version that doesn't need the database:
         class FakeResourceTracker(object):
-            def instance_claim(self, context, instance, limits):
-                return mox.MockAnything()
+            @staticmethod
+            def instance_claim(context, instance, limits):
+                return mock.MagicMock()
 
         self.mox.StubOutWithMock(self.compute, '_get_resource_tracker')
+        self.mox.StubOutWithMock(self.compute, '_reschedule_or_error')
         self.mox.StubOutWithMock(self.compute, '_allocate_network')
         self.mox.StubOutWithMock(objects.BlockDeviceMappingList,
                                  'get_by_instance_uuid')
@@ -150,6 +152,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         def fake_allocate(context, *args, **kwargs):
             if context.is_admin:
                 self.admin_context = True
+            raise test.TestingException()
 
         # NOTE(vish): The nice mox parameter matchers here don't work well
         #             because they raise an exception that gets wrapped by
@@ -160,16 +163,22 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg(),
                 mox.IgnoreArg()).WithSideEffects(fake_allocate)
 
+        self.compute._reschedule_or_error(mox.IgnoreArg(), instance,
+                mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg(),
+                mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg(),
+                mox.IgnoreArg(), mox.IgnoreArg(),
+                mox.IgnoreArg())
+
         self.mox.ReplayAll()
 
-        instance, nw_info = self.compute._build_instance(self.context, {}, {},
-                                     None, None, None, True,
-                                     node, instance,
-                                     {}, False)
+        self.assertRaises(test.TestingException,
+                          self.compute._build_instance,
+                          self.context, {}, {},
+                          None, None, None, True,
+                          node, instance,
+                          {}, False)
         self.assertFalse(self.admin_context,
                          "_allocate_network called with admin context")
-        self.assertEqual(vm_states.BUILDING, instance.vm_state)
-        self.assertEqual(task_states.BLOCK_DEVICE_MAPPING, instance.task_state)
 
     def test_reschedule_maintains_context(self):
         # override tracker with a version that causes a reschedule
