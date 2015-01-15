@@ -156,7 +156,7 @@ class TestXMLMatches(testtools.TestCase, helpers.TestMatchersInterface):
     <child3>DONTCARE</child3>
     <?spam processing instruction?>
   </children>
-</root>""")
+</root>""", allow_mixed_nodes=False)
 
     matches_matches = ["""<?xml version="1.0"?>
 <root>
@@ -248,6 +248,32 @@ class TestXMLMatches(testtools.TestCase, helpers.TestMatchersInterface):
     <child4>child 4</child4>
   </children>
 </root>""",
+                          """<?xml version="1.0"?>
+<root>
+  <text>some text here</text>
+  <text>some other text here</text>
+  <attrs key1="spam" key2="DONTCARE"/>
+  <children>
+    <!--This is a comment-->
+    <child2>child 2</child2>
+    <child1>child 1</child1>
+    <child3>DONTCARE</child3>
+    <?spam processing instruction?>
+  </children>
+</root>""",
+                          """<?xml version="1.1"?>
+<root>
+  <text>some text here</text>
+  <text>some other text here</text>
+  <attrs key1="spam" key2="DONTCARE"/>
+  <children>
+    <!--This is a comment-->
+    <child1>child 1</child1>
+    <child2>child 2</child2>
+    <child3>DONTCARE</child3>
+    <?spam processing instruction?>
+  </children>
+</root>""",
     ]
 
     str_examples = [
@@ -268,7 +294,7 @@ class TestXMLMatches(testtools.TestCase, helpers.TestMatchersInterface):
 
     describe_examples = [
         ("/root/text[1]: XML text value mismatch: expected text value: "
-         "'some other text here'; actual value: 'mismatch text'",
+         "['some other text here']; actual value: ['mismatch text']",
          """<?xml version="1.0"?>
 <root>
   <text>some text here</text>
@@ -346,4 +372,94 @@ class TestXMLMatches(testtools.TestCase, helpers.TestMatchersInterface):
     <child4>child 4</child4>
   </children>
 </root>""", matches_matcher),
+        ("/root/children[3]: XML tag mismatch at index 0: "
+         "expected tag <child1>; actual tag <child2>",
+         """<?xml version="1.0"?>
+<root>
+  <text>some text here</text>
+  <text>some other text here</text>
+  <attrs key1="spam" key2="quux"/>
+  <children>
+    <child2>child 2</child2>
+    <child1>child 1</child1>
+    <child3>child 3</child3>
+  </children>
+</root>""", matches_matcher),
+        ("/: XML information mismatch(version, encoding) "
+         "expected version 1.0, expected encoding UTF-8; "
+         "actual version 1.1, actual encoding UTF-8",
+         """<?xml version="1.1"?>
+<root>
+  <text>some text here</text>
+  <text>some other text here</text>
+  <attrs key1="spam" key2="DONTCARE"/>
+  <children>
+    <!--This is a comment-->
+    <child1>child 1</child1>
+    <child2>child 2</child2>
+    <child3>DONTCARE</child3>
+    <?spam processing instruction?>
+  </children>
+</root>""", matches_matcher),
     ]
+
+
+class TestXMLMatchesUnorderedNodes(testtools.TestCase,
+                                   helpers.TestMatchersInterface):
+
+    matches_matcher = matchers.XMLMatches("""<?xml version="1.0"?>
+<root>
+  <text>some text here</text>
+  <text>some other text here</text>
+  <attrs key1="spam" key2="DONTCARE"/>
+  <children>
+    <child3>DONTCARE</child3>
+    <!--This is a comment-->
+    <child2>child 2</child2>
+    <child1>child 1</child1>
+    <?spam processing instruction?>
+  </children>
+</root>""", allow_mixed_nodes=True)
+
+    matches_matches = ["""<?xml version="1.0"?>
+<root>
+  <text>some text here</text>
+  <attrs key2="spam" key1="spam"/>
+  <children>
+    <child1>child 1</child1>
+    <child2>child 2</child2>
+    <child3>child 3</child3>
+  </children>
+  <text>some other text here</text>
+</root>""",
+    ]
+
+    matches_mismatches = ["""<?xml version="1.0"?>
+<root>
+  <text>some text here</text>
+  <text>mismatch text</text>
+  <attrs key1="spam" key2="quux"/>
+  <children>
+    <child1>child 1</child1>
+    <child2>child 2</child2>
+    <child3>child 3</child3>
+  </children>
+</root>""",
+    ]
+
+    describe_examples = [
+        ("/root: XML expected child element <text> not present at index 4",
+         """<?xml version="1.0"?>
+<root>
+  <text>some text here</text>
+  <text>mismatch text</text>
+  <attrs key1="spam" key2="quux"/>
+  <children>
+    <child1>child 1</child1>
+    <child2>child 2</child2>
+    <child3>child 3</child3>
+  </children>
+</root>""", matches_matcher),
+    ]
+
+    str_examples = []
