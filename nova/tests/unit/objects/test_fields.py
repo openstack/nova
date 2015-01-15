@@ -72,7 +72,7 @@ class TestField(test.NoDBTestCase):
 
 class TestString(TestField):
     def setUp(self):
-        super(TestField, self).setUp()
+        super(TestString, self).setUp()
         self.field = fields.StringField()
         self.coerce_good_values = [('foo', 'foo'), (1, '1'), (1L, '1'),
                                    (True, 'True')]
@@ -84,9 +84,34 @@ class TestString(TestField):
         self.assertEqual("'123'", self.field.stringify(123))
 
 
+class TestEnum(TestField):
+    def setUp(self):
+        super(TestEnum, self).setUp()
+        self.field = fields.EnumField(
+            valid_values=['foo', 'bar', 1, 1L, True])
+        self.coerce_good_values = [('foo', 'foo'), (1, '1'), (1L, '1'),
+                                   (True, 'True')]
+        self.coerce_bad_values = ['boo', 2, False]
+        self.to_primitive_values = self.coerce_good_values[0:1]
+        self.from_primitive_values = self.coerce_good_values[0:1]
+
+    def test_stringify(self):
+        self.assertEqual("'foo'", self.field.stringify('foo'))
+
+    def test_stringify_invalid(self):
+        self.assertRaises(ValueError, self.field.stringify, '123')
+
+    def test_fingerprint(self):
+        # Notes(yjiang5): make sure changing valid_value will be detected
+        # in test_objects.test_versions
+        field1 = fields.EnumField(valid_values=['foo', 'bar'])
+        field2 = fields.EnumField(valid_values=['foo', 'bar1'])
+        self.assertNotEqual(str(field1), str(field2))
+
+
 class TestInteger(TestField):
     def setUp(self):
-        super(TestField, self).setUp()
+        super(TestInteger, self).setUp()
         self.field = fields.IntegerField()
         self.coerce_good_values = [(1, 1), ('1', 1)]
         self.coerce_bad_values = ['foo', None]
@@ -106,7 +131,7 @@ class TestFloat(TestField):
 
 class TestBoolean(TestField):
     def setUp(self):
-        super(TestField, self).setUp()
+        super(TestBoolean, self).setUp()
         self.field = fields.BooleanField()
         self.coerce_good_values = [(True, True), (False, False), (1, True),
                                    ('foo', True), (0, False), ('', False)]
@@ -284,6 +309,29 @@ class TestListOfStrings(TestField):
 
     def test_stringify(self):
         self.assertEqual("['abc']", self.field.stringify(['abc']))
+
+
+class TestListOfEnum(TestField):
+    def setUp(self):
+        super(TestListOfEnum, self).setUp()
+        self.field = fields.ListOfEnumField(valid_values=['foo', 'bar'])
+        self.coerce_good_values = [(['foo', 'bar'], ['foo', 'bar'])]
+        self.coerce_bad_values = ['foo', ['foo', 'bar1']]
+        self.to_primitive_values = [(['foo'], ['foo'])]
+        self.from_primitive_values = [(['foo'], ['foo'])]
+
+    def test_stringify(self):
+        self.assertEqual("['foo']", self.field.stringify(['foo']))
+
+    def test_stringify_invalid(self):
+        self.assertRaises(ValueError, self.field.stringify, '[abc]')
+
+    def test_fingerprint(self):
+        # Notes(yjiang5): make sure changing valid_value will be detected
+        # in test_objects.test_versions
+        field1 = fields.ListOfEnumField(valid_values=['foo', 'bar'])
+        field2 = fields.ListOfEnumField(valid_values=['foo', 'bar1'])
+        self.assertNotEqual(str(field1), str(field2))
 
 
 class TestSet(TestField):
