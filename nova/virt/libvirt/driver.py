@@ -3726,6 +3726,56 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return membacking
 
+    def _get_flavor(self, ctxt, instance, flavor):
+        if flavor is not None:
+            return flavor
+        with utils.temporary_mutation(ctxt, read_deleted="yes"):
+            return objects.Flavor.get_by_id(ctxt, instance['instance_type_id'])
+
+    def _configure_guest_by_virt_type(self, guest, virt_type, caps, instance,
+                                      image_meta, root_device_name):
+        if virt_type == "xen":
+            if guest.os_type == vm_mode.HVM:
+                guest.os_loader = CONF.libvirt.xen_hvmloader_path
+        elif virt_type in ("kvm", "qemu"):
+            if caps.host.cpu.arch in (arch.I686, arch.X86_64):
+                guest.sysinfo = self._get_guest_config_sysinfo(instance)
+                guest.os_smbios = vconfig.LibvirtConfigGuestSMBIOS()
+            guest.os_mach_type = self._get_machine_type(image_meta, caps)
+        elif virt_type == "lxc":
+            guest.os_init_path = "/sbin/init"
+            guest.os_cmdline = CONSOLE
+        elif virt_type == "uml":
+            guest.os_kernel = "/usr/bin/linux"
+            guest.os_root = root_device_name
+
+    def _conf_non_lxc_uml(self, virt_type, guest, root_device_name, rescue,
+                    instance, inst_path, image_meta, disk_info):
+        if rescue:
+            self._set_guest_for_rescue(rescue, guest, inst_path, virt_type,
+                                       root_device_name)
+        elif instance['kernel_id']:
+            self._set_guest_for_inst_kernel(instance, guest, inst_path,
+                                            virt_type, root_device_name,
+                                            image_meta)
+        else:
+            guest.os_boot_dev = blockinfo.get_boot_order(disk_info)
+
+    def _create_consoles(self, virt_type, guest, instance, flavor, image_meta,
+                         caps):
+        if virt_type in ("qemu", "kvm"):
+            # Create the serial console char devices
+            self._create_serial_console_devices(guest, instance, flavor,
+                                                image_meta)
+            if caps.host.cpu.arch in (arch.S390, arch.S390X):
+                consolepty = vconfig.LibvirtConfigGuestConsole()
+                consolepty.target_type = "sclp"
+            else:
+                consolepty = vconfig.LibvirtConfigGuestSerial()
+        else:
+            consolepty = vconfig.LibvirtConfigGuestConsole()
+        return consolepty
+
     def _get_guest_config(self, instance, network_info, image_meta,
                           disk_info, rescue=None, block_device_info=None,
                           context=None, flavor=None):
@@ -3736,10 +3786,7 @@ class LibvirtDriver(driver.ComputeDriver):
             'kernel_id' if a kernel is needed for the rescue image.
         """
         ctxt = context or nova_context.get_admin_context()
-        if flavor is None:
-            with utils.temporary_mutation(ctxt, read_deleted="yes"):
-                flavor = objects.Flavor.get_by_id(ctxt,
-                                                  instance['instance_type_id'])
+        flavor = self._get_flavor(ctxt, instance, flavor)
         inst_path = libvirt_utils.get_instance_path(instance)
         disk_mapping = disk_info['mapping']
         img_meta_prop = image_meta.get('properties', {}) if image_meta else {}
@@ -3785,38 +3832,15 @@ class LibvirtDriver(driver.ComputeDriver):
             # for nova.api.ec2.cloud.CloudController.get_metadata()
             instance.root_device_name = root_device_name
 
-        guest.os_type = vm_mode.get_from_instance(instance)
-
-        if guest.os_type is None:
-            guest.os_type = self._get_guest_os_type(virt_type)
+        guest.os_type = (vm_mode.get_from_instance(instance) or
+                self._get_guest_os_type(virt_type))
         caps = self._host.get_capabilities()
 
-        if virt_type == "xen":
-            if guest.os_type == vm_mode.HVM:
-                guest.os_loader = CONF.libvirt.xen_hvmloader_path
-
-        if virt_type in ("kvm", "qemu"):
-            if caps.host.cpu.arch in (arch.I686, arch.X86_64):
-                guest.sysinfo = self._get_guest_config_sysinfo(instance)
-                guest.os_smbios = vconfig.LibvirtConfigGuestSMBIOS()
-            guest.os_mach_type = self._get_machine_type(image_meta, caps)
-
-        if virt_type == "lxc":
-            guest.os_init_path = "/sbin/init"
-            guest.os_cmdline = CONSOLE
-        elif virt_type == "uml":
-            guest.os_kernel = "/usr/bin/linux"
-            guest.os_root = root_device_name
-        else:
-            if rescue:
-                self._set_guest_for_rescue(rescue, guest, inst_path, virt_type,
-                                           root_device_name)
-            elif instance['kernel_id']:
-                self._set_guest_for_inst_kernel(instance, guest, inst_path,
-                                                virt_type, root_device_name,
-                                                image_meta)
-            else:
-                guest.os_boot_dev = blockinfo.get_boot_order(disk_info)
+        self._configure_guest_by_virt_type(guest, virt_type, caps, instance,
+                                           image_meta, root_device_name)
+        if virt_type not in ('lxc', 'uml'):
+            self._conf_non_lxc_uml(virt_type, guest, root_device_name, rescue,
+                    instance, inst_path, image_meta, disk_info)
 
         self._set_features(guest, instance.os_type, caps, virt_type)
         self._set_clock(guest, instance.os_type, image_meta, virt_type)
@@ -3833,18 +3857,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 flavor, virt_type)
             guest.add_device(config)
 
-        if virt_type in ("qemu", "kvm"):
-            # Create the serial console char devices
-            self._create_serial_console_devices(guest, instance, flavor,
-                                                image_meta)
-            if caps.host.cpu.arch in (arch.S390, arch.S390X):
-                consolepty = vconfig.LibvirtConfigGuestConsole()
-                consolepty.target_type = "sclp"
-            else:
-                consolepty = vconfig.LibvirtConfigGuestSerial()
-        else:
-            consolepty = vconfig.LibvirtConfigGuestConsole()
-
+        consolepty = self._create_consoles(virt_type, guest, instance, flavor,
+                                           image_meta, caps)
         consolepty.type = "pty"
         guest.add_device(consolepty)
 
@@ -3868,8 +3882,8 @@ class LibvirtDriver(driver.ComputeDriver):
             tablet.bus = "usb"
             guest.add_device(tablet)
 
-        if CONF.spice.enabled and CONF.spice.agent_enabled and \
-                virt_type not in ('lxc', 'uml', 'xen'):
+        if (CONF.spice.enabled and CONF.spice.agent_enabled and
+                virt_type not in ('lxc', 'uml', 'xen')):
             channel = vconfig.LibvirtConfigGuestChannel()
             channel.target_name = "com.redhat.spice.0"
             guest.add_device(channel)
@@ -3888,8 +3902,8 @@ class LibvirtDriver(driver.ComputeDriver):
             guest.add_device(graphics)
             add_video_driver = True
 
-        if CONF.spice.enabled and \
-                virt_type not in ('lxc', 'uml', 'xen'):
+        if (CONF.spice.enabled and
+                virt_type not in ('lxc', 'uml', 'xen')):
             graphics = vconfig.LibvirtConfigGuestGraphics()
             graphics.type = "spice"
             graphics.keymap = CONF.spice.keymap
