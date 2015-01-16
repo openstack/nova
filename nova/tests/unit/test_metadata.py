@@ -42,12 +42,11 @@ from nova import db
 from nova.db.sqlalchemy import api
 from nova import exception
 from nova.network import api as network_api
+from nova.network import model as network_model
 from nova import objects
 from nova import test
 from nova.tests.unit import fake_block_device
-from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_network
-from nova.tests.unit.objects import test_instance_info_cache
 from nova.tests.unit.objects import test_security_group
 from nova.virt import netutils
 
@@ -56,35 +55,36 @@ CONF = cfg.CONF
 USER_DATA_STRING = ("This is an encoded string")
 ENCODE_USER_DATA_STRING = base64.b64encode(USER_DATA_STRING)
 
-INSTANCE = fake_instance.fake_db_instance(**
-    {'id': 1,
-     'uuid': 'b65cee2f-8c69-4aeb-be2f-f79742548fc2',
-     'name': 'fake',
-     'project_id': 'test',
-     'key_name': "mykey",
-     'key_data': "ssh-rsa AAAAB3Nzai....N3NtHw== someuser@somehost",
-     'host': 'test',
-     'launch_index': 1,
-     'instance_type': {'name': 'm1.tiny'},
-     'reservation_id': 'r-xxxxxxxx',
-     'user_data': ENCODE_USER_DATA_STRING,
-     'image_ref': 7,
-     'vcpus': 1,
-     'fixed_ips': [],
-     'root_device_name': '/dev/sda1',
-     'info_cache': test_instance_info_cache.fake_info_cache,
-     'hostname': 'test.novadomain',
-     'display_name': 'my_displayname',
-     'metadata': {},
-     'system_metadata': {},
-    })
-
 
 def fake_inst_obj(context):
-    return objects.Instance._from_db_object(
-        context, objects.Instance(), INSTANCE,
-        expected_attrs=['metadata', 'system_metadata',
-                        'info_cache'])
+    inst = objects.Instance(
+        context=context,
+        id=1,
+        uuid='b65cee2f-8c69-4aeb-be2f-f79742548fc2',
+        project_id='test',
+        key_name="mykey",
+        key_data="ssh-rsa AAAAB3Nzai....N3NtHw== someuser@somehost",
+        host='test',
+        launch_index=1,
+        reservation_id='r-xxxxxxxx',
+        user_data=ENCODE_USER_DATA_STRING,
+        image_ref=7,
+        vcpus=1,
+        fixed_ips=[],
+        root_device_name='/dev/sda1',
+        hostname='test.novadomain',
+        display_name='my_displayname',
+        metadata={},
+        default_ephemeral_device=None,
+        default_swap_device=None,
+        system_metadata={})
+    nwinfo = network_model.NetworkInfo([])
+    inst.info_cache = objects.InstanceInfoCache(context=context,
+                                                instance_uuid=inst.uuid,
+                                                network_info=nwinfo)
+    with mock.patch.object(inst, 'save'):
+        inst.set_flavor(flavors.get_default_flavor())
+    return inst
 
 
 def get_default_sys_meta():
@@ -148,7 +148,6 @@ class MetadataTestCase(test.TestCase):
         super(MetadataTestCase, self).setUp()
         self.context = context.RequestContext('fake', 'fake')
         self.instance = fake_inst_obj(self.context)
-        self.instance.system_metadata = get_default_sys_meta()
         self.flags(use_local=True, group='conductor')
         fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs)
 
@@ -353,7 +352,6 @@ class OpenStackMetadataTestCase(test.TestCase):
         super(OpenStackMetadataTestCase, self).setUp()
         self.context = context.RequestContext('fake', 'fake')
         self.instance = fake_inst_obj(self.context)
-        self.instance['system_metadata'] = get_default_sys_meta()
         self.flags(use_local=True, group='conductor')
         fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs)
 
@@ -551,7 +549,6 @@ class MetadataHandlerTestCase(test.TestCase):
         fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs)
         self.context = context.RequestContext('fake', 'fake')
         self.instance = fake_inst_obj(self.context)
-        self.instance.system_metadata = get_default_sys_meta()
         self.flags(use_local=True, group='conductor')
         self.mdinst = fake_InstanceMetadata(self.stubs, self.instance,
             address=None, sgroups=None)
@@ -815,7 +812,6 @@ class MetadataPasswordTestCase(test.TestCase):
         fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs)
         self.context = context.RequestContext('fake', 'fake')
         self.instance = fake_inst_obj(self.context)
-        self.instance.system_metadata = get_default_sys_meta()
         self.flags(use_local=True, group='conductor')
         self.mdinst = fake_InstanceMetadata(self.stubs, self.instance,
             address=None, sgroups=None)

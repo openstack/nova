@@ -68,7 +68,6 @@ class NotificationsTestCase(test.TestCase):
 
     def _wrapped_create(self, params=None):
         instance_type = flavors.get_flavor_by_name('m1.tiny')
-        sys_meta = flavors.save_flavor_info({}, instance_type)
         inst = objects.Instance(image_ref=1,
                                 user_id=self.user_id,
                                 project_id=self.project_id,
@@ -80,10 +79,12 @@ class NotificationsTestCase(test.TestCase):
                                 display_name='test_instance',
                                 hostname='test_instance_hostname',
                                 node='test_instance_node',
-                                system_metadata=sys_meta)
+                                system_metadata={})
         inst._context = self.context
         if params:
             inst.update(params)
+        with mock.patch.object(inst, 'save'):
+            inst.set_flavor(instance_type)
         inst.create()
         return inst
 
