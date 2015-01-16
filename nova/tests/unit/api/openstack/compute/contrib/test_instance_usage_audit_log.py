@@ -130,6 +130,9 @@ class InstanceUsageAuditLogTestV21(test.NoDBTestCase):
         self.stubs.Set(db, 'task_log_get_all',
                        fake_task_log_get_all)
 
+        self.req = fakes.HTTPRequest.blank('')
+        self.admin_req = fakes.HTTPRequest.blank('', use_admin_context=True)
+
     def _set_up_controller(self):
         self.controller = v21_ial.InstanceUsageAuditLogController()
 
@@ -138,9 +141,7 @@ class InstanceUsageAuditLogTestV21(test.NoDBTestCase):
         timeutils.clear_time_override()
 
     def test_index(self):
-        req = fakes.HTTPRequest.blank('/v2/fake/os-instance_usage_audit_log',
-                                      use_admin_context=True)
-        result = self.controller.index(req)
+        result = self.controller.index(self.admin_req)
         self.assertIn('instance_usage_audit_logs', result)
         logs = result['instance_usage_audit_logs']
         self.assertEqual(57, logs['total_instances'])
@@ -153,16 +154,11 @@ class InstanceUsageAuditLogTestV21(test.NoDBTestCase):
         self.assertEqual("ALL hosts done. 0 errors.", logs['overall_status'])
 
     def test_index_non_admin(self):
-        req = fakes.HTTPRequest.blank('/v2/fake/os-instance_usage_audit_log',
-                                      use_admin_context=False)
         self.assertRaises(exception.PolicyNotAuthorized,
-                          self.controller.index, req)
+                          self.controller.index, self.req)
 
     def test_show(self):
-        req = fakes.HTTPRequest.blank(
-                    '/v2/fake/os-instance_usage_audit_log/show',
-                    use_admin_context=True)
-        result = self.controller.show(req, '2012-07-05 10:00:00')
+        result = self.controller.show(self.admin_req, '2012-07-05 10:00:00')
         self.assertIn('instance_usage_audit_log', result)
         logs = result['instance_usage_audit_log']
         self.assertEqual(57, logs['total_instances'])
@@ -175,16 +171,12 @@ class InstanceUsageAuditLogTestV21(test.NoDBTestCase):
         self.assertEqual("ALL hosts done. 0 errors.", logs['overall_status'])
 
     def test_show_non_admin(self):
-        req = fakes.HTTPRequest.blank('/v2/fake/os-instance_usage_audit_log',
-                                      use_admin_context=False)
         self.assertRaises(exception.PolicyNotAuthorized,
-                          self.controller.show, req, '2012-07-05 10:00:00')
+                          self.controller.show, self.req,
+                          '2012-07-05 10:00:00')
 
     def test_show_with_running(self):
-        req = fakes.HTTPRequest.blank(
-                    '/v2/fake/os-instance_usage_audit_log/show',
-                    use_admin_context=True)
-        result = self.controller.show(req, '2012-07-06 10:00:00')
+        result = self.controller.show(self.admin_req, '2012-07-06 10:00:00')
         self.assertIn('instance_usage_audit_log', result)
         logs = result['instance_usage_audit_log']
         self.assertEqual(57, logs['total_instances'])
@@ -198,10 +190,7 @@ class InstanceUsageAuditLogTestV21(test.NoDBTestCase):
                          logs['overall_status'])
 
     def test_show_with_errors(self):
-        req = fakes.HTTPRequest.blank(
-                    '/v2/fake/os-instance_usage_audit_log/show',
-                    use_admin_context=True)
-        result = self.controller.show(req, '2012-07-07 10:00:00')
+        result = self.controller.show(self.admin_req, '2012-07-07 10:00:00')
         self.assertIn('instance_usage_audit_log', result)
         logs = result['instance_usage_audit_log']
         self.assertEqual(57, logs['total_instances'])
