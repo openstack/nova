@@ -345,18 +345,12 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
         """Attach the volume to instance_name."""
         iscsi_properties = connection_info['data']
 
+        # multipath installed, discovering other targets if available
+        # multipath should be configured on the nova-compute node,
+        # in order to fit storage vendor
+        out = None
         if self.use_multipath:
-            # multipath installed, discovering other targets if available
-            # multipath should be configured on the nova-compute node,
-            # in order to fit storage vendor
-            out = self._run_iscsiadm_bare(['-m',
-                                          'discovery',
-                                          '-t',
-                                          'sendtargets',
-                                          '-p',
-                                          iscsi_properties['target_portal']],
-                                          check_exit_code=[0, 255])[0] \
-                or ""
+            out = self._run_iscsiadm_discover(iscsi_properties)
 
             # There are two types of iSCSI multipath devices.  One which shares
             # the same iqn between multiple portals, and the other which use
@@ -441,6 +435,60 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
 
         connection_info['data']['device_path'] = host_device
 
+    def _run_iscsiadm_discover(self, iscsi_properties):
+        def run_iscsiadm_update_discoverydb():
+            return utils.execute(
+                            'iscsiadm',
+                            '-m', 'discoverydb',
+                            '-t', 'sendtargets',
+                            '-p', iscsi_properties['target_portal'],
+                            '--op', 'update',
+                            '-n', "discovery.sendtargets.auth.authmethod",
+                            '-v', iscsi_properties['discovery_auth_method'],
+                            '-n', "discovery.sendtargets.auth.username",
+                            '-v', iscsi_properties['discovery_auth_username'],
+                            '-n', "discovery.sendtargets.auth.password",
+                            '-v', iscsi_properties['discovery_auth_password'],
+                            run_as_root=True)
+
+        out = None
+        if iscsi_properties.get('discovery_auth_method'):
+            try:
+                run_iscsiadm_update_discoverydb()
+            except processutils.ProcessExecutionError as exc:
+                # iscsiadm returns 6 for "db record not found"
+                if exc.exit_code == 6:
+                    (out, err) = utils.execute(
+                                   'iscsiadm',
+                                   '-m', 'discoverydb',
+                                   '-t', 'sendtargets',
+                                   '-p', iscsi_properties['target_portal'],
+                                   '--op', 'new',
+                                   run_as_root=True)
+                    run_iscsiadm_update_discoverydb()
+                else:
+                    raise
+
+            out = self._run_iscsiadm_bare(
+                                        ['-m',
+                                        'discoverydb',
+                                        '-t',
+                                        'sendtargets',
+                                        '-p',
+                                        iscsi_properties['target_portal'],
+                                        '--discover'],
+                                        check_exit_code=[0, 255])[0] or ""
+        else:
+            out = self._run_iscsiadm_bare(
+                                        ['-m',
+                                        'discovery',
+                                        '-t',
+                                        'sendtargets',
+                                        '-p',
+                                        iscsi_properties['target_portal']],
+                                        check_exit_code=[0, 255])[0] or ""
+        return out
+
     @utils.synchronized('connect_volume')
     def disconnect_volume(self, connection_info, disk_dev):
         """Detach the volume from instance_name."""
@@ -518,14 +566,7 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
         # Do a discovery to find all targets.
         # Targets for multiple paths for the same multipath device
         # may not be the same.
-        out = self._run_iscsiadm_bare(['-m',
-                                      'discovery',
-                                      '-t',
-                                      'sendtargets',
-                                      '-p',
-                                      iscsi_properties['target_portal']],
-                                      check_exit_code=[0, 255])[0] \
-            or ""
+        out = self._run_iscsiadm_discover(iscsi_properties)
 
         # Extract targets for the current multipath device.
         ips_iqns = []
