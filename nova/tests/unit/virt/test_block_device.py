@@ -238,11 +238,16 @@ class TestDriverBlockDevice(test.NoDBTestCase):
 
         # Test the save method
         with mock.patch.object(test_bdm._bdm_obj, 'save') as save_mock:
-            test_bdm.save()
+            test_bdm.save(self.context)
             for fld, alias in test_bdm._update_on_save.iteritems():
                 self.assertEqual(test_bdm[alias or fld],
                                  getattr(test_bdm._bdm_obj, fld))
 
+            save_mock.assert_called_once_with(self.context)
+
+        # Test the save method with no context passed
+        with mock.patch.object(test_bdm._bdm_obj, 'save') as save_mock:
+            test_bdm.save()
             save_mock.assert_called_once_with()
 
     def _test_driver_default_size(self, name):
@@ -378,7 +383,7 @@ class TestDriverBlockDevice(test.NoDBTestCase):
             self.volume_api.attach(elevated_context, fake_volume['id'],
                                    'fake_uuid', bdm_dict['device_name'],
                                    mode=access_mode).AndReturn(None)
-        driver_bdm._bdm_obj.save().AndReturn(None)
+        driver_bdm._bdm_obj.save(self.context).AndReturn(None)
         return instance, expected_conn_info
 
     def test_volume_attach(self):
@@ -489,7 +494,7 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         self.volume_api.initialize_connection(
             self.context, test_bdm.volume_id,
             connector).AndReturn(connection_info)
-        test_bdm._bdm_obj.save().AndReturn(None)
+        test_bdm._bdm_obj.save(self.context).AndReturn(None)
 
         self.mox.ReplayAll()
 
