@@ -13,11 +13,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.api.openstack.compute.contrib import admin_actions as \
-    lock_server_v2
-from nova.api.openstack.compute.plugins.v3 import lock_server as \
-    lock_server_v21
+from nova.api.openstack.compute.contrib import (admin_actions as
+                                                lock_server_v2)
+from nova.api.openstack.compute.plugins.v3 import (lock_server as
+                                                   lock_server_v21)
 from nova import exception
+from nova import test
 from nova.tests.unit.api.openstack.compute import admin_only_action_common
 from nova.tests.unit.api.openstack import fakes
 
@@ -79,3 +80,35 @@ class LockServerTestsV2(LockServerTestsV21):
     def _get_app(self):
         return fakes.wsgi_app(init_only=('servers',),
                                  fake_auth_context=self.context)
+
+
+class LockServerPolicyEnforcementV21(test.NoDBTestCase):
+
+    def setUp(self):
+        super(LockServerPolicyEnforcementV21, self).setUp()
+        self.controller = lock_server_v21.LockServerController()
+        self.req = fakes.HTTPRequest.blank('')
+
+    def test_lock_policy_failed(self):
+        rule_name = "compute_extension:v3:os-lock-server:lock"
+        self.policy.set_rules({rule_name: "project:non_fake"})
+        exc = self.assertRaises(
+                                exception.PolicyNotAuthorized,
+                                self.controller._lock, self.req,
+                                fakes.FAKE_UUID,
+                                body={'lock': {}})
+        self.assertEqual(
+                      "Policy doesn't allow %s to be performed." % rule_name,
+                      exc.format_message())
+
+    def test_unlock_policy_failed(self):
+        rule_name = "compute_extension:v3:os-lock-server:unlock"
+        self.policy.set_rules({rule_name: "project:non_fake"})
+        exc = self.assertRaises(
+                                exception.PolicyNotAuthorized,
+                                self.controller._unlock, self.req,
+                                fakes.FAKE_UUID,
+                                body={'unlock': {}})
+        self.assertEqual(
+                      "Policy doesn't allow %s to be performed." % rule_name,
+                      exc.format_message())
