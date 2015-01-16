@@ -780,8 +780,8 @@ class NovaObjectSerializer(messaging.NoOpSerializer):
         """
         iterable = values.__class__
         if issubclass(iterable, dict):
-            return iterable(**dict((k, action_fn(context, v))
-                            for k, v in six.iteritems(values)))
+            return iterable(**{k: action_fn(context, v)
+                            for k, v in six.iteritems(values)})
         else:
             # NOTE(danms): A set can't have an unhashable value inside, such as
             # a dict. Convert sets to tuples, which is fine, since we can't

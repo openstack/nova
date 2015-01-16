@@ -144,7 +144,7 @@ class TenantNetworkController(wsgi.Controller):
         network = body["network"]
         keys = ["cidr", "cidr_v6", "ipam", "vlan_start", "network_size",
                 "num_networks"]
-        kwargs = dict((k, network.get(k)) for k in keys)
+        kwargs = {k: network.get(k) for k in keys}
 
         label = network["label"]
 

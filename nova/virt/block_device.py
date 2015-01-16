@@ -96,8 +96,7 @@ class DriverBlockDevice(dict):
         if self._bdm_obj.no_device:
             raise _NotTransformable()
 
-        self.update(dict((field, None)
-                    for field in self._fields))
+        self.update({field: None for field in self._fields})
         self._transform()
 
     def __getattr__(self, name):
@@ -122,7 +121,7 @@ class DriverBlockDevice(dict):
         Basic method will just drop the fields that are not in
         _legacy_fields set. Override this in subclass if needed.
         """
-        return dict((key, self.get(key)) for key in self._legacy_fields)
+        return {key: self.get(key) for key in self._legacy_fields}
 
     def attach(self, **kwargs):
         """Make the device available to be used by VMs.
@@ -205,8 +204,8 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
             raise _InvalidType
 
         self.update(
-            dict((k, v) for k, v in self._bdm_obj.iteritems()
-                 if k in self._new_fields | set(['delete_on_termination']))
+            {k: v for k, v in self._bdm_obj.iteritems()
+             if k in self._new_fields | set(['delete_on_termination'])}
         )
         self['mount_device'] = self._bdm_obj.device_name
         try:

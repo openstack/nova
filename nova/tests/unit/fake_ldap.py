@@ -234,7 +234,7 @@ class FakeLDAP(object):
             raise SERVER_DOWN()
 
         key = "%s%s" % (self.__prefix, dn)
-        value_dict = dict([(k, _to_json(v)) for k, v in attr])
+        value_dict = {k: _to_json(v) for k, v in attr}
         Store.instance().hmset(key, value_dict)
 
     def delete_s(self, dn):
@@ -313,13 +313,12 @@ class FakeLDAP(object):
             # get the attributes from the store
             attrs = store.hgetall(key)
             # turn the values from the store into lists
-            attrs = dict([(k, _from_json(v))
-                          for k, v in attrs.iteritems()])
+            attrs = {k: _from_json(v) for k, v in attrs.iteritems()}
             # filter the objects by query
             if not query or _match_query(query, attrs):
                 # filter the attributes by fields
-                attrs = dict([(k, v) for k, v in attrs.iteritems()
-                              if not fields or k in fields])
+                attrs = {k: v for k, v in attrs.iteritems()
+                         if not fields or k in fields}
                 objects.append((key[len(self.__prefix):], attrs))
         return objects
 

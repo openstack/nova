@@ -60,8 +60,8 @@ def check_shadow_table(migrate_engine, table_name):
     shadow_table = Table(db._SHADOW_TABLE_PREFIX + table_name, meta,
                          autoload=True)
 
-    columns = dict([(c.name, c) for c in table.columns])
-    shadow_columns = dict([(c.name, c) for c in shadow_table.columns])
+    columns = {c.name: c for c in table.columns}
+    shadow_columns = {c.name: c for c in shadow_table.columns}
 
     for name, column in columns.iteritems():
         if name not in shadow_columns:

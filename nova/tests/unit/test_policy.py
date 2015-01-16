@@ -75,8 +75,8 @@ class PolicyTestCase(test.NoDBTestCase):
         }
         policy.reset()
         policy.init()
-        policy.set_rules(dict((k, common_policy.parse_rule(v))
-                               for k, v in rules.items()))
+        policy.set_rules({k: common_policy.parse_rule(v)
+                          for k, v in rules.items()})
         self.context = context.RequestContext('fake', 'fake', roles=['member'])
         self.target = {}
 
@@ -161,8 +161,8 @@ class DefaultPolicyTestCase(test.NoDBTestCase):
 
     def _set_rules(self, default_rule):
         policy.reset()
-        rules = dict((k, common_policy.parse_rule(v))
-                     for k, v in self.rules.items())
+        rules = {k: common_policy.parse_rule(v)
+                 for k, v in self.rules.items()}
         policy.init(rules=rules, default_rule=default_rule, use_conf=False)
 
     def test_policy_called(self):

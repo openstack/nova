@@ -91,6 +91,7 @@ underscore_import_check = re.compile(r"(.)*import _(.)*")
 # We need this for cases where they have created their own _ function.
 custom_underscore_check = re.compile(r"(.)*_\s*=\s*(.)*")
 api_version_re = re.compile(r"@.*api_version")
+dict_constructor_with_list_copy_re = re.compile(r".*\bdict\((\[)?(\(|\[)")
 
 # TODO(dims): When other oslo libraries switch over non-namespace'd
 # imports, we need to add them to the regexp below.
@@ -490,6 +491,14 @@ def assert_raises_regexp(logical_line):
                   "of assertRaisesRegexp")
 
 
+def dict_constructor_with_list_copy(logical_line):
+    msg = ("N336: Must use a dict comprehension instead of a dict constructor"
+           " with a sequence of key-value pairs."
+           )
+    if dict_constructor_with_list_copy_re.match(logical_line):
+        yield (0, msg)
+
+
 def factory(register):
     register(import_no_db_in_virt)
     register(no_db_session_in_public_api)
@@ -513,3 +522,4 @@ def factory(register):
     register(CheckForTransAdd)
     register(check_oslo_namespace_imports)
     register(assert_true_or_false_with_in)
+    register(dict_constructor_with_list_copy)

@@ -316,7 +316,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
 
         # The server should also be in the all-servers details list
         servers = self.api.get_servers(detail=True)
-        server_map = dict((server['id'], server) for server in servers)
+        server_map = {server['id']: server for server in servers}
         found_server = server_map.get(created_server_id)
         self.assertTrue(found_server)
         # Details do include metadata
@@ -324,7 +324,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
 
         # The server should also be in the all-servers summary list
         servers = self.api.get_servers(detail=False)
-        server_map = dict((server['id'], server) for server in servers)
+        server_map = {server['id']: server for server in servers}
         found_server = server_map.get(created_server_id)
         self.assertTrue(found_server)
         # Summary should not include metadata
@@ -453,7 +453,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         # lookup servers created by the first request.
         servers = self.api.get_servers(detail=True,
                 search_opts={'reservation_id': reservation_id})
-        server_map = dict((server['id'], server) for server in servers)
+        server_map = {server['id']: server for server in servers}
         found_server = server_map.get(created_server_id)
         # The server from the 2nd request should not be there.
         self.assertIsNone(found_server)

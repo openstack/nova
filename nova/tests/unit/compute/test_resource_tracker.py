@@ -1201,7 +1201,7 @@ class ResizeClaimTestCase(BaseTrackerTestCase):
 
         src_dict = {
             'memory_mb': 1, 'root_gb': 1, 'ephemeral_gb': 0, 'vcpus': 1}
-        dest_dict = dict((k, v + 1) for (k, v) in src_dict.iteritems())
+        dest_dict = {k: v + 1 for (k, v) in src_dict.iteritems()}
         src_type = self._fake_flavor_create(
                 id=10, name="srcflavor", **src_dict)
         dest_type = self._fake_flavor_create(

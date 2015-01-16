@@ -1240,8 +1240,8 @@ class ModelsObjectComparatorMixin(object):
     def _dict_from_object(self, obj, ignored_keys):
         if ignored_keys is None:
             ignored_keys = []
-        return dict([(k, v) for k, v in obj.iteritems()
-                                if k not in ignored_keys])
+        return {k: v for k, v in obj.iteritems()
+                if k not in ignored_keys}
 
     def _assertEqualObjects(self, obj1, obj2, ignored_keys=None):
         obj1 = self._dict_from_object(obj1, ignored_keys)
@@ -6478,8 +6478,8 @@ class CertificateTestCase(test.TestCase, ModelsObjectComparatorMixin):
             'project_id': 'project',
             'file_name': 'filename'
         }
-        return [dict((k, v + str(x)) for k, v in base_values.iteritems())
-                      for x in xrange(1, 4)]
+        return [{k: v + str(x) for k, v in base_values.iteritems()}
+                for x in xrange(1, 4)]
 
     def _certificates_create(self):
         return [db.certificate_create(self.ctxt, cert)
@@ -6535,11 +6535,11 @@ class ConsoleTestCase(test.TestCase, ModelsObjectComparatorMixin):
                          for val in pools_data]
         instance_uuid = uuidutils.generate_uuid()
         db.instance_create(self.ctxt, {'uuid': instance_uuid})
-        self.console_data = [dict([('instance_name', 'name' + str(x)),
-                                  ('instance_uuid', instance_uuid),
-                                  ('password', 'pass' + str(x)),
-                                  ('port', 7878 + x),
-                                  ('pool_id', self.console_pools[x]['id'])])
+        self.console_data = [{'instance_name': 'name' + str(x),
+                              'instance_uuid': instance_uuid,
+                              'password': 'pass' + str(x),
+                              'port': 7878 + x,
+                              'pool_id': self.console_pools[x]['id']}
                              for x in xrange(len(pools_data))]
         self.consoles = [db.console_create(self.ctxt, val)
                          for val in self.console_data]
@@ -6644,8 +6644,8 @@ class CellTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def _create_cells(self):
         test_values = []
         for x in xrange(1, 4):
-            modified_val = dict([(k, self._cell_value_modify(v, x))
-                        for k, v in self._get_cell_base_values().iteritems()])
+            modified_val = {k: self._cell_value_modify(v, x)
+                        for k, v in self._get_cell_base_values().iteritems()}
             db.cell_create(self.ctxt, modified_val)
             test_values.append(modified_val)
         return test_values
@@ -6689,8 +6689,8 @@ class CellTestCase(test.TestCase, ModelsObjectComparatorMixin):
         new_cells = self._create_cells()
         cells = db.cell_get_all(self.ctxt)
         self.assertEqual(len(new_cells), len(cells))
-        cells_byname = dict([(newcell['name'],
-                              newcell) for newcell in new_cells])
+        cells_byname = {newcell['name']: newcell
+                        for newcell in new_cells}
         for cell in cells:
             self._assertEqualObjects(cell, cells_byname[cell['name']],
                                      self._ignored_keys)

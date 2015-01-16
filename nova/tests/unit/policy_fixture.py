@@ -41,8 +41,8 @@ class PolicyFixture(fixtures.Fixture):
 
     def set_rules(self, rules):
         policy = nova.policy._ENFORCER
-        policy.set_rules(dict((k, common_policy.parse_rule(v))
-                               for k, v in rules.items()))
+        policy.set_rules({k: common_policy.parse_rule(v)
+                          for k, v in rules.items()})
 
 
 class RoleBasedPolicyFixture(fixtures.Fixture):

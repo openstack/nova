@@ -365,8 +365,7 @@ def get_info_from_bdm(virt_type, bdm, mapping=None, disk_bus=None,
 
     if not device_name:
         if assigned_devices:
-            padded_mapping = dict((dev, {'dev': dev})
-                for dev in assigned_devices)
+            padded_mapping = {dev: {'dev': dev} for dev in assigned_devices}
             padded_mapping.update(mapping)
         else:
             padded_mapping = mapping

@@ -1286,7 +1286,7 @@ class VMwareVMOps(object):
         """Return data about VM diagnostics."""
         data = self._get_diagnostics(instance)
         # Add a namespace to all of the diagnostsics
-        return dict([('vmware:' + k, v) for k, v in data.items()])
+        return {'vmware:' + k: v for k, v in data.items()}
 
     def get_instance_diagnostics(self, instance):
         """Return data about VM diagnostics."""

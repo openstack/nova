@@ -1960,8 +1960,7 @@ class DbQuotaDriverTestCase(test.TestCase):
                                     usages=True, remains=False,
                                     project_quotas=None):
             self.calls.append('get_project_quotas')
-            return dict((k, dict(limit=v.default))
-                        for k, v in resources.items())
+            return {k: dict(limit=v.default) for k, v in resources.items()}
 
         self.stubs.Set(self.driver, 'get_project_quotas',
                        fake_get_project_quotas)

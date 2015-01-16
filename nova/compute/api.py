@@ -254,7 +254,7 @@ def _diff_dict(orig, new):
     element, giving the updated value.
     """
     # Figure out what keys went away
-    result = dict((k, ['-']) for k in set(orig.keys()) - set(new.keys()))
+    result = {k: ['-'] for k in set(orig.keys()) - set(new.keys())}
     # Compute the updates
     for key, value in new.items():
         if key not in orig or value != orig[key]:
@@ -358,9 +358,9 @@ class API(base.Base):
                 raise exception.OnsetFileContentLimitExceeded()
 
     def _get_headroom(self, quotas, usages, deltas):
-        headroom = dict((res, quotas[res] -
-                         (usages[res]['in_use'] + usages[res]['reserved']))
-                        for res in quotas.keys())
+        headroom = {res: quotas[res] -
+                         (usages[res]['in_use'] + usages[res]['reserved'])
+                    for res in quotas.keys()}
         # If quota_cores is unlimited [-1]:
         # - set cores headroom based on instances headroom:
         if quotas.get('cores') == -1:

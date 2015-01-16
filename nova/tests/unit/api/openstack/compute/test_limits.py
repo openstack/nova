@@ -62,8 +62,8 @@ class BaseLimitTestSuite(test.NoDBTestCase):
         self.absolute_limits = {}
 
         def stub_get_project_quotas(context, project_id, usages=True):
-            return dict((k, dict(limit=v))
-                        for k, v in self.absolute_limits.items())
+            return {k: dict(limit=v)
+                    for k, v in self.absolute_limits.items()}
 
         self.stubs.Set(nova.quota.QUOTAS, "get_project_quotas",
                        stub_get_project_quotas)
@@ -197,8 +197,7 @@ class LimitsControllerTestV21(BaseLimitTestSuite):
         }
 
         def _get_project_quotas(context, project_id, usages=True):
-            return dict((k, dict(limit=v))
-                        for k, v in self.absolute_limits.items())
+            return {k: dict(limit=v) for k, v in self.absolute_limits.items()}
 
         with mock.patch('nova.quota.QUOTAS.get_project_quotas') as \
                 get_project_quotas:

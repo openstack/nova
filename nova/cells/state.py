@@ -74,9 +74,8 @@ class CellState(object):
 
     def update_db_info(self, cell_db_info):
         """Update cell credentials from db."""
-        self.db_info = dict(
-                [(k, v) for k, v in cell_db_info.iteritems()
-                        if k != 'name'])
+        self.db_info = {k: v for k, v in cell_db_info.iteritems()
+                        if k != 'name'}
 
     def update_capabilities(self, cell_metadata):
         """Update cell capabilities for a cell."""
@@ -440,7 +439,7 @@ class CellStateManagerDB(CellStateManager):
             self.last_cell_db_check = timeutils.utcnow()
             ctxt = context.get_admin_context()
             db_cells = self.db.cell_get_all(ctxt)
-            db_cells_dict = dict((cell['name'], cell) for cell in db_cells)
+            db_cells_dict = {cell['name']: cell for cell in db_cells}
             self._refresh_cells_from_dict(db_cells_dict)
             self._update_our_capacity(ctxt)
 

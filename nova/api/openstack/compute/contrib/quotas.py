@@ -97,7 +97,7 @@ class QuotaSetsController(wsgi.Controller):
         if usages:
             return values
         else:
-            return dict((k, v['limit']) for k, v in values.items())
+            return {k: v['limit'] for k, v in values.items()}
 
     def show(self, req, id):
         context = req.environ['nova.context']

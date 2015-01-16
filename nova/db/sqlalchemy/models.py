@@ -1132,7 +1132,7 @@ class Aggregate(BASE, NovaBase):
 
     @property
     def metadetails(self):
-        return dict([(m.key, m.value) for m in self._metadata])
+        return {m.key: m.value for m in self._metadata}
 
     @property
     def availability_zone(self):

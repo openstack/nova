@@ -478,8 +478,7 @@ class Failure(Exception):
             return "XenAPI Fake Failure: %s" % str(self.details)
 
     def _details_map(self):
-        return dict([(str(i), self.details[i])
-                     for i in range(len(self.details))])
+        return {str(i): self.details[i] for i in range(len(self.details))}
 
 
 class SessionBase(object):
