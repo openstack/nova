@@ -1198,7 +1198,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                         random, 'choice', side_effect=lambda cells: cells[0])):
             cfg = conn._get_guest_config(instance_ref, [], {}, disk_info)
             self.assertEqual(set([0, 1]), cfg.cpuset)
-            self.assertIsNone(cfg.cputune)
+            self.assertEqual(0, len(cfg.cputune.vcpupin))
             self.assertIsNone(cfg.cpu.numa)
 
     @mock.patch.object(objects.Flavor, 'get_by_id')
@@ -1230,7 +1230,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             cfg = conn._get_guest_config(instance_ref, [], {}, disk_info)
             self.assertFalse(choice_mock.called)
             self.assertEqual(set([3]), cfg.cpuset)
-            self.assertIsNone(cfg.cputune)
+            self.assertEqual(0, len(cfg.cputune.vcpupin))
             self.assertIsNone(cfg.cpu.numa)
 
     def _test_get_guest_memory_backing_config(
@@ -1304,7 +1304,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             # when choosing viable cells
             choice_mock.assert_called_once_with([set([2, 3])])
             self.assertEqual(set([2, 3]), cfg.cpuset)
-            self.assertIsNone(cfg.cputune)
+            self.assertEqual(0, len(cfg.cputune.vcpupin))
             self.assertIsNone(cfg.cpu.numa)
 
     @mock.patch.object(objects.Flavor, 'get_by_id')
@@ -1341,7 +1341,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                     conn, "_get_host_capabilities", return_value=caps)):
             cfg = conn._get_guest_config(instance_ref, [], {}, disk_info)
             self.assertIsNone(cfg.cpuset)
-            self.assertIsNone(cfg.cputune)
+            self.assertEqual(0, len(cfg.cputune.vcpupin))
             self.assertIsNone(cfg.numatune)
             self.assertIsNotNone(cfg.cpu.numa)
             for instance_cell, numa_cfg_cell in zip(
@@ -3197,6 +3197,25 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                           instance_ref,
                           [],
                           image_meta, disk_info)
+
+    @mock.patch.object(objects.Flavor, 'get_by_id')
+    def test_guest_cpu_shares_with_multi_vcpu(self, mock_flavor):
+        self.flags(virt_type='kvm', group='libvirt')
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+
+        instance_ref = objects.Instance(**self.test_instance)
+        flavor = instance_ref.get_flavor()
+        flavor.extra_specs = {}
+        flavor.vcpus = 4
+        mock_flavor.return_value = flavor
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref)
+
+        cfg = conn._get_guest_config(instance_ref, [], {}, disk_info)
+
+        self.assertEqual(4096, cfg.cputune.shares)
 
     @mock.patch.object(objects.Flavor, 'get_by_id')
     def test_get_guest_config_with_cpu_quota(self, mock_flavor):

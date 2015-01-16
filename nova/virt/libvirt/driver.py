@@ -3437,6 +3437,21 @@ class LibvirtDriver(driver.ComputeDriver):
             id_maps.extend(gid_maps)
         return id_maps
 
+    def _update_guest_cputune(self, guest, flavor, virt_type):
+        if virt_type in ('lxc', 'kvm', 'qemu'):
+            if guest.cputune is None:
+                guest.cputune = vconfig.LibvirtConfigGuestCPUTune()
+            # Setting the default cpu.shares value to be a value
+            # dependent on the number of vcpus
+            guest.cputune.shares = 1024 * guest.vcpus
+
+            cputuning = ['shares', 'period', 'quota']
+            for name in cputuning:
+                key = "quota:cpu_" + name
+                if key in flavor.extra_specs:
+                    setattr(guest.cputune, name,
+                            int(flavor.extra_specs[key]))
+
     def _get_cpu_numa_config_from_instance(self, instance_numa_topology):
         if instance_numa_topology:
             guest_cpu_numa = vconfig.LibvirtConfigGuestCPUNUMA()
@@ -3871,14 +3886,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                                           flavor))
         guest.idmaps = self._get_guest_idmaps()
 
-        cputuning = ['shares', 'period', 'quota']
-        for name in cputuning:
-            key = "quota:cpu_" + name
-            if key in flavor.extra_specs:
-                if guest.cputune is None:
-                    guest.cputune = vconfig.LibvirtConfigGuestCPUTune()
-                setattr(guest.cputune, name,
-                        int(flavor.extra_specs[key]))
+        self._update_guest_cputune(guest, flavor, virt_type)
 
         guest.cpu = self._get_guest_cpu_config(
                 flavor, image_meta, guest_numa_config.numaconfig)
