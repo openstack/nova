@@ -269,3 +269,26 @@ class EvacuateTestV2(EvacuateTestV21):
 
     def test_evacuate_enable_password_return(self):
         pass
+
+
+class EvacuatePolicyEnforcementv21(test.NoDBTestCase):
+
+    def setUp(self):
+        super(EvacuatePolicyEnforcementv21, self).setUp()
+        self.controller = evacuate_v21.EvacuateController()
+
+    def test_evacuate_policy_failed(self):
+        rule_name = "compute_extension:v3:os-evacuate"
+        self.policy.set_rules({rule_name: "project:non_fake"})
+        req = fakes.HTTPRequest.blank('')
+        body = {'evacuate': {'host': 'my-host',
+                             'onSharedStorage': 'False',
+                             'adminPass': 'MyNewPass'
+                             }}
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.controller._evacuate, req, fakes.FAKE_UUID,
+            body=body)
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+            exc.format_message())
