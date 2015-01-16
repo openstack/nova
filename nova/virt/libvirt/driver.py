@@ -4719,6 +4719,8 @@ class LibvirtDriver(driver.ComputeDriver):
             "vendor_id": "%04x" % cfgdev.pci_capability.vendor_id,
             }
 
+        device["numa_node"] = cfgdev.pci_capability.numa_node
+
         # requirement by DataBase Model
         device['label'] = 'label_%(vendor_id)s_%(product_id)s' % device
         device.update(_get_device_type(cfgdev))

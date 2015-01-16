@@ -30,6 +30,7 @@ dev_dict = {
     'address': 'a',
     'vendor_id': 'v',
     'product_id': 'p',
+    'numa_node': 1,
     'dev_type': 't',
     'status': 'available',
     'dev_id': 'i',
