@@ -90,3 +90,21 @@ class ServerVirtualInterfaceTestV20(ServerVirtualInterfaceTestV21):
 
     def _set_controller(self):
         self.controller = vi20.ServerVirtualInterfaceController()
+
+
+class ServerVirtualInterfaceEnforcementV21(test.NoDBTestCase):
+
+    def setUp(self):
+        super(ServerVirtualInterfaceEnforcementV21, self).setUp()
+        self.controller = vi21.ServerVirtualInterfaceController()
+        self.req = fakes.HTTPRequest.blank('')
+
+    def test_index_virtual_interfaces_policy_failed(self):
+        rule_name = "compute_extension:v3:os-virtual-interfaces"
+        self.policy.set_rules({rule_name: "project:non_fake"})
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.controller.index, self.req, fakes.FAKE_UUID)
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+            exc.format_message())
