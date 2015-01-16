@@ -779,7 +779,7 @@ def _numa_fit_instance_cell(host_cell, instance_cell, limit_cell=None):
             len(instance_cell.cpuset) > len(host_cell.cpuset)):
         return None
 
-    if instance_cell.cpu_pinning is not None:
+    if instance_cell.cpu_pinning_requested:
         new_instance_cell = _numa_fit_instance_cell_with_pinning(
             host_cell, instance_cell)
         if not new_instance_cell:
@@ -1121,7 +1121,12 @@ def numa_usage_from_instances(host, instances, free=False):
     for hostcell in host.cells:
         memory_usage = hostcell.memory_usage
         cpu_usage = hostcell.cpu_usage
-        mempages = hostcell.mempages
+
+        newcell = objects.NUMACell(
+            id=hostcell.id, cpuset=hostcell.cpuset, memory=hostcell.memory,
+            cpu_usage=0, memory_usage=0,
+            pinned_cpus=hostcell.pinned_cpus, siblings=hostcell.siblings)
+
         for instance in instances:
             for instancecell in instance.cells:
                 if instancecell.id == hostcell.id:
@@ -1129,15 +1134,19 @@ def numa_usage_from_instances(host, instances, free=False):
                             memory_usage + sign * instancecell.memory)
                     cpu_usage = cpu_usage + sign * len(instancecell.cpuset)
                     if instancecell.pagesize and instancecell.pagesize > 0:
-                        mempages = _numa_pagesize_usage_from_cell(
+                        newcell.mempages = _numa_pagesize_usage_from_cell(
                             hostcell, instancecell, sign)
+                    if instance.cpu_pinning_requested:
+                        pinned_cpus = set(instancecell.cpu_pinning.values())
+                        if free:
+                            newcell.unpin_cpus(pinned_cpus)
+                        else:
+                            newcell.pin_cpus(pinned_cpus)
 
-        cell = objects.NUMACell(
-            id=hostcell.id, cpuset=hostcell.cpuset, memory=hostcell.memory,
-            cpu_usage=max(0, cpu_usage), memory_usage=max(0, memory_usage),
-            mempages=mempages)
+            newcell.cpu_usage = max(0, cpu_usage)
+            newcell.memory_usage = max(0, memory_usage)
 
-        cells.append(cell)
+        cells.append(newcell)
 
     return objects.NUMATopology(cells=cells)
 
