@@ -80,7 +80,6 @@ from nova.openstack.common import log as logging
 from nova.openstack.common import loopingcall
 from nova.pci import manager as pci_manager
 from nova.pci import utils as pci_utils
-from nova import rpc
 from nova import utils
 from nova import version
 from nova.virt import block_device as driver_block_device
@@ -392,7 +391,6 @@ class LibvirtDriver(driver.ComputeDriver):
         self._host = host.Host(self.uri(), read_only,
                                lifecycle_event_handler=self.emit_event,
                                conn_event_handler=self._handle_conn_event)
-        self._skip_list_all_domains = False
         self._initiator = None
         self._fc_wwnns = None
         self._fc_wwpns = None
@@ -544,19 +542,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 {'major': major, 'minor': minor, 'micro': micro})
 
     def _get_connection(self):
-        try:
-            conn = self._host.get_connection()
-        except libvirt.libvirtError as ex:
-            LOG.exception(_LE("Connection to libvirt failed: %s"), ex)
-            payload = dict(ip=LibvirtDriver.get_host_ip_addr(),
-                           method='_connect',
-                           reason=ex)
-            rpc.get_notifier('compute').error(nova_context.get_admin_context(),
-                                              'compute.libvirt.error',
-                                              payload)
-            raise exception.HypervisorUnavailable(host=CONF.host)
-
-        return conn
+        return self._host.get_connection()
 
     _conn = property(_get_connection)
 
@@ -580,88 +566,16 @@ class LibvirtDriver(driver.ComputeDriver):
         except exception.NovaException:
             return False
 
-    def _list_instance_domains_fast(self, only_running=True):
-        # The modern (>= 0.9.13) fast way - 1 single API call for all domains
-        flags = libvirt.VIR_CONNECT_LIST_DOMAINS_ACTIVE
-        if not only_running:
-            flags = flags | libvirt.VIR_CONNECT_LIST_DOMAINS_INACTIVE
-        return self._conn.listAllDomains(flags)
-
-    def _list_instance_domains_slow(self, only_running=True):
-        # The legacy (< 0.9.13) slow way - O(n) API call for n domains
-        uuids = []
-        doms = []
-        # Redundant numOfDomains check is for libvirt bz #836647
-        if self._conn.numOfDomains() > 0:
-            for id in self._conn.listDomainsID():
-                try:
-                    dom = self._host.get_domain_by_id(id)
-                    doms.append(dom)
-                    uuids.append(dom.UUIDString())
-                except exception.InstanceNotFound:
-                    continue
-
-        if only_running:
-            return doms
-
-        for name in self._conn.listDefinedDomains():
-            try:
-                dom = self._host.get_domain_by_name(name)
-                if dom.UUIDString() not in uuids:
-                    doms.append(dom)
-            except exception.InstanceNotFound:
-                continue
-
-        return doms
-
-    def _list_instance_domains(self, only_running=True, only_guests=True):
-        """Get a list of libvirt.Domain objects for nova instances
-
-        :param only_running: True to only return running instances
-        :param only_guests: True to filter out any host domain (eg Dom-0)
-
-        Query libvirt to a get a list of all libvirt.Domain objects
-        that correspond to nova instances. If the only_running parameter
-        is true this list will only include active domains, otherwise
-        inactive domains will be included too. If the only_guests parameter
-        is true the list will have any "host" domain (aka Xen Domain-0)
-        filtered out.
-
-        :returns: list of libvirt.Domain objects
-        """
-
-        if not self._skip_list_all_domains:
-            try:
-                alldoms = self._list_instance_domains_fast(only_running)
-            except (libvirt.libvirtError, AttributeError) as ex:
-                LOG.info(_LI("Unable to use bulk domain list APIs, "
-                             "falling back to slow code path: %(ex)s"),
-                         {'ex': ex})
-                self._skip_list_all_domains = True
-
-        if self._skip_list_all_domains:
-            # Old libvirt, or a libvirt driver which doesn't
-            # implement the new API
-            alldoms = self._list_instance_domains_slow(only_running)
-
-        doms = []
-        for dom in alldoms:
-            if only_guests and dom.ID() == 0:
-                continue
-            doms.append(dom)
-
-        return doms
-
     def list_instances(self):
         names = []
-        for dom in self._list_instance_domains(only_running=False):
+        for dom in self._host.list_instance_domains(only_running=False):
             names.append(dom.name())
 
         return names
 
     def list_instance_uuids(self):
         uuids = []
-        for dom in self._list_instance_domains(only_running=False):
+        for dom in self._host.list_instance_domains(only_running=False):
             uuids.append(dom.UUIDString())
 
         return uuids
@@ -4337,7 +4251,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def _get_all_block_devices(self):
         """Return all block devices in use on this node."""
         devices = []
-        for dom in self._list_instance_domains():
+        for dom in self._host.list_instance_domains():
             try:
                 doc = etree.fromstring(dom.XMLDesc(0))
             except libvirt.libvirtError as e:
@@ -4456,7 +4370,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if CONF.libvirt.virt_type == 'lxc':
             return total + 1
 
-        for dom in self._list_instance_domains():
+        for dom in self._host.list_instance_domains():
             try:
                 vcpus = dom.vcpus()
             except libvirt.libvirtError as e:
@@ -4487,7 +4401,7 @@ class LibvirtDriver(driver.ComputeDriver):
         idx3 = m.index('Cached:')
         if CONF.libvirt.virt_type == 'xen':
             used = 0
-            for dom in self._list_instance_domains(only_guests=False):
+            for dom in self._host.list_instance_domains(only_guests=False):
                 try:
                     dom_mem = int(dom.info()[2])
                 except libvirt.libvirtError as e:
@@ -5673,7 +5587,7 @@ class LibvirtDriver(driver.ComputeDriver):
         """Return total over committed disk size for all instances."""
         # Disk size that all instance uses : virtual_size - disk_size
         disk_over_committed_size = 0
-        for dom in self._list_instance_domains():
+        for dom in self._host.list_instance_domains():
             try:
                 xml = dom.XMLDesc(0)
                 disk_infos = jsonutils.loads(
