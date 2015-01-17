@@ -431,25 +431,6 @@ class ConsolesExtensionTestV21(test.NoDBTestCase):
         res = req.get_response(self.app)
         self.assertEqual(400, res.status_int)
 
-
-class ConsolesExtensionTestV2(ConsolesExtensionTestV21):
-
-    def _setup_wsgi(self):
-        self.flags(
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Consoles'])
-        self.app = fakes.wsgi_app(init_only=('servers',))
-
-    def test_get_vnc_console_with_undefined_param(self):
-        pass
-
-    def test_get_spice_console_with_undefined_param(self):
-        pass
-
-    def test_get_rdp_console_with_undefined_param(self):
-        pass
-
     def test_get_serial_console(self):
         body = {'os-getSerialConsole': {'type': 'serial'}}
         req = webob.Request.blank(self.url)
@@ -492,7 +473,6 @@ class ConsolesExtensionTestV2(ConsolesExtensionTestV21):
 
         res = req.get_response(self.app)
         self.assertEqual(res.status_int, 400)
-        self.assertTrue(get_serial_console.called)
 
     @mock.patch.object(compute_api.API, 'get_serial_console')
     def test_get_serial_console_no_type(self, get_serial_console):
@@ -507,7 +487,6 @@ class ConsolesExtensionTestV2(ConsolesExtensionTestV21):
 
         res = req.get_response(self.app)
         self.assertEqual(res.status_int, 400)
-        self.assertTrue(get_serial_console.called)
 
     @mock.patch.object(compute_api.API, 'get_serial_console')
     def test_get_serial_console_no_instance(self, get_serial_console):
@@ -552,7 +531,7 @@ class ConsolesExtensionTestV2(ConsolesExtensionTestV21):
         req.headers["content-type"] = "application/json"
 
         res = req.get_response(self.app)
-        self.assertEqual(res.status_int, 500)
+        self.assertEqual(res.status_int, 400)
         self.assertTrue(get_serial_console.called)
 
     @mock.patch.object(compute_api.API, 'get_serial_console')
@@ -585,3 +564,22 @@ class ConsolesExtensionTestV2(ConsolesExtensionTestV21):
         res = req.get_response(self.app)
         self.assertEqual(res.status_int, 400)
         self.assertTrue(get_serial_console.called)
+
+
+class ConsolesExtensionTestV2(ConsolesExtensionTestV21):
+
+    def _setup_wsgi(self):
+        self.flags(
+            osapi_compute_extension=[
+                'nova.api.openstack.compute.contrib.select_extensions'],
+            osapi_compute_ext_list=['Consoles'])
+        self.app = fakes.wsgi_app(init_only=('servers',))
+
+    def test_get_vnc_console_with_undefined_param(self):
+        pass
+
+    def test_get_spice_console_with_undefined_param(self):
+        pass
+
+    def test_get_rdp_console_with_undefined_param(self):
+        pass
