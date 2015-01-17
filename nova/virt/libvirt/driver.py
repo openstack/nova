@@ -495,7 +495,7 @@ class LibvirtDriver(driver.ComputeDriver):
         unknown. Currently, only qemu or kvm on intel 32- or 64-bit systems
         is tested upstream.
         """
-        caps = self._get_host_capabilities()
+        caps = self._host.get_capabilities()
         hostarch = caps.host.cpu.arch
         if (CONF.libvirt.virt_type not in ('qemu', 'kvm') or
             hostarch not in (arch.I686, arch.X86_64)):
@@ -2991,37 +2991,6 @@ class LibvirtDriver(driver.ComputeDriver):
                          'due to an unexpected exception.'), CONF.host,
                      exc_info=True)
 
-    def _get_host_capabilities(self):
-        """Returns an instance of config.LibvirtConfigCaps representing
-           the capabilities of the host.
-        """
-        if not self._caps:
-            xmlstr = self._conn.getCapabilities()
-            self._caps = vconfig.LibvirtConfigCaps()
-            self._caps.parse_str(xmlstr)
-            if hasattr(libvirt, 'VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES'):
-                try:
-                    features = self._conn.baselineCPU(
-                        [self._caps.host.cpu.to_xml()],
-                        libvirt.VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES)
-                    # FIXME(wangpan): the return value of baselineCPU should be
-                    #                 None or xml string, but libvirt has a bug
-                    #                 of it from 1.1.2 which is fixed in 1.2.0,
-                    #                 this -1 checking should be removed later.
-                    if features and features != -1:
-                        cpu = vconfig.LibvirtConfigCPU()
-                        cpu.parse_str(features)
-                        self._caps.host.cpu.features = cpu.features
-                except libvirt.libvirtError as ex:
-                    error_code = ex.get_error_code()
-                    if error_code == libvirt.VIR_ERR_NO_SUPPORT:
-                        LOG.warn(_LW("URI %(uri)s does not support full set"
-                                     " of host capabilities: " "%(error)s"),
-                                     {'uri': self.uri(), 'error': ex})
-                    else:
-                        raise
-        return self._caps
-
     def _get_guest_cpu_model_config(self):
         mode = CONF.libvirt.cpu_mode
         model = CONF.libvirt.cpu_model
@@ -3204,7 +3173,7 @@ class LibvirtDriver(driver.ComputeDriver):
         This is typically from the SMBIOS data, unless it has
         been overridden in /etc/libvirt/libvirtd.conf
         """
-        caps = self._get_host_capabilities()
+        caps = self._host.get_capabilities()
         return caps.host.uuid
 
     def _get_host_sysinfo_serial_os(self):
@@ -3820,7 +3789,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         if guest.os_type is None:
             guest.os_type = self._get_guest_os_type(virt_type)
-        caps = self._get_host_capabilities()
+        caps = self._host.get_capabilities()
 
         if virt_type == "xen":
             if guest.os_type == vm_mode.HVM:
@@ -4476,7 +4445,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         :returns: List of tuples describing instance capabilities
         """
-        caps = self._get_host_capabilities()
+        caps = self._host.get_capabilities()
         instance_caps = list()
         for g in caps.guests:
             for dt in g.domtype:
@@ -4498,7 +4467,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         """
 
-        caps = self._get_host_capabilities()
+        caps = self._host.get_capabilities()
         cpu_info = dict()
 
         cpu_info['arch'] = caps.host.cpu.arch
@@ -4624,7 +4593,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if not self._host.has_min_version(MIN_LIBVIRT_NUMA_TOPOLOGY_VERSION):
             return
 
-        caps = self._get_host_capabilities()
+        caps = self._host.get_capabilities()
         topology = caps.host.topology
 
         if topology is None or not topology.cells:

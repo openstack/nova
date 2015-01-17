@@ -917,8 +917,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         @mock.patch.object(libvirt, 'registerErrorHandler',
                            side_effect=fake_registerErrorHandler)
-        @mock.patch.object(libvirt_driver.LibvirtDriver,
-                           '_get_host_capabilities',
+        @mock.patch.object(host.Host, "get_capabilities",
                             side_effect=fake_get_host_capabilities)
         def test_init_host(get_host_capabilities, register_error_handler):
             conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -957,89 +956,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             # we don't care what the log message is, we just want to make sure
             # our stub method is called which asserts the password is scrubbed
             self.assertTrue(debug_mock.called)
-
-    def test_cpu_features_bug_1217630(self):
-        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-
-        # Test old version of libvirt, it shouldn't see the `aes' feature
-        with mock.patch('nova.virt.libvirt.driver.libvirt') as mock_libvirt:
-            del mock_libvirt.VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES
-            caps = conn._get_host_capabilities()
-            self.assertNotIn('aes', [x.name for x in caps.host.cpu.features])
-
-        # Test new verion of libvirt, should find the `aes' feature
-        with mock.patch('nova.virt.libvirt.driver.libvirt') as mock_libvirt:
-            mock_libvirt['VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES'] = 1
-            # Cleanup the capabilities cache firstly
-            conn._caps = None
-            caps = conn._get_host_capabilities()
-            self.assertIn('aes', [x.name for x in caps.host.cpu.features])
-
-    def test_cpu_features_are_not_duplicated(self):
-        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-
-        # Test old version of libvirt. Should return single 'hypervisor'
-        with mock.patch('nova.virt.libvirt.driver.libvirt') as mock_libvirt:
-            del mock_libvirt.VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES
-            caps = conn._get_host_capabilities()
-            cnt = [x.name for x in caps.host.cpu.features].count('hypervisor')
-            self.assertEqual(1, cnt)
-
-        # Test new version of libvirt. Should still return single 'hypervisor'
-        with mock.patch('nova.virt.libvirt.driver.libvirt') as mock_libvirt:
-            mock_libvirt['VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES'] = 1
-            # Cleanup the capabilities cache firstly
-            conn._caps = None
-            caps = conn._get_host_capabilities()
-            cnt = [x.name for x in caps.host.cpu.features].count('hypervisor')
-            self.assertEqual(1, cnt)
-
-    def test_baseline_cpu_not_supported(self):
-        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-
-        # `mock` has trouble stubbing attributes that don't exist yet, so
-        # fallback to plain-Python attribute setting/deleting
-        cap_str = 'VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES'
-        if not hasattr(libvirt_driver.libvirt, cap_str):
-            setattr(libvirt_driver.libvirt, cap_str, True)
-            self.addCleanup(delattr, libvirt_driver.libvirt, cap_str)
-
-        # Handle just the NO_SUPPORT error
-        not_supported_exc = fakelibvirt.make_libvirtError(
-                libvirt.libvirtError,
-                'this function is not supported by the connection driver:'
-                ' virConnectBaselineCPU',
-                error_code=libvirt.VIR_ERR_NO_SUPPORT)
-
-        with mock.patch.object(conn._conn, 'baselineCPU',
-                               side_effect=not_supported_exc):
-            caps = conn._get_host_capabilities()
-            self.assertEqual(vconfig.LibvirtConfigCaps, type(caps))
-            self.assertNotIn('aes', [x.name for x in caps.host.cpu.features])
-
-        # Clear cached result so we can test again...
-        conn._caps = None
-
-        # Other errors should not be caught
-        other_exc = fakelibvirt.make_libvirtError(
-            libvirt.libvirtError,
-            'other exc',
-            error_code=libvirt.VIR_ERR_NO_DOMAIN)
-
-        with mock.patch.object(conn._conn, 'baselineCPU',
-                               side_effect=other_exc):
-            self.assertRaises(libvirt.libvirtError,
-                              conn._get_host_capabilities)
-
-    def test_lxc_get_host_capabilities_failed(self):
-        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-
-        with mock.patch.object(conn._conn, 'baselineCPU', return_value=-1):
-            setattr(libvirt, 'VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES', 1)
-            caps = conn._get_host_capabilities()
-            delattr(libvirt, 'VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES')
-            self.assertEqual(vconfig.LibvirtConfigCaps, type(caps))
-            self.assertNotIn('aes', [x.name for x in caps.host.cpu.features])
 
     @mock.patch.object(time, "time")
     def test_get_guest_config(self, time_mock):
@@ -1220,8 +1136,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         with contextlib.nested(
                 mock.patch.object(host.Host, 'has_min_version',
                                   return_value=True),
-                mock.patch.object(
-                    conn, "_get_host_capabilities", return_value=caps),
+                mock.patch.object(host.Host, "get_capabilities",
+                                  return_value=caps),
                 mock.patch.object(
                         random, 'choice', side_effect=lambda cells: cells[0])):
             cfg = conn._get_guest_config(instance_ref, [], {}, disk_info)
@@ -1248,8 +1164,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                             instance_ref)
 
         with contextlib.nested(
-                mock.patch.object(
-                    conn, "_get_host_capabilities", return_value=caps),
+                mock.patch.object(host.Host, "get_capabilities",
+                                  return_value=caps),
                 mock.patch.object(
                     hardware, 'get_vcpu_pin_set', return_value=set([3])),
                 mock.patch.object(random, 'choice')
@@ -1319,8 +1235,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         with contextlib.nested(
                 mock.patch.object(host.Host, 'has_min_version',
                                   return_value=True),
-                mock.patch.object(
-                    conn, "_get_host_capabilities", return_value=caps),
+                mock.patch.object(host.Host, "get_capabilities",
+                                  return_value=caps),
                 mock.patch.object(
                     hardware, 'get_vcpu_pin_set', return_value=set([2, 3])),
                 mock.patch.object(
@@ -1365,8 +1281,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                     return_value=instance_topology),
                 mock.patch.object(host.Host, 'has_min_version',
                                   return_value=True),
-                mock.patch.object(
-                    conn, "_get_host_capabilities", return_value=caps)):
+                mock.patch.object(host.Host, "get_capabilities",
+                                  return_value=caps)):
             cfg = conn._get_guest_config(instance_ref, [], {}, disk_info)
             self.assertIsNone(cfg.cpuset)
             self.assertEqual(0, len(cfg.cputune.vcpupin))
@@ -1412,8 +1328,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                     return_value=instance_topology),
                 mock.patch.object(host.Host, 'has_min_version',
                                   return_value=True),
-                mock.patch.object(
-                    conn, "_get_host_capabilities", return_value=caps),
+                mock.patch.object(host.Host, "get_capabilities",
+                                  return_value=caps),
                 mock.patch.object(
                     hardware, 'get_vcpu_pin_set',
                     return_value=set([2, 3, 4, 5]))
@@ -1489,8 +1405,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                     return_value=instance_topology),
                 mock.patch.object(host.Host, 'has_min_version',
                                   return_value=True),
-                mock.patch.object(
-                    conn, "_get_host_capabilities", return_value=caps),
+                mock.patch.object(host.Host, "get_capabilities",
+                                  return_value=caps),
                 ):
             cfg = conn._get_guest_config(instance_ref, [], {}, disk_info)
             self.assertIsNone(cfg.cpuset)
@@ -2483,8 +2399,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             caps.host.cpu = cpu
             return caps
 
-        self.stubs.Set(libvirt_driver.LibvirtDriver,
-                       "_get_host_capabilities",
+        self.stubs.Set(host.Host, "get_capabilities",
                        get_host_capabilities_stub)
 
     def _stub_guest_cpu_config_arch(self, cpu_arch):
@@ -3621,8 +3536,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance_ref)
 
-        self.stubs.Set(libvirt_driver.LibvirtDriver,
-                       "_get_host_capabilities",
+        self.stubs.Set(host.Host, "get_capabilities",
                        get_host_capabilities_stub)
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -3653,8 +3567,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance_ref)
 
-        self.stubs.Set(libvirt_driver.LibvirtDriver,
-                       "_get_host_capabilities",
+        self.stubs.Set(host.Host, "get_capabilities",
                        get_host_capabilities_stub)
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -8651,8 +8564,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
             return caps
 
-        self.stubs.Set(libvirt_driver.LibvirtDriver,
-                       '_get_host_capabilities',
+        self.stubs.Set(host.Host, "get_capabilities",
                        get_host_capabilities_stub)
 
         want = {"vendor": "AMD",
@@ -8845,8 +8757,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         with contextlib.nested(
                 mock.patch.object(host.Host, 'has_min_version',
                                   return_value=True),
-                mock.patch.object(
-                    conn, '_get_host_capabilities', return_value=caps),
+                mock.patch.object(host.Host, "get_capabilities",
+                                  return_value=caps),
                 mock.patch.object(
                     hardware, 'get_vcpu_pin_set', return_value=set([0, 1, 3]))
                 ):
@@ -8873,7 +8785,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         with contextlib.nested(
             mock.patch.object(host.Host, 'has_min_version', return_value=True),
-            mock.patch.object(conn, '_get_host_capabilities',
+            mock.patch.object(host.Host, "get_capabilities",
                               return_value=caps)
         ) as (has_min_version, get_caps):
             self.assertIsNone(conn._get_host_numa_topology())
@@ -9606,8 +9518,7 @@ Active:          8381604 kB
 
             return caps
 
-        self.stubs.Set(libvirt_driver.LibvirtDriver,
-                       '_get_host_capabilities',
+        self.stubs.Set(host.Host, "get_capabilities",
                        get_host_capabilities_stub)
 
         want = [(arch.X86_64, 'kvm', 'hvm'),
@@ -10235,20 +10146,14 @@ Active:          8381604 kB
         network_info = _fake_network_info(self.stubs, 1)
         self.create_fake_libvirt_mock(getLibVersion=fake_getLibVersion,
                                       getCapabilities=fake_getCapabilities,
-                                      getVersion=lambda: 1005001)
+                                      getVersion=lambda: 1005001,
+                                      listDefinedDomains=lambda: [],
+                                      baselineCPU=fake_baselineCPU)
         instance_ref = self.test_instance
         instance_ref['image_ref'] = 123456  # we send an int to test sha1 call
         instance = objects.Instance(**instance_ref)
         flavor = instance.get_flavor()
         flavor.extra_specs = {}
-
-        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
-        libvirt_driver.LibvirtDriver._conn.listDefinedDomains = lambda: []
-        libvirt_driver.LibvirtDriver._conn.getCapabilities = \
-                                                        fake_getCapabilities
-        libvirt_driver.LibvirtDriver._conn.getVersion = lambda: 1005001
-        libvirt_driver.LibvirtDriver._conn.defineXML = fake_defineXML
-        libvirt_driver.LibvirtDriver._conn.baselineCPU = fake_baselineCPU
 
         self.mox.ReplayAll()
 

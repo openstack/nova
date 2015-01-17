@@ -1050,8 +1050,21 @@ class Connection(object):
     def baselineCPU(self, cpu, flag):
         """Add new libvirt API."""
         return """<cpu mode='custom' match='exact'>
-                    <model fallback='allow'>Westmere</model>
+                    <model>Penryn</model>
                     <vendor>Intel</vendor>
+                    <feature name='xtpr'/>
+                    <feature name='tm2'/>
+                    <feature name='est'/>
+                    <feature name='vmx'/>
+                    <feature name='ds_cpl'/>
+                    <feature name='monitor'/>
+                    <feature name='pbe'/>
+                    <feature name='tm'/>
+                    <feature name='ht'/>
+                    <feature name='ss'/>
+                    <feature name='acpi'/>
+                    <feature name='ds'/>
+                    <feature name='vme'/>
                     <feature policy='require' name='aes'/>
                   </cpu>"""
 
