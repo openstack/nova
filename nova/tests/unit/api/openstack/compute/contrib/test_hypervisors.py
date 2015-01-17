@@ -165,8 +165,7 @@ class HypervisorsTestV21(test.NoDBTestCase):
     NO_SERVER_HYPER_DICTS[1].update({'servers': []})
 
     def _get_request(self, use_admin_context):
-        return fakes.HTTPRequest.blank('/v2/fake/os-hypervisors/statistics',
-                                       use_admin_context=use_admin_context)
+        return fakes.HTTPRequest.blank('', use_admin_context=use_admin_context)
 
     def _set_up_controller(self):
         self.controller = hypervisors_v21.HypervisorsController()
