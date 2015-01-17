@@ -18,7 +18,6 @@ Tests For Scheduler
 """
 
 import mock
-from mox3 import mox
 from oslo.config import cfg
 
 from nova.compute import api as compute_api
@@ -26,14 +25,12 @@ from nova import context
 from nova import db
 from nova import exception
 from nova.image import glance
-from nova import rpc
 from nova.scheduler import driver
 from nova.scheduler import manager
 from nova import servicegroup
 from nova import test
 from nova.tests.unit import fake_server_actions
 from nova.tests.unit.image import fake as fake_image
-from nova.tests.unit.objects import test_instance_fault
 from nova.tests.unit.scheduler import fakes
 
 CONF = cfg.CONF
@@ -138,25 +135,6 @@ class SchedulerTestCase(test.NoDBTestCase):
         self.mox.ReplayAll()
         result = self.driver.hosts_up(self.context, self.topic)
         self.assertEqual(result, ['host2'])
-
-    def test_handle_schedule_error_adds_instance_fault(self):
-        instance = {'uuid': 'fake-uuid'}
-        self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
-        self.mox.StubOutWithMock(db, 'instance_fault_create')
-        db.instance_update_and_get_original(self.context, instance['uuid'],
-                                            mox.IgnoreArg()).AndReturn(
-                                                (None, instance))
-        db.instance_fault_create(self.context, mox.IgnoreArg()).AndReturn(
-            test_instance_fault.fake_faults['fake-uuid'][0])
-        self.mox.StubOutWithMock(rpc, 'get_notifier')
-        notifier = self.mox.CreateMockAnything()
-        rpc.get_notifier('scheduler').AndReturn(notifier)
-        notifier.error(self.context, 'scheduler.run_instance', mox.IgnoreArg())
-        self.mox.ReplayAll()
-
-        driver.handle_schedule_error(self.context,
-                                     exception.NoValidHost('test'),
-                                     instance['uuid'], {})
 
 
 class SchedulerDriverBaseTestCase(SchedulerTestCase):
