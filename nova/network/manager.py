@@ -44,7 +44,7 @@ from oslo.utils import timeutils
 from nova import conductor
 from nova import context
 from nova import exception
-from nova.i18n import _, _LE, _LW
+from nova.i18n import _, _LI, _LE, _LW
 from nova import ipv6
 from nova import manager
 from nova.network import api as network_api
@@ -325,14 +325,14 @@ class NetworkManager(manager.Manager):
         #             an ip address.
         ctxt = context.get_admin_context()
         for network in objects.NetworkList.get_by_host(ctxt, self.host):
-            LOG.debug('Setup network %s on host %s', network['uuid'],
-                      self.host)
             self._setup_network_on_host(ctxt, network)
             if CONF.update_dns_entries:
                 LOG.debug('Update DNS on network %s for host %s',
                           network['uuid'], self.host)
                 dev = self.driver.get_dev(network)
                 self.driver.update_dns(ctxt, dev, network)
+            LOG.info(_LI('Configured network %(network)s on host %(host)s'),
+                     {'network': network['uuid'], 'host': self.host})
 
     @periodic_task.periodic_task
     def _disassociate_stale_fixed_ips(self, context):
@@ -476,8 +476,6 @@ class NetworkManager(manager.Manager):
         vpn = kwargs['vpn']
         macs = kwargs['macs']
         admin_context = context.elevated()
-        LOG.debug("Allocate network for instance", instance_uuid=instance_uuid,
-                  context=context)
         networks = self._get_networks_for_instance(context,
                                         instance_uuid, project_id,
                                         requested_networks=requested_networks)
@@ -504,8 +502,12 @@ class NetworkManager(manager.Manager):
             network_ids = [network['id'] for network in networks]
             self.network_rpcapi.update_dns(context, network_ids)
 
-        return self.get_instance_nw_info(admin_context, instance_uuid,
-                                         rxtx_factor, host)
+        net_info = self.get_instance_nw_info(admin_context, instance_uuid,
+                                             rxtx_factor, host)
+        LOG.info(_LI("Allocated network: '%s' for instance"), net_info,
+                 instance_uuid=instance_uuid,
+                 context=context)
+        return net_info
 
     def deallocate_for_instance(self, context, **kwargs):
         """Handles deallocating various network resources for an instance.
@@ -561,6 +563,8 @@ class NetworkManager(manager.Manager):
         # deallocate vifs (mac addresses)
         objects.VirtualInterface.delete_by_instance_uuid(
                 read_deleted_context, instance_uuid)
+        LOG.info(_LI("Network deallocated for instance (fixed ips: '%s')"),
+                 fixed_ips, context=context, instance_uuid=instance_uuid)
 
     @messaging.expected_exceptions(exception.InstanceNotFound)
     def get_instance_nw_info(self, context, instance_id, rxtx_factor,
