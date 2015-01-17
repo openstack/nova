@@ -167,18 +167,19 @@ def compute_node_get(context, compute_id):
     return IMPL.compute_node_get(context, compute_id)
 
 
-def compute_node_get_by_service_id(context, service_id):
-    """Get a compute node by its associated service id.
+def compute_nodes_get_by_service_id(context, service_id):
+    """Get a list of compute nodes by their associated service id.
 
     :param context: The security context
     :param service_id: ID of the associated service
 
-    :returns: Dictionary-like object containing properties of the compute node,
-              including its corresponding service and statistics
+    :returns: List of dictionary-like objects, each containing properties of
+              the compute node, including its corresponding service and
+              statistics
 
     Raises ServiceNotFound if service with the given ID doesn't exist.
     """
-    return IMPL.compute_node_get_by_service_id(context, service_id)
+    return IMPL.compute_nodes_get_by_service_id(context, service_id)
 
 
 def compute_node_get_by_host_and_nodename(context, host, nodename):

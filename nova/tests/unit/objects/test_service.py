@@ -92,7 +92,7 @@ class _TestServiceObject(object):
 
     def test_with_compute_node(self):
         self.mox.StubOutWithMock(db, 'service_get')
-        self.mox.StubOutWithMock(db, 'compute_node_get_by_service_id')
+        self.mox.StubOutWithMock(db, 'compute_nodes_get_by_service_id')
         _fake_service = dict(
             fake_service, compute_node=[test_compute_node.fake_compute_node])
         db.service_get(self.context, 123).AndReturn(_fake_service)
@@ -207,9 +207,9 @@ class _TestServiceObject(object):
         self.assertEqual('test-az', services[0].availability_zone)
 
     def test_compute_node(self):
-        self.mox.StubOutWithMock(db, 'compute_node_get_by_service_id')
-        db.compute_node_get_by_service_id(self.context, 123).AndReturn(
-            test_compute_node.fake_compute_node)
+        self.mox.StubOutWithMock(db, 'compute_nodes_get_by_service_id')
+        db.compute_nodes_get_by_service_id(self.context, 123).AndReturn(
+            [test_compute_node.fake_compute_node])
         self.mox.ReplayAll()
         service_obj = service.Service()
         service_obj._context = self.context

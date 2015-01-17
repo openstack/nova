@@ -132,9 +132,9 @@ class _TestComputeNodeObject(object):
                          comparators=self.comparators())
 
     def test_get_by_service_id(self):
-        self.mox.StubOutWithMock(db, 'compute_node_get_by_service_id')
-        db.compute_node_get_by_service_id(self.context, 456).AndReturn(
-            fake_compute_node)
+        self.mox.StubOutWithMock(db, 'compute_nodes_get_by_service_id')
+        db.compute_nodes_get_by_service_id(self.context, 456).AndReturn(
+            [fake_compute_node])
         self.mox.ReplayAll()
         compute = compute_node.ComputeNode.get_by_service_id(self.context, 456)
         self.compare_obj(compute, fake_compute_node,
@@ -152,7 +152,7 @@ class _TestComputeNodeObject(object):
                          comparators=self.comparators())
 
     @mock.patch('nova.objects.Service.get_by_id')
-    @mock.patch('nova.db.compute_node_get_by_service_id')
+    @mock.patch('nova.db.compute_nodes_get_by_service_id')
     @mock.patch('nova.objects.Service.get_by_compute_host')
     @mock.patch.object(db, 'compute_node_get_by_host_and_nodename')
     def test_get_by_host_and_nodename_with_old_compute(self, cn_get_by_h_and_n,
@@ -164,13 +164,61 @@ class _TestComputeNodeObject(object):
         fake_service = service.Service(id=123)
         fake_service.host = 'fake'
         svc_get_by_ch.return_value = fake_service
-        cn_get_by_svc_id.return_value = fake_old_compute_node
+        cn_get_by_svc_id.return_value = [fake_old_compute_node]
         svc_get_by_id.return_value = fake_service
 
         compute = compute_node.ComputeNode.get_by_host_and_nodename(
             self.context, 'fake', 'vm.danplanet.com')
         # NOTE(sbauza): Result is still converted to new style Compute
         self.compare_obj(compute, fake_compute_node,
+                         subs=self.subs(),
+                         comparators=self.comparators())
+
+    @mock.patch('nova.objects.Service.get_by_id')
+    @mock.patch('nova.db.compute_nodes_get_by_service_id')
+    @mock.patch('nova.objects.Service.get_by_compute_host')
+    @mock.patch.object(db, 'compute_node_get_by_host_and_nodename')
+    def test_get_by_host_and_nodename_not_found(self, cn_get_by_h_and_n,
+                                                svc_get_by_ch,
+                                                cn_get_by_svc_id,
+                                                svc_get_by_id):
+        cn_get_by_h_and_n.side_effect = exception.ComputeHostNotFound(
+            host='fake')
+        fake_service = service.Service(id=123)
+        fake_service.host = 'fake'
+        another_node = fake_old_compute_node.copy()
+        another_node['hypervisor_hostname'] = 'elsewhere'
+        svc_get_by_ch.return_value = fake_service
+        cn_get_by_svc_id.return_value = [another_node]
+        svc_get_by_id.return_value = fake_service
+
+        self.assertRaises(exception.ComputeHostNotFound,
+                          compute_node.ComputeNode.get_by_host_and_nodename,
+                          self.context, 'fake', 'vm.danplanet.com')
+
+    @mock.patch('nova.objects.Service.get_by_id')
+    @mock.patch('nova.db.compute_nodes_get_by_service_id')
+    @mock.patch('nova.objects.Service.get_by_compute_host')
+    @mock.patch.object(db, 'compute_node_get_by_host_and_nodename')
+    def test_get_by_host_and_nodename_good_and_bad(self, cn_get_by_h_and_n,
+                                                   svc_get_by_ch,
+                                                   cn_get_by_svc_id,
+                                                   svc_get_by_id):
+        cn_get_by_h_and_n.side_effect = exception.ComputeHostNotFound(
+            host='fake')
+        fake_service = service.Service(id=123)
+        fake_service.host = 'fake'
+        bad_node = fake_old_compute_node.copy()
+        bad_node['hypervisor_hostname'] = 'elsewhere'
+        good_node = fake_old_compute_node.copy()
+        svc_get_by_ch.return_value = fake_service
+        cn_get_by_svc_id.return_value = [bad_node, good_node]
+        svc_get_by_id.return_value = fake_service
+
+        compute = compute_node.ComputeNode.get_by_host_and_nodename(
+            self.context, 'fake', 'vm.danplanet.com')
+        # NOTE(sbauza): Result is still converted to new style Compute
+        self.compare_obj(compute, good_node,
                          subs=self.subs(),
                          comparators=self.comparators())
 
@@ -280,9 +328,9 @@ class _TestComputeNodeObject(object):
                          subs=self.subs(),
                          comparators=self.comparators())
 
-    @mock.patch('nova.db.service_get')
-    def test_get_by_service(self, service_get):
-        service_get.return_value = {'compute_node': [fake_compute_node]}
+    @mock.patch('nova.db.compute_nodes_get_by_service_id')
+    def test_get_by_service(self, cn_get_by_svc_id):
+        cn_get_by_svc_id.return_value = [fake_compute_node]
         fake_service = service.Service(id=123)
         computes = compute_node.ComputeNodeList.get_by_service(self.context,
                                                                fake_service)
@@ -302,7 +350,7 @@ class _TestComputeNodeObject(object):
                          comparators=self.comparators())
 
     @mock.patch('nova.objects.Service.get_by_id')
-    @mock.patch('nova.db.compute_node_get_by_service_id')
+    @mock.patch('nova.db.compute_nodes_get_by_service_id')
     @mock.patch('nova.objects.Service.get_by_compute_host')
     @mock.patch('nova.db.compute_node_get_all_by_host')
     def test_get_all_by_host_with_old_compute(self, cn_get_all_by_host,
@@ -314,7 +362,7 @@ class _TestComputeNodeObject(object):
         fake_service = service.Service(id=123)
         fake_service.host = 'fake'
         svc_get_by_ch.return_value = fake_service
-        cn_get_by_svc_id.return_value = fake_old_compute_node
+        cn_get_by_svc_id.return_value = [fake_old_compute_node]
         svc_get_by_id.return_value = fake_service
 
         computes = compute_node.ComputeNodeList.get_all_by_host(self.context,
