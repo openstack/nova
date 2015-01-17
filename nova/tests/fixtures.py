@@ -241,10 +241,12 @@ class RPCFixture(fixtures.Fixture):
         # 1.5.1 fake driver is less than optimal, as by default the
         # polling will wait for a full second even if there are no
         # events available. Turning this down speeds up the tests
-        # substantially.
+        # substantially. It should be > 0.05, because we've seen races
+        # that happen if this is less than the internal polling
+        # timeout in oslo.messaging.
         self.useFixture(fixtures.MonkeyPatch(
             'oslo.messaging._executors.base.POLL_TIMEOUT',
-            0.001))
+            0.1))
 
 
 class WarningsFixture(fixtures.Fixture):
