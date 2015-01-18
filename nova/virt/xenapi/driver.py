@@ -272,7 +272,7 @@ class XenAPIDriver(driver.ComputeDriver):
         return self._vmops.migrate_disk_and_power_off(context, instance,
                     dest, flavor, block_device_info)
 
-    def suspend(self, instance):
+    def suspend(self, context, instance):
         """suspend the specified instance."""
         self._vmops.suspend(instance)
 

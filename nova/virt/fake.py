@@ -217,7 +217,7 @@ class FakeDriver(driver.ComputeDriver):
     def unpause(self, instance):
         pass
 
-    def suspend(self, instance):
+    def suspend(self, context, instance):
         pass
 
     def resume(self, context, instance, network_info, block_device_info=None):

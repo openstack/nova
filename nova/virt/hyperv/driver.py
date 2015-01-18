@@ -109,7 +109,7 @@ class HyperVDriver(driver.ComputeDriver):
     def unpause(self, instance):
         self._vmops.unpause(instance)
 
-    def suspend(self, instance):
+    def suspend(self, context, instance):
         self._vmops.suspend(instance)
 
     def resume(self, context, instance, network_info, block_device_info=None):
