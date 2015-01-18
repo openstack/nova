@@ -7506,7 +7506,7 @@ class LibvirtConnTestCase(test.TestCase):
         domain = FakeVirtDomain()
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
-        conn._detach_sriov_ports(instance, domain)
+        conn._detach_sriov_ports(self.context, instance, domain)
         mock_get_image_metadata.assert_called_once_with(mock.ANY,
             conn._image_api, instance['image_ref'], instance)
         self.assertTrue(mock_detachDeviceFlags.called)

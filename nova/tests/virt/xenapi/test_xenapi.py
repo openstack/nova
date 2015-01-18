@@ -1487,7 +1487,7 @@ iface eth0 inet6 static
     def test_per_instance_usage_suspended(self):
         # Suspended instances do not consume memory:
         instance = self._create_instance(spawn=True)
-        self.conn.suspend(instance)
+        self.conn.suspend(self.context, instance)
         actual = self.conn.get_per_instance_usage()
         self.assertEqual({}, actual)
 
