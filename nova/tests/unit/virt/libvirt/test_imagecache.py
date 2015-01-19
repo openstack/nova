@@ -334,7 +334,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
                                (base_file3, False, True)])
 
     @contextlib.contextmanager
-    def _make_base_file(self, checksum=True):
+    def _make_base_file(self, checksum=True, lock=True):
         """Make a base file for testing."""
 
         with utils.tempdir() as tmpdir:
@@ -347,6 +347,15 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
             base_file = open(fname, 'w')
             base_file.write('data')
             base_file.close()
+
+            if lock:
+                lockdir = os.path.join(tmpdir, 'locks')
+                lockname = os.path.join(lockdir, 'nova-aaa')
+                os.mkdir(lockdir)
+                lock_file = open(lockname, 'w')
+                lock_file.write('data')
+                lock_file.close()
+
             base_file = open(fname, 'r')
 
             if checksum:
@@ -361,9 +370,14 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
             image_cache_manager._remove_base_file(fname)
             info_fname = imagecache.get_info_filename(fname)
 
+            lock_name = 'nova-' + os.path.split(fname)[-1]
+            lock_dir = os.path.join(CONF.instances_path, 'locks')
+            lock_file = os.path.join(lock_dir, lock_name)
+
             # Files are initially too new to delete
             self.assertTrue(os.path.exists(fname))
             self.assertTrue(os.path.exists(info_fname))
+            self.assertTrue(os.path.exists(lock_file))
 
             # Old files get cleaned up though
             os.utime(fname, (-1, time.time() - 3601))
@@ -371,6 +385,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
 
             self.assertFalse(os.path.exists(fname))
             self.assertFalse(os.path.exists(info_fname))
+            self.assertFalse(os.path.exists(lock_file))
 
     def test_remove_base_file_original(self):
         with self._make_base_file() as fname:

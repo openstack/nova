@@ -27,6 +27,7 @@ import time
 
 from oslo.config import cfg
 from oslo.serialization import jsonutils
+from oslo_concurrency import lockutils
 from oslo_concurrency import processutils
 
 from nova.i18n import _LE
@@ -440,7 +441,8 @@ class ImageCacheManager(imagecache.ImageCacheManager):
 
         return (True, age)
 
-    def _remove_old_enough_file(self, base_file, maxage, remove_sig=True):
+    def _remove_old_enough_file(self, base_file, maxage, remove_sig=True,
+                                remove_lock=True):
         """Remove a single swap or base file if it is old enough."""
         exists, age = self._get_age_of_file(base_file)
         if not exists:
@@ -463,11 +465,28 @@ class ImageCacheManager(imagecache.ImageCacheManager):
                           {'base_file': base_file,
                            'error': e})
 
+            if remove_lock:
+                try:
+                    # NOTE(jichenjc) The lock file will be constructed first
+                    # time the image file was accessed. the lock file looks
+                    # like nova-9e881789030568a317fad9daae82c5b1c65e0d4a
+                    # or nova-03d8e206-6500-4d91-b47d-ee74897f9b4e
+                    # according to the original file name
+                    lock_file = os.path.split(base_file)[-1]
+                    lockutils.remove_external_lock_file(lock_file,
+                        lock_file_prefix='nova-', lock_path=self.lock_path)
+                except OSError as e:
+                    LOG.debug('Failed to remove %(lock_file)s, '
+                              'error was %(error)s',
+                              {'lock_file': lock_file,
+                               'error': e})
+
     def _remove_swap_file(self, base_file):
         """Remove a single swap base file if it is old enough."""
         maxage = CONF.remove_unused_original_minimum_age_seconds
 
-        self._remove_old_enough_file(base_file, maxage, remove_sig=False)
+        self._remove_old_enough_file(base_file, maxage, remove_sig=False,
+                                     remove_lock=False)
 
     def _remove_base_file(self, base_file):
         """Remove a single base file if it is old enough."""
