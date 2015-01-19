@@ -38,6 +38,7 @@ class VMwareImagesTestCase(test.NoDBTestCase):
         file_path = 'fake_file'
         ds_name = 'ds1'
         host = mock.MagicMock()
+        port = 7443
         context = mock.MagicMock()
 
         image_data = {
@@ -55,7 +56,7 @@ class VMwareImagesTestCase(test.NoDBTestCase):
         def fake_read_handle(read_iter):
             return read_file_handle
 
-        def fake_write_handle(host, dc_name, ds_name, cookies,
+        def fake_write_handle(host, port, dc_name, ds_name, cookies,
                               file_path, file_size):
             return write_file_handle
 
@@ -72,11 +73,11 @@ class VMwareImagesTestCase(test.NoDBTestCase):
         ) as (glance_read, http_write, start_transfer, image_show,
                 image_download):
             images.fetch_image(context, instance,
-                               host, dc_name,
+                               host, port, dc_name,
                                ds_name, file_path)
 
         glance_read.assert_called_once_with(read_iter)
-        http_write.assert_called_once_with(host, dc_name, ds_name, None,
+        http_write.assert_called_once_with(host, port, dc_name, ds_name, None,
                                            file_path, image_data['size'])
         start_transfer.assert_called_once_with(
                 context, read_file_handle,
