@@ -64,9 +64,9 @@ class ModelWithDefaultViews(base_model.ReportModel):
                 del newargs[k]
         super(ModelWithDefaultViews, self).__init__(*args, **newargs)
 
-    def set_current_view_type(self, tp):
+    def set_current_view_type(self, tp, visited=None):
         self.attached_view = self.views[tp]
-        super(ModelWithDefaultViews, self).set_current_view_type(tp)
+        super(ModelWithDefaultViews, self).set_current_view_type(tp, visited)
 
     def __getattr__(self, attrname):
         if attrname[:3] == 'to_':

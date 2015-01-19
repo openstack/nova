@@ -32,6 +32,6 @@ def is_uuid_like(val):
 
     """
     try:
-        return str(uuid.UUID(val)) == val
+        return str(uuid.UUID(val)).lower() == val.lower()
     except (TypeError, ValueError, AttributeError):
         return False

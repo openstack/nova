@@ -136,7 +136,7 @@ class deprecated(object):
             # TODO(tsufiev): change `functools` module to `six` as
             # soon as six 1.7.4 (with fix for passing `assigned`
             # argument to underlying `functools.wraps`) is released
-            # and added to the nova-incubator requrements
+            # and added to the oslo-incubator requrements
             @functools.wraps(orig_init, assigned=('__name__', '__doc__'))
             def new_init(self, *args, **kwargs):
                 LOG.deprecated(msg, details)

@@ -16,25 +16,30 @@ See http://docs.openstack.org/developer/oslo.i18n/usage.html
 
 """
 
-import oslo.i18n
+try:
+    import oslo.i18n
 
+    # NOTE(dhellmann): This reference to o-s-l-o will be replaced by the
+    # application name when this module is synced into the separate
+    # repository. It is OK to have more than one translation function
+    # using the same domain, since there will still only be one message
+    # catalog.
+    _translators = oslo.i18n.TranslatorFactory(domain='nova')
 
-# NOTE(dhellmann): This reference to o-s-l-o will be replaced by the
-# application name when this module is synced into the separate
-# repository. It is OK to have more than one translation function
-# using the same domain, since there will still only be one message
-# catalog.
-_translators = oslo.i18n.TranslatorFactory(domain='nova')
+    # The primary translation function using the well-known name "_"
+    _ = _translators.primary
 
-# The primary translation function using the well-known name "_"
-_ = _translators.primary
-
-# Translators for log levels.
-#
-# The abbreviated names are meant to reflect the usual use of a short
-# name like '_'. The "L" is for "log" and the other letter comes from
-# the level.
-_LI = _translators.log_info
-_LW = _translators.log_warning
-_LE = _translators.log_error
-_LC = _translators.log_critical
+    # Translators for log levels.
+    #
+    # The abbreviated names are meant to reflect the usual use of a short
+    # name like '_'. The "L" is for "log" and the other letter comes from
+    # the level.
+    _LI = _translators.log_info
+    _LW = _translators.log_warning
+    _LE = _translators.log_error
+    _LC = _translators.log_critical
+except ImportError:
+    # NOTE(dims): Support for cases where a project wants to use
+    # code from oslo-incubator, but is not ready to be internationalized
+    # (like tempest)
+    _ = _LI = _LW = _LE = _LC = lambda x: x
