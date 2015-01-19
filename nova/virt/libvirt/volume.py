@@ -423,7 +423,23 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
                                       check_exit_code=[0, 255])[0] \
             or ""
 
-        ips_iqns = self._get_target_portals_from_iscsiadm_output(out)
+        # Extract targets for the current multipath device.
+        ips_iqns = []
+        entries = self._get_iscsi_devices()
+        for ip, iqn in self._get_target_portals_from_iscsiadm_output(out):
+            ip_iqn = "%s-iscsi-%s" % (ip.split(",")[0], iqn)
+            for entry in entries:
+                entry_ip_iqn = entry.split("-lun-")[0]
+                if entry_ip_iqn[:3] == "ip-":
+                    entry_ip_iqn = entry_ip_iqn[3:]
+                if (ip_iqn != entry_ip_iqn):
+                    continue
+                entry_real_path = os.path.realpath("/dev/disk/by-path/%s" %
+                                                   entry)
+                entry_mpdev = self._get_multipath_device_name(entry_real_path)
+                if entry_mpdev == multipath_device:
+                    ips_iqns.append([ip, iqn])
+                    break
 
         if not devices:
             # disconnect if no other multipath devices
