@@ -4588,25 +4588,35 @@ class LibvirtDriver(driver.ComputeDriver):
         if topology is None or not topology.cells:
             return
 
-        topology = objects.NUMATopology(
-                cells=[objects.NUMACell(
-                    id=cell.id,
-                    cpuset=set(cpu.id for cpu in cell.cpus),
-                    memory=cell.memory / units.Ki,
-                    cpu_usage=0, memory_usage=0,
-                    mempages=[
-                        objects.NUMAPagesTopology(
-                            size_kb=pages.size,
-                            total=pages.total,
-                            used=0)
-                        for pages in cell.mempages])
-                for cell in topology.cells])
-
+        cells = []
         allowed_cpus = hardware.get_vcpu_pin_set()
-        if allowed_cpus:
-            for cell in topology.cells:
-                cell.cpuset &= allowed_cpus
-        return topology
+
+        for cell in topology.cells:
+            cpuset = set(cpu.id for cpu in cell.cpus)
+            siblings = sorted(map(set,
+                                  set(tuple(cpu.siblings)
+                                        if cpu.siblings else ()
+                                      for cpu in cell.cpus)
+                                  ))
+            if allowed_cpus:
+                cpuset &= allowed_cpus
+                siblings = [sib & allowed_cpus for sib in siblings]
+            # Filter out singles and empty sibling sets that may be left
+            siblings = [sib for sib in siblings if len(sib) > 1]
+
+            cell = objects.NUMACell(id=cell.id, cpuset=cpuset,
+                                    memory=cell.memory / units.Ki,
+                                    cpu_usage=0, memory_usage=0,
+                                    siblings=siblings,
+                                    mempages=[
+                                        objects.NUMAPagesTopology(
+                                            size_kb=pages.size,
+                                            total=pages.total,
+                                            used=0)
+                                    for pages in cell.mempages])
+            cells.append(cell)
+
+        return objects.NUMATopology(cells=cells)
 
     def get_all_volume_usage(self, context, compute_host_bdms):
         """Return usage info for volumes attached to vms on
