@@ -2003,11 +2003,9 @@ class LibvirtDriver(driver.ComputeDriver):
 
         self._destroy(instance)
 
-        # Get the system metadata from the instance
-        system_meta = utils.instance_sys_meta(instance)
-
         # Convert the system metadata to image metadata
-        image_meta = utils.get_image_from_system_metadata(system_meta)
+        image_meta = utils.get_image_from_system_metadata(
+            instance.system_metadata)
         # NOTE(stpierre): In certain cases -- e.g., when booting a
         #                 guest to restore its state after restarting
         #                 Nova compute -- the context is not
@@ -4047,8 +4045,7 @@ class LibvirtDriver(driver.ComputeDriver):
             self._connect_volume(root_disk['connection_info'], disk_info)
 
             # Get the system metadata from the instance
-            system_meta = utils.instance_sys_meta(instance)
-            use_cow = system_meta['image_disk_format'] == 'qcow2'
+            use_cow = instance.system_metadata['image_disk_format'] == 'qcow2'
         else:
             image = self.image_backend.image(instance, 'disk')
             disk_path = image.path
