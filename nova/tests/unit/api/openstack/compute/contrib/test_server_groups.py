@@ -78,6 +78,7 @@ def server_group_db(sg):
 
 
 class ServerGroupTestV21(test.TestCase):
+    validation_error = exception.ValidationError
 
     def setUp(self):
         super(ServerGroupTestV21, self).setUp()
@@ -89,14 +90,15 @@ class ServerGroupTestV21(test.TestCase):
 
     def test_create_server_group_with_no_policies(self):
         sgroup = server_group_template()
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
-                          self.req, {'server_group': sgroup})
+        self.assertRaises(self.validation_error, self.controller.create,
+                          self.req, body={'server_group': sgroup})
 
     def test_create_server_group_normal(self):
         sgroup = server_group_template()
         policies = ['anti-affinity']
         sgroup['policies'] = policies
-        res_dict = self.controller.create(self.req, {'server_group': sgroup})
+        res_dict = self.controller.create(self.req,
+                                          body={'server_group': sgroup})
         self.assertEqual(res_dict['server_group']['name'], 'test')
         self.assertTrue(uuidutils.is_uuid_like(res_dict['server_group']['id']))
         self.assertEqual(res_dict['server_group']['policies'], policies)
@@ -149,88 +151,88 @@ class ServerGroupTestV21(test.TestCase):
     def test_create_server_group_with_illegal_name(self):
         # blank name
         sgroup = server_group_template(name='', policies=['test_policy'])
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
-                          self.req, {'server_group': sgroup})
+        self.assertRaises(self.validation_error, self.controller.create,
+                          self.req, body={'server_group': sgroup})
 
         # name with length 256
         sgroup = server_group_template(name='1234567890' * 26,
                                        policies=['test_policy'])
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
-                          self.req, {'server_group': sgroup})
+        self.assertRaises(self.validation_error, self.controller.create,
+                          self.req, body={'server_group': sgroup})
 
         # non-string name
         sgroup = server_group_template(name=12, policies=['test_policy'])
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
-                          self.req, {'server_group': sgroup})
+        self.assertRaises(self.validation_error, self.controller.create,
+                          self.req, body={'server_group': sgroup})
 
         # name with leading spaces
         sgroup = server_group_template(name='  leading spaces',
                                        policies=['test_policy'])
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
-                          self.req, {'server_group': sgroup})
+        self.assertRaises(self.validation_error, self.controller.create,
+                          self.req, body={'server_group': sgroup})
 
         # name with trailing spaces
         sgroup = server_group_template(name='trailing space ',
                                        policies=['test_policy'])
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
-                          self.req, {'server_group': sgroup})
+        self.assertRaises(self.validation_error, self.controller.create,
+                          self.req, body={'server_group': sgroup})
 
         # name with all spaces
         sgroup = server_group_template(name='    ',
                                        policies=['test_policy'])
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
-                          self.req, {'server_group': sgroup})
+        self.assertRaises(self.validation_error, self.controller.create,
+                          self.req, body={'server_group': sgroup})
 
     def test_create_server_group_with_illegal_policies(self):
         # blank policy
         sgroup = server_group_template(name='fake-name', policies='')
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
-                          self.req, {'server_group': sgroup})
+        self.assertRaises(self.validation_error, self.controller.create,
+                          self.req, body={'server_group': sgroup})
 
         # policy as integer
         sgroup = server_group_template(name='fake-name', policies=7)
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
-                          self.req, {'server_group': sgroup})
+        self.assertRaises(self.validation_error, self.controller.create,
+                          self.req, body={'server_group': sgroup})
 
         # policy as string
         sgroup = server_group_template(name='fake-name', policies='invalid')
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
-                          self.req, {'server_group': sgroup})
+        self.assertRaises(self.validation_error, self.controller.create,
+                          self.req, body={'server_group': sgroup})
 
         # policy as None
         sgroup = server_group_template(name='fake-name', policies=None)
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
-                          self.req, {'server_group': sgroup})
+        self.assertRaises(self.validation_error, self.controller.create,
+                          self.req, body={'server_group': sgroup})
 
     def test_create_server_group_conflicting_policies(self):
         sgroup = server_group_template()
         policies = ['anti-affinity', 'affinity']
         sgroup['policies'] = policies
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
-                          self.req, {'server_group': sgroup})
+        self.assertRaises(self.validation_error, self.controller.create,
+                          self.req, body={'server_group': sgroup})
 
     def test_create_server_group_with_duplicate_policies(self):
         sgroup = server_group_template()
         policies = ['affinity', 'affinity']
         sgroup['policies'] = policies
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
-                          self.req, {'server_group': sgroup})
+        self.assertRaises(self.validation_error, self.controller.create,
+                          self.req, body={'server_group': sgroup})
 
     def test_create_server_group_not_supported(self):
         sgroup = server_group_template()
         policies = ['storage-affinity', 'anti-affinity', 'rack-affinity']
         sgroup['policies'] = policies
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
-                          self.req, {'server_group': sgroup})
+        self.assertRaises(self.validation_error, self.controller.create,
+                          self.req, body={'server_group': sgroup})
 
     def test_create_server_group_with_no_body(self):
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.create, self.req, None)
+        self.assertRaises(self.validation_error,
+                          self.controller.create, self.req, body=None)
 
     def test_create_server_group_with_no_server_group(self):
         body = {'no-instanceGroup': None}
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.create, self.req, body)
+        self.assertRaises(self.validation_error,
+                          self.controller.create, self.req, body=body)
 
     def test_list_server_group_by_tenant(self):
         groups = []
@@ -338,6 +340,7 @@ class ServerGroupTestV21(test.TestCase):
 
 
 class ServerGroupTestV2(ServerGroupTestV21):
+    validation_error = webob.exc.HTTPBadRequest
 
     def _setup_controller(self):
         ext_mgr = extensions.ExtensionManager()

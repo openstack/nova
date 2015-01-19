@@ -19,20 +19,20 @@ import webob
 from webob import exc
 
 from nova.api.openstack import common
+from nova.api.openstack.compute.schemas.v3 import server_groups as schema
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+from nova.api import validation
 import nova.exception
 from nova.i18n import _
 from nova.i18n import _LE
 from nova import objects
 from nova.openstack.common import log as logging
-from nova import utils
 
 LOG = logging.getLogger(__name__)
 
 ALIAS = "os-server-groups"
 
-SUPPORTED_POLICIES = ['anti-affinity', 'affinity']
 
 authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
 
@@ -67,61 +67,6 @@ class ServerGroupController(wsgi.Controller):
             members = [instance.uuid for instance in instances]
         server_group['members'] = members
         return server_group
-
-    def _validate_policies(self, policies):
-        """Validate the policies.
-
-        Validates that there are no contradicting policies, for example
-        'anti-affinity' and 'affinity' in the same group.
-        Validates that the defined policies are supported.
-        :param policies:     the given policies of the server_group
-        """
-        if ('anti-affinity' in policies and
-            'affinity' in policies):
-            msg = _("Conflicting policies configured!")
-            raise nova.exception.InvalidInput(reason=msg)
-        not_supported = [policy for policy in policies
-                         if policy not in SUPPORTED_POLICIES]
-        if not_supported:
-            msg = _("Invalid policies: %s") % ', '.join(not_supported)
-            raise nova.exception.InvalidInput(reason=msg)
-
-        # Note(wingwj): It doesn't make sense to store duplicate policies.
-        if sorted(set(policies)) != sorted(policies):
-            msg = _("Duplicate policies configured!")
-            raise nova.exception.InvalidInput(reason=msg)
-
-    def _validate_input_body(self, body, entity_name):
-        if not self.is_valid_body(body, entity_name):
-            msg = _("the body is invalid.")
-            raise nova.exception.InvalidInput(reason=msg)
-
-        subbody = dict(body[entity_name])
-
-        expected_fields = ['name', 'policies']
-        for field in expected_fields:
-            value = subbody.pop(field, None)
-            if not value:
-                msg = _("'%s' is either missing or empty.") % field
-                raise nova.exception.InvalidInput(reason=msg)
-            if field == 'name':
-                utils.check_string_length(value, field,
-                                          min_length=1, max_length=255)
-                if not common.VALID_NAME_REGEX.search(value):
-                    msg = _("Invalid format for name: '%s'") % value
-                    raise nova.exception.InvalidInput(reason=msg)
-            elif field == 'policies':
-                if isinstance(value, list):
-                    [utils.check_string_length(v, field,
-                        min_length=1, max_length=255) for v in value]
-                    self._validate_policies(value)
-                else:
-                    msg = _("'%s' is not a list") % value
-                    raise nova.exception.InvalidInput(reason=msg)
-
-        if subbody:
-            msg = _("unsupported fields: %s") % subbody.keys()
-            raise nova.exception.InvalidInput(reason=msg)
 
     @extensions.expected_errors(404)
     def show(self, req, id):
@@ -181,14 +126,10 @@ class ServerGroupController(wsgi.Controller):
         return {'server_groups': result}
 
     @extensions.expected_errors((400, 403))
+    @validation.schema(schema.create)
     def create(self, req, body):
         """Creates a new server group."""
         context = _authorize_context(req)
-
-        try:
-            self._validate_input_body(body, 'server_group')
-        except nova.exception.InvalidInput as e:
-            raise exc.HTTPBadRequest(explanation=e.format_message())
 
         quotas = objects.Quotas()
         try:
