@@ -758,14 +758,22 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
         self.cells_manager.soft_delete_instance(self.ctxt,
                                                 instance='fake-instance')
 
-    def test_resize_instance(self):
+    def _test_resize_instance(self, clean_shutdown=True):
         self.mox.StubOutWithMock(self.msg_runner, 'resize_instance')
         self.msg_runner.resize_instance(self.ctxt, 'fake-instance',
-                                       'fake-flavor', 'fake-updates')
+                                       'fake-flavor', 'fake-updates',
+                                       clean_shutdown=clean_shutdown)
         self.mox.ReplayAll()
         self.cells_manager.resize_instance(
                 self.ctxt, instance='fake-instance', flavor='fake-flavor',
-                extra_instance_updates='fake-updates')
+                extra_instance_updates='fake-updates',
+                clean_shutdown=clean_shutdown)
+
+    def test_resize_instance(self):
+        self._test_resize_instance()
+
+    def test_resize_instance_forced_shutdown(self):
+        self._test_resize_instance(clean_shutdown=False)
 
     def test_live_migrate_instance(self):
         self.mox.StubOutWithMock(self.msg_runner, 'live_migrate_instance')

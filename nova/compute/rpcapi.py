@@ -281,6 +281,7 @@ class ComputeAPI(object):
         * 3.36 - Make build_and_run_instance() send a Flavor object
         * 3.37 - Add clean_shutdown to stop, resize, rescue, shelve, and
                  shelve_offload
+        * 3.38 - Add clean_shutdown to prep_resize
     '''
 
     VERSION_ALIASES = {
@@ -590,18 +591,24 @@ class ComputeAPI(object):
 
     def prep_resize(self, ctxt, image, instance, instance_type, host,
                     reservations=None, request_spec=None,
-                    filter_properties=None, node=None):
-        version = '3.0'
+                    filter_properties=None, node=None,
+                    clean_shutdown=True):
         instance_type_p = jsonutils.to_primitive(instance_type)
         image_p = jsonutils.to_primitive(image)
+        msg_args = {'instance': instance,
+                    'instance_type': instance_type_p,
+                    'image': image_p,
+                    'reservations': reservations,
+                    'request_spec': request_spec,
+                    'filter_properties': filter_properties,
+                    'node': node,
+                    'clean_shutdown': clean_shutdown}
+        version = '3.38'
+        if not self.client.can_send_version(version):
+            del msg_args['clean_shutdown']
+            version = '3.0'
         cctxt = self.client.prepare(server=host, version=version)
-        cctxt.cast(ctxt, 'prep_resize',
-                   instance=instance,
-                   instance_type=instance_type_p,
-                   image=image_p, reservations=reservations,
-                   request_spec=request_spec,
-                   filter_properties=filter_properties,
-                   node=node)
+        cctxt.cast(ctxt, 'prep_resize', **msg_args)
 
     def reboot_instance(self, ctxt, instance, block_device_info,
                         reboot_type):

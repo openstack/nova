@@ -1184,7 +1184,7 @@ class _BaseTaskTestCase(object):
                 {'host': 'destination'}, True, False, None,
                  'block_migration', 'disk_over_commit')
 
-    def test_cold_migrate(self):
+    def _test_cold_migrate(self, clean_shutdown=True):
         self.mox.StubOutWithMock(compute_utils, 'get_image_metadata')
         self.mox.StubOutWithMock(scheduler_utils, 'build_request_spec')
         self.mox.StubOutWithMock(scheduler_utils, 'setup_instance_group')
@@ -1222,7 +1222,8 @@ class _BaseTaskTestCase(object):
         self.conductor_manager.compute_rpcapi.prep_resize(
             self.context, 'image', mox.IsA(objects.Instance),
             mox.IsA(objects.Flavor), 'host1', [], request_spec=request_spec,
-            filter_properties=filter_properties, node=None)
+            filter_properties=filter_properties, node=None,
+            clean_shutdown=clean_shutdown)
 
         self.mox.ReplayAll()
 
@@ -1233,11 +1234,19 @@ class _BaseTaskTestCase(object):
             # The API method is actually 'resize_instance'.  It gets
             # converted into 'migrate_server' when doing RPC.
             self.conductor.resize_instance(
-                self.context, inst_obj, {}, scheduler_hint, flavor, [])
+                self.context, inst_obj, {}, scheduler_hint, flavor, [],
+                clean_shutdown)
         else:
             self.conductor.migrate_server(
                 self.context, inst_obj, scheduler_hint,
-                False, False, flavor, None, None, [])
+                False, False, flavor, None, None, [],
+                clean_shutdown)
+
+    def test_cold_migrate(self):
+        self._test_cold_migrate()
+
+    def test_cold_migrate_forced_shutdown(self):
+        self._test_cold_migrate(clean_shutdown=False)
 
     def test_build_instances(self):
         system_metadata = flavors.save_flavor_info({},
@@ -1824,7 +1833,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         self.assertRaises(exc.NoValidHost,
                           self.conductor._cold_migrate,
                           self.context, inst_obj,
-                          flavor, filter_props, [resvs])
+                          flavor, filter_props, [resvs],
+                          clean_shutdown=True)
 
     def test_cold_migrate_no_valid_host_back_in_stopped_state(self):
         flavor = flavors.get_flavor_by_name('m1.tiny')
@@ -1885,7 +1895,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
 
         self.assertRaises(exc.NoValidHost,
                           self.conductor._cold_migrate, self.context,
-                          inst_obj, flavor, filter_props, [resvs])
+                          inst_obj, flavor, filter_props, [resvs],
+                          clean_shutdown=True)
 
     def test_cold_migrate_no_valid_host_error_msg(self):
         flavor = flavors.get_flavor_by_name('m1.tiny')
@@ -1915,7 +1926,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         ) as (image_mock, brs_mock, sig_mock, set_vm_mock, select_dest_mock):
             nvh = self.assertRaises(exc.NoValidHost,
                                     self.conductor._cold_migrate, self.context,
-                                    inst_obj, flavor, filter_props, [resvs])
+                                    inst_obj, flavor, filter_props, [resvs],
+                                    clean_shutdown=True)
             self.assertIn('cold migrate', nvh.message)
 
     def test_cold_migrate_exception_host_in_error_state_and_raise(self):
@@ -1974,7 +1986,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                 'flavor', hosts[0]['host'], [resvs],
                 request_spec=request_spec,
                 filter_properties=expected_filter_props,
-                node=hosts[0]['nodename']).AndRaise(exc_info)
+                node=hosts[0]['nodename'],
+                clean_shutdown=True).AndRaise(exc_info)
 
         updates = {'vm_state': vm_states.STOPPED,
                    'task_state': None}
@@ -1996,7 +2009,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         self.assertRaises(test.TestingException,
                           self.conductor._cold_migrate,
                           self.context, inst_obj, 'flavor',
-                          filter_props, [resvs])
+                          filter_props, [resvs],
+                          clean_shutdown=True)
 
     def test_resize_no_valid_host_error_msg(self):
         flavor = flavors.get_flavor_by_name('m1.tiny')
@@ -2028,7 +2042,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             nvh = self.assertRaises(exc.NoValidHost,
                                     self.conductor._cold_migrate, self.context,
                                     inst_obj, flavor_new, filter_props,
-                                    [resvs])
+                                    [resvs], clean_shutdown=True)
             self.assertIn('resize', nvh.message)
 
     def test_build_instances_instance_not_found(self):

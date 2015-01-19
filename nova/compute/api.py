@@ -2537,7 +2537,7 @@ class API(base.Base):
     @check_instance_lock
     @check_instance_cell
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED])
-    def resize(self, context, instance, flavor_id=None,
+    def resize(self, context, instance, flavor_id=None, clean_shutdown=True,
                **extra_instance_updates):
         """Resize (ie, migrate) a running instance.
 
@@ -2638,7 +2638,8 @@ class API(base.Base):
         self.compute_task_api.resize_instance(context, instance,
                 extra_instance_updates, scheduler_hint=scheduler_hint,
                 flavor=new_instance_type,
-                reservations=quotas.reservations or [])
+                reservations=quotas.reservations or [],
+                clean_shutdown=clean_shutdown)
 
     @wrap_check_policy
     @check_instance_lock

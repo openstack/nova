@@ -391,6 +391,7 @@ class ComputeTaskAPI(object):
     1.8 - Add rebuild_instance
     1.9 - Converted requested_networks to NetworkRequestList object
     1.10 - Made migrate_server() and build_instances() send flavor objects
+    1.11 - Added clean_shutdown to migrate_server()
 
     """
 
@@ -404,22 +405,26 @@ class ComputeTaskAPI(object):
 
     def migrate_server(self, context, instance, scheduler_hint, live, rebuild,
                   flavor, block_migration, disk_over_commit,
-                  reservations=None):
-        version = '1.10'
+                  reservations=None, clean_shutdown=True):
+        kw = {'instance': instance, 'scheduler_hint': scheduler_hint,
+              'live': live, 'rebuild': rebuild, 'flavor': flavor,
+              'block_migration': block_migration,
+              'disk_over_commit': disk_over_commit,
+              'reservations': reservations,
+              'clean_shutdown': clean_shutdown}
+        version = '1.11'
         if not self.client.can_send_version(version):
-            flavor = objects_base.obj_to_primitive(flavor)
+            del kw['clean_shutdown']
+            version = '1.10'
+        if not self.client.can_send_version(version):
+            kw['flavor'] = objects_base.obj_to_primitive(flavor)
             version = '1.6'
         if not self.client.can_send_version(version):
-            instance = jsonutils.to_primitive(
+            kw['instance'] = jsonutils.to_primitive(
                     objects_base.obj_to_primitive(instance))
             version = '1.4'
         cctxt = self.client.prepare(version=version)
-        return cctxt.call(context, 'migrate_server',
-                          instance=instance, scheduler_hint=scheduler_hint,
-                          live=live, rebuild=rebuild, flavor=flavor,
-                          block_migration=block_migration,
-                          disk_over_commit=disk_over_commit,
-                          reservations=reservations)
+        return cctxt.call(context, 'migrate_server', **kw)
 
     def build_instances(self, context, instances, image, filter_properties,
             admin_password, injected_files, requested_networks,

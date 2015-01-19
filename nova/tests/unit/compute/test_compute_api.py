@@ -1379,7 +1379,8 @@ class _ComputeAPIUnitTestMixIn(object):
                      allow_mig_same_host=False,
                      project_id=None,
                      extra_kwargs=None,
-                     same_flavor=False):
+                     same_flavor=False,
+                     clean_shutdown=True):
         if extra_kwargs is None:
             extra_kwargs = {}
 
@@ -1482,16 +1483,20 @@ class _ComputeAPIUnitTestMixIn(object):
                     self.context, fake_inst, extra_kwargs,
                     scheduler_hint=scheduler_hint,
                     flavor=mox.IsA(objects.Flavor),
-                    reservations=expected_reservations)
+                    reservations=expected_reservations,
+                    clean_shutdown=clean_shutdown)
 
         self.mox.ReplayAll()
 
         if flavor_id_passed:
             self.compute_api.resize(self.context, fake_inst,
                                     flavor_id='new-flavor-id',
+                                    clean_shutdown=clean_shutdown,
                                     **extra_kwargs)
         else:
-            self.compute_api.resize(self.context, fake_inst, **extra_kwargs)
+            self.compute_api.resize(self.context, fake_inst,
+                                    clean_shutdown=clean_shutdown,
+                                    **extra_kwargs)
 
     def _test_migrate(self, *args, **kwargs):
         self._test_resize(*args, flavor_id_passed=False, **kwargs)
@@ -1510,6 +1515,9 @@ class _ComputeAPIUnitTestMixIn(object):
 
     def test_resize_different_project_id(self):
         self._test_resize(project_id='different')
+
+    def test_resize_forced_shutdown(self):
+        self._test_resize(clean_shutdown=False)
 
     def test_migrate(self):
         self._test_migrate()
