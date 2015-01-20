@@ -586,7 +586,14 @@ class ServersController(wsgi.Controller):
                 exception.InvalidBDMBootSequence,
                 exception.InvalidBDMLocalsLimit,
                 exception.InvalidBDMVolumeNotBootable,
-                exception.AutoDiskConfigDisabledByImage) as error:
+                exception.AutoDiskConfigDisabledByImage,
+                exception.ImageNUMATopologyIncomplete,
+                exception.ImageNUMATopologyForbidden,
+                exception.ImageNUMATopologyAsymmetric,
+                exception.ImageNUMATopologyCPUOutOfRange,
+                exception.ImageNUMATopologyCPUDuplicates,
+                exception.ImageNUMATopologyCPUsUnassigned,
+                exception.ImageNUMATopologyMemoryOutOfRange) as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())
         except (exception.PortInUse,
                 exception.InstanceExists,
