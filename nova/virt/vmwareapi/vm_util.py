@@ -26,6 +26,7 @@ from oslo.config import cfg
 from oslo.utils import excutils
 from oslo.utils import units
 from oslo.vmware import exceptions as vexc
+from oslo.vmware.objects import datastore as ds_obj
 from oslo.vmware import pbm
 
 from nova import exception
@@ -449,6 +450,26 @@ def get_vm_extra_config_spec(client_factory, extra_opts):
     return config_spec
 
 
+def _get_device_capacity(device):
+    # Devices pre-vSphere-5.5 only reports capacityInKB, which has
+    # rounding inaccuracies. Use that only if the more accurate
+    # attribute is absent.
+    if hasattr(device, 'capacityInBytes'):
+        return device.capacityInBytes
+    else:
+        return device.capacityInKB * units.Ki
+
+
+def _get_device_disk_type(device):
+    if getattr(device.backing, 'thinProvisioned', False):
+        return constants.DISK_TYPE_THIN
+    else:
+        if getattr(device.backing, 'eagerlyScrub', False):
+            return constants.DISK_TYPE_EAGER_ZEROED_THICK
+        else:
+            return constants.DEFAULT_DISK_TYPE
+
+
 def get_vmdk_info(session, vm_ref, uuid=None):
     """Returns information for the primary VMDK attached to the given VM."""
     hardware_devices = session._call_method(vim_util,
@@ -459,35 +480,24 @@ def get_vmdk_info(session, vm_ref, uuid=None):
     vmdk_file_path = None
     vmdk_controller_key = None
     disk_type = None
-    capacity_in_bytes = None
+    capacity_in_bytes = 0
+    vmdk_device = None
+
+    # Determine if we need to get the details of the root disk
+    root_disk = None
+    root_device = None
+    if uuid:
+        root_disk = '%s.vmdk' % uuid
 
     adapter_type_dict = {}
     for device in hardware_devices:
         if device.__class__.__name__ == "VirtualDisk":
             if device.backing.__class__.__name__ == \
                     "VirtualDiskFlatVer2BackingInfo":
-                if uuid:
-                    if uuid in device.backing.fileName:
-                        vmdk_file_path = device.backing.fileName
-                else:
-                    vmdk_file_path = device.backing.fileName
-                vmdk_controller_key = device.controllerKey
-
-                # Devices pre-vSphere-5.5 only reports capacityInKB, which has
-                # rounding inaccuracies. Use that only if the more accurate
-                # attribute is absent.
-                if hasattr(device, 'capacityInBytes'):
-                    capacity_in_bytes = device.capacityInBytes
-                else:
-                    capacity_in_bytes = device.capacityInKB * units.Ki
-
-                if getattr(device.backing, 'thinProvisioned', False):
-                    disk_type = "thin"
-                else:
-                    if getattr(device.backing, 'eagerlyScrub', False):
-                        disk_type = "eagerZeroedThick"
-                    else:
-                        disk_type = constants.DEFAULT_DISK_TYPE
+                path = ds_obj.DatastorePath.parse(device.backing.fileName)
+                if root_disk and path.basename == root_disk:
+                    root_device = device
+                vmdk_device = device
         elif device.__class__.__name__ == "VirtualLsiLogicController":
             adapter_type_dict[device.key] = constants.DEFAULT_ADAPTER_TYPE
         elif device.__class__.__name__ == "VirtualBusLogicController":
@@ -499,7 +509,16 @@ def get_vmdk_info(session, vm_ref, uuid=None):
         elif device.__class__.__name__ == "ParaVirtualSCSIController":
             adapter_type_dict[device.key] = constants.ADAPTER_TYPE_PARAVIRTUAL
 
-    adapter_type = adapter_type_dict.get(vmdk_controller_key, "")
+    if root_disk:
+        vmdk_device = root_device
+
+    if vmdk_device:
+        vmdk_file_path = vmdk_device.backing.fileName
+        capacity_in_bytes = _get_device_capacity(vmdk_device)
+        vmdk_controller_key = vmdk_device.controllerKey
+        disk_type = _get_device_disk_type(vmdk_device)
+
+    adapter_type = adapter_type_dict.get(vmdk_controller_key)
     return VmdkInfo(vmdk_file_path, adapter_type, disk_type,
                     capacity_in_bytes)
 
