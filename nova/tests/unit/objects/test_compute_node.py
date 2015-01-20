@@ -222,6 +222,32 @@ class _TestComputeNodeObject(object):
                          subs=self.subs(),
                          comparators=self.comparators())
 
+    @mock.patch('nova.db.compute_node_get_all_by_host')
+    def test_get_first_node_by_host_for_old_compat(
+            self, cn_get_all_by_host):
+        another_node = fake_compute_node.copy()
+        another_node['hypervisor_hostname'] = 'neverland'
+        cn_get_all_by_host.return_value = [fake_compute_node, another_node]
+
+        compute = (
+            compute_node.ComputeNode.get_first_node_by_host_for_old_compat(
+                self.context, 'fake')
+        )
+        self.compare_obj(compute, fake_compute_node,
+                         subs=self.subs(),
+                         comparators=self.comparators())
+
+    @mock.patch('nova.objects.ComputeNodeList.get_all_by_host')
+    def test_get_first_node_by_host_for_old_compat_not_found(
+            self, cn_get_all_by_host):
+        cn_get_all_by_host.side_effect = exception.ComputeHostNotFound(
+            host='fake')
+
+        self.assertRaises(
+            exception.ComputeHostNotFound,
+            compute_node.ComputeNode.get_first_node_by_host_for_old_compat,
+            self.context, 'fake')
+
     def test_create(self):
         self.mox.StubOutWithMock(db, 'compute_node_create')
         db.compute_node_create(

@@ -176,13 +176,12 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
 
     def test_check_requested_destination_fails_with_not_enough_memory(self):
         self.mox.StubOutWithMock(self.task, '_check_host_is_up')
-        self.mox.StubOutWithMock(db, 'service_get_by_compute_host')
+        self.mox.StubOutWithMock(objects.ComputeNode,
+                                 'get_first_node_by_host_for_old_compat')
 
         self.task._check_host_is_up(self.destination)
-        db.service_get_by_compute_host(self.context,
-            self.destination).AndReturn({
-                "compute_node": [{"free_ram_mb": 511}]
-            })
+        objects.ComputeNode.get_first_node_by_host_for_old_compat(self.context,
+            self.destination).AndReturn({"free_ram_mb": 511})
 
         self.mox.ReplayAll()
         self.assertRaises(exception.MigrationPreCheckError,

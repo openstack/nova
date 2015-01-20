@@ -4870,8 +4870,8 @@ class ComputeManager(manager.Manager):
         self.driver.detach_interface(instance, condemned)
 
     def _get_compute_info(self, context, host):
-        service = objects.Service.get_by_compute_host(context, host)
-        return service.compute_node
+        return objects.ComputeNode.get_first_node_by_host_for_old_compat(
+            context, host)
 
     @wrap_exception()
     def check_instance_shared_storage(self, ctxt, instance, data):
@@ -6050,14 +6050,12 @@ class ComputeManager(manager.Manager):
         self._resource_tracker_dict = new_resource_tracker_dict
 
     def _get_compute_nodes_in_db(self, context, use_slave=False):
-        service = objects.Service.get_by_compute_host(context, self.host,
-                                                        use_slave=use_slave)
-        if not service:
-            LOG.error(_LE("No service record for host %s"), self.host)
+        try:
+            return objects.ComputeNodeList.get_all_by_host(context, self.host,
+                                                           use_slave=use_slave)
+        except exception.NotFound:
+            LOG.error(_LE("No compute node record for host %s"), self.host)
             return []
-        return objects.ComputeNodeList.get_by_service(context,
-                                                      service,
-                                                      use_slave=use_slave)
 
     @periodic_task.periodic_task(
         spacing=CONF.running_deleted_instance_poll_interval)

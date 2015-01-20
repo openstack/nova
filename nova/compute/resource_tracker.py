@@ -403,14 +403,11 @@ class ResourceTracker(object):
                 # no service record, disable resource
                 return
 
-            compute_node_refs = service['compute_node']
-            if compute_node_refs:
-                for cn in compute_node_refs:
-                    if cn.get('hypervisor_hostname') == self.nodename:
-                        self.compute_node = cn
-                        if self.pci_tracker:
-                            self.pci_tracker.set_compute_node_id(cn['id'])
-                        break
+            cn = self._get_compute_node(context)
+            if cn:
+                self.compute_node = cn
+                if self.pci_tracker:
+                    self.pci_tracker.set_compute_node_id(cn['id'])
 
         if not self.compute_node:
             # Need to create the ComputeNode record:
@@ -439,6 +436,16 @@ class ResourceTracker(object):
             LOG.info(_LI('Compute_service record updated for '
                          '%(host)s:%(node)s'),
                      {'host': self.host, 'node': self.nodename})
+
+    def _get_compute_node(self, context):
+        """Returns compute node for the host and nodename."""
+        try:
+            compute = objects.ComputeNode.get_by_host_and_nodename(
+                context, self.host, self.nodename)
+            return obj_base.obj_to_primitive(compute)
+        except exception.NotFound:
+            LOG.warning(_LW("No compute node record for %(host)s:%(node)s"),
+                        {'host': self.host, 'node': self.nodename})
 
     def _write_ext_resources(self, resources):
         resources['stats'] = {}
