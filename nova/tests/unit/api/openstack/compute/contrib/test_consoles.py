@@ -16,6 +16,7 @@
 import mock
 import webob
 
+from nova.api.openstack import api_version_request
 from nova.api.openstack.compute.contrib import consoles \
     as console_v2
 from nova.api.openstack.compute.plugins.v3 import remote_consoles \
@@ -426,6 +427,150 @@ class ConsolesExtensionTestV21(test.NoDBTestCase):
                                     webob.exc.HTTPBadRequest,
                                     body)
         self.assertTrue(get_serial_console.called)
+
+
+class ConsolesExtensionTestV26(test.NoDBTestCase):
+    def setUp(self):
+        super(ConsolesExtensionTestV26, self).setUp()
+        self.req = fakes.HTTPRequest.blank('')
+        self.context = self.req.environ['nova.context']
+        self.req.api_version_request = api_version_request.APIVersionRequest(
+            '2.6')
+        self.controller = console_v21.RemoteConsolesController()
+
+    @mock.patch.object(compute_api.API, 'get', return_value='fake_instance')
+    def test_create_vnc_console(self, mock_get):
+        mock_handler = mock.MagicMock()
+        mock_handler.return_value = {'url': "http://fake"}
+        self.controller.handlers['vnc'] = mock_handler
+
+        body = {'remote_console': {'protocol': 'vnc', 'type': 'novnc'}}
+        output = self.controller.create(self.req, fakes.FAKE_UUID, body=body)
+        self.assertEqual({'remote_console': {'protocol': 'vnc',
+                                             'type': 'novnc',
+                                             'url': 'http://fake'}}, output)
+        mock_handler.assert_called_once_with(self.context, 'fake_instance',
+                                             'novnc')
+
+    @mock.patch.object(compute_api.API, 'get', return_value='fake_instance')
+    def test_create_spice_console(self, mock_get):
+        mock_handler = mock.MagicMock()
+        mock_handler.return_value = {'url': "http://fake"}
+        self.controller.handlers['spice'] = mock_handler
+
+        body = {'remote_console': {'protocol': 'spice',
+                                   'type': 'spice-html5'}}
+        output = self.controller.create(self.req, fakes.FAKE_UUID, body=body)
+        self.assertEqual({'remote_console': {'protocol': 'spice',
+                                             'type': 'spice-html5',
+                                             'url': 'http://fake'}}, output)
+        mock_handler.assert_called_once_with(self.context, 'fake_instance',
+                                             'spice-html5')
+
+    @mock.patch.object(compute_api.API, 'get', return_value='fake_instance')
+    def test_create_rdp_console(self, mock_get):
+        mock_handler = mock.MagicMock()
+        mock_handler.return_value = {'url': "http://fake"}
+        self.controller.handlers['rdp'] = mock_handler
+
+        body = {'remote_console': {'protocol': 'rdp', 'type': 'rdp-html5'}}
+        output = self.controller.create(self.req, fakes.FAKE_UUID, body=body)
+        self.assertEqual({'remote_console': {'protocol': 'rdp',
+                                             'type': 'rdp-html5',
+                                             'url': 'http://fake'}}, output)
+        mock_handler.assert_called_once_with(self.context, 'fake_instance',
+                                             'rdp-html5')
+
+    @mock.patch.object(compute_api.API, 'get', return_value='fake_instance')
+    def test_create_serial_console(self, mock_get):
+        mock_handler = mock.MagicMock()
+        mock_handler.return_value = {'url': "http://fake"}
+        self.controller.handlers['serial'] = mock_handler
+
+        body = {'remote_console': {'protocol': 'serial', 'type': 'serial'}}
+        output = self.controller.create(self.req, fakes.FAKE_UUID, body=body)
+        self.assertEqual({'remote_console': {'protocol': 'serial',
+                                             'type': 'serial',
+                                             'url': 'http://fake'}}, output)
+        mock_handler.assert_called_once_with(self.context, 'fake_instance',
+                                             'serial')
+
+    @mock.patch.object(compute_api.API, 'get', return_value='fake_instance')
+    def test_create_console_instance_not_ready(self, mock_get):
+        mock_handler = mock.MagicMock()
+        mock_handler.side_effect = exception.InstanceNotReady(
+            instance_id='xxx')
+        self.controller.handlers['vnc'] = mock_handler
+
+        body = {'remote_console': {'protocol': 'vnc', 'type': 'novnc'}}
+        self.assertRaises(webob.exc.HTTPConflict, self.controller.create,
+                          self.req, fakes.FAKE_UUID, body=body)
+
+    @mock.patch.object(compute_api.API, 'get', return_value='fake_instance')
+    def test_create_console_unavailable(self, mock_get):
+        mock_handler = mock.MagicMock()
+        mock_handler.side_effect = exception.ConsoleTypeUnavailable(
+            console_type='vnc')
+        self.controller.handlers['vnc'] = mock_handler
+
+        body = {'remote_console': {'protocol': 'vnc', 'type': 'novnc'}}
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
+                          self.req, fakes.FAKE_UUID, body=body)
+        self.assertTrue(mock_handler.called)
+
+    @mock.patch.object(compute_api.API, 'get', return_value='fake_instance')
+    def test_create_console_not_found(self, mock_get):
+        mock_handler = mock.MagicMock()
+        mock_handler.side_effect = exception.InstanceNotFound(
+            instance_id='xxx')
+        self.controller.handlers['vnc'] = mock_handler
+
+        body = {'remote_console': {'protocol': 'vnc', 'type': 'novnc'}}
+        self.assertRaises(webob.exc.HTTPNotFound, self.controller.create,
+                          self.req, fakes.FAKE_UUID, body=body)
+
+    @mock.patch.object(compute_api.API, 'get', return_value='fake_instance')
+    def test_create_console_not_implemented(self, mock_get):
+        mock_handler = mock.MagicMock()
+        mock_handler.side_effect = NotImplementedError()
+        self.controller.handlers['vnc'] = mock_handler
+
+        body = {'remote_console': {'protocol': 'vnc', 'type': 'novnc'}}
+        self.assertRaises(webob.exc.HTTPNotImplemented, self.controller.create,
+                          self.req, fakes.FAKE_UUID, body=body)
+
+    @mock.patch.object(compute_api.API, 'get', return_value='fake_instance')
+    def test_create_console_nport_invalid(self, mock_get):
+        mock_handler = mock.MagicMock()
+        mock_handler.side_effect = exception.ImageSerialPortNumberInvalid(
+            num_ports='x', property="hw_serial_port_count")
+        self.controller.handlers['serial'] = mock_handler
+
+        body = {'remote_console': {'protocol': 'serial', 'type': 'serial'}}
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
+                          self.req, fakes.FAKE_UUID, body=body)
+
+    @mock.patch.object(compute_api.API, 'get', return_value='fake_instance')
+    def test_create_console_nport_exceed(self, mock_get):
+        mock_handler = mock.MagicMock()
+        mock_handler.side_effect = (
+            exception.ImageSerialPortNumberExceedFlavorValue())
+        self.controller.handlers['serial'] = mock_handler
+
+        body = {'remote_console': {'protocol': 'serial', 'type': 'serial'}}
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
+                          self.req, fakes.FAKE_UUID, body=body)
+
+    @mock.patch.object(compute_api.API, 'get', return_value='fake_instance')
+    def test_create_console_socket_exhausted(self, mock_get):
+        mock_handler = mock.MagicMock()
+        mock_handler.side_effect = (
+            exception.SocketPortRangeExhaustedException(host='127.0.0.1'))
+        self.controller.handlers['serial'] = mock_handler
+
+        body = {'remote_console': {'protocol': 'serial', 'type': 'serial'}}
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
+                          self.req, fakes.FAKE_UUID, body=body)
 
 
 class ConsolesExtensionTestV2(ConsolesExtensionTestV21):
