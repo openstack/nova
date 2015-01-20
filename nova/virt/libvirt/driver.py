@@ -5287,8 +5287,21 @@ class LibvirtDriver(driver.ComputeDriver):
                                                destroy_disks=True,
                                                migrate_data=None):
         """Clean up destination node after a failed live migration."""
-        self.destroy(context, instance, network_info, block_device_info,
-                     destroy_disks, migrate_data)
+        try:
+            self.destroy(context, instance, network_info, block_device_info,
+                         destroy_disks, migrate_data)
+        finally:
+            # NOTE(gcb): Failed block live migration may leave instance
+            # directory at destination node, ensure it is always deleted.
+            is_shared_instance_path = True
+            if migrate_data:
+                is_shared_instance_path = migrate_data.get(
+                        'is_shared_instance_path', True)
+            if not is_shared_instance_path:
+                instance_dir = libvirt_utils.get_instance_path_at_destination(
+                                instance, migrate_data)
+                if os.path.exists(instance_dir):
+                        shutil.rmtree(instance_dir)
 
     def pre_live_migration(self, context, instance, block_device_info,
                            network_info, disk_info, migrate_data=None):
@@ -5297,14 +5310,12 @@ class LibvirtDriver(driver.ComputeDriver):
         is_shared_block_storage = True
         is_shared_instance_path = True
         is_block_migration = True
-        instance_relative_path = None
         if migrate_data:
             is_shared_block_storage = migrate_data.get(
                     'is_shared_block_storage', True)
             is_shared_instance_path = migrate_data.get(
                     'is_shared_instance_path', True)
             is_block_migration = migrate_data.get('block_migration', True)
-            instance_relative_path = migrate_data.get('instance_relative_path')
 
         if not (is_shared_instance_path and is_shared_block_storage):
             # NOTE(mikal): live migration of instances using config drive is
@@ -5314,14 +5325,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 raise exception.NoLiveMigrationForConfigDriveInLibVirt()
 
         if not is_shared_instance_path:
-            # NOTE(mikal): this doesn't use libvirt_utils.get_instance_path
-            # because we are ensuring that the same instance directory name
-            # is used as was at the source
-            if instance_relative_path:
-                instance_dir = os.path.join(CONF.instances_path,
-                                            instance_relative_path)
-            else:
-                instance_dir = libvirt_utils.get_instance_path(instance)
+            instance_dir = libvirt_utils.get_instance_path_at_destination(
+                            instance, migrate_data)
 
             if os.path.exists(instance_dir):
                 raise exception.DestinationDiskExists(path=instance_dir)

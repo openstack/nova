@@ -655,3 +655,24 @@ disk size: 4.4M
         with_actual_path = True
         out = libvirt_utils.get_disk_backing_file('')
         self.assertEqual(out, 'c')
+
+    def test_get_instance_path_at_destination(self):
+        instance = dict(name='fake_inst', uuid='fake_uuid')
+
+        migrate_data = None
+        inst_path_at_dest = libvirt_utils.get_instance_path_at_destination(
+            instance, migrate_data)
+        expected_path = os.path.join(CONF.instances_path, instance['uuid'])
+        self.assertEqual(expected_path, inst_path_at_dest)
+
+        migrate_data = {}
+        inst_path_at_dest = libvirt_utils.get_instance_path_at_destination(
+            instance, migrate_data)
+        expected_path = os.path.join(CONF.instances_path, instance['uuid'])
+        self.assertEqual(expected_path, inst_path_at_dest)
+
+        migrate_data = dict(instance_relative_path='fake_relative_path')
+        inst_path_at_dest = libvirt_utils.get_instance_path_at_destination(
+            instance, migrate_data)
+        expected_path = os.path.join(CONF.instances_path, 'fake_relative_path')
+        self.assertEqual(expected_path, inst_path_at_dest)

@@ -195,6 +195,11 @@ def get_instance_path(instance, forceold=False, relative=False):
                                            relative=relative)
 
 
+def get_instance_path_at_destination(instance, migrate_data=None):
+    return libvirt_utils.get_instance_path_at_destination(instance,
+                                                          migrate_data)
+
+
 def pick_disk_driver_name(hypervisor_version, is_block_dev=False):
     return "qemu"
 

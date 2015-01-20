@@ -488,6 +488,33 @@ def get_instance_path(instance, forceold=False, relative=False):
     return os.path.join(CONF.instances_path, instance['uuid'])
 
 
+def get_instance_path_at_destination(instance, migrate_data=None):
+    """Get the the instance path on destination node while live migration.
+
+    This method determines the directory name for instance storage on
+    destination node, while live migration.
+
+    :param instance: the instance we want a path for
+    :param migrate_data: if not None, it is a dict which holds data
+                         required for live migration without shared
+                         storage.
+
+    :returns: a path to store information about that instance
+    """
+    instance_relative_path = None
+    if migrate_data:
+        instance_relative_path = migrate_data.get('instance_relative_path')
+    # NOTE(mikal): this doesn't use libvirt_utils.get_instance_path
+    # because we are ensuring that the same instance directory name
+    # is used as was at the source
+    if instance_relative_path:
+        instance_dir = os.path.join(CONF.instances_path,
+                                    instance_relative_path)
+    else:
+        instance_dir = get_instance_path(instance)
+    return instance_dir
+
+
 def get_arch(image_meta):
     """Determine the architecture of the guest (or host).
 

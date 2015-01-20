@@ -6325,13 +6325,49 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                           recover_method=fake_recover_method,
                           migrate_data=migrate_data)
 
-    def test_rollback_live_migration_at_destination(self):
+    @mock.patch('shutil.rmtree')
+    @mock.patch('os.path.exists', return_value=True)
+    @mock.patch('nova.virt.libvirt.utils.get_instance_path_at_destination')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.destroy')
+    def test_rollback_live_migration_at_dest_not_shared(self, mock_destroy,
+                                                        mock_get_instance_path,
+                                                        mock_exist,
+                                                        mock_shutil
+                                                        ):
+        # destroy method may raise InstanceTerminationFailure or
+        # InstancePowerOffFailure, here use their base class Invalid.
+        mock_destroy.side_effect = exception.Invalid(reason='just test')
+        fake_instance_path = os.path.join(cfg.CONF.instances_path,
+                                          '/fake_instance_uuid')
+        mock_get_instance_path.return_value = fake_instance_path
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        with mock.patch.object(conn, "destroy") as mock_destroy:
-            conn.rollback_live_migration_at_destination("context",
-                    "instance", [], None, True, None)
-            mock_destroy.assert_called_once_with("context",
-                    "instance", [], None, True, None)
+
+        migrate_data = {'is_shared_instance_path': False}
+        self.assertRaises(exception.Invalid,
+                          conn.rollback_live_migration_at_destination,
+                          "context", "instance", [], None, True, migrate_data)
+        mock_exist.assert_called_once_with(fake_instance_path)
+        mock_shutil.assert_called_once_with(fake_instance_path)
+
+    @mock.patch('shutil.rmtree')
+    @mock.patch('os.path.exists')
+    @mock.patch('nova.virt.libvirt.utils.get_instance_path_at_destination')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.destroy')
+    def test_rollback_live_migration_at_dest_shared(self, mock_destroy,
+                                                    mock_get_instance_path,
+                                                    mock_exist,
+                                                    mock_shutil
+                                                    ):
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+        migrate_data = {'is_shared_instance_path': True}
+        conn.rollback_live_migration_at_destination("context", "instance", [],
+                                                    None, True, migrate_data)
+        mock_destroy.assert_called_once_with("context", "instance", [],
+                                             None, True, migrate_data)
+        self.assertFalse(mock_get_instance_path.called)
+        self.assertFalse(mock_exist.called)
+        self.assertFalse(mock_shutil.called)
 
     def _do_test_create_images_and_backing(self, disk_type):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
