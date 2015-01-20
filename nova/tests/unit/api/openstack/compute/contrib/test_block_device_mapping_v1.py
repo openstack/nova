@@ -329,12 +329,17 @@ class BlockDeviceMappingTestV21(test.TestCase):
         self._test_create(params, override_controller=controller)
 
     def test_create_instance_both_bdm_formats(self):
+        ext_info = plugins.LoadedExtensionInfo()
+        CONF.set_override('extensions_blacklist', '', 'osapi_v3')
+        both_controllers = servers_v3.ServersController(
+                extension_info=ext_info)
         bdm = [{'device_name': 'foo'}]
         bdm_v2 = [{'source_type': 'volume',
                    'uuid': 'fake_vol'}]
         params = {'block_device_mapping': bdm,
                   'block_device_mapping_v2': bdm_v2}
-        self.assertRaises(exc.HTTPBadRequest, self._test_create, params)
+        self.assertRaises(exc.HTTPBadRequest, self._test_create, params,
+                          override_controller=both_controllers)
 
 
 class BlockDeviceMappingTestV2(BlockDeviceMappingTestV21):
