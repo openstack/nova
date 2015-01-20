@@ -284,7 +284,7 @@ MAX_CONSOLE_BYTES = 100 * units.Ki
 # The libvirt driver will prefix any disable reason codes with this string.
 DISABLE_PREFIX = 'AUTO: '
 # Disable reason for the service which was enabled or disabled without reason
-DISABLE_REASON_UNDEFINED = 'None'
+DISABLE_REASON_UNDEFINED = None
 
 # Guest config console string
 CONSOLE = "console=tty0 console=ttyS0"
@@ -509,8 +509,6 @@ class LibvirtDriver(driver.ComputeDriver):
     def _handle_conn_event(self, enabled, reason):
         LOG.info(_LI("Connection event '%(enabled)d' reason '%(reason)s'"),
                  {'enabled': enabled, 'reason': reason})
-        if reason is None:
-            reason = DISABLE_REASON_UNDEFINED
         self._set_host_enabled(enabled, reason)
 
     def init_host(self, host):

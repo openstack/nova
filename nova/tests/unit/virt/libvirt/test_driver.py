@@ -7552,7 +7552,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             conn.init_host("wibble")
             conn.get_num_instances()
             self.assertTrue(not service_mock.disabled and
-                            service_mock.disabled_reason is 'None')
+                            service_mock.disabled_reason is None)
 
     def test_immediate_delete(self):
         def fake_get_domain(instance):

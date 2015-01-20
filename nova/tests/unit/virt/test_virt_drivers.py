@@ -840,7 +840,7 @@ class LibvirtConnTestCase(_VirtDriverTestCase, test.TestCase):
                                return_value=service_mock):
             self.connection._set_host_enabled(True)
             self.assertFalse(service_mock.disabled)
-            self.assertEqual(service_mock.disabled_reason, 'None')
+            self.assertIsNone(service_mock.disabled_reason)
 
     def test_set_host_enabled_when_manually_disabled(self):
         self.mox.UnsetStubs()
