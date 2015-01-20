@@ -36,6 +36,28 @@ class TestComputeCapabilitiesFilter(test.NoDBTestCase):
         assertion = self.assertTrue if passes else self.assertFalse
         assertion(self.filt_cls.host_passes(host, filter_properties))
 
+    def test_compute_filter_passes_without_extra_specs(self):
+        filter_properties = {'instance_type': {'memory_mb': 1024}}
+        host_state = {'free_ram_mb': 1024}
+        host = fakes.FakeHostState('host1', 'node1', host_state)
+        self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
+
+    def test_compute_filter_fails_without_host_state(self):
+        especs = {'capabilities': '1'}
+        filter_properties = {'instance_type': {'memory_mb': 1024,
+                                               'extra_specs': especs}}
+        self.assertFalse(self.filt_cls.host_passes(None, filter_properties))
+
+    def test_compute_filter_fails_without_capabilites(self):
+        cpu_info = """ { } """
+
+        cpu_info = six.text_type(cpu_info)
+
+        self._do_test_compute_filter_extra_specs(
+            ecaps={'cpu_info': cpu_info},
+            especs={'capabilities:cpu_info:vendor': 'Intel'},
+            passes=False)
+
     def test_compute_filter_pass_cpu_info_as_text_type(self):
         cpu_info = """ { "vendor": "Intel", "model": "core2duo",
         "arch": "i686","features": ["lahf_lm", "rdtscp"], "topology":
@@ -44,7 +66,7 @@ class TestComputeCapabilitiesFilter(test.NoDBTestCase):
         cpu_info = six.text_type(cpu_info)
 
         self._do_test_compute_filter_extra_specs(
-                ecaps={'cpu_info': cpu_info},
+            ecaps={'cpu_info': cpu_info},
             especs={'capabilities:cpu_info:vendor': 'Intel'},
             passes=True)
 
@@ -54,25 +76,25 @@ class TestComputeCapabilitiesFilter(test.NoDBTestCase):
         cpu_info = six.text_type(cpu_info)
 
         self._do_test_compute_filter_extra_specs(
-                ecaps={'cpu_info': cpu_info},
+            ecaps={'cpu_info': cpu_info},
             especs={'capabilities:cpu_info:vendor': 'Intel'},
             passes=False)
 
     def test_compute_filter_passes_extra_specs_simple(self):
         self._do_test_compute_filter_extra_specs(
-                ecaps={'stats': {'opt1': 1, 'opt2': 2}},
+            ecaps={'stats': {'opt1': 1, 'opt2': 2}},
             especs={'opt1': '1', 'opt2': '2', 'trust:trusted_host': 'true'},
             passes=True)
 
     def test_compute_filter_fails_extra_specs_simple(self):
         self._do_test_compute_filter_extra_specs(
-                ecaps={'stats': {'opt1': 1, 'opt2': 2}},
+            ecaps={'stats': {'opt1': 1, 'opt2': 2}},
             especs={'opt1': '1', 'opt2': '222', 'trust:trusted_host': 'true'},
             passes=False)
 
     def test_compute_filter_pass_extra_specs_simple_with_scope(self):
         self._do_test_compute_filter_extra_specs(
-                ecaps={'stats': {'opt1': 1, 'opt2': 2}},
+            ecaps={'stats': {'opt1': 1, 'opt2': 2}},
             especs={'capabilities:opt1': '1',
                     'trust:trusted_host': 'true'},
             passes=True)
@@ -93,7 +115,7 @@ class TestComputeCapabilitiesFilter(test.NoDBTestCase):
 
     def test_compute_filter_extra_specs_pass_multi_level_with_scope(self):
         self._do_test_compute_filter_extra_specs(
-                ecaps={'stats': {'opt1': {'a': 1, 'b': {'aa': 2}}, 'opt2': 2}},
+            ecaps={'stats': {'opt1': {'a': 1, 'b': {'aa': 2}}, 'opt2': 2}},
             especs={'opt1:a': '1', 'capabilities:opt1:b:aa': '2',
                     'trust:trusted_host': 'true'},
             passes=True)
