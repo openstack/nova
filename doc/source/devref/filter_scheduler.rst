@@ -246,7 +246,9 @@ and at the same time with free disk space greater or equal than 200 GB.
 
 Many filters use data from ``scheduler_hints``, that is defined in the moment of
 creation of the new server for the user. The only exception for this rule is
-|JsonFilter|, that takes data in some strange difficult to understand way.
+|JsonFilter|, that takes data from the schedulers ``HostState`` data structure
+directly. Variable naming, such as the ``$free_ram_mb`` example above, should
+be based on those attributes.
 
 The |RetryFilter| filters hosts that have already been attempted for scheduling.
 It only passes hosts that have not been previously attempted.
