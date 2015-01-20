@@ -13,13 +13,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_utils import uuidutils
+import webob
 
 from nova.api.openstack import common
 from nova.api.openstack.compute.contrib import admin_actions as \
     create_backup_v2
 from nova.api.openstack.compute.plugins.v3 import create_backup as \
     create_backup_v21
+from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack.compute import admin_only_action_common
 from nova.tests.unit.api.openstack import fakes
@@ -29,6 +30,7 @@ class CreateBackupTestsV21(admin_only_action_common.CommonMixin,
                         test.NoDBTestCase):
     create_backup = create_backup_v21
     controller_name = 'CreateBackupController'
+    validation_error = exception.ValidationError
 
     def setUp(self):
         super(CreateBackupTestsV21, self).setUp()
@@ -40,21 +42,10 @@ class CreateBackupTestsV21(admin_only_action_common.CommonMixin,
 
         self.stubs.Set(self.create_backup, self.controller_name,
                        _fake_controller)
-        self.app = self._get_app()
         self.mox.StubOutWithMock(self.compute_api, 'get')
         self.mox.StubOutWithMock(common,
                                  'check_img_metadata_properties_quota')
         self.mox.StubOutWithMock(self.compute_api, 'backup')
-
-    def _make_url(self, uuid=None):
-        if uuid is None:
-            uuid = uuidutils.generate_uuid()
-        return '/servers/%s/action' % uuid
-
-    def _get_app(self):
-        return fakes.wsgi_app_v21(init_only=('servers',
-                                             'os-create-backup'),
-                                  fake_auth_context=self.context)
 
     def test_create_backup_with_metadata(self):
         metadata = {'123': 'asdf'}
@@ -77,8 +68,8 @@ class CreateBackupTestsV21(admin_only_action_common.CommonMixin,
                                 extra_properties=metadata).AndReturn(image)
 
         self.mox.ReplayAll()
-
-        res = self._make_request(self._make_url(instance.uuid), body)
+        res = self.controller._create_backup(self.req, instance.uuid,
+                                             body=body)
         self.assertEqual(202, res.status_int)
         self.assertIn('fake-image-id', res.headers['Location'])
 
@@ -90,8 +81,9 @@ class CreateBackupTestsV21(admin_only_action_common.CommonMixin,
                 'rotation': 1,
             },
         }
-        res = self._make_request(self._make_url(), body)
-        self.assertEqual(400, res.status_int)
+        self.assertRaises(self.validation_error,
+                          self.controller._create_backup,
+                          self.req, fakes.FAKE_UUID, body=body)
 
     def test_create_backup_no_rotation(self):
         # Rotation is required for backup requests.
@@ -101,8 +93,9 @@ class CreateBackupTestsV21(admin_only_action_common.CommonMixin,
                 'backup_type': 'daily',
             },
         }
-        res = self._make_request(self._make_url(), body)
-        self.assertEqual(400, res.status_int)
+        self.assertRaises(self.validation_error,
+                          self.controller._create_backup,
+                          self.req, fakes.FAKE_UUID, body=body)
 
     def test_create_backup_negative_rotation(self):
         """Rotation must be greater than or equal to zero
@@ -115,8 +108,9 @@ class CreateBackupTestsV21(admin_only_action_common.CommonMixin,
                 'rotation': -1,
             },
         }
-        res = self._make_request(self._make_url(), body)
-        self.assertEqual(400, res.status_int)
+        self.assertRaises(self.validation_error,
+                          self.controller._create_backup,
+                          self.req, fakes.FAKE_UUID, body=body)
 
     def test_create_backup_negative_rotation_with_string_number(self):
         body = {
@@ -126,8 +120,9 @@ class CreateBackupTestsV21(admin_only_action_common.CommonMixin,
                 'rotation': '-1',
             },
         }
-        res = self._make_request(self._make_url('fake'), body)
-        self.assertEqual(400, res.status_int)
+        self.assertRaises(self.validation_error,
+                          self.controller._create_backup,
+                          self.req, fakes.FAKE_UUID, body=body)
 
     def test_create_backup_no_backup_type(self):
         # Backup Type (daily or weekly) is required for backup requests.
@@ -137,8 +132,9 @@ class CreateBackupTestsV21(admin_only_action_common.CommonMixin,
                 'rotation': 1,
             },
         }
-        res = self._make_request(self._make_url(), body)
-        self.assertEqual(400, res.status_int)
+        self.assertRaises(self.validation_error,
+                          self.controller._create_backup,
+                          self.req, fakes.FAKE_UUID, body=body)
 
     def test_create_backup_non_dict_metadata(self):
         body = {
@@ -149,13 +145,15 @@ class CreateBackupTestsV21(admin_only_action_common.CommonMixin,
                 'metadata': 'non_dict',
             },
         }
-        res = self._make_request(self._make_url('fake'), body)
-        self.assertEqual(400, res.status_int)
+        self.assertRaises(self.validation_error,
+                          self.controller._create_backup,
+                          self.req, fakes.FAKE_UUID, body=body)
 
     def test_create_backup_bad_entity(self):
         body = {'createBackup': 'go'}
-        res = self._make_request(self._make_url(), body)
-        self.assertEqual(400, res.status_int)
+        self.assertRaises(self.validation_error,
+                          self.controller._create_backup,
+                          self.req, fakes.FAKE_UUID, body=body)
 
     def test_create_backup_rotation_is_zero(self):
         # The happy path for creating backups if rotation is zero.
@@ -177,7 +175,8 @@ class CreateBackupTestsV21(admin_only_action_common.CommonMixin,
 
         self.mox.ReplayAll()
 
-        res = self._make_request(self._make_url(instance.uuid), body)
+        res = self.controller._create_backup(self.req, instance.uuid,
+                                             body=body)
         self.assertEqual(202, res.status_int)
         self.assertNotIn('Location', res.headers)
 
@@ -201,7 +200,8 @@ class CreateBackupTestsV21(admin_only_action_common.CommonMixin,
 
         self.mox.ReplayAll()
 
-        res = self._make_request(self._make_url(instance.uuid), body)
+        res = self.controller._create_backup(self.req, instance.uuid,
+                                             body=body)
         self.assertEqual(202, res.status_int)
         self.assertIn('fake-image-id', res.headers['Location'])
 
@@ -224,7 +224,8 @@ class CreateBackupTestsV21(admin_only_action_common.CommonMixin,
 
         self.mox.ReplayAll()
 
-        res = self._make_request(self._make_url(instance['uuid']), body)
+        res = self.controller._create_backup(self.req, instance['uuid'],
+                                             body=body)
         self.assertEqual(202, res.status_int)
         self.assertIn('fake-image-id', res.headers['Location'])
 
@@ -237,14 +238,15 @@ class CreateBackupTestsV21(admin_only_action_common.CommonMixin,
             },
         }
         args_map = {
-            'createBackup': (
+            '_create_backup': (
                 ('Backup 1', 'daily', 1), {'extra_properties': {}}
             ),
         }
         common.check_img_metadata_properties_quota(self.context, {})
-        self._test_invalid_state('createBackup', method='backup',
+        self._test_invalid_state('_create_backup', method='backup',
                                  body_map=body_map,
-                                 compute_api_args_map=args_map)
+                                 compute_api_args_map=args_map,
+                                 exception_arg='createBackup')
 
     def test_create_backup_with_non_existed_instance(self):
         body_map = {
@@ -255,7 +257,7 @@ class CreateBackupTestsV21(admin_only_action_common.CommonMixin,
             },
         }
         common.check_img_metadata_properties_quota(self.context, {})
-        self._test_non_existing_instance('createBackup',
+        self._test_non_existing_instance('_create_backup',
                                          body_map=body_map)
 
     def test_create_backup_with_invalid_create_backup(self):
@@ -266,24 +268,29 @@ class CreateBackupTestsV21(admin_only_action_common.CommonMixin,
                 'rotation': 1,
             },
         }
-        res = self._make_request(self._make_url(), body)
-        self.assertEqual(400, res.status_int)
+        self.assertRaises(self.validation_error,
+                          self.controller._create_backup,
+                          self.req, fakes.FAKE_UUID, body=body)
 
 
 class CreateBackupTestsV2(CreateBackupTestsV21):
     create_backup = create_backup_v2
     controller_name = 'AdminActionsController'
+    validation_error = webob.exc.HTTPBadRequest
 
-    def setUp(self):
-        super(CreateBackupTestsV2, self).setUp()
-        self.flags(
-            osapi_compute_extension=[
-            'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Admin_actions'])
-
-    def _get_app(self):
-        return fakes.wsgi_app(init_only=('servers',),
-            fake_auth_context=self.context)
+    def test_create_backup_with_invalid_create_backup(self):
+        # NOTE(gmann):V2 API does not raise bad request for below type of
+        # invalid body in controller method.
+        body = {
+            'createBackupup': {
+                'name': 'Backup 1',
+                'backup_type': 'daily',
+                'rotation': 1,
+            },
+        }
+        self.assertRaises(KeyError,
+                          self.controller._create_backup,
+                          self.req, fakes.FAKE_UUID, body=body)
 
     def test_create_backup_non_dict_metadata(self):
         pass

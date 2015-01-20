@@ -12,15 +12,14 @@
 #   License for the specific language governing permissions and limitations
 #   under the License.
 
-from oslo_serialization import jsonutils
 from oslo_utils import timeutils
 from oslo_utils import uuidutils
 import webob
 
 from nova.compute import vm_states
-import nova.context
 from nova import exception
 from nova import test
+from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_instance
 
 
@@ -28,14 +27,8 @@ class CommonMixin(object):
     def setUp(self):
         super(CommonMixin, self).setUp()
         self.compute_api = None
-        self.context = nova.context.RequestContext('fake', 'fake')
-
-    def _make_request(self, url, body):
-        req = webob.Request.blank('/v2/fake' + url)
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.content_type = 'application/json'
-        return req.get_response(self.app)
+        self.req = fakes.HTTPRequest.blank('')
+        self.context = self.req.environ['nova.context']
 
     def _stub_instance_get(self, uuid=None):
         if uuid is None:
@@ -60,10 +53,10 @@ class CommonMixin(object):
                 exception.InstanceNotFound(instance_id=uuid), uuid=uuid)
 
         self.mox.ReplayAll()
-
-        res = self._make_request('/servers/%s/action' % uuid,
-                                 {action: body_map.get(action)})
-        self.assertEqual(404, res.status_int)
+        controller_function = getattr(self.controller, action)
+        self.assertRaises(webob.exc.HTTPNotFound,
+                          controller_function,
+                          self.req, uuid, body=body_map)
         # Do these here instead of tearDown because this method is called
         # more than once for the same test case
         self.mox.VerifyAll()
@@ -72,21 +65,24 @@ class CommonMixin(object):
     def _test_action(self, action, body=None, method=None,
                      compute_api_args_map=None):
         if method is None:
-            method = action
-
+            method = action.replace('_', '')
         compute_api_args_map = compute_api_args_map or {}
 
         instance = self._stub_instance_get()
-
         args, kwargs = compute_api_args_map.get(action, ((), {}))
         getattr(self.compute_api, method)(self.context, instance, *args,
                                           **kwargs)
 
         self.mox.ReplayAll()
-
-        res = self._make_request('/servers/%s/action' % instance.uuid,
-                                 {action: body})
-        self.assertEqual(202, res.status_int)
+        controller_function = getattr(self.controller, action)
+        res = controller_function(self.req, instance.uuid, body=body)
+        # NOTE: on v2.1, http status code is set as wsgi_code of API
+        # method instead of status_int in a response object.
+        if self._api_version == '2.1':
+            status_int = controller_function.wsgi_code
+        else:
+            status_int = res.status_int
+        self.assertEqual(202, status_int)
         # Do these here instead of tearDown because this method is called
         # more than once for the same test case
         self.mox.VerifyAll()
@@ -94,7 +90,7 @@ class CommonMixin(object):
 
     def _test_not_implemented_state(self, action, method=None):
         if method is None:
-            method = action
+            method = action.replace('_', '')
 
         instance = self._stub_instance_get()
         body = {}
@@ -105,19 +101,20 @@ class CommonMixin(object):
                 NotImplementedError())
 
         self.mox.ReplayAll()
-
-        res = self._make_request('/servers/%s/action' % instance.uuid,
-                                 {action: body})
-        self.assertEqual(501, res.status_int)
+        controller_function = getattr(self.controller, action)
+        self.assertRaises(webob.exc.HTTPNotImplemented,
+                          controller_function,
+                          self.req, instance.uuid, body=body)
         # Do these here instead of tearDown because this method is called
         # more than once for the same test case
         self.mox.VerifyAll()
         self.mox.UnsetStubs()
 
     def _test_invalid_state(self, action, method=None, body_map=None,
-                            compute_api_args_map=None):
+                            compute_api_args_map=None,
+                            exception_arg=None):
         if method is None:
-            method = action
+            method = action.replace('_', '')
         if body_map is None:
             body_map = {}
         if compute_api_args_map is None:
@@ -134,12 +131,14 @@ class CommonMixin(object):
                     state='foo', method=method))
 
         self.mox.ReplayAll()
-
-        res = self._make_request('/servers/%s/action' % instance.uuid,
-                                 {action: body_map.get(action)})
-        self.assertEqual(409, res.status_int)
+        controller_function = getattr(self.controller, action)
+        ex = self.assertRaises(webob.exc.HTTPConflict,
+                               controller_function,
+                               self.req, instance.uuid,
+                               body=body_map)
         self.assertIn("Cannot \'%(action)s\' instance %(id)s"
-                      % {'action': action, 'id': instance.uuid}, res.body)
+                      % {'action': exception_arg or method,
+                         'id': instance.uuid}, ex.explanation)
         # Do these here instead of tearDown because this method is called
         # more than once for the same test case
         self.mox.VerifyAll()
@@ -148,7 +147,7 @@ class CommonMixin(object):
     def _test_locked_instance(self, action, method=None, body=None,
                               compute_api_args_map=None):
         if method is None:
-            method = action
+            method = action.replace('_', '')
 
         compute_api_args_map = compute_api_args_map or {}
         instance = self._stub_instance_get()
@@ -160,9 +159,10 @@ class CommonMixin(object):
 
         self.mox.ReplayAll()
 
-        res = self._make_request('/servers/%s/action' % instance.uuid,
-                                 {action: body})
-        self.assertEqual(409, res.status_int)
+        controller_function = getattr(self.controller, action)
+        self.assertRaises(webob.exc.HTTPConflict,
+                          controller_function,
+                          self.req, instance.uuid, body=body)
         # Do these here instead of tearDown because this method is called
         # more than once for the same test case
         self.mox.VerifyAll()
@@ -171,8 +171,7 @@ class CommonMixin(object):
     def _test_instance_not_found_in_compute_api(self, action,
                          method=None, body=None, compute_api_args_map=None):
         if method is None:
-            method = action
-
+            method = action.replace('_', '')
         compute_api_args_map = compute_api_args_map or {}
 
         instance = self._stub_instance_get()
@@ -184,9 +183,10 @@ class CommonMixin(object):
 
         self.mox.ReplayAll()
 
-        res = self._make_request('/servers/%s/action' % instance.uuid,
-                                 {action: body})
-        self.assertEqual(404, res.status_int)
+        controller_function = getattr(self.controller, action)
+        self.assertRaises(webob.exc.HTTPNotFound,
+                          controller_function,
+                          self.req, instance.uuid, body=body)
         # Do these here instead of tearDown because this method is called
         # more than once for the same test case
         self.mox.VerifyAll()
@@ -202,7 +202,8 @@ class CommonTests(CommonMixin, test.NoDBTestCase):
         for action in actions:
             method = method_translations.get(action)
             body = body_map.get(action)
-            self.mox.StubOutWithMock(self.compute_api, method or action)
+            self.mox.StubOutWithMock(self.compute_api,
+                                     method or action.replace('_', ''))
             self._test_action(action, method=method, body=body,
                               compute_api_args_map=args_map)
             # Re-mock this.
@@ -217,7 +218,8 @@ class CommonTests(CommonMixin, test.NoDBTestCase):
         for action in actions:
             method = method_translations.get(action)
             body = body_map.get(action)
-            self.mox.StubOutWithMock(self.compute_api, method or action)
+            self.mox.StubOutWithMock(self.compute_api,
+                                     method or action.replace('_', ''))
             self._test_instance_not_found_in_compute_api(
                 action, method=method, body=body,
                 compute_api_args_map=args_map)
@@ -234,16 +236,20 @@ class CommonTests(CommonMixin, test.NoDBTestCase):
 
     def _test_actions_raise_conflict_on_invalid_state(
             self, actions, method_translations=None, body_map=None,
-            args_map=None):
+            args_map=None, exception_args=None):
         method_translations = method_translations or {}
         body_map = body_map or {}
         args_map = args_map or {}
+        exception_args = exception_args or {}
         for action in actions:
             method = method_translations.get(action)
-            self.mox.StubOutWithMock(self.compute_api, method or action)
+            exception_arg = exception_args.get(action)
+            self.mox.StubOutWithMock(self.compute_api,
+                                     method or action.replace('_', ''))
             self._test_invalid_state(action, method=method,
                                      body_map=body_map,
-                                     compute_api_args_map=args_map)
+                                     compute_api_args_map=args_map,
+                                     exception_arg=exception_arg)
             # Re-mock this.
             self.mox.StubOutWithMock(self.compute_api, 'get')
 
@@ -256,7 +262,8 @@ class CommonTests(CommonMixin, test.NoDBTestCase):
         for action in actions:
             method = method_translations.get(action)
             body = body_map.get(action)
-            self.mox.StubOutWithMock(self.compute_api, method or action)
+            self.mox.StubOutWithMock(self.compute_api,
+                                     method or action.replace('_', ''))
             self._test_locked_instance(action, method=method, body=body,
                                        compute_api_args_map=args_map)
             # Re-mock this.
