@@ -131,6 +131,12 @@ class ServerGroupController(wsgi.Controller):
         """Creates a new server group."""
         context = _authorize_context(req)
 
+        policies = body['server_group']['policies']
+        if ('anti-affinity' in policies and
+            'affinity' in policies):
+            msg = _("Conflicting policies configured!")
+            raise exc.HTTPBadRequest(explanation=msg)
+
         quotas = objects.Quotas()
         try:
             quotas.reserve(context, project_id=context.project_id,

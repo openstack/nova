@@ -208,7 +208,7 @@ class ServerGroupTestV21(test.TestCase):
         sgroup = server_group_template()
         policies = ['anti-affinity', 'affinity']
         sgroup['policies'] = policies
-        self.assertRaises(self.validation_error, self.controller.create,
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           self.req, body={'server_group': sgroup})
 
     def test_create_server_group_with_duplicate_policies(self):

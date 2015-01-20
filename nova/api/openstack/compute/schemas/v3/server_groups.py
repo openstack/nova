@@ -30,13 +30,7 @@ create = {
                 'policies': {
                     'type': 'array',
                     'items': {
-                        'type': 'string', 'enum': SUPPORTED_POLICIES,
-                        'not': {'allOf': [
-                            # NOTE: Clients cannot specify both affinity and
-                            # anti-affinity in a single request.
-                            {'enum': 'affinity'},
-                            {'enum': 'anti-affinity'}
-                        ]}
+                        'type': 'string', 'enum': SUPPORTED_POLICIES
                     },
                     'uniqueItems': True,
                     'minItems': 1
