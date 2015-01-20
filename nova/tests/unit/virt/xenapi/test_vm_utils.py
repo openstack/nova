@@ -994,7 +994,7 @@ class VDIOtherConfigTestCase(VMUtilsTestBase):
     def setUp(self):
         super(VDIOtherConfigTestCase, self).setUp()
 
-        class _FakeSession():
+        class _FakeSession(object):
             def call_xenapi(self, operation, *args, **kwargs):
                 # VDI.add_to_other_config -> VDI_add_to_other_config
                 method = getattr(self, operation.replace('.', '_'), None)

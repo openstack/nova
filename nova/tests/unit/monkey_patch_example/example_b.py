@@ -20,7 +20,7 @@ def example_function_b():
     return 'Example function'
 
 
-class ExampleClassB():
+class ExampleClassB(object):
     def example_method(self):
         return 'Example method'
 

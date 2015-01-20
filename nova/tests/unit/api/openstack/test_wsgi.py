@@ -503,7 +503,7 @@ class ResourceTest(test.NoDBTestCase):
                           '{"barAction": true}')
 
     def test_get_method_action_method(self):
-        class Controller():
+        class Controller(object):
             def action(self, req, pants=None):
                 return pants
 

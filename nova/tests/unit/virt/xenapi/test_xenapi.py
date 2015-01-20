@@ -1321,7 +1321,7 @@ iface eth0 inet6 static
     def test_finish_revert_migration(self):
         instance = self._create_instance()
 
-        class VMOpsMock():
+        class VMOpsMock(object):
 
             def __init__(self):
                 self.finish_revert_migration_called = False

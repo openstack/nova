@@ -1045,7 +1045,7 @@ class FakeXenAPI(object):
 
 
 # Based upon _Method from xmlrpclib.
-class _Dispatcher:
+class _Dispatcher(object):
     def __init__(self, send, name):
         self.__send = send
         self.__name = name

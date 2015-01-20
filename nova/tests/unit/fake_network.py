@@ -50,7 +50,7 @@ class FakeNetworkManager(network_manager.NetworkManager):
     inherited service cruft and just perform unit tests.
     """
 
-    class FakeDB:
+    class FakeDB(object):
         vifs = [{'id': 0,
                  'created_at': None,
                  'updated_at': None,

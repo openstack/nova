@@ -96,7 +96,7 @@ class InvalidMetadataPath(Exception):
     pass
 
 
-class InstanceMetadata():
+class InstanceMetadata(object):
     """Instance metadata."""
 
     def __init__(self, instance, address=None, content=None, extra_md=None,
