@@ -78,6 +78,20 @@ class ExtensionDescriptor(object):
         controller_exts = []
         return controller_exts
 
+    def __repr__(self):
+        return "<Extension: name=%s, alias=%s, updated=%s>" % (
+            self.name, self.alias, self.updated)
+
+    def is_valid(self):
+        """Validate required fields for extensions.
+
+        Raises an attribute error if the attr is not defined
+        """
+        for attr in ('name', 'alias', 'updated', 'namespace'):
+            if getattr(self, attr) is None:
+                raise AttributeError("%s is None, needs to be defined" % attr)
+        return True
+
 
 class ExtensionsController(wsgi.Resource):
 
@@ -177,12 +191,7 @@ class ExtensionManager(object):
     def _check_extension(self, extension):
         """Checks for required methods in extension objects."""
         try:
-            LOG.debug('Ext name: %s', extension.name)
-            LOG.debug('Ext alias: %s', extension.alias)
-            LOG.debug('Ext description: %s',
-                      ' '.join(extension.__doc__.strip().split()))
-            LOG.debug('Ext namespace: %s', extension.namespace)
-            LOG.debug('Ext updated: %s', extension.updated)
+            extension.is_valid()
         except AttributeError as ex:
             LOG.exception(_LE("Exception loading extension: %s"), ex)
             return False
@@ -412,6 +421,20 @@ class V3APIExtensionBase(object):
     def version(self):
         """Version of the extension."""
         pass
+
+    def __repr__(self):
+        return "<Extension: name=%s, alias=%s, version=%s>" % (
+            self.name, self.alias, self.version)
+
+    def is_valid(self):
+        """Validate required fields for extensions.
+
+        Raises an attribute error if the attr is not defined
+        """
+        for attr in ('name', 'alias', 'version'):
+            if getattr(self, attr) is None:
+                raise AttributeError("%s is None, needs to be defined" % attr)
+        return True
 
 
 def expected_errors(errors):
