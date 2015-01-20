@@ -130,18 +130,21 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
                 id = neutronv20.find_resourceid_by_name_or_id(
                     neutron, 'security_group', name, context.project_id)
             group = neutron.show_security_group(id).get('security_group')
+            return self._convert_to_nova_security_group_format(group)
         except n_exc.NeutronClientNoUniqueMatch as e:
             raise exception.NoUniqueMatch(six.text_type(e))
         except n_exc.NeutronClientException as e:
             exc_info = sys.exc_info()
             if e.status_code == 404:
                 LOG.debug("Neutron security group %s not found", name)
-                self.raise_not_found(six.text_type(e))
+                raise exception.SecurityGroupNotFound(six.text_type(e))
             else:
                 LOG.error(_LE("Neutron Error: %s"), e)
                 raise exc_info[0], exc_info[1], exc_info[2]
-
-        return self._convert_to_nova_security_group_format(group)
+        except TypeError as e:
+            LOG.error(_LE("Neutron Error: %s"), e)
+            msg = _("Invalid security group name: %(name)s.") % {"name": name}
+            raise exception.SecurityGroupNotFound(six.text_type(msg))
 
     def list(self, context, names=None, ids=None, project=None,
              search_opts=None):
