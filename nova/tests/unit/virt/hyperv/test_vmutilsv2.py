@@ -15,6 +15,7 @@
 import mock
 
 from nova.tests.unit.virt.hyperv import test_vmutils
+from nova.virt.hyperv import constants
 from nova.virt.hyperv import vmutilsv2
 
 
@@ -28,6 +29,7 @@ class VMUtilsV2TestCase(test_vmutils.VMUtilsTestCase):
     _ADD_RESOURCE = 'AddResourceSettings'
     _REMOVE_RESOURCE = 'RemoveResourceSettings'
     _SETTING_TYPE = 'VirtualSystemType'
+    _VM_GEN = constants.VM_GEN_2
 
     _VIRTUAL_SYSTEM_TYPE_REALIZED = 'Microsoft:Hyper-V:System:Realized'
 
@@ -35,6 +37,13 @@ class VMUtilsV2TestCase(test_vmutils.VMUtilsTestCase):
         super(VMUtilsV2TestCase, self).setUp()
         self._vmutils = vmutilsv2.VMUtilsV2()
         self._vmutils._conn = mock.MagicMock()
+
+    def test_create_vm(self):
+        super(VMUtilsV2TestCase, self).test_create_vm()
+        mock_vssd = self._vmutils._conn.Msvm_VirtualSystemSettingData.new()
+        self.assertEqual(self._vmutils._VIRTUAL_SYSTEM_SUBTYPE_GEN2,
+                         mock_vssd.VirtualSystemSubType)
+        self.assertFalse(mock_vssd.SecureBootEnabled)
 
     def test_modify_virt_resource(self):
         mock_svc = self._vmutils._conn.Msvm_VirtualSystemManagementService()[0]
@@ -153,6 +162,7 @@ class VMUtilsV2TestCase(test_vmutils.VMUtilsTestCase):
         response = self._vmutils._create_vm_obj(
             vs_man_svc=mock_vs_man_svc,
             vm_name='fake vm',
+            vm_gen='fake vm gen',
             notes='fake notes',
             dynamic_memory_ratio=dynamic_memory_ratio)
 
@@ -195,3 +205,26 @@ class VMUtilsV2TestCase(test_vmutils.VMUtilsTestCase):
         self._vmutils._conn.Msvm_VirtualSystemSettingData.assert_called_with(
             ['ElementName'],
             VirtualSystemType=self._vmutils._VIRTUAL_SYSTEM_TYPE_REALIZED)
+
+    def test_get_attached_disks(self):
+        mock_scsi_ctrl_path = mock.MagicMock()
+        expected_query = ("SELECT * FROM %(class_name)s "
+                          "WHERE (ResourceSubType='%(res_sub_type)s' OR "
+                          "ResourceSubType='%(res_sub_type_virt)s' OR "
+                          "ResourceSubType='%(res_sub_type_dvd)s') AND "
+                          "Parent = '%(parent)s'" %
+                          {"class_name":
+                           self._vmutils._RESOURCE_ALLOC_SETTING_DATA_CLASS,
+                           "res_sub_type":
+                           self._vmutils._PHYS_DISK_RES_SUB_TYPE,
+                           "res_sub_type_virt":
+                           self._vmutils._DISK_DRIVE_RES_SUB_TYPE,
+                           "res_sub_type_dvd":
+                           self._vmutils._DVD_DRIVE_RES_SUB_TYPE,
+                           "parent": mock_scsi_ctrl_path.replace("'", "''")})
+        expected_disks = self._vmutils._conn.query.return_value
+
+        ret_disks = self._vmutils.get_attached_disks(mock_scsi_ctrl_path)
+
+        self._vmutils._conn.query.assert_called_once_with(expected_query)
+        self.assertEqual(expected_disks, ret_disks)

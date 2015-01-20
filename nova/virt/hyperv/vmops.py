@@ -93,6 +93,16 @@ SHUTDOWN_TIME_INCREMENT = 5
 REBOOT_TYPE_SOFT = 'SOFT'
 REBOOT_TYPE_HARD = 'HARD'
 
+VM_GENERATIONS = {
+    constants.IMAGE_PROP_VM_GEN_1: constants.VM_GEN_1,
+    constants.IMAGE_PROP_VM_GEN_2: constants.VM_GEN_2
+}
+
+VM_GENERATIONS_CONTROLLER_TYPES = {
+    constants.VM_GEN_1: constants.CTRL_TYPE_IDE,
+    constants.VM_GEN_2: constants.CTRL_TYPE_SCSI
+}
+
 
 def check_admin_permissions(function):
     @functools.wraps(function)
@@ -120,6 +130,7 @@ class VMOps(object):
         self._vmutils = utilsfactory.get_vmutils()
         self._vhdutils = utilsfactory.get_vhdutils()
         self._pathutils = utilsfactory.get_pathutils()
+        self._hostutils = utilsfactory.get_hostutils()
         self._volumeops = volumeops.VolumeOps()
         self._imagecache = imagecache.ImageCache()
         self._vif_driver = None
@@ -261,16 +272,17 @@ class VMOps(object):
             root_vhd_path = self._create_root_vhd(context, instance)
 
         eph_vhd_path = self.create_ephemeral_vhd(instance)
+        vm_gen = self.get_image_vm_generation(root_vhd_path, image_meta)
 
         try:
             self.create_instance(instance, network_info, block_device_info,
-                                 root_vhd_path, eph_vhd_path)
+                                 root_vhd_path, eph_vhd_path, vm_gen)
 
             if configdrive.required_by(instance):
                 configdrive_path = self._create_config_drive(instance,
                                                              injected_files,
                                                              admin_password)
-                self.attach_config_drive(instance, configdrive_path)
+                self.attach_config_drive(instance, configdrive_path, vm_gen)
 
             self.power_on(instance)
         except Exception:
@@ -278,7 +290,7 @@ class VMOps(object):
                 self.destroy(instance)
 
     def create_instance(self, instance, network_info, block_device_info,
-                        root_vhd_path, eph_vhd_path):
+                        root_vhd_path, eph_vhd_path, vm_gen):
         instance_name = instance['name']
 
         self._vmutils.create_vm(instance_name,
@@ -286,29 +298,28 @@ class VMOps(object):
                                 instance['vcpus'],
                                 CONF.hyperv.limit_cpu_features,
                                 CONF.hyperv.dynamic_memory_ratio,
+                                vm_gen,
                                 [instance['uuid']])
+
+        self._vmutils.create_scsi_controller(instance_name)
+        controller_type = VM_GENERATIONS_CONTROLLER_TYPES[vm_gen]
 
         ctrl_disk_addr = 0
         if root_vhd_path:
-            self._vmutils.attach_ide_drive(instance_name,
-                                           root_vhd_path,
-                                           0,
-                                           ctrl_disk_addr,
-                                           constants.DISK)
+            self._attach_drive(instance_name, root_vhd_path, 0, ctrl_disk_addr,
+                               controller_type)
             ctrl_disk_addr += 1
 
         if eph_vhd_path:
-            self._vmutils.attach_ide_drive(instance_name,
-                                           eph_vhd_path,
-                                           0,
-                                           ctrl_disk_addr,
-                                           constants.DISK)
+            self._attach_drive(instance_name, eph_vhd_path, 0, ctrl_disk_addr,
+                               controller_type)
 
-        self._vmutils.create_scsi_controller(instance_name)
-
+        # If ebs_root is False, the first volume will be attached to SCSI
+        # controller. Generation 2 VMs only has a SCSI controller.
+        ebs_root = vm_gen is not constants.VM_GEN_2 and root_vhd_path is None
         self._volumeops.attach_volumes(block_device_info,
                                        instance_name,
-                                       root_vhd_path is None)
+                                       ebs_root)
 
         for vif in network_info:
             LOG.debug('Creating nic for instance', instance=instance)
@@ -321,6 +332,39 @@ class VMOps(object):
             self._vmutils.enable_vm_metrics_collection(instance_name)
 
         self._create_vm_com_port_pipe(instance)
+
+    def _attach_drive(self, instance_name, path, drive_addr, ctrl_disk_addr,
+                      controller_type, drive_type=constants.DISK):
+        if controller_type == constants.CTRL_TYPE_SCSI:
+            self._vmutils.attach_scsi_drive(instance_name, path, drive_type)
+        else:
+            self._vmutils.attach_ide_drive(instance_name, path, drive_addr,
+                                           ctrl_disk_addr, drive_type)
+
+    def get_image_vm_generation(self, root_vhd_path, image_meta):
+        image_props = image_meta['properties']
+        default_vm_gen = self._hostutils.get_default_vm_generation()
+        image_prop_vm = image_props.get(constants.IMAGE_PROP_VM_GEN,
+                                        default_vm_gen)
+        if image_prop_vm not in self._hostutils.get_supported_vm_types():
+            LOG.error(_LE('Requested VM Generation %s is not supported on '
+                         ' this OS.'), image_prop_vm)
+            raise vmutils.HyperVException(
+                _('Requested VM Generation %s is not supported on this '
+                  'OS.') % image_prop_vm)
+
+        vm_gen = VM_GENERATIONS[image_prop_vm]
+
+        if (vm_gen != constants.VM_GEN_1 and root_vhd_path and
+                self._vhdutils.get_vhd_format(
+                    root_vhd_path) == constants.DISK_FORMAT_VHD):
+            LOG.error(_LE('Requested VM Generation %s, but provided VHD '
+                          'instead of VHDX.'), vm_gen)
+            raise vmutils.HyperVException(
+                _('Requested VM Generation %s, but provided VHD instead of '
+                  'VHDX.') % vm_gen)
+
+        return vm_gen
 
     def _create_config_drive(self, instance, injected_files, admin_password):
         if CONF.config_drive_format != 'iso9660':
@@ -371,13 +415,15 @@ class VMOps(object):
 
         return configdrive_path
 
-    def attach_config_drive(self, instance, configdrive_path):
+    def attach_config_drive(self, instance, configdrive_path, vm_gen):
         configdrive_ext = configdrive_path[(configdrive_path.rfind('.') + 1):]
         # Do the attach here and if there is a certain file format that isn't
         # supported in constants.DISK_FORMAT_MAP then bomb out.
         try:
-            self._vmutils.attach_ide_drive(instance.name, configdrive_path,
-                    1, 0, constants.DISK_FORMAT_MAP[configdrive_ext])
+            drive_type = constants.DISK_FORMAT_MAP[configdrive_ext]
+            controller_type = VM_GENERATIONS_CONTROLLER_TYPES[vm_gen]
+            self._attach_drive(instance.name, configdrive_path, 1, 0,
+                               controller_type, drive_type)
         except KeyError:
             raise exception.InvalidDiskFormat(disk_format=configdrive_ext)
 

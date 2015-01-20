@@ -149,12 +149,13 @@ class MigrationOps(object):
             instance_name)
         self._pathutils.rename(revert_path, instance_path)
 
-    def _check_and_attach_config_drive(self, instance):
+    def _check_and_attach_config_drive(self, instance, vm_gen):
         if configdrive.required_by(instance):
             configdrive_path = self._pathutils.lookup_configdrive_path(
                 instance.name)
             if configdrive_path:
-                self._vmops.attach_config_drive(instance, configdrive_path)
+                self._vmops.attach_config_drive(instance, configdrive_path,
+                                                vm_gen)
             else:
                 raise vmutils.HyperVException(
                     _("Config drive is required by instance: %s, "
@@ -174,10 +175,12 @@ class MigrationOps(object):
 
         eph_vhd_path = self._pathutils.lookup_ephemeral_vhd_path(instance_name)
 
+        image_meta = self._imagecache.get_image_details(context, instance)
+        vm_gen = self._vmops.get_image_vm_generation(root_vhd_path, image_meta)
         self._vmops.create_instance(instance, network_info, block_device_info,
-                                    root_vhd_path, eph_vhd_path)
+                                    root_vhd_path, eph_vhd_path, vm_gen)
 
-        self._check_and_attach_config_drive(instance)
+        self._check_and_attach_config_drive(instance, vm_gen)
 
         if power_on:
             self._vmops.power_on(instance)
@@ -285,10 +288,11 @@ class MigrationOps(object):
                 eph_vhd_info = self._vhdutils.get_vhd_info(eph_vhd_path)
                 self._check_resize_vhd(eph_vhd_path, eph_vhd_info, new_size)
 
+        vm_gen = self._vmops.get_image_vm_generation(root_vhd_path, image_meta)
         self._vmops.create_instance(instance, network_info, block_device_info,
-                                    root_vhd_path, eph_vhd_path)
+                                    root_vhd_path, eph_vhd_path, vm_gen)
 
-        self._check_and_attach_config_drive(instance)
+        self._check_and_attach_config_drive(instance, vm_gen)
 
         if power_on:
             self._vmops.power_on(instance)
