@@ -713,24 +713,19 @@ class VMwareVMOps(object):
         service_content = self._session.vim.service_content
 
         def _get_vm_and_vmdk_attribs():
-            # Get the vmdk file name that the VM is pointing to
-            hw_devices = self._session._call_method(vim_util,
-                        "get_dynamic_property", vm_ref,
-                        "VirtualMachine", "config.hardware.device")
-            (vmdk_file_path_before_snapshot, adapter_type,
-             disk_type) = vm_util.get_vmdk_path_and_adapter_type(
-                                        hw_devices, uuid=instance.uuid)
-            if not vmdk_file_path_before_snapshot:
+            # Get the vmdk info that the VM is pointing to
+            vmdk = vm_util.get_vmdk_info(self._session, vm_ref,
+                                              instance.uuid)
+            if not vmdk.path:
                 LOG.debug("No root disk defined. Unable to snapshot.")
                 raise error_util.NoRootDiskDefined()
 
-            datastore_name = ds_util.DatastorePath.parse(
-                    vmdk_file_path_before_snapshot).datastore
+            datastore_name = ds_util.DatastorePath.parse(vmdk.path).datastore
             os_type = self._session._call_method(vim_util,
                         "get_dynamic_property", vm_ref,
                         "VirtualMachine", "summary.config.guestId")
-            return (vmdk_file_path_before_snapshot, adapter_type, disk_type,
-                    datastore_name, os_type)
+            return (vmdk.path, vmdk.adapter_type,
+                    vmdk.disk_type, datastore_name, os_type)
 
         (vmdk_file_path_before_snapshot, adapter_type, disk_type,
          datastore_name, os_type) = _get_vm_and_vmdk_attribs()
@@ -1030,17 +1025,14 @@ class VMwareVMOps(object):
                    power_on=False)
 
         # Attach vmdk to the rescue VM
-        hardware_devices = self._session._call_method(vim_util,
-                        "get_dynamic_property", vm_ref,
-                        "VirtualMachine", "config.hardware.device")
-        (vmdk_path, adapter_type,
-         disk_type) = vm_util.get_vmdk_path_and_adapter_type(
-                hardware_devices, uuid=instance.uuid)
+        vmdk = vm_util.get_vmdk_info(self._session, vm_ref, instance.uuid)
         rescue_vm_ref = vm_util.get_vm_ref_from_name(self._session,
                                                      instance_name)
-        self._volumeops.attach_disk_to_vm(
-                                rescue_vm_ref, instance,
-                                adapter_type, disk_type, vmdk_path)
+        self._volumeops.attach_disk_to_vm(rescue_vm_ref,
+                                          instance,
+                                          vmdk.adapter_type,
+                                          vmdk.disk_type,
+                                          vmdk.path)
         vm_util.power_on_instance(self._session, instance,
                                   vm_ref=rescue_vm_ref)
 
@@ -1048,13 +1040,7 @@ class VMwareVMOps(object):
         """Unrescue the specified instance."""
         # Get the original vmdk_path
         vm_ref = vm_util.get_vm_ref(self._session, instance)
-        hardware_devices = self._session._call_method(vim_util,
-                        "get_dynamic_property", vm_ref,
-                        "VirtualMachine", "config.hardware.device")
-        (vmdk_path, adapter_type,
-         disk_type) = vm_util.get_vmdk_path_and_adapter_type(
-                hardware_devices, uuid=instance.uuid)
-
+        vmdk = vm_util.get_vmdk_info(self._session, vm_ref, instance.uuid)
         instance_name = instance.uuid + self._rescue_suffix
         # detach the original instance disk from the rescue disk
         vm_rescue_ref = vm_util.get_vm_ref_from_name(self._session,
@@ -1062,7 +1048,7 @@ class VMwareVMOps(object):
         hardware_devices = self._session._call_method(vim_util,
                         "get_dynamic_property", vm_rescue_ref,
                         "VirtualMachine", "config.hardware.device")
-        device = vm_util.get_vmdk_volume_disk(hardware_devices, path=vmdk_path)
+        device = vm_util.get_vmdk_volume_disk(hardware_devices, path=vmdk.path)
         vm_util.power_off_instance(self._session, instance, vm_rescue_ref)
         self._volumeops.detach_disk_from_vm(vm_rescue_ref, instance, device)
         self._destroy_instance(instance, instance_name=instance_name)
@@ -1191,8 +1177,9 @@ class VMwareVMOps(object):
             old_root_gb = instance.system_metadata['old_instance_type_root_gb']
             if instance['root_gb'] > int(old_root_gb):
                 root_disk_in_kb = instance['root_gb'] * units.Mi
-                vmdk_path = vm_util.get_vmdk_path(self._session, vm_ref,
-                                                  instance)
+                vmdk_info = vm_util.get_vmdk_info(self._session, vm_ref,
+                                                  instance.uuid)
+                vmdk_path = vmdk_info.path
                 data_store_ref = ds_util.get_datastore(self._session,
                     self._cluster, datastore_regex=self._datastore_regex).ref
                 dc_info = self.get_datacenter_ref_and_name(data_store_ref)

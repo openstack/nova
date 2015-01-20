@@ -204,6 +204,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         disk.controllerKey = controller_key
         disk_backing = fake.VirtualDiskFlatVer2BackingInfo()
         disk_backing.fileName = filename
+        disk.capacityInBytes = 1024
         if parent:
             disk_backing.parent = parent
         disk.backing = disk_backing
@@ -212,43 +213,32 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         devices = [disk, controller]
         return devices
 
-    def test_get_vmdk_path(self):
-        uuid = '00000000-0000-0000-0000-000000000000'
-        filename = '[test_datastore] %s/%s.vmdk' % (uuid, uuid)
-        devices = self._vmdk_path_and_adapter_type_devices(filename)
-        session = fake.FakeSession()
-
-        with mock.patch.object(session, '_call_method',
-                               return_value=devices):
-            instance = {'uuid': uuid}
-            vmdk_path = vm_util.get_vmdk_path(session, None, instance)
-            self.assertEqual(filename, vmdk_path)
-
     def test_get_vmdk_path_and_adapter_type(self):
         filename = '[test_datastore] test_file.vmdk'
         devices = self._vmdk_path_and_adapter_type_devices(filename)
-        vmdk_info = vm_util.get_vmdk_path_and_adapter_type(devices)
-        adapter_type = vmdk_info[1]
-        self.assertEqual('lsiLogicsas', adapter_type)
-        self.assertEqual(vmdk_info[0], filename)
+        session = fake.FakeSession()
+        with mock.patch.object(session, '_call_method', return_value=devices):
+            vmdk = vm_util.get_vmdk_info(session, None)
+            self.assertEqual('lsiLogicsas', vmdk.adapter_type)
+            self.assertEqual(filename, vmdk.path)
 
     def test_get_vmdk_path_and_adapter_type_with_match(self):
         n_filename = '[test_datastore] uuid/uuid.vmdk'
         devices = self._vmdk_path_and_adapter_type_devices(n_filename)
-        vmdk_info = vm_util.get_vmdk_path_and_adapter_type(
-                devices, uuid='uuid')
-        adapter_type = vmdk_info[1]
-        self.assertEqual('lsiLogicsas', adapter_type)
-        self.assertEqual(n_filename, vmdk_info[0])
+        session = fake.FakeSession()
+        with mock.patch.object(session, '_call_method', return_value=devices):
+            vmdk = vm_util.get_vmdk_info(session, None, uuid='uuid')
+            self.assertEqual('lsiLogicsas', vmdk.adapter_type)
+            self.assertEqual(n_filename, vmdk.path)
 
     def test_get_vmdk_path_and_adapter_type_with_nomatch(self):
         n_filename = '[test_datastore] diuu/diuu.vmdk'
+        session = fake.FakeSession()
         devices = self._vmdk_path_and_adapter_type_devices(n_filename)
-        vmdk_info = vm_util.get_vmdk_path_and_adapter_type(
-                devices, uuid='uuid')
-        adapter_type = vmdk_info[1]
-        self.assertEqual('lsiLogicsas', adapter_type)
-        self.assertIsNone(vmdk_info[0])
+        with mock.patch.object(session, '_call_method', return_value=devices):
+            vmdk = vm_util.get_vmdk_info(session, None, uuid='uuid')
+            self.assertEqual('lsiLogicsas', vmdk.adapter_type)
+            self.assertIsNone(vmdk.path)
 
     def test_get_vmdk_adapter_type(self):
         # Test for the adapter_type to be used in vmdk descriptor

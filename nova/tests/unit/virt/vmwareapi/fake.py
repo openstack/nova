@@ -523,6 +523,8 @@ class VirtualMachine(ManagedObject):
             disk_backing.fileName = filename
             disk_backing.key = -101
             disk.backing = disk_backing
+            disk.capacityInBytes = 1024
+            disk.capacityInKB = 1
 
             controller = VirtualLsiLogicController()
             controller.key = controller_key

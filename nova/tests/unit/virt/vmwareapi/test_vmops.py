@@ -353,9 +353,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         vm_rescue_ref = mock.Mock()
         vm_ref = mock.Mock()
 
-        args_list = [(vm_ref, 'VirtualMachine',
-                      'config.hardware.device'),
-                     (vm_rescue_ref, 'VirtualMachine',
+        args_list = [(vm_rescue_ref, 'VirtualMachine',
                       'config.hardware.device')]
 
         def fake_call_method(module, method, *args, **kwargs):
@@ -363,11 +361,13 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             self.assertEqual('get_dynamic_property', method)
             self.assertEqual(expected_args, args)
 
-        path = mock.Mock()
-        path_and_type = (path, mock.Mock(), mock.Mock())
+        vmdk = vm_util.VmdkInfo(mock.sentinel.PATH,
+                                mock.sentinel.ADAPTER_TYPE,
+                                mock.sentinel.DISK_TYPE,
+                                mock.sentinel.CAPACITY)
         with contextlib.nested(
-                mock.patch.object(vm_util, 'get_vmdk_path_and_adapter_type',
-                                  return_value=path_and_type),
+                mock.patch.object(vm_util, 'get_vmdk_info',
+                                  return_value=vmdk),
                 mock.patch.object(vm_util, 'get_vmdk_volume_disk'),
                 mock.patch.object(vm_util, 'power_on_instance'),
                 mock.patch.object(vm_util, 'get_vm_ref', return_value=vm_ref),
@@ -377,14 +377,15 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                   fake_call_method),
                 mock.patch.object(vm_util, 'power_off_instance'),
                 mock.patch.object(self._vmops, '_destroy_instance'),
-        ) as (_get_vmdk_path_and_adapter_type, _get_vmdk_volume_disk,
+        ) as (_get_vmdk_info, _get_vmdk_volume_disk,
               _power_on_instance, _get_vm_ref, _get_vm_ref_from_name,
               _call_method, _power_off, _destroy_instance):
             self._vmops.unrescue(self._instance, power_on=power_on)
 
-            _get_vmdk_path_and_adapter_type.assert_called_once_with(
-                None, uuid='fake_uuid')
-            _get_vmdk_volume_disk.assert_called_once_with(None, path=path)
+            _get_vmdk_info.assert_called_once_with(self._session,
+                                                   vm_ref, 'fake_uuid')
+            _get_vmdk_volume_disk.assert_called_once_with(
+                None, path=mock.sentinel.PATH)
             if power_on:
                 _power_on_instance.assert_called_once_with(self._session,
                                                            self._instance,

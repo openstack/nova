@@ -103,13 +103,13 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
                            'data': {'volume': 'vm-10',
                                     'volume_id': 'volume-fake-id'}}
         instance = mock.MagicMock(name='fake-name', vm_state=vm_states.ACTIVE)
-        path_and_type = ('fake-path', 'ide', 'preallocated')
+        vmdk_info = vm_util.VmdkInfo('fake-path', 'ide', 'preallocated', 1024)
         with contextlib.nested(
             mock.patch.object(vm_util, 'get_vm_ref'),
             mock.patch.object(self._volumeops, '_get_volume_ref'),
-            mock.patch.object(vm_util, 'get_vmdk_path_and_adapter_type',
-                              return_value=path_and_type)
-        ) as (get_vm_ref, get_volume_ref, get_vmdk_path_and_adapter_type):
+            mock.patch.object(vm_util, 'get_vmdk_info',
+                              return_value=vmdk_info)
+        ) as (get_vm_ref, get_volume_ref, get_vmdk_info):
             self.assertRaises(exception.Invalid,
                 self._volumeops._attach_volume_vmdk, connection_info,
                 instance)
@@ -118,7 +118,7 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
                                                instance)
             get_volume_ref.assert_called_once_with(
                 connection_info['data']['volume'])
-            self.assertTrue(get_vmdk_path_and_adapter_type.called)
+            self.assertTrue(get_vmdk_info.called)
 
     def test_detach_volume_vmdk_invalid(self):
         connection_info = {'driver_volume_type': 'vmdk',
@@ -126,17 +126,17 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
                            'data': {'volume': 'vm-10',
                                     'volume_id': 'volume-fake-id'}}
         instance = mock.MagicMock(name='fake-name', vm_state=vm_states.ACTIVE)
-        path_and_type = ('fake-path', 'ide', 'preallocated')
+        vmdk_info = vm_util.VmdkInfo('fake-path', 'ide', 'preallocated', 1024)
         with contextlib.nested(
             mock.patch.object(vm_util, 'get_vm_ref',
                               return_value=mock.sentinel.vm_ref),
             mock.patch.object(self._volumeops, '_get_volume_ref'),
             mock.patch.object(self._volumeops,
                               '_get_vmdk_backed_disk_device'),
-            mock.patch.object(vm_util, 'get_vmdk_path_and_adapter_type',
-                              return_value=path_and_type)
+            mock.patch.object(vm_util, 'get_vmdk_info',
+                              return_value=vmdk_info)
         ) as (get_vm_ref, get_volume_ref, get_vmdk_backed_disk_device,
-              get_vmdk_path_and_adapter_type):
+              get_vmdk_info):
             self.assertRaises(exception.Invalid,
                 self._volumeops._detach_volume_vmdk, connection_info,
                 instance)
@@ -147,4 +147,4 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
                 connection_info['data']['volume'])
             get_vmdk_backed_disk_device.assert_called_once_with(
                 mock.sentinel.vm_ref, connection_info['data'])
-            self.assertTrue(get_vmdk_path_and_adapter_type.called)
+            self.assertTrue(get_vmdk_info.called)

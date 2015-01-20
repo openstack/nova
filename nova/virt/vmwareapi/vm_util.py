@@ -18,6 +18,7 @@
 The VMware API VM utility module to build SOAP object specs.
 """
 
+import collections
 import copy
 import functools
 
@@ -119,6 +120,10 @@ def vm_ref_cache_from_name(func):
 
 # the config key which stores the VNC port
 VNC_CONFIG_KEY = 'config.extraConfig["RemoteDisplay.vnc.port"]'
+
+VmdkInfo = collections.namedtuple('VmdkInfo', ['path', 'adapter_type',
+                                               'disk_type',
+                                               'capacity_in_bytes'])
 
 
 def _iface_id_option_value(client_factory, iface_id, port_index):
@@ -444,23 +449,17 @@ def get_vm_extra_config_spec(client_factory, extra_opts):
     return config_spec
 
 
-def get_vmdk_path(session, vm_ref, instance):
-    """Gets the vmdk file path for specified instance."""
+def get_vmdk_info(session, vm_ref, uuid=None):
+    """Returns information for the primary VMDK attached to the given VM."""
     hardware_devices = session._call_method(vim_util,
             "get_dynamic_property", vm_ref, "VirtualMachine",
             "config.hardware.device")
-    (vmdk_path, adapter_type, disk_type) = get_vmdk_path_and_adapter_type(
-            hardware_devices, uuid=instance['uuid'])
-    return vmdk_path
-
-
-def get_vmdk_path_and_adapter_type(hardware_devices, uuid=None):
-    """Gets the vmdk file path and the storage adapter type."""
     if hardware_devices.__class__.__name__ == "ArrayOfVirtualDevice":
         hardware_devices = hardware_devices.VirtualDevice
     vmdk_file_path = None
     vmdk_controller_key = None
     disk_type = None
+    capacity_in_bytes = None
 
     adapter_type_dict = {}
     for device in hardware_devices:
@@ -473,6 +472,15 @@ def get_vmdk_path_and_adapter_type(hardware_devices, uuid=None):
                 else:
                     vmdk_file_path = device.backing.fileName
                 vmdk_controller_key = device.controllerKey
+
+                # Devices pre-vSphere-5.5 only reports capacityInKB, which has
+                # rounding inaccuracies. Use that only if the more accurate
+                # attribute is absent.
+                if hasattr(device, 'capacityInBytes'):
+                    capacity_in_bytes = device.capacityInBytes
+                else:
+                    capacity_in_bytes = device.capacityInKB * units.Ki
+
                 if getattr(device.backing, 'thinProvisioned', False):
                     disk_type = "thin"
                 else:
@@ -492,8 +500,8 @@ def get_vmdk_path_and_adapter_type(hardware_devices, uuid=None):
             adapter_type_dict[device.key] = constants.ADAPTER_TYPE_PARAVIRTUAL
 
     adapter_type = adapter_type_dict.get(vmdk_controller_key, "")
-
-    return (vmdk_file_path, adapter_type, disk_type)
+    return VmdkInfo(vmdk_file_path, adapter_type, disk_type,
+                    capacity_in_bytes)
 
 
 def _find_controller_slot(controller_keys, taken, max_unit_number):
