@@ -3226,3 +3226,53 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                              migration_save.mock_calls)
             self.assertEqual([mock.call(), mock.call()],
                              migration_obj_as_admin.mock_calls)
+
+    def test_revert_resize_instance_destroy_disks(self):
+
+        # This test asserts that _is_instance_storage_shared() is called from
+        # revert_resize() and the return value is passed to driver.destroy().
+        # Otherwise we could regress this.
+
+        @mock.patch.object(self.compute, '_get_instance_nw_info')
+        @mock.patch.object(self.compute, '_is_instance_storage_shared')
+        @mock.patch.object(self.compute, 'finish_revert_resize')
+        @mock.patch.object(self.compute, '_instance_update')
+        @mock.patch.object(self.compute, '_get_resource_tracker')
+        @mock.patch.object(self.compute.driver, 'destroy')
+        @mock.patch.object(self.compute.network_api, 'setup_networks_on_host')
+        @mock.patch.object(self.compute.network_api, 'migrate_instance_start')
+        @mock.patch.object(self.compute.conductor_api, 'notify_usage_exists')
+        @mock.patch.object(self.migration, 'save')
+        @mock.patch.object(objects.BlockDeviceMappingList,
+                           'get_by_instance_uuid')
+        def do_test(get_by_instance_uuid,
+                    migration_save,
+                    notify_usage_exists,
+                    migrate_instance_start,
+                    setup_networks_on_host,
+                    destroy,
+                    _get_resource_tracker,
+                    _instance_update,
+                    finish_revert_resize,
+                    _is_instance_storage_shared,
+                    _get_instance_nw_info):
+
+            self.migration.source_compute = self.instance['host']
+
+            # inform compute that this instance uses shared storage
+            _is_instance_storage_shared.return_value = True
+
+            self.compute.revert_resize(context=self.context,
+                                       migration=self.migration,
+                                       instance=self.instance,
+                                       reservations=None)
+
+            _is_instance_storage_shared.assert_called_once_with(self.context,
+                                                                self.instance)
+
+            # since shared storage is used, we should not be instructed to
+            # destroy disks here
+            destroy.assert_called_once_with(self.context, self.instance,
+                                            mock.ANY, mock.ANY, False)
+
+        do_test()
