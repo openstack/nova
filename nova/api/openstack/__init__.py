@@ -285,17 +285,7 @@ class APIRouterV21(base_wsgi.Router):
                     # Check the extension is not in the blacklist
                     if ext.obj.alias not in CONF.osapi_v3.extensions_blacklist:
                         return self._register_extension(ext)
-                    else:
-                        LOG.warning(_LW("Not loading %s because it is "
-                                        "in the blacklist"), ext.obj.alias)
-                        return False
-                else:
-                    LOG.warning(
-                        _LW("Not loading %s because it is not in the "
-                            "whitelist"), ext.obj.alias)
-                    return False
-            else:
-                return False
+            return False
 
         if not CONF.osapi_v3.enabled:
             LOG.info(_LI("V3 API has been disabled by configuration"))
@@ -343,6 +333,8 @@ class APIRouterV21(base_wsgi.Router):
             raise exception.CoreAPIMissing(
                 missing_apis=missing_core_extensions)
 
+        LOG.info(_LI("Loaded extensions: %s"),
+                 sorted(self.loaded_extension_info.get_extensions().keys()))
         super(APIRouterV21, self).__init__(mapper)
 
     def _register_resources_list(self, ext_list, mapper):
