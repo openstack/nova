@@ -1647,7 +1647,13 @@ class LibvirtDriver(driver.ComputeDriver):
     def _volume_refresh_connection_info(self, context, instance, volume_id):
         bdm = objects.BlockDeviceMapping.get_by_volume_id(context,
                                                           volume_id)
-        driver_bdm = driver_block_device.DriverVolumeBlockDevice(bdm)
+
+        if bdm['source_type'] == 'image':
+            driver_bdm = driver_block_device.DriverImageBlockDevice(bdm)
+        else:
+            # source_type = 'volume'
+            driver_bdm = driver_block_device.DriverVolumeBlockDevice(bdm)
+
         driver_bdm.refresh_connection_info(context, instance,
                                            self._volume_api, self)
 
