@@ -32,6 +32,8 @@ There are some standard filter classes to use (:mod:`nova.scheduler.filters`):
   image properties contained in the instance.
 * |AvailabilityZoneFilter| - filters hosts by availability zone. It passes
   hosts matching the availability zone specified in the instance properties.
+  Use a comma to specify multiple zones. The filter will then ensure it matches
+  any zone specified.
 * |ComputeCapabilitiesFilter| - checks that the capabilities provided by the
   host compute service satisfy any extra specifications associated with the
   instance type.  It passes hosts that can create the specified instance type.
@@ -71,7 +73,8 @@ There are some standard filter classes to use (:mod:`nova.scheduler.filters`):
   have no scope or are scoped with ``aggregate_instance_extra_specs``).
   It passes hosts that can create the specified instance type.
   The extra specifications can have the same operators as
-  |ComputeCapabilitiesFilter|.
+  |ComputeCapabilitiesFilter|. To specify multiple values for the same key
+  use a comma. E.g., "value1,value2"
 * |ComputeFilter| - passes all hosts that are operational and enabled.
 * |CoreFilter| - filters based on CPU core utilization. It passes hosts with
   sufficient number of CPU cores.
@@ -148,8 +151,10 @@ There are some standard filter classes to use (:mod:`nova.scheduler.filters`):
   ServerGroupAntiAffinityFilter.  The difference is that when you create the server
   group, you should specify a policy of 'affinity'.
 * |AggregateMultiTenancyIsolation| - isolate tenants in specific aggregates.
+  To specify multiple tenants use a comma. Eg. "tenant1,tenant2"
 * |AggregateImagePropertiesIsolation| - isolates hosts based on image
-  properties and aggregate metadata.
+  properties and aggregate metadata. Use a comma to specify multiple values for the
+  same property. The filter will then ensure at least one value matches.
 * |MetricsFilter| - filters hosts based on metrics weight_setting. Only hosts with
   the available metrics are passed.
 * |NUMATopologyFilter| - filters hosts based on the NUMA topology requested by the
