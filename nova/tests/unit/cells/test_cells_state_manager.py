@@ -61,6 +61,10 @@ def _fake_compute_node_get_all(context):
     return [_node(*fake) for fake in FAKE_COMPUTES]
 
 
+def _fake_cell_get_all(context):
+    return []
+
+
 def _fake_instance_type_all(context):
     def _type(mem, root, eph):
         return {'root_gb': root,
@@ -70,13 +74,14 @@ def _fake_instance_type_all(context):
     return [_type(*fake) for fake in FAKE_ITYPES]
 
 
-class TestCellsStateManager(test.TestCase):
+class TestCellsStateManager(test.NoDBTestCase):
 
     def setUp(self):
         super(TestCellsStateManager, self).setUp()
 
         self.stubs.Set(db, 'compute_node_get_all', _fake_compute_node_get_all)
         self.stubs.Set(db, 'flavor_get_all', _fake_instance_type_all)
+        self.stubs.Set(db, 'cell_get_all', _fake_cell_get_all)
 
     def test_cells_config_not_found(self):
         self.flags(cells_config='no_such_file_exists.conf', group='cells')
@@ -171,7 +176,7 @@ class TestCellsStateManager(test.TestCase):
         return my_state.capacities
 
 
-class TestCellStateManagerException(test.TestCase):
+class TestCellStateManagerException(test.NoDBTestCase):
     @mock.patch.object(time, 'sleep')
     def test_init_db_error(self, mock_sleep):
         class TestCellStateManagerDB(state.CellStateManagerDB):
@@ -228,7 +233,7 @@ class FakeCellStateManager(object):
         self.called.append(('_cell_data_sync', force))
 
 
-class TestSyncDecorators(test.TestCase):
+class TestSyncDecorators(test.NoDBTestCase):
     def test_sync_before(self):
         manager = FakeCellStateManager()
 
