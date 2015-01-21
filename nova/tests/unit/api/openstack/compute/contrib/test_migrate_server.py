@@ -19,6 +19,7 @@ from nova.api.openstack.compute.plugins.v3 import migrate_server as \
     migrate_server_v21
 from nova import exception
 from nova.openstack.common import uuidutils
+from nova import test
 from nova.tests.unit.api.openstack.compute import admin_only_action_common
 from nova.tests.unit.api.openstack import fakes
 
@@ -272,3 +273,38 @@ class MigrateServerTestsV2(MigrateServerTestsV21):
     def _get_app(self):
         return fakes.wsgi_app(init_only=('servers',),
             fake_auth_context=self.context)
+
+
+class MigrateServerPolicyEnforcementV21(test.NoDBTestCase):
+
+    def setUp(self):
+        super(MigrateServerPolicyEnforcementV21, self).setUp()
+        self.controller = migrate_server_v21.MigrateServerController()
+        self.req = fakes.HTTPRequest.blank('')
+
+    def test_migrate_policy_failed(self):
+        rule_name = "compute_extension:v3:os-migrate-server:migrate"
+        self.policy.set_rules({rule_name: "project:non_fake"})
+        exc = self.assertRaises(
+                                exception.PolicyNotAuthorized,
+                                self.controller._migrate, self.req,
+                                fakes.FAKE_UUID,
+                                body={'migrate': {}})
+        self.assertEqual(
+                      "Policy doesn't allow %s to be performed." % rule_name,
+                      exc.format_message())
+
+    def test_migrate_live_policy_failed(self):
+        rule_name = "compute_extension:v3:os-migrate-server:migrate_live"
+        self.policy.set_rules({rule_name: "project:non_fake"})
+        body_args = {'os-migrateLive': {'host': 'hostname',
+                'block_migration': False,
+                'disk_over_commit': False}}
+        exc = self.assertRaises(
+                                exception.PolicyNotAuthorized,
+                                self.controller._migrate_live, self.req,
+                                fakes.FAKE_UUID,
+                                body=body_args)
+        self.assertEqual(
+                      "Policy doesn't allow %s to be performed." % rule_name,
+                      exc.format_message())
