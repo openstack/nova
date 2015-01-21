@@ -44,6 +44,7 @@ from nova import test
 from nova.tests.unit.compute import fake_resource_tracker
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_instance
+from nova.tests.unit import fake_server_actions
 from nova.tests.unit.objects import test_instance_fault
 from nova.tests.unit.objects import test_instance_info_cache
 from nova import utils
@@ -60,6 +61,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         super(ComputeManagerUnitTestCase, self).setUp()
         self.compute = importutils.import_object(CONF.compute_manager)
         self.context = context.RequestContext('fake', 'fake')
+        fake_server_actions.stub_out_action_events(self.stubs)
 
     @mock.patch.object(manager.ComputeManager, '_sync_instance_power_state')
     @mock.patch.object(objects.Instance, 'get_by_uuid')
@@ -1611,9 +1613,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         fake_nw_info = network_model.NetworkInfo()
         rescue_image_meta = {'id': 'fake', 'name': 'fake'}
         with contextlib.nested(
-            mock.patch.object(objects.InstanceActionEvent, 'event_start'),
-            mock.patch.object(objects.InstanceActionEvent,
-                              'event_finish_with_failure'),
             mock.patch.object(self.context, 'elevated',
                               return_value=self.context),
             mock.patch.object(self.compute, '_get_instance_nw_info',
@@ -1629,7 +1628,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                               return_value=power_state.RUNNING),
             mock.patch.object(instance, 'save')
         ) as (
-            event_start, event_finish, elevated_context, get_nw_info,
+            elevated_context, get_nw_info,
             get_rescue_image, notify_instance_usage, power_off_instance,
             driver_rescue, notify_usage_exists, get_power_state, instance_save
         ):
@@ -1683,9 +1682,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             self.context, vm_state=vm_states.RESCUED)
         fake_nw_info = network_model.NetworkInfo()
         with contextlib.nested(
-            mock.patch.object(objects.InstanceActionEvent, 'event_start'),
-            mock.patch.object(objects.InstanceActionEvent,
-                              'event_finish_with_failure'),
             mock.patch.object(self.context, 'elevated',
                               return_value=self.context),
             mock.patch.object(self.compute, '_get_instance_nw_info',
@@ -1696,7 +1692,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                               return_value=power_state.RUNNING),
             mock.patch.object(instance, 'save')
         ) as (
-            event_start, event_finish, elevated_context, get_nw_info,
+            elevated_context, get_nw_info,
             notify_instance_usage, driver_unrescue, get_power_state,
             instance_save
         ):
@@ -1723,16 +1719,12 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             instance_save.assert_called_once_with(
                 expected_task_state=task_states.UNRESCUING)
 
-    @mock.patch.object(objects.InstanceActionEvent, 'event_start')
-    @mock.patch.object(objects.InstanceActionEvent,
-                       'event_finish_with_failure')
     @mock.patch('nova.compute.manager.ComputeManager._get_power_state',
                 return_value=power_state.RUNNING)
     @mock.patch.object(objects.Instance, 'save')
     @mock.patch('nova.utils.generate_password', return_value='fake-pass')
     def test_set_admin_password(self, gen_password_mock,
-                                instance_save_mock, power_state_mock,
-                                event_finish_mock, event_start_mock):
+                                instance_save_mock, power_state_mock):
         # Ensure instance can have its admin password set.
         instance = fake_instance.fake_instance_obj(
             self.context,
@@ -1755,16 +1747,13 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
         do_test()
 
-    @mock.patch.object(objects.InstanceActionEvent, 'event_start')
-    @mock.patch.object(objects.InstanceActionEvent,
-                       'event_finish_with_failure')
     @mock.patch('nova.compute.manager.ComputeManager._get_power_state',
                 return_value=power_state.NOSTATE)
     @mock.patch.object(objects.Instance, 'save')
     @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
     def test_set_admin_password_bad_state(self, add_fault_mock,
-                                          instance_save_mock, power_state_mock,
-                                          event_finish_mock, event_start_mock):
+                                          instance_save_mock,
+                                          power_state_mock):
         # Test setting password while instance is rebuilding.
         instance = fake_instance.fake_instance_obj(self.context)
         with mock.patch.object(self.context, 'elevated',
@@ -1781,9 +1770,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         add_fault_mock.assert_called_once_with(
             self.context, instance, mock.ANY, mock.ANY)
 
-    @mock.patch.object(objects.InstanceActionEvent, 'event_start')
-    @mock.patch.object(objects.InstanceActionEvent,
-                       'event_finish_with_failure')
     @mock.patch('nova.utils.generate_password', return_value='fake-pass')
     @mock.patch('nova.compute.manager.ComputeManager._get_power_state',
                 return_value=power_state.RUNNING)
@@ -1798,9 +1784,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                                                  instance_save_mock,
                                                  update_mock,
                                                  power_state_mock,
-                                                 gen_password_mock,
-                                                 event_finish_mock,
-                                                 event_start_mock):
+                                                 gen_password_mock):
         # Ensure expected exception is raised if set_admin_password fails.
         instance = fake_instance.fake_instance_obj(
             self.context,
@@ -2051,16 +2035,12 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             self.context, vm_state=vm_states.ACTIVE,
             task_state=None, power_state=power_state.SHUTDOWN)
 
-        @mock.patch.object(objects.InstanceActionEvent, 'event_start')
-        @mock.patch.object(objects.InstanceActionEvent,
-                           'event_finish_with_failure')
         @mock.patch.object(self.compute, '_get_power_state',
                            return_value=power_state.SHUTDOWN)
         @mock.patch.object(self.compute, '_notify_about_instance_usage')
         @mock.patch.object(self.compute, '_power_off_instance')
         @mock.patch.object(instance, 'save')
-        def do_test(save_mock, power_off_mock, notify_mock, get_state_mock,
-                    event_finish_mock, event_start_mock):
+        def do_test(save_mock, power_off_mock, notify_mock, get_state_mock):
             # run the code
             self.compute.stop_instance(self.context, instance)
             # assert the calls
@@ -2286,14 +2266,12 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
 
     # This test when sending an icehouse compatible rpc call to juno compute
     # node, NetworkRequest object can load from three items tuple.
-    @mock.patch('nova.objects.InstanceActionEvent.event_finish_with_failure')
-    @mock.patch('nova.objects.InstanceActionEvent.event_start')
     @mock.patch('nova.objects.Instance.save')
     @mock.patch('nova.compute.manager.ComputeManager._build_and_run_instance')
     @mock.patch('nova.utils.spawn_n')
     def test_build_and_run_instance_with_icehouse_requested_network(
-            self, mock_spawn, mock_build_and_run, mock_save, mock_event_start,
-            mock_event_finish):
+            self, mock_spawn, mock_build_and_run, mock_save):
+        fake_server_actions.stub_out_action_events(self.stubs)
         mock_spawn.side_effect = lambda f, *a, **k: f(*a, **k)
         mock_save.return_value = self.instance
         self.compute.build_and_run_instance(self.context, self.instance,
@@ -3187,20 +3165,18 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                 expected_attrs=['metadata', 'system_metadata', 'info_cache'])
         self.migration = objects.Migration(context=self.context.elevated())
         self.migration.status = 'migrating'
+        fake_server_actions.stub_out_action_events(self.stubs)
 
     def test_finish_resize_failure(self):
         with contextlib.nested(
             mock.patch.object(self.compute, '_finish_resize',
                               side_effect=exception.ResizeError(reason='')),
-            mock.patch.object(objects.InstanceActionEvent, 'event_start'),
-            mock.patch.object(objects.InstanceActionEvent,
-                              'event_finish_with_failure'),
             mock.patch.object(db, 'instance_fault_create'),
             mock.patch.object(self.compute, '_instance_update'),
             mock.patch.object(self.migration, 'save'),
             mock.patch.object(self.migration, 'obj_as_admin',
                               return_value=mock.MagicMock())
-        ) as (meth, event_start, event_finish, fault_create, instance_update,
+        ) as (meth, fault_create, instance_update,
               migration_save, migration_obj_as_admin):
             fault_create.return_value = (
                 test_instance_fault.fake_faults['fake-uuid'][0])
@@ -3220,9 +3196,6 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             mock.patch.object(self.compute.driver,
                               'migrate_disk_and_power_off',
                               side_effect=exception.ResizeError(reason='')),
-            mock.patch.object(objects.InstanceActionEvent, 'event_start'),
-            mock.patch.object(objects.InstanceActionEvent,
-                              'event_finish_with_failure'),
             mock.patch.object(db, 'instance_fault_create'),
             mock.patch.object(self.compute, '_instance_update'),
             mock.patch.object(self.migration, 'save'),
@@ -3238,7 +3211,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             mock.patch.object(objects.BlockDeviceMappingList,
                               'get_by_instance_uuid',
                               return_value=None)
-        ) as (meth, event_start, event_finish, fault_create, instance_update,
+        ) as (meth, fault_create, instance_update,
               migration_save, migration_obj_as_admin, nw_info, save_inst,
               notify, vol_block_info, bdm):
             fault_create.return_value = (
