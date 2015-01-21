@@ -596,7 +596,7 @@ class VMwareVCDriver(driver.ComputeDriver):
         """
         raise NotImplementedError()
 
-    def get_host_uptime(self, host):
+    def get_host_uptime(self):
         """Host uptime operation not supported by VC driver."""
 
         msg = _("Multiple hosts may be managed by the VMWare "

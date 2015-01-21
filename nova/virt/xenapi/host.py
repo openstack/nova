@@ -132,7 +132,7 @@ class Host(object):
         response = call_xenhost(self._session, "set_host_enabled", args)
         return response.get("status", response)
 
-    def get_host_uptime(self, _host):
+    def get_host_uptime(self):
         """Returns the result of calling "uptime" on the target host."""
         response = call_xenhost(self._session, "host_uptime", {})
         return response.get("uptime", response)

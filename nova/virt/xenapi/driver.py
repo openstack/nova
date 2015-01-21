@@ -646,9 +646,9 @@ class XenAPIDriver(driver.ComputeDriver):
         """Sets the compute host's ability to accept new instances."""
         return self._host.set_host_enabled(enabled)
 
-    def get_host_uptime(self, host):
+    def get_host_uptime(self):
         """Returns the result of calling "uptime" on the target host."""
-        return self._host.get_host_uptime(host)
+        return self._host.get_host_uptime()
 
     def host_maintenance_mode(self, host, mode):
         """Start/Stop host maintenance window. On start, it triggers

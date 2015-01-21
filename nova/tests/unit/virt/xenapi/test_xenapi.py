@@ -2144,7 +2144,7 @@ class XenAPIHostTestCase(stubs.XenAPITestBase):
         self.assertEqual(service.disabled, True)
 
     def test_get_host_uptime(self):
-        result = self.conn.get_host_uptime('host')
+        result = self.conn.get_host_uptime()
         self.assertEqual(result, 'fake uptime')
 
     def test_supported_instances_is_included_in_host_state(self):

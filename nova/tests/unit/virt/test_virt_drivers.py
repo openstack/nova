@@ -664,7 +664,7 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
 
     @catch_notimplementederror
     def test_get_host_uptime(self):
-        self.connection.get_host_uptime('a useless argument?')
+        self.connection.get_host_uptime()
 
     @catch_notimplementederror
     def test_host_power_action_reboot(self):
