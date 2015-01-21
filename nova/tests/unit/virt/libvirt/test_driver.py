@@ -11336,6 +11336,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         inst['key_data'] = 'ABCDEFG'
         inst['system_metadata'] = {}
         inst['metadata'] = {}
+        inst['vm_mode'] = 'hvm'
 
         inst.update(params)
 

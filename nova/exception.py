@@ -1414,8 +1414,13 @@ class ConfigDriveMountFailed(NovaException):
 
 
 class ConfigDriveUnknownFormat(NovaException):
-    msg_fmt = _("Unknown config drive format %(format)s. Select one of "
-                "iso9660 or vfat.")
+    msg_fmt = _("Unknown config drive format %(format)s for %(os_type)s "
+                "os type. Valid options are: iso9660, vfat or None.")
+
+
+class ConfigDriveUnsupportedFormat(NovaException):
+    msg_fmt = _("Unsupported config drive format %(format)s "
+                "for %(image_type)s image type. Image path: %(image_path)")
 
 
 class InterfaceAttachFailed(Invalid):
