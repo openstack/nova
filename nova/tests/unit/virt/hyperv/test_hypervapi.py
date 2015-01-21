@@ -19,7 +19,6 @@ Test suite for the Hyper-V driver and related APIs.
 import time
 import uuid
 
-import mock
 from mox3 import mox
 from oslo_config import cfg
 from oslo_utils import fileutils
@@ -36,7 +35,6 @@ from nova.tests.unit.virt.hyperv import db_fakes
 from nova.tests.unit.virt.hyperv import fake
 from nova import utils
 from nova.virt import configdrive
-from nova.virt import driver
 from nova.virt.hyperv import driver as driver_hyperv
 from nova.virt.hyperv import hostutils
 from nova.virt.hyperv import ioutils
@@ -151,9 +149,6 @@ class HyperVAPIBaseTestCase(test.NoDBTestCase):
 class HyperVAPITestCase(HyperVAPIBaseTestCase):
     """Unit tests for Hyper-V driver calls."""
 
-    def test_public_api_signatures(self):
-        self.assertPublicAPISignatures(driver.ComputeDriver(None), self._conn)
-
     def _get_instance_data(self):
         instance_name = 'openstack_unit_test_vm_' + str(uuid.uuid4())
         return db_fakes.get_fake_instance_data(instance_name,
@@ -167,25 +162,6 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
             context, objects.Instance(),
             fake_instance.fake_db_instance(**updates),
             expected_attrs=expected_attrs)
-
-    def test_plug_vifs(self):
-        # Check to make sure the method raises NotImplementedError.
-        self.assertRaises(NotImplementedError,
-                          self._conn.plug_vifs,
-                          instance=mock.sentinel.instance,
-                          network_info=None)
-
-    def test_unplug_vifs(self):
-        # Check to make sure the method raises NotImplementedError.
-        self.assertRaises(NotImplementedError,
-                          self._conn.unplug_vifs,
-                          instance=mock.sentinel.instance,
-                          network_info=None)
-
-    def test_refresh_instance_security_rules(self):
-        self.assertRaises(NotImplementedError,
-                          self._conn.refresh_instance_security_rules,
-                          instance=None)
 
     def test_get_rdp_console(self):
         self.flags(my_ip="192.168.1.1")
