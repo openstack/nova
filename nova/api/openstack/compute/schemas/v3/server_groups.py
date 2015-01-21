@@ -29,11 +29,9 @@ create = {
                 'name': parameter_types.name,
                 'policies': {
                     'type': 'array',
-                    'items': {
-                        'type': 'string', 'enum': SUPPORTED_POLICIES
-                    },
+                    'items': [{'enum': SUPPORTED_POLICIES}],
                     'uniqueItems': True,
-                    'minItems': 1
+                    'additionalItems': False,
                 }
             },
             'required': ['name', 'policies'],

@@ -93,15 +93,19 @@ class ServerGroupTestV21(test.TestCase):
         self.assertRaises(self.validation_error, self.controller.create,
                           self.req, body={'server_group': sgroup})
 
-    def test_create_server_group_normal(self):
+    def _create_server_group_normal(self, policies):
         sgroup = server_group_template()
-        policies = ['anti-affinity']
         sgroup['policies'] = policies
         res_dict = self.controller.create(self.req,
                                           body={'server_group': sgroup})
         self.assertEqual(res_dict['server_group']['name'], 'test')
         self.assertTrue(uuidutils.is_uuid_like(res_dict['server_group']['id']))
         self.assertEqual(res_dict['server_group']['policies'], policies)
+
+    def test_create_server_group(self):
+        policies = ['affinity', 'anti-affinity']
+        for policy in policies:
+            self._create_server_group_normal([policy])
 
     def _create_instance(self, context):
         instance = objects.Instance(context=context, image_ref=1, node='node1',
@@ -208,7 +212,7 @@ class ServerGroupTestV21(test.TestCase):
         sgroup = server_group_template()
         policies = ['anti-affinity', 'affinity']
         sgroup['policies'] = policies
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
+        self.assertRaises(self.validation_error, self.controller.create,
                           self.req, body={'server_group': sgroup})
 
     def test_create_server_group_with_duplicate_policies(self):
