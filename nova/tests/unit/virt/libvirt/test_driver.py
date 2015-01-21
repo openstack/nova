@@ -471,7 +471,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.stubs.Set(imagebackend.Image, 'resolve_driver_format',
                        imagebackend.Image._get_driver_format)
 
-        class FakeConn():
+        class FakeConn(object):
             def baselineCPU(self, cpu, flag):
                 """Add new libvirt API."""
                 return """<cpu mode='custom' match='exact'>
@@ -718,7 +718,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
 
-        class FakeDev():
+        class FakeDev(object):
             def attach(self):
                 pass
 
@@ -743,7 +743,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.flags(virt_type='xen', group='libvirt')
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
 
-        class FakeDev():
+        class FakeDev(object):
 
             def attach(self):
                 pass
@@ -805,14 +805,14 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver,
                                  '_get_guest_pci_device')
 
-        class FakeDev():
+        class FakeDev(object):
             def to_xml(self):
                 pass
 
         libvirt_driver.LibvirtDriver._get_guest_pci_device =\
             lambda x, y: FakeDev()
 
-        class FakeDomain():
+        class FakeDomain(object):
             def detachDeviceFlags(self, xml, flag):
                 pci_devices[0]['hypervisor_name'] = 'marked'
                 pass
@@ -849,14 +849,14 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver,
                                  '_get_guest_pci_device')
 
-        class FakeDev():
+        class FakeDev(object):
             def to_xml(self):
                 pass
 
         libvirt_driver.LibvirtDriver._get_guest_pci_device =\
             lambda x, y: FakeDev()
 
-        class FakeDomain():
+        class FakeDomain(object):
             def detachDeviceFlags(self, xml, flag):
                 pass
 
@@ -6454,7 +6454,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                   {'connection_info': 'dummy', 'mount_device': '/dev/sdb'}]}
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
-        class FakeNetworkInfo():
+        class FakeNetworkInfo(object):
             def fixed_ips(self):
                 return ["test_ip_addr"]
 
@@ -6524,7 +6524,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
             self.stubs.Set(conn, '_create_images_and_backing', fake_none)
 
-            class FakeNetworkInfo():
+            class FakeNetworkInfo(object):
                 def fixed_ips(self):
                     return ["test_ip_addr"]
             inst_ref = objects.Instance(**self.test_instance)
@@ -7078,7 +7078,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         def fake_get_info(instance):
             return hardware.InstanceInfo(state=power_state.RUNNING)
 
-        class FakeLibvirtPciDevice():
+        class FakeLibvirtPciDevice(object):
             def dettach(self):
                 return None
 
@@ -7728,7 +7728,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                              None)
 
     def test_reboot_different_ids(self):
-        class FakeLoopingCall:
+        class FakeLoopingCall(object):
             def start(self, *a, **k):
                 return self
 
@@ -7768,7 +7768,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertTrue(self.reboot_create_called)
 
     def test_reboot_same_ids(self):
-        class FakeLoopingCall:
+        class FakeLoopingCall(object):
             def start(self, *a, **k):
                 return self
 
@@ -11400,7 +11400,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
 
     def _test_finish_revert_migration_after_crash(self, backup_made=True,
                                                   del_inst_failed=False):
-        class FakeLoopingCall:
+        class FakeLoopingCall(object):
             def start(self, *a, **k):
                 return self
 

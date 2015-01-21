@@ -59,7 +59,7 @@ class TestField(test.NoDBTestCase):
                                                                in_val))
 
     def test_from_primitive(self):
-        class ObjectLikeThing:
+        class ObjectLikeThing(object):
             _context = 'context'
 
         for prim_val, out_val in self.from_primitive_values:

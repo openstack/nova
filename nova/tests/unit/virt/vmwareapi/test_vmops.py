@@ -40,7 +40,7 @@ from nova.virt.vmwareapi import vm_util
 from nova.virt.vmwareapi import vmops
 
 
-class DsPathMatcher:
+class DsPathMatcher(object):
     def __init__(self, expected_ds_path_str):
         self.expected_ds_path_str = expected_ds_path_str
 

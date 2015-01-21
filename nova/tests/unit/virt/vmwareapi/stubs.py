@@ -104,11 +104,11 @@ def fake_suds_context(calls=None):
 
     calls = calls or {}
 
-    class fake_factory:
+    class fake_factory(object):
         def create(self, name):
             return mock.NonCallableMagicMock(name=name)
 
-    class fake_service:
+    class fake_service(object):
         def __getattr__(self, attr_name):
             if attr_name in calls:
                 return calls[attr_name]
@@ -117,7 +117,7 @@ def fake_suds_context(calls=None):
             calls[attr_name] = mock_call
             return mock_call
 
-    class fake_client:
+    class fake_client(object):
         def __init__(self, wdsl_url, **kwargs):
             self.service = fake_service()
             self.factory = fake_factory()

@@ -46,7 +46,8 @@ class ElementTypeError(TypeError):
                    })
 
 
-class AbstractFieldType(six.with_metaclass(abc.ABCMeta, object)):
+@six.add_metaclass(abc.ABCMeta)
+class AbstractFieldType(object):
     @abc.abstractmethod
     def coerce(self, obj, attr, value):
         """This is called to coerce (if possible) a value on assignment.

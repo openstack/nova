@@ -28,7 +28,7 @@ CONF.import_opt('cross_az_attach',
                 'nova.volume.cinder', group='cinder')
 
 
-class fake_volume():
+class fake_volume(object):
     user_uuid = '4a3cd440-b9c2-11e1-afa6-0800200c9a66'
     instance_uuid = '4a3cd441-b9c2-11e1-afa6-0800200c9a66'
 
@@ -79,7 +79,7 @@ class fake_volume():
         self.vol[key]
 
 
-class fake_snapshot():
+class fake_snapshot(object):
     user_uuid = '4a3cd440-b9c2-11e1-afa6-0800200c9a66'
     instance_uuid = '4a3cd441-b9c2-11e1-afa6-0800200c9a66'
 
@@ -118,7 +118,7 @@ class API(object):
     snapshot_list = []
     _instance = None
 
-    class Singleton:
+    class Singleton(object):
         def __init__(self):
             self.API = None
 

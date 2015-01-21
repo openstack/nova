@@ -44,7 +44,7 @@ _fake_stub_out_get_nw_info = fake_network.stub_out_nw_api_get_instance_nw_info
 _ipv4_like = fake_network.ipv4_like
 
 
-class NWFilterFakes:
+class NWFilterFakes(object):
     def __init__(self):
         self.filters = {}
 
@@ -54,7 +54,7 @@ class NWFilterFakes:
         raise libvirt.libvirtError('Filter Not Found')
 
     def filterDefineXMLMock(self, xml):
-        class FakeNWFilterInternal:
+        class FakeNWFilterInternal(object):
             def __init__(self, parent, name, u, xml):
                 self.name = name
                 self.uuid = u

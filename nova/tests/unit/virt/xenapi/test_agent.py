@@ -81,7 +81,7 @@ class AgentImageFlagsTestCase(AgentTestCaseBase):
         self.assertTrue(agent.should_use_agent(instance))
 
 
-class SysMetaKeyTestBase():
+class SysMetaKeyTestBase(object):
     key = None
 
     def _create_agent_with_value(self, value):

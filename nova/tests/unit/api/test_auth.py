@@ -137,7 +137,7 @@ class TestPipeLineFactory(test.NoDBTestCase):
         def __init__(self, name):
             self.name = name
 
-    class FakeLoader():
+    class FakeLoader(object):
         def get_filter(self, name):
             return TestPipeLineFactory.FakeFilter(name)
 

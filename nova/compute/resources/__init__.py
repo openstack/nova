@@ -23,7 +23,7 @@ LOG = logging.getLogger(__name__)
 RESOURCE_NAMESPACE = 'nova.compute.resources'
 
 
-class ResourceHandler():
+class ResourceHandler(object):
 
     def _log_missing_plugins(self, names):
         for name in names:
