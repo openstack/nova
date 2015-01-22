@@ -552,10 +552,16 @@ class HostAPI(compute_api.HostAPI):
         # NOTE(danms): Currently cells does not support objects as
         # return values, so just convert the db-formatted service objects
         # to new-world objects here
+
+        # NOTE(dheeraj): Use ServiceProxy here too. See johannes'
+        # note on service_get_all
         if db_service:
-            return objects.Service._from_db_object(context,
-                                                   objects.Service(),
-                                                   db_service)
+            cell_path, _id = cells_utils.split_cell_and_item(db_service['id'])
+            db_service['id'] = _id
+            ser_obj = objects.Service._from_db_object(context,
+                                                      objects.Service(),
+                                                      db_service)
+            return ServiceProxy(ser_obj, cell_path)
 
     def service_update(self, context, host_name, binary, params_to_update):
         """Used to enable/disable a service. For compute services, setting to
@@ -571,10 +577,16 @@ class HostAPI(compute_api.HostAPI):
         # NOTE(danms): Currently cells does not support objects as
         # return values, so just convert the db-formatted service objects
         # to new-world objects here
+
+        # NOTE(dheeraj): Use ServiceProxy here too. See johannes'
+        # note on service_get_all
         if db_service:
-            return objects.Service._from_db_object(context,
-                                                   objects.Service(),
-                                                   db_service)
+            cell_path, _id = cells_utils.split_cell_and_item(db_service['id'])
+            db_service['id'] = _id
+            ser_obj = objects.Service._from_db_object(context,
+                                                      objects.Service(),
+                                                      db_service)
+            return ServiceProxy(ser_obj, cell_path)
 
     def service_delete(self, context, service_id):
         """Deletes the specified service."""
