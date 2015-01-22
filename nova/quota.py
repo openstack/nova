@@ -229,8 +229,12 @@ class DbQuotaDriver(object):
         :param user_quotas: Quotas dictionary for the specified project
                             and user.
         """
-        user_quotas = user_quotas or db.quota_get_all_by_project_and_user(
-            context, project_id, user_id)
+        if user_quotas:
+            user_quotas = user_quotas.copy()
+        else:
+            user_quotas = db.quota_get_all_by_project_and_user(context,
+                                                               project_id,
+                                                               user_id)
         # Use the project quota for default user quota.
         proj_quotas = project_quotas or db.quota_get_all_by_project(
             context, project_id)

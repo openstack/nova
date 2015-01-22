@@ -1693,6 +1693,11 @@ class DbQuotaDriverTestCase(test.TestCase):
                 ))
 
     def _stub_get_settable_quotas(self):
+
+        def fake_quota_get_all_by_project(context, project_id):
+            self.calls.append('quota_get_all_by_project')
+            return {'floating_ips': 20}
+
         def fake_get_project_quotas(context, resources, project_id,
                                     quota_class=None, defaults=True,
                                     usages=True, remains=False,
@@ -1709,6 +1714,10 @@ class DbQuotaDriverTestCase(test.TestCase):
                     remains = -1
                     in_use = 5
                     limit = -1
+                elif k == 'floating_ips':
+                    remains = 20
+                    in_use = 0
+                    limit = 20
                 else:
                     remains = v.default
                     in_use = 0
@@ -1716,11 +1725,12 @@ class DbQuotaDriverTestCase(test.TestCase):
                              'reserved': reserved, 'remains': remains}
             return result
 
-        def fake_get_user_quotas(context, resources, project_id, user_id,
-                                 quota_class=None, defaults=True,
-                                 usages=True, project_quotas=None,
-                                 user_quotas=None):
-            self.calls.append('get_user_quotas')
+        def fake_process_quotas_in_get_user_quotas(context, resources,
+                                                   project_id, quotas,
+                                                   quota_class=None,
+                                                   defaults=True, usages=None,
+                                                   remains=False):
+            self.calls.append('_process_quotas')
             result = {}
             for k, v in resources.items():
                 reserved = 0
@@ -1739,10 +1749,12 @@ class DbQuotaDriverTestCase(test.TestCase):
             self.calls.append('quota_get_all_by_project_and_user')
             return {'instances': 2, 'cores': -1}
 
+        self.stubs.Set(db, 'quota_get_all_by_project',
+                       fake_quota_get_all_by_project)
         self.stubs.Set(self.driver, 'get_project_quotas',
                        fake_get_project_quotas)
-        self.stubs.Set(self.driver, 'get_user_quotas',
-                       fake_get_user_quotas)
+        self.stubs.Set(self.driver, '_process_quotas',
+                       fake_process_quotas_in_get_user_quotas)
         self.stubs.Set(db, 'quota_get_all_by_project_and_user',
                        fake_qgabpau)
 
@@ -1753,9 +1765,10 @@ class DbQuotaDriverTestCase(test.TestCase):
             quota.QUOTAS._resources, 'test_project', user_id='test_user')
 
         self.assertEqual(self.calls, [
+                'quota_get_all_by_project',
                 'get_project_quotas',
                 'quota_get_all_by_project_and_user',
-                'get_user_quotas',
+                '_process_quotas',
                 ])
         self.assertEqual(result, {
                 'instances': {
@@ -1772,7 +1785,7 @@ class DbQuotaDriverTestCase(test.TestCase):
                     },
                 'floating_ips': {
                     'minimum': 0,
-                    'maximum': 10,
+                    'maximum': 20,
                     },
                 'fixed_ips': {
                     'minimum': 0,
@@ -1823,6 +1836,7 @@ class DbQuotaDriverTestCase(test.TestCase):
             quota.QUOTAS._resources, 'test_project')
 
         self.assertEqual(self.calls, [
+                'quota_get_all_by_project',
                 'get_project_quotas',
                 ])
         self.assertEqual(result, {
@@ -1891,9 +1905,10 @@ class DbQuotaDriverTestCase(test.TestCase):
             quota.QUOTAS._resources, 'test_project', user_id='test_user')
 
         self.assertEqual(self.calls, [
+                'quota_get_all_by_project',
                 'get_project_quotas',
                 'quota_get_all_by_project_and_user',
-                'get_user_quotas',
+                '_process_quotas',
                 ])
         self.assertEqual(result, {
                 'instances': {
@@ -1910,7 +1925,7 @@ class DbQuotaDriverTestCase(test.TestCase):
                     },
                 'floating_ips': {
                     'minimum': 0,
-                    'maximum': 10,
+                    'maximum': 20,
                     },
                 'fixed_ips': {
                     'minimum': 0,
