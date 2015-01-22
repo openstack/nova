@@ -19,10 +19,7 @@ from oslo.config import cfg
 from oslo.serialization import jsonutils
 import webob
 
-from nova.api.openstack.compute.contrib import config_drive as config_drive_v2
 from nova.api.openstack.compute import plugins
-from nova.api.openstack.compute.plugins.v3 import config_drive \
-    as config_drive_v21
 from nova.api.openstack.compute.plugins.v3 import servers as servers_v21
 from nova.api.openstack.compute import servers as servers_v2
 from nova.api.openstack import extensions
@@ -45,12 +42,8 @@ class ConfigDriveTestV21(test.TestCase):
     def _setup_wsgi(self):
         self.app = fakes.wsgi_app_v21(init_only=('servers', 'os-config-drive'))
 
-    def _get_config_drive_controller(self):
-        return config_drive_v21.ConfigDriveController()
-
     def setUp(self):
         super(ConfigDriveTestV21, self).setUp()
-        self.Controller = self._get_config_drive_controller()
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
         fake.stub_out_image_service(self.stubs)
@@ -85,10 +78,6 @@ class ConfigDriveTestV21(test.TestCase):
 
 
 class ConfigDriveTestV2(ConfigDriveTestV21):
-
-    def _get_config_drive_controller(self):
-        return config_drive_v2.Controller()
-
     def _setup_wsgi(self):
         self.flags(
             osapi_compute_extension=[
