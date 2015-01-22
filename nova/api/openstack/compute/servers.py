@@ -880,7 +880,7 @@ class Controller(wsgi.Controller):
     @wsgi.action('changePassword')
     def _action_change_password(self, req, id, body):
         context = req.environ['nova.context']
-        if ('changePassword' not in body
+        if (not body.get('changePassword')
                 or 'adminPass' not in body['changePassword']):
             msg = _("No adminPass was specified")
             raise exc.HTTPBadRequest(explanation=msg)
