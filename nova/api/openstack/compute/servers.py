@@ -889,6 +889,11 @@ class Controller(wsgi.Controller):
         server = self._get_server(context, req, id)
         try:
             self.compute_api.set_admin_password(context, server, password)
+        except exception.InstancePasswordSetFailed as e:
+            raise exc.HTTPConflict(explanation=e.format_message())
+        except exception.InstanceInvalidState as e:
+            raise common.raise_http_conflict_for_instance_invalid_state(
+                e, 'changePassword', id)
         except NotImplementedError:
             msg = _("Unable to set password on instance")
             raise exc.HTTPNotImplemented(explanation=msg)
