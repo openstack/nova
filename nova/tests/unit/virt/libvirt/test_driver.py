@@ -12174,6 +12174,29 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         mock_get.assert_called_once_with(self.context,
                                          instance['instance_type_id'])
 
+    def test_get_interfaces(self):
+        dom_xml = """
+              <domain type="qemu">
+                  <devices>
+                      <interface type="ethernet">
+                          <mac address="fe:eb:da:ed:ef:ac"/>
+                          <model type="virtio"/>
+                          <target dev="eth0"/>
+                      </interface>
+                      <interface type="bridge">
+                          <mac address="ca:fe:de:ad:be:ef"/>
+                          <model type="virtio"/>
+                          <target dev="br0"/>
+                      </interface>
+                  </devices>
+              </domain>"""
+
+        list_interfaces = ['eth0', 'br0']
+
+        drv = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+
+        self.assertEqual(list_interfaces, drv._get_interfaces(dom_xml))
+
 
 class LibvirtVolumeUsageTestCase(test.NoDBTestCase):
     """Test for LibvirtDriver.get_all_volume_usage."""
