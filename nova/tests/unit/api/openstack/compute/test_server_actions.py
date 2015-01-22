@@ -1344,66 +1344,6 @@ class ServerActionsControllerTestV2(ServerActionsControllerTestV21):
         location = response.headers['Location']
         self.assertEqual('https://glancehost/v2/fake/images/123', location)
 
-    # TODO(eliqiao): password cases should be move to test_admin_password
-    def test_server_change_password(self):
-        mock_method = MockSetAdminPassword()
-        self.stubs.Set(compute_api.API, 'set_admin_password', mock_method)
-        body = {'changePassword': {'adminPass': '1234pass'}}
-
-        req = fakes.HTTPRequest.blank(self.url)
-        self.controller._action_change_password(req, FAKE_UUID, body)
-
-        self.assertEqual(mock_method.instance_id, self.uuid)
-        self.assertEqual(mock_method.password, '1234pass')
-
-    def test_server_change_password_pass_disabled(self):
-        # run with enable_instance_password disabled to verify adminPass
-        # is missing from response. See lp bug 921814
-        self.flags(enable_instance_password=False)
-
-        mock_method = MockSetAdminPassword()
-        self.stubs.Set(compute_api.API, 'set_admin_password', mock_method)
-        body = {'changePassword': {'adminPass': '1234pass'}}
-
-        req = fakes.HTTPRequest.blank(self.url)
-        self.controller._action_change_password(req, FAKE_UUID, body)
-
-        self.assertEqual(mock_method.instance_id, self.uuid)
-        # note,the mock still contains the password.
-        self.assertEqual(mock_method.password, '1234pass')
-
-    def test_server_change_password_not_a_string(self):
-        body = {'changePassword': {'adminPass': 1234}}
-        req = fakes.HTTPRequest.blank(self.url)
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller._action_change_password,
-                          req, FAKE_UUID, body)
-
-    def test_server_change_password_bad_request(self):
-        body = {'changePassword': {'pass': '12345'}}
-        req = fakes.HTTPRequest.blank(self.url)
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller._action_change_password,
-                          req, FAKE_UUID, body)
-
-    def test_server_change_password_empty_string(self):
-        mock_method = MockSetAdminPassword()
-        self.stubs.Set(compute_api.API, 'set_admin_password', mock_method)
-        body = {'changePassword': {'adminPass': ''}}
-
-        req = fakes.HTTPRequest.blank(self.url)
-        self.controller._action_change_password(req, FAKE_UUID, body)
-
-        self.assertEqual(mock_method.instance_id, self.uuid)
-        self.assertEqual(mock_method.password, '')
-
-    def test_server_change_password_none(self):
-        body = {'changePassword': {'adminPass': None}}
-        req = fakes.HTTPRequest.blank(self.url)
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller._action_change_password,
-                          req, FAKE_UUID, body)
-
     def test_rebuild_preserve_ephemeral_is_ignored_when_ext_not_loaded(self):
         return_server = fakes.fake_instance_get(image_ref='2',
                                                 vm_state=vm_states.ACTIVE,
