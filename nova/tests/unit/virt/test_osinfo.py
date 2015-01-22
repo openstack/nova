@@ -15,6 +15,7 @@
 import mock
 
 from nova import exception
+from nova import objects
 from nova import test
 from nova.virt import osinfo
 
@@ -23,6 +24,12 @@ class LibvirtOsInfoTest(test.NoDBTestCase):
 
     def setUp(self):
         super(LibvirtOsInfoTest, self).setUp()
+        image_meta = {'properties':
+                            {'os_distro': 'fedora19',
+                             'hw_disk_bus': 'ide',
+                             'hw_vif_model': 'virtio'}
+                        }
+        self.img_meta = objects.ImageMeta.from_dict(image_meta)
         osinfo.libosinfo = mock.Mock()
 
     def test_get_os(self):
@@ -51,3 +58,33 @@ class LibvirtOsInfoTest(test.NoDBTestCase):
         self.assertRaises(exception.OsInfoNotFound,
                           os_info_db.get_os,
                           'test33')
+
+    def test_hardware_properties_from_osinfo(self):
+        """Verifies that HardwareProperties attributes are being set
+           from libosinfo.
+        """
+        img_meta = {'properties':
+                       {'os_distro': 'fedora19'}
+                   }
+
+        img_meta = objects.ImageMeta.from_dict(img_meta)
+        with test.nested(
+            mock.patch.object(osinfo.OsInfo, 'network_model',
+                               new_callable=mock.PropertyMock,
+                               return_value='rtl8139'),
+            mock.patch.object(osinfo.OsInfo, 'disk_model',
+                               new_callable=mock.PropertyMock,
+                               return_value='scsi')):
+
+            osinfo_obj = osinfo.HardwareProperties(img_meta)
+            self.assertEqual('rtl8139', osinfo_obj.network_model)
+            self.assertEqual('scsi', osinfo_obj.disk_model)
+
+    def test_hardware_properties_from_meta(self):
+        """Verifies that HardwareProperties attributes are being set
+           from image properties.
+        """
+        with mock.patch.object(osinfo._OsInfoDatabase, 'get_instance'):
+            osinfo_obj = osinfo.HardwareProperties(self.img_meta)
+            self.assertEqual('virtio', osinfo_obj.network_model)
+            self.assertEqual('ide', osinfo_obj.disk_model)

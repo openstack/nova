@@ -111,3 +111,23 @@ class OsInfo(object):
             devs = self._os_obj.get_all_devices(fltr)
             if devs.get_length():
                 return devs.get_nth(0).get_name()
+
+
+class HardwareProperties(object):
+
+    def __init__(self, image_meta):
+        """:param image_meta:  ImageMeta object
+        """
+        self.img_props = image_meta.properties
+        os_key = self.img_props.get('os_distro')
+        self.os_info_obj = OsInfo(os_key)
+
+    @property
+    def network_model(self):
+        return self.img_props.get('hw_vif_model',
+                                  self.os_info_obj.network_model)
+
+    @property
+    def disk_model(self):
+        return self.img_props.get('hw_disk_bus',
+                                  self.os_info_obj.disk_model)
