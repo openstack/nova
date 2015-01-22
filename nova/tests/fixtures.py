@@ -258,4 +258,8 @@ class WarningsFixture(fixtures.Fixture):
         # this gets kind of crazy given the way that upstream python libs use
         # this.
         warnings.simplefilter("once", DeprecationWarning)
+        warnings.filterwarnings('ignore',
+                                message='With-statements now directly support'
+                                        ' multiple context managers')
+
         self.addCleanup(warnings.resetwarnings)
