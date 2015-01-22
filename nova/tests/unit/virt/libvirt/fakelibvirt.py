@@ -134,6 +134,7 @@ VIR_FROM_DOMAIN = 200
 VIR_FROM_NWFILTER = 330
 VIR_FROM_REMOTE = 340
 VIR_FROM_RPC = 345
+VIR_FROM_NODEDEV = 666
 VIR_ERR_NO_SUPPORT = 3
 VIR_ERR_XML_DETAIL = 350
 VIR_ERR_NO_DOMAIN = 420
@@ -143,6 +144,7 @@ VIR_ERR_NO_NWFILTER = 620
 VIR_ERR_SYSTEM_ERROR = 900
 VIR_ERR_INTERNAL_ERROR = 950
 VIR_ERR_CONFIG_UNSUPPORTED = 951
+VIR_ERR_NO_NODE_DEVICE = 667
 
 # Readonly
 VIR_CONNECT_RO = 1
@@ -278,6 +280,30 @@ class NWFilter(object):
 
     def undefine(self):
         self._connection._remove_filter(self)
+
+
+class NodeDevice(object):
+
+    def __init__(self, connection, xml=None):
+        self._connection = connection
+
+        self._xml = xml
+        if xml is not None:
+            self._parse_xml(xml)
+
+    def _parse_xml(self, xml):
+        tree = etree.fromstring(xml)
+        root = tree.find('.')
+        self._name = root.get('name')
+
+    def attach(self):
+        pass
+
+    def dettach(self):
+        pass
+
+    def reset(self):
+        pass
 
 
 class Domain(object):
@@ -643,6 +669,7 @@ class Connection(object):
         self._running_vms = {}
         self._id_counter = 1  # libvirt reserves 0 for the hypervisor.
         self._nwfilters = {}
+        self._nodedevs = {}
         self._event_callbacks = {}
         self.fakeLibVersion = version
         self.fakeVersion = version
@@ -652,6 +679,12 @@ class Connection(object):
 
     def _remove_filter(self, nwfilter):
         del self._nwfilters[nwfilter._name]
+
+    def _add_nodedev(self, nodedev):
+        self._nodedevs[nodedev._name] = nodedev
+
+    def _remove_nodedev(self, nodedev):
+        del self._nodedevs[nodedev._name]
 
     def _mark_running(self, dom):
         self._running_vms[self._id_counter] = dom
@@ -1040,6 +1073,16 @@ class Connection(object):
         nwfilter = NWFilter(self, xml)
         self._add_filter(nwfilter)
 
+    def nodeDeviceLookupByName(self, name):
+        try:
+            return self._nodedevs[name]
+        except KeyError:
+            raise make_libvirtError(
+                    libvirtError,
+                    "no nodedev with matching name %s" % name,
+                    error_code=VIR_ERR_NO_NODE_DEVICE,
+                    error_domain=VIR_FROM_NODEDEV)
+
     def listDefinedDomains(self):
         return []
 
@@ -1115,7 +1158,7 @@ def make_libvirtError(error_class, msg, error_code=None,
 
 
 virDomain = Domain
-
+virNodeDevice = NodeDevice
 
 virConnect = Connection
 

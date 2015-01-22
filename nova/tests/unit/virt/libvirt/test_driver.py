@@ -471,74 +471,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.stubs.Set(imagebackend.Image, 'resolve_driver_format',
                        imagebackend.Image._get_driver_format)
 
-        class FakeConn(object):
-            def baselineCPU(self, cpu, flag):
-                """Add new libvirt API."""
-                return """<cpu mode='custom' match='exact'>
-                            <model fallback='allow'>Westmere</model>
-                            <vendor>Intel</vendor>
-                            <feature policy='require' name='aes'/>
-                            <feature policy='require' name='hypervisor'/>
-                          </cpu>"""
-
-            def getCapabilities(self):
-                """Ensure standard capabilities being returned."""
-                return """<capabilities>
-                            <host><cpu><arch>x86_64</arch>
-                            <feature policy='require' name='hypervisor'/>
-                            </cpu></host>
-                          </capabilities>"""
-
-            def getVersion(self):
-                return 1005001
-
-            def getLibVersion(self):
-                return (0 * 1000 * 1000) + (9 * 1000) + 11
-
-            def domainEventRegisterAny(self, *args, **kwargs):
-                pass
-
-            def registerCloseCallback(self, cb, opaque):
-                pass
-
-            def nwfilterDefineXML(self, *args, **kwargs):
-                pass
-
-            def nodeDeviceLookupByName(self, x):
-                pass
-
-            def listDevices(self, cap, flags):
-                return []
-
-            def lookupByName(self, name):
-                pass
-
-            def lookupByID(self, id):
-                pass
-
-            def getHostname(self):
-                return "mustard"
-
-            def getType(self):
-                return "QEMU"
-
-            def numOfDomains(self):
-                return 0
-
-            def listDomainsID(self):
-                return []
-
-            def listDefinedDomains(self):
-                return []
-
-            def getInfo(self):
-                return [arch.X86_64, 123456, 2, 2000,
-                        2, 1, 1, 1]
-
-        self.conn = FakeConn()
-        self.stubs.Set(host.Host,
-                       'get_connection',
-                       lambda h: self.conn)
+        self.useFixture(fakelibvirt.FakeLibvirtFixture())
 
         sys_meta = {
             'instance_type_memory_mb': 2048,
@@ -710,54 +643,36 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             db_mock.side_effect = exception.NovaException
             conn._set_host_enabled(False)
 
-    def test_prepare_pci_device(self):
+    @mock.patch.object(fakelibvirt.virConnect, "nodeDeviceLookupByName")
+    def test_prepare_pci_device(self, mock_lookup):
 
         pci_devices = [dict(hypervisor_name='xxx')]
 
         self.flags(virt_type='xen', group='libvirt')
 
-        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        conn = drvr._host.get_connection()
 
-        class FakeDev(object):
-            def attach(self):
-                pass
+        mock_lookup.side_effect = lambda x: fakelibvirt.NodeDevice(conn)
+        drvr._prepare_pci_devices_for_use(pci_devices)
 
-            def dettach(self):
-                pass
-
-            def reset(self):
-                pass
-
-        self.mox.StubOutWithMock(self.conn, 'nodeDeviceLookupByName')
-        self.conn.nodeDeviceLookupByName('xxx').AndReturn(FakeDev())
-        self.conn.nodeDeviceLookupByName('xxx').AndReturn(FakeDev())
-        self.mox.ReplayAll()
-        conn._prepare_pci_devices_for_use(pci_devices)
-
-    def test_prepare_pci_device_exception(self):
+    @mock.patch.object(fakelibvirt.virConnect, "nodeDeviceLookupByName")
+    @mock.patch.object(fakelibvirt.virNodeDevice, "dettach")
+    def test_prepare_pci_device_exception(self, mock_detach, mock_lookup):
 
         pci_devices = [dict(hypervisor_name='xxx',
                             id='id1',
                             instance_uuid='uuid')]
 
         self.flags(virt_type='xen', group='libvirt')
-        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        conn = drvr._host.get_connection()
 
-        class FakeDev(object):
+        mock_lookup.side_effect = lambda x: fakelibvirt.NodeDevice(conn)
+        mock_detach.side_effect = libvirt.libvirtError("xxxx")
 
-            def attach(self):
-                pass
-
-            def dettach(self):
-                raise libvirt.libvirtError("xxxxx")
-
-            def reset(self):
-                pass
-
-        self.stubs.Set(self.conn, 'nodeDeviceLookupByName',
-                       lambda x: FakeDev())
         self.assertRaises(exception.PciDevicePrepareFailed,
-                         conn._prepare_pci_devices_for_use, pci_devices)
+                          drvr._prepare_pci_devices_for_use, pci_devices)
 
     def test_detach_pci_devices_exception(self):
 
@@ -3724,12 +3639,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                    cpu_mode=None,
                    group='libvirt')
 
-        def get_lib_version_stub():
-            return (0 * 1000 * 1000) + (9 * 1000) + 11
-
-        self.stubs.Set(self.conn,
-                       "getLibVersion",
-                       get_lib_version_stub)
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         instance_ref = objects.Instance(**self.test_instance)
         flavor = instance_ref.get_flavor()
@@ -5065,9 +4974,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                           instance,
                           "/dev/sda")
 
-    def test_attach_blockio_invalid_version(self):
-        def get_lib_version_stub():
-            return (0 * 1000 * 1000) + (9 * 1000) + 8
+    @mock.patch.object(fakelibvirt.virConnect, "getLibVersion")
+    def test_attach_blockio_invalid_version(self, mock_version):
+        mock_version.return_value = (0 * 1000 * 1000) + (9 * 1000) + 8
         self.flags(virt_type='qemu', group='libvirt')
         self.create_fake_libvirt_mock()
         libvirt_driver.LibvirtDriver._conn.lookupByName = self.fake_lookup
@@ -5075,7 +4984,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             self.context, **self.test_instance)
         self.mox.ReplayAll()
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.stubs.Set(self.conn, "getLibVersion", get_lib_version_stub)
         self.assertRaises(exception.Invalid,
                           conn.attach_volume, None,
                           {"driver_volume_type": "fake",
