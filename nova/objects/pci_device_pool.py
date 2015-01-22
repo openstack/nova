@@ -48,6 +48,16 @@ class PciDevicePool(base.NovaObject):
         pool.tags.update(pool_dict)
         return pool
 
+    # NOTE(sbauza): Before using objects, pci stats was a list of
+    # dictionaries not having tags. For compatibility with other modules, let's
+    # create a reversible method
+    def to_dict(self):
+        pci_pool = base.obj_to_primitive(self)
+        tags = pci_pool.pop('tags', None)
+        for k, v in six.iteritems(tags):
+            pci_pool[k] = v
+        return pci_pool
+
 
 class PciDevicePoolList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial verison

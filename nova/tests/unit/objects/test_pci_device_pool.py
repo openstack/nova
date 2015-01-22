@@ -43,6 +43,19 @@ class _TestPciDevicePoolObject(object):
         pool_obj = objects.PciDevicePool.from_dict(dict_notag)
         self.assertEqual(pool_obj.tags, {})
 
+    def test_pci_pool_to_dict(self):
+        tags = {'t1': 'foo', 't2': 'bar'}
+        pool_obj = objects.PciDevicePool(product_id='pid', tags=tags)
+        pool_dict = pool_obj.to_dict()
+        self.assertEqual({'product_id': 'pid',
+                          't1': 'foo',
+                          't2': 'bar'}, pool_dict)
+
+    def test_pci_pool_to_dict_no_tags(self):
+        pool_obj = objects.PciDevicePool(product_id='pid', tags={})
+        pool_dict = pool_obj.to_dict()
+        self.assertEqual({'product_id': 'pid'}, pool_dict)
+
 
 class TestPciDevicePoolObject(test_objects._LocalTest,
                               _TestPciDevicePoolObject):
