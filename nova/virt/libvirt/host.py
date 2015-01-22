@@ -79,6 +79,7 @@ class Host(object):
         self._lifecycle_event_handler = lifecycle_event_handler
         self._skip_list_all_domains = False
         self._caps = None
+        self._hostname = None
 
         self._wrapped_conn = None
         self._wrapped_conn_lock = threading.Lock()
@@ -619,3 +620,33 @@ class Host(object):
                     else:
                         raise
         return self._caps
+
+    def get_driver_type(self):
+        """Get hypervisor type.
+
+        :returns: hypervisor type (ex. qemu)
+
+        """
+
+        return self.get_connection().getType()
+
+    def get_version(self):
+        """Get hypervisor version.
+
+        :returns: hypervisor version (ex. 12003)
+
+        """
+
+        return self.get_connection().getVersion()
+
+    def get_hostname(self):
+        """Returns the hostname of the hypervisor."""
+        hostname = self.get_connection().getHostname()
+        if self._hostname is None:
+            self._hostname = hostname
+        elif hostname != self._hostname:
+            LOG.error(_LE('Hostname has changed from %(old)s '
+                          'to %(new)s. A restart is required to take effect.'),
+                          {'old': self._hostname,
+                           'new': hostname})
+        return self._hostname

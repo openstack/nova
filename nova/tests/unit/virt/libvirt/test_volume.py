@@ -27,8 +27,9 @@ from nova import exception
 from nova.storage import linuxscsi
 from nova import test
 from nova.tests.unit.virt.libvirt import fake_libvirt_utils
+from nova.tests.unit.virt.libvirt import fakelibvirt
 from nova import utils
-from nova.virt import fake
+from nova.virt.libvirt import host
 from nova.virt.libvirt import utils as libvirt_utils
 from nova.virt.libvirt import volume
 
@@ -47,21 +48,16 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
 
         self.stubs.Set(utils, 'execute', fake_execute)
 
+        self.useFixture(fakelibvirt.FakeLibvirtFixture())
+
         class FakeLibvirtDriver(object):
-            def __init__(self, hyperv="QEMU", version=1005001):
-                self.hyperv = hyperv
-                self.version = version
-
-            def _get_hypervisor_version(self):
-                return self.version
-
-            def _get_hypervisor_type(self):
-                return self.hyperv
+            def __init__(self):
+                self._host = host.Host("qemu:///system")
 
             def _get_all_block_devices(self):
                 return []
 
-        self.fake_conn = FakeLibvirtDriver(fake.FakeVirtAPI())
+        self.fake_conn = FakeLibvirtDriver()
         self.connr = {
             'ip': '127.0.0.1',
             'initiator': 'fake_initiator',

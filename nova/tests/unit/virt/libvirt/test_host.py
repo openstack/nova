@@ -634,3 +634,27 @@ class HostTestCase(test.NoDBTestCase):
             delattr(libvirt, 'VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES')
             self.assertEqual(vconfig.LibvirtConfigCaps, type(caps))
             self.assertNotIn('aes', [x.name for x in caps.host.cpu.features])
+
+    @mock.patch.object(fakelibvirt.virConnect, "getHostname")
+    def test_get_hostname_caching(self, mock_hostname):
+        mock_hostname.return_value = "foo"
+        self.assertEqual('foo', self.host.get_hostname())
+        mock_hostname.assert_called_with()
+
+        mock_hostname.reset_mock()
+
+        mock_hostname.return_value = "bar"
+        self.assertEqual('foo', self.host.get_hostname())
+        mock_hostname.assert_called_with()
+
+    @mock.patch.object(fakelibvirt.virConnect, "getType")
+    def test_get_driver_type(self, mock_type):
+        mock_type.return_value = "qemu"
+        self.assertEqual("qemu", self.host.get_driver_type())
+        mock_type.assert_called_once_with()
+
+    @mock.patch.object(fakelibvirt.virConnect, "getVersion")
+    def test_get_version(self, mock_version):
+        mock_version.return_value = 1005001
+        self.assertEqual(1005001, self.host.get_version())
+        mock_version.assert_called_once_with()
