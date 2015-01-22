@@ -539,3 +539,15 @@ class API(base_api.NetworkAPI):
             args['host'] = migration['dest_compute']
 
         self.network_rpcapi.migrate_instance_finish(context, **args)
+
+    def setup_instance_network_on_host(self, context, instance, host):
+        """Setup network for specified instance on host."""
+        self.migrate_instance_finish(context, instance,
+                                     {'source_compute': None,
+                                      'dest_compute': host})
+
+    def cleanup_instance_network_on_host(self, context, instance, host):
+        """Cleanup network for specified instance on host."""
+        self.migrate_instance_start(context, instance,
+                                    {'source_compute': host,
+                                     'dest_compute': None})
