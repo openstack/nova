@@ -60,7 +60,7 @@ volume_opts = [
                help='Directory where the NFS volume is mounted on the'
                ' compute node'),
     cfg.StrOpt('nfs_mount_options',
-               help='Mount options passedf to the NFS client. See section '
+               help='Mount options passed to the NFS client. See section '
                     'of the nfs man page for details'),
     cfg.StrOpt('smbfs_mount_point_base',
                default=paths.state_path_def('mnt'),
