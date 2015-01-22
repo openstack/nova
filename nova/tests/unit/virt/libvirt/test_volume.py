@@ -17,6 +17,7 @@ import contextlib
 import os
 import time
 
+import eventlet
 import fixtures
 import mock
 from oslo.config import cfg
@@ -796,7 +797,7 @@ Setting up iSCSI targets: unused
     def test_libvirt_kvm_iser_volume_with_multipath(self):
         self.flags(iser_use_multipath=True, group='libvirt')
         self.stubs.Set(os.path, 'exists', lambda x: True)
-        self.stubs.Set(time, 'sleep', lambda x: None)
+        self.stubs.Set(time, 'sleep', lambda x: eventlet.sleep(0.1))
         devs = ['/dev/mapper/sda', '/dev/mapper/sdb']
         self.stubs.Set(self.fake_conn, '_get_all_block_devices', lambda: devs)
         libvirt_driver = volume.LibvirtISERVolumeDriver(self.fake_conn)
@@ -831,7 +832,7 @@ Setting up iSCSI targets: unused
     def test_libvirt_kvm_iser_volume_with_multipath_getmpdev(self):
         self.flags(iser_use_multipath=True, group='libvirt')
         self.stubs.Set(os.path, 'exists', lambda x: True)
-        self.stubs.Set(time, 'sleep', lambda x: None)
+        self.stubs.Set(time, 'sleep', lambda x: eventlet.sleep(0.1))
         libvirt_driver = volume.LibvirtISERVolumeDriver(self.fake_conn)
         name0 = 'volume-00000000'
         location0 = '10.0.2.15:3260'
