@@ -6430,6 +6430,25 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
         stats = db.compute_node_statistics(self.ctxt)
         self.assertEqual(stats.pop('count'), 0)
 
+    def test_compute_node_statistics_with_old_service_id(self):
+        # NOTE(sbauza): This test is only for checking backwards compatibility
+        # with old versions of compute_nodes not providing host column.
+        # This test could be removed once we are sure that all compute nodes
+        # are populating the host field thanks to the ResourceTracker
+
+        service2 = self.service_dict.copy()
+        service2['host'] = 'host2'
+        db_service2 = db.service_create(self.ctxt, service2)
+        compute_node_old_host = self.compute_node_dict.copy()
+        compute_node_old_host['stats'] = jsonutils.dumps(self.stats)
+        compute_node_old_host['hypervisor_hostname'] = 'node_2'
+        compute_node_old_host['service_id'] = db_service2['id']
+        compute_node_old_host.pop('host')
+
+        db.compute_node_create(self.ctxt, compute_node_old_host)
+        stats = db.compute_node_statistics(self.ctxt)
+        self.assertEqual(2, stats.pop('count'))
+
     def test_compute_node_not_found(self):
         self.assertRaises(exception.ComputeHostNotFound, db.compute_node_get,
                           self.ctxt, 100500)
