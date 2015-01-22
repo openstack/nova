@@ -99,14 +99,21 @@ class VMUtilsV2TestCase(test_vmutils.VMUtilsTestCase):
         mock_disk.path_.return_value = self._FAKE_RES_PATH
         mock_get_vm_disks.return_value = ([mock_disk], [mock_disk])
 
-        fake_metric_def_paths = ["fake_0", None]
-        fake_metric_resource_paths = [self._FAKE_VM_PATH, self._FAKE_RES_PATH]
+        fake_metric_def_paths = ['fake_0', 'fake_0', None]
+        fake_metric_resource_paths = [self._FAKE_VM_PATH,
+                                      self._FAKE_VM_PATH,
+                                      self._FAKE_RES_PATH]
 
         metric_def.path_.side_effect = fake_metric_def_paths
         self._vmutils._conn.CIM_BaseMetricDefinition.return_value = [
             metric_def]
 
         self._vmutils.enable_vm_metrics_collection(self._FAKE_VM_NAME)
+
+        calls = [mock.call(Name=def_name)
+                 for def_name in [self._vmutils._METRIC_AGGR_CPU_AVG,
+                                  self._vmutils._METRIC_AGGR_MEMORY_AVG]]
+        self._vmutils._conn.CIM_BaseMetricDefinition.assert_has_calls(calls)
 
         calls = []
         for i in range(len(fake_metric_def_paths)):
