@@ -45,7 +45,15 @@ vmware_utils_opts = [
     cfg.IntOpt('console_delay_seconds',
                help='Set this value if affected by an increased network '
                     'latency causing repeated characters when typing in '
-                    'a remote console.')
+                    'a remote console.'),
+    cfg.StrOpt('serial_port_service_uri',
+               help='Identifies the remote system that serial port traffic '
+                    'will be sent to. If this is not set, no serial ports '
+                    'will be added to the created VMs.'),
+    cfg.StrOpt('serial_port_proxy_uri',
+               help='Identifies a proxy service that provides network access '
+                    'to the serial_port_service_uri. This option is ignored '
+                    'if serial_port_service_uri is not specified.'),
     ]
 
 CONF = cfg.CONF
@@ -246,14 +254,16 @@ def get_vm_create_spec(client_factory, instance, data_store_name,
             client_factory, extra_specs.memory_limits,
             'ns0:ResourceAllocationInfo')
 
-    vif_spec_list = []
+    devices = []
     for vif_info in vif_infos:
         vif_spec = _create_vif_spec(client_factory, vif_info)
-        vif_spec_list.append(vif_spec)
+        devices.append(vif_spec)
 
-    device_config_spec = vif_spec_list
+    serial_port_spec = create_serial_port_spec(client_factory)
+    if serial_port_spec:
+        devices.append(serial_port_spec)
 
-    config_spec.deviceChange = device_config_spec
+    config_spec.deviceChange = devices
 
     # add vm-uuid and iface-id.x values for Neutron
     extra_config = []
@@ -286,6 +296,33 @@ def get_vm_create_spec(client_factory, instance, data_store_name,
     config_spec.managedBy = managed_by
 
     return config_spec
+
+
+def create_serial_port_spec(client_factory):
+    """Creates config spec for serial port."""
+    if not CONF.vmware.serial_port_service_uri:
+        return
+
+    backing = client_factory.create('ns0:VirtualSerialPortURIBackingInfo')
+    backing.direction = "server"
+    backing.serviceURI = CONF.vmware.serial_port_service_uri
+    backing.proxyURI = CONF.vmware.serial_port_proxy_uri
+
+    connectable_spec = client_factory.create('ns0:VirtualDeviceConnectInfo')
+    connectable_spec.startConnected = True
+    connectable_spec.allowGuestControl = True
+    connectable_spec.connected = True
+
+    serial_port = client_factory.create('ns0:VirtualSerialPort')
+    serial_port.connectable = connectable_spec
+    serial_port.backing = backing
+    # we are using unique negative integers as temporary keys
+    serial_port.key = -2
+    serial_port.yieldOnPoll = True
+    dev_spec = client_factory.create('ns0:VirtualDeviceConfigSpec')
+    dev_spec.operation = "add"
+    dev_spec.device = serial_port
+    return dev_spec
 
 
 def get_vm_boot_spec(client_factory, device):
