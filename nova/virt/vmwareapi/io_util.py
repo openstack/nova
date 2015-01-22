@@ -52,7 +52,7 @@ class ThreadSafePipe(queue.LightQueue):
         that the data chunks written to the pipe by readers is the same as the
         chunks asked for by the Writer.
         """
-        if self.transferred < self.transfer_size:
+        if self.transfer_size == 0 or self.transferred < self.transfer_size:
             data_item = self.get()
             self.transferred += len(data_item)
             return data_item

@@ -1151,10 +1151,10 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         version = vm.get("version")
         self.assertEqual('vmx-08', version)
 
-    def mock_upload_image(self, context, image, instance, **kwargs):
+    def mock_upload_image(self, context, image, instance, session, **kwargs):
         self.assertEqual(image, 'Test-Snapshot')
         self.assertEqual(instance, self.instance)
-        self.assertEqual(kwargs['disk_type'], 'preallocated')
+        self.assertEqual(1024, kwargs['vmdk_size'])
 
     def test_get_vm_ref_using_extra_config(self):
         self._create_vm()
@@ -1209,7 +1209,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         func_call_matcher = matchers.FunctionCallMatcher(expected_calls)
         info = self._get_info()
         self._check_vm_info(info, power_state.RUNNING)
-        with mock.patch.object(images, 'upload_image',
+        with mock.patch.object(images, 'upload_image_stream_optimized',
                                self.mock_upload_image):
             self.conn.snapshot(self.context, self.instance, "Test-Snapshot",
                                func_call_matcher.call)
@@ -2169,28 +2169,6 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                         uuid=uuid2)
         info = self._get_info(uuid=uuid2)
         self._check_vm_info(info, power_state.RUNNING)
-
-    def test_snapshot_using_file_manager(self):
-        self._create_vm()
-        uuid_str = uuidutils.generate_uuid()
-        self.mox.StubOutWithMock(uuidutils,
-                                 'generate_uuid')
-        uuidutils.generate_uuid().AndReturn(uuid_str)
-
-        self.mox.StubOutWithMock(ds_util, 'file_delete')
-        disk_ds_path = ds_util.DatastorePath(
-                self.ds, "vmware_temp", "%s.vmdk" % uuid_str)
-        disk_ds_flat_path = ds_util.DatastorePath(
-                self.ds, "vmware_temp", "%s-flat.vmdk" % uuid_str)
-        # Check calls for delete vmdk and -flat.vmdk pair
-        ds_util.file_delete(
-                mox.IgnoreArg(), disk_ds_flat_path,
-                mox.IgnoreArg()).AndReturn(None)
-        ds_util.file_delete(
-                mox.IgnoreArg(), disk_ds_path, mox.IgnoreArg()).AndReturn(None)
-
-        self.mox.ReplayAll()
-        self._test_snapshot()
 
     def test_spawn_invalid_node(self):
         self._create_instance(node='InvalidNodeName')
