@@ -18,33 +18,14 @@
 import socket
 
 from oslo.config import cfg
-
-from nova import utils
+from oslo.utils import netutils
 
 CONF = cfg.CONF
 
 
-def _get_my_ip():
-    """Returns the actual ip of the local machine.
-
-    This code figures out what source address would be used if some traffic
-    were to be sent out to some well known address on the Internet. In this
-    case, a Google DNS server is used, but the specific address does not
-    matter much.  No traffic is actually sent.
-    """
-    try:
-        csock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        csock.connect(('8.8.8.8', 80))
-        (addr, port) = csock.getsockname()
-        csock.close()
-        return addr
-    except socket.error:
-        return utils.get_my_ipv4_address()
-
-
 netconf_opts = [
     cfg.StrOpt('my_ip',
-               default=_get_my_ip(),
+               default=netutils.get_my_ipv4(),
                help='IP address of this host'),
     cfg.StrOpt('my_block_storage_ip',
                default='$my_ip',
