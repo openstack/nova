@@ -15,6 +15,7 @@
 
 import copy
 
+import fixtures
 import mock
 
 from nova import block_device
@@ -25,6 +26,7 @@ from nova import objects
 from nova import test
 from nova.tests.unit import fake_block_device
 import nova.tests.unit.image.fake
+from nova.tests.unit.virt import fakelibosinfo
 from nova.virt import block_device as driver_block_device
 from nova.virt import driver
 from nova.virt.libvirt import blockinfo
@@ -743,6 +745,17 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
         self.assertRaises(exception.UnsupportedHardware,
                           blockinfo.get_disk_bus_for_device_type,
                           instance, 'kvm', image_meta)
+
+    def test_get_disk_bus_with_osinfo(self):
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.virt.osinfo.libosinfo',
+            fakelibosinfo))
+        instance = objects.Instance(**self.test_instance)
+        image_meta = {'properties': {'os_name': 'fedora22'}}
+        image_meta = objects.ImageMeta.from_dict(image_meta)
+        bus = blockinfo.get_disk_bus_for_device_type(instance,
+                                                     'kvm', image_meta)
+        self.assertEqual('virtio', bus)
 
     def test_success_get_disk_bus_for_disk_dev(self):
         expected = (

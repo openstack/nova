@@ -84,6 +84,7 @@ from nova.objects import base as obj_base
 from nova.virt import configdrive
 from nova.virt import driver
 from nova.virt.libvirt import utils as libvirt_utils
+from nova.virt import osinfo
 
 CONF = cfg.CONF
 
@@ -234,8 +235,11 @@ def get_disk_bus_for_device_type(instance,
     """
 
     # Prefer a disk bus set against the image first of all
-    key = "hw_" + device_type + "_bus"
-    disk_bus = image_meta.properties.get(key)
+    if device_type == "disk":
+        disk_bus = osinfo.HardwareProperties(image_meta).disk_model
+    else:
+        key = "hw_" + device_type + "_bus"
+        disk_bus = image_meta.properties.get(key)
     if disk_bus is not None:
         if not is_disk_bus_valid_for_virt(virt_type, disk_bus):
             raise exception.UnsupportedHardware(model=disk_bus,
