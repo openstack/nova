@@ -20,6 +20,7 @@ from nova.api.openstack.compute.contrib import admin_actions as \
     create_backup_v2
 from nova.api.openstack.compute.plugins.v3 import create_backup as \
     create_backup_v21
+from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack.compute import admin_only_action_common
 from nova.tests.unit.api.openstack import fakes
@@ -287,3 +288,31 @@ class CreateBackupTestsV2(CreateBackupTestsV21):
 
     def test_create_backup_non_dict_metadata(self):
         pass
+
+
+class CreateBackupPolicyEnforcementv21(test.NoDBTestCase):
+
+    def setUp(self):
+        super(CreateBackupPolicyEnforcementv21, self).setUp()
+        self.controller = create_backup_v21.CreateBackupController()
+        self.req = fakes.HTTPRequest.blank('')
+
+    def test_create_backup_policy_failed(self):
+        rule_name = "compute_extension:v3:os-create-backup"
+        self.policy.set_rules({rule_name: "project:non_fake"})
+        metadata = {'123': 'asdf'}
+        body = {
+            'createBackup': {
+                'name': 'Backup 1',
+                'backup_type': 'daily',
+                'rotation': 1,
+                'metadata': metadata,
+            },
+        }
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.controller._create_backup, self.req, fakes.FAKE_UUID,
+            body=body)
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+            exc.format_message())
