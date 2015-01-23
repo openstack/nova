@@ -427,3 +427,46 @@ class InterfaceAttachTestsV2(InterfaceAttachTestsV21):
 
     def test_attach_interface_instance_with_non_array_fixed_ips(self):
         pass
+
+
+class AttachInterfacesPolicyEnforcementv21(test.NoDBTestCase):
+
+    def setUp(self):
+        super(AttachInterfacesPolicyEnforcementv21, self).setUp()
+        self.controller = \
+            attach_interfaces_v21.InterfaceAttachmentController()
+        self.req = fakes.HTTPRequest.blank('')
+        self.rule_name = "compute_extension:v3:os-attach-interfaces"
+        self.policy.set_rules({self.rule_name: "project:non_fake"})
+
+    def test_index_attach_interfaces_policy_failed(self):
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.controller.index, self.req, fakes.FAKE_UUID)
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % self.rule_name,
+            exc.format_message())
+
+    def test_show_attach_interfaces_policy_failed(self):
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.controller.show, self.req, fakes.FAKE_UUID, FAKE_PORT_ID1)
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % self.rule_name,
+            exc.format_message())
+
+    def test_create_attach_interfaces_policy_failed(self):
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.controller.create, self.req, fakes.FAKE_UUID, body={})
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % self.rule_name,
+            exc.format_message())
+
+    def test_delete_attach_interfaces_policy_failed(self):
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.controller.delete, self.req, fakes.FAKE_UUID, FAKE_PORT_ID1)
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % self.rule_name,
+            exc.format_message())
