@@ -2448,7 +2448,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
 
     def test_get_host_uptime(self):
         self.assertRaises(NotImplementedError,
-                          self.conn.get_host_uptime, 'host')
+                          self.conn.get_host_uptime)
 
     def _test_finish_migration(self, power_on, resize_instance=False):
         """Tests the finish_migration method on VC Driver."""

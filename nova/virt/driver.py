@@ -1026,7 +1026,7 @@ class ComputeDriver(object):
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
-    def get_host_uptime(self, host):
+    def get_host_uptime(self):
         """Returns the result of calling "uptime" on the target host."""
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()

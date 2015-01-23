@@ -5607,10 +5607,8 @@ class LibvirtDriver(driver.ComputeDriver):
         stats["frequency"] = self._conn.getInfo()[3]
         return stats
 
-    def get_host_uptime(self, host):
+    def get_host_uptime(self):
         """Returns the result of calling "uptime"."""
-        # NOTE(dprince): host seems to be ignored for this call and in
-        # other compute drivers as well. Perhaps we should remove it?
         out, err = utils.execute('env', 'LANG=C', 'uptime')
         return out
 

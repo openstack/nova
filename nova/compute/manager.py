@@ -4081,7 +4081,7 @@ class ComputeManager(manager.Manager):
     @wrap_exception()
     def get_host_uptime(self, context):
         """Returns the result of calling "uptime" on the target host."""
-        return self.driver.get_host_uptime(self.host)
+        return self.driver.get_host_uptime()
 
     @object_compat
     @wrap_exception()
