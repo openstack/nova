@@ -44,7 +44,6 @@ from nova import crypto
 from nova import db
 from nova import exception
 from nova import objects
-from nova.objects import instance as instance_obj
 from nova.openstack.common import log as logging
 from nova import test
 from nova.tests.unit.db import fakes as db_fakes
@@ -1531,9 +1530,10 @@ iface eth0 inet6 static
         network_info = fake_network.fake_get_instance_nw_info(self.stubs)
         image_meta = {'id': IMAGE_VHD,
                       'disk_format': 'vhd'}
-        inst_obj = objects.Instance._from_db_object(
-            self.context, objects.Instance(), instance,
-            expected_attrs=instance_obj.INSTANCE_DEFAULT_FIELDS)
+        inst_obj = objects.Instance.get_by_uuid(
+            self.context, instance['uuid'],
+            expected_attrs=['system_metadata', 'metadata', 'info_cache',
+                            'security_groups'])
         if spawn:
             self.conn.spawn(self.context, inst_obj, image_meta, [], 'herp',
                             network_info)

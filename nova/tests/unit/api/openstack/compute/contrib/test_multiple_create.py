@@ -616,8 +616,6 @@ class MultiCreateExtensionTestV2(MultiCreateExtensionTestV21):
                 "vm_state": "",
                 "root_device_name": inst.get('root_device_name', 'vda'),
                 "security_groups": inst['security_groups'],
-                "extra": {"pci_requests": None,
-                          "numa_topology": None},
             })
 
             self.instance_cache_by_id[instance['id']] = instance

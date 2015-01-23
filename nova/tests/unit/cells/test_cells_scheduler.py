@@ -23,6 +23,7 @@ from oslo.config import cfg
 from nova import block_device
 from nova.cells import filters
 from nova.cells import weights
+from nova.compute import flavors
 from nova.compute import vm_states
 from nova import context
 from nova import db
@@ -96,7 +97,7 @@ class CellsSchedulerTestCase(test.TestCase):
 
     def test_create_instances_here(self):
         # Just grab the first instance type
-        inst_type = db.flavor_get(self.ctxt, 1)
+        inst_type = flavors.get_flavor(1)
         image = {'properties': {}}
         instance_uuids = self.instance_uuids
         instance_props = {'id': 'removed',
@@ -108,8 +109,9 @@ class CellsSchedulerTestCase(test.TestCase):
                           'image_ref': 'fake_image_ref',
                           'user_id': self.ctxt.user_id,
                           # Test these as lists
-                          'metadata': [{'key': 'moo', 'value': 'cow'}],
-                          'system_metadata': [{'key': 'meow', 'value': 'cat'}],
+                          'metadata': {'moo': 'cow'},
+                          'system_metadata': {'meow': 'cat'},
+                          'flavor': inst_type,
                           'project_id': self.ctxt.project_id}
 
         call_info = {'uuids': []}
