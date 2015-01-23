@@ -229,8 +229,11 @@ class TestNeutronv2Base(test.TestCase):
                                     'name': 'out-of-this-world',
                                     'router:external': True,
                                     'tenant_id': 'should-be-an-admin'}]
+        # A network that is both shared and external
+        self.nets6 = [{'id': 'net_id', 'name': 'net_name',
+                       'router:external': True, 'shared': True}]
         self.nets = [self.nets1, self.nets2, self.nets3,
-                     self.nets4, self.nets5]
+                     self.nets4, self.nets5, self.nets6]
 
         self.port_address = '10.0.1.2'
         self.port_data1 = [{'network_id': 'my_netid1',
@@ -1020,6 +1023,12 @@ class TestNeutronv2(TestNeutronv2Base):
         self.assertRaises(exception.PortInUse,
                           api.allocate_for_instance, self.context,
                           self.instance, requested_networks=requested_networks)
+
+    def test_allocate_for_instance_with_external_shared_net(self):
+        """Only one network is available, it's external and shared."""
+        ctx = context.RequestContext('userid', 'my_tenantid')
+        api = self._stub_allocate_for_instance(net_idx=6)
+        api.allocate_for_instance(ctx, self.instance)
 
     def _deallocate_for_instance(self, number, requested_networks=None):
         api = neutronapi.API()

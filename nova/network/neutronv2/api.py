@@ -141,7 +141,7 @@ class API(base.Base):
                 # Perform this check here rather than in validate_networks to
                 # ensure the check is performed everytime allocate_for_instance
                 # is invoked
-                if net.get('router:external'):
+                if net.get('router:external') and not net.get('shared'):
                     raise exception.ExternalNetworkAttachForbidden(
                         network_uuid=net['id'])
 
