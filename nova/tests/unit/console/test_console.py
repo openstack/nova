@@ -16,6 +16,7 @@
 
 """Tests For Console proxy."""
 
+import mock
 from oslo_config import cfg
 from oslo_utils import importutils
 
@@ -25,6 +26,7 @@ from nova.console import rpcapi as console_rpcapi
 from nova import context
 from nova import db
 from nova import exception
+from nova import objects
 from nova import test
 
 CONF = cfg.CONF
@@ -146,10 +148,6 @@ class ConsoleAPITestCase(test.TestCase):
         self.stubs.Set(db, 'console_get_all_by_instance',
                        _fake_db_console_get_all_by_instance)
 
-        def _fake_instance_get_by_uuid(_ctxt, _instance_uuid):
-            return self.fake_instance
-        self.stubs.Set(db, 'instance_get_by_uuid', _fake_instance_get_by_uuid)
-
     def test_get_consoles(self):
         console = self.console_api.get_consoles(self.context, self.fake_uuid)
         self.assertEqual(console, [self.fake_console])
@@ -169,18 +167,13 @@ class ConsoleAPITestCase(test.TestCase):
         self.console_api.delete_console(self.context, self.fake_uuid,
                                         'fake_id')
 
-    def test_create_console(self):
-        self.mox.StubOutWithMock(compute_rpcapi.ComputeAPI,
-                                 'get_console_topic')
-
-        compute_rpcapi.ComputeAPI.get_console_topic(
-            self.context, 'fake_host').AndReturn('compute.fake_host')
-        self.mox.StubOutClassWithMocks(console_rpcapi, 'ConsoleAPI')
-        console_api_mock = console_rpcapi.ConsoleAPI(
-            topic='compute', server='fake_host')
-        console_api_mock.add_console(self.context,
-                                     self.fake_instance['id'])
-
-        self.mox.ReplayAll()
-
+    @mock.patch.object(compute_rpcapi.ComputeAPI, 'get_console_topic',
+                       return_value='compute.fake_host')
+    @mock.patch.object(objects.Instance, 'get_by_uuid')
+    def test_create_console(self, mock_get_instance_by_uuid,
+                            mock_get_console_topic):
+        mock_get_instance_by_uuid.return_value = objects.Instance(
+            **self.fake_instance)
         self.console_api.create_console(self.context, self.fake_uuid)
+        mock_get_console_topic.assert_called_once_with(self.context,
+                                                       'fake_host')

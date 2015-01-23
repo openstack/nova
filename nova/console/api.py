@@ -16,11 +16,11 @@
 """Handles ConsoleProxy API requests."""
 
 from oslo_config import cfg
-from oslo_utils import uuidutils
 
 from nova.compute import rpcapi as compute_rpcapi
 from nova.console import rpcapi as console_rpcapi
 from nova.db import base
+from nova import objects
 
 CONF = cfg.CONF
 CONF.import_opt('console_topic', 'nova.console.rpcapi')
@@ -51,21 +51,14 @@ class API(base.Base):
         #                They can just do an index later to fetch
         #                console info. I am not sure which is better
         #                here.
-        instance = self._get_instance(context, instance_uuid)
-        topic = self._get_console_topic(context, instance['host'])
+        instance = objects.Instance.get_by_uuid(context, instance_uuid)
+        topic = self._get_console_topic(context, instance.host)
         server = None
         if '.' in topic:
             topic, server = topic.split('.', 1)
         rpcapi = console_rpcapi.ConsoleAPI(topic=topic, server=server)
-        rpcapi.add_console(context, instance['id'])
+        rpcapi.add_console(context, instance.id)
 
     def _get_console_topic(self, context, instance_host):
         rpcapi = compute_rpcapi.ComputeAPI()
         return rpcapi.get_console_topic(context, instance_host)
-
-    def _get_instance(self, context, instance_uuid):
-        if uuidutils.is_uuid_like(instance_uuid):
-            instance = self.db.instance_get_by_uuid(context, instance_uuid)
-        else:
-            instance = self.db.instance_get(context, instance_uuid)
-        return instance
