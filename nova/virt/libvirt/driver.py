@@ -185,6 +185,8 @@ libvirt_opts = [
                       'LibvirtFibreChannelVolumeDriver',
                   'scality='
                       'nova.virt.libvirt.volume.LibvirtScalityVolumeDriver',
+                  'gpfs='
+                      'nova.virt.libvirt.volume.LibvirtGPFSVolumeDriver',
                   ],
                 help='DEPRECATED. Libvirt handlers for remote volumes. '
                      'This option is deprecated and will be removed in the '
