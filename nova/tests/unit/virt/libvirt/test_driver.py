@@ -9931,7 +9931,7 @@ Active:          8381604 kB
         elif method_name == "detach_interface":
             fake_image_meta = None
         else:
-            raise ValueError("Unhandled method %" % method_name)
+            raise ValueError("Unhandled method %s" % method_name)
 
         if method_name == "attach_interface":
             self.mox.StubOutWithMock(conn.firewall_driver,
@@ -9957,7 +9957,7 @@ Active:          8381604 kB
         elif method_name == "detach_interface":
             conn.detach_interface(instance, network_info[0])
         else:
-            raise ValueError("Unhandled method %" % method_name)
+            raise ValueError("Unhandled method %s" % method_name)
 
     @mock.patch.object(lockutils, "external_lock")
     def test_attach_interface_get_config(self, mock_lock):

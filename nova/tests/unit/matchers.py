@@ -225,7 +225,7 @@ class XMLMismatch(object):
         self.actual = state.actual
 
     def describe(self):
-        return "%(path)s: XML does not match" % self.path
+        return "%(path)s: XML does not match" % {'path': self.path}
 
     def get_details(self):
         return {
