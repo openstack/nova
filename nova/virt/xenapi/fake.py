@@ -50,7 +50,6 @@ A fake XenAPI SDK.
 
 import base64
 import pickle
-import pprint
 import random
 import uuid
 from xml.sax import saxutils
@@ -72,13 +71,6 @@ _CLASSES = ['host', 'network', 'session', 'pool', 'SR', 'VBD',
 _db_content = {}
 
 LOG = logging.getLogger(__name__)
-
-
-def log_db_contents(msg=None):
-    text = msg or ""
-    content = pprint.pformat(_db_content)
-    LOG.debug("%(text)s: _db_content => %(content)s",
-              {'text': text, 'content': content})
 
 
 def reset():
