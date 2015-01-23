@@ -25,13 +25,14 @@ from nova import exception
 from nova.i18n import _
 
 ALIAS = 'server-metadata'
+authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class ServerMetadataController(wsgi.Controller):
     """The server metadata API controller for the OpenStack API."""
 
     def __init__(self):
-        self.compute_api = compute.API()
+        self.compute_api = compute.API(skip_policy_check=True)
         super(ServerMetadataController, self).__init__()
 
     def _get_metadata(self, context, server_id):
@@ -53,6 +54,7 @@ class ServerMetadataController(wsgi.Controller):
     def index(self, req, server_id):
         """Returns the list of metadata for a given instance."""
         context = req.environ['nova.context']
+        authorize(context, action='index')
         return {'metadata': self._get_metadata(context, server_id)}
 
     @extensions.expected_errors((400, 403, 404, 409, 413))
@@ -62,7 +64,7 @@ class ServerMetadataController(wsgi.Controller):
     def create(self, req, server_id, body):
         metadata = body['metadata']
         context = req.environ['nova.context']
-
+        authorize(context, action='create')
         new_metadata = self._update_instance_metadata(context,
                                                       server_id,
                                                       metadata,
@@ -73,12 +75,13 @@ class ServerMetadataController(wsgi.Controller):
     @extensions.expected_errors((400, 403, 404, 409, 413))
     @validation.schema(server_metadata.update)
     def update(self, req, server_id, id, body):
+        context = req.environ['nova.context']
+        authorize(context, action='update')
         meta_item = body['meta']
         if id not in meta_item:
             expl = _('Request body and URI mismatch')
             raise exc.HTTPBadRequest(explanation=expl)
 
-        context = req.environ['nova.context']
         self._update_instance_metadata(context,
                                        server_id,
                                        meta_item,
@@ -89,8 +92,9 @@ class ServerMetadataController(wsgi.Controller):
     @extensions.expected_errors((400, 403, 404, 409, 413))
     @validation.schema(server_metadata.update_all)
     def update_all(self, req, server_id, body):
-        metadata = body['metadata']
         context = req.environ['nova.context']
+        authorize(context, action='update_all')
+        metadata = body['metadata']
         new_metadata = self._update_instance_metadata(context,
                                                       server_id,
                                                       metadata,
@@ -122,6 +126,7 @@ class ServerMetadataController(wsgi.Controller):
     def show(self, req, server_id, id):
         """Return a single metadata item."""
         context = req.environ['nova.context']
+        authorize(context, action='show')
         data = self._get_metadata(context, server_id)
 
         try:
@@ -135,7 +140,7 @@ class ServerMetadataController(wsgi.Controller):
     def delete(self, req, server_id, id):
         """Deletes an existing metadata."""
         context = req.environ['nova.context']
-
+        authorize(context, action='delete')
         metadata = self._get_metadata(context, server_id)
 
         if id not in metadata:
