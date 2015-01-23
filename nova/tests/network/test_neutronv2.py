@@ -246,9 +246,13 @@ class TestNeutronv2Base(test.TestCase):
         self.nets7.append(self.nets1[0])
         # A network request with only external network
         self.nets8 = [self.nets5[1]]
+        # A network that is both shared and external
+        self.nets9 = [{'id': 'net_id', 'name': 'net_name',
+                       'router:external': True, 'shared': True}]
 
         self.nets = [self.nets1, self.nets2, self.nets3, self.nets4,
-                     self.nets5, self.nets6, self.nets7, self.nets8]
+                     self.nets5, self.nets6, self.nets7, self.nets8,
+                     self.nets9]
 
         self.port_address = '10.0.1.2'
         self.port_data1 = [{'network_id': 'my_netid1',
@@ -1175,6 +1179,12 @@ class TestNeutronv2(TestNeutronv2Base):
                                            is_admin=True)
         api = self._stub_allocate_for_instance(net_idx=8)
         api.allocate_for_instance(admin_ctx, self.instance)
+
+    def test_allocate_for_instance_with_external_shared_net(self):
+        """Only one network is available, it's external and shared."""
+        ctx = context.RequestContext('userid', 'my_tenantid')
+        api = self._stub_allocate_for_instance(net_idx=9)
+        api.allocate_for_instance(ctx, self.instance)
 
     def _deallocate_for_instance(self, number, requested_networks=None):
         # TODO(mriedem): Remove this conversion when all neutronv2 APIs are
