@@ -2595,16 +2595,17 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual(cfg.devices[3].type, "vnc")
         self.assertEqual(cfg.devices[4].type, "xen")
 
+    @mock.patch.object(libvirt_driver.libvirt_utils, 'get_arch',
+                       return_value=arch.S390X)
     @mock.patch.object(objects.Flavor, 'get_by_id')
-    def test_get_guest_config_with_type_kvm_on_s390(self, mock_flavor):
+    def test_get_guest_config_with_type_kvm_on_s390(self, mock_flavor,
+                                                    mock_get_arch):
         self.flags(vnc_enabled=False)
         self.flags(virt_type='kvm',
                    use_usb_tablet=False,
                    group='libvirt')
 
-        host_arch = arch.S390X
-        self._stub_host_capabilities_cpu_arch(host_arch)
-        self._stub_guest_cpu_config_arch(host_arch)
+        self._stub_host_capabilities_cpu_arch(arch.S390X)
 
         instance_ref = self._get_flavor_mocked_test_instance(mock_flavor)
 
@@ -2625,7 +2626,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual("sclp", terminal_device.target_type)
         self.assertEqual("pty", terminal_device.type)
         self.assertEqual("s390-ccw-virtio", cfg.os_mach_type)
-        self.assertEqual("s390x", cfg.cpu.arch)
 
     def _stub_host_capabilities_cpu_arch(self, cpu_arch):
         def get_host_capabilities_stub(self):
@@ -2639,16 +2639,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         self.stubs.Set(host.Host, "get_capabilities",
                        get_host_capabilities_stub)
-
-    def _stub_guest_cpu_config_arch(self, cpu_arch):
-        def get_guest_cpu_config(self):
-            cpu = vconfig.LibvirtConfigGuestCPU()
-            cpu.arch = cpu_arch
-            return cpu
-
-        self.stubs.Set(libvirt_driver.LibvirtDriver,
-                       "_get_guest_cpu_model_config",
-                       get_guest_cpu_config)
 
     def _get_flavor_mocked_test_instance(self, mock_flavor):
         instance = objects.Instance(**self.test_instance)
