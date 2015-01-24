@@ -94,6 +94,7 @@ import_translation_for_log_or_exception = re.compile(
 custom_underscore_check = re.compile(r"(.)*_\s*=\s*(.)*")
 api_version_re = re.compile(r"@.*api_version")
 dict_constructor_with_list_copy_re = re.compile(r".*\bdict\((\[)?(\(|\[)")
+decorator_re = re.compile(r"@.*")
 
 # TODO(dims): When other oslo libraries switch over non-namespace'd
 # imports, we need to add them to the regexp below.
@@ -403,10 +404,12 @@ def use_jsonutils(logical_line, filename):
                 yield (pos, msg % {'fun': f[:-1]})
 
 
-def check_api_version_decorator(logical_line, blank_before, filename):
+def check_api_version_decorator(logical_line, previous_logical, blank_before,
+                                filename):
     msg = ("N332: the api_version decorator must be the first decorator"
            " on a method.")
-    if blank_before == 0 and re.match(api_version_re, logical_line):
+    if blank_before == 0 and re.match(api_version_re, logical_line) \
+           and re.match(decorator_re, previous_logical):
         yield(0, msg)
 
 
