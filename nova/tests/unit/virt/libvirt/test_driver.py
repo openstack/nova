@@ -7844,8 +7844,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance, block_device_info)
 
-        system_meta = utils.instance_sys_meta(instance)
-        image_meta = utils.get_image_from_system_metadata(system_meta)
+        image_meta = utils.get_image_from_system_metadata(
+            instance.system_metadata)
 
         conn._get_guest_xml(self.context, instance, network_info, disk_info,
                             image_meta=image_meta,
@@ -7917,8 +7917,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         def _check_xml_bus(name, xml, block_info):
             tree = etree.fromstring(xml)
             got_disk_targets = tree.findall('./devices/disk/target')
-            system_meta = utils.instance_sys_meta(instance)
-            image_meta = utils.get_image_from_system_metadata(system_meta)
+            image_meta = utils.get_image_from_system_metadata(
+                instance.system_metadata)
             want_device_bus = image_meta.get('hw_disk_bus')
             if not want_device_bus:
                 want_device_bus = self.fake_img['properties']['hw_disk_bus']
