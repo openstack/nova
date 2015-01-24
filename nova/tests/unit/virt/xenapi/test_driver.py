@@ -44,6 +44,26 @@ class XenAPIDriverTestCase(stubs.XenAPITestBaseNoDB):
                 'host_hostname': 'somename',
                 'supported_instances': arch.X86_64,
                 'host_cpu_info': {'cpu_count': 50},
+                'cpu_model': {
+                    'vendor': 'GenuineIntel',
+                    'model': 'Intel(R) Xeon(R) CPU           X3430  @ 2.40GHz',
+                    'topology': {
+                        'sockets': 1,
+                        'cores': 4,
+                        'threads': 1,
+                    },
+                    'features': [
+                        'fpu', 'de', 'tsc', 'msr', 'pae', 'mce',
+                        'cx8', 'apic', 'sep', 'mtrr', 'mca',
+                        'cmov', 'pat', 'clflush', 'acpi', 'mmx',
+                        'fxsr', 'sse', 'sse2', 'ss', 'ht',
+                        'nx', 'constant_tsc', 'nonstop_tsc',
+                        'aperfmperf', 'pni', 'vmx', 'est', 'ssse3',
+                        'sse4_1', 'sse4_2', 'popcnt', 'hypervisor',
+                        'ida', 'tpr_shadow', 'vnmi', 'flexpriority',
+                        'ept', 'vpid',
+                    ],
+                },
                 'vcpus_used': 10,
                 'pci_passthrough_devices': '',
                 'host_other-config': {'iscsi_iqn': 'someiqn'}}

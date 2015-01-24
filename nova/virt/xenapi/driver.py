@@ -453,9 +453,7 @@ class XenAPIDriver(driver.ComputeDriver):
                'hypervisor_type': 'xen',
                'hypervisor_version': hyper_ver,
                'hypervisor_hostname': host_stats['host_hostname'],
-               # Todo(bobba) cpu_info may be in a format not supported by
-               # arch_filter.py - see libvirt/driver.py get_cpu_info
-               'cpu_info': jsonutils.dumps(host_stats['host_cpu_info']),
+               'cpu_info': jsonutils.dumps(host_stats['cpu_model']),
                'disk_available_least': total_disk_gb - allocated_disk_gb,
                'supported_instances': jsonutils.dumps(
                    host_stats['supported_instances']),

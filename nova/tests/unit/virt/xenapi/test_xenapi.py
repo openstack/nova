@@ -2067,8 +2067,27 @@ class XenAPIHostTestCase(stubs.XenAPITestBase):
         self.assertEqual(stats['host_memory_free'], 30)
         self.assertEqual(stats['host_memory_free_computed'], 40)
         self.assertEqual(stats['hypervisor_hostname'], 'fake-xenhost')
-        self.assertThat({'cpu_count': 50},
-                        matchers.DictMatches(stats['host_cpu_info']))
+        self.assertEqual(stats['host_cpu_info']['cpu_count'], 4)
+        self.assertThat({
+            'vendor': 'GenuineIntel',
+            'model': 'Intel(R) Xeon(R) CPU           X3430  @ 2.40GHz',
+            'topology': {
+                'sockets': 1,
+                'cores': 4,
+                'threads': 1,
+            },
+            'features': [
+                'fpu', 'de', 'tsc', 'msr', 'pae', 'mce',
+                'cx8', 'apic', 'sep', 'mtrr', 'mca',
+                'cmov', 'pat', 'clflush', 'acpi', 'mmx',
+                'fxsr', 'sse', 'sse2', 'ss', 'ht',
+                'nx', 'constant_tsc', 'nonstop_tsc',
+                'aperfmperf', 'pni', 'vmx', 'est', 'ssse3',
+                'sse4_1', 'sse4_2', 'popcnt', 'hypervisor',
+                'ida', 'tpr_shadow', 'vnmi', 'flexpriority',
+                'ept', 'vpid',
+            ]},
+            matchers.DictMatches(stats['cpu_model']))
         # No VMs running
         self.assertEqual(stats['vcpus_used'], 0)
 
@@ -2154,7 +2173,6 @@ class XenAPIHostTestCase(stubs.XenAPITestBase):
     def test_supported_instances_is_calculated_by_to_supported_instances(self):
 
         def to_supported_instances(somedata):
-            self.assertIsNone(somedata)
             return "SOMERETURNVALUE"
         self.stubs.Set(host, 'to_supported_instances', to_supported_instances)
 
