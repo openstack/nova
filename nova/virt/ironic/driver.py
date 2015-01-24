@@ -252,7 +252,6 @@ class IronicDriver(virt_driver.ComputeDriver):
             local_gb = 0
 
         dic = {
-            'node': str(node.uuid),
             'hypervisor_hostname': str(node.uuid),
             'hypervisor_type': self._get_hypervisor_type(),
             'hypervisor_version': self._get_hypervisor_version(),
@@ -265,19 +264,13 @@ class IronicDriver(virt_driver.ComputeDriver):
             'vcpus_used': vcpus_used,
             'local_gb': local_gb,
             'local_gb_used': local_gb_used,
-            'disk_total': local_gb,
-            'disk_used': local_gb_used,
-            'disk_available': local_gb - local_gb_used,
+            'disk_available_least': local_gb - local_gb_used,
             'memory_mb': memory_mb,
             'memory_mb_used': memory_mb_used,
-            'host_memory_total': memory_mb,
-            'host_memory_free': memory_mb - memory_mb_used,
             'supported_instances': jsonutils.dumps(
                 _get_nodes_supported_instances(cpu_arch)),
             'stats': jsonutils.dumps(nodes_extra_specs),
-            'host': CONF.host,
         }
-        dic.update(nodes_extra_specs)
         return dic
 
     def _start_firewall(self, instance, network_info):
