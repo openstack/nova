@@ -6104,9 +6104,6 @@ class ComputeManager(manager.Manager):
         # NOTE(sirp): admin contexts don't ordinarily return deleted records
         with utils.temporary_mutation(context, read_deleted="yes"):
             for instance in self._running_deleted_instances(context):
-                bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
-                        context, instance.uuid, use_slave=True)
-
                 if action == "log":
                     LOG.warning(_LW("Detected instance with name label "
                                     "'%s' which is marked as "
@@ -6136,6 +6133,8 @@ class ComputeManager(manager.Manager):
                                  "'%s' which is marked as "
                                  "DELETED but still present on host."),
                              instance['name'], instance=instance)
+                    bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+                        context, instance.uuid, use_slave=True)
                     self.instance_events.clear_events_for_instance(instance)
                     try:
                         self._shutdown_instance(context, instance, bdms,
