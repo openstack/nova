@@ -1136,8 +1136,8 @@ class CellCommands(object):
         return transport_hosts
 
     @args('--name', metavar='<name>', help='Name for the new cell')
-    @args('--cell_type', metavar='<parent|child>',
-         help='Whether the cell is a parent or child')
+    @args('--cell_type', metavar='<parent|api|child|compute>',
+         help='Whether the cell is parent/api or child/compute')
     @args('--username', metavar='<username>',
          help='Username for the message broker in this cell')
     @args('--password', metavar='<password>',
@@ -1159,8 +1159,9 @@ class CellCommands(object):
                password=None, hostname=None, port=None, virtual_host=None,
                woffset=None, wscale=None):
 
-        if cell_type not in ['parent', 'child']:
-            print("Error: cell type must be 'parent' or 'child'")
+        if cell_type not in ['parent', 'child', 'api', 'compute']:
+            print("Error: cell type must be 'parent'/'api' or "
+                "'child'/'compute'")
             return(2)
 
         # Set up the transport URL
@@ -1172,7 +1173,9 @@ class CellCommands(object):
         transport_url.hosts.extend(transport_hosts)
         transport_url.virtual_host = virtual_host
 
-        is_parent = cell_type == 'parent'
+        is_parent = False
+        if cell_type in ['api', 'parent']:
+            is_parent = True
         values = {'name': name,
                   'is_parent': is_parent,
                   'transport_url': str(transport_url),
