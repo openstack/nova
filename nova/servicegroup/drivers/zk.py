@@ -24,7 +24,7 @@ from nova import exception
 from nova.i18n import _LE
 from nova.openstack.common import log as logging
 from nova.openstack.common import loopingcall
-from nova.servicegroup import api
+from nova.servicegroup.drivers import base
 
 evzookeeper = importutils.try_import('evzookeeper')
 membership = importutils.try_import('evzookeeper.membership')
@@ -52,7 +52,7 @@ CONF.register_opts(zk_driver_opts, group="zookeeper")
 LOG = logging.getLogger(__name__)
 
 
-class ZooKeeperDriver(api.ServiceGroupDriver):
+class ZooKeeperDriver(base.Driver):
     """ZooKeeper driver for the service group API."""
 
     def __init__(self, *args, **kwargs):
