@@ -37,7 +37,7 @@ class ZKServiceGroupTestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(ZKServiceGroupTestCase, self).setUp()
-        servicegroup.API._driver = None
+        from nova.servicegroup.drivers import zk
         self.flags(servicegroup_driver='zk')
         self.flags(address='localhost:2181', group="zookeeper")
         try:

@@ -34,6 +34,14 @@ LOG = logging.getLogger(__name__)
 class DbDriver(base.Driver):
 
     def __init__(self, *args, **kwargs):
+        """Creates an instance of the DB-based servicegroup driver.
+
+        Valid kwargs are:
+
+        db_allowed - Boolean. False if direct db access is not allowed and
+                     alternative data access (conductor) should be used
+                     instead.
+        """
         self.db_allowed = kwargs.get('db_allowed', True)
         self.conductor_api = conductor.API(use_local=self.db_allowed)
         self.service_down_time = CONF.service_down_time
