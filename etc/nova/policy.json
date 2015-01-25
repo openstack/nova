@@ -200,6 +200,8 @@
     "compute_extension:v3:os-instance-usage-audit-log": "rule:admin_api",
     "compute_extension:v3:os-instance-usage-audit-log:discoverable": "",
     "compute_extension:v3:ips:discoverable": "",
+    "compute_extension:v3:ips:index": "rule:admin_or_owner",
+    "compute_extension:v3:ips:show": "rule:admin_or_owner",
     "compute_extension:keypairs": "",
     "compute_extension:keypairs:index": "",
     "compute_extension:keypairs:show": "",
