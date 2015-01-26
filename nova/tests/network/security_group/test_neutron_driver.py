@@ -108,6 +108,26 @@ class TestNeutronDriver(test.NoDBTestCase):
         self.assertRaises(exception.SecurityGroupLimitExceeded,
                           sg_api.add_rules, self.context, None, name, [vals])
 
+    def test_create_security_group_rules_bad_request(self):
+        vals = {'protocol': 'icmp', 'cidr': '0.0.0.0/0',
+                'parent_group_id': '7ae75663-277e-4a0e-8f87-56ea4e70cb47',
+                'group_id': None, 'to_port': 255}
+        body = {'security_group_rules': [{'remote_group_id': None,
+                'direction': 'ingress', 'protocol': 'icmp',
+                'ethertype': 'IPv4', 'port_range_max': 255,
+                'security_group_id': '7ae75663-277e-4a0e-8f87-56ea4e70cb47',
+                'remote_ip_prefix': '0.0.0.0/0'}]}
+        name = 'test-security-group'
+        message = "ICMP code (port-range-max) 255 is provided but ICMP type" \
+                  " (port-range-min) is missing"
+        self.moxed_client.create_security_group_rule(
+            body).AndRaise(n_exc.NeutronClientException(status_code=400,
+                                                        message=message))
+        self.mox.ReplayAll()
+        sg_api = security_groups.NativeNeutronSecurityGroupAPI()
+        self.assertRaises(exception.Invalid, sg_api.add_rules,
+                          self.context, None, name, [vals])
+
     def test_list_security_group_with_no_port_range_and_not_tcp_udp_icmp(self):
         sg1 = {'description': 'default',
                'id': '07f1362f-34f6-4136-819a-2dcde112269e',
