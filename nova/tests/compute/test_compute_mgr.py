@@ -813,6 +813,18 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.assertEqual([x['uuid'] for x in driver_instances],
                          [x['uuid'] for x in result])
 
+    @mock.patch('nova.virt.driver.ComputeDriver.list_instance_uuids')
+    @mock.patch('nova.db.api.instance_get_all_by_filters')
+    def test_get_instances_on_driver_empty(self, mock_list, mock_db):
+        fake_context = context.get_admin_context()
+        mock_list.return_value = []
+
+        result = self.compute._get_instances_on_driver(fake_context)
+        # instance_get_all_by_filters should not be called
+        self.assertEqual(0, mock_db.call_count)
+        self.assertEqual([],
+                         [x['uuid'] for x in result])
+
     def test_get_instances_on_driver_fallback(self):
         # Test getting instances when driver doesn't support
         # 'list_instance_uuids'

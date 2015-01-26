@@ -691,6 +691,9 @@ class ComputeManager(manager.Manager):
             filters = {}
         try:
             driver_uuids = self.driver.list_instance_uuids()
+            if len(driver_uuids) == 0:
+                # Short circuit, don't waste a DB call
+                return objects.InstanceList()
             filters['uuid'] = driver_uuids
             local_instances = objects.InstanceList.get_by_filters(
                 context, filters, use_slave=True)
