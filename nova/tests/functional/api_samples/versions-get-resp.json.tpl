@@ -8,7 +8,7 @@
                     "rel": "self"
                 }
             ],
-            "status": "CURRENT",
+            "status": "SUPPORTED",
             "updated": "2011-01-21T11:33:21Z"
         },
         {
@@ -19,7 +19,7 @@
                     "rel": "self"
                 }
             ],
-            "status": "EXPERIMENTAL",
+            "status": "CURRENT",
             "updated": "2013-07-23T11:33:21Z"
         }
     ]
