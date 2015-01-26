@@ -148,3 +148,23 @@ class ConsoleOutputExtensionTestV21(test.NoDBTestCase):
 class ConsoleOutputExtensionTestV2(ConsoleOutputExtensionTestV21):
     controller_class = console_output_v2
     validation_error = webob.exc.HTTPBadRequest
+
+
+class ConsoleOutpuPolicyEnforcementV21(test.NoDBTestCase):
+
+    def setUp(self):
+        super(ConsoleOutpuPolicyEnforcementV21, self).setUp()
+        self.controller = console_output_v21.ConsoleOutputController()
+
+    def test_get_console_output_policy_failed(self):
+        rule_name = "compute_extension:v3:os-console-output"
+        self.policy.set_rules({rule_name: "project:non_fake"})
+        req = fakes.HTTPRequest.blank('')
+        body = {'os-getConsoleOutput': {}}
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.controller.get_console_output, req, fakes.FAKE_UUID,
+            body=body)
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+            exc.format_message())
