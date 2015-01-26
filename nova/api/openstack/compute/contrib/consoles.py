@@ -132,8 +132,6 @@ class ConsolesController(wsgi.Controller):
                                                          console_type)
         except exception.InstanceNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
-        except exception.InstanceNotFound as e:
-            raise webob.exc.HTTPNotFound(explanation=e.format_message())
         except exception.InstanceNotReady as e:
             raise webob.exc.HTTPConflict(explanation=e.format_message())
         except (exception.ConsoleTypeUnavailable,
