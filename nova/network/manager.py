@@ -901,6 +901,13 @@ class NetworkManager(manager.Manager):
 
                 vif = objects.VirtualInterface.get_by_instance_and_network(
                         context, instance_id, network['id'])
+                if vif is None:
+                    LOG.debug('vif for network %(network)s is used up, '
+                              'trying to create new vif',
+                              {'network': network['id']}, instance=instance)
+                    vif = self._add_virtual_interface(context,
+                        instance_id, network['id'])
+
                 fip.allocated = True
                 fip.virtual_interface_id = vif.id
                 fip.save()
@@ -1914,6 +1921,15 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
 
         vif = objects.VirtualInterface.get_by_instance_and_network(
             context, instance_id, network['id'])
+        if vif is None:
+            LOG.debug('vif for network %(network)s and instance '
+                      '%(instance_id)s is used up, '
+                      'trying to create new vif',
+                      {'network': network['id'],
+                       'instance_id': instance_id})
+            vif = self._add_virtual_interface(context,
+                instance_id, network['id'])
+
         fip.allocated = True
         fip.virtual_interface_id = vif.id
         fip.save()

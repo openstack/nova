@@ -789,6 +789,52 @@ class FlatNetworkTestCase(test.TestCase):
 
         mock_fixedip_disassociate.assert_called_once_with(self.context)
 
+    @mock.patch('nova.objects.instance.Instance.get_by_uuid')
+    @mock.patch('nova.objects.virtual_interface.VirtualInterface'
+                '.get_by_instance_and_network')
+    @mock.patch('nova.objects.fixed_ip.FixedIP.disassociate')
+    @mock.patch('nova.objects.fixed_ip.FixedIP.associate_pool')
+    @mock.patch('nova.objects.fixed_ip.FixedIP.save')
+    @mock.patch('nova.network.manager.NetworkManager._add_virtual_interface')
+    def test_allocate_fixed_ip_create_new_vifs(self,
+                                               mock_add,
+                                               mock_fixedip_save,
+                                               mock_fixedip_associate,
+                                               mock_fixedip_disassociate,
+                                               mock_vif_get,
+                                               mock_instance_get):
+        address = netaddr.IPAddress('1.2.3.4')
+
+        fip = objects.FixedIP(instance_uuid='fake-uuid',
+                              address=address,
+                              virtual_interface_id=1)
+        net = {'cidr': '24', 'id': 1, 'uuid': 'nosuch'}
+        instance = objects.Instance(context=self.context)
+        instance.create()
+
+        vif = objects.VirtualInterface(context,
+                                       id=1000,
+                                       address='00:00:00:00:00:00',
+                                       instance_uuid=instance.uuid,
+                                       network_id=net['id'],
+                                       uuid='nosuch')
+        mock_fixedip_associate.return_value = fip
+        mock_add.return_value = vif
+        mock_instance_get.return_value = instance
+        mock_vif_get.return_value = None
+
+        with contextlib.nested(
+            mock.patch.object(self.network, '_setup_network_on_host'),
+            mock.patch.object(self.network, 'instance_dns_manager'),
+            mock.patch.object(self.network,
+                '_do_trigger_security_group_members_refresh_for_instance')
+        ) as (mock_setup_network, mock_dns_manager, mock_ignored):
+            self.network.allocate_fixed_ip(self.context, instance['uuid'],
+                net)
+            mock_add.assert_called_once_with(self.context, instance['uuid'],
+                net['id'])
+            self.assertEqual(fip.virtual_interface_id, vif.id)
+
 
 class FlatDHCPNetworkTestCase(test.TestCase):
     def setUp(self):
@@ -932,6 +978,45 @@ class VlanNetworkTestCase(test.TestCase):
             dict(test_network.fake_network, **networks[0]))
         network.vpn_private_address = '192.168.0.2'
         self.network.allocate_fixed_ip(self.context, FAKEUUID, network)
+
+    @mock.patch('nova.network.manager.VlanManager._setup_network_on_host')
+    @mock.patch('nova.network.manager.VlanManager.'
+                '_validate_instance_zone_for_dns_domain')
+    @mock.patch('nova.network.manager.VlanManager.'
+                '_do_trigger_security_group_members_refresh_for_instance')
+    @mock.patch('nova.network.manager.VlanManager._add_virtual_interface')
+    @mock.patch('nova.objects.instance.Instance.get_by_uuid')
+    @mock.patch('nova.objects.fixed_ip.FixedIP.associate')
+    @mock.patch('nova.objects.fixed_ip.FixedIP.save')
+    @mock.patch('nova.objects.VirtualInterface.get_by_instance_and_network')
+    def test_allocate_fixed_ip_return_none(self, mock_get, mock_save,
+            mock_associate, mock_get_uuid, mock_add, mock_trigger,
+            mock_validate, mock_setup):
+        net = {'cidr': '24', 'id': 1, 'uuid': 'nosuch'}
+        fip = objects.FixedIP(instance_uuid='fake-uuid',
+                              address=netaddr.IPAddress('1.2.3.4'),
+                              virtual_interface_id=1)
+
+        instance = objects.Instance(context=self.context)
+        instance.create()
+
+        vif = objects.VirtualInterface(self.context,
+                                       id=1000,
+                                       address='00:00:00:00:00:00',
+                                       instance_uuid=instance.uuid,
+                                       network_id=net['id'],
+                                       uuid='nosuch')
+        mock_associate.return_value = fip
+        mock_add.return_value = vif
+        mock_get.return_value = None
+        mock_get_uuid.return_value = instance
+        mock_validate.return_value = False
+
+        self.network.allocate_fixed_ip(self.context_admin, instance.uuid, net)
+
+        mock_add.assert_called_once_with(self.context_admin, instance.uuid,
+                                         net['id'])
+        mock_save.assert_called_once_with()
 
     @mock.patch('nova.objects.instance.Instance.get_by_uuid')
     @mock.patch('nova.objects.fixed_ip.FixedIP.associate')
