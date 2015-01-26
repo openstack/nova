@@ -1648,14 +1648,10 @@ class LibvirtDriver(driver.ComputeDriver):
         bdm = objects.BlockDeviceMapping.get_by_volume_id(context,
                                                           volume_id)
 
-        if bdm['source_type'] == 'image':
-            driver_bdm = driver_block_device.DriverImageBlockDevice(bdm)
-        else:
-            # source_type = 'volume'
-            driver_bdm = driver_block_device.DriverVolumeBlockDevice(bdm)
-
-        driver_bdm.refresh_connection_info(context, instance,
-                                           self._volume_api, self)
+        driver_bdm = driver_block_device.convert_volume(bdm)
+        if driver_bdm:
+            driver_bdm.refresh_connection_info(context, instance,
+                                               self._volume_api, self)
 
     def volume_snapshot_create(self, context, instance, volume_id,
                                create_info):
