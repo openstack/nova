@@ -620,16 +620,21 @@ class ComputeManager(manager.Manager):
             self._resource_tracker_dict[nodename] = rt
         return rt
 
+    def _update_resource_tracker(self, context, instance):
+        """Let resource tracker know that instance has changed state."""
+
+        if (instance['host'] == self.host and
+                self.driver.node_is_available(instance['node'])):
+            rt = self._get_resource_tracker(instance.get('node'))
+            rt.update_usage(context, instance)
+
     def _instance_update(self, context, instance_uuid, **kwargs):
         """Update an instance in the database using kwargs as value."""
 
         instance_ref = self.conductor_api.instance_update(context,
                                                           instance_uuid,
                                                           **kwargs)
-        if (instance_ref['host'] == self.host and
-                self.driver.node_is_available(instance_ref['node'])):
-            rt = self._get_resource_tracker(instance_ref.get('node'))
-            rt.update_usage(context, instance_ref)
+        self._update_resource_tracker(context, instance_ref)
 
         return instance_ref
 
@@ -2243,6 +2248,7 @@ class ComputeManager(manager.Manager):
             instance.task_state = None
             instance.terminated_at = timeutils.utcnow()
             instance.save()
+            self._update_resource_tracker(context, instance)
             system_meta = utils.instance_sys_meta(instance)
             db_inst = self.conductor_api.instance_destroy(
                 context, obj_base.obj_to_primitive(instance))
