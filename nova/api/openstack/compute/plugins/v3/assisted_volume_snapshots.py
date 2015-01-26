@@ -32,15 +32,14 @@ from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
 ALIAS = 'os-assisted-volume-snapshots'
-authorize = extensions.extension_authorizer('compute',
-                                            'v3:' + ALIAS)
+authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class AssistedVolumeSnapshotsController(wsgi.Controller):
     """The Assisted volume snapshots API controller for the OpenStack API."""
 
     def __init__(self):
-        self.compute_api = compute.API()
+        self.compute_api = compute.API(skip_policy_check=True)
         super(AssistedVolumeSnapshotsController, self).__init__()
 
     @extensions.expected_errors(400)
