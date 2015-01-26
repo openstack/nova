@@ -76,6 +76,7 @@ from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import loopingcall
 from nova.openstack.common import processutils
+from nova.openstack.common import strutils
 from nova.openstack.common import timeutils
 from nova.openstack.common import units
 from nova.openstack.common import xmlutils
@@ -4333,12 +4334,14 @@ class LibvirtDriver(driver.ComputeDriver):
 
             if power_on:
                 err = _LE('Error launching a defined domain with XML: %s') \
-                          % domain.XMLDesc(0)
+                          % strutils.safe_decode(domain.XMLDesc(0),
+                                                 errors='ignore')
                 domain.createWithFlags(launch_flags)
 
             if not utils.is_neutron():
                 err = _LE('Error enabling hairpin mode with XML: %s') \
-                          % domain.XMLDesc(0)
+                          % strutils.safe_decode(domain.XMLDesc(0),
+                                                 errors='ignore')
                 self._enable_hairpin(domain.XMLDesc(0))
         except Exception:
             with excutils.save_and_reraise_exception():

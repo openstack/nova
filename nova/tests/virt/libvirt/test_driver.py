@@ -59,6 +59,7 @@ from nova.openstack.common import jsonutils
 from nova.openstack.common import lockutils
 from nova.openstack.common import loopingcall
 from nova.openstack.common import processutils
+from nova.openstack.common import strutils
 from nova.openstack.common import timeutils
 from nova.openstack.common import units
 from nova.openstack.common import uuidutils
@@ -8974,7 +8975,8 @@ Active:          8381604 kB
         lookup_mock.assert_called_once_with(instance['name'])
 
     @mock.patch.object(fake_libvirt_utils, 'get_instance_path')
-    def test_create_domain(self, mock_get_inst_path):
+    @mock.patch.object(strutils, 'safe_decode')
+    def test_create_domain(self, mock_safe_decode, mock_get_inst_path):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         mock_domain = mock.MagicMock()
         mock_instance = mock.MagicMock()
@@ -8986,6 +8988,7 @@ Active:          8381604 kB
         self.assertEqual(mock_domain, domain)
         mock_get_inst_path.assertHasCalls([mock.call(mock_instance)])
         mock_domain.createWithFlags.assertHasCalls([mock.call(0)])
+        self.assertEqual(2, mock_safe_decode.call_count)
 
     @mock.patch('nova.virt.disk.api.clean_lxc_namespace')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.get_info')
