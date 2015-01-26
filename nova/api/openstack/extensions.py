@@ -299,8 +299,8 @@ def load_standard_extensions(ext_mgr, logger, path, package, ext_list=None):
             try:
                 ext_mgr.load_extension(classpath)
             except Exception as exc:
-                logger.warn(_('Failed to load extension %(classpath)s: '
-                              '%(exc)s'),
+                logger.warn(_LW('Failed to load extension %(classpath)s: '
+                                '%(exc)s'),
                             {'classpath': classpath, 'exc': exc})
 
         # Now, let's consider any subdirectories we may have...
@@ -322,8 +322,8 @@ def load_standard_extensions(ext_mgr, logger, path, package, ext_list=None):
                 try:
                     ext(ext_mgr)
                 except Exception as exc:
-                    logger.warn(_('Failed to load extension %(ext_name)s:'
-                                  '%(exc)s'),
+                    logger.warn(_LW('Failed to load extension %(ext_name)s:'
+                                    '%(exc)s'),
                                 {'ext_name': ext_name, 'exc': exc})
 
         # Update the list of directories we'll explore...

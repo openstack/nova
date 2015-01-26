@@ -1794,7 +1794,7 @@ class API(base.Base):
                     if bdm.delete_on_termination:
                         self.volume_api.delete(context, bdm.volume_id)
                 except Exception as exc:
-                    err_str = _("Ignoring volume cleanup failure due to %s")
+                    err_str = _LW("Ignoring volume cleanup failure due to %s")
                     LOG.warn(err_str % exc, instance=instance)
             bdm.destroy()
         cb(context, instance, bdms, local=True)
