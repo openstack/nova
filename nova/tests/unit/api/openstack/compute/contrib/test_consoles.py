@@ -440,3 +440,41 @@ class ConsolesExtensionTestV2(ConsolesExtensionTestV21):
 
     def test_get_rdp_console_with_undefined_param(self):
         pass
+
+
+class TestRemoteConsolePolicyEnforcementV21(test.NoDBTestCase):
+
+    def setUp(self):
+        super(TestRemoteConsolePolicyEnforcementV21, self).setUp()
+        self.controller = console_v21.RemoteConsolesController()
+        self.req = fakes.HTTPRequest.blank('')
+
+    def _common_policy_check(self, func, *arg, **kwarg):
+        rule_name = "compute_extension:v3:os-remote-consoles"
+        rule = {rule_name: "project:non_fake"}
+        self.policy.set_rules(rule)
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized, func, *arg, **kwarg)
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+            exc.format_message())
+
+    def test_remote_vnc_console_policy_failed(self):
+        body = {'os-getVNCConsole': {'type': 'novnc'}}
+        self._common_policy_check(self.controller.get_vnc_console, self.req,
+                                  fakes.FAKE_UUID, body=body)
+
+    def test_remote_splice_console_policy_failed(self):
+        body = {'os-getSPICEConsole': {'type': 'spice-html5'}}
+        self._common_policy_check(self.controller.get_spice_console, self.req,
+                                  fakes.FAKE_UUID, body=body)
+
+    def test_remote_rdp_console_policy_failed(self):
+        body = {'os-getRDPConsole': {'type': 'rdp-html5'}}
+        self._common_policy_check(self.controller.get_rdp_console, self.req,
+                                  fakes.FAKE_UUID, body=body)
+
+    def test_remote_serial_console_policy_failed(self):
+        body = {'os-getSerialConsole': {'type': 'serial'}}
+        self._common_policy_check(self.controller.get_serial_console, self.req,
+                                  fakes.FAKE_UUID, body=body)
