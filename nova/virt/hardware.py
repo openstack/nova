@@ -1050,6 +1050,37 @@ def _numa_get_constraints_auto(nodes, flavor, image_meta):
     return objects.InstanceNUMATopology(cells=cells)
 
 
+def _add_cpu_pinning_constraint(flavor, image_meta, numa_topology):
+    flavor_pinning = flavor.get('extra_specs', {}).get("hw:cpu_policy")
+    image_pinning = image_meta.get('properties', {}).get("hw_cpu_policy")
+    if flavor_pinning == "dedicated":
+        requested = True
+    elif flavor_pinning == "shared":
+        if image_pinning == "dedicated":
+            raise exception.ImageCPUPinningForbidden()
+        requested = False
+    else:
+        requested = image_pinning == "dedicated"
+
+    if not requested:
+        return numa_topology
+
+    if numa_topology:
+        # NOTE(ndipanov) Setting the cpu_pinning attribute to a non-None value
+        # means CPU pinning was requested
+        for cell in numa_topology.cells:
+            cell.cpu_pinning = {}
+        return numa_topology
+    else:
+        single_cell = objects.InstanceNUMACell(
+                id=0,
+                cpuset=set(range(flavor['vcpus'])),
+                memory=flavor['memory_mb'],
+                cpu_pinning={})
+        numa_topology = objects.InstanceNUMATopology(cells=[single_cell])
+        return numa_topology
+
+
 # TODO(sahid): Move numa related to hardward/numa.py
 def numa_get_constraints(flavor, image_meta):
     """Return topology related to input request
@@ -1064,7 +1095,7 @@ def numa_get_constraints(flavor, image_meta):
     pagesize = _numa_get_pagesize_constraints(
         flavor, image_meta)
 
-    topology = None
+    numa_topology = None
     if nodes or pagesize:
         nodes = nodes and int(nodes) or 1
         # We'll pick what path to go down based on whether
@@ -1074,16 +1105,16 @@ def numa_get_constraints(flavor, image_meta):
             flavor, image_meta, "numa_cpus.0") is None
 
         if auto:
-            topology = _numa_get_constraints_auto(
+            numa_topology = _numa_get_constraints_auto(
                 nodes, flavor, image_meta)
         else:
-            topology = _numa_get_constraints_manual(
+            numa_topology = _numa_get_constraints_manual(
                 nodes, flavor, image_meta)
 
         # We currently support same pagesize for all cells.
-        [setattr(c, 'pagesize', pagesize) for c in topology.cells]
+        [setattr(c, 'pagesize', pagesize) for c in numa_topology.cells]
 
-    return topology
+    return _add_cpu_pinning_constraint(flavor, image_meta, numa_topology)
 
 
 class VirtNUMALimitTopology(VirtNUMATopology):
