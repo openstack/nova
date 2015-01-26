@@ -379,6 +379,22 @@ def file_delete(session, ds_path, dc_ref):
     LOG.debug("Deleted the datastore file")
 
 
+def file_copy(session, src_file, src_dc_ref, dst_file, dst_dc_ref):
+    LOG.debug("Copying the datastore file from %(src)s to %(dst)s",
+              {'src': src_file, 'dst': dst_file})
+    vim = session.vim
+    copy_task = session._call_method(
+            vim,
+            "CopyDatastoreFile_Task",
+            vim.service_content.fileManager,
+            sourceName=src_file,
+            sourceDatacenter=src_dc_ref,
+            destinationName=dst_file,
+            destinationDatacenter=dst_dc_ref)
+    session._wait_for_task(copy_task)
+    LOG.debug("Copied the datastore file")
+
+
 def disk_move(session, dc_ref, src_file, dst_file):
     """Moves the source virtual disk to the destination.
 
