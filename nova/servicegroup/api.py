@@ -75,36 +75,20 @@ class API(object):
         self._driver = importutils.import_object(driver_class,
                                                  *args, **kwargs)
 
-    def join(self, member_id, group_id, service=None):
-        """Add a new member to the ServiceGroup
+    def join(self, member, group, service=None):
+        """Add a new member to a service group.
 
-        @param member_id: the joined member ID
-        @param group_id: the group name, of the joined member
-        @param service: the parameter can be used for notifications about
-        disconnect mode and update some internals
+        :param member: the joined member ID/name
+        :param group: the group ID/name, of the joined member
+        :param service: a `nova.service.Service` object
         """
-
-        LOG.debug('Join new ServiceGroup member %(member_id)s to the '
-                  '%(group_id)s group, service = %(service)s',
-                  {'member_id': member_id,
-                   'group_id': group_id,
-                   'service': service})
-        return self._driver.join(member_id, group_id, service)
+        return self._driver.join(member, group, service)
 
     def service_is_up(self, member):
         """Check if the given member is up."""
         # NOTE(johngarbutt) no logging in this method,
         # so this doesn't slow down the scheduler
         return self._driver.is_up(member)
-
-    def leave(self, member_id, group_id):
-        """Explicitly remove the given member from the ServiceGroup
-        monitoring.
-        """
-        LOG.debug('Explicitly remove the given member %(member_id)s from the'
-                  '%(group_id)s group monitoring',
-                  {'member_id': member_id, 'group_id': group_id})
-        return self._driver.leave(member_id, group_id)
 
     def get_all(self, group_id):
         """Returns ALL members of the given group."""

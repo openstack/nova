@@ -23,7 +23,6 @@ from oslo_utils import importutils
 
 from nova import exception
 from nova.i18n import _LE, _LW
-from nova.openstack.common import loopingcall
 from nova.servicegroup.drivers import base
 
 evzookeeper = importutils.try_import('evzookeeper')
@@ -107,43 +106,33 @@ class ZooKeeperDriver(base.Driver):
                         'of it in production right now may be risky.'))
         return session
 
-    def join(self, member_id, group, service=None):
-        """Join the given service with its group."""
-        # process id
+    def join(self, member, group, service=None):
+        """Add a new member to a service group.
+
+        :param member: the joined member ID/name
+        :param group: the group ID/name, of the joined member
+        :param service: a `nova.service.Service` object
+        """
         process_id = str(os.getpid())
         LOG.debug('ZooKeeperDriver: join new member %(id)s(%(pid)s) to the '
                   '%(gr)s group, service=%(sr)s',
-                  {'id': member_id, 'pid': process_id,
+                  {'id': member, 'pid': process_id,
                    'gr': group, 'sr': service})
-        member = self._memberships.get((group, member_id), None)
+        member = self._memberships.get((group, member), None)
         if member is None:
             # the first time to join. Generate a new object
-            path = "%s/%s/%s" % (CONF.zookeeper.sg_prefix, group, member_id)
+            path = "%s/%s/%s" % (CONF.zookeeper.sg_prefix, group, member)
             try:
-                member = membership.Membership(self._session, path, process_id)
+                zk_member = membership.Membership(self._session, path,
+                                                  process_id)
             except RuntimeError:
                 LOG.exception(_LE("Unable to join. It is possible that either"
                                   " another node exists with the same name, or"
                                   " this node just restarted. We will try "
                                   "again in a short while to make sure."))
                 eventlet.sleep(CONF.zookeeper.sg_retry_interval)
-                member = membership.Membership(self._session, path, member_id)
-            self._memberships[(group, member_id)] = member
-        return FakeLoopingCall(self, member_id, group)
-
-    def leave(self, member_id, group):
-        """Remove the given member from the service group."""
-        LOG.debug('ZooKeeperDriver.leave: %(member)s from group %(group)s',
-                  {'member': member_id, 'group': group})
-        try:
-            key = (group, member_id)
-            member = self._memberships[key]
-            member.leave()
-            del self._memberships[key]
-        except KeyError:
-            LOG.error(_LE('ZooKeeperDriver.leave: %(id)s has not joined '
-                          'to the %(gr)s group'),
-                      {'id': member_id, 'gr': group})
+                zk_member = membership.Membership(self._session, path, member)
+            self._memberships[(group, member)] = zk_member
 
     def is_up(self, service_ref):
         group_id = service_ref['topic']
@@ -209,22 +198,3 @@ class ZooKeeperDriver(base.Driver):
         all_members = filter(have_processes, all_members)
 
         return all_members
-
-
-class FakeLoopingCall(loopingcall.LoopingCallBase):
-    """The fake Looping Call implementation, created for backward
-    compatibility with a membership based on DB.
-    """
-    def __init__(self, driver, host, group):
-        self._driver = driver
-        self._group = group
-        self._host = host
-
-    def stop(self):
-        self._driver.leave(self._host, self._group)
-
-    def start(self, interval, initial_delay=None):
-        pass
-
-    def wait(self):
-        pass
