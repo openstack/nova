@@ -364,6 +364,8 @@ REQ_HYPERVISOR_DISCARD = "QEMU"
 MIN_LIBVIRT_NUMA_TOPOLOGY_VERSION = (1, 0, 4)
 # fsFreeze/fsThaw requirement
 MIN_LIBVIRT_FSFREEZE_VERSION = (1, 2, 5)
+# libvirt mempage size report
+MIN_LIBVIRT_MEMPAGES_VERSION = (1, 2, 8)
 
 # Hyper-V paravirtualized time source
 MIN_LIBVIRT_HYPERV_TIMER_VERSION = (1, 2, 2)
@@ -3711,6 +3713,9 @@ class LibvirtDriver(driver.ComputeDriver):
             self._add_rng_device(guest, flavor)
 
     def _get_guest_memory_backing_config(self, inst_topology, numatune):
+        if not self._host.has_min_version(MIN_LIBVIRT_MEMPAGES_VERSION):
+            return
+
         host_topology = self._get_host_numa_topology()
 
         membacking = None

@@ -1100,7 +1100,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             return conn._get_guest_memory_backing_config(
                 inst_topology, numatune)
 
-    def test_get_guest_memory_backing_config_large_success(self):
+    @mock.patch.object(host.Host,
+                       'has_min_version', return_value=True)
+    def test_get_guest_memory_backing_config_large_success(self, mock_version):
         host_topology = objects.NUMATopology(
             cells=[
                 objects.NUMACell(
@@ -1126,6 +1128,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual(1, len(result.hugepages))
         self.assertEqual(2048, result.hugepages[0].size_kb)
         self.assertEqual([0], result.hugepages[0].nodeset)
+
+    def test_get_guest_memory_backing_config_mempages_none(self):
+        with mock.patch.object(host.Host, 'has_min_version',
+                               return_value=False):
+            self.assertIsNone(self._test_get_guest_memory_backing_config(
+                              'not_empty', 'not_empty', 'not_empty'))
 
     @mock.patch.object(objects.Flavor, 'get_by_id')
     def test_get_guest_config_numa_host_instance_fit_w_cpu_pinset(self,
