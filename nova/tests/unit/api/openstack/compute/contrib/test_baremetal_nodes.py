@@ -66,6 +66,8 @@ FAKE_IRONIC_CLIENT = ironic_utils.FakeClient()
 @mock.patch.object(b_nodes_v21, '_get_ironic_client',
                    lambda *_: FAKE_IRONIC_CLIENT)
 class BareMetalNodesTestV21(test.NoDBTestCase):
+    mod = b_nodes_v21
+
     def setUp(self):
         super(BareMetalNodesTestV21, self).setUp()
 
@@ -93,6 +95,12 @@ class BareMetalNodesTestV21(test.NoDBTestCase):
                              'cpus': properties['cpus']}]}
         self.assertEqual(expected_output, res_dict)
         mock_list.assert_called_once_with(detail=True)
+
+    def test_index_ironic_not_implemented(self):
+        with mock.patch.object(self.mod, 'ironic_client', None):
+            self.assertRaises(exc.HTTPNotImplemented,
+                              self.controller.index,
+                              self.request)
 
     @mock.patch.object(FAKE_IRONIC_CLIENT.node, 'list_ports')
     @mock.patch.object(FAKE_IRONIC_CLIENT.node, 'get')
@@ -130,6 +138,13 @@ class BareMetalNodesTestV21(test.NoDBTestCase):
         mock_get.assert_called_once_with(node.uuid)
         mock_list_ports.assert_called_once_with(node.uuid)
 
+    def test_show_ironic_not_implemented(self):
+        with mock.patch.object(self.mod, 'ironic_client', None):
+            properties = {'cpus': 1, 'memory_mb': 512, 'local_gb': 10}
+            node = ironic_utils.get_test_node(properties=properties)
+            self.assertRaises(exc.HTTPNotImplemented, self.controller.show,
+                              self.request, node.uuid)
+
     def test_create_ironic_not_supported(self):
         self.assertRaises(exc.HTTPBadRequest,
                           self.controller.create,
@@ -154,6 +169,8 @@ class BareMetalNodesTestV21(test.NoDBTestCase):
 @mock.patch.object(b_nodes_v2, '_get_ironic_client',
                    lambda *_: FAKE_IRONIC_CLIENT)
 class BareMetalNodesTestV2(BareMetalNodesTestV21):
+    mod = b_nodes_v2
+
     def _setup(self):
         self.ext_mgr = self.mox.CreateMock(extensions.ExtensionManager)
         self.controller = b_nodes_v2.BareMetalNodeController(self.ext_mgr)

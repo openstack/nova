@@ -57,6 +57,13 @@ CONF.import_opt('compute_driver', 'nova.virt.driver')
 LOG = logging.getLogger(__name__)
 
 
+def _check_ironic_client_enabled():
+    """Check whether Ironic is installed or not."""
+    if ironic_client is None:
+        msg = _("Ironic client unavailable, cannot access Ironic.")
+        raise webob.exc.HTTPNotImplemented(explanation=msg)
+
+
 def _get_ironic_client():
     """return an Ironic client."""
     # TODO(NobodyCam): Fix insecure setting
@@ -105,6 +112,7 @@ class BareMetalNodeController(wsgi.Controller):
         authorize(context)
         nodes = []
         # proxy command to Ironic
+        _check_ironic_client_enabled()
         ironicclient = _get_ironic_client()
         ironic_nodes = ironicclient.node.list(detail=True)
         for inode in ironic_nodes:
@@ -122,6 +130,7 @@ class BareMetalNodeController(wsgi.Controller):
         context = req.environ['nova.context']
         authorize(context)
         # proxy command to Ironic
+        _check_ironic_client_enabled()
         icli = _get_ironic_client()
         inode = icli.node.get(id)
         iports = icli.node.list_ports(id)
