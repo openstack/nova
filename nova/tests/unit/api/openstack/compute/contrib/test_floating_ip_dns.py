@@ -397,3 +397,79 @@ class FloatingIpDNSTestV2(FloatingIpDNSTestV21):
 
     def _bad_request(self):
         return webob.exc.HTTPUnprocessableEntity
+
+
+class FloatingIPDNSDomainPolicyEnforcementV21(test.NoDBTestCase):
+
+    def setUp(self):
+        super(FloatingIPDNSDomainPolicyEnforcementV21, self).setUp()
+        self.controller = fipdns_v21.FloatingIPDNSDomainController()
+        self.rule_name = "compute_extension:v3:os-floating-ip-dns"
+        self.policy.set_rules({self.rule_name: "project:non_fake"})
+        self.req = fakes.HTTPRequest.blank('')
+
+    def test_get_floating_ip_dns_policy_failed(self):
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.controller.index, self.req)
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % self.rule_name,
+            exc.format_message())
+
+    def test_update_floating_ip_dns_policy_failed(self):
+        body = {'domain_entry':
+                {'scope': 'public',
+                 'project': 'testproject'}}
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.controller.update, self.req, _quote_domain(domain), body=body)
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % self.rule_name,
+            exc.format_message())
+
+    def test_delete_floating_ip_dns_policy_failed(self):
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.controller.delete, self.req, _quote_domain(domain))
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % self.rule_name,
+            exc.format_message())
+
+
+class FloatingIPDNSEntryPolicyEnforcementV21(test.NoDBTestCase):
+
+    def setUp(self):
+        super(FloatingIPDNSEntryPolicyEnforcementV21, self).setUp()
+        self.controller = fipdns_v21.FloatingIPDNSEntryController()
+        self.rule_name = "compute_extension:v3:os-floating-ip-dns"
+        self.policy.set_rules({self.rule_name: "project:non_fake"})
+        self.req = fakes.HTTPRequest.blank('')
+
+    def test_show_floating_ip_dns_entry_policy_failed(self):
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.controller.show, self.req,
+                _quote_domain(domain), test_ipv4_address)
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % self.rule_name,
+            exc.format_message())
+
+    def test_update_floating_ip_dns_policy_failed(self):
+        body = {'dns_entry':
+                 {'ip': test_ipv4_address,
+                  'dns_type': 'A'}}
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.controller.update, self.req, _quote_domain(domain),
+                                    name, body=body)
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % self.rule_name,
+            exc.format_message())
+
+    def test_delete_floating_ip_dns_policy_failed(self):
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.controller.delete, self.req, _quote_domain(domain), name)
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % self.rule_name,
+            exc.format_message())
