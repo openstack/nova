@@ -11,8 +11,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import random
-
 
 class Driver(object):
     """Base class for all ServiceGroup drivers."""
@@ -33,16 +31,3 @@ class Driver(object):
     def get_all(self, group_id):
         """Returns ALL members of the given group."""
         raise NotImplementedError()
-
-    def get_one(self, group_id):
-        """The default behavior of get_one is to randomly pick one from
-        the result of get_all(). This is likely to be overridden in the
-        actual driver implementation.
-        """
-        members = self.get_all(group_id)
-        if members is None:
-            return None
-        length = len(members)
-        if length == 0:
-            return None
-        return random.choice(members)
