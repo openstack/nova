@@ -157,3 +157,12 @@ class VFSLocalFS(vfs.VFS):
 
         if owner is not None:
             utils.execute(cmd, owner, canonpath, run_as_root=True)
+
+    def get_image_fs(self):
+        if self.mount.device or self.mount.get_dev():
+            out, err = utils.execute('blkid', '-o',
+                                     'value', '-s',
+                                     'TYPE', self.mount.device,
+                                     run_as_root=True)
+            return out.strip()
+        return ""

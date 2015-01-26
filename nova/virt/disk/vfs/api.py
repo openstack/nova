@@ -139,3 +139,11 @@ class VFS(object):
         this call.
         """
         pass
+
+    def get_image_fs(self):
+        """Returns the filesystem type or an empty string.
+
+        Determine the filesystem type whether the disk image is
+        partition less.
+        """
+        pass

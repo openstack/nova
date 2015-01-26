@@ -186,3 +186,6 @@ class GuestFS(object):
 
     def set_event_callback(self, func, events):
         self.event_callback = (func, events)
+
+    def vfs_type(self, dev):
+        return 'ext3'
