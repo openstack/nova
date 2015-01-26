@@ -64,9 +64,6 @@ class CloudpipeController(object):
         cloudpipes = self._get_all_cloudpipes(context) or [None]
         return cloudpipes[0]
 
-    def _get_ip_and_port(self, instance):
-        pass
-
     def _vpn_dict(self, context, project_id, instance):
         elevated = context.elevated()
         rv = {'project_id': project_id}
