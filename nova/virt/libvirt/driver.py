@@ -45,7 +45,6 @@ from eventlet import greenio
 from eventlet import greenthread
 from eventlet import patcher
 from eventlet import tpool
-from eventlet import util as eventlet_util
 from lxml import etree
 from oslo.config import cfg
 import six
@@ -110,6 +109,7 @@ from nova.virt import watchdog_actions
 from nova import volume
 from nova.volume import encryptors
 
+native_socket = patcher.original('socket')
 native_threading = patcher.original("threading")
 native_Queue = patcher.original("Queue")
 
@@ -640,12 +640,10 @@ class LibvirtDriver(driver.ComputeDriver):
         except (ImportError, NotImplementedError):
             # This is Windows compatibility -- use a socket instead
             #  of a pipe because pipes don't really exist on Windows.
-            sock = eventlet_util.__original_socket__(socket.AF_INET,
-                                                     socket.SOCK_STREAM)
+            sock = native_socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.bind(('localhost', 0))
             sock.listen(50)
-            csock = eventlet_util.__original_socket__(socket.AF_INET,
-                                                      socket.SOCK_STREAM)
+            csock = native_socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             csock.connect(('localhost', sock.getsockname()[1]))
             nsock, addr = sock.accept()
             self._event_notify_send = nsock.makefile('wb', 0)
