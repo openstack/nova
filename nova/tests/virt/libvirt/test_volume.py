@@ -636,6 +636,46 @@ Setting up iSCSI targets: unused
         expected_multipath_cmd = ('multipath', '-f', 'foo')
         self.assertIn(expected_multipath_cmd, self.executes)
 
+    def test_libvirt_kvm_volume_with_multipath_connecting(self):
+        libvirt_driver = volume.LibvirtISCSIVolumeDriver(self.fake_conn)
+        ip_iqns = [[self.location, self.iqn],
+                   ['10.0.2.16:3260', self.iqn],
+                   [self.location,
+                    'iqn.2010-10.org.openstack:volume-00000002']]
+
+        with contextlib.nested(
+            mock.patch.object(os.path, 'exists', return_value=True),
+            mock.patch.object(libvirt_driver, '_run_iscsiadm_bare'),
+            mock.patch.object(libvirt_driver,
+                              '_get_target_portals_from_iscsiadm_output',
+                              return_value=ip_iqns),
+            mock.patch.object(libvirt_driver, '_connect_to_iscsi_portal'),
+            mock.patch.object(libvirt_driver, '_rescan_iscsi'),
+            mock.patch.object(libvirt_driver, '_get_host_device',
+                              return_value='fake-device'),
+            mock.patch.object(libvirt_driver, '_rescan_multipath'),
+            mock.patch.object(libvirt_driver, '_get_multipath_device_name',
+                              return_value='/dev/mapper/fake-mpath-devname')
+        ) as (mock_exists, mock_run_iscsiadm_bare, mock_get_portals,
+              mock_connect_iscsi, mock_rescan_iscsi, mock_host_device,
+              mock_rescan_multipath, mock_device_name):
+            vol = {'id': 1, 'name': self.name}
+            connection_info = self.iscsi_connection(vol, self.location,
+                                                    self.iqn)
+            libvirt_driver.use_multipath = True
+            libvirt_driver.connect_volume(connection_info, self.disk_info)
+
+            # Verify that the supplied iqn is used when it shares the same
+            # iqn between multiple portals.
+            connection_info = self.iscsi_connection(vol, self.location,
+                                                    self.iqn)
+            props1 = connection_info['data'].copy()
+            props2 = connection_info['data'].copy()
+            props2['target_portal'] = '10.0.2.16:3260'
+            expected_calls = [mock.call(props1), mock.call(props2),
+                              mock.call(props1)]
+            self.assertEqual(expected_calls, mock_connect_iscsi.call_args_list)
+
     def test_libvirt_kvm_volume_with_multipath_still_in_use(self):
         name = 'volume-00000001'
         location = '10.0.2.15:3260'
