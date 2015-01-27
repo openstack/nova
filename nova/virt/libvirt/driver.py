@@ -3099,10 +3099,16 @@ class LibvirtDriver(driver.ComputeDriver):
                                   inst_type['extra_specs'],
                                   self._host.get_version())
 
+    def _get_guest_fs_config(self, instance, name, image_type=None):
+        image = self.image_backend.image(instance,
+                                         name,
+                                         image_type)
+        return image.libvirt_fs_info("/", "ploop")
+
     def _get_guest_storage_config(self, instance, image_meta,
                                   disk_info,
                                   rescue, block_device_info,
-                                  inst_type):
+                                  inst_type, os_type):
         devices = []
         disk_mapping = disk_info['mapping']
 
@@ -3114,6 +3120,9 @@ class LibvirtDriver(driver.ComputeDriver):
             fs.source_type = "mount"
             fs.source_dir = os.path.join(
                 libvirt_utils.get_instance_path(instance), 'rootfs')
+            devices.append(fs)
+        elif os_type == vm_mode.EXE and CONF.libvirt.virt_type == "parallels":
+            fs = self._get_guest_fs_config(instance, "disk")
             devices.append(fs)
         else:
 
@@ -3808,6 +3817,9 @@ class LibvirtDriver(driver.ComputeDriver):
         elif virt_type == "uml":
             guest.os_kernel = "/usr/bin/linux"
             guest.os_root = root_device_name
+        elif virt_type == "parallels":
+            if guest.os_type == vm_mode.EXE:
+                guest.os_init_path = "/sbin/init"
 
     def _conf_non_lxc_uml(self, virt_type, guest, root_device_name, rescue,
                     instance, inst_path, image_meta, disk_info):
@@ -3909,7 +3921,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         storage_configs = self._get_guest_storage_config(
                 instance, image_meta, disk_info, rescue, block_device_info,
-                flavor)
+                flavor, guest.os_type)
         for config in storage_configs:
             guest.add_device(config)
 
