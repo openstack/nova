@@ -106,3 +106,20 @@ base_resize = {
     'required': ['resize'],
     'additionalProperties': False,
 }
+
+create_image = {
+    'type': 'object',
+    'properties': {
+        'createImage': {
+            'type': 'object',
+            'properties': {
+                'name': parameter_types.name,
+                'metadata': parameter_types.metadata
+            },
+            'required': ['name'],
+            'additionalProperties': False
+        }
+    },
+    'required': ['createImage'],
+    'additionalProperties': False
+}

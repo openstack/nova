@@ -976,7 +976,7 @@ class ServerActionsControllerTestV21(test.TestCase):
         }
 
         req = fakes.HTTPRequest.blank(self.url)
-        self.assertRaises(webob.exc.HTTPBadRequest,
+        self.assertRaises(self.validation_error,
                           self.controller._action_create_image, req,
                           FAKE_UUID, body=body)
 
@@ -1197,7 +1197,7 @@ class ServerActionsControllerTestV21(test.TestCase):
             'createImage': {},
         }
         req = fakes.HTTPRequest.blank(self.url)
-        self.assertRaises(webob.exc.HTTPBadRequest,
+        self.assertRaises(self.validation_error,
                           self.controller._action_create_image,
                           req, FAKE_UUID, body=body)
 
@@ -1208,7 +1208,7 @@ class ServerActionsControllerTestV21(test.TestCase):
             }
         }
         req = fakes.HTTPRequest.blank(self.url)
-        self.assertRaises(webob.exc.HTTPBadRequest,
+        self.assertRaises(self.validation_error,
                           self.controller._action_create_image,
                           req, FAKE_UUID, body=body)
 
@@ -1220,7 +1220,7 @@ class ServerActionsControllerTestV21(test.TestCase):
             },
         }
         req = fakes.HTTPRequest.blank(self.url)
-        self.assertRaises(webob.exc.HTTPBadRequest,
+        self.assertRaises(self.validation_error,
                           self.controller._action_create_image,
                           req, FAKE_UUID, body=body)
 

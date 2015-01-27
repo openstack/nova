@@ -990,25 +990,16 @@ class ServersController(wsgi.Controller):
     @extensions.expected_errors((400, 403, 404, 409))
     @wsgi.action('createImage')
     @common.check_snapshots_enabled
+    @validation.schema(schema_servers.create_image)
     def _action_create_image(self, req, id, body):
         """Snapshot a server instance."""
         context = req.environ['nova.context']
-        entity = body.get("createImage", {})
 
-        image_name = entity.get("name")
-
-        if not image_name:
-            msg = _("createImage entity requires name attribute")
-            raise exc.HTTPBadRequest(explanation=msg)
-
-        props = {}
+        entity = body["createImage"]
+        image_name = entity["name"]
         metadata = entity.get('metadata', {})
+
         common.check_img_metadata_properties_quota(context, metadata)
-        try:
-            props.update(metadata)
-        except ValueError:
-            msg = _("Invalid metadata")
-            raise exc.HTTPBadRequest(explanation=msg)
 
         instance = self._get_server(context, req, id)
 
@@ -1032,12 +1023,13 @@ class ServersController(wsgi.Controller):
                                                        instance,
                                                        image_meta,
                                                        image_name,
-                                                       extra_properties=props)
+                                                       extra_properties=
+                                                       metadata)
             else:
                 image = self.compute_api.snapshot(context,
                                                   instance,
                                                   image_name,
-                                                  extra_properties=props)
+                                                  extra_properties=metadata)
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                         'createImage', id)
