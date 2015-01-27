@@ -16,6 +16,7 @@
 import tempfile
 
 import fixtures
+import mock
 from oslo_concurrency import processutils
 
 from nova import test
@@ -158,3 +159,42 @@ class APITestCase(test.NoDBTestCase):
 
         self.mox.ReplayAll()
         api.extend(imgfile, imgsize, use_cow=use_cow)
+
+    HASH_EXT3 = utils.get_hash_str(api.FS_FORMAT_EXT3)[:7]
+    HASH_NTFS = utils.get_hash_str(api.FS_FORMAT_NTFS)[:7]
+
+    def test_get_file_extension_for_os_type(self):
+        self.assertEqual(self.HASH_EXT3,
+                         api.get_file_extension_for_os_type(
+                             None, None))
+        self.assertEqual(self.HASH_EXT3,
+                         api.get_file_extension_for_os_type(
+                             'linux', None))
+        self.assertEqual(self.HASH_NTFS,
+                         api.get_file_extension_for_os_type(
+                             'windows', None))
+
+    def test_get_file_extension_for_os_type_with_overrides(self):
+        with mock.patch('nova.virt.disk.api._DEFAULT_MKFS_COMMAND',
+                        'custom mkfs command'):
+            self.assertEqual("a74d253",
+                             api.get_file_extension_for_os_type(
+                                 'linux', None))
+            self.assertEqual("a74d253",
+                             api.get_file_extension_for_os_type(
+                                 'windows', None))
+            self.assertEqual("a74d253",
+                             api.get_file_extension_for_os_type(
+                                 'osx', None))
+
+        with mock.patch.dict(api._MKFS_COMMAND,
+                             {'osx': 'custom mkfs command'}, clear=True):
+            self.assertEqual(self.HASH_EXT3,
+                             api.get_file_extension_for_os_type(
+                                 'linux', None))
+            self.assertEqual(self.HASH_NTFS,
+                             api.get_file_extension_for_os_type(
+                                 'windows', None))
+            self.assertEqual("a74d253",
+                             api.get_file_extension_for_os_type(
+                                 'osx', None))

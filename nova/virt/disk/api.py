@@ -107,6 +107,19 @@ def get_fs_type_for_os_type(os_type):
     return os_type if _MKFS_COMMAND.get(os_type) else 'default'
 
 
+def get_file_extension_for_os_type(os_type, specified_fs=None):
+    mkfs_command = _MKFS_COMMAND.get(os_type, _DEFAULT_MKFS_COMMAND)
+    if mkfs_command:
+        extension = mkfs_command
+    else:
+        if not specified_fs:
+            specified_fs = CONF.default_ephemeral_format
+            if not specified_fs:
+                specified_fs = _DEFAULT_FS_BY_OSTYPE.get(os_type, 'ext3')
+        extension = specified_fs
+    return utils.get_hash_str(extension)[:7]
+
+
 def mkfs(os_type, fs_label, target, run_as_root=True, specified_fs=None):
     """Format a file or block device using
        a user provided command for each os type.

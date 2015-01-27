@@ -443,6 +443,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     REQUIRES_LOCKING = True
 
+    _EPHEMERAL_20_DEFAULT = ('ephemeral_20_%s' %
+                             utils.get_hash_str('ext3')[:7])
+
     def setUp(self):
         super(LibvirtConnTestCase, self).setUp()
         self.flags(fake_call=True)
@@ -7324,22 +7327,25 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     def test_create_image_plain_os_type_blank(self):
         self._test_create_image_plain(os_type='',
-                                      filename='ephemeral_20_default',
+                                      filename=self._EPHEMERAL_20_DEFAULT,
                                       mkfs=False)
 
     def test_create_image_plain_os_type_none(self):
         self._test_create_image_plain(os_type=None,
-                                      filename='ephemeral_20_default',
+                                      filename=self._EPHEMERAL_20_DEFAULT,
                                       mkfs=False)
 
     def test_create_image_plain_os_type_set_no_fs(self):
         self._test_create_image_plain(os_type='test',
-                                      filename='ephemeral_20_default',
+                                      filename=self._EPHEMERAL_20_DEFAULT,
                                       mkfs=False)
 
     def test_create_image_plain_os_type_set_with_fs(self):
+        ephemeral_file_name = ('ephemeral_20_%s' % utils.get_hash_str(
+            'mkfs.ext3 --label %(fs_label)s %(target)s')[:7])
+
         self._test_create_image_plain(os_type='test',
-                                      filename='ephemeral_20_test',
+                                      filename=ephemeral_file_name,
                                       mkfs=True)
 
     def test_create_image_with_swap(self):
@@ -7397,7 +7403,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         wantFiles = [
             {'filename': '356a192b7913b04c54574d18c28d46e6395428ab',
              'size': 10 * units.Gi},
-            {'filename': 'ephemeral_20_default',
+            {'filename': self._EPHEMERAL_20_DEFAULT,
              'size': 20 * units.Gi},
             {'filename': 'swap_500',
              'size': 500 * units.Mi},
