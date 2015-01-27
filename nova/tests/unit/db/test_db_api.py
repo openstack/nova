@@ -5642,7 +5642,6 @@ class KeyPairTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def test_key_pair_create(self):
         param = {
             'name': 'test_1',
-            'type': 'ssh',
             'user_id': 'test_user_id_1',
             'public_key': 'test_public_key_1',
             'fingerprint': 'test_fingerprint_1'
@@ -5655,17 +5654,16 @@ class KeyPairTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self._assertEqualObjects(key_pair, param, ignored_keys)
 
     def test_key_pair_create_with_duplicate_name(self):
-        params = {'name': 'test_name', 'user_id': 'test_user_id',
-                  'type': 'ssh'}
+        params = {'name': 'test_name', 'user_id': 'test_user_id'}
         self._create_key_pair(params)
         self.assertRaises(exception.KeyPairExists, self._create_key_pair,
                           params)
 
     def test_key_pair_get(self):
         params = [
-            {'name': 'test_1', 'user_id': 'test_user_id_1', 'type': 'ssh'},
-            {'name': 'test_2', 'user_id': 'test_user_id_2', 'type': 'ssh'},
-            {'name': 'test_3', 'user_id': 'test_user_id_3', 'type': 'ssh'}
+            {'name': 'test_1', 'user_id': 'test_user_id_1'},
+            {'name': 'test_2', 'user_id': 'test_user_id_2'},
+            {'name': 'test_3', 'user_id': 'test_user_id_3'}
         ]
         key_pairs = [self._create_key_pair(p) for p in params]
 
@@ -5679,7 +5677,7 @@ class KeyPairTestCase(test.TestCase, ModelsObjectComparatorMixin):
                           self.ctxt, param['user_id'], param['name'])
 
     def test_key_pair_get_deleted(self):
-        param = {'name': 'test_1', 'user_id': 'test_user_id_1', 'type': 'ssh'}
+        param = {'name': 'test_1', 'user_id': 'test_user_id_1'}
         key_pair_created = self._create_key_pair(param)
 
         db.key_pair_destroy(self.ctxt, param['user_id'], param['name'])
@@ -5696,9 +5694,9 @@ class KeyPairTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_key_pair_get_all_by_user(self):
         params = [
-            {'name': 'test_1', 'user_id': 'test_user_id_1', 'type': 'ssh'},
-            {'name': 'test_2', 'user_id': 'test_user_id_1', 'type': 'ssh'},
-            {'name': 'test_3', 'user_id': 'test_user_id_2', 'type': 'ssh'}
+            {'name': 'test_1', 'user_id': 'test_user_id_1'},
+            {'name': 'test_2', 'user_id': 'test_user_id_1'},
+            {'name': 'test_3', 'user_id': 'test_user_id_2'}
         ]
         key_pairs_user_1 = [self._create_key_pair(p) for p in params
                             if p['user_id'] == 'test_user_id_1']
@@ -5713,9 +5711,9 @@ class KeyPairTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_key_pair_count_by_user(self):
         params = [
-            {'name': 'test_1', 'user_id': 'test_user_id_1', 'type': 'ssh'},
-            {'name': 'test_2', 'user_id': 'test_user_id_1', 'type': 'ssh'},
-            {'name': 'test_3', 'user_id': 'test_user_id_2', 'type': 'ssh'}
+            {'name': 'test_1', 'user_id': 'test_user_id_1'},
+            {'name': 'test_2', 'user_id': 'test_user_id_1'},
+            {'name': 'test_3', 'user_id': 'test_user_id_2'}
         ]
         for p in params:
             self._create_key_pair(p)
@@ -5727,7 +5725,7 @@ class KeyPairTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertEqual(count_2, 1)
 
     def test_key_pair_destroy(self):
-        param = {'name': 'test_1', 'user_id': 'test_user_id_1', 'type': 'ssh'}
+        param = {'name': 'test_1', 'user_id': 'test_user_id_1'}
         self._create_key_pair(param)
 
         db.key_pair_destroy(self.ctxt, param['user_id'], param['name'])
