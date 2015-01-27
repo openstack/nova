@@ -16,7 +16,6 @@
 import os
 import re
 
-from lxml import etree
 from oslo.serialization import jsonutils
 from oslo.utils import importutils
 import six
@@ -35,40 +34,16 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
     extension_name = None
 
     def _pretty_data(self, data):
-        if self.ctype == 'json':
-            data = jsonutils.dumps(jsonutils.loads(data), sort_keys=True,
-                    indent=4)
-
-        else:
-            if data is None:
-                # Likely from missing XML file.
-                return ""
-            xml = etree.XML(data)
-            data = etree.tostring(xml, encoding="UTF-8",
-                    xml_declaration=True, pretty_print=True)
+        data = jsonutils.dumps(jsonutils.loads(data), sort_keys=True,
+                indent=4)
         return '\n'.join(line.rstrip() for line in data.split('\n')).strip()
 
     def _objectify(self, data):
         if not data:
             return {}
-        if self.ctype == 'json':
-            # NOTE(vish): allow non-quoted replacements to survive json
-            data = re.sub(r'([^"])%\((.+)\)s([^"])', r'\1"%(int:\2)s"\3', data)
-            return jsonutils.loads(data)
-        else:
-            def to_dict(node):
-                ret = {}
-                if node.items():
-                    ret.update(dict(node.items()))
-                if node.text:
-                    ret['__content__'] = node.text
-                if node.tag:
-                    ret['__tag__'] = node.tag
-                for element in node:
-                    ret.setdefault(node.tag, [])
-                    ret[node.tag].append(to_dict(element))
-                return ret
-            return to_dict(etree.fromstring(data))
+        # NOTE(vish): allow non-quoted replacements to survive json
+        data = re.sub(r'([^"])%\((.+)\)s([^"])', r'\1"%(int:\2)s"\3', data)
+        return jsonutils.loads(data)
 
     @classmethod
     def _get_sample_path(cls, name, dirname, suffix=''):
