@@ -5826,7 +5826,7 @@ class LibvirtDriver(driver.ComputeDriver):
         pth = info['path']
         if (size and fmt == 'qcow2' and
                 disk.can_resize_image(pth, size) and
-                disk.is_image_partitionless(pth, use_cow=True)):
+                disk.is_image_extendable(pth, use_cow=True)):
             self._disk_qcow2_to_raw(pth)
             fmt = 'raw'
 

@@ -85,6 +85,11 @@ FS_FORMAT_XFS = "xfs"
 FS_FORMAT_NTFS = "ntfs"
 FS_FORMAT_VFAT = "vfat"
 
+SUPPORTED_FS_TO_EXTEND = (
+    FS_FORMAT_EXT2,
+    FS_FORMAT_EXT3,
+    FS_FORMAT_EXT4)
+
 _DEFAULT_FS_BY_OSTYPE = {'linux': FS_FORMAT_EXT3,
                          'windows': FS_FORMAT_NTFS}
 
@@ -159,7 +164,7 @@ def extend(image, size, use_cow=False):
     utils.execute('qemu-img', 'resize', image, size)
 
     # if we can't access the filesystem, we can't do anything more
-    if not is_image_partitionless(image, use_cow):
+    if not is_image_extendable(image, use_cow):
         return
 
     def safe_resize2fs(dev, run_as_root=False, finally_call=lambda: None):
@@ -200,23 +205,33 @@ def can_resize_image(image, size):
     return True
 
 
-def is_image_partitionless(image, use_cow=False):
-    """Check whether we can resize contained file system."""
-    LOG.debug('Checking if we can resize filesystem inside %(image)s. '
+def is_image_extendable(image, use_cow=False):
+    """Check whether we can extend the image."""
+    LOG.debug('Checking if we can extend filesystem inside %(image)s. '
               'CoW=%(use_cow)s', {'image': image, 'use_cow': use_cow})
 
     # Check the image is unpartitioned
     if use_cow:
+        fs = None
         try:
             fs = vfs.VFS.instance_for_image(image, 'qcow2', None)
-            fs.setup()
-            fs.teardown()
+            fs.setup(mount=False)
+            if fs.get_image_fs() in SUPPORTED_FS_TO_EXTEND:
+                return True
         except exception.NovaException as e:
-            LOG.debug('Unable to mount image %(image)s with '
-                      'error %(error)s. Cannot resize.',
-                      {'image': image,
-                       'error': e})
-            return False
+            # FIXME(sahid): At this step we probably want to break the
+            # process if something wrong happens however our CI
+            # provides a bad configuration for libguestfs reported in
+            # the bug lp#1413142. When resolved we should remove this
+            # except to let the error to be propagated.
+            LOG.warning(_LW('Unable to mount image %(image)s with '
+                            'error %(error)s. Cannot resize.'),
+                        {'image': image, 'error': e})
+        finally:
+            if fs is not None:
+                fs.teardown()
+
+        return False
     else:
         # For raw, we can directly inspect the file system
         try:

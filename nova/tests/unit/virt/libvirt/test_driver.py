@@ -11346,10 +11346,10 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         mock_extend.assert_called_once_with(info['path'], 50, use_cow=False)
 
     @mock.patch('nova.virt.disk.api.can_resize_image')
-    @mock.patch('nova.virt.disk.api.is_image_partitionless')
+    @mock.patch('nova.virt.disk.api.is_image_extendable')
     @mock.patch('nova.virt.disk.api.extend')
     def test_disk_resize_qcow2(
-            self, mock_extend, mock_can_resize, mock_is_partitionless):
+            self, mock_extend, mock_can_resize, mock_is_image_extendable):
         info = {'type': 'qcow2', 'path': '/test/disk'}
 
         with contextlib.nested(
@@ -11360,7 +11360,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         as (mock_disk_qcow2_to_raw, mock_disk_raw_to_qcow2):
 
             mock_can_resize.return_value = True
-            mock_is_partitionless.return_value = True
+            mock_is_image_extendable.return_value = True
 
             self.drvr._disk_resize(info, 50)
 
