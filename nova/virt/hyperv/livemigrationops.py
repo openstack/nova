@@ -89,7 +89,7 @@ class LiveMigrationOps(object):
         if CONF.use_cow_images:
             boot_from_volume = self._volumeops.ebs_root_in_block_devices(
                 block_device_info)
-            if not boot_from_volume:
+            if not boot_from_volume and instance.image_ref:
                 self._imagecache.get_cached_image(context, instance)
 
         self._volumeops.login_storage_targets(block_device_info)
