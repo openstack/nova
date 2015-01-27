@@ -36,7 +36,7 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject,
     # Version 1.7: Added host field
     # Version 1.8: Added get_by_host_and_nodename()
     # Version 1.9: Added pci_device_pools
-    # Version 1.10: Added get_first_node_per_host_for_old_compat()
+    # Version 1.10: Added get_first_node_by_host_for_old_compat()
     VERSION = '1.10'
 
     fields = {
