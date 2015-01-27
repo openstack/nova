@@ -2162,9 +2162,11 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             self.compute._poll_bandwidth_usage(self.context)
             get_by_uuid_mac.assert_called_once_with(self.context, 'fake-uuid',
                     'fake-mac', start_period=0, use_slave=True)
+            # NOTE(sdague): bw_usage_update happens at some time in
+            # the future, so what last_refreshed is is irrelevant.
             bw_usage_update.assert_called_once_with(self.context, 'fake-uuid',
                     'fake-mac', 0, 4, 6, 1, 2,
-                    last_refreshed=timeutils.isotime(_time),
+                    last_refreshed=mock.ANY,
                     update_cells=False)
 
 
