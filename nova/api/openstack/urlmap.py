@@ -132,14 +132,6 @@ class Accept(object):
 
         return best_content_type, best_params
 
-    def content_type_params(self, best_content_type):
-        """Find parameters in Accept header for given content type."""
-        for content_type, params in self._content_types:
-            if best_content_type == content_type:
-                return params
-
-        return {}
-
     def _match_mask(self, mask, content_type):
         if '*' not in mask:
             return content_type == mask
