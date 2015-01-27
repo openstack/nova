@@ -2312,6 +2312,30 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEqual(cfg.devices[5].type, "spice")
         self.assertEqual(cfg.devices[6].type, "qxl")
 
+    @mock.patch('nova.console.serial.acquire_port')
+    @mock.patch('nova.virt.hardware.get_number_of_serial_ports',
+                return_value=1)
+    @mock.patch.object(libvirt_driver.libvirt_utils, 'get_arch',)
+    def test_create_serial_console_devices_based_on_arch(self, mock_get_arch,
+                                           mock_get_port_number,
+                                           mock_acquire_port):
+        self.flags(enabled=True, group='serial_console')
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+
+        expected = {arch.X86_64: vconfig.LibvirtConfigGuestSerial,
+                    arch.S390: vconfig.LibvirtConfigGuestConsole,
+                    arch.S390X: vconfig.LibvirtConfigGuestConsole}
+
+        for guest_arch, device_type in expected.items():
+            mock_get_arch.return_value = guest_arch
+            guest = vconfig.LibvirtConfigGuest()
+            drvr._create_serial_console_devices(guest, instance=None,
+                                                flavor={}, image_meta={})
+            self.assertEqual(1, len(guest.devices))
+            console_device = guest.devices[0]
+            self.assertIsInstance(console_device, device_type)
+            self.assertEqual("tcp", console_device.type)
+
     @mock.patch.object(objects.Flavor, 'get_by_id')
     @mock.patch('nova.console.serial.acquire_port')
     def test_get_guest_config_serial_console(self, acquire_port,
@@ -2530,24 +2554,37 @@ class LibvirtConnTestCase(test.TestCase):
             ('127.0.0.1', 100),
             ('127.0.0.2', 101)], list(i))
 
-    def _test_get_serial_ports_from_instance(self, mode, mock_get_domain):
+    @mock.patch.object(host.Host, "get_domain")
+    def test_get_serial_ports_from_instance_on_s390(self, mock_get_domain):
+
+        i = self._test_get_serial_ports_from_instance(None,
+                                                      mock_get_domain,
+                                                      'console')
+        self.assertEqual([
+            ('127.0.0.1', 100),
+            ('127.0.0.1', 101),
+            ('127.0.0.2', 100),
+            ('127.0.0.2', 101)], list(i))
+
+    def _test_get_serial_ports_from_instance(self, mode, mock_get_domain,
+                                             dev_name='serial'):
         xml = """
         <domain type='kvm'>
           <devices>
-            <serial type="tcp">
+            <%(dev_name)s type="tcp">
               <source host="127.0.0.1" service="100" mode="connect"/>
-            </serial>
-            <serial type="tcp">
+            </%(dev_name)s>
+            <%(dev_name)s type="tcp">
               <source host="127.0.0.1" service="101" mode="bind"/>
-            </serial>
-            <serial type="tcp">
+            </%(dev_name)s>
+            <%(dev_name)s type="tcp">
               <source host="127.0.0.2" service="100" mode="bind"/>
-            </serial>
-            <serial type="tcp">
+            </%(dev_name)s>
+            <%(dev_name)s type="tcp">
               <source host="127.0.0.2" service="101" mode="connect"/>
-            </serial>
+            </%(dev_name)s>
           </devices>
-        </domain>"""
+        </domain>""" % {'dev_name': dev_name}
 
         dom = mock.MagicMock()
         dom.XMLDesc.return_value = xml
