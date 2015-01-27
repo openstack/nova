@@ -2690,6 +2690,44 @@ class TestNeutronv2WithMock(test.TestCase):
             list_networks_mock.assert_called_once_with(id=ids)
             show_quota_mock.assert_called_once_with(tenant_id='fake-project')
 
+    def test_validate_networks_over_limit_quota(self):
+        """Test validates that a relevant exception is being raised when
+           there are more ports defined, than there is a quota for it.
+        """
+        requested_networks = [('my_netid1', '10.0.1.2', None, None),
+                              ('my_netid2', '10.0.1.3', None, None)]
+
+        list_port_values = [({'network_id': 'my_netid1',
+                              'fixed_ips': 'ip_address=10.0.1.2',
+                              'fields': 'device_id'},
+                             {'ports': []}),
+                            ({'network_id': 'my_netid2',
+                              'fixed_ips': 'ip_address=10.0.1.3',
+                              'fields': 'device_id'},
+                             {'ports': []}),
+
+                            ({'tenant_id': 'fake-project'},
+                             {'ports': [1, 2, 3, 4, 5]})]
+
+        nets = [{'subnets': '1'}, {'subnets': '2'}]
+
+        def _fake_list_ports(**search_opts):
+            for args, return_value in list_port_values:
+                if args == search_opts:
+                    return return_value
+
+        with contextlib.nested(
+            mock.patch.object(self.api, '_get_available_networks',
+                              return_value=nets),
+            mock.patch.object(client.Client, 'list_ports',
+                              side_effect=_fake_list_ports),
+            mock.patch.object(client.Client, 'show_quota',
+                              return_value={'quota': {'port': 1}})):
+
+                self.assertRaises(exception.PortLimitExceeded,
+                                  self.api.validate_networks,
+                                  self.context, requested_networks, 1)
+
     def test_validate_networks_fixed_ip_no_dup1(self):
         # Test validation for a request for a network with a
         # fixed ip that is not already in use because no fixed ips in use

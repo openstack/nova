@@ -960,6 +960,12 @@ class API(base_api.NetworkAPI):
                 return num_instances
             else:
                 free_ports = quotas.get('port') - len(ports)
+                if free_ports < 0:
+                    msg = (_("The number of defined ports: %(ports)d"
+                                      "is over the limit: %(quota)d"),
+                                      {'ports': len(ports),
+                                       'quota': quotas.get('port')})
+                    raise exception.PortLimitExceeded(msg)
                 ports_needed = ports_needed_per_instance * num_instances
                 if free_ports >= ports_needed:
                     return num_instances
