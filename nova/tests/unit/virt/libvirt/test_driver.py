@@ -10070,25 +10070,30 @@ Active:          8381604 kB
         self.assertEqual(drvr.default_root_device_name(instance, image_meta,
                                                        root_bdm), '/dev/vda')
 
-    def test_default_device_names_for_instance(self):
-        instance = {'uuid': 'fake_instance'}
+    @mock.patch.object(blockinfo, "default_device_names")
+    @mock.patch.object(utils, "get_image_from_system_metadata")
+    def test_default_device_names_for_instance(self, mock_meta, mock_devnames):
+        instance = objects.Instance(**self.test_instance)
+        image_meta = {}
         root_device_name = '/dev/vda'
         ephemerals = [{'device_name': 'vdb'}]
         swap = [{'device_name': 'vdc'}]
         block_device_mapping = [{'device_name': 'vdc'}]
         self.flags(virt_type='fake_libvirt_type', group='libvirt')
 
-        self.mox.StubOutWithMock(blockinfo, 'default_device_names')
-
-        blockinfo.default_device_names('fake_libvirt_type', mox.IgnoreArg(),
-                                       instance, root_device_name,
-                                       ephemerals, swap, block_device_mapping)
-        self.mox.ReplayAll()
+        mock_meta.return_value = image_meta
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         drvr.default_device_names_for_instance(instance, root_device_name,
                                                ephemerals, swap,
-                                               block_device_mapping)
+                                               block_device_mapping,
+                                               image_meta)
+
+        mock_devnames.assert_called_once_with(
+            "fake_libvirt_type", mock.ANY,
+            instance, root_device_name,
+            ephemerals, swap, block_device_mapping,
+            image_meta)
 
     def test_is_supported_fs_format(self):
         supported_fs = [disk.FS_FORMAT_EXT2, disk.FS_FORMAT_EXT3,

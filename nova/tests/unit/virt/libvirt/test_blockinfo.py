@@ -905,12 +905,14 @@ class DefaultDeviceNamesTestCase(test.NoDBTestCase):
         for patcher in self.patchers:
             patcher.stop()
 
-    def _test_default_device_names(self, *block_device_lists):
+    def _test_default_device_names(self, eph, swap, bdm):
+        image_meta = {}
         blockinfo.default_device_names(self.virt_type,
                                        self.context,
                                        self.instance,
                                        self.root_device_name,
-                                       *block_device_lists)
+                                       eph, swap, bdm,
+                                       image_meta)
 
     def test_only_block_device_mapping(self):
         # Test no-op
