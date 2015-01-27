@@ -34,7 +34,6 @@ class HostOpsTestCase(test_base.HyperVBaseTestCase):
     FAKE_NAME = 'fake_name'
     FAKE_MANUFACTURER = 'FAKE_MANUFACTURER'
     FAKE_NUM_CPUS = 1
-    FAKE_WIN_VERSION = '6.3.0'
     FAKE_INSTANCE_DIR = "C:/fake/dir"
     FAKE_LOCAL_IP = '10.11.12.13'
     FAKE_TICK_COUNT = 1000000
@@ -95,11 +94,14 @@ class HostOpsTestCase(test_base.HyperVBaseTestCase):
         self.assertEqual((2, 1, 1), response)
 
     def test_get_hypervisor_version(self):
-        self._hostops._hostutils.get_windows_version.return_value = (
-            self.FAKE_WIN_VERSION)
-        response = self._hostops._get_hypervisor_version()
-        self._hostops._hostutils.get_windows_version.assert_called_once_with()
-        self.assertEqual(self.FAKE_WIN_VERSION.replace('.', ''), response)
+        self._hostops._hostutils.get_windows_version.return_value = '6.3.9600'
+        response_lower = self._hostops._get_hypervisor_version()
+
+        self._hostops._hostutils.get_windows_version.return_value = '10.1.0'
+        response_higher = self._hostops._get_hypervisor_version()
+
+        self.assertEqual(6003, response_lower)
+        self.assertEqual(10001, response_higher)
 
     @mock.patch.object(hostops.HostOps, '_get_cpu_info')
     @mock.patch.object(hostops.HostOps, '_get_memory_info')
