@@ -64,25 +64,23 @@ class ConsoleAuthTokensExtensionTestV21(test.TestCase):
                        _fake_check_token)
 
         self.controller = self.controller_class.ConsoleAuthTokensController()
+        self.req = fakes.HTTPRequest.blank('', use_admin_context=True)
 
     def test_get_console_connect_info(self):
-        req = fakes.HTTPRequest.blank('', use_admin_context=True)
-        output = self.controller.show(req, fakes.FAKE_UUID)
+        output = self.controller.show(self.req, fakes.FAKE_UUID)
         self.assertEqual(self._EXPECTED_OUTPUT, output)
 
     def test_get_console_connect_info_token_not_found(self):
         self.stubs.Set(consoleauth_rpcapi.ConsoleAuthAPI, 'check_token',
                        _fake_check_token_not_found)
-        req = fakes.HTTPRequest.blank('', use_admin_context=True)
         self.assertRaises(webob.exc.HTTPNotFound,
-                          self.controller.show, req, fakes.FAKE_UUID)
+                          self.controller.show, self.req, fakes.FAKE_UUID)
 
     def test_get_console_connect_info_unauthorized_console_type(self):
         self.stubs.Set(consoleauth_rpcapi.ConsoleAuthAPI, 'check_token',
                        _fake_check_token_unauthorized)
-        req = fakes.HTTPRequest.blank('', use_admin_context=True)
         self.assertRaises(webob.exc.HTTPUnauthorized,
-                          self.controller.show, req, fakes.FAKE_UUID)
+                          self.controller.show, self.req, fakes.FAKE_UUID)
 
 
 class ConsoleAuthTokensExtensionTestV2(ConsoleAuthTokensExtensionTestV21):

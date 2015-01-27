@@ -85,25 +85,24 @@ class KeypairsTestV21(test.TestCase):
             osapi_compute_ext_list=['Keypairs'])
         self._setup_app_and_controller()
 
+        self.req = fakes.HTTPRequest.blank('')
+
     def test_keypair_list(self):
-        req = fakes.HTTPRequest.blank('')
-        res_dict = self.controller.index(req)
+        res_dict = self.controller.index(self.req)
         response = {'keypairs': [{'keypair': dict(keypair_data, name='FAKE')}]}
         self.assertEqual(res_dict, response)
 
     def test_keypair_create(self):
         body = {'keypair': {'name': 'create_test'}}
-        req = fakes.HTTPRequest.blank('')
-        res_dict = self.controller.create(req, body=body)
+        res_dict = self.controller.create(self.req, body=body)
         self.assertTrue(len(res_dict['keypair']['fingerprint']) > 0)
         self.assertTrue(len(res_dict['keypair']['private_key']) > 0)
 
     def _test_keypair_create_bad_request_case(self,
                                               body,
                                               exception):
-        req = fakes.HTTPRequest.blank('')
         self.assertRaises(exception,
-                          self.controller.create, req, body=body)
+                          self.controller.create, self.req, body=body)
 
     def test_keypair_create_with_empty_name(self):
         body = {'keypair': {'name': ''}}
@@ -158,8 +157,7 @@ class KeypairsTestV21(test.TestCase):
                               'bHkXa6OciiJDvkRzJXzf',
             },
         }
-        req = fakes.HTTPRequest.blank('')
-        res_dict = self.controller.create(req, body=body)
+        res_dict = self.controller.create(self.req, body=body)
         # FIXME(ja): sholud we check that public_key was sent to create?
         self.assertTrue(len(res_dict['keypair']['fingerprint']) > 0)
         self.assertNotIn('private_key', res_dict['keypair'])
@@ -186,9 +184,8 @@ class KeypairsTestV21(test.TestCase):
             },
         }
 
-        req = fakes.HTTPRequest.blank('')
         ex = self.assertRaises(webob.exc.HTTPForbidden,
-                               self.controller.create, req, body=body)
+                               self.controller.create, self.req, body=body)
         self.assertIn('Quota exceeded, too many key pairs.', ex.explanation)
 
     def test_keypair_create_quota_limit(self):
@@ -204,28 +201,24 @@ class KeypairsTestV21(test.TestCase):
             },
         }
 
-        req = fakes.HTTPRequest.blank('')
         ex = self.assertRaises(webob.exc.HTTPForbidden,
-                               self.controller.create, req, body=body)
+                               self.controller.create, self.req, body=body)
         self.assertIn('Quota exceeded, too many key pairs.', ex.explanation)
 
     def test_keypair_create_duplicate(self):
         self.stubs.Set(db, "key_pair_create", db_key_pair_create_duplicate)
         body = {'keypair': {'name': 'create_duplicate'}}
-        req = fakes.HTTPRequest.blank('')
         ex = self.assertRaises(webob.exc.HTTPConflict,
-                               self.controller.create, req, body=body)
+                               self.controller.create, self.req, body=body)
         self.assertIn("Key pair 'create_duplicate' already exists.",
                       ex.explanation)
 
     def test_keypair_delete(self):
-        req = fakes.HTTPRequest.blank('')
-        self.controller.delete(req, 'FAKE')
+        self.controller.delete(self.req, 'FAKE')
 
     def test_keypair_get_keypair_not_found(self):
-        req = fakes.HTTPRequest.blank('')
         self.assertRaises(webob.exc.HTTPNotFound,
-                          self.controller.show, req, 'DOESNOTEXIST')
+                          self.controller.show, self.req, 'DOESNOTEXIST')
 
     def test_keypair_delete_not_found(self):
 
@@ -234,9 +227,8 @@ class KeypairsTestV21(test.TestCase):
 
         self.stubs.Set(db, "key_pair_destroy",
                        db_key_pair_get_not_found)
-        req = fakes.HTTPRequest.blank('')
         self.assertRaises(webob.exc.HTTPNotFound,
-                          self.controller.delete, req, 'FAKE')
+                          self.controller.delete, self.req, 'FAKE')
 
     def test_keypair_show(self):
 
@@ -246,8 +238,7 @@ class KeypairsTestV21(test.TestCase):
 
         self.stubs.Set(db, "key_pair_get", _db_key_pair_get)
 
-        req = fakes.HTTPRequest.blank('')
-        res_dict = self.controller.show(req, 'FAKE')
+        res_dict = self.controller.show(self.req, 'FAKE')
         self.assertEqual('foo', res_dict['keypair']['name'])
         self.assertEqual('XXX', res_dict['keypair']['public_key'])
         self.assertEqual('YYY', res_dict['keypair']['fingerprint'])
@@ -259,9 +250,8 @@ class KeypairsTestV21(test.TestCase):
 
         self.stubs.Set(db, "key_pair_get", _db_key_pair_get)
 
-        req = fakes.HTTPRequest.blank('')
         self.assertRaises(webob.exc.HTTPNotFound,
-                          self.controller.show, req, 'FAKE')
+                          self.controller.show, self.req, 'FAKE')
 
     def test_show_server(self):
         self.stubs.Set(db, 'instance_get',
@@ -314,38 +304,36 @@ class KeypairPolicyTestV21(test.TestCase):
         self.stubs.Set(db, "key_pair_destroy",
                        db_key_pair_destroy)
 
+        self.req = fakes.HTTPRequest.blank('')
+
     def test_keypair_list_fail_policy(self):
         rules = {self.policy_path + ':index':
                      common_policy.parse_rule('role:admin')}
         policy.set_rules(rules)
-        req = fakes.HTTPRequest.blank('')
         self.assertRaises(exception.Forbidden,
                           self.KeyPairController.index,
-                          req)
+                          self.req)
 
     def test_keypair_list_pass_policy(self):
         rules = {self.policy_path + ':index':
                      common_policy.parse_rule('')}
         policy.set_rules(rules)
-        req = fakes.HTTPRequest.blank('')
-        res = self.KeyPairController.index(req)
+        res = self.KeyPairController.index(self.req)
         self.assertIn('keypairs', res)
 
     def test_keypair_show_fail_policy(self):
         rules = {self.policy_path + ':show':
                      common_policy.parse_rule('role:admin')}
         policy.set_rules(rules)
-        req = fakes.HTTPRequest.blank('')
         self.assertRaises(exception.Forbidden,
                           self.KeyPairController.show,
-                          req, 'FAKE')
+                          self.req, 'FAKE')
 
     def test_keypair_show_pass_policy(self):
         rules = {self.policy_path + ':show':
                      common_policy.parse_rule('')}
         policy.set_rules(rules)
-        req = fakes.HTTPRequest.blank('')
-        res = self.KeyPairController.show(req, 'FAKE')
+        res = self.KeyPairController.show(self.req, 'FAKE')
         self.assertIn('keypair', res)
 
     def test_keypair_create_fail_policy(self):
@@ -353,39 +341,31 @@ class KeypairPolicyTestV21(test.TestCase):
         rules = {self.policy_path + ':create':
                      common_policy.parse_rule('role:admin')}
         policy.set_rules(rules)
-        req = fakes.HTTPRequest.blank('')
-        req.method = 'POST'
         self.assertRaises(exception.Forbidden,
                           self.KeyPairController.create,
-                          req, body=body)
+                          self.req, body=body)
 
     def test_keypair_create_pass_policy(self):
         body = {'keypair': {'name': 'create_test'}}
         rules = {self.policy_path + ':create':
                      common_policy.parse_rule('')}
         policy.set_rules(rules)
-        req = fakes.HTTPRequest.blank('')
-        req.method = 'POST'
-        res = self.KeyPairController.create(req, body=body)
+        res = self.KeyPairController.create(self.req, body=body)
         self.assertIn('keypair', res)
 
     def test_keypair_delete_fail_policy(self):
         rules = {self.policy_path + ':delete':
                      common_policy.parse_rule('role:admin')}
         policy.set_rules(rules)
-        req = fakes.HTTPRequest.blank('')
-        req.method = 'DELETE'
         self.assertRaises(exception.Forbidden,
                           self.KeyPairController.delete,
-                          req, 'FAKE')
+                          self.req, 'FAKE')
 
     def test_keypair_delete_pass_policy(self):
         rules = {self.policy_path + ':delete':
                      common_policy.parse_rule('')}
         policy.set_rules(rules)
-        req = fakes.HTTPRequest.blank('')
-        req.method = 'DELETE'
-        res = self.KeyPairController.delete(req, 'FAKE')
+        res = self.KeyPairController.delete(self.req, 'FAKE')
 
         # NOTE: on v2.1, http status code is set as wsgi_code of API
         # method instead of status_int in a response object.
