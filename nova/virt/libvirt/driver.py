@@ -1114,8 +1114,11 @@ class LibvirtDriver(driver.ComputeDriver):
             virt_dom = self._host.get_domain(instance)
             xml = virt_dom.XMLDesc(0)
         except exception.InstanceNotFound:
+            image_meta = utils.get_image_from_system_metadata(
+                instance.system_metadata)
             disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                                 instance,
+                                                image_meta,
                                                 block_device_info)
             xml = self._get_guest_xml(nova_context.get_admin_context(),
                                       instance, network_info, disk_info,
@@ -2031,8 +2034,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance,
-                                            block_device_info,
-                                            image_meta)
+                                            image_meta,
+                                            block_device_info)
         # NOTE(vish): This could generate the wrong device_format if we are
         #             using the raw backend and the images don't exist yet.
         #             The create_images_and_backing below doesn't properly
@@ -2187,8 +2190,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 self._image_api, instance.image_ref, instance)
 
         disk_info = blockinfo.get_disk_info(
-                CONF.libvirt.virt_type, instance,
-                block_device_info=block_device_info, image_meta=image_meta)
+                CONF.libvirt.virt_type, instance, image_meta,
+                block_device_info=block_device_info)
 
         xml = self._get_existing_domain_xml(instance, network_info,
                                             block_device_info)
@@ -2254,7 +2257,6 @@ class LibvirtDriver(driver.ComputeDriver):
         }
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance,
-                                            None,
                                             image_meta,
                                             rescue=True)
         self._create_image(context, instance, disk_info['mapping'],
@@ -2300,8 +2302,8 @@ class LibvirtDriver(driver.ComputeDriver):
               flavor=None):
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance,
-                                            block_device_info,
-                                            image_meta)
+                                            image_meta,
+                                            block_device_info)
         self._create_image(context, instance,
                            disk_info['mapping'],
                            network_info=network_info,
@@ -5469,10 +5471,13 @@ class LibvirtDriver(driver.ComputeDriver):
         # Define migrated instance, otherwise, suspend/destroy does not work.
         dom_list = self._conn.listDefinedDomains()
         if instance["name"] not in dom_list:
+            image_meta = utils.get_image_from_system_metadata(
+                instance.system_metadata)
             # In case of block migration, destination does not have
             # libvirt.xml
             disk_info = blockinfo.get_disk_info(
-                CONF.libvirt.virt_type, instance, block_device_info)
+                CONF.libvirt.virt_type, instance,
+                image_meta, block_device_info)
             xml = self._get_guest_xml(context, instance,
                                       network_info, disk_info,
                                       block_device_info=block_device_info,
@@ -5850,8 +5855,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance,
-                                            block_device_info,
-                                            image_meta)
+                                            image_meta,
+                                            block_device_info)
         # assume _create_image do nothing if a target file exists.
         self._create_image(context, instance, disk_info['mapping'],
                            network_info=network_info,
@@ -5904,8 +5909,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance,
-                                            block_device_info,
-                                            image_meta)
+                                            image_meta,
+                                            block_device_info)
         xml = self._get_guest_xml(context, instance, network_info, disk_info,
                                   block_device_info=block_device_info)
         self._create_domain_and_network(context, xml, instance, network_info,
