@@ -327,6 +327,9 @@ class HackingTestCase(test.NoDBTestCase):
                          self._run_check(code, checker, filename)]
         self.assertEqual(expected_errors or [], actual_errors)
 
+    def _assert_has_no_errors(self, code, checker, filename=None):
+        self._assert_has_errors(code, checker, filename=filename)
+
     def test_str_unicode_exception(self):
 
         checker = checks.CheckForStrUnicodeExc
@@ -349,8 +352,7 @@ class HackingTestCase(test.NoDBTestCase):
                        p = e
                    return p
                """
-        errors = []
-        self._assert_has_errors(code, checker, expected_errors=errors)
+        self._assert_has_no_errors(code, checker)
 
         code = """
                def f(a, b):
@@ -427,8 +429,7 @@ class HackingTestCase(test.NoDBTestCase):
                    def my_method():
                        pass
                """
-        self._assert_has_errors(code, checks.check_api_version_decorator,
-                                expected_errors=[])
+        self._assert_has_no_errors(code, checks.check_api_version_decorator)
 
     def test_trans_add(self):
 
@@ -463,8 +464,7 @@ class HackingTestCase(test.NoDBTestCase):
                    msg = 'test' + 'add me'
                    return msg
                """
-        errors = []
-        self._assert_has_errors(code, checker, expected_errors=errors)
+        self._assert_has_no_errors(code, checker)
 
     def test_dict_constructor_with_list_copy(self):
         self.assertEqual(1, len(list(checks.dict_constructor_with_list_copy(
