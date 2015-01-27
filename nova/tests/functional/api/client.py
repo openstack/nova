@@ -337,6 +337,20 @@ class TestOpenStackClient(object):
         return self.api_post('/servers/%s/metadata' % server_id,
                              post_body).body['metadata']
 
+    def get_server_groups(self):
+        return self.api_get('/os-server-groups').body['server_groups']
+
+    def get_server_group(self, group_id):
+        return self.api_get('/os-server-groups/%s' %
+                            group_id).body['server_group']
+
+    def post_server_groups(self, group):
+        response = self.api_post('/os-server-groups', {"server_group": group})
+        return response.body['server_group']
+
+    def delete_server_group(self, group_id):
+        self.api_delete('/os-server-groups/%s' % group_id)
+
 
 class TestOpenStackClientV3(TestOpenStackClient):
     """Simple OpenStack v3 API Client.
