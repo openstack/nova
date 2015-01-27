@@ -335,11 +335,13 @@ class IronicDriver(virt_driver.ComputeDriver):
                       dict(node=node.uuid), instance=instance)
             raise loopingcall.LoopingCallDone()
 
-        if node.target_provision_state == ironic_states.DELETED:
+        if node.target_provision_state in (ironic_states.DELETED,
+                                           ironic_states.AVAILABLE):
             # ironic is trying to delete it now
             raise exception.InstanceNotFound(instance_id=instance.uuid)
 
-        if node.provision_state == ironic_states.NOSTATE:
+        if node.provision_state in (ironic_states.NOSTATE,
+                                    ironic_states.AVAILABLE):
             # ironic already deleted it
             raise exception.InstanceNotFound(instance_id=instance.uuid)
 
@@ -677,7 +679,8 @@ class IronicDriver(virt_driver.ComputeDriver):
 
         def _wait_for_provision_state():
             node = _validate_instance_and_node(ironicclient, instance)
-            if not node.provision_state:
+            if node.provision_state in (ironic_states.NOSTATE,
+                                        ironic_states.AVAILABLE):
                 LOG.debug("Ironic node %(node)s is now unprovisioned",
                           dict(node=node.uuid), instance=instance)
                 raise loopingcall.LoopingCallDone()

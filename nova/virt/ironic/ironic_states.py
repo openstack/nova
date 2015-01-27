@@ -36,7 +36,18 @@ maintenance mode in this case.
 NOSTATE = None
 """ No state information.
 
-Default for the power and provision state of newly created nodes.
+This state is used with power_state to represent a lack of knowledge of
+power state, and in target_*_state fields when there is no target.
+
+Prior to the Kilo release, Ironic set node.provision_state to NOSTATE
+when the node was available for provisioning. During Kilo cycle, this was
+changed to the AVAILABLE state.
+"""
+
+AVAILABLE = 'available'
+""" Node is available for use and scheduling.
+
+This state is replacing the NOSTATE state used prior to Kilo.
 """
 
 ACTIVE = 'active'
