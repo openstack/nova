@@ -960,6 +960,36 @@ class SqlAlchemyDbApiNoDbTestCase(test.NoDBTestCase):
         op = sqlalchemy_api._get_regexp_op_for_connection('notdb:///')
         self.assertEqual('LIKE', op)
 
+    @mock.patch.object(sqlalchemy_api, '_create_facade_lazily')
+    def test_get_engine(self, mock_create_facade):
+        mock_facade = mock.MagicMock()
+        mock_create_facade.return_value = mock_facade
+
+        sqlalchemy_api.get_engine()
+        mock_create_facade.assert_called_once_with(sqlalchemy_api._MAIN_FACADE,
+                CONF.database)
+        mock_facade.get_engine.assert_called_once_with(use_slave=False)
+
+    @mock.patch.object(sqlalchemy_api, '_create_facade_lazily')
+    def test_get_api_engine(self, mock_create_facade):
+        mock_facade = mock.MagicMock()
+        mock_create_facade.return_value = mock_facade
+
+        sqlalchemy_api.get_api_engine()
+        mock_create_facade.assert_called_once_with(sqlalchemy_api._API_FACADE,
+                CONF.api_database)
+        mock_facade.get_engine.assert_called_once_with()
+
+    @mock.patch.object(sqlalchemy_api, '_create_facade_lazily')
+    def test_get_session(self, mock_create_facade):
+        mock_facade = mock.MagicMock()
+        mock_create_facade.return_value = mock_facade
+
+        sqlalchemy_api.get_session()
+        mock_create_facade.assert_called_once_with(sqlalchemy_api._MAIN_FACADE,
+                CONF.database)
+        mock_facade.get_session.assert_called_once_with(use_slave=False)
+
 
 class SqlAlchemyDbApiTestCase(DbTestCase):
     def test_instance_get_all_by_host(self):
