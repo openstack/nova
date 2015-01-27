@@ -104,6 +104,9 @@ class NovaMigrationsCheckers(test_migrations.WalkVersionsMixin):
     def assertIndexExists(self, engine, table_name, index):
         self.assertTrue(oslodbutils.index_exists(engine, table_name, index))
 
+    def assertIndexNotExists(self, engine, table_name, index):
+        self.assertFalse(oslodbutils.index_exists(engine, table_name, index))
+
     def assertIndexMembers(self, engine, table, index, members):
         # NOTE(johannes): Order of columns can matter. Most SQL databases
         # can use the leading columns for optimizing queries that don't
@@ -590,6 +593,70 @@ class NovaMigrationsCheckers(test_migrations.WalkVersionsMixin):
     def _post_downgrade_270(self, engine):
         self.assertColumnNotExists(engine, 'instance_extra', 'flavor')
         self.assertColumnNotExists(engine, 'shadow_instance_extra', 'flavor')
+
+    def _check_271(self, engine, data):
+        self.assertIndexMembers(engine, 'block_device_mapping',
+                                'snapshot_id', ['snapshot_id'])
+        self.assertIndexMembers(engine, 'block_device_mapping',
+                                'volume_id', ['volume_id'])
+        self.assertIndexMembers(engine, 'dns_domains',
+                                'dns_domains_project_id_idx',
+                                ['project_id'])
+        self.assertIndexMembers(engine, 'fixed_ips',
+                                'network_id', ['network_id'])
+        self.assertIndexMembers(engine, 'fixed_ips',
+                                'fixed_ips_instance_uuid_fkey',
+                                ['instance_uuid'])
+        self.assertIndexMembers(engine, 'fixed_ips',
+                                'fixed_ips_virtual_interface_id_fkey',
+                                ['virtual_interface_id'])
+        self.assertIndexMembers(engine, 'floating_ips',
+                                'fixed_ip_id', ['fixed_ip_id'])
+        self.assertIndexMembers(engine, 'iscsi_targets',
+                                'iscsi_targets_volume_id_fkey', ['volume_id'])
+        self.assertIndexMembers(engine, 'virtual_interfaces',
+                                'virtual_interfaces_network_id_idx',
+                                ['network_id'])
+        self.assertIndexMembers(engine, 'virtual_interfaces',
+                                'virtual_interfaces_instance_uuid_fkey',
+                                ['instance_uuid'])
+
+        # Removed on MySQL, never existed on other databases
+        self.assertIndexNotExists(engine, 'dns_domains', 'project_id')
+        self.assertIndexNotExists(engine, 'virtual_interfaces', 'network_id')
+
+    def _post_downgrade_271(self, engine):
+        self.assertIndexNotExists(engine, 'dns_domains',
+                                  'dns_domains_project_id_idx')
+        self.assertIndexNotExists(engine, 'virtual_interfaces',
+                                  'virtual_interfaces_network_id_idx')
+        if engine.name == 'mysql':
+            self.assertIndexMembers(engine, 'dns_domains',
+                                    'project_id',
+                                    ['project_id'])
+            self.assertIndexMembers(engine, 'virtual_interfaces',
+                                    'network_id',
+                                    ['network_id'])
+            # Rest of indexes will still exist on MySQL
+            return
+
+        # Never existed on non-MySQL databases, so shouldn't exist now
+        self.assertIndexNotExists(engine, 'dns_domains', 'project_id')
+        self.assertIndexNotExists(engine, 'virtual_interfaces', 'network_id')
+
+        for table_name, index_name in [
+                ('block_device_mapping', 'snapshot_id'),
+                ('block_device_mapping', 'volume_id'),
+                ('dns_domains', 'dns_domains_project_id_idx'),
+                ('fixed_ips', 'network_id'),
+                ('fixed_ips', 'fixed_ips_instance_uuid_fkey'),
+                ('fixed_ips', 'fixed_ips_virtual_interface_id_fkey'),
+                ('floating_ips', 'fixed_ip_id'),
+                ('iscsi_targets', 'iscsi_targets_volume_id_fkey'),
+                ('virtual_interfaces', 'virtual_interfaces_network_id_idx'),
+                ('virtual_interfaces',
+                 'virtual_interfaces_instance_uuid_fkey')]:
+            self.assertIndexNotExists(engine, table_name, index_name)
 
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,

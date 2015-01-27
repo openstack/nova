@@ -831,7 +831,7 @@ class VirtualInterface(BASE, NovaBase):
     __table_args__ = (
         schema.UniqueConstraint("address", "deleted",
                         name="uniq_virtual_interfaces0address0deleted"),
-        Index('network_id', 'network_id'),
+        Index('virtual_interfaces_network_id_idx', 'network_id'),
         Index('virtual_interfaces_instance_uuid_fkey', 'instance_uuid'),
     )
     id = Column(Integer, primary_key=True, nullable=False)
@@ -932,7 +932,7 @@ class DNSDomain(BASE, NovaBase):
     """Represents a DNS domain with availability zone or project info."""
     __tablename__ = 'dns_domains'
     __table_args__ = (
-        Index('project_id', 'project_id'),
+        Index('dns_domains_project_id_idx', 'project_id'),
         Index('dns_domains_domain_deleted_idx', 'domain', 'deleted'),
     )
     deleted = Column(Boolean, default=False)
