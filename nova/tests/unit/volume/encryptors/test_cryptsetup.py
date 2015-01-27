@@ -50,7 +50,7 @@ class CryptsetupEncryptorTestCase(test_base.VolumeEncryptorTestCase):
             mock.call('cryptsetup', 'create', '--key-file=-', self.dev_name,
                       self.dev_path, process_input='passphrase',
                       run_as_root=True, check_exit_code=True),
-        ], any_order=False)
+        ])
         self.assertEqual(1, mock_execute.call_count)
 
     @mock.patch('nova.utils.execute')
@@ -67,7 +67,7 @@ class CryptsetupEncryptorTestCase(test_base.VolumeEncryptorTestCase):
             mock.call('ln', '--symbolic', '--force',
                       '/dev/mapper/%s' % self.dev_name, self.symlink_path,
                       run_as_root=True, check_exit_code=True),
-        ], any_order=False)
+        ])
         self.assertEqual(2, mock_execute.call_count)
 
     @mock.patch('nova.utils.execute')
@@ -77,7 +77,7 @@ class CryptsetupEncryptorTestCase(test_base.VolumeEncryptorTestCase):
         mock_execute.assert_has_calls([
             mock.call('cryptsetup', 'remove', self.dev_name,
                       run_as_root=True, check_exit_code=True),
-        ], any_order=False)
+        ])
         self.assertEqual(1, mock_execute.call_count)
 
     @mock.patch('nova.utils.execute')
@@ -87,5 +87,5 @@ class CryptsetupEncryptorTestCase(test_base.VolumeEncryptorTestCase):
         mock_execute.assert_has_calls([
             mock.call('cryptsetup', 'remove', self.dev_name,
                       run_as_root=True, check_exit_code=True),
-        ], any_order=False)
+        ])
         self.assertEqual(1, mock_execute.call_count)
