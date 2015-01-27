@@ -274,6 +274,7 @@ CONF.import_opt('proxyclient_address', 'nova.console.serial',
                 group='serial_console')
 CONF.import_opt('hw_disk_discard', 'nova.virt.libvirt.imagebackend',
                 group='libvirt')
+CONF.import_group('workarounds', 'nova.utils')
 
 DEFAULT_FIREWALL_DRIVER = "%s.%s" % (
     libvirt_firewall.__name__,
@@ -344,10 +345,7 @@ MIN_LIBVIRT_VERSION = (0, 9, 11)
 MIN_LIBVIRT_DEVICE_CALLBACK_VERSION = (1, 1, 1)
 # Live snapshot requirements
 REQ_HYPERVISOR_LIVESNAPSHOT = "QEMU"
-# TODO(sdague): this should be 1.0.0, but hacked to set 1.3.0 until
-# https://bugs.launchpad.net/nova/+bug/1334398
-# can be diagnosed & resolved
-MIN_LIBVIRT_LIVESNAPSHOT_VERSION = (1, 3, 0)
+MIN_LIBVIRT_LIVESNAPSHOT_VERSION = (1, 0, 0)
 MIN_QEMU_LIVESNAPSHOT_VERSION = (1, 3, 0)
 # block size tuning requirements
 MIN_LIBVIRT_BLOCKIO_VERSION = (0, 10, 2)
@@ -1288,7 +1286,8 @@ class LibvirtDriver(driver.ComputeDriver):
                                        MIN_QEMU_LIVESNAPSHOT_VERSION,
                                        REQ_HYPERVISOR_LIVESNAPSHOT)
              and source_format not in ('lvm', 'rbd')
-             and not CONF.ephemeral_storage_encryption.enabled):
+             and not CONF.ephemeral_storage_encryption.enabled
+             and not CONF.workarounds.disable_libvirt_livesnapshot):
             live_snapshot = True
             # Abort is an idempotent operation, so make sure any block
             # jobs which may have failed are ended. This operation also
