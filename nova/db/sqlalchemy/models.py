@@ -726,7 +726,7 @@ class ProviderFirewallRule(BASE, NovaBase):
 
 
 class KeyPair(BASE, NovaBase):
-    """Represents a public key pair for ssh."""
+    """Represents a public key pair for ssh / WinRM."""
     __tablename__ = 'key_pairs'
     __table_args__ = (
         schema.UniqueConstraint("user_id", "name", "deleted",
@@ -740,6 +740,7 @@ class KeyPair(BASE, NovaBase):
 
     fingerprint = Column(String(255))
     public_key = Column(MediumText())
+    type = Column(Enum('ssh', 'x509'), nullable=False)
 
 
 class Migration(BASE, NovaBase):
