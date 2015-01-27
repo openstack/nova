@@ -17,7 +17,6 @@ import webob.exc
 
 from nova.api.openstack.compute.contrib import agents as agents_v2
 from nova.api.openstack.compute.plugins.v3 import agents as agents_v21
-from nova import context
 from nova import db
 from nova.db.sqlalchemy import models
 from nova import exception
@@ -92,8 +91,10 @@ class AgentsTestV21(test.NoDBTestCase):
                        fake_agent_build_destroy)
         self.stubs.Set(db, "agent_build_create",
                        fake_agent_build_create)
-        self.context = context.get_admin_context()
-        self.req = fakes.HTTPRequest.blank('')
+        self.req = self._get_http_request()
+
+    def _get_http_request(self):
+        return fakes.HTTPRequest.blank('')
 
     def test_agents_create(self):
         body = {'agent': {'hypervisor': 'kvm',
@@ -327,3 +328,83 @@ class AgentsTestV21(test.NoDBTestCase):
 class AgentsTestV2(AgentsTestV21):
     controller = agents_v2.AgentController()
     validation_error = webob.exc.HTTPBadRequest
+
+    def setUp(self):
+        super(AgentsTestV2, self).setUp()
+        self.non_admin_req = fakes.HTTPRequest.blank('')
+
+    def _get_http_request(self):
+        return fakes.HTTPRequest.blank('', use_admin_context=True)
+
+    def test_agents_update_with_non_admin(self):
+        self.assertRaises(exception.AdminRequired, self.controller.update,
+                          self.non_admin_req, fakes.FAKE_UUID, body={})
+
+    def test_agents_create_with_non_admin(self):
+        self.assertRaises(exception.AdminRequired, self.controller.create,
+                          self.non_admin_req, body={})
+
+    def test_agents_delete_with_non_admin(self):
+        self.assertRaises(exception.AdminRequired, self.controller.delete,
+                          self.non_admin_req, fakes.FAKE_UUID)
+
+    def test_agents_index_with_non_admin(self):
+        self.assertRaises(exception.AdminRequired, self.controller.index,
+                          self.non_admin_req)
+
+
+class AgentsPolicyEnforcementV21(test.NoDBTestCase):
+
+    def setUp(self):
+        super(AgentsPolicyEnforcementV21, self).setUp()
+        self.controller = agents_v21.AgentController()
+        self.req = fakes.HTTPRequest.blank('')
+
+    def test_create_policy_failed(self):
+        rule_name = "compute_extension:v3:os-agents"
+        self.policy.set_rules({rule_name: "project_id:non_fake"})
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.controller.create, self.req,
+            body={'agent': {'hypervisor': 'kvm',
+                            'os': 'win',
+                            'architecture': 'x86',
+                            'version': '7.0',
+                            'url': 'xxx://xxxx/xxx/xxx',
+                            'md5hash': 'add6bb58e139be103324d04d82d8f545'}})
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+            exc.format_message())
+
+    def test_index_policy_failed(self):
+        rule_name = "compute_extension:v3:os-agents"
+        self.policy.set_rules({rule_name: "project_id:non_fake"})
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.controller.index, self.req)
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+            exc.format_message())
+
+    def test_delete_policy_failed(self):
+        rule_name = "compute_extension:v3:os-agents"
+        self.policy.set_rules({rule_name: "project_id:non_fake"})
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.controller.delete, self.req, fakes.FAKE_UUID)
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+            exc.format_message())
+
+    def test_update_policy_failed(self):
+        rule_name = "compute_extension:v3:os-agents"
+        self.policy.set_rules({rule_name: "project_id:non_fake"})
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.controller.update, self.req, fakes.FAKE_UUID,
+            body={'para': {'version': '7.0',
+                           'url': 'xxx://xxxx/xxx/xxx',
+                           'md5hash': 'add6bb58e139be103324d04d82d8f545'}})
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+            exc.format_message())

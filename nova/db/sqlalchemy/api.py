@@ -4925,7 +4925,6 @@ def instance_system_metadata_update(context, instance_uuid, metadata, delete):
 ####################
 
 
-@require_admin_context
 def agent_build_create(context, values):
     agent_build_ref = models.AgentBuild()
     agent_build_ref.update(values)
@@ -4937,7 +4936,6 @@ def agent_build_create(context, values):
     return agent_build_ref
 
 
-@require_admin_context
 def agent_build_get_by_triple(context, hypervisor, os, architecture):
     return model_query(context, models.AgentBuild, read_deleted="no").\
                    filter_by(hypervisor=hypervisor).\
@@ -4946,7 +4944,6 @@ def agent_build_get_by_triple(context, hypervisor, os, architecture):
                    first()
 
 
-@require_admin_context
 def agent_build_get_all(context, hypervisor=None):
     if hypervisor:
         return model_query(context, models.AgentBuild, read_deleted="no").\
@@ -4957,7 +4954,6 @@ def agent_build_get_all(context, hypervisor=None):
                    all()
 
 
-@require_admin_context
 def agent_build_destroy(context, agent_build_id):
     rows_affected = model_query(context, models.AgentBuild).filter_by(
                                         id=agent_build_id).soft_delete()
@@ -4965,7 +4961,6 @@ def agent_build_destroy(context, agent_build_id):
         raise exception.AgentBuildNotFound(id=agent_build_id)
 
 
-@require_admin_context
 def agent_build_update(context, agent_build_id, values):
     rows_affected = model_query(context, models.AgentBuild).\
                    filter_by(id=agent_build_id).\

@@ -16,6 +16,7 @@
 import webob.exc
 
 from nova.api.openstack import extensions
+from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
 from nova import objects
@@ -51,6 +52,9 @@ class AgentController(object):
         """Return a list of all agent builds. Filter by hypervisor."""
         context = req.environ['nova.context']
         authorize(context)
+        # NOTE(alex_xu): back-compatible with db layer hard-code admin
+        # permission checks.
+        nova_context.require_admin_context(context)
         hypervisor = None
         agents = []
         if 'hypervisor' in req.GET:
@@ -72,7 +76,9 @@ class AgentController(object):
         """Update an existing agent build."""
         context = req.environ['nova.context']
         authorize(context)
-
+        # NOTE(alex_xu): back-compatible with db layer hard-code admin
+        # permission checks.
+        nova_context.require_admin_context(context)
         try:
             para = body['para']
             url = para['url']
@@ -114,7 +120,9 @@ class AgentController(object):
         """Deletes an existing agent build."""
         context = req.environ['nova.context']
         authorize(context)
-
+        # NOTE(alex_xu): back-compatible with db layer hard-code admin
+        # permission checks.
+        nova_context.require_admin_context(context)
         try:
             agent = objects.Agent(context=context, id=id)
             agent.destroy()
@@ -125,7 +133,9 @@ class AgentController(object):
         """Creates a new agent build."""
         context = req.environ['nova.context']
         authorize(context)
-
+        # NOTE(alex_xu): back-compatible with db layer hard-code admin
+        # permission checks.
+        nova_context.require_admin_context(context)
         try:
             agent = body['agent']
             hypervisor = agent['hypervisor']
