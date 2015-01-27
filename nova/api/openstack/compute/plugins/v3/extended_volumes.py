@@ -21,13 +21,13 @@ from nova import objects
 from nova import volume
 
 ALIAS = "os-extended-volumes"
-authorize = extensions.soft_extension_authorizer('compute', 'v3:' + ALIAS)
+soft_authorize = extensions.os_compute_soft_authorizer(ALIAS)
 
 
 class ExtendedVolumesController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
         super(ExtendedVolumesController, self).__init__(*args, **kwargs)
-        self.compute_api = compute.API()
+        self.compute_api = compute.API(skip_policy_check=True)
         self.volume_api = volume.API()
 
     def _extend_server(self, context, server, instance, requested_version):
@@ -48,7 +48,7 @@ class ExtendedVolumesController(wsgi.Controller):
     @wsgi.extends
     def show(self, req, resp_obj, id):
         context = req.environ['nova.context']
-        if authorize(context):
+        if soft_authorize(context):
             server = resp_obj.obj['server']
             db_instance = req.get_db_instance(server['id'])
             # server['id'] is guaranteed to be in the cache due to
@@ -59,7 +59,7 @@ class ExtendedVolumesController(wsgi.Controller):
     @wsgi.extends
     def detail(self, req, resp_obj):
         context = req.environ['nova.context']
-        if authorize(context):
+        if soft_authorize(context):
             servers = list(resp_obj.obj['servers'])
             for server in servers:
                 db_instance = req.get_db_instance(server['id'])
