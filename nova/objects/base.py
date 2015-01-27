@@ -783,11 +783,13 @@ class NovaObjectSerializer(messaging.NoOpSerializer):
             return iterable(**{k: action_fn(context, v)
                             for k, v in six.iteritems(values)})
         else:
-            # NOTE(danms): A set can't have an unhashable value inside, such as
-            # a dict. Convert sets to tuples, which is fine, since we can't
-            # send them over RPC anyway.
+            # NOTE(danms, gibi) A set can't have an unhashable value inside,
+            # such as a dict. Convert the set to list, which is fine, since we
+            # can't send them over RPC anyway. We convert it to list as this
+            # way there will be no semantic change between the fake rpc driver
+            # used in functional test and a normal rpc driver.
             if iterable == set:
-                iterable = tuple
+                iterable = list
             return iterable([action_fn(context, value) for value in values])
 
     def serialize_entity(self, context, entity):

@@ -1013,6 +1013,10 @@ class TestObjectSerializer(_BaseTestCase):
         for thing in (1, 'foo', [1, 2], {'foo': 'bar'}):
             self.assertEqual(thing, ser.deserialize_entity(None, thing))
 
+    def test_serialize_set_to_list(self):
+        ser = base.NovaObjectSerializer()
+        self.assertEqual([1, 2], ser.serialize_entity(None, set([1, 2])))
+
     def _test_deserialize_entity_newer(self, obj_version, backported_to,
                                        my_version='1.6'):
         ser = base.NovaObjectSerializer()
