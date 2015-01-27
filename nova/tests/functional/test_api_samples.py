@@ -3329,10 +3329,8 @@ class HypervisorsCellsSampleJsonTests(ApiSampleTestBaseV2):
         super(HypervisorsCellsSampleJsonTests, self).setUp()
 
     def test_hypervisor_uptime(self, mocks):
-        fake_hypervisor = {'service': {'host': 'fake-mini',
-                                       'disabled': False,
-                                       'disabled_reason': None},
-                           'id': 1, 'hypervisor_hostname': 'fake-mini'}
+        fake_hypervisor = objects.ComputeNode(id=1, host='fake-mini',
+                                              hypervisor_hostname='fake-mini')
 
         def fake_get_host_uptime(self, context, hyp):
             return (" 08:32:11 up 93 days, 18:25, 12 users,  load average:"
@@ -3341,8 +3339,15 @@ class HypervisorsCellsSampleJsonTests(ApiSampleTestBaseV2):
         def fake_compute_node_get(self, context, hyp):
             return fake_hypervisor
 
+        @classmethod
+        def fake_service_get_by_host_and_topic(cls, context, host, topic):
+            return objects.Service(host='fake-mini', disabled=False,
+                                   disabled_reason=None)
+
         self.stubs.Set(cells_api.HostAPI, 'compute_node_get',
                        fake_compute_node_get)
+        self.stubs.Set(objects.Service, 'get_by_host_and_topic',
+                       fake_service_get_by_host_and_topic)
 
         self.stubs.Set(cells_api.HostAPI,
                        'get_host_uptime', fake_get_host_uptime)
