@@ -35,7 +35,12 @@ _REPOSITORY = {}
 
 LOG = logging.getLogger(__name__)
 
-get_engine = db_session.get_engine
+
+def get_engine(database='main'):
+    if database == 'main':
+        return db_session.get_engine()
+    if database == 'api':
+        return db_session.get_api_engine()
 
 
 def db_sync(version=None, database='main'):
@@ -48,24 +53,25 @@ def db_sync(version=None, database='main'):
     current_version = db_version(database)
     repository = _find_migrate_repo(database)
     if version is None or version > current_version:
-        return versioning_api.upgrade(get_engine(), repository, version)
+        return versioning_api.upgrade(get_engine(database), repository,
+                version)
     else:
-        return versioning_api.downgrade(get_engine(), repository,
-                                        version)
+        return versioning_api.downgrade(get_engine(database), repository,
+                version)
 
 
 def db_version(database='main'):
     repository = _find_migrate_repo(database)
     try:
-        return versioning_api.db_version(get_engine(), repository)
+        return versioning_api.db_version(get_engine(database), repository)
     except versioning_exceptions.DatabaseNotControlledError as exc:
         meta = sqlalchemy.MetaData()
-        engine = get_engine()
+        engine = get_engine(database)
         meta.reflect(bind=engine)
         tables = meta.tables
         if len(tables) == 0:
             db_version_control(INIT_VERSION[database], database)
-            return versioning_api.db_version(get_engine(), repository)
+            return versioning_api.db_version(get_engine(database), repository)
         else:
             LOG.exception(exc)
             # Some pre-Essex DB's may not be version controlled.
@@ -149,7 +155,7 @@ def db_null_instance_uuid_scan(delete=False):
 
 def db_version_control(version=None, database='main'):
     repository = _find_migrate_repo(database)
-    versioning_api.version_control(get_engine(), repository, version)
+    versioning_api.version_control(get_engine(database), repository, version)
     return version
 
 
