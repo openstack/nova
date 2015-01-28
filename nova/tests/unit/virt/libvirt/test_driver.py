@@ -1144,6 +1144,27 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             self.assertIsNone(self._test_get_guest_memory_backing_config(
                               'not_empty', 'not_empty', 'not_empty'))
 
+    def test_get_guest_numa_tune_memnodes(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        guest_cpu_numa_config = objects.InstanceNUMATopology(cells=[
+                                objects.InstanceNUMACell(
+                                id=1, cpuset=set([0, 1]),
+                                memory=1024, pagesize=2048)])
+        memnodes = [vconfig.LibvirtConfigGuestNUMATuneMemNode()]
+        with mock.patch.object(host.Host, 'has_min_version',
+                               return_value=True):
+            self.assertIsNotNone(drvr._get_guest_numa_tune_memnodes(
+                              guest_cpu_numa_config, memnodes))
+            self.assertEqual(guest_cpu_numa_config.cells[0].id,
+                             memnodes[0].cellid)
+
+    def test_get_guest_numa_tune_memnodes_none(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        with mock.patch.object(host.Host, 'has_min_version',
+                               return_value=False):
+            self.assertIsNone(drvr._get_guest_numa_tune_memnodes(
+                              'something', 'something'))
+
     @mock.patch.object(objects.Flavor, 'get_by_id')
     def test_get_guest_config_numa_host_instance_fit_w_cpu_pinset(self,
                                                                   mock_flavor):
