@@ -170,6 +170,33 @@ class Image(object):
                     setattr(info, scope[1], value)
         return info
 
+    def libvirt_fs_info(self, target, driver_type=None):
+        """Get `LibvirtConfigGuestFilesys` filled for this image.
+
+        :target: target directory inside a container.
+        :driver_type: filesystem driver type, can be loop
+                      nbd or ploop.
+        """
+        info = vconfig.LibvirtConfigGuestFilesys()
+        info.target_dir = target
+
+        if self.is_block_dev:
+            info.source_type = "block"
+            info.source_dev = self.path
+        else:
+            info.source_type = "file"
+            info.source_file = self.path
+            info.driver_format = self.driver_format
+            if driver_type:
+                info.driver_type = driver_type
+            else:
+                if self.driver_format == "raw":
+                    info.driver_type = "loop"
+                else:
+                    info.driver_type = "nbd"
+
+        return info
+
     def check_image_exists(self):
         return os.path.exists(self.path)
 
