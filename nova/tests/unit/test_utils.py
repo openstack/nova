@@ -197,6 +197,17 @@ class GenericUtilsTestCase(test.NoDBTestCase):
         self.assertEqual(
             value, utils.get_hash_str(base_str))
 
+    def test_use_rootwrap(self):
+        self.flags(disable_rootwrap=False, group='workarounds')
+        self.flags(rootwrap_config='foo')
+        cmd = utils._get_root_helper()
+        self.assertEqual('sudo nova-rootwrap foo', cmd)
+
+    def test_use_sudo(self):
+        self.flags(disable_rootwrap=True, group='workarounds')
+        cmd = utils._get_root_helper()
+        self.assertEqual('sudo', cmd)
+
 
 class MonkeyPatchTestCase(test.NoDBTestCase):
     """Unit test for utils.monkey_patch()."""
