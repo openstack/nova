@@ -512,7 +512,7 @@ class NovaObject(object):
         This is optional for subclasses, but is presented here in the base
         class for consistency among those that do.
         """
-        raise NotImplementedError('Cannot save anything in the base class')
+        raise NotImplementedError(_('Cannot save anything in the base class'))
 
     def obj_what_changed(self):
         """Returns a set of fields that have been modified."""
