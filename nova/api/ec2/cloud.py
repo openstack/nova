@@ -47,6 +47,7 @@ from nova import network
 from nova.network.security_group import neutron_driver
 from nova.network.security_group import openstack_driver
 from nova import objects
+from nova.openstack.common import versionutils
 from nova import quota
 from nova import servicegroup
 from nova import utils
@@ -229,6 +230,13 @@ class CloudController(object):
  sent to the other nodes.
 """
     def __init__(self):
+        versionutils.report_deprecated_feature(
+            LOG,
+            _LW('The in tree EC2 API is deprecated as of Kilo release and may '
+                'be removed in a future release. The stackforge ec2-api '
+                'project http://git.openstack.org/cgit/stackforge/ec2-api/ '
+                'is the target replacement for this functionality.')
+        )
         self.image_service = s3.S3ImageService()
         self.network_api = network.API()
         self.volume_api = volume.API()
