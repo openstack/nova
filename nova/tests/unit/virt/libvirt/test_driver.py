@@ -444,7 +444,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     REQUIRES_LOCKING = True
 
     _EPHEMERAL_20_DEFAULT = ('ephemeral_20_%s' %
-                             utils.get_hash_str('ext3')[:7])
+                             utils.get_hash_str(disk._DEFAULT_FILE_SYSTEM)[:7])
 
     def setUp(self):
         super(LibvirtConnTestCase, self).setUp()
@@ -7307,7 +7307,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.stubs.Set(drvr, 'get_info', fake_get_info)
         if mkfs:
             self.stubs.Set(nova.virt.disk.api, '_MKFS_COMMAND',
-                       {os_type: 'mkfs.ext3 --label %(fs_label)s %(target)s'})
+                       {os_type: 'mkfs.ext4 --label %(fs_label)s %(target)s'})
 
         image_meta = {'id': instance['image_ref']}
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
@@ -7342,7 +7342,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     def test_create_image_plain_os_type_set_with_fs(self):
         ephemeral_file_name = ('ephemeral_20_%s' % utils.get_hash_str(
-            'mkfs.ext3 --label %(fs_label)s %(target)s')[:7])
+            'mkfs.ext4 --label %(fs_label)s %(target)s')[:7])
 
         self._test_create_image_plain(os_type='test',
                                       filename=ephemeral_file_name,
@@ -7451,7 +7451,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     def test_create_ephemeral_default(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.mox.StubOutWithMock(utils, 'execute')
-        utils.execute('mkfs', '-t', 'ext3', '-F', '-L', 'myVol',
+        utils.execute('mkfs', '-t', 'ext4', '-F', '-L', 'myVol',
                       '/dev/something', run_as_root=True)
         self.mox.ReplayAll()
         drvr._create_ephemeral('/dev/something', 20, 'myVol', 'linux',
@@ -7468,6 +7468,17 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                is_block_dev=True)
 
     def test_create_ephemeral_with_arbitrary(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.stubs.Set(nova.virt.disk.api, '_MKFS_COMMAND',
+                       {'linux': 'mkfs.ext4 --label %(fs_label)s %(target)s'})
+        self.mox.StubOutWithMock(utils, 'execute')
+        utils.execute('mkfs.ext4', '--label', 'myVol', '/dev/something',
+                      run_as_root=True)
+        self.mox.ReplayAll()
+        drvr._create_ephemeral('/dev/something', 20, 'myVol', 'linux',
+                               is_block_dev=True)
+
+    def test_create_ephemeral_with_ext3(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.stubs.Set(nova.virt.disk.api, '_MKFS_COMMAND',
                        {'linux': 'mkfs.ext3 --label %(fs_label)s %(target)s'})

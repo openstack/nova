@@ -168,6 +168,7 @@ touch: CommandFilter, touch, root
 
 # nova/virt/disk/api.py:
 mkfs.ext3: CommandFilter, mkfs.ext3, root
+mkfs.ext4: CommandFilter, mkfs.ext4, root
 mkfs.ntfs: CommandFilter, mkfs.ntfs, root
 
 # nova/virt/libvirt/connection.py:
