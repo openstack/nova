@@ -24,9 +24,12 @@ from nova import context
 from nova import db
 from nova.db import migration
 from nova import exception
+from nova import objects
 from nova import test
 from nova.tests.unit.db import fakes as db_fakes
+from nova.tests.unit import fake_instance
 from nova.tests.unit.objects import test_network
+from nova.tests.unit import test_flavors
 
 
 class FixedIpCommandsTestCase(test.TestCase):
@@ -326,6 +329,49 @@ class ProjectCommandsTestCase(test.TestCase):
 
     def test_quota_update_invalid_key(self):
         self.assertEqual(2, self.commands.quota('admin', 'volumes1', '10'))
+
+
+class VmCommandsTestCase(test.TestCase):
+    def setUp(self):
+        super(VmCommandsTestCase, self).setUp()
+        self.commands = manage.VmCommands()
+        self.fake_flavor = objects.Flavor(**test_flavors.DEFAULT_FLAVORS[0])
+
+    def test_list_without_host(self):
+        output = StringIO.StringIO()
+        sys.stdout = output
+        with mock.patch.object(objects.InstanceList, 'get_by_filters') as get:
+            get.return_value = objects.InstanceList(
+                objects=[fake_instance.fake_instance_obj(
+                    context.get_admin_context(), host='foo-host',
+                    instance_type=self.fake_flavor,
+                    expected_attrs=('flavor'))])
+            self.commands.list()
+
+        sys.stdout = sys.__stdout__
+        result = output.getvalue()
+
+        self.assertIn('node', result)   # check the header line
+        self.assertIn('m1.tiny', result)    # flavor.name
+        self.assertIn('foo-host', result)
+
+    def test_list_with_host(self):
+        output = StringIO.StringIO()
+        sys.stdout = output
+        with mock.patch.object(objects.InstanceList, 'get_by_host') as get:
+            get.return_value = objects.InstanceList(
+                objects=[fake_instance.fake_instance_obj(
+                    context.get_admin_context(),
+                    instance_type=self.fake_flavor,
+                    expected_attrs=('flavor'))])
+            self.commands.list(host='fake-host')
+
+        sys.stdout = sys.__stdout__
+        result = output.getvalue()
+
+        self.assertIn('node', result)   # check the header line
+        self.assertIn('m1.tiny', result)    # flavor.name
+        self.assertIn('fake-host', result)
 
 
 class DBCommandsTestCase(test.TestCase):

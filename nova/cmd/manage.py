@@ -693,7 +693,7 @@ class VmCommands(object):
                                                 instance.project_id,
                                                 instance.user_id,
                                                 instance.availability_zone,
-                                                instance.launch_index)))
+                                                instance.launch_index or 0)))
 
 
 class ServiceCommands(object):
