@@ -44,4 +44,4 @@ oslo.i18n>=1.0.0  # Apache-2.0
 lockfile>=0.8
 simplejson>=2.2.0
 rfc3986>=0.2.0  # Apache-2.0
-oslo.vmware>=0.6.0                      # Apache-2.0
+oslo.vmware>=0.6.0,<0.9.0               # Apache-2.0
