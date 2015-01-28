@@ -19,4 +19,4 @@ oslosphinx>=2.2.0  # Apache-2.0
 oslotest>=1.2.0  # Apache-2.0
 testrepository>=0.0.18
 testtools>=0.9.36,!=1.2.0
-tempest-lib
+tempest-lib>=0.1.0
