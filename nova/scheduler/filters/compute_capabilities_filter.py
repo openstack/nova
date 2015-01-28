@@ -37,7 +37,12 @@ class ComputeCapabilitiesFilter(filters.BaseHostFilter):
                 if isinstance(cap, six.string_types):
                     try:
                         cap = jsonutils.loads(cap)
-                    except ValueError:
+                    except ValueError as e:
+                        LOG.debug("%(host_state)s fails. The capabilities "
+                                  "'%(cap)s' couldn't be loaded from JSON: "
+                                  "%(error)s",
+                                  {'host_state': host_state, 'cap': cap,
+                                   'error': e})
                         return None
                 if not isinstance(cap, dict):
                     if getattr(cap, scope[index], None) is None:
@@ -47,9 +52,15 @@ class ComputeCapabilitiesFilter(filters.BaseHostFilter):
                         cap = getattr(cap, scope[index], None)
                 else:
                     cap = cap.get(scope[index], None)
-            except AttributeError:
+            except AttributeError as e:
+                LOG.debug("%(host_state)s fails. The capabilities couldn't "
+                          "be retrieved: %(error)s.",
+                          {'host_state': host_state, 'error': e})
                 return None
             if cap is None:
+                LOG.debug("%(host_state)s fails. There are no capabilities "
+                          "to retrieve.",
+                          {'host_state': host_state})
                 return None
         return cap
 
@@ -74,8 +85,10 @@ class ComputeCapabilitiesFilter(filters.BaseHostFilter):
                 return False
 
             if not extra_specs_ops.match(str(cap), req):
-                LOG.debug("extra_spec requirement '%(req)s' does not match "
-                    "'%(cap)s'", {'req': req, 'cap': cap})
+                LOG.debug("%(host_state)s fails extra_spec requirements. "
+                          "'%(req)s' does not match '%(cap)s'",
+                          {'host_state': host_state, 'req': req,
+                           'cap': cap})
                 return False
         return True
 
@@ -85,6 +98,6 @@ class ComputeCapabilitiesFilter(filters.BaseHostFilter):
         if not self._satisfies_extra_specs(host_state,
                 instance_type):
             LOG.debug("%(host_state)s fails instance_type extra_specs "
-                    "requirements", {'host_state': host_state})
+                      "requirements", {'host_state': host_state})
             return False
         return True
