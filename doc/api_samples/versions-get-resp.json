@@ -15,7 +15,7 @@
             "id": "v2.1",
             "links": [
                 {
-                    "href": "http://openstack.example.com/v2/",
+                    "href": "http://openstack.example.com/v2.1/",
                     "rel": "self"
                 }
             ],
