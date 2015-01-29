@@ -12,8 +12,10 @@
 
 from webob import exc
 
+from nova.api.openstack.compute.schemas.v3 import networks_associate
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+from nova.api import validation
 from nova import exception
 from nova.i18n import _
 from nova import network
@@ -64,6 +66,7 @@ class NetworkAssociateActionController(wsgi.Controller):
     @wsgi.action("associate_host")
     @wsgi.response(202)
     @extensions.expected_errors((404, 501))
+    @validation.schema(networks_associate.associate_host)
     def _associate_host(self, req, id, body):
         context = req.environ['nova.context']
         authorize(context)

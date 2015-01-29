@@ -551,7 +551,7 @@ class NetworksAssociateTestV21(test.NoDBTestCase):
         uuid = FAKE_NETWORKS[1]['uuid']
         req = fakes.HTTPRequest.blank('/v2/1234//os-networks/%s/action' % uuid)
         res = self.associate_controller._associate_host(
-            req, uuid, {'associate_host': "TestHost"})
+            req, uuid, body={'associate_host': "TestHost"})
         self._check_status(res, self.associate_controller._associate_host, 202)
         req = fakes.HTTPRequest.blank('/v2/1234/os-networks/%s' % uuid)
         req.environ["nova.context"].is_admin = True
@@ -567,6 +567,30 @@ class NetworksAssociateTestV21(test.NoDBTestCase):
         self.assertRaises(webob.exc.HTTPNotImplemented,
                           assoc_ctrl._associate_host,
                           req, uuid, {'associate_host': "TestHost"})
+
+    def _test_network_neutron_associate_host_validation_failed(self, body):
+        uuid = FAKE_NETWORKS[1]['uuid']
+
+        req = fakes.HTTPRequest.blank('')
+        self.assertRaises(exception.ValidationError,
+                          self.associate_controller._associate_host,
+                          req, uuid, body=body)
+
+    def test_network_neutron_associate_host_non_string(self):
+        self._test_network_neutron_associate_host_validation_failed(
+                                            {'associate_host': 123})
+
+    def test_network_neutron_associate_host_empty_body(self):
+        self._test_network_neutron_associate_host_validation_failed({})
+
+    def test_network_neutron_associate_bad_associate_host_key(self):
+        self._test_network_neutron_associate_host_validation_failed(
+                                            {'badassociate_host': "TestHost"})
+
+    def test_network_neutron_associate_host_extra_arg(self):
+        self._test_network_neutron_associate_host_validation_failed(
+                                            {'associate_host': "TestHost",
+                                             'extra_arg': "extra_arg"})
 
     def test_network_neutron_disassociate_project_not_implemented(self):
         uuid = FAKE_NETWORKS[1]['uuid']
@@ -601,3 +625,6 @@ class NetworksAssociateTestV2(NetworksAssociateTestV21):
 
     def _check_status(self, res, method, code):
         self.assertEqual(res.status_int, 202)
+
+    def _test_network_neutron_associate_host_validation_failed(self, body):
+        pass
