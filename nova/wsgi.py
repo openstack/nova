@@ -159,6 +159,18 @@ class Server(object):
         # to keep file descriptor usable.
 
         dup_socket = self._socket.dup()
+        dup_socket.setsockopt(socket.SOL_SOCKET,
+                              socket.SO_REUSEADDR, 1)
+        # sockets can hang around forever without keepalive
+        dup_socket.setsockopt(socket.SOL_SOCKET,
+                              socket.SO_KEEPALIVE, 1)
+
+        # This option isn't available in the OS X version of eventlet
+        if hasattr(socket, 'TCP_KEEPIDLE'):
+            dup_socket.setsockopt(socket.IPPROTO_TCP,
+                                  socket.TCP_KEEPIDLE,
+                                  CONF.tcp_keepidle)
+
         if self._use_ssl:
             try:
                 ca_file = CONF.ssl_ca_file
@@ -195,19 +207,6 @@ class Server(object):
 
                 dup_socket = eventlet.wrap_ssl(dup_socket,
                                                **ssl_kwargs)
-
-                dup_socket.setsockopt(socket.SOL_SOCKET,
-                                      socket.SO_REUSEADDR, 1)
-                # sockets can hang around forever without keepalive
-                dup_socket.setsockopt(socket.SOL_SOCKET,
-                                      socket.SO_KEEPALIVE, 1)
-
-                # This option isn't available in the OS X version of eventlet
-                if hasattr(socket, 'TCP_KEEPIDLE'):
-                    dup_socket.setsockopt(socket.IPPROTO_TCP,
-                                    socket.TCP_KEEPIDLE,
-                                    CONF.tcp_keepidle)
-
             except Exception:
                 with excutils.save_and_reraise_exception():
                     LOG.error(_LE("Failed to start %(name)s on %(host)s"
