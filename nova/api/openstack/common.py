@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import collections
 import functools
 import itertools
 import os
@@ -355,7 +356,7 @@ def dict_to_query_str(params):
 
 
 def get_networks_for_instance_from_nw_info(nw_info):
-    networks = {}
+    networks = collections.OrderedDict()
     for vif in nw_info:
         ips = vif.fixed_ips()
         floaters = vif.floating_ips()

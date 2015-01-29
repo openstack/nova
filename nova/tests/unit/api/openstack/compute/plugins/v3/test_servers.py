@@ -15,6 +15,7 @@
 #    under the License.
 
 import base64
+import collections
 import contextlib
 import copy
 import datetime
@@ -482,6 +483,11 @@ class ServersControllerTest(ControllerTest):
             },
         }
         self.assertThat(res_dict, matchers.DictMatches(expected))
+        # Make sure we kept the addresses in order
+        self.assertIsInstance(res_dict['addresses'], collections.OrderedDict)
+        labels = [vif['network']['label'] for vif in nw_cache]
+        for index, label in enumerate(res_dict['addresses'].keys()):
+            self.assertEqual(label, labels[index])
 
     def test_get_server_addresses_nonexistent_network(self):
         url = '/v3/servers/%s/ips/network_0' % FAKE_UUID

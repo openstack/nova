@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import collections
 import itertools
 
 from nova.api.openstack import common
@@ -37,7 +38,7 @@ class ViewBuilder(common.ViewBuilder):
 
     def index(self, networks):
         """Return a dictionary describing a list of networks."""
-        addresses = {}
+        addresses = collections.OrderedDict()
         for label, network in networks.items():
             network_dict = self.show(network, label)
             addresses[label] = network_dict[label]
