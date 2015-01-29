@@ -102,7 +102,7 @@ compute_opts = [
                help='Kernel image that indicates not to use a kernel, but to '
                     'use a raw disk image instead'),
     cfg.StrOpt('multi_instance_display_name_template',
-               default='%(name)s-%(uuid)s',
+               default='%(name)s-%(count)d',
                help='When creating multiple instances with a single request '
                     'using the os-multiple-create API extension, this '
                     'template will be used to build the display name for '

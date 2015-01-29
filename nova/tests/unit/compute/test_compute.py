@@ -8643,14 +8643,8 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertEqual(refs[1]['display_name'], 'x')
         self.assertEqual(refs[1]['hostname'], 'x')
 
-        self.flags(multi_instance_display_name_template='%(name)s-%(count)s')
-        (refs, resv_id) = self.compute_api.create(self.context,
-                flavors.get_default_flavor(), image_href='some-fake-image',
-                min_count=2, max_count=2, display_name='x')
-        self.assertEqual(refs[0]['display_name'], 'x-1')
-        self.assertEqual(refs[0]['hostname'], 'x-1')
-        self.assertEqual(refs[1]['display_name'], 'x-2')
-        self.assertEqual(refs[1]['hostname'], 'x-2')
+        self.flags(multi_instance_display_name_template='%(name)s-%(count)d')
+        self._multi_instance_display_name_default()
 
         self.flags(multi_instance_display_name_template='%(name)s-%(uuid)s')
         (refs, resv_id) = self.compute_api.create(self.context,
@@ -8660,6 +8654,18 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertEqual(refs[0]['hostname'], 'x-%s' % refs[0]['uuid'])
         self.assertEqual(refs[1]['display_name'], 'x-%s' % refs[1]['uuid'])
         self.assertEqual(refs[1]['hostname'], 'x-%s' % refs[1]['uuid'])
+
+    def test_multi_instance_display_name_default(self):
+        self._multi_instance_display_name_default()
+
+    def _multi_instance_display_name_default(self):
+        (refs, resv_id) = self.compute_api.create(self.context,
+                flavors.get_default_flavor(), image_href='some-fake-image',
+                min_count=2, max_count=2, display_name='x')
+        self.assertEqual(refs[0]['display_name'], 'x-1')
+        self.assertEqual(refs[0]['hostname'], 'x-1')
+        self.assertEqual(refs[1]['display_name'], 'x-2')
+        self.assertEqual(refs[1]['hostname'], 'x-2')
 
     def test_instance_architecture(self):
         # Test the instance architecture.

@@ -129,14 +129,14 @@ class CellsSchedulerTestCase(test.TestCase):
                 ['default'], block_device_mapping)
         self.assertEqual(instance_uuids, call_info['uuids'])
 
-        for instance_uuid in instance_uuids:
+        for count, instance_uuid in enumerate(instance_uuids):
             instance = db.instance_get_by_uuid(self.ctxt, instance_uuid)
             meta = utils.instance_meta(instance)
             self.assertEqual('cow', meta['moo'])
             sys_meta = utils.instance_sys_meta(instance)
             self.assertEqual('cat', sys_meta['meow'])
             self.assertEqual('meow', instance['hostname'])
-            self.assertEqual('moo-%s' % instance['uuid'],
+            self.assertEqual('moo-%d' % (count + 1),
                              instance['display_name'])
             self.assertEqual('fake_image_ref', instance['image_ref'])
 
