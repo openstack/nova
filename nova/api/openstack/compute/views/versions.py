@@ -85,8 +85,8 @@ class ViewBuilder(common.ViewBuilder):
     def generate_href(self, version, path=None):
         """Create an url that refers to a specific version_number."""
         prefix = self._update_compute_link_prefix(self.base_url)
-        if version.find('v3.') == 0:
-            version_number = 'v3'
+        if version.find('v2.1') == 0:
+            version_number = 'v2.1'
         else:
             version_number = 'v2'
 

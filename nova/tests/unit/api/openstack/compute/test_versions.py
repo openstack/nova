@@ -112,7 +112,7 @@ class VersionsTestV20(test.NoDBTestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/v2/",
+                        "href": "http://localhost/v2.1/",
                     }],
             },
         ]
@@ -206,7 +206,7 @@ class VersionsTestV20(test.NoDBTestCase):
                 "status": "EXPERIMENTAL",
                 "links": [
                     {
-                        "href": "http://localhost/v2/images/1",
+                        "href": "http://localhost/v2.1/images/1",
                         "rel": "self",
                     },
                 ],
@@ -265,7 +265,7 @@ class VersionsTestV20(test.NoDBTestCase):
                 "status": "EXPERIMENTAL",
                 "links": [
                     {
-                        "href": "http://localhost/v2/servers/" + uuid,
+                        "href": "http://localhost/v2.1/servers/" + uuid,
                         "rel": "self",
                     },
                 ],
@@ -329,7 +329,7 @@ class VersionsViewBuilderTests(test.NoDBTestCase):
     def test_generate_href_v21(self):
         base_url = "http://example.org/app/"
 
-        expected = "http://example.org/app/v2/"
+        expected = "http://example.org/app/v2.1/"
 
         builder = views.versions.ViewBuilder(base_url)
         actual = builder.generate_href('v2.1')
