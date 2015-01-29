@@ -30,6 +30,29 @@ class ComputeCapabilitiesFilter(filters.BaseHostFilter):
     # Instance type and host capabilities do not change within a request
     run_filter_once_per_request = True
 
+    def _get_capabilities(self, host_state, scope):
+        cap = host_state
+        for index in range(0, len(scope)):
+            try:
+                if isinstance(cap, six.string_types):
+                    try:
+                        cap = jsonutils.loads(cap)
+                    except ValueError:
+                        return None
+                if not isinstance(cap, dict):
+                    if getattr(cap, scope[index], None) is None:
+                        # If can't find, check stats dict
+                        cap = cap.stats.get(scope[index], None)
+                    else:
+                        cap = getattr(cap, scope[index], None)
+                else:
+                    cap = cap.get(scope[index], None)
+            except AttributeError:
+                return None
+            if cap is None:
+                return None
+        return cap
+
     def _satisfies_extra_specs(self, host_state, instance_type):
         """Check that the host_state provided by the compute service
         satisfy the extra specs associated with the instance type.
@@ -45,26 +68,11 @@ class ComputeCapabilitiesFilter(filters.BaseHostFilter):
                     continue
                 else:
                     del scope[0]
-            cap = host_state
-            for index in range(0, len(scope)):
-                try:
-                    if isinstance(cap, six.string_types):
-                        try:
-                            cap = jsonutils.loads(cap)
-                        except ValueError:
-                            return False
-                    if not isinstance(cap, dict):
-                        if getattr(cap, scope[index], None) is None:
-                            # If can't find, check stats dict
-                            cap = cap.stats.get(scope[index], None)
-                        else:
-                            cap = getattr(cap, scope[index], None)
-                    else:
-                        cap = cap.get(scope[index], None)
-                except AttributeError:
-                    return False
-                if cap is None:
-                    return False
+
+            cap = self._get_capabilities(host_state, scope)
+            if cap is None:
+                return False
+
             if not extra_specs_ops.match(str(cap), req):
                 LOG.debug("extra_spec requirement '%(req)s' does not match "
                     "'%(cap)s'", {'req': req, 'cap': cap})
