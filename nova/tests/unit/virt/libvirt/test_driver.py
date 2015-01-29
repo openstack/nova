@@ -12346,6 +12346,48 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
 
         self.assertEqual(list_interfaces, drv._get_interfaces(dom_xml))
 
+    def test_get_disk_xml(self):
+        dom_xml = """
+              <domain type="kvm">
+                <devices>
+                  <disk type="file">
+                     <source file="disk1_file"/>
+                     <target dev="vda" bus="virtio"/>
+                     <serial>0e38683e-f0af-418f-a3f1-6b67ea0f919d</serial>
+                  </disk>
+                  <disk type="block">
+                    <source dev="/path/to/dev/1"/>
+                    <target dev="vdb" bus="virtio" serial="1234"/>
+                  </disk>
+                </devices>
+              </domain>
+              """
+
+        diska_xml = """<disk type="file">
+                     <source file="disk1_file"/>
+                     <target dev="vda" bus="virtio"/>
+                     <serial>0e38683e-f0af-418f-a3f1-6b67ea0f919d</serial>
+                  </disk>
+                  """
+
+        diskb_xml = """<disk type="block">
+                    <source dev="/path/to/dev/1"/>
+                    <target dev="vdb" bus="virtio" serial="1234"/>
+                  </disk>
+                  """
+
+        drv = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+
+        # NOTE(gcb): etree.tostring(node) returns an extra line with
+        # some white spaces, need to strip it.
+        actual_diska_xml = drv._get_disk_xml(dom_xml, 'vda')
+        self.assertEqual(diska_xml.strip(), actual_diska_xml.strip())
+
+        actual_diskb_xml = drv._get_disk_xml(dom_xml, 'vdb')
+        self.assertEqual(diskb_xml.strip(), actual_diskb_xml.strip())
+
+        self.assertIsNone(drv._get_disk_xml(dom_xml, 'vdc'))
+
 
 class LibvirtVolumeUsageTestCase(test.NoDBTestCase):
     """Test for LibvirtDriver.get_all_volume_usage."""

@@ -1101,12 +1101,9 @@ class LibvirtDriver(driver.ComputeDriver):
             doc = etree.fromstring(xml)
         except Exception:
             return None
-        ret = doc.findall('./devices/disk')
-        for node in ret:
-            for child in node.getchildren():
-                if child.tag == 'target':
-                    if child.get('dev') == device:
-                        return etree.tostring(node)
+        node = doc.find("./devices/disk/target[@dev='%s'].." % device)
+        if node is not None:
+            return etree.tostring(node)
 
     def _get_existing_domain_xml(self, instance, network_info,
                                  block_device_info=None):
