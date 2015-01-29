@@ -21,7 +21,7 @@ from oslo.config import cfg
 from oslo.utils import importutils
 
 from nova import exception
-from nova.i18n import _LE
+from nova.i18n import _LE, _LW
 from nova.openstack.common import log as logging
 from nova.openstack.common import loopingcall
 from nova.servicegroup.drivers import base
@@ -77,15 +77,18 @@ class ZooKeeperDriver(base.Driver):
 
     def join(self, member_id, group, service=None):
         """Join the given service with its group."""
-        LOG.debug('ZooKeeperDriver: join new member %(id)s to the '
+        # process id
+        process_id = str(os.getpid())
+        LOG.debug('ZooKeeperDriver: join new member %(id)s(%(pid)s) to the '
                   '%(gr)s group, service=%(sr)s',
-                  {'id': member_id, 'gr': group, 'sr': service})
+                  {'id': member_id, 'pid': process_id,
+                   'gr': group, 'sr': service})
         member = self._memberships.get((group, member_id), None)
         if member is None:
             # the first time to join. Generate a new object
-            path = "%s/%s" % (CONF.zookeeper.sg_prefix, group)
+            path = "%s/%s/%s" % (CONF.zookeeper.sg_prefix, group, member_id)
             try:
-                member = membership.Membership(self._session, path, member_id)
+                member = membership.Membership(self._session, path, process_id)
             except RuntimeError:
                 LOG.exception(_LE("Unable to join. It is possible that either"
                                   " another node exists with the same name, or"
@@ -136,14 +139,43 @@ class ZooKeeperDriver(base.Driver):
             # while to retrieve all members from zookeeper. To prevent
             # None to be returned, we sleep 5 sec max to wait for data to
             # be ready.
-            for _retry in range(50):
-                eventlet.sleep(0.1)
+            timeout = 5  # seconds
+            interval = 0.1
+            tries = int(timeout / interval)
+            for _retry in range(tries):
+                eventlet.sleep(interval)
                 all_members = monitor.get_all()
                 if all_members is not None:
-                    return all_members
-        all_members = monitor.get_all()
+                    # Stop the tries once the cache is populated
+                    LOG.debug('got info about members in %r: %r',
+                              path, ', '.join(all_members))
+                    break
+            else:
+                # if all_members, weren't populated
+                LOG.warning(_LW('Problem with acquiring the list of '
+                                'children of %(path)r within a given '
+                                'timeout=%(timeout)rs'),
+                            path, timeout)
+        else:
+            all_members = monitor.get_all()
+
         if all_members is None:
             raise exception.ServiceGroupUnavailable(driver="ZooKeeperDriver")
+
+        def have_processes(member):
+            """Predicate that given member has processes (subnode exists)."""
+            value, stat = monitor.get_member_details(member)
+            # only check nodes that are created by Membership class
+            if value == 'ZKMembers':
+                num_children = stat['numChildren']
+                return num_children > 0
+            else:
+                # unknown type of node found - ignoring
+                return False
+
+        # filter only this members that have processes running
+        all_members = filter(have_processes, all_members)
+
         return all_members
 
 
