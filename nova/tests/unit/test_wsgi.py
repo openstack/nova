@@ -18,7 +18,6 @@
 
 import os.path
 import tempfile
-import urllib2
 
 import eventlet
 import eventlet.wsgi
@@ -286,8 +285,9 @@ class TestWSGIServerWithSSL(test.NoDBTestCase):
 
         server.start()
 
-        response = urllib2.urlopen('https://[::1]:%d/' % server.port)
-        self.assertEqual(greetings, response.read())
+        response = requests.get('https://[::1]:%d/' % server.port,
+                                verify=os.path.join(SSL_CERT_DIR, 'ca.crt'))
+        self.assertEqual(greetings, response.text)
 
         server.stop()
         server.wait()
