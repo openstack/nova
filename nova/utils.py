@@ -92,6 +92,11 @@ Please use with care!
 Document the BugID that your workaround is paired with."""
 
 workarounds_opts = [
+    cfg.BoolOpt('disable_rootwrap',
+                default=False,
+                help='This option allows a fallback to sudo for performance '
+                     'reasons. For example see '
+                     'https://bugs.launchpad.net/nova/+bug/1415106'),
     ]
 CONF = cfg.CONF
 CONF.register_opts(monkey_patch_opts)
@@ -171,7 +176,11 @@ def vpn_ping(address, port, timeout=0.05, session_id=None):
 
 
 def _get_root_helper():
-    return 'sudo nova-rootwrap %s' % CONF.rootwrap_config
+    if CONF.workarounds.disable_rootwrap:
+        cmd = 'sudo'
+    else:
+        cmd = 'sudo nova-rootwrap %s' % CONF.rootwrap_config
+    return cmd
 
 
 def execute(*cmd, **kwargs):
