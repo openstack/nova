@@ -369,10 +369,9 @@ class HostTestCase(test.NoDBTestCase):
         fake_get_domain.assert_called_once_with("instance-0000007c")
 
     @mock.patch.object(fakelibvirt.Connection, "listAllDomains")
+    @mock.patch.object(libvirt, "VIR_CONNECT_LIST_DOMAINS_ACTIVE", new=1,
+                       create=True)
     def test_list_instance_domains_fast(self, mock_list_all):
-        if not hasattr(libvirt, "VIR_CONNECT_LIST_DOMAINS_ACTIVE"):
-            self.skipTest("libvirt missing VIR_CONNECT_LIST_DOMAINS_ACTIVE")
-
         vm1 = FakeVirtDomain(id=3, name="instance00000001")
         vm2 = FakeVirtDomain(id=17, name="instance00000002")
         vm3 = FakeVirtDomain(name="instance00000003")
@@ -482,6 +481,8 @@ class HostTestCase(test.NoDBTestCase):
     @mock.patch.object(fakelibvirt.Connection, "numOfDomains")
     @mock.patch.object(fakelibvirt.Connection, "listDomainsID")
     @mock.patch.object(host.Host, "_get_domain_by_id")
+    @mock.patch.object(libvirt, "VIR_CONNECT_LIST_DOMAINS_ACTIVE", new=1,
+                       create=True)
     def test_list_instance_domains_fallback(self,
                                             mock_get_id, mock_list_ids,
                                             mock_num_ids, mock_list_all):
