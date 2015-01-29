@@ -67,7 +67,6 @@ import six
 
 from nova.api.ec2 import ec2utils
 from nova import availability_zones
-from nova.compute import flavors
 from nova import config
 from nova import context
 from nova import db
@@ -674,26 +673,27 @@ class VmCommands(object):
                                              _('index'))))
 
         if host is None:
-            instances = db.instance_get_all(context.get_admin_context())
+            instances = objects.InstanceList.get_by_filters(
+                context.get_admin_context(), {}, expected_attrs=['flavor'])
         else:
-            instances = db.instance_get_all_by_host(
-                           context.get_admin_context(), host)
+            instances = objects.InstanceList.get_by_host(
+                context.get_admin_context(), host, expected_attrs=['flavor'])
 
         for instance in instances:
-            instance_type = flavors.extract_flavor(instance)
+            instance_type = instance.get_flavor()
             print(("%-10s %-15s %-10s %-10s %-26s %-9s %-9s %-9s"
-                   " %-10s %-10s %-10s %-5d" % (instance['display_name'],
-                                                instance['host'],
-                                                instance_type['name'],
-                                                instance['vm_state'],
-                                                instance['launched_at'],
-                                                instance['image_ref'],
-                                                instance['kernel_id'],
-                                                instance['ramdisk_id'],
-                                                instance['project_id'],
-                                                instance['user_id'],
-                                                instance['availability_zone'],
-                                                instance['launch_index'])))
+                   " %-10s %-10s %-10s %-5d" % (instance.display_name,
+                                                instance.host,
+                                                instance_type.name,
+                                                instance.vm_state,
+                                                instance.launched_at,
+                                                instance.image_ref,
+                                                instance.kernel_id,
+                                                instance.ramdisk_id,
+                                                instance.project_id,
+                                                instance.user_id,
+                                                instance.availability_zone,
+                                                instance.launch_index)))
 
 
 class ServiceCommands(object):
