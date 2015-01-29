@@ -7,5 +7,5 @@
             "members": [],
             "metadata": {}
         }
-   ]
+    ]
 }
