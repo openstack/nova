@@ -16,14 +16,11 @@
 
 """Define APIs for the servicegroup access."""
 
-import random
-
 from oslo.config import cfg
 from oslo.utils import importutils
 
 from nova.i18n import _, _LW
 from nova.openstack.common import log as logging
-from nova import utils
 
 LOG = logging.getLogger(__name__)
 _default_driver = 'db'
@@ -71,9 +68,6 @@ class API(object):
                                 % driver_name)
             cls._driver = importutils.import_object(driver_class,
                                                     *args, **kwargs)
-            utils.check_isinstance(cls._driver, ServiceGroupDriver)
-            # we don't have to check that cls._driver is not NONE,
-            # check_isinstance does it
         return super(API, cls).__new__(cls)
 
     def __init__(self, *args, **kwargs):
@@ -138,36 +132,3 @@ class API(object):
         """
         LOG.debug('Returns one member of the [%s] group', group_id)
         return self._driver.get_one(group_id)
-
-
-class ServiceGroupDriver(object):
-    """Base class for ServiceGroup drivers."""
-
-    def join(self, member_id, group_id, service=None):
-        """Join the given service with its group."""
-        raise NotImplementedError()
-
-    def is_up(self, member):
-        """Check whether the given member is up."""
-        raise NotImplementedError()
-
-    def leave(self, member_id, group_id):
-        """Remove the given member from the ServiceGroup monitoring."""
-        raise NotImplementedError()
-
-    def get_all(self, group_id):
-        """Returns ALL members of the given group."""
-        raise NotImplementedError()
-
-    def get_one(self, group_id):
-        """The default behavior of get_one is to randomly pick one from
-        the result of get_all(). This is likely to be overridden in the
-        actual driver implementation.
-        """
-        members = self.get_all(group_id)
-        if members is None:
-            return None
-        length = len(members)
-        if length == 0:
-            return None
-        return random.choice(members)

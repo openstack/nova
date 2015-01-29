@@ -22,6 +22,7 @@ from nova import context
 from nova.i18n import _, _LE
 from nova.openstack.common import log as logging
 from nova.servicegroup import api
+from nova.servicegroup.drivers import base
 
 
 CONF = cfg.CONF
@@ -30,7 +31,7 @@ CONF.import_opt('service_down_time', 'nova.service')
 LOG = logging.getLogger(__name__)
 
 
-class DbDriver(api.ServiceGroupDriver):
+class DbDriver(base.Driver):
 
     def __init__(self, *args, **kwargs):
         self.db_allowed = kwargs.get('db_allowed', True)
