@@ -125,6 +125,7 @@ class NovaMigrationsCheckers(test_migrations.WalkVersionsMixin):
     def _skippable_migrations(self):
         special = [
             216,  # Havana
+            272,  # NOOP migration due to revert
         ]
 
         havana_placeholders = range(217, 227)
@@ -657,45 +658,6 @@ class NovaMigrationsCheckers(test_migrations.WalkVersionsMixin):
                 ('virtual_interfaces',
                  'virtual_interfaces_instance_uuid_fkey')]:
             self.assertIndexNotExists(engine, table_name, index_name)
-
-    def _check_272(self, engine, data):
-        self.assertColumnExists(engine, 'key_pairs', 'type')
-        self.assertColumnExists(engine, 'shadow_key_pairs', 'type')
-
-        key_pairs = oslodbutils.get_table(engine, 'key_pairs')
-        shadow_key_pairs = oslodbutils.get_table(engine, 'shadow_key_pairs')
-        self.assertIsInstance(key_pairs.c.type.type,
-                              sqlalchemy.types.String)
-        self.assertIsInstance(shadow_key_pairs.c.type.type,
-                              sqlalchemy.types.String)
-
-    def _post_downgrade_272(self, engine):
-        self.assertColumnNotExists(engine, 'key_pairs', 'type')
-        self.assertColumnNotExists(engine, 'shadow_key_pairs', 'type')
-
-    def test_migration_272(self):
-        # This is separate from test_walk_versions so we can test that the
-        # previous keypair entries will have the default value set in the
-        # new column.
-        self.migration_api.version_control(
-            self.migrate_engine, self.REPOSITORY, self.INIT_VERSION)
-        self.migration_api.upgrade(self.migrate_engine, self.REPOSITORY, 271)
-
-        # Create a keypair record so we can test that the upgrade will set
-        # 'ssh' as default value in the new column for the previous keypair
-        # entries.
-        key_pairs = oslodbutils.get_table(self.migrate_engine, 'key_pairs')
-        fake_keypair = {'name': 'test-migr'}
-        key_pairs.insert().execute(fake_keypair)
-
-        # Now run the 272 upgrade again.
-        self.migration_api.upgrade(self.migrate_engine, self.REPOSITORY, 272)
-
-        # Make sure the keypair entry will have the type 'ssh'
-        key_pairs = oslodbutils.get_table(self.migrate_engine, 'key_pairs')
-        keypair = key_pairs.select(
-            key_pairs.c.name == 'test-migr').execute().first()
-        self.assertEqual('ssh', keypair.type)
 
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,

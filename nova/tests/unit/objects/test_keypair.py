@@ -27,7 +27,6 @@ fake_keypair = {
     'deleted': False,
     'id': 123,
     'name': 'foo-keypair',
-    'type': 'ssh',
     'user_id': 'fake-user',
     'fingerprint': 'fake-fingerprint',
     'public_key': 'fake\npublic\nkey',

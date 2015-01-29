@@ -13,33 +13,20 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from sqlalchemy import MetaData, Column, Table
-from sqlalchemy import String
-
-from nova.objects import keypair
+# NOTE(mikal): this migration number exists like this because change
+# I506dd1c8d0f0a877fdfc1a4ed11a8830d9600b98 needs to revert the hyper-v
+# keypair change, but we promise that we will never remove a schema migration
+# version. Instead, we replace this migration with a noop.
+#
+# It is hypothetically possible that a hyper-v continuous deployer exists who
+# will have a poor experience because of this code revert, if that deployer
+# is you, please contact the nova team at openstack-dev@lists.openstack.org
+# and we will walk you through the manual fix required for this problem.
 
 
 def upgrade(migrate_engine):
-    """Function adds key_pairs type field."""
-    meta = MetaData(bind=migrate_engine)
-    key_pairs = Table('key_pairs', meta, autoload=True)
-    shadow_key_pairs = Table('shadow_key_pairs', meta, autoload=True)
-
-    keypair_type = Column('type', String(16), nullable=False,
-                          server_default=keypair.KEYPAIR_TYPE_SSH)
-
-    key_pairs.create_column(keypair_type)
-    shadow_key_pairs.create_column(keypair_type.copy())
+    pass
 
 
 def downgrade(migrate_engine):
-    """Function removes key_pairs type field."""
-    meta = MetaData(bind=migrate_engine)
-    key_pairs = Table('key_pairs', meta, autoload=True)
-    shadow_key_pairs = Table('shadow_key_pairs', meta, autoload=True)
-
-    if hasattr(key_pairs.c, 'type'):
-        key_pairs.c.type.drop()
-
-    if hasattr(shadow_key_pairs.c, 'type'):
-        shadow_key_pairs.c.type.drop()
+    pass
