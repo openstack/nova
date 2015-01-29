@@ -7,7 +7,7 @@ SQLAlchemy>=0.9.7,<=0.9.99
 argparse
 boto>=2.32.1,<2.35.0
 decorator>=3.4.0
-eventlet>=0.15.2
+eventlet>=0.16.1
 Jinja2>=2.6  # BSD License (3 clause)
 keystonemiddleware>=1.0.0
 lxml>=2.3
