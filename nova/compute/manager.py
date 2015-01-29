@@ -1185,7 +1185,7 @@ class ComputeManager(manager.Manager):
         LOG.debug('Checking state', instance=instance)
         try:
             return self.driver.get_info(instance).state
-        except exception.NotFound:
+        except exception.InstanceNotFound:
             return power_state.NOSTATE
 
     def get_console_topic(self, context):

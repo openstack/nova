@@ -449,6 +449,28 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             self.compute._init_instance(self.context, instance)
             set_error_state.assert_called_once_with(self.context, instance)
 
+    def test__get_power_state_InstanceNotFound(self):
+        instance = fake_instance.fake_instance_obj(
+                self.context,
+                power_state=power_state.RUNNING)
+        with mock.patch.object(self.compute.driver,
+                'get_info',
+                side_effect=exception.InstanceNotFound(instance_id=1)):
+            self.assertEqual(self.compute._get_power_state(self.context,
+                                                           instance),
+                    power_state.NOSTATE)
+
+    def test__get_power_state_NotFound(self):
+        instance = fake_instance.fake_instance_obj(
+                self.context,
+                power_state=power_state.RUNNING)
+        with mock.patch.object(self.compute.driver,
+                'get_info',
+                side_effect=exception.NotFound()):
+            self.assertRaises(exception.NotFound,
+                              self.compute._get_power_state,
+                              self.context, instance)
+
     def test_init_instance_failed_resume_sets_error(self):
         instance = fake_instance.fake_instance_obj(
                 self.context,
