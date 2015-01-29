@@ -991,12 +991,6 @@ class SecurityGroupRuleExists(Invalid):
     msg_fmt = _("Rule already exists in group: %(rule)s")
 
 
-class SecurityGroupNotAllowedTogetherWithPort(Invalid):
-    msg_fmt = _("It's not allowed to specify security groups if port_id "
-                "is provided on instance boot. Neutron should be used to "
-                "configure security groups on port.")
-
-
 class NoUniqueMatch(NovaException):
     msg_fmt = _("No Unique Match Found.")
     code = 409
