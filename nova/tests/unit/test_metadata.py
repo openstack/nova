@@ -664,6 +664,7 @@ class MetadataHandlerTestCase(test.TestCase):
         hnd = handler.MetadataRequestHandler()
 
         req.headers['X-Instance-ID'] = 'fake-inst'
+        req.headers['X-Instance-ID-Signature'] = 'fake-sig'
         req.headers['X-Tenant-ID'] = 'fake-proj'
 
         self.assertRaises(test.TestingException,

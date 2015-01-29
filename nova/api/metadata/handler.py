@@ -167,6 +167,8 @@ class MetadataRequestHandler(wsgi.Application):
 
         if instance_id is None:
             msg = _('X-Instance-ID header is missing from request.')
+        elif signature is None:
+            msg = _('X-Instance-ID-Signature header is missing from request.')
         elif tenant_id is None:
             msg = _('X-Tenant-ID header is missing from request.')
         elif not isinstance(instance_id, six.string_types):
