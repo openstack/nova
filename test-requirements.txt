@@ -6,7 +6,6 @@ hacking>=0.10.0,<0.11
 coverage>=3.6
 discover
 fixtures>=0.3.14
-libvirt-python>=1.2.5                   # LGPLv2+
 mock>=1.0
 mox3>=0.7.0
 MySQL-python
