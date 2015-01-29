@@ -728,7 +728,7 @@ def _pack_instance_onto_cores(available_siblings, instance_cell, host_cell_id):
 
     # We build up a data structure 'can_pack' that answers the question:
     # 'Given the number of threads I want to pack, give me a list of all
-    # the available sibling sets that can accomodate it'
+    # the available sibling sets that can accommodate it'
     can_pack = collections.defaultdict(list)
     for sib in available_siblings:
         for threads_no in range(1, len(sib) + 1):
