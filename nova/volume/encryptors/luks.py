@@ -17,6 +17,7 @@
 from oslo_concurrency import processutils
 
 from nova.i18n import _LI
+from nova.i18n import _LW
 from nova.openstack.common import log as logging
 from nova import utils
 from nova.volume.encryptors import cryptsetup
@@ -33,11 +34,14 @@ def is_luks(device):
     """
     try:
         # check to see if the device uses LUKS: exit status is 0
-        # if the device is a LUKS partition and 1 if not
+        # if the device is a LUKS partition and non-zero if not
         utils.execute('cryptsetup', 'isLuks', '--verbose', device,
                       run_as_root=True, check_exit_code=True)
         return True
-    except processutils.ProcessExecutionError:
+    except processutils.ProcessExecutionError as e:
+        LOG.warning(_LW("isLuks exited abnormally (status %(exit_code)s): "
+                        "%(stderr)s"),
+                    {"exit_code": e.exit_code, "stderr": e.stderr})
         return False
 
 
