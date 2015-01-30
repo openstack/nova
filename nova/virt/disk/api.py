@@ -636,9 +636,9 @@ def _set_passwd(username, admin_passwd, passwd_data, shadow_data):
     if the username is not found in both files, an exception is raised.
 
     :param username: the username
-    :param encrypted_passwd: the  encrypted password
-    :param passwd_file: path to the passwd file
-    :param shadow_file: path to the shadow password file
+    :param admin_passwd: the admin password
+    :param passwd_data: path to the passwd file
+    :param shadow_data: path to the shadow password file
     :returns: nothing
     :raises: exception.NovaException(), IOError()
 

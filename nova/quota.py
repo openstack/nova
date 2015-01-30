@@ -1208,7 +1208,6 @@ class QuotaEngine(object):
         the given user or project.
 
         :param context: The request context, for access checks.
-        :param resources: A dictionary of the registered resources.
         :param project_id: The ID of the project to return quotas for.
         :param user_id: The ID of the user to return quotas for.
         """

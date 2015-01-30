@@ -38,7 +38,7 @@ ALL = [HVM, XEN, UML, EXE]
 def get_from_instance(instance):
     """Get the vm mode for an instance
 
-    :param name: instance object to query
+    :param instance: instance object to query
 
     :returns: canonicalized vm mode for the instance
     """

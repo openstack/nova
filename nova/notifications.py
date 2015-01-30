@@ -65,8 +65,8 @@ def notify_decorator(name, fn):
     """Decorator for notify which is used from utils.monkey_patch().
 
         :param name: name of the function
-        :param function: - object of the function
-        :returns: function -- decorated function
+        :param fn: - object of the function
+        :returns: fn -- decorated function
 
     """
     def wrapped_func(*args, **kwarg):
