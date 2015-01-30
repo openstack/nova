@@ -2753,6 +2753,10 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         # themselves until the virt spawn method is called.
         self._test_build_and_run_spawn_exceptions(exception.NoMoreNetworks())
 
+    def test_build_and_run_no_more_fixedips_exception(self):
+        self._test_build_and_run_spawn_exceptions(
+            exception.NoMoreFixedIps("error messge"))
+
     def test_build_and_run_flavor_disk_too_small_exception(self):
         self._test_build_and_run_spawn_exceptions(
             exception.FlavorDiskTooSmall())

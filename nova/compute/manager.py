@@ -2191,7 +2191,7 @@ class ComputeManager(manager.Manager):
                 self._notify_about_instance_usage(context, instance,
                     'create.error', fault=e)
         except (exception.FixedIpLimitExceeded,
-                exception.NoMoreNetworks) as e:
+                exception.NoMoreNetworks, exception.NoMoreFixedIps) as e:
             LOG.warning(_LW('No more network or fixed IP to be allocated'),
                         instance=instance)
             self._notify_about_instance_usage(context, instance,
