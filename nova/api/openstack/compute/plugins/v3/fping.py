@@ -24,7 +24,6 @@ from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import compute
-from nova import exception
 from nova.i18n import _
 from nova import utils
 
@@ -127,19 +126,15 @@ class FpingController(wsgi.Controller):
         authorize(context)
         self.check_fping()
         instance = common.get_instance(self.compute_api, context, id)
-
-        try:
-            ips = [str(ip) for ip in self._get_instance_ips(context, instance)]
-            alive_ips = self.fping(ips)
-            return {
-                "server": {
-                    "id": instance["uuid"],
-                    "project_id": instance["project_id"],
-                    "alive": bool(set(ips) & alive_ips),
-                }
+        ips = [str(ip) for ip in self._get_instance_ips(context, instance)]
+        alive_ips = self.fping(ips)
+        return {
+            "server": {
+                "id": instance["uuid"],
+                "project_id": instance["project_id"],
+                "alive": bool(set(ips) & alive_ips),
             }
-        except exception.NotFound as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
+        }
 
 
 class Fping(extensions.V3APIExtensionBase):

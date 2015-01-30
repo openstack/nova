@@ -23,7 +23,6 @@ from webob import exc
 from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova import compute
-from nova import exception
 from nova.i18n import _
 from nova import utils
 
@@ -127,12 +126,7 @@ class FpingController(object):
         authorize(context)
         self.check_fping()
         instance = common.get_instance(self.compute_api, context, id)
-
-        try:
-            ips = [str(ip) for ip in self._get_instance_ips(context, instance)]
-        except exception.NotFound:
-            raise exc.HTTPNotFound()
-
+        ips = [str(ip) for ip in self._get_instance_ips(context, instance)]
         alive_ips = self.fping(ips)
         return {
             "server": {
