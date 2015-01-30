@@ -787,13 +787,13 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
         # No root_device_name
         blockinfo.get_root_info('kvm', image_meta, root_bdm, 'virtio', 'ide')
         mock_get_info.assert_called_once_with('kvm', image_meta,
-                                              root_bdm, 'virtio')
+                                              root_bdm, {}, 'virtio')
         mock_get_info.reset_mock()
         # Both device names
         blockinfo.get_root_info('kvm', image_meta, root_bdm, 'virtio', 'ide',
                                 root_device_name='sda')
         mock_get_info.assert_called_once_with('kvm', image_meta,
-                                              root_bdm, 'virtio')
+                                              root_bdm, {}, 'virtio')
         mock_get_info.reset_mock()
         # Missing device names
         del root_bdm['mount_device']
@@ -804,7 +804,7 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
                                               {'device_name': 'sda',
                                                'disk_bus': 'scsi',
                                                'device_type': 'disk'},
-                                              'virtio')
+                                              {}, 'virtio')
 
     def test_get_boot_order_simple(self):
         disk_info = {
