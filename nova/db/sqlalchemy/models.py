@@ -364,6 +364,7 @@ class InstanceExtra(BASE, NovaBase):
     numa_topology = orm.deferred(Column(Text))
     pci_requests = orm.deferred(Column(Text))
     flavor = orm.deferred(Column(Text))
+    vcpu_model = orm.deferred(Column(Text))
     instance = orm.relationship(Instance,
                             backref=orm.backref('extra',
                                                 uselist=False),
