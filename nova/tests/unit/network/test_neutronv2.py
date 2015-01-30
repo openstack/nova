@@ -342,8 +342,6 @@ class TestNeutronv2Base(test.TestCase):
                                'port_id': self.port_data2[1]['id'],
                                'fixed_ip_address': fixed_ip_address,
                                'router_id': 'router_id1'}
-        self.sec_group_data = [{'id': 'test_secgroup_id1',
-                                'name': 'test_secgroup_name'}]
         self._returned_nw_info = []
         self.mox.StubOutWithMock(neutronapi, 'get_client')
         self.moxed_client = self.mox.CreateMock(client.Client)
@@ -469,20 +467,9 @@ class TestNeutronv2Base(test.TestCase):
                 self.mox.ReplayAll()
                 return api
 
-        security_groups = kwargs.get('security_groups')
-        if security_groups:
-            search_opts = {'tenant_id': self.instance.project_id}
-            self.moxed_client.list_security_groups(
-                **search_opts).AndReturn(
-                    {'security_groups': self.sec_group_data})
-
         ports_in_requested_net_order = []
         nets_in_requested_net_order = []
         for request in ordered_networks:
-            if (request.port_id and security_groups):
-                self.mox.ReplayAll()
-                return api
-
             port_req_body = {
                 'port': {
                     'device_id': self.instance.uuid,
@@ -536,8 +523,6 @@ class TestNeutronv2Base(test.TestCase):
                 res_port = {'port': {'id': 'fake'}}
                 if has_extra_dhcp_opts:
                     port_req_body['port']['extra_dhcp_opts'] = dhcp_options
-                if security_groups:
-                    port_req_body['port']['security_groups'] = security_groups
                 if kwargs.get('_break') == 'mac' + request.network_id:
                     self.mox.ReplayAll()
                     return api
@@ -905,25 +890,6 @@ class TestNeutronv2(TestNeutronv2Base):
             requested_networks=objects.NetworkRequestList(
                 objects=[objects.NetworkRequest(port_id='my_portid1')]))
         self.assertEqual(self.port_data1, result)
-
-    def test_allocate_for_instance_with_sec_groups(self):
-        # Test that allocate_for_instance handles security groups if provided
-        self._allocate_for_instance(
-            1, security_groups=[self.sec_group_data[0]['id']])
-
-    def test_allocate_for_instance_with_sec_groups_and_port_id(self):
-        # Test that allocate_for_instance raises if security groups are
-        # provided together with port_id
-        requested_networks = objects.NetworkRequestList(
-            objects=[objects.NetworkRequest(port_id='my_portid1')])
-        security_groups = [self.sec_group_data[0]['id']]
-        api = self._stub_allocate_for_instance(
-            requested_networks=requested_networks,
-            security_groups=security_groups)
-        self.assertRaises(exception.SecurityGroupNotAllowedTogetherWithPort,
-                          api.allocate_for_instance, self.context,
-                          self.instance, requested_networks=requested_networks,
-                          security_groups=security_groups)
 
     def test_allocate_for_instance_not_enough_macs_via_ports(self):
         # using a hypervisor MAC via a pre-created port will stop it being
