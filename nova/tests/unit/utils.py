@@ -17,6 +17,7 @@ import platform
 import socket
 import sys
 
+import mock
 from oslo.config import cfg
 
 from nova.compute import flavors
@@ -76,9 +77,6 @@ def get_test_instance(context=None, flavor=None, obj=False):
     if not flavor:
         flavor = get_test_flavor(context)
 
-    metadata = {}
-    flavors.save_flavor_info(metadata, flavor, '')
-
     test_instance = {'memory_kb': '2048000',
                      'basepath': '/some/path',
                      'bridge_name': 'br100',
@@ -86,8 +84,8 @@ def get_test_instance(context=None, flavor=None, obj=False):
                      'root_gb': 40,
                      'bridge': 'br101',
                      'image_ref': 'cedef40a-ed67-4d10-800e-17455edce175',
-                     'instance_type_id': '5',
-                     'system_metadata': metadata,
+                     'instance_type_id': flavor['id'],
+                     'system_metadata': {},
                      'extra_specs': {},
                      'user_id': context.user_id,
                      'project_id': context.project_id,
@@ -95,8 +93,12 @@ def get_test_instance(context=None, flavor=None, obj=False):
 
     if obj:
         instance = objects.Instance(context, **test_instance)
+        with mock.patch.object(instance, 'save'):
+            instance.set_flavor(objects.Flavor.get_by_id(context,
+                                                         flavor['id']))
         instance.create()
     else:
+        flavors.save_flavor_info(test_instance['system_metadata'], flavor, '')
         instance = nova.db.instance_create(context, test_instance)
     return instance
 

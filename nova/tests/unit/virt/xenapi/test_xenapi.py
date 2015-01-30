@@ -21,6 +21,7 @@ import copy
 import functools
 import os
 import re
+import uuid
 
 import mock
 from mox3 import mox
@@ -44,6 +45,7 @@ from nova import crypto
 from nova import db
 from nova import exception
 from nova import objects
+from nova.objects import base
 from nova.openstack.common import log as logging
 from nova import test
 from nova.tests.unit.db import fakes as db_fakes
@@ -205,16 +207,21 @@ def get_create_system_metadata(context, instance_type_id):
 
 
 def create_instance_with_system_metadata(context, instance_values, obj=False):
-    instance_values['system_metadata'] = get_create_system_metadata(
-        context, instance_values['instance_type_id'])
-    instance_values['pci_devices'] = []
-    db_inst = db.instance_create(context, instance_values)
+    inst = objects.Instance(context=context,
+                            system_metadata={})
+    for k, v in instance_values.items():
+        setattr(inst, k, v)
+    with mock.patch.object(inst, 'save'):
+        inst.set_flavor(objects.Flavor.get_by_id(
+            context,
+            instance_values['instance_type_id']))
+    inst.create()
+    inst.pci_devices = objects.PciDeviceList(objects=[])
+
     if obj:
-        return objects.Instance._from_db_object(
-            context, objects.Instance(), db_inst,
-            expected_attrs=['system_metadata'])
+        return inst
     else:
-        return db_inst
+        return base.obj_to_primitive(inst)
 
 
 class XenAPIVolumeTestCase(stubs.XenAPITestBaseNoDB):
@@ -369,7 +376,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
     def test_list_instance_uuids(self):
         uuids = []
         for x in xrange(1, 4):
-            instance = self._create_instance(x)
+            instance = self._create_instance()
             uuids.append(instance['uuid'])
         instance_uuids = self.conn.list_instance_uuids()
         self.assertEqual(len(uuids), len(instance_uuids))
@@ -731,8 +738,16 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
             instance.hostname = hostname
             instance.key_data = key_data
             instance.architecture = architecture
-            instance.system_metadata = get_create_system_metadata(
-                self.context, instance_type_id)
+            instance.system_metadata = {}
+
+            flavor = objects.Flavor.get_by_id(self.context,
+                                              instance_type_id)
+            if instance_type_id == 5:
+                # NOTE(danms): xenapi test stubs have flavor 5 with no
+                # vcpu_weight
+                flavor.vcpu_weight = None
+            with mock.patch.object(instance, 'save'):
+                instance.set_flavor(flavor)
             instance.create()
         else:
             instance = objects.Instance.get_by_id(self.context, instance_id)
@@ -1029,18 +1044,18 @@ iface eth0 inet6 static
         self.stubs.Set(vmops.VMOps, '_create_vifs', dummy)
         # Reset network table
         xenapi_fake.reset_table('network')
-        # Instance id = 2 will use vlan network (see db/fakes.py)
+        # Instance 2 will use vlan network (see db/fakes.py)
         ctxt = self.context.elevated()
         self.network.conductor_api = conductor_api.LocalAPI()
-        self._create_instance(2, False)
+        inst2 = self._create_instance(False, obj=True)
         networks = self.network.db.network_get_all(ctxt)
         with mock.patch('nova.objects.network.Network._from_db_object'):
             for network in networks:
                 self.network.set_network_host(ctxt, network)
 
         self.network.allocate_for_instance(ctxt,
-                          instance_id=2,
-                          instance_uuid='00000000-0000-0000-0000-000000000002',
+                          instance_id=inst2.id,
+                          instance_uuid=inst2.uuid,
                           host=CONF.host,
                           vpn=None,
                           rxtx_factor=3,
@@ -1049,7 +1064,7 @@ iface eth0 inet6 static
         self._test_spawn(IMAGE_MACHINE,
                          IMAGE_KERNEL,
                          IMAGE_RAMDISK,
-                         instance_id=2,
+                         instance_id=inst2.id,
                          create_record=False)
         # TODO(salvatore-orlando): a complete test here would require
         # a check for making sure the bridge for the VM's VIF is
@@ -1303,7 +1318,7 @@ iface eth0 inet6 static
         self.assertEqual(vdi_rec['uuid'], vdi_rec2['uuid'])
 
     def test_unrescue(self):
-        instance = self._create_instance()
+        instance = self._create_instance(obj=True)
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         # Unrescue expects the original instance to be powered off
         conn.power_off(instance)
@@ -1311,7 +1326,7 @@ iface eth0 inet6 static
         conn.unrescue(instance, None)
 
     def test_unrescue_not_in_rescue(self):
-        instance = self._create_instance()
+        instance = self._create_instance(obj=True)
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         # Ensure that it will not unrescue a non-rescued instance.
         self.assertRaises(exception.InstanceNotInRescueMode, conn.unrescue,
@@ -1506,12 +1521,11 @@ iface eth0 inet6 static
         actual = self.conn.get_per_instance_usage()
         self.assertEqual({}, actual)
 
-    def _create_instance(self, instance_id=1, spawn=True, obj=False, **attrs):
+    def _create_instance(self, spawn=True, obj=False, **attrs):
         """Creates and spawns a test instance."""
         instance_values = {
-            'id': instance_id,
-            'uuid': '00000000-0000-0000-0000-00000000000%d' % instance_id,
-            'display_name': 'host-%d' % instance_id,
+            'uuid': str(uuid.uuid4()),
+            'display_name': 'host-',
             'project_id': self.project_id,
             'user_id': self.user_id,
             'image_ref': 1,
@@ -1625,7 +1639,7 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         self.user_id = 'fake'
         self.project_id = 'fake'
         self.context = context.RequestContext(self.user_id, self.project_id)
-        self.instance_values = {'id': 1,
+        self.instance_values = {
                   'project_id': self.project_id,
                   'user_id': self.user_id,
                   'image_ref': 1,
@@ -2253,7 +2267,7 @@ class XenAPIAutoDiskConfigTestCase(stubs.XenAPITestBase):
         self.user_id = 'fake'
         self.project_id = 'fake'
 
-        self.instance_values = {'id': 1,
+        self.instance_values = {
                   'project_id': self.project_id,
                   'user_id': self.user_id,
                   'image_ref': 1,
@@ -2376,7 +2390,7 @@ class XenAPIGenerateLocal(stubs.XenAPITestBase):
         self.user_id = 'fake'
         self.project_id = 'fake'
 
-        self.instance_values = {'id': 1,
+        self.instance_values = {
                   'project_id': self.project_id,
                   'user_id': self.user_id,
                   'image_ref': 1,
