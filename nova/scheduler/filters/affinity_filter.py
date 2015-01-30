@@ -102,10 +102,6 @@ class _GroupAntiAffinityFilter(AffinityFilter):
     """Schedule the instance on a different host from a set of group
     hosts.
     """
-
-    def __init__(self):
-        super(_GroupAntiAffinityFilter, self).__init__()
-
     def host_passes(self, host_state, filter_properties):
         # Only invoke the filter is 'anti-affinity' is configured
         policies = filter_properties.get('group_policies', [])
@@ -132,10 +128,6 @@ class ServerGroupAntiAffinityFilter(_GroupAntiAffinityFilter):
 class _GroupAffinityFilter(AffinityFilter):
     """Schedule the instance on to host from a set of group hosts.
     """
-
-    def __init__(self):
-        super(_GroupAffinityFilter, self).__init__()
-
     def host_passes(self, host_state, filter_properties):
         # Only invoke the filter is 'affinity' is configured
         policies = filter_properties.get('group_policies', [])
