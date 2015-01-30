@@ -81,7 +81,8 @@ def notify_decorator(name, fn):
         ctxt = common_context.get_context_from_function_and_args(
             fn, args, kwarg)
 
-        notifier = rpc.get_notifier(publisher_id=(CONF.default_publisher_id
+        notifier = rpc.get_notifier('api',
+                                    publisher_id=(CONF.default_publisher_id
                                                   or CONF.host))
         method = notifier.getattr(CONF.default_notification_level.lower(),
                                   'info')
@@ -103,7 +104,8 @@ def send_api_fault(url, status, exception):
     rpc.get_notifier('api').error(None, 'api.fault', payload)
 
 
-def send_update(context, old_instance, new_instance, service=None, host=None):
+def send_update(context, old_instance, new_instance, service="compute",
+                host=None):
     """Send compute.instance.update notification to report any changes occurred
     in that instance
     """

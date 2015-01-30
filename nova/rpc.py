@@ -140,7 +140,7 @@ def get_server(target, endpoints, serializer=None):
                                     serializer=serializer)
 
 
-def get_notifier(service=None, host=None, publisher_id=None):
+def get_notifier(service, host=None, publisher_id=None):
     assert NOTIFIER is not None
     if not publisher_id:
         publisher_id = "%s.%s" % (service, host or CONF.host)

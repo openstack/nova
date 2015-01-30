@@ -86,7 +86,6 @@ class ResourceTracker(object):
         self.monitors = monitor_handler.choose_monitors(self)
         self.ext_resources_handler = \
             ext_resources.ResourceHandler(CONF.compute_resources)
-        self.notifier = rpc.get_notifier()
         self.old_resources = {}
         self.scheduler_client = scheduler_client.SchedulerClient()
 
