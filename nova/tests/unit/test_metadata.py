@@ -87,11 +87,6 @@ def fake_inst_obj(context):
     return inst
 
 
-def get_default_sys_meta():
-    return flavors.save_flavor_info(
-        {}, flavors.get_default_flavor())
-
-
 def return_non_existing_address(*args, **kwarg):
     raise exception.NotFound()
 
