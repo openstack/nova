@@ -367,7 +367,10 @@ class API(base_api.NetworkAPI):
         if requested_networks:
             for request in requested_networks:
                 if request.port_id:
-                    port = neutron.show_port(request.port_id)['port']
+                    try:
+                        port = neutron.show_port(request.port_id)['port']
+                    except neutron_client_exc.PortNotFoundClient:
+                        raise exception.PortNotFound(port_id=request.port_id)
                     if port.get('device_id'):
                         raise exception.PortInUse(port_id=request.port_id)
                     if hypervisor_macs is not None:
@@ -390,8 +393,16 @@ class API(base_api.NetworkAPI):
         nets = self._get_available_networks(context, instance.project_id,
                                             net_ids, neutron=neutron)
         if not nets:
-            LOG.debug("No network configured", instance=instance)
-            return network_model.NetworkInfo([])
+            # NOTE(chaochin): If user specifies a network id and the network
+            # can not be found, raise NetworkNotFound error.
+            if requested_networks:
+                for request in requested_networks:
+                    if not request.port_id and request.network_id:
+                        raise exception.NetworkNotFound(
+                            network_id=request.network_id)
+            else:
+                LOG.debug("No network configured", instance=instance)
+                return network_model.NetworkInfo([])
 
         # if this function is directly called without a requested_network param
         # or if it is indirectly called through allocate_port_for_instance()

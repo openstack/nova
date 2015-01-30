@@ -244,9 +244,12 @@ class TestNeutronv2Base(test.TestCase):
         self.nets7.append(self.nets1[0])
         # A network request with only external network
         self.nets8 = [self.nets5[1]]
+        # An empty network
+        self.nets9 = []
 
         self.nets = [self.nets1, self.nets2, self.nets3, self.nets4,
-                     self.nets5, self.nets6, self.nets7, self.nets8]
+                     self.nets5, self.nets6, self.nets7, self.nets8,
+                     self.nets9]
 
         self.port_address = '10.0.1.2'
         self.port_data1 = [{'network_id': 'my_netid1',
@@ -413,6 +416,11 @@ class TestNeutronv2Base(test.TestCase):
                         request.network_id = 'my_netid1'
                         if macs is not None:
                             macs.discard('my_mac1')
+                    elif request.port_id == 'invalid_id':
+                        PortNotFound = exceptions.PortNotFoundClient(
+                            status_code=404)
+                        self.moxed_client.show_port(request.port_id
+                        ).AndRaise(PortNotFound)
                     else:
                         self.moxed_client.show_port(request.port_id).AndReturn(
                             {'port': {'id': 'my_portid1',
@@ -450,6 +458,10 @@ class TestNeutronv2Base(test.TestCase):
             mox_list_params = {'shared': True}
             self.moxed_client.list_networks(
                 **mox_list_params).AndReturn({'networks': []})
+
+        if kwargs.get('_break') == 'post_list_networks':
+            self.mox.ReplayAll()
+            return api
 
         if (('requested_networks' not in kwargs or
              kwargs['requested_networks'].as_tuples() == [(None, None, None)])
@@ -999,6 +1011,17 @@ class TestNeutronv2(TestNeutronv2Base):
         self._allocate_for_instance(net_idx=3,
                                     requested_networks=requested_networks)
 
+    def test_allocate_for_instance_with_invalid_network_id(self):
+        requested_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(network_id='invalid_id')])
+        api = self._stub_allocate_for_instance(net_idx=9,
+            requested_networks=requested_networks,
+            _break='post_list_networks')
+        self.assertRaises(exception.NetworkNotFound,
+                          api.allocate_for_instance,
+                          self.context, self.instance,
+                          requested_networks=requested_networks)
+
     def test_allocate_for_instance_with_requested_networks_with_fixedip(self):
         # specify only first and last network
         requested_networks = objects.NetworkRequestList(
@@ -1169,6 +1192,17 @@ class TestNeutronv2(TestNeutronv2Base):
             _break='pre_list_networks',
             _device=True)
         self.assertRaises(exception.PortInUse,
+                          api.allocate_for_instance, self.context,
+                          self.instance, requested_networks=requested_networks)
+
+    def test_allocate_for_instance_port_not_found(self):
+        # If a port is not found, an exception should be raised.
+        requested_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(port_id='invalid_id')])
+        api = self._stub_allocate_for_instance(
+            requested_networks=requested_networks,
+            _break='pre_list_networks')
+        self.assertRaises(exception.PortNotFound,
                           api.allocate_for_instance, self.context,
                           self.instance, requested_networks=requested_networks)
 
