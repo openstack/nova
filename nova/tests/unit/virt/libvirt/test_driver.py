@@ -475,18 +475,16 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         self.useFixture(fakelibvirt.FakeLibvirtFixture())
 
-        sys_meta = {
-            'instance_type_memory_mb': 2048,
-            'instance_type_swap': 0,
-            'instance_type_vcpu_weight': None,
-            'instance_type_root_gb': 1,
-            'instance_type_id': 2,
-            'instance_type_name': u'm1.small',
-            'instance_type_ephemeral_gb': 0,
-            'instance_type_rxtx_factor': 1.0,
-            'instance_type_flavorid': u'1',
-            'instance_type_vcpus': 1
-        }
+        flavor = objects.Flavor(memory_mb=2048,
+                                swap=0,
+                                vcpu_weight=None,
+                                root_gb=1,
+                                id=2,
+                                name=u'm1.small',
+                                ephemeral_gb=0,
+                                rxtx_factor=1.0,
+                                flavorid=u'1',
+                                vcpus=1)
 
         self.image_service = nova.tests.unit.image.fake.stub_out_image_service(
                 self.stubs)
@@ -505,7 +503,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             'ephemeral_gb': 20,
             'instance_type_id': '5',  # m1.small
             'extra_specs': {},
-            'system_metadata': sys_meta,
+            'system_metadata': {},
+            'flavor': flavor,
+            'new_flavor': None,
+            'old_flavor': None,
             'pci_devices': objects.PciDeviceList(),
             'numa_topology': None,
             'config_drive': None,
@@ -7387,9 +7388,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         instance_ref = self.test_instance
         instance_ref['image_ref'] = 1
-        # Turn on some swap to exercise that codepath in _create_image
-        instance_ref['system_metadata']['instance_type_swap'] = 500
         instance = objects.Instance(**instance_ref)
+        # Turn on some swap to exercise that codepath in _create_image
+        instance.flavor.swap = 500
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.stubs.Set(drvr, '_get_guest_xml', fake_none)
@@ -10982,18 +10983,16 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         if not params:
             params = {}
 
-        sys_meta = {
-            'instance_type_memory_mb': 512,
-            'instance_type_swap': 0,
-            'instance_type_vcpu_weight': None,
-            'instance_type_root_gb': 1,
-            'instance_type_id': 2,
-            'instance_type_name': u'm1.tiny',
-            'instance_type_ephemeral_gb': 0,
-            'instance_type_rxtx_factor': 1.0,
-            'instance_type_flavorid': u'1',
-            'instance_type_vcpus': 1
-        }
+        flavor = objects.Flavor(memory_mb=512,
+                                swap=0,
+                                vcpu_weight=None,
+                                root_gb=1,
+                                id=2,
+                                name=u'm1.tiny',
+                                ephemeral_gb=0,
+                                rxtx_factor=1.0,
+                                flavorid=u'1',
+                                vcpus=1)
 
         inst = {}
         inst['id'] = 1
@@ -11012,11 +11011,13 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         inst['kernel_id'] = 2
         inst['ramdisk_id'] = 3
         inst['key_data'] = 'ABCDEFG'
-        inst['system_metadata'] = sys_meta
+        inst['system_metadata'] = {}
 
         inst.update(params)
 
-        return objects.Instance(**inst)
+        return objects.Instance(flavor=flavor,
+                                old_flavor=None, new_flavor=None,
+                                **inst)
 
     def test_migrate_disk_and_power_off_exception(self):
         """Test for nova.virt.libvirt.libvirt_driver.LivirtConnection

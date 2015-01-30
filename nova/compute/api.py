@@ -831,8 +831,7 @@ class API(base.Base):
         numa_topology = hardware.numa_get_constraints(
                 instance_type, boot_meta)
 
-        system_metadata = flavors.save_flavor_info(
-            dict(), instance_type)
+        system_metadata = {}
 
         # PCI requests come from two sources: instance flavor and
         # requested_networks. The first call in below returns an
@@ -1321,6 +1320,9 @@ class API(base.Base):
         info_cache.instance_uuid = instance.uuid
         info_cache.network_info = network_model.NetworkInfo()
         instance.info_cache = info_cache
+        instance.flavor = instance_type
+        instance.old_flavor = None
+        instance.new_flavor = None
         if CONF.ephemeral_storage_encryption.enabled:
             instance.ephemeral_key_uuid = self.key_manager.create_key(
                 context,

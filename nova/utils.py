@@ -1089,8 +1089,7 @@ def get_image_from_system_metadata(system_meta):
                 continue
             properties[key] = value
 
-    if properties:
-        image_meta['properties'] = properties
+    image_meta['properties'] = properties
 
     return image_meta
 

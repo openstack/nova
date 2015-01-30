@@ -16,12 +16,12 @@
 """Tests for the conductor service."""
 
 import contextlib
+import uuid
 
 import mock
 from mox3 import mox
 from oslo.config import cfg
 from oslo import messaging
-from oslo.serialization import jsonutils
 from oslo.utils import timeutils
 import six
 
@@ -45,6 +45,7 @@ from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import block_device as block_device_obj
 from nova.objects import fields
+from nova.objects import instance as instance_obj
 from nova.objects import quotas as quotas_obj
 from nova import quota
 from nova import rpc
@@ -1248,29 +1249,28 @@ class _BaseTaskTestCase(object):
     def test_cold_migrate_forced_shutdown(self):
         self._test_cold_migrate(clean_shutdown=False)
 
-    def test_build_instances(self):
-        system_metadata = flavors.save_flavor_info({},
-                flavors.get_default_flavor())
-        instances = [fake_instance.fake_instance_obj(
-            self.context,
-            system_metadata=system_metadata,
-            expected_attrs=['system_metadata']) for i in xrange(2)]
-        instance_type = flavors.extract_flavor(instances[0])
-        instance_type['extra_specs'] = {}
-        instance_type_p = jsonutils.to_primitive(instance_type)
-        instance_properties = jsonutils.to_primitive(instances[0])
+    @mock.patch('nova.objects.Instance.refresh')
+    @mock.patch('nova.utils.spawn_n')
+    def test_build_instances(self, mock_spawn, mock_refresh):
+        mock_spawn.side_effect = lambda f, *a, **k: f(*a, **k)
+        instance_type = flavors.get_default_flavor()
+        instances = [objects.Instance(context=self.context,
+                                      id=i,
+                                      uuid=uuid.uuid4(),
+                                      flavor=instance_type) for i in xrange(2)]
+        instance_type_p = obj_base.obj_to_primitive(instance_type)
+        instance_properties = instance_obj.compat_instance(instances[0])
 
         self.mox.StubOutWithMock(scheduler_utils, 'setup_instance_group')
         self.mox.StubOutWithMock(self.conductor_manager.scheduler_client,
                                  'select_destinations')
-        self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
         self.mox.StubOutWithMock(db,
                                  'block_device_mapping_get_all_by_instance')
         self.mox.StubOutWithMock(self.conductor_manager.compute_rpcapi,
                                  'build_and_run_instance')
 
         spec = {'image': {'fake_data': 'should_pass_silently'},
-                'instance_properties': jsonutils.to_primitive(instances[0]),
+                'instance_properties': instance_properties,
                 'instance_type': instance_type_p,
                 'num_instances': 2}
         scheduler_utils.setup_instance_group(self.context, spec, {})
@@ -1279,10 +1279,6 @@ class _BaseTaskTestCase(object):
                 {'retry': {'num_attempts': 1, 'hosts': []}}).AndReturn(
                         [{'host': 'host1', 'nodename': 'node1', 'limits': []},
                          {'host': 'host2', 'nodename': 'node2', 'limits': []}])
-        db.instance_get_by_uuid(self.context, instances[0].uuid,
-                columns_to_join=['system_metadata'],
-                use_slave=False).AndReturn(
-                        jsonutils.to_primitive(instances[0]))
         db.block_device_mapping_get_all_by_instance(self.context,
                 instances[0].uuid, use_slave=False).AndReturn([])
         self.conductor_manager.compute_rpcapi.build_and_run_instance(
@@ -1304,10 +1300,6 @@ class _BaseTaskTestCase(object):
                 security_groups='security_groups',
                 block_device_mapping=mox.IgnoreArg(),
                 node='node1', limits=[])
-        db.instance_get_by_uuid(self.context, instances[1].uuid,
-                columns_to_join=['system_metadata'],
-                use_slave=False).AndReturn(
-                        jsonutils.to_primitive(instances[1]))
         db.block_device_mapping_get_all_by_instance(self.context,
                 instances[1].uuid, use_slave=False).AndReturn([])
         self.conductor_manager.compute_rpcapi.build_and_run_instance(

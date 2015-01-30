@@ -24,7 +24,6 @@ from oslo.config import cfg
 from nova.cells import filters
 from nova.cells import weights
 from nova import compute
-from nova.compute import flavors
 from nova.compute import instance_actions
 from nova.compute import vm_states
 from nova import conductor
@@ -87,17 +86,13 @@ class CellsScheduler(base.Base):
         # The parent may pass these metadata values as lists, and the
         # create call expects it to be a dict.
         instance_values['metadata'] = utils.instance_meta(instance_values)
-        sys_metadata = utils.instance_sys_meta(instance_values)
-        # Make sure the flavor info is set.  It may not have been passed
-        # down.
-        sys_metadata = flavors.save_flavor_info(sys_metadata, instance_type)
-        instance_values['system_metadata'] = sys_metadata
         # Pop out things that will get set properly when re-creating the
         # instance record.
         instance_values.pop('id')
         instance_values.pop('name')
         instance_values.pop('info_cache')
         instance_values.pop('security_groups')
+        instance_values.pop('flavor')
 
         # FIXME(danms): The instance was brutally serialized before being
         # sent over RPC to us. Thus, the pci_requests value wasn't really
@@ -112,6 +107,9 @@ class CellsScheduler(base.Base):
             instance = objects.Instance(context=ctxt)
             instance.update(instance_values)
             instance.uuid = instance_uuid
+            instance.flavor = instance_type
+            instance.old_flavor = None
+            instance.new_flavor = None
             instance = self.compute_api.create_db_entry_for_new_instance(
                     ctxt,
                     instance_type,

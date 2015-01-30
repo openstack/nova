@@ -461,7 +461,9 @@ class UsageInfoTestCase(test.TestCase):
     def test_notify_usage_exists(self):
         # Ensure 'exists' notification generates appropriate usage data.
         instance_id = self._create_instance()
-        instance = objects.Instance.get_by_id(self.context, instance_id)
+        instance = objects.Instance.get_by_id(self.context, instance_id,
+                                              expected_attrs=[
+                                                  'system_metadata'])
         # Set some system metadata
         sys_metadata = {'image_md_key1': 'val1',
                         'image_md_key2': 'val2',
@@ -682,7 +684,9 @@ class ComputeGetImageMetadataTestCase(test.NoDBTestCase):
         with mock.patch.object(self.instance_obj, 'save'):
             self.instance_obj.set_flavor(flavor)
 
-    def test_get_image_meta(self):
+    @mock.patch('nova.objects.Flavor.get_by_flavor_id')
+    def test_get_image_meta(self, mock_get):
+        mock_get.return_value = objects.Flavor(extra_specs={})
         image_meta = compute_utils.get_image_metadata(
             self.ctx, self.mock_image_api, 'fake-image', self.instance_obj)
 
@@ -694,12 +698,14 @@ class ComputeGetImageMetadataTestCase(test.NoDBTestCase):
         mock_flavor_get.return_value = objects.Flavor(extra_specs={})
         self.image['properties'] = {'fake_property': 'fake_value'}
 
+        inst = self.instance_obj
+
         with mock.patch.object(flavors,
                                "extract_flavor") as mock_extract_flavor:
             with mock.patch.object(utils, "get_system_metadata_from_image"
                                    ) as mock_get_sys_metadata:
                 image_meta = compute_utils.get_image_metadata(
-                    self.ctx, self.mock_image_api, None, self.instance_obj)
+                    self.ctx, self.mock_image_api, None, inst)
 
                 self.assertEqual(0, self.mock_image_api.get.call_count)
                 self.assertEqual(0, mock_extract_flavor.call_count)
@@ -748,8 +754,10 @@ class ComputeGetImageMetadataTestCase(test.NoDBTestCase):
             if k.startswith('image_'):
                 del self.instance_obj.system_metadata[k]
 
-        image_meta = compute_utils.get_image_metadata(
-            self.ctx, self.mock_image_api, 'fake-image', self.instance_obj)
+        with mock.patch('nova.objects.Flavor.get_by_flavor_id') as get:
+            get.return_value = objects.Flavor(extra_specs={})
+            image_meta = compute_utils.get_image_metadata(
+                self.ctx, self.mock_image_api, 'fake-image', self.instance_obj)
 
         self.image['properties'] = 'DONTCARE'
         self.assertThat(self.image, matchers.DictMatches(image_meta))
@@ -762,8 +770,10 @@ class ComputeGetImageMetadataTestCase(test.NoDBTestCase):
             if k.startswith('image_'):
                 del self.instance_obj.system_metadata[k]
 
-        image_meta = compute_utils.get_image_metadata(
-            self.ctx, self.mock_image_api, 'fake-image', self.instance_obj)
+        with mock.patch('nova.objects.Flavor.get_by_flavor_id') as get:
+            get.return_value = objects.Flavor(extra_specs={})
+            image_meta = compute_utils.get_image_metadata(
+                self.ctx, self.mock_image_api, 'fake-image', self.instance_obj)
 
         expected = {'properties': 'DONTCARE'}
         self.assertThat(expected, matchers.DictMatches(image_meta))

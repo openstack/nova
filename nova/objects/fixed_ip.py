@@ -37,7 +37,8 @@ class FixedIP(obj_base.NovaPersistentObject, obj_base.NovaObject,
     # Version 1.5: Added floating_ips field
     # Version 1.6: Instance 1.16
     # Version 1.7: Instance 1.17
-    VERSION = '1.7'
+    # Version 1.8: Instance 1.18
+    VERSION = '1.8'
 
     fields = {
         'id': fields.IntegerField(),
@@ -62,7 +63,7 @@ class FixedIP(obj_base.NovaPersistentObject, obj_base.NovaObject,
 
     obj_relationships = {
         'instance': [('1.0', '1.13'), ('1.2', '1.14'), ('1.3', '1.15'),
-                     ('1.6', '1.16'), ('1.7', '1.17')],
+                     ('1.6', '1.16'), ('1.7', '1.17'), ('1.8', '1.18')],
         'network': [('1.0', '1.2')],
         'virtual_interface': [('1.1', '1.0')],
         'floating_ips': [('1.5', '1.7')],
@@ -208,7 +209,8 @@ class FixedIPList(obj_base.ObjectListBase, obj_base.NovaObject):
     # Version 1.5: FixedIP <= version 1.5, added expected attrs to gets
     # Version 1.6: FixedIP <= version 1.6
     # Version 1.7: FixedIP <= version 1.7
-    VERSION = '1.7'
+    # Version 1.8: FixedIP <= version 1.8
+    VERSION = '1.8'
 
     fields = {
         'objects': fields.ListOfObjectsField('FixedIP'),
@@ -222,6 +224,7 @@ class FixedIPList(obj_base.ObjectListBase, obj_base.NovaObject):
         '1.5': '1.5',
         '1.6': '1.6',
         '1.7': '1.7',
+        '1.8': '1.8',
         }
 
     @obj_base.remotable_classmethod

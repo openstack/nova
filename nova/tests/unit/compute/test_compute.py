@@ -2590,11 +2590,13 @@ class ComputeTestCase(BaseTestCase):
                    power_state=10003,
                    vm_state=vm_states.ACTIVE,
                    task_state=expected_task,
+                   instance_type=flavors.get_default_flavor(),
                    launched_at=timeutils.utcnow()))
         updated_dbinstance2 = fake_instance.fake_db_instance(
             **dict(uuid='updated-instance2',
                    power_state=10003,
                    vm_state=vm_states.ACTIVE,
+                   instance_type=flavors.get_default_flavor(),
                    task_state=expected_task,
                    launched_at=timeutils.utcnow()))
 
@@ -2629,7 +2631,9 @@ class ComputeTestCase(BaseTestCase):
                                          'expected_task_state': expected_tasks,
                                          'power_state': fake_power_state1},
                                         update_cells=False,
-                                        columns_to_join=['system_metadata']
+                                            columns_to_join=['system_metadata',
+                                                             'extra',
+                                                             'extra.flavor']
                                         ).AndReturn((None,
                                                      updated_dbinstance1))
         expected_nw_info = fake_nw_model
@@ -2638,7 +2642,9 @@ class ComputeTestCase(BaseTestCase):
                                         {'task_state': task_started,
                                          'expected_task_state': task_pending},
                                         update_cells=False,
-                                        columns_to_join=['system_metadata']
+                                            columns_to_join=['system_metadata',
+                                                             'extra',
+                                                             'extra.flavor']
                                         ).AndReturn((None,
                                                      updated_dbinstance1))
 
@@ -2685,7 +2691,7 @@ class ComputeTestCase(BaseTestCase):
                  'task_state': None,
                  'vm_state': vm_states.ACTIVE},
                 update_cells=False,
-                columns_to_join=['system_metadata'],
+                columns_to_join=['system_metadata', 'extra', 'extra.flavor'],
                 ).AndRaise(fault)
             self.compute._notify_about_instance_usage(
                 econtext,
@@ -2696,7 +2702,7 @@ class ComputeTestCase(BaseTestCase):
                 econtext, updated_dbinstance1['uuid'],
                 {'vm_state': vm_states.ERROR},
                 update_cells=False,
-                columns_to_join=['system_metadata'],
+                columns_to_join=['system_metadata', 'extra', 'extra.flavor'],
                 ).AndRaise(fault)
         else:
             db.instance_update_and_get_original(
@@ -2705,7 +2711,7 @@ class ComputeTestCase(BaseTestCase):
                  'task_state': None,
                  'vm_state': vm_states.ACTIVE},
                 update_cells=False,
-                columns_to_join=['system_metadata'],
+                columns_to_join=['system_metadata', 'extra', 'extra.flavor'],
                 ).AndReturn((None, updated_dbinstance2))
             if fail_running:
                 self.compute._notify_about_instance_usage(econtext, instance,
@@ -4649,7 +4655,7 @@ class ComputeTestCase(BaseTestCase):
         instance = self._create_fake_instance_obj(type_name=old_flavor_name)
         new_flavor = flavors.get_flavor_by_name(new_flavor_name)
 
-        self.compute._set_instance_info(instance, new_flavor)
+        self.compute._set_instance_info(instance, new_flavor.obj_clone())
 
         self.assertEqual(new_flavor['memory_mb'], instance.memory_mb)
         self.assertEqual(new_flavor['vcpus'], instance.vcpus)
@@ -5022,9 +5028,7 @@ class ComputeTestCase(BaseTestCase):
 
         def fake_confirm_migration_driver(*args, **kwargs):
             # Confirm the instance uses the new type in finish_resize
-            inst = args[1]
-            sys_meta = inst['system_metadata']
-            self.assertEqual(sys_meta['instance_type_flavorid'], '3')
+            self.assertEqual('3', instance.flavor.flavorid)
 
         old_vm_state = None
         p_state = None
@@ -5131,8 +5135,7 @@ class ComputeTestCase(BaseTestCase):
         def fake_finish_revert_migration_driver(*args, **kwargs):
             # Confirm the instance uses the old type in finish_revert_resize
             inst = args[1]
-            sys_meta = inst.system_metadata
-            self.assertEqual(sys_meta['instance_type_flavorid'], '1')
+            self.assertEqual('1', inst.flavor.flavorid)
 
         old_vm_state = None
         if power_on:
@@ -5248,33 +5251,25 @@ class ComputeTestCase(BaseTestCase):
         migration = dict(old_instance_type_id=old,
                          new_instance_type_id=new)
         instance.system_metadata = dict(instance_type_id=old)
-        sys_meta = dict(instance.system_metadata)
-        self.mox.StubOutWithMock(flavors, 'extract_flavor')
-        self.mox.StubOutWithMock(flavors, 'delete_flavor_info')
-        self.mox.StubOutWithMock(flavors, 'save_flavor_info')
-        if revert:
-            old_flavor = dict(test_flavor.fake_flavor, id=old)
-            new_flavor = dict(test_flavor.fake_flavor, id=new)
-            flavors.extract_flavor(instance, 'old_').AndReturn(old_flavor)
-            flavors.extract_flavor(instance, '').AndReturn(new_flavor)
-            flavors.save_flavor_info(
-                sys_meta, mox.IgnoreArg(), '').AndReturn(sys_meta)
-        else:
-            new_flavor = dict(test_flavor.fake_flavor, id=new)
-            old_flavor = dict(test_flavor.fake_flavor, id=old)
-            flavors.extract_flavor(instance, '').AndReturn(new_flavor)
-            flavors.extract_flavor(instance, 'old_').AndReturn(old_flavor)
-        flavors.delete_flavor_info(
-            sys_meta, 'old_').AndReturn(sys_meta)
-        flavors.delete_flavor_info(
-            sys_meta, 'new_').AndReturn(sys_meta)
 
-        self.mox.ReplayAll()
-        sysmeta, flavor, drop_flavor = \
-            self.compute._cleanup_stored_instance_types(migration, instance,
-                                                        revert)
+        old_flavor = objects.Flavor(**test_flavor.fake_flavor)
+        old_flavor.id = old
+        new_flavor = objects.Flavor(**test_flavor.fake_flavor)
+        new_flavor.id = new
+
+        instance.old_flavor = old_flavor
+        instance.new_flavor = new_flavor
+        instance.flavor = new_flavor
+
+        with mock.patch.object(instance, 'save'):
+            sysmeta, flavor, drop_flavor = \
+                self.compute._cleanup_stored_instance_types(migration,
+                                                            instance,
+                                                            revert)
+
         self.assertEqual(int(revert and old or new), flavor['id'])
         self.assertEqual(int(revert and new or old), drop_flavor['id'])
+        self.assertNotIn('old_instance_type_id', sysmeta)
 
     def test_cleanup_stored_instance_types_for_resize(self):
         self._test_cleanup_stored_instance_types('1', '2')
@@ -6117,7 +6112,8 @@ class ComputeTestCase(BaseTestCase):
         # subsequent call so we don't need it, but keep this to make sure it
         # does the right thing.
         db.instance_get_by_uuid(self.context, fake_inst['uuid'],
-                                columns_to_join=['system_metadata'],
+                                columns_to_join=['system_metadata',
+                                                 'extra', 'extra.flavor'],
                                 use_slave=False
                                 ).AndReturn(fake_inst)
         self.compute.network_api.get_instance_nw_info(self.context,
@@ -6159,7 +6155,8 @@ class ComputeTestCase(BaseTestCase):
             if instance_uuid not in instance_map:
                 raise exception.InstanceNotFound(instance_id=instance_uuid)
             call_info['get_by_uuid'] += 1
-            self.assertEqual(['system_metadata', 'info_cache'],
+            self.assertEqual(['system_metadata', 'info_cache',
+                              'extra', 'extra.flavor'],
                              columns_to_join)
             return instance_map[instance_uuid]
 
@@ -6936,15 +6933,12 @@ class ComputeTestCase(BaseTestCase):
 
     def test_allow_confirm_resize_on_instance_in_deleting_task_state(self):
         instance = self._create_fake_instance_obj()
-        old_type = flavors.extract_flavor(instance)
+        old_type = instance.flavor
         new_type = flavors.get_flavor_by_flavor_id('4')
-        sys_meta = instance.system_metadata
-        sys_meta = flavors.save_flavor_info(sys_meta,
-                                            old_type, 'old_')
-        sys_meta = flavors.save_flavor_info(sys_meta,
-                                            new_type, 'new_')
-        sys_meta = flavors.save_flavor_info(sys_meta,
-                                            new_type)
+
+        instance.flavor = new_type
+        instance.old_flavor = old_type
+        instance.new_flavor = new_type
 
         fake_rt = self.mox.CreateMockAnything()
 
@@ -6970,7 +6964,7 @@ class ComputeTestCase(BaseTestCase):
 
         instance.task_state = task_states.DELETING
         instance.vm_state = vm_states.RESIZED
-        instance.system_metadata = sys_meta
+        instance.system_metadata = {}
         instance.save()
 
         self.compute.confirm_resize(self.context, instance=instance,
@@ -7355,24 +7349,16 @@ class ComputeAPITestCase(BaseTestCase):
             self.assertIn(key, sys_metadata)
             self.assertEqual(value, sys_metadata[key])
 
-    def test_create_saves_type_in_system_metadata(self):
+    def test_create_saves_flavor(self):
         instance_type = flavors.get_default_flavor()
         (ref, resv_id) = self.compute_api.create(
                 self.context,
                 instance_type=instance_type,
                 image_href='some-fake-image')
 
-        sys_metadata = db.instance_system_metadata_get(self.context,
-                ref[0]['uuid'])
-
-        instance_type_props = ['name', 'memory_mb', 'vcpus', 'root_gb',
-                               'ephemeral_gb', 'flavorid', 'swap',
-                               'rxtx_factor', 'vcpu_weight']
-        for key in instance_type_props:
-            sys_meta_key = "instance_type_%s" % key
-            self.assertIn(sys_meta_key, sys_metadata)
-            self.assertEqual(str(instance_type[key]),
-                             str(sys_metadata[sys_meta_key]))
+        instance = objects.Instance.get_by_uuid(self.context, ref[0]['uuid'])
+        self.assertEqual(instance_type.flavorid, instance.flavor.flavorid)
+        self.assertNotIn('instance_type_id', instance.system_metadata)
 
     def test_create_instance_associates_security_groups(self):
         # Make sure create associates security groups.
@@ -7567,7 +7553,8 @@ class ComputeAPITestCase(BaseTestCase):
 
         def fake_rpc_rebuild(context, **kwargs):
             info['image_ref'] = kwargs['instance'].image_ref
-            info['clean'] = kwargs['instance'].obj_what_changed() == set()
+            info['clean'] = ('progress' not in
+                             kwargs['instance'].obj_what_changed())
 
         self.stubs.Set(self.compute_api.compute_task_api, 'rebuild_instance',
                        fake_rpc_rebuild)
@@ -7647,13 +7634,8 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_rebuild_with_too_little_ram(self):
         instance = self._create_fake_instance_obj(params={'image_ref': '1'})
-
-        def fake_extract_flavor(_inst, prefix):
-            self.assertEqual('', prefix)
-            return dict(test_flavor.fake_flavor, memory_mb=64, root_gb=1)
-
-        self.stubs.Set(flavors, 'extract_flavor',
-                       fake_extract_flavor)
+        instance.flavor.memory_mb = 64
+        instance.flavor.root_gb = 1
 
         self.fake_image['min_ram'] = 128
         self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
@@ -7671,9 +7653,14 @@ class ComputeAPITestCase(BaseTestCase):
     def test_rebuild_with_too_little_disk(self):
         instance = self._create_fake_instance_obj(params={'image_ref': '1'})
 
-        def fake_extract_flavor(_inst, prefix):
-            self.assertEqual('', prefix)
-            return dict(test_flavor.fake_flavor, memory_mb=64, root_gb=1)
+        def fake_extract_flavor(_inst, prefix=''):
+            if prefix == '':
+                f = objects.Flavor(**test_flavor.fake_flavor)
+                f.memory_mb = 64
+                f.root_gb = 1
+                return f
+            else:
+                raise KeyError()
 
         self.stubs.Set(flavors, 'extract_flavor',
                        fake_extract_flavor)
@@ -7694,9 +7681,14 @@ class ComputeAPITestCase(BaseTestCase):
     def test_rebuild_with_just_enough_ram_and_disk(self):
         instance = self._create_fake_instance_obj(params={'image_ref': '1'})
 
-        def fake_extract_flavor(_inst, prefix):
-            self.assertEqual('', prefix)
-            return dict(test_flavor.fake_flavor, memory_mb=64, root_gb=1)
+        def fake_extract_flavor(_inst, prefix=''):
+            if prefix == '':
+                f = objects.Flavor(**test_flavor.fake_flavor)
+                f.memory_mb = 64
+                f.root_gb = 1
+                return f
+            else:
+                raise KeyError()
 
         self.stubs.Set(flavors, 'extract_flavor',
                        fake_extract_flavor)
@@ -7711,9 +7703,14 @@ class ComputeAPITestCase(BaseTestCase):
     def test_rebuild_with_no_ram_and_disk_reqs(self):
         instance = self._create_fake_instance_obj(params={'image_ref': '1'})
 
-        def fake_extract_flavor(_inst, prefix):
-            self.assertEqual('', prefix)
-            return dict(test_flavor.fake_flavor, memory_mb=64, root_gb=1)
+        def fake_extract_flavor(_inst, prefix=''):
+            if prefix == '':
+                f = objects.Flavor(**test_flavor.fake_flavor)
+                f.memory_mb = 64
+                f.root_gb = 1
+                return f
+            else:
+                raise KeyError()
 
         self.stubs.Set(flavors, 'extract_flavor',
                        fake_extract_flavor)
@@ -7725,9 +7722,14 @@ class ComputeAPITestCase(BaseTestCase):
     def test_rebuild_with_too_large_image(self):
         instance = self._create_fake_instance_obj(params={'image_ref': '1'})
 
-        def fake_extract_flavor(_inst, prefix):
-            self.assertEqual('', prefix)
-            return dict(test_flavor.fake_flavor, memory_mb=64, root_gb=1)
+        def fake_extract_flavor(_inst, prefix=''):
+            if prefix == '':
+                f = objects.Flavor(**test_flavor.fake_flavor)
+                f.memory_mb = 64
+                f.root_gb = 1
+                return f
+            else:
+                raise KeyError()
 
         self.stubs.Set(flavors, 'extract_flavor',
                        fake_extract_flavor)

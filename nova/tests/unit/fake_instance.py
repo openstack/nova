@@ -15,6 +15,8 @@
 import datetime
 import uuid
 
+from oslo.serialization import jsonutils
+
 from nova import objects
 from nova.objects import fields
 
@@ -41,6 +43,18 @@ def fake_db_secgroups(instance, names):
 
 
 def fake_db_instance(**updates):
+    if 'instance_type' in updates:
+        if isinstance(updates['instance_type'], objects.Flavor):
+            flavor = updates['instance_type']
+        else:
+            flavor = objects.Flavor(**updates['instance_type'])
+        flavorinfo = jsonutils.dumps({
+            'cur': flavor.obj_to_primitive(),
+            'old': None,
+            'new': None,
+        })
+    else:
+        flavorinfo = None
     db_instance = {
         'id': 1,
         'deleted': False,
@@ -56,6 +70,7 @@ def fake_db_instance(**updates):
         'root_gb': 0,
         'ephemeral_gb': 0,
         'extra': {'pci_requests': None,
+                  'flavor': flavorinfo,
                   'numa_topology': None},
         'tags': []
         }
@@ -67,6 +82,8 @@ def fake_db_instance(**updates):
             db_instance[name] = None
         elif field.default != fields.UnspecifiedDefault:
             db_instance[name] = field.default
+        elif name in ['flavor']:
+            pass
         else:
             raise Exception('fake_db_instance needs help with %s' % name)
 

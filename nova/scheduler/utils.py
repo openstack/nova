@@ -29,6 +29,7 @@ from nova.i18n import _, _LE, _LW
 from nova import notifications
 from nova import objects
 from nova.objects import base as obj_base
+from nova.objects import instance as instance_obj
 from nova.openstack.common import log as logging
 from nova import rpc
 
@@ -56,16 +57,14 @@ def build_request_spec(ctxt, image, instances, instance_type=None):
     type.
     """
     instance = instances[0]
-    if isinstance(instance, obj_base.NovaObject):
-        instance = obj_base.obj_to_primitive(instance)
-
     if instance_type is None:
-        instance_type = flavors.extract_flavor(instance)
-        # NOTE(danms): This won't have extra_specs, so fill in the gaps
-        _instance_type = objects.Flavor.get_by_flavor_id(
-            ctxt, instance_type['flavorid'])
-        instance_type.extra_specs = instance_type.get('extra_specs', {})
-        instance_type.extra_specs.update(_instance_type.extra_specs)
+        if isinstance(instance, objects.Instance):
+            instance_type = instance.get_flavor()
+        else:
+            instance_type = flavors.extract_flavor(instance)
+
+    if isinstance(instance, objects.Instance):
+        instance = instance_obj.compat_instance(instance)
 
     if isinstance(instance_type, objects.Flavor):
         instance_type = obj_base.obj_to_primitive(instance_type)

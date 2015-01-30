@@ -271,6 +271,9 @@ def get_flavor_access_by_flavor_id(flavorid, ctxt=None):
     return flavor.projects
 
 
+# NOTE(danms): This method is deprecated, do not use it!
+# Use instance.{old_,new_,}flavor instead, as instances no longer
+# have flavor information in system_metadata.
 def extract_flavor(instance, prefix=''):
     """Create a Flavor object from instance's system_metadata
     information.
@@ -297,6 +300,9 @@ def extract_flavor(instance, prefix=''):
     return flavor
 
 
+# NOTE(danms): This method is deprecated, do not use it!
+# Use instance.{old_,new_,}flavor instead, as instances no longer
+# have flavor information in system_metadata.
 def save_flavor_info(metadata, instance_type, prefix=''):
     """Save properties from instance_type into instance's system_metadata,
     in the format of:
@@ -326,6 +332,8 @@ def save_flavor_info(metadata, instance_type, prefix=''):
     return metadata
 
 
+# NOTE(danms): This method is deprecated, do not use it!
+# Instances no longer store flavor information in system_metadata
 def delete_flavor_info(metadata, *prefixes):
     """Delete flavor instance_type information from instance's system_metadata
     by prefix.
