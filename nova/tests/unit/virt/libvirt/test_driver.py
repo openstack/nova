@@ -44,6 +44,7 @@ import six
 
 from nova.api.metadata import base as instance_metadata
 from nova.compute import arch
+from nova.compute import cpumodel
 from nova.compute import manager
 from nova.compute import power_state
 from nova.compute import task_states
@@ -517,6 +518,7 @@ class LibvirtConnTestCase(test.TestCase):
             'os_type': 'linux',
             'user_id': '838a72b0-0d54-4827-8fd6-fb1227633ceb',
             'ephemeral_key_uuid': None,
+            'vcpu_model': None,
         }
 
         self.device_xml_tmpl = """
@@ -13215,6 +13217,36 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         self.assertEqual(diskb_xml.strip(), actual_diskb_xml.strip())
 
         self.assertIsNone(drv._get_disk_xml(dom_xml, 'vdc'))
+
+    def test_vcpu_model_from_config(self):
+        drv = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        vcpu_model = drv._cpu_config_to_vcpu_model(None, None)
+        self.assertIsNone(vcpu_model)
+
+        cpu = vconfig.LibvirtConfigGuestCPU()
+        feature1 = vconfig.LibvirtConfigGuestCPUFeature()
+        feature2 = vconfig.LibvirtConfigGuestCPUFeature()
+        feature1.name = 'sse'
+        feature1.policy = cpumodel.POLICY_REQUIRE
+        feature2.name = 'aes'
+        feature2.policy = cpumodel.POLICY_REQUIRE
+
+        cpu.features = set([feature1, feature2])
+        cpu.mode = cpumodel.MODE_CUSTOM
+        cpu.sockets = 1
+        cpu.cores = 2
+        cpu.threads = 4
+        vcpu_model = drv._cpu_config_to_vcpu_model(cpu, None)
+        self.assertEqual(cpumodel.MATCH_EXACT, vcpu_model.match)
+        self.assertEqual(cpumodel.MODE_CUSTOM, vcpu_model.mode)
+        self.assertEqual(4, vcpu_model.topology.threads)
+        self.assertEqual(set(['sse', 'aes']),
+                         set([f.name for f in vcpu_model.features]))
+
+        cpu.mode = cpumodel.MODE_HOST_MODEL
+        vcpu_model_1 = drv._cpu_config_to_vcpu_model(cpu, vcpu_model)
+        self.assertEqual(cpumodel.MODE_HOST_MODEL, vcpu_model.mode)
+        self.assertEqual(vcpu_model, vcpu_model_1)
 
 
 class LibvirtVolumeUsageTestCase(test.NoDBTestCase):
