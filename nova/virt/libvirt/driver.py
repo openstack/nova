@@ -640,7 +640,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     # If the instance is already shut off, we get this:
                     # Code=55 Error=Requested operation is not valid:
                     # domain is not running
-                    state = LIBVIRT_POWER_STATE[virt_dom.info()[0]]
+                    state = self._get_power_state(virt_dom)
                     if state == power_state.SHUTDOWN:
                         is_okay = True
                 elif errcode == libvirt.VIR_ERR_INTERNAL_ERROR:
@@ -1042,7 +1042,7 @@ class LibvirtDriver(driver.ComputeDriver):
             #             domains are persistent, but we should only
             #             affect live if the domain is running.
             flags = libvirt.VIR_DOMAIN_AFFECT_CONFIG
-            state = LIBVIRT_POWER_STATE[virt_dom.info()[0]]
+            state = self._get_power_state(virt_dom)
             if state in (power_state.RUNNING, power_state.PAUSED):
                 flags |= libvirt.VIR_DOMAIN_AFFECT_LIVE
 
@@ -1180,7 +1180,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 #             domains are persistent, but we should only
                 #             affect live if the domain is running.
                 flags = libvirt.VIR_DOMAIN_AFFECT_CONFIG
-                state = LIBVIRT_POWER_STATE[virt_dom.info()[0]]
+                state = self._get_power_state(virt_dom)
                 if state in (power_state.RUNNING, power_state.PAUSED):
                     flags |= libvirt.VIR_DOMAIN_AFFECT_LIVE
                 virt_dom.detachDeviceFlags(xml, flags)
@@ -1219,7 +1219,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                          CONF.libvirt.virt_type)
         try:
             flags = libvirt.VIR_DOMAIN_AFFECT_CONFIG
-            state = LIBVIRT_POWER_STATE[virt_dom.info()[0]]
+            state = self._get_power_state(virt_dom)
             if state == power_state.RUNNING or state == power_state.PAUSED:
                 flags |= libvirt.VIR_DOMAIN_AFFECT_LIVE
             virt_dom.attachDeviceFlags(cfg.to_xml(), flags)
@@ -1237,7 +1237,7 @@ class LibvirtDriver(driver.ComputeDriver):
         try:
             self.vif_driver.unplug(instance, vif)
             flags = libvirt.VIR_DOMAIN_AFFECT_CONFIG
-            state = LIBVIRT_POWER_STATE[virt_dom.info()[0]]
+            state = self._get_power_state(virt_dom)
             if state == power_state.RUNNING or state == power_state.PAUSED:
                 flags |= libvirt.VIR_DOMAIN_AFFECT_LIVE
             virt_dom.detachDeviceFlags(cfg.to_xml(), flags)
@@ -1311,7 +1311,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         snapshot_name = uuid.uuid4().hex
 
-        state = LIBVIRT_POWER_STATE[virt_dom.info()[0]]
+        state = self._get_power_state(virt_dom)
 
         # NOTE(rmk): Live snapshots require QEMU 1.3 and Libvirt 1.0.0.
         #            These restrictions can be relaxed as other configurations
@@ -1997,7 +1997,7 @@ class LibvirtDriver(driver.ComputeDriver):
         :returns: True if the reboot succeeded
         """
         dom = self._host.get_domain(instance)
-        state = LIBVIRT_POWER_STATE[dom.info()[0]]
+        state = self._get_power_state(dom)
         old_domid = dom.ID()
         # NOTE(vish): This check allows us to reboot an instance that
         #             is already shutdown.
@@ -2010,7 +2010,7 @@ class LibvirtDriver(driver.ComputeDriver):
             pci_manager.get_instance_pci_devs(instance, 'all'))
         for x in xrange(CONF.libvirt.wait_soft_reboot_seconds):
             dom = self._host.get_domain(instance)
-            state = LIBVIRT_POWER_STATE[dom.info()[0]]
+            state = self._get_power_state(dom)
             new_domid = dom.ID()
 
             # NOTE(ivoks): By checking domain IDs, we make sure we are
@@ -2144,8 +2144,7 @@ class LibvirtDriver(driver.ComputeDriver):
             # wait for it to shutdown
             return True
 
-        (state, _max_mem, _mem, _cpus, _t) = dom.info()
-        state = LIBVIRT_POWER_STATE[state]
+        state = self._get_power_state(dom)
         if state in SHUTDOWN_STATES:
             LOG.info(_LI("Instance already shutdown."),
                      instance=instance)
@@ -2159,8 +2158,7 @@ class LibvirtDriver(driver.ComputeDriver):
         for sec in six.moves.range(timeout):
 
             dom = self._host.get_domain(instance)
-            (state, _max_mem, _mem, _cpus, _t) = dom.info()
-            state = LIBVIRT_POWER_STATE[state]
+            state = self._get_power_state(dom)
 
             if state in SHUTDOWN_STATES:
                 LOG.info(_LI("Instance shutdown successfully after %d "
@@ -2244,7 +2242,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # anything if it is.
         try:
             domain = self._host.get_domain(instance)
-            state = LIBVIRT_POWER_STATE[domain.info()[0]]
+            state = self._get_power_state(domain)
 
             ignored_states = (power_state.RUNNING,
                               power_state.SUSPENDED,
@@ -4176,7 +4174,7 @@ class LibvirtDriver(driver.ComputeDriver):
         """
         virt_dom = self._host.get_domain(instance)
         try:
-            dom_info = virt_dom.info()
+            dom_info = self._host.get_domain_info(virt_dom)
         except libvirt.libvirtError as ex:
             error_code = ex.get_error_code()
             if error_code == libvirt.VIR_ERR_NO_DOMAIN:
@@ -4542,7 +4540,7 @@ class LibvirtDriver(driver.ComputeDriver):
             used = 0
             for dom in self._host.list_instance_domains(only_guests=False):
                 try:
-                    dom_mem = int(dom.info()[2])
+                    dom_mem = int(self._host.get_domain_info(dom)[2])
                 except libvirt.libvirtError as e:
                     LOG.warn(_LW("couldn't obtain the memory from domain:"
                                  " %(uuid)s, exception: %(ex)s") %
@@ -6501,7 +6499,8 @@ class LibvirtDriver(driver.ComputeDriver):
         xml = domain.XMLDesc(0)
         xml_doc = etree.fromstring(xml)
 
-        (state, max_mem, mem, num_cpu, cpu_time) = domain.info()
+        (state, max_mem, mem, num_cpu, cpu_time) = \
+            self._host.get_domain_info(domain)
         config_drive = configdrive.required_by(instance)
         launched_at = timeutils.normalize_time(instance.launched_at)
         uptime = timeutils.delta_seconds(launched_at,
@@ -6666,3 +6665,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def is_supported_fs_format(self, fs_type):
         return fs_type in [disk.FS_FORMAT_EXT2, disk.FS_FORMAT_EXT3,
                            disk.FS_FORMAT_EXT4, disk.FS_FORMAT_XFS]
+
+    def _get_power_state(self, virt_dom):
+        dom_info = self._host.get_domain_info(virt_dom)
+        return LIBVIRT_POWER_STATE[dom_info[0]]
