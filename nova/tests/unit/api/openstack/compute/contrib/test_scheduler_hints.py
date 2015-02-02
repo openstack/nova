@@ -50,7 +50,7 @@ class SchedulerHintsTestCaseV21(test.TestCase):
                                                   'os-scheduler-hints'))
 
     def _get_request(self):
-        return fakes.HTTPRequestV3.blank('/servers')
+        return fakes.HTTPRequest.blank('/servers')
 
     def test_create_server_without_hints(self):
 
@@ -189,7 +189,7 @@ class ServersControllerCreateTestV21(test.TestCase):
         self.assertNotIn('scheduler_hints', kwargs)
 
     def _get_request(self):
-        return fakes.HTTPRequestV3.blank('/servers')
+        return fakes.HTTPRequest.blank('/servers')
 
     def _test_create_extra(self, params):
         image_uuid = 'c905cedb-7281-47e4-8a62-f26bc5fc4c77'
