@@ -134,7 +134,8 @@ class Server(object):
             raise
 
         (self.host, self.port) = self._socket.getsockname()[0:2]
-        LOG.info(_("%(name)s listening on %(host)s:%(port)s") % self.__dict__)
+        LOG.info(_("%(name)s listening on %(host)s:%(port)s"),
+                 {'name': self.name, 'host': self.host, 'port': self.port})
 
     def start(self):
         """Start serving a WSGI application.
@@ -193,7 +194,9 @@ class Server(object):
             except Exception:
                 with excutils.save_and_reraise_exception():
                     LOG.error(_("Failed to start %(name)s on %(host)s"
-                                ":%(port)s with SSL support") % self.__dict__)
+                                ":%(port)s with SSL support"),
+                              {'name': self.name, 'host': self.host,
+                               'port': self.port})
 
         wsgi_kwargs = {
             'func': eventlet.wsgi.server,
