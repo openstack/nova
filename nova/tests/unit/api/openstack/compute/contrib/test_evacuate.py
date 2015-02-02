@@ -75,6 +75,7 @@ class EvacuateTestV21(test.NoDBTestCase):
 
     def _set_up_controller(self):
         self.controller = evacuate_v21.EvacuateController()
+        self.controller_no_ext = self.controller
 
     def _get_evacuate_response(self, json_load, uuid=None):
         base_json_load = {'evacuate': json_load}
@@ -85,11 +86,13 @@ class EvacuateTestV21(test.NoDBTestCase):
 
         return response
 
-    def _check_evacuate_failure(self, exception, body, uuid=None):
+    def _check_evacuate_failure(self, exception, body, uuid=None,
+                                controller=None):
+        controller = controller or self.controller
         body = {'evacuate': body}
         req = fakes.HTTPRequest.blank('', use_admin_context=True)
         self.assertRaises(exception,
-                          self.controller._evacuate,
+                          controller._evacuate,
                           req, uuid or self.UUID, body=body)
 
     def _fake_update(self, inst, context, instance, task_state,
@@ -205,7 +208,8 @@ class EvacuateTestV21(test.NoDBTestCase):
         self._check_evacuate_failure(self.validation_error,
                                      {'host': '',
                                       'onSharedStorage': 'False',
-                                      'adminPass': 'MyNewPass'})
+                                      'adminPass': 'MyNewPass'},
+                                     controller=self.controller_no_ext)
 
     def test_evacuate_instance_with_underscore_in_hostname(self):
         # NOTE: The hostname grammar in RFC952 does not allow for
@@ -242,13 +246,17 @@ class EvacuateTestV2(EvacuateTestV21):
 
     def _set_up_controller(self):
         ext_mgr = extensions.ExtensionManager()
-        ext_mgr.extensions = {'os-evacuate': 'fake'}
+        ext_mgr.extensions = {'os-extended-evacuate-find-host': 'fake'}
         self.controller = evacuate_v2.Controller(ext_mgr)
+        ext_mgr_no_ext = extensions.ExtensionManager()
+        ext_mgr_no_ext.extensions = {}
+        self.controller_no_ext = evacuate_v2.Controller(ext_mgr_no_ext)
 
-    def test_evacuate_instance_with_no_target(self):
+    def test_no_target_fails_if_extension_not_loaded(self):
         self._check_evacuate_failure(webob.exc.HTTPBadRequest,
                                      {'onSharedStorage': 'False',
-                                      'adminPass': 'MyNewPass'})
+                                      'adminPass': 'MyNewPass'},
+                                     controller=self.controller_no_ext)
 
     def test_evacuate_instance_with_too_long_host(self):
         pass
