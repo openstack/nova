@@ -103,6 +103,9 @@ class API(base_api.NetworkAPI):
 
     @wrap_check_policy
     def delete(self, context, network_uuid):
+        network = self.get(context, network_uuid)
+        if network.project_id is not None:
+            raise exception.NetworkInUse(network_id=network_uuid)
         return self.network_rpcapi.delete_network(context, network_uuid, None)
 
     @wrap_check_policy
