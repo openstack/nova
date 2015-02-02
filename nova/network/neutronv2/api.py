@@ -257,7 +257,8 @@ class API(base_api.NetworkAPI):
         """
         try:
             if fixed_ip:
-                port_req_body['port']['fixed_ips'] = [{'ip_address': fixed_ip}]
+                port_req_body['port']['fixed_ips'] = [
+                    {'ip_address': str(fixed_ip)}]
             port_req_body['port']['network_id'] = network_id
             port_req_body['port']['admin_state_up'] = True
             port_req_body['port']['tenant_id'] = instance['project_id']
