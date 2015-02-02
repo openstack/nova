@@ -147,37 +147,62 @@ class ExtensionTestCase(test.TestCase):
             self.flags(osapi_compute_extension=ext_list)
         self.fake_context = nova.context.RequestContext('fake', 'fake')
 
-    def test_extension_authorizer_throws_exception_if_policy_fails(self):
+    def _test_extension_authorizer_throws_exception_if_policy_fails(self,
+                                                                    rule,
+                                                                    authorize):
         target = {'project_id': '1234',
                   'user_id': '5678'}
         self.mox.StubOutWithMock(nova.policy, 'enforce')
         nova.policy.enforce(self.fake_context,
-                            "compute_extension:used_limits_for_admin",
+                            rule,
                             target).AndRaise(
             exception.PolicyNotAuthorized(
-                action="compute_extension:used_limits_for_admin"))
+                action=rule))
         self.mox.ReplayAll()
-        authorize = base_extensions.extension_authorizer('compute',
-                                                        'used_limits_for_admin'
-        )
+        self.assertRaises(exception.PolicyNotAuthorized, authorize,
+                          self.fake_context, target=target)
+
+    def test_extension_authorizer_throws_exception_if_policy_fails(self):
+        authorize = base_extensions.extension_authorizer(
+            'compute', 'used_limits_for_admin')
+        self._test_extension_authorizer_throws_exception_if_policy_fails(
+            "compute_extension:used_limits_for_admin",
+            authorize)
+
+    def test_os_compute_api_authorizer_throws_exception_if_policy_fails(self):
+        authorize = base_extensions.os_compute_authorizer(
+            'used_limits_for_admin')
+        self._test_extension_authorizer_throws_exception_if_policy_fails(
+            "compute_extension:v3:used_limits_for_admin",
+            authorize)
+
+    def _test_core_authorizer_throws_exception_if_policy_fails(self,
+                                                               rule,
+                                                               authorize):
+        target = {'project_id': '1234',
+                  'user_id': '5678'}
+        self.mox.StubOutWithMock(nova.policy, 'enforce')
+        nova.policy.enforce(self.fake_context,
+                            rule,
+                            target).AndRaise(
+            exception.PolicyNotAuthorized(
+                action=rule))
+        self.mox.ReplayAll()
         self.assertRaises(exception.PolicyNotAuthorized, authorize,
                           self.fake_context, target=target)
 
     def test_core_authorizer_throws_exception_if_policy_fails(self):
-        target = {'project_id': '1234',
-                  'user_id': '5678'}
-        self.mox.StubOutWithMock(nova.policy, 'enforce')
-        nova.policy.enforce(self.fake_context,
-                            "compute:used_limits_for_admin",
-                            target).AndRaise(
-            exception.PolicyNotAuthorized(
-                action="compute:used_limits_for_admin"))
-        self.mox.ReplayAll()
         authorize = base_extensions.core_authorizer('compute',
-                                                    'used_limits_for_admin'
-        )
-        self.assertRaises(exception.PolicyNotAuthorized, authorize,
-                          self.fake_context, target=target)
+                                                    'used_limits_for_admin')
+        self._test_core_authorizer_throws_exception_if_policy_fails(
+            "compute:used_limits_for_admin", authorize)
+
+    def test_os_compute_api_core_authorizer_throws_exception_if_policy_fails(
+            self):
+        authorize = base_extensions.os_compute_authorizer(
+            'used_limits_for_admin', core=True)
+        self._test_core_authorizer_throws_exception_if_policy_fails(
+            "compute:v3:used_limits_for_admin", authorize)
 
 
 class ExtensionControllerTest(ExtensionTestCase):

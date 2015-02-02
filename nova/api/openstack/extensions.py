@@ -334,6 +334,7 @@ def load_standard_extensions(ext_mgr, logger, path, package, ext_list=None):
         dirnames[:] = subdirs
 
 
+# This will be deprecated after policy cleanup finished
 def core_authorizer(api_name, extension_name):
     def authorize(context, target=None, action=None):
         if target is None:
@@ -347,33 +348,65 @@ def core_authorizer(api_name, extension_name):
     return authorize
 
 
+# This is only used for Nova V2 API, after v2 API depreciated, this will be
+# deprecated also.
 def extension_authorizer(api_name, extension_name):
     return core_authorizer('%s_extension' % api_name, extension_name)
 
 
-def soft_authorizer(hard_authorizer, api_name, extension_name):
+def _soft_authorizer(hard_authorizer, api_name, extension_name):
     hard_authorize = hard_authorizer(api_name, extension_name)
 
-    def authorize(context, action=None):
+    def authorize(context, target=None, action=None):
         try:
-            hard_authorize(context, action=action)
+            hard_authorize(context, target=target, action=action)
             return True
         except exception.Forbidden:
             return False
     return authorize
 
 
+# This is only used for Nova V2 API, after V2 API depreciated, this will be
+# deprecated also.
 def soft_extension_authorizer(api_name, extension_name):
-    return soft_authorizer(extension_authorizer, api_name, extension_name)
+    return _soft_authorizer(extension_authorizer, api_name, extension_name)
 
 
+# This will be deprecated after policy cleanup finished
 def soft_core_authorizer(api_name, extension_name):
-    return soft_authorizer(core_authorizer, api_name, extension_name)
+    return _soft_authorizer(core_authorizer, api_name, extension_name)
 
 
+# This will be deprecated after ec2 old style policy removed in later release
 def check_compute_policy(context, action, target, scope='compute'):
     _action = '%s:%s' % (scope, action)
     nova.policy.enforce(context, _action, target)
+
+
+# NOTE(alex_xu): The functions os_compute_authorizer and
+# os_compute_soft_authorizer are used to policy enforcement for Openstack
+# Compute API, now Nova V2.1 REST API will invoke it. Currently this function
+# still uses the old policy rule name style as below:
+#   core api: 'compute:v3:[extension]:[action]'
+#   extension api: 'compute_extension:v3:[extension]:[action]'
+#
+# After the policy cleanup is finished, the policy rule name will be renamed
+# to 'os_compute_api:[extension]:[action]'. And the parameter 'core' will be
+# deleted, because there isn't distinguish between core or extension API in
+# the future.
+
+def os_compute_authorizer(extension_name, core=False):
+    if core:
+        return core_authorizer('compute', 'v3:%s' % extension_name)
+    else:
+        return extension_authorizer('compute', 'v3:%s' % extension_name)
+
+
+def os_compute_soft_authorizer(extension_name, core=False):
+    if core:
+        return soft_core_authorizer('compute', 'v3:%s' % extension_name)
+    else:
+        return soft_extension_authorizer('compute', 'v3:%s' % extension_name)
 
 
 @six.add_metaclass(abc.ABCMeta)
