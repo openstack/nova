@@ -435,6 +435,37 @@ def disk_move(session, dc_ref, src_file, dst_file):
              {'src': src_file, 'dst': dst_file})
 
 
+def disk_copy(session, dc_ref, src_file, dst_file):
+    """Copies the source virtual disk to the destination."""
+    LOG.debug("Copying virtual disk from %(src)s to %(dst)s.",
+              {'src': src_file, 'dst': dst_file})
+    copy_disk_task = session._call_method(
+            session.vim,
+            "CopyVirtualDisk_Task",
+            session.vim.service_content.virtualDiskManager,
+            sourceName=str(src_file),
+            sourceDatacenter=dc_ref,
+            destName=str(dst_file),
+            destDatacenter=dc_ref,
+            force=False)
+    session._wait_for_task(copy_disk_task)
+    LOG.info(_LI("Copied virtual disk from %(src)s to %(dst)s."),
+             {'src': src_file, 'dst': dst_file})
+
+
+def disk_delete(session, dc_ref, file_path):
+    """Deletes a virtual disk."""
+    LOG.debug("Deleting virtual disk %s", file_path)
+    delete_disk_task = session._call_method(
+            session.vim,
+            "DeleteVirtualDisk_Task",
+            session.vim.service_content.virtualDiskManager,
+            name=str(file_path),
+            datacenter=dc_ref)
+    session._wait_for_task(delete_disk_task)
+    LOG.info(_LI("Deleted virtual disk %s."), file_path)
+
+
 def file_move(session, dc_ref, src_file, dst_file):
     """Moves the source file or folder to the destination.
 
