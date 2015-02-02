@@ -140,7 +140,7 @@ function run_tests {
     ${wrapper} python setup.py egg_info
   fi
   echo "Running \`${wrapper} $TESTRTESTS\`"
-  if ${wrapper} which subunit-2to1 2>&1 > /dev/null
+  if ${wrapper} which subunit-2to1 >/dev/null 2>&1
   then
     # subunit-2to1 is present, testr subunit stream should be in version 2
     # format. Convert to version one before colorizing.
