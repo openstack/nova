@@ -210,12 +210,9 @@ class FlavorManageTestV21(test.NoDBTestCase):
     def _create_flavor_bad_request_case(self, body):
         self.stubs.UnsetAll()
 
-        req = webob.Request.blank(self.base_url)
-        req.headers['Content-Type'] = 'application/json'
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        res = req.get_response(self.app)
-        self.assertEqual(res.status_code, 400)
+        req = fakes.HTTPRequest.blank('')
+        self.assertRaises(self.validation_error, self.controller._create,
+                          req, body=body)
 
     def test_create_invalid_name(self):
         self.request_body['flavor']['name'] = 'bad !@#!$%\x00 name'
@@ -322,12 +319,9 @@ class FlavorManageTestV21(test.NoDBTestCase):
             raise exception.FlavorExists(name=name)
 
         self.stubs.Set(flavors, "create", fake_create)
-        req = webob.Request.blank(self.base_url)
-        req.headers['Content-Type'] = 'application/json'
-        req.method = 'POST'
-        req.body = jsonutils.dumps(expected)
-        res = req.get_response(self.app)
-        self.assertEqual(res.status_int, 409)
+        req = fakes.HTTPRequest.blank('')
+        self.assertRaises(webob.exc.HTTPConflict, self.controller._create,
+                          req, body=expected)
 
     @mock.patch('nova.compute.flavors.create',
                 side_effect=exception.FlavorCreateFailed)
@@ -345,13 +339,11 @@ class FlavorManageTestV21(test.NoDBTestCase):
                 "os-flavor-access:is_public": True,
             }
         }
-        req = webob.Request.blank(self.base_url)
-        req.headers['Content-Type'] = 'application/json'
-        req.method = 'POST'
-        req.body = jsonutils.dumps(request_dict)
-        res = req.get_response(self.app)
-        self.assertEqual(res.status_int, 500)
-        self.assertIn('Unable to create flavor', res.body)
+        req = fakes.HTTPRequest.blank('')
+        ex = self.assertRaises(webob.exc.HTTPInternalServerError,
+                               self.controller._create,
+                               req, body=request_dict)
+        self.assertIn('Unable to create flavor', ex.explanation)
 
     def test_invalid_memory_mb(self):
         """Check negative and decimal number can't be accepted."""
