@@ -37,6 +37,7 @@ from eventlet import greenthread
 from eventlet import patcher
 from eventlet import tpool
 from oslo.config import cfg
+from oslo.utils import excutils
 
 from nova import context as nova_context
 from nova import exception
@@ -650,3 +651,69 @@ class Host(object):
                           {'old': self._hostname,
                            'new': hostname})
         return self._hostname
+
+    def find_secret(self, usage_type, usage_id):
+        """Find a secret.
+
+        usage_type: one of 'iscsi', 'ceph', 'rbd' or 'volume'
+        usage_id: name of resource in secret
+        """
+        if usage_type == 'iscsi':
+            usage_type_const = libvirt.VIR_SECRET_USAGE_TYPE_ISCSI
+        elif usage_type in ('rbd', 'ceph'):
+            usage_type_const = libvirt.VIR_SECRET_USAGE_TYPE_CEPH
+        elif usage_type == 'volume':
+            usage_type_const = libvirt.VIR_SECRET_USAGE_TYPE_VOLUME
+        else:
+            msg = _("Invalid usage_type: %s")
+            raise exception.NovaException(msg % usage_type)
+
+        try:
+            conn = self.get_connection()
+            return conn.secretLookupByUsage(usage_type_const, usage_id)
+        except libvirt.libvirtError as e:
+            if e.get_error_code() == libvirt.VIR_ERR_NO_SECRET:
+                return None
+
+    def create_secret(self, usage_type, usage_id, password=None):
+        """Create a secret.
+
+        usage_type: one of 'iscsi', 'ceph', 'rbd' or 'volume'
+                           'rbd' will be converted to 'ceph'.
+        usage_id: name of resource in secret
+        """
+        secret_conf = vconfig.LibvirtConfigSecret()
+        secret_conf.ephemeral = False
+        secret_conf.private = False
+        secret_conf.usage_id = usage_id
+        if usage_type in ('rbd', 'ceph'):
+            secret_conf.usage_type = 'ceph'
+        elif usage_type == 'iscsi':
+            secret_conf.usage_type = 'iscsi'
+        elif usage_type == 'volume':
+            secret_conf.usage_type = 'volume'
+        else:
+            msg = _("Invalid usage_type: %s")
+            raise exception.NovaException(msg % usage_type)
+
+        xml = secret_conf.to_xml()
+        try:
+            LOG.debug('Secret XML: %s' % xml)
+            conn = self.get_connection()
+            secret = conn.secretDefineXML(xml)
+            if password is not None:
+                secret.setValue(password)
+            return secret
+        except libvirt.libvirtError:
+            with excutils.save_and_reraise_exception():
+                LOG.error(_LE('Error defining a secret with XML: %s') % xml)
+
+    def delete_secret(self, usage_type, usage_id):
+        """Delete a secret.
+
+        usage_type: one of 'iscsi', 'ceph', 'rbd' or 'volume'
+        usage_id: name of resource in secret
+        """
+        secret = self.find_secret(usage_type, usage_id)
+        if secret is not None:
+            secret.undefine()

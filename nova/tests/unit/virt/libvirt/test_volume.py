@@ -34,6 +34,30 @@ from nova.virt.libvirt import utils as libvirt_utils
 from nova.virt.libvirt import volume
 
 CONF = cfg.CONF
+SECRET_UUID = '2a0a0d6c-babf-454d-b93e-9ac9957b95e0'
+
+
+class FakeSecret(object):
+
+    def __init__(self):
+        self.uuid = SECRET_UUID
+
+    def getUUIDString(self):
+        return self.uuid
+
+    def UUIDString(self):
+        return self.uuid
+
+    def setValue(self, value):
+        self.value = value
+        return 0
+
+    def getValue(self, value):
+        return self.value
+
+    def undefine(self):
+        self.value = None
+        return 0
 
 
 class LibvirtVolumeTestCase(test.NoDBTestCase):
@@ -80,6 +104,12 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
         self.assertEqual(tree.find('./source').get('protocol'), 'rbd')
         rbd_name = '%s/%s' % ('rbd', self.name)
         self.assertEqual(tree.find('./source').get('name'), rbd_name)
+
+    def _assertISCSINetworkAndProtocolEquals(self, tree):
+        self.assertEqual(tree.get('type'), 'network')
+        self.assertEqual(tree.find('./source').get('protocol'), 'iscsi')
+        iscsi_name = '%s/%s' % (self.iqn, self.vol['id'])
+        self.assertEqual(tree.find('./source').get('name'), iscsi_name)
 
     def _assertFileTypeEquals(self, tree, file_path):
         self.assertEqual(tree.get('type'), 'file')
@@ -223,10 +253,10 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
         readonly = tree.find('./readonly')
         self.assertIsNotNone(readonly)
 
-    def iscsi_connection(self, volume, location, iqn):
+    def iscsi_connection(self, volume, location, iqn, auth=False):
         dev_name = 'ip-%s-iscsi-%s-lun-1' % (location, iqn)
         dev_path = '/dev/disk/by-path/%s' % (dev_name)
-        return {
+        ret = {
                 'driver_volume_type': 'iscsi',
                 'data': {
                     'volume_id': volume['id'],
@@ -240,6 +270,11 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
                         }
                 }
         }
+        if auth:
+            ret['data']['auth_method'] = 'CHAP'
+            ret['data']['auth_username'] = 'foo'
+            ret['data']['auth_password'] = 'bar'
+        return ret
 
     def test_rescan_multipath(self):
         libvirt_driver = volume.LibvirtISCSIVolumeDriver(self.fake_conn)
@@ -577,6 +612,26 @@ Setting up iSCSI targets: unused
         self.assertEqual(tree.find('./auth/secret').get('type'), secret_type)
         self.assertEqual(tree.find('./auth/secret').get('uuid'), flags_uuid)
         libvirt_driver.disconnect_volume(connection_info, "vde")
+
+    @mock.patch.object(host.Host, 'find_secret')
+    @mock.patch.object(host.Host, 'create_secret')
+    @mock.patch.object(host.Host, 'delete_secret')
+    def test_libvirt_iscsi_net_driver(self, mock_delete, mock_create,
+                                      mock_find):
+        mock_find.return_value = FakeSecret()
+        mock_create.return_value = FakeSecret()
+        libvirt_driver = volume.LibvirtNetVolumeDriver(self.fake_conn)
+        connection_info = self.iscsi_connection(self.vol, self.location,
+                                                self.iqn, auth=True)
+        secret_type = 'iscsi'
+        flags_user = connection_info['data']['auth_username']
+        conf = libvirt_driver.get_config(connection_info, self.disk_info)
+        tree = conf.format_dom()
+        self._assertISCSINetworkAndProtocolEquals(tree)
+        self.assertEqual(tree.find('./auth').get('username'), flags_user)
+        self.assertEqual(tree.find('./auth/secret').get('type'), secret_type)
+        self.assertEqual(tree.find('./auth/secret').get('uuid'), SECRET_UUID)
+        libvirt_driver.disconnect_volume(connection_info, 'vde')
 
     def test_libvirt_kvm_volume(self):
         self.stubs.Set(os.path, 'exists', lambda x: True)

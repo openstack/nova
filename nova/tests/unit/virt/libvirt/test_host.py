@@ -658,3 +658,52 @@ class HostTestCase(test.NoDBTestCase):
         mock_version.return_value = 1005001
         self.assertEqual(1005001, self.host.get_version())
         mock_version.assert_called_once_with()
+
+    @mock.patch.object(fakelibvirt.virConnect, "secretLookupByUsage")
+    def test_find_secret(self, mock_sec):
+        """finding secrets with various usage_type."""
+        expected = [
+            mock.call(libvirt.VIR_SECRET_USAGE_TYPE_CEPH, 'rbdvol'),
+            mock.call(libvirt.VIR_SECRET_USAGE_TYPE_CEPH, 'cephvol'),
+            mock.call(libvirt.VIR_SECRET_USAGE_TYPE_ISCSI, 'iscsivol'),
+            mock.call(libvirt.VIR_SECRET_USAGE_TYPE_VOLUME, 'vol')]
+
+        self.host.find_secret('rbd', 'rbdvol')
+        self.host.find_secret('ceph', 'cephvol')
+        self.host.find_secret('iscsi', 'iscsivol')
+        self.host.find_secret('volume', 'vol')
+        self.assertEqual(expected, mock_sec.mock_calls)
+        self.assertRaises(exception.NovaException,
+                          self.host.find_secret, "foo", "foovol")
+
+        mock_sec.side_effect = libvirt.libvirtError("")
+        mock_sec.side_effect.err = (66, )
+        self.assertIsNone(self.host.find_secret('rbd', 'rbdvol'))
+
+    @mock.patch.object(fakelibvirt.virConnect, "secretDefineXML")
+    def test_create_secret(self, mock_sec):
+        """creating secrets with various usage_type."""
+        self.host.create_secret('rbd', 'rbdvol')
+        self.host.create_secret('ceph', 'cephvol')
+        self.host.create_secret('iscsi', 'iscsivol')
+        self.host.create_secret('volume', 'vol')
+        self.assertRaises(exception.NovaException,
+                          self.host.create_secret, "foo", "foovol")
+
+        secret = mock.MagicMock()
+        mock_sec.return_value = secret
+        self.host.create_secret('iscsi', 'iscsivol', password="foo")
+        secret.setValue.assert_called_once_with("foo")
+
+    @mock.patch('nova.virt.libvirt.host.Host.find_secret')
+    def test_delete_secret(self, mock_find_secret):
+        """deleting secret."""
+        secret = mock.MagicMock()
+        mock_find_secret.return_value = secret
+        expected = [mock.call('rbd', 'rbdvol'),
+                    mock.call().undefine()]
+        self.host.delete_secret('rbd', 'rbdvol')
+        self.assertEqual(expected, mock_find_secret.mock_calls)
+
+        mock_find_secret.return_value = None
+        self.host.delete_secret("rbd", "rbdvol")
