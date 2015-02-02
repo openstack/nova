@@ -34,6 +34,7 @@ from nova.api.ec2 import cloud
 from nova.api.ec2 import ec2utils
 from nova.api.ec2 import inst_state
 from nova.api.metadata import password
+from nova import availability_zones
 from nova.compute import api as compute_api
 from nova.compute import flavors
 from nova.compute import power_state
@@ -140,6 +141,7 @@ class CloudTestCase(test.TestCase):
         super(CloudTestCase, self).setUp()
         self.useFixture(test.SampleNetworks())
         ec2utils.reset_cache()
+        availability_zones.reset_cache()
         self.flags(compute_driver='nova.virt.fake.FakeDriver',
                    volume_api_class='nova.tests.unit.fake_volume.API')
         self.useFixture(fixtures.FakeLogger('boto'))

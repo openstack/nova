@@ -19,7 +19,6 @@ import re
 
 from oslo.utils import timeutils
 
-from nova import availability_zones
 from nova import context
 from nova import exception
 from nova.i18n import _
@@ -172,11 +171,6 @@ def get_ip_info_for_instance(context, instance):
     if not nw_info:
         nw_info = []
     return get_ip_info_for_instance_from_nw_info(nw_info)
-
-
-def get_availability_zone_by_host(host, conductor_api=None):
-    return availability_zones.get_host_availability_zone(
-        context.get_admin_context(), host, conductor_api)
 
 
 def id_to_ec2_id(instance_id, template='i-%08x'):
