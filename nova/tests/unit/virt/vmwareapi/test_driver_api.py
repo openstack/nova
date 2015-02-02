@@ -412,7 +412,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                         network_info=self.network_info,
                         block_device_info=bdi)
         self._check_vm_record(num_instances=num_instances,
-                              powered_on=powered_on)
+                              powered_on=powered_on,
+                              uuid=uuid)
         self.assertIsNotNone(vm_util.vm_ref_cache_get(self.uuid))
 
     def _get_vm_record(self):
@@ -431,12 +432,13 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                                    'name': name,
                                    'node': node})
 
-    def _check_vm_record(self, num_instances=1, powered_on=True):
+    def _check_vm_record(self, num_instances=1, powered_on=True, uuid=None):
         """Check if the spawned VM's properties correspond to the instance in
         the db.
         """
         instances = self.conn.list_instances()
-        self.assertEqual(len(instances), num_instances)
+        if uuidutils.is_uuid_like(uuid):
+            self.assertEqual(len(instances), num_instances)
 
         # Get Nova record for VM
         vm_info = self._get_info()

@@ -32,7 +32,6 @@ from oslo.vmware import vim_util
 from nova import exception
 from nova.i18n import _, _LI, _LW
 from nova.openstack.common import log as logging
-from nova.openstack.common import uuidutils
 from nova.virt import driver
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import error_util
@@ -257,8 +256,7 @@ class VMwareVCDriver(driver.ComputeDriver):
 
     def list_instance_uuids(self):
         """List VM instance UUIDs."""
-        uuids = self._vmops.list_instances()
-        return [uuid for uuid in uuids if uuidutils.is_uuid_like(uuid)]
+        return self._vmops.list_instances()
 
     def list_instances(self):
         """List VM instances from all nodes."""
