@@ -322,7 +322,8 @@ class Controller(wsgi.Controller):
                     msg = _("Invalid fixed IP address (%s)") % request.address
                     raise exc.HTTPBadRequest(explanation=msg)
 
-                if (request.network_id and
+                # duplicate networks are allowed only for neutron v2.0
+                if (not utils.is_neutron() and request.network_id and
                         request.network_id in network_uuids):
                     expl = (_("Duplicate networks"
                               " (%s) are not allowed") %
