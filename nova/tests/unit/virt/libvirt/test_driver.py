@@ -86,6 +86,7 @@ from nova.virt.libvirt import host
 from nova.virt.libvirt import imagebackend
 from nova.virt.libvirt import rbd_utils
 from nova.virt.libvirt import utils as libvirt_utils
+from nova.virt.libvirt import volume as volume_drivers
 
 try:
     import libvirt
@@ -5167,6 +5168,26 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         expected['container_format'] = base.get('container_format', 'bare')
         ret = drvr._create_snapshot_metadata(base, instance, img_fmt, snp_name)
         self.assertEqual(ret, expected)
+
+    def test_get_volume_driver(self):
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        connection_info = {'driver_volume_type': 'fake',
+                           'data': {'device_path': '/fake',
+                                    'access_mode': 'rw'}}
+        driver = conn._get_volume_driver(connection_info)
+        result = isinstance(driver, volume_drivers.LibvirtFakeVolumeDriver)
+        self.assertTrue(result)
+
+    def test_get_volume_driver_unknown(self):
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        connection_info = {'driver_volume_type': 'unknown',
+                           'data': {'device_path': '/fake',
+                                    'access_mode': 'rw'}}
+        self.assertRaises(
+            exception.VolumeDriverNotFound,
+            conn._get_volume_driver,
+            connection_info
+        )
 
     @mock.patch('nova.virt.libvirt.volume.LibvirtFakeVolumeDriver.'
                 'connect_volume')

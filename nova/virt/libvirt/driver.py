@@ -953,25 +953,22 @@ class LibvirtDriver(driver.ComputeDriver):
             self.unplug_vifs(instance, network_info)
             self.firewall_driver.unfilter_instance(instance, network_info)
 
-    def _connect_volume(self, connection_info, disk_info):
+    def _get_volume_driver(self, connection_info):
         driver_type = connection_info.get('driver_volume_type')
         if driver_type not in self.volume_drivers:
             raise exception.VolumeDriverNotFound(driver_type=driver_type)
-        driver = self.volume_drivers[driver_type]
+        return self.volume_drivers[driver_type]
+
+    def _connect_volume(self, connection_info, disk_info):
+        driver = self._get_volume_driver(connection_info)
         driver.connect_volume(connection_info, disk_info)
 
     def _disconnect_volume(self, connection_info, disk_dev):
-        driver_type = connection_info.get('driver_volume_type')
-        if driver_type not in self.volume_drivers:
-            raise exception.VolumeDriverNotFound(driver_type=driver_type)
-        driver = self.volume_drivers[driver_type]
+        driver = self._get_volume_driver(connection_info)
         return driver.disconnect_volume(connection_info, disk_dev)
 
     def _get_volume_config(self, connection_info, disk_info):
-        driver_type = connection_info.get('driver_volume_type')
-        if driver_type not in self.volume_drivers:
-            raise exception.VolumeDriverNotFound(driver_type=driver_type)
-        driver = self.volume_drivers[driver_type]
+        driver = self._get_volume_driver(connection_info)
         return driver.get_config(connection_info, disk_info)
 
     def _get_volume_encryptor(self, connection_info, encryption):
