@@ -713,12 +713,6 @@ class ServersController(wsgi.Controller):
         if 'name' in body['server']:
             update_dict['display_name'] = body['server']['name']
 
-        # TODO(oomichi): The following host_id validation code can be removed
-        # when setting "'additionalProperties': False" in base_update schema.
-        if 'host_id' in body['server']:
-            msg = _("host_id cannot be updated.")
-            raise exc.HTTPBadRequest(explanation=msg)
-
         if list(self.update_extension_manager):
             self.update_extension_manager.map(self._update_extension_point,
                                               body['server'], update_dict)

@@ -1698,6 +1698,17 @@ class ServersControllerUpdateTest(ControllerTest):
         self.assertRaises(exception.ValidationError, self.controller.update,
                           req, FAKE_UUID, body=body)
 
+    def test_update_server_host_id(self):
+        inst_dict = dict(host_id='123')
+        body = dict(server=inst_dict)
+
+        req = fakes.HTTPRequest.blank('/fake/servers/%s' % FAKE_UUID)
+        req.method = 'PUT'
+        req.content_type = "application/json"
+        req.body = jsonutils.dumps(body)
+        self.assertRaises(exception.ValidationError, self.controller.update,
+                          req, FAKE_UUID, body=body)
+
     def test_update_server_not_found(self):
         def fake_get(*args, **kwargs):
             raise exception.InstanceNotFound(instance_id='fake')
