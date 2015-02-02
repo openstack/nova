@@ -1378,6 +1378,49 @@ class _BaseTaskTestCase(object):
                 block_device_mapping='block_device_mapping',
                 legacy_bdm=False)
 
+    @mock.patch('nova.utils.spawn_n')
+    @mock.patch.object(scheduler_utils, 'build_request_spec')
+    @mock.patch.object(scheduler_utils, 'setup_instance_group')
+    @mock.patch.object(conductor_manager.ComputeTaskManager,
+                       '_set_vm_state_and_notify')
+    def test_build_instances_scheduler_group_failure(self, state_mock,
+                                                     sig_mock, bs_mock,
+                                                     spawn_mock):
+        instances = [fake_instance.fake_instance_obj(self.context)
+                     for i in range(2)]
+        image = {'fake-data': 'should_pass_silently'}
+        spec = {'fake': 'specs',
+                'instance_properties': instances[0]}
+
+        # NOTE(gibi): LocalComputeTaskAPI use eventlet spawn that makes mocking
+        # hard so use direct call instead.
+        spawn_mock.side_effect = lambda f, *a, **k: f(*a, **k)
+        bs_mock.return_value = spec
+        exception = exc.UnsupportedPolicyException(reason='fake-reason')
+        sig_mock.side_effect = exception
+
+        updates = {'vm_state': vm_states.ERROR, 'task_state': None}
+
+        # build_instances() is a cast, we need to wait for it to complete
+        self.useFixture(cast_as_call.CastAsCall(self.stubs))
+
+        self.conductor.build_instances(
+                          context=self.context,
+                          instances=instances,
+                          image=image,
+                          filter_properties={},
+                          admin_password='admin_password',
+                          injected_files='injected_files',
+                          requested_networks=None,
+                          security_groups='security_groups',
+                          block_device_mapping='block_device_mapping',
+                          legacy_bdm=False)
+        calls = []
+        for instance in instances:
+            calls.append(mock.call(self.context, instance.uuid,
+                         'build_instances', updates, exception, spec))
+        state_mock.assert_has_calls(calls)
+
     def test_unshelve_instance_on_host(self):
         instance = self._create_fake_instance_obj()
         instance.vm_state = vm_states.SHELVED
@@ -1605,6 +1648,49 @@ class _BaseTaskTestCase(object):
                                                      request_spec,
                                                      filter_properties)
             self.assertFalse(rebuild_mock.called)
+
+    @mock.patch('nova.utils.spawn_n')
+    @mock.patch.object(conductor_manager.compute_rpcapi.ComputeAPI,
+                       'rebuild_instance')
+    @mock.patch.object(scheduler_utils, 'setup_instance_group')
+    @mock.patch.object(conductor_manager.scheduler_client.SchedulerClient,
+                       'select_destinations')
+    @mock.patch('nova.scheduler.utils.build_request_spec')
+    @mock.patch.object(conductor_manager.ComputeTaskManager,
+                       '_set_vm_state_and_notify')
+    def test_rebuild_instance_with_scheduler_group_failure(self,
+                                                           state_mock,
+                                                           bs_mock,
+                                                           select_dest_mock,
+                                                           sig_mock,
+                                                           rebuild_mock,
+                                                           spawn_mock):
+        inst_obj = self._create_fake_instance_obj()
+        rebuild_args = self._prepare_rebuild_args({'host': None})
+        request_spec = {}
+        bs_mock.return_value = request_spec
+
+        # NOTE(gibi): LocalComputeTaskAPI use eventlet spawn that makes mocking
+        # hard so use direct call instead.
+        spawn_mock.side_effect = lambda f, *a, **k: f(*a, **k)
+
+        exception = exc.UnsupportedPolicyException(reason='')
+        sig_mock.side_effect = exception
+
+        # build_instances() is a cast, we need to wait for it to complete
+        self.useFixture(cast_as_call.CastAsCall(self.stubs))
+
+        self.assertRaises(exc.UnsupportedPolicyException,
+                          self.conductor.rebuild_instance,
+                          self.context,
+                          inst_obj,
+                          **rebuild_args)
+        updates = {'vm_state': vm_states.ACTIVE, 'task_state': None}
+        state_mock.assert_called_once_with(self.context, inst_obj.uuid,
+                                           'rebuild_server', updates,
+                                           exception, request_spec)
+        self.assertFalse(select_dest_mock.called)
+        self.assertFalse(rebuild_mock.called)
 
 
 class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
@@ -1921,6 +2007,44 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                                     inst_obj, flavor, filter_props, [resvs],
                                     clean_shutdown=True)
             self.assertIn('cold migrate', nvh.message)
+
+    @mock.patch.object(compute_utils, 'get_image_metadata')
+    @mock.patch('nova.scheduler.utils.build_request_spec')
+    @mock.patch.object(scheduler_utils, 'setup_instance_group')
+    @mock.patch.object(conductor_manager.ComputeTaskManager,
+                       '_set_vm_state_and_notify')
+    def test_cold_migrate_no_valid_host_in_group(self,
+                                                 set_vm_mock,
+                                                 sig_mock,
+                                                 brs_mock,
+                                                 image_mock):
+        flavor = flavors.get_flavor_by_name('m1.tiny')
+        inst = fake_instance.fake_db_instance(image_ref='fake-image_ref',
+                                              vm_state=vm_states.STOPPED,
+                                              instance_type_id=flavor['id'])
+        inst_obj = objects.Instance._from_db_object(
+                self.context, objects.Instance(), inst,
+                expected_attrs=[])
+        request_spec = dict(instance_type=dict(extra_specs=dict()),
+                            instance_properties=dict())
+        filter_props = dict(context=None)
+        resvs = 'fake-resvs'
+        image = 'fake-image'
+        exception = exc.UnsupportedPolicyException(reason='')
+
+        image_mock.return_value = image
+        brs_mock.return_value = request_spec
+        sig_mock.side_effect = exception
+
+        self.assertRaises(exc.UnsupportedPolicyException,
+                          self.conductor._cold_migrate, self.context,
+                          inst_obj, flavor, filter_props, [resvs],
+                          clean_shutdown=True)
+
+        updates = {'vm_state': vm_states.STOPPED, 'task_state': None}
+        set_vm_mock.assert_called_once_with(self.context, inst_obj.uuid,
+                                            'migrate_server', updates,
+                                            exception, request_spec)
 
     def test_cold_migrate_exception_host_in_error_state_and_raise(self):
         inst = fake_instance.fake_db_instance(image_ref='fake-image_ref',
