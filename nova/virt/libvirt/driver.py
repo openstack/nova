@@ -366,6 +366,8 @@ MIN_LIBVIRT_NUMA_TOPOLOGY_VERSION = (1, 0, 4)
 MIN_LIBVIRT_FSFREEZE_VERSION = (1, 2, 5)
 # libvirt mempage size report
 MIN_LIBVIRT_MEMPAGES_VERSION = (1, 2, 8)
+# libvirt memory allocation policy for each guest NUMA node
+MIN_LIBVIRT_MEMNODE_VERSION = (1, 2, 7)
 
 # Hyper-V paravirtualized time source
 MIN_LIBVIRT_HYPERV_TIMER_VERSION = (1, 2, 2)
@@ -3492,14 +3494,14 @@ class LibvirtDriver(driver.ComputeDriver):
                 guest_cpu_tune.vcpupin.sort(key=operator.attrgetter("id"))
 
                 guest_numa_tune.memory = numa_mem
-                guest_numa_tune.memnodes = numa_memnodes
 
                 # normalize cell.id
-                for i, (cell, memnode) in enumerate(
-                                            zip(guest_cpu_numa_config.cells,
-                                                guest_numa_tune.memnodes)):
+                for i, cell in enumerate(guest_cpu_numa_config.cells):
                     cell.id = i
-                    memnode.cellid = i
+
+                guest_numa_tune.memnodes = self._get_guest_numa_tune_memnodes(
+                                                        guest_cpu_numa_config,
+                                                        numa_memnodes)
 
                 return GuestNumaConfig(None, guest_cpu_tune,
                                        guest_cpu_numa_config,
@@ -3507,6 +3509,18 @@ class LibvirtDriver(driver.ComputeDriver):
             else:
                 return GuestNumaConfig(allowed_cpus, None,
                                        guest_cpu_numa_config, None)
+
+    def _get_guest_numa_tune_memnodes(self, guest_cpu_numa_config,
+                                      numa_memnodes):
+        if not self._host.has_min_version(MIN_LIBVIRT_MEMNODE_VERSION):
+            return
+
+        # normalize cell.id
+        for (cell, memnode) in zip(guest_cpu_numa_config.cells,
+                                    numa_memnodes):
+            memnode.cellid = cell.id
+
+        return numa_memnodes
 
     def _get_guest_os_type(self, virt_type):
         """Returns the guest OS type based on virt type."""
