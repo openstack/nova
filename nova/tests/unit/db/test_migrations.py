@@ -50,6 +50,7 @@ from sqlalchemy.sql import null
 from nova.db import migration
 from nova.db.sqlalchemy import migrate_repo
 from nova.db.sqlalchemy import migration as sa_migration
+from nova.db.sqlalchemy import models
 from nova.db.sqlalchemy import utils as db_utils
 from nova import exception
 from nova import test
@@ -58,7 +59,8 @@ from nova import test
 LOG = logging.getLogger(__name__)
 
 
-class NovaMigrationsCheckers(test_migrations.WalkVersionsMixin):
+class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
+                             test_migrations.WalkVersionsMixin):
     """Test sqlalchemy-migrate migrations."""
 
     TIMEOUT_SCALING_FACTOR = 2
@@ -122,6 +124,29 @@ class NovaMigrationsCheckers(test_migrations.WalkVersionsMixin):
                 break
 
         self.assertEqual(members, index_columns)
+
+    # Implementations for ModelsMigrationsSync
+    def db_sync(self, engine):
+        with mock.patch.object(sa_migration, 'get_engine',
+                               return_value=engine):
+            sa_migration.db_sync()
+
+    def get_engine(self):
+        return self.migrate_engine
+
+    def get_metadata(self):
+        return models.BASE.metadata
+
+    def include_object(self, object_, name, type_, reflected, compare_to):
+        if type_ == 'table':
+            # migrate_version is a sqlalchemy-migrate control table and
+            # isn't included in the model. shadow_* are generated from
+            # the model and have their own tests to ensure they don't
+            # drift.
+            if name == 'migrate_version' or name.startswith('shadow_'):
+                return False
+
+        return True
 
     def _skippable_migrations(self):
         special = [
