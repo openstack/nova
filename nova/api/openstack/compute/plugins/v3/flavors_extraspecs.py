@@ -108,8 +108,7 @@ class FlavorExtraSpecsController(wsgi.Controller):
         try:
             flavor = objects.Flavor.get_by_flavor_id(context, flavor_id)
             return {id: flavor.extra_specs[id]}
-        except (exception.FlavorExtraSpecsNotFound,
-                exception.FlavorNotFound) as e:
+        except exception.FlavorNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
         except KeyError:
             msg = _("Flavor %(flavor_id)s has no extra specs with "
