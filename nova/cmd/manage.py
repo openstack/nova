@@ -954,6 +954,21 @@ class DbCommands(object):
             print(_('There were no records found where '
                     'instance_uuid was NULL.'))
 
+    @args('--max-number', metavar='<number>',
+          help='Maximum number of instances to consider')
+    def migrate_flavor_data(self, max_number):
+        if max_number is not None:
+            max_number = int(max_number)
+            if max_number < 0:
+                print(_('Must supply a positive value for max_number'))
+                return(1)
+        admin_context = context.get_admin_context()
+        flavor_cache = {}
+        match, done = db.migrate_flavor_data(admin_context, max_number,
+                                             flavor_cache)
+        print(_('%(total)i instances matched query, %(done)i completed'),
+              {'total': match, 'done': done})
+
 
 class AgentBuildCommands(object):
     """Class for managing agent builds."""

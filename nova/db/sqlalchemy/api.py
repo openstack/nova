@@ -5897,6 +5897,74 @@ def archive_deleted_rows(context, max_rows=None):
     return rows_archived
 
 
+def _augment_flavor_to_migrate(flavor_to_migrate, db_flavor):
+    """Make sure that extra_specs on the flavor to migrate is updated."""
+    if not flavor_to_migrate.obj_attr_is_set('extra_specs'):
+        flavor_to_migrate.extra_specs = {}
+    for key in db_flavor['extra_specs']:
+        if key not in flavor_to_migrate.extra_specs:
+            flavor_to_migrate.extra_specs[key] = db_flavor['extra_specs'][key]
+
+
+def _augment_flavors_to_migrate(instance, flavor_cache):
+    """Add extra_specs to instance flavors.
+
+    :param instance: Instance to be mined
+    :param flavor_cache:  Dict to persist flavors we look up from the DB
+    """
+
+    for flavorprop in ['flavor', 'old_flavor', 'new_flavor']:
+        flavor = getattr(instance, flavorprop)
+        if flavor is None:
+            continue
+        flavorid = flavor.flavorid
+        if flavorid not in flavor_cache:
+            flavor_cache[flavorid] = flavor_get_by_flavor_id(
+                instance._context, flavorid, 'yes')
+        _augment_flavor_to_migrate(flavor, flavor_cache[flavorid])
+
+
+@require_admin_context
+def migrate_flavor_data(context, max_count, flavor_cache):
+    # NOTE(danms): This is only ever run in nova-manage, and we need to avoid
+    # a circular import
+    from nova import objects
+
+    query = _instance_get_all_query(context, joins=['extra', 'extra.flavor']).\
+                join(models.Instance.extra).\
+                filter(models.InstanceExtra.flavor.is_(None))
+    if max_count is not None:
+        instances = query.limit(max_count)
+    else:
+        instances = query.all()
+
+    instances = _instances_fill_metadata(context, instances,
+                                         manual_joins=['system_metadata'])
+
+    count_all = 0
+    count_hit = 0
+    for db_instance in instances:
+        count_all += 1
+        instance = objects.Instance._from_db_object(
+            context, objects.Instance(), db_instance,
+            expected_attrs=['system_metadata', 'flavor'])
+        # NOTE(danms): Don't touch instances that are likely in the
+        # middle of some other operation. This is just a guess and not
+        # a lock. There is still a race here, although it's the same
+        # race as the normal code, since we use expected_task_state below.
+        if instance.task_state is not None:
+            continue
+        if instance.vm_state in [vm_states.RESCUED, vm_states.RESIZED]:
+            continue
+
+        _augment_flavors_to_migrate(instance, flavor_cache)
+        if instance.obj_what_changed():
+            instance.save(expected_task_state=[None])
+            count_hit += 1
+
+    return count_all, count_hit
+
+
 ####################
 
 

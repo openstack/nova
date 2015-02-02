@@ -366,6 +366,9 @@ class DBCommandsTestCase(test.TestCase):
     def test_null_instance_uuid_scan_delete(self):
         self._test_null_instance_uuid_scan(delete=True)
 
+    def test_migrate_flavor_data_negative(self):
+        self.assertEqual(1, self.commands.migrate_flavor_data(-1))
+
 
 class ServiceCommandsTestCase(test.TestCase):
     def setUp(self):
