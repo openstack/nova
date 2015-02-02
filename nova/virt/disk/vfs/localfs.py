@@ -79,7 +79,7 @@ class VFSLocalFS(vfs.VFS):
             self.mount = mnt
         except Exception as e:
             with excutils.save_and_reraise_exception():
-                LOG.debug("Failed to mount image %(ex)s)", {'ex': e})
+                LOG.debug("Failed to mount image: %(ex)s", {'ex': e})
                 self.teardown()
 
     def teardown(self):
