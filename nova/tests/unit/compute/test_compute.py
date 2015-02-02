@@ -405,7 +405,8 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.stubs.Set(db, 'block_device_mapping_update', store_cinfo)
 
     def test_attach_volume_serial(self):
-        fake_bdm = objects.BlockDeviceMapping(**self.fake_volume)
+        fake_bdm = objects.BlockDeviceMapping(context=self.context,
+                                              **self.fake_volume)
         with (mock.patch.object(cinder.API, 'get_volume_encryption_metadata',
                                 return_value={})):
             instance = self._create_fake_instance_obj()
@@ -553,7 +554,7 @@ class ComputeVolumeTestCase(BaseTestCase):
             })]
             prepped_bdm = self.compute._prep_block_device(
                     self.context, self.instance_object, block_device_mapping)
-            mock_save.assert_called_once_with(self.context)
+            mock_save.assert_called_once_with()
             volume_driver_bdm = prepped_bdm['block_device_mapping'][0]
             self.assertEqual(volume_driver_bdm['connection_info']['serial'],
                              self.volume_id)
@@ -9094,7 +9095,7 @@ class ComputeAPITestCase(BaseTestCase):
         def fake_rpc_reserve_block_device_name(self, context, instance, device,
                                                volume_id, **kwargs):
             called['fake_rpc_reserve_block_device_name'] = True
-            bdm = block_device_obj.BlockDeviceMapping()
+            bdm = block_device_obj.BlockDeviceMapping(context=context)
             bdm['device_name'] = '/dev/vdb'
             return bdm
 
@@ -9216,7 +9217,7 @@ class ComputeAPITestCase(BaseTestCase):
                                  'get_by_volume_id')
         objects.BlockDeviceMapping.get_by_volume_id(
                 self.context, 1).AndReturn(objects.BlockDeviceMapping(
-                    **fake_bdm))
+                    context=self.context, **fake_bdm))
         self.mox.ReplayAll()
 
         self.assertRaises(AttributeError, self.compute.detach_volume,
@@ -9233,7 +9234,7 @@ class ComputeAPITestCase(BaseTestCase):
                 {'source_type': 'volume', 'destination_type': 'volume',
                  'volume_id': 'fake-id', 'device_name': '/dev/vdb',
                  'connection_info': '{"test": "test"}'})
-        bdm = objects.BlockDeviceMapping(**fake_bdm)
+        bdm = objects.BlockDeviceMapping(context=self.context, **fake_bdm)
 
         with contextlib.nested(
             mock.patch.object(self.compute.driver, 'detach_volume',

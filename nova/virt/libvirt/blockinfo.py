@@ -465,7 +465,7 @@ def default_device_names(virt_type, context, instance, root_device_name,
                                [block_device_info['swap']] if
                                block_device_info['swap'] else [],
                                block_device_info['block_device_mapping']):
-        driver_bdm.save(context)
+        driver_bdm.save()
 
 
 def has_default_ephemeral(instance, disk_bus, block_device_info, mapping):

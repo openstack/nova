@@ -46,7 +46,7 @@ def update_db(method):
     @functools.wraps(method)
     def wrapped(obj, context, *args, **kwargs):
         ret_val = method(obj, context, *args, **kwargs)
-        obj.save(context)
+        obj.save()
         return ret_val
     return wrapped
 
@@ -131,14 +131,10 @@ class DriverBlockDevice(dict):
         """
         raise NotImplementedError()
 
-    def save(self, context=None):
+    def save(self):
         for attr_name, key_name in self._update_on_save.iteritems():
             setattr(self._bdm_obj, attr_name, self[key_name or attr_name])
-
-        if context:
-            self._bdm_obj.save(context)
-        else:
-            self._bdm_obj.save()
+        self._bdm_obj.save()
 
 
 class DriverSwapBlockDevice(DriverBlockDevice):
@@ -285,7 +281,7 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
         self._preserve_multipath_id(connection_info)
         self['connection_info'] = connection_info
 
-    def save(self, context=None):
+    def save(self):
         # NOTE(ndipanov): we might want to generalize this by adding it to the
         # _update_on_save and adding a transformation function.
         try:
@@ -293,7 +289,7 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
                     self.get('connection_info'))
         except TypeError:
             pass
-        super(DriverVolumeBlockDevice, self).save(context)
+        super(DriverVolumeBlockDevice, self).save()
 
 
 class DriverSnapshotBlockDevice(DriverVolumeBlockDevice):
