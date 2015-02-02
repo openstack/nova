@@ -239,11 +239,6 @@ class HackingTestCase(test.NoDBTestCase):
                     len(list(
                         checks.validate_log_translations(ok, ok, 'f'))))
 
-    def test_log_translations_warning_instead_warn(self):
-        warn = "LOG.warn('qwe')"
-        self.assertEqual(
-            1, len(list(checks.validate_log_translations(warn, warn, 'f'))))
-
     def test_no_mutable_default_args(self):
         self.assertEqual(1, len(list(checks.no_mutable_default_args(
             " def fake_suds_context(calls={}):"))))

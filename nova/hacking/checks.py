@@ -348,9 +348,6 @@ def validate_log_translations(logical_line, physical_line, filename):
     msg = "N330: LOG.warning messages require translations `_LW()`!"
     if log_translation_LW.match(logical_line):
         yield (0, msg)
-    msg = "N331: Use LOG.warning due to compatibility with py3"
-    if log_warn.match(logical_line):
-        yield (0, msg)
     msg = "N321: Log messages require translations!"
     if log_translation.match(logical_line):
         yield (0, msg)
