@@ -213,7 +213,7 @@ def is_disk_bus_valid_for_virt(virt_type, disk_bus):
 
 
 def get_disk_bus_for_device_type(virt_type,
-                                 image_meta=None,
+                                 image_meta,
                                  device_type="disk"):
     """Determine the best disk bus to use for a device type.
 
@@ -228,14 +228,13 @@ def get_disk_bus_for_device_type(virt_type,
     """
 
     # Prefer a disk bus set against the image first of all
-    if image_meta:
-        key = "hw_" + device_type + "_bus"
-        disk_bus = image_meta.get('properties', {}).get(key)
-        if disk_bus is not None:
-            if not is_disk_bus_valid_for_virt(virt_type, disk_bus):
-                raise exception.UnsupportedHardware(model=disk_bus,
-                                                    virt=virt_type)
-            return disk_bus
+    key = "hw_" + device_type + "_bus"
+    disk_bus = image_meta.get('properties', {}).get(key)
+    if disk_bus is not None:
+        if not is_disk_bus_valid_for_virt(virt_type, disk_bus):
+            raise exception.UnsupportedHardware(model=disk_bus,
+                                                virt=virt_type)
+        return disk_bus
 
     # Otherwise pick a hypervisor default disk bus
     if virt_type == "uml":
@@ -418,7 +417,7 @@ def get_root_info(virt_type, image_meta, root_bdm, disk_bus, cdrom_bus,
         root_bdm.get('source_type') == 'image' and
         root_bdm.get('destination_type') == 'local'))
     if no_root_bdm:
-        if (image_meta and image_meta.get('disk_format') == 'iso'):
+        if image_meta.get('disk_format') == 'iso':
             root_device_bus = cdrom_bus
             root_device_type = 'cdrom'
         else:

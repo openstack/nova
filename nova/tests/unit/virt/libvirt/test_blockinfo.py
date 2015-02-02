@@ -609,12 +609,13 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
                 (arch.PPC64, 'disk', 'virtio'),
                 (arch.PPC64, 'cdrom', 'scsi')
                 )
+        image_meta = {}
         for guestarch, dev, res in expected:
             with mock.patch.object(blockinfo.libvirt_utils,
                                    'get_arch',
                                    return_value=guestarch):
                 bus = blockinfo.get_disk_bus_for_device_type('kvm',
-                            device_type=dev)
+                            image_meta, dev)
                 self.assertEqual(res, bus)
 
         expected = (
@@ -771,10 +772,11 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
     @mock.patch('nova.virt.libvirt.blockinfo.get_disk_bus_for_disk_dev',
                 return_value='virtio')
     def test_get_root_info_no_bdm(self, mock_get_bus, mock_find_dev):
-        blockinfo.get_root_info('kvm', None, None, 'virtio', 'ide')
+        image_meta = {}
+        blockinfo.get_root_info('kvm', image_meta, None, 'virtio', 'ide')
         mock_find_dev.assert_called_once_with({}, 'virtio')
 
-        blockinfo.get_root_info('kvm', None, None, 'virtio', 'ide',
+        blockinfo.get_root_info('kvm', image_meta, None, 'virtio', 'ide',
                                  root_device_name='/dev/vda')
         mock_get_bus.assert_called_once_with('kvm', '/dev/vda')
 
