@@ -693,6 +693,31 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
             mock.sentinel.FAKE_VM_NAME, vmops.SHUTDOWN_TIME_INCREMENT)
         self.assertFalse(result)
 
+    def test_copy_vm_console_logs(self):
+        fake_local_paths = (mock.sentinel.FAKE_PATH,
+                            mock.sentinel.FAKE_PATH_ARCHIVED)
+        fake_remote_paths = (mock.sentinel.FAKE_REMOTE_PATH,
+                             mock.sentinel.FAKE_REMOTE_PATH_ARCHIVED)
+
+        self._vmops._pathutils.get_vm_console_log_paths.side_effect = [
+            fake_local_paths, fake_remote_paths]
+        self._vmops._pathutils.exists.side_effect = [True, False]
+
+        self._vmops.copy_vm_console_logs(mock.sentinel.FAKE_VM_NAME,
+                                         mock.sentinel.FAKE_DEST)
+
+        calls = [mock.call(mock.sentinel.FAKE_VM_NAME),
+                 mock.call(mock.sentinel.FAKE_VM_NAME,
+                           remote_server=mock.sentinel.FAKE_DEST)]
+        self._vmops._pathutils.get_vm_console_log_paths.assert_has_calls(calls)
+
+        calls = [mock.call(mock.sentinel.FAKE_PATH),
+                 mock.call(mock.sentinel.FAKE_PATH_ARCHIVED)]
+        self._vmops._pathutils.exists.assert_has_calls(calls)
+
+        self._vmops._pathutils.copy.assert_called_once_with(
+            mock.sentinel.FAKE_PATH, mock.sentinel.FAKE_REMOTE_PATH)
+
     @mock.patch("__builtin__.open")
     @mock.patch("os.path.exists")
     def test_get_console_output_exception(self, fake_path_exists, fake_open):
