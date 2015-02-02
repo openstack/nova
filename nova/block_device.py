@@ -180,6 +180,7 @@ class BlockDeviceDict(dict):
 
             source_type = api_dict.get('source_type')
             device_uuid = api_dict.get('uuid')
+            destination_type = api_dict.get('destination_type')
 
             if source_type not in ('volume', 'image', 'snapshot', 'blank'):
                 raise exception.InvalidBDMFormat(
@@ -192,6 +193,9 @@ class BlockDeviceDict(dict):
                     raise exception.InvalidBDMFormat(
                         details=_("Missing device UUID."))
                 api_dict[source_type + '_id'] = device_uuid
+            if source_type == 'image' and destination_type == 'local':
+                raise exception.InvalidBDMFormat(
+                    details=_("Mapping image to local is not supported."))
 
         api_dict.pop('uuid', None)
         return cls(api_dict)

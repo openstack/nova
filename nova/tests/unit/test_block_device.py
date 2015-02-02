@@ -534,6 +534,14 @@ class TestBlockDeviceDict(test.NoDBTestCase):
         self.assertRaises(exception.InvalidBDMFormat,
                           block_device.BlockDeviceDict.from_api, api_dict)
 
+    def test_from_api_invalid_source_to_local_mapping(self):
+        api_dict = {'id': 1,
+                    'source_type': 'image',
+                    'destination_type': 'local',
+                    'uuid': 'fake-volume-id-1'}
+        self.assertRaises(exception.InvalidBDMFormat,
+                          block_device.BlockDeviceDict.from_api, api_dict)
+
     def test_legacy(self):
         for legacy, new in zip(self.legacy_mapping, self.new_mapping):
             self.assertThat(
