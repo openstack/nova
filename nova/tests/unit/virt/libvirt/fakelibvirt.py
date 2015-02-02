@@ -655,7 +655,8 @@ class Connection(object):
                          'lxc:///',     # from LibvirtDriver.uri()
                          'xen:///',     # from LibvirtDriver.uri()
                          'uml:///system',
-                         'test:///default']
+                         'test:///default',
+                         'parallels:///system']
 
         if uri not in uri_whitelist:
             raise make_libvirtError(

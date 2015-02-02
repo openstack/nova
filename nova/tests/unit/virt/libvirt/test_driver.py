@@ -10867,6 +10867,26 @@ Active:          8381604 kB
                           check_instance_shared_storage_local(self.context,
                                                               instance))
 
+    def test_version_to_string(self):
+        driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        string_ver = driver._version_to_string((4, 33, 173))
+        self.assertEqual("4.33.173", string_ver)
+
+    def test_parallels_min_version_fail(self):
+        self.flags(virt_type='parallels', group='libvirt')
+        driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        with mock.patch.object(driver._conn, 'getLibVersion',
+                               return_value=1002011):
+            self.assertRaises(exception.NovaException,
+                              driver.init_host, 'wibble')
+
+    def test_parallels_min_version_ok(self):
+        self.flags(virt_type='parallels', group='libvirt')
+        driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        with mock.patch.object(driver._conn, 'getLibVersion',
+                               return_value=1002012):
+            driver.init_host('wibble')
+
 
 class HostStateTestCase(test.NoDBTestCase):
 
