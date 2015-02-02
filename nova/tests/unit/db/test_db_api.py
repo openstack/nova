@@ -5079,19 +5079,29 @@ class BlockDeviceMappingTestCase(test.TestCase):
         bdm1 = dict(values)
         bdm1['device_name'] = None
         db.block_device_mapping_update_or_create(self.ctxt, bdm1, legacy=False)
-        bdm_real = db.block_device_mapping_get_all_by_instance(self.ctxt, uuid)
-        self.assertEqual(len(bdm_real), 2)
-        bdm_real = bdm_real[1]
-        self.assertIsNone(bdm_real['device_name'])
+        bdms = db.block_device_mapping_get_all_by_instance(self.ctxt, uuid)
+        with_device_name = [b for b in bdms if b['device_name'] is not None]
+        without_device_name = [b for b in bdms if b['device_name'] is None]
+        self.assertEqual(len(with_device_name), 1,
+                         'expected 1 bdm with device_name, found %d' %
+                         len(with_device_name))
+        self.assertEqual(len(without_device_name), 1,
+                         'expected 1 bdm without device_name, found %d' %
+                         len(without_device_name))
 
         # check create multiple devices without device_name
         bdm2 = dict(values)
         bdm2['device_name'] = None
         db.block_device_mapping_update_or_create(self.ctxt, bdm2, legacy=False)
-        bdm_real = db.block_device_mapping_get_all_by_instance(self.ctxt, uuid)
-        self.assertEqual(len(bdm_real), 3)
-        bdm_real = bdm_real[2]
-        self.assertIsNone(bdm_real['device_name'])
+        bdms = db.block_device_mapping_get_all_by_instance(self.ctxt, uuid)
+        with_device_name = [b for b in bdms if b['device_name'] is not None]
+        without_device_name = [b for b in bdms if b['device_name'] is None]
+        self.assertEqual(len(with_device_name), 1,
+                         'expected 1 bdm with device_name, found %d' %
+                         len(with_device_name))
+        self.assertEqual(len(without_device_name), 2,
+                         'expected 2 bdms without device_name, found %d' %
+                         len(without_device_name))
 
     def test_block_device_mapping_update_or_create_multiple_ephemeral(self):
         uuid = self.instance['uuid']
