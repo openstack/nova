@@ -32,13 +32,7 @@ create = {
                     'items': {
                         'type': 'object',
                         'properties': {
-                            'ip_address': {
-                                'type': 'string',
-                                'oneOf': [
-                                    {'format': 'ipv4'},
-                                    {'format': 'ipv6'}
-                                ],
-                            },
+                            'ip_address': parameter_types.ip_address
                         },
                         'required': ['ip_address'],
                         'additionalProperties': False,

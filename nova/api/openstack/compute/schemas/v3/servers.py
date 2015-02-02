@@ -31,13 +31,7 @@ base_create = {
                     'items': {
                         'type': 'object',
                         'properties': {
-                            'fixed_ip': {
-                                'type': ['string', 'null'],
-                                'oneOf': [
-                                    {'format': 'ipv4'},
-                                    {'format': 'ipv6'}
-                                ]
-                            },
+                            'fixed_ip': parameter_types.ip_address,
                             'port': {
                                 'type': ['string', 'null'],
                                 'format': 'uuid'

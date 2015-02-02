@@ -36,13 +36,7 @@ update = {
         'configure_project': {
             'type': 'object',
             'properties': {
-                'vpn_ip': {
-                    'type': 'string',
-                    'oneOf': [
-                        {'format': 'ipv4'},
-                        {'format': 'ipv6'}
-                     ],
-                },
+                'vpn_ip': parameter_types.ip_address,
                 'vpn_port': parameter_types.tcp_udp_port,
             },
             'required': ['vpn_ip', 'vpn_port'],

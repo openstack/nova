@@ -46,16 +46,7 @@ _hints = {
         # NOTE: The value of 'target_cell' is the cell name what cell
         # a new server is scheduled on.
         'target_cell': parameter_types.name,
-        'build_near_host_ip': {
-            # NOTE: The combination string of 'build_near_host_ip' and 'cidr'
-            # is passed to netaddr.IPNetwork().
-            # This covers both ipv4 and ipv6.
-            'type': 'string',
-            'oneOf': [
-                {'format': 'ipv4'},
-                {'format': 'ipv6'}
-            ],
-        },
+        'build_near_host_ip': parameter_types.ip_address,
         'cidr': {
             'type': 'string',
             'pattern': '^\/[0-9a-f.:]+$'

@@ -45,13 +45,7 @@ dns_entry_update = {
         'dns_entry': {
             'type': 'object',
             'properties': {
-                'ip': {
-                    'type': 'string',
-                    'oneOf': [
-                        {'format': 'ipv4'},
-                        {'format': 'ipv6'}
-                    ],
-                },
+                'ip': parameter_types.ip_address,
                 'dns_type': {
                     'type': 'string',
                     'enum': ['a', 'A'],
