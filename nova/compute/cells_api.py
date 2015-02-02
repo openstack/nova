@@ -198,6 +198,13 @@ class ComputeCellsAPI(compute_api.API):
         """
         return super(ComputeCellsAPI, self).create(*args, **kwargs)
 
+    def _update_block_device_mapping(self, *args, **kwargs):
+        """Don't create block device mappings in the API cell.
+
+        The child cell will create it and propagate it up to the parent cell.
+        """
+        pass
+
     def update(self, context, instance, **kwargs):
         """Update an instance."""
         cell_name = instance['cell_name']
