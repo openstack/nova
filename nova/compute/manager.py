@@ -3219,8 +3219,7 @@ class ComputeManager(manager.Manager):
         if current_power_state != expected_state:
             instance.task_state = None
             instance.save(expected_task_state=task_states.UPDATING_PASSWORD)
-            _msg = _('Failed to set admin password. Instance %s is not'
-                     ' running') % instance.uuid
+            _msg = _('instance %s is not running') % instance.uuid
             raise exception.InstancePasswordSetFailed(
                 instance=instance.uuid, reason=_msg)
 
