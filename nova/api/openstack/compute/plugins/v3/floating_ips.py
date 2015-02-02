@@ -247,19 +247,13 @@ class FloatingIPActionController(wsgi.Controller):
 
     @extensions.expected_errors((400, 403, 404, 409))
     @wsgi.action('removeFloatingIp')
+    @validation.schema(floating_ips.remove_floating_ip)
     def _remove_floating_ip(self, req, id, body):
         """Dissociate floating_ip from an instance."""
         context = req.environ['nova.context']
         authorize(context)
 
-        try:
-            address = body['removeFloatingIp']['address']
-        except TypeError:
-            msg = _("Missing parameter dict")
-            raise webob.exc.HTTPBadRequest(explanation=msg)
-        except KeyError:
-            msg = _("Address not specified")
-            raise webob.exc.HTTPBadRequest(explanation=msg)
+        address = body['removeFloatingIp']['address']
 
         # get the floating ip object
         try:
