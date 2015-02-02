@@ -18,8 +18,10 @@
 import webob
 
 from nova.api.openstack import common
+from nova.api.openstack.compute.schemas.v3 import floating_ips
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+from nova.api import validation
 from nova import compute
 from nova.compute import utils as compute_utils
 from nova import exception
@@ -181,19 +183,13 @@ class FloatingIPActionController(wsgi.Controller):
 
     @extensions.expected_errors((400, 403, 404))
     @wsgi.action('addFloatingIp')
+    @validation.schema(floating_ips.add_floating_ip)
     def _add_floating_ip(self, req, id, body):
         """Associate floating_ip to an instance."""
         context = req.environ['nova.context']
         authorize(context)
 
-        try:
-            address = body['addFloatingIp']['address']
-        except TypeError:
-            msg = _("Missing parameter dict")
-            raise webob.exc.HTTPBadRequest(explanation=msg)
-        except KeyError:
-            msg = _("Address not specified")
-            raise webob.exc.HTTPBadRequest(explanation=msg)
+        address = body['addFloatingIp']['address']
 
         instance = common.get_instance(self.compute_api, context, id,
                                        want_objects=True)

@@ -172,6 +172,7 @@ class FloatingIpTestV21(test.TestCase):
     floating_ip = "10.10.10.10"
     floating_ip_2 = "10.10.10.11"
     floating_ips = fips_v21
+    validation_error = exception.ValidationError
 
     def _create_floating_ips(self, floating_ips=None):
         """Create a floating ip object."""
@@ -485,7 +486,8 @@ class FloatingIpTestV21(test.TestCase):
                        fake_associate_floating_ip)
         body = dict(addFloatingIp=dict(address=self.floating_ip))
 
-        rsp = self.manager._add_floating_ip(self.fake_req, 'test_inst', body)
+        rsp = self.manager._add_floating_ip(self.fake_req, 'test_inst',
+                                            body=body)
         self.assertEqual(202, rsp.status_int)
 
     def test_floating_ip_associate_invalid_instance(self):
@@ -500,7 +502,7 @@ class FloatingIpTestV21(test.TestCase):
 
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.manager._add_floating_ip, self.fake_req,
-                          'test_inst', body)
+                          'test_inst', body=body)
 
     def test_associate_not_allocated_floating_ip_to_instance(self):
         def fake_associate_floating_ip(self, context, instance,
@@ -514,7 +516,7 @@ class FloatingIpTestV21(test.TestCase):
         body = dict(addFloatingIp=dict(address=floating_ip))
         ex = self.assertRaises(webob.exc.HTTPNotFound,
                                self.manager._add_floating_ip,
-                               self.fake_req, 'test_inst', body)
+                               self.fake_req, 'test_inst', body=body)
 
         self.assertIn("floating ip not found", ex.explanation)
 
@@ -524,21 +526,21 @@ class FloatingIpTestV21(test.TestCase):
         body = dict(addFloatingIp=dict(address='10.10.10.11'))
         self.assertRaises(webob.exc.HTTPForbidden,
                           self.manager._add_floating_ip, self.fake_req,
-                          'test_inst', body)
+                          'test_inst', body=body)
 
     def test_associate_floating_ip_bad_address_key(self):
         body = dict(addFloatingIp=dict(bad_address='10.10.10.11'))
         req = fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')
-        self.assertRaises(webob.exc.HTTPBadRequest,
+        self.assertRaises(self.validation_error,
                           self.manager._add_floating_ip, req, 'test_inst',
-                          body)
+                          body=body)
 
     def test_associate_floating_ip_bad_addfloatingip_key(self):
         body = dict(bad_addFloatingIp=dict(address='10.10.10.11'))
         req = fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')
-        self.assertRaises(webob.exc.HTTPBadRequest,
+        self.assertRaises(self.validation_error,
                           self.manager._add_floating_ip, req, 'test_inst',
-                          body)
+                          body=body)
 
     def test_floating_ip_disassociate(self):
         def get_instance_by_floating_ip_addr(self, context, address):
@@ -576,7 +578,7 @@ class FloatingIpTestV21(test.TestCase):
         body = dict(addFloatingIp=dict(address='1.1.1.1'))
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.manager._add_floating_ip,
-                          self.fake_req, 'test_inst', body)
+                          self.fake_req, 'test_inst', body=body)
 
     def test_floating_ip_disassociate_non_existent_ip(self):
         def network_api_get_floating_ip_by_address(self, context,
@@ -689,13 +691,14 @@ class FloatingIpTestV21(test.TestCase):
     def test_missing_dict_param_in_add_floating_ip(self):
         body = dict(addFloatingIp='11.0.0.1')
 
-        self.assertRaises(webob.exc.HTTPBadRequest,
+        self.assertRaises(self.validation_error,
                           self.manager._add_floating_ip, self.fake_req,
-                          'test_inst', body)
+                          'test_inst', body=body)
 
 
 class FloatingIpTestV2(FloatingIpTestV21):
     floating_ips = fips_v2
+    validation_error = webob.exc.HTTPBadRequest
 
     def test_not_extended_floating_ip_associate_fixed(self):
         # Check that fixed_address is ignored if os-extended-floating-ips
@@ -794,7 +797,8 @@ class ExtendedFloatingIpTestV21(test.TestCase):
         body = dict(addFloatingIp=dict(address=self.floating_ip,
                                        fixed_address=fixed_address))
 
-        rsp = self.manager._add_floating_ip(self.fake_req, 'test_inst', body)
+        rsp = self.manager._add_floating_ip(self.fake_req, 'test_inst',
+                                            body=body)
         self.assertEqual(202, rsp.status_int)
 
     def test_extended_floating_ip_associate_fixed_not_allocated(self):
@@ -808,7 +812,7 @@ class ExtendedFloatingIpTestV21(test.TestCase):
 
         ex = self.assertRaises(webob.exc.HTTPBadRequest,
                                self.manager._add_floating_ip,
-                               self.fake_req, 'test_inst', body)
+                               self.fake_req, 'test_inst', body=body)
 
         self.assertIn("Specified fixed address not assigned to instance",
                       ex.explanation)
