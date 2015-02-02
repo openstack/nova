@@ -220,6 +220,11 @@ class EC2KeystoneAuth(wsgi.Middleware):
 
     @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
+        # NOTE(alevine) We need to calculate the hash here because
+        # subsequent access to request modifies the req.body so the hash
+        # calculation will yield invalid results.
+        body_hash = hashlib.sha256(req.body).hexdigest()
+
         request_id = context.generate_request_id()
         signature = self._get_signature(req)
         if not signature:
@@ -232,12 +237,14 @@ class EC2KeystoneAuth(wsgi.Middleware):
             return faults.ec2_error_response(request_id, "AuthFailure", msg,
                                              status=400)
 
-        # Make a copy of args for authentication and signature verification.
-        auth_params = dict(req.params)
-        # Not part of authentication args
-        auth_params.pop('Signature', None)
+        if 'X-Amz-Signature' in req.params or 'Authorization' in req.headers:
+            auth_params = {}
+        else:
+            # Make a copy of args for authentication and signature verification
+            auth_params = dict(req.params)
+            # Not part of authentication args
+            auth_params.pop('Signature', None)
 
-        body_hash = hashlib.sha256(req.body).hexdigest()
         cred_dict = {
             'access': access,
             'signature': signature,
