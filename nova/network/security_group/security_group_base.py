@@ -30,6 +30,9 @@ CONF = cfg.CONF
 
 class SecurityGroupBase(object):
 
+    def __init__(self, skip_policy_check=False):
+        self.skip_policy_check = skip_policy_check
+
     def parse_cidr(self, cidr):
         if cidr:
             try:

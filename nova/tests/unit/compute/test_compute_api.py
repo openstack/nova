@@ -28,6 +28,7 @@ from nova.compute import cells_api as compute_cells_api
 from nova.compute import delete_types
 from nova.compute import flavors
 from nova.compute import instance_actions
+from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import task_states
 from nova.compute import utils as compute_utils
 from nova.compute import vm_mode
@@ -38,7 +39,9 @@ from nova import exception
 from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import quotas as quotas_obj
+from nova.openstack.common import policy as common_policy
 from nova.openstack.common import uuidutils
+from nova import policy
 from nova import quota
 from nova import test
 from nova.tests.unit import fake_block_device
@@ -2762,6 +2765,44 @@ class _ComputeAPIUnitTestMixIn(object):
                           self.compute_api._check_and_transform_bdm,
                               base_options, instance_type, image_meta, 1, 1,
                                   block_device_mapping, legacy_bdm)
+
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch.object(objects.InstanceAction, 'action_start')
+    @mock.patch.object(compute_rpcapi.ComputeAPI, 'pause_instance')
+    @mock.patch.object(objects.Instance, 'get_by_uuid')
+    @mock.patch.object(compute_api.API, '_get_instances_by_filters',
+                       return_value=[])
+    @mock.patch.object(compute_api.API, '_create_instance')
+    def test_skip_policy_check(self, mock_create, mock_get_ins_by_filters,
+                               mock_get, mock_pause, mock_action, mock_save):
+        policy.reset()
+        rules = {'compute:pause': common_policy.parse_rule('!'),
+                 'compute:get': common_policy.parse_rule('!'),
+                 'compute:get_all': common_policy.parse_rule('!'),
+                 'compute:create': common_policy.parse_rule('!')}
+        policy.set_rules(common_policy.Rules(rules))
+        instance = self._create_instance_obj()
+        mock_get.return_value = instance
+
+        self.assertRaises(exception.PolicyNotAuthorized,
+                          self.compute_api.pause, self.context, instance)
+        api = compute_api.API(skip_policy_check=True)
+        api.pause(self.context, instance)
+
+        self.assertRaises(exception.PolicyNotAuthorized,
+                          self.compute_api.get, self.context, instance.uuid)
+        api = compute_api.API(skip_policy_check=True)
+        api.get(self.context, instance.uuid)
+
+        self.assertRaises(exception.PolicyNotAuthorized,
+                          self.compute_api.get_all, self.context)
+        api = compute_api.API(skip_policy_check=True)
+        api.get_all(self.context)
+
+        self.assertRaises(exception.PolicyNotAuthorized,
+                          self.compute_api.create, self.context, None, None)
+        api = compute_api.API(skip_policy_check=True)
+        api.create(self.context, None, None)
 
 
 class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):

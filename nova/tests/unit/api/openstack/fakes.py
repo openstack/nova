@@ -219,6 +219,9 @@ def stub_out_nw_api(stubs, cls=None, private=None, publics=None):
         publics = ['1.2.3.4']
 
     class Fake(object):
+        def __init__(self, skip_policy_check=False):
+            pass
+
         def get_instance_nw_info(*args, **kwargs):
             pass
 
