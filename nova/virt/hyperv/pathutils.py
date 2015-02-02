@@ -44,6 +44,8 @@ CONF = cfg.CONF
 CONF.register_opts(hyperv_opts, 'hyperv')
 CONF.import_opt('instances_path', 'nova.compute.manager')
 
+ERROR_INVALID_NAME = 123
+
 
 class PathUtils(object):
     def __init__(self):
@@ -112,11 +114,22 @@ class PathUtils(object):
                                create_dir=True, remove_dir=False):
         instances_path = self.get_instances_dir(remote_server)
         path = os.path.join(instances_path, dir_name)
-        if remove_dir:
-            self._check_remove_dir(path)
-        if create_dir:
-            self._check_create_dir(path)
-        return path
+        try:
+            if remove_dir:
+                self._check_remove_dir(path)
+            if create_dir:
+                self._check_create_dir(path)
+            return path
+        except WindowsError as ex:
+            if ex.winerror == ERROR_INVALID_NAME:
+                raise vmutils.HyperVException(_(
+                    "Cannot access \"%(instances_path)s\", make sure the "
+                    "path exists and that you have the proper permissions. "
+                    "In particular Nova-Compute must not be executed with the "
+                    "builtin SYSTEM account or other accounts unable to "
+                    "authenticate on a remote host.") %
+                    {'instances_path': instances_path})
+            raise
 
     def get_instance_migr_revert_dir(self, instance_name, create_dir=False,
                                      remove_dir=False):
