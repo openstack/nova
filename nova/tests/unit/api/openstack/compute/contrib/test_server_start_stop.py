@@ -60,6 +60,7 @@ class ServerStartStopTestV21(test.TestCase):
     def setUp(self):
         super(ServerStartStopTestV21, self).setUp()
         self._setup_controller()
+        self.req = fakes.HTTPRequest.blank('')
 
     def _setup_controller(self):
         ext_info = plugins.LoadedExtensionInfo()
@@ -72,9 +73,8 @@ class ServerStartStopTestV21(test.TestCase):
         compute_api.API.start(mox.IgnoreArg(), mox.IgnoreArg())
         self.mox.ReplayAll()
 
-        req = fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')
         body = dict(start="")
-        self.controller._start_server(req, 'test_inst', body)
+        self.controller._start_server(self.req, 'test_inst', body)
 
     def test_start_policy_failed(self):
         rules = {
@@ -83,36 +83,32 @@ class ServerStartStopTestV21(test.TestCase):
         }
         policy.set_rules(rules)
         self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get)
-        req = fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')
         body = dict(start="")
         exc = self.assertRaises(exception.PolicyNotAuthorized,
                                 self.controller._start_server,
-                                req, 'test_inst', body)
+                                self.req, 'test_inst', body)
         self.assertIn(self.start_policy, exc.format_message())
 
     def test_start_not_ready(self):
         self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get)
         self.stubs.Set(compute_api.API, 'start', fake_start_stop_not_ready)
-        req = fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')
         body = dict(start="")
         self.assertRaises(webob.exc.HTTPConflict,
-            self.controller._start_server, req, 'test_inst', body)
+            self.controller._start_server, self.req, 'test_inst', body)
 
     def test_start_locked_server(self):
         self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get)
         self.stubs.Set(compute_api.API, 'start', fake_start_stop_locked_server)
-        req = fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')
         body = dict(start="")
         self.assertRaises(webob.exc.HTTPConflict,
-            self.controller._start_server, req, 'test_inst', body)
+            self.controller._start_server, self.req, 'test_inst', body)
 
     def test_start_invalid_state(self):
         self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get)
         self.stubs.Set(compute_api.API, 'start', fake_start_stop_invalid_state)
-        req = fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')
         body = dict(start="")
         self.assertRaises(webob.exc.HTTPConflict,
-            self.controller._start_server, req, 'test_inst', body)
+            self.controller._start_server, self.req, 'test_inst', body)
 
     def test_stop(self):
         self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get)
@@ -120,9 +116,8 @@ class ServerStartStopTestV21(test.TestCase):
         compute_api.API.stop(mox.IgnoreArg(), mox.IgnoreArg())
         self.mox.ReplayAll()
 
-        req = fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')
         body = dict(stop="")
-        self.controller._stop_server(req, 'test_inst', body)
+        self.controller._stop_server(self.req, 'test_inst', body)
 
     def test_stop_policy_failed(self):
         rules = {
@@ -131,48 +126,42 @@ class ServerStartStopTestV21(test.TestCase):
         }
         policy.set_rules(rules)
         self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get)
-        req = fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')
         body = dict(stop="")
         exc = self.assertRaises(exception.PolicyNotAuthorized,
                                 self.controller._stop_server,
-                                req, 'test_inst', body)
+                                self.req, 'test_inst', body)
         self.assertIn(self.stop_policy, exc.format_message())
 
     def test_stop_not_ready(self):
         self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get)
         self.stubs.Set(compute_api.API, 'stop', fake_start_stop_not_ready)
-        req = fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')
         body = dict(stop="")
         self.assertRaises(webob.exc.HTTPConflict,
-            self.controller._stop_server, req, 'test_inst', body)
+            self.controller._stop_server, self.req, 'test_inst', body)
 
     def test_stop_locked_server(self):
         self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get)
         self.stubs.Set(compute_api.API, 'stop', fake_start_stop_locked_server)
-        req = fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')
         body = dict(stop="")
         self.assertRaises(webob.exc.HTTPConflict,
-            self.controller._stop_server, req, 'test_inst', body)
+            self.controller._stop_server, self.req, 'test_inst', body)
 
     def test_stop_invalid_state(self):
         self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get)
         self.stubs.Set(compute_api.API, 'stop', fake_start_stop_invalid_state)
-        req = fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')
         body = dict(start="")
         self.assertRaises(webob.exc.HTTPConflict,
-            self.controller._stop_server, req, 'test_inst', body)
+            self.controller._stop_server, self.req, 'test_inst', body)
 
     def test_start_with_bogus_id(self):
-        req = fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')
         body = dict(start="")
         self.assertRaises(webob.exc.HTTPNotFound,
-            self.controller._start_server, req, 'test_inst', body)
+            self.controller._start_server, self.req, 'test_inst', body)
 
     def test_stop_with_bogus_id(self):
-        req = fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')
         body = dict(stop="")
         self.assertRaises(webob.exc.HTTPNotFound,
-            self.controller._stop_server, req, 'test_inst', body)
+            self.controller._stop_server, self.req, 'test_inst', body)
 
 
 class ServerStartStopTestV2(ServerStartStopTestV21):

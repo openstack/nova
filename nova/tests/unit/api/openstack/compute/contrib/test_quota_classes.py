@@ -39,6 +39,8 @@ class QuotaClassSetsTestV21(test.TestCase):
 
     def setUp(self):
         super(QuotaClassSetsTestV21, self).setUp()
+        self.req_admin = fakes.HTTPRequest.blank('', use_admin_context=True)
+        self.req = fakes.HTTPRequest.blank('')
         self._setup()
 
     def _setup(self):
@@ -81,18 +83,13 @@ class QuotaClassSetsTestV21(test.TestCase):
         self.assertEqual(qs['key_pairs'], 100)
 
     def test_quotas_show_as_admin(self):
-        req = fakes.HTTPRequest.blank(
-            '/v2/fake4/os-quota-class-sets/test_class',
-            use_admin_context=True)
-        res_dict = self.controller.show(req, 'test_class')
+        res_dict = self.controller.show(self.req_admin, 'test_class')
 
         self.assertEqual(res_dict, quota_set('test_class'))
 
     def test_quotas_show_as_unauthorized_user(self):
-        req = fakes.HTTPRequest.blank(
-            '/v2/fake4/os-quota-class-sets/test_class')
         self.assertRaises(webob.exc.HTTPForbidden, self.controller.show,
-                          req, 'test_class')
+                          self.req, 'test_class')
 
     def test_quotas_update_as_admin(self):
         body = {'quota_class_set': {'instances': 50, 'cores': 50,
@@ -105,10 +102,7 @@ class QuotaClassSetsTestV21(test.TestCase):
                                     'security_group_rules': 20,
                                     'key_pairs': 100}}
 
-        req = fakes.HTTPRequest.blank(
-            '/v2/fake4/os-quota-class-sets/test_class',
-            use_admin_context=True)
-        res_dict = self.controller.update(req, 'test_class', body)
+        res_dict = self.controller.update(self.req_admin, 'test_class', body)
 
         self.assertEqual(res_dict, body)
 
@@ -123,41 +117,27 @@ class QuotaClassSetsTestV21(test.TestCase):
                                     'key_pairs': 100,
                                     }}
 
-        req = fakes.HTTPRequest.blank(
-            '/v2/fake4/os-quota-class-sets/test_class')
         self.assertRaises(webob.exc.HTTPForbidden, self.controller.update,
-                          req, 'test_class', body)
+                          self.req, 'test_class', body)
 
     def test_quotas_update_with_empty_body(self):
         body = {}
-        req = fakes.HTTPRequest.blank(
-            '/v2/fake4/os-quota-class-sets/test_class',
-            use_admin_context=True)
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
-                          req, 'test_class', body)
+                          self.req_admin, 'test_class', body)
 
     def test_quotas_update_with_non_integer(self):
         body = {'quota_class_set': {'instances': "abc"}}
-        req = fakes.HTTPRequest.blank(
-            '/v2/fake4/os-quota-class-sets/test_class',
-            use_admin_context=True)
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
-                          req, 'test_class', body)
+                          self.req_admin, 'test_class', body)
 
         body = {'quota_class_set': {'instances': 50.5}}
-        req = fakes.HTTPRequest.blank(
-            '/v2/fake4/os-quota-class-sets/test_class',
-            use_admin_context=True)
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
-                          req, 'test_class', body)
+                          self.req_admin, 'test_class', body)
 
         body = {'quota_class_set': {
                 'instances': u'\u30aa\u30fc\u30d7\u30f3'}}
-        req = fakes.HTTPRequest.blank(
-            '/v2/fake4/os-quota-class-sets/test_class',
-            use_admin_context=True)
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
-                          req, 'test_class', body)
+                          self.req_admin, 'test_class', body)
 
 
 class QuotaClassSetsTestV2(QuotaClassSetsTestV21):
