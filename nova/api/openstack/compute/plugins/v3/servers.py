@@ -773,25 +773,12 @@ class ServersController(wsgi.Controller):
                     'revertResize', id)
 
     @wsgi.response(202)
-    @extensions.expected_errors((400, 404, 409))
+    @extensions.expected_errors((404, 409))
     @wsgi.action('reboot')
+    @validation.schema(schema_servers.reboot)
     def _action_reboot(self, req, id, body):
-        if 'reboot' in body and 'type' in body['reboot']:
-            if not isinstance(body['reboot']['type'], six.string_types):
-                msg = _("Argument 'type' for reboot must be a string")
-                LOG.error(msg)
-                raise exc.HTTPBadRequest(explanation=msg)
-            valid_reboot_types = ['HARD', 'SOFT']
-            reboot_type = body['reboot']['type'].upper()
-            if not valid_reboot_types.count(reboot_type):
-                msg = _("Argument 'type' for reboot is not HARD or SOFT")
-                LOG.error(msg)
-                raise exc.HTTPBadRequest(explanation=msg)
-        else:
-            msg = _("Missing argument 'type' for reboot")
-            LOG.error(msg)
-            raise exc.HTTPBadRequest(explanation=msg)
 
+        reboot_type = body['reboot']['type'].upper()
         context = req.environ['nova.context']
         instance = self._get_server(context, req, id)
 

@@ -214,21 +214,21 @@ class ServerActionsControllerTestV21(test.TestCase):
     def test_reboot_incorrect_type(self):
         body = dict(reboot=dict(type="NOT_A_TYPE"))
         req = fakes.HTTPRequest.blank(self.url)
-        self.assertRaises(webob.exc.HTTPBadRequest,
+        self.assertRaises(self.validation_error,
                           self.controller._action_reboot,
                           req, FAKE_UUID, body=body)
 
     def test_reboot_missing_type(self):
         body = dict(reboot=dict())
         req = fakes.HTTPRequest.blank(self.url)
-        self.assertRaises(webob.exc.HTTPBadRequest,
+        self.assertRaises(self.validation_error,
                           self.controller._action_reboot,
                           req, FAKE_UUID, body=body)
 
     def test_reboot_none(self):
         body = dict(reboot=dict(type=None))
         req = fakes.HTTPRequest.blank(self.url)
-        self.assertRaises(webob.exc.HTTPBadRequest,
+        self.assertRaises(self.validation_error,
                           self.controller._action_reboot,
                           req, FAKE_UUID, body=body)
 

@@ -123,3 +123,21 @@ create_image = {
     'required': ['createImage'],
     'additionalProperties': False
 }
+
+reboot = {
+    'type': 'object',
+    'properties': {
+        'reboot': {
+            'type': 'object',
+            'properties': {
+                'type': {
+                    'enum': ['HARD', 'Hard', 'hard', 'SOFT', 'Soft', 'soft']
+                }
+            },
+            'required': ['type'],
+            'additionalProperties': False
+        }
+    },
+    'required': ['reboot'],
+    'additionalProperties': False
+}
