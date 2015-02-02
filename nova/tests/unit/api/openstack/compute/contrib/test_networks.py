@@ -547,6 +547,23 @@ class NetworksAssociateTestV21(test.NoDBTestCase):
         self.assertIsNone(self.fake_network_api.networks[0]['project_id'])
         self.assertIsNotNone(self.fake_network_api.networks[0]['host'])
 
+    def test_network_disassociate_project_network_delete(self):
+        uuid = FAKE_NETWORKS[1]['uuid']
+        req = fakes.HTTPRequest.blank('/v2/1234/os-networks/%s/action' % uuid)
+        res = self.associate_controller._disassociate_project_only(
+                        req, uuid, {'disassociate_project': None})
+        self._check_status(
+            res, self.associate_controller._disassociate_project_only, 202)
+        self.assertIsNone(self.fake_network_api.networks[1]['project_id'])
+        res = self.controller.delete(req, 1)
+        self.assertEqual(202, res.status_int)
+
+    def test_network_associate_project_delete_fail(self):
+        uuid = FAKE_NETWORKS[0]['uuid']
+        req = fakes.HTTPRequest.blank('/v2/1234/os-networks/%s/action' % uuid)
+        self.assertRaises(webob.exc.HTTPConflict,
+                                    self.controller.delete, req, -1)
+
     def test_network_associate_with_host(self):
         uuid = FAKE_NETWORKS[1]['uuid']
         req = fakes.HTTPRequest.blank('/v2/1234//os-networks/%s/action' % uuid)
