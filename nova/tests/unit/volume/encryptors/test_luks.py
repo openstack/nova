@@ -25,9 +25,6 @@ class LuksEncryptorTestCase(test_cryptsetup.CryptsetupEncryptorTestCase):
     def _create(self, connection_info):
         return luks.LuksEncryptor(connection_info)
 
-    def setUp(self):
-        super(LuksEncryptorTestCase, self).setUp()
-
     @mock.patch('nova.utils.execute')
     def test_is_luks(self, mock_execute):
         luks.is_luks(self.dev_path)
@@ -37,6 +34,24 @@ class LuksEncryptorTestCase(test_cryptsetup.CryptsetupEncryptorTestCase):
                       run_as_root=True, check_exit_code=True),
         ], any_order=False)
         self.assertEqual(1, mock_execute.call_count)
+
+    @mock.patch('nova.volume.encryptors.luks.LOG')
+    @mock.patch('nova.utils.execute')
+    def test_is_luks_with_error(self, mock_execute, mock_log):
+        error_msg = "Device %s is not a valid LUKS device." % self.dev_path
+        mock_execute.side_effect = \
+                processutils.ProcessExecutionError(exit_code=1,
+                                                   stderr=error_msg)
+
+        luks.is_luks(self.dev_path)
+
+        mock_execute.assert_has_calls([
+            mock.call('cryptsetup', 'isLuks', '--verbose', self.dev_path,
+                      run_as_root=True, check_exit_code=True),
+        ])
+        self.assertEqual(1, mock_execute.call_count)
+
+        self.assertEqual(1, mock_log.warning.call_count)  # warning logged
 
     @mock.patch('nova.utils.execute')
     def test__format_volume(self, mock_execute):
