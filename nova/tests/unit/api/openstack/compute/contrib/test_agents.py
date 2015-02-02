@@ -93,9 +93,9 @@ class AgentsTestV21(test.NoDBTestCase):
         self.stubs.Set(db, "agent_build_create",
                        fake_agent_build_create)
         self.context = context.get_admin_context()
+        self.req = fakes.HTTPRequest.blank('')
 
     def test_agents_create(self):
-        req = fakes.HTTPRequest.blank('')
         body = {'agent': {'hypervisor': 'kvm',
                 'os': 'win',
                 'architecture': 'x86',
@@ -109,11 +109,10 @@ class AgentsTestV21(test.NoDBTestCase):
                     'url': 'http://example.com/path/to/resource',
                     'md5hash': 'add6bb58e139be103324d04d82d8f545',
                     'agent_id': 1}}
-        res_dict = self.controller.create(req, body=body)
+        res_dict = self.controller.create(self.req, body=body)
         self.assertEqual(res_dict, response)
 
     def _test_agents_create_key_error(self, key):
-        req = fakes.HTTPRequest.blank('')
         body = {'agent': {'hypervisor': 'kvm',
                 'os': 'win',
                 'architecture': 'x86',
@@ -122,7 +121,7 @@ class AgentsTestV21(test.NoDBTestCase):
                 'md5hash': 'add6bb58e139be103324d04d82d8f545'}}
         body['agent'].pop(key)
         self.assertRaises(self.validation_error,
-                          self.controller.create, req, body=body)
+                          self.controller.create, self.req, body=body)
 
     def test_agents_create_without_hypervisor(self):
         self._test_agents_create_key_error('hypervisor')
@@ -143,16 +142,14 @@ class AgentsTestV21(test.NoDBTestCase):
         self._test_agents_create_key_error('md5hash')
 
     def test_agents_create_with_wrong_type(self):
-        req = fakes.HTTPRequest.blank('')
         body = {'agent': None}
         self.assertRaises(self.validation_error,
-                          self.controller.create, req, body=body)
+                          self.controller.create, self.req, body=body)
 
     def test_agents_create_with_empty_type(self):
-        req = fakes.HTTPRequest.blank('')
         body = {}
         self.assertRaises(self.validation_error,
-                          self.controller.create, req, body=body)
+                          self.controller.create, self.req, body=body)
 
     def test_agents_create_with_existed_agent(self):
         def fake_agent_build_create_with_exited_agent(context, values):
@@ -160,18 +157,16 @@ class AgentsTestV21(test.NoDBTestCase):
 
         self.stubs.Set(db, 'agent_build_create',
                        fake_agent_build_create_with_exited_agent)
-        req = fakes.HTTPRequest.blank('')
         body = {'agent': {'hypervisor': 'kvm',
                 'os': 'win',
                 'architecture': 'x86',
                 'version': '7.0',
                 'url': 'xxx://xxxx/xxx/xxx',
                 'md5hash': 'add6bb58e139be103324d04d82d8f545'}}
-        self.assertRaises(webob.exc.HTTPConflict, self.controller.create, req,
-                          body=body)
+        self.assertRaises(webob.exc.HTTPConflict, self.controller.create,
+                          self.req, body=body)
 
     def _test_agents_create_with_invalid_length(self, key):
-        req = fakes.HTTPRequest.blank('')
         body = {'agent': {'hypervisor': 'kvm',
                 'os': 'win',
                 'architecture': 'x86',
@@ -180,7 +175,7 @@ class AgentsTestV21(test.NoDBTestCase):
                 'md5hash': 'add6bb58e139be103324d04d82d8f545'}}
         body['agent'][key] = 'x' * 256
         self.assertRaises(self.validation_error,
-                          self.controller.create, req, body=body)
+                          self.controller.create, self.req, body=body)
 
     def test_agents_create_with_invalid_length_hypervisor(self):
         self._test_agents_create_with_invalid_length('hypervisor')
@@ -201,19 +196,16 @@ class AgentsTestV21(test.NoDBTestCase):
         self._test_agents_create_with_invalid_length('md5hash')
 
     def test_agents_delete(self):
-        req = fakes.HTTPRequest.blank('')
-        self.controller.delete(req, 1)
+        self.controller.delete(self.req, 1)
 
     def test_agents_delete_with_id_not_found(self):
         with mock.patch.object(db, 'agent_build_destroy',
             side_effect=exception.AgentBuildNotFound(id=1)):
-            req = fakes.HTTPRequest.blank('')
             self.assertRaises(webob.exc.HTTPNotFound,
-                              self.controller.delete, req, 1)
+                              self.controller.delete, self.req, 1)
 
     def test_agents_list(self):
-        req = fakes.HTTPRequest.blank('')
-        res_dict = self.controller.index(req)
+        res_dict = self.controller.index(self.req)
         agents_list = [{'hypervisor': 'kvm', 'os': 'win',
                      'architecture': 'x86',
                      'version': '7.0',
@@ -261,7 +253,6 @@ class AgentsTestV21(test.NoDBTestCase):
         self.assertEqual(res_dict, {'agents': response})
 
     def test_agents_update(self):
-        req = fakes.HTTPRequest.blank('')
         body = {'para': {'version': '7.0',
                 'url': 'http://example.com/path/to/resource',
                 'md5hash': 'add6bb58e139be103324d04d82d8f545'}}
@@ -269,17 +260,16 @@ class AgentsTestV21(test.NoDBTestCase):
                     'version': '7.0',
                     'url': 'http://example.com/path/to/resource',
                     'md5hash': 'add6bb58e139be103324d04d82d8f545'}}
-        res_dict = self.controller.update(req, 1, body=body)
+        res_dict = self.controller.update(self.req, 1, body=body)
         self.assertEqual(res_dict, response)
 
     def _test_agents_update_key_error(self, key):
-        req = fakes.HTTPRequest.blank('')
         body = {'para': {'version': '7.0',
                 'url': 'xxx://xxxx/xxx/xxx',
                 'md5hash': 'add6bb58e139be103324d04d82d8f545'}}
         body['para'].pop(key)
         self.assertRaises(self.validation_error,
-                          self.controller.update, req, 1, body=body)
+                          self.controller.update, self.req, 1, body=body)
 
     def test_agents_update_without_version(self):
         self._test_agents_update_key_error('version')
@@ -291,33 +281,29 @@ class AgentsTestV21(test.NoDBTestCase):
         self._test_agents_update_key_error('md5hash')
 
     def test_agents_update_with_wrong_type(self):
-        req = fakes.HTTPRequest.blank('')
         body = {'agent': None}
         self.assertRaises(self.validation_error,
-                          self.controller.update, req, 1, body=body)
+                          self.controller.update, self.req, 1, body=body)
 
     def test_agents_update_with_empty(self):
-        req = fakes.HTTPRequest.blank('')
         body = {}
         self.assertRaises(self.validation_error,
-                          self.controller.update, req, 1, body=body)
+                          self.controller.update, self.req, 1, body=body)
 
     def test_agents_update_value_error(self):
-        req = fakes.HTTPRequest.blank('')
         body = {'para': {'version': '7.0',
                 'url': 1111,
                 'md5hash': 'add6bb58e139be103324d04d82d8f545'}}
         self.assertRaises(self.validation_error,
-                          self.controller.update, req, 1, body=body)
+                          self.controller.update, self.req, 1, body=body)
 
     def _test_agents_update_with_invalid_length(self, key):
-        req = fakes.HTTPRequest.blank('')
         body = {'para': {'version': '7.0',
                 'url': 'http://example.com/path/to/resource',
                 'md5hash': 'add6bb58e139be103324d04d82d8f545'}}
         body['para'][key] = 'x' * 256
         self.assertRaises(self.validation_error,
-                          self.controller.update, req, 1, body=body)
+                          self.controller.update, self.req, 1, body=body)
 
     def test_agents_update_with_invalid_length_version(self):
         self._test_agents_update_with_invalid_length('version')
@@ -331,12 +317,11 @@ class AgentsTestV21(test.NoDBTestCase):
     def test_agents_update_with_id_not_found(self):
         with mock.patch.object(db, 'agent_build_update',
             side_effect=exception.AgentBuildNotFound(id=1)):
-            req = fakes.HTTPRequest.blank('')
             body = {'para': {'version': '7.0',
                     'url': 'http://example.com/path/to/resource',
                     'md5hash': 'add6bb58e139be103324d04d82d8f545'}}
             self.assertRaises(webob.exc.HTTPNotFound,
-                          self.controller.update, req, 1, body=body)
+                          self.controller.update, self.req, 1, body=body)
 
 
 class AgentsTestV2(AgentsTestV21):

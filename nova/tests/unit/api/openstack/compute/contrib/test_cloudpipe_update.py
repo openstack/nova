@@ -46,6 +46,7 @@ class CloudpipeUpdateTestV21(test.NoDBTestCase):
         self.stubs.Set(db, "project_get_networks", fake_project_get_networks)
         self.stubs.Set(db, "network_update", fake_network_update)
         self._setup()
+        self.req = fakes.HTTPRequest.blank('')
 
     def _setup(self):
         self.controller = clup_v21.CloudpipeController()
@@ -54,47 +55,37 @@ class CloudpipeUpdateTestV21(test.NoDBTestCase):
         self.assertEqual(expected_status, controller_methord.wsgi_code)
 
     def test_cloudpipe_configure_project(self):
-        req = fakes.HTTPRequest.blank(
-            '/v2/fake/os-cloudpipe/configure-project')
         body = {"configure_project": {"vpn_ip": "1.2.3.4", "vpn_port": 222}}
-        result = self.controller.update(req, 'configure-project',
-                                               body=body)
+        result = self.controller.update(self.req, 'configure-project',
+                                           body=body)
         self._check_status(202, result, self.controller.update)
         self.assertEqual(fake_networks[0]['vpn_public_address'], "1.2.3.4")
         self.assertEqual(fake_networks[0]['vpn_public_port'], 222)
 
     def test_cloudpipe_configure_project_bad_url(self):
-        req = fakes.HTTPRequest.blank(
-            '/v2/fake/os-cloudpipe/configure-projectx')
         body = {"configure_project": {"vpn_ip": "1.2.3.4", "vpn_port": 222}}
         self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.update, req,
+                          self.controller.update, self.req,
                           'configure-projectx', body=body)
 
     def test_cloudpipe_configure_project_bad_data(self):
-        req = fakes.HTTPRequest.blank(
-            '/v2/fake/os-cloudpipe/configure-project')
         body = {"configure_project": {"vpn_ipxx": "1.2.3.4", "vpn_port": 222}}
         self.assertRaises(self.bad_request,
-                          self.controller.update, req,
+                          self.controller.update, self.req,
                           'configure-project', body=body)
 
     def test_cloudpipe_configure_project_bad_vpn_port(self):
-        req = fakes.HTTPRequest.blank(
-            '/v2/fake/os-cloudpipe/configure-project')
         body = {"configure_project": {"vpn_ipxx": "1.2.3.4",
                                       "vpn_port": "foo"}}
         self.assertRaises(self.bad_request,
-                          self.controller.update, req,
+                          self.controller.update, self.req,
                           'configure-project', body=body)
 
     def test_cloudpipe_configure_project_vpn_port_with_empty_string(self):
-        req = fakes.HTTPRequest.blank(
-            '/v2/fake/os-cloudpipe/configure-project')
         body = {"configure_project": {"vpn_ipxx": "1.2.3.4",
                                       "vpn_port": ""}}
         self.assertRaises(self.bad_request,
-                          self.controller.update, req,
+                          self.controller.update, self.req,
                           'configure-project', body=body)
 
 
