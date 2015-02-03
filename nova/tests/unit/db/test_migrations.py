@@ -746,6 +746,18 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
         # NOTE(johannes): No downgrade implemented, so nothing to check
         pass
 
+    def _check_274(self, engine, data):
+        self.assertIndexMembers(engine, 'instances',
+                                'instances_project_id_deleted_idx',
+                                ['project_id', 'deleted'])
+        self.assertIndexNotExists(engine, 'instances', 'project_id')
+
+    def _post_downgrade_274(self, engine):
+        self.assertIndexMembers(engine, 'instances',
+                                'project_id', ['project_id'])
+        self.assertIndexNotExists(engine, 'instances',
+                                  'instances_project_id_deleted_idx')
+
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
                                test.TestCase,

@@ -195,7 +195,8 @@ class Instance(BASE, NovaBase):
     __tablename__ = 'instances'
     __table_args__ = (
         Index('uuid', 'uuid', unique=True),
-        Index('project_id', 'project_id'),
+        Index('instances_project_id_deleted_idx',
+              'project_id', 'deleted'),
         Index('instances_reservation_id_idx',
               'reservation_id'),
         Index('instances_terminated_at_launched_at_idx',
