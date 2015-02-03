@@ -3530,7 +3530,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def _get_guest_numa_tune_memnodes(self, guest_cpu_numa_config,
                                       numa_memnodes):
         if not self._host.has_min_version(MIN_LIBVIRT_MEMNODE_VERSION):
-            return
+            return []
 
         # normalize cell.id
         for (cell, memnode) in zip(guest_cpu_numa_config.cells,
