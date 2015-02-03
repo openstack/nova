@@ -66,7 +66,7 @@ ec2_opts = [
                help='The protocol to use when connecting to the EC2 API '
                     'server (http, https)'),
     cfg.StrOpt('ec2_path',
-               default='/services/Cloud',
+               default='/',
                help='The path prefix used to call the ec2 API server'),
     cfg.ListOpt('region_list',
                 default=[],
