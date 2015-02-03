@@ -551,13 +551,13 @@ class ServersController(wsgi.Controller):
             raise exc.HTTPForbidden(
                 explanation=error.format_message(),
                 headers={'Retry-After': 0})
-        except exception.ImageNotFound as error:
+        except exception.ImageNotFound:
             msg = _("Can not find requested image")
             raise exc.HTTPBadRequest(explanation=msg)
-        except exception.FlavorNotFound as error:
+        except exception.FlavorNotFound:
             msg = _("Invalid flavorRef provided.")
             raise exc.HTTPBadRequest(explanation=msg)
-        except exception.KeypairNotFound as error:
+        except exception.KeypairNotFound:
             msg = _("Invalid key_name provided.")
             raise exc.HTTPBadRequest(explanation=msg)
         except exception.ConfigDriveInvalidValue:
