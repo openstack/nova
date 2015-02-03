@@ -10879,6 +10879,7 @@ Active:          8381604 kB
         swap_volume.assert_called_once_with(mock_dom, 'vdb',
                                             '/fake-new-volume', 1)
         disconnect_volume.assert_called_once_with(old_connection_info, 'vdb')
+        volume_save.assert_called_once_with()
 
     def test_live_snapshot(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
