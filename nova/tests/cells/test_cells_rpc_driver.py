@@ -17,6 +17,7 @@
 Tests For Cells RPC Communication Driver
 """
 
+import mock
 import mox
 from oslo.config import cfg
 from oslo import messaging as oslo_messaging
@@ -78,6 +79,26 @@ class CellsRPCDriverTestCase(test.NoDBTestCase):
         self.driver.rpc_servers = fake_servers
         self.driver.stop_servers()
         self.assertEqual(fake_servers, call_info['stopped'])
+
+    def test_create_transport_once(self):
+        # should only construct each Transport once
+        rpcapi = self.driver.intercell_rpcapi
+
+        transport_url = 'amqp://fakeurl'
+        next_hop = fakes.FakeCellState('cellname')
+        next_hop.db_info['transport_url'] = transport_url
+
+        # first call to _get_transport creates a oslo.messaging.Transport obj
+        with mock.patch.object(oslo_messaging, 'get_transport') as get_trans:
+            transport = rpcapi._get_transport(next_hop)
+            get_trans.assert_called_once_with(rpc_driver.CONF, transport_url,
+                                              rpc.TRANSPORT_ALIASES)
+            self.assertIn(transport_url, rpcapi.transports)
+            self.assertEqual(transport, rpcapi.transports[transport_url])
+
+        # subsequent calls should return the pre-created Transport obj
+        transport2 = rpcapi._get_transport(next_hop)
+        self.assertEqual(transport, transport2)
 
     def test_send_message_to_cell_cast(self):
         msg_runner = fakes.get_message_runner('api-cell')
