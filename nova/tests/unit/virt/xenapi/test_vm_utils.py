@@ -974,6 +974,15 @@ class UnplugVbdTestCase(VMUtilsTestBase):
         self.assertEqual(11, session.call_xenapi.call_count)
         self.assertEqual(10, mock_sleep.call_count)
 
+    def _test_uplug_vbd_retries_with_neg_val(self):
+        session = _get_fake_session()
+        self.flags(num_vbd_unplug_retries=-1, group='xenserver')
+        vbd_ref = "vbd_ref"
+        vm_ref = 'vm_ref'
+
+        vm_utils.unplug_vbd(session, vbd_ref, vm_ref)
+        self.assertEqual(1, session.call_xenapi.call_count)
+
     @mock.patch.object(greenthread, 'sleep')
     def test_uplug_vbd_retries_on_rejected(self, mock_sleep):
         self._test_uplug_vbd_retries(mock_sleep,
