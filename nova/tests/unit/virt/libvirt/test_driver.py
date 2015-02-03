@@ -1836,7 +1836,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                             image_meta,
                                             info)
         with mock.patch.object(
-                driver_block_device.DriverVolumeBlockDevice, 'save'):
+                driver_block_device.DriverVolumeBlockDevice, 'save'
+        ) as mock_save:
             cfg = drvr._get_guest_config(instance_ref, [], {}, disk_info,
                                      None, info)
             self.assertIsInstance(cfg.devices[2],
@@ -1845,8 +1846,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             self.assertIsInstance(cfg.devices[3],
                                   vconfig.LibvirtConfigGuestDisk)
             self.assertEqual(cfg.devices[3].target_dev, 'vdd')
-            self.assertTrue(info['block_device_mapping'][0].save.called)
-            self.assertTrue(info['block_device_mapping'][1].save.called)
+            mock_save.assert_called_with()
 
     @mock.patch.object(objects.Flavor, 'get_by_id')
     def test_get_guest_config_lxc_with_attached_volume(self, mock_flavor):
@@ -1881,7 +1881,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         info['block_device_mapping'][1]['mount_device'] = '/dev/vdc'
         info['block_device_mapping'][2]['mount_device'] = '/dev/vdd'
         with mock.patch.object(
-                driver_block_device.DriverVolumeBlockDevice, 'save'):
+                driver_block_device.DriverVolumeBlockDevice, 'save'
+        ) as mock_save:
             disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                                 instance_ref,
                                                 image_meta,
@@ -1894,6 +1895,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             self.assertIsInstance(cfg.devices[2],
                                   vconfig.LibvirtConfigGuestDisk)
             self.assertEqual(cfg.devices[2].target_dev, 'vdd')
+            mock_save.assert_called_with()
 
     @mock.patch.object(objects.Flavor, 'get_by_id')
     def test_get_guest_config_with_configdrive(self, mock_flavor):
@@ -1978,7 +1980,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                             image_meta,
                                             bd_info)
         with mock.patch.object(
-                driver_block_device.DriverVolumeBlockDevice, 'save'):
+                driver_block_device.DriverVolumeBlockDevice, 'save'
+        ) as mock_save:
             cfg = drvr._get_guest_config(instance_ref, [], image_meta,
                     disk_info, [], bd_info)
             self.assertIsInstance(cfg.devices[2],
@@ -1992,6 +1995,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             self.assertIsInstance(cfg.devices[4],
                              vconfig.LibvirtConfigGuestController)
             self.assertEqual(cfg.devices[4].model, 'virtio-scsi')
+            mock_save.assert_called_with()
 
     @mock.patch.object(objects.Flavor, 'get_by_id')
     def test_get_guest_config_with_vnc(self, mock_flavor):
@@ -10423,13 +10427,13 @@ Active:          8381604 kB
                     driver_block_device.DriverVolumeBlockDevice, 'save'),
                 mock.patch.object(objects.Flavor, 'get_by_id',
                                    return_value=flavor),
-                mock.patch.object(objects.Instance, 'save')):
+                mock.patch.object(objects.Instance, 'save')
+        ) as (mock_volume_save, mock_get_by_id, mock_instance_save):
             drvr.post_live_migration_at_destination(
                     self.context, instance, network_info, True,
                     block_device_info=block_device_info)
             self.assertIn('fake', self.resultXML)
-            self.assertTrue(
-                    block_device_info['block_device_mapping'][0].save.called)
+            mock_volume_save.assert_called_once_with()
 
     def test_create_propagates_exceptions(self):
         self.flags(virt_type='lxc', group='libvirt')
@@ -10702,7 +10706,7 @@ Active:          8381604 kB
                 {'bus': 'virtio', 'type': 'disk', 'dev': 'vdc'})
             get_volume_config.assert_called_with(bdm['connection_info'],
                 {'bus': 'virtio', 'type': 'disk', 'dev': 'vdc'})
-            self.assertEqual(1, volume_save.call_count)
+            volume_save.assert_called_once_with()
             self.assertEqual(3, set_cache_mode.call_count)
 
     def test_get_neutron_events(self):
