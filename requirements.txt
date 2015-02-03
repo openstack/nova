@@ -35,9 +35,9 @@ oslo.config>=1.6.0  # Apache-2.0
 oslo.serialization>=1.2.0               # Apache-2.0
 oslo.utils>=1.2.0                       # Apache-2.0
 oslo.db>=1.4.1  # Apache-2.0
-oslo.rootwrap>=1.3.0
-oslo.messaging>=1.4.0,!=1.5.0
+oslo.rootwrap>=1.5.0  # Apache-2.0
+oslo.messaging>=1.6.0  # Apache-2.0
 oslo.i18n>=1.3.0  # Apache-2.0
 rfc3986>=0.2.0  # Apache-2.0
-oslo.vmware>=0.8.0                      # Apache-2.0
+oslo.vmware>=0.9.0                      # Apache-2.0
 oslo.middleware>=0.3.0                  # Apache-2.0
