@@ -101,8 +101,16 @@ class VHDUtilsV2(vhdutils.VHDUtils):
 
         et = ElementTree.fromstring(vhd_info_xml)
         item = et.find(".//PROPERTY[@NAME='ParentPath']/VALUE")
-        if item:
+        if item is not None:
             item.text = parent_vhd_path
+        else:
+            msg = (_("Failed to reconnect image %(child_vhd_path)s to "
+                     "parent %(parent_vhd_path)s. The child image has no "
+                     "parent path property.") %
+                   {'child_vhd_path': child_vhd_path,
+                    'parent_vhd_path': parent_vhd_path})
+            raise vmutils.HyperVException(msg)
+
         vhd_info_xml = ElementTree.tostring(et)
 
         (job_path, ret_val) = image_man_svc.SetVirtualHardDiskSettingData(

@@ -17,6 +17,7 @@ import mock
 from nova.tests.unit.virt.hyperv import test_vhdutils
 from nova.virt.hyperv import constants
 from nova.virt.hyperv import vhdutilsv2
+from nova.virt.hyperv import vmutils
 
 
 class VHDUtilsV2TestCase(test_vhdutils.VHDUtilsBaseTestCase):
@@ -109,6 +110,8 @@ class VHDUtilsV2TestCase(test_vhdutils.VHDUtilsBaseTestCase):
 
     def test_reconnect_parent_vhd(self):
         mock_img_svc = self._vhdutils._conn.Msvm_ImageManagementService()[0]
+        fake_new_parent_path = 'fake_new_parent_path'
+
         self._vhdutils._get_vhd_info_xml = mock.MagicMock(
             return_value=self._FAKE_VHD_INFO_XML)
 
@@ -116,9 +119,25 @@ class VHDUtilsV2TestCase(test_vhdutils.VHDUtilsBaseTestCase):
             self._FAKE_JOB_PATH, self._FAKE_RET_VAL)
 
         self._vhdutils.reconnect_parent_vhd(self._FAKE_VHD_PATH,
-                                            self._FAKE_PARENT_PATH)
+                                            fake_new_parent_path)
+
+        expected_virt_disk_data = self._FAKE_VHD_INFO_XML.replace(
+            self._FAKE_PARENT_PATH, fake_new_parent_path)
         mock_img_svc.SetVirtualHardDiskSettingData.assert_called_once_with(
-            VirtualDiskSettingData=self._FAKE_VHD_INFO_XML)
+            VirtualDiskSettingData=expected_virt_disk_data)
+
+    def test_reconnect_parent_vhd_exception(self):
+        # Test that reconnect_parent_vhd raises an exception if the
+        # vhd info XML does not contain the ParentPath property.
+        fake_vhd_info_xml = self._FAKE_VHD_INFO_XML.replace('ParentPath',
+                                                            'FakeParentPath')
+        self._vhdutils._get_vhd_info_xml = mock.Mock(
+            return_value=fake_vhd_info_xml)
+
+        self.assertRaises(vmutils.HyperVException,
+                          self._vhdutils.reconnect_parent_vhd,
+                          self._FAKE_VHD_PATH,
+                          mock.sentinel.new_parent_path)
 
     def test_resize_vhd(self):
         mock_img_svc = self._vhdutils._conn.Msvm_ImageManagementService()[0]
