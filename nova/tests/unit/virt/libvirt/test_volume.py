@@ -14,6 +14,7 @@
 #    under the License.
 
 import contextlib
+import glob
 import os
 import time
 
@@ -253,8 +254,11 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
         readonly = tree.find('./readonly')
         self.assertIsNotNone(readonly)
 
-    def iscsi_connection(self, volume, location, iqn, auth=False):
+    def iscsi_connection(self, volume, location, iqn, auth=False,
+                         transport=None):
         dev_name = 'ip-%s-iscsi-%s-lun-1' % (location, iqn)
+        if transport is not None:
+            dev_name = 'pci-0000:00:00.0-' + dev_name
         dev_path = '/dev/disk/by-path/%s' % (dev_name)
         ret = {
                 'driver_volume_type': 'iscsi',
@@ -275,6 +279,15 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
             ret['data']['auth_username'] = 'foo'
             ret['data']['auth_password'] = 'bar'
         return ret
+
+    def generate_device(self, transport=None, lun=1, short=False):
+        dev_format = "ip-%s-iscsi-%s-lun-%s" % (self.location, self.iqn, lun)
+        if transport:
+            dev_format = "pci-0000:00:00.0-" + dev_format
+        if short:
+            return dev_format
+        fake_dev_path = "/dev/disk/by-path/" + dev_format
+        return fake_dev_path
 
     def test_rescan_multipath(self):
         libvirt_driver = volume.LibvirtISCSIVolumeDriver(self.fake_conn)
@@ -305,12 +318,30 @@ Setting up iSCSI targets: unused
         out = driver._get_target_portals_from_iscsiadm_output(sample_input)
         self.assertEqual(out, targets)
 
-    def test_libvirt_iscsi_driver(self):
+    def test_libvirt_iscsi_get_host_device(self, transport=None):
+        libvirt_driver = volume.LibvirtISCSIVolumeDriver(self.fake_conn)
+        connection_info = self.iscsi_connection(self.vol, self.location,
+                                                self.iqn)
+        iscsi_properties = connection_info['data']
+        expected_device = self.generate_device(transport, 1, False)
+        if transport:
+            self.stubs.Set(glob, 'glob', lambda x: [expected_device])
+        device = libvirt_driver._get_host_device(iscsi_properties)
+        self.assertEqual(expected_device, device)
+
+    def test_libvirt_iscsi_get_host_device_with_transport(self):
+        self.flags(iscsi_transport='fake_transport', group='libvirt')
+        self.test_libvirt_iscsi_get_host_device('fake_transport')
+
+    def test_libvirt_iscsi_driver(self, transport=None):
         # NOTE(vish) exists is to make driver assume connecting worked
         self.stubs.Set(os.path, 'exists', lambda x: True)
         libvirt_driver = volume.LibvirtISCSIVolumeDriver(self.fake_conn)
         connection_info = self.iscsi_connection(self.vol, self.location,
-                                                self.iqn)
+                                                self.iqn, False, transport)
+        if transport is not None:
+            self.stubs.Set(libvirt_driver, '_get_host_device',
+                           lambda x: self.generate_device(transport, 1, False))
         libvirt_driver.connect_volume(connection_info, self.disk_info)
         libvirt_driver.disconnect_volume(connection_info, "vde")
         expected_commands = [('iscsiadm', '-m', 'node', '-T', self.iqn,
@@ -330,19 +361,25 @@ Setting up iSCSI targets: unused
                               '-p', self.location, '--logout'),
                              ('iscsiadm', '-m', 'node', '-T', self.iqn,
                               '-p', self.location, '--op', 'delete')]
-        self.assertEqual(self.executes, expected_commands)
+        self.assertEqual(expected_commands, self.executes)
 
-    def test_libvirt_iscsi_driver_still_in_use(self):
+    def test_libvirt_iscsi_driver_with_transport(self):
+        self.flags(iscsi_transport='fake_transport', group='libvirt')
+        self.test_libvirt_iscsi_driver('fake_transport')
+
+    def test_libvirt_iscsi_driver_still_in_use(self, transport=None):
         # NOTE(vish) exists is to make driver assume connecting worked
         self.stubs.Set(os.path, 'exists', lambda x: True)
         libvirt_driver = volume.LibvirtISCSIVolumeDriver(self.fake_conn)
-        devs = ['/dev/disk/by-path/ip-%s-iscsi-%s-lun-2' % (self.location,
-                                                            self.iqn)]
+        dev_name = self.generate_device(transport, 1, True)
+        if transport is not None:
+            self.stubs.Set(libvirt_driver, '_get_host_device',
+                           lambda x: self.generate_device(transport, 1, False))
+        devs = [self.generate_device(transport, 2, False)]
         self.stubs.Set(self.fake_conn, '_get_all_block_devices', lambda: devs)
         vol = {'id': 1, 'name': self.name}
         connection_info = self.iscsi_connection(vol, self.location, self.iqn)
         libvirt_driver.connect_volume(connection_info, self.disk_info)
-        dev_name = 'ip-%s-iscsi-%s-lun-1' % (self.location, self.iqn)
         libvirt_driver.disconnect_volume(connection_info, "vde")
         expected_commands = [('iscsiadm', '-m', 'node', '-T', self.iqn,
                               '-p', self.location),
@@ -358,11 +395,19 @@ Setting up iSCSI targets: unused
                               '/sys/block/%s/device/delete' % dev_name)]
         self.assertEqual(self.executes, expected_commands)
 
-    def test_libvirt_iscsi_driver_disconnect_multipath_error(self):
+    def test_libvirt_iscsi_driver_still_in_use_with_transport(self):
+        self.flags(iscsi_transport='fake_transport', group='libvirt')
+        self.test_libvirt_iscsi_driver_still_in_use('fake_transport')
+
+    def test_libvirt_iscsi_driver_disconnect_multipath_error(self,
+                                                             transport=None):
         libvirt_driver = volume.LibvirtISCSIVolumeDriver(self.fake_conn)
-        devs = ['/dev/disk/by-path/ip-%s-iscsi-%s-lun-2' % (self.location,
-                                                            self.iqn)]
-        iscsi_devs = ['ip-fake-ip-iscsi-fake-portal-lun-2']
+        if transport is None:
+            prefix = ""
+        else:
+            prefix = "pci-0000:00:00.0-"
+        devs = [self.generate_device(transport, 2, False)]
+        iscsi_devs = ['%sip-fake-ip-iscsi-fake-portal-lun-2' % prefix]
         with contextlib.nested(
             mock.patch.object(os.path, 'exists', return_value=True),
             mock.patch.object(self.fake_conn, '_get_all_block_devices',
@@ -393,13 +438,13 @@ Setting up iSCSI targets: unused
                                             ['-f', 'fake-multipath-devname'],
                                             check_exit_code=[0, 1])
 
-    def test_libvirt_iscsi_driver_get_config(self):
+    def test_libvirt_iscsi_driver_get_config(self, transport=None):
         libvirt_driver = volume.LibvirtISCSIVolumeDriver(self.fake_conn)
-        dev_name = 'ip-%s-iscsi-%s-lun-1' % (self.location, self.iqn)
+        dev_name = self.generate_device(transport, 1, True)
         dev_path = '/dev/disk/by-path/%s' % (dev_name)
         vol = {'id': 1, 'name': self.name}
         connection_info = self.iscsi_connection(vol, self.location,
-                                                self.iqn)
+                                                self.iqn, False, transport)
         conf = libvirt_driver.get_config(connection_info, self.disk_info)
         tree = conf.format_dom()
         self.assertEqual('block', tree.get('type'))
@@ -410,6 +455,10 @@ Setting up iSCSI targets: unused
         tree = conf.format_dom()
         self.assertEqual('block', tree.get('type'))
         self.assertEqual(dev_path, tree.find('./source').get('dev'))
+
+    def test_libvirt_iscsi_driver_get_config_with_transport(self):
+        self.flags(iscsi_transport = 'fake_transport', group='libvirt')
+        self.test_libvirt_iscsi_driver_get_config('fake_transport')
 
     def test_libvirt_iscsi_driver_multipath_id(self):
         libvirt_driver = volume.LibvirtISCSIVolumeDriver(self.fake_conn)
@@ -742,7 +791,9 @@ Setting up iSCSI targets: unused
 
         iscsi_devs = ['1.2.3.4-iscsi-%s-lun-1' % iqn,
                       '%s-iscsi-%s-lun-1' % (location, iqn),
-                      '%s-iscsi-%s-lun-2' % (location, iqn)]
+                      '%s-iscsi-%s-lun-2' % (location, iqn),
+                      'pci-0000:00:00.0-ip-%s-iscsi-%s-lun-3' % (location,
+                                                                 iqn)]
         libvirt_driver._get_iscsi_devices = lambda: iscsi_devs
 
         self.stubs.Set(libvirt_driver,
@@ -871,6 +922,9 @@ Setting up iSCSI targets: unused
         self.stubs.Set(libvirt_driver,
                        '_get_target_portals_from_iscsiadm_output',
                        lambda x: [[location, iqn]])
+        self.stubs.Set(libvirt_driver, '_get_host_device',
+                       lambda x: self.generate_device('iser', 0, False))
+
         libvirt_driver.connect_volume(connection_info, disk_info)
         conf = libvirt_driver.get_config(connection_info, disk_info)
         tree = conf.format_dom()
@@ -897,6 +951,8 @@ Setting up iSCSI targets: unused
         devs = [dev0, dev]
         self.stubs.Set(self.fake_conn, '_get_all_block_devices', lambda: devs)
         self.stubs.Set(libvirt_driver, '_get_iscsi_devices', lambda: [])
+        self.stubs.Set(libvirt_driver, '_get_host_device',
+                       lambda x: self.generate_device('iser', 1, False))
         connection_info = self.iser_connection(vol, location, iqn)
         mpdev_filepath = '/dev/mapper/foo'
         disk_info = {
