@@ -850,13 +850,11 @@ class LibvirtDriver(driver.ComputeDriver):
         virt_dom = self._host.get_domain(instance)
         xml = virt_dom.XMLDesc(0)
         tree = etree.fromstring(xml)
-        for serial in tree.findall("./devices/serial"):
-            if serial.get("type") == "tcp":
-                source = serial.find("./source")
-                if source is not None:
-                    if mode and source.get("mode") != mode:
-                        continue
-                    yield (source.get("host"), int(source.get("service")))
+        source_xpath = "./devices/serial[@type='tcp']/source"
+        if mode:
+            source_xpath = source_xpath + "[@mode='%s']" % mode
+        for source in tree.findall(source_xpath):
+            yield (source.get("host"), int(source.get("service")))
 
     @staticmethod
     def _get_rbd_driver():
