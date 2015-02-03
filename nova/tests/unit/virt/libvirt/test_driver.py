@@ -11119,7 +11119,6 @@ Active:          8381604 kB
         get_domain.assert_called_once_with(instance)
         get_disk_xml.assert_called_once_with(mock_dom.XMLDesc(0), 'vdb')
         connect_volume.assert_called_once_with(new_connection_info, disk_info)
-        self.assertTrue(volume_save.called)
         swap_volume.assert_called_once_with(mock_dom, 'vdb',
                                             '/fake-new-volume', 1)
         disconnect_volume.assert_called_once_with(old_connection_info, 'vdb')
