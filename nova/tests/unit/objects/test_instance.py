@@ -421,7 +421,7 @@ class _TestInstanceObject(object):
             self.assertTrue(save_mock.called)
 
     @mock.patch('nova.db.instance_update_and_get_original')
-    @mock.patch('nova.objects.Instance._from_db_object')
+    @mock.patch.object(objects.Instance, '_from_db_object')
     def test_save_does_not_refresh_pci_devices(self, mock_fdo, mock_update):
         # NOTE(danms): This tests that we don't update the pci_devices
         # field from the contents of the database. This is not because we
@@ -438,7 +438,7 @@ class _TestInstanceObject(object):
 
     @mock.patch('nova.db.instance_extra_update_by_uuid')
     @mock.patch('nova.db.instance_update_and_get_original')
-    @mock.patch('nova.objects.Instance._from_db_object')
+    @mock.patch.object(objects.Instance, '_from_db_object')
     def test_save_updates_numa_topology(self, mock_fdo, mock_update,
             mock_extra_update):
         fake_obj_numa_topology = objects.InstanceNUMATopology(cells=[
@@ -970,7 +970,7 @@ class _TestInstanceObject(object):
             inst.fault
             mock_load.assert_called_once_with()
 
-    @mock.patch('nova.objects.Instance.get_by_uuid')
+    @mock.patch.object(objects.Instance, 'get_by_uuid')
     def test_load_generic(self, mock_get):
         inst2 = instance.Instance(metadata={'foo': 'bar'})
         mock_get.return_value = inst2
