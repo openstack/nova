@@ -15,7 +15,6 @@
 import uuid
 
 from oslo.config import cfg
-from oslo.serialization import jsonutils
 import webob
 
 from nova.api.openstack.compute.contrib import evacuate as evacuate_v2
@@ -72,6 +71,8 @@ class EvacuateTestV21(test.NoDBTestCase):
         for _method in self._methods:
             self.stubs.Set(compute_api.API, _method, fake_compute_api)
         self._set_up_controller()
+        self.admin_req = fakes.HTTPRequest.blank('', use_admin_context=True)
+        self.req = fakes.HTTPRequest.blank('')
 
     def _set_up_controller(self):
         self.controller = evacuate_v21.EvacuateController()
@@ -79,9 +80,7 @@ class EvacuateTestV21(test.NoDBTestCase):
 
     def _get_evacuate_response(self, json_load, uuid=None):
         base_json_load = {'evacuate': json_load}
-        req = fakes.HTTPRequest.blank('', use_admin_context=True)
-        req.body = jsonutils.dumps(base_json_load)
-        response = self.controller._evacuate(req, uuid or self.UUID,
+        response = self.controller._evacuate(self.admin_req, uuid or self.UUID,
                                              body=base_json_load)
 
         return response
@@ -90,10 +89,9 @@ class EvacuateTestV21(test.NoDBTestCase):
                                 controller=None):
         controller = controller or self.controller
         body = {'evacuate': body}
-        req = fakes.HTTPRequest.blank('', use_admin_context=True)
         self.assertRaises(exception,
                           controller._evacuate,
-                          req, uuid or self.UUID, body=body)
+                          self.admin_req, uuid or self.UUID, body=body)
 
     def _fake_update(self, inst, context, instance, task_state,
                      expected_task_state):
@@ -193,10 +191,9 @@ class EvacuateTestV21(test.NoDBTestCase):
     def test_not_admin(self):
         body = {'evacuate': {'host': 'my-host',
                              'onSharedStorage': 'False'}}
-        req = fakes.HTTPRequest.blank('', use_admin_context=False)
         self.assertRaises(exception.PolicyNotAuthorized,
                           self.controller._evacuate,
-                          req, self.UUID, body=body)
+                          self.req, self.UUID, body=body)
 
     def test_evacuate_to_same_host(self):
         self._check_evacuate_failure(webob.exc.HTTPBadRequest,

@@ -180,6 +180,9 @@ class ServicesTestV21(test.TestCase):
         self.stubs.Set(db, "service_update",
                        fake_db_service_update(fake_services_list))
 
+        self.req = fakes.HTTPRequest.blank('')
+        self.admin_req = fakes.HTTPRequest.blank('', use_admin_context=True)
+
     def _process_output(self, services, has_disabled=False, has_id=False):
         return services
 
@@ -450,65 +453,56 @@ class ServicesTestV21(test.TestCase):
         self.stubs.Set(db, "service_update", _service_update)
 
         body = {'host': 'host1', 'binary': 'nova-compute'}
-        req = fakes.HTTPRequest.blank('/v2/fake/os-services/enable')
-
-        res_dict = self.controller.update(req, "enable", body=body)
+        res_dict = self.controller.update(self.req, "enable", body=body)
         self.assertEqual(res_dict['service']['status'], 'enabled')
         self.assertNotIn('disabled_reason', res_dict['service'])
 
     def test_services_enable_with_invalid_host(self):
         body = {'host': 'invalid', 'binary': 'nova-compute'}
-        req = fakes.HTTPRequest.blank('/v2/fake/os-services/enable')
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.controller.update,
-                          req,
+                          self.req,
                           "enable",
                           body=body)
 
     def test_services_enable_with_invalid_binary(self):
         body = {'host': 'host1', 'binary': 'invalid'}
-        req = fakes.HTTPRequest.blank('/v2/fake/os-services/enable')
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.controller.update,
-                          req,
+                          self.req,
                           "enable",
                           body=body)
 
     def test_services_disable(self):
-        req = fakes.HTTPRequest.blank('/v2/fake/os-services/disable')
         body = {'host': 'host1', 'binary': 'nova-compute'}
-        res_dict = self.controller.update(req, "disable", body=body)
+        res_dict = self.controller.update(self.req, "disable", body=body)
 
         self.assertEqual(res_dict['service']['status'], 'disabled')
         self.assertNotIn('disabled_reason', res_dict['service'])
 
     def test_services_disable_with_invalid_host(self):
         body = {'host': 'invalid', 'binary': 'nova-compute'}
-        req = fakes.HTTPRequest.blank('/v2/fake/os-services/disable')
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.controller.update,
-                          req,
+                          self.req,
                           "disable",
                           body=body)
 
     def test_services_disable_with_invalid_binary(self):
         body = {'host': 'host1', 'binary': 'invalid'}
-        req = fakes.HTTPRequest.blank('/v2/fake/os-services/disable')
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.controller.update,
-                          req,
+                          self.req,
                           "disable",
                           body=body)
 
     def test_services_disable_log_reason(self):
         self.ext_mgr.extensions['os-extended-services'] = True
-        req = \
-            fakes.HTTPRequest.blank('/v2/fake/os-services/disable-log-reason')
         body = {'host': 'host1',
                 'binary': 'nova-compute',
                 'disabled_reason': 'test-reason',
                 }
-        res_dict = self.controller.update(req,
+        res_dict = self.controller.update(self.req,
                                           "disable-log-reason",
                                           body=body)
 
@@ -517,48 +511,39 @@ class ServicesTestV21(test.TestCase):
 
     def test_mandatory_reason_field(self):
         self.ext_mgr.extensions['os-extended-services'] = True
-        req = \
-            fakes.HTTPRequest.blank('/v2/fake/os-services/disable-log-reason')
         body = {'host': 'host1',
                 'binary': 'nova-compute',
                }
         self.assertRaises(webob.exc.HTTPBadRequest,
-                self.controller.update, req, "disable-log-reason", body=body)
+                self.controller.update, self.req, "disable-log-reason",
+                body=body)
 
     def test_invalid_reason_field(self):
         self.ext_mgr.extensions['os-extended-services'] = True
-        url = '/v2/fake/os-services/disable-log-reason'
-        req = fakes.HTTPRequest.blank(url)
         reason = 'a' * 256
         body = {'host': 'host1',
                 'binary': 'nova-compute',
                 'disabled_reason': reason,
                }
         self.assertRaises(self.bad_request,
-                self.controller.update, req, "disable-log-reason", body=body)
+                self.controller.update, self.req, "disable-log-reason",
+                body=body)
 
     def test_services_delete(self):
         self.ext_mgr.extensions['os-extended-services-delete'] = True
 
-        request = fakes.HTTPRequest.blank('/v2/fakes/os-services/1',
-                                          use_admin_context=True)
-        request.method = 'DELETE'
-
         with mock.patch.object(self.controller.host_api,
                                'service_delete') as service_delete:
-            self.controller.delete(request, '1')
+            self.controller.delete(self.admin_req, '1')
             service_delete.assert_called_once_with(
-                request.environ['nova.context'], '1')
+                self.admin_req.environ['nova.context'], '1')
             self.assertEqual(self.controller.delete.wsgi_code, 204)
 
     def test_services_delete_not_found(self):
         self.ext_mgr.extensions['os-extended-services-delete'] = True
 
-        request = fakes.HTTPRequest.blank('/v2/fakes/os-services/abc',
-                                          use_admin_context=True)
-        request.method = 'DELETE'
         self.assertRaises(webob.exc.HTTPNotFound,
-                          self.controller.delete, request, 'abc')
+                          self.controller.delete, self.admin_req, 'abc')
 
     # This test is just to verify that the servicegroup API gets used when
     # calling the API
@@ -579,11 +564,8 @@ class ServicesTestV20(ServicesTestV21):
         self.controller = services_v2.ServiceController(self.ext_mgr)
 
     def test_services_delete_not_enabled(self):
-        request = fakes.HTTPRequest.blank('v2/fakes/os-services/300',
-                                          use_admin_context=True)
-        request.method = 'DELETE'
         self.assertRaises(webob.exc.HTTPMethodNotAllowed,
-                          self.controller.delete, request, '300')
+                          self.controller.delete, self.admin_req, '300')
 
     def _process_output(self, services, has_disabled=False, has_id=False):
         for service in services['services']:
