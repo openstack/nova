@@ -5132,11 +5132,19 @@ class LibvirtDriver(driver.ComputeDriver):
                           post_method, recover_method, block_migration,
                           migrate_data)
 
-    def _correct_listen_addr(self, old_xml_str, listen_addrs):
-        # NB(sross): can't just use LibvirtConfigGuest#parse_str
-        #            here b/c it doesn't capture the entire XML
-        #            description
-        xml_doc = etree.fromstring(old_xml_str)
+    def _update_xml(self, xml_str, volume, listen_addrs):
+        xml_doc = etree.fromstring(xml_str)
+
+        if volume:
+            xml_doc = self._update_volume_xml(xml_doc, volume)
+        if listen_addrs:
+            xml_doc = self._update_graphics_xml(xml_doc, listen_addrs)
+        else:
+            self._check_graphics_addresses_can_live_migrate(listen_addrs)
+
+        return etree.tostring(xml_doc)
+
+    def _update_graphics_xml(self, xml_doc, listen_addrs):
 
         # change over listen addresses
         for dev in xml_doc.findall('./devices/graphics'):
@@ -5148,7 +5156,50 @@ class LibvirtDriver(driver.ComputeDriver):
                 if dev.get('listen') is not None:
                     dev.set('listen', listen_addrs[gr_type])
 
-        return etree.tostring(xml_doc)
+        return xml_doc
+
+    def _update_volume_xml(self, xml_doc, volume):
+        """Update XML using device information of destination host."""
+
+        # Update volume xml
+        parser = etree.XMLParser(remove_blank_text=True)
+        disk_nodes = xml_doc.findall('./devices/disk')
+        for pos, disk_dev in enumerate(disk_nodes):
+            serial_source = disk_dev.findtext('serial')
+            if serial_source is None or volume.get(serial_source) is None:
+                continue
+
+            if ('connection_info' not in volume[serial_source] or
+                    'disk_info' not in volume[serial_source]):
+                continue
+
+            conf = self._get_volume_config(
+                volume[serial_source]['connection_info'],
+                volume[serial_source]['disk_info'])
+            xml_doc2 = etree.XML(conf.to_xml(), parser)
+            serial_dest = xml_doc2.findtext('serial')
+
+            # Compare source serial and destination serial number.
+            # If these serial numbers match, continue the process.
+            if (serial_dest and (serial_source == serial_dest)):
+                LOG.debug("Find same serial number: pos=%(pos)s, "
+                          "serial=%(num)s",
+                          {'pos': pos, 'num': serial_source})
+                for cnt, item_src in enumerate(disk_dev):
+                    # If source and destination have same item, update
+                    # the item using destination value.
+                    for item_dst in xml_doc2.findall(item_src.tag):
+                        disk_dev.remove(item_src)
+                        item_dst.tail = None
+                        disk_dev.insert(cnt, item_dst)
+
+                # If destination has additional items, thses items should be
+                # added here.
+                for item_dst in list(xml_doc2):
+                    item_dst.tail = None
+                    disk_dev.insert(cnt, item_dst)
+
+        return xml_doc
 
     def _check_graphics_addresses_can_live_migrate(self, listen_addrs):
         LOCAL_ADDRS = ('0.0.0.0', '127.0.0.1', '::', '::1')
@@ -5224,11 +5275,13 @@ class LibvirtDriver(driver.ComputeDriver):
             pre_live_migrate_data = (migrate_data or {}).get(
                                         'pre_live_migration_result', {})
             listen_addrs = pre_live_migrate_data.get('graphics_listen_addrs')
+            volume = pre_live_migrate_data.get('volume')
 
             migratable_flag = getattr(libvirt, 'VIR_DOMAIN_XML_MIGRATABLE',
                                       None)
 
-            if migratable_flag is None or listen_addrs is None:
+            if (migratable_flag is None or
+                    (listen_addrs is None and not volume)):
                 self._check_graphics_addresses_can_live_migrate(listen_addrs)
                 dom.migrateToURI(CONF.libvirt.live_migration_uri % dest,
                                  logical_sum,
@@ -5236,8 +5289,9 @@ class LibvirtDriver(driver.ComputeDriver):
                                  CONF.libvirt.live_migration_bandwidth)
             else:
                 old_xml_str = dom.XMLDesc(migratable_flag)
-                new_xml_str = self._correct_listen_addr(old_xml_str,
-                                                        listen_addrs)
+                new_xml_str = self._update_xml(old_xml_str,
+                                               volume,
+                                               listen_addrs)
                 try:
                     dom.migrateToURI2(CONF.libvirt.live_migration_uri % dest,
                                       None,
@@ -5412,9 +5466,21 @@ class LibvirtDriver(driver.ComputeDriver):
                              instance=instance)
                     greenthread.sleep(1)
 
-        res_data = {'graphics_listen_addrs': {}}
+        # Store vncserver_listen and latest disk device info
+        res_data = {'graphics_listen_addrs': {}, 'volume': {}}
         res_data['graphics_listen_addrs']['vnc'] = CONF.vncserver_listen
         res_data['graphics_listen_addrs']['spice'] = CONF.spice.server_listen
+        for vol in block_device_mapping:
+            connection_info = vol['connection_info']
+            if connection_info.get('serial'):
+                serial = connection_info['serial']
+                res_data['volume'][serial] = {'connection_info': {},
+                                              'disk_info': {}}
+                res_data['volume'][serial]['connection_info'] = \
+                    connection_info
+                disk_info = blockinfo.get_info_from_bdm(
+                    CONF.libvirt.virt_type, image_meta, vol)
+                res_data['volume'][serial]['disk_info'] = disk_info
 
         return res_data
 
