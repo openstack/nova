@@ -9729,20 +9729,59 @@ class ComputeAPIIpFilterTestCase(BaseTestCase):
 
     def test_ip_filtering_no_matches(self):
         instances = self._get_ip_filtering_instances()
-        insts = self.compute_api._ip_filter(instances, {'ip': '.*30'})
+        insts = self.compute_api._ip_filter(instances, {'ip': '.*30'}, None)
         self.assertEqual(0, len(insts))
 
     def test_ip_filtering_one_match(self):
         instances = self._get_ip_filtering_instances()
         for val in ('192.168.0.10', '192.168.0.1', '192.164.0.10', '.*10'):
-            insts = self.compute_api._ip_filter(instances, {'ip': val})
+            insts = self.compute_api._ip_filter(instances, {'ip': val}, None)
+            self.assertEqual([1], [i.id for i in insts])
+
+    def test_ip_filtering_one_match_limit(self):
+        instances = self._get_ip_filtering_instances()
+        for limit in (None, 1, 2):
+            insts = self.compute_api._ip_filter(instances,
+                                                {'ip': '.*10'},
+                                                limit)
             self.assertEqual([1], [i.id for i in insts])
 
     def test_ip_filtering_two_matches(self):
         instances = self._get_ip_filtering_instances()
         for val in ('192.16', '192.168', '192.164'):
-            insts = self.compute_api._ip_filter(instances, {'ip': val})
+            insts = self.compute_api._ip_filter(instances, {'ip': val}, None)
             self.assertEqual([1, 2], [i.id for i in insts])
+
+    def test_ip_filtering_two_matches_limit(self):
+        instances = self._get_ip_filtering_instances()
+        # Up to 2 match, based on the passed limit
+        for limit in (None, 1, 2, 3):
+            insts = self.compute_api._ip_filter(instances,
+                                                {'ip': '192.168.0.*'},
+                                                limit)
+            expected_ids = [1, 2]
+            if limit:
+                expected_len = min(limit, len(expected_ids))
+                expected_ids = expected_ids[:expected_len]
+            self.assertEqual(expected_ids, [inst.id for inst in insts])
+
+    def test_ip_filtering_no_limit_to_db(self):
+        c = context.get_admin_context()
+        # Limit is not supplied to the DB when using an IP filter
+        with mock.patch('nova.objects.InstanceList.get_by_filters') as m_get:
+            self.compute_api.get_all(c, search_opts={'ip': '.10'}, limit=1)
+            self.assertEqual(1, m_get.call_count)
+            kwargs = m_get.call_args[1]
+            self.assertIsNone(kwargs['limit'])
+
+    def test_ip_filtering_pass_limit_to_db(self):
+        c = context.get_admin_context()
+        # No IP filter, verify that the limit is passed
+        with mock.patch('nova.objects.InstanceList.get_by_filters') as m_get:
+            self.compute_api.get_all(c, search_opts={}, limit=1)
+            self.assertEqual(1, m_get.call_count)
+            kwargs = m_get.call_args[1]
+            self.assertEqual(1, kwargs['limit'])
 
 
 def fake_rpc_method(context, method, **kwargs):
