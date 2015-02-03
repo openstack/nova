@@ -1138,6 +1138,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                                 block_device_info)
             xml = self._get_guest_xml(nova_context.get_admin_context(),
                                       instance, network_info, disk_info,
+                                      image_meta,
                                       block_device_info=block_device_info)
         return xml
 
@@ -2059,7 +2060,7 @@ class LibvirtDriver(driver.ComputeDriver):
         #             does we need to (re)generate the xml after the images
         #             are in place.
         xml = self._get_guest_xml(context, instance, network_info, disk_info,
-                                  image_meta=image_meta,
+                                  image_meta,
                                   block_device_info=block_device_info,
                                   write_to_disk=True)
 
@@ -4020,14 +4021,9 @@ class LibvirtDriver(driver.ComputeDriver):
         return guest
 
     def _get_guest_xml(self, context, instance, network_info, disk_info,
-                       image_meta=None, rescue=None,
+                       image_meta, rescue=None,
                        block_device_info=None, write_to_disk=False,
                        flavor=None):
-
-        if image_meta is None:
-            image_ref = instance['image_ref']
-            image_meta = compute_utils.get_image_metadata(
-                                context, self._image_api, image_ref, instance)
         # NOTE(danms): Stringifying a NetworkInfo will take a lock. Do
         # this ahead of time so that we don't acquire it while also
         # holding the logging lock.
@@ -5589,6 +5585,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 image_meta, block_device_info)
             xml = self._get_guest_xml(context, instance,
                                       network_info, disk_info,
+                                      image_meta,
                                       block_device_info=block_device_info,
                                       write_to_disk=True)
             self._conn.defineXML(xml)
@@ -5971,6 +5968,7 @@ class LibvirtDriver(driver.ComputeDriver):
                            network_info=network_info,
                            block_device_info=None, inject_files=False)
         xml = self._get_guest_xml(context, instance, network_info, disk_info,
+                                  image_meta,
                                   block_device_info=block_device_info,
                                   write_to_disk=True)
         self._create_domain_and_network(context, xml, instance, network_info,
@@ -6021,6 +6019,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                             image_meta,
                                             block_device_info)
         xml = self._get_guest_xml(context, instance, network_info, disk_info,
+                                  image_meta,
                                   block_device_info=block_device_info)
         self._create_domain_and_network(context, xml, instance, network_info,
                                         disk_info,

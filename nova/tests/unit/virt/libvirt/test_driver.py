@@ -5374,7 +5374,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                             instance_ref,
                                             image_meta)
         xml = drvr._get_guest_xml(self.context, instance_ref,
-                                  network_info, disk_info)
+                                  network_info, disk_info,
+                                  image_meta)
         tree = etree.fromstring(xml)
         interfaces = tree.findall("./devices/interface")
         self.assertEqual(len(interfaces), 2)
@@ -5448,7 +5449,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         mock_flavor.return_value = flavor
 
         xml = drvr._get_guest_xml(self.context, instance_ref,
-                                  network_info, disk_info)
+                                  network_info, disk_info,
+                                  image_meta)
         tree = etree.fromstring(xml)
 
         check = [
@@ -5508,7 +5510,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             flavor.extra_specs = {}
             mock_flavor.return_value = flavor
             xml = drvr._get_guest_xml(self.context, instance_ref,
-                                      network_info, disk_info)
+                                      network_info, disk_info,
+                                      image_meta)
             tree = etree.fromstring(xml)
 
             for i, (check, expected_result) in enumerate(checks):
@@ -5798,6 +5801,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 mock_flavor.return_value = flavor
                 xml = drvr._get_guest_xml(self.context, instance_ref,
                                           network_info, disk_info,
+                                          image_meta,
                                           rescue=rescue)
                 tree = etree.fromstring(xml)
                 for i, (check, expected_result) in enumerate(checks):
@@ -8392,8 +8396,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             instance.system_metadata)
 
         drvr._get_guest_xml(self.context, instance, network_info, disk_info,
-                            image_meta=image_meta,
-                            block_device_info=block_device_info,
+                            image_meta, block_device_info=block_device_info,
                             write_to_disk=True).AndReturn(dummyxml)
         disk_info_json = '[{"virt_disk_size": 2}]'
         drvr._get_instance_disk_info(instance["name"], dummyxml,
@@ -11969,7 +11972,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
     def test_finish_revert_migration_preserves_disk_bus(self):
 
         def fake_get_guest_xml(context, instance, network_info, disk_info,
-                               block_device_info=None):
+                               image_meta, block_device_info=None):
             self.assertEqual('ide', disk_info['disk_bus'])
 
         image_meta = {"properties": {"hw_disk_bus": "ide"}}
