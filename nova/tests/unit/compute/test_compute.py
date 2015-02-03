@@ -7238,35 +7238,6 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertIsNone(instance['task_state'])
         return instance, instance_uuid
 
-    def test_ip_filtering(self):
-        info = [{
-            'address': 'aa:bb:cc:dd:ee:ff',
-            'id': 1,
-            'network': {
-                'bridge': 'br0',
-                'id': 1,
-                'label': 'private',
-                'subnets': [{
-                    'cidr': '192.168.0.0/24',
-                    'ips': [{
-                        'address': '192.168.0.10',
-                        'type': 'fixed',
-                    }]
-                }]
-            }
-        }]
-
-        info1 = objects.InstanceInfoCache(network_info=jsonutils.dumps(info))
-        inst1 = objects.Instance(id=1, info_cache=info1)
-        info[0]['network']['subnets'][0]['ips'][0]['address'] = '192.168.0.20'
-        info2 = objects.InstanceInfoCache(network_info=jsonutils.dumps(info))
-        inst2 = objects.Instance(id=2, info_cache=info2)
-        instances = objects.InstanceList(objects=[inst1, inst2])
-
-        instances = self.compute_api._ip_filter(instances, {'ip': '.*10'})
-        self.assertEqual(len(instances), 1)
-        self.assertEqual(instances[0].id, 1)
-
     def test_create_with_too_little_ram(self):
         # Test an instance type with too little memory.
 
@@ -9705,6 +9676,73 @@ class ComputeAPITestCase(BaseTestCase):
                                                              filters)
         self.assertEqual(1, len(migrations))
         self.assertEqual(migrations[0].id, migration['id'])
+
+
+class ComputeAPIIpFilterTestCase(BaseTestCase):
+    '''Verifies the IP filtering in the compute API.'''
+
+    def _get_ip_filtering_instances(self):
+        '''Utility function to get instances for the IP filtering tests.'''
+        info = [{
+            'address': 'aa:bb:cc:dd:ee:ff',
+            'id': 1,
+            'network': {
+                'bridge': 'br0',
+                'id': 1,
+                'label': 'private',
+                'subnets': [{
+                    'cidr': '192.168.0.0/24',
+                    'ips': [{
+                        'address': '192.168.0.10',
+                        'type': 'fixed'
+                    }, {
+                        'address': '192.168.0.11',
+                        'type': 'fixed'
+                    }]
+                }]
+            }
+        }, {
+            'address': 'aa:bb:cc:dd:ee:ff',
+            'id': 2,
+            'network': {
+                'bridge': 'br1',
+                'id': 2,
+                'label': 'private',
+                'subnets': [{
+                    'cidr': '192.164.0.0/24',
+                    'ips': [{
+                        'address': '192.164.0.10',
+                        'type': 'fixed'
+                    }]
+                }]
+            }
+        }]
+
+        info1 = objects.InstanceInfoCache(network_info=jsonutils.dumps(info))
+        inst1 = objects.Instance(id=1, info_cache=info1)
+        info[0]['network']['subnets'][0]['ips'][0]['address'] = '192.168.0.20'
+        info[0]['network']['subnets'][0]['ips'][1]['address'] = '192.168.0.21'
+        info[1]['network']['subnets'][0]['ips'][0]['address'] = '192.164.0.20'
+        info2 = objects.InstanceInfoCache(network_info=jsonutils.dumps(info))
+        inst2 = objects.Instance(id=2, info_cache=info2)
+        return objects.InstanceList(objects=[inst1, inst2])
+
+    def test_ip_filtering_no_matches(self):
+        instances = self._get_ip_filtering_instances()
+        insts = self.compute_api._ip_filter(instances, {'ip': '.*30'})
+        self.assertEqual(0, len(insts))
+
+    def test_ip_filtering_one_match(self):
+        instances = self._get_ip_filtering_instances()
+        for val in ('192.168.0.10', '192.168.0.1', '192.164.0.10', '.*10'):
+            insts = self.compute_api._ip_filter(instances, {'ip': val})
+            self.assertEqual([1], [i.id for i in insts])
+
+    def test_ip_filtering_two_matches(self):
+        instances = self._get_ip_filtering_instances()
+        for val in ('192.16', '192.168', '192.164'):
+            insts = self.compute_api._ip_filter(instances, {'ip': val})
+            self.assertEqual([1, 2], [i.id for i in insts])
 
 
 def fake_rpc_method(context, method, **kwargs):

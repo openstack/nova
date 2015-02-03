@@ -2069,8 +2069,8 @@ class API(base.Base):
     def _ip_filter(inst_models, filters):
         ipv4_f = re.compile(str(filters.get('ip')))
         ipv6_f = re.compile(str(filters.get('ip6')))
-        result_objs = []
-        for instance in inst_models:
+
+        def _match_instance(instance):
             nw_info = compute_utils.get_nw_info_for_instance(instance)
             for vif in nw_info:
                 for fixed_ip in vif.fixed_ips():
@@ -2080,8 +2080,13 @@ class API(base.Base):
                     version = fixed_ip.get('version')
                     if ((version == 4 and ipv4_f.match(address)) or
                         (version == 6 and ipv6_f.match(address))):
-                        result_objs.append(instance)
-                        continue
+                        return True
+            return False
+
+        result_objs = []
+        for instance in inst_models:
+            if _match_instance(instance):
+                result_objs.append(instance)
         return objects.InstanceList(objects=result_objs)
 
     def _get_instances_by_filters(self, context, filters,
