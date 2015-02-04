@@ -114,18 +114,32 @@ class InterCellRPCAPI(object):
         self.version_cap = (
             self.VERSION_ALIASES.get(CONF.upgrade_levels.intercell,
                                      CONF.upgrade_levels.intercell))
+        self.transports = {}
 
     def _get_client(self, next_hop, topic):
         """Turn the DB information for a cell into a messaging.RPCClient."""
-        transport_url = next_hop.db_info['transport_url']
-        transport = messaging.get_transport(cfg.CONF, transport_url,
-                                            rpc.TRANSPORT_ALIASES)
+        transport = self._get_transport(next_hop)
         target = messaging.Target(topic=topic, version='1.0')
         serializer = rpc.RequestContextSerializer(None)
         return messaging.RPCClient(transport,
                                    target,
                                    version_cap=self.version_cap,
                                    serializer=serializer)
+
+    def _get_transport(self, next_hop):
+        """NOTE(belliott) Each Transport object contains connection pool
+        state.  Maintain references to them to avoid continual reconnects
+        to the message broker.
+        """
+        transport_url = next_hop.db_info['transport_url']
+        if transport_url not in self.transports:
+            transport = messaging.get_transport(cfg.CONF, transport_url,
+                                                rpc.TRANSPORT_ALIASES)
+            self.transports[transport_url] = transport
+        else:
+            transport = self.transports[transport_url]
+
+        return transport
 
     def send_message_to_cell(self, cell_state, message):
         """Send a message to another cell by JSON-ifying the message and
