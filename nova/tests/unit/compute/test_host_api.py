@@ -25,6 +25,7 @@ from nova import exception
 from nova import objects
 from nova import test
 from nova.tests.unit import fake_notifier
+from nova.tests.unit.objects import test_compute_node
 from nova.tests.unit.objects import test_objects
 from nova.tests.unit.objects import test_service
 
@@ -410,6 +411,30 @@ class ComputeHostAPICellsTestCase(ComputeHostAPITestCase):
         result = self.host_api.service_get_by_compute_host(self.ctxt,
                                                            'fake-host')
         self._compare_obj(result, exp_service)
+
+    def test_service_get_by_compute_host_with_compute_node(self):
+        self.mox.StubOutWithMock(self.host_api.cells_rpcapi,
+                                 'service_get_by_compute_host')
+
+        # Cells return services and compute_nodes with full cell_path prepended
+        # to IDs
+        fake_compute_node = dict(test_compute_node.fake_compute_node,
+                                 id='region!child@1')
+        exp_compute_node = fake_compute_node.copy()
+
+        fake_service = dict(test_service.fake_service, id='cell1@1',
+                            compute_node=[fake_compute_node])
+
+        self.host_api.cells_rpcapi.service_get_by_compute_host(self.ctxt,
+                'fake-host').AndReturn(fake_service)
+        self.mox.ReplayAll()
+        result = self.host_api.service_get_by_compute_host(self.ctxt,
+                                                           'fake-host')
+
+        # NOTE: Testing equality of a compute node obj and dict requires
+        # multiple comparator methods.  So here we just test that the proxy
+        # object correctly replaces the 'id'.
+        self.assertEqual(exp_compute_node['id'], result.compute_node.id)
 
     def test_service_update(self):
         host_name = 'fake-host'

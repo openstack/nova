@@ -477,6 +477,33 @@ class ComputeCellsAPI(compute_api.API):
 
 
 class ServiceProxy(object):
+    def __init__(self, obj, cell_path, compute_node=None):
+        self._obj = obj
+        self._cell_path = cell_path
+        self._compute_node = compute_node
+
+    @property
+    def id(self):
+        return cells_utils.cell_with_item(self._cell_path, self._obj.id)
+
+    def __getitem__(self, key):
+        if key == 'id':
+            return self.id
+
+        if key == 'compute_node' and self._compute_node:
+            return self._compute_node
+
+        return getattr(self._obj, key)
+
+    def __getattr__(self, key):
+
+        if key == 'compute_node' and self._compute_node:
+            return self._compute_node
+
+        return getattr(self._obj, key)
+
+
+class ComputeNodeProxy(object):
     def __init__(self, obj, cell_path):
         self._obj = obj
         self._cell_path = cell_path
@@ -570,12 +597,31 @@ class HostAPI(compute_api.HostAPI):
         # NOTE(dheeraj): Use ServiceProxy here too. See johannes'
         # note on service_get_all
         if db_service:
+            # NOTE(alaski): Creation of the Service object involves creating
+            # a ComputeNode object in this case.  This will fail because with
+            # cells the 'id' is a string of the format 'region!child@1' but
+            # the object expects the 'id' to be an int.
+            if 'compute_node' in db_service:
+                # NOTE(alaski): compute_node is a list that should have one
+                # item in it, except in the case of Ironic.  But the Service
+                # object only uses the first compute_node for its relationship
+                # so we only need to pull the first one here.
+                db_compute = db_service['compute_node'][0]
+                comp_cell_path, comp_id = cells_utils.split_cell_and_item(
+                        db_compute['id'])
+                db_compute['id'] = comp_id
+
             cell_path, _id = cells_utils.split_cell_and_item(db_service['id'])
             db_service['id'] = _id
             ser_obj = objects.Service._from_db_object(context,
                                                       objects.Service(),
                                                       db_service)
-            return ServiceProxy(ser_obj, cell_path)
+            compute_proxy = None
+            if 'compute_node' in db_service:
+                compute_proxy = ComputeNodeProxy(ser_obj.compute_node,
+                        comp_cell_path)
+
+            return ServiceProxy(ser_obj, cell_path, compute_node=compute_proxy)
 
     def service_update(self, context, host_name, binary, params_to_update):
         """Used to enable/disable a service. For compute services, setting to
