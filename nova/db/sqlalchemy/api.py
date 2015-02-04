@@ -346,15 +346,17 @@ class InequalityCondition(object):
 def service_destroy(context, service_id):
     session = get_session()
     with session.begin():
-        count = model_query(context, models.Service, session=session).\
+        service = _service_get(context, service_id)
+
+        model_query(context, models.Service, session=session).\
                     filter_by(id=service_id).\
                     soft_delete(synchronize_session=False)
 
-        if count == 0:
-            raise exception.ServiceNotFound(service_id=service_id)
-
+        # TODO(sbauza): Remove the service_id filter in a later release
+        # once we are sure that all compute nodes report the host field
         model_query(context, models.ComputeNode, session=session).\
-                    filter_by(service_id=service_id).\
+                    filter(or_(models.ComputeNode.service_id == service_id,
+                               models.ComputeNode.host == service['host'])).\
                     soft_delete(synchronize_session=False)
 
 
