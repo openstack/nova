@@ -76,19 +76,28 @@ class ViewBuilder(common.ViewBuilder):
     def detail(self, request, images):
         """Show a list of images with details."""
         list_func = self.show
-        return self._list_view(list_func, request, images)
+        coll_name = self._collection_name + '/detail'
+        return self._list_view(list_func, request, images, coll_name)
 
     def index(self, request, images):
         """Show a list of images with basic attributes."""
         list_func = self.basic
-        return self._list_view(list_func, request, images)
+        coll_name = self._collection_name
+        return self._list_view(list_func, request, images, coll_name)
 
-    def _list_view(self, list_func, request, images):
-        """Provide a view for a list of images."""
+    def _list_view(self, list_func, request, images, coll_name):
+        """Provide a view for a list of images.
+
+        :param list_func: Function used to format the image data
+        :param request: API request
+        :param images: List of images in dictionary format
+        :param coll_name: Name of collection, used to generate the next link
+                          for a pagination query
+
+        :returns: Image reply data in dictionary format
+        """
         image_list = [list_func(request, image)["image"] for image in images]
-        images_links = self._get_collection_links(request,
-                                                  images,
-                                                  self._collection_name)
+        images_links = self._get_collection_links(request, images, coll_name)
         images_dict = dict(images=image_list)
 
         if images_links:

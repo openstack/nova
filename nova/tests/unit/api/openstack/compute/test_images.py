@@ -21,6 +21,7 @@ and as a WSGI layer
 import copy
 
 import mock
+import six.moves.urllib.parse as urlparse
 import webob
 
 from nova.api.openstack.compute import images
@@ -380,6 +381,30 @@ class ImagesControllerTestV21(test.NoDBTestCase):
         request.method = 'DELETE'
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.controller.delete, request, '300')
+
+    @mock.patch('nova.image.api.API.get_all', return_value=[IMAGE_FIXTURES[0]])
+    def test_get_image_next_link(self, get_all_mocked):
+        request = self.http_request.blank(
+            self.url_base + 'imagesl?limit=1')
+        response = self.controller.index(request)
+        response_links = response['images_links']
+        href_parts = urlparse.urlparse(response_links[0]['href'])
+        self.assertEqual(self.url_base + '/images', href_parts.path)
+        params = urlparse.parse_qs(href_parts.query)
+        self.assertThat({'limit': ['1'], 'marker': [IMAGE_FIXTURES[0]['id']]},
+                        matchers.DictMatches(params))
+
+    @mock.patch('nova.image.api.API.get_all', return_value=[IMAGE_FIXTURES[0]])
+    def test_get_image_details_next_link(self, get_all_mocked):
+        request = self.http_request.blank(
+            self.url_base + 'images/detail?limit=1')
+        response = self.controller.detail(request)
+        response_links = response['images_links']
+        href_parts = urlparse.urlparse(response_links[0]['href'])
+        self.assertEqual(self.url_base + '/images/detail', href_parts.path)
+        params = urlparse.parse_qs(href_parts.query)
+        self.assertThat({'limit': ['1'], 'marker': [IMAGE_FIXTURES[0]['id']]},
+                        matchers.DictMatches(params))
 
 
 class ImagesControllerTestV2(ImagesControllerTestV21):
