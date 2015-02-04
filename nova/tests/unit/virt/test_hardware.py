@@ -22,6 +22,7 @@ from nova import context
 from nova import exception
 from nova import objects
 from nova.objects import base as base_obj
+from nova.pci import stats
 from nova import test
 from nova.virt import hardware as hw
 
@@ -1420,6 +1421,34 @@ class VirtNUMAHostTopologyTestCase(test.NoDBTestCase):
                 self.host, self.instance3, self.limits)
         self.assertIsInstance(fitted_instance2, objects.InstanceNUMATopology)
         self.assertEqual(2, fitted_instance2.cells[0].id)
+
+    def test_get_fitting_pci_success(self):
+        pci_request = objects.InstancePCIRequest(count=1,
+            spec=[{'vendor_id': '8086'}])
+        pci_reqs = [pci_request]
+        pci_stats = stats.PciDeviceStats()
+        with mock.patch.object(stats.PciDeviceStats,
+                'support_requests', return_value= True):
+            fitted_instance1 = hw.numa_fit_instance_to_host(self.host,
+                                                        self.instance1,
+                                                        pci_requests=pci_reqs,
+                                                        pci_stats=pci_stats)
+            self.assertIsInstance(fitted_instance1,
+                                  objects.InstanceNUMATopology)
+
+    def test_get_fitting_pci_fail(self):
+        pci_request = objects.InstancePCIRequest(count=1,
+            spec=[{'vendor_id': '8086'}])
+        pci_reqs = [pci_request]
+        pci_stats = stats.PciDeviceStats()
+        with mock.patch.object(stats.PciDeviceStats,
+                'support_requests', return_value= False):
+            fitted_instance1 = hw.numa_fit_instance_to_host(
+                                                        self.host,
+                                                        self.instance1,
+                                                        pci_requests=pci_reqs,
+                                                        pci_stats=pci_stats)
+            self.assertIsNone(fitted_instance1)
 
 
 class NumberOfSerialPortsTest(test.NoDBTestCase):

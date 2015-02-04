@@ -206,12 +206,27 @@ class Claim(NopClaim):
         if host_topology:
             host_topology = objects.NUMATopology.obj_from_db_obj(
                     host_topology)
+            pci_requests = objects.InstancePCIRequests.get_by_instance_uuid(
+                                        self.context, self.instance['uuid'])
+
+            pci_stats = None
+            if pci_requests.requests:
+                pci_stats = self.tracker.pci_tracker.stats
+
             instance_topology = (
                     hardware.numa_fit_instance_to_host(
                         host_topology, requested_topology,
-                        limits_topology=limit))
+                        limits_topology=limit,
+                        pci_requests=pci_requests.requests,
+                        pci_stats=pci_stats))
+
             if requested_topology and not instance_topology:
-                return (_("Requested instance NUMA topology cannot fit "
+                if pci_requests.requests:
+                    return (_("Requested instance NUMA topology together with"
+                              " requested PCI devices cannot fit the given"
+                              " host NUMA topology"))
+                else:
+                    return (_("Requested instance NUMA topology cannot fit "
                           "the given host NUMA topology"))
             elif instance_topology:
                 self.claimed_numa_topology = instance_topology

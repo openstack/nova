@@ -492,7 +492,7 @@ class HostStateTestCase(test.NoDBTestCase):
         instance = dict(root_gb=0, ephemeral_gb=0, memory_mb=0, vcpus=0,
                         project_id='12345', vm_state=vm_states.BUILDING,
                         task_state=task_states.SCHEDULING, os_type='Linux',
-                        uuid='fake-uuid')
+                        uuid='fake-uuid', numa_topology=None)
         host.consume_from_instance(instance)
         numa_usage_mock.assert_called_once_with(host, instance)
         self.assertEqual('fake-consumed-once', host.numa_topology)
@@ -501,7 +501,7 @@ class HostStateTestCase(test.NoDBTestCase):
         instance = dict(root_gb=0, ephemeral_gb=0, memory_mb=0, vcpus=0,
                         project_id='12345', vm_state=vm_states.PAUSED,
                         task_state=None, os_type='Linux',
-                        uuid='fake-uuid')
+                        uuid='fake-uuid', numa_topology=None)
         host.consume_from_instance(instance)
 
         self.assertEqual(2, host.num_instances)

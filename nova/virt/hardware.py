@@ -1126,12 +1126,15 @@ class VirtNUMALimitTopology(VirtNUMATopology):
 
 
 def numa_fit_instance_to_host(
-        host_topology, instance_topology, limits_topology=None):
+        host_topology, instance_topology, limits_topology=None,
+        pci_requests=None, pci_stats=None):
     """Fit the instance topology onto the host topology given the limits
 
     :param host_topology: objects.NUMATopology object to fit an instance on
     :param instance_topology: objects.InstanceNUMATopology to be fitted
     :param limits_topology: VirtNUMALimitTopology that defines limits
+    :param pci_requests: instance pci_requests
+    :param pci_stats: pci_stats for the host
 
     Given a host and instance topology and optionally limits - this method
     will attempt to fit instance cells onto all permutations of host cells
@@ -1163,7 +1166,12 @@ def numa_fit_instance_to_host(
                     break
                 cells.append(got_cell)
             if len(cells) == len(host_cell_perm):
-                return objects.InstanceNUMATopology(cells=cells)
+                if not pci_requests:
+                    return objects.InstanceNUMATopology(cells=cells)
+                elif ((pci_stats is not None) and
+                    pci_stats.support_requests(pci_requests,
+                                                     cells)):
+                    return objects.InstanceNUMATopology(cells=cells)
 
 
 def _numa_pagesize_usage_from_cell(hostcell, instancecell, sign):

@@ -36,7 +36,8 @@ fake_pci = {
     'product_id': 'p',
     'vendor_id': 'v',
     'request_id': None,
-    'status': 'available'}
+    'status': 'available',
+    'numa_node': 0}
 fake_pci_1 = dict(fake_pci, address='0000:00:00.2',
                   product_id='p1', vendor_id='v1')
 fake_pci_2 = dict(fake_pci, address='0000:00:00.3')
@@ -63,8 +64,10 @@ fake_db_dev = {
     }
 fake_db_dev_1 = dict(fake_db_dev, vendor_id='v1',
                      product_id='p1', id=2,
-                     address='0000:00:00.2')
-fake_db_dev_2 = dict(fake_db_dev, id=3, address='0000:00:00.3')
+                     address='0000:00:00.2',
+                     numa_node=0)
+fake_db_dev_2 = dict(fake_db_dev, id=3, address='0000:00:00.3',
+                     numa_node=None)
 fake_db_devs = [fake_db_dev, fake_db_dev_1, fake_db_dev_2]
 
 
@@ -82,6 +85,7 @@ class PciDevTrackerTestCase(test.TestCase):
         self.inst.pci_devices = objects.PciDeviceList()
         self.inst.vm_state = vm_states.ACTIVE
         self.inst.task_state = None
+        self.inst.numa_topology = None
 
     def _fake_get_pci_devices(self, ctxt, node_id):
         return fake_db_devs[:]
@@ -119,7 +123,7 @@ class PciDevTrackerTestCase(test.TestCase):
         free_devs = self.tracker.pci_stats.get_free_devs()
         self.assertEqual(len(free_devs), 3)
         self.assertEqual(self.tracker.stale.keys(), [])
-        self.assertEqual(len(self.tracker.stats.pools), 2)
+        self.assertEqual(len(self.tracker.stats.pools), 3)
         self.assertEqual(self.tracker.node_id, 1)
 
     def test_pcidev_tracker_create_no_nodeid(self):
@@ -180,6 +184,36 @@ class PciDevTrackerTestCase(test.TestCase):
         pci_requests = copy.deepcopy(fake_pci_requests)
         pci_requests[0]['count'] = 4
         self._create_pci_requests_object(mock_get, pci_requests)
+        self.assertRaises(exception.PciDeviceRequestFailed,
+                          self.tracker.update_pci_for_instance,
+                          None,
+                          self.inst)
+
+    @mock.patch('nova.objects.InstancePCIRequests.get_by_instance')
+    def test_update_pci_for_instance_with_numa(self, mock_get):
+        fake_db_dev_3 = dict(fake_db_dev_1, id=4, address='0000:00:00.4')
+        fake_devs_numa = copy.deepcopy(fake_db_devs)
+        fake_devs_numa.append(fake_db_dev_3)
+        self.tracker = manager.PciDevTracker(1)
+        self.tracker.set_hvdevs(fake_devs_numa)
+        pci_requests = copy.deepcopy(fake_pci_requests)[:1]
+        pci_requests[0]['count'] = 2
+        self._create_pci_requests_object(mock_get, pci_requests)
+        self.inst.numa_topology = objects.InstanceNUMATopology(
+                    cells=[objects.InstanceNUMACell(
+                        id=1, cpuset=set([1, 2]), memory=512)])
+        self.tracker.update_pci_for_instance(None, self.inst)
+        free_devs = self.tracker.pci_stats.get_free_devs()
+        self.assertEqual(2, len(free_devs))
+        self.assertEqual('v1', free_devs[0]['vendor_id'])
+        self.assertEqual('v1', free_devs[1]['vendor_id'])
+
+    @mock.patch('nova.objects.InstancePCIRequests.get_by_instance')
+    def test_update_pci_for_instance_with_numa_fail(self, mock_get):
+        self._create_pci_requests_object(mock_get, fake_pci_requests)
+        self.inst.numa_topology = objects.InstanceNUMATopology(
+                    cells=[objects.InstanceNUMACell(
+                        id=1, cpuset=set([1, 2]), memory=512)])
         self.assertRaises(exception.PciDeviceRequestFailed,
                           self.tracker.update_pci_for_instance,
                           None,
