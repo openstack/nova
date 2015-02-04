@@ -103,6 +103,14 @@ class _TestNUMA(object):
         inst_cell = objects.NUMACell()
         self.assertEqual(0, len(inst_cell.obj_get_changes()))
 
+    def test_obj_cell_relationships(self):
+        obj = objects.NUMATopology(cells=[objects.NUMACell()])
+        rel = objects.NUMATopology.obj_relationships['cells']
+        for topo_ver, cell_ver in rel:
+            prim = obj.obj_to_primitive(target_version=topo_ver)
+            cell = objects.NUMATopology.obj_from_primitive(prim).cells[0]
+            self.assertEqual(cell_ver, cell.VERSION)
+
 
 class TestNUMA(test_objects._LocalTest,
                _TestNUMA):
