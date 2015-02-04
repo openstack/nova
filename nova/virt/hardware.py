@@ -1214,7 +1214,7 @@ def numa_usage_from_instances(host, instances, free=False):
 
         newcell = objects.NUMACell(
             id=hostcell.id, cpuset=hostcell.cpuset, memory=hostcell.memory,
-            cpu_usage=0, memory_usage=0,
+            cpu_usage=0, memory_usage=0, mempages=hostcell.mempages,
             pinned_cpus=hostcell.pinned_cpus, siblings=hostcell.siblings)
 
         for instance in instances:
