@@ -48,6 +48,16 @@ To run the `ValidateIntegerTestCase.test_invalid_inputs` test method in
 
     tox -epy27 test_utils.ValidateIntegerTestCase.test_invalid_inputs
 
+Debugging strange test failures
+-------------------------------
+
+Things to try when there are odd test failures such as failure on
+jenkins but not locally.
+
+The venv can get stale. Force a refresh by adding the -r flag::
+
+    tox -r -e pep8
+
 .. rubric:: Footnotes
 
 .. [#f1] See :doc:`jenkins`.
