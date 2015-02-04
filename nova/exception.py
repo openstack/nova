@@ -782,6 +782,10 @@ class FixedIpNotFoundForNetwork(FixedIpNotFound):
                 "network (%(network_uuid)s).")
 
 
+class FixedIpAssociateFailed(NovaException):
+    msg_fmt = _("Fixed IP associate failed for network: %(net)s.")
+
+
 class FixedIpAlreadyInUse(NovaException):
     msg_fmt = _("Fixed IP address %(address)s is already in use on instance "
                 "%(instance_uuid)s.")

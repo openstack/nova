@@ -3983,6 +3983,55 @@ class FixedIPTestCase(BaseInstanceTypeTestCase):
         fixed_ip = db.fixed_ip_get_by_address(self.ctxt, address)
         self.assertEqual(fixed_ip['instance_uuid'], instance_uuid)
 
+    def test_fixed_ip_associate_pool_succeeds_fip_ref_network_id_is_none(self):
+        instance_uuid = self._create_instance()
+        network = db.network_create_safe(self.ctxt, {})
+
+        self.create_fixed_ip(network_id=None)
+        fixed_ip = db.fixed_ip_associate_pool(self.ctxt,
+                                              network['id'], instance_uuid)
+        self.assertEqual(instance_uuid, fixed_ip['instance_uuid'])
+        self.assertEqual(network['id'], fixed_ip['network_id'])
+
+    def test_fixed_ip_associate_pool_succeeds_retry(self):
+        instance_uuid = self._create_instance()
+        network = db.network_create_safe(self.ctxt, {})
+
+        address = self.create_fixed_ip(network_id=network['id'])
+
+        def fake_first():
+            if mock_first.call_count == 1:
+                return {'network_id': network['id'], 'address': 'invalid',
+                        'instance_uuid': None, 'host': None, 'id': 1}
+            else:
+                return {'network_id': network['id'], 'address': address,
+                        'instance_uuid': None, 'host': None, 'id': 1}
+
+        with mock.patch('sqlalchemy.orm.query.Query.first',
+                        side_effect=fake_first) as mock_first:
+            db.fixed_ip_associate_pool(self.ctxt, network['id'], instance_uuid)
+            self.assertEqual(2, mock_first.call_count)
+
+        fixed_ip = db.fixed_ip_get_by_address(self.ctxt, address)
+        self.assertEqual(instance_uuid, fixed_ip['instance_uuid'])
+
+    def test_fixed_ip_associate_pool_retry_limit_exceeded(self):
+        instance_uuid = self._create_instance()
+        network = db.network_create_safe(self.ctxt, {})
+
+        self.create_fixed_ip(network_id=network['id'])
+
+        def fake_first():
+            return {'network_id': network['id'], 'address': 'invalid',
+                    'instance_uuid': None, 'host': None, 'id': 1}
+
+        with mock.patch('sqlalchemy.orm.query.Query.first',
+                        side_effect=fake_first) as mock_first:
+            self.assertRaises(exception.FixedIpAssociateFailed,
+                              db.fixed_ip_associate_pool, self.ctxt,
+                              network['id'], instance_uuid)
+            self.assertEqual(5, mock_first.call_count)
+
     def test_fixed_ip_create_same_address(self):
         address = '192.168.1.5'
         params = {'address': address}
