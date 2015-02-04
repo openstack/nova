@@ -371,26 +371,30 @@ class VMwareVolumeOps(object):
         else:
             raise exception.VolumeDriverNotFound(driver_type=driver_type)
 
-    def _relocate_vmdk_volume(self, volume_ref, res_pool, datastore):
+    def _relocate_vmdk_volume(self, volume_ref, res_pool, datastore,
+                              host=None):
         """Relocate the volume.
 
         The move type will be moveAllDiskBackingsAndAllowSharing.
         """
         client_factory = self._session.vim.client.factory
         spec = vm_util.relocate_vm_spec(client_factory,
-                                        datastore=datastore)
+                                        datastore=datastore,
+                                        host=host)
         spec.pool = res_pool
         task = self._session._call_method(self._session.vim,
                                           "RelocateVM_Task", volume_ref,
                                           spec=spec)
         self._session._wait_for_task(task)
 
-    def _get_res_pool_of_vm(self, vm_ref):
-        """Get resource pool to which the VM belongs."""
-        # Get the host, the VM belongs to
-        host = self._session._call_method(vim_util, 'get_dynamic_property',
+    def _get_host_of_vm(self, vm_ref):
+        """Get the ESX host of given VM."""
+        return self._session._call_method(vim_util, 'get_dynamic_property',
                                           vm_ref, 'VirtualMachine',
                                           'runtime').host
+
+    def _get_res_pool_of_host(self, host):
+        """Get the resource pool of given host's cluster."""
         # Get the compute resource, the host belongs to
         compute_res = self._session._call_method(vim_util,
                                                  'get_dynamic_property',
@@ -400,6 +404,13 @@ class VMwareVolumeOps(object):
         return self._session._call_method(vim_util, 'get_dynamic_property',
                                           compute_res, compute_res._type,
                                           'resourcePool')
+
+    def _get_res_pool_of_vm(self, vm_ref):
+        """Get resource pool to which the VM belongs."""
+        # Get the host, the VM belongs to
+        host = self._get_host_of_vm(vm_ref)
+        # Get the resource pool of host's cluster.
+        return self._get_res_pool_of_host(host)
 
     def _consolidate_vmdk_volume(self, instance, vm_ref, device, volume_ref,
                                  adapter_type=None, disk_type=None):
@@ -440,11 +451,12 @@ class VMwareVolumeOps(object):
         LOG.info(_LI("The volume's backing has been relocated to %s. Need to "
                      "consolidate backing disk file."), current_device_path)
 
-        # Pick the resource pool on which the instance resides.
+        # Pick the host and resource pool on which the instance resides.
         # Move the volume to the datastore where the new VMDK file is present.
-        res_pool = self._get_res_pool_of_vm(vm_ref)
+        host = self._get_host_of_vm(vm_ref)
+        res_pool = self._get_res_pool_of_host(host)
         datastore = device.backing.datastore
-        self._relocate_vmdk_volume(volume_ref, res_pool, datastore)
+        self._relocate_vmdk_volume(volume_ref, res_pool, datastore, host)
 
         # Delete the original disk from the volume_ref
         self.detach_disk_from_vm(volume_ref, instance, original_device,

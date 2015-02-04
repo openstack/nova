@@ -257,3 +257,68 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
                              constants.ADAPTER_TYPE_LSILOGICSAS,
                              constants.ADAPTER_TYPE_PARAVIRTUAL):
             self._test_attach_volume_iscsi(adapter_type)
+
+    @mock.patch.object(volumeops.VMwareVolumeOps,
+                       '_get_vmdk_base_volume_device')
+    @mock.patch.object(volumeops.VMwareVolumeOps, '_relocate_vmdk_volume')
+    def test_consolidate_vmdk_volume_with_no_relocate(
+            self, relocate_vmdk_volume, get_vmdk_base_volume_device):
+        file_name = mock.sentinel.file_name
+        backing = mock.Mock(fileName=file_name)
+        original_device = mock.Mock(backing=backing)
+        get_vmdk_base_volume_device.return_value = original_device
+
+        device = mock.Mock(backing=backing)
+
+        volume_ref = mock.sentinel.volume_ref
+        vm_ref = mock.sentinel.vm_ref
+
+        self._volumeops._consolidate_vmdk_volume(self._instance, vm_ref,
+                                                 device, volume_ref)
+
+        get_vmdk_base_volume_device.assert_called_once_with(volume_ref)
+        self.assertFalse(relocate_vmdk_volume.called)
+
+    @mock.patch.object(volumeops.VMwareVolumeOps,
+                       '_get_vmdk_base_volume_device')
+    @mock.patch.object(volumeops.VMwareVolumeOps, '_relocate_vmdk_volume')
+    @mock.patch.object(volumeops.VMwareVolumeOps, '_get_host_of_vm')
+    @mock.patch.object(volumeops.VMwareVolumeOps, '_get_res_pool_of_host')
+    @mock.patch.object(volumeops.VMwareVolumeOps, 'detach_disk_from_vm')
+    @mock.patch.object(volumeops.VMwareVolumeOps, 'attach_disk_to_vm')
+    def test_consolidate_vmdk_volume_with_relocate(
+            self, attach_disk_to_vm, detach_disk_from_vm, get_res_pool_of_host,
+            get_host_of_vm, relocate_vmdk_volume, get_vmdk_base_volume_device):
+        file_name = mock.sentinel.file_name
+        backing = mock.Mock(fileName=file_name)
+        original_device = mock.Mock(backing=backing)
+        get_vmdk_base_volume_device.return_value = original_device
+
+        new_file_name = mock.sentinel.new_file_name
+        datastore = mock.sentinel.datastore
+        new_backing = mock.Mock(fileName=new_file_name, datastore=datastore)
+        device = mock.Mock(backing=new_backing)
+
+        host = mock.sentinel.host
+        get_host_of_vm.return_value = host
+        rp = mock.sentinel.rp
+        get_res_pool_of_host.return_value = rp
+
+        instance = self._instance
+        volume_ref = mock.sentinel.volume_ref
+        vm_ref = mock.sentinel.vm_ref
+        adapter_type = constants.ADAPTER_TYPE_BUSLOGIC
+        disk_type = constants.DISK_TYPE_EAGER_ZEROED_THICK
+
+        self._volumeops._consolidate_vmdk_volume(instance, vm_ref, device,
+                                                 volume_ref, adapter_type,
+                                                 disk_type)
+
+        get_vmdk_base_volume_device.assert_called_once_with(volume_ref)
+        relocate_vmdk_volume.assert_called_once_with(
+            volume_ref, rp, datastore, host)
+        detach_disk_from_vm.assert_called_once_with(
+            volume_ref, instance, original_device, destroy_disk=True)
+        attach_disk_to_vm.assert_called_once_with(
+            volume_ref, instance, adapter_type, disk_type,
+            vmdk_path=new_file_name)
