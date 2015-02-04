@@ -1133,10 +1133,6 @@ class TestRemoteInstanceObject(test_objects._RemoteTest,
         class OldInstance(objects.Instance):
             VERSION = '1.17'
 
-            @classmethod
-            def obj_name(cls):
-                return 'Instance'
-
         inst = OldInstance.get_by_uuid(self.context, inst.uuid)
         self.assertFalse(inst.obj_attr_is_set('system_metadata'))
         self.assertEqual('bar', inst.system_metadata['foo'])
@@ -1154,10 +1150,6 @@ class TestRemoteInstanceObject(test_objects._RemoteTest,
 
         class OldInstance(objects.Instance):
             VERSION = '1.17'
-
-            @classmethod
-            def obj_name(cls):
-                return 'Instance'
 
         inst = OldInstance.get_by_uuid(self.context, inst.uuid,
                                        expected_attrs=['system_metadata'])
