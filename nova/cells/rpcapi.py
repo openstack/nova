@@ -20,7 +20,7 @@ within a cell).
 
 This is different than communication between child and parent nova-cells
 services.  That communication is handled by the cells driver via the
-messging module.
+messaging module.
 """
 
 from oslo.config import cfg
