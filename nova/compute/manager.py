@@ -1250,24 +1250,9 @@ class ComputeManager(manager.Manager):
         """This call passes straight through to the virtualization driver."""
         return self.driver.refresh_provider_fw_rules()
 
-    def _get_instance_nw_info(self, context, instance, use_slave=False):
+    def _get_instance_nw_info(self, context, instance):
         """Get a list of dictionaries of network data of an instance."""
-        if (not hasattr(instance, 'system_metadata') or
-                len(instance.system_metadata) == 0):
-            # NOTE(danms): Several places in the code look up instances without
-            # pulling system_metadata for performance, and call this function.
-            # If we get an instance without it, re-fetch so that the call
-            # to network_api (which requires it for instance_type) will
-            # succeed.
-            attrs = ['system_metadata']
-            instance = objects.Instance.get_by_uuid(context,
-                                                    instance.uuid,
-                                                    expected_attrs=attrs,
-                                                    use_slave=use_slave)
-
-        network_info = self.network_api.get_instance_nw_info(context,
-                                                             instance)
-        return network_info
+        return self.network_api.get_instance_nw_info(context, instance)
 
     def _await_block_device_map_created(self, context, vol_id):
         # TODO(yamahata): creating volume simultaneously
@@ -5426,7 +5411,7 @@ class ComputeManager(manager.Manager):
             try:
                 # Call to network API to get instance info.. this will
                 # force an update to the instance's info_cache
-                self._get_instance_nw_info(context, instance, use_slave=True)
+                self._get_instance_nw_info(context, instance)
                 LOG.debug('Updated the network info_cache for instance',
                           instance=instance)
             except exception.InstanceNotFound:

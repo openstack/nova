@@ -6121,19 +6121,7 @@ class ComputeTestCase(BaseTestCase):
 
         self.mox.StubOutWithMock(self.compute.network_api,
                                  'get_instance_nw_info')
-        self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
 
-        db.instance_get_by_uuid(self.context, fake_inst['uuid']
-                                ).AndReturn(fake_inst)
-        # NOTE(danms): compute manager will re-query since we're not giving
-        # it an instance with system_metadata. We're stubbing out the
-        # subsequent call so we don't need it, but keep this to make sure it
-        # does the right thing.
-        db.instance_get_by_uuid(self.context, fake_inst['uuid'],
-                                columns_to_join=['system_metadata',
-                                                 'extra', 'extra.flavor'],
-                                use_slave=False
-                                ).AndReturn(fake_inst)
         self.compute.network_api.get_instance_nw_info(self.context,
                 mox.IsA(objects.Instance)).AndReturn(fake_nw_info)
 
