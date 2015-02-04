@@ -306,6 +306,42 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.assertEqual(final_result, res)
         self.assertEqual(1, sleep.call_count)
 
+    @mock.patch('nova.utils.spawn_n')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_do_build_and_run_instance')
+    def _test_max_concurrent_builds(self, mock_dbari, mock_spawn):
+        mock_spawn.side_effect = lambda f, *a, **k: f(*a, **k)
+
+        with mock.patch.object(self.compute,
+                               '_build_semaphore') as mock_sem:
+            instance = objects.Instance(uuid=str(uuid.uuid4()))
+            for i in (1, 2, 3):
+                self.compute.build_and_run_instance(self.context, instance,
+                                                    mock.sentinel.image,
+                                                    mock.sentinel.request_spec,
+                                                    {})
+            self.assertEqual(3, mock_sem.__enter__.call_count)
+
+    def test_max_concurrent_builds_limited(self):
+        self.flags(max_concurrent_builds=2)
+        self._test_max_concurrent_builds()
+
+    def test_max_concurrent_builds_unlimited(self):
+        self.flags(max_concurrent_builds=0)
+        self._test_max_concurrent_builds()
+
+    def test_max_concurrent_builds_semaphore_limited(self):
+        self.flags(max_concurrent_builds=123)
+        self.assertEqual(123,
+                         manager.ComputeManager()._build_semaphore.balance)
+
+    def test_max_concurrent_builds_semaphore_unlimited(self):
+        self.flags(max_concurrent_builds=0)
+        compute = manager.ComputeManager()
+        self.assertEqual(0, compute._build_semaphore.balance)
+        self.assertIsInstance(compute._build_semaphore,
+                              compute_utils.UnlimitedSemaphore)
+
     def test_init_host(self):
         our_host = self.compute.host
         fake_context = 'fake-context'
