@@ -5480,7 +5480,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             'xen': [
                 (lambda t: t.find('.').get('type'), 'xen'),
                 (lambda t: t.find('./devices/disk/target').get('dev'),
-                 _get_prefix(prefix, 'sda'))],
+                 _get_prefix(prefix, 'xvda'))],
             'kvm': [
                 (lambda t: t.find('.').get('type'), 'kvm'),
                 (lambda t: t.find('./devices/disk/target').get('dev'),

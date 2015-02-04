@@ -76,6 +76,7 @@ from oslo.config import cfg
 
 from nova import block_device
 from nova.compute import arch
+from nova.compute import vm_mode
 from nova import exception
 from nova.i18n import _
 from nova.objects import base as obj_base
@@ -127,9 +128,7 @@ def get_dev_prefix_for_disk_bus(disk_bus):
     elif disk_bus == "virtio":
         return "vd"
     elif disk_bus == "xen":
-        # Two possible mappings for Xen, xvda or sda
-        # which are interchangeable, so we pick sda
-        return "sd"
+        return "xvd"
     elif disk_bus == "scsi":
         return "sd"
     elif disk_bus == "usb":
@@ -214,7 +213,8 @@ def is_disk_bus_valid_for_virt(virt_type, disk_bus):
 
 def get_disk_bus_for_device_type(virt_type,
                                  image_meta,
-                                 device_type="disk"):
+                                 device_type="disk",
+                                 instance=None):
     """Determine the best disk bus to use for a device type.
 
        Considering the currently configured virtualization
@@ -243,9 +243,12 @@ def get_disk_bus_for_device_type(virt_type,
     elif virt_type == "lxc":
         return "lxc"
     elif virt_type == "xen":
-        if device_type == "cdrom":
+        guest_vm_mode = None
+        if instance:
+            guest_vm_mode = vm_mode.get_from_instance(instance)
+        if guest_vm_mode == vm_mode.HVM:
             return "ide"
-        elif device_type == "disk":
+        else:
             return "xen"
     elif virt_type in ("qemu", "kvm"):
         if device_type == "cdrom":
@@ -589,7 +592,8 @@ def get_disk_mapping(virt_type, instance,
         device_type = get_config_drive_type()
         disk_bus = get_disk_bus_for_device_type(virt_type,
                                                 image_meta,
-                                                device_type)
+                                                device_type,
+                                                instance=instance)
         config_info = get_next_disk_info(mapping,
                                          disk_bus,
                                          device_type,
@@ -614,8 +618,10 @@ def get_disk_info(virt_type, instance, image_meta,
        Returns the disk mapping disk.
     """
 
-    disk_bus = get_disk_bus_for_device_type(virt_type, image_meta, "disk")
-    cdrom_bus = get_disk_bus_for_device_type(virt_type, image_meta, "cdrom")
+    disk_bus = get_disk_bus_for_device_type(virt_type, image_meta, "disk",
+                                            instance=instance)
+    cdrom_bus = get_disk_bus_for_device_type(virt_type, image_meta, "cdrom",
+                                             instance=instance)
     mapping = get_disk_mapping(virt_type, instance,
                                disk_bus, cdrom_bus,
                                image_meta,
