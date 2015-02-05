@@ -3682,7 +3682,7 @@ class LibvirtDriver(driver.ComputeDriver):
             # client app is connected. Thus we can't get away
             # with a single type=pty console. Instead we have
             # to configure two separate consoles.
-            if guest.cpu.arch in (arch.S390, arch.S390X):
+            if libvirt_utils.get_arch(image_meta) in (arch.S390, arch.S390X):
                 consolelog = vconfig.LibvirtConfigGuestConsole()
                 consolelog.target_type = "sclplm"
             else:
