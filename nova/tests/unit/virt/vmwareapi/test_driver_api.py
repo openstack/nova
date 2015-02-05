@@ -1759,8 +1759,11 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
 
         adapter_type = constants.DEFAULT_ADAPTER_TYPE
         disk_type = constants.DEFAULT_DISK_TYPE
+        disk_uuid = 'e97f357b-331e-4ad1-b726-89be048fb811'
+        backing = mock.Mock(uuid=disk_uuid)
+        device = mock.Mock(backing=backing)
         vmdk_info = vm_util.VmdkInfo('fake-path', adapter_type, disk_type, 64,
-                                     'fake-device')
+                                     device)
         with contextlib.nested(
             mock.patch.object(vm_util, 'get_vm_ref',
                               return_value=mock.sentinel.vm_ref),
@@ -1783,8 +1786,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
             attach_disk_to_vm.assert_called_once_with(mock.sentinel.vm_ref,
                 self.instance, adapter_type, disk_type, vmdk_path='fake-path')
             update_volume_details.assert_called_once_with(
-                mock.sentinel.vm_ref, self.instance,
-                connection_info['data']['volume_id'])
+                mock.sentinel.vm_ref, connection_info['data']['volume_id'],
+                disk_uuid)
 
     def test_detach_vmdk_disk_from_vm(self):
         self._create_vm()

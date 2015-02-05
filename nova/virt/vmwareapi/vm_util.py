@@ -1084,18 +1084,6 @@ def propset_dict(propset):
     return {prop.name: prop.val for prop in propset}
 
 
-def get_vmdk_backed_disk_uuid(hardware_devices, volume_uuid):
-    if hardware_devices.__class__.__name__ == "ArrayOfVirtualDevice":
-        hardware_devices = hardware_devices.VirtualDevice
-
-    for device in hardware_devices:
-        if (device.__class__.__name__ == "VirtualDisk" and
-                device.backing.__class__.__name__ ==
-                "VirtualDiskFlatVer2BackingInfo" and
-                volume_uuid in device.backing.fileName):
-            return device.backing.uuid
-
-
 def get_vmdk_backed_disk_device(hardware_devices, uuid):
     if hardware_devices.__class__.__name__ == "ArrayOfVirtualDevice":
         hardware_devices = hardware_devices.VirtualDevice

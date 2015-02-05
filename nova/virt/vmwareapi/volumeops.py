@@ -76,14 +76,8 @@ class VMwareVolumeOps(object):
                    'device_name': device_name, 'disk_type': disk_type},
                   instance=instance)
 
-    def _update_volume_details(self, vm_ref, instance, volume_uuid):
+    def _update_volume_details(self, vm_ref, volume_uuid, device_uuid):
         # Store the uuid of the volume_device
-        hw_devices = self._session._call_method(vim_util,
-                                                'get_dynamic_property',
-                                                vm_ref, 'VirtualMachine',
-                                                'config.hardware.device')
-        device_uuid = vm_util.get_vmdk_backed_disk_uuid(hw_devices,
-                                                        volume_uuid)
         volume_option = 'volume-%s' % volume_uuid
         extra_opts = {volume_option: device_uuid}
 
@@ -336,7 +330,8 @@ class VMwareVolumeOps(object):
                                vmdk_path=vmdk.path)
 
         # Store the uuid of the volume_device
-        self._update_volume_details(vm_ref, instance, data['volume_id'])
+        self._update_volume_details(vm_ref, data['volume_id'],
+                                    vmdk.device.backing.uuid)
 
         LOG.debug("Attached VMDK: %s", connection_info, instance=instance)
 
