@@ -121,6 +121,43 @@ class HackingTestCase(test.NoDBTestCase):
         self.assertEqual(
             len(list(checks.assert_equal_type("self.assertTrue()"))), 0)
 
+    def test_assert_equal_in(self):
+        self.assertEqual(len(list(checks.assert_equal_in(
+            "self.assertEqual(a in b, True)"))), 1)
+
+        self.assertEqual(len(list(checks.assert_equal_in(
+            "self.assertEqual('str' in 'string', True)"))), 1)
+
+        self.assertEqual(len(list(checks.assert_equal_in(
+            "self.assertEqual(any(a==1 for a in b), True)"))), 0)
+
+        self.assertEqual(len(list(checks.assert_equal_in(
+            "self.assertEqual(True, a in b)"))), 1)
+
+        self.assertEqual(len(list(checks.assert_equal_in(
+            "self.assertEqual(True, 'str' in 'string')"))), 1)
+
+        self.assertEqual(len(list(checks.assert_equal_in(
+            "self.assertEqual(True, any(a==1 for a in b))"))), 0)
+
+        self.assertEqual(len(list(checks.assert_equal_in(
+            "self.assertEqual(a in b, False)"))), 1)
+
+        self.assertEqual(len(list(checks.assert_equal_in(
+            "self.assertEqual('str' in 'string', False)"))), 1)
+
+        self.assertEqual(len(list(checks.assert_equal_in(
+            "self.assertEqual(any(a==1 for a in b), False)"))), 0)
+
+        self.assertEqual(len(list(checks.assert_equal_in(
+            "self.assertEqual(False, a in b)"))), 1)
+
+        self.assertEqual(len(list(checks.assert_equal_in(
+            "self.assertEqual(False, 'str' in 'string')"))), 1)
+
+        self.assertEqual(len(list(checks.assert_equal_in(
+            "self.assertEqual(False, any(a==1 for a in b))"))), 0)
+
     def test_assert_equal_none(self):
         self.assertEqual(len(list(checks.assert_equal_none(
             "self.assertEqual(A, None)"))), 1)

@@ -47,6 +47,9 @@ Nova Specific Commandments
 - [N335] Check for usage of deprecated assertRaisesRegexp
 - [N336] Must use a dict comprehension instead of a dict constructor with a sequence of key-value pairs.
 - [N337] Don't import translation in tests
+- [N338] Change assertEqual(A in B, True), assertEqual(True, A in B),
+  assertEqual(A in B, False) or assertEqual(False, A in B) to the more specific
+  assertIn/NotIn(A, B)
 
 Creating Unit Tests
 -------------------

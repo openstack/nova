@@ -50,6 +50,10 @@ asse_trueinst_re = re.compile(
 asse_equal_type_re = re.compile(
                        r"(.)*assertEqual\(type\((\w|\.|\'|\"|\[|\])+\), "
                        "(\w|\.|\'|\"|\[|\])+\)")
+asse_equal_in_end_with_true_or_false_re = re.compile(r"assertEqual\("
+                    r"(\w|[][.'\"])+ in (\w|[][.'\", ])+, (True|False)\)")
+asse_equal_in_start_with_true_or_false_re = re.compile(r"assertEqual\("
+                    r"(True|False), (\w|[][.'\"])+ in (\w|[][.'\", ])+\)")
 asse_equal_end_with_none_re = re.compile(
                            r"assertEqual\(.*?,\s+None\)$")
 asse_equal_start_with_none_re = re.compile(
@@ -511,6 +515,20 @@ def dict_constructor_with_list_copy(logical_line):
         yield (0, msg)
 
 
+def assert_equal_in(logical_line):
+    """Check for assertEqual(A in B, True), assertEqual(True, A in B),
+    assertEqual(A in B, False) or assertEqual(False, A in B) sentences
+
+    N338
+    """
+    res = (asse_equal_in_start_with_true_or_false_re.search(logical_line) or
+           asse_equal_in_end_with_true_or_false_re.search(logical_line))
+    if res:
+        yield (0, "N338: Use assertIn/NotIn(A, B) rather than "
+                  "assertEqual(A in B, True/False) when checking collection "
+                  "contents.")
+
+
 def factory(register):
     register(import_no_db_in_virt)
     register(no_db_session_in_public_api)
@@ -536,3 +554,4 @@ def factory(register):
     register(check_oslo_namespace_imports)
     register(assert_true_or_false_with_in)
     register(dict_constructor_with_list_copy)
+    register(assert_equal_in)
