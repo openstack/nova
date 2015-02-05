@@ -79,9 +79,7 @@ log_translation_info = re.compile(
 log_translation_exception = re.compile(
     r"(.)*LOG\.(exception)\(\s*(_\(|'|\")")
 log_translation_LW = re.compile(
-    r"(.)*LOG\.(warning)\(\s*(_\(|'|\")")
-log_warn = re.compile(
-    r"(.)*LOG\.(warn)\(\s*('|\"|_)")
+    r"(.)*LOG\.(warning|warn)\(\s*(_\(|'|\")")
 translated_log = re.compile(
     r"(.)*LOG\.(audit|error|info|critical|exception)"
     "\(\s*_\(\s*('|\")")
@@ -345,7 +343,7 @@ def validate_log_translations(logical_line, physical_line, filename):
     msg = "N329: LOG.exception messages require translations `_LE()`!"
     if log_translation_exception.match(logical_line):
         yield (0, msg)
-    msg = "N330: LOG.warning messages require translations `_LW()`!"
+    msg = "N330: LOG.warning, LOG.warn messages require translations `_LW()`!"
     if log_translation_LW.match(logical_line):
         yield (0, msg)
     msg = "N321: Log messages require translations!"
