@@ -917,10 +917,6 @@ class ServersController(wsgi.Controller):
 
         rebuild_kwargs = {}
 
-        if 'preserve_ephemeral' in rebuild_dict:
-            rebuild_kwargs['preserve_ephemeral'] = strutils.bool_from_string(
-                rebuild_dict['preserve_ephemeral'], strict=True)
-
         if list(self.rebuild_extension_manager):
             self.rebuild_extension_manager.map(self._rebuild_extension_point,
                                                rebuild_dict, rebuild_kwargs)

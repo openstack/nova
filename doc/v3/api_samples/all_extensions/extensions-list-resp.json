@@ -601,6 +601,14 @@
             "updated": "2014-12-03T00:00:00Z"
         },
         {
+            "alias": "os-preserve-ephemeral-rebuild",
+            "description": "Allow preservation of the ephemeral partition on rebuild.",
+            "links": [],
+            "name": "PreserveEphemeralOnRebuild",
+            "namespace": "http://docs.openstack.org/compute/ext/fake_xml",
+            "updated": "2014-12-03T00:00:00Z"
+        },
+        {
             "alias": "os-quota-class-sets",
             "description": "Quota classes management support.",
             "links": [],

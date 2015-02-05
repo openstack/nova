@@ -238,6 +238,7 @@
     "compute_extension:v3:os-pci:detail": "rule:admin_api",
     "compute_extension:v3:os-pci:show": "rule:admin_api",
     "compute_extension:v3:os-personality:discoverable": "",
+    "compute_extension:v3:os-preserve-ephemeral-rebuild:discoverable": "",
     "compute_extension:quotas:show": "",
     "compute_extension:quotas:update": "rule:admin_api",
     "compute_extension:quotas:delete": "rule:admin_api",
