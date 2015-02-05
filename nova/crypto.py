@@ -120,8 +120,10 @@ def ensure_ca_filesystem():
         start = os.getcwd()
         fileutils.ensure_tree(ca_dir)
         os.chdir(ca_dir)
-        utils.execute("sh", genrootca_sh_path)
-        os.chdir(start)
+        try:
+            utils.execute("sh", genrootca_sh_path)
+        finally:
+            os.chdir(start)
 
 
 def _generate_fingerprint(public_key_file):
