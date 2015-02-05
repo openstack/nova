@@ -11220,7 +11220,7 @@ Active:          8381604 kB
             mock.patch.object(drvr, '_set_cache_mode')
         ) as (volume_save, connect_volume, get_volume_config, set_cache_mode):
             devices = drvr._get_guest_storage_config(instance, None,
-                disk_info, False, bdi, flavor)
+                disk_info, False, bdi, flavor, "hvm")
 
             self.assertEqual(3, len(devices))
             self.assertEqual('/dev/vdb', instance.default_ephemeral_device)
@@ -11557,6 +11557,39 @@ Active:          8381604 kB
         self.assertIsInstance(cfg.devices[4],
                               vconfig.LibvirtConfigGuestGraphics)
         self.assertIsInstance(cfg.devices[5],
+                              vconfig.LibvirtConfigGuestVideo)
+
+    def test_get_guest_config_parallels_ct(self):
+        self.flags(virt_type='parallels', group='libvirt')
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        ct_instance = self.test_instance.copy()
+        ct_instance["vm_mode"] = vm_mode.EXE
+        instance_ref = objects.Instance(**ct_instance)
+        flavor = instance_ref.get_flavor()
+        flavor.extra_specs = {}
+
+        cfg = drvr._get_guest_config(instance_ref,
+                                    _fake_network_info(self.stubs, 1),
+                                    None, {'mapping': {}}, flavor=flavor)
+        self.assertEqual("parallels", cfg.virt_type)
+        self.assertEqual(instance_ref["uuid"], cfg.uuid)
+        self.assertEqual(2 * units.Mi, cfg.memory)
+        self.assertEqual(1, cfg.vcpus)
+        self.assertEqual(vm_mode.EXE, cfg.os_type)
+        self.assertEqual("/sbin/init", cfg.os_init_path)
+        self.assertIsNone(cfg.os_root)
+        self.assertEqual(4, len(cfg.devices))
+        self.assertIsInstance(cfg.devices[0],
+                              vconfig.LibvirtConfigGuestFilesys)
+        fs = cfg.devices[0]
+        self.assertEqual(fs.source_type, "file")
+        self.assertEqual(fs.driver_type, "ploop")
+        self.assertEqual(fs.target_dir, "/")
+        self.assertIsInstance(cfg.devices[1],
+                              vconfig.LibvirtConfigGuestInterface)
+        self.assertIsInstance(cfg.devices[2],
+                              vconfig.LibvirtConfigGuestGraphics)
+        self.assertIsInstance(cfg.devices[3],
                               vconfig.LibvirtConfigGuestVideo)
 
 
