@@ -108,8 +108,8 @@ class ComputeNode(BASE, NovaBase):
     __tablename__ = 'compute_nodes'
     __table_args__ = (
         schema.UniqueConstraint(
-            'host', 'hypervisor_hostname',
-            name="uniq_compute_nodes0host0hypervisor_hostname"),
+            'host', 'hypervisor_hostname', 'deleted',
+            name="uniq_compute_nodes0host0hypervisor_hostname0deleted"),
     )
     id = Column(Integer, primary_key=True)
     service_id = Column(Integer, nullable=True)
