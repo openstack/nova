@@ -11521,6 +11521,44 @@ Active:          8381604 kB
                                return_value=1002012):
             driver.init_host('wibble')
 
+    def test_get_guest_config_parallels_vm(self):
+        self.flags(virt_type='parallels', group='libvirt')
+        self.flags(images_type='ploop', group='libvirt')
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = objects.Instance(**self.test_instance)
+        flavor = instance_ref.get_flavor()
+        flavor.extra_specs = {}
+
+        image_meta = {}
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref,
+                                            image_meta)
+
+        cfg = drvr._get_guest_config(instance_ref,
+                                    _fake_network_info(self.stubs, 1),
+                                    None, disk_info, flavor=flavor)
+        self.assertEqual("parallels", cfg.virt_type)
+        self.assertEqual(instance_ref["uuid"], cfg.uuid)
+        self.assertEqual(2 * units.Mi, cfg.memory)
+        self.assertEqual(1, cfg.vcpus)
+        self.assertEqual(vm_mode.HVM, cfg.os_type)
+        self.assertIsNone(cfg.os_root)
+        self.assertEqual(6, len(cfg.devices))
+        self.assertIsInstance(cfg.devices[0],
+                              vconfig.LibvirtConfigGuestDisk)
+        self.assertEqual(cfg.devices[0].driver_format, "ploop")
+        self.assertIsInstance(cfg.devices[1],
+                              vconfig.LibvirtConfigGuestDisk)
+        self.assertIsInstance(cfg.devices[2],
+                              vconfig.LibvirtConfigGuestInterface)
+        self.assertIsInstance(cfg.devices[3],
+                              vconfig.LibvirtConfigGuestInput)
+        self.assertIsInstance(cfg.devices[4],
+                              vconfig.LibvirtConfigGuestGraphics)
+        self.assertIsInstance(cfg.devices[5],
+                              vconfig.LibvirtConfigGuestVideo)
+
 
 class HostStateTestCase(test.NoDBTestCase):
 

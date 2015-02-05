@@ -15,7 +15,9 @@
 
 import abc
 import contextlib
+import functools
 import os
+import shutil
 
 from oslo.config import cfg
 from oslo.serialization import jsonutils
@@ -738,6 +740,64 @@ class Rbd(Image):
                                           reason=reason)
 
 
+class Ploop(Image):
+    def __init__(self, instance=None, disk_name=None, path=None):
+        super(Ploop, self).__init__("file", "ploop", is_block_dev=False)
+
+        self.path = (path or
+                     os.path.join(libvirt_utils.get_instance_path(instance),
+                                  disk_name))
+        self.resolve_driver_format()
+
+    def create_image(self, prepare_template, base, size, *args, **kwargs):
+        filename = os.path.split(base)[-1]
+
+        @utils.synchronized(filename, external=True, lock_path=self.lock_path)
+        def create_ploop_image(base, target, size):
+            image_path = os.path.join(target, "root.hds")
+            libvirt_utils.copy_image(base, image_path)
+            utils.execute('ploop', 'restore-descriptor', '-f', self.pcs_format,
+                          target, image_path)
+            if size:
+                dd_path = os.path.join(self.path, "DiskDescriptor.xml")
+                utils.execute('ploop', 'grow', '-s', '%dK' % (size >> 10),
+                              dd_path, run_as_root=True)
+
+        if not os.path.exists(self.path):
+            if CONF.force_raw_images:
+                self.pcs_format = "raw"
+            else:
+                image_meta = IMAGE_API.get(kwargs["context"],
+                                           kwargs["image_id"])
+                format = image_meta.get("disk_format")
+                if format == "ploop":
+                    self.pcs_format = "expanded"
+                elif format == "raw":
+                    self.pcs_format = "raw"
+                else:
+                    reason = _("PCS doesn't support images in %s format."
+                                " You should either set force_raw_images=True"
+                                " in config or upload an image in ploop"
+                                " or raw format.") % format
+                    raise exception.ImageUnacceptable(
+                                        image_id=kwargs["image_id"],
+                                        reason=reason)
+
+        if not os.path.exists(base):
+            prepare_template(target=base, max_size=size, *args, **kwargs)
+        self.verify_base_size(base, size)
+
+        if os.path.exists(self.path):
+            return
+
+        fileutils.ensure_tree(self.path)
+
+        remove_func = functools.partial(fileutils.delete_if_exists,
+                                        remove=shutil.rmtree)
+        with fileutils.remove_path_on_error(self.path, remove=remove_func):
+            create_ploop_image(base, self.path, size)
+
+
 class Backend(object):
     def __init__(self, use_cow):
         self.BACKEND = {
@@ -745,6 +805,7 @@ class Backend(object):
             'qcow2': Qcow2,
             'lvm': Lvm,
             'rbd': Rbd,
+            'ploop': Ploop,
             'default': Qcow2 if use_cow else Raw
         }
 

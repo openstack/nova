@@ -1249,6 +1249,74 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
         self.assertEqual(image.path, rbd_path)
 
 
+class PloopTestCase(_ImageTestCase, test.NoDBTestCase):
+    SIZE = 1024
+
+    def setUp(self):
+        self.image_class = imagebackend.Ploop
+        super(PloopTestCase, self).setUp()
+        self.utils = imagebackend.utils
+        self.stubs.Set(imagebackend.Ploop, 'get_disk_size', lambda a, b: 2048)
+
+    def prepare_mocks(self):
+        fn = self.mox.CreateMockAnything()
+        self.mox.StubOutWithMock(imagebackend.utils.synchronized,
+                                 '__call__')
+        self.mox.StubOutWithMock(imagebackend.libvirt_utils, 'copy_image')
+        self.mox.StubOutWithMock(self.utils, 'execute')
+        return fn
+
+    def test_cache(self):
+        self.mox.StubOutWithMock(os.path, 'exists')
+        if self.OLD_STYLE_INSTANCE_PATH:
+            os.path.exists(self.OLD_STYLE_INSTANCE_PATH).AndReturn(False)
+        os.path.exists(self.TEMPLATE_DIR).AndReturn(False)
+        os.path.exists(self.PATH).AndReturn(False)
+        os.path.exists(self.TEMPLATE_PATH).AndReturn(False)
+        fn = self.mox.CreateMockAnything()
+        fn(target=self.TEMPLATE_PATH)
+        self.mox.StubOutWithMock(imagebackend.fileutils, 'ensure_tree')
+        imagebackend.fileutils.ensure_tree(self.TEMPLATE_DIR)
+        self.mox.ReplayAll()
+
+        image = self.image_class(self.INSTANCE, self.NAME)
+        self.mock_create_image(image)
+        image.cache(fn, self.TEMPLATE)
+
+        self.mox.VerifyAll()
+
+    def test_create_image(self):
+        fn = self.prepare_mocks()
+        fn(target=self.TEMPLATE_PATH, max_size=2048, image_id=None)
+        img_path = os.path.join(self.PATH, "root.hds")
+        imagebackend.libvirt_utils.copy_image(self.TEMPLATE_PATH, img_path)
+        self.utils.execute("ploop", "restore-descriptor", "-f", "raw",
+                           self.PATH, img_path)
+        self.utils.execute("ploop", "grow", '-s', "2K",
+                           os.path.join(self.PATH, "DiskDescriptor.xml"),
+                           run_as_root=True)
+        self.mox.ReplayAll()
+
+        image = self.image_class(self.INSTANCE, self.NAME)
+        image.create_image(fn, self.TEMPLATE_PATH, 2048, image_id=None)
+
+        self.mox.VerifyAll()
+
+    def test_prealloc_image(self):
+        self.flags(preallocate_images='space')
+        fake_processutils.fake_execute_clear_log()
+        fake_processutils.stub_out_processutils_execute(self.stubs)
+        image = self.image_class(self.INSTANCE, self.NAME)
+
+        def fake_fetch(target, *args, **kwargs):
+            return
+
+        self.stubs.Set(os.path, 'exists', lambda _: True)
+        self.stubs.Set(image, 'check_image_exists', lambda: True)
+
+        image.cache(fake_fetch, self.TEMPLATE_PATH, self.SIZE)
+
+
 class BackendTestCase(test.NoDBTestCase):
     INSTANCE = {'name': 'fake-instance',
                 'uuid': uuidutils.generate_uuid()}

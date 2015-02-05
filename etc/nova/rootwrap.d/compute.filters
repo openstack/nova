@@ -227,3 +227,5 @@ cp: CommandFilter, cp, root
 # nova/virt/xenapi/vm_utils.py:
 sync: CommandFilter, sync, root
 
+# nova/virt/libvirt/imagebackend.py:
+ploop: CommandFilter, ploop, root
