@@ -91,6 +91,7 @@ as it allows particular rules to be explicitly disabled.
 import abc
 import ast
 import copy
+import logging
 import os
 import re
 
@@ -102,7 +103,6 @@ import six.moves.urllib.request as urlrequest
 
 from nova.openstack.common import fileutils
 from nova.openstack.common._i18n import _, _LE, _LI
-from nova.openstack.common import log as logging
 
 
 policy_opts = [

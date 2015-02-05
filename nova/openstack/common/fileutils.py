@@ -17,6 +17,7 @@ import contextlib
 import errno
 import logging
 import os
+import stat
 import tempfile
 
 from oslo.utils import excutils
@@ -24,15 +25,17 @@ from oslo.utils import excutils
 LOG = logging.getLogger(__name__)
 
 _FILE_CACHE = {}
+DEFAULT_MODE = stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO
 
 
-def ensure_tree(path):
+def ensure_tree(path, mode=DEFAULT_MODE):
     """Create a directory (and any ancestor directories required)
 
     :param path: Directory to create
+    :param mode: Directory creation permissions
     """
     try:
-        os.makedirs(path)
+        os.makedirs(path, mode)
     except OSError as exc:
         if exc.errno == errno.EEXIST:
             if not os.path.isdir(path):
