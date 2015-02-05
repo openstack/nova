@@ -1240,6 +1240,7 @@ class ComputeManager(manager.Manager):
         # TODO(mdragon): perhaps make this variable by console_type?
         return '%s.%s' % (CONF.console_topic, CONF.console_host)
 
+    @wrap_exception()
     def get_console_pool_info(self, context, console_type):
         return self.driver.get_console_pool_info(console_type)
 
@@ -3183,6 +3184,7 @@ class ComputeManager(manager.Manager):
 
     @object_compat
     @messaging.expected_exceptions(NotImplementedError)
+    @wrap_exception()
     def volume_snapshot_create(self, context, instance, volume_id,
                                create_info):
         self.driver.volume_snapshot_create(context, instance, volume_id,
@@ -3190,6 +3192,7 @@ class ComputeManager(manager.Manager):
 
     @object_compat
     @messaging.expected_exceptions(NotImplementedError)
+    @wrap_exception()
     def volume_snapshot_delete(self, context, instance, volume_id,
                                snapshot_id, delete_info):
         self.driver.volume_snapshot_delete(context, instance, volume_id,
