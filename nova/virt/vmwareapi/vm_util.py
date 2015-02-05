@@ -173,7 +173,7 @@ def get_vm_create_spec(client_factory, instance, name, data_store_name,
     config_spec.memoryMB = int(instance['memory_mb'])
 
     # Configure cpu information
-    if (extra_specs.has_cpu_limits()):
+    if extra_specs.has_cpu_limits():
         allocation = client_factory.create('ns0:ResourceAllocationInfo')
         if extra_specs.cpu_limits.cpu_limit:
             allocation.limit = extra_specs.cpu_limits.cpu_limit
