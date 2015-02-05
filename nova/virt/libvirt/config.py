@@ -1047,14 +1047,25 @@ class LibvirtConfigGuestFilesys(LibvirtConfigGuestDevice):
 
         self.source_type = "mount"
         self.source_dir = None
+        self.source_file = None
+        self.source_dev = None
         self.target_dir = "/"
+        self.driver_type = "loop"
+        self.driver_format = "raw"
 
     def format_dom(self):
         dev = super(LibvirtConfigGuestFilesys, self).format_dom()
 
         dev.set("type", self.source_type)
 
-        dev.append(etree.Element("source", dir=self.source_dir))
+        if self.source_type == "file":
+            dev.append(etree.Element("driver", type = self.driver_type,
+                                     format = self.driver_format))
+            dev.append(etree.Element("source", file=self.source_file))
+        elif self.source_type == "block":
+            dev.append(etree.Element("source", dev=self.source_dev))
+        else:
+            dev.append(etree.Element("source", dir=self.source_dir))
         dev.append(etree.Element("target", dir=self.target_dir))
 
         return dev

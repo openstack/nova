@@ -901,6 +901,35 @@ class LibvirtConfigGuestFilesysTest(LibvirtConfigBaseTest):
               <target dir="/mnt"/>
             </filesystem>""")
 
+    def test_config_block(self):
+        obj = config.LibvirtConfigGuestFilesys()
+        obj.source_type = "block"
+        obj.source_dev = "/dev/sdb"
+        obj.target_dir = "/mnt"
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <filesystem type="block">
+              <source dev="/dev/sdb"/>
+              <target dir="/mnt"/>
+            </filesystem>""")
+
+    def test_config_file(self):
+        obj = config.LibvirtConfigGuestFilesys()
+        obj.source_type = "file"
+        obj.source_file = "/data/myimage.qcow2"
+        obj.driver_type = "nbd"
+        obj.driver_format = "qcow2"
+        obj.target_dir = "/mnt"
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <filesystem type="file">
+              <driver format="qcow2" type="nbd"/>
+              <source file="/data/myimage.qcow2"/>
+              <target dir="/mnt"/>
+            </filesystem>""")
+
 
 class LibvirtConfigGuestInputTest(LibvirtConfigBaseTest):
 
