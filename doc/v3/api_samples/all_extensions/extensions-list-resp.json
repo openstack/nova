@@ -1,34 +1,10 @@
 {
     "extensions": [
         {
-            "alias": "os-consoles",
-            "description": "Consoles.",
-            "links": [],
-            "name": "Consoles",
-            "namespace": "http://docs.openstack.org/compute/ext/fake_xml",
-            "updated": "2014-12-03T00:00:00Z"
-        },
-        {
             "alias": "extensions",
             "description": "Extension information.",
             "links": [],
             "name": "Extensions",
-            "namespace": "http://docs.openstack.org/compute/ext/fake_xml",
-            "updated": "2014-12-03T00:00:00Z"
-        },
-        {
-            "alias": "os-flavor-extra-specs",
-            "description": "Flavors extra specs support.",
-            "links": [],
-            "name": "FlavorsExtraSpecs",
-            "namespace": "http://docs.openstack.org/compute/ext/fake_xml",
-            "updated": "2014-12-03T00:00:00Z"
-        },
-        {
-            "alias": "os-flavor-manage",
-            "description": "Flavor create/delete API support.",
-            "links": [],
-            "name": "FlavorManage",
             "namespace": "http://docs.openstack.org/compute/ext/fake_xml",
             "updated": "2014-12-03T00:00:00Z"
         },
@@ -209,6 +185,14 @@
             "updated": "2014-12-03T00:00:00Z"
         },
         {
+            "alias": "os-consoles",
+            "description": "Consoles.",
+            "links": [],
+            "name": "Consoles",
+            "namespace": "http://docs.openstack.org/compute/ext/fake_xml",
+            "updated": "2014-12-03T00:00:00Z"
+        },
+        {
             "alias": "os-create-backup",
             "description": "Create a backup of a server.",
             "links": [],
@@ -285,6 +269,22 @@
             "description": "Flavor access support.",
             "links": [],
             "name": "FlavorAccess",
+            "namespace": "http://docs.openstack.org/compute/ext/fake_xml",
+            "updated": "2014-12-03T00:00:00Z"
+        },
+        {
+            "alias": "os-flavor-extra-specs",
+            "description": "Flavors extra specs support.",
+            "links": [],
+            "name": "FlavorsExtraSpecs",
+            "namespace": "http://docs.openstack.org/compute/ext/fake_xml",
+            "updated": "2014-12-03T00:00:00Z"
+        },
+        {
+            "alias": "os-flavor-manage",
+            "description": "Flavor create/delete API support.",
+            "links": [],
+            "name": "FlavorManage",
             "namespace": "http://docs.openstack.org/compute/ext/fake_xml",
             "updated": "2014-12-03T00:00:00Z"
         },
@@ -605,6 +605,14 @@
             "description": "Provide data on limited resources that are being used.",
             "links": [],
             "name": "UsedLimits",
+            "namespace": "http://docs.openstack.org/compute/ext/fake_xml",
+            "updated": "2014-12-03T00:00:00Z"
+        },
+        {
+            "alias": "os-user-data",
+            "description": "Add user_data to the Create Server v1.1 API.",
+            "links": [],
+            "name": "UserData",
             "namespace": "http://docs.openstack.org/compute/ext/fake_xml",
             "updated": "2014-12-03T00:00:00Z"
         },
