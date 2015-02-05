@@ -19,11 +19,12 @@ Management class for Storage-related functions (attach, detach, etc).
 
 from oslo_config import cfg
 from oslo_log import log as logging
+from oslo_vmware import exceptions as oslo_vmw_exceptions
 from oslo_vmware import vim_util as vutil
 
 from nova.compute import vm_states
 from nova import exception
-from nova.i18n import _, _LI
+from nova.i18n import _, _LI, _LW
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
@@ -459,11 +460,29 @@ class VMwareVolumeOps(object):
         host = self._get_host_of_vm(vm_ref)
         res_pool = self._get_res_pool_of_host(host)
         datastore = device.backing.datastore
-        self._relocate_vmdk_volume(volume_ref, res_pool, datastore, host)
+        detached = False
+        LOG.debug("Relocating volume's backing: %(backing)s to resource "
+                  "pool: %(rp)s, datastore: %(ds)s, host: %(host)s.",
+                  {'backing': volume_ref, 'rp': res_pool, 'ds': datastore,
+                   'host': host})
+        try:
+            self._relocate_vmdk_volume(volume_ref, res_pool, datastore, host)
+        except oslo_vmw_exceptions.FileNotFoundException:
+            # Volume's vmdk was moved; remove the device so that we can
+            # relocate the volume.
+            LOG.warn(_LW("Virtual disk: %s of volume's backing not found."),
+                     original_device_path, exc_info=True)
+            LOG.debug("Removing disk device of volume's backing and "
+                      "reattempting relocate.")
+            self.detach_disk_from_vm(volume_ref, instance, original_device)
+            detached = True
+            self._relocate_vmdk_volume(volume_ref, res_pool, datastore, host)
 
-        # Delete the original disk from the volume_ref
-        self.detach_disk_from_vm(volume_ref, instance, original_device,
-                                 destroy_disk=True)
+        # Volume's backing is relocated now; detach the old vmdk if not done
+        # already.
+        if not detached:
+            self.detach_disk_from_vm(volume_ref, instance, original_device,
+                                     destroy_disk=True)
 
         # Attach the current volume to the volume_ref
         self.attach_disk_to_vm(volume_ref, instance,
