@@ -37,6 +37,7 @@ import uuid
 from cinderclient import exceptions as cinder_exception
 import eventlet.event
 from eventlet import greenthread
+import eventlet.semaphore
 import eventlet.timeout
 from keystoneclient import exceptions as keystone_exception
 from oslo.config import cfg
@@ -122,6 +123,9 @@ compute_opts = [
     cfg.IntOpt('network_allocate_retries',
                default=0,
                help="Number of times to retry network allocation on failures"),
+    cfg.IntOpt('max_concurrent_builds',
+               default=10,
+               help='Maximum number of instance builds to run concurrently'),
     cfg.IntOpt('block_device_allocate_retries',
                default=60,
                help='Number of times to retry block device'
@@ -619,6 +623,11 @@ class ComputeManager(manager.Manager):
         self.instance_events = InstanceEvents()
         self._sync_power_pool = eventlet.GreenPool()
         self._syncs_in_progress = {}
+        if CONF.max_concurrent_builds != 0:
+            self._build_semaphore = eventlet.semaphore.Semaphore(
+                CONF.max_concurrent_builds)
+        else:
+            self._build_semaphore = compute_utils.UnlimitedSemaphore()
 
         super(ComputeManager, self).__init__(service_name="compute",
                                              *args, **kwargs)
@@ -2023,7 +2032,12 @@ class ComputeManager(manager.Manager):
 
         @utils.synchronized(instance.uuid)
         def _locked_do_build_and_run_instance(*args, **kwargs):
-            self._do_build_and_run_instance(*args, **kwargs)
+            # NOTE(danms): We grab the semaphore with the instance uuid
+            # locked because we could wait in line to build this instance
+            # for a while and we want to make sure that nothing else tries
+            # to do anything with this instance while we wait.
+            with self._build_semaphore:
+                self._do_build_and_run_instance(*args, **kwargs)
 
         # NOTE(danms): We spawn here to return the RPC worker thread back to
         # the pool. Since what follows could take a really long time, we don't

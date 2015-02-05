@@ -480,3 +480,15 @@ class EventReporter(object):
                 self.context, uuid, self.event_name, exc_val=exc_val,
                 exc_tb=exc_tb, want_result=False)
         return False
+
+
+class UnlimitedSemaphore(object):
+    def __enter__(self):
+        pass
+
+    def __exit__(self):
+        pass
+
+    @property
+    def balance(self):
+        return 0
