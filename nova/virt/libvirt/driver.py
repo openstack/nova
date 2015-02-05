@@ -4441,19 +4441,9 @@ class LibvirtDriver(driver.ComputeDriver):
 
         interfaces = []
 
-        ret = doc.findall('./devices/interface')
-
-        for node in ret:
-            devdst = None
-
-            for child in list(node):
-                if child.tag == 'target':
-                    devdst = child.attrib['dev']
-
-            if devdst is None:
-                continue
-
-            interfaces.append(devdst)
+        nodes = doc.findall('./devices/interface/target')
+        for target in nodes:
+            interfaces.append(target.get('dev'))
 
         return interfaces
 
