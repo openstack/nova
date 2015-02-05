@@ -34,7 +34,7 @@ private_key		= $dir/private/cakey.pem
 unique_subject		= no
 default_crl_days	= 365
 default_days		= 365
-default_md		= md5
+default_md		= sha256
 preserve		= no
 email_in_dn		= no
 nameopt			= default_ca
@@ -57,7 +57,7 @@ emailAddress		= optional
 [ req ]
 default_bits		= 1024			# Size of keys
 default_keyfile		= key.pem		# name of generated keys
-default_md		= md5			# message digest algorithm
+default_md		= sha256		# message digest algorithm
 string_mask		= nombstr		# permitted characters
 distinguished_name	= req_distinguished_name
 
