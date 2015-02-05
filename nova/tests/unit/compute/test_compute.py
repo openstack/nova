@@ -4241,6 +4241,8 @@ class ComputeTestCase(BaseTestCase):
         self._stub_out_resize_network_methods()
         instance = self._create_fake_instance_obj()
         for operation in actions:
+            if 'revert_resize' in operation:
+                migration.source_compute = 'fake-mini'
 
             def fake_migration_save(*args, **kwargs):
                 raise test.TestingException()
@@ -6600,7 +6602,7 @@ class ComputeTestCase(BaseTestCase):
                 evacuated_instance).AndReturn({'filename': 'tmpfilename'})
         self.compute.compute_rpcapi.check_instance_shared_storage(fake_context,
                 evacuated_instance,
-                {'filename': 'tmpfilename'}).AndReturn(False)
+                {'filename': 'tmpfilename'}, host=None).AndReturn(False)
         self.compute.driver.check_instance_shared_storage_cleanup(fake_context,
                 {'filename': 'tmpfilename'})
         self.compute.driver.destroy(fake_context, evacuated_instance,
