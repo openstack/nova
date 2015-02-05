@@ -21,7 +21,7 @@ ATTRIBUTE_NAME = 'user_data'
 
 
 class UserData(extensions.V3APIExtensionBase):
-    """Add user_data to the Create Server v1.1 API."""
+    """Add user_data to the Create Server API."""
 
     name = "UserData"
     alias = ALIAS
