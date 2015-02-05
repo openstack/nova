@@ -1455,3 +1455,20 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                    pbm_default_policy='default-policy', group='vmware')
         extra_specs = self._vmops._get_extra_specs(flavor)
         self.assertEqual('flavor-policy', extra_specs.storage_policy)
+
+    def test_get_base_folder_not_set(self):
+        self.flags(image_cache_subdirectory_name='vmware_base')
+        base_folder = self._vmops._get_base_folder()
+        self.assertEqual('vmware_base', base_folder)
+
+    def test_get_base_folder_host_ip(self):
+        self.flags(my_ip='7.7.7.7',
+                   image_cache_subdirectory_name='_base')
+        base_folder = self._vmops._get_base_folder()
+        self.assertEqual('7.7.7.7_base', base_folder)
+
+    def test_get_base_folder_cache_prefix(self):
+        self.flags(cache_prefix='my_prefix', group='vmware')
+        self.flags(image_cache_subdirectory_name='_base')
+        base_folder = self._vmops._get_base_folder()
+        self.assertEqual('my_prefix_base', base_folder)

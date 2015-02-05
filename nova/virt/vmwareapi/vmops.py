@@ -57,8 +57,19 @@ from nova.virt.vmwareapi import vif as vmwarevif
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
 
+vmops_opts = [
+    cfg.StrOpt('cache_prefix',
+               help='The prefix for Where cached images are stored. This is '
+                    'NOT the full path - just a folder prefix. '
+                    'This should only be used when a datastore cache should '
+                    'be shared between compute nodes. Note: this should only '
+                    'be used when the compute nodes have a shared file '
+                    'system.'),
+    ]
 
 CONF = cfg.CONF
+CONF.register_opts(vmops_opts, 'vmware')
+
 CONF.import_opt('image_cache_subdirectory_name', 'nova.virt.imagecache')
 CONF.import_opt('remove_unused_base_images', 'nova.virt.imagecache')
 CONF.import_opt('vnc_enabled', 'nova.vnc')
@@ -151,13 +162,7 @@ class VMwareVMOps(object):
         self._root_resource_pool = vm_util.get_res_pool_ref(self._session,
                                                             self._cluster)
         self._datastore_regex = datastore_regex
-        # Ensure that the base folder is unique per compute node
-        if CONF.remove_unused_base_images:
-            self._base_folder = '%s%s' % (CONF.my_ip,
-                                          CONF.image_cache_subdirectory_name)
-        else:
-            # Aging disable ensures backward compatibility
-            self._base_folder = CONF.image_cache_subdirectory_name
+        self._base_folder = self._get_base_folder()
         self._tmp_folder = 'vmware_temp'
         self._rescue_suffix = '-rescue'
         self._migrate_suffix = '-orig'
@@ -165,6 +170,20 @@ class VMwareVMOps(object):
         self._datastore_browser_mapping = {}
         self._imagecache = imagecache.ImageCacheManager(self._session,
                                                         self._base_folder)
+
+    def _get_base_folder(self):
+        # Enable more than one compute node to run on the same host
+        if CONF.vmware.cache_prefix:
+            base_folder = '%s%s' % (CONF.vmware.cache_prefix,
+                                    CONF.image_cache_subdirectory_name)
+        # Ensure that the base folder is unique per compute node
+        elif CONF.remove_unused_base_images:
+            base_folder = '%s%s' % (CONF.my_ip,
+                                    CONF.image_cache_subdirectory_name)
+        else:
+            # Aging disable ensures backward compatibility
+            base_folder = CONF.image_cache_subdirectory_name
+        return base_folder
 
     def _extend_virtual_disk(self, instance, requested_size, name, dc_ref):
         service_content = self._session.vim.service_content
