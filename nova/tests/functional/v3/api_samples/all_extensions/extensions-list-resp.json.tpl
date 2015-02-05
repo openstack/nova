@@ -610,7 +610,7 @@
         },
         {
             "alias": "os-user-data",
-            "description": "Add user_data to the Create Server v1.1 API.",
+            "description": "Add user_data to the Create Server API.",
             "links": [],
             "name": "UserData",
             "namespace": "http://docs.openstack.org/compute/ext/fake_xml",
