@@ -15,7 +15,6 @@ from oslo_config import cfg
 from nova.compute import power_state
 from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import utils as compute_utils
-from nova import db
 from nova import exception
 from nova.i18n import _
 from nova import image
@@ -85,7 +84,7 @@ class LiveMigrationTask(object):
 
     def _check_host_is_up(self, host):
         try:
-            service = db.service_get_by_compute_host(self.context, host)
+            service = objects.Service.get_by_compute_host(self.context, host)
         except exception.NotFound:
             raise exception.ComputeServiceUnavailable(host=host)
 

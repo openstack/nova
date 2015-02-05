@@ -869,10 +869,9 @@ class CellsTargetedMethodsTestCase(test.TestCase):
     def test_service_get_by_compute_host(self):
         fake_host_name = 'fake-host-name'
 
-        self.mox.StubOutWithMock(self.tgt_db_inst,
-                                 'service_get_by_compute_host')
+        self.mox.StubOutWithMock(objects.Service, 'get_by_compute_host')
 
-        self.tgt_db_inst.service_get_by_compute_host(self.ctxt,
+        objects.Service.get_by_compute_host(self.ctxt,
                 fake_host_name).AndReturn('fake-service')
         self.mox.ReplayAll()
 
@@ -937,10 +936,8 @@ class CellsTargetedMethodsTestCase(test.TestCase):
         fake_rpc_message = {'method': 'fake_rpc_method', 'args': {}}
         fake_host_name = 'fake-host-name'
 
-        self.mox.StubOutWithMock(self.tgt_db_inst,
-                                 'service_get_by_compute_host')
-        self.tgt_db_inst.service_get_by_compute_host(self.ctxt,
-                                                     fake_host_name)
+        self.mox.StubOutWithMock(objects.Service, 'get_by_compute_host')
+        objects.Service.get_by_compute_host(self.ctxt, fake_host_name)
 
         target = oslo_messaging.Target(topic='fake-topic')
         rpcclient = self.mox.CreateMockAnything()
@@ -967,10 +964,8 @@ class CellsTargetedMethodsTestCase(test.TestCase):
         fake_rpc_message = {'method': 'fake_rpc_method', 'args': {}}
         fake_host_name = 'fake-host-name'
 
-        self.mox.StubOutWithMock(self.tgt_db_inst,
-                                 'service_get_by_compute_host')
-        self.tgt_db_inst.service_get_by_compute_host(self.ctxt,
-                                                     fake_host_name)
+        self.mox.StubOutWithMock(objects.Service, 'get_by_compute_host')
+        objects.Service.get_by_compute_host(self.ctxt, fake_host_name)
 
         target = oslo_messaging.Target(topic='fake-topic')
         rpcclient = self.mox.CreateMockAnything()

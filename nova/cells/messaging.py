@@ -737,7 +737,7 @@ class _TargetedMessageMethods(_BaseMessageMethods):
 
     def service_get_by_compute_host(self, message, host_name):
         """Return the service entry for a compute host."""
-        service = self.db.service_get_by_compute_host(message.ctxt,
+        service = objects.Service.get_by_compute_host(message.ctxt,
                                                       host_name)
         return jsonutils.to_primitive(service)
 
@@ -762,7 +762,7 @@ class _TargetedMessageMethods(_BaseMessageMethods):
                              topic, timeout):
         """Proxy RPC to the given compute topic."""
         # Check that the host exists.
-        self.db.service_get_by_compute_host(message.ctxt, host_name)
+        objects.Service.get_by_compute_host(message.ctxt, host_name)
 
         topic, _sep, server = topic.partition('.')
 

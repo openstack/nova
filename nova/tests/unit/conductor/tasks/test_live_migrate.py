@@ -15,7 +15,6 @@ from mox3 import mox
 from nova.compute import power_state
 from nova.compute import utils as compute_utils
 from nova.conductor.tasks import live_migrate
-from nova import db
 from nova import exception
 from nova import objects
 from nova.scheduler import utils as scheduler_utils
@@ -95,22 +94,22 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                           self.task._check_instance_is_running)
 
     def test_check_instance_host_is_up(self):
-        self.mox.StubOutWithMock(db, 'service_get_by_compute_host')
+        self.mox.StubOutWithMock(objects.Service, 'get_by_compute_host')
         self.mox.StubOutWithMock(self.task.servicegroup_api, 'service_is_up')
 
-        db.service_get_by_compute_host(self.context,
-                                       "host").AndReturn("service")
+        objects.Service.get_by_compute_host(self.context,
+                                            "host").AndReturn("service")
         self.task.servicegroup_api.service_is_up("service").AndReturn(True)
 
         self.mox.ReplayAll()
         self.task._check_host_is_up("host")
 
     def test_check_instance_host_is_up_fails_if_not_up(self):
-        self.mox.StubOutWithMock(db, 'service_get_by_compute_host')
+        self.mox.StubOutWithMock(objects.Service, 'get_by_compute_host')
         self.mox.StubOutWithMock(self.task.servicegroup_api, 'service_is_up')
 
-        db.service_get_by_compute_host(self.context,
-                                       "host").AndReturn("service")
+        objects.Service.get_by_compute_host(self.context,
+                                            "host").AndReturn("service")
         self.task.servicegroup_api.service_is_up("service").AndReturn(False)
 
         self.mox.ReplayAll()
@@ -118,24 +117,24 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                 self.task._check_host_is_up, "host")
 
     def test_check_instance_host_is_up_fails_if_not_found(self):
-        self.mox.StubOutWithMock(db, 'service_get_by_compute_host')
+        self.mox.StubOutWithMock(objects.Service, 'get_by_compute_host')
 
-        db.service_get_by_compute_host(self.context,
-                                       "host").AndRaise(exception.NotFound)
+        objects.Service.get_by_compute_host(
+            self.context, "host").AndRaise(exception.NotFound)
 
         self.mox.ReplayAll()
         self.assertRaises(exception.ComputeServiceUnavailable,
             self.task._check_host_is_up, "host")
 
     def test_check_requested_destination(self):
-        self.mox.StubOutWithMock(db, 'service_get_by_compute_host')
+        self.mox.StubOutWithMock(objects.Service, 'get_by_compute_host')
         self.mox.StubOutWithMock(self.task, '_get_compute_info')
         self.mox.StubOutWithMock(self.task.servicegroup_api, 'service_is_up')
         self.mox.StubOutWithMock(self.task.compute_rpcapi,
                                  'check_can_live_migrate_destination')
 
-        db.service_get_by_compute_host(self.context,
-                                       self.destination).AndReturn("service")
+        objects.Service.get_by_compute_host(
+            self.context, self.destination).AndReturn("service")
         self.task.servicegroup_api.service_is_up("service").AndReturn(True)
         hypervisor_details = {
             "hypervisor_type": "a",
@@ -165,10 +164,10 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                           self.task._check_requested_destination)
 
     def test_check_requested_destination_fails_when_destination_is_up(self):
-        self.mox.StubOutWithMock(db, 'service_get_by_compute_host')
+        self.mox.StubOutWithMock(objects.Service, 'get_by_compute_host')
 
-        db.service_get_by_compute_host(self.context,
-            self.destination).AndRaise(exception.NotFound)
+        objects.Service.get_by_compute_host(
+            self.context, self.destination).AndRaise(exception.NotFound)
 
         self.mox.ReplayAll()
         self.assertRaises(exception.ComputeServiceUnavailable,
