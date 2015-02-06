@@ -248,7 +248,7 @@ class HackingTestCase(test.NoDBTestCase):
             "CONF.option = 1", "nova/compute/foo.py"))), 0)
 
     def test_log_translations(self):
-        logs = ['audit', 'error', 'info', 'warning', 'critical',
+        logs = ['audit', 'error', 'info', 'warning', 'critical', 'warn',
                 'exception']
         levels = ['_LI', '_LW', '_LE', '_LC']
         debug = "LOG.debug('OK')"

@@ -39,7 +39,7 @@ Nova Specific Commandments
 - [N326] Translated messages cannot be concatenated.  String should be included in translated message.
 - [N328] Validate that LOG.info messages use _LI.
 - [N329] Validate that LOG.exception messages use _LE.
-- [N330] Validate that LOG.warning messages use _LW.
+- [N330] Validate that LOG.warning and LOG.warn messages use _LW.
 - [N332] Check that the api_version decorator is the first decorator on a method
 - [N333] Check for oslo library imports use the non-namespaced packages
 - [N334] Change assertTrue/False(A in/not in B, message) to the more specific
