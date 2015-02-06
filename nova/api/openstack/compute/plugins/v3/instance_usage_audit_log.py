@@ -128,7 +128,7 @@ class InstanceUsageAuditLogController(wsgi.Controller):
 
 class InstanceUsageAuditLog(extensions.V3APIExtensionBase):
     """Admin-only Task Log Monitoring."""
-    name = "InstanceUsageAuditLog"
+    name = "OSInstanceUsageAuditLog"
     alias = ALIAS
     version = 1
 

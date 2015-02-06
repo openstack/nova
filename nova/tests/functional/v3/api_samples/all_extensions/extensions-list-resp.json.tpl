@@ -268,7 +268,7 @@
             "alias": "os-consoles",
             "description": "Interactive Console support.",
             "links": [],
-            "name": "RemoteConsoles",
+            "name": "Consoles",
             "namespace": "http://docs.openstack.org/compute/ext/fake_xml",
             "updated": "2014-12-03T00:00:00Z"
         },
@@ -404,7 +404,7 @@
             "alias": "os-flavor-extra-specs",
             "description": "Flavors extra specs support.",
             "links": [],
-            "name": "FlavorsExtraSpecs",
+            "name": "FlavorExtraSpecs",
             "namespace": "http://docs.openstack.org/compute/ext/fake_xml",
             "updated": "2014-12-03T00:00:00Z"
         },
@@ -516,7 +516,7 @@
             "alias": "os-instance_usage_audit_log",
             "description": "Admin-only Task Log Monitoring.",
             "links": [],
-            "name": "InstanceUsageAuditLog",
+            "name": "OSInstanceUsageAuditLog",
             "namespace": "http://docs.openstack.org/compute/ext/fake_xml",
             "updated": "2014-12-03T00:00:00Z"
         },
@@ -740,7 +740,7 @@
             "alias": "os-tenant-networks",
             "description": "Tenant-based Network Management Extension.",
             "links": [],
-            "name": "TenantNetworks",
+            "name": "OSTenantNetworks",
             "namespace": "http://docs.openstack.org/compute/ext/fake_xml",
             "updated": "2014-12-03T00:00:00Z"
         },

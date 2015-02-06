@@ -195,7 +195,7 @@ class TenantNetworkController(wsgi.Controller):
 class TenantNetworks(extensions.V3APIExtensionBase):
     """Tenant-based Network Management Extension."""
 
-    name = "TenantNetworks"
+    name = "OSTenantNetworks"
     alias = ALIAS
     version = 1
 
