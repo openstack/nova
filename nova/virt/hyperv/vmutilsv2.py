@@ -24,7 +24,7 @@ import uuid
 if sys.platform == 'win32':
     import wmi
 
-from oslo.config import cfg
+from oslo_config import cfg
 
 from nova.openstack.common import log as logging
 from nova.virt.hyperv import constants

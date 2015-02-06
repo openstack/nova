@@ -23,8 +23,8 @@ that needs to be implemented by Resource Monitor.
 import functools
 import types
 
-from oslo.config import cfg
-from oslo.utils import timeutils
+from oslo_config import cfg
+from oslo_utils import timeutils
 import six
 
 from nova.i18n import _, _LW

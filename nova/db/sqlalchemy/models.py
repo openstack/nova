@@ -19,9 +19,9 @@
 SQLAlchemy models for nova data.
 """
 
-from oslo.config import cfg
-from oslo.db.sqlalchemy import models
-from oslo.utils import timeutils
+from oslo_config import cfg
+from oslo_db.sqlalchemy import models
+from oslo_utils import timeutils
 from sqlalchemy import (Column, Index, Integer, BigInteger, Enum, String,
                         schema, Unicode)
 from sqlalchemy.dialects.mysql import MEDIUMTEXT

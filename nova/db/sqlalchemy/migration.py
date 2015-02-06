@@ -19,7 +19,7 @@ import os
 from migrate import exceptions as versioning_exceptions
 from migrate.versioning import api as versioning_api
 from migrate.versioning.repository import Repository
-from oslo.db.sqlalchemy import utils as db_utils
+from oslo_db.sqlalchemy import utils as db_utils
 import sqlalchemy
 from sqlalchemy.sql import null
 

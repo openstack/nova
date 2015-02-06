@@ -28,10 +28,10 @@ import re
 import string
 import struct
 
-from oslo.config import cfg
-from oslo.utils import excutils
-from oslo.utils import timeutils
 from oslo_concurrency import processutils
+from oslo_config import cfg
+from oslo_utils import excutils
+from oslo_utils import timeutils
 from pyasn1.codec.der import encoder as der_encoder
 from pyasn1.type import univ
 

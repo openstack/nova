@@ -14,7 +14,7 @@ import copy
 import uuid
 
 import mock
-from oslo.serialization import jsonutils
+from oslo_serialization import jsonutils
 
 from nova import exception
 from nova import objects

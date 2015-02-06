@@ -16,8 +16,8 @@ import contextlib
 import re
 
 import mock
-from oslo.utils import units
-from oslo.vmware import exceptions as vexc
+from oslo_utils import units
+from oslo_vmware import exceptions as vexc
 from testtools import matchers
 
 from nova import exception

@@ -102,7 +102,15 @@ decorator_re = re.compile(r"@.*")
 
 # TODO(dims): When other oslo libraries switch over non-namespace'd
 # imports, we need to add them to the regexp below.
-oslo_namespace_imports = re.compile(r"from[\s]*oslo[.](concurrency)")
+oslo_namespace_imports = re.compile(r"from[\s]*oslo[.]"
+                                    r"(concurrency|config|db|i18n|messaging|"
+                                    r"middleware|serialization|utils|vmware)")
+oslo_namespace_imports_2 = re.compile(r"from[\s]*oslo[\s]*import[\s]*"
+                                    r"(concurrency|config|db|i18n|messaging|"
+                                    r"middleware|serialization|utils|vmware)")
+oslo_namespace_imports_3 = re.compile(r"import[\s]*oslo\."
+                                    r"(concurrency|config|db|i18n|messaging|"
+                                    r"middleware|serialization|utils|vmware)")
 
 
 class BaseASTChecker(ast.NodeVisitor):
@@ -478,6 +486,16 @@ def check_oslo_namespace_imports(logical_line, blank_before, filename):
         msg = ("N333: '%s' must be used instead of '%s'.") % (
                logical_line.replace('oslo.', 'oslo_'),
                logical_line)
+        yield(0, msg)
+    match = re.match(oslo_namespace_imports_2, logical_line)
+    if match:
+        msg = ("N333: 'module %s should not be imported "
+               "from oslo namespace.") % match.group(1)
+        yield(0, msg)
+    match = re.match(oslo_namespace_imports_3, logical_line)
+    if match:
+        msg = ("N333: 'module %s should not be imported "
+               "from oslo namespace.") % match.group(1)
         yield(0, msg)
 
 

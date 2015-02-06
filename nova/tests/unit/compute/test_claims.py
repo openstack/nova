@@ -18,7 +18,7 @@
 import uuid
 
 import mock
-from oslo.serialization import jsonutils
+from oslo_serialization import jsonutils
 
 from nova.compute import claims
 from nova import db

@@ -22,7 +22,7 @@ import re
 import string
 
 from eventlet import greenthread
-from oslo.config import cfg
+from oslo_config import cfg
 
 from nova import exception
 from nova.i18n import _, _LW

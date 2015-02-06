@@ -23,7 +23,7 @@ import tempfile
 import eventlet
 import eventlet.wsgi
 import mock
-from oslo.config import cfg
+from oslo_config import cfg
 import requests
 import testtools
 import webob

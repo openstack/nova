@@ -16,7 +16,7 @@
 
 """The Assisted volume snapshots extension."""
 
-from oslo.serialization import jsonutils
+from oslo_serialization import jsonutils
 import six
 from webob import exc
 

@@ -15,7 +15,7 @@
 import datetime
 import urllib
 
-from oslo.utils import timeutils
+from oslo_utils import timeutils
 
 from nova.tests.functional.v3 import test_servers
 

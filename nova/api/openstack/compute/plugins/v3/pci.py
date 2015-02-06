@@ -14,7 +14,7 @@
 #    under the License.
 
 
-from oslo.serialization import jsonutils
+from oslo_serialization import jsonutils
 import webob.exc
 
 from nova.api.openstack import extensions

@@ -24,9 +24,9 @@ import tempfile
 import mock
 from mox3 import mox
 import netaddr
-from oslo.config import cfg
-from oslo.utils import timeutils
 from oslo_concurrency import processutils
+from oslo_config import cfg
+from oslo_utils import timeutils
 
 import nova
 from nova import exception

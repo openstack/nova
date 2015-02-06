@@ -15,7 +15,7 @@
 import os
 import tempfile
 
-from oslo.utils import excutils
+from oslo_utils import excutils
 
 from nova import exception
 from nova.i18n import _

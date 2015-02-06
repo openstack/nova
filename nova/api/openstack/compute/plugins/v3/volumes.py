@@ -15,7 +15,7 @@
 
 """The volumes extension."""
 
-from oslo.utils import strutils
+from oslo_utils import strutils
 from webob import exc
 
 from nova.api.openstack import common

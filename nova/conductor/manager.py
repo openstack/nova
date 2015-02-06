@@ -17,10 +17,10 @@
 import copy
 import itertools
 
-from oslo import messaging
-from oslo.serialization import jsonutils
-from oslo.utils import excutils
-from oslo.utils import timeutils
+import oslo_messaging as messaging
+from oslo_serialization import jsonutils
+from oslo_utils import excutils
+from oslo_utils import timeutils
 import six
 
 from nova.api.ec2 import ec2utils

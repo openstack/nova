@@ -19,10 +19,10 @@
 Scheduler Service
 """
 
-from oslo.config import cfg
-from oslo import messaging
-from oslo.serialization import jsonutils
-from oslo.utils import importutils
+from oslo_config import cfg
+import oslo_messaging as messaging
+from oslo_serialization import jsonutils
+from oslo_utils import importutils
 
 from nova import exception
 from nova import manager

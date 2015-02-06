@@ -14,8 +14,8 @@
 
 """Handles all requests to the conductor service."""
 
-from oslo.config import cfg
-from oslo import messaging
+from oslo_config import cfg
+import oslo_messaging as messaging
 
 from nova import baserpc
 from nova.conductor import manager

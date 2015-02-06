@@ -12,8 +12,8 @@
 #   License for the specific language governing permissions and limitations
 #   under the License.
 
-from oslo.serialization import jsonutils
-from oslo.utils import timeutils
+from oslo_serialization import jsonutils
+from oslo_utils import timeutils
 import webob
 
 from nova.compute import vm_states

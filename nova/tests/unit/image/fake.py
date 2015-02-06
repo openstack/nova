@@ -20,7 +20,7 @@ import copy
 import datetime
 import uuid
 
-from oslo.config import cfg
+from oslo_config import cfg
 
 from nova.compute import arch
 from nova import exception

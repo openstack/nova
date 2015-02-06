@@ -20,9 +20,9 @@ Manage hosts in the current zone.
 import collections
 import UserDict
 
-from oslo.config import cfg
-from oslo.serialization import jsonutils
-from oslo.utils import timeutils
+from oslo_config import cfg
+from oslo_serialization import jsonutils
+from oslo_utils import timeutils
 
 from nova.compute import task_states
 from nova.compute import vm_states

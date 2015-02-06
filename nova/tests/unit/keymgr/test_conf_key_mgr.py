@@ -19,7 +19,7 @@ Test cases for the conf key manager.
 
 import array
 
-from oslo.config import cfg
+from oslo_config import cfg
 
 from nova.keymgr import conf_key_mgr
 from nova.keymgr import key

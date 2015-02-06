@@ -22,11 +22,11 @@ import os
 import time
 
 from eventlet import timeout as etimeout
-from oslo.config import cfg
-from oslo.utils import excutils
-from oslo.utils import importutils
-from oslo.utils import units
 from oslo_concurrency import processutils
+from oslo_config import cfg
+from oslo_utils import excutils
+from oslo_utils import importutils
+from oslo_utils import units
 
 from nova.api.metadata import base as instance_metadata
 from nova import exception

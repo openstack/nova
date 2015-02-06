@@ -14,8 +14,8 @@
 #    under the License.
 
 
-from oslo.config import cfg
-from oslo.serialization import jsonutils
+from oslo_config import cfg
+from oslo_serialization import jsonutils
 
 import nova.quota
 from nova.tests.functional.v3 import api_sample_base

@@ -25,10 +25,10 @@ import time
 
 import glanceclient
 import glanceclient.exc
-from oslo.config import cfg
-from oslo.serialization import jsonutils
-from oslo.utils import netutils
-from oslo.utils import timeutils
+from oslo_config import cfg
+from oslo_serialization import jsonutils
+from oslo_utils import netutils
+from oslo_utils import timeutils
 import six
 import six.moves.urllib.parse as urlparse
 

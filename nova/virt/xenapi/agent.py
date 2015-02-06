@@ -21,9 +21,9 @@ import sys
 import time
 import uuid
 
-from oslo.config import cfg
-from oslo.serialization import jsonutils
-from oslo.utils import strutils
+from oslo_config import cfg
+from oslo_serialization import jsonutils
+from oslo_utils import strutils
 
 from nova.api.metadata import password
 from nova.compute import utils as compute_utils

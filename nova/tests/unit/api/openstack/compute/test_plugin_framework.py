@@ -13,8 +13,8 @@
 #    under the License.
 
 import mock
-from oslo.config import cfg
-from oslo.serialization import jsonutils
+from oslo_config import cfg
+from oslo_serialization import jsonutils
 
 from nova import test
 from nova.tests.unit.api.openstack import fakes

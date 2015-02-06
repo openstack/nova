@@ -27,13 +27,13 @@ import datetime
 from eventlet import greenthread
 import mock
 from mox3 import mox
-from oslo.config import cfg
-from oslo.utils import timeutils
-from oslo.utils import units
-from oslo.vmware import exceptions as vexc
-from oslo.vmware import pbm
-from oslo.vmware import vim
-from oslo.vmware import vim_util as oslo_vim_util
+from oslo_config import cfg
+from oslo_utils import timeutils
+from oslo_utils import units
+from oslo_vmware import exceptions as vexc
+from oslo_vmware import pbm
+from oslo_vmware import vim
+from oslo_vmware import vim_util as oslo_vim_util
 import suds
 
 from nova import block_device

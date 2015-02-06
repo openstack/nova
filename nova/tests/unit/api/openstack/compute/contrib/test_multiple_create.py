@@ -16,7 +16,7 @@
 import datetime
 import uuid
 
-from oslo.config import cfg
+from oslo_config import cfg
 import webob
 
 from nova.api.openstack.compute import plugins

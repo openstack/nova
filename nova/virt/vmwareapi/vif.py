@@ -15,8 +15,8 @@
 
 """VIF drivers for VMware."""
 
-from oslo.config import cfg
-from oslo.vmware import exceptions as vexc
+from oslo_config import cfg
+from oslo_vmware import exceptions as vexc
 
 from nova import exception
 from nova.i18n import _LW

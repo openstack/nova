@@ -20,7 +20,7 @@
 Helper classes for Ironic HTTP PATCH creation.
 """
 
-from oslo.config import cfg
+from oslo_config import cfg
 
 CONF = cfg.CONF
 CONF.import_opt('default_ephemeral_format', 'nova.virt.driver')

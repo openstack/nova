@@ -55,9 +55,9 @@ import uuid
 from xml.sax import saxutils
 import zlib
 
-from oslo.serialization import jsonutils
-from oslo.utils import timeutils
-from oslo.utils import units
+from oslo_serialization import jsonutils
+from oslo_utils import timeutils
+from oslo_utils import units
 
 from nova import exception
 from nova.i18n import _

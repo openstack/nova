@@ -38,7 +38,7 @@ import os
 import os.path
 import urllib
 
-from oslo.config import cfg
+from oslo_config import cfg
 import routes
 import six
 import webob

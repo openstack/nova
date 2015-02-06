@@ -15,7 +15,7 @@
 
 import datetime
 
-from oslo.utils import timeutils
+from oslo_utils import timeutils
 
 
 class ViewBuilder(object):

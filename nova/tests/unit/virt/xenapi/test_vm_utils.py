@@ -20,12 +20,12 @@ from eventlet import greenthread
 import fixtures
 import mock
 from mox3 import mox
-from oslo.config import cfg
-from oslo.config import fixture as config_fixture
-from oslo.utils import timeutils
-from oslo.utils import units
 from oslo_concurrency import lockutils
 from oslo_concurrency import processutils
+from oslo_config import cfg
+from oslo_config import fixture as config_fixture
+from oslo_utils import timeutils
+from oslo_utils import units
 import six
 
 from nova.compute import flavors

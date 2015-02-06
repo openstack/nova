@@ -21,7 +21,7 @@ option to a positive number and the weighing has the opposite effect of the
 default.
 """
 
-from oslo.config import cfg
+from oslo_config import cfg
 
 from nova.scheduler import weights
 

@@ -22,7 +22,7 @@ import uuid
 import iso8601
 import mock
 import netaddr
-from oslo.config import cfg
+from oslo_config import cfg
 import webob
 
 from nova.api.openstack.compute.contrib import networks_associate

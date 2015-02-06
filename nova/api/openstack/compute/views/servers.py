@@ -16,7 +16,7 @@
 
 import hashlib
 
-from oslo.utils import timeutils
+from oslo_utils import timeutils
 
 from nova.api.openstack import common
 from nova.api.openstack.compute.views import addresses as views_addresses

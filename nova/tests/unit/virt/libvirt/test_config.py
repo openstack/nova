@@ -13,7 +13,7 @@
 #    under the License.
 
 from lxml import etree
-from oslo.utils import units
+from oslo_utils import units
 
 from nova.compute import arch
 from nova import test

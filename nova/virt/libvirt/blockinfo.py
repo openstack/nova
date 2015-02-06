@@ -72,7 +72,7 @@ variables / types used
 import itertools
 import operator
 
-from oslo.config import cfg
+from oslo_config import cfg
 
 from nova import block_device
 from nova.compute import arch

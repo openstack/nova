@@ -13,7 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo.serialization import jsonutils
+from oslo_serialization import jsonutils
 import webob
 
 

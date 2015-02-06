@@ -16,7 +16,7 @@
 import os
 
 import mock
-from oslo.config import cfg
+from oslo_config import cfg
 
 from nova import exception
 from nova import test

@@ -21,11 +21,11 @@ import datetime
 import functools
 import time
 
-from oslo.config import cfg
-from oslo.db import exception as db_exc
-from oslo.serialization import jsonutils
-from oslo.utils import timeutils
-from oslo.utils import units
+from oslo_config import cfg
+from oslo_db import exception as db_exc
+from oslo_serialization import jsonutils
+from oslo_utils import timeutils
+from oslo_utils import units
 
 from nova.cells import rpc_driver
 from nova import context

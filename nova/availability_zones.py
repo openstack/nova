@@ -17,7 +17,7 @@
 
 import collections
 
-from oslo.config import cfg
+from oslo_config import cfg
 
 from nova import objects
 from nova.openstack.common import memorycache

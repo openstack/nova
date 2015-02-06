@@ -24,7 +24,7 @@ import os
 import string
 import zipfile
 
-from oslo.config import cfg
+from oslo_config import cfg
 
 from nova import compute
 from nova.compute import flavors

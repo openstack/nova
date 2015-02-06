@@ -21,7 +21,7 @@ import xmlrpclib
 
 from eventlet import queue
 from eventlet import timeout
-from oslo.config import cfg
+from oslo_config import cfg
 
 from nova import context
 from nova import exception

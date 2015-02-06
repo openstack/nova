@@ -15,7 +15,7 @@
 
 import datetime
 
-from oslo.serialization import jsonutils
+from oslo_serialization import jsonutils
 import webob
 
 from nova.compute import flavors

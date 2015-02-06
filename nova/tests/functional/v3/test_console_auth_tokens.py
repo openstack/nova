@@ -14,7 +14,7 @@
 
 import re
 
-from oslo.serialization import jsonutils
+from oslo_serialization import jsonutils
 
 from nova.tests.functional.v3 import test_servers
 

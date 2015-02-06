@@ -13,7 +13,7 @@
 #    under the License.
 
 import mock
-from oslo.config import cfg
+from oslo_config import cfg
 import webob
 
 from nova.api.openstack.compute.contrib import \

@@ -18,7 +18,7 @@ Serial consoles. Leverages websockify.py by Joel Martin.
 Based on nova-novncproxy.
 """
 
-from oslo.config import cfg
+from oslo_config import cfg
 
 from nova.cmd import baseproxy
 

@@ -23,8 +23,8 @@ import os
 import re
 
 from lxml import etree
-from oslo.config import cfg
 from oslo_concurrency import processutils
+from oslo_config import cfg
 
 from nova.compute import arch
 from nova.i18n import _

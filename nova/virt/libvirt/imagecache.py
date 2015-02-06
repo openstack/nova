@@ -25,10 +25,10 @@ import os
 import re
 import time
 
-from oslo.config import cfg
-from oslo.serialization import jsonutils
 from oslo_concurrency import lockutils
 from oslo_concurrency import processutils
+from oslo_config import cfg
+from oslo_serialization import jsonutils
 
 from nova.i18n import _LE
 from nova.i18n import _LI

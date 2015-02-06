@@ -22,8 +22,8 @@ import functools
 import traceback
 
 import netaddr
-from oslo import messaging
-from oslo.utils import timeutils
+import oslo_messaging as messaging
+from oslo_utils import timeutils
 import six
 
 from nova import context

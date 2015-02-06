@@ -20,9 +20,9 @@ import uuid
 
 import mock
 from mox3 import mox
-from oslo.config import cfg
-from oslo import messaging
-from oslo.utils import timeutils
+from oslo_config import cfg
+import oslo_messaging as messaging
+from oslo_utils import timeutils
 import six
 
 from nova.api.ec2 import ec2utils

@@ -17,8 +17,8 @@
 CPU monitor based on compute driver to retrieve CPU information
 """
 
-from oslo.config import cfg
-from oslo.utils import timeutils
+from oslo_config import cfg
+from oslo_utils import timeutils
 
 from nova.compute import monitors
 from nova.compute.monitors import cpu_monitor as monitor

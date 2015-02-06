@@ -18,7 +18,7 @@ Weigh cells by their weight_offset in the DB.  Cells with higher
 weight_offsets in the DB will be preferred.
 """
 
-from oslo.config import cfg
+from oslo_config import cfg
 
 from nova.cells import weights
 

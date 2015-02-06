@@ -16,7 +16,7 @@
 import datetime
 
 import mock
-from oslo.utils import timeutils
+from oslo_utils import timeutils
 import webob
 
 from nova.api.openstack.compute.contrib import simple_tenant_usage as \

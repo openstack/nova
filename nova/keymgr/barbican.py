@@ -23,8 +23,8 @@ import binascii
 
 from barbicanclient import client as barbican_client
 from keystoneclient import session
-from oslo.config import cfg
-from oslo.utils import excutils
+from oslo_config import cfg
+from oslo_utils import excutils
 
 from nova import exception
 from nova.i18n import _

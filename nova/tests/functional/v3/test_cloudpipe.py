@@ -14,7 +14,7 @@
 
 import uuid as uuid_lib
 
-from oslo.config import cfg
+from oslo_config import cfg
 
 from nova.cloudpipe import pipelib
 from nova.network import api as network_api

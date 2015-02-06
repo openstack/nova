@@ -26,12 +26,12 @@ import uuid as stdlib_uuid
 import iso8601
 import mock
 import netaddr
-from oslo.config import cfg
-from oslo.db import exception as db_exc
-from oslo.db.sqlalchemy import test_base
-from oslo.db.sqlalchemy import utils as sqlalchemyutils
-from oslo.serialization import jsonutils
-from oslo.utils import timeutils
+from oslo_config import cfg
+from oslo_db import exception as db_exc
+from oslo_db.sqlalchemy import test_base
+from oslo_db.sqlalchemy import utils as sqlalchemyutils
+from oslo_serialization import jsonutils
+from oslo_utils import timeutils
 import six
 from sqlalchemy import Column
 from sqlalchemy.dialects import sqlite

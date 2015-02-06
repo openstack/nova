@@ -17,7 +17,7 @@ Tests For HostManager
 """
 
 import mock
-from oslo.serialization import jsonutils
+from oslo_serialization import jsonutils
 import six
 
 from nova.compute import task_states

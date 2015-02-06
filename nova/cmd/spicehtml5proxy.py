@@ -18,7 +18,7 @@ Websocket proxy that is compatible with OpenStack Nova
 SPICE HTML5 consoles. Leverages websockify.py by Joel Martin
 """
 
-from oslo.config import cfg
+from oslo_config import cfg
 
 from nova.cmd import baseproxy
 

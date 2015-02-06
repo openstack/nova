@@ -19,8 +19,8 @@ Management class for host-related functions (start, reboot, etc).
 
 import re
 
-from oslo.config import cfg
-from oslo.serialization import jsonutils
+from oslo_config import cfg
+from oslo_serialization import jsonutils
 
 from nova.compute import arch
 from nova.compute import hv_type

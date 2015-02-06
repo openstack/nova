@@ -17,8 +17,8 @@ Datastore utility functions
 """
 import posixpath
 
-from oslo.vmware import exceptions as vexc
-from oslo.vmware import pbm
+from oslo_vmware import exceptions as vexc
+from oslo_vmware import pbm
 
 from nova import exception
 from nova.i18n import _, _LE, _LI

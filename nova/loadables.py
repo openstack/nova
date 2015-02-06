@@ -42,7 +42,7 @@ import inspect
 import os
 import sys
 
-from oslo.utils import importutils
+from oslo_utils import importutils
 
 from nova import exception
 

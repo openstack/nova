@@ -16,7 +16,7 @@
 """Tests for the compute extra resources framework."""
 
 
-from oslo.config import cfg
+from oslo_config import cfg
 from stevedore import extension
 from stevedore import named
 

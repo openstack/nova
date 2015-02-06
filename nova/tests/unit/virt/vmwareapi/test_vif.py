@@ -16,8 +16,8 @@
 import contextlib
 
 import mock
-from oslo.config import cfg
-from oslo.vmware import exceptions as vexc
+from oslo_config import cfg
+from oslo_vmware import exceptions as vexc
 
 from nova import exception
 from nova.network import model as network_model

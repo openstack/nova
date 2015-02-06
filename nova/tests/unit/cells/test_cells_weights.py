@@ -20,7 +20,7 @@ Cells with higher weights should be given priority for new builds.
 
 import datetime
 
-from oslo.utils import timeutils
+from oslo_utils import timeutils
 
 from nova.cells import state
 from nova.cells import weights

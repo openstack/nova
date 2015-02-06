@@ -17,7 +17,7 @@ import datetime
 import iso8601
 import mock
 import netaddr
-from oslo.utils import timeutils
+from oslo_utils import timeutils
 
 from nova import exception
 from nova.objects import fixed_ip

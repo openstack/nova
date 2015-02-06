@@ -23,9 +23,9 @@ except ImportError:
     rados = None
     rbd = None
 
-from oslo.serialization import jsonutils
-from oslo.utils import excutils
-from oslo.utils import units
+from oslo_serialization import jsonutils
+from oslo_utils import excutils
+from oslo_utils import units
 
 from nova import exception
 from nova.i18n import _

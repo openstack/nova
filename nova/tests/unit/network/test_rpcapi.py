@@ -19,7 +19,7 @@ Unit Tests for nova.network.rpcapi
 import collections
 
 from mox3 import mox
-from oslo.config import cfg
+from oslo_config import cfg
 
 from nova import context
 from nova.network import rpcapi as network_rpcapi

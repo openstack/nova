@@ -18,7 +18,7 @@ import random
 import re
 import time
 
-from oslo.config import cfg
+from oslo_config import cfg
 
 from nova.i18n import _, _LE, _LI, _LW
 from nova.openstack.common import log as logging

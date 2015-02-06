@@ -14,8 +14,8 @@
 
 """Connect your vlan to the world."""
 
-from oslo.config import cfg
-from oslo.utils import timeutils
+from oslo_config import cfg
+from oslo_utils import timeutils
 from webob import exc
 
 from nova.api.openstack import extensions

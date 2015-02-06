@@ -15,9 +15,9 @@
 
 """Client side of the conductor RPC API."""
 
-from oslo.config import cfg
-from oslo import messaging
-from oslo.serialization import jsonutils
+from oslo_config import cfg
+import oslo_messaging as messaging
+from oslo_serialization import jsonutils
 
 from nova.objects import base as objects_base
 from nova import rpc

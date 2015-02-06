@@ -13,7 +13,7 @@
 #    under the License.
 
 
-from oslo.serialization import jsonutils
+from oslo_serialization import jsonutils
 from webob import exc
 
 from nova.api.openstack.compute.plugins.v3 import pci

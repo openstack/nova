@@ -60,9 +60,9 @@ import sys
 
 import decorator
 import netaddr
-from oslo.config import cfg
-from oslo import messaging
-from oslo.utils import importutils
+from oslo_config import cfg
+import oslo_messaging as messaging
+from oslo_utils import importutils
 import six
 
 from nova.api.ec2 import ec2utils

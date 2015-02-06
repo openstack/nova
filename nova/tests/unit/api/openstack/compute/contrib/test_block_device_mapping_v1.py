@@ -15,8 +15,8 @@
 
 import mock
 from mox3 import mox
-from oslo.config import cfg
-from oslo.serialization import jsonutils
+from oslo_config import cfg
+from oslo_serialization import jsonutils
 from webob import exc
 
 from nova.api.openstack.compute import extensions

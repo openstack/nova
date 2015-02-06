@@ -20,7 +20,7 @@ import uuid
 
 import mock
 from mox3 import mox
-from oslo.config import cfg
+from oslo_config import cfg
 
 from nova.compute import flavors
 from nova.compute import utils as compute_utils

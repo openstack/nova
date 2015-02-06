@@ -19,7 +19,7 @@ Unit Tests for nova.consoleauth.rpcapi
 import contextlib
 
 import mock
-from oslo.config import cfg
+from oslo_config import cfg
 
 from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import context

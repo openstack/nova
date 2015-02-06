@@ -16,7 +16,7 @@
 Tests For Cells RPCAPI
 """
 
-from oslo.config import cfg
+from oslo_config import cfg
 import six
 
 from nova.cells import rpcapi as cells_rpcapi

@@ -16,7 +16,7 @@ import copy
 import os
 import ssl
 
-from oslo.config import cfg
+from oslo_config import cfg
 
 from nova.openstack.common._i18n import _
 

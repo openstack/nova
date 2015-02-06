@@ -16,7 +16,7 @@
 from ironicclient import client as ironic_client
 from ironicclient import exc as ironic_exception
 import mock
-from oslo.config import cfg
+from oslo_config import cfg
 
 from nova import exception
 from nova import test

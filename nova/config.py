@@ -15,8 +15,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo.config import cfg
-from oslo.db import options
+from oslo_config import cfg
+from oslo_db import options
 
 from nova import debugger
 from nova.openstack.common import log

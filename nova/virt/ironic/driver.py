@@ -27,10 +27,10 @@ import shutil
 import tempfile
 import time
 
-from oslo.config import cfg
-from oslo.serialization import jsonutils
-from oslo.utils import excutils
-from oslo.utils import importutils
+from oslo_config import cfg
+from oslo_serialization import jsonutils
+from oslo_utils import excutils
+from oslo_utils import importutils
 import six
 
 from nova.api.metadata import base as instance_metadata

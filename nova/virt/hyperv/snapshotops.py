@@ -18,7 +18,7 @@ Management class for VM snapshot operations.
 """
 import os
 
-from oslo.config import cfg
+from oslo_config import cfg
 
 from nova.compute import task_states
 from nova.i18n import _LW

@@ -14,7 +14,7 @@
 #    under the License.
 
 
-from oslo.utils import timeutils
+from oslo_utils import timeutils
 from sqlalchemy import Column
 from sqlalchemy import DateTime
 from sqlalchemy import ForeignKey

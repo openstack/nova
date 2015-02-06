@@ -15,7 +15,7 @@
 #    under the License.
 
 """The security groups extension."""
-from oslo.serialization import jsonutils
+from oslo_serialization import jsonutils
 from webob import exc
 
 from nova.api.openstack import common

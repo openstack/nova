@@ -38,8 +38,8 @@ import math
 import re
 import time
 
-from oslo.serialization import jsonutils
-from oslo.utils import importutils
+from oslo_serialization import jsonutils
+from oslo_utils import importutils
 import webob.dec
 import webob.exc
 

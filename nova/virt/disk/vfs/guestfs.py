@@ -13,8 +13,8 @@
 # under the License.
 
 from eventlet import tpool
-from oslo.config import cfg
-from oslo.utils import importutils
+from oslo_config import cfg
+from oslo_utils import importutils
 import six
 
 from nova import exception

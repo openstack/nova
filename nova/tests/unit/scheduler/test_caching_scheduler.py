@@ -14,7 +14,7 @@
 #    under the License.
 
 import mock
-from oslo.utils import timeutils
+from oslo_utils import timeutils
 
 from nova import exception
 from nova.scheduler import caching_scheduler

@@ -13,7 +13,7 @@
 #    under the License.
 
 import fixtures
-from oslo import messaging
+import oslo_messaging as messaging
 
 
 class CastAsCall(fixtures.Fixture):

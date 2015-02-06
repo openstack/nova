@@ -23,10 +23,10 @@ dynamic configuration.
 import datetime
 import os
 
-from oslo.config import cfg
-from oslo.serialization import jsonutils
-from oslo.utils import excutils
-from oslo.utils import timeutils
+from oslo_config import cfg
+from oslo_serialization import jsonutils
+from oslo_utils import excutils
+from oslo_utils import timeutils
 
 from nova.i18n import _LE
 from nova.openstack.common import log as logging

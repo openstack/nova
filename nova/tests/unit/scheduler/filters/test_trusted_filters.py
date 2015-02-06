@@ -11,9 +11,9 @@
 #    under the License.
 
 import mock
-from oslo.config import cfg
-from oslo.serialization import jsonutils
-from oslo.utils import timeutils
+from oslo_config import cfg
+from oslo_serialization import jsonutils
+from oslo_utils import timeutils
 import requests
 
 from nova.scheduler.filters import trusted_filter

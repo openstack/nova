@@ -24,7 +24,7 @@ Cert manager manages x509 certificates.
 
 import base64
 
-from oslo import messaging
+import oslo_messaging as messaging
 
 from nova import crypto
 from nova import manager

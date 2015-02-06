@@ -17,7 +17,7 @@
 Management class for host-related functions (start, reboot, etc).
 """
 
-from oslo.utils import units
+from oslo_utils import units
 
 from nova.compute import arch
 from nova.compute import hv_type

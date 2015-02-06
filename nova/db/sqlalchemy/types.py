@@ -16,7 +16,7 @@
 """Custom SQLAlchemy types."""
 
 import netaddr
-from oslo.utils import netutils
+from oslo_utils import netutils
 from sqlalchemy.dialects import postgresql
 from sqlalchemy import types
 

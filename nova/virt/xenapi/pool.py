@@ -17,8 +17,8 @@
 Management class for Pool-related functions (join, eject, etc).
 """
 
-from oslo.config import cfg
-from oslo.serialization import jsonutils
+from oslo_config import cfg
+from oslo_serialization import jsonutils
 import six
 import six.moves.urllib.parse as urlparse
 

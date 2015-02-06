@@ -15,8 +15,8 @@
 import functools
 import operator
 
-from oslo.serialization import jsonutils
-from oslo.utils import excutils
+from oslo_serialization import jsonutils
+from oslo_utils import excutils
 
 from nova import block_device
 from nova.i18n import _

@@ -16,8 +16,8 @@
 
 import datetime
 
-from oslo.config import cfg
-from oslo.utils import timeutils
+from oslo_config import cfg
+from oslo_utils import timeutils
 
 from nova.api.ec2 import cloud
 from nova.api.ec2 import ec2utils

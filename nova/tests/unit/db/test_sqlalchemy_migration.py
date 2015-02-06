@@ -13,7 +13,7 @@
 #    under the License.
 
 from migrate import UniqueConstraint
-from oslo.db.sqlalchemy import utils as db_utils
+from oslo_db.sqlalchemy import utils as db_utils
 
 from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy import migration

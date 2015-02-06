@@ -20,10 +20,10 @@ from cinderclient import exceptions as cinder_exception
 from eventlet import event as eventlet_event
 import mock
 from mox3 import mox
-from oslo.config import cfg
-from oslo import messaging
-from oslo.utils import importutils
-from oslo.utils import timeutils
+from oslo_config import cfg
+import oslo_messaging as messaging
+from oslo_utils import importutils
+from oslo_utils import timeutils
 
 from nova.compute import build_results
 from nova.compute import manager

@@ -15,7 +15,7 @@
 
 import itertools
 
-from oslo.serialization import jsonutils
+from oslo_serialization import jsonutils
 import webob
 
 from nova import compute

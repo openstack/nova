@@ -18,7 +18,7 @@ Tests For IronicHostManager
 """
 
 import mock
-from oslo.serialization import jsonutils
+from oslo_serialization import jsonutils
 
 from nova import db
 from nova import exception

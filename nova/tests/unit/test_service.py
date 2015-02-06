@@ -22,8 +22,8 @@ import sys
 
 import mock
 from mox3 import mox
-from oslo.config import cfg
 from oslo_concurrency import processutils
+from oslo_config import cfg
 import testtools
 
 from nova import context

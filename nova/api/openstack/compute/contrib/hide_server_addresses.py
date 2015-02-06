@@ -15,7 +15,7 @@
 
 """Extension for hiding server addresses in certain states."""
 
-from oslo.config import cfg
+from oslo_config import cfg
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi

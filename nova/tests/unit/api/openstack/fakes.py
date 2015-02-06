@@ -16,9 +16,9 @@
 import datetime
 import uuid
 
-from oslo.serialization import jsonutils
-from oslo.utils import netutils
-from oslo.utils import timeutils
+from oslo_serialization import jsonutils
+from oslo_utils import netutils
+from oslo_utils import timeutils
 import routes
 import six
 import webob

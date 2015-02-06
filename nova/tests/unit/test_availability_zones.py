@@ -17,7 +17,7 @@
 Tests for availability zones
 """
 
-from oslo.config import cfg
+from oslo_config import cfg
 
 from nova import availability_zones as az
 from nova import context

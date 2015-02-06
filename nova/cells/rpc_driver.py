@@ -17,8 +17,8 @@
 """
 Cells RPC Communication Driver
 """
-from oslo.config import cfg
-from oslo import messaging
+from oslo_config import cfg
+import oslo_messaging as messaging
 
 from nova.cells import driver
 from nova import rpc

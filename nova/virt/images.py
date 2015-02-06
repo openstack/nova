@@ -21,7 +21,7 @@ Handling of VM disk images.
 
 import os
 
-from oslo.config import cfg
+from oslo_config import cfg
 
 from nova import exception
 from nova.i18n import _, _LE

@@ -18,9 +18,9 @@
 Base RPC client and server common to all services.
 """
 
-from oslo.config import cfg
-from oslo import messaging
-from oslo.serialization import jsonutils
+from oslo_config import cfg
+import oslo_messaging as messaging
+from oslo_serialization import jsonutils
 
 from nova import rpc
 

@@ -19,8 +19,8 @@ Unit Tests for nova.compute.rpcapi
 import contextlib
 
 import mock
-from oslo.config import cfg
-from oslo.serialization import jsonutils
+from oslo_config import cfg
+from oslo_serialization import jsonutils
 
 from nova.compute import rpcapi as compute_rpcapi
 from nova import context

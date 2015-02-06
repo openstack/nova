@@ -27,7 +27,7 @@ def enabled():
 
 
 def register_cli_opts():
-    from oslo.config import cfg
+    from oslo_config import cfg
 
     cli_opts = [
         cfg.StrOpt('host',
@@ -50,7 +50,7 @@ def register_cli_opts():
 
 
 def init():
-    from oslo.config import cfg
+    from oslo_config import cfg
     CONF = cfg.CONF
 
     # NOTE(markmc): gracefully handle the CLI options not being registered

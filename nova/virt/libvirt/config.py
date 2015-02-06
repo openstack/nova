@@ -26,7 +26,7 @@ helpers for populating up config object instances.
 import time
 
 from lxml import etree
-from oslo.utils import units
+from oslo_utils import units
 import six
 
 from nova import exception

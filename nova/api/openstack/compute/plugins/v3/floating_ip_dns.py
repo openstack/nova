@@ -14,7 +14,7 @@
 
 import urllib
 
-from oslo.utils import netutils
+from oslo_utils import netutils
 import webob
 
 from nova.api.openstack.compute.schemas.v3 import floating_ip_dns

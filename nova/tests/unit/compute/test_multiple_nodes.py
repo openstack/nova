@@ -14,8 +14,8 @@
 #    under the License.
 """Tests for compute service with multiple compute nodes."""
 
-from oslo.config import cfg
-from oslo.utils import importutils
+from oslo_config import cfg
+from oslo_utils import importutils
 
 from nova import context
 from nova import db

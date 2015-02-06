@@ -20,9 +20,9 @@ model.
 """
 import copy
 
-from oslo.config import cfg
-from oslo.serialization import jsonutils
-from oslo.utils import importutils
+from oslo_config import cfg
+from oslo_serialization import jsonutils
+from oslo_utils import importutils
 
 from nova.compute import claims
 from nova.compute import flavors

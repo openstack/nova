@@ -19,8 +19,8 @@ Tests For Cells RPC Communication Driver
 
 import mock
 from mox3 import mox
-from oslo.config import cfg
-from oslo import messaging as oslo_messaging
+from oslo_config import cfg
+import oslo_messaging
 
 from nova.cells import messaging
 from nova.cells import rpc_driver

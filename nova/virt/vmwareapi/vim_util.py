@@ -17,8 +17,8 @@
 The VMware API utility module.
 """
 
-from oslo.config import cfg
-from oslo.vmware import vim_util as vutil
+from oslo_config import cfg
+from oslo_vmware import vim_util as vutil
 import suds
 
 from nova.i18n import _LW

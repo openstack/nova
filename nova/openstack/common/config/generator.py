@@ -27,8 +27,8 @@ import socket
 import sys
 import textwrap
 
-from oslo.config import cfg
-from oslo.utils import importutils
+from oslo_config import cfg
+from oslo_utils import importutils
 import six
 import stevedore.named
 
@@ -104,7 +104,7 @@ def generate(argv):
     # and the list of Opt instances for that group.
     if parsed_args.libraries:
         loader = stevedore.named.NamedExtensionManager(
-            'oslo.config.opts',
+            'oslo_config.opts',
             names=list(set(parsed_args.libraries)),
             invoke_on_load=False,
             on_load_failure_callback=raise_extension_exception

@@ -23,8 +23,8 @@ import mock
 from mox3 import mox
 from neutronclient.common import exceptions
 from neutronclient.v2_0 import client
-from oslo.config import cfg
-from oslo.serialization import jsonutils
+from oslo_config import cfg
+from oslo_serialization import jsonutils
 import six
 
 from nova.compute import flavors

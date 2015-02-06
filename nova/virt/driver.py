@@ -22,8 +22,8 @@ Driver base-classes:
 
 import sys
 
-from oslo.config import cfg
-from oslo.utils import importutils
+from oslo_config import cfg
+from oslo_utils import importutils
 
 from nova.i18n import _, _LE, _LI
 from nova.openstack.common import log as logging

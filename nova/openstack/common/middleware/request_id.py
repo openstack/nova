@@ -12,7 +12,7 @@
 
 """Compatibility shim for Kilo, while operators migrate to oslo.middleware."""
 
-from oslo.middleware import request_id
+from oslo_middleware import request_id
 
 from nova.openstack.common import versionutils
 

@@ -27,8 +27,8 @@ these objects be simple dictionaries.
 
 """
 
-from oslo.config import cfg
-from oslo.db import concurrency
+from oslo_config import cfg
+from oslo_db import concurrency
 
 from nova.cells import rpcapi as cells_rpcapi
 from nova.i18n import _LE

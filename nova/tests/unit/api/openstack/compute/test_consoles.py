@@ -17,7 +17,7 @@
 import datetime
 import uuid as stdlib_uuid
 
-from oslo.utils import timeutils
+from oslo_utils import timeutils
 import webob
 
 from nova.api.openstack.compute import consoles as consoles_v2

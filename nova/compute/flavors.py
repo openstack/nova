@@ -21,8 +21,8 @@
 import re
 import uuid
 
-from oslo.config import cfg
-from oslo.utils import strutils
+from oslo_config import cfg
+from oslo_utils import strutils
 import six
 
 from nova.api.validation import parameter_types

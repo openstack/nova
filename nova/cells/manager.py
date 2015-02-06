@@ -19,10 +19,10 @@ Cells Service Manager
 import datetime
 import time
 
-from oslo.config import cfg
-from oslo import messaging as oslo_messaging
-from oslo.utils import importutils
-from oslo.utils import timeutils
+from oslo_config import cfg
+import oslo_messaging
+from oslo_utils import importutils
+from oslo_utils import timeutils
 
 from nova.cells import messaging
 from nova.cells import state as cells_state

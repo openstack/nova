@@ -24,12 +24,12 @@ import re
 import time
 
 import netaddr
-from oslo.config import cfg
-from oslo.serialization import jsonutils
-from oslo.utils import excutils
-from oslo.utils import importutils
-from oslo.utils import timeutils
 from oslo_concurrency import processutils
+from oslo_config import cfg
+from oslo_serialization import jsonutils
+from oslo_utils import excutils
+from oslo_utils import importutils
+from oslo_utils import timeutils
 import six
 
 from nova import exception

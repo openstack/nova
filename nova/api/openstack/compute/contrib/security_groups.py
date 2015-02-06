@@ -19,7 +19,7 @@
 import contextlib
 from xml.dom import minidom
 
-from oslo.serialization import jsonutils
+from oslo_serialization import jsonutils
 import six
 import webob
 from webob import exc

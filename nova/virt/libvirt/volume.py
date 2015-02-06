@@ -22,9 +22,9 @@ import re
 import time
 import urllib2
 
-from oslo.config import cfg
-from oslo.utils import strutils
 from oslo_concurrency import processutils
+from oslo_config import cfg
+from oslo_utils import strutils
 import six
 import six.moves.urllib.parse as urlparse
 

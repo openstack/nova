@@ -12,7 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo.db.sqlalchemy import utils
+from oslo_db.sqlalchemy import utils
 from sqlalchemy import Column, String, Text
 
 from nova.db.sqlalchemy import api

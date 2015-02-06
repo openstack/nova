@@ -13,8 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo.db import exception as db_exc
-from oslo.db.sqlalchemy import utils as oslodbutils
+from oslo_db import exception as db_exc
+from oslo_db.sqlalchemy import utils as oslodbutils
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy import MetaData

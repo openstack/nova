@@ -25,7 +25,7 @@ such strings specially)
 
 import copy
 
-from oslo.serialization import jsonutils as json
+from oslo_serialization import jsonutils as json
 
 from nova.openstack.common.report import utils as utils
 

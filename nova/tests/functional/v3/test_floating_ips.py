@@ -13,7 +13,7 @@
 #    under the License.
 
 
-from oslo.config import cfg
+from oslo_config import cfg
 
 from nova import context
 from nova.tests.functional.v3 import api_sample_base

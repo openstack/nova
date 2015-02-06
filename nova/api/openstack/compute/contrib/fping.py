@@ -17,7 +17,7 @@
 import itertools
 import os
 
-from oslo.config import cfg
+from oslo_config import cfg
 from webob import exc
 
 from nova.api.openstack import common

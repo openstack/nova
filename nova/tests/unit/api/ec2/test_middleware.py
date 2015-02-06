@@ -16,8 +16,8 @@
 
 from lxml import etree
 import mock
-from oslo.config import cfg
-from oslo.utils import timeutils
+from oslo_config import cfg
+from oslo_utils import timeutils
 import requests
 import webob
 import webob.dec

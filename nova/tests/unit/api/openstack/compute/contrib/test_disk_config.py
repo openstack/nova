@@ -15,7 +15,7 @@
 
 import datetime
 
-from oslo.serialization import jsonutils
+from oslo_serialization import jsonutils
 
 from nova.api.openstack import compute
 from nova.compute import api as compute_api

@@ -36,8 +36,8 @@ from eventlet import greenio
 from eventlet import greenthread
 from eventlet import patcher
 from eventlet import tpool
-from oslo.config import cfg
-from oslo.utils import excutils
+from oslo_config import cfg
+from oslo_utils import excutils
 
 from nova import context as nova_context
 from nova import exception

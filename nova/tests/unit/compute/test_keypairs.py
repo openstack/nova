@@ -14,7 +14,7 @@
 #    under the License.
 """Tests for keypair API."""
 
-from oslo.config import cfg
+from oslo_config import cfg
 import six
 
 from nova.compute import api as compute_api

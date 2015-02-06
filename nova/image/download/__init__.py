@@ -15,7 +15,7 @@
 
 import logging
 
-from oslo.config import cfg
+from oslo_config import cfg
 import stevedore.driver
 import stevedore.extension
 

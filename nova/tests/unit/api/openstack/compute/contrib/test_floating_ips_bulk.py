@@ -14,7 +14,7 @@
 
 import mock
 import netaddr
-from oslo.config import cfg
+from oslo_config import cfg
 import webob
 
 from nova.api.openstack.compute.contrib import floating_ips_bulk as fipbulk_v2

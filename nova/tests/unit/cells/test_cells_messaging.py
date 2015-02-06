@@ -21,10 +21,10 @@ import contextlib
 
 import mock
 from mox3 import mox
-from oslo.config import cfg
-from oslo import messaging as oslo_messaging
-from oslo.serialization import jsonutils
-from oslo.utils import timeutils
+from oslo_config import cfg
+import oslo_messaging
+from oslo_serialization import jsonutils
+from oslo_utils import timeutils
 
 from nova.cells import messaging
 from nova.cells import utils as cells_utils

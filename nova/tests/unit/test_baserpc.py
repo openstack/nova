@@ -18,7 +18,7 @@
 Test the base rpc API.
 """
 
-from oslo.config import cfg
+from oslo_config import cfg
 
 from nova import baserpc
 from nova import context

@@ -16,7 +16,7 @@
 Fakes For Cells tests.
 """
 
-from oslo.config import cfg
+from oslo_config import cfg
 
 from nova.cells import driver
 from nova.cells import manager as cells_manager

@@ -25,8 +25,8 @@ SHOULD include dedicated exception logging.
 import functools
 import sys
 
-from oslo.config import cfg
-from oslo.utils import excutils
+from oslo_config import cfg
+from oslo_utils import excutils
 import webob.exc
 
 from nova.i18n import _, _LE

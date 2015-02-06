@@ -19,9 +19,9 @@ import traceback
 import fixtures
 import mock
 import netaddr
-from oslo.serialization import jsonutils
-from oslo.utils import importutils
-from oslo.utils import timeutils
+from oslo_serialization import jsonutils
+from oslo_utils import importutils
+from oslo_utils import timeutils
 import six
 
 from nova.compute import manager

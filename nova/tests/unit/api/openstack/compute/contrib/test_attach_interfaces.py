@@ -14,8 +14,8 @@
 #    under the License.
 
 import mock
-from oslo.config import cfg
-from oslo.serialization import jsonutils
+from oslo_config import cfg
+from oslo_serialization import jsonutils
 
 from nova.api.openstack.compute.contrib import attach_interfaces \
     as attach_interfaces_v2

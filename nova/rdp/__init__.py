@@ -14,7 +14,7 @@
 
 """Module for RDP Proxying."""
 
-from oslo.config import cfg
+from oslo_config import cfg
 
 
 rdp_opts = [

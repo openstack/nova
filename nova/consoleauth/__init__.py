@@ -16,7 +16,7 @@
 
 """Module to authenticate Consoles."""
 
-from oslo.config import cfg
+from oslo_config import cfg
 
 
 consoleauth_topic_opt = cfg.StrOpt('consoleauth_topic',

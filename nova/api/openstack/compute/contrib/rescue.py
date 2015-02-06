@@ -14,7 +14,7 @@
 
 """The rescue mode extension."""
 
-from oslo.config import cfg
+from oslo_config import cfg
 import webob
 from webob import exc
 
