@@ -154,6 +154,9 @@ class NetworkController(object):
                 "num_networks"]
         kwargs = {k: network.get(k) for k in keys}
 
+        if not network.get("label"):
+            msg = _("Network label is required")
+            raise exc.HTTPBadRequest(explanation=msg)
         label = network["label"]
 
         if not (kwargs["cidr"] or kwargs["cidr_v6"]):

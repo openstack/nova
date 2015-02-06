@@ -237,6 +237,16 @@ class TenantNetworksTestV21(test.NoDBTestCase):
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.create, self.req, body)
 
+    def test_network_create_empty_network(self):
+        body = {'network': {}}
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.create, self.req, body)
+
+    def test_network_create_without_label(self):
+        body = {'network': {"cidr": "10.20.105.0/24"}}
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.create, self.req, body)
+
 
 class TenantNetworksTestV2(TenantNetworksTestV21):
     ctrlr = networks.NetworkController
