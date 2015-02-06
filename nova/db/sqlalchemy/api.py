@@ -35,9 +35,7 @@ from oslo_utils import timeutils
 import retrying
 import six
 from sqlalchemy import and_
-from sqlalchemy import Boolean
 from sqlalchemy.exc import NoSuchTableError
-from sqlalchemy import Integer
 from sqlalchemy import MetaData
 from sqlalchemy import or_
 from sqlalchemy.orm import aliased
@@ -54,7 +52,6 @@ from sqlalchemy.sql import false
 from sqlalchemy.sql import func
 from sqlalchemy.sql import null
 from sqlalchemy.sql import true
-from sqlalchemy import String
 
 from nova import block_device
 from nova.compute import task_states
@@ -5804,31 +5801,6 @@ def task_log_end_task(context, task_name, period_beginning, period_ending,
             raise exception.TaskNotRunning(task_name=task_name, host=host)
 
 
-def _get_default_deleted_value(table):
-    # TODO(dripton): It would be better to introspect the actual default value
-    # from the column, but I don't see a way to do that in the low-level APIs
-    # of SQLAlchemy 0.7.  0.8 has better introspection APIs, which we should
-    # use when Nova is ready to require 0.8.
-
-    # NOTE(snikitin): We have one table (tags) which is not
-    # subclass of NovaBase. That is way this table does not contain
-    # column 'deleted'
-    if 'deleted' not in table.c:
-        return
-
-    # NOTE(mikal): this is a little confusing. This method returns the value
-    # that a _not_deleted_ row would have.
-    deleted_column_type = table.c.deleted.type
-    if isinstance(deleted_column_type, Integer):
-        return 0
-    elif isinstance(deleted_column_type, Boolean):
-        return False
-    elif isinstance(deleted_column_type, String):
-        return ""
-    else:
-        return None
-
-
 @require_admin_context
 def archive_deleted_rows_for_table(context, tablename, max_rows):
     """Move up to max_rows rows from one tables to the corresponding
@@ -5845,7 +5817,6 @@ def archive_deleted_rows_for_table(context, tablename, max_rows):
     metadata = MetaData()
     metadata.bind = engine
     table = Table(tablename, metadata, autoload=True)
-    default_deleted_value = _get_default_deleted_value(table)
     shadow_tablename = _SHADOW_TABLE_PREFIX + tablename
     rows_archived = 0
     try:
@@ -5862,11 +5833,12 @@ def archive_deleted_rows_for_table(context, tablename, max_rows):
         column = table.c.id
     # NOTE(guochbo): Use InsertFromSelect and DeleteFromSelect to avoid
     # database's limit of maximum parameter in one SQL statement.
+    deleted_column = table.c.deleted
     query_insert = sql.select([table],
-                          table.c.deleted != default_deleted_value).\
+                          deleted_column != deleted_column.default).\
                           order_by(column).limit(max_rows)
     query_delete = sql.select([column],
-                          table.c.deleted != default_deleted_value).\
+                          deleted_column != deleted_column.default).\
                           order_by(column).limit(max_rows)
 
     insert_statement = sqlalchemyutils.InsertFromSelect(
