@@ -329,11 +329,6 @@ class LimitsControllerTestV2(LimitsControllerTestV21):
         self.assertRaises(webob.exc.HTTPNotImplemented, self.ctrler.delete,
                           req, 1)
 
-    def test_limit_detail(self):
-        req = fakes.HTTPRequest.blank('/v2/fake/limits')
-        self.assertRaises(webob.exc.HTTPNotImplemented, self.ctrler.detail,
-                          req)
-
     def test_limit_show(self):
         req = fakes.HTTPRequest.blank('/v2/fake/limits')
         self.assertRaises(webob.exc.HTTPNotImplemented, self.ctrler.show,

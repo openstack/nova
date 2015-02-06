@@ -78,10 +78,6 @@ class LimitsController(object):
         """Delete the limit."""
         raise webob.exc.HTTPNotImplemented()
 
-    def detail(self, req):
-        """Return limit details."""
-        raise webob.exc.HTTPNotImplemented()
-
     def show(self, req, id):
         """Show limit information."""
         raise webob.exc.HTTPNotImplemented()
