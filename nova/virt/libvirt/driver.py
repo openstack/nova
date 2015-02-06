@@ -5460,6 +5460,18 @@ class LibvirtDriver(driver.ComputeDriver):
                 CONF.libvirt.virt_type, image_meta, vol)
             self._connect_volume(connection_info, disk_info)
 
+        if is_block_migration and len(block_device_mapping):
+            # NOTE(stpierre): if this instance has mapped volumes,
+            # we can't do a block migration, since that will
+            # result in volumes being copied from themselves to
+            # themselves, which is a recipe for disaster.
+            LOG.error(
+                _LE('Cannot block migrate instance %s with mapped volumes') %
+                instance.uuid)
+            raise exception.MigrationError(
+                _('Cannot block migrate instance %s with mapped volumes') %
+                instance.uuid)
+
         # We call plug_vifs before the compute manager calls
         # ensure_filtering_rules_for_instance, to ensure bridge is set up
         # Retry operation is necessary because continuously request comes,
