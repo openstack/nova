@@ -43,7 +43,8 @@ def _fake_resources():
 class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
     def _shelve_instance(self, shelved_offload_time, clean_shutdown=True):
         CONF.set_override('shelved_offload_time', shelved_offload_time)
-        instance = self._create_fake_instance_obj()
+        host = 'fake-mini'
+        instance = self._create_fake_instance_obj(params={'host': host})
         image_id = 'fake_image_id'
         host = 'fake-mini'
         cur_time = timeutils.utcnow()
@@ -55,6 +56,8 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         self.mox.StubOutWithMock(self.compute.driver, 'snapshot')
         self.mox.StubOutWithMock(self.compute.driver, 'power_off')
         self.mox.StubOutWithMock(self.compute, '_get_power_state')
+        self.mox.StubOutWithMock(self.compute.network_api,
+                                 'cleanup_instance_network_on_host')
 
         self.compute._notify_about_instance_usage(self.context, instance,
                 'shelve.start')
@@ -66,6 +69,9 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
             self.compute.driver.power_off(instance, 0, 0)
         self.compute._get_power_state(self.context,
                 instance).AndReturn(123)
+        if CONF.shelved_offload_time == 0:
+            self.compute.network_api.cleanup_instance_network_on_host(
+                self.context, instance, instance.host)
         self.compute.driver.snapshot(self.context, instance, 'fake_image_id',
                 mox.IgnoreArg())
 
@@ -130,7 +136,8 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         self._shelve_instance(0)
 
     def _shelve_offload(self, clean_shutdown=True):
-        instance = self._create_fake_instance_obj()
+        host = 'fake-mini'
+        instance = self._create_fake_instance_obj(params={'host': host})
         instance.task_state = task_states.SHELVING
         instance.save()
         cur_time = timeutils.utcnow()
@@ -139,6 +146,8 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         self.mox.StubOutWithMock(self.compute, '_notify_about_instance_usage')
         self.mox.StubOutWithMock(self.compute.driver, 'power_off')
         self.mox.StubOutWithMock(self.compute, '_get_power_state')
+        self.mox.StubOutWithMock(self.compute.network_api,
+                                 'cleanup_instance_network_on_host')
 
         self.compute._notify_about_instance_usage(self.context, instance,
                 'shelve_offload.start')
@@ -148,6 +157,8 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                                           self.compute.SHUTDOWN_RETRY_INTERVAL)
         else:
             self.compute.driver.power_off(instance, 0, 0)
+        self.compute.network_api.cleanup_instance_network_on_host(
+                self.context, instance, instance.host)
         self.compute._get_power_state(self.context,
                 instance).AndReturn(123)
         self.compute._notify_about_instance_usage(self.context, instance,
@@ -181,7 +192,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         self.mox.StubOutWithMock(self.compute, '_get_power_state')
         self.mox.StubOutWithMock(self.rt, 'instance_claim')
         self.mox.StubOutWithMock(self.compute.network_api,
-                                 'migrate_instance_finish')
+                                 'setup_instance_network_on_host')
 
         self.deleted_image_id = None
 
@@ -219,9 +230,8 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                 'unshelve.start')
         self.compute._prep_block_device(self.context, instance,
                 mox.IgnoreArg(), do_check_attach=False).AndReturn('fake_bdm')
-        self.compute.network_api.migrate_instance_finish(
-                self.context, instance, {'source_compute': '',
-                                         'dest_compute': self.compute.host})
+        self.compute.network_api.setup_instance_network_on_host(
+                self.context, instance, self.compute.host)
         self.compute.driver.spawn(self.context, instance, image,
                 injected_files=[], admin_password=None,
                 network_info=[],
@@ -264,7 +274,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         self.mox.StubOutWithMock(self.compute, '_get_power_state')
         self.mox.StubOutWithMock(self.rt, 'instance_claim')
         self.mox.StubOutWithMock(self.compute.network_api,
-                                 'migrate_instance_finish')
+                                 'setup_instance_network_on_host')
 
         tracking = {'last_state': instance.task_state}
 
@@ -288,9 +298,8 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
 
         self.compute._prep_block_device(self.context, instance,
                 mox.IgnoreArg(), do_check_attach=False).AndReturn('fake_bdm')
-        self.compute.network_api.migrate_instance_finish(
-                self.context, instance, {'source_compute': '',
-                                         'dest_compute': self.compute.host})
+        self.compute.network_api.setup_instance_network_on_host(
+                self.context, instance, self.compute.host)
         self.rt.instance_claim(self.context, instance, limits).AndReturn(
                 claims.Claim(self.context, instance, self.rt,
                              _fake_resources()))

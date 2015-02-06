@@ -4261,6 +4261,8 @@ class ComputeManager(manager.Manager):
         self._power_off_instance(context, instance, clean_shutdown)
         current_power_state = self._get_power_state(context, instance)
 
+        self.network_api.cleanup_instance_network_on_host(context, instance,
+                                                          instance.host)
         network_info = self._get_instance_nw_info(context, instance)
         block_device_info = self._get_instance_block_device_info(context,
                                                                  instance)
@@ -4338,8 +4340,8 @@ class ComputeManager(manager.Manager):
             shelved_image_ref = instance.image_ref
             instance.image_ref = image['id']
 
-        self.network_api.migrate_instance_finish(context, instance,
-            {'source_compute': '', 'dest_compute': self.host})
+        self.network_api.setup_instance_network_on_host(context, instance,
+                                                        self.host)
         network_info = self._get_instance_nw_info(context, instance)
         try:
             with rt.instance_claim(context, instance, limits):
