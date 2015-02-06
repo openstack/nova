@@ -76,34 +76,29 @@ class MockEntryPoint(object):
 
 
 class MockedHookTestCase(test.BaseHookTestCase):
-    def _mock_load_plugins(self, iload, *iargs, **ikwargs):
-        return []
+    PLUGINS = []
 
     def setUp(self):
         super(MockedHookTestCase, self).setUp()
 
         hooks.reset()
 
-        self.stubs.Set(stevedore.extension.ExtensionManager, '_load_plugins',
-                       self._mock_load_plugins)
+        hook_manager = hooks.HookManager.make_test_instance(self.PLUGINS)
+        self.stubs.Set(hooks, 'HookManager', lambda x: hook_manager)
 
 
 class HookTestCase(MockedHookTestCase):
-    def _mock_load_plugins(self, iload, *iargs, **ikwargs):
-        return [
+    PLUGINS = [
             stevedore.extension.Extension('test_hook',
                 MockEntryPoint(SampleHookA), SampleHookA, SampleHookA()),
             stevedore.extension.Extension('test_hook',
                 MockEntryPoint(SampleHookB), SampleHookB, SampleHookB()),
-        ]
+    ]
 
     def setUp(self):
         super(HookTestCase, self).setUp()
 
         hooks.reset()
-
-        self.stubs.Set(stevedore.extension.ExtensionManager, '_load_plugins',
-                       self._mock_load_plugins)
 
     @hooks.add_hook('test_hook')
     def _hooked(self, a, b=1, c=2, called=None):
@@ -125,11 +120,10 @@ class HookTestCase(MockedHookTestCase):
 
 
 class HookTestCaseWithFunction(MockedHookTestCase):
-    def _mock_load_plugins(self, iload, *iargs, **ikwargs):
-        return [
+    PLUGINS = [
             stevedore.extension.Extension('function_hook',
                 MockEntryPoint(SampleHookC), SampleHookC, SampleHookC()),
-        ]
+    ]
 
     @hooks.add_hook('function_hook', pass_function=True)
     def _hooked(self, a, b=1, c=2, called=None):
@@ -150,12 +144,11 @@ class HookTestCaseWithFunction(MockedHookTestCase):
 
 
 class HookFailPreTestCase(MockedHookTestCase):
-    def _mock_load_plugins(self, iload, *iargs, **ikwargs):
-        return [
+    PLUGINS = [
             stevedore.extension.Extension('fail_pre',
                 MockEntryPoint(SampleHookExceptionPre),
                 SampleHookExceptionPre, SampleHookExceptionPre()),
-        ]
+    ]
 
     @hooks.add_hook('fail_pre', pass_function=True)
     def _hooked(self, a, b=1, c=2, called=None):
@@ -178,12 +171,11 @@ class HookFailPreTestCase(MockedHookTestCase):
 
 
 class HookFailPostTestCase(MockedHookTestCase):
-    def _mock_load_plugins(self, iload, *iargs, **ikwargs):
-        return [
+    PLUGINS = [
             stevedore.extension.Extension('fail_post',
                 MockEntryPoint(SampleHookExceptionPost),
                 SampleHookExceptionPost, SampleHookExceptionPost()),
-        ]
+    ]
 
     @hooks.add_hook('fail_post', pass_function=True)
     def _hooked(self, a, b=1, c=2, called=None):
