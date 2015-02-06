@@ -66,6 +66,7 @@ from nova.tests.unit import fake_network
 import nova.tests.unit.image.fake
 from nova.tests.unit import matchers
 from nova.tests.unit.objects import test_pci_device
+from nova.tests.unit.objects import test_vcpu_model
 from nova.tests.unit.virt.libvirt import fake_imagebackend
 from nova.tests.unit.virt.libvirt import fake_libvirt_utils
 from nova.tests.unit.virt.libvirt import fakelibvirt
@@ -6079,26 +6080,28 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEqual(29, fake_timer.counter, "Didn't wait the expected "
                                                  "amount of time")
 
-    def test_check_can_live_migrate_dest_all_pass_with_block_migration(self):
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+        '_create_shared_storage_test_file')
+    @mock.patch.object(fakelibvirt.Connection, 'compareCPU')
+    def test_check_can_live_migrate_dest_all_pass_with_block_migration(
+            self, mock_cpu, mock_test_file):
         instance_ref = objects.Instance(**self.test_instance)
+        instance_ref.vcpu_model = test_vcpu_model.fake_vcpumodel
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         compute_info = {'disk_available_least': 400,
                         'cpu_info': 'asdf',
                         }
         filename = "file"
 
-        self.mox.StubOutWithMock(drvr, '_create_shared_storage_test_file')
-        self.mox.StubOutWithMock(drvr, '_compare_cpu')
-
         # _check_cpu_match
-        drvr._compare_cpu("asdf")
+        mock_cpu.return_value = 1
 
         # mounted_on_same_shared_storage
-        drvr._create_shared_storage_test_file().AndReturn(filename)
+        mock_test_file.return_value = filename
 
-        self.mox.ReplayAll()
+        # No need for the src_compute_info
         return_value = drvr.check_can_live_migrate_destination(self.context,
-                instance_ref, compute_info, compute_info, True)
+                instance_ref, None, compute_info, True)
         self.assertThat({"filename": "file",
                          'image_type': 'default',
                          'disk_available_mb': 409600,
@@ -6106,22 +6109,54 @@ class LibvirtConnTestCase(test.TestCase):
                          "block_migration": True},
                         matchers.DictMatches(return_value))
 
-    def test_check_can_live_migrate_dest_all_pass_no_block_migration(self):
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+        '_create_shared_storage_test_file')
+    @mock.patch.object(fakelibvirt.Connection, 'compareCPU')
+    def test_check_can_live_migrate_dest_all_pass_no_block_migration(
+            self, mock_cpu, mock_test_file):
         instance_ref = objects.Instance(**self.test_instance)
+        instance_ref.vcpu_model = test_vcpu_model.fake_vcpumodel
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        compute_info = {'cpu_info': 'asdf'}
+        compute_info = {'disk_available_least': 400,
+                        'cpu_info': 'asdf',
+                        }
         filename = "file"
 
-        self.mox.StubOutWithMock(drvr, '_create_shared_storage_test_file')
-        self.mox.StubOutWithMock(drvr, '_compare_cpu')
+        # _check_cpu_match
+        mock_cpu.return_value = 1
+        # mounted_on_same_shared_storage
+        mock_test_file.return_value = filename
+        # No need for the src_compute_info
+        return_value = drvr.check_can_live_migrate_destination(self.context,
+                instance_ref, None, compute_info, False)
+        self.assertThat({"filename": "file",
+                         "image_type": 'default',
+                         "block_migration": False,
+                         "disk_over_commit": False,
+                         "disk_available_mb": None},
+                        matchers.DictMatches(return_value))
+
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+        '_create_shared_storage_test_file')
+    @mock.patch.object(fakelibvirt.Connection, 'compareCPU')
+    def test_check_can_live_migrate_dest_no_instance_cpu_info(
+            self, mock_cpu, mock_test_file):
+        instance_ref = objects.Instance(**self.test_instance)
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        compute_info = {'cpu_info': jsonutils.dumps({
+            "vendor": "AMD",
+            "arch": arch.I686,
+            "features": ["sse3"],
+            "model": "Opteron_G3",
+            "topology": {"cores": 2, "threads": 1, "sockets": 4}
+        })}
+        filename = "file"
 
         # _check_cpu_match
-        drvr._compare_cpu("asdf")
-
+        mock_cpu.return_value = 1
         # mounted_on_same_shared_storage
-        drvr._create_shared_storage_test_file().AndReturn(filename)
+        mock_test_file.return_value = filename
 
-        self.mox.ReplayAll()
         return_value = drvr.check_can_live_migrate_destination(self.context,
                 instance_ref, compute_info, compute_info, False)
         self.assertThat({"filename": "file",
@@ -6131,18 +6166,15 @@ class LibvirtConnTestCase(test.TestCase):
                          "disk_available_mb": None},
                         matchers.DictMatches(return_value))
 
-    def test_check_can_live_migrate_dest_incompatible_cpu_raises(self):
+    @mock.patch.object(fakelibvirt.Connection, 'compareCPU')
+    def test_check_can_live_migrate_dest_incompatible_cpu_raises(
+            self, mock_cpu):
         instance_ref = objects.Instance(**self.test_instance)
+        instance_ref.vcpu_model = test_vcpu_model.fake_vcpumodel
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         compute_info = {'cpu_info': 'asdf'}
 
-        self.mox.StubOutWithMock(drvr, '_compare_cpu')
-
-        drvr._compare_cpu("asdf").AndRaise(exception.InvalidCPUInfo(
-                                              reason='foo')
-                                           )
-
-        self.mox.ReplayAll()
+        mock_cpu.side_effect = exception.InvalidCPUInfo(reason='foo')
         self.assertRaises(exception.InvalidCPUInfo,
                           drvr.check_can_live_migrate_destination,
                           self.context, instance_ref,
@@ -13247,6 +13279,29 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         vcpu_model_1 = drv._cpu_config_to_vcpu_model(cpu, vcpu_model)
         self.assertEqual(cpumodel.MODE_HOST_MODEL, vcpu_model.mode)
         self.assertEqual(vcpu_model, vcpu_model_1)
+
+    def test_vcpu_model_to_config(self):
+        drv = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+
+        feature = objects.VirtCPUFeature(policy=cpumodel.POLICY_REQUIRE,
+                                         name='sse')
+        feature_1 = objects.VirtCPUFeature(policy=cpumodel.POLICY_FORBID,
+                                           name='aes')
+        topo = objects.VirtCPUTopology(sockets=1, cores=2, threads=4)
+        vcpu_model = objects.VirtCPUModel(mode=cpumodel.MODE_HOST_MODEL,
+                                          features=[feature, feature_1],
+                                          topology=topo)
+
+        cpu = drv._vcpu_model_to_cpu_config(vcpu_model)
+        self.assertEqual(cpumodel.MODE_HOST_MODEL, cpu.mode)
+        self.assertEqual(1, cpu.sockets)
+        self.assertEqual(4, cpu.threads)
+        self.assertEqual(2, len(cpu.features))
+        self.assertEqual(set(['sse', 'aes']),
+                         set([f.name for f in cpu.features]))
+        self.assertEqual(set([cpumodel.POLICY_REQUIRE,
+                              cpumodel.POLICY_FORBID]),
+                         set([f.policy for f in cpu.features]))
 
 
 class LibvirtVolumeUsageTestCase(test.NoDBTestCase):
