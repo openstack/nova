@@ -29,6 +29,7 @@ import os
 import eventlet
 
 from nova import servicegroup
+from nova.servicegroup.drivers import zk
 from nova import test
 
 
@@ -37,7 +38,6 @@ class ZKServiceGroupTestCase(test.NoDBTestCase):
     def setUp(self):
         super(ZKServiceGroupTestCase, self).setUp()
         servicegroup.API._driver = None
-        from nova.servicegroup.drivers import zk
         self.flags(servicegroup_driver='zk')
         self.flags(address='localhost:2181', group="zookeeper")
         try:
@@ -85,3 +85,18 @@ class ZKServiceGroupTestCase(test.NoDBTestCase):
                                    None)
         # expected existing "process id" node
         self.assertTrue(session.get(path))
+
+    def test_lazy_session(self):
+        """Session object (contains zk handle) should be created in
+        lazy manner, because handle cannot be shared by forked processes.
+        """
+        # insied import because this test runs conditionaly (look at setUp)
+        import evzookeeper
+        driver = zk.ZooKeeperDriver()
+        # check that internal private attribute session is empty
+        self.assertIsNone(driver.__dict__['_ZooKeeperDriver__session'])
+        # after first use of property ...
+        driver._session
+        # check that internal private session attribute is ready
+        self.assertIsInstance(driver.__dict__['_ZooKeeperDriver__session'],
+                              evzookeeper.ZKSession)
