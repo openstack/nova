@@ -4,7 +4,7 @@
 
 pbr>=0.6,!=0.7,<1.0
 SQLAlchemy>=0.9.7,<=0.9.99
-boto>=2.32.1,<2.35.0
+boto>=2.32.1
 decorator>=3.4.0
 eventlet>=0.16.1
 Jinja2>=2.6  # BSD License (3 clause)
