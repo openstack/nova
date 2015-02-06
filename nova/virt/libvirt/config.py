@@ -1803,6 +1803,7 @@ class LibvirtConfigGuest(LibvirtConfigObject):
         self.os_boot_dev = []
         self.os_smbios = None
         self.os_mach_type = None
+        self.os_bootmenu = False
         self.devices = []
         self.metadata = []
         self.idmaps = []
@@ -1854,6 +1855,9 @@ class LibvirtConfigGuest(LibvirtConfigObject):
 
         if self.os_smbios is not None:
             os.append(self.os_smbios.format_dom())
+
+        if self.os_bootmenu:
+            os.append(etree.Element("bootmenu", enable="yes"))
         root.append(os)
 
     def _format_features(self, root):

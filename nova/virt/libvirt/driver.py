@@ -3802,7 +3802,7 @@ class LibvirtDriver(driver.ComputeDriver):
             return objects.Flavor.get_by_id(ctxt, instance['instance_type_id'])
 
     def _configure_guest_by_virt_type(self, guest, virt_type, caps, instance,
-                                      image_meta, root_device_name):
+                                      image_meta, flavor, root_device_name):
         if virt_type == "xen":
             if guest.os_type == vm_mode.HVM:
                 guest.os_loader = CONF.libvirt.xen_hvmloader_path
@@ -3811,6 +3811,10 @@ class LibvirtDriver(driver.ComputeDriver):
                 guest.sysinfo = self._get_guest_config_sysinfo(instance)
                 guest.os_smbios = vconfig.LibvirtConfigGuestSMBIOS()
             guest.os_mach_type = self._get_machine_type(image_meta, caps)
+            guest.os_bootmenu = strutils.bool_from_string(
+                flavor.extra_specs.get(
+                    'hw:boot_menu', image_meta.get('properties', {}).get(
+                        'hw_boot_menu', 'no')))
         elif virt_type == "lxc":
             guest.os_init_path = "/sbin/init"
             guest.os_cmdline = CONSOLE
@@ -3911,7 +3915,8 @@ class LibvirtDriver(driver.ComputeDriver):
         caps = self._host.get_capabilities()
 
         self._configure_guest_by_virt_type(guest, virt_type, caps, instance,
-                                           image_meta, root_device_name)
+                                           image_meta, flavor,
+                                           root_device_name)
         if virt_type not in ('lxc', 'uml'):
             self._conf_non_lxc_uml(virt_type, guest, root_device_name, rescue,
                     instance, inst_path, image_meta, disk_info)
