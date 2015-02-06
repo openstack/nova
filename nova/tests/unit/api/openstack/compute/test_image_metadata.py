@@ -206,8 +206,7 @@ class ImageMetaDataTestV21(test.NoDBTestCase):
         self.assertFalse(update_mocked.called)
 
     @mock.patch(CHK_QUOTA_STR,
-                side_effect=webob.exc.HTTPRequestEntityTooLarge(
-                        explanation='', headers={'Retry-After': 0}))
+                side_effect=webob.exc.HTTPBadRequest())
     @mock.patch('nova.image.api.API.update')
     @mock.patch('nova.image.api.API.get')
     def test_update_item_too_many_keys(self, get_mocked, update_mocked,
