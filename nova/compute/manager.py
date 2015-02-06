@@ -4420,12 +4420,12 @@ class ComputeManager(manager.Manager):
         else:
             return '\n'.join(log.split('\n')[-int(length):])
 
+    @object_compat
     @messaging.expected_exceptions(exception.ConsoleTypeInvalid,
                                    exception.InstanceNotReady,
                                    exception.InstanceNotFound,
                                    exception.ConsoleTypeUnavailable,
                                    NotImplementedError)
-    @object_compat
     @wrap_exception()
     @wrap_instance_fault
     def get_vnc_console(self, context, console_type, instance):
