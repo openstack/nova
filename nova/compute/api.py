@@ -731,10 +731,16 @@ class API(base.Base):
             block_device_mapping = block_device.from_legacy_mapping(
                 block_device_mapping, image_ref, root_device_name,
                 no_root=root_in_image_bdms)
-        elif image_ref and root_in_image_bdms:
+        elif root_in_image_bdms:
             # NOTE (ndipanov): client will insert an image mapping into the v2
             # block_device_mapping, but if there is a bootable device in image
-            # mappings - we need to get rid of the inserted image.
+            # mappings - we need to get rid of the inserted image
+            # NOTE (gibi): another case is when a server is booted with an
+            # image to bdm mapping where the image only contains a bdm to a
+            # snapshot. In this case the outher image to bdm mapping
+            # contains an unnecessasry device with boot_index == 0.
+            # Also in this case the image_ref is None as we are booting from
+            # an image to volume bdm.
             def not_image_and_root_bdm(bdm):
                 return not (bdm.get('boot_index') == 0 and
                             bdm.get('source_type') == 'image')

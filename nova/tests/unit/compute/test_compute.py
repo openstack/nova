@@ -8566,7 +8566,8 @@ class ComputeAPITestCase(BaseTestCase):
 
         image_meta = {'properties': {'block_device_mapping': [
             {'device_name': '/dev/vda',
-             'snapshot_id': '33333333-aaaa-bbbb-cccc-333333333333'}]}}
+             'snapshot_id': '33333333-aaaa-bbbb-cccc-333333333333',
+             'boot_index': 0}]}}
 
         # We get an image BDM
         transformed_bdm = self.compute_api._check_and_transform_bdm(
@@ -8593,6 +8594,24 @@ class ComputeAPITestCase(BaseTestCase):
         checked_bdm = self.compute_api._check_and_transform_bdm(
             base_options, {}, {}, 1, 1, transformed_bdm, True)
         self.assertEqual(checked_bdm, transformed_bdm)
+
+        # Volume backed so no image_ref in base_options
+        # v2 bdms contains a root image to volume mapping
+        # image_meta contains a snapshot as the image
+        # is created by nova image-create from a volume backed server
+        # see bug 1381598
+        fake_v2_bdms = [{'boot_index': 0,
+                         'connection_info': None,
+                         'delete_on_termination': None,
+                         'destination_type': u'volume',
+                         'image_id': FAKE_IMAGE_REF,
+                         'source_type': u'image',
+                         'volume_id': None,
+                         'volume_size': 1}]
+        base_options['image_ref'] = None
+        transformed_bdm = self.compute_api._check_and_transform_bdm(
+            base_options, {}, image_meta, 1, 1, fake_v2_bdms, False)
+        self.assertEqual(len(transformed_bdm), 1)
 
     def test_volume_size(self):
         ephemeral_size = 2
