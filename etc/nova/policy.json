@@ -18,6 +18,11 @@
     "compute:shelve": "",
     "compute:shelve_offload": "",
     "compute:unshelve": "",
+    "compute:resize": "",
+    "compute:confirm_resize": "",
+    "compute:revert_resize": "",
+    "compute:rebuild": "",
+    "compute:reboot": "",
 
     "compute:volume_snapshot_create": "",
     "compute:volume_snapshot_delete": "",
