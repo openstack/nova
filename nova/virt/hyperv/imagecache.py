@@ -24,6 +24,7 @@ from oslo_utils import units
 
 import nova.conf
 from nova import exception
+from nova.i18n import _
 from nova import utils
 from nova.virt.hyperv import pathutils
 from nova.virt import images
@@ -87,8 +88,8 @@ class ImageCache(object):
             copy_and_resize_vhd()
             return resized_vhd_path
 
-    def get_cached_image(self, context, instance):
-        image_id = instance.image_ref
+    def get_cached_image(self, context, instance, rescue_image_id=None):
+        image_id = rescue_image_id or instance.image_ref
 
         base_vhd_dir = self._pathutils.get_base_vhd_dir()
         base_vhd_path = os.path.join(base_vhd_dir, image_id)
@@ -118,11 +119,33 @@ class ImageCache(object):
 
         vhd_path = fetch_image_if_not_existing()
 
-        if CONF.use_cow_images and vhd_path.split('.')[-1].lower() == 'vhd':
+        # Note: rescue images are not resized.
+        is_vhd = vhd_path.split('.')[-1].lower() == 'vhd'
+        if CONF.use_cow_images and is_vhd and not rescue_image_id:
             # Resize the base VHD image as it's not possible to resize a
             # differencing VHD. This does not apply to VHDX images.
             resized_vhd_path = self._resize_and_cache_vhd(instance, vhd_path)
             if resized_vhd_path:
                 return resized_vhd_path
 
+        if rescue_image_id:
+            self._verify_rescue_image(instance, rescue_image_id,
+                                      vhd_path)
+
         return vhd_path
+
+    def _verify_rescue_image(self, instance, rescue_image_id,
+                             rescue_image_path):
+        rescue_image_info = self._vhdutils.get_vhd_info(rescue_image_path)
+        rescue_image_size = rescue_image_info['VirtualSize']
+        flavor_disk_size = instance.root_gb * units.Gi
+
+        if rescue_image_size > flavor_disk_size:
+            err_msg = _('Using a rescue image bigger than the instance '
+                        'flavor disk size is not allowed. '
+                        'Rescue image size: %(rescue_image_size)s. '
+                        'Flavor disk size:%(flavor_disk_size)s.') % dict(
+                            rescue_image_size=rescue_image_size,
+                            flavor_disk_size=flavor_disk_size)
+            raise exception.ImageUnacceptable(reason=err_msg,
+                                              image_id=rescue_image_id)

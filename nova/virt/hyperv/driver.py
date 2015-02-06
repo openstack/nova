@@ -333,3 +333,11 @@ class HyperVDriver(driver.ComputeDriver):
 
     def detach_interface(self, instance, vif):
         return self._vmops.detach_interface(instance, vif)
+
+    def rescue(self, context, instance, network_info, image_meta,
+               rescue_password):
+        self._vmops.rescue_instance(context, instance, network_info,
+                                    image_meta, rescue_password)
+
+    def unrescue(self, instance, network_info):
+        self._vmops.unrescue_instance(instance)

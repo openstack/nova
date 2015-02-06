@@ -20,8 +20,10 @@ from os_win import constants as os_win_const
 from os_win import exceptions as os_win_exc
 from oslo_concurrency import processutils
 from oslo_config import cfg
+from oslo_utils import fileutils
 from oslo_utils import units
 
+from nova.compute import vm_states
 from nova import exception
 from nova import objects
 from nova.tests.unit import fake_instance
@@ -189,7 +191,7 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
 
         self.assertEqual(fake_root_path, response)
         self._vmops._pathutils.get_root_vhd_path.assert_called_with(
-            mock_instance.name, vhd_format)
+            mock_instance.name, vhd_format, False)
         differencing_vhd = self._vmops._vhdutils.create_differencing_vhd
         differencing_vhd.assert_called_with(fake_root_path, fake_vhd_path)
         self._vmops._vhdutils.get_vhd_info.assert_called_once_with(
@@ -205,29 +207,41 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
                 fake_root_path, root_vhd_internal_size, is_file_max_size=False)
 
     @mock.patch('nova.virt.hyperv.imagecache.ImageCache.get_cached_image')
-    def _test_create_root_vhd(self, mock_get_cached_image, vhd_format):
+    def _test_create_root_vhd(self, mock_get_cached_image, vhd_format,
+                              is_rescue_vhd=False):
         mock_instance = self._prepare_create_root_vhd_mocks(
             use_cow_images=False, vhd_format=vhd_format,
             vhd_size=(self.FAKE_SIZE - 1))
         fake_vhd_path = self.FAKE_ROOT_PATH % vhd_format
         mock_get_cached_image.return_value = fake_vhd_path
+        rescue_image_id = (
+            mock.sentinel.rescue_image_id if is_rescue_vhd else None)
 
         fake_root_path = self._vmops._pathutils.get_root_vhd_path.return_value
         root_vhd_internal_size = mock_instance.root_gb * units.Gi
         get_size = self._vmops._vhdutils.get_internal_vhd_size_by_file_size
 
-        response = self._vmops._create_root_vhd(context=self.context,
-                                                instance=mock_instance)
+        response = self._vmops._create_root_vhd(
+            context=self.context,
+            instance=mock_instance,
+            rescue_image_id=rescue_image_id)
 
         self.assertEqual(fake_root_path, response)
+        mock_get_cached_image.assert_called_once_with(self.context,
+                                                      mock_instance,
+                                                      rescue_image_id)
         self._vmops._pathutils.get_root_vhd_path.assert_called_with(
-            mock_instance.name, vhd_format)
+            mock_instance.name, vhd_format, is_rescue_vhd)
 
         self._vmops._pathutils.copyfile.assert_called_once_with(
             fake_vhd_path, fake_root_path)
         get_size.assert_called_once_with(fake_vhd_path, root_vhd_internal_size)
-        self._vmops._vhdutils.resize_vhd.assert_called_once_with(
-            fake_root_path, root_vhd_internal_size, is_file_max_size=False)
+        if is_rescue_vhd:
+            self.assertFalse(self._vmops._vhdutils.resize_vhd.called)
+        else:
+            self._vmops._vhdutils.resize_vhd.assert_called_once_with(
+                fake_root_path, root_vhd_internal_size,
+                is_file_max_size=False)
 
     def test_create_root_vhd(self):
         self._test_create_root_vhd(vhd_format=constants.DISK_FORMAT_VHD)
@@ -240,6 +254,10 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
 
     def test_create_root_vhdx_use_cow_images_true(self):
         self._test_create_root_vhd_qcow(vhd_format=constants.DISK_FORMAT_VHDX)
+
+    def test_create_rescue_vhd(self):
+        self._test_create_root_vhd(vhd_format=constants.DISK_FORMAT_VHD,
+                                   is_rescue_vhd=True)
 
     def test_create_root_vhdx_size_less_than_internal(self):
         self._test_create_root_vhd_exception(
@@ -546,44 +564,63 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
     @mock.patch('nova.utils.execute')
     def _test_create_config_drive(self, mock_execute, mock_ConfigDriveBuilder,
                                   mock_InstanceMetadata, config_drive_format,
-                                  config_drive_cdrom, side_effect):
+                                  config_drive_cdrom, side_effect,
+                                  rescue=False):
         mock_instance = fake_instance.fake_instance_obj(self.context)
         self.flags(config_drive_format=config_drive_format)
         self.flags(config_drive_cdrom=config_drive_cdrom, group='hyperv')
         self.flags(config_drive_inject_password=True, group='hyperv')
-        self._vmops._pathutils.get_instance_dir.return_value = (
-            self.FAKE_DIR)
         mock_ConfigDriveBuilder().__enter__().make_drive.side_effect = [
             side_effect]
+
+        path_iso = os.path.join(self.FAKE_DIR, self.FAKE_CONFIG_DRIVE_ISO)
+        path_vhd = os.path.join(self.FAKE_DIR, self.FAKE_CONFIG_DRIVE_VHD)
+
+        def fake_get_configdrive_path(instance_name, disk_format,
+                                      rescue=False):
+            return (path_iso
+                    if disk_format == constants.DVD_FORMAT else path_vhd)
+
+        mock_get_configdrive_path = self._vmops._pathutils.get_configdrive_path
+        mock_get_configdrive_path.side_effect = fake_get_configdrive_path
+        expected_get_configdrive_path_calls = [mock.call(mock_instance.name,
+                                                         constants.DVD_FORMAT,
+                                                         rescue=rescue)]
+        if not config_drive_cdrom:
+            expected_call = mock.call(mock_instance.name,
+                                      constants.DISK_FORMAT_VHD,
+                                      rescue=rescue)
+            expected_get_configdrive_path_calls.append(expected_call)
 
         if config_drive_format != self.ISO9660:
             self.assertRaises(exception.ConfigDriveUnsupportedFormat,
                               self._vmops._create_config_drive,
                               mock_instance, [mock.sentinel.FILE],
                               mock.sentinel.PASSWORD,
-                              mock.sentinel.NET_INFO)
+                              mock.sentinel.NET_INFO,
+                              rescue)
         elif side_effect is processutils.ProcessExecutionError:
             self.assertRaises(processutils.ProcessExecutionError,
                               self._vmops._create_config_drive,
                               mock_instance, [mock.sentinel.FILE],
                               mock.sentinel.PASSWORD,
-                              mock.sentinel.NET_INFO)
+                              mock.sentinel.NET_INFO,
+                              rescue)
         else:
             path = self._vmops._create_config_drive(mock_instance,
                                                     [mock.sentinel.FILE],
                                                     mock.sentinel.PASSWORD,
-                                                    mock.sentinel.NET_INFO)
+                                                    mock.sentinel.NET_INFO,
+                                                    rescue)
             mock_InstanceMetadata.assert_called_once_with(
                 mock_instance, content=[mock.sentinel.FILE],
                 extra_md={'admin_pass': mock.sentinel.PASSWORD},
                 network_info=mock.sentinel.NET_INFO)
-            self._vmops._pathutils.get_instance_dir.assert_called_once_with(
-                mock_instance.name)
+            mock_get_configdrive_path.assert_has_calls(
+                expected_get_configdrive_path_calls)
             mock_ConfigDriveBuilder.assert_called_with(
                 instance_md=mock_InstanceMetadata())
             mock_make_drive = mock_ConfigDriveBuilder().__enter__().make_drive
-            path_iso = os.path.join(self.FAKE_DIR, self.FAKE_CONFIG_DRIVE_ISO)
-            path_vhd = os.path.join(self.FAKE_DIR, self.FAKE_CONFIG_DRIVE_VHD)
             mock_make_drive.assert_called_once_with(path_iso)
             if not CONF.hyperv.config_drive_cdrom:
                 expected = path_vhd
@@ -607,6 +644,12 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
         self._test_create_config_drive(config_drive_format=self.ISO9660,
                                        config_drive_cdrom=False,
                                        side_effect=None)
+
+    def test_create_rescue_config_drive_vhd(self):
+        self._test_create_config_drive(config_drive_format=self.ISO9660,
+                                       config_drive_cdrom=False,
+                                       side_effect=None,
+                                       rescue=True)
 
     def test_create_config_drive_other_drive_format(self):
         self._test_create_config_drive(config_drive_format=mock.sentinel.OTHER,
@@ -645,6 +688,25 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
         mock_attach_drive.assert_called_once_with(
             instance.name, self._FAKE_CONFIGDRIVE_PATH,
             1, 0, constants.CTRL_TYPE_SCSI, constants.DISK)
+
+    def test_detach_config_drive(self):
+        is_rescue_configdrive = True
+        mock_lookup_configdrive = (
+            self._vmops._pathutils.lookup_configdrive_path)
+        mock_lookup_configdrive.return_value = mock.sentinel.configdrive_path
+
+        self._vmops._detach_config_drive(mock.sentinel.instance_name,
+                                         rescue=is_rescue_configdrive,
+                                         delete=True)
+
+        mock_lookup_configdrive.assert_called_once_with(
+            mock.sentinel.instance_name,
+            rescue=is_rescue_configdrive)
+        self._vmops._vmutils.detach_vm_disk.assert_called_once_with(
+            mock.sentinel.instance_name, mock.sentinel.configdrive_path,
+            is_physical=False)
+        self._vmops._pathutils.remove.assert_called_once_with(
+            mock.sentinel.configdrive_path)
 
     def test_delete_disk_files(self):
         mock_instance = fake_instance.fake_instance_obj(self.context)
@@ -1073,3 +1135,162 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
         self.assertRaises(exception.InterfaceDetachFailed,
                           self._vmops.detach_interface,
                           mock.MagicMock(), mock.sentinel.fake_vif)
+
+    @mock.patch('nova.virt.configdrive.required_by')
+    @mock.patch.object(vmops.VMOps, '_create_root_vhd')
+    @mock.patch.object(vmops.VMOps, 'get_image_vm_generation')
+    @mock.patch.object(vmops.VMOps, '_attach_drive')
+    @mock.patch.object(vmops.VMOps, '_create_config_drive')
+    @mock.patch.object(vmops.VMOps, 'attach_config_drive')
+    @mock.patch.object(vmops.VMOps, '_detach_config_drive')
+    @mock.patch.object(vmops.VMOps, 'power_on')
+    def test_rescue_instance(self, mock_power_on,
+                             mock_detach_config_drive,
+                             mock_attach_config_drive,
+                             mock_create_config_drive,
+                             mock_attach_drive,
+                             mock_get_image_vm_gen,
+                             mock_create_root_vhd,
+                             mock_configdrive_required):
+        mock_image_meta = mock.MagicMock()
+        mock_vm_gen = constants.VM_GEN_2
+        mock_instance = fake_instance.fake_instance_obj(self.context)
+
+        mock_configdrive_required.return_value = True
+        mock_create_root_vhd.return_value = mock.sentinel.rescue_vhd_path
+        mock_get_image_vm_gen.return_value = mock_vm_gen
+        self._vmops._vmutils.get_vm_generation.return_value = mock_vm_gen
+        self._vmops._pathutils.lookup_root_vhd_path.return_value = (
+            mock.sentinel.root_vhd_path)
+        mock_create_config_drive.return_value = (
+            mock.sentinel.rescue_configdrive_path)
+
+        self._vmops.rescue_instance(self.context,
+                                    mock_instance,
+                                    mock.sentinel.network_info,
+                                    mock_image_meta,
+                                    mock.sentinel.rescue_password)
+
+        mock_get_image_vm_gen.assert_called_once_with(
+            mock_instance.uuid, mock.sentinel.rescue_vhd_path,
+            mock_image_meta)
+        self._vmops._vmutils.detach_vm_disk.assert_called_once_with(
+            mock_instance.name, mock.sentinel.root_vhd_path,
+            is_physical=False)
+        mock_attach_drive.assert_called_once_with(
+            mock_instance.name, mock.sentinel.rescue_vhd_path, 0,
+            self._vmops._ROOT_DISK_CTRL_ADDR,
+            vmops.VM_GENERATIONS_CONTROLLER_TYPES[mock_vm_gen])
+        self._vmops._vmutils.attach_scsi_drive.assert_called_once_with(
+            mock_instance.name, mock.sentinel.root_vhd_path,
+            drive_type=constants.DISK)
+        mock_detach_config_drive.assert_called_once_with(mock_instance.name)
+        mock_create_config_drive.assert_called_once_with(
+            mock_instance,
+            injected_files=None,
+            admin_password=mock.sentinel.rescue_password,
+            network_info=mock.sentinel.network_info,
+            rescue=True)
+        mock_attach_config_drive.assert_called_once_with(
+            mock_instance, mock.sentinel.rescue_configdrive_path,
+            mock_vm_gen)
+
+    @mock.patch.object(vmops.VMOps, '_create_root_vhd')
+    @mock.patch.object(vmops.VMOps, 'get_image_vm_generation')
+    @mock.patch.object(vmops.VMOps, 'unrescue_instance')
+    def _test_rescue_instance_exception(self, mock_unrescue,
+                                        mock_get_image_vm_gen,
+                                        mock_create_root_vhd,
+                                        wrong_vm_gen=False,
+                                        boot_from_volume=False,
+                                        expected_exc=None):
+        mock_vm_gen = constants.VM_GEN_1
+        image_vm_gen = (mock_vm_gen
+                        if not wrong_vm_gen else constants.VM_GEN_2)
+        mock_image_meta = mock.MagicMock()
+
+        mock_instance = fake_instance.fake_instance_obj(self.context)
+        mock_get_image_vm_gen.return_value = image_vm_gen
+        self._vmops._vmutils.get_vm_generation.return_value = mock_vm_gen
+        self._vmops._pathutils.lookup_root_vhd_path.return_value = (
+            mock.sentinel.root_vhd_path if not boot_from_volume else None)
+
+        self.assertRaises(expected_exc,
+                          self._vmops.rescue_instance,
+                          self.context, mock_instance,
+                          mock.sentinel.network_info,
+                          mock_image_meta,
+                          mock.sentinel.rescue_password)
+        mock_unrescue.assert_called_once_with(mock_instance)
+
+    def test_rescue_instance_wrong_vm_gen(self):
+        # Test the case when the rescue image requires a different
+        # vm generation than the actual rescued instance.
+        self._test_rescue_instance_exception(
+            wrong_vm_gen=True,
+            expected_exc=exception.ImageUnacceptable)
+
+    def test_rescue_instance_boot_from_volume(self):
+        # Rescuing instances booted from volume is not supported.
+        self._test_rescue_instance_exception(
+            boot_from_volume=True,
+            expected_exc=exception.InstanceNotRescuable)
+
+    @mock.patch.object(fileutils, 'delete_if_exists')
+    @mock.patch.object(vmops.VMOps, '_attach_drive')
+    @mock.patch.object(vmops.VMOps, 'attach_config_drive')
+    @mock.patch.object(vmops.VMOps, '_detach_config_drive')
+    @mock.patch.object(vmops.VMOps, 'power_on')
+    @mock.patch.object(vmops.VMOps, 'power_off')
+    def test_unrescue_instance(self, mock_power_on, mock_power_off,
+                               mock_detach_config_drive,
+                               mock_attach_configdrive,
+                               mock_attach_drive,
+                               mock_delete_if_exists):
+        mock_instance = fake_instance.fake_instance_obj(self.context)
+        mock_vm_gen = constants.VM_GEN_2
+
+        self._vmops._vmutils.get_vm_generation.return_value = mock_vm_gen
+        self._vmops._vmutils.is_disk_attached.return_value = False
+        self._vmops._pathutils.lookup_root_vhd_path.side_effect = (
+            mock.sentinel.root_vhd_path, mock.sentinel.rescue_vhd_path)
+        self._vmops._pathutils.lookup_configdrive_path.return_value = (
+            mock.sentinel.configdrive_path)
+
+        self._vmops.unrescue_instance(mock_instance)
+
+        self._vmops._pathutils.lookup_root_vhd_path.assert_has_calls(
+            [mock.call(mock_instance.name),
+             mock.call(mock_instance.name, rescue=True)])
+        self._vmops._vmutils.detach_vm_disk.assert_has_calls(
+            [mock.call(mock_instance.name,
+                       mock.sentinel.root_vhd_path,
+                       is_physical=False),
+             mock.call(mock_instance.name,
+                       mock.sentinel.rescue_vhd_path,
+                       is_physical=False)])
+        mock_attach_drive.assert_called_once_with(
+            mock_instance.name, mock.sentinel.root_vhd_path, 0,
+            self._vmops._ROOT_DISK_CTRL_ADDR,
+            vmops.VM_GENERATIONS_CONTROLLER_TYPES[mock_vm_gen])
+        mock_detach_config_drive.assert_called_once_with(mock_instance.name,
+                                                         rescue=True,
+                                                         delete=True)
+        mock_delete_if_exists.assert_called_once_with(
+            mock.sentinel.rescue_vhd_path)
+        self._vmops._vmutils.is_disk_attached.assert_called_once_with(
+            mock.sentinel.configdrive_path,
+            is_physical=False)
+        mock_attach_configdrive.assert_called_once_with(
+            mock_instance, mock.sentinel.configdrive_path, mock_vm_gen)
+        mock_power_on.assert_called_once_with(mock_instance)
+
+    @mock.patch.object(vmops.VMOps, 'power_off')
+    def test_unrescue_instance_missing_root_image(self, mock_power_off):
+        mock_instance = fake_instance.fake_instance_obj(self.context)
+        mock_instance.vm_state = vm_states.RESCUED
+        self._vmops._pathutils.lookup_root_vhd_path.return_value = None
+
+        self.assertRaises(exception.InstanceNotRescuable,
+                          self._vmops.unrescue_instance,
+                          mock_instance)

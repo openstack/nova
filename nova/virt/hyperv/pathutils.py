@@ -80,22 +80,26 @@ class PathUtils(pathutils.PathUtils):
         return self._get_instances_sub_dir(instance_name, remote_server,
                                            create_dir, remove_dir)
 
-    def _lookup_vhd_path(self, instance_name, vhd_path_func):
+    def _lookup_vhd_path(self, instance_name, vhd_path_func,
+                         *args, **kwargs):
         vhd_path = None
         for format_ext in ['vhd', 'vhdx']:
-            test_path = vhd_path_func(instance_name, format_ext)
+            test_path = vhd_path_func(instance_name, format_ext,
+                                      *args, **kwargs)
             if self.exists(test_path):
                 vhd_path = test_path
                 break
         return vhd_path
 
-    def lookup_root_vhd_path(self, instance_name):
-        return self._lookup_vhd_path(instance_name, self.get_root_vhd_path)
+    def lookup_root_vhd_path(self, instance_name, rescue=False):
+        return self._lookup_vhd_path(instance_name, self.get_root_vhd_path,
+                                     rescue)
 
-    def lookup_configdrive_path(self, instance_name):
+    def lookup_configdrive_path(self, instance_name, rescue=False):
         configdrive_path = None
         for format_ext in constants.DISK_FORMAT_MAP:
-            test_path = self.get_configdrive_path(instance_name, format_ext)
+            test_path = self.get_configdrive_path(instance_name, format_ext,
+                                                  rescue=rescue)
             if self.exists(test_path):
                 configdrive_path = test_path
                 break
@@ -105,14 +109,22 @@ class PathUtils(pathutils.PathUtils):
         return self._lookup_vhd_path(instance_name,
                                      self.get_ephemeral_vhd_path)
 
-    def get_root_vhd_path(self, instance_name, format_ext):
+    def get_root_vhd_path(self, instance_name, format_ext, rescue=False):
         instance_path = self.get_instance_dir(instance_name)
-        return os.path.join(instance_path, 'root.' + format_ext.lower())
+        image_name = 'root'
+        if rescue:
+            image_name += '-rescue'
+        return os.path.join(instance_path,
+                            image_name + '.' + format_ext.lower())
 
     def get_configdrive_path(self, instance_name, format_ext,
-                             remote_server=None):
+                             remote_server=None, rescue=False):
         instance_path = self.get_instance_dir(instance_name, remote_server)
-        return os.path.join(instance_path, 'configdrive.' + format_ext.lower())
+        configdrive_image_name = 'configdrive'
+        if rescue:
+            configdrive_image_name += '-rescue'
+        return os.path.join(instance_path,
+                            configdrive_image_name + '.' + format_ext.lower())
 
     def get_ephemeral_vhd_path(self, instance_name, format_ext):
         instance_path = self.get_instance_dir(instance_name)

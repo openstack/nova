@@ -97,7 +97,8 @@ class ImageCacheTestCase(test_base.HyperVBaseTestCase):
         mock_internal_vhd_size.assert_called_once_with(
             mock.sentinel.vhd_path, self.FAKE_VHD_SIZE_GB * units.Gi)
 
-    def _prepare_get_cached_image(self, path_exists, use_cow):
+    def _prepare_get_cached_image(self, path_exists=False, use_cow=False,
+                                  rescue_image_id=None):
         self.instance.image_ref = self.FAKE_IMAGE_REF
         self.imagecache._pathutils.get_base_vhd_dir.return_value = (
             self.FAKE_BASE_DIR)
@@ -107,8 +108,9 @@ class ImageCacheTestCase(test_base.HyperVBaseTestCase):
 
         CONF.set_override('use_cow_images', use_cow)
 
+        image_file_name = rescue_image_id or self.FAKE_IMAGE_REF
         expected_path = os.path.join(self.FAKE_BASE_DIR,
-                                     self.FAKE_IMAGE_REF)
+                                     image_file_name)
         expected_vhd_path = "%s.%s" % (expected_path,
                                        constants.DISK_FORMAT_VHD.lower())
         return (expected_path, expected_vhd_path)
@@ -157,3 +159,24 @@ class ImageCacheTestCase(test_base.HyperVBaseTestCase):
         self.assertEqual(expected_resized_vhd_path, result)
 
         mock_resize.assert_called_once_with(self.instance, expected_vhd_path)
+
+    @mock.patch.object(imagecache.images, 'fetch')
+    def test_cache_rescue_image_bigger_than_flavor(self, mock_fetch):
+        fake_rescue_image_id = 'fake_rescue_image_id'
+
+        self.imagecache._vhdutils.get_vhd_info.return_value = {
+            'VirtualSize': self.instance.root_gb + 1}
+        (expected_path,
+         expected_vhd_path) = self._prepare_get_cached_image(
+            rescue_image_id=fake_rescue_image_id)
+
+        self.assertRaises(exception.ImageUnacceptable,
+                          self.imagecache.get_cached_image,
+                          self.context, self.instance,
+                          fake_rescue_image_id)
+
+        mock_fetch.assert_called_once_with(self.context,
+                                           fake_rescue_image_id,
+                                           expected_path)
+        self.imagecache._vhdutils.get_vhd_info.assert_called_once_with(
+            expected_vhd_path)
