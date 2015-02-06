@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
+
 from nova.api.validation import parameter_types
 
 common_quota = {
@@ -21,28 +23,32 @@ common_quota = {
     'minimum': -1
 }
 
+quota_resources = {
+    'instances': common_quota,
+    'cores': common_quota,
+    'ram': common_quota,
+    'floating_ips': common_quota,
+    'fixed_ips': common_quota,
+    'metadata_items': common_quota,
+    'key_pairs': common_quota,
+    'security_groups': common_quota,
+    'security_group_rules': common_quota,
+    'injected_files': common_quota,
+    'injected_file_content_bytes': common_quota,
+    'injected_file_path_bytes': common_quota,
+    'server_groups': common_quota,
+    'server_group_members': common_quota,
+}
+
+update_quota_set = copy.deepcopy(quota_resources)
+update_quota_set.update({'force': parameter_types.boolean})
+
 update = {
     'type': 'object',
     'properties': {
         'type': 'object',
         'quota_set': {
-            'properties': {
-                'instances': common_quota,
-                'cores': common_quota,
-                'ram': common_quota,
-                'floating_ips': common_quota,
-                'fixed_ips': common_quota,
-                'metadata_items': common_quota,
-                'key_pairs': common_quota,
-                'security_groups': common_quota,
-                'security_group_rules': common_quota,
-                'injected_files': common_quota,
-                'injected_file_content_bytes': common_quota,
-                'injected_file_path_bytes': common_quota,
-                'server_groups': common_quota,
-                'server_group_members': common_quota,
-                'force': parameter_types.boolean,
-            },
+            'properties': update_quota_set,
             'additionalProperties': False,
         },
     },

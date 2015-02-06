@@ -20,6 +20,7 @@ from nova.api.openstack.compute import plugins
 from nova.api.openstack.compute.plugins.v3 import quota_classes \
        as quota_classes_v21
 from nova.api.openstack import extensions
+from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 
@@ -36,6 +37,7 @@ def quota_set(class_name):
 
 
 class QuotaClassSetsTestV21(test.TestCase):
+    validation_error = exception.ValidationError
 
     def setUp(self):
         super(QuotaClassSetsTestV21, self).setUp()
@@ -102,7 +104,8 @@ class QuotaClassSetsTestV21(test.TestCase):
                                     'security_group_rules': 20,
                                     'key_pairs': 100}}
 
-        res_dict = self.controller.update(self.req_admin, 'test_class', body)
+        res_dict = self.controller.update(self.req_admin, 'test_class',
+                                          body=body)
 
         self.assertEqual(res_dict, body)
 
@@ -118,29 +121,36 @@ class QuotaClassSetsTestV21(test.TestCase):
                                     }}
 
         self.assertRaises(webob.exc.HTTPForbidden, self.controller.update,
-                          self.req, 'test_class', body)
+                          self.req, 'test_class', body=body)
 
     def test_quotas_update_with_empty_body(self):
         body = {}
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
-                          self.req_admin, 'test_class', body)
+        self.assertRaises(self.validation_error, self.controller.update,
+                          self.req_admin, 'test_class', body=body)
 
     def test_quotas_update_with_non_integer(self):
         body = {'quota_class_set': {'instances': "abc"}}
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
-                          self.req_admin, 'test_class', body)
+        self.assertRaises(self.validation_error, self.controller.update,
+                          self.req_admin, 'test_class', body=body)
 
         body = {'quota_class_set': {'instances': 50.5}}
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
-                          self.req_admin, 'test_class', body)
+        self.assertRaises(self.validation_error, self.controller.update,
+                          self.req_admin, 'test_class', body=body)
 
         body = {'quota_class_set': {
                 'instances': u'\u30aa\u30fc\u30d7\u30f3'}}
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
-                          self.req_admin, 'test_class', body)
+        self.assertRaises(self.validation_error, self.controller.update,
+                          self.req_admin, 'test_class', body=body)
+
+    def test_quotas_update_with_unsupported_quota_class(self):
+        body = {'quota_class_set': {'instances': 50, 'cores': 50,
+                                    'ram': 51200, 'unsupported': 12}}
+        self.assertRaises(self.validation_error, self.controller.update,
+                          self.req_admin, 'test_class', body=body)
 
 
 class QuotaClassSetsTestV2(QuotaClassSetsTestV21):
+    validation_error = webob.exc.HTTPBadRequest
 
     def _setup(self):
         ext_mgr = extensions.ExtensionManager()
