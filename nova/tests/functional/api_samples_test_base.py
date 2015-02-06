@@ -271,25 +271,30 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             'int': '[0-9]+',
         }
 
-    def _get_response(self, url, method, body=None, strip_version=False):
+    def _get_response(self, url, method, body=None, strip_version=False,
+                      api_version=None):
         headers = {}
         headers['Content-Type'] = 'application/' + self.ctype
         headers['Accept'] = 'application/' + self.ctype
+        if api_version:
+            headers['X-OpenStack-Compute-API-Version'] = api_version
         return self.api.api_request(url, body=body, method=method,
                 headers=headers, strip_version=strip_version)
 
-    def _do_get(self, url, strip_version=False):
-        return self._get_response(url, 'GET', strip_version=strip_version)
+    def _do_get(self, url, strip_version=False, api_version=None):
+        return self._get_response(url, 'GET', strip_version=strip_version,
+                                  api_version=api_version)
 
-    def _do_post(self, url, name, subs, method='POST'):
+    def _do_post(self, url, name, subs, method='POST', api_version=None):
         body = self._read_template(name) % subs
         sample = self._get_sample(name)
         if self.generate_samples and not os.path.exists(sample):
                 self._write_sample(name, body)
-        return self._get_response(url, method, body)
+        return self._get_response(url, method, body, api_version=api_version)
 
-    def _do_put(self, url, name, subs):
-        return self._do_post(url, name, subs, method='PUT')
+    def _do_put(self, url, name, subs, api_version=None):
+        return self._do_post(url, name, subs, method='PUT',
+                             api_version=api_version)
 
-    def _do_delete(self, url):
-        return self._get_response(url, 'DELETE')
+    def _do_delete(self, url, api_version=None):
+        return self._get_response(url, 'DELETE', api_version=api_version)
