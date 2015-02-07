@@ -5834,7 +5834,12 @@ class LibvirtDriver(driver.ComputeDriver):
         # if this fails we pass the exception up the stack so we can catch
         # failures here earlier
         if not shared_storage:
-            utils.execute('ssh', dest, 'mkdir', '-p', inst_base)
+            try:
+                utils.execute('ssh', dest, 'mkdir', '-p', inst_base)
+            except processutils.ProcessExecutionError as e:
+                reason = _("not able to execute ssh command: %s") % e
+                raise exception.InstanceFaultRollback(
+                    exception.ResizeError(reason=reason))
 
         self.power_off(instance, timeout, retry_interval)
 
