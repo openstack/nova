@@ -12021,7 +12021,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
 
         self.stubs.Set(utils, 'execute', fake_execute)
 
-        expected_exc = exception.MigrationPreCheckError
+        expected_exc = exception.InstanceFaultRollback
         self._test_migrate_disk_and_power_off_resize_check(expected_exc)
 
     def test_migrate_disk_and_power_off_resize_cannot_ssh(self):
