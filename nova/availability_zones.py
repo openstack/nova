@@ -140,8 +140,8 @@ def get_availability_zones(context, get_only_available=False,
         :param with_hosts: whether to return hosts part of the AZs
         :type with_hosts: bool
     """
-    enabled_services = objects.ServiceList.get_all(context, disabled=False)
-    enabled_services = set_availability_zones(context, enabled_services)
+    enabled_services = objects.ServiceList.get_all(context, disabled=False,
+                                                   set_zones=True)
 
     available_zones = []
     for (zone, host) in [(service['availability_zone'], service['host'])
@@ -156,8 +156,8 @@ def get_availability_zones(context, get_only_available=False,
             available_zones = list(_available_zones.items())
 
     if not get_only_available:
-        disabled_services = objects.ServiceList.get_all(context, disabled=True)
-        disabled_services = set_availability_zones(context, disabled_services)
+        disabled_services = objects.ServiceList.get_all(context, disabled=True,
+                                                        set_zones=True)
         not_available_zones = []
         azs = available_zones if not with_hosts else dict(available_zones)
         zones = [(service['availability_zone'], service['host'])
