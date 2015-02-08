@@ -318,11 +318,23 @@ class VMwareVMOps(object):
             extra_specs.storage_policy = storage_policy
         return extra_specs
 
+    def _get_esx_host_and_cookies(self, datastore, dc_name, file_path):
+        hosts = datastore.get_connected_hosts(self._session)
+        host = ds_obj.Datastore.choose_host(hosts)
+        host_name = self._session._call_method(vutil, 'get_object_property',
+                                               host, 'name')
+        url = ds_obj.DatastoreURL('https', host_name, file_path, dc_name,
+                                  datastore.name)
+        cookie_header = url.get_transfer_ticket(self._session, 'PUT')
+        name, value = cookie_header.split('=')
+        # TODO(rgerganov): this is a hack to emulate cookiejar until we fix
+        # oslo.vmware to accept plain http headers
+        Cookie = collections.namedtuple('Cookie', ['name', 'value'])
+        return host_name, [Cookie(name, value)]
+
     def _fetch_image_as_file(self, context, vi, image_ds_loc):
         """Download image as an individual file to host via HTTP PUT."""
         session = self._session
-        session_vim = session.vim
-        cookies = session_vim.client.options.transport.cookiejar
 
         LOG.debug("Downloading image file data %(image_id)s to "
                   "%(file_path)s on the data store "
@@ -332,12 +344,24 @@ class VMwareVMOps(object):
                    'datastore_name': vi.datastore.name},
                   instance=vi.instance)
 
+        # try to get esx cookie to upload
+        try:
+            dc_name = 'ha-datacenter'
+            host, cookies = self._get_esx_host_and_cookies(vi.datastore,
+                                                        dc_name,
+                                                        image_ds_loc.rel_path)
+        except Exception as e:
+            LOG.warning(_LW("Get esx cookies failed: %s"), e)
+            dc_name = vi.dc_info.name
+            host = self._session._host
+            cookies = session.vim.client.options.transport.cookiejar
+
         images.fetch_image(
             context,
             vi.instance,
-            session._host,
+            host,
             session._port,
-            vi.dc_info.name,
+            dc_name,
             vi.datastore.name,
             image_ds_loc.rel_path,
             cookies=cookies)
