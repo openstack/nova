@@ -103,7 +103,8 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
                            'data': {'volume': 'vm-10',
                                     'volume_id': 'volume-fake-id'}}
         instance = mock.MagicMock(name='fake-name', vm_state=vm_states.ACTIVE)
-        vmdk_info = vm_util.VmdkInfo('fake-path', 'ide', 'preallocated', 1024)
+        vmdk_info = vm_util.VmdkInfo('fake-path', 'ide', 'preallocated', 1024,
+                                     'fake-device')
         with contextlib.nested(
             mock.patch.object(vm_util, 'get_vm_ref'),
             mock.patch.object(self._volumeops, '_get_volume_ref'),
@@ -126,7 +127,8 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
                            'data': {'volume': 'vm-10',
                                     'volume_id': 'volume-fake-id'}}
         instance = mock.MagicMock(name='fake-name', vm_state=vm_states.ACTIVE)
-        vmdk_info = vm_util.VmdkInfo('fake-path', 'ide', 'preallocated', 1024)
+        vmdk_info = vm_util.VmdkInfo('fake-path', 'ide', 'preallocated', 1024,
+                                     'fake-device')
         with contextlib.nested(
             mock.patch.object(vm_util, 'get_vm_ref',
                               return_value=mock.sentinel.vm_ref),

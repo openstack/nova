@@ -124,7 +124,8 @@ VNC_CONFIG_KEY = 'config.extraConfig["RemoteDisplay.vnc.port"]'
 
 VmdkInfo = collections.namedtuple('VmdkInfo', ['path', 'adapter_type',
                                                'disk_type',
-                                               'capacity_in_bytes'])
+                                               'capacity_in_bytes',
+                                               'device'])
 
 
 def _iface_id_option_value(client_factory, iface_id, port_index):
@@ -488,6 +489,7 @@ def get_vmdk_info(session, vm_ref, uuid=None):
     root_device = None
     if uuid:
         root_disk = '%s.vmdk' % uuid
+    vmdk_device = None
 
     adapter_type_dict = {}
     for device in hardware_devices:
@@ -520,7 +522,7 @@ def get_vmdk_info(session, vm_ref, uuid=None):
 
     adapter_type = adapter_type_dict.get(vmdk_controller_key)
     return VmdkInfo(vmdk_file_path, adapter_type, disk_type,
-                    capacity_in_bytes)
+                    capacity_in_bytes, vmdk_device)
 
 
 def _find_controller_slot(controller_keys, taken, max_unit_number):
