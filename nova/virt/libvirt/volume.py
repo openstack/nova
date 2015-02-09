@@ -634,7 +634,7 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
                                 check_exit_code=[0, 1, 21, 255])
 
     def _rescan_multipath(self):
-        self._run_multipath('-r', check_exit_code=[0, 1, 21])
+        self._run_multipath(['-r'], check_exit_code=[0, 1, 21])
 
     def _get_host_device(self, iscsi_properties):
         return ("/dev/disk/by-path/ip-%s-iscsi-%s-lun-%s" %

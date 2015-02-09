@@ -240,6 +240,12 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
                 }
         }
 
+    def test_rescan_multipath(self):
+        libvirt_driver = volume.LibvirtISCSIVolumeDriver(self.fake_conn)
+        libvirt_driver._rescan_multipath()
+        expected_multipath_cmd = ('multipath', '-r')
+        self.assertIn(expected_multipath_cmd, self.executes)
+
     def test_libvirt_iscsi_driver(self):
         # NOTE(vish) exists is to make driver assume connecting worked
         self.stubs.Set(os.path, 'exists', lambda x: True)
