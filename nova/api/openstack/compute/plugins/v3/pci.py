@@ -13,8 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
-from oslo_serialization import jsonutils
 import webob.exc
 
 from nova.api.openstack import extensions
@@ -63,8 +61,12 @@ class PciServerController(wsgi.Controller):
 
 class PciHypervisorController(wsgi.Controller):
     def _extend_hypervisor(self, hypervisor, compute_node):
-        hypervisor['%s:pci_stats' % Pci.alias] = jsonutils.loads(
-            compute_node['pci_stats'])
+        if compute_node.pci_device_pools is not None:
+            pci_pools = [pci_pool.to_dict()
+                         for pci_pool in compute_node.pci_device_pools]
+        else:
+            pci_pools = []
+        hypervisor['%s:pci_stats' % Pci.alias] = pci_pools
 
     @wsgi.extends
     def show(self, req, resp_obj, id):

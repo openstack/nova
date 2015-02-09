@@ -16,8 +16,6 @@
 
 import copy
 
-from oslo_serialization import jsonutils
-
 from nova import exception
 from nova.i18n import _LE
 from nova.openstack.common import log as logging
@@ -56,7 +54,9 @@ class PciDeviceStats(object):
 
     def __init__(self, stats=None):
         super(PciDeviceStats, self).__init__()
-        self.pools = jsonutils.loads(stats) if stats else []
+        # NOTE(sbauza): Stats are a PCIDevicePoolList object
+        self.pools = [pci_pool.to_dict()
+                      for pci_pool in stats] if stats else []
         self.pools.sort(self.pool_cmp)
 
     def _equal_properties(self, dev, entry, matching_keys):
