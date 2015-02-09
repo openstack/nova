@@ -1910,9 +1910,7 @@ class ComputeManager(manager.Manager):
                 LOG.exception(_LE('Instance failed to spawn'),
                               instance=instance)
 
-        current_power_state = self._get_power_state(context, instance)
-
-        instance.power_state = current_power_state
+        instance.power_state = self._get_power_state(context, instance)
         instance.vm_state = vm_states.ACTIVE
         instance.task_state = None
         instance.launched_at = timeutils.utcnow()
@@ -2638,8 +2636,7 @@ class ComputeManager(manager.Manager):
             self._notify_about_instance_usage(context, instance,
                                               "power_off.start")
             self._power_off_instance(context, instance, clean_shutdown)
-            current_power_state = self._get_power_state(context, instance)
-            instance.power_state = current_power_state
+            instance.power_state = self._get_power_state(context, instance)
             instance.vm_state = vm_states.STOPPED
             instance.task_state = None
             instance.save(expected_task_state=expected_task_state)
@@ -2667,8 +2664,7 @@ class ComputeManager(manager.Manager):
         """Starting an instance on this host."""
         self._notify_about_instance_usage(context, instance, "power_on.start")
         self._power_on(context, instance)
-        current_power_state = self._get_power_state(context, instance)
-        instance.power_state = current_power_state
+        instance.power_state = self._get_power_state(context, instance)
         instance.vm_state = vm_states.ACTIVE
         instance.task_state = None
         instance.save(expected_task_state=task_states.POWERING_ON)
@@ -2693,8 +2689,7 @@ class ComputeManager(manager.Manager):
                 # Fallback to just powering off the instance if the
                 # hypervisor doesn't implement the soft_delete method
                 self.driver.power_off(instance)
-            current_power_state = self._get_power_state(context, instance)
-            instance.power_state = current_power_state
+            instance.power_state = self._get_power_state(context, instance)
             instance.vm_state = vm_states.SOFT_DELETED
             instance.task_state = None
             instance.save(expected_task_state=[task_states.SOFT_DELETING])
@@ -2718,8 +2713,7 @@ class ComputeManager(manager.Manager):
             # Fallback to just powering on the instance if the hypervisor
             # doesn't implement the restore method
             self._power_on(context, instance)
-        current_power_state = self._get_power_state(context, instance)
-        instance.power_state = current_power_state
+        instance.power_state = self._get_power_state(context, instance)
         instance.vm_state = vm_states.ACTIVE
         instance.task_state = None
         instance.save(expected_task_state=task_states.RESTORING)
@@ -2973,9 +2967,7 @@ class ComputeManager(manager.Manager):
 
         self._notify_about_instance_usage(context, instance, "reboot.start")
 
-        current_power_state = self._get_power_state(context, instance)
-
-        instance.power_state = current_power_state
+        instance.power_state = self._get_power_state(context, instance)
         instance.save(expected_task_state=expected_states)
 
         if instance['power_state'] != power_state.RUNNING:
@@ -3100,9 +3092,8 @@ class ComputeManager(manager.Manager):
                            expected_task_state):
         context = context.elevated()
 
-        current_power_state = self._get_power_state(context, instance)
+        instance.power_state = self._get_power_state(context, instance)
         try:
-            instance.power_state = current_power_state
             instance.save()
 
             LOG.audit(_('instance snapshotting'), context=context,
@@ -3358,10 +3349,9 @@ class ComputeManager(manager.Manager):
         self.conductor_api.notify_usage_exists(context, instance,
                                                current_period=True)
 
-        current_power_state = self._get_power_state(context, instance)
         instance.vm_state = vm_states.RESCUED
         instance.task_state = None
-        instance.power_state = current_power_state
+        instance.power_state = self._get_power_state(context, instance)
         instance.launched_at = timeutils.utcnow()
         instance.save(expected_task_state=task_states.RESCUING)
 
@@ -3385,10 +3375,9 @@ class ComputeManager(manager.Manager):
             self.driver.unrescue(instance,
                                  network_info)
 
-        current_power_state = self._get_power_state(context, instance)
         instance.vm_state = vm_states.ACTIVE
         instance.task_state = None
-        instance.power_state = current_power_state
+        instance.power_state = self._get_power_state(context, instance)
         instance.save(expected_task_state=task_states.UNRESCUING)
 
         self._notify_about_instance_usage(context,
@@ -4054,8 +4043,7 @@ class ComputeManager(manager.Manager):
         LOG.audit(_('Pausing'), context=context, instance=instance)
         self._notify_about_instance_usage(context, instance, 'pause.start')
         self.driver.pause(instance)
-        current_power_state = self._get_power_state(context, instance)
-        instance.power_state = current_power_state
+        instance.power_state = self._get_power_state(context, instance)
         instance.vm_state = vm_states.PAUSED
         instance.task_state = None
         instance.save(expected_task_state=task_states.PAUSING)
@@ -4071,8 +4059,7 @@ class ComputeManager(manager.Manager):
         LOG.audit(_('Unpausing'), context=context, instance=instance)
         self._notify_about_instance_usage(context, instance, 'unpause.start')
         self.driver.unpause(instance)
-        current_power_state = self._get_power_state(context, instance)
-        instance.power_state = current_power_state
+        instance.power_state = self._get_power_state(context, instance)
         instance.vm_state = vm_states.ACTIVE
         instance.task_state = None
         instance.save(expected_task_state=task_states.UNPAUSING)
@@ -4149,8 +4136,7 @@ class ComputeManager(manager.Manager):
         with self._error_out_instance_on_exception(context, instance,
              instance_state=instance.vm_state):
             self.driver.suspend(instance)
-        current_power_state = self._get_power_state(context, instance)
-        instance.power_state = current_power_state
+        instance.power_state = self._get_power_state(context, instance)
         instance.vm_state = vm_states.SUSPENDED
         instance.task_state = None
         instance.save(expected_task_state=task_states.SUSPENDING)
@@ -4219,7 +4205,6 @@ class ComputeManager(manager.Manager):
             instance.save(expected_task_state=expected_state)
 
         self._power_off_instance(context, instance, clean_shutdown)
-        current_power_state = self._get_power_state(context, instance)
         self.driver.snapshot(context, instance, image_id, update_task_state)
 
         instance.system_metadata['shelved_at'] = timeutils.strtime()
@@ -4229,7 +4214,7 @@ class ComputeManager(manager.Manager):
         instance.task_state = None
         if CONF.shelved_offload_time == 0:
             instance.task_state = task_states.SHELVING_OFFLOADING
-        instance.power_state = current_power_state
+        instance.power_state = self._get_power_state(context, instance)
         instance.save(expected_task_state=[
                 task_states.SHELVING,
                 task_states.SHELVING_IMAGE_UPLOADING])
