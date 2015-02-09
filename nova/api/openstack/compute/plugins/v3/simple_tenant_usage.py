@@ -84,7 +84,7 @@ class SimpleTenantUsageController(wsgi.Controller):
         """
         try:
             return instance.get_flavor()
-        except KeyError:
+        except exception.NotFound:
             if not instance.deleted:
                 # Only support the fallback mechanism for deleted instances
                 # that would have been skipped by migration #153
