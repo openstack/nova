@@ -8105,6 +8105,18 @@ class LibvirtConnTestCase(test.TestCase):
         ip = drvr.get_host_ip_addr()
         self.assertEqual(ip, CONF.my_ip)
 
+    @mock.patch.object(libvirt_driver.LOG, 'warn')
+    @mock.patch('nova.compute.utils.get_machine_ips')
+    def test_get_host_ip_addr_failure(self, mock_ips, mock_log):
+        mock_ips.return_value = ['8.8.8.8', '75.75.75.75']
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        drvr.get_host_ip_addr()
+        mock_log.assert_called_once_with(u'my_ip address (%(my_ip)s) was '
+                                         u'not found on any of the '
+                                         u'interfaces: %(ifaces)s',
+                                         {'ifaces': '8.8.8.8, 75.75.75.75',
+                                          'my_ip': mock.ANY})
+
     def test_conn_event_handler(self):
         self.mox.UnsetStubs()
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)

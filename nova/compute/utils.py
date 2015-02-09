@@ -18,6 +18,7 @@ import itertools
 import string
 import traceback
 
+import netifaces
 from oslo_config import cfg
 from oslo_utils import encodeutils
 
@@ -457,6 +458,31 @@ def get_reboot_type(task_state, current_power_state):
                   task_states.REBOOTING]
     reboot_type = 'SOFT' if task_state in soft_types else 'HARD'
     return reboot_type
+
+
+def get_machine_ips():
+    """Get the machine's ip addresses
+
+    :returns: list of Strings of ip addresses
+    """
+    addresses = []
+    for interface in netifaces.interfaces():
+        iface_data = netifaces.ifaddresses(interface)
+        for family in iface_data:
+            if family not in (netifaces.AF_INET, netifaces.AF_INET6):
+                continue
+            try:
+                for address in iface_data[family]:
+                    addr = address['addr']
+
+                    # If we have an ipv6 address remove the
+                    # %ether_interface at the end
+                    if family == netifaces.AF_INET6:
+                        addr = addr.split('%')[0]
+                    addresses.append(addr)
+            except ValueError:
+                pass
+    return addresses
 
 
 class EventReporter(object):
