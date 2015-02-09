@@ -18,7 +18,6 @@ Tests For Filter Scheduler.
 
 import mock
 
-from nova import context
 from nova import exception
 from nova.scheduler import filter_scheduler
 from nova.scheduler import host_manager
@@ -37,10 +36,12 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
     driver_cls = filter_scheduler.FilterScheduler
 
+    @mock.patch('nova.db.compute_node_get_all',
+                return_value=fakes.COMPUTE_NODES)
     @mock.patch('nova.db.instance_extra_get_by_instance_uuid',
                 return_value={'numa_topology': None,
                               'pci_requests': None})
-    def test_schedule_happy_day(self, mock_get_extra):
+    def test_schedule_happy_day(self, mock_get_extra, mock_get_all):
         """Make sure there's nothing glaringly wrong with _schedule()
         by doing a happy day pass through.
         """
@@ -52,15 +53,10 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
             host_state = hosts[0]
             return [weights.WeighedHost(host_state, self.next_weight)]
 
-        sched = fakes.FakeFilterScheduler()
-        fake_context = context.RequestContext('user', 'project',
-                is_admin=True)
-
-        self.stubs.Set(sched.host_manager, 'get_filtered_hosts',
+        self.stubs.Set(self.driver.host_manager, 'get_filtered_hosts',
                 fake_get_filtered_hosts)
         self.stubs.Set(weights.HostWeightHandler,
                 'get_weighed_objects', _fake_weigh_objects)
-        fakes.mox_host_manager_db_calls(self.mox, fake_context)
 
         request_spec = {'num_instances': 10,
                         'instance_type': {'memory_mb': 512, 'root_gb': 512,
@@ -74,7 +70,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                                                 'os_type': 'Linux',
                                                 'uuid': 'fake-uuid'}}
         self.mox.ReplayAll()
-        weighed_hosts = sched._schedule(fake_context, request_spec, {})
+        weighed_hosts = self.driver._schedule(self.context, request_spec, {})
         self.assertEqual(len(weighed_hosts), 10)
         for weighed_host in weighed_hosts:
             self.assertIsNotNone(weighed_host.obj)
@@ -115,20 +111,17 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
         self.assertEqual({'vcpus': 5}, host_state.limits)
 
+    @mock.patch('nova.db.compute_node_get_all',
+                return_value=fakes.COMPUTE_NODES)
     @mock.patch('nova.db.instance_extra_get_by_instance_uuid',
                 return_value={'numa_topology': None,
                               'pci_requests': None})
-    def test_schedule_host_pool(self, mock_get_extra):
+    def test_schedule_host_pool(self, mock_get_extra, mock_get_all):
         """Make sure the scheduler_host_subset_size property works properly."""
 
         self.flags(scheduler_host_subset_size=2)
-        sched = fakes.FakeFilterScheduler()
-
-        fake_context = context.RequestContext('user', 'project',
-                is_admin=True)
-        self.stubs.Set(sched.host_manager, 'get_filtered_hosts',
+        self.stubs.Set(self.driver.host_manager, 'get_filtered_hosts',
                 fake_get_filtered_hosts)
-        fakes.mox_host_manager_db_calls(self.mox, fake_context)
 
         instance_properties = {'project_id': 1,
                                'root_gb': 512,
@@ -142,28 +135,25 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                             instance_type={})
         filter_properties = {}
         self.mox.ReplayAll()
-        hosts = sched._schedule(self.context, request_spec,
+        hosts = self.driver._schedule(self.context, request_spec,
                 filter_properties=filter_properties)
 
         # one host should be chosen
         self.assertEqual(len(hosts), 1)
 
+    @mock.patch('nova.db.compute_node_get_all',
+                return_value=fakes.COMPUTE_NODES)
     @mock.patch('nova.db.instance_extra_get_by_instance_uuid',
                 return_value={'numa_topology': None,
                               'pci_requests': None})
-    def test_schedule_large_host_pool(self, mock_get_extra):
+    def test_schedule_large_host_pool(self, mock_get_extra, mock_get_all):
         """Hosts should still be chosen if pool size
         is larger than number of filtered hosts.
         """
 
-        sched = fakes.FakeFilterScheduler()
-
-        fake_context = context.RequestContext('user', 'project',
-                is_admin=True)
         self.flags(scheduler_host_subset_size=20)
-        self.stubs.Set(sched.host_manager, 'get_filtered_hosts',
+        self.stubs.Set(self.driver.host_manager, 'get_filtered_hosts',
                 fake_get_filtered_hosts)
-        fakes.mox_host_manager_db_calls(self.mox, fake_context)
 
         instance_properties = {'project_id': 1,
                                'root_gb': 512,
@@ -176,29 +166,25 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                             instance_type={})
         filter_properties = {}
         self.mox.ReplayAll()
-        hosts = sched._schedule(self.context, request_spec,
+        hosts = self.driver._schedule(self.context, request_spec,
                 filter_properties=filter_properties)
 
         # one host should be chose
         self.assertEqual(len(hosts), 1)
 
+    @mock.patch('nova.db.compute_node_get_all',
+                return_value=fakes.COMPUTE_NODES)
     @mock.patch('nova.db.instance_extra_get_by_instance_uuid',
                 return_value={'numa_topology': None,
                               'pci_requests': None})
-    def test_schedule_chooses_best_host(self, mock_get_extra):
+    def test_schedule_chooses_best_host(self, mock_get_extra, mock_get_all):
         """If scheduler_host_subset_size is 1, the largest host with greatest
         weight should be returned.
         """
 
         self.flags(scheduler_host_subset_size=1)
-
-        sched = fakes.FakeFilterScheduler()
-
-        fake_context = context.RequestContext('user', 'project',
-                is_admin=True)
-        self.stubs.Set(sched.host_manager, 'get_filtered_hosts',
+        self.stubs.Set(self.driver.host_manager, 'get_filtered_hosts',
                 fake_get_filtered_hosts)
-        fakes.mox_host_manager_db_calls(self.mox, fake_context)
 
         self.next_weight = 50
 
@@ -224,7 +210,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
         filter_properties = {}
         self.mox.ReplayAll()
-        hosts = sched._schedule(self.context, request_spec,
+        hosts = self.driver._schedule(self.context, request_spec,
                 filter_properties=filter_properties)
 
         # one host should be chosen
@@ -232,10 +218,12 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
         self.assertEqual(50, hosts[0].weight)
 
+    @mock.patch('nova.db.compute_node_get_all',
+                return_value=fakes.COMPUTE_NODES)
     @mock.patch('nova.db.instance_extra_get_by_instance_uuid',
                 return_value={'numa_topology': None,
                               'pci_requests': None})
-    def test_select_destinations(self, mock_get_extra):
+    def test_select_destinations(self, mock_get_extra, mock_get_all):
         """select_destinations is basically a wrapper around _schedule().
 
         Similar to the _schedule tests, this just does a happy path test to
@@ -254,15 +242,10 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
             selected_nodes.append(host_state.nodename)
             return [weights.WeighedHost(host_state, self.next_weight)]
 
-        sched = fakes.FakeFilterScheduler()
-        fake_context = context.RequestContext('user', 'project',
-            is_admin=True)
-
-        self.stubs.Set(sched.host_manager, 'get_filtered_hosts',
+        self.stubs.Set(self.driver.host_manager, 'get_filtered_hosts',
             fake_get_filtered_hosts)
         self.stubs.Set(weights.HostWeightHandler,
             'get_weighed_objects', _fake_weigh_objects)
-        fakes.mox_host_manager_db_calls(self.mox, fake_context)
 
         request_spec = {'instance_type': {'memory_mb': 512, 'root_gb': 512,
                                           'ephemeral_gb': 0,
@@ -276,7 +259,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                                                 'uuid': 'fake-uuid'},
                         'num_instances': 1}
         self.mox.ReplayAll()
-        dests = sched.select_destinations(fake_context, request_spec, {})
+        dests = self.driver.select_destinations(self.context, request_spec, {})
         (host, node) = (dests[0]['host'], dests[0]['nodename'])
         self.assertEqual(host, selected_hosts[0])
         self.assertEqual(node, selected_nodes[0])
