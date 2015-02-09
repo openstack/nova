@@ -1012,8 +1012,8 @@ class CellsTargetedMethodsTestCase(test.TestCase):
 
     def test_compute_node_get(self):
         compute_id = 'fake-id'
-        self.mox.StubOutWithMock(self.tgt_db_inst, 'compute_node_get')
-        self.tgt_db_inst.compute_node_get(self.ctxt,
+        self.mox.StubOutWithMock(objects.ComputeNode, 'get_by_id')
+        objects.ComputeNode.get_by_id(self.ctxt,
                 compute_id).AndReturn('fake_result')
 
         self.mox.ReplayAll()
@@ -1857,13 +1857,12 @@ class CellsBroadcastMethodsTestCase(test.TestCase):
 
         ctxt = self.ctxt.elevated()
 
-        self.mox.StubOutWithMock(self.src_db_inst, 'compute_node_get_all')
-        self.mox.StubOutWithMock(self.mid_db_inst, 'compute_node_get_all')
-        self.mox.StubOutWithMock(self.tgt_db_inst, 'compute_node_get_all')
+        self.mox.StubOutWithMock(objects.ComputeNodeList, 'get_all')
 
-        self.src_db_inst.compute_node_get_all(ctxt).AndReturn([1, 2])
-        self.mid_db_inst.compute_node_get_all(ctxt).AndReturn([3])
-        self.tgt_db_inst.compute_node_get_all(ctxt).AndReturn([4, 5])
+        # Calls are made from grandchild-cell to api-cell
+        objects.ComputeNodeList.get_all(mox.IgnoreArg()).AndReturn([4, 5])
+        objects.ComputeNodeList.get_all(mox.IgnoreArg()).AndReturn([3])
+        objects.ComputeNodeList.get_all(mox.IgnoreArg()).AndReturn([1, 2])
 
         self.mox.ReplayAll()
 
@@ -1882,19 +1881,15 @@ class CellsBroadcastMethodsTestCase(test.TestCase):
 
         ctxt = self.ctxt.elevated()
 
-        self.mox.StubOutWithMock(self.src_db_inst,
-                                 'compute_node_search_by_hypervisor')
-        self.mox.StubOutWithMock(self.mid_db_inst,
-                                 'compute_node_search_by_hypervisor')
-        self.mox.StubOutWithMock(self.tgt_db_inst,
-                                 'compute_node_search_by_hypervisor')
+        self.mox.StubOutWithMock(objects.ComputeNodeList, 'get_by_hypervisor')
 
-        self.src_db_inst.compute_node_search_by_hypervisor(ctxt,
-                hypervisor_match).AndReturn([1, 2])
-        self.mid_db_inst.compute_node_search_by_hypervisor(ctxt,
-                hypervisor_match).AndReturn([3])
-        self.tgt_db_inst.compute_node_search_by_hypervisor(ctxt,
-                hypervisor_match).AndReturn([4, 5])
+        # Calls are made from grandchild-cell to api-cell
+        objects.ComputeNodeList.get_by_hypervisor(
+            ctxt, hypervisor_match).AndReturn([4, 5])
+        objects.ComputeNodeList.get_by_hypervisor(
+            ctxt, hypervisor_match).AndReturn([3])
+        objects.ComputeNodeList.get_by_hypervisor(
+            ctxt, hypervisor_match).AndReturn([1, 2])
 
         self.mox.ReplayAll()
 

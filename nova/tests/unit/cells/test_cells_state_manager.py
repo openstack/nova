@@ -27,6 +27,7 @@ from nova.cells import state
 from nova import db
 from nova.db.sqlalchemy import models
 from nova import exception
+from nova import objects
 from nova.openstack.common import fileutils
 from nova import test
 
@@ -48,15 +49,22 @@ FAKE_ITYPES = [
 ]
 
 
-def _fake_compute_node_get_all(context):
+@classmethod
+def _fake_compute_node_get_all(cls, context):
     def _node(host, total_mem, total_disk, free_mem, free_disk):
-        service = {'host': host, 'disabled': False}
-        return {'service': service,
-                'host': host,
-                'memory_mb': total_mem,
-                'local_gb': total_disk,
-                'free_ram_mb': free_mem,
-                'free_disk_gb': free_disk}
+        return objects.ComputeNode(host=host,
+                                   memory_mb=total_mem,
+                                   local_gb=total_disk,
+                                   free_ram_mb=free_mem,
+                                   free_disk_gb=free_disk)
+
+    return [_node(*fake) for fake in FAKE_COMPUTES]
+
+
+@classmethod
+def _fake_service_get_all_by_topic(cls, context, topic):
+    def _node(host, total_mem, total_disk, free_mem, free_disk):
+        return objects.Service(host=host, disabled=False)
 
     return [_node(*fake) for fake in FAKE_COMPUTES]
 
@@ -79,7 +87,10 @@ class TestCellsStateManager(test.NoDBTestCase):
     def setUp(self):
         super(TestCellsStateManager, self).setUp()
 
-        self.stubs.Set(db, 'compute_node_get_all', _fake_compute_node_get_all)
+        self.stubs.Set(objects.ComputeNodeList, 'get_all',
+                       _fake_compute_node_get_all)
+        self.stubs.Set(objects.ServiceList, 'get_by_topic',
+                       _fake_service_get_all_by_topic)
         self.stubs.Set(db, 'flavor_get_all', _fake_instance_type_all)
         self.stubs.Set(db, 'cell_get_all', _fake_cell_get_all)
 
