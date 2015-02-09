@@ -148,24 +148,13 @@ class UrlmapTest(test.NoDBTestCase):
         body = jsonutils.loads(res.body)
         self.assertEqual(body['version']['id'], 'v2.1')
 
-    def test_path_content_type_v21(self):
-        # Test URL path specifying JSON returns JSON content.
-        url = '/v2.1/fake/extensions/extensions.json'
-        req = webob.Request.blank(url)
-        req.accept = "application/xml"
-        res = req.get_response(fakes.wsgi_app_v21())
-        self.assertEqual(res.status_int, 200)
-        self.assertEqual(res.content_type, "application/json")
-        body = jsonutils.loads(res.body)
-        self.assertEqual(body['extension']['name'], 'Extensions')
-
     def test_accept_content_type_v21(self):
         # Test Accept header specifying JSON returns JSON content.
-        url = '/v2.1/fake/extensions/extensions'
-        req = webob.Request.blank(url)
+        req = webob.Request.blank('/')
+        req.content_type = "application/json;version=2.1"
         req.accept = "application/xml;q=0.8, application/json"
-        res = req.get_response(fakes.wsgi_app_v21(init_only=('extensions',)))
+        res = req.get_response(fakes.wsgi_app_v21(init_only=('versions',)))
         self.assertEqual(res.status_int, 200)
         self.assertEqual(res.content_type, "application/json")
         body = jsonutils.loads(res.body)
-        self.assertEqual(body['extension']['name'], 'Extensions')
+        self.assertEqual(body['version']['id'], 'v2.1')

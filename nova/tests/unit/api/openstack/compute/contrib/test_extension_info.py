@@ -12,6 +12,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
+
+import webob
+
 from nova.api.openstack.compute import plugins
 from nova.api.openstack.compute.plugins.v3 import extension_info
 from nova import exception
@@ -128,9 +132,29 @@ class ExtensionInfoV21Test(test.NoDBTestCase):
     def test_extension_info_list(self):
         req = fakes.HTTPRequest.blank('/extensions')
         res_dict = self.controller.index(req)
-        self.assertEqual(5, len(res_dict['extensions']))
+        self.assertEqual(12, len(res_dict['extensions']))
 
-        expected_output = simulated_extension_list
+        expected_output = copy.deepcopy(simulated_extension_list)
+        del expected_output['images']
+        del expected_output['servers']
+        expected_output['os-cell-capacities'] = fake_extension(
+            'CellCapacities', 'os-cell-capacities', '', -1)
+        expected_output['os-server-sort-keys'] = fake_extension(
+            'ServerSortKeys', 'os-server-sort-keys', '', -1)
+        expected_output['os-user-quotas'] = fake_extension(
+            'UserQuotas', 'os-user-quotas', '', -1)
+        expected_output['os-extended-quotas'] = fake_extension(
+            'ExtendedQuotas', 'os-extended-quotas', '', -1)
+        expected_output['os-create-server-ext'] = fake_extension(
+            'Createserverext', 'os-create-server-ext', '', -1)
+        expected_output['OS-EXT-IPS'] = fake_extension(
+            'ExtendedIps', 'OS-EXT-IPS', '', -1)
+        expected_output['OS-EXT-IPS-MAC'] = fake_extension(
+            'ExtendedIpsMac', 'OS-EXT-IPS-MAC', '', -1)
+        expected_output['os-server-list-multi-status'] = fake_extension(
+            'ServerListMultiStatus', 'os-server-list-multi-status', '', -1)
+        expected_output['os-server-start-stop'] = fake_extension(
+            'ServerStartStop', 'os-server-start-stop', '', -1)
 
         for e in res_dict['extensions']:
             self.assertIn(e['alias'], expected_output)
@@ -155,3 +179,8 @@ class ExtensionInfoV21Test(test.NoDBTestCase):
         self.assertEqual(res_dict['extension']['updated'], FAKE_UPDATED_DATE)
         self.assertEqual(res_dict['extension']['links'], [])
         self.assertEqual(6, len(res_dict['extension']))
+
+    def test_extension_info_show_servers_not_present(self):
+        req = fakes.HTTPRequest.blank('/extensions/servers')
+        self.assertRaises(webob.exc.HTTPNotFound, self.controller.show,
+                          req, 'servers')
