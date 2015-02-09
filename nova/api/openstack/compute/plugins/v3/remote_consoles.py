@@ -157,7 +157,7 @@ class RemoteConsolesController(wsgi.Controller):
 
 class RemoteConsoles(extensions.V3APIExtensionBase):
     """Interactive Console support."""
-    name = "RemoteConsoles"
+    name = "Consoles"
     alias = ALIAS
     version = 1
 

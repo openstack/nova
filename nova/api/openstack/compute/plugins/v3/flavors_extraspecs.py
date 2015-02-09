@@ -140,7 +140,7 @@ class FlavorExtraSpecsController(wsgi.Controller):
 
 class FlavorsExtraSpecs(extensions.V3APIExtensionBase):
     """Flavors extra specs support."""
-    name = 'FlavorsExtraSpecs'
+    name = 'FlavorExtraSpecs'
     alias = ALIAS
     version = 1
 
