@@ -554,7 +554,7 @@ def get_arch(image_meta):
     if image_meta:
         image_arch = image_meta.get('properties', {}).get('architecture')
         if image_arch is not None:
-            return image_arch
+            return arch.canonicalize(image_arch)
 
     return arch.from_host()
 
