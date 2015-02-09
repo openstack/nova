@@ -20,8 +20,10 @@ from oslo_config import cfg
 import six
 from webob import exc
 
+from nova.api.openstack.compute.schemas.v3 import tenant_networks as schema
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+from nova.api import validation
 from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
@@ -136,11 +138,8 @@ class TenantNetworkController(wsgi.Controller):
             QUOTAS.commit(context, reservation)
 
     @extensions.expected_errors((400, 403, 503))
+    @validation.schema(schema.create)
     def create(self, req, body):
-        if not body:
-            _msg = _("Missing request body")
-            raise exc.HTTPBadRequest(explanation=_msg)
-
         context = req.environ["nova.context"]
         authorize(context)
 
@@ -149,14 +148,8 @@ class TenantNetworkController(wsgi.Controller):
                 "num_networks"]
         kwargs = {k: network.get(k) for k in keys}
 
-        if not network.get("label"):
-            msg = _("Network label is required")
-            raise exc.HTTPBadRequest(explanation=msg)
         label = network["label"]
 
-        if not (kwargs["cidr"] or kwargs["cidr_v6"]):
-            msg = _("No CIDR requested")
-            raise exc.HTTPBadRequest(explanation=msg)
         if kwargs["cidr"]:
             try:
                 net = netaddr.IPNetwork(kwargs["cidr"])
@@ -164,9 +157,6 @@ class TenantNetworkController(wsgi.Controller):
                     msg = _("Requested network does not contain "
                             "enough (2+) usable hosts")
                     raise exc.HTTPBadRequest(explanation=msg)
-            except netexc.AddrFormatError:
-                msg = _("CIDR is malformed.")
-                raise exc.HTTPBadRequest(explanation=msg)
             except netexc.AddrConversionError:
                 msg = _("Address could not be converted.")
                 raise exc.HTTPBadRequest(explanation=msg)
