@@ -18,22 +18,14 @@ Tests For Scheduler
 """
 
 import mock
-from oslo_config import cfg
 
-from nova.compute import api as compute_api
 from nova import context
 from nova import db
-from nova import exception
-from nova.image import glance
 from nova.scheduler import driver
 from nova.scheduler import manager
 from nova import servicegroup
 from nova import test
 from nova.tests.unit import fake_server_actions
-from nova.tests.unit.image import fake as fake_image
-from nova.tests.unit.scheduler import fakes
-
-CONF = cfg.CONF
 
 
 class SchedulerManagerTestCase(test.NoDBTestCase):
@@ -46,7 +38,6 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
     def setUp(self):
         super(SchedulerManagerTestCase, self).setUp()
         self.flags(scheduler_driver=self.driver_cls_name)
-        self.stubs.Set(compute_api, 'API', fakes.FakeComputeAPI)
         self.manager = self.manager_cls()
         self.context = context.RequestContext('fake_user', 'fake_project')
         self.topic = 'fake_topic'
@@ -58,16 +49,6 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
         # Correct scheduler driver
         manager = self.manager
         self.assertIsInstance(manager.driver, self.driver_cls)
-
-    def _mox_schedule_method_helper(self, method_name):
-        # Make sure the method exists that we're going to test call
-        def stub_method(*args, **kwargs):
-            pass
-
-        setattr(self.manager.driver, method_name, stub_method)
-
-        self.mox.StubOutWithMock(self.manager.driver,
-                method_name)
 
     def test_select_destination(self):
         with mock.patch.object(self.manager, 'select_destinations'
@@ -97,23 +78,6 @@ class SchedulerTestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(SchedulerTestCase, self).setUp()
-        self.stubs.Set(compute_api, 'API', fakes.FakeComputeAPI)
-
-        def fake_show(meh, context, id, **kwargs):
-            if id:
-                return {'id': id, 'min_disk': None, 'min_ram': None,
-                        'name': 'fake_name',
-                        'status': 'active',
-                        'properties': {'kernel_id': 'fake_kernel_id',
-                                       'ramdisk_id': 'fake_ramdisk_id',
-                                       'something_else': 'meow'}}
-            else:
-                raise exception.ImageNotFound(image_id=id)
-
-        fake_image.stub_out_image_service(self.stubs)
-        self.stubs.Set(fake_image._FakeImageService, 'show', fake_show)
-        self.image_service = glance.get_default_image_service()
-
         self.driver = self.driver_cls()
         self.context = context.RequestContext('fake_user', 'fake_project')
         self.topic = 'fake_topic'
