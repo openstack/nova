@@ -16,6 +16,8 @@ Test suite for images.
 """
 
 import contextlib
+import os
+import tarfile
 
 import mock
 from oslo_utils import units
@@ -92,6 +94,85 @@ class VMwareImagesTestCase(test.NoDBTestCase):
         mock_image_service = mock.MagicMock()
         mock_image_service.show.return_value = metadata
         mock_get_remote_image_service.return_value = [mock_image_service, 'i']
+
+    def test_get_vmdk_name_from_ovf(self):
+        ovf_path = os.path.join(os.path.dirname(__file__), 'ovf.xml')
+        with open(ovf_path) as f:
+            ovf_descriptor = f.read()
+            vmdk_name = images.get_vmdk_name_from_ovf(ovf_descriptor)
+            self.assertEqual("Damn_Small_Linux-disk1.vmdk", vmdk_name)
+
+    @mock.patch('oslo_vmware.rw_handles.ImageReadHandle')
+    @mock.patch('oslo_vmware.rw_handles.VmdkWriteHandle')
+    @mock.patch.object(tarfile, 'open')
+    @mock.patch.object(os, 'unlink')
+    def test_fetch_image_ova(self, mock_unlink, mock_tar_open,
+                             mock_write_class, mock_read_class):
+        session = mock.MagicMock()
+        ovf_descriptor = None
+        ovf_path = os.path.join(os.path.dirname(__file__), 'ovf.xml')
+        with open(ovf_path) as f:
+            ovf_descriptor = f.read()
+
+        with contextlib.nested(
+             mock.patch.object(images.IMAGE_API, 'get'),
+             mock.patch.object(images.IMAGE_API, 'download'),
+             mock.patch.object(images, 'start_transfer'),
+             mock.patch.object(images, '_build_shadow_vm_config_spec'),
+             mock.patch.object(session, '_call_method')
+        ) as (mock_image_api_get,
+              mock_image_api_download,
+              mock_start_transfer,
+              mock_build_shadow_vm_config_spec,
+              mock_call_method):
+            image_data = {'id': 'fake-id',
+                          'disk_format': 'vmdk',
+                          'size': 512}
+            instance = mock.MagicMock()
+            instance.image_ref = image_data['id']
+            mock_image_api_get.return_value = image_data
+
+            vm_folder_ref = mock.MagicMock()
+            res_pool_ref = mock.MagicMock()
+            context = mock.MagicMock()
+
+            mock_read_handle = mock.MagicMock()
+            mock_read_class.return_value = mock_read_handle
+            mock_write_handle = mock.MagicMock()
+            mock_write_class.return_value = mock_write_handle
+            mock_write_handle.get_imported_vm.return_value = \
+                mock.sentinel.vm_ref
+
+            mock_ovf = mock.MagicMock()
+            mock_ovf.name = 'dsl.ovf'
+            mock_vmdk = mock.MagicMock()
+            mock_vmdk.name = "Damn_Small_Linux-disk1.vmdk"
+
+            def fake_extract(name):
+                if name == mock_ovf.name:
+                    m = mock.MagicMock()
+                    m.read.return_value = ovf_descriptor
+                    return m
+                elif name == mock_vmdk.name:
+                    return mock_read_handle
+
+            mock_tar = mock.MagicMock()
+            mock_tar.__iter__ = mock.Mock(return_value = iter([mock_ovf,
+                                                               mock_vmdk]))
+            mock_tar.extractfile = fake_extract
+            mock_tar_open.return_value.__enter__.return_value = mock_tar
+
+            images.fetch_image_ova(
+                    context, instance, session, 'fake-vm', 'fake-datastore',
+                    vm_folder_ref, res_pool_ref)
+
+            mock_start_transfer.assert_called_once_with(context,
+                    mock_read_handle, 512, write_file_handle=mock_write_handle)
+
+            mock_call_method.assert_called_once_with(
+                    session.vim, "UnregisterVM", mock.sentinel.vm_ref)
+
+            mock_unlink.assert_called_once_with(mock.ANY)
 
     @mock.patch('oslo_vmware.rw_handles.ImageReadHandle')
     @mock.patch('oslo_vmware.rw_handles.VmdkWriteHandle')
