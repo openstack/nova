@@ -2121,7 +2121,7 @@ class VMOps(object):
             # XAPI must support the relaxed SR check for live migrating with
             # iSCSI VBDs
             if not self._is_xsm_sr_check_relaxed():
-                raise exception.MigrationError(_('XAPI supporting '
+                raise exception.MigrationError(reason=_('XAPI supporting '
                                 'relax-xsm-sr-check=true required'))
 
         if 'migrate_data' in dest_check_data:
@@ -2192,7 +2192,8 @@ class VMOps(object):
                         "VM.migrate_send", vm_ref, migrate_data)
                 except self._session.XenAPI.Failure as exc:
                     LOG.exception(exc)
-                    raise exception.MigrationError(_('Migrate Send failed'))
+                    raise exception.MigrationError(
+                        reason=_('Migrate Send failed'))
 
                 # Tidy up the iSCSI SRs
                 for sr_ref in iscsi_srs:
