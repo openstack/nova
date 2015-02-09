@@ -20,15 +20,16 @@ Manage hosts in the current zone.
 import collections
 import UserDict
 
+import iso8601
 from oslo_config import cfg
 from oslo_serialization import jsonutils
 from oslo_utils import timeutils
 
 from nova.compute import task_states
 from nova.compute import vm_states
-from nova import db
 from nova import exception
 from nova.i18n import _, _LI, _LW
+from nova import objects
 from nova.openstack.common import log as logging
 from nova.pci import stats as pci_stats
 from nova.scheduler import filters
@@ -62,6 +63,7 @@ host_manager_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(host_manager_opts)
+CONF.import_opt('compute_topic', 'nova.compute.rpcapi')
 
 LOG = logging.getLogger(__name__)
 
@@ -150,10 +152,11 @@ class HostState(object):
         self.service = ReadOnlyDict(service)
 
     def _update_metrics_from_compute_node(self, compute):
+        """Update metrics from a ComputeNode object."""
         # NOTE(llu): The 'or []' is to avoid json decode failure of None
         #            returned from compute.get, because DB schema allows
         #            NULL in the metrics column
-        metrics = compute.get('metrics', []) or []
+        metrics = compute.metrics or []
         if metrics:
             metrics = jsonutils.loads(metrics)
         for metric in metrics:
@@ -170,15 +173,15 @@ class HostState(object):
                 LOG.warning(_LW("Metric name unknown of %r"), item)
 
     def update_from_compute_node(self, compute):
-        """Update information about a host from its compute_node info."""
-        if (self.updated and compute['updated_at']
-                and self.updated > compute['updated_at']):
+        """Update information about a host from a ComputeNode object."""
+        if (self.updated and compute.updated_at
+                and self.updated > compute.updated_at):
             return
-        all_ram_mb = compute['memory_mb']
+        all_ram_mb = compute.memory_mb
 
         # Assume virtual size is all consumed by instances if use qcow2 disk.
-        free_gb = compute['free_disk_gb']
-        least_gb = compute.get('disk_available_least')
+        free_gb = compute.free_disk_gb
+        least_gb = compute.disk_available_least
         if least_gb is not None:
             if least_gb > free_gb:
                 # can occur when an instance in database is not on host
@@ -186,41 +189,43 @@ class HostState(object):
                                 "database expected "
                                 "(%(physical)sgb > %(database)sgb)"),
                             {'physical': least_gb, 'database': free_gb,
-                             'hostname': compute['hypervisor_hostname']})
+                             'hostname': compute.hypervisor_hostname})
             free_gb = min(least_gb, free_gb)
         free_disk_mb = free_gb * 1024
 
-        self.disk_mb_used = compute['local_gb_used'] * 1024
+        self.disk_mb_used = compute.local_gb_used * 1024
 
         # NOTE(jogo) free_ram_mb can be negative
-        self.free_ram_mb = compute['free_ram_mb']
+        self.free_ram_mb = compute.free_ram_mb
         self.total_usable_ram_mb = all_ram_mb
-        self.total_usable_disk_gb = compute['local_gb']
+        self.total_usable_disk_gb = compute.local_gb
         self.free_disk_mb = free_disk_mb
-        self.vcpus_total = compute['vcpus']
-        self.vcpus_used = compute['vcpus_used']
-        self.updated = compute['updated_at']
-        self.numa_topology = compute['numa_topology']
-        if 'pci_stats' in compute:
-            self.pci_stats = pci_stats.PciDeviceStats(compute['pci_stats'])
+        self.vcpus_total = compute.vcpus
+        self.vcpus_used = compute.vcpus_used
+        self.updated = compute.updated_at
+        self.numa_topology = compute.numa_topology
+        if compute.pci_device_pools is not None:
+            self.pci_stats = pci_stats.PciDeviceStats(
+                compute.pci_device_pools)
         else:
             self.pci_stats = None
 
         # All virt drivers report host_ip
-        self.host_ip = compute['host_ip']
-        self.hypervisor_type = compute.get('hypervisor_type')
-        self.hypervisor_version = compute.get('hypervisor_version')
-        self.hypervisor_hostname = compute.get('hypervisor_hostname')
-        self.cpu_info = compute.get('cpu_info')
-        if compute.get('supported_instances'):
-            self.supported_instances = jsonutils.loads(
-                    compute.get('supported_instances'))
+        self.host_ip = compute.host_ip
+        self.hypervisor_type = compute.hypervisor_type
+        self.hypervisor_version = compute.hypervisor_version
+        self.hypervisor_hostname = compute.hypervisor_hostname
+        self.cpu_info = compute.cpu_info
+        if compute.supported_hv_specs:
+            self.supported_instances = [spec.to_list() for spec
+                                        in compute.supported_hv_specs]
+        else:
+            self.supported_instances = []
 
         # Don't store stats directly in host_state to make sure these don't
         # overwrite any values, or get overwritten themselves. Store in self so
         # filters can schedule with them.
-        stats = compute.get('stats', None) or '{}'
-        self.stats = jsonutils.loads(stats)
+        self.stats = compute.stats or {}
 
         # Track number of instances on host
         self.num_instances = int(self.stats.get('num_instances', 0))
@@ -238,7 +243,10 @@ class HostState(object):
         self.free_ram_mb -= ram_mb
         self.free_disk_mb -= disk_mb
         self.vcpus_used += vcpus
-        self.updated = timeutils.utcnow()
+
+        now = timeutils.utcnow()
+        # NOTE(sbauza): Objects are UTC tz-aware by default
+        self.updated = now.replace(tzinfo=iso8601.iso8601.Utc())
 
         # Track number of instances on host
         self.num_instances += 1
@@ -409,15 +417,18 @@ class HostManager(object):
         """
 
         # Get resource usage across the available compute nodes:
-        compute_nodes = db.compute_node_get_all(context)
+        compute_nodes = objects.ComputeNodeList.get_all(context)
         seen_nodes = set()
         for compute in compute_nodes:
-            service = compute['service']
+            service = compute.service
             if not service:
-                LOG.warning(_LW("No service for compute ID %s"), compute['id'])
+                LOG.warning(_LW(
+                    "No service record found for host %(host)s "
+                    "on %(topic)s topic"),
+                    {'host': compute.host, 'topic': CONF.compute_topic})
                 continue
-            host = service['host']
-            node = compute.get('hypervisor_hostname')
+            host = compute.host
+            node = compute.hypervisor_hostname
             state_key = (host, node)
             host_state = self.host_state_map.get(state_key)
             if host_state:

@@ -18,10 +18,10 @@ Tests For IronicHostManager
 """
 
 import mock
-from oslo_serialization import jsonutils
 
-from nova import db
 from nova import exception
+from nova import objects
+from nova.objects import base as obj_base
 from nova.scheduler import filters
 from nova.scheduler import host_manager
 from nova.scheduler import ironic_host_manager
@@ -62,8 +62,9 @@ class IronicHostManagerTestCase(test.NoDBTestCase):
         # Ensure .service is set and we have the values we expect to.
         context = 'fake_context'
 
-        self.mox.StubOutWithMock(db, 'compute_node_get_all')
-        db.compute_node_get_all(context).AndReturn(ironic_fakes.COMPUTE_NODES)
+        self.mox.StubOutWithMock(objects.ComputeNodeList, 'get_all')
+        objects.ComputeNodeList.get_all(context).AndReturn(
+            ironic_fakes.COMPUTE_NODES)
         self.mox.ReplayAll()
 
         self.host_manager.get_all_host_states(context)
@@ -72,16 +73,17 @@ class IronicHostManagerTestCase(test.NoDBTestCase):
         self.assertEqual(len(host_states_map), 4)
         for i in range(4):
             compute_node = ironic_fakes.COMPUTE_NODES[i]
-            host = compute_node['service']['host']
-            node = compute_node['hypervisor_hostname']
+            host = compute_node.host
+            node = compute_node.hypervisor_hostname
             state_key = (host, node)
-            self.assertEqual(compute_node['service'],
-                             host_states_map[state_key].service)
-            self.assertEqual(jsonutils.loads(compute_node['stats']),
+            self.assertEqual(host_states_map[state_key].service,
+                             obj_base.obj_to_primitive(
+                                 compute_node.service))
+            self.assertEqual(compute_node.stats,
                              host_states_map[state_key].stats)
-            self.assertEqual(compute_node['free_ram_mb'],
+            self.assertEqual(compute_node.free_ram_mb,
                              host_states_map[state_key].free_ram_mb)
-            self.assertEqual(compute_node['free_disk_gb'] * 1024,
+            self.assertEqual(compute_node.free_disk_gb * 1024,
                              host_states_map[state_key].free_disk_mb)
 
 
@@ -92,18 +94,20 @@ class IronicHostManagerChangedNodesTestCase(test.NoDBTestCase):
         super(IronicHostManagerChangedNodesTestCase, self).setUp()
         self.host_manager = ironic_host_manager.IronicHostManager()
         ironic_driver = "nova.virt.ironic.driver.IronicDriver"
-        supported_instances = '[["i386", "baremetal", "baremetal"]]'
-        self.compute_node = dict(id=1, local_gb=10, memory_mb=1024, vcpus=1,
-                            vcpus_used=0, local_gb_used=0, memory_mb_used=0,
-                            updated_at=None, cpu_info='baremetal cpu',
-                                stats=jsonutils.dumps(dict(
-                                    ironic_driver=ironic_driver,
-                                    cpu_arch='i386')),
-                            supported_instances=supported_instances,
-                            free_disk_gb=10, free_ram_mb=1024,
-                            hypervisor_type='ironic',
-                            hypervisor_version = 1,
-                            hypervisor_hostname = 'fake_host')
+        supported_instances = [
+            objects.HVSpec.from_list(["i386", "baremetal", "baremetal"])]
+        self.compute_node = objects.ComputeNode(
+            id=1, local_gb=10, memory_mb=1024, vcpus=1,
+            vcpus_used=0, local_gb_used=0, memory_mb_used=0,
+            updated_at=None, cpu_info='baremetal cpu',
+            stats=dict(
+                ironic_driver=ironic_driver,
+                cpu_arch='i386'),
+            supported_hv_specs=supported_instances,
+            free_disk_gb=10, free_ram_mb=1024,
+            hypervisor_type='ironic',
+            hypervisor_version=1,
+            hypervisor_hostname='fake_host')
 
     @mock.patch.object(ironic_host_manager.IronicNodeState, '__init__')
     def test_create_ironic_node_state(self, init_mock):
@@ -124,13 +128,15 @@ class IronicHostManagerChangedNodesTestCase(test.NoDBTestCase):
     def test_get_all_host_states_after_delete_one(self):
         context = 'fake_context'
 
-        self.mox.StubOutWithMock(db, 'compute_node_get_all')
+        self.mox.StubOutWithMock(objects.ServiceList, 'get_by_topic')
+        self.mox.StubOutWithMock(objects.ComputeNodeList, 'get_all')
         # all nodes active for first call
-        db.compute_node_get_all(context).AndReturn(ironic_fakes.COMPUTE_NODES)
+        objects.ComputeNodeList.get_all(context).AndReturn(
+            ironic_fakes.COMPUTE_NODES)
         # remove node4 for second call
         running_nodes = [n for n in ironic_fakes.COMPUTE_NODES
                          if n.get('hypervisor_hostname') != 'node4uuid']
-        db.compute_node_get_all(context).AndReturn(running_nodes)
+        objects.ComputeNodeList.get_all(context).AndReturn(running_nodes)
         self.mox.ReplayAll()
 
         self.host_manager.get_all_host_states(context)
@@ -141,11 +147,13 @@ class IronicHostManagerChangedNodesTestCase(test.NoDBTestCase):
     def test_get_all_host_states_after_delete_all(self):
         context = 'fake_context'
 
-        self.mox.StubOutWithMock(db, 'compute_node_get_all')
+        self.mox.StubOutWithMock(objects.ServiceList, 'get_by_topic')
+        self.mox.StubOutWithMock(objects.ComputeNodeList, 'get_all')
         # all nodes active for first call
-        db.compute_node_get_all(context).AndReturn(ironic_fakes.COMPUTE_NODES)
+        objects.ComputeNodeList.get_all(context).AndReturn(
+            ironic_fakes.COMPUTE_NODES)
         # remove all nodes for second call
-        db.compute_node_get_all(context).AndReturn([])
+        objects.ComputeNodeList.get_all(context).AndReturn([])
         self.mox.ReplayAll()
 
         self.host_manager.get_all_host_states(context)
@@ -162,8 +170,7 @@ class IronicHostManagerChangedNodesTestCase(test.NoDBTestCase):
         self.assertEqual(10240, host.free_disk_mb)
         self.assertEqual(1, host.vcpus_total)
         self.assertEqual(0, host.vcpus_used)
-        self.assertEqual(jsonutils.loads(self.compute_node['stats']),
-                         host.stats)
+        self.assertEqual(self.compute_node['stats'], host.stats)
         self.assertEqual('ironic', host.hypervisor_type)
         self.assertEqual(1, host.hypervisor_version)
         self.assertEqual('fake_host', host.hypervisor_hostname)
