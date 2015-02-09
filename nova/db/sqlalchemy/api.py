@@ -2815,10 +2815,7 @@ def network_get_all_by_uuids(context, network_uuids, project_only):
     return result
 
 
-@require_admin_context
-def network_get_associated_fixed_ips(context, network_id, host=None):
-    # FIXME(sirp): since this returns fixed_ips, this would be better named
-    # fixed_ip_get_all_by_network.
+def _get_associated_fixed_ips_query(network_id, host=None):
     # NOTE(vish): The ugly joins here are to solve a performance issue and
     #             should be removed once we can add and remove leases
     #             without regenerating the whole list
@@ -2856,6 +2853,14 @@ def network_get_associated_fixed_ips(context, network_id, host=None):
                           filter(models.FixedIp.virtual_interface_id != null())
     if host:
         query = query.filter(models.Instance.host == host)
+    return query
+
+
+@require_admin_context
+def network_get_associated_fixed_ips(context, network_id, host=None):
+    # FIXME(sirp): since this returns fixed_ips, this would be better named
+    # fixed_ip_get_all_by_network.
+    query = _get_associated_fixed_ips_query(network_id, host)
     result = query.all()
     data = []
     for datum in result:
@@ -2878,8 +2883,8 @@ def network_get_associated_fixed_ips(context, network_id, host=None):
 
 
 def network_in_use_on_host(context, network_id, host):
-    fixed_ips = network_get_associated_fixed_ips(context, network_id, host)
-    return len(fixed_ips) > 0
+    query = _get_associated_fixed_ips_query(network_id, host)
+    return query.count() > 0
 
 
 def _network_get_query(context, session=None):
