@@ -102,6 +102,14 @@ class IronicDriverTestCase(test.NoDBTestCase):
     def test_validate_driver_loading(self):
         self.assertIsInstance(self.driver, ironic_driver.IronicDriver)
 
+    def test_driver_capabilities(self):
+        self.assertFalse(self.driver.capabilities['has_imagecache'],
+                         'Driver capabilities for \'has_imagecache\''
+                         'is invalid')
+        self.assertFalse(self.driver.capabilities['supports_recreate'],
+                         'Driver capabilities for \'supports_recreate\''
+                         'is invalid')
+
     def test__get_hypervisor_type(self):
         self.assertEqual('ironic', self.driver._get_hypervisor_type())
 
