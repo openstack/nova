@@ -729,6 +729,9 @@ def floating_ip_get_pools(context):
 
 
 @require_context
+@_retry_on_deadlock
+@retrying.retry(stop_max_attempt_number=5, retry_on_exception=
+                lambda e: isinstance(e, exception.FloatingIpAllocateFailed))
 def floating_ip_allocate_address(context, project_id, pool,
                                  auto_assigned=False):
     nova.context.authorize_project_context(context, project_id)
@@ -739,15 +742,26 @@ def floating_ip_allocate_address(context, project_id, pool,
                                   filter_by(fixed_ip_id=None).\
                                   filter_by(project_id=None).\
                                   filter_by(pool=pool).\
-                                  with_lockmode('update').\
                                   first()
-        # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
-        #             then this has concurrency issues
+
         if not floating_ip_ref:
             raise exception.NoMoreFloatingIps()
-        floating_ip_ref['project_id'] = project_id
-        floating_ip_ref['auto_assigned'] = auto_assigned
-        session.add(floating_ip_ref)
+
+        params = {'project_id': project_id, 'auto_assigned': auto_assigned}
+
+        rows_update = model_query(context, models.FloatingIp,
+                                      session=session, read_deleted="no").\
+            filter_by(id=floating_ip_ref['id']).\
+            filter_by(fixed_ip_id=None).\
+            filter_by(project_id=None).\
+            filter_by(pool=pool).\
+            update(params, synchronize_session='evaluate')
+
+        if not rows_update:
+            LOG.debug('The row was updated in a concurrent transaction, '
+                      'we will fetch another one')
+            raise exception.FloatingIpAllocateFailed()
+
     return floating_ip_ref['address']
 
 

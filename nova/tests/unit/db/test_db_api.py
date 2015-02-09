@@ -4347,6 +4347,59 @@ class FloatingIpTestCase(test.TestCase, ModelsObjectComparatorMixin):
                           db.floating_ip_allocate_address,
                           ctxt, 'other_project_id', 'any_pool')
 
+    def test_floating_ip_allocate_address_succeeds_retry(self):
+        pool = 'pool0'
+        address = '0.0.0.0'
+        vals = {'pool': pool, 'address': address, 'project_id': None}
+        floating_ip = self._create_floating_ip(vals)
+
+        project_id = self._get_base_values()['project_id']
+
+        def fake_first():
+            if mock_first.call_count == 1:
+                return {'pool': pool, 'project_id': None, 'fixed_ip_id': None,
+                        'address': address, 'id': 'invalid_id'}
+            else:
+                return {'pool': pool, 'project_id': None, 'fixed_ip_id': None,
+                        'address': address, 'id': 1}
+
+        with mock.patch('sqlalchemy.orm.query.Query.first',
+                        side_effect=fake_first) as mock_first:
+            float_addr = db.floating_ip_allocate_address(self.ctxt,
+                                                         project_id, pool)
+            self.assertEqual(address, float_addr)
+            self.assertEqual(2, mock_first.call_count)
+
+        float_ip = db.floating_ip_get(self.ctxt, floating_ip.id)
+        self.assertEqual(project_id, float_ip['project_id'])
+
+    def test_floating_ip_allocate_address_retry_limit_exceeded(self):
+        pool = 'pool0'
+        address = '0.0.0.0'
+        vals = {'pool': pool, 'address': address, 'project_id': None}
+        self._create_floating_ip(vals)
+
+        project_id = self._get_base_values()['project_id']
+
+        def fake_first():
+            return {'pool': pool, 'project_id': None, 'fixed_ip_id': None,
+                    'address': address, 'id': 'invalid_id'}
+
+        with mock.patch('sqlalchemy.orm.query.Query.first',
+                        side_effect=fake_first) as mock_first:
+            self.assertRaises(exception.FloatingIpAllocateFailed,
+                              db.floating_ip_allocate_address, self.ctxt,
+                              project_id, pool)
+            self.assertEqual(5, mock_first.call_count)
+
+    def test_floating_ip_allocate_address_no_more_ips_with_no_retries(self):
+        with mock.patch('sqlalchemy.orm.query.Query.first',
+                        return_value=None) as mock_first:
+            self.assertRaises(exception.NoMoreFloatingIps,
+                              db.floating_ip_allocate_address,
+                              self.ctxt, 'any_project_id', 'no_such_pool')
+            self.assertEqual(1, mock_first.call_count)
+
     def _get_existing_ips(self):
         return [ip['address'] for ip in db.floating_ip_get_all(self.ctxt)]
 
