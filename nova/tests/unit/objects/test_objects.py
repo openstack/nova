@@ -1182,6 +1182,8 @@ object_data = {
     'TestSubclassedObject': '1.6-87177ccbefd7a740a9e261f958e15b00',
     'VirtualInterface': '1.0-10fdac4c704102b6d57d6936d6d790d2',
     'VirtualInterfaceList': '1.0-accbf02628a8063c1d885077a2bf49b6',
+    'VirtCPUFeature': '1.0-3cac8c77d84a632ba79da01a4b87afb9',
+    'VirtCPUModel': '1.0-ae051080026849eddf7179e353673756',
     'VirtCPUTopology': '1.0-fc694de72e20298f7c6bab1083fd4563',
 }
 
@@ -1205,7 +1207,8 @@ object_relationships = {
     'MyObj': {'MyOwnedObject': '1.0'},
     'SecurityGroupRule': {'SecurityGroup': '1.1'},
     'Service': {'ComputeNode': '1.10'},
-    'TestSubclassedObject': {'MyOwnedObject': '1.0'}
+    'TestSubclassedObject': {'MyOwnedObject': '1.0'},
+    'VirtCPUModel': {'VirtCPUTopology': '1.0'},
 }
 
 
