@@ -125,11 +125,10 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
                           fake.FakeObjectRetrievalSession(""), 'fake_cluster')
 
     def test_get_resize_spec(self):
-        fake_instance = {'id': 7, 'name': 'fake!',
-                         'uuid': 'bda5fb9e-b347-40e8-8256-42397848cb00',
-                         'vcpus': 2, 'memory_mb': 2048}
+        vcpus = 2
+        memory_mb = 2048
         result = vm_util.get_vm_resize_spec(fake.FakeFactory(),
-                                            fake_instance)
+                                            vcpus, memory_mb)
         expected = """{'memoryMB': 2048,
                        'numCPUs': 2,
                        'obj_name': 'ns0:VirtualMachineConfigSpec'}"""
