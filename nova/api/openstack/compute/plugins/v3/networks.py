@@ -173,7 +173,7 @@ class NetworkController(wsgi.Controller):
         return {"network": network_dict(context, network)}
 
     @wsgi.response(202)
-    @extensions.expected_errors((400, 409, 501))
+    @extensions.expected_errors((400, 501))
     def add(self, req, body):
         context = req.environ['nova.context']
         authorize(context)
