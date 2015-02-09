@@ -15,7 +15,7 @@
 
 """The hypervisors admin extension."""
 
-from oslo.config import cfg
+from oslo_config import cfg
 import webob.exc
 
 from nova.api.openstack import extensions
