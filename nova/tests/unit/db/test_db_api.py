@@ -2840,8 +2840,7 @@ class ServiceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         services = [self._create_service(vals) for vals in values]
 
         real_service = db.service_get_by_compute_host(self.ctxt, 'host1')
-        self._assertEqualObjects(services[0], real_service,
-                                 ignored_keys=['compute_node'])
+        self._assertEqualObjects(services[0], real_service)
 
         self.assertRaises(exception.ComputeHostNotFound,
                           db.service_get_by_compute_host,
