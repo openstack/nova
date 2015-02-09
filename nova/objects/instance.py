@@ -15,6 +15,7 @@
 import copy
 
 from oslo_config import cfg
+from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import timeutils
 
@@ -29,7 +30,6 @@ from nova import notifications
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
-from nova.openstack.common import log as logging
 from nova import utils
 
 

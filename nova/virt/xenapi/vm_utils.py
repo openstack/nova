@@ -30,6 +30,7 @@ from xml.parsers import expat
 from eventlet import greenthread
 from oslo_concurrency import processutils
 from oslo_config import cfg
+from oslo_log import log as logging
 from oslo_utils import excutils
 from oslo_utils import importutils
 from oslo_utils import strutils
@@ -45,7 +46,6 @@ from nova.compute import vm_mode
 from nova import exception
 from nova.i18n import _, _LE, _LI, _LW
 from nova.network import model as network_model
-from nova.openstack.common import log as logging
 from nova.openstack.common import versionutils
 from nova import utils
 from nova.virt import configdrive

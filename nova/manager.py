@@ -52,9 +52,9 @@ This module provides Manager, a base class for managers.
 """
 
 from oslo_config import cfg
+from oslo_log import log as logging
 
 from nova.db import base
-from nova.openstack.common import log as logging
 from nova.openstack.common import periodic_task
 from nova import rpc
 

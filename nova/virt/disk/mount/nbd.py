@@ -19,9 +19,9 @@ import re
 import time
 
 from oslo_config import cfg
+from oslo_log import log as logging
 
 from nova.i18n import _, _LE, _LI, _LW
-from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt.disk.mount import api
 

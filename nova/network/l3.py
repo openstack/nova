@@ -13,8 +13,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_log import log as logging
+
 from nova.network import linux_net
-from nova.openstack.common import log as logging
 from nova import utils
 
 LOG = logging.getLogger(__name__)

@@ -18,6 +18,7 @@ import base64
 import re
 
 from oslo_config import cfg
+from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_utils import strutils
 from oslo_utils import timeutils
@@ -39,7 +40,6 @@ from nova.i18n import _
 from nova.i18n import _LW
 from nova.image import glance
 from nova import objects
-from nova.openstack.common import log as logging
 from nova.openstack.common import uuidutils
 from nova import policy
 from nova import utils

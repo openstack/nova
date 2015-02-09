@@ -26,7 +26,7 @@ eventlet.monkey_patch(os=False)
 
 import copy
 import inspect
-import logging
+import logging as std_logging
 import mock
 import os
 
@@ -34,6 +34,8 @@ import fixtures
 from oslo_concurrency import lockutils
 from oslo_config import cfg
 from oslo_config import fixture as config_fixture
+from oslo_log.fixture import logging_error as log_fixture
+from oslo_log import log as logging
 from oslo_utils import timeutils
 from oslotest import moxstubout
 import six
@@ -44,8 +46,6 @@ from nova import db
 from nova.network import manager as network_manager
 from nova import objects
 from nova.objects import base as objects_base
-from nova.openstack.common.fixture import logging as log_fixture
-from nova.openstack.common import log as nova_logging
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit import conf_fixture
 from nova.tests.unit import policy_fixture
@@ -54,9 +54,10 @@ from nova import utils
 
 CONF = cfg.CONF
 CONF.import_opt('enabled', 'nova.api.openstack', group='osapi_v3')
-CONF.set_override('use_stderr', False)
 
-nova_logging.setup('nova')
+logging.register_options(CONF)
+CONF.set_override('use_stderr', False)
+logging.setup(CONF, 'nova')
 
 # NOTE(comstud): Make sure we have all of the objects loaded. We do this
 # at module import time, because we may be using mock decorators in our
@@ -100,7 +101,7 @@ class TestingException(Exception):
     pass
 
 
-class NullHandler(logging.Handler):
+class NullHandler(std_logging.Handler):
     """custom default NullHandler to attempt to format the record.
 
     Used in conjunction with

@@ -17,11 +17,11 @@ import datetime
 import time
 import zlib
 
+from oslo_log import log as logging
 from oslo_utils import timeutils
 
 from nova import context
 from nova import exception
-from nova.openstack.common import log as logging
 from nova.tests.functional.api import client
 from nova.tests.functional import integrated_helpers
 from nova.tests.unit import fake_network

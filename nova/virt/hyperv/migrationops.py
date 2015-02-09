@@ -18,12 +18,12 @@ Management class for migration / resize operations.
 """
 import os
 
+from oslo_log import log as logging
 from oslo_utils import excutils
 from oslo_utils import units
 
 from nova import exception
 from nova.i18n import _, _LE
-from nova.openstack.common import log as logging
 from nova.virt import configdrive
 from nova.virt.hyperv import imagecache
 from nova.virt.hyperv import utilsfactory

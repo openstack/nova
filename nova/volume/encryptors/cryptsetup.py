@@ -16,7 +16,8 @@
 
 import os
 
-from nova.openstack.common import log as logging
+from oslo_log import log as logging
+
 from nova import utils
 from nova.volume.encryptors import base
 

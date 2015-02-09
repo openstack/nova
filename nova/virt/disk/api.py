@@ -32,13 +32,13 @@ if os.name != 'nt':
 
 from oslo_concurrency import processutils
 from oslo_config import cfg
+from oslo_log import log as logging
 from oslo_serialization import jsonutils
 
 from nova import exception
 from nova.i18n import _
 from nova.i18n import _LE
 from nova.i18n import _LW
-from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt.disk.mount import api as mount
 from nova.virt.disk.vfs import api as vfs

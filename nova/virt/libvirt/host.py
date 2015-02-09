@@ -37,6 +37,7 @@ from eventlet import greenthread
 from eventlet import patcher
 from eventlet import tpool
 from oslo_config import cfg
+from oslo_log import log as logging
 from oslo_utils import excutils
 
 from nova import context as nova_context
@@ -45,7 +46,6 @@ from nova.i18n import _
 from nova.i18n import _LE
 from nova.i18n import _LI
 from nova.i18n import _LW
-from nova.openstack.common import log as logging
 from nova import rpc
 from nova import utils
 from nova.virt import event as virtevent

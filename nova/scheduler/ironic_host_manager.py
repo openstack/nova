@@ -23,9 +23,9 @@ subdivided into multiple instances.
 """
 import iso8601
 from oslo_config import cfg
+from oslo_log import log as logging
 from oslo_utils import timeutils
 
-from nova.openstack.common import log as logging
 from nova.scheduler import host_manager
 
 host_manager_opts = [

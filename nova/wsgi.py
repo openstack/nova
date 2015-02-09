@@ -28,6 +28,8 @@ import eventlet
 import eventlet.wsgi
 import greenlet
 from oslo_config import cfg
+from oslo_log import log as logging
+from oslo_log import loggers
 from oslo_utils import excutils
 from paste import deploy
 import routes.middleware
@@ -36,7 +38,6 @@ import webob.exc
 
 from nova import exception
 from nova.i18n import _, _LE, _LI
-from nova.openstack.common import log as logging
 
 wsgi_opts = [
     cfg.StrOpt('api_paste_config',
@@ -114,7 +115,7 @@ class Server(object):
         self.pool_size = pool_size or self.default_pool_size
         self._pool = eventlet.GreenPool(self.pool_size)
         self._logger = logging.getLogger("nova.%s.wsgi.server" % self.name)
-        self._wsgi_logger = logging.WritableLogger(self._logger)
+        self._wsgi_logger = loggers.WritableLogger(self._logger)
         self._use_ssl = use_ssl
         self._max_url_len = max_url_len
         self.client_socket_timeout = CONF.client_socket_timeout or None

@@ -40,12 +40,12 @@ import copy
 
 import jsonschema
 from oslo_config import cfg
+from oslo_log import log as logging
 from oslo_serialization import jsonutils
 import six
 
 from nova import exception
 from nova import objects
-from nova.openstack.common import log as logging
 from nova.pci import utils
 
 pci_alias_opts = [

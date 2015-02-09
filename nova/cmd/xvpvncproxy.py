@@ -17,8 +17,9 @@
 
 import sys
 
+from oslo_log import log as logging
+
 from nova import config
-from nova.openstack.common import log as logging
 from nova.openstack.common.report import guru_meditation_report as gmr
 from nova import service
 from nova import version
@@ -27,7 +28,7 @@ from nova.vnc import xvp_proxy
 
 def main():
     config.parse_args(sys.argv)
-    logging.setup("nova")
+    logging.setup(config.CONF, "nova")
 
     gmr.TextGuruMeditation.setup_autorun(version)
 

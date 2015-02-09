@@ -14,9 +14,9 @@
 #    under the License.
 
 from oslo_config import cfg
+from oslo_log import log as logging
 
 # Import extensions to pull in osapi_compute_extension CONF option used below.
-from nova.openstack.common import log as logging
 from nova.tests.functional import integrated_helpers
 
 CONF = cfg.CONF

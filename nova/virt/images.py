@@ -22,13 +22,13 @@ Handling of VM disk images.
 import os
 
 from oslo_config import cfg
+from oslo_log import log as logging
 
 from nova import exception
 from nova.i18n import _, _LE
 from nova import image
 from nova.openstack.common import fileutils
 from nova.openstack.common import imageutils
-from nova.openstack.common import log as logging
 from nova import utils
 
 LOG = logging.getLogger(__name__)

@@ -19,6 +19,7 @@
 import functools
 
 from oslo_config import cfg
+from oslo_log import log as logging
 
 from nova import exception
 from nova.i18n import _LI
@@ -28,7 +29,6 @@ from nova.network import model as network_model
 from nova.network import rpcapi as network_rpcapi
 from nova import objects
 from nova.objects import base as obj_base
-from nova.openstack.common import log as logging
 from nova import policy
 from nova import utils
 

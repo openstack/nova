@@ -22,10 +22,10 @@ Weighing Functions.
 import random
 
 from oslo_config import cfg
+from oslo_log import log as logging
 
 from nova import exception
 from nova.i18n import _
-from nova.openstack.common import log as logging
 from nova import rpc
 from nova.scheduler import driver
 from nova.scheduler import scheduler_options

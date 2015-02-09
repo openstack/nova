@@ -41,6 +41,7 @@ import eventlet.semaphore
 import eventlet.timeout
 from keystoneclient import exceptions as keystone_exception
 from oslo_config import cfg
+from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
 from oslo_utils import excutils
@@ -76,7 +77,6 @@ from nova.network import model as network_model
 from nova.network.security_group import openstack_driver
 from nova import objects
 from nova.objects import base as obj_base
-from nova.openstack.common import log as logging
 from nova.openstack.common import loopingcall
 from nova.openstack.common import periodic_task
 from nova import paths
@@ -4636,7 +4636,7 @@ class ComputeManager(manager.Manager):
         LOG.info(_LI('Attaching volume %(volume_id)s to %(mountpoint)s'),
                   {'volume_id': bdm.volume_id,
                   'mountpoint': bdm['mount_device']},
-                  context=context, instance=instance)
+                 context=context, instance=instance)
         try:
             bdm.attach(context, instance, self.volume_api, self.driver,
                        do_check_attach=False, do_driver_attach=True)

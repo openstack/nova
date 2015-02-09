@@ -15,11 +15,11 @@
 import os
 import tempfile
 
+from oslo_log import log as logging
 from oslo_utils import excutils
 
 from nova import exception
 from nova.i18n import _
-from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt.disk.mount import loop
 from nova.virt.disk.mount import nbd

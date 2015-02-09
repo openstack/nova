@@ -19,9 +19,10 @@
 
 import sys
 
+from oslo_log import log as logging
+
 from nova import config
 from nova.objectstore import s3server
-from nova.openstack.common import log as logging
 from nova.openstack.common.report import guru_meditation_report as gmr
 from nova import service
 from nova import utils
@@ -30,7 +31,7 @@ from nova import version
 
 def main():
     config.parse_args(sys.argv)
-    logging.setup("nova")
+    logging.setup(config.CONF, "nova")
     utils.monkey_patch()
 
     gmr.TextGuruMeditation.setup_autorun(version)

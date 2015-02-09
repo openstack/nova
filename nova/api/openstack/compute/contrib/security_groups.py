@@ -19,6 +19,7 @@
 import contextlib
 from xml.dom import minidom
 
+from oslo_log import log as logging
 from oslo_serialization import jsonutils
 import six
 import webob
@@ -31,7 +32,6 @@ from nova import compute
 from nova import exception
 from nova.i18n import _
 from nova.network.security_group import openstack_driver
-from nova.openstack.common import log as logging
 from nova.virt import netutils
 
 

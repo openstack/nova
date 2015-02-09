@@ -18,11 +18,11 @@ The VMware API utility module.
 """
 
 from oslo_config import cfg
+from oslo_log import log as logging
 from oslo_vmware import vim_util as vutil
 import suds
 
 from nova.i18n import _LW
-from nova.openstack.common import log as logging
 
 vmware_opts = cfg.IntOpt('maximum_objects', default=100,
                          help='The maximum number of ObjectContent data '

@@ -61,6 +61,7 @@ import sys
 import decorator
 import netaddr
 from oslo_config import cfg
+from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_utils import importutils
 import six
@@ -75,7 +76,6 @@ from nova import exception
 from nova.i18n import _
 from nova import objects
 from nova.openstack.common import cliutils
-from nova.openstack.common import log as logging
 from nova import quota
 from nova import rpc
 from nova import servicegroup
@@ -1307,7 +1307,7 @@ def main():
     CONF.register_cli_opt(category_opt)
     try:
         config.parse_args(sys.argv)
-        logging.setup("nova")
+        logging.setup(CONF, "nova")
     except cfg.ConfigFilesNotFoundError:
         cfgfile = CONF.config_file[-1] if CONF.config_file else None
         if cfgfile and not os.access(cfgfile, os.R_OK):

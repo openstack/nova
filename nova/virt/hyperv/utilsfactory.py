@@ -14,9 +14,9 @@
 #    under the License.
 
 from oslo_config import cfg
+from oslo_log import log as logging
 
 from nova.i18n import _
-from nova.openstack.common import log as logging
 from nova.virt.hyperv import hostutils
 from nova.virt.hyperv import livemigrationutils
 from nova.virt.hyperv import networkutils

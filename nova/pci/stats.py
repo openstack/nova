@@ -16,9 +16,10 @@
 
 import copy
 
+from oslo_log import log as logging
+
 from nova import exception
 from nova.i18n import _LE
-from nova.openstack.common import log as logging
 from nova.pci import utils
 from nova.pci import whitelist
 

@@ -16,10 +16,10 @@
 import re
 import urllib2
 
+from oslo_log import log as logging
 import paste.urlmap
 
 from nova.api.openstack import wsgi
-from nova.openstack.common import log as logging
 
 
 LOG = logging.getLogger(__name__)

@@ -21,9 +21,10 @@ specified to route a build to a particular cell.  No error handling is
 done as there's no way to know whether the full path is a valid.
 """
 
+from oslo_log import log as logging
+
 from nova.cells import filters
 from nova.i18n import _LI
-from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
 

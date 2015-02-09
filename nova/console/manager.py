@@ -18,13 +18,13 @@
 import socket
 
 from oslo_config import cfg
+from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_utils import importutils
 
 from nova.compute import rpcapi as compute_rpcapi
 from nova import exception
 from nova import manager
-from nova.openstack.common import log as logging
 from nova import utils
 
 

@@ -16,10 +16,11 @@
 #    under the License.
 from distutils import versionpredicate
 
+from oslo_log import log as logging
+
 from nova.compute import arch
 from nova.compute import hv_type
 from nova.compute import vm_mode
-from nova.openstack.common import log as logging
 from nova.scheduler import filters
 from nova import utils
 

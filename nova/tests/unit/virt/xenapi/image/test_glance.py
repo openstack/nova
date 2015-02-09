@@ -18,11 +18,11 @@ import time
 
 import mock
 from mox3 import mox
+from oslo_log import log as logging
 
 from nova.compute import utils as compute_utils
 from nova import context
 from nova import exception
-from nova.openstack.common import log as logging
 from nova.tests.unit.virt.xenapi import stubs
 from nova.virt.xenapi import driver as xenapi_conn
 from nova.virt.xenapi import fake

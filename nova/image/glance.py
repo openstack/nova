@@ -26,6 +26,7 @@ import time
 import glanceclient
 import glanceclient.exc
 from oslo_config import cfg
+from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import netutils
 from oslo_utils import timeutils
@@ -35,7 +36,6 @@ import six.moves.urllib.parse as urlparse
 from nova import exception
 from nova.i18n import _, _LE
 import nova.image.download as image_xfers
-from nova.openstack.common import log as logging
 
 
 glance_opts = [

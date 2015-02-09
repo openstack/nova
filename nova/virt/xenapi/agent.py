@@ -22,6 +22,7 @@ import time
 import uuid
 
 from oslo_config import cfg
+from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import strutils
 
@@ -32,7 +33,6 @@ from nova import crypto
 from nova import exception
 from nova.i18n import _, _LE, _LI, _LW
 from nova import objects
-from nova.openstack.common import log as logging
 from nova import utils
 
 

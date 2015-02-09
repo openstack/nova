@@ -28,6 +28,7 @@ import fixtures
 import iso8601
 import mock
 from oslo_config import cfg
+from oslo_log import log as logging
 from oslo_utils import timeutils
 
 from nova.api.ec2 import cloud
@@ -51,7 +52,6 @@ from nova.network import model
 from nova.network.neutronv2 import api as neutronapi
 from nova import objects
 from nova.objects import base as obj_base
-from nova.openstack.common import log as logging
 from nova.openstack.common import policy as common_policy
 from nova.openstack.common import uuidutils
 from nova import policy

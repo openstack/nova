@@ -17,9 +17,9 @@ import errno
 import os
 
 from eventlet import patcher
+from oslo_log import log as logging
 
 from nova.i18n import _LE
-from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
 

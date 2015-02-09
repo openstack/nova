@@ -27,8 +27,9 @@ cells.
 
 from distutils import versionpredicate
 
+from oslo_log import log as logging
+
 from nova.cells import filters
-from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
 

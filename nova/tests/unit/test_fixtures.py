@@ -14,11 +14,11 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import logging
 import sys
 
 import fixtures as fx
 from oslo_config import cfg
+from oslo_log import log as logging
 import testtools
 
 from nova.db.sqlalchemy import api as session

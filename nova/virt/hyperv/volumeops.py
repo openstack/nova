@@ -23,11 +23,11 @@ import re
 import time
 
 from oslo_config import cfg
+from oslo_log import log as logging
 from oslo_utils import excutils
 
 from nova import exception
 from nova.i18n import _, _LE, _LW
-from nova.openstack.common import log as logging
 from nova.virt import driver
 from nova.virt.hyperv import utilsfactory
 from nova.virt.hyperv import vmutils

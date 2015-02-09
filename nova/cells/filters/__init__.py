@@ -17,8 +17,9 @@
 Cell scheduler filters
 """
 
+from oslo_log import log as logging
+
 from nova import filters
-from nova.openstack.common import log as logging
 from nova import policy
 
 LOG = logging.getLogger(__name__)

@@ -23,6 +23,7 @@ import time
 
 from oslo_config import cfg
 from oslo_db import exception as db_exc
+from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import timeutils
 from oslo_utils import units
@@ -34,7 +35,6 @@ from nova import exception
 from nova.i18n import _LE
 from nova import objects
 from nova.openstack.common import fileutils
-from nova.openstack.common import log as logging
 from nova import rpc
 from nova import utils
 

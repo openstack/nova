@@ -17,6 +17,7 @@
 import functools
 import re
 
+from oslo_log import log as logging
 from oslo_utils import timeutils
 
 from nova import context
@@ -26,7 +27,6 @@ from nova.i18n import _LI
 from nova.network import model as network_model
 from nova import objects
 from nova.objects import base as obj_base
-from nova.openstack.common import log as logging
 from nova.openstack.common import memorycache
 from nova.openstack.common import uuidutils
 

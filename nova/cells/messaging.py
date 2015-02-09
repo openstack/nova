@@ -26,11 +26,13 @@ reached.
 
 The interface into this module is the MessageRunner class.
 """
+
 import sys
 import traceback
 
 from eventlet import queue
 from oslo_config import cfg
+from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
 from oslo_utils import excutils
@@ -53,7 +55,6 @@ from nova.i18n import _, _LE, _LI, _LW
 from nova.network import model as network_model
 from nova import objects
 from nova.objects import base as objects_base
-from nova.openstack.common import log as logging
 from nova.openstack.common import uuidutils
 from nova import rpc
 from nova import utils

@@ -15,10 +15,10 @@
 
 
 from oslo_concurrency import processutils
+from oslo_log import log as logging
 
 from nova.i18n import _LI
 from nova.i18n import _LW
-from nova.openstack.common import log as logging
 from nova import utils
 from nova.volume.encryptors import cryptsetup
 

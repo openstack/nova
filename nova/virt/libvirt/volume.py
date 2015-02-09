@@ -26,6 +26,7 @@ import urllib2
 
 from oslo_concurrency import processutils
 from oslo_config import cfg
+from oslo_log import log as logging
 from oslo_utils import strutils
 import six
 import six.moves.urllib.parse as urlparse
@@ -36,7 +37,6 @@ from nova.i18n import _
 from nova.i18n import _LE
 from nova.i18n import _LI
 from nova.i18n import _LW
-from nova.openstack.common import log as logging
 from nova.openstack.common import loopingcall
 from nova import paths
 from nova.storage import linuxscsi

@@ -24,6 +24,7 @@ import uuid as uuid_lib
 
 import mock
 from oslo_config import cfg
+from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import importutils
 from oslo_utils import timeutils
@@ -48,7 +49,6 @@ from nova import exception
 from nova.network import api as network_api
 from nova.network.neutronv2 import api as neutron_api  # noqa - only for cfg
 from nova import objects
-from nova.openstack.common import log as logging
 import nova.quota
 from nova.servicegroup import api as service_group_api
 from nova import test

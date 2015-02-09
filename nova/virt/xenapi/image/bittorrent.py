@@ -14,11 +14,11 @@
 #    under the License.
 
 from oslo_config import cfg
+from oslo_log import log as logging
 import pkg_resources
 import six.moves.urllib.parse as urlparse
 
 from nova.i18n import _
-import nova.openstack.common.log as logging
 from nova.virt.xenapi import vm_utils
 
 LOG = logging.getLogger(__name__)

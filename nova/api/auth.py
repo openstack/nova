@@ -17,6 +17,7 @@ Common Auth Middleware.
 """
 
 from oslo_config import cfg
+from oslo_log import log as logging
 from oslo_middleware import request_id
 from oslo_serialization import jsonutils
 import webob.dec
@@ -24,7 +25,6 @@ import webob.exc
 
 from nova import context
 from nova.i18n import _
-from nova.openstack.common import log as logging
 from nova import wsgi
 
 

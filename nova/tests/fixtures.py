@@ -18,7 +18,7 @@
 from __future__ import absolute_import
 
 import gettext
-import logging
+import logging as std_logging
 import os
 import uuid
 import warnings
@@ -66,7 +66,7 @@ class TranslationFixture(fixtures.Fixture):
         self.gettext_patcher = self.useFixture(gettext_fixture)
 
 
-class NullHandler(logging.Handler):
+class NullHandler(std_logging.Handler):
     """custom default NullHandler to attempt to format the record.
 
     Used in conjunction with
@@ -114,14 +114,14 @@ class StandardLogging(fixtures.Fixture):
         super(StandardLogging, self).setUp()
 
         # set root logger to debug
-        root = logging.getLogger()
-        root.setLevel(logging.DEBUG)
+        root = std_logging.getLogger()
+        root.setLevel(std_logging.DEBUG)
 
         # supports collecting debug level for local runs
         if os.environ.get('OS_DEBUG') in _TRUE_VALUES:
-            level = logging.DEBUG
+            level = std_logging.DEBUG
         else:
-            level = logging.INFO
+            level = std_logging.INFO
 
         # Collect logs
         fs = '%(asctime)s %(levelname)s [%(name)s] %(message)s'
@@ -132,15 +132,15 @@ class StandardLogging(fixtures.Fixture):
         # to the bottom of.
         root.handlers[0].setLevel(level)
 
-        if level > logging.DEBUG:
+        if level > std_logging.DEBUG:
             # Just attempt to format debug level logs, but don't save them
             handler = NullHandler()
             self.useFixture(fixtures.LogHandler(handler, nuke_handlers=False))
-            handler.setLevel(logging.DEBUG)
+            handler.setLevel(std_logging.DEBUG)
 
             # Don't log every single DB migration step
-            logging.getLogger(
-                'migrate.versioning.api').setLevel(logging.WARNING)
+            std_logging.getLogger(
+                'migrate.versioning.api').setLevel(std_logging.WARNING)
 
 
 class OutputStreamCapture(fixtures.Fixture):

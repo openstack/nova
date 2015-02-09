@@ -29,10 +29,10 @@ these objects be simple dictionaries.
 
 from oslo_config import cfg
 from oslo_db import concurrency
+from oslo_log import log as logging
 
 from nova.cells import rpcapi as cells_rpcapi
 from nova.i18n import _LE
-from nova.openstack.common import log as logging
 
 
 db_opts = [

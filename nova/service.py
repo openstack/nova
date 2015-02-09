@@ -23,6 +23,7 @@ import sys
 
 from oslo_concurrency import processutils
 from oslo_config import cfg
+from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_utils import importutils
 
@@ -33,7 +34,6 @@ from nova import debugger
 from nova import exception
 from nova.i18n import _, _LE, _LI, _LW
 from nova.objects import base as objects_base
-from nova.openstack.common import log as logging
 from nova.openstack.common import service
 from nova import rpc
 from nova import servicegroup

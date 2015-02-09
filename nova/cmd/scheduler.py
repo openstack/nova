@@ -19,10 +19,10 @@
 import sys
 
 from oslo_config import cfg
+from oslo_log import log as logging
 
 from nova import config
 from nova import objects
-from nova.openstack.common import log as logging
 from nova.openstack.common.report import guru_meditation_report as gmr
 from nova import service
 from nova import utils
@@ -34,7 +34,7 @@ CONF.import_opt('scheduler_topic', 'nova.scheduler.rpcapi')
 
 def main():
     config.parse_args(sys.argv)
-    logging.setup("nova")
+    logging.setup(CONF, "nova")
     utils.monkey_patch()
     objects.register_all()
 

@@ -18,9 +18,8 @@ import re
 
 from eventlet import greenthread
 from oslo_concurrency import processutils
+from oslo_log import log as logging
 import six
-
-from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
 

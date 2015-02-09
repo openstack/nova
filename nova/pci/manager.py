@@ -16,13 +16,14 @@
 
 import collections
 
+from oslo_log import log as logging
+
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova import context
 from nova import exception
 from nova.i18n import _LW
 from nova import objects
-from nova.openstack.common import log as logging
 from nova.pci import device
 from nova.pci import stats
 from nova.virt import hardware

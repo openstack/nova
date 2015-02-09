@@ -24,6 +24,7 @@ import netaddr
 from oslo_concurrency import processutils
 from oslo_config import cfg
 from oslo_db import exception as db_exc
+from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_utils import importutils
 from oslo_utils import netutils
@@ -41,7 +42,6 @@ from nova.network import model as net_model
 from nova import objects
 from nova.objects import quotas as quotas_obj
 from nova.objects import virtual_interface as vif_obj
-from nova.openstack.common import log as logging
 from nova import quota
 from nova import test
 from nova.tests.unit import fake_instance

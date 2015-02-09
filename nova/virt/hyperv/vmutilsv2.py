@@ -25,8 +25,8 @@ if sys.platform == 'win32':
     import wmi
 
 from oslo_config import cfg
+from oslo_log import log as logging
 
-from nova.openstack.common import log as logging
 from nova.virt.hyperv import constants
 from nova.virt.hyperv import vmutils
 

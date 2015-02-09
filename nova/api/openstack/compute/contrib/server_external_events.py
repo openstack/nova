@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_log import log as logging
 import webob
 
 from nova.api.openstack import extensions
@@ -22,7 +23,6 @@ from nova.i18n import _
 from nova.i18n import _LI
 from nova import objects
 from nova.objects import external_event as external_event_obj
-from nova.openstack.common import log as logging
 
 
 LOG = logging.getLogger(__name__)

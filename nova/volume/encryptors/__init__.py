@@ -14,10 +14,10 @@
 #    under the License.
 
 
+from oslo_log import log as logging
 from oslo_utils import importutils
 
 from nova.i18n import _LE
-from nova.openstack.common import log as logging
 from nova.volume.encryptors import nop
 
 

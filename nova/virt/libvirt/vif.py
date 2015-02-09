@@ -22,13 +22,13 @@ import copy
 import os
 from oslo_concurrency import processutils
 from oslo_config import cfg
+from oslo_log import log as logging
 
 from nova import exception
 from nova.i18n import _
 from nova.i18n import _LE
 from nova.network import linux_net
 from nova.network import model as network_model
-from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import designer

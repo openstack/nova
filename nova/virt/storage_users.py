@@ -17,10 +17,10 @@ import os
 import time
 
 from oslo_config import cfg
+from oslo_log import log as logging
 from oslo_serialization import jsonutils
 
 from nova.i18n import _LW
-from nova.openstack.common import log as logging
 from nova import utils
 
 LOG = logging.getLogger(__name__)

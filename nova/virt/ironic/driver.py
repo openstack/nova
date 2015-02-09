@@ -22,12 +22,12 @@ bare metal resources.
 """
 import base64
 import gzip
-import logging as py_logging
 import shutil
 import tempfile
 import time
 
 from oslo_config import cfg
+from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import excutils
 from oslo_utils import importutils
@@ -46,7 +46,6 @@ from nova.i18n import _LE
 from nova.i18n import _LI
 from nova.i18n import _LW
 from nova import objects
-from nova.openstack.common import log as logging
 from nova.openstack.common import loopingcall
 from nova.virt import configdrive
 from nova.virt import driver as virt_driver
@@ -183,8 +182,8 @@ class IronicDriver(virt_driver.ComputeDriver):
         # to be addressed
         ironicclient_log_level = CONF.ironic.client_log_level
         if ironicclient_log_level:
-            level = py_logging.getLevelName(ironicclient_log_level)
-            logger = py_logging.getLogger('ironicclient')
+            level = logging.getLevelName(ironicclient_log_level)
+            logger = logging.getLogger('ironicclient')
             logger.setLevel(level)
 
         self.ironicclient = client_wrapper.IronicClientWrapper()

@@ -28,9 +28,10 @@ if sys.platform == 'win32':
     import _winreg
     import wmi
 
+from oslo_log import log as logging
+
 from nova import block_device
 from nova.i18n import _LI
-from nova.openstack.common import log as logging
 from nova.virt import driver
 
 LOG = logging.getLogger(__name__)

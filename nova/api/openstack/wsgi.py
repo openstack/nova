@@ -19,6 +19,7 @@ import inspect
 import math
 import time
 
+from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import strutils
 import six
@@ -31,7 +32,6 @@ from nova import i18n
 from nova.i18n import _
 from nova.i18n import _LE
 from nova.i18n import _LI
-from nova.openstack.common import log as logging
 from nova import utils
 from nova import wsgi
 

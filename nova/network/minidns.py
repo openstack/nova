@@ -17,11 +17,11 @@ import shutil
 import tempfile
 
 from oslo_config import cfg
+from oslo_log import log as logging
 
 from nova import exception
 from nova.i18n import _, _LI, _LW
 from nova.network import dns_driver
-from nova.openstack.common import log as logging
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)

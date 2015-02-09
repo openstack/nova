@@ -19,11 +19,11 @@ Management class for VM snapshot operations.
 import os
 
 from oslo_config import cfg
+from oslo_log import log as logging
 
 from nova.compute import task_states
 from nova.i18n import _LW
 from nova.image import glance
-from nova.openstack.common import log as logging
 from nova.virt.hyperv import utilsfactory
 
 CONF = cfg.CONF

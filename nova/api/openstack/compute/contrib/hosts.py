@@ -15,6 +15,7 @@
 
 """The hosts admin extension."""
 
+from oslo_log import log as logging
 import webob.exc
 
 from nova.api.openstack import extensions
@@ -23,7 +24,6 @@ from nova import exception
 from nova.i18n import _
 from nova.i18n import _LI
 from nova import objects
-from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
 authorize = extensions.extension_authorizer('compute', 'hosts')

@@ -11,6 +11,7 @@
 #    under the License.
 
 from oslo_config import cfg
+from oslo_log import log as logging
 
 from nova.compute import power_state
 from nova.compute import rpcapi as compute_rpcapi
@@ -19,7 +20,6 @@ from nova import exception
 from nova.i18n import _
 from nova import image
 from nova import objects
-from nova.openstack.common import log as logging
 from nova.scheduler import client as scheduler_client
 from nova.scheduler import utils as scheduler_utils
 from nova import servicegroup

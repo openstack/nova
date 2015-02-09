@@ -17,10 +17,10 @@
 """Define APIs for the servicegroup access."""
 
 from oslo_config import cfg
+from oslo_log import log as logging
 from oslo_utils import importutils
 
 from nova.i18n import _, _LW
-from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
 _default_driver = 'db'

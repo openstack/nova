@@ -33,6 +33,9 @@ For postgres on Ubuntu this can be done with the following commands::
 """
 
 import glob
+# NOTE(dhellmann): Use stdlib logging instead of oslo.log because we
+# need to call methods on the logger that are not exposed through the
+# adapter provided by oslo.log.
 import logging
 import os
 

@@ -19,6 +19,7 @@ import traceback
 import fixtures
 import mock
 import netaddr
+from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import importutils
 from oslo_utils import timeutils
@@ -28,7 +29,6 @@ from nova.compute import manager
 from nova.console import type as ctype
 from nova import exception
 from nova import objects
-from nova.openstack.common import log as logging
 from nova import test
 from nova.tests.unit import fake_block_device
 from nova.tests.unit.image import fake as fake_image

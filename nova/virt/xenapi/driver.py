@@ -26,12 +26,12 @@ A driver for XenServer or Xen Cloud Platform.
 import math
 
 from oslo_config import cfg
+from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import units
 import six.moves.urllib.parse as urlparse
 
 from nova.i18n import _, _LE, _LW
-from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt import driver
 from nova.virt.xenapi.client import session

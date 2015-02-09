@@ -22,6 +22,7 @@ import datetime
 
 from oslo_config import cfg
 from oslo_context import context as common_context
+from oslo_log import log
 from oslo_utils import excutils
 from oslo_utils import timeutils
 import six
@@ -33,7 +34,6 @@ from nova.image import glance
 from nova import network
 from nova.network import model as network_model
 from nova.objects import base as obj_base
-from nova.openstack.common import log
 from nova import rpc
 from nova import utils
 

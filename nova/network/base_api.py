@@ -17,6 +17,7 @@ import functools
 import inspect
 
 from oslo_concurrency import lockutils
+from oslo_log import log as logging
 from oslo_utils import excutils
 
 from nova.db import base
@@ -24,7 +25,6 @@ from nova import hooks
 from nova.i18n import _, _LE
 from nova.network import model as network_model
 from nova import objects
-from nova.openstack.common import log as logging
 
 
 LOG = logging.getLogger(__name__)

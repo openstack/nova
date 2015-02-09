@@ -18,6 +18,7 @@ import sys
 from neutronclient.common import exceptions as n_exc
 from neutronclient.neutron import v2_0 as neutronv20
 from oslo_config import cfg
+from oslo_log import log as logging
 from oslo_utils import excutils
 import six
 from webob import exc
@@ -28,7 +29,6 @@ from nova.i18n import _, _LE, _LI, _LW
 from nova.network.neutronv2 import api as neutronapi
 from nova.network.security_group import security_group_base
 from nova import objects
-from nova.openstack.common import log as logging
 from nova.openstack.common import uuidutils
 from nova import utils
 

@@ -16,12 +16,12 @@
 """VIF drivers for VMware."""
 
 from oslo_config import cfg
+from oslo_log import log as logging
 from oslo_vmware import exceptions as vexc
 
 from nova import exception
 from nova.i18n import _LW
 from nova.network import model
-from nova.openstack.common import log as logging
 from nova.virt.vmwareapi import network_util
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util

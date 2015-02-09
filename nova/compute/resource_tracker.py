@@ -21,6 +21,7 @@ model.
 import copy
 
 from oslo_config import cfg
+from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import importutils
 
@@ -36,7 +37,6 @@ from nova.i18n import _, _LI, _LW
 from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import instance as instance_obj
-from nova.openstack.common import log as logging
 from nova.pci import manager as pci_manager
 from nova.pci import whitelist as pci_whitelist
 from nova import rpc

@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_log import log as logging
+
 from nova import block_device
 from nova.cells import opts as cells_opts
 from nova.cells import rpcapi as cells_rpcapi
@@ -21,7 +23,6 @@ from nova.i18n import _
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
-from nova.openstack.common import log as logging
 
 
 LOG = logging.getLogger(__name__)

@@ -20,6 +20,7 @@ import traceback
 
 import netifaces
 from oslo_config import cfg
+from oslo_log import log
 from oslo_utils import encodeutils
 
 from nova import block_device
@@ -31,7 +32,6 @@ from nova.network import model as network_model
 from nova import notifications
 from nova import objects
 from nova.objects import base as obj_base
-from nova.openstack.common import log
 from nova import rpc
 from nova import utils
 from nova.virt import driver

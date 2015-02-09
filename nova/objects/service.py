@@ -12,13 +12,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_log import log as logging
+
 from nova import availability_zones
 from nova import db
 from nova import exception
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
-from nova.openstack.common import log as logging
 
 
 LOG = logging.getLogger(__name__)

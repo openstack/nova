@@ -15,14 +15,15 @@
 """
 Datastore utility functions
 """
+
 import posixpath
 
+from oslo_log import log as logging
 from oslo_vmware import exceptions as vexc
 from oslo_vmware import pbm
 
 from nova import exception
 from nova.i18n import _, _LE, _LI
-from nova.openstack.common import log as logging
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util

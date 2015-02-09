@@ -16,10 +16,10 @@
 import os
 import time
 
+from oslo_log import log as logging
 from oslo_utils import importutils
 
 from nova.i18n import _, _LI, _LW
-from nova.openstack.common import log as logging
 from nova import utils
 
 LOG = logging.getLogger(__name__)

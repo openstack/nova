@@ -19,10 +19,10 @@ Management class for live migration VM operations.
 import functools
 
 from oslo_config import cfg
+from oslo_log import log as logging
 from oslo_utils import excutils
 
 from nova.i18n import _
-from nova.openstack.common import log as logging
 from nova.virt.hyperv import imagecache
 from nova.virt.hyperv import utilsfactory
 from nova.virt.hyperv import vmops

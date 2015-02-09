@@ -15,10 +15,10 @@
 import sys
 
 from oslo_config import cfg
+from oslo_log import log as logging
 from oslo_utils import importutils
 
 from nova.i18n import _LE, _LI
-from nova.openstack.common import log as logging
 
 driver_opts = [
     cfg.StrOpt('network_driver',

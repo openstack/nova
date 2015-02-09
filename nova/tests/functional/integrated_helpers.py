@@ -22,10 +22,10 @@ import string
 import uuid
 
 from oslo_config import cfg
+from oslo_log import log as logging
 
 from nova import crypto
 import nova.image.glance
-from nova.openstack.common import log as logging
 from nova import service
 from nova import test
 from nova.tests.functional.api import client

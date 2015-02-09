@@ -15,6 +15,7 @@
 
 """The Server Group API Extension."""
 
+from oslo_log import log as logging
 import webob
 from webob import exc
 
@@ -27,7 +28,6 @@ import nova.exception
 from nova.i18n import _
 from nova.i18n import _LE
 from nova import objects
-from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
 

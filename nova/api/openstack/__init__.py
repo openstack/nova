@@ -19,6 +19,7 @@ WSGI middleware for OpenStack API controllers.
 """
 
 from oslo_config import cfg
+from oslo_log import log as logging
 import routes
 import stevedore
 import webob.dec
@@ -34,7 +35,6 @@ from nova.i18n import _LI
 from nova.i18n import _LW
 from nova.i18n import translate
 from nova import notifications
-from nova.openstack.common import log as logging
 from nova import utils
 from nova import wsgi as base_wsgi
 

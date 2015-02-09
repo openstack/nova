@@ -15,10 +15,9 @@
 
 import base64
 
+from oslo_log import log as logging
 import rfc3986
 import six
-
-from nova.openstack.common import log as logging
 
 
 LOG = logging.getLogger(__name__)

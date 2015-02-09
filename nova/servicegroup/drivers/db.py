@@ -14,13 +14,13 @@
 # limitations under the License.
 
 from oslo_config import cfg
+from oslo_log import log as logging
 from oslo_utils import timeutils
 import six
 
 from nova import conductor
 from nova import context
 from nova.i18n import _, _LE
-from nova.openstack.common import log as logging
 from nova.servicegroup import api
 from nova.servicegroup.drivers import base
 

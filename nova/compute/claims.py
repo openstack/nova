@@ -17,6 +17,7 @@
 Claim objects for use with resource tracking.
 """
 
+from oslo_log import log as logging
 from oslo_serialization import jsonutils
 
 from nova import context
@@ -25,7 +26,6 @@ from nova.i18n import _
 from nova.i18n import _LI
 from nova import objects
 from nova.objects import base as obj_base
-from nova.openstack.common import log as logging
 from nova.virt import hardware
 
 
@@ -155,7 +155,7 @@ class Claim(NopClaim):
         msg = _("Attempting claim: memory %(memory_mb)d MB, disk %(disk_gb)d "
                 "GB")
         params = {'memory_mb': self.memory_mb, 'disk_gb': self.disk_gb}
-        LOG.audit(msg % params, instance=self.instance)
+        LOG.info(msg % params, instance=self.instance)
 
         reasons = [self._test_memory(resources, memory_mb_limit),
                    self._test_disk(resources, disk_gb_limit),

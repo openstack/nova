@@ -27,6 +27,7 @@ from cinderclient.v1 import client as v1_client
 from keystoneclient import exceptions as keystone_exception
 from keystoneclient import session
 from oslo_config import cfg
+from oslo_log import log as logging
 from oslo_utils import strutils
 import six.moves.urllib.parse as urlparse
 
@@ -34,7 +35,6 @@ from nova import availability_zones as az
 from nova import exception
 from nova.i18n import _
 from nova.i18n import _LW
-from nova.openstack.common import log as logging
 
 cinder_opts = [
     cfg.StrOpt('catalog_info',

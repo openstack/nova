@@ -27,6 +27,7 @@ import string
 import uuid
 
 from oslo_config import cfg
+from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import excutils
 from oslo_utils import strutils
@@ -67,7 +68,6 @@ from nova.objects import block_device as block_device_obj
 from nova.objects import keypair as keypair_obj
 from nova.objects import quotas as quotas_obj
 from nova.objects import security_group as security_group_obj
-from nova.openstack.common import log as logging
 from nova.openstack.common import uuidutils
 from nova.pci import request as pci_request
 import nova.policy
@@ -4073,10 +4073,10 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
         for v in vals:
             rule = self.db.security_group_rule_create(context, v)
             rules.append(rule)
-            LOG.audit(msg, {'name': name,
-                            'protocol': rule.protocol,
-                            'from_port': rule.from_port,
-                            'to_port': rule.to_port})
+            LOG.info(msg, {'name': name,
+                           'protocol': rule.protocol,
+                           'from_port': rule.from_port,
+                           'to_port': rule.to_port})
 
         self.trigger_rules_refresh(context, id=id)
         return rules
@@ -4086,10 +4086,10 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
                 "(%(from_port)s:%(to_port)s)")
         for rule_id in rule_ids:
             rule = self.get_rule(context, rule_id)
-            LOG.audit(msg, {'name': security_group['name'],
-                            'protocol': rule.protocol,
-                            'from_port': rule.from_port,
-                            'to_port': rule.to_port})
+            LOG.info(msg, {'name': security_group['name'],
+                           'protocol': rule.protocol,
+                           'from_port': rule.from_port,
+                           'to_port': rule.to_port})
 
             self.db.security_group_rule_destroy(context, rule_id)
 

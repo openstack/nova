@@ -15,13 +15,13 @@
 """Handles all requests to the conductor service."""
 
 from oslo_config import cfg
+from oslo_log import log as logging
 import oslo_messaging as messaging
 
 from nova import baserpc
 from nova.conductor import manager
 from nova.conductor import rpcapi
 from nova.i18n import _LI, _LW
-from nova.openstack.common import log as logging
 from nova import utils
 
 conductor_opts = [

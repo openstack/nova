@@ -21,11 +21,11 @@ import datetime
 import uuid
 
 from oslo_config import cfg
+from oslo_log import log as logging
 
 from nova.compute import arch
 from nova import exception
 import nova.image.glance
-from nova.openstack.common import log as logging
 
 CONF = cfg.CONF
 CONF.import_opt('null_kernel', 'nova.compute.api')

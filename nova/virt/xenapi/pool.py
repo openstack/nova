@@ -18,6 +18,7 @@ Management class for Pool-related functions (join, eject, etc).
 """
 
 from oslo_config import cfg
+from oslo_log import log as logging
 from oslo_serialization import jsonutils
 import six
 import six.moves.urllib.parse as urlparse
@@ -25,7 +26,6 @@ import six.moves.urllib.parse as urlparse
 from nova.compute import rpcapi as compute_rpcapi
 from nova import exception
 from nova.i18n import _, _LE
-from nova.openstack.common import log as logging
 from nova.virt.xenapi import pool_states
 from nova.virt.xenapi import vm_utils
 

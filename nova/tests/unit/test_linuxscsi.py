@@ -14,8 +14,8 @@
 #    under the License.
 
 from oslo_config import cfg
+from oslo_log import log as logging
 
-from nova.openstack.common import log as logging
 from nova.storage import linuxscsi
 from nova import test
 from nova import utils

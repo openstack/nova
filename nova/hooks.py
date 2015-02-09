@@ -44,10 +44,10 @@ Example Hook object with function parameters::
 
 import functools
 
+from oslo_log import log as logging
 import stevedore
 
 from nova.i18n import _, _LE
-from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
 NS = 'nova.hooks'

@@ -16,6 +16,7 @@ import collections
 import itertools
 
 from oslo_config import cfg
+from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import units
 import six
@@ -24,7 +25,6 @@ from nova import context
 from nova import exception
 from nova.i18n import _
 from nova import objects
-from nova.openstack.common import log as logging
 
 virt_cpu_opts = [
     cfg.StrOpt('vcpu_pin_set',

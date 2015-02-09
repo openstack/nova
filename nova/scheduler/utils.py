@@ -19,6 +19,7 @@ import functools
 import sys
 
 from oslo_config import cfg
+from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
 
@@ -30,7 +31,6 @@ from nova import notifications
 from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import instance as instance_obj
-from nova.openstack.common import log as logging
 from nova import rpc
 
 

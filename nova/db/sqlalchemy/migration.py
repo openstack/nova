@@ -20,13 +20,13 @@ from migrate import exceptions as versioning_exceptions
 from migrate.versioning import api as versioning_api
 from migrate.versioning.repository import Repository
 from oslo_db.sqlalchemy import utils as db_utils
+from oslo_log import log as logging
 import sqlalchemy
 from sqlalchemy.sql import null
 
 from nova.db.sqlalchemy import api as db_session
 from nova import exception
 from nova.i18n import _
-from nova.openstack.common import log as logging
 
 INIT_VERSION = 215
 _REPOSITORY = None

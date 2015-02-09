@@ -19,6 +19,7 @@
 import datetime
 
 from oslo_config import cfg
+from oslo_log import log as logging
 from oslo_utils import importutils
 from oslo_utils import timeutils
 import six
@@ -27,7 +28,6 @@ from nova import db
 from nova import exception
 from nova.i18n import _LE
 from nova import objects
-from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
 

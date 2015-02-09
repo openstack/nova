@@ -15,10 +15,10 @@
 import uuid
 
 from oslo_config import cfg
+from oslo_log import log as logging
 from oslo_utils import timeutils
 
 from nova import exception
-from nova.openstack.common import log as logging
 
 
 LOG = logging.getLogger(__name__)

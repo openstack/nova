@@ -26,12 +26,12 @@ import re
 from lxml import etree
 from oslo_concurrency import processutils
 from oslo_config import cfg
+from oslo_log import log as logging
 
 from nova.compute import arch
 from nova.i18n import _
 from nova.i18n import _LI
 from nova.i18n import _LW
-from nova.openstack.common import log as logging
 from nova.storage import linuxscsi
 from nova import utils
 from nova.virt import images

@@ -19,6 +19,7 @@
 import time
 
 from oslo_config import cfg
+from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
 
@@ -27,7 +28,6 @@ from nova.compute import rpcapi as compute_rpcapi
 from nova.i18n import _LI, _LW
 from nova import manager
 from nova import objects
-from nova.openstack.common import log as logging
 from nova.openstack.common import memorycache
 
 

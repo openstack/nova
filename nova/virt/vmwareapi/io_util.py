@@ -22,11 +22,11 @@ to the write using a LightQueue as a Pipe between the reader and the writer.
 from eventlet import event
 from eventlet import greenthread
 from eventlet import queue
+from oslo_log import log as logging
 
 from nova import exception
 from nova.i18n import _
 from nova import image
-from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
 IMAGE_API = image.API()

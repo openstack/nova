@@ -16,10 +16,10 @@
 
 import abc
 
+from oslo_log import log as logging
 import six
 
 from nova import keymgr
-from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
 

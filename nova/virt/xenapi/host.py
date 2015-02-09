@@ -20,6 +20,7 @@ Management class for host-related functions (start, reboot, etc).
 import re
 
 from oslo_config import cfg
+from oslo_log import log as logging
 from oslo_serialization import jsonutils
 
 from nova.compute import arch
@@ -31,7 +32,6 @@ from nova import context
 from nova import exception
 from nova.i18n import _, _LE, _LI, _LW
 from nova import objects
-from nova.openstack.common import log as logging
 from nova.virt.xenapi import pool_states
 from nova.virt.xenapi import vm_utils
 

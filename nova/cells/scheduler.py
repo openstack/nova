@@ -20,6 +20,7 @@ import copy
 import time
 
 from oslo_config import cfg
+from oslo_log import log as logging
 
 from nova.cells import filters
 from nova.cells import weights
@@ -32,7 +33,6 @@ from nova import exception
 from nova.i18n import _LE, _LI
 from nova import objects
 from nova.objects import base as obj_base
-from nova.openstack.common import log as logging
 from nova.scheduler import utils as scheduler_utils
 from nova import utils
 

@@ -17,6 +17,7 @@
 import netaddr
 import netaddr.core as netexc
 from oslo_config import cfg
+from oslo_log import log as logging
 import six
 from webob import exc
 
@@ -29,7 +30,6 @@ from nova import exception
 from nova.i18n import _
 from nova.i18n import _LE
 import nova.network
-from nova.openstack.common import log as logging
 from nova import quota
 
 

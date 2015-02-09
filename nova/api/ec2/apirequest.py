@@ -23,12 +23,12 @@ import datetime
 from xml.dom import minidom
 
 from lxml import etree
+from oslo_log import log as logging
 from oslo_utils import encodeutils
 import six
 
 from nova.api.ec2 import ec2utils
 from nova import exception
-from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
 

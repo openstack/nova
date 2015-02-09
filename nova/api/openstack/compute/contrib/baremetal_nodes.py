@@ -16,13 +16,13 @@
 """The bare-metal admin extension with Ironic Proxy."""
 
 from oslo_config import cfg
+from oslo_log import log as logging
 from oslo_utils import importutils
 import webob
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.i18n import _
-from nova.openstack.common import log as logging
 
 ironic_client = importutils.try_import('ironicclient.client')
 

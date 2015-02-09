@@ -22,13 +22,13 @@ import copy
 from keystoneclient import auth
 from keystoneclient import service_catalog
 from oslo_context import context
+from oslo_log import log as logging
 from oslo_utils import timeutils
 import six
 
 from nova import exception
 from nova.i18n import _, _LW
 from nova.openstack.common import local
-from nova.openstack.common import log as logging
 from nova import policy
 
 

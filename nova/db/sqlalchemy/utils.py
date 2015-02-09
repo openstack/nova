@@ -15,6 +15,7 @@
 
 from oslo_db import exception as db_exc
 from oslo_db.sqlalchemy import utils as oslodbutils
+from oslo_log import log as logging
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy import MetaData
@@ -25,7 +26,6 @@ from sqlalchemy.types import NullType
 from nova.db.sqlalchemy import api as db
 from nova import exception
 from nova.i18n import _, _LE
-from nova.openstack.common import log as logging
 
 
 LOG = logging.getLogger(__name__)

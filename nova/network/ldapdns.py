@@ -21,11 +21,11 @@ except ImportError:
 import time
 
 from oslo_config import cfg
+from oslo_log import log as logging
 
 from nova import exception
 from nova.i18n import _, _LW
 from nova.network import dns_driver
-from nova.openstack.common import log as logging
 from nova import utils
 
 CONF = cfg.CONF

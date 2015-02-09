@@ -12,9 +12,9 @@
 
 
 import mock
+from oslo_log import log as logging
 
 from nova import exception
-from nova.openstack.common import log as logging
 from nova import test
 from nova import utils
 from nova.virt.libvirt import rbd_utils

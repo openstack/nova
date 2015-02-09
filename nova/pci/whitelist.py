@@ -15,11 +15,11 @@
 #    under the License.
 
 from oslo_config import cfg
+from oslo_log import log as logging
 from oslo_serialization import jsonutils
 
 from nova import exception
 from nova.i18n import _
-from nova.openstack.common import log as logging
 from nova.pci import devspec
 
 pci_opts = [cfg.MultiStrOpt('pci_passthrough_whitelist',

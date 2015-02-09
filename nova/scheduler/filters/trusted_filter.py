@@ -44,13 +44,13 @@ the Open Attestation project at:
 """
 
 from oslo_config import cfg
+from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import timeutils
 import requests
 
 from nova import context
 from nova import objects
-from nova.openstack.common import log as logging
 from nova.scheduler import filters
 
 LOG = logging.getLogger(__name__)

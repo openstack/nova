@@ -39,6 +39,7 @@ import netaddr
 from oslo_concurrency import lockutils
 from oslo_concurrency import processutils
 from oslo_config import cfg
+from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_utils import excutils
 from oslo_utils import importutils
@@ -47,7 +48,6 @@ import six
 
 from nova import exception
 from nova.i18n import _, _LE, _LW
-from nova.openstack.common import log as logging
 
 notify_decorator = 'nova.notifications.notify_decorator'
 

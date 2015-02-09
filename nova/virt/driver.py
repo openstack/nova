@@ -23,10 +23,10 @@ Driver base-classes:
 import sys
 
 from oslo_config import cfg
+from oslo_log import log as logging
 from oslo_utils import importutils
 
 from nova.i18n import _, _LE, _LI
-from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt import event as virtevent
 

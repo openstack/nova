@@ -23,10 +23,10 @@ import string
 
 from eventlet import greenthread
 from oslo_config import cfg
+from oslo_log import log as logging
 
 from nova import exception
 from nova.i18n import _, _LW
-from nova.openstack.common import log as logging
 
 xenapi_volume_utils_opts = [
     cfg.IntOpt('introduce_vdi_retry_wait',

@@ -60,8 +60,8 @@ def init():
     if not (CONF.remote_debug.host and CONF.remote_debug.port):
         return
 
+    import logging
     from nova.i18n import _LW
-    from nova.openstack.common import log as logging
     LOG = logging.getLogger(__name__)
 
     LOG.debug('Listening on %(host)s:%(port)s for debug connection',

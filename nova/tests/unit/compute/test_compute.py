@@ -30,6 +30,7 @@ from eventlet import greenthread
 import mock
 from mox3 import mox
 from oslo_config import cfg
+from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
 from oslo_utils import importutils
@@ -65,7 +66,6 @@ from nova.network.security_group import openstack_driver
 from nova import objects
 from nova.objects import block_device as block_device_obj
 from nova.objects import instance as instance_obj
-from nova.openstack.common import log as logging
 from nova.openstack.common import uuidutils
 from nova import policy
 from nova import quota

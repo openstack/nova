@@ -14,6 +14,8 @@
 
 import itertools
 
+from oslo_log import log as logging
+
 from nova.cells import opts as cells_opts
 from nova.cells import rpcapi as cells_rpcapi
 from nova import db
@@ -22,7 +24,6 @@ from nova.i18n import _LE
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
-from nova.openstack.common import log as logging
 
 
 LOG = logging.getLogger(__name__)

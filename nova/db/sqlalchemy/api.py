@@ -30,6 +30,7 @@ from oslo_config import cfg
 from oslo_db import exception as db_exc
 from oslo_db.sqlalchemy import session as db_session
 from oslo_db.sqlalchemy import utils as sqlalchemyutils
+from oslo_log import log as logging
 from oslo_utils import excutils
 from oslo_utils import timeutils
 import retrying
@@ -60,7 +61,6 @@ import nova.context
 from nova.db.sqlalchemy import models
 from nova import exception
 from nova.i18n import _, _LI, _LE, _LW
-from nova.openstack.common import log as logging
 from nova.openstack.common import uuidutils
 from nova import quota
 

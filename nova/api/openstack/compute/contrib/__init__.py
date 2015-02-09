@@ -20,9 +20,9 @@ It can't be called 'extensions' because that causes namespacing problems.
 """
 
 from oslo_config import cfg
+from oslo_log import log as logging
 
 from nova.api.openstack import extensions
-from nova.openstack.common import log as logging
 
 ext_opts = [
     cfg.ListOpt('osapi_compute_ext_list',

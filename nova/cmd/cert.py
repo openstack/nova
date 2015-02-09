@@ -17,9 +17,9 @@
 import sys
 
 from oslo_config import cfg
+from oslo_log import log as logging
 
 from nova import config
-from nova.openstack.common import log as logging
 from nova.openstack.common.report import guru_meditation_report as gmr
 from nova import service
 from nova import utils
@@ -31,7 +31,7 @@ CONF.import_opt('cert_topic', 'nova.cert.rpcapi')
 
 def main():
     config.parse_args(sys.argv)
-    logging.setup("nova")
+    logging.setup(CONF, "nova")
     utils.monkey_patch()
 
     gmr.TextGuruMeditation.setup_autorun(version)

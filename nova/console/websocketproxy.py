@@ -23,13 +23,13 @@ import socket
 import sys
 import urlparse
 
+from oslo_log import log as logging
 import websockify
 
 from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import context
 from nova import exception
 from nova.i18n import _
-from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
 

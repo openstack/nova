@@ -18,6 +18,7 @@ import abc
 import functools
 import os
 
+from oslo_log import log as logging
 from oslo_utils import importutils
 import six
 import webob.dec
@@ -29,7 +30,6 @@ from nova import exception
 from nova.i18n import _
 from nova.i18n import _LE
 from nova.i18n import _LW
-from nova.openstack.common import log as logging
 import nova.policy
 
 LOG = logging.getLogger(__name__)

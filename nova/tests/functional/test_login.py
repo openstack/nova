@@ -13,8 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_log import log as logging
 
-from nova.openstack.common import log as logging
 from nova.tests.functional.api import client
 from nova.tests.functional import integrated_helpers
 

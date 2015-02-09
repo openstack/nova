@@ -19,12 +19,12 @@ import uuid
 
 from lxml import etree
 from oslo_config import cfg
+from oslo_log import log as logging
 from oslo_utils import importutils
 
 from nova.cloudpipe import pipelib
 from nova.i18n import _LI
 from nova.i18n import _LW
-from nova.openstack.common import log as logging
 import nova.virt.firewall as base_firewall
 from nova.virt import netutils
 

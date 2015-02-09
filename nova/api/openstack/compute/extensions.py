@@ -14,9 +14,9 @@
 #    under the License.
 
 from oslo_config import cfg
+from oslo_log import log as logging
 
 from nova.api.openstack import extensions as base_extensions
-from nova.openstack.common import log as logging
 
 ext_opts = [
     cfg.MultiStrOpt('osapi_compute_extension',

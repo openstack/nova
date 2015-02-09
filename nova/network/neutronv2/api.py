@@ -22,6 +22,7 @@ from neutronclient.common import exceptions as neutron_client_exc
 from neutronclient.v2_0 import client as clientv20
 from oslo_concurrency import lockutils
 from oslo_config import cfg
+from oslo_log import log as logging
 from oslo_utils import excutils
 import six
 
@@ -33,7 +34,6 @@ from nova.network import base_api
 from nova.network import model as network_model
 from nova.network.neutronv2 import constants
 from nova import objects
-from nova.openstack.common import log as logging
 from nova.openstack.common import uuidutils
 from nova.pci import manager as pci_manager
 from nova.pci import request as pci_request

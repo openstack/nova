@@ -25,6 +25,7 @@ import string
 import zipfile
 
 from oslo_config import cfg
+from oslo_log import log as logging
 
 from nova import compute
 from nova.compute import flavors
@@ -33,7 +34,6 @@ from nova import db
 from nova import exception
 from nova.i18n import _
 from nova.openstack.common import fileutils
-from nova.openstack.common import log as logging
 from nova import paths
 from nova import utils
 

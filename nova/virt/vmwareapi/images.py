@@ -23,6 +23,7 @@ import tempfile
 
 from lxml import etree
 from oslo_config import cfg
+from oslo_log import log as logging
 from oslo_utils import strutils
 from oslo_utils import units
 from oslo_vmware import rw_handles
@@ -30,7 +31,6 @@ from oslo_vmware import rw_handles
 from nova import exception
 from nova.i18n import _, _LI
 from nova import image
-from nova.openstack.common import log as logging
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import io_util
 
