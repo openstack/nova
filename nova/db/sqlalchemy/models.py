@@ -112,13 +112,7 @@ class ComputeNode(BASE, NovaBase):
             name="uniq_compute_nodes0host0hypervisor_hostname"),
     )
     id = Column(Integer, primary_key=True)
-    service_id = Column(Integer, ForeignKey('services.id'), nullable=False)
-    service = orm.relationship(Service,
-                           backref=orm.backref('compute_node'),
-                           foreign_keys=service_id,
-                           primaryjoin='and_('
-                                'ComputeNode.service_id == Service.id,'
-                                'ComputeNode.deleted == 0)')
+    service_id = Column(Integer, nullable=True)
 
     # FIXME(sbauza: Host field is nullable because some old Juno compute nodes
     # can still report stats from an old ResourceTracker without setting this
