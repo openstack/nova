@@ -51,7 +51,7 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
         self.assertIsInstance(manager.driver, self.driver_cls)
 
     def test_select_destination(self):
-        with mock.patch.object(self.manager, 'select_destinations'
+        with mock.patch.object(self.manager.driver, 'select_destinations'
                 ) as select_destinations:
             self.manager.select_destinations(None, None, {})
             select_destinations.assert_called_once_with(None, None, {})
