@@ -16,12 +16,9 @@
 
 """Database setup and migration commands."""
 
-from nova import utils
+from nova.db.sqlalchemy import migration
 
-
-IMPL = utils.LazyPluggable('backend',
-                           config_group='database',
-                           sqlalchemy='nova.db.sqlalchemy.migration')
+IMPL = migration
 
 
 def db_sync(version=None):
