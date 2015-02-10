@@ -8230,6 +8230,49 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             ]
         self.assertEqual(gotFiles, wantFiles)
 
+    @mock.patch.object(nova.virt.libvirt.imagebackend.Image, 'cache',
+                       side_effect=exception.ImageNotFound(image_id='fake-id'))
+    def test_create_image_not_exist_no_fallback(self, mock_cache):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance = objects.Instance(**self.test_instance)
+        image_meta = {'id': instance.image_ref}
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance,
+                                            image_meta)
+        self.assertRaises(exception.ImageNotFound,
+                          drvr._create_image,
+                          self.context, instance, disk_info['mapping'])
+
+    @mock.patch.object(nova.virt.libvirt.imagebackend.Image, 'cache')
+    def test_create_image_not_exist_fallback(self, mock_cache):
+
+        def side_effect(fetch_func, filename, size=None, *args, **kwargs):
+            def second_call(fetch_func, filename, size=None, *args, **kwargs):
+                # call copy_from_host ourselves because we mocked image.cache()
+                fetch_func('fake-target', 'fake-max-size')
+                # further calls have no side effect
+                mock_cache.side_effect = None
+            mock_cache.side_effect = second_call
+            # raise an error only the first call
+            raise exception.ImageNotFound(image_id='fake-id')
+
+        mock_cache.side_effect = side_effect
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance = objects.Instance(**self.test_instance)
+        image_meta = {'id': instance.image_ref}
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance,
+                                            image_meta)
+
+        with mock.patch.object(libvirt_driver.libvirt_utils,
+                               'copy_image') as mock_copy:
+            drvr._create_image(self.context, instance, disk_info['mapping'],
+                               fallback_from_host='fake-source-host')
+            mock_copy.assert_called_once_with(src='fake-target',
+                                              dest='fake-target',
+                                              host='fake-source-host',
+                                              receive=True)
+
     @mock.patch.object(utils, 'execute')
     def test_create_ephemeral_specified_fs(self, mock_exec):
         self.flags(default_ephemeral_format='ext3')
@@ -12506,7 +12549,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         def fake_create_image(context, inst,
                               disk_mapping, suffix='',
                               disk_images=None, network_info=None,
-                              block_device_info=None, inject_files=True):
+                              block_device_info=None, inject_files=True,
+                              fallback_from_host=None):
             self.assertFalse(inject_files)
 
         def fake_create_domain_and_network(
@@ -12552,8 +12596,13 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         ins_ref = self._create_instance()
         image_meta = {}
 
+        migration = objects.Migration()
+        migration.source_compute = 'fake-source-compute'
+        migration.dest_compute = 'fake-dest-compute'
+        migration.source_node = 'fake-source-node'
+        migration.dest_node = 'fake-dest-node'
         self.drvr.finish_migration(
-                      context.get_admin_context(), None, ins_ref,
+                      context.get_admin_context(), migration, ins_ref,
                       disk_info_text, [], image_meta,
                       resize_instance, None, power_on)
         self.assertTrue(self.fake_create_domain_called)
