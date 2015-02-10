@@ -3679,13 +3679,13 @@ class ComputeManager(manager.Manager):
         if not instance['host']:
             self._set_instance_error_state(context, instance)
             msg = _('Instance has no source host')
-            raise exception.MigrationError(msg)
+            raise exception.MigrationError(reason=msg)
 
         same_host = instance['host'] == self.host
         if same_host and not CONF.allow_resize_to_same_host:
             self._set_instance_error_state(context, instance)
             msg = _('destination same as source!')
-            raise exception.MigrationError(msg)
+            raise exception.MigrationError(reason=msg)
 
         # NOTE(danms): Stash the new instance_type to avoid having to
         # look it up in the database later

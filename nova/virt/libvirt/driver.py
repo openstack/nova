@@ -5223,16 +5223,16 @@ class LibvirtDriver(driver.ComputeDriver):
         if ((CONF.vnc_enabled and not local_vnc) or
             (CONF.spice.enabled and not local_spice)):
 
-            raise exception.MigrationError(
-                    _('Your libvirt version does not support the'
-                      ' VIR_DOMAIN_XML_MIGRATABLE flag or your'
-                      ' destination node does not support'
-                      ' retrieving listen addresses.  In order'
-                      ' for live migration to work properly, you'
-                      ' must configure the graphics (VNC and/or'
-                      ' SPICE) listen addresses to be either'
-                      ' the catch-all address (0.0.0.0 or ::) or'
-                      ' the local address (127.0.0.1 or ::1).'))
+            msg = _('Your libvirt version does not support the'
+                    ' VIR_DOMAIN_XML_MIGRATABLE flag or your'
+                    ' destination node does not support'
+                    ' retrieving listen addresses.  In order'
+                    ' for live migration to work properly, you'
+                    ' must configure the graphics (VNC and/or'
+                    ' SPICE) listen addresses to be either'
+                    ' the catch-all address (0.0.0.0 or ::) or'
+                    ' the local address (127.0.0.1 or ::1).')
+            raise exception.MigrationError(reason=msg)
 
         if listen_addrs is not None:
             dest_local_vnc = listen_addrs['vnc'] in LOCAL_ADDRS
@@ -5455,9 +5455,9 @@ class LibvirtDriver(driver.ComputeDriver):
             LOG.error(
                 _LE('Cannot block migrate instance %s with mapped volumes') %
                 instance.uuid)
-            raise exception.MigrationError(
-                _('Cannot block migrate instance %s with mapped volumes') %
-                instance.uuid)
+            msg = (_('Cannot block migrate instance %s with mapped volumes') %
+                   instance.uuid)
+            raise exception.MigrationError(reason=msg)
 
         # We call plug_vifs before the compute manager calls
         # ensure_filtering_rules_for_instance, to ensure bridge is set up
