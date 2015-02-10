@@ -180,6 +180,9 @@ class NotificationsTestCase(test.TestCase):
         notifications.send_update(self.context, old, self.instance)
 
         self.assertEqual(1, len(fake_notifier.NOTIFICATIONS))
+        # service name should default to 'compute'
+        notif = fake_notifier.NOTIFICATIONS[0]
+        self.assertEqual('compute.testhost', notif.publisher_id)
 
     def test_send_on_task_change(self):
 
