@@ -27,8 +27,9 @@ def get_iscsi_initiator():
     try:
         contents = utils.read_file_as_root('/etc/iscsi/initiatorname.iscsi')
     except exception.FileNotFound:
-        return None
+        return ''
 
     for l in contents.split('\n'):
         if l.startswith('InitiatorName='):
             return l[l.index('=') + 1:].strip()
+    return ''

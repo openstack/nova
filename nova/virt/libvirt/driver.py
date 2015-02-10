@@ -897,20 +897,20 @@ class LibvirtDriver(driver.ComputeDriver):
         return []
 
     def get_volume_connector(self, instance):
-        if not self._initiator:
+        if self._initiator is None:
             self._initiator = libvirt_utils.get_iscsi_initiator()
             if not self._initiator:
                 LOG.debug('Could not determine iscsi initiator name',
                           instance=instance)
 
-        if not self._fc_wwnns:
+        if self._fc_wwnns is None:
             self._fc_wwnns = libvirt_utils.get_fc_wwnns()
             if not self._fc_wwnns or len(self._fc_wwnns) == 0:
                 LOG.debug('Could not determine fibre channel '
                           'world wide node names',
                           instance=instance)
 
-        if not self._fc_wwpns:
+        if self._fc_wwpns is None:
             self._fc_wwpns = libvirt_utils.get_fc_wwpns()
             if not self._fc_wwpns or len(self._fc_wwpns) == 0:
                 LOG.debug('Could not determine fibre channel '
