@@ -106,9 +106,7 @@ NEW_NETWORK = {
         "cidr": "10.20.105.0/24",
         "label": "new net 111",
         "vlan_start": 111,
-        "injected": False,
         "multi_host": False,
-        'mtu': None,
         'dhcp_server': '10.0.0.1',
         'enable_dhcp': True,
         'share_address': False,
@@ -194,6 +192,14 @@ class FakeNetworkAPI(object):
     def get(self, context, network_id):
         for network in self.networks:
             if network.get('uuid') == network_id:
+                if 'injected' in network and network['injected'] is None:
+                    # NOTE: This is a workaround for passing unit tests.
+                    # When using nova-network, 'injected' value should be
+                    # boolean because of the definition of objects.Network().
+                    # However, 'injected' value can be None if neutron.
+                    # So here changes the value to False just for passing
+                    # following _from_db_object().
+                    network['injected'] = False
                 return objects.Network._from_db_object(context,
                                                        objects.Network(),
                                                        network)
@@ -229,6 +235,7 @@ class FakeNetworkAPI(object):
 # NOTE(vish): tests that network create Exceptions actually return
 #             the proper error responses
 class NetworkCreateExceptionsTestV21(test.TestCase):
+    validation_error = exception.ValidationError
 
     class PassthroughAPI(object):
         def __init__(self):
@@ -252,28 +259,39 @@ class NetworkCreateExceptionsTestV21(test.TestCase):
 
     def test_network_create_bad_vlan(self):
         self.new_network['network']['vlan_start'] = 'foo'
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.create, self.req, self.new_network)
+        self.assertRaises(self.validation_error,
+                          self.controller.create, self.req,
+                          body=self.new_network)
 
     def test_network_create_no_cidr(self):
         self.new_network['network']['cidr'] = ''
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.create, self.req, self.new_network)
+        self.assertRaises(self.validation_error,
+                          self.controller.create, self.req,
+                          body=self.new_network)
 
     def test_network_create_invalid_fixed_cidr(self):
         self.new_network['network']['fixed_cidr'] = 'foo'
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.create, self.req, self.new_network)
+        self.assertRaises(self.validation_error,
+                          self.controller.create, self.req,
+                          body=self.new_network)
 
     def test_network_create_invalid_start(self):
         self.new_network['network']['allowed_start'] = 'foo'
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.create, self.req, self.new_network)
+        self.assertRaises(self.validation_error,
+                          self.controller.create, self.req,
+                          body=self.new_network)
+
+    def test_network_create_bad_cidr(self):
+        self.new_network['network']['cidr'] = '128.0.0.0/900'
+        self.assertRaises(self.validation_error,
+                          self.controller.create, self.req,
+                          body=self.new_network)
 
     def test_network_create_handle_network_not_created(self):
         self.new_network['network']['label'] = 'fail_NetworkNotCreated'
         self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.create, self.req, self.new_network)
+                          self.controller.create, self.req,
+                          body=self.new_network)
 
     def test_network_create_cidr_conflict(self):
 
@@ -288,10 +306,12 @@ class NetworkCreateExceptionsTestV21(test.TestCase):
 
         self.new_network['network']['cidr'] = '10.0.0.0/24'
         self.assertRaises(webob.exc.HTTPConflict,
-                          self.controller.create, self.req, self.new_network)
+                          self.controller.create, self.req,
+                          body=self.new_network)
 
 
 class NetworkCreateExceptionsTestV2(NetworkCreateExceptionsTestV21):
+    validation_error = webob.exc.HTTPBadRequest
 
     def _setup(self):
         ext_mgr = extensions.ExtensionManager()
@@ -299,6 +319,11 @@ class NetworkCreateExceptionsTestV2(NetworkCreateExceptionsTestV21):
 
         self.controller = networks.NetworkController(
                 self.PassthroughAPI(), ext_mgr)
+
+    def test_network_create_with_both_cidr_and_cidr_v6(self):
+        # NOTE: v2.0 API cannot handle this case, so we need to just
+        # skip it on the API.
+        pass
 
 
 class NetworksTestV21(test.NoDBTestCase):
@@ -428,14 +453,9 @@ class NetworksTestV21(test.NoDBTestCase):
 
     def test_network_create_large(self):
         self.new_network['network']['cidr'] = '128.0.0.0/4'
-        res_dict = self.controller.create(self.req, self.new_network)
+        res_dict = self.controller.create(self.req, body=self.new_network)
         self.assertEqual(res_dict['network']['cidr'],
                          self.new_network['network']['cidr'])
-
-    def test_network_create_bad_cidr(self):
-        self.new_network['network']['cidr'] = '128.0.0.0/900'
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.create, self.req, self.new_network)
 
     def test_network_neutron_disassociate_not_implemented(self):
         uuid = FAKE_NETWORKS[1]['uuid']
@@ -469,7 +489,7 @@ class NetworksTestV2(NetworksTestV21):
 
         self.stubs.Set(self.controller.network_api, 'create', no_mtu)
         self.new_network['network']['mtu'] = 9000
-        self.controller.create(self.req, self.new_network)
+        self.controller.create(self.req, body=self.new_network)
 
 
 class NetworksAssociateTestV21(test.NoDBTestCase):

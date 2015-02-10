@@ -189,3 +189,18 @@ ip_address = {
         {'format': 'ipv6'}
     ]
 }
+
+
+ipv4 = {
+    'type': 'string', 'format': 'ipv4'
+}
+
+
+ipv6 = {
+    'type': 'string', 'format': 'ipv6'
+}
+
+
+cidr = {
+    'type': 'string', 'format': 'cidr'
+}
