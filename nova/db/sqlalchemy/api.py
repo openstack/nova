@@ -1610,7 +1610,7 @@ def instance_create(context, values):
 
     def _get_sec_group_models(session, security_groups):
         models = []
-        default_group = security_group_ensure_default(context)
+        default_group = _security_group_ensure_default(context, session)
         if 'default' in security_groups:
             models.append(default_group)
             # Generate a new list, so we don't modify the original
@@ -3750,8 +3750,15 @@ def security_group_update(context, security_group_id, values,
 
 def security_group_ensure_default(context):
     """Ensure default security group exists for a project_id."""
-    session = get_session()
-    with session.begin():
+
+    return _security_group_ensure_default(context)
+
+
+def _security_group_ensure_default(context, session=None):
+    if session is None:
+        session = get_session()
+
+    with session.begin(subtransactions=True):
         try:
             default_group = _security_group_get_by_names(context,
                                                          session,
