@@ -3013,10 +3013,10 @@ class LibvirtDriver(driver.ComputeDriver):
                               'status with: %s',
                               status_name[disable_service])
         except exception.ComputeHostNotFound:
-            LOG.warn(_LW('Cannot update service status on host: %s,'
+            LOG.warn(_LW('Cannot update service status on host "%s" '
                          'since it is not registered.'), CONF.host)
         except Exception:
-            LOG.warn(_LW('Cannot update service status on host: %s,'
+            LOG.warn(_LW('Cannot update service status on host "%s" '
                          'due to an unexpected exception.'), CONF.host,
                      exc_info=True)
 
