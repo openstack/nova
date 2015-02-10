@@ -24,7 +24,6 @@ import webob.exc
 
 from nova import context
 from nova.i18n import _
-from nova.i18n import _LW
 from nova.openstack.common import log as logging
 from nova import wsgi
 
@@ -66,12 +65,6 @@ def pipeline_factory(loader, global_conf, **local_conf):
         limit_name = CONF.auth_strategy + '_nolimit'
         pipeline = local_conf.get(limit_name, pipeline)
     pipeline = pipeline.split()
-    # NOTE (Alex Xu): This is just for configuration file compatibility.
-    # If the configuration file still contains 'ratelimit_v3', just ignore it.
-    # We will remove this code at next release (J)
-    if 'ratelimit_v3' in pipeline:
-        LOG.warning(_LW('ratelimit_v3 is removed from v3 api.'))
-        pipeline.remove('ratelimit_v3')
     return _load_pipeline(loader, pipeline)
 
 
