@@ -3470,7 +3470,6 @@ class LibvirtDriver(driver.ComputeDriver):
 
                             numa_mem.nodeset.append(host_cell.id)
 
-                            allpcpus.extend(host_cell.cpuset)
                             object_numa_cell = (
                                     instance_numa_topology.cells[guest_node_id]
                                 )
@@ -3486,6 +3485,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                     pin_cpuset.cpuset = set([pcpu])
                                 else:
                                     pin_cpuset.cpuset = host_cell.cpuset
+                                allpcpus.extend(pin_cpuset.cpuset)
                                 guest_cpu_tune.vcpupin.append(pin_cpuset)
 
                 # TODO(berrange) When the guest has >1 NUMA node, it will
