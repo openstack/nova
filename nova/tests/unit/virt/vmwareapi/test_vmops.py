@@ -370,7 +370,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         vmdk = vm_util.VmdkInfo(mock.sentinel.PATH,
                                 mock.sentinel.ADAPTER_TYPE,
                                 mock.sentinel.DISK_TYPE,
-                                mock.sentinel.CAPACITY)
+                                mock.sentinel.CAPACITY,
+                                mock.sentinel.DEVICE)
         with contextlib.nested(
                 mock.patch.object(vm_util, 'get_vmdk_info',
                                   return_value=vmdk),

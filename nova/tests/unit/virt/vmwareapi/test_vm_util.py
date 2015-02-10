@@ -230,6 +230,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
             self.assertEqual('[test_datastore] uuid/ephemeral_0.vmdk',
                              vmdk.path)
             self.assertEqual(512, vmdk.capacity_in_bytes)
+            self.assertEqual(devices[1], vmdk.device)
 
     def test_get_vmdk_path_and_adapter_type_with_match(self):
         n_filename = '[test_datastore] uuid/uuid.vmdk'
@@ -240,6 +241,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
             self.assertEqual('lsiLogicsas', vmdk.adapter_type)
             self.assertEqual(n_filename, vmdk.path)
             self.assertEqual(1024, vmdk.capacity_in_bytes)
+            self.assertEqual(devices[0], vmdk.device)
 
     def test_get_vmdk_path_and_adapter_type_with_nomatch(self):
         n_filename = '[test_datastore] diuu/diuu.vmdk'
@@ -250,6 +252,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
             self.assertIsNone(vmdk.adapter_type)
             self.assertIsNone(vmdk.path)
             self.assertEqual(0, vmdk.capacity_in_bytes)
+            self.assertIsNone(vmdk.device)
 
     def test_get_vmdk_adapter_type(self):
         # Test for the adapter_type to be used in vmdk descriptor

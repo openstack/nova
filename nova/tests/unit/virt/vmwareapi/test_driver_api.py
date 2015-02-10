@@ -1753,7 +1753,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
 
         adapter_type = constants.DEFAULT_ADAPTER_TYPE
         disk_type = constants.DEFAULT_DISK_TYPE
-        vmdk_info = vm_util.VmdkInfo('fake-path', adapter_type, disk_type, 64)
+        vmdk_info = vm_util.VmdkInfo('fake-path', adapter_type, disk_type, 64,
+                                     'fake-device')
         with contextlib.nested(
             mock.patch.object(vm_util, 'get_vm_ref',
                               return_value=mock.sentinel.vm_ref),
@@ -1785,7 +1786,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
 
         adapter_type = constants.DEFAULT_ADAPTER_TYPE
         disk_type = constants.DEFAULT_DISK_TYPE
-        vmdk_info = vm_util.VmdkInfo('fake-path', adapter_type, disk_type, 64)
+        vmdk_info = vm_util.VmdkInfo('fake-path', adapter_type, disk_type, 64,
+                                     'fake-device')
         with contextlib.nested(
             mock.patch.object(vm_util, 'get_vm_ref',
                               return_value=mock.sentinel.vm_ref),
