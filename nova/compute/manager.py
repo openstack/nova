@@ -4132,6 +4132,7 @@ class ComputeManager(manager.Manager):
 
         # Store the old state
         instance.system_metadata['old_vm_state'] = instance.vm_state
+        self._notify_about_instance_usage(context, instance, 'suspend.start')
 
         with self._error_out_instance_on_exception(context, instance,
              instance_state=instance.vm_state):
@@ -4140,7 +4141,7 @@ class ComputeManager(manager.Manager):
         instance.vm_state = vm_states.SUSPENDED
         instance.task_state = None
         instance.save(expected_task_state=task_states.SUSPENDING)
-        self._notify_about_instance_usage(context, instance, 'suspend')
+        self._notify_about_instance_usage(context, instance, 'suspend.end')
 
     @wrap_exception()
     @reverts_task_state
