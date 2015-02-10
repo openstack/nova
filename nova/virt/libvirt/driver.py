@@ -5346,20 +5346,8 @@ class LibvirtDriver(driver.ComputeDriver):
                           instance=instance)
                 recover_method(context, instance, dest, block_migration)
 
-        # Waiting for completion of live_migration.
-        timer = loopingcall.FixedIntervalLoopingCall(f=None)
-
-        def wait_for_live_migration():
-            """waiting for live migration completion."""
-            try:
-                self.get_info(instance).state
-            except exception.InstanceNotFound:
-                timer.stop()
-                post_method(context, instance, dest, block_migration,
-                            migrate_data)
-
-        timer.f = wait_for_live_migration
-        timer.start(interval=0.5).wait()
+        post_method(context, instance, dest, block_migration,
+                    migrate_data)
 
     def _fetch_instance_kernel_ramdisk(self, context, instance):
         """Download kernel and ramdisk for instance in instance directory."""
