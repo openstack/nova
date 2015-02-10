@@ -443,6 +443,16 @@ class CellsMessageClassesTestCase(test.TestCase):
         self.assertRaises(exception.CellRoutingInconsistency,
                 response.value_or_raise)
 
+    def test_targeted_message_target_cell_none(self):
+        target_cell = None
+        method = 'our_fake_method'
+        method_kwargs = dict(arg=1, arg2=2)
+        direction = 'down'
+
+        self.assertRaises(exception.CellRoutingInconsistency,
+                messaging._TargetedMessage, self.msg_runner, self.ctxt, method,
+                method_kwargs, direction, target_cell, need_response=False)
+
     def test_broadcast_routing(self):
         method = 'our_fake_method'
         method_kwargs = dict(arg1=1, arg2=2)

@@ -543,6 +543,24 @@ class HostAPI(compute_api.HostAPI):
         """
         pass
 
+    def set_host_enabled(self, context, host_name, enabled):
+        try:
+            result = super(HostAPI, self).set_host_enabled(context, host_name,
+                    enabled)
+        except exception.CellRoutingInconsistency:
+            raise exception.HostNotFound(host=host_name)
+
+        return result
+
+    def host_power_action(self, context, host_name, action):
+        try:
+            result = super(HostAPI, self).host_power_action(context, host_name,
+                    action)
+        except exception.CellRoutingInconsistency:
+            raise exception.HostNotFound(host=host_name)
+
+        return result
+
     def get_host_uptime(self, context, host_name):
         """Returns the result of calling "uptime" on the target host."""
         return self.cells_rpcapi.get_host_uptime(context, host_name)
@@ -588,8 +606,12 @@ class HostAPI(compute_api.HostAPI):
         return services
 
     def service_get_by_compute_host(self, context, host_name):
-        db_service = self.cells_rpcapi.service_get_by_compute_host(context,
-                                                                   host_name)
+        try:
+            db_service = self.cells_rpcapi.service_get_by_compute_host(context,
+                    host_name)
+        except exception.CellRoutingInconsistency:
+            raise exception.ComputeHostNotFound(host=host_name)
+
         # NOTE(danms): Currently cells does not support objects as
         # return values, so just convert the db-formatted service objects
         # to new-world objects here
