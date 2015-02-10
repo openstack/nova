@@ -131,6 +131,7 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
     validate_exc = exception.ValidationError
     in_use_exc = exc.HTTPConflict
     not_found_exc = exc.HTTPNotFound
+    not_usable_exc = exc.HTTPBadRequest
 
     def setUp(self):
         super(InterfaceAttachTestsV21, self).setUp()
@@ -363,6 +364,27 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
             port_id=FAKE_PORT_ID1)
         body = {}
         self.assertRaises(self.in_use_exc,
+                          self.attachments.create, self.req, FAKE_UUID1,
+                          body=body)
+        ctxt = self.req.environ['nova.context']
+        attach_mock.assert_called_once_with(ctxt, fake_instance, None,
+                                            None, None)
+        get_mock.assert_called_once_with(ctxt, FAKE_UUID1,
+                                         want_objects=True,
+                                         expected_attrs=None)
+
+    @mock.patch.object(compute_api.API, 'get')
+    @mock.patch.object(compute_api.API, 'attach_interface')
+    def test_attach_interface_port_not_usable(self,
+                                              attach_mock,
+                                              get_mock):
+        fake_instance = objects.Instance(uuid=FAKE_UUID1)
+        get_mock.return_value = fake_instance
+        attach_mock.side_effect = exception.PortNotUsable(
+            port_id=FAKE_PORT_ID1,
+            instance=fake_instance.uuid)
+        body = {}
+        self.assertRaises(self.not_usable_exc,
                           self.attachments.create, self.req, FAKE_UUID1,
                           body=body)
         ctxt = self.req.environ['nova.context']

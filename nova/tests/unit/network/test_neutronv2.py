@@ -201,14 +201,15 @@ class TestNeutronv2Base(test.NoDBTestCase):
         setattr(self.context,
                 'auth_token',
                 'bff4a5a6b9eb4ea2a6efec6eefb77936')
-        self.instance = {'project_id': '9d049e4b60b64716978ab415e6fbd5c0',
+        self.tenant_id = '9d049e4b60b64716978ab415e6fbd5c0'
+        self.instance = {'project_id': self.tenant_id,
                          'uuid': str(uuid.uuid4()),
                          'display_name': 'test_instance',
                          'availability_zone': 'nova',
                          'host': 'some_host',
                          'info_cache': {'network_info': []},
                          'security_groups': []}
-        self.instance2 = {'project_id': '9d049e4b60b64716978ab415e6fbd5c0',
+        self.instance2 = {'project_id': self.tenant_id,
                          'uuid': str(uuid.uuid4()),
                          'display_name': 'test_instance2',
                          'availability_zone': 'nova',
@@ -260,6 +261,7 @@ class TestNeutronv2Base(test.NoDBTestCase):
         self.port_address = '10.0.1.2'
         self.port_data1 = [{'network_id': 'my_netid1',
                            'device_id': self.instance2['uuid'],
+                           'tenant_id': self.tenant_id,
                            'device_owner': 'compute:nova',
                            'id': 'my_portid1',
                            'binding:vnic_type': model.VNIC_TYPE_NORMAL,
@@ -280,6 +282,7 @@ class TestNeutronv2Base(test.NoDBTestCase):
         self.port_data2.append(self.port_data1[0])
         self.port_data2.append({'network_id': 'my_netid2',
                                 'device_id': self.instance['uuid'],
+                                'tenant_id': self.tenant_id,
                                 'admin_state_up': True,
                                 'status': 'ACTIVE',
                                 'device_owner': 'compute:nova',
@@ -296,6 +299,7 @@ class TestNeutronv2Base(test.NoDBTestCase):
                                  'floating_ip_address': '172.0.2.2'})
         self.port_data3 = [{'network_id': 'my_netid1',
                            'device_id': 'device_id3',
+                           'tenant_id': self.tenant_id,
                            'status': 'DOWN',
                            'admin_state_up': True,
                            'device_owner': 'compute:nova',
@@ -427,6 +431,7 @@ class TestNeutronv2Base(test.NoDBTestCase):
                         ).AndReturn(
                             {'port': {'id': 'my_portid3',
                                       'network_id': 'my_netid1',
+                                      'tenant_id': self.tenant_id,
                                       'mac_address': 'my_mac1',
                                       'device_id': kwargs.get('_device') and
                                                    self.instance2.uuid or
@@ -446,6 +451,7 @@ class TestNeutronv2Base(test.NoDBTestCase):
                         self.moxed_client.show_port(request.port_id).AndReturn(
                             {'port': {'id': 'my_portid1',
                                       'network_id': 'my_netid1',
+                                      'tenant_id': self.tenant_id,
                                       'mac_address': 'my_mac1',
                                       'device_id': kwargs.get('_device') and
                                                    self.instance2.uuid or
@@ -1209,6 +1215,17 @@ class TestNeutronv2(TestNeutronv2Base):
             requested_networks=requested_networks,
             _break='pre_list_networks')
         self.assertRaises(exception.PortNotFound,
+                          api.allocate_for_instance, self.context,
+                          self.instance, requested_networks=requested_networks)
+
+    def test_allocate_for_instance_port_invalid_tenantid(self):
+        self.tenant_id = 'invalid_id'
+        requested_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(port_id='my_portid1')])
+        api = self._stub_allocate_for_instance(
+            requested_networks=requested_networks,
+            _break='pre_list_networks')
+        self.assertRaises(exception.PortNotUsable,
                           api.allocate_for_instance, self.context,
                           self.instance, requested_networks=requested_networks)
 
@@ -3266,7 +3283,8 @@ class TestNeutronv2WithMock(test.NoDBTestCase):
         mock_nc = mock.Mock()
 
         def show_port(port_id):
-            return {'port': {'network_id': 'net-1', 'id': port_id}}
+            return {'port': {'network_id': 'net-1', 'id': port_id,
+                             'tenant_id': 'proj-1'}}
         mock_nc.show_port = show_port
 
         mock_ntrn.return_value = mock_nc
