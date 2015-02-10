@@ -5453,7 +5453,7 @@ class LibvirtDriver(driver.ComputeDriver):
             # result in volumes being copied from themselves to
             # themselves, which is a recipe for disaster.
             LOG.error(
-                _LE('Cannot block migrate instance %s with mapped volumes') %
+                _LE('Cannot block migrate instance %s with mapped volumes'),
                 instance.uuid)
             msg = (_('Cannot block migrate instance %s with mapped volumes') %
                    instance.uuid)
