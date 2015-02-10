@@ -139,7 +139,6 @@ class ApiSamplesTrap(ApiSampleTestBaseV2):
         do_not_approve_additions = []
         do_not_approve_additions.append('os-create-server-ext')
         do_not_approve_additions.append('os-baremetal-ext-status')
-        do_not_approve_additions.append('os-baremetal-nodes')
 
         tests = self._get_extensions_tested()
         extensions = self._get_extensions()
@@ -2543,6 +2542,38 @@ class QuotaClassesSampleJsonTests(ApiSampleTestBaseV2):
                                 {})
         self._verify_response('quota-classes-update-post-resp',
                               {}, response, 200)
+
+
+class FakeNode(object):
+    def __init__(self, uuid='058d27fa-241b-445a-a386-08c04f96db43'):
+        self.uuid = uuid
+        self.provision_state = 'active'
+        self.properties = {'cpus': '2',
+                           'memory_mb': '1024',
+                           'local_gb': '10'}
+
+
+class NodeManager(object):
+    def list(self, detail=False):
+        return [FakeNode(), FakeNode('e2025409-f3ce-4d6a-9788-c565cf3b1b1c')]
+
+
+class fake_client(object):
+    node = NodeManager()
+
+
+class BaremetalNodesJsonTest(ApiSampleTestBaseV2):
+    extension_name = ("nova.api.openstack.compute.contrib"
+      ".baremetal_nodes.Baremetal_nodes")
+
+    @mock.patch("nova.api.openstack.compute.contrib.baremetal_nodes"
+                "._get_ironic_client")
+    def test_baremetal_nodes_list(self, mock_get_irc):
+        mock_get_irc.return_value = fake_client()
+
+        response = self._do_get('os-baremetal-nodes')
+        subs = self._get_regexes()
+        self._verify_response('baremetal-node-list-resp', subs, response, 200)
 
 
 class CellsSampleJsonTest(ApiSampleTestBaseV2):
