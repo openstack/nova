@@ -24,38 +24,6 @@ from nova.compute import arch
 # (i.e. allow the client to rely on default URLs)
 allow_default_uri_connection = True
 
-# string indicating the CPU arch
-node_arch = arch.X86_64  # or 'i686' (or whatever else uname -m might return)
-
-# memory size in kilobytes
-node_kB_mem = 4096
-
-# the number of active CPUs
-node_cpus = 2
-
-# expected CPU frequency
-node_mhz = 800
-
-# the number of NUMA cell, 1 for unusual NUMA topologies or uniform
-# memory access; check capabilities XML for the actual NUMA topology
-node_nodes = 1  # NUMA nodes
-
-# number of CPU sockets per node if nodes > 1, total number of CPU
-# sockets otherwise
-node_sockets = 1
-
-# number of cores per socket
-node_cores = 2
-
-# number of threads per core
-node_threads = 1
-
-# CPU model
-node_cpu_model = "Penryn"
-
-# CPU vendor
-node_cpu_vendor = "Intel"
-
 # Has libvirt connection been used at least once
 connection_used = False
 
@@ -174,6 +142,49 @@ VIR_SECRET_USAGE_TYPE_NONE = 0
 VIR_SECRET_USAGE_TYPE_VOLUME = 1
 VIR_SECRET_USAGE_TYPE_CEPH = 2
 VIR_SECRET_USAGE_TYPE_ISCSI = 3
+
+# Libvirt version
+FAKE_LIBVIRT_VERSION = 9011
+
+
+class HostInfo(object):
+    def __init__(self, arch=arch.X86_64, kB_mem=4096,
+                 cpus=2, cpu_mhz=800, cpu_nodes=1,
+                 cpu_sockets=1, cpu_cores=2,
+                 cpu_threads=1, cpu_model="Penryn",
+                 cpu_vendor="Intel", numa_topology='',
+                 cpu_disabled=None):
+        """Create a new Host Info object
+
+        :param arch: (string) indicating the CPU arch
+                     (eg 'i686' or whatever else uname -m might return)
+        :param kB_mem: (int) memory size in KBytes
+        :param cpus: (int) the number of active CPUs
+        :param cpu_mhz: (int) expected CPU frequency
+        :param cpu_nodes: (int) the number of NUMA cell, 1 for unusual
+                          NUMA topologies or uniform
+        :param cpu_sockets: (int) number of CPU sockets per node if nodes > 1,
+                            total number of CPU sockets otherwise
+        :param cpu_cores: (int) number of cores per socket
+        :param cpu_threads: (int) number of threads per core
+        :param cpu_model: CPU model
+        :param cpu_vendor: CPU vendor
+        :param numa_topology: Numa topology
+        :param cpu_disabled: List of disabled cpus
+        """
+
+        self.arch = arch
+        self.kB_mem = kB_mem
+        self.cpus = cpus
+        self.cpu_mhz = cpu_mhz
+        self.cpu_nodes = cpu_nodes
+        self.cpu_cores = cpu_cores
+        self.cpu_threads = cpu_threads
+        self.cpu_sockets = cpu_sockets
+        self.cpu_model = cpu_model
+        self.cpu_vendor = cpu_vendor
+        self.numa_topology = numa_topology
+        self.disabled_cpus_list = cpu_disabled or []
 
 
 VIR_DOMAIN_JOB_NONE = 0
@@ -395,7 +406,7 @@ class Domain(object):
         os_type = tree.find('./os/type')
         if os_type is not None:
             os['type'] = os_type.text
-            os['arch'] = os_type.get('arch', node_arch)
+            os['arch'] = os_type.get('arch', self._connection.host_info.arch)
 
         os_kernel = tree.find('./os/kernel')
         if os_kernel is not None:
@@ -691,7 +702,7 @@ class DomainSnapshot(object):
 
 
 class Connection(object):
-    def __init__(self, uri=None, readonly=False, version=9011):
+    def __init__(self, uri=None, readonly=False, version=9011, host_info=None):
         if not uri or uri == '':
             if allow_default_uri_connection:
                 uri = 'qemu:///session'
@@ -724,6 +735,7 @@ class Connection(object):
         self._event_callbacks = {}
         self.fakeLibVersion = version
         self.fakeVersion = version
+        self.host_info = host_info or HostInfo()
 
     def _add_filter(self, nwfilter):
         self._nwfilters[nwfilter._name] = nwfilter
@@ -760,14 +772,14 @@ class Connection(object):
             self._emit_lifecycle(dom, VIR_DOMAIN_EVENT_UNDEFINED, 0)
 
     def getInfo(self):
-        return [node_arch,
-                node_kB_mem,
-                node_cpus,
-                node_mhz,
-                node_nodes,
-                node_sockets,
-                node_cores,
-                node_threads]
+        return [self.host_info.arch,
+                self.host_info.kB_mem,
+                self.host_info.cpus,
+                self.host_info.cpu_mhz,
+                self.host_info.cpu_nodes,
+                self.host_info.cpu_sockets,
+                self.host_info.cpu_cores,
+                self.host_info.cpu_threads]
 
     def numOfDomains(self):
         return len(self._running_vms)
@@ -845,8 +857,14 @@ class Connection(object):
         pass
 
     def getCPUMap(self):
-        """Return spoofed CPU map, showing 2 online CPUs."""
-        return (2, [True] * 2, 2)
+        """Return calculated CPU map from HostInfo, by default showing 2
+           online CPUs.
+        """
+        active_cpus = self.host_info.cpus
+        total_cpus = active_cpus + len(self.host_info.disabled_cpus_list)
+        cpu_map = [True if cpu_num not in self.host_info.disabled_cpus_list
+                   else False for cpu_num in range(total_cpus)]
+        return (total_cpus, cpu_map, active_cpus)
 
     def getCapabilities(self):
         """Return spoofed capabilities."""
@@ -857,7 +875,7 @@ class Connection(object):
       <arch>x86_64</arch>
       <model>Penryn</model>
       <vendor>Intel</vendor>
-      <topology sockets='1' cores='2' threads='1'/>
+      <topology sockets='%(sockets)s' cores='%(cores)s' threads='%(threads)s'/>
       <feature name='xtpr'/>
       <feature name='tm2'/>
       <feature name='est'/>
@@ -878,6 +896,7 @@ class Connection(object):
         <uri_transport>tcp</uri_transport>
       </uri_transports>
     </migration_features>
+    %(topology)s
     <secmodel>
       <model>apparmor</model>
       <doi>0</doi>
@@ -1075,7 +1094,10 @@ class Connection(object):
     </features>
   </guest>
 
-</capabilities>'''
+</capabilities>''' % {'sockets': self.host_info.cpu_sockets,
+                      'cores': self.host_info.cpu_cores,
+                      'threads': self.host_info.cpu_threads,
+                      'topology': self.host_info.numa_topology}
 
     def compareCPU(self, xml, flags):
         tree = etree.fromstring(xml)
@@ -1088,12 +1110,12 @@ class Connection(object):
 
         model_node = tree.find('./model')
         if model_node is not None:
-            if model_node.text != node_cpu_model:
+            if model_node.text != self.host_info.cpu_model:
                 return VIR_CPU_COMPARE_INCOMPATIBLE
 
         vendor_node = tree.find('./vendor')
         if vendor_node is not None:
-            if vendor_node.text != node_cpu_vendor:
+            if vendor_node.text != self.host_info.cpu_vendor:
                 return VIR_CPU_COMPARE_INCOMPATIBLE
 
         # The rest of the stuff libvirt implements is rather complicated
