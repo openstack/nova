@@ -253,7 +253,7 @@ def get_disk_bus_for_device_type(virt_type,
     elif virt_type in ("qemu", "kvm"):
         if device_type == "cdrom":
             guestarch = libvirt_utils.get_arch(image_meta)
-            if guestarch in (arch.PPC, arch.PPC64):
+            if guestarch in (arch.PPC, arch.PPC64, arch.S390, arch.S390X):
                 return "scsi"
             else:
                 return "ide"

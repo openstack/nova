@@ -607,7 +607,11 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
                 (arch.PPC, 'disk', 'virtio'),
                 (arch.PPC, 'cdrom', 'scsi'),
                 (arch.PPC64, 'disk', 'virtio'),
-                (arch.PPC64, 'cdrom', 'scsi')
+                (arch.PPC64, 'cdrom', 'scsi'),
+                (arch.S390, 'disk', 'virtio'),
+                (arch.S390, 'cdrom', 'scsi'),
+                (arch.S390X, 'disk', 'virtio'),
+                (arch.S390X, 'cdrom', 'scsi')
                 )
         image_meta = {}
         for guestarch, dev, res in expected:
