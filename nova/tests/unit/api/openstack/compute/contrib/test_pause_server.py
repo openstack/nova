@@ -17,6 +17,8 @@ from nova.api.openstack.compute.contrib import admin_actions as \
     pause_server_v2
 from nova.api.openstack.compute.plugins.v3 import pause_server as \
     pause_server_v21
+from nova import exception
+from nova import test
 from nova.tests.unit.api.openstack.compute import admin_only_action_common
 from nova.tests.unit.api.openstack import fakes
 
@@ -85,3 +87,34 @@ class PauseServerTestsV2(PauseServerTestsV21):
 
     def test_actions_raise_on_not_implemented(self):
         pass
+
+
+class PauseServerPolicyEnforcementV21(test.NoDBTestCase):
+
+    def setUp(self):
+        super(PauseServerPolicyEnforcementV21, self).setUp()
+        self.controller = pause_server_v21.PauseServerController()
+
+    def test_pause_policy_failed(self):
+        rule_name = "compute_extension:v3:os-pause-server:pause"
+        self.policy.set_rules({rule_name: "project:non_fake"})
+        req = fakes.HTTPRequest.blank('')
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.controller._pause, req, fakes.FAKE_UUID,
+            body={'pause': {}})
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+            exc.format_message())
+
+    def test_unpause_policy_failed(self):
+        rule_name = "compute_extension:v3:os-pause-server:unpause"
+        self.policy.set_rules({rule_name: "project:non_fake"})
+        req = fakes.HTTPRequest.blank('')
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.controller._unpause, req, fakes.FAKE_UUID,
+            body={'unpause': {}})
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+            exc.format_message())
