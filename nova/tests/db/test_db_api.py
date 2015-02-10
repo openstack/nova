@@ -24,6 +24,7 @@ import iso8601
 import types
 import uuid as stdlib_uuid
 
+import mock
 import mox
 import netaddr
 from oslo.config import cfg
@@ -1339,6 +1340,24 @@ class SecurityGroupTestCase(test.TestCase, ModelsObjectComparatorMixin):
                                    'security_groups',
                                    self.ctxt.user_id)
         self.assertEqual(1, usage.in_use)
+
+    @mock.patch.object(db.sqlalchemy.api, '_security_group_get_by_names')
+    def test_security_group_ensure_default_called_concurrently(self, sg_mock):
+        # make sure NotFound is always raised here to trick Nova to insert the
+        # duplicate security group entry
+        sg_mock.side_effect = exception.NotFound
+
+        # create the first db entry
+        self.ctxt.project_id = 1
+        db.security_group_ensure_default(self.ctxt)
+        security_groups = db.security_group_get_by_project(
+                            self.ctxt,
+                            self.ctxt.project_id)
+        self.assertEqual(1, len(security_groups))
+
+        # create the second one and ensure the exception is handled properly
+        default_group = db.security_group_ensure_default(self.ctxt)
+        self.assertEqual('default', default_group.name)
 
     def test_security_group_update(self):
         security_group = self._create_security_group({})
