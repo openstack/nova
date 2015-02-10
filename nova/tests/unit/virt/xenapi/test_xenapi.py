@@ -30,6 +30,7 @@ from oslo_config import cfg
 from oslo_config import fixture as config_fixture
 from oslo_serialization import jsonutils
 from oslo_utils import importutils
+import testtools
 
 from nova.compute import api as compute_api
 from nova.compute import arch
@@ -55,6 +56,7 @@ from nova.tests.unit import fake_processutils
 import nova.tests.unit.image.fake as fake_image
 from nova.tests.unit import matchers
 from nova.tests.unit.objects import test_aggregate
+from nova.tests.unit import utils as test_utils
 from nova.tests.unit.virt.xenapi import stubs
 from nova.virt import fake
 from nova.virt.xenapi import agent
@@ -934,6 +936,8 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         self._test_spawn(IMAGE_VHD, None, None,
                          block_device_info=dev_info)
 
+    @testtools.skipIf(test_utils.is_osx(),
+                      'IPv6 pretty-printing broken on OSX, see bug 1409135')
     def test_spawn_netinject_file(self):
         self.flags(flat_injected=True)
         db_fakes.stub_out_db_instance_api(self.stubs, injected=True)
@@ -982,6 +986,8 @@ iface eth0 inet6 static
                          check_injection=True)
         self.assertTrue(self._tee_executed)
 
+    @testtools.skipIf(test_utils.is_osx(),
+                      'IPv6 pretty-printing broken on OSX, see bug 1409135')
     def test_spawn_netinject_xenstore(self):
         db_fakes.stub_out_db_instance_api(self.stubs, injected=True)
 
