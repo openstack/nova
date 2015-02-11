@@ -1177,7 +1177,8 @@ class VMwareVMOps(object):
         if resize_instance:
             client_factory = self._session.vim.client.factory
             vm_resize_spec = vm_util.get_vm_resize_spec(client_factory,
-                                                        instance)
+                                                        instance.vcpus,
+                                                        instance.memory_mb)
             vm_util.reconfigure_vm(self._session, vm_ref, vm_resize_spec)
 
             # Resize the disk (if larger)

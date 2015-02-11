@@ -2490,7 +2490,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
             if resize_instance:
                 fake_vm_resize_spec.assert_called_once_with(
                     self.conn._session.vim.client.factory,
-                    self.instance)
+                    self.instance.vcpus,
+                    self.instance.memory_mb)
                 fake_call_method.assert_any_call(
                     self.conn._session.vim,
                     "ReconfigVM_Task",

@@ -226,11 +226,11 @@ def get_vm_create_spec(client_factory, instance, name, data_store_name,
     return config_spec
 
 
-def get_vm_resize_spec(client_factory, instance):
+def get_vm_resize_spec(client_factory, vcpus, memory_mb):
     """Provides updates for a VM spec."""
     resize_spec = client_factory.create('ns0:VirtualMachineConfigSpec')
-    resize_spec.numCPUs = int(instance['vcpus'])
-    resize_spec.memoryMB = int(instance['memory_mb'])
+    resize_spec.numCPUs = vcpus
+    resize_spec.memoryMB = memory_mb
     return resize_spec
 
 
