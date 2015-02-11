@@ -99,6 +99,12 @@ class ZooKeeperDriver(base.Driver):
                                  acl=[evzookeeper.ZOO_OPEN_ACL_UNSAFE])
         except zookeeper.NodeExistsException:
             pass
+        # Log a warning about quality for this driver.
+        LOG.warning(_LW('The ZooKeeper service group driver in Nova is not '
+                        'tested by the OpenStack project and thus its quality '
+                        'can not be ensured. This may change in the future, '
+                        'but current deployers should be aware that the use '
+                        'of it in production right now may be risky.'))
         return session
 
     def join(self, member_id, group, service=None):
