@@ -2970,8 +2970,8 @@ class ComputeManager(manager.Manager):
         instance.power_state = self._get_power_state(context, instance)
         instance.save(expected_task_state=expected_states)
 
-        if instance['power_state'] != power_state.RUNNING:
-            state = instance['power_state']
+        if instance.power_state != power_state.RUNNING:
+            state = instance.power_state
             running = power_state.RUNNING
             LOG.warning(_LW('trying to reboot a non-running instance:'
                             ' (state: %(state)s expected: %(running)s)'),
@@ -2984,7 +2984,7 @@ class ComputeManager(manager.Manager):
 
         try:
             # Don't change it out of rescue mode
-            if instance['vm_state'] == vm_states.RESCUED:
+            if instance.vm_state == vm_states.RESCUED:
                 new_vm_state = vm_states.RESCUED
             else:
                 new_vm_state = vm_states.ACTIVE
