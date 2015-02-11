@@ -9378,7 +9378,7 @@ class LibvirtConnTestCase(test.TestCase):
             cpu_1 = vconfig.LibvirtConfigCapsNUMACPU()
             cpu_1.id = 2 * i + 1
             cpu_1.socket_id = i
-            cpu_1.core_id = 1
+            cpu_1.core_id = 0
             cpu_1.siblings = set([2 * i, 2 * i + 1])
             mempages_1 = vconfig.LibvirtConfigCapsNUMAPages()
             mempages_1.size = 2048
