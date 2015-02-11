@@ -124,10 +124,12 @@ class ClaimTestCase(test.NoDBTestCase):
             'numa_topology': objects.NUMATopology(
                 cells=[objects.NUMACell(id=1, cpuset=set([1, 2]), memory=512,
                                         memory_usage=0, cpu_usage=0,
-                                        mempages=[]),
+                                        mempages=[], siblings=[],
+                                        pinned_cpus=set([])),
                        objects.NUMACell(id=2, cpuset=set([3, 4]), memory=512,
                                         memory_usage=0, cpu_usage=0,
-                                        mempages=[])]
+                                        mempages=[], siblings=[],
+                                        pinned_cpus=set([]))]
                 )._to_json()
         }
         if values:
