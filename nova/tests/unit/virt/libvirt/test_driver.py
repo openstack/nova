@@ -9360,30 +9360,58 @@ class LibvirtConnTestCase(test.TestCase):
                 if key not in ['phys_function', 'virt_functions', 'label']:
                     self.assertEqual(expectvfs[dev][key], actualvfs[dev][key])
 
-    def _fake_caps_numa_topology(self):
+    def _fake_caps_numa_topology(self,
+                                 cells_per_host=4,
+                                 sockets_per_cell=1,
+                                 cores_per_socket=1,
+                                 threads_per_core=2):
         topology = vconfig.LibvirtConfigCapsNUMATopology()
 
-        for i in range(4):
+        for cellid in range(cells_per_host):
             cell = vconfig.LibvirtConfigCapsNUMACell()
-            cell.id = i
+            cell.id = cellid
             cell.memory = 1024 * units.Ki
-            cpu_0 = vconfig.LibvirtConfigCapsNUMACPU()
-            cpu_0.id = 2 * i
-            cpu_0.socket_id = i
-            cpu_0.core_id = 0
-            cpu_0.siblings = set([2 * i, 2 * i + 1])
+
+            cell.cpus = []
+            for socket in range(sockets_per_cell):
+                for core in range(cores_per_socket):
+                    for thread in range(threads_per_core):
+                        cpu = vconfig.LibvirtConfigCapsNUMACPU()
+                        # CPU ID is globally unique
+                        cpu.id = (
+                            (cellid * sockets_per_cell *
+                             cores_per_socket * threads_per_core) +
+                            (socket * cores_per_socket *
+                             threads_per_core) +
+                            (core * threads_per_core) +
+                            thread)
+                        # Socket ID is globally unique
+                        cpu.socket_id = (
+                            (cellid * sockets_per_cell) +
+                            socket)
+                        # Core ID is unique within a socket
+                        cpu.core_id = core
+                        # Siblings is list of cpu.id for all threads
+                        # in a core
+                        first_thread = (
+                            (cellid * sockets_per_cell *
+                             cores_per_socket * threads_per_core) +
+                            (socket * cores_per_socket *
+                             threads_per_core) +
+                            (core * threads_per_core))
+                        cpu.siblings = set(
+                            range(first_thread,
+                                  first_thread + threads_per_core))
+                        cell.cpus.append(cpu)
+
             mempages_0 = vconfig.LibvirtConfigCapsNUMAPages()
             mempages_0.size = 4
-            mempages_0.total = 1024 * i
-            cpu_1 = vconfig.LibvirtConfigCapsNUMACPU()
-            cpu_1.id = 2 * i + 1
-            cpu_1.socket_id = i
-            cpu_1.core_id = 0
-            cpu_1.siblings = set([2 * i, 2 * i + 1])
+            mempages_0.total = 1024 * cellid
+
             mempages_1 = vconfig.LibvirtConfigCapsNUMAPages()
             mempages_1.size = 2048
-            mempages_1.total = 0 + i
-            cell.cpus = [cpu_0, cpu_1]
+            mempages_1.total = 0 + cellid
+
             cell.mempages = [mempages_0, mempages_1]
             topology.cells.append(cell)
 
