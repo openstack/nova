@@ -683,7 +683,7 @@ class CinderCloudTestCase(test.TestCase):
         self._tearDownBlockDeviceMapping(instances, volumes)
 
     def test_format_instance_bdm_while_attaching_volume(self):
-        # NOTE(ft): Since instance bdm is deleted immediatly by detach
+        # NOTE(ft): Since instance bdm is deleted immediately by detach
         # operation call, no test for 'detaching' stage is required
         vol = self.cloud.create_volume(self.context, size=1)
 

@@ -60,7 +60,7 @@ class PciDevicePool(base.NovaObject):
 
 
 class PciDevicePoolList(base.ObjectListBase, base.NovaObject):
-    # Version 1.0: Initial verison
+    # Version 1.0: Initial version
     #              PciDevicePool <= 1.0
     VERSION = '1.0'
     fields = {
