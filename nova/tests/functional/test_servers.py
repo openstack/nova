@@ -31,7 +31,7 @@ import nova.virt.fake
 LOG = logging.getLogger(__name__)
 
 
-class ServersTest(integrated_helpers._IntegratedTestBase):
+class ServersTestBase(integrated_helpers._IntegratedTestBase):
     _api_version = 'v2'
     _force_delete_parameter = 'forceDelete'
     _image_ref_parameter = 'imageRef'
@@ -42,7 +42,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
     _min_count_parameter = 'min_count'
 
     def setUp(self):
-        super(ServersTest, self).setUp()
+        super(ServersTestBase, self).setUp()
         self.conductor = self.start_service(
             'conductor', manager='nova.conductor.manager.ConductorManager')
 
@@ -59,6 +59,43 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         """restart compute service. NOTE: fake driver forgets all instances."""
         self.compute.kill()
         self.compute = self.start_service('compute', *args, **kwargs)
+
+    def _wait_for_deletion(self, server_id):
+        # Wait (briefly) for deletion
+        for _retries in range(50):
+            try:
+                found_server = self.api.get_server(server_id)
+            except client.OpenStackApiNotFoundException:
+                found_server = None
+                LOG.debug("Got 404, proceeding")
+                break
+
+            LOG.debug("Found_server=%s" % found_server)
+
+            # TODO(justinsb): Mock doesn't yet do accurate state changes
+            # if found_server['status'] != 'deleting':
+            #    break
+            time.sleep(.1)
+
+        # Should be gone
+        self.assertFalse(found_server)
+
+    def _delete_server(self, server_id):
+        # Delete the server
+        self.api.delete_server(server_id)
+        self._wait_for_deletion(server_id)
+
+    def _get_access_ips_params(self):
+        return {self._access_ipv4_parameter: "172.19.0.2",
+                self._access_ipv6_parameter: "fe80::2"}
+
+    def _verify_access_ips(self, server):
+        self.assertEqual('172.19.0.2',
+                         server[self._access_ipv4_parameter])
+        self.assertEqual('fe80::2', server[self._access_ipv6_parameter])
+
+
+class ServersTest(ServersTestBase):
 
     def test_get_servers(self):
         # Simple check that listing servers works.
@@ -266,31 +303,6 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         # Wait for real deletion
         self._wait_for_deletion(created_server_id)
 
-    def _wait_for_deletion(self, server_id):
-        # Wait (briefly) for deletion
-        for _retries in range(50):
-            try:
-                found_server = self.api.get_server(server_id)
-            except client.OpenStackApiNotFoundException:
-                found_server = None
-                LOG.debug("Got 404, proceeding")
-                break
-
-            LOG.debug("Found_server=%s" % found_server)
-
-            # TODO(justinsb): Mock doesn't yet do accurate state changes
-            # if found_server['status'] != 'deleting':
-            #    break
-            time.sleep(.1)
-
-        # Should be gone
-        self.assertFalse(found_server)
-
-    def _delete_server(self, server_id):
-        # Delete the server
-        self.api.delete_server(server_id)
-        self._wait_for_deletion(server_id)
-
     def test_create_server_with_metadata(self):
         # Creates a server with metadata.
         fake_network.set_stub_network_methods(self.stubs)
@@ -398,15 +410,6 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
 
         # Cleanup
         self._delete_server(created_server_id)
-
-    def _get_access_ips_params(self):
-        return {self._access_ipv4_parameter: "172.19.0.2",
-                self._access_ipv6_parameter: "fe80::2"}
-
-    def _verify_access_ips(self, server):
-        self.assertEqual('172.19.0.2',
-                         server[self._access_ipv4_parameter])
-        self.assertEqual('fe80::2', server[self._access_ipv6_parameter])
 
     def test_rename_server(self):
         # Test building and renaming a server.
