@@ -2439,6 +2439,11 @@ class LibvirtDriver(driver.ComputeDriver):
 
     @staticmethod
     def get_host_ip_addr():
+        ips = compute_utils.get_machine_ips()
+        if CONF.my_ip not in ips:
+            LOG.warn(_LW('my_ip address (%(my_ip)s) was not found on '
+                         'any of the interfaces: %(ifaces)s'),
+                     {'my_ip': CONF.my_ip, 'ifaces': ", ".join(ips)})
         return CONF.my_ip
 
     def get_vnc_console(self, context, instance):
