@@ -13,7 +13,8 @@
 #    under the License.
 
 import os
-import sys
+
+import fixtures
 
 from nova import exception
 from nova import test
@@ -23,14 +24,13 @@ from nova.virt.disk.vfs import guestfs as vfsguestfs
 
 
 class VirtDiskTest(test.NoDBTestCase):
-
     def setUp(self):
         super(VirtDiskTest, self).setUp()
-        sys.modules['guestfs'] = fakeguestfs
-        vfsguestfs.guestfs = fakeguestfs
+        self.useFixture(
+                fixtures.MonkeyPatch('nova.virt.disk.vfs.guestfs.guestfs',
+                                     fakeguestfs))
 
     def test_inject_data(self):
-
         self.assertTrue(diskapi.inject_data("/some/file", use_cow=True))
 
         self.assertTrue(diskapi.inject_data("/some/file",
