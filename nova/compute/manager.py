@@ -5517,7 +5517,7 @@ class ComputeManager(manager.Manager):
                           instance_uuid)
                 _set_migration_to_error(migration, reason)
                 continue
-            if instance['vm_state'] == vm_states.ERROR:
+            if instance.vm_state == vm_states.ERROR:
                 reason = _("In ERROR state")
                 _set_migration_to_error(migration, reason,
                                         instance=instance)
@@ -5543,8 +5543,8 @@ class ComputeManager(manager.Manager):
                 LOG.debug(msg, instance=instance)
                 continue
 
-            vm_state = instance['vm_state']
-            task_state = instance['task_state']
+            vm_state = instance.vm_state
+            task_state = instance.task_state
             if vm_state != vm_states.RESIZED or task_state is not None:
                 reason = (_("In states %(vm_state)s/%(task_state)s, not "
                            "RESIZED/None") %
