@@ -996,14 +996,12 @@ class VMOps(object):
 
         @step
         def transfer_immutable_vhds(root_vdi_uuids):
-            active_root_vdi_uuid = root_vdi_uuids[0]
             immutable_root_vdi_uuids = root_vdi_uuids[1:]
             for vhd_num, vdi_uuid in enumerate(immutable_root_vdi_uuids,
                                                start=1):
                 vm_utils.migrate_vhd(self._session, instance, vdi_uuid, dest,
                                      sr_path, vhd_num)
             LOG.debug("Migrated root base vhds", instance=instance)
-            return active_root_vdi_uuid
 
         def _process_ephemeral_chain_recursive(ephemeral_chains,
                                                active_vdi_uuids):
@@ -1041,7 +1039,10 @@ class VMOps(object):
                     vm_ref, label, str(userdevice)) as chain_vdi_uuids:
 
                 # remember active vdi, we will migrate these later
-                active_vdi_uuids.append(chain_vdi_uuids[0])
+                vdi_ref, vm_vdi_rec = vm_utils.get_vdi_for_vm_safely(
+                        self._session, vm_ref, str(userdevice))
+                active_uuid = vm_vdi_rec['uuid']
+                active_vdi_uuids.append(active_uuid)
 
                 # migrate inactive vhds
                 inactive_vdi_uuids = chain_vdi_uuids[1:]
@@ -1113,7 +1114,10 @@ class VMOps(object):
                 fake_step_to_show_snapshot_complete()
 
                 # transfer all the non-active VHDs in the root disk chain
-                active_root_vdi_uuid = transfer_immutable_vhds(root_vdi_uuids)
+                transfer_immutable_vhds(root_vdi_uuids)
+                vdi_ref, vm_vdi_rec = vm_utils.get_vdi_for_vm_safely(
+                        self._session, vm_ref)
+                active_root_vdi_uuid = vm_vdi_rec['uuid']
 
                 # snapshot and transfer all ephemeral disks
                 # then power down and transfer any diffs since
