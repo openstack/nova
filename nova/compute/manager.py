@@ -2508,8 +2508,13 @@ class ComputeManager(manager.Manager):
     def _delete_instance(self, context, instance, bdms, quotas):
         """Delete an instance on this host.  Commit or rollback quotas
         as necessary.
+
+        :param context: nova request context
+        :param instance: nova.objects.instance.Instance object
+        :param bdms: nova.objects.block_device.BlockDeviceMappingList object
+        :param quotas: nova.objects.quotas.Quotas object
         """
-        was_soft_deleted = instance['vm_state'] == vm_states.SOFT_DELETED
+        was_soft_deleted = instance.vm_state == vm_states.SOFT_DELETED
         if was_soft_deleted:
             # Instances in SOFT_DELETED vm_state have already had quotas
             # decremented.
