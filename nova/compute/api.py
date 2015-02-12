@@ -110,12 +110,12 @@ compute_opts = [
                     'behavior of every instance having the same name, set '
                     'this option to "%(name)s".  Valid keys for the '
                     'template are: name, uuid, count.'),
-     cfg.IntOpt('max_local_block_devices',
-                default=3,
-                help='Maximum number of devices that will result '
-                     'in a local image being created on the hypervisor node. '
-                     'Setting this to 0 means nova will allow only '
-                     'boot from volume. A negative number means unlimited.'),
+    cfg.IntOpt('max_local_block_devices',
+               default=3,
+               help='Maximum number of devices that will result '
+                    'in a local image being created on the hypervisor node. '
+                    'Setting this to 0 means nova will allow only '
+                    'boot from volume. A negative number means unlimited.'),
 ]
 
 ephemeral_storage_encryption_group = cfg.OptGroup(
