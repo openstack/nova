@@ -145,3 +145,33 @@ class DeferredDeleteExtensionTestV21(test.NoDBTestCase):
 
 class DeferredDeleteExtensionTestV2(DeferredDeleteExtensionTestV21):
     ext_ver = deferred_delete.DeferredDeleteController
+
+
+class DeferredDeletePolicyEnforcementV21(test.NoDBTestCase):
+
+    def setUp(self):
+        super(DeferredDeletePolicyEnforcementV21, self).setUp()
+        self.controller = dd_v21.DeferredDeleteController()
+        self.req = fakes.HTTPRequest.blank('')
+
+    def test_restore_policy_failed(self):
+        rule_name = "compute_extension:v3:os-deferred-delete"
+        self.policy.set_rules({rule_name: "project:non_fake"})
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.controller._restore, self.req, fakes.FAKE_UUID,
+            body={'restore': {}})
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+            exc.format_message())
+
+    def test_force_delete_policy_failed(self):
+        rule_name = "compute_extension:v3:os-deferred-delete"
+        self.policy.set_rules({rule_name: "project:non_fake"})
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.controller._force_delete, self.req, fakes.FAKE_UUID,
+            body={'forceDelete': {}})
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+            exc.format_message())
