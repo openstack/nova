@@ -646,13 +646,13 @@ class VirtNUMATopologyCellLimit(VirtNUMATopologyCell):
         :param cpuset: set containing list of CPU indexes
         :param memory: RAM measured in MiB
         :param cpu_limit: maximum number of  CPUs allocated
-        :param memory_usage: maxumum RAM allocated in MiB
+        :param memory_limit: maxumum RAM allocated in MiB
 
         Creates a new NUMA cell object to represent the max hardware
         resources and utilization. The number of CPUs specified
         by the @cpu_usage parameter may be larger than the number
         of bits set in @cpuset if CPU overcommit is used. Likewise
-        the amount of RAM specified by the @memory_usage parameter
+        the amount of RAM specified by the @memory_limit parameter
         may be larger than the available RAM in @memory if RAM
         overcommit is used.
 

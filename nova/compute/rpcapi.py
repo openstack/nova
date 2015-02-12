@@ -308,7 +308,7 @@ class ComputeAPI(object):
         '''Add aggregate host.
 
         :param ctxt: request context
-        :param aggregate_id:
+        :param aggregate:
         :param host_param: This value is placed in the message to be the 'host'
                            parameter for the remote method.
         :param host: This is the host to send the message to.
@@ -648,7 +648,7 @@ class ComputeAPI(object):
         '''Remove aggregate host.
 
         :param ctxt: request context
-        :param aggregate_id:
+        :param aggregate:
         :param host_param: This value is placed in the message to be the 'host'
                            parameter for the remote method.
         :param host: This is the host to send the message to.

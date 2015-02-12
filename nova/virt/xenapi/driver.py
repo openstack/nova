@@ -490,7 +490,7 @@ class XenAPIDriver(driver.ComputeDriver):
         """Do required cleanup on dest host after check_can_live_migrate calls
 
         :param context: security context
-        :param disk_over_commit: if true, allow disk over commit
+        :param dest_check_data: result of check_can_live_migrate_destination
         """
         pass
 

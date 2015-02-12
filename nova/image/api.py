@@ -44,7 +44,7 @@ class API(object):
         """Returns a client session that can be used to query for image
         information.
 
-        :param context: The `nova.context.Context` object for the request
+        :param _context: The `nova.context.Context` object for the request
         """
         # TODO(jaypipes): Refactor glance.get_remote_image_service and
         #                 glance.get_default_image_service into a single

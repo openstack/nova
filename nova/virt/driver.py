@@ -963,7 +963,7 @@ class ComputeDriver(object):
         """Set the root password on the specified instance.
 
         :param instance: nova.objects.instance.Instance
-        :param new_password: the new password
+        :param new_pass: the new password
         """
         raise NotImplementedError()
 
@@ -1154,7 +1154,7 @@ class ComputeDriver(object):
         related to other calls into the driver. The prime example is to clean
         the cache and remove images which are no longer of interest.
 
-        :param instances: nova.objects.instance.InstanceList
+        :param all_instances: nova.objects.instance.InstanceList
         """
         pass
 

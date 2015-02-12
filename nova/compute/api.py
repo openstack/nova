@@ -2468,8 +2468,8 @@ class API(base.Base):
         in the resize cycle.
 
         :param context: the request context
-        :param new_instance_type: the target instance type
-        :param old_instance_type: the original instance type
+        :param new_flavor: the target instance type
+        :param old_flavor: the original instance type
         :param sense: the sense of the adjustment, 1 indicates a
                       forward adjustment, whereas -1 indicates a
                       reversal of a prior adjustment

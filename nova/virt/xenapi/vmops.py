@@ -2071,7 +2071,7 @@ class VMOps(object):
                                            disk_over_commit=False):
         """Check if it is possible to execute live migration.
 
-        :param context: security context
+        :param ctxt: security context
         :param instance_ref: nova.db.sqlalchemy.models.Instance object
         :param block_migration: if true, prepare for block migration
         :param disk_over_commit: if true, allow disk over commit
@@ -2111,7 +2111,7 @@ class VMOps(object):
                                       dest_check_data):
         """Check if it's possible to execute live migration on the source side.
 
-        :param context: security context
+        :param ctxt: security context
         :param instance_ref: nova.db.sqlalchemy.models.Instance object
         :param dest_check_data: data returned by the check on the
                                 destination, includes block_migration flag

@@ -2530,7 +2530,6 @@ def instance_info_cache_get(context, instance_uuid):
     """Gets an instance info cache from the table.
 
     :param instance_uuid: = uuid of the info cache's instance
-    :param session: = optional session object
     """
     return model_query(context, models.InstanceInfoCache).\
                          filter_by(instance_uuid=instance_uuid).\
@@ -2543,7 +2542,6 @@ def instance_info_cache_update(context, instance_uuid, values):
 
     :param instance_uuid: = uuid of info cache's instance
     :param values: = dict containing column values to update
-    :param session: = optional session object
     """
     session = get_session()
     with session.begin():
@@ -2576,7 +2574,6 @@ def instance_info_cache_delete(context, instance_uuid):
     """Deletes an existing instance_info_cache record
 
     :param instance_uuid: = uuid of the instance tied to the cache record
-    :param session: = optional session object
     """
     model_query(context, models.InstanceInfoCache).\
                          filter_by(instance_uuid=instance_uuid).\
@@ -3294,7 +3291,6 @@ def _create_quota_usage_if_missing(user_usages, resource, until_refresh,
     :param resource:      The resource being checked for quota usage.
     :param until_refresh: Count of reservations until usage is refreshed,
                           int or None
-    :param max_age:       Number of seconds between subsequent usage refreshes.
     :param project_id:    The project being checked for quota usage.
     :param user_id:       The user being checked for quota usage.
     :param session:       DB session holding a transaction lock.

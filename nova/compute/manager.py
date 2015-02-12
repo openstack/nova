@@ -4897,7 +4897,8 @@ class ComputeManager(manager.Manager):
     def check_instance_shared_storage(self, ctxt, instance, data):
         """Check if the instance files are shared
 
-        :param context: security context
+        :param ctxt: security context
+        :param instance: dict of instance data
         :param data: result of driver.check_instance_shared_storage_local
 
         Returns True if instance disks located on shared storage and
@@ -4947,7 +4948,7 @@ class ComputeManager(manager.Manager):
         This checks if the live migration can succeed, based on the
         results from check_can_live_migrate_destination.
 
-        :param context: security context
+        :param ctxt: security context
         :param instance: dict of instance data
         :param dest_check_data: result of check_can_live_migrate_destination
         :returns: a dict containing migration info
