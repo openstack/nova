@@ -300,6 +300,14 @@ class SimpleTenantUsageControllerTestV21(test.TestCase):
                           self.controller._get_flavor, self.context,
                           self.inst_obj, {})
 
+    @mock.patch('nova.objects.Instance.get_flavor',
+                side_effect=exception.NotFound())
+    def test_get_flavor_from_deleted_with_notfound(self, fake_get_flavor):
+        self.inst_obj.deleted = 1
+        flavor = self.controller._get_flavor(self.context, self.inst_obj, {})
+        self.assertEqual(objects.Flavor, type(flavor))
+        self.assertEqual(FAKE_INST_TYPE['id'], flavor.id)
+
     def test_get_flavor_from_deleted_with_id(self):
         # Deleted instances may not have type info in system_metadata,
         # so verify that they get their type from a lookup of their
