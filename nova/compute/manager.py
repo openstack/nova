@@ -900,7 +900,7 @@ class ComputeManager(manager.Manager):
                                     task_states.IMAGE_SNAPSHOT]):
             LOG.debug("Instance in transitional state %s at start-up "
                       "clearing task state",
-                      instance['task_state'], instance=instance)
+                      instance.task_state, instance=instance)
             try:
                 self._post_interrupted_snapshot_cleanup(context, instance)
             except Exception:
@@ -942,7 +942,7 @@ class ComputeManager(manager.Manager):
             LOG.debug("Instance in transitional state (%(task_state)s) at "
                       "start-up and power state is (%(power_state)s), "
                       "triggering reboot",
-                      {'task_state': instance['task_state'],
+                      {'task_state': instance.task_state,
                        'power_state': current_power_state},
                       instance=instance)
             self.compute_rpcapi.reboot_instance(context, instance,
@@ -987,7 +987,7 @@ class ComputeManager(manager.Manager):
             try:
                 LOG.debug("Instance in transitional state %s at start-up "
                           "retrying stop request",
-                          instance['task_state'], instance=instance)
+                          instance.task_state, instance=instance)
                 self.stop_instance(context, instance)
             except Exception:
                 # we don't want that an exception blocks the init_host
@@ -999,7 +999,7 @@ class ComputeManager(manager.Manager):
             try:
                 LOG.debug("Instance in transitional state %s at start-up "
                           "retrying start request",
-                          instance['task_state'], instance=instance)
+                          instance.task_state, instance=instance)
                 self.start_instance(context, instance)
             except Exception:
                 # we don't want that an exception blocks the init_host
