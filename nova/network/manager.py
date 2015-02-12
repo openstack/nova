@@ -1750,15 +1750,18 @@ class FlatManager(NetworkManager):
         #             we major version the network_rpcapi to 2.0.
         return []
 
+    # NOTE(hanlind): This method can be removed in version 2.0 of the RPC API
     def allocate_floating_ip(self, context, project_id, pool):
         """Gets a floating ip from the pool."""
         return None
 
+    # NOTE(hanlind): This method can be removed in version 2.0 of the RPC API
     def deallocate_floating_ip(self, context, address,
                                affect_auto_assigned):
         """Returns a floating ip to the pool."""
         return None
 
+    # NOTE(hanlind): This method can be removed in version 2.0 of the RPC API
     def associate_floating_ip(self, context, floating_address, fixed_address,
                               affect_auto_assigned=False):
         """Associates a floating ip with a fixed ip.
@@ -1768,6 +1771,7 @@ class FlatManager(NetworkManager):
         """
         return None
 
+    # NOTE(hanlind): This method can be removed in version 2.0 of the RPC API
     def disassociate_floating_ip(self, context, address,
                                  affect_auto_assigned=False):
         """Disassociates a floating ip from its fixed ip.
