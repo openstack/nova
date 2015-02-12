@@ -15,14 +15,12 @@
 
 import mock
 from oslo_config import cfg
-from oslo_serialization import jsonutils
 
 from nova.api.openstack.compute.contrib import attach_interfaces \
     as attach_interfaces_v2
 from nova.api.openstack.compute.plugins.v3 import attach_interfaces \
     as attach_interfaces_v3
 from nova.compute import api as compute_api
-from nova import context
 from nova import exception
 from nova.network import api as network_api
 from nova import objects
@@ -129,7 +127,6 @@ def fake_get_instance(self, *args, **kwargs):
 
 
 class InterfaceAttachTestsV21(test.NoDBTestCase):
-    url = '/v3/os-interfaces'
     controller_cls = attach_interfaces_v3.InterfaceAttachmentController
     validate_exc = exception.ValidationError
     in_use_exc = exc.HTTPConflict
@@ -143,7 +140,6 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
         self.stubs.Set(network_api.API, 'show_port', fake_show_port)
         self.stubs.Set(network_api.API, 'list_ports', fake_list_ports)
         self.stubs.Set(compute_api.API, 'get', fake_get_instance)
-        self.context = context.get_admin_context()
         self.expected_show = {'interfaceAttachment':
             {'net_id': FAKE_NET_ID1,
              'port_id': FAKE_PORT_ID1,
@@ -152,81 +148,50 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
              'fixed_ips': port_data1['fixed_ips'],
             }}
         self.attachments = self.controller_cls()
+        self.req = fakes.HTTPRequest.blank('')
 
     @mock.patch.object(compute_api.API, 'get',
                        side_effect=exception.InstanceNotFound(instance_id=''))
-    def _test_instance_not_found(self, url, func, args, mock_get, kwargs=None,
-                                 method='GET'):
-        req = fakes.HTTPRequest.blank(url)
-        req.method = method
-        req.headers['content-type'] = 'application/json'
-        req.environ['nova.context'] = self.context
+    def _test_instance_not_found(self, func, args, mock_get, kwargs=None):
         if not kwargs:
             kwargs = {}
-        self.assertRaises(exc.HTTPNotFound, func, req, *args, **kwargs)
+        self.assertRaises(exc.HTTPNotFound, func, self.req, *args, **kwargs)
 
     def test_show_instance_not_found(self):
-        self._test_instance_not_found(self.url + 'fake',
-                                      self.attachments.show, ('fake', 'fake'))
+        self._test_instance_not_found(self.attachments.show, ('fake', 'fake'))
 
     def test_index_instance_not_found(self):
-        self._test_instance_not_found(self.url,
-                                      self.attachments.index, ('fake', ))
+        self._test_instance_not_found(self.attachments.index, ('fake', ))
 
     def test_detach_interface_instance_not_found(self):
-        self._test_instance_not_found(self.url + '/fake',
-                                      self.attachments.delete,
-                                      ('fake', 'fake'), method='DELETE')
+        self._test_instance_not_found(self.attachments.delete,
+                                      ('fake', 'fake'))
 
     def test_attach_interface_instance_not_found(self):
-        self._test_instance_not_found(
-            '/v2/fake/os-interfaces', self.attachments.create, ('fake', ),
-            kwargs={'body': {'interfaceAttachment': {}}}, method='POST')
+        self._test_instance_not_found(self.attachments.create, ('fake', ),
+            kwargs={'body': {'interfaceAttachment': {}}})
 
     def test_show(self):
-        req = fakes.HTTPRequest.blank(self.url + '/show')
-        req.method = 'POST'
-        req.body = jsonutils.dumps({})
-        req.headers['content-type'] = 'application/json'
-        req.environ['nova.context'] = self.context
-
-        result = self.attachments.show(req, FAKE_UUID1, FAKE_PORT_ID1)
+        result = self.attachments.show(self.req, FAKE_UUID1, FAKE_PORT_ID1)
         self.assertEqual(self.expected_show, result)
 
     def test_show_invalid(self):
-        req = fakes.HTTPRequest.blank(self.url + '/show')
-        req.method = 'POST'
-        req.body = jsonutils.dumps({})
-        req.headers['content-type'] = 'application/json'
-        req.environ['nova.context'] = self.context
-
         self.assertRaises(exc.HTTPNotFound,
-                          self.attachments.show, req, FAKE_UUID2,
+                          self.attachments.show, self.req, FAKE_UUID2,
                           FAKE_PORT_ID1)
 
     @mock.patch.object(network_api.API, 'show_port',
                        side_effect=exception.Forbidden)
     def test_show_forbidden(self, show_port_mock):
-        req = fakes.HTTPRequest.blank(self.url + '/show')
-        req.method = 'POST'
-        req.body = jsonutils.dumps({})
-        req.headers['content-type'] = 'application/json'
-        req.environ['nova.context'] = self.context
-
         self.assertRaises(exc.HTTPForbidden,
-                          self.attachments.show, req, FAKE_UUID1,
+                          self.attachments.show, self.req, FAKE_UUID1,
                           FAKE_PORT_ID1)
 
     def test_delete(self):
         self.stubs.Set(compute_api.API, 'detach_interface',
                        fake_detach_interface)
-        req = fakes.HTTPRequest.blank(self.url + '/delete')
-        req.method = 'DELETE'
-        req.body = jsonutils.dumps({})
-        req.headers['content-type'] = 'application/json'
-        req.environ['nova.context'] = self.context
 
-        result = self.attachments.delete(req, FAKE_UUID1, FAKE_PORT_ID1)
+        result = self.attachments.delete(self.req, FAKE_UUID1, FAKE_PORT_ID1)
         # NOTE: on v2.1, http status code is set as wsgi_code of API
         # method instead of status_int in a response object.
         if isinstance(self.attachments,
@@ -244,30 +209,20 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
         self.stubs.Set(compute_api.API,
                        'detach_interface',
                        fake_detach_interface_from_locked_server)
-        req = fakes.HTTPRequest.blank(self.url + '/delete')
-        req.method = 'POST'
-        req.body = jsonutils.dumps({})
-        req.headers['content-type'] = 'application/json'
-        req.environ['nova.context'] = self.context
 
         self.assertRaises(exc.HTTPConflict,
                           self.attachments.delete,
-                          req,
+                          self.req,
                           FAKE_UUID1,
                           FAKE_PORT_ID1)
 
     def test_delete_interface_not_found(self):
         self.stubs.Set(compute_api.API, 'detach_interface',
                        fake_detach_interface)
-        req = fakes.HTTPRequest.blank(self.url + '/delete')
-        req.method = 'DELETE'
-        req.body = jsonutils.dumps({})
-        req.headers['content-type'] = 'application/json'
-        req.environ['nova.context'] = self.context
 
         self.assertRaises(exc.HTTPNotFound,
                           self.attachments.delete,
-                          req,
+                          self.req,
                           FAKE_UUID1,
                           'invaid-port-id')
 
@@ -279,65 +234,40 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
         self.stubs.Set(compute_api.API,
                        'attach_interface',
                        fake_attach_interface_to_locked_server)
-        req = fakes.HTTPRequest.blank(self.url + '/attach')
-        req.method = 'POST'
-        req.body = jsonutils.dumps({})
-        req.headers['content-type'] = 'application/json'
-        req.environ['nova.context'] = self.context
+        body = {}
         self.assertRaises(exc.HTTPConflict,
-                          self.attachments.create, req, FAKE_UUID1,
-                          body=jsonutils.loads(req.body))
+                          self.attachments.create, self.req, FAKE_UUID1,
+                          body=body)
 
     def test_attach_interface_without_network_id(self):
         self.stubs.Set(compute_api.API, 'attach_interface',
                        fake_attach_interface)
-        req = fakes.HTTPRequest.blank(self.url + '/attach')
-        req.method = 'POST'
-        req.body = jsonutils.dumps({})
-        req.headers['content-type'] = 'application/json'
-        req.environ['nova.context'] = self.context
-        result = self.attachments.create(req, FAKE_UUID1,
-                                    body=jsonutils.loads(req.body))
+        body = {}
+        result = self.attachments.create(self.req, FAKE_UUID1, body=body)
         self.assertEqual(result['interfaceAttachment']['net_id'],
             FAKE_NET_ID1)
 
     def test_attach_interface_with_network_id(self):
         self.stubs.Set(compute_api.API, 'attach_interface',
                        fake_attach_interface)
-        req = fakes.HTTPRequest.blank(self.url + '/attach')
-        req.method = 'POST'
-        req.body = jsonutils.dumps({'interfaceAttachment':
-                                   {'net_id': FAKE_NET_ID2}})
-        req.headers['content-type'] = 'application/json'
-        req.environ['nova.context'] = self.context
-        result = self.attachments.create(req, FAKE_UUID1,
-                                    body=jsonutils.loads(req.body))
+        body = {'interfaceAttachment': {'net_id': FAKE_NET_ID2}}
+        result = self.attachments.create(self.req, FAKE_UUID1, body=body)
         self.assertEqual(result['interfaceAttachment']['net_id'],
             FAKE_NET_ID2)
 
     def _attach_interface_bad_request_case(self, body):
         self.stubs.Set(compute_api.API, 'attach_interface',
                        fake_attach_interface)
-        req = fakes.HTTPRequest.blank(self.url + '/attach')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers['content-type'] = 'application/json'
-        req.environ['nova.context'] = self.context
         self.assertRaises(exc.HTTPBadRequest,
-                          self.attachments.create, req, FAKE_UUID1,
-                          body=jsonutils.loads(req.body))
+                          self.attachments.create, self.req, FAKE_UUID1,
+                          body=body)
 
     def _attach_interface_not_found_case(self, body):
         self.stubs.Set(compute_api.API, 'attach_interface',
                        fake_attach_interface)
-        req = fakes.HTTPRequest.blank(self.url + '/attach')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers['content-type'] = 'application/json'
-        req.environ['nova.context'] = self.context
         self.assertRaises(self.not_found_exc,
-                          self.attachments.create, req, FAKE_UUID1,
-                          body=jsonutils.loads(req.body))
+                          self.attachments.create, self.req, FAKE_UUID1,
+                          body=body)
 
     def test_attach_interface_with_port_and_network_id(self):
         body = {
@@ -372,15 +302,10 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
 
         self.stubs.Set(compute_api.API, 'attach_interface',
                        fake_attach_interface_invalid_state)
-        req = fakes.HTTPRequest.blank(self.url + '/attach')
-        req.method = 'POST'
-        req.body = jsonutils.dumps({'interfaceAttachment':
-                                    {'net_id': FAKE_NET_ID1}})
-        req.headers['content-type'] = 'application/json'
-        req.environ['nova.context'] = self.context
+        body = {'interfaceAttachment': {'net_id': FAKE_NET_ID1}}
         self.assertRaises(exc.HTTPConflict,
-                          self.attachments.create, req, FAKE_UUID1,
-                          body=jsonutils.loads(req.body))
+                          self.attachments.create, self.req, FAKE_UUID1,
+                          body=body)
 
     def test_detach_interface_with_invalid_state(self):
         def fake_detach_interface_invalid_state(*args, **kwargs):
@@ -390,32 +315,22 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
 
         self.stubs.Set(compute_api.API, 'detach_interface',
                        fake_detach_interface_invalid_state)
-        req = fakes.HTTPRequest.blank(self.url + '/attach')
-        req.method = 'DELETE'
-        req.body = jsonutils.dumps({})
-        req.headers['content-type'] = 'application/json'
-        req.environ['nova.context'] = self.context
         self.assertRaises(exc.HTTPConflict,
                           self.attachments.delete,
-                          req,
+                          self.req,
                           FAKE_UUID1,
                           FAKE_NET_ID1)
 
     def test_attach_interface_invalid_fixed_ip(self):
-        req = fakes.HTTPRequest.blank(self.url + '/attach')
-        req.method = 'POST'
         body = {
             'interfaceAttachment': {
                 'net_id': FAKE_NET_ID1,
                 'fixed_ips': [{'ip_address': 'invalid_ip'}]
             }
         }
-        req.body = jsonutils.dumps(body)
-        req.headers['content-type'] = 'application/json'
-        req.environ['nova.context'] = self.context
         self.assertRaises(self.validate_exc,
-                          self.attachments.create, req, FAKE_UUID1,
-                          body=jsonutils.loads(req.body))
+                          self.attachments.create, self.req, FAKE_UUID1,
+                          body=body)
 
     @mock.patch.object(compute_api.API, 'get')
     @mock.patch.object(compute_api.API, 'attach_interface')
@@ -426,17 +341,14 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
         get_mock.return_value = fake_instance
         attach_mock.side_effect = exception.FixedIpAlreadyInUse(
             address='10.0.2.2', instance_uuid=FAKE_UUID1)
-        req = fakes.HTTPRequest.blank(self.url + '/attach')
-        req.method = 'POST'
-        req.body = jsonutils.dumps({})
-        req.headers['content-type'] = 'application/json'
-        req.environ['nova.context'] = self.context
+        body = {}
         self.assertRaises(self.in_use_exc,
-                          self.attachments.create, req, FAKE_UUID1,
-                          body=jsonutils.loads(req.body))
-        attach_mock.assert_called_once_with(self.context, fake_instance, None,
+                          self.attachments.create, self.req, FAKE_UUID1,
+                          body=body)
+        ctxt = self.req.environ['nova.context']
+        attach_mock.assert_called_once_with(ctxt, fake_instance, None,
                                             None, None)
-        get_mock.assert_called_once_with(self.context, FAKE_UUID1,
+        get_mock.assert_called_once_with(ctxt, FAKE_UUID1,
                                          want_objects=True,
                                          expected_attrs=None)
 
@@ -449,31 +361,24 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
         get_mock.return_value = fake_instance
         attach_mock.side_effect = exception.PortInUse(
             port_id=FAKE_PORT_ID1)
-        req = fakes.HTTPRequest.blank(self.url + '/attach')
-        req.method = 'POST'
-        req.body = jsonutils.dumps({})
-        req.headers['content-type'] = 'application/json'
-        req.environ['nova.context'] = self.context
+        body = {}
         self.assertRaises(self.in_use_exc,
-                          self.attachments.create, req, FAKE_UUID1,
-                          body=jsonutils.loads(req.body))
-        attach_mock.assert_called_once_with(self.context, fake_instance, None,
+                          self.attachments.create, self.req, FAKE_UUID1,
+                          body=body)
+        ctxt = self.req.environ['nova.context']
+        attach_mock.assert_called_once_with(ctxt, fake_instance, None,
                                             None, None)
-        get_mock.assert_called_once_with(self.context, FAKE_UUID1,
+        get_mock.assert_called_once_with(ctxt, FAKE_UUID1,
                                          want_objects=True,
                                          expected_attrs=None)
 
     def _test_attach_interface_with_invalid_parameter(self, param):
         self.stubs.Set(compute_api.API, 'attach_interface',
                        fake_attach_interface)
-        req = fakes.HTTPRequest.blank(self.url + '/attach')
-        req.method = 'POST'
-        req.body = jsonutils.dumps({'interface_attachment': param})
-        req.headers['content-type'] = 'application/json'
-        req.environ['nova.context'] = self.context
+        body = {'interface_attachment': param}
         self.assertRaises(exception.ValidationError,
-                          self.attachments.create, req, FAKE_UUID1,
-                          body=jsonutils.loads(req.body))
+                          self.attachments.create, self.req, FAKE_UUID1,
+                          body=body)
 
     def test_attach_interface_instance_with_non_uuid_net_id(self):
         param = {'net_id': 'non_uuid'}
@@ -489,7 +394,6 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
 
 
 class InterfaceAttachTestsV2(InterfaceAttachTestsV21):
-    url = '/v2/fake/os-interfaces'
     controller_cls = attach_interfaces_v2.InterfaceAttachmentController
     validate_exc = exc.HTTPBadRequest
     in_use_exc = exc.HTTPBadRequest

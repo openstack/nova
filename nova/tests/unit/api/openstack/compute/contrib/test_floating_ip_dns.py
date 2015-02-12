@@ -143,14 +143,14 @@ class FloatingIpDNSTestV21(test.TestCase):
         self.domain_controller = temp
         self.entry_controller = self.floating_ip_dns.\
                                 FloatingIPDNSEntryController()
+        self.req = fakes.HTTPRequest.blank('')
 
     def tearDown(self):
         self._delete_floating_ip()
         super(FloatingIpDNSTestV21, self).tearDown()
 
     def test_dns_domains_list(self):
-        req = fakes.HTTPRequest.blank('/v2/123/os-floating-ip-dns')
-        res_dict = self.domain_controller.index(req)
+        res_dict = self.domain_controller.index(self.req)
         entries = res_dict['domain_entries']
         self.assertTrue(entries)
         self.assertEqual(entries[0]['domain'], "example.org")
@@ -165,13 +165,7 @@ class FloatingIpDNSTestV21(test.TestCase):
 
     def _test_get_dns_entries_by_address(self, address):
 
-        qparams = {'ip': address}
-        params = "?%s" % urllib.urlencode(qparams) if qparams else ""
-
-        req = fakes.HTTPRequest.blank(
-            '/v2/123/os-floating-ip-dns/%s/entries/%s'
-            % (_quote_domain(domain), params))
-        entries = self.entry_controller.show(req, _quote_domain(domain),
+        entries = self.entry_controller.show(self.req, _quote_domain(domain),
                                              address)
         entries = entries.obj
         self.assertEqual(len(entries['dns_entries']), 2)
@@ -189,10 +183,8 @@ class FloatingIpDNSTestV21(test.TestCase):
         self._test_get_dns_entries_by_address(test_ipv6_address)
 
     def test_get_dns_entries_by_name(self):
-        req = fakes.HTTPRequest.blank(
-              '/v2/123/os-floating-ip-dns/%s/entries/%s' %
-              (_quote_domain(domain), name))
-        entry = self.entry_controller.show(req, _quote_domain(domain), name)
+        entry = self.entry_controller.show(self.req, _quote_domain(domain),
+                                           name)
 
         self.assertEqual(entry['dns_entry']['ip'],
                          test_ipv4_address)
@@ -206,45 +198,37 @@ class FloatingIpDNSTestV21(test.TestCase):
         self.stubs.Set(network.api.API, "get_dns_entries_by_name",
                        fake_get_dns_entries_by_name)
 
-        req = fakes.HTTPRequest.blank(
-              '/v2/123/os-floating-ip-dns/%s/entries/%s' %
-              (_quote_domain(domain), 'nonexistent'))
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.entry_controller.show,
-                          req, _quote_domain(domain), 'nonexistent')
+                          self.req, _quote_domain(domain), 'nonexistent')
 
     def test_create_entry(self):
         body = {'dns_entry':
                  {'ip': test_ipv4_address,
                   'dns_type': 'A'}}
-        req = fakes.HTTPRequest.blank(
-              '/v2/123/os-floating-ip-dns/%s/entries/%s' %
-              (_quote_domain(domain), name))
-        entry = self.entry_controller.update(req, _quote_domain(domain),
+        entry = self.entry_controller.update(self.req, _quote_domain(domain),
                                              name, body=body)
         self.assertEqual(entry['dns_entry']['ip'], test_ipv4_address)
 
     def test_create_domain(self):
-        req = fakes.HTTPRequest.blank('/v2/123/os-floating-ip-dns/%s' %
-                                      _quote_domain(domain))
         body = {'domain_entry':
                 {'scope': 'private',
                  'project': 'testproject'}}
         self.assertRaises(self._bad_request(),
                           self.domain_controller.update,
-                          req, _quote_domain(domain), body=body)
+                          self.req, _quote_domain(domain), body=body)
 
         body = {'domain_entry':
                 {'scope': 'public',
                  'availability_zone': 'zone1'}}
         self.assertRaises(self._bad_request(),
                           self.domain_controller.update,
-                          req, _quote_domain(domain), body=body)
+                          self.req, _quote_domain(domain), body=body)
 
         body = {'domain_entry':
                 {'scope': 'public',
                  'project': 'testproject'}}
-        entry = self.domain_controller.update(req, _quote_domain(domain),
+        entry = self.domain_controller.update(self.req, _quote_domain(domain),
                     body=body)
         self.assertEqual(entry['domain_entry']['domain'], domain)
         self.assertEqual(entry['domain_entry']['scope'], 'public')
@@ -253,7 +237,7 @@ class FloatingIpDNSTestV21(test.TestCase):
         body = {'domain_entry':
                 {'scope': 'private',
                  'availability_zone': 'zone1'}}
-        entry = self.domain_controller.update(req, _quote_domain(domain),
+        entry = self.domain_controller.update(self.req, _quote_domain(domain),
             body=body)
         self.assertEqual(entry['domain_entry']['domain'], domain)
         self.assertEqual(entry['domain_entry']['scope'], 'private')
@@ -268,10 +252,8 @@ class FloatingIpDNSTestV21(test.TestCase):
         self.stubs.Set(network.api.API, "delete_dns_entry",
                        network_delete_dns_entry)
 
-        req = fakes.HTTPRequest.blank(
-              '/v2/123/os-floating-ip-dns/%s/entries/%s' %
-              (_quote_domain(domain), name))
-        res = self.entry_controller.delete(req, _quote_domain(domain), name)
+        res = self.entry_controller.delete(self.req, _quote_domain(domain),
+                                           name)
 
         self._check_status(202, res, self.entry_controller.delete)
         self.assertEqual([(name, domain)], calls)
@@ -283,11 +265,9 @@ class FloatingIpDNSTestV21(test.TestCase):
         self.stubs.Set(network.api.API, "delete_dns_entry",
                        delete_dns_entry_notfound)
 
-        req = fakes.HTTPRequest.blank(
-              '/v2/123/os-floating-ip-dns/%s/entries/%s' %
-              (_quote_domain(domain), name))
         self.assertRaises(webob.exc.HTTPNotFound,
-            self.entry_controller.delete, req, _quote_domain(domain), name)
+            self.entry_controller.delete, self.req, _quote_domain(domain),
+            name)
 
     def test_delete_domain(self):
         calls = []
@@ -298,9 +278,7 @@ class FloatingIpDNSTestV21(test.TestCase):
         self.stubs.Set(network.api.API, "delete_dns_domain",
                        network_delete_dns_domain)
 
-        req = fakes.HTTPRequest.blank('/v2/123/os-floating-ip-dns/%s' %
-                                      _quote_domain(domain))
-        res = self.domain_controller.delete(req, _quote_domain(domain))
+        res = self.domain_controller.delete(self.req, _quote_domain(domain))
 
         self._check_status(202, res, self.domain_controller.delete)
         self.assertEqual([domain], calls)
@@ -312,18 +290,14 @@ class FloatingIpDNSTestV21(test.TestCase):
         self.stubs.Set(network.api.API, "delete_dns_domain",
                        delete_dns_domain_notfound)
 
-        req = fakes.HTTPRequest.blank('/v2/123/os-floating-ip-dns/%s' %
-                                      _quote_domain(domain))
         self.assertRaises(webob.exc.HTTPNotFound,
-            self.domain_controller.delete, req, _quote_domain(domain))
+            self.domain_controller.delete, self.req, _quote_domain(domain))
 
     def test_modify(self):
         body = {'dns_entry':
                  {'ip': test_ipv4_address2,
                   'dns_type': 'A'}}
-        req = fakes.HTTPRequest.blank(
-              '/v2/123/os-floating-ip-dns/%s/entries/%s' % (domain, name))
-        entry = self.entry_controller.update(req, domain, name, body=body)
+        entry = self.entry_controller.update(self.req, domain, name, body=body)
 
         self.assertEqual(entry['dns_entry']['ip'], test_ipv4_address2)
 
@@ -331,47 +305,34 @@ class FloatingIpDNSTestV21(test.TestCase):
         body = {'dns_entry':
                  {'ip': test_ipv4_address,
                   'dns_type': 'A'}}
-        req = fakes.HTTPRequest.blank(
-              '/v2/123/os-floating-ip-dns/%s/entries/%s' %
-              (_quote_domain(domain), name))
         with mock.patch.object(network.api.API, 'modify_dns_entry',
                                side_effect=NotImplementedError()):
             self.assertRaises(webob.exc.HTTPNotImplemented,
-                              self.entry_controller.update, req,
+                              self.entry_controller.update, self.req,
                               _quote_domain(domain), name, body=body)
 
     def test_not_implemented_dns_entry_show(self):
-        req = fakes.HTTPRequest.blank(
-              '/v2/123/os-floating-ip-dns/%s/entries/%s' %
-              (_quote_domain(domain), name))
         with mock.patch.object(network.api.API, 'get_dns_entries_by_name',
                                side_effect=NotImplementedError()):
             self.assertRaises(webob.exc.HTTPNotImplemented,
                               self.entry_controller.show,
-                              req, _quote_domain(domain), name)
+                              self.req, _quote_domain(domain), name)
 
     def test_not_implemented_delete_entry(self):
-        req = fakes.HTTPRequest.blank(
-              '/v2/123/os-floating-ip-dns/%s/entries/%s' %
-              (_quote_domain(domain), name))
         with mock.patch.object(network.api.API, 'delete_dns_entry',
                                side_effect=NotImplementedError()):
             self.assertRaises(webob.exc.HTTPNotImplemented,
-                              self.entry_controller.delete, req,
+                              self.entry_controller.delete, self.req,
                               _quote_domain(domain), name)
 
     def test_not_implemented_delete_domain(self):
-        req = fakes.HTTPRequest.blank('/v2/123/os-floating-ip-dns/%s' %
-                                      _quote_domain(domain))
         with mock.patch.object(network.api.API, 'delete_dns_domain',
                                side_effect=NotImplementedError()):
             self.assertRaises(webob.exc.HTTPNotImplemented,
-                              self.domain_controller.delete, req,
+                              self.domain_controller.delete, self.req,
                               _quote_domain(domain))
 
     def test_not_implemented_create_domain(self):
-        req = fakes.HTTPRequest.blank('/v2/123/os-floating-ip-dns/%s' %
-                                      _quote_domain(domain))
         body = {'domain_entry':
                 {'scope': 'private',
                  'availability_zone': 'zone1'}}
@@ -379,14 +340,13 @@ class FloatingIpDNSTestV21(test.TestCase):
                                side_effect=NotImplementedError()):
             self.assertRaises(webob.exc.HTTPNotImplemented,
                               self.domain_controller.update,
-                              req, _quote_domain(domain), body=body)
+                              self.req, _quote_domain(domain), body=body)
 
     def test_not_implemented_dns_domains_list(self):
-        req = fakes.HTTPRequest.blank('/v2/123/os-floating-ip-dns')
         with mock.patch.object(network.api.API, 'get_dns_domains',
                                side_effect=NotImplementedError()):
             self.assertRaises(webob.exc.HTTPNotImplemented,
-                              self.domain_controller.index, req)
+                              self.domain_controller.index, self.req)
 
 
 class FloatingIpDNSTestV2(FloatingIpDNSTestV21):

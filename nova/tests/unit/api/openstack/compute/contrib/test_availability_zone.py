@@ -107,6 +107,8 @@ class AvailabilityZoneApiTestV21(test.NoDBTestCase):
                        fake_set_availability_zones)
         self.stubs.Set(servicegroup.API, 'service_is_up', fake_service_is_up)
         self.controller = self.availability_zone.AvailabilityZoneController()
+        self.admin_webreq = webob.Request.blank('')
+        self.admin_webreq.environ['nova.context'] = context.get_admin_context()
 
     def test_filtered_availability_zones(self):
         zones = ['zone1', 'internal']
@@ -124,9 +126,7 @@ class AvailabilityZoneApiTestV21(test.NoDBTestCase):
         self.assertEqual(result, expected)
 
     def test_availability_zone_index(self):
-        req = webob.Request.blank('')
-        req.environ['nova.context'] = context.get_admin_context()
-        resp_dict = self.controller.index(req)
+        resp_dict = self.controller.index(self.admin_webreq)
 
         self.assertIn('availabilityZoneInfo', resp_dict)
         zones = resp_dict['availabilityZoneInfo']
@@ -169,9 +169,7 @@ class AvailabilityZoneApiTestV21(test.NoDBTestCase):
             self.assertEqual(zone['zoneName'], name)
             self.assertEqual(zone['zoneState'], status)
 
-        req = webob.Request.blank('')
-        req.environ['nova.context'] = context.get_admin_context()
-        resp_dict = self.controller.detail(req)
+        resp_dict = self.controller.detail(self.admin_webreq)
 
         self.assertIn('availabilityZoneInfo', resp_dict)
         zones = resp_dict['availabilityZoneInfo']
@@ -232,9 +230,7 @@ class AvailabilityZoneApiTestV21(test.NoDBTestCase):
         self.stubs.Set(availability_zones, 'get_availability_zones',
                        fake_get_availability_zones)
 
-        req = webob.Request.blank('')
-        req.environ['nova.context'] = context.get_admin_context()
-        resp_dict = self.controller.detail(req)
+        resp_dict = self.controller.detail(self.admin_webreq)
 
         self.assertThat(resp_dict,
                         matchers.DictMatches(expected_response))
@@ -286,6 +282,8 @@ class ServersControllerCreateTestV21(test.TestCase):
         fake.stub_out_image_service(self.stubs)
         self.stubs.Set(db, 'instance_create', instance_create)
 
+        self.req = fakes.HTTPRequest.blank('')
+
     def _set_up_controller(self):
         ext_info = plugins.LoadedExtensionInfo()
         self.controller = servers_v21.ServersController(
@@ -304,11 +302,7 @@ class ServersControllerCreateTestV21(test.TestCase):
         server = dict(name='server_test', imageRef=image_uuid, flavorRef=2)
         server.update(params)
         body = dict(server=server)
-        req = fakes.HTTPRequest.blank(self.base_url + 'servers')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
-        server = controller.create(req, body=body).obj['server']
+        server = controller.create(self.req, body=body).obj['server']
 
     def test_create_instance_with_availability_zone_disabled(self):
         params = {'availability_zone': 'foo'}
@@ -344,10 +338,6 @@ class ServersControllerCreateTestV21(test.TestCase):
             },
         }
 
-        req = fakes.HTTPRequest.blank(self.base_url + 'servers')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
         admin_context = context.get_admin_context()
         db.service_create(admin_context, {'host': 'host1_zones',
                                           'binary': "nova-compute",
@@ -356,7 +346,7 @@ class ServersControllerCreateTestV21(test.TestCase):
         agg = db.aggregate_create(admin_context,
                 {'name': 'agg1'}, {'availability_zone': 'nova'})
         db.aggregate_host_add(admin_context, agg['id'], 'host1_zones')
-        return req, body
+        return self.req, body
 
     def test_create_instance_with_availability_zone(self):
         zone_name = 'nova'
@@ -398,11 +388,7 @@ class ServersControllerCreateTestV21(test.TestCase):
             },
         }
 
-        req = fakes.HTTPRequest.blank(self.base_url + 'servers')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
-        res = self.controller.create(req, body=body).obj
+        res = self.controller.create(self.req, body=body).obj
         server = res['server']
         self.assertEqual(fakes.FAKE_UUID, server['id'])
 

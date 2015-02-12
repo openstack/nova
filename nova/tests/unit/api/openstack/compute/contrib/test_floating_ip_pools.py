@@ -28,7 +28,6 @@ def fake_get_floating_ip_pools(self, context):
 
 class FloatingIpPoolTestV21(test.NoDBTestCase):
     floating_ip_pools = fipp_v21
-    url = '/v2/fake/os-floating-ip-pools'
 
     def setUp(self):
         super(FloatingIpPoolTestV21, self).setUp()
@@ -37,6 +36,7 @@ class FloatingIpPoolTestV21(test.NoDBTestCase):
 
         self.context = context.RequestContext('fake', 'fake')
         self.controller = self.floating_ip_pools.FloatingIPPoolsController()
+        self.req = fakes.HTTPRequest.blank('')
 
     def test_translate_floating_ip_pools_view(self):
         pools = fake_get_floating_ip_pools(None, self.context)
@@ -48,8 +48,7 @@ class FloatingIpPoolTestV21(test.NoDBTestCase):
                          pools[1])
 
     def test_floating_ips_pools_list(self):
-        req = fakes.HTTPRequest.blank(self.url)
-        res_dict = self.controller.index(req)
+        res_dict = self.controller.index(self.req)
 
         pools = fake_get_floating_ip_pools(None, self.context)
         response = {'floating_ip_pools': [{'name': name} for name in pools]}
