@@ -19,8 +19,10 @@ import mock
 from oslo_config import cfg
 
 from nova import exception
+from nova import objects
 from nova import test
 from nova.tests.unit import fake_instance
+from nova.tests.unit.objects import test_flavor
 from nova.virt.hyperv import constants
 from nova.virt.hyperv import imagecache
 
@@ -54,6 +56,22 @@ class ImageCacheTestCase(test.NoDBTestCase):
         self.imagecache = imagecache.ImageCache()
         self.imagecache._pathutils = mock.MagicMock()
         self.imagecache._vhdutils = mock.MagicMock()
+
+    def _test_get_root_vhd_size_gb(self, old_flavor=True):
+        if old_flavor:
+            mock_flavor = objects.Flavor(**test_flavor.fake_flavor)
+            self.instance.old_flavor = mock_flavor
+        else:
+            self.instance.old_flavor = None
+        return self.imagecache._get_root_vhd_size_gb(self.instance)
+
+    def test_get_root_vhd_size_gb_old_flavor(self):
+        ret_val = self._test_get_root_vhd_size_gb()
+        self.assertEqual(test_flavor.fake_flavor['root_gb'], ret_val)
+
+    def test_get_root_vhd_size_gb(self):
+        ret_val = self._test_get_root_vhd_size_gb(old_flavor=False)
+        self.assertEqual(self.instance.root_gb, ret_val)
 
     def _prepare_get_cached_image(self, path_exists, use_cow):
         self.instance.image_ref = self.FAKE_IMAGE_REF
