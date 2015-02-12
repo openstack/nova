@@ -516,9 +516,7 @@ class InstanceEvents(object):
         """
         @utils.synchronized(self._lock_name(instance))
         def _clear_events():
-            # NOTE(danms): Use getitem syntax for the instance until
-            # all the callers are using objects
-            return self._events.pop(instance['uuid'], {})
+            return self._events.pop(instance.uuid, {})
         return _clear_events()
 
 
@@ -670,7 +668,7 @@ class ComputeManager(manager.Manager):
         return instance_ref
 
     def _set_instance_error_state(self, context, instance):
-        instance_uuid = instance['uuid']
+        instance_uuid = instance.uuid
         try:
             self._instance_update(context, instance_uuid,
                                   vm_state=vm_states.ERROR)
@@ -1237,7 +1235,7 @@ class ComputeManager(manager.Manager):
         Synchronise the call because we may still be in the middle of
         creating the instance.
         """
-        @utils.synchronized(instance['uuid'])
+        @utils.synchronized(instance.uuid)
         def _sync_refresh():
             try:
                 return self.driver.refresh_instance_security_rules(instance)
@@ -1255,7 +1253,7 @@ class ComputeManager(manager.Manager):
     def _get_instance_nw_info(self, context, instance, use_slave=False):
         """Get a list of dictionaries of network data of an instance."""
         if (not hasattr(instance, 'system_metadata') or
-                len(instance['system_metadata']) == 0):
+                len(instance.system_metadata) == 0):
             # NOTE(danms): Several places in the code look up instances without
             # pulling system_metadata for performance, and call this function.
             # If we get an instance without it, re-fetch so that the call
@@ -1263,7 +1261,7 @@ class ComputeManager(manager.Manager):
             # succeed.
             attrs = ['system_metadata']
             instance = objects.Instance.get_by_uuid(context,
-                                                    instance['uuid'],
+                                                    instance.uuid,
                                                     expected_attrs=attrs,
                                                     use_slave=use_slave)
 
@@ -1640,7 +1638,7 @@ class ComputeManager(manager.Manager):
                            filters, expected_attrs=[], use_slave=True)
 
         for instance in building_insts:
-            if timeutils.is_older_than(instance['created_at'], timeout):
+            if timeutils.is_older_than(instance.created_at, timeout):
                 self._set_instance_error_state(context, instance)
                 LOG.warning(_LW("Instance build timed out. Set to error "
                                 "state."), instance=instance)
@@ -1844,7 +1842,7 @@ class ComputeManager(manager.Manager):
         """Set up the block device for an instance with error logging."""
         try:
             block_device_info = {
-                'root_device_name': instance['root_device_name'],
+                'root_device_name': instance.root_device_name,
                 'swap': driver_block_device.convert_swap(bdms),
                 'ephemerals': driver_block_device.convert_ephemerals(bdms),
                 'block_device_mapping': (
@@ -1967,7 +1965,7 @@ class ComputeManager(manager.Manager):
 
         if not bdms:
             bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
-                    context, instance['uuid'])
+                    context, instance.uuid)
         swap = driver_block_device.convert_swap(bdms)
         ephemerals = driver_block_device.convert_ephemerals(bdms)
         block_device_mapping = (
@@ -3431,7 +3429,7 @@ class ComputeManager(manager.Manager):
                                                   reservations,
                                                   instance=instance)
 
-        @utils.synchronized(instance['uuid'])
+        @utils.synchronized(instance.uuid)
         def do_confirm_resize(context, instance, migration_id):
             # NOTE(wangpan): Get the migration status from db, if it has been
             #                confirmed, we do nothing and return here
@@ -3680,12 +3678,12 @@ class ComputeManager(manager.Manager):
         if not filter_properties:
             filter_properties = {}
 
-        if not instance['host']:
+        if not instance.host:
             self._set_instance_error_state(context, instance)
             msg = _('Instance has no source host')
             raise exception.MigrationError(reason=msg)
 
-        same_host = instance['host'] == self.host
+        same_host = instance.host == self.host
         if same_host and not CONF.allow_resize_to_same_host:
             self._set_instance_error_state(context, instance)
             msg = _('destination same as source!')
@@ -3696,7 +3694,7 @@ class ComputeManager(manager.Manager):
         instance.set_flavor(instance_type, 'new')
         # NOTE(mriedem): Stash the old vm_state so we can set the
         # resized/reverted instance back to the same state later.
-        vm_state = instance['vm_state']
+        vm_state = instance.vm_state
         LOG.debug('Stashing vm_state: %s', vm_state, instance=instance)
         instance.system_metadata['old_vm_state'] = vm_state
         instance.save()
@@ -3773,7 +3771,7 @@ class ComputeManager(manager.Manager):
             filter_properties = {}
 
         rescheduled = False
-        instance_uuid = instance['uuid']
+        instance_uuid = instance.uuid
 
         try:
             reschedule_method = self.compute_task_api.resize_instance
@@ -4287,7 +4285,7 @@ class ComputeManager(manager.Manager):
         if filter_properties is None:
             filter_properties = {}
 
-        @utils.synchronized(instance['uuid'])
+        @utils.synchronized(instance.uuid)
         def do_unshelve_instance():
             self._unshelve_instance(context, instance, image,
                                     filter_properties, node)
@@ -4442,9 +4440,9 @@ class ComputeManager(manager.Manager):
             console = self.driver.get_vnc_console(context, instance)
             connect_info = console.get_connection_info(token, access_url)
         except exception.InstanceNotFound:
-            if instance['vm_state'] != vm_states.BUILDING:
+            if instance.vm_state != vm_states.BUILDING:
                 raise
-            raise exception.InstanceNotReady(instance_id=instance['uuid'])
+            raise exception.InstanceNotReady(instance_id=instance.uuid)
 
         return connect_info
 
@@ -4478,9 +4476,9 @@ class ComputeManager(manager.Manager):
             console = self.driver.get_spice_console(context, instance)
             connect_info = console.get_connection_info(token, access_url)
         except exception.InstanceNotFound:
-            if instance['vm_state'] != vm_states.BUILDING:
+            if instance.vm_state != vm_states.BUILDING:
                 raise
-            raise exception.InstanceNotReady(instance_id=instance['uuid'])
+            raise exception.InstanceNotReady(instance_id=instance.uuid)
 
         return connect_info
 
@@ -4513,9 +4511,9 @@ class ComputeManager(manager.Manager):
             console = self.driver.get_rdp_console(context, instance)
             connect_info = console.get_connection_info(token, access_url)
         except exception.InstanceNotFound:
-            if instance['vm_state'] != vm_states.BUILDING:
+            if instance.vm_state != vm_states.BUILDING:
                 raise
-            raise exception.InstanceNotReady(instance_id=instance['uuid'])
+            raise exception.InstanceNotReady(instance_id=instance.uuid)
 
         return connect_info
 
@@ -4551,7 +4549,7 @@ class ComputeManager(manager.Manager):
         except exception.InstanceNotFound:
             if instance.vm_state != vm_states.BUILDING:
                 raise
-            raise exception.InstanceNotReady(instance_id=instance['uuid'])
+            raise exception.InstanceNotReady(instance_id=instance.uuid)
 
         return connect_info
 
@@ -4584,7 +4582,7 @@ class ComputeManager(manager.Manager):
         # passed (by older clients) and defaulted by the virt driver. Remove
         # default values on the next major RPC version bump.
 
-        @utils.synchronized(instance['uuid'])
+        @utils.synchronized(instance.uuid)
         def do_reserve():
             bdms = (
                 objects.BlockDeviceMappingList.get_by_instance_uuid(
@@ -5124,7 +5122,7 @@ class ComputeManager(manager.Manager):
                  instance=instance)
 
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
-                ctxt, instance['uuid'])
+                ctxt, instance.uuid)
 
         # Cleanup source host post live-migration
         block_device_info = self._get_instance_block_device_info(
@@ -5210,10 +5208,10 @@ class ComputeManager(manager.Manager):
         if CONF.vnc_enabled or CONF.spice.enabled or CONF.rdp.enabled:
             if CONF.cells.enable:
                 self.cells_rpcapi.consoleauth_delete_tokens(ctxt,
-                        instance['uuid'])
+                        instance.uuid)
             else:
                 self.consoleauth_rpcapi.delete_tokens_for_instance(ctxt,
-                        instance['uuid'])
+                        instance.uuid)
 
     @object_compat
     @wrap_exception()
@@ -5236,7 +5234,7 @@ class ComputeManager(manager.Manager):
         #                  plug_vifs
         self.network_api.setup_networks_on_host(context, instance,
                                                          self.host)
-        migration = {'source_compute': instance['host'],
+        migration = {'source_compute': instance.host,
                      'dest_compute': self.host, }
         self.network_api.migrate_instance_finish(context,
                                                  instance,
@@ -5298,7 +5296,7 @@ class ComputeManager(manager.Manager):
         self.network_api.setup_networks_on_host(context, instance, self.host)
 
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
-                context, instance['uuid'])
+                context, instance.uuid)
         for bdm in bdms:
             if bdm.is_volume:
                 self.compute_rpcapi.remove_volume_connection(
@@ -5456,7 +5454,7 @@ class ComputeManager(manager.Manager):
 
             to_poll = []
             for instance in rebooting:
-                if timeutils.is_older_than(instance['updated_at'],
+                if timeutils.is_older_than(instance.updated_at,
                                            CONF.reboot_timeout):
                     to_poll.append(instance)
 
@@ -5473,7 +5471,7 @@ class ComputeManager(manager.Manager):
 
             to_unrescue = []
             for instance in rescued_instances:
-                if timeutils.is_older_than(instance['launched_at'],
+                if timeutils.is_older_than(instance.launched_at,
                                            CONF.rescue_timeout):
                     to_unrescue.append(instance)
 
@@ -6121,13 +6119,13 @@ class ComputeManager(manager.Manager):
                     LOG.warning(_LW("Detected instance with name label "
                                     "'%s' which is marked as "
                                     "DELETED but still present on host."),
-                                instance['name'], instance=instance)
+                                instance.name, instance=instance)
 
                 elif action == 'shutdown':
                     LOG.info(_LI("Powering off instance with name label "
                                  "'%s' which is marked as "
                                  "DELETED but still present on host."),
-                             instance['name'], instance=instance)
+                             instance.name, instance=instance)
                     try:
                         try:
                             # disable starting the instance
@@ -6145,14 +6143,14 @@ class ComputeManager(manager.Manager):
                     LOG.info(_LI("Destroying instance with name label "
                                  "'%s' which is marked as "
                                  "DELETED but still present on host."),
-                             instance['name'], instance=instance)
+                             instance.name, instance=instance)
                     bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                         context, instance.uuid, use_slave=True)
                     self.instance_events.clear_events_for_instance(instance)
                     try:
                         self._shutdown_instance(context, instance, bdms,
                                                 notify=False)
-                        self._cleanup_volumes(context, instance['uuid'], bdms)
+                        self._cleanup_volumes(context, instance.uuid, bdms)
                     except Exception as e:
                         LOG.warning(_LW("Periodic cleanup failed to delete "
                                         "instance: %s"),
@@ -6183,7 +6181,7 @@ class ComputeManager(manager.Manager):
     def _error_out_instance_on_exception(self, context, instance,
                                          quotas=None,
                                          instance_state=vm_states.ACTIVE):
-        instance_uuid = instance['uuid']
+        instance_uuid = instance.uuid
         try:
             yield
         except NotImplementedError as error:
