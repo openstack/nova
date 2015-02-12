@@ -12,7 +12,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import collections
+
 import mock
+from oslo_serialization import jsonutils
 
 from nova import db
 from nova import objects
@@ -86,8 +89,19 @@ class ExtendedHyervisorPciSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
 
     def setUp(self):
         super(ExtendedHyervisorPciSampleJsonTest, self).setUp()
+        cpu_info = collections.OrderedDict([
+            ('arch', 'x86_64'),
+            ('model', 'Nehalem'),
+            ('vendor', 'Intel'),
+            ('features', ['pge', 'clflush']),
+            ('topology', {
+                'cores': 1,
+                'threads': 1,
+                'sockets': 4,
+                }),
+            ])
         self.fake_compute_node = objects.ComputeNode(
-            cpu_info="?",
+            cpu_info=jsonutils.dumps(cpu_info),
             current_workload=0,
             disk_available_least=0,
             host_ip="1.1.1.1",

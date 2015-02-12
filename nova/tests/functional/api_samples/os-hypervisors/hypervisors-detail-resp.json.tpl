@@ -1,7 +1,7 @@
 {
     "hypervisors": [
         {
-            "cpu_info": "?",
+            "cpu_info": "{\"arch\": \"x86_64\", \"model\": \"Nehalem\", \"vendor\": \"Intel\", \"features\": [\"pge\", \"clflush\"], \"topology\": {\"cores\": 1, \"threads\": 1, \"sockets\": 4}}",
             "current_workload": 0,
             "disk_available_least": null,
             "host_ip": "%(ip)s",
