@@ -1481,15 +1481,6 @@ class API(base.Base):
                        shutdown_terminate=shutdown_terminate,
                        check_server_group_quota=check_server_group_quota)
 
-    def trigger_provider_fw_rules_refresh(self, context):
-        """Called when a rule is added/removed from a provider firewall."""
-
-        services = objects.ServiceList.get_all_by_topic(context,
-                                                        CONF.compute_topic)
-        for service in services:
-            host_name = service.host
-            self.compute_rpcapi.refresh_provider_fw_rules(context, host_name)
-
     @wrap_check_policy
     def update(self, context, instance, **kwargs):
         """Updates the instance in the datastore.
