@@ -75,14 +75,6 @@ def _build_metadata_by_host(aggregates, hosts=None):
     return metadata
 
 
-def _build_metadata_by_key(aggregates):
-    metadata = collections.defaultdict(set)
-    for aggregate in aggregates:
-        for key, value in aggregate.metadata.iteritems():
-            metadata[key].add(value)
-    return metadata
-
-
 def set_availability_zones(context, services):
     # Makes sure services isn't a sqlalchemy object
     services = [dict(service.iteritems()) for service in services]
@@ -105,16 +97,11 @@ def set_availability_zones(context, services):
     return services
 
 
-def get_host_availability_zone(context, host, conductor_api=None):
-    if conductor_api:
-        metadata = conductor_api.aggregate_metadata_get_by_host(
-            context, host, key='availability_zone')
-    else:
-        aggregates = objects.AggregateList.get_by_host(context, host,
-                                                       key='availability_zone')
-        metadata = _build_metadata_by_key(aggregates)
-    if 'availability_zone' in metadata:
-        az = list(metadata['availability_zone'])[0]
+def get_host_availability_zone(context, host):
+    aggregates = objects.AggregateList.get_by_host(context, host,
+                                                   key='availability_zone')
+    if aggregates:
+        az = aggregates[0].metadata['availability_zone']
     else:
         az = CONF.default_availability_zone
     return az
