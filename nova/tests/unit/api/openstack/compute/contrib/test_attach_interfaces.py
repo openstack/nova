@@ -307,6 +307,14 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
                           self.attachments.create, self.req, FAKE_UUID1,
                           body=body)
 
+    @mock.patch.object(compute_api.API, 'attach_interface',
+                       side_effect=NotImplementedError())
+    def test_attach_interface_with_not_implemented(self, _mock):
+        body = {'interfaceAttachment': {'net_id': FAKE_NET_ID1}}
+        self.assertRaises(exc.HTTPNotImplemented,
+                          self.attachments.create, self.req, FAKE_UUID1,
+                          body=body)
+
     def test_detach_interface_with_invalid_state(self):
         def fake_detach_interface_invalid_state(*args, **kwargs):
             raise exception.InstanceInvalidState(
@@ -320,6 +328,13 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
                           self.req,
                           FAKE_UUID1,
                           FAKE_NET_ID1)
+
+    @mock.patch.object(compute_api.API, 'detach_interface',
+                       side_effect=NotImplementedError())
+    def test_detach_interface_with_not_implemented(self, _mock):
+        self.assertRaises(exc.HTTPNotImplemented,
+                          self.attachments.delete,
+                          self.req, FAKE_UUID1, FAKE_NET_ID1)
 
     def test_attach_interface_invalid_fixed_ip(self):
         body = {
