@@ -32,6 +32,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
     ctype = 'json'
     all_extensions = False
     extension_name = None
+    request_api_version = None
 
     def _pretty_data(self, data):
         data = jsonutils.dumps(jsonutils.loads(data), sort_keys=True,
@@ -46,7 +47,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
         return jsonutils.loads(data)
 
     @classmethod
-    def _get_sample_path(cls, name, dirname, suffix=''):
+    def _get_sample_path(cls, name, dirname, suffix='', api_version=None):
         parts = [dirname]
         parts.append('api_samples')
         if cls.all_extensions:
@@ -58,27 +59,30 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
         return os.path.join(*parts)
 
     @classmethod
-    def _get_sample(cls, name):
+    def _get_sample(cls, name, api_version):
         dirname = os.path.dirname(os.path.abspath(__file__))
         dirname = os.path.normpath(os.path.join(dirname, "../../../doc"))
-        return cls._get_sample_path(name, dirname)
+        return cls._get_sample_path(name, dirname, api_version=api_version)
 
     @classmethod
-    def _get_template(cls, name):
+    def _get_template(cls, name, api_version):
         dirname = os.path.dirname(os.path.abspath(__file__))
-        return cls._get_sample_path(name, dirname, suffix='.tpl')
+        return cls._get_sample_path(name, dirname, suffix='.tpl',
+                                    api_version=api_version)
 
     def _read_template(self, name):
-        template = self._get_template(name)
+        template = self._get_template(name, self.request_api_version)
         with open(template) as inf:
             return inf.read().strip()
 
     def _write_template(self, name, data):
-        with open(self._get_template(name), 'w') as outf:
+        with open(self._get_template(name,
+                                     self.request_api_version), 'w') as outf:
             outf.write(data)
 
     def _write_sample(self, name, data):
-        with open(self._get_sample(name), 'w') as outf:
+        with open(self._get_sample(
+            name, self.request_api_version), 'w') as outf:
             outf.write(data)
 
     def _compare_result(self, subs, expected, result, result_str):
@@ -195,18 +199,21 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
         self.assertEqual(response.status_code, exp_code)
         response_data = response.content
         response_data = self._pretty_data(response_data)
-        if not os.path.exists(self._get_template(name)):
+        if not os.path.exists(self._get_template(name,
+                                                 self.request_api_version)):
             self._write_template(name, response_data)
             template_data = response_data
         else:
             template_data = self._read_template(name)
 
         if (self.generate_samples and
-                not os.path.exists(self._get_sample(name))):
+                not os.path.exists(self._get_sample(
+                    name, self.request_api_version))):
             self._write_sample(name, response_data)
             sample_data = response_data
         else:
-            with file(self._get_sample(name)) as sample:
+            with file(self._get_sample(name,
+                                       self.request_api_version)) as sample:
                 sample_data = sample.read()
 
         try:
@@ -287,7 +294,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
 
     def _do_post(self, url, name, subs, method='POST', api_version=None):
         body = self._read_template(name) % subs
-        sample = self._get_sample(name)
+        sample = self._get_sample(name, self.request_api_version)
         if self.generate_samples and not os.path.exists(sample):
                 self._write_sample(name, body)
         return self._get_response(url, method, body, api_version=api_version)
