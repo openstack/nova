@@ -281,6 +281,8 @@ class HostManagerTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(objects.ComputeNodeList, 'get_all')
         self.mox.StubOutWithMock(host_manager.LOG, 'warning')
 
+        objects.ServiceList.get_by_topic(
+            context, CONF.compute_topic).AndReturn(fakes.SERVICES)
         objects.ComputeNodeList.get_all(context).AndReturn(fakes.COMPUTE_NODES)
         # node 3 host physical disk space is greater than database
         host_manager.LOG.warning("Host %(hostname)s has more disk space "
@@ -292,7 +294,6 @@ class HostManagerTestCase(test.NoDBTestCase):
         host_manager.LOG.warning("No service record found for host %(host)s "
                                  "on %(topic)s topic",
                                  {'host': 'fake', 'topic': CONF.compute_topic})
-
         self.mox.ReplayAll()
         self.host_manager.get_all_host_states(context)
         host_states_map = self.host_manager.host_state_map
@@ -305,7 +306,7 @@ class HostManagerTestCase(test.NoDBTestCase):
             node = compute_node['hypervisor_hostname']
             state_key = (host, node)
             self.assertEqual(host_states_map[state_key].service,
-                    obj_base.obj_to_primitive(compute_node['service']))
+                    obj_base.obj_to_primitive(fakes.get_service_by_host(host)))
         self.assertEqual(host_states_map[('host1', 'node1')].free_ram_mb,
                          512)
         # 511GB
@@ -351,6 +352,8 @@ class HostManagerChangedNodesTestCase(test.NoDBTestCase):
 
         self.mox.StubOutWithMock(objects.ServiceList, 'get_by_topic')
         self.mox.StubOutWithMock(objects.ComputeNodeList, 'get_all')
+        objects.ServiceList.get_by_topic(
+            context, CONF.compute_topic).AndReturn(fakes.SERVICES)
         objects.ComputeNodeList.get_all(context).AndReturn(fakes.COMPUTE_NODES)
         self.mox.ReplayAll()
 
@@ -364,10 +367,14 @@ class HostManagerChangedNodesTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(objects.ServiceList, 'get_by_topic')
         self.mox.StubOutWithMock(objects.ComputeNodeList, 'get_all')
         # all nodes active for first call
+        objects.ServiceList.get_by_topic(
+            context, CONF.compute_topic).AndReturn(fakes.SERVICES)
         objects.ComputeNodeList.get_all(context).AndReturn(fakes.COMPUTE_NODES)
         # remove node4 for second call
         running_nodes = [n for n in fakes.COMPUTE_NODES
                          if n.get('hypervisor_hostname') != 'node4']
+        objects.ServiceList.get_by_topic(
+            context, CONF.compute_topic).AndReturn(fakes.SERVICES)
         objects.ComputeNodeList.get_all(context).AndReturn(running_nodes)
         self.mox.ReplayAll()
 
@@ -382,8 +389,12 @@ class HostManagerChangedNodesTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(objects.ServiceList, 'get_by_topic')
         self.mox.StubOutWithMock(objects.ComputeNodeList, 'get_all')
         # all nodes active for first call
+        objects.ServiceList.get_by_topic(
+            context, CONF.compute_topic).AndReturn(fakes.SERVICES)
         objects.ComputeNodeList.get_all(context).AndReturn(fakes.COMPUTE_NODES)
         # remove all nodes for second call
+        objects.ServiceList.get_by_topic(
+            context, CONF.compute_topic).AndReturn(fakes.SERVICES)
         objects.ComputeNodeList.get_all(context).AndReturn([])
         self.mox.ReplayAll()
 
