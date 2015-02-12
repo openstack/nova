@@ -3730,7 +3730,11 @@ class KeypairAPI(base.Base):
         notify = self.get_notifier()
         notify.info(context, 'keypair.%s' % event_suffix, payload)
 
-    def _validate_new_key_pair(self, context, user_id, key_name):
+    def _validate_new_key_pair(self, context, user_id, key_name, key_type):
+        if key_type is not keypair_obj.KEYPAIR_TYPE_SSH:
+            raise exception.InvalidKeypair(
+                reason=_('Specified Keypair type "%s" is invalid') % key_type)
+
         safe_chars = "_- " + string.digits + string.ascii_letters
         clean_value = "".join(x for x in key_name if x in safe_chars)
         if clean_value != key_name:
@@ -3752,9 +3756,10 @@ class KeypairAPI(base.Base):
             raise exception.KeypairLimitExceeded()
 
     @wrap_exception()
-    def import_key_pair(self, context, user_id, key_name, public_key):
+    def import_key_pair(self, context, user_id, key_name, public_key,
+                        key_type=keypair_obj.KEYPAIR_TYPE_SSH):
         """Import a key pair using an existing public key."""
-        self._validate_new_key_pair(context, user_id, key_name)
+        self._validate_new_key_pair(context, user_id, key_name, key_type)
 
         self._notify(context, 'import.start', key_name)
 
@@ -3763,7 +3768,7 @@ class KeypairAPI(base.Base):
         keypair = objects.KeyPair(context)
         keypair.user_id = user_id
         keypair.name = key_name
-        keypair.type = keypair_obj.KEYPAIR_TYPE_SSH
+        keypair.type = key_type
         keypair.fingerprint = fingerprint
         keypair.public_key = public_key
         keypair.create()
@@ -3773,9 +3778,10 @@ class KeypairAPI(base.Base):
         return keypair
 
     @wrap_exception()
-    def create_key_pair(self, context, user_id, key_name):
+    def create_key_pair(self, context, user_id, key_name,
+                        key_type=keypair_obj.KEYPAIR_TYPE_SSH):
         """Create a new key pair."""
-        self._validate_new_key_pair(context, user_id, key_name)
+        self._validate_new_key_pair(context, user_id, key_name, key_type)
 
         self._notify(context, 'create.start', key_name)
 
@@ -3784,7 +3790,7 @@ class KeypairAPI(base.Base):
         keypair = objects.KeyPair(context)
         keypair.user_id = user_id
         keypair.name = key_name
-        keypair.type = keypair_obj.KEYPAIR_TYPE_SSH
+        keypair.type = key_type
         keypair.fingerprint = fingerprint
         keypair.public_key = public_key
         keypair.create()

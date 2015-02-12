@@ -25,6 +25,7 @@ from nova.api import validation
 from nova.compute import api as compute_api
 from nova import exception
 from nova.i18n import _
+from nova.objects import keypair as keypair_obj
 
 
 ALIAS = 'os-keypairs'
@@ -39,6 +40,8 @@ class KeypairController(wsgi.Controller):
         self.api = compute_api.KeypairAPI()
 
     def _filter_keypair(self, keypair, **attrs):
+        # TODO(claudiub): After v2 and v2.1 is no longer supported,
+        # keypair_type can be added to the clean dict below
         clean = {
             'name': keypair.name,
             'public_key': keypair.public_key,
@@ -48,9 +51,28 @@ class KeypairController(wsgi.Controller):
             clean[attr] = keypair[attr]
         return clean
 
-    # TODO(oomichi): Here should be 201(Created) instead of 200 by v2.1
-    # +microversions because the keypair creation finishes when returning
-    # a response.
+    @wsgi.Controller.api_version("2.2")
+    @wsgi.response(201)
+    @extensions.expected_errors((400, 403, 409))
+    @validation.schema(keypairs.create_v22)
+    def create(self, req, body):
+        """Create or import keypair.
+
+        Sending name will generate a key and return private_key
+        and fingerprint.
+
+        Keypair will have the type ssh or x509, specified by key_type.
+
+        You can send a public_key to add an existing ssh/x509 key.
+
+        params: keypair object with:
+            name (required) - string
+            public_key (optional) - string
+            key_type (optional) - string
+        """
+        return self._create(req, body, type=True)
+
+    @wsgi.Controller.api_version("2.1", "2.1")  # noqa
     @extensions.expected_errors((400, 403, 409))
     @validation.schema(keypairs.create)
     def create(self, req, body):
@@ -59,29 +81,34 @@ class KeypairController(wsgi.Controller):
         Sending name will generate a key and return private_key
         and fingerprint.
 
-        You can send a public_key to add an existing ssh key
+        You can send a public_key to add an existing ssh key.
 
         params: keypair object with:
             name (required) - string
             public_key (optional) - string
         """
+        return self._create(req, body)
 
+    def _create(self, req, body, **keypair_filters):
         context = req.environ['nova.context']
         authorize(context, action='create')
 
         params = body['keypair']
         name = params['name']
+        key_type = params.get('key_type', keypair_obj.KEYPAIR_TYPE_SSH)
 
         try:
             if 'public_key' in params:
                 keypair = self.api.import_key_pair(context,
                                               context.user_id, name,
-                                              params['public_key'])
-                keypair = self._filter_keypair(keypair, user_id=True)
+                                              params['public_key'], key_type)
+                keypair = self._filter_keypair(keypair, user_id=True,
+                                               **keypair_filters)
             else:
                 keypair, private_key = self.api.create_key_pair(
-                    context, context.user_id, name)
-                keypair = self._filter_keypair(keypair, user_id=True)
+                    context, context.user_id, name, key_type)
+                keypair = self._filter_keypair(keypair, user_id=True,
+                                               **keypair_filters)
                 keypair['private_key'] = private_key
 
             return {'keypair': keypair}
@@ -94,12 +121,19 @@ class KeypairController(wsgi.Controller):
         except exception.KeyPairExists as exc:
             raise webob.exc.HTTPConflict(explanation=exc.format_message())
 
-    # TODO(oomichi): Here should be 204(No Content) instead of 202 by v2.1
-    # +microversions because the resource keypair has been deleted completely
-    # when returning a response.
+    @wsgi.Controller.api_version("2.1", "2.1")
     @wsgi.response(202)
     @extensions.expected_errors(404)
     def delete(self, req, id):
+        self._delete(req, id)
+
+    @wsgi.Controller.api_version("2.2")    # noqa
+    @wsgi.response(204)
+    @extensions.expected_errors(404)
+    def delete(self, req, id):
+        self._delete(req, id)
+
+    def _delete(self, req, id):
         """Delete a keypair with a given name."""
         context = req.environ['nova.context']
         authorize(context, action='delete')
@@ -108,23 +142,29 @@ class KeypairController(wsgi.Controller):
         except exception.KeypairNotFound as exc:
             raise webob.exc.HTTPNotFound(explanation=exc.format_message())
 
+    @wsgi.Controller.api_version("2.2")
     @extensions.expected_errors(404)
     def show(self, req, id):
+        return self._show(req, id, type=True)
+
+    @wsgi.Controller.api_version("2.1", "2.1")  # noqa
+    @extensions.expected_errors(404)
+    def show(self, req, id):
+        return self._show(req, id)
+
+    def _show(self, req, id, **keypair_filters):
         """Return data for the given key name."""
         context = req.environ['nova.context']
         authorize(context, action='show')
 
         try:
-            # Since this method returns the whole object, functional test
-            # test_keypairs_get is failing, receiving an unexpected field
-            # 'type', which was added to the keypair object.
-            # TODO(claudiub): Revert the changes in the next commit, which will
-            # enable nova-api to return the keypair type.
+            # The return object needs to be a dict in order to pop the 'type'
+            # field, if the api_version < 2.2.
             keypair = self.api.get_key_pair(context, context.user_id, id)
             keypair = self._filter_keypair(keypair, created_at=True,
                                            deleted=True, deleted_at=True,
                                            id=True, user_id=True,
-                                           updated_at=True)
+                                           updated_at=True, **keypair_filters)
         except exception.KeypairNotFound as exc:
             raise webob.exc.HTTPNotFound(explanation=exc.format_message())
         # TODO(oomichi): It is necessary to filter a response of keypair with
@@ -132,15 +172,25 @@ class KeypairController(wsgi.Controller):
         # behaviors in this keypair resource.
         return {'keypair': keypair}
 
+    @wsgi.Controller.api_version("2.2")
     @extensions.expected_errors(())
     def index(self, req):
+        return self._index(req, type=True)
+
+    @wsgi.Controller.api_version("2.1", "2.1")  # noqa
+    @extensions.expected_errors(())
+    def index(self, req):
+        return self._index(req)
+
+    def _index(self, req, **keypair_filters):
         """List of keypairs for a user."""
         context = req.environ['nova.context']
         authorize(context, action='index')
         key_pairs = self.api.get_key_pairs(context, context.user_id)
         rval = []
         for key_pair in key_pairs:
-            rval.append({'keypair': self._filter_keypair(key_pair)})
+            rval.append({'keypair': self._filter_keypair(key_pair,
+                                                         **keypair_filters)})
 
         return {'keypairs': rval}
 
