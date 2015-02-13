@@ -2040,12 +2040,20 @@ class API(base.Base):
                     except ValueError:
                         return []
 
+        # IP address filtering cannot be applied at the DB layer, remove any DB
+        # limit so that it can be applied after the IP filter.
+        filter_ip = 'ip6' in filters or 'ip' in filters
+        orig_limit = limit
+        if filter_ip and limit:
+            LOG.debug('Removing limit for DB query due to IP filter')
+            limit = None
+
         inst_models = self._get_instances_by_filters(context, filters,
                 limit=limit, marker=marker, expected_attrs=expected_attrs,
                 sort_keys=sort_keys, sort_dirs=sort_dirs)
 
-        if 'ip6' in filters or 'ip' in filters:
-            inst_models = self._ip_filter(inst_models, filters)
+        if filter_ip:
+            inst_models = self._ip_filter(inst_models, filters, orig_limit)
 
         if want_objects:
             return inst_models
@@ -2058,7 +2066,7 @@ class API(base.Base):
         return instances
 
     @staticmethod
-    def _ip_filter(inst_models, filters):
+    def _ip_filter(inst_models, filters, limit):
         ipv4_f = re.compile(str(filters.get('ip')))
         ipv6_f = re.compile(str(filters.get('ip6')))
 
@@ -2079,6 +2087,8 @@ class API(base.Base):
         for instance in inst_models:
             if _match_instance(instance):
                 result_objs.append(instance)
+                if limit and len(result_objs) == limit:
+                    break
         return objects.InstanceList(objects=result_objs)
 
     def _get_instances_by_filters(self, context, filters,
