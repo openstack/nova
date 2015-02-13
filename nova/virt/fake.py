@@ -197,8 +197,7 @@ class FakeDriver(driver.ComputeDriver):
                block_device_info=None, bad_volumes_callback=None):
         pass
 
-    @staticmethod
-    def get_host_ip_addr():
+    def get_host_ip_addr(self):
         return '192.168.0.1'
 
     def set_admin_password(self, instance, new_pass):

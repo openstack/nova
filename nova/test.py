@@ -320,7 +320,11 @@ class TestCase(testtools.TestCase):
     def assertPublicAPISignatures(self, baseinst, inst):
         def get_public_apis(inst):
             methods = {}
-            for (name, value) in inspect.getmembers(inst, inspect.ismethod):
+
+            def findmethods(object):
+                return inspect.ismethod(object) or inspect.isfunction(object)
+
+            for (name, value) in inspect.getmembers(inst, findmethods):
                 if name.startswith("_"):
                     continue
                 methods[name] = value

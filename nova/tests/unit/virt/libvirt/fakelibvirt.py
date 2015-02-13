@@ -753,8 +753,8 @@ class Connection(object):
 
         uri_whitelist = ['qemu:///system',
                          'qemu:///session',
-                         'lxc:///',     # from LibvirtDriver.uri()
-                         'xen:///',     # from LibvirtDriver.uri()
+                         'lxc:///',     # from LibvirtDriver._uri()
+                         'xen:///',     # from LibvirtDriver._uri()
                          'uml:///system',
                          'test:///default',
                          'parallels:///system']

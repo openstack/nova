@@ -393,7 +393,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if libvirt is None:
             libvirt = importutils.import_module('libvirt')
 
-        self._host = host.Host(self.uri(), read_only,
+        self._host = host.Host(self._uri(), read_only,
                                lifecycle_event_handler=self.emit_event,
                                conn_event_handler=self._handle_conn_event)
         self._initiator = None
@@ -559,7 +559,7 @@ class LibvirtDriver(driver.ComputeDriver):
     _conn = property(_get_connection)
 
     @staticmethod
-    def uri():
+    def _uri():
         if CONF.libvirt.virt_type == 'uml':
             uri = CONF.libvirt.connection_uri or 'uml:///system'
         elif CONF.libvirt.virt_type == 'xen':
@@ -2449,8 +2449,7 @@ class LibvirtDriver(driver.ComputeDriver):
                          remaining, instance=instance)
             return log_data
 
-    @staticmethod
-    def get_host_ip_addr():
+    def get_host_ip_addr(self):
         ips = compute_utils.get_machine_ips()
         if CONF.my_ip not in ips:
             LOG.warn(_LW('my_ip address (%(my_ip)s) was not found on '
@@ -4726,7 +4725,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 self._list_devices_supported = False
                 LOG.warn(_LW("URI %(uri)s does not support "
                              "listDevices: %(error)s"),
-                             {'uri': self.uri(), 'error': ex})
+                             {'uri': self._uri(), 'error': ex})
                 return jsonutils.dumps([])
             else:
                 raise
