@@ -22,6 +22,7 @@ import mock
 from nova import context
 from nova import db
 from nova.scheduler import driver
+from nova.scheduler import host_manager
 from nova.scheduler import manager
 from nova import servicegroup
 from nova import test
@@ -38,7 +39,8 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
     def setUp(self):
         super(SchedulerManagerTestCase, self).setUp()
         self.flags(scheduler_driver=self.driver_cls_name)
-        self.manager = self.manager_cls()
+        with mock.patch.object(host_manager.HostManager, '_init_aggregates'):
+            self.manager = self.manager_cls()
         self.context = context.RequestContext('fake_user', 'fake_project')
         self.topic = 'fake_topic'
         self.fake_args = (1, 2, 3)
@@ -78,7 +80,8 @@ class SchedulerTestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(SchedulerTestCase, self).setUp()
-        self.driver = self.driver_cls()
+        with mock.patch.object(host_manager.HostManager, '_init_aggregates'):
+            self.driver = self.driver_cls()
         self.context = context.RequestContext('fake_user', 'fake_project')
         self.topic = 'fake_topic'
         self.servicegroup_api = servicegroup.API()

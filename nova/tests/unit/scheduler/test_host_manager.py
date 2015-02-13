@@ -16,6 +16,8 @@
 Tests For HostManager
 """
 
+import collections
+
 import mock
 from oslo_config import cfg
 from oslo_serialization import jsonutils
@@ -56,7 +58,8 @@ class HostManagerTestCase(test.NoDBTestCase):
                                                 cls in ['FakeFilterClass1',
                                                         'FakeFilterClass2']])
         self.flags(scheduler_default_filters=['FakeFilterClass1'])
-        self.host_manager = host_manager.HostManager()
+        with mock.patch.object(host_manager.HostManager, '_init_aggregates'):
+            self.host_manager = host_manager.HostManager()
         self.fake_hosts = [host_manager.HostState('fake_host%s' % x,
                 'fake-node') for x in xrange(1, 5)]
         self.fake_hosts += [host_manager.HostState('fake_multihost',
@@ -66,6 +69,30 @@ class HostManagerTestCase(test.NoDBTestCase):
         default_filters = self.host_manager.default_filters
         self.assertEqual(1, len(default_filters))
         self.assertIsInstance(default_filters[0], FakeFilterClass1)
+
+    @mock.patch.object(objects.AggregateList, 'get_all')
+    def test_init_aggregates_no_aggs(self, agg_get_all):
+        agg_get_all.return_value = []
+        self.host_manager = host_manager.HostManager()
+        self.assertEqual({}, self.host_manager.aggs_by_id)
+        self.assertEqual({}, self.host_manager.host_aggregates_map)
+
+    @mock.patch.object(objects.AggregateList, 'get_all')
+    def test_init_aggregates_one_agg_no_hosts(self, agg_get_all):
+        fake_agg = objects.Aggregate(id=1, hosts=[])
+        agg_get_all.return_value = [fake_agg]
+        self.host_manager = host_manager.HostManager()
+        self.assertEqual({1: fake_agg}, self.host_manager.aggs_by_id)
+        self.assertEqual({}, self.host_manager.host_aggregates_map)
+
+    @mock.patch.object(objects.AggregateList, 'get_all')
+    def test_init_aggregates_one_agg_with_hosts(self, agg_get_all):
+        fake_agg = objects.Aggregate(id=1, hosts=['fake-host'])
+        agg_get_all.return_value = [fake_agg]
+        self.host_manager = host_manager.HostManager()
+        self.assertEqual({1: fake_agg}, self.host_manager.aggs_by_id)
+        self.assertEqual({'fake-host': set([1])},
+                         self.host_manager.host_aggregates_map)
 
     def test_choose_host_filters_not_found(self):
         self.assertRaises(exception.SchedulerHostFilterNotFound,
@@ -312,13 +339,67 @@ class HostManagerTestCase(test.NoDBTestCase):
         self.assertEqual(host_states_map[('host4', 'node4')].free_disk_mb,
                          8388608)
 
+    @mock.patch.object(host_manager.HostState, 'update_from_compute_node')
+    @mock.patch.object(objects.ComputeNodeList, 'get_all')
+    @mock.patch.object(objects.ServiceList, 'get_by_topic')
+    def test_get_all_host_states_with_no_aggs(self, svc_get_by_topic,
+                                              cn_get_all, update_from_cn):
+        svc_get_by_topic.return_value = [objects.Service(host='fake')]
+        cn_get_all.return_value = [
+            objects.ComputeNode(host='fake', hypervisor_hostname='fake')]
+
+        self.host_manager.host_aggregates_map = collections.defaultdict(set)
+
+        self.host_manager.get_all_host_states('fake-context')
+        host_state = self.host_manager.host_state_map[('fake', 'fake')]
+        self.assertEqual([], host_state.aggregates)
+
+    @mock.patch.object(host_manager.HostState, 'update_from_compute_node')
+    @mock.patch.object(objects.ComputeNodeList, 'get_all')
+    @mock.patch.object(objects.ServiceList, 'get_by_topic')
+    def test_get_all_host_states_with_matching_aggs(self, svc_get_by_topic,
+                                                    cn_get_all,
+                                                    update_from_cn):
+        svc_get_by_topic.return_value = [objects.Service(host='fake')]
+        cn_get_all.return_value = [
+            objects.ComputeNode(host='fake', hypervisor_hostname='fake')]
+        fake_agg = objects.Aggregate(id=1)
+        self.host_manager.host_aggregates_map = collections.defaultdict(
+            set, {'fake': set([1])})
+        self.host_manager.aggs_by_id = {1: fake_agg}
+
+        self.host_manager.get_all_host_states('fake-context')
+        host_state = self.host_manager.host_state_map[('fake', 'fake')]
+        self.assertEqual([fake_agg], host_state.aggregates)
+
+    @mock.patch.object(host_manager.HostState, 'update_from_compute_node')
+    @mock.patch.object(objects.ComputeNodeList, 'get_all')
+    @mock.patch.object(objects.ServiceList, 'get_by_topic')
+    def test_get_all_host_states_with_not_matching_aggs(self, svc_get_by_topic,
+                                                        cn_get_all,
+                                                        update_from_cn):
+        svc_get_by_topic.return_value = [objects.Service(host='fake'),
+                                         objects.Service(host='other')]
+        cn_get_all.return_value = [
+            objects.ComputeNode(host='fake', hypervisor_hostname='fake'),
+            objects.ComputeNode(host='other', hypervisor_hostname='other')]
+        fake_agg = objects.Aggregate(id=1)
+        self.host_manager.host_aggregates_map = collections.defaultdict(
+            set, {'other': set([1])})
+        self.host_manager.aggs_by_id = {1: fake_agg}
+
+        self.host_manager.get_all_host_states('fake-context')
+        host_state = self.host_manager.host_state_map[('fake', 'fake')]
+        self.assertEqual([], host_state.aggregates)
+
 
 class HostManagerChangedNodesTestCase(test.NoDBTestCase):
     """Test case for HostManager class."""
 
     def setUp(self):
         super(HostManagerChangedNodesTestCase, self).setUp()
-        self.host_manager = host_manager.HostManager()
+        with mock.patch.object(host_manager.HostManager, '_init_aggregates'):
+            self.host_manager = host_manager.HostManager()
         self.fake_hosts = [
               host_manager.HostState('host1', 'node1'),
               host_manager.HostState('host2', 'node2'),
