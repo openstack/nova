@@ -40,7 +40,7 @@ class NUMACell(base.NovaObject,
         }
 
     obj_relationships = {
-        'NUMAPagesTopology': [('1.2', '1.0')]
+        'mempages': [('1.2', '1.0')]
     }
 
     @property
@@ -146,7 +146,7 @@ class NUMATopology(base.NovaObject,
         }
 
     obj_relationships = {
-        'NUMACell': [('1.0', '1.0'), ('1.1', '1.1'), ('1.2', '1.2')]
+        'cells': [('1.0', '1.0'), ('1.1', '1.1'), ('1.2', '1.2')]
     }
 
     @classmethod
