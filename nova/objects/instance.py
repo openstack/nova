@@ -840,12 +840,6 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                 context, self.uuid, updates, update_cells=False,
                 columns_to_join=_expected_cols(expected_attrs))
 
-        if stale_instance:
-            _handle_cell_update_from_api()
-        elif cell_type == 'compute':
-            cells_api = cells_rpcapi.CellsAPI()
-            cells_api.instance_update_at_top(context, inst_ref)
-
         self._from_db_object(context, self, inst_ref,
                              expected_attrs=expected_attrs)
 
@@ -853,6 +847,14 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         # any lazy-loads that will unmigrate or unbackport something. So,
         # make a copy of the instance for notifications first.
         new_ref = self.obj_clone()
+
+        if stale_instance:
+            _handle_cell_update_from_api()
+        elif cell_type == 'compute':
+            cells_api = cells_rpcapi.CellsAPI()
+            cells_api.instance_update_at_top(context,
+                                             base.obj_to_primitive(new_ref))
+
         notifications.send_update(context, old_ref, new_ref)
         self.obj_reset_changes()
 
