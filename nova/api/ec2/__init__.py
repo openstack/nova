@@ -21,6 +21,7 @@ Starting point for routing EC2 requests.
 import hashlib
 
 from oslo_config import cfg
+from oslo_context import context as common_context
 from oslo_serialization import jsonutils
 from oslo_utils import importutils
 from oslo_utils import netutils
@@ -40,7 +41,6 @@ from nova import exception
 from nova.i18n import _
 from nova.i18n import _LE
 from nova.i18n import _LW
-from nova.openstack.common import context as common_context
 from nova.openstack.common import log as logging
 from nova.openstack.common import memorycache
 from nova import wsgi
