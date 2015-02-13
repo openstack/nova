@@ -1215,7 +1215,7 @@ object_data = {
 
 object_relationships = {
     'BlockDeviceMapping': {'Instance': '1.19'},
-    'ComputeNode': {'PciDevicePoolList': '1.0'},
+    'ComputeNode': {'HVSpec': '1.0', 'PciDevicePoolList': '1.0'},
     'FixedIP': {'Instance': '1.19', 'Network': '1.2',
                 'VirtualInterface': '1.0',
                 'FloatingIPList': '1.7'},
@@ -1231,11 +1231,16 @@ object_relationships = {
                  'VirtCPUModel': '1.0',
                  },
     'InstanceNUMACell': {'VirtCPUTopology': '1.0'},
+    'InstanceNUMATopology': {'InstanceNUMACell': '1.2'},
+    'InstancePCIRequests': {'InstancePCIRequest': '1.1'},
     'MyObj': {'MyOwnedObject': '1.0'},
+    'NUMACell': {'NUMAPagesTopology': '1.0'},
+    'NUMATopology': {'NUMACell': '1.2'},
     'SecurityGroupRule': {'SecurityGroup': '1.1'},
     'Service': {'ComputeNode': '1.10'},
     'TestSubclassedObject': {'MyOwnedObject': '1.0'},
-    'VirtCPUModel': {'VirtCPUTopology': '1.0'},
+    'VirtCPUModel': {'VirtCPUFeature': '1.0', 'VirtCPUTopology': '1.0'},
+    'TestSubclassedObject': {'MyOwnedObject': '1.0'}
 }
 
 
@@ -1305,14 +1310,26 @@ class TestObjectVersions(test.TestCase):
                          'versions have been bumped, and then update their '
                          'hashes here.')
 
+    def _get_object_field_name(self, field):
+        if isinstance(field._type, fields.Object):
+            return field._type._obj_name
+        if isinstance(field, fields.ListOfObjectsField):
+            return field._type._element_type._type._obj_name
+        return None
+
     def _build_tree(self, tree, obj_class):
         obj_name = obj_class.obj_name()
         if obj_name in tree:
             return
 
         for name, field in obj_class.fields.items():
-            if isinstance(field._type, fields.Object):
-                sub_obj_name = field._type._obj_name
+            # Notes(yjiang5): ObjectListBase should be covered by
+            # child_versions test
+            if (issubclass(obj_class, base.ObjectListBase) and
+                    name == 'objects'):
+                continue
+            sub_obj_name = self._get_object_field_name(field)
+            if sub_obj_name:
                 sub_obj_class = base.NovaObject._obj_classes[sub_obj_name][0]
                 self._build_tree(tree, sub_obj_class)
                 tree.setdefault(obj_name, {})
