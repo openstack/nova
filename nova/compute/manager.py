@@ -3629,16 +3629,16 @@ class ComputeManager(manager.Manager):
             instance.root_gb = instance_type['root_gb']
             instance.ephemeral_gb = instance_type['ephemeral_gb']
             instance.instance_type_id = instance_type['id']
-            instance.host = migration['source_compute']
-            instance.node = migration['source_node']
+            instance.host = migration.source_compute
+            instance.node = migration.source_node
             instance.save()
 
-            migration.dest_compute = migration['source_compute']
+            migration.dest_compute = migration.source_compute
             with migration.obj_as_admin():
                 migration.save()
 
             self.network_api.setup_networks_on_host(context, instance,
-                                            migration['source_compute'])
+                                                    migration.source_compute)
 
             block_device_info = self._get_instance_block_device_info(
                     context, instance, refresh_conn_info=True)
