@@ -39,7 +39,7 @@ def fake_compute_node_get_all(context):
 
 
 @classmethod
-def fake_service_get_by_host_and_topic(cls, context, host, topic):
+def fake_service_get_by_host_and_binary(cls, context, host, binary):
     for service in test_hypervisors.TEST_SERVICES:
         if service.host == host:
             return service
@@ -77,8 +77,8 @@ class ExtendedHypervisorsTestV21(test.NoDBTestCase):
                        fake_compute_node_get_all)
         self.stubs.Set(self.controller.host_api, 'compute_node_get',
                        fake_compute_node_get)
-        self.stubs.Set(objects.Service, 'get_by_host_and_topic',
-                       fake_service_get_by_host_and_topic)
+        self.stubs.Set(objects.Service, 'get_by_host_and_binary',
+                       fake_service_get_by_host_and_binary)
 
     def test_view_hypervisor_detail_noservers(self):
         result = self.controller._view_hypervisor(
