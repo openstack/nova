@@ -148,7 +148,7 @@ class TestWSGIServer(test.NoDBTestCase):
     def test_server_pool_waitall(self):
         # test pools waitall method gets called while stopping server
         server = nova.wsgi.Server("test_server", None,
-            host="127.0.0.1", port=4444)
+            host="127.0.0.1")
         server.start()
         with mock.patch.object(server._pool,
                               'waitall') as mock_waitall:
