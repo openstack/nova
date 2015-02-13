@@ -766,6 +766,12 @@ class ComputeTaskManager(base.Base):
                 LOG.warning(_LW("No valid host found for unshelve instance"),
                             instance=instance)
                 return
+            except Exception:
+                with excutils.save_and_reraise_exception():
+                    instance.task_state = None
+                    instance.save()
+                    LOG.error(_LE("Unshelve attempted but an error "
+                                  "has occurred"), instance=instance)
         else:
             LOG.error(_LE('Unshelve attempted but vm_state not SHELVED or '
                           'SHELVED_OFFLOADED'), instance=instance)
