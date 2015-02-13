@@ -65,6 +65,7 @@ def fake_network_api_create(context, **kwargs):
 
 class TenantNetworksTestV21(test.NoDBTestCase):
     ctrlr = networks_v21.TenantNetworkController
+    validation_error = exception.ValidationError
 
     def setUp(self):
         super(TenantNetworksTestV21, self).setUp()
@@ -181,7 +182,7 @@ class TenantNetworksTestV21(test.NoDBTestCase):
         body = copy.deepcopy(NETWORKS[0])
         del body['id']
         body = {'network': body}
-        res = self.controller.create(self.req, body)
+        res = self.controller.create(self.req, body=body)
 
         self.assertEqual(res['network'], NETWORKS[0])
         commit_mock.assert_called_once_with(ctxt, 'rv')
@@ -195,7 +196,7 @@ class TenantNetworksTestV21(test.NoDBTestCase):
         body = {'network': {"cidr": "10.20.105.0/24",
                             "label": "new net 1"}}
         self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.create, self.req, body)
+                          self.controller.create, self.req, body=body)
         reserve_mock.assert_called_once_with(ctxt, networks=1)
 
     @mock.patch('nova.quota.QUOTAS.reserve')
@@ -209,7 +210,7 @@ class TenantNetworksTestV21(test.NoDBTestCase):
         create_mock.side_effect = ex
         body = {'network': {"cidr": "10.20.105.0/24",
                             "label": "new net 1"}}
-        self.assertRaises(expex, self.controller.create, self.req, body)
+        self.assertRaises(expex, self.controller.create, self.req, body=body)
         reserve_mock.assert_called_once_with(ctxt, networks=1)
 
     def test_network_create_exception_policy_failed(self):
@@ -223,33 +224,34 @@ class TenantNetworksTestV21(test.NoDBTestCase):
         self._test_network_create_exception(ex, expex)
 
     def test_network_create_empty_body(self):
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.create, self.req, {})
+        self.assertRaises(exception.ValidationError,
+                          self.controller.create, self.req, body={})
 
     def test_network_create_without_cidr(self):
         body = {'network': {"label": "new net 1"}}
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.create, self.req, body)
+        self.assertRaises(self.validation_error,
+                          self.controller.create, self.req, body=body)
 
     def test_network_create_bad_format_cidr(self):
         body = {'network': {"cidr": "123",
                             "label": "new net 1"}}
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.create, self.req, body)
+        self.assertRaises(self.validation_error,
+                          self.controller.create, self.req, body=body)
 
     def test_network_create_empty_network(self):
         body = {'network': {}}
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.create, self.req, body)
+        self.assertRaises(self.validation_error,
+                          self.controller.create, self.req, body=body)
 
     def test_network_create_without_label(self):
         body = {'network': {"cidr": "10.20.105.0/24"}}
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.create, self.req, body)
+        self.assertRaises(self.validation_error,
+                          self.controller.create, self.req, body=body)
 
 
 class TenantNetworksTestV2(TenantNetworksTestV21):
     ctrlr = networks.NetworkController
+    validation_error = webob.exc.HTTPBadRequest
 
     def test_network_create_empty_body(self):
         self.assertRaises(webob.exc.HTTPUnprocessableEntity,
