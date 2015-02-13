@@ -1407,13 +1407,6 @@ class FakeVim(object):
         task_mdo = create_task(method, "success")
         return task_mdo.obj
 
-    def fake_transfer_file(self, ds_name, file_path):
-        """Fakes fetch image call.
-        Just adds a reference to the db for the file.
-        """
-        ds_file_path = "[" + ds_name + "] " + file_path
-        _add_file(ds_file_path)
-
     def _make_dir(self, method, *args, **kwargs):
         """Creates a directory in the datastore."""
         ds_path = kwargs.get("name")
