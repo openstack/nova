@@ -33,9 +33,13 @@ fake_stats_db_format = jsonutils.dumps(fake_stats)
 fake_host_ip = '127.0.0.1'
 fake_numa_topology = objects.NUMATopology(
         cells=[objects.NUMACell(id=0, cpuset=set([1, 2]), memory=512,
-                                cpu_usage=0, memory_usage=0),
+                                cpu_usage=0, memory_usage=0,
+                                mempages=[], pinned_cpus=set([]),
+                                siblings=[]),
                objects.NUMACell(id=1, cpuset=set([3, 4]), memory=512,
-                                cpu_usage=0, memory_usage=0)])
+                                cpu_usage=0, memory_usage=0,
+                                mempages=[], pinned_cpus=set([]),
+                                siblings=[])])
 fake_numa_topology_db_format = fake_numa_topology._to_json()
 fake_hv_spec = hv_spec.HVSpec(arch='foo', hv_type='bar', vm_mode='foobar')
 fake_supported_hv_specs = [fake_hv_spec]

@@ -4681,6 +4681,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                     memory=cell.memory / units.Ki,
                                     cpu_usage=0, memory_usage=0,
                                     siblings=siblings,
+                                    pinned_cpus=set([]),
                                     mempages=[
                                         objects.NUMAPagesTopology(
                                             size_kb=pages.size,

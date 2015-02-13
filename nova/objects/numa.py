@@ -43,13 +43,6 @@ class NUMACell(base.NovaObject,
         'NUMAPagesTopology': [('1.2', '1.0')]
     }
 
-    def __init__(self, **kwargs):
-        super(NUMACell, self).__init__(**kwargs)
-        if 'pinned_cpus' not in kwargs:
-            self.pinned_cpus = set()
-        if 'siblings' not in kwargs:
-            self.siblings = []
-
     @property
     def free_cpus(self):
         return self.cpuset - self.pinned_cpus or set()
@@ -99,7 +92,7 @@ class NUMACell(base.NovaObject,
         cell_id = data_dict.get('id')
         return cls(id=cell_id, cpuset=cpuset, memory=memory,
                    cpu_usage=cpu_usage, memory_usage=memory_usage,
-                   mempages=[])
+                   mempages=[], pinned_cpus=set([]), siblings=[])
 
     def can_fit_hugepages(self, pagesize, memory):
         """Returns whether memory can fit into hugepages size

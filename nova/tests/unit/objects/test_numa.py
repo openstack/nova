@@ -19,10 +19,14 @@ fake_obj_numa = objects.NUMATopology(
     cells=[
         objects.NUMACell(
             id=0, cpuset=set([1, 2]), memory=512,
-            cpu_usage=2, memory_usage=256),
+            cpu_usage=2, memory_usage=256,
+            mempages=[], pinned_cpus=set([]),
+            siblings=[]),
         objects.NUMACell(
             id=1, cpuset=set([3, 4]), memory=512,
-            cpu_usage=1, memory_usage=128)])
+            cpu_usage=1, memory_usage=128,
+            mempages=[], pinned_cpus=set([]),
+            siblings=[])])
 
 
 class _TestNUMA(object):
@@ -38,11 +42,13 @@ class _TestNUMA(object):
             objects.NUMACell(
                 id=0, cpuset=set([1, 2]), memory=512,
                 cpu_usage=2, memory_usage=256,
-                pinned_cpus=set([1])),
+                pinned_cpus=set([1]), siblings=[],
+                mempages=[]),
             objects.NUMACell(
                 id=1, cpuset=set([3, 4]), memory=512,
                 cpu_usage=1, memory_usage=128,
-                pinned_cpus=set([]))
+                pinned_cpus=set([]), siblings=[],
+                mempages=[])
             ]
         )
         self.assertEqual(set([2]), obj.cells[0].free_cpus)
@@ -51,7 +57,8 @@ class _TestNUMA(object):
     def test_pinning_logic(self):
         numacell = objects.NUMACell(id=0, cpuset=set([1, 2, 3, 4]), memory=512,
                                     cpu_usage=2, memory_usage=256,
-                                    pinned_cpus=set([1]))
+                                    pinned_cpus=set([1]), siblings=[],
+                                    mempages=[])
         numacell.pin_cpus(set([2, 3]))
         self.assertEqual(set([4]), numacell.free_cpus)
         self.assertRaises(exception.CPUPinningInvalid,
@@ -76,6 +83,7 @@ class _TestNUMA(object):
     def test_can_fit_hugepages(self):
         cell = objects.NUMACell(
             id=0, cpuset=set([1, 2]), memory=1024,
+            siblings=[], pinned_cpus=set([]),
             mempages=[
                 objects.NUMAPagesTopology(
                     size_kb=4, total=1548736, used=0),
@@ -90,6 +98,10 @@ class _TestNUMA(object):
         self.assertRaises(
             exception.MemoryPageSizeNotSupported,
             cell.can_fit_hugepages, 12345, 2 ** 20)
+
+    def test_default_behavior(self):
+        inst_cell = objects.NUMACell()
+        self.assertEqual(0, len(inst_cell.obj_get_changes()))
 
 
 class TestNUMA(test_objects._LocalTest,
