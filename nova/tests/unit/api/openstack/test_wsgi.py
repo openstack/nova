@@ -159,7 +159,7 @@ class RequestTest(test.NoDBTestCase):
         mock_maxver.return_value = api_version.APIVersionRequest("2.14")
 
         request = wsgi.Request.blank('/')
-        request.headers = {'X-OpenStack-Compute-API-Version': '2.14'}
+        request.headers = {'X-OpenStack-Nova-API-Version': '2.14'}
         request.set_api_version_request()
         self.assertEqual(api_version.APIVersionRequest("2.14"),
                          request.api_version_request)
@@ -169,14 +169,14 @@ class RequestTest(test.NoDBTestCase):
         mock_maxver.return_value = api_version.APIVersionRequest("3.5")
 
         request = wsgi.Request.blank('/')
-        request.headers = {'X-OpenStack-Compute-API-Version': 'latest'}
+        request.headers = {'X-OpenStack-Nova-API-Version': 'latest'}
         request.set_api_version_request()
         self.assertEqual(api_version.APIVersionRequest("3.5"),
                          request.api_version_request)
 
     def test_api_version_request_header_invalid(self):
         request = wsgi.Request.blank('/')
-        request.headers = {'X-OpenStack-Compute-API-Version': '2.1.3'}
+        request.headers = {'X-OpenStack-Nova-API-Version': '2.1.3'}
 
         self.assertRaises(exception.InvalidAPIVersionString,
                           request.set_api_version_request)
@@ -313,7 +313,7 @@ class ResourceTest(test.NoDBTestCase):
 
         app = fakes.TestRouterV21(Controller())
         req = webob.Request.blank('/tests')
-        req.headers = {'X-OpenStack-Compute-API-Version': version}
+        req.headers = {'X-OpenStack-Nova-API-Version': version}
         response = req.get_response(app)
         self.assertEqual(response.body, 'success')
         self.assertEqual(response.status_int, 200)
@@ -327,7 +327,7 @@ class ResourceTest(test.NoDBTestCase):
 
         app = fakes.TestRouterV21(Controller())
         req = webob.Request.blank('/tests')
-        req.headers = {'X-OpenStack-Compute-API-Version': invalid_version}
+        req.headers = {'X-OpenStack-Nova-API-Version': invalid_version}
         response = req.get_response(app)
         self.assertEqual(400, response.status_int)
 

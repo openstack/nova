@@ -72,7 +72,7 @@ VER_METHOD_ATTR = 'versioned_methods'
 
 # Name of header used by clients to request a specific version
 # of the REST API
-API_VERSION_REQUEST_HEADER = 'X-OpenStack-Compute-API-Version'
+API_VERSION_REQUEST_HEADER = 'X-OpenStack-Nova-API-Version'
 
 
 def get_supported_content_types():
