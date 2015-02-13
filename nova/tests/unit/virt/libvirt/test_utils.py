@@ -21,6 +21,7 @@ import mock
 from oslo_concurrency import processutils
 from oslo_config import cfg
 
+from nova.compute import arch
 from nova import exception
 from nova.openstack.common import fileutils
 from nova import test
@@ -715,3 +716,8 @@ disk size: 4.4M
             instance, migrate_data)
         expected_path = os.path.join(CONF.instances_path, 'fake_relative_path')
         self.assertEqual(expected_path, inst_path_at_dest)
+
+    def test_get_arch(self):
+        image_meta = {'properties': {'architecture': "X86_64"}}
+        image_arch = libvirt_utils.get_arch(image_meta)
+        self.assertEqual(arch.X86_64, image_arch)
