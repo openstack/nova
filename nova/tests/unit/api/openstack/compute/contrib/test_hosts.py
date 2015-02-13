@@ -32,9 +32,9 @@ def stub_service_get_all(context, disabled=None):
     return fake_hosts.SERVICES_LIST
 
 
-def stub_service_get_by_host_and_topic(context, host_name, topic):
+def stub_service_get_by_host_and_binary(context, host_name, binary):
     for service in stub_service_get_all(context):
-        if service['host'] == host_name and service['topic'] == topic:
+        if service['host'] == host_name and service['binary'] == binary:
             return service
 
 
@@ -152,8 +152,8 @@ class HostTestCaseV21(test.TestCase):
         self.stubs.Set(db, 'service_get_all',
                        stub_service_get_all)
         # Only hosts in our fake DB exist
-        self.stubs.Set(db, 'service_get_by_host_and_topic',
-                       stub_service_get_by_host_and_topic)
+        self.stubs.Set(db, 'service_get_by_host_and_binary',
+                       stub_service_get_by_host_and_binary)
         # 'host_c1' always succeeds, and 'host_c2'
         self.stubs.Set(self.hosts_api, 'set_host_enabled',
                        stub_set_host_enabled)

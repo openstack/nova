@@ -2760,7 +2760,7 @@ class FloatingIPTestCase(test.TestCase):
     @mock.patch('nova.db.fixed_ip_get')
     @mock.patch('nova.db.network_get')
     @mock.patch('nova.db.instance_get_by_uuid')
-    @mock.patch('nova.db.service_get_by_host_and_topic')
+    @mock.patch('nova.db.service_get_by_host_and_binary')
     @mock.patch('nova.db.floating_ip_get_by_address')
     def test_disassociate_floating_ip_multi_host_calls(self, floating_get,
                                                        service_get,
