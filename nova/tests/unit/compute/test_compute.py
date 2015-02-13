@@ -8045,20 +8045,15 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_get_all_by_flavor(self):
         # Test searching instances by image.
-
         c = context.get_admin_context()
-        instance1 = self._create_fake_instance_obj({'instance_type_id': 1})
-        instance2 = self._create_fake_instance_obj({'instance_type_id': 2})
-        instance3 = self._create_fake_instance_obj({'instance_type_id': 2})
-
-        # NOTE(comstud): Migrations set up the instance_types table
-        # for us.  Therefore, we assume the following is true for
-        # these tests:
-        # instance_type_id 1 == flavor 3
-        # instance_type_id 2 == flavor 1
-        # instance_type_id 3 == flavor 4
-        # instance_type_id 4 == flavor 5
-        # instance_type_id 5 == flavor 2
+        flavor_dict = flavors.get_all_flavors(c)
+        flavor_dict = {f.flavorid: f for f in flavor_dict.values()}
+        instance1 = self._create_fake_instance_obj(
+            {'instance_type_id': flavor_dict['1'].id})
+        instance2 = self._create_fake_instance_obj(
+            {'instance_type_id': flavor_dict['2'].id})
+        instance3 = self._create_fake_instance_obj(
+            {'instance_type_id': flavor_dict['2'].id})
 
         instances = self.compute_api.get_all(c,
                 search_opts={'flavor': 5})
@@ -8069,11 +8064,11 @@ class ComputeAPITestCase(BaseTestCase):
                           self.compute_api.get_all, c,
                           search_opts={'flavor': 99})
 
-        instances = self.compute_api.get_all(c, search_opts={'flavor': 3})
+        instances = self.compute_api.get_all(c, search_opts={'flavor': 1})
         self.assertEqual(len(instances), 1)
         self.assertEqual(instances[0]['id'], instance1['id'])
 
-        instances = self.compute_api.get_all(c, search_opts={'flavor': 1})
+        instances = self.compute_api.get_all(c, search_opts={'flavor': 2})
         self.assertEqual(len(instances), 2)
         instance_uuids = [instance['uuid'] for instance in instances]
         self.assertIn(instance2['uuid'], instance_uuids)
