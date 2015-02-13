@@ -52,6 +52,7 @@ class VMUtilsV2(vmutils.VMUtils):
     _SNAPSHOT_FULL = 2
 
     _METRIC_AGGR_CPU_AVG = 'Aggregated Average CPU Utilization'
+    _METRIC_AGGR_MEMORY_AVG = 'Aggregated Average Memory Utilization'
     _METRIC_ENABLED = 2
 
     _STORAGE_ALLOC_SETTING_DATA_CLASS = 'Msvm_StorageAllocationSettingData'
@@ -272,7 +273,8 @@ class VMUtilsV2(vmutils.VMUtils):
         self._add_virt_resource(eth_port_data, vm.path_())
 
     def enable_vm_metrics_collection(self, vm_name):
-        metric_names = [self._METRIC_AGGR_CPU_AVG]
+        metric_names = [self._METRIC_AGGR_CPU_AVG,
+                        self._METRIC_AGGR_MEMORY_AVG]
 
         vm = self._lookup_vm_check(vm_name)
         metric_svc = self._conn.Msvm_MetricService()[0]
