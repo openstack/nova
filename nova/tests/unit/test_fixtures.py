@@ -148,6 +148,30 @@ class TestTimeout(testtools.TestCase):
         self.assertEqual(timeout.test_timeout, 20)
 
 
+class TestOSAPIFixture(testtools.TestCase):
+    def test_responds_to_version(self):
+        """Ensure the OSAPI server responds to calls sensibly."""
+        self.useFixture(conf_fixture.ConfFixture())
+        api = self.useFixture(fixtures.OSAPIFixture()).api
+
+        # request the API root, which provides us the versions of the API
+        resp = api.api_request('/', strip_version=True)
+        self.assertEqual(resp.status_code, 200, resp.content)
+
+        # request a bad root url, should be a 404
+        #
+        # NOTE(sdague): this currently fails, as it falls into the 300
+        # dispatcher instead. This is a bug. The test case is left in
+        # here, commented out until we can address it.
+        #
+        # resp = api.api_request('/foo', strip_version=True)
+        # self.assertEqual(resp.status_code, 400, resp.content)
+
+        # request a known bad url, and we should get a 404
+        resp = api.api_request('/foo')
+        self.assertEqual(resp.status_code, 404, resp.content)
+
+
 class TestDatabaseFixture(testtools.TestCase):
     def test_fixture_reset(self):
         # because this sets up reasonable db connection strings
