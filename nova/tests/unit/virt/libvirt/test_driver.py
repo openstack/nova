@@ -8187,7 +8187,8 @@ class LibvirtConnTestCase(test.TestCase):
             self.assertTrue(not service_mock.disabled and
                             service_mock.disabled_reason is None)
 
-    def test_immediate_delete(self):
+    @mock.patch.object(objects.Instance, 'save')
+    def test_immediate_delete(self, mock_save):
         def fake_get_domain(instance):
             raise exception.InstanceNotFound(instance_id=instance.name)
 
@@ -8196,27 +8197,20 @@ class LibvirtConnTestCase(test.TestCase):
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.stubs.Set(drvr._host, 'get_domain', fake_get_domain)
-        self.stubs.Set(drvr, '_delete_instance_files',
+        self.stubs.Set(drvr, 'delete_instance_files',
                        fake_delete_instance_files)
 
-        instance = objects.Instance(**self.test_instance)
+        instance = objects.Instance(self.context, **self.test_instance)
         drvr.destroy(self.context, instance, {})
+        mock_save.assert_called_once_with()
 
     def _test_destroy_removes_disk(self, volume_fail=False):
-        instance = {"name": "instancename", "id": "42",
-                    "uuid": "875a8070-d0b9-4949-8b31-104d125c9a64",
-                    "cleaned": 0, 'info_cache': None, 'security_groups': []}
+        instance = objects.Instance(self.context, **self.test_instance)
         vol = {'block_device_mapping': [
               {'connection_info': 'dummy', 'mount_device': '/dev/sdb'}]}
 
         self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver,
                                  '_undefine_domain')
-        self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
-        db.instance_get_by_uuid(mox.IgnoreArg(), mox.IgnoreArg(),
-                                columns_to_join=['info_cache',
-                                                 'security_groups'],
-                                use_slave=False
-                                ).AndReturn(instance)
         self.mox.StubOutWithMock(driver, "block_device_info_get_mapping")
         driver.block_device_info_get_mapping(vol
                                     ).AndReturn(vol['block_device_mapping'])
@@ -8231,7 +8225,7 @@ class LibvirtConnTestCase(test.TestCase):
                         mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg())
         self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver,
                                  'delete_instance_files')
-        (libvirt_driver.LibvirtDriver.delete_instance_files(mox.IgnoreArg()).
+        (libvirt_driver.LibvirtDriver.delete_instance_files(instance).
          AndReturn(True))
         libvirt_driver.LibvirtDriver._undefine_domain(instance)
 
@@ -8911,7 +8905,8 @@ class LibvirtConnTestCase(test.TestCase):
             _attach_pci_devices.assert_has_calls([mock.call('fake_dom',
                                                  'fake_pci_devs')])
 
-    def test_destroy_undefines(self):
+    @mock.patch.object(objects.Instance, 'save')
+    def test_destroy_undefines(self, mock_save):
         mock = self.mox.CreateMock(libvirt.virDomain)
         mock.ID()
         mock.destroy()
@@ -8931,11 +8926,12 @@ class LibvirtConnTestCase(test.TestCase):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.stubs.Set(drvr._host, 'get_domain', fake_get_domain)
         self.stubs.Set(drvr, 'get_info', fake_get_info)
-        self.stubs.Set(drvr, '_delete_instance_files',
+        self.stubs.Set(drvr, 'delete_instance_files',
                        fake_delete_instance_files)
 
-        instance = objects.Instance(**self.test_instance)
+        instance = objects.Instance(self.context, **self.test_instance)
         drvr.destroy(self.context, instance, [])
+        mock_save.assert_called_once_with()
 
     @mock.patch.object(rbd_utils, 'RBDDriver')
     def test_cleanup_rbd(self, mock_driver):
@@ -8948,7 +8944,8 @@ class LibvirtConnTestCase(test.TestCase):
 
         driver.cleanup_volumes.assert_called_once_with(fake_instance)
 
-    def test_destroy_undefines_no_undefine_flags(self):
+    @mock.patch.object(objects.Instance, 'save')
+    def test_destroy_undefines_no_undefine_flags(self, mock_save):
         mock = self.mox.CreateMock(libvirt.virDomain)
         mock.ID()
         mock.destroy()
@@ -8969,12 +8966,14 @@ class LibvirtConnTestCase(test.TestCase):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.stubs.Set(drvr._host, 'get_domain', fake_get_domain)
         self.stubs.Set(drvr, 'get_info', fake_get_info)
-        self.stubs.Set(drvr, '_delete_instance_files',
+        self.stubs.Set(drvr, 'delete_instance_files',
                        fake_delete_instance_files)
-        instance = objects.Instance(**self.test_instance)
+        instance = objects.Instance(self.context, **self.test_instance)
         drvr.destroy(self.context, instance, [])
+        mock_save.assert_called_once_with()
 
-    def test_destroy_undefines_no_attribute_with_managed_save(self):
+    @mock.patch.object(objects.Instance, 'save')
+    def test_destroy_undefines_no_attribute_with_managed_save(self, mock_save):
         mock = self.mox.CreateMock(libvirt.virDomain)
         mock.ID()
         mock.destroy()
@@ -8997,12 +8996,14 @@ class LibvirtConnTestCase(test.TestCase):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.stubs.Set(drvr._host, 'get_domain', fake_get_domain)
         self.stubs.Set(drvr, 'get_info', fake_get_info)
-        self.stubs.Set(drvr, '_delete_instance_files',
+        self.stubs.Set(drvr, 'delete_instance_files',
                        fake_delete_instance_files)
-        instance = objects.Instance(**self.test_instance)
+        instance = objects.Instance(self.context, **self.test_instance)
         drvr.destroy(self.context, instance, [])
+        mock_save.assert_called_once_with()
 
-    def test_destroy_undefines_no_attribute_no_managed_save(self):
+    @mock.patch.object(objects.Instance, 'save')
+    def test_destroy_undefines_no_attribute_no_managed_save(self, mock_save):
         mock = self.mox.CreateMock(libvirt.virDomain)
         mock.ID()
         mock.destroy()
@@ -9024,10 +9025,11 @@ class LibvirtConnTestCase(test.TestCase):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.stubs.Set(host.Host, 'get_domain', fake_get_domain)
         self.stubs.Set(drvr, 'get_info', fake_get_info)
-        self.stubs.Set(drvr, '_delete_instance_files',
+        self.stubs.Set(drvr, 'delete_instance_files',
                        fake_delete_instance_files)
-        instance = objects.Instance(**self.test_instance)
+        instance = objects.Instance(self.context, **self.test_instance)
         drvr.destroy(self.context, instance, [])
+        mock_save.assert_called_once_with()
 
     def test_destroy_timed_out(self):
         mock = self.mox.CreateMock(libvirt.virDomain)

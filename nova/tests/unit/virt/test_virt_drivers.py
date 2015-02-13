@@ -138,7 +138,7 @@ class _FakeDriverBackendTestCase(object):
                        'extend', fake_extend)
 
         self.stubs.Set(nova.virt.libvirt.driver.LibvirtDriver,
-                       '_delete_instance_files',
+                       'delete_instance_files',
                        fake_delete_instance_files)
 
         # Like the existing fakelibvirt.migrateToURI, do nothing,

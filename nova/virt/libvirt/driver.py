@@ -825,7 +825,15 @@ class LibvirtDriver(driver.ComputeDriver):
         if destroy_disks or (
                 migrate_data and migrate_data.get('is_shared_block_storage',
                                                   False)):
-            self._delete_instance_files(instance)
+            attempts = int(instance.system_metadata.get('clean_attempts',
+                                                        '0'))
+            success = self.delete_instance_files(instance)
+            # NOTE(mriedem): This is used in the _run_pending_deletes periodic
+            # task in the compute manager. The tight coupling is not great...
+            instance.system_metadata['clean_attempts'] = str(attempts + 1)
+            if success:
+                instance.cleaned = True
+            instance.save()
 
         if CONF.serial_console.enabled:
             serials = self._get_serial_ports_from_instance(instance)
@@ -4303,7 +4311,7 @@ class LibvirtDriver(driver.ComputeDriver):
         except eventlet.timeout.Timeout:
             # We never heard from Neutron
             LOG.warn(_LW('Timeout waiting for vif plugging callback for '
-                         'instance %(uuid)s'), {'uuid': instance['uuid']})
+                         'instance %(uuid)s'), {'uuid': instance.uuid})
             if CONF.vif_plugging_is_fatal:
                 if domain:
                     domain.destroy()
@@ -6214,21 +6222,6 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def inject_network_info(self, instance, nw_info):
         self.firewall_driver.setup_basic_filtering(instance, nw_info)
-
-    def _delete_instance_files(self, instance):
-        # NOTE(mikal): a shim to handle this file not using instance objects
-        # everywhere. Remove this when that conversion happens.
-        context = nova_context.get_admin_context(read_deleted='yes')
-        inst_obj = objects.Instance.get_by_uuid(context, instance['uuid'])
-
-        # NOTE(mikal): this code should be pushed up a layer when this shim is
-        # removed.
-        attempts = int(inst_obj.system_metadata.get('clean_attempts', '0'))
-        success = self.delete_instance_files(inst_obj)
-        inst_obj.system_metadata['clean_attempts'] = str(attempts + 1)
-        if success:
-            inst_obj.cleaned = True
-        inst_obj.save()
 
     def delete_instance_files(self, instance):
         target = libvirt_utils.get_instance_path(instance)
