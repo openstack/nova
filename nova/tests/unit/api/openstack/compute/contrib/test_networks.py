@@ -343,7 +343,7 @@ class NetworksTestV21(test.NoDBTestCase):
             self.fake_network_api)
 
     def _check_status(self, res, method, code):
-        self.assertEqual(method.wsgi_code, 202)
+        self.assertEqual(method.wsgi_code, code)
 
     @staticmethod
     def network_uuid_to_id(network):
@@ -408,8 +408,7 @@ class NetworksTestV21(test.NoDBTestCase):
 
     def test_network_delete(self):
         res = self.controller.delete(self.req, 1)
-        self._check_status(res, self.controller._disassociate_host_and_project,
-                           202)
+        self._check_status(res, self.controller.delete, 202)
 
     def test_network_delete_not_found(self):
         self.assertRaises(webob.exc.HTTPNotFound,
@@ -422,8 +421,7 @@ class NetworksTestV21(test.NoDBTestCase):
     def test_network_add(self):
         uuid = FAKE_NETWORKS[1]['uuid']
         res = self.controller.add(self.req, {'id': uuid})
-        self._check_status(res, self.controller._disassociate_host_and_project,
-                           202)
+        self._check_status(res, self.controller.add, 202)
         res_dict = self.controller.show(self.admin_req, uuid)
         self.assertEqual(res_dict['network']['project_id'], 'fake')
 
@@ -475,7 +473,7 @@ class NetworksTestV2(NetworksTestV21):
                                                      ext_mgr)
 
     def _check_status(self, res, method, code):
-        self.assertEqual(res.status_int, 202)
+        self.assertEqual(res.status_int, code)
 
     def test_network_create_not_extended(self):
         self.stubs.Set(self.controller, 'extended', False)
@@ -618,7 +616,7 @@ class NetworksAssociateTestV2(NetworksAssociateTestV21):
             .NetworkAssociateActionController(self.fake_network_api)
 
     def _check_status(self, res, method, code):
-        self.assertEqual(res.status_int, 202)
+        self.assertEqual(res.status_int, code)
 
     def _test_network_neutron_associate_host_validation_failed(self, body):
         pass
