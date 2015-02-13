@@ -62,7 +62,7 @@ def _fake_compute_node_get_all(cls, context):
 
 
 @classmethod
-def _fake_service_get_all_by_topic(cls, context, topic):
+def _fake_service_get_all_by_binary(cls, context, binary):
     def _node(host, total_mem, total_disk, free_mem, free_disk):
         return objects.Service(host=host, disabled=False)
 
@@ -89,8 +89,8 @@ class TestCellsStateManager(test.NoDBTestCase):
 
         self.stubs.Set(objects.ComputeNodeList, 'get_all',
                        _fake_compute_node_get_all)
-        self.stubs.Set(objects.ServiceList, 'get_by_topic',
-                       _fake_service_get_all_by_topic)
+        self.stubs.Set(objects.ServiceList, 'get_by_binary',
+                       _fake_service_get_all_by_binary)
         self.stubs.Set(db, 'flavor_get_all', _fake_instance_type_all)
         self.stubs.Set(db, 'cell_get_all', _fake_cell_get_all)
 
