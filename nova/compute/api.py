@@ -62,6 +62,7 @@ from nova.network.security_group import security_group_base
 from nova import notifications
 from nova import objects
 from nova.objects import base as obj_base
+from nova.objects import keypair as keypair_obj
 from nova.objects import quotas as quotas_obj
 from nova.objects import security_group as security_group_obj
 from nova.openstack.common import log as logging
@@ -3730,6 +3731,7 @@ class KeypairAPI(base.Base):
         keypair = objects.KeyPair(context)
         keypair.user_id = user_id
         keypair.name = key_name
+        keypair.type = keypair_obj.KEYPAIR_TYPE_SSH
         keypair.fingerprint = fingerprint
         keypair.public_key = public_key
         keypair.create()
@@ -3750,6 +3752,7 @@ class KeypairAPI(base.Base):
         keypair = objects.KeyPair(context)
         keypair.user_id = user_id
         keypair.name = key_name
+        keypair.type = keypair_obj.KEYPAIR_TYPE_SSH
         keypair.fingerprint = fingerprint
         keypair.public_key = public_key
         keypair.create()

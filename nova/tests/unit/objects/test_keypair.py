@@ -27,6 +27,7 @@ fake_keypair = {
     'deleted': False,
     'id': 123,
     'name': 'foo-keypair',
+    'type': 'ssh',
     'user_id': 'fake-user',
     'fingerprint': 'fake-fingerprint',
     'public_key': 'fake\npublic\nkey',
@@ -97,6 +98,13 @@ class _TestKeyPairObject(object):
         self.compare_obj(keypairs[0], fake_keypair)
         self.assertEqual(1, keypair.KeyPairList.get_count_by_user(self.context,
                                                                   'fake-user'))
+
+    def test_obj_make_compatible(self):
+        keypair_obj = keypair.KeyPair(context=self.context)
+        fake_keypair_copy = dict(fake_keypair)
+
+        keypair_obj.obj_make_compatible(fake_keypair_copy, '1.1')
+        self.assertNotIn('type', fake_keypair_copy)
 
 
 class TestMigrationObject(test_objects._LocalTest,
