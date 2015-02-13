@@ -18,6 +18,7 @@ import contextlib
 import copy
 import datetime
 import errno
+import glob
 import os
 import random
 import re
@@ -84,6 +85,7 @@ from nova.virt.libvirt import driver as libvirt_driver
 from nova.virt.libvirt import firewall
 from nova.virt.libvirt import host
 from nova.virt.libvirt import imagebackend
+from nova.virt.libvirt import lvm
 from nova.virt.libvirt import rbd_utils
 from nova.virt.libvirt import utils as libvirt_utils
 from nova.virt.libvirt import volume as volume_drivers
@@ -12841,6 +12843,47 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         self.drvr.rescue(self.context, instance,
                     network_info, image_meta, rescue_password)
         self.mox.VerifyAll()
+
+    @mock.patch.object(libvirt_utils, 'get_instance_path')
+    @mock.patch.object(libvirt_utils, 'load_file')
+    @mock.patch.object(host.Host, "get_domain")
+    def test_unrescue(self, mock_get_domain, mock_load_file,
+                                           mock_get_instance_path):
+        dummyxml = ("<domain type='kvm'><name>instance-0000000a</name>"
+                    "<devices>"
+                    "<disk type='block' device='disk'>"
+                    "<source dev='/dev/some-vg/some-lv'/>"
+                    "<target dev='vda' bus='virtio'/></disk>"
+                    "</devices></domain>")
+
+        mock_get_instance_path.return_value = '/path'
+        instance = objects.Instance(uuid='fake=uuid', id=1)
+        fake_dom = FakeVirtDomain(fake_xml=dummyxml)
+        mock_get_domain.return_value = fake_dom
+        mock_load_file.return_value = "fake_unrescue_xml"
+        unrescue_xml_path = os.path.join('/path', 'unrescue.xml')
+        rescue_file = os.path.join('/path', 'rescue.file')
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        with contextlib.nested(
+                mock.patch.object(drvr, '_destroy'),
+                mock.patch.object(drvr, '_create_domain'),
+                mock.patch.object(libvirt_utils, 'file_delete'),
+                mock.patch.object(drvr, '_lvm_disks',
+                                  return_value=['lvm.rescue']),
+                mock.patch.object(lvm, 'remove_volumes'),
+                mock.patch.object(glob, 'iglob', return_value=[rescue_file])
+                ) as (mock_destroy, mock_create, mock_del, mock_lvm_disks,
+                      mock_remove_volumes, mock_glob):
+            drvr.unrescue(instance, None)
+            mock_destroy.assert_called_once_with(instance)
+            mock_create.assert_called_once_with("fake_unrescue_xml",
+                                                 fake_dom)
+            self.assertEqual(2, mock_del.call_count)
+            self.assertEqual(unrescue_xml_path,
+                             mock_del.call_args_list[0][0][0])
+            self.assertEqual(rescue_file, mock_del.call_args_list[1][0][0])
+            mock_remove_volumes.assert_called_once_with(['lvm.rescue'])
 
     @mock.patch(
         'nova.virt.configdrive.ConfigDriveBuilder.add_instance_metadata')
