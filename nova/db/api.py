@@ -101,8 +101,13 @@ def service_get(context, service_id, use_slave=False):
 
 
 def service_get_by_host_and_topic(context, host, topic):
-    """Get a service by host it's on and topic it listens to."""
+    """Get a service by hostname and topic it listens to."""
     return IMPL.service_get_by_host_and_topic(context, host, topic)
+
+
+def service_get_by_host_and_binary(context, host, binary):
+    """Get a service by hostname and binary."""
+    return IMPL.service_get_by_host_and_binary(context, host, binary)
 
 
 def service_get_all(context, disabled=None):
@@ -113,6 +118,11 @@ def service_get_all(context, disabled=None):
 def service_get_all_by_topic(context, topic):
     """Get all services for a given topic."""
     return IMPL.service_get_all_by_topic(context, topic)
+
+
+def service_get_all_by_binary(context, binary):
+    """Get all services for a given binary."""
+    return IMPL.service_get_all_by_binary(context, binary)
 
 
 def service_get_all_by_host(context, host):
