@@ -6329,16 +6329,15 @@ def pci_device_destroy(context, node_id, address):
 def pci_device_update(context, node_id, address, values):
     session = get_session()
     with session.begin():
-        device = model_query(context, models.PciDevice, session=session,
-                             read_deleted="no").\
+        query = model_query(context, models.PciDevice, session=session,
+                            read_deleted="no").\
                         filter_by(compute_node_id=node_id).\
-                        filter_by(address=address).\
-                        first()
-        if not device:
+                        filter_by(address=address)
+        if query.update(values) == 0:
             device = models.PciDevice()
-        device.update(values)
-        session.add(device)
-    return device
+            device.update(values)
+            session.add(device)
+        return query.one()
 
 
 ####################
