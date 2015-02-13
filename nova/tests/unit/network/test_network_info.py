@@ -582,6 +582,7 @@ iface lo inet loopback
 
 auto eth0
 iface eth0 inet static
+    hwaddress ether aa:aa:aa:aa:aa:aa
     address 10.10.0.2
     netmask 255.255.255.0
     broadcast 10.10.0.255
@@ -604,6 +605,7 @@ iface lo inet loopback
 
 auto eth0
 iface eth0 inet static
+    hwaddress ether aa:aa:aa:aa:aa:aa
     address 10.10.0.2
     netmask 255.255.255.0
     broadcast 10.10.0.255
@@ -625,6 +627,7 @@ iface lo inet loopback
 
 auto eth0
 iface eth0 inet static
+    hwaddress ether aa:aa:aa:aa:aa:aa
     address 10.10.0.2
     netmask 255.255.255.0
     broadcast 10.10.0.255
@@ -646,12 +649,14 @@ iface lo inet loopback
 
 auto eth0
 iface eth0 inet static
+    hwaddress ether aa:aa:aa:aa:aa:aa
     address 10.10.0.2
     netmask 255.255.255.0
     broadcast 10.10.0.255
     gateway 10.10.0.1
     dns-nameservers 1.2.3.4 2.3.4.5
 iface eth0 inet6 static
+    hwaddress ether aa:aa:aa:aa:aa:aa
     address 1234:567::2
     netmask 48
     gateway 1234:567::1
@@ -673,11 +678,13 @@ iface lo inet loopback
 
 auto eth0
 iface eth0 inet static
+    hwaddress ether aa:aa:aa:aa:aa:aa
     address 10.10.0.2
     netmask 255.255.255.0
     broadcast 10.10.0.255
     dns-nameservers 1.2.3.4 2.3.4.5
 iface eth0 inet6 static
+    hwaddress ether aa:aa:aa:aa:aa:aa
     address 1234:567::2
     netmask 48
     dns-nameservers 2001:4860:4860::8888 2001:4860:4860::8844
@@ -704,12 +711,14 @@ iface lo inet loopback
 
 auto eth0
 iface eth0 inet static
+    hwaddress ether aa:aa:aa:aa:aa:aa
     address 10.10.0.2
     netmask 255.255.255.0
     broadcast 10.10.0.255
     gateway 10.10.0.1
     dns-nameservers 1.2.3.4 2.3.4.5
 iface eth0 inet6 static
+    hwaddress ether aa:aa:aa:aa:aa:aa
     address 1234:567::2
     netmask 48
     gateway 1234:567::1
@@ -717,12 +726,14 @@ iface eth0 inet6 static
 
 auto eth1
 iface eth1 inet static
+    hwaddress ether aa:aa:aa:aa:aa:aa
     address 10.10.0.2
     netmask 255.255.255.0
     broadcast 10.10.0.255
     gateway 10.10.0.1
     dns-nameservers 1.2.3.4 2.3.4.5
 iface eth1 inet6 static
+    hwaddress ether aa:aa:aa:aa:aa:aa
     address 1234:567::2
     netmask 48
     gateway 1234:567::1
@@ -745,6 +756,7 @@ iface lo inet loopback
 
 auto eth0
 iface eth0 inet static
+    hwaddress ether aa:aa:aa:aa:aa:aa
     address 10.10.0.2
     netmask 255.255.255.0
     broadcast 10.10.0.255
@@ -755,6 +767,7 @@ iface eth0 inet static
 
 auto eth1
 iface eth1 inet static
+    hwaddress ether aa:aa:aa:aa:aa:aa
     address 10.10.0.2
     netmask 255.255.255.0
     broadcast 10.10.0.255
@@ -780,6 +793,7 @@ iface lo inet loopback
 
 auto eth0
 iface eth0 inet static
+    hwaddress ether aa:aa:aa:aa:aa:aa
     address 10.10.0.2
     netmask 255.255.255.0
     broadcast 10.10.0.255
@@ -788,6 +802,7 @@ iface eth0 inet static
 
 auto eth1
 iface eth1 inet static
+    hwaddress ether aa:aa:aa:aa:aa:aa
     address 10.10.0.2
     netmask 255.255.255.0
     broadcast 10.10.0.255
