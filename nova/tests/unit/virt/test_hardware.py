@@ -1117,6 +1117,8 @@ class NUMATopologyTest(test.NoDBTestCase):
                          hostusage.cells[0].memory)
         self.assertEqual(hostusage.cells[0].cpu_usage, 5)
         self.assertEqual(hostusage.cells[0].memory_usage, 512)
+        self.assertEqual(hostusage.cells[0].mempages, [
+            hpages0_4K, hpages0_2M])
 
         self.assertIsInstance(hostusage.cells[1], objects.NUMACell)
         self.assertEqual(hosttopo.cells[1].cpuset,
@@ -1125,6 +1127,9 @@ class NUMATopologyTest(test.NoDBTestCase):
                          hostusage.cells[1].memory)
         self.assertEqual(hostusage.cells[1].cpu_usage, 3)
         self.assertEqual(hostusage.cells[1].memory_usage, 512)
+        self.assertEqual(hostusage.cells[1].mempages, [
+            hpages1_4K, hpages1_2M])
+
         self.assertEqual(256, hpages0_4K.total)
         self.assertEqual(0, hpages0_4K.used)
         self.assertEqual(0, hpages0_2M.total)
