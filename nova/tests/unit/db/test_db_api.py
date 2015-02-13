@@ -2647,9 +2647,10 @@ class InstanceExtraTestCase(test.TestCase):
     def test_instance_extra_get_with_columns(self):
         extra = db.instance_extra_get_by_instance_uuid(
             self.ctxt, self.instance['uuid'],
-            columns=['numa_topology'])
+            columns=['numa_topology', 'vcpu_model'])
         self.assertNotIn('pci_requests', extra)
         self.assertIn('numa_topology', extra)
+        self.assertIn('vcpu_model', extra)
 
 
 class ServiceTestCase(test.TestCase, ModelsObjectComparatorMixin):

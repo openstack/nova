@@ -787,6 +787,23 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
         self.assertColumnNotExists(engine, 'key_pairs', 'type')
         self.assertColumnNotExists(engine, 'shadow_key_pairs', 'type')
 
+    def _check_276(self, engine, data):
+        self.assertColumnExists(engine, 'instance_extra', 'vcpu_model')
+        self.assertColumnExists(engine, 'shadow_instance_extra', 'vcpu_model')
+
+        instance_extra = oslodbutils.get_table(engine, 'instance_extra')
+        shadow_instance_extra = oslodbutils.get_table(
+                engine, 'shadow_instance_extra')
+        self.assertIsInstance(instance_extra.c.vcpu_model.type,
+                              sqlalchemy.types.Text)
+        self.assertIsInstance(shadow_instance_extra.c.vcpu_model.type,
+                              sqlalchemy.types.Text)
+
+    def _post_downgrade_276(self, engine):
+        self.assertColumnNotExists(engine, 'instance_extra', 'vcpu_model')
+        self.assertColumnNotExists(engine, 'shadow_instance_extra',
+                                   'vcpu_model')
+
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
                                test.TestCase,

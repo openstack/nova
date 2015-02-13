@@ -71,7 +71,9 @@ def fake_db_instance(**updates):
         'ephemeral_gb': 0,
         'extra': {'pci_requests': None,
                   'flavor': flavorinfo,
-                  'numa_topology': None},
+                  'numa_topology': None,
+                  'vcpu_model': None,
+                 },
         'tags': []
         }
 

@@ -45,7 +45,8 @@ _INSTANCE_OPTIONAL_JOINED_FIELDS = ['metadata', 'system_metadata',
 _INSTANCE_OPTIONAL_NON_COLUMN_FIELDS = ['fault', 'flavor', 'old_flavor',
                                         'new_flavor']
 # These are fields that are optional and in instance_extra
-_INSTANCE_EXTRA_FIELDS = ['numa_topology', 'pci_requests', 'flavor']
+_INSTANCE_EXTRA_FIELDS = ['numa_topology', 'pci_requests',
+                          'flavor', 'vcpu_model']
 
 # These are fields that can be specified as expected_attrs
 INSTANCE_OPTIONAL_ATTRS = (_INSTANCE_OPTIONAL_JOINED_FIELDS +
@@ -151,7 +152,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
     # Version 1.16: Added pci_requests
     # Version 1.17: Added tags
     # Version 1.18: Added flavor, old_flavor, new_flavor
-    VERSION = '1.18'
+    # Version 1.19: Added vcpu_model
+    VERSION = '1.19'
 
     fields = {
         'id': fields.IntegerField(),
@@ -245,6 +247,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         'flavor': fields.ObjectField('Flavor'),
         'old_flavor': fields.ObjectField('Flavor', nullable=True),
         'new_flavor': fields.ObjectField('Flavor', nullable=True),
+        'vcpu_model': fields.ObjectField('VirtCPUModel', nullable=True),
         }
 
     obj_extra_fields = ['name']
@@ -260,6 +263,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         'flavor': [('1.18', '1.1')],
         'old_flavor': [('1.18', '1.1')],
         'new_flavor': [('1.18', '1.1')],
+        'vcpu_model': [('1.19', '1.0')],
     }
 
     def __init__(self, *args, **kwargs):
@@ -503,7 +507,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         if 'pci_requests' in expected_attrs:
             instance._load_pci_requests(
                 db_inst.get('extra').get('pci_requests'))
-
+        if 'vcpu_model' in expected_attrs:
+            instance._load_vcpu_model(db_inst.get('extra').get('vcpu_model'))
         if 'info_cache' in expected_attrs:
             if db_inst['info_cache'] is None:
                 instance.info_cache = None
@@ -610,6 +615,11 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                 'new': new,
             }
             updates['extra']['flavor'] = jsonutils.dumps(flavor_info)
+        vcpu_model = updates.pop('vcpu_model', None)
+        if vcpu_model:
+            expected_attrs.append('vcpu_model')
+            updates['extra']['vcpu_model'] = (
+                jsonutils.dumps(vcpu_model.obj_to_primitive()))
         db_inst = db.instance_create(context, updates)
         self._from_db_object(context, self, db_inst, expected_attrs)
 
@@ -690,6 +700,18 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
     def _save_new_flavor(self, context):
         if 'new_flavor' in self.obj_what_changed():
             self._save_flavor(context)
+
+    def _save_vcpu_model(self, context):
+        # TODO(yjiang5): should merge the db accesses for all the extra
+        # fields
+        if 'vcpu_model' in self.obj_what_changed():
+            if self.vcpu_model:
+                update = jsonutils.dumps(self.vcpu_model.obj_to_primitive())
+            else:
+                update = None
+            db.instance_extra_update_by_uuid(
+                context, self.uuid,
+                {'vcpu_model': update})
 
     def _maybe_upgrade_flavor(self):
         # NOTE(danms): We may have regressed to flavors stored in sysmeta,
@@ -926,6 +948,15 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         instance.system_metadata.update(self.get('system_metadata', {}))
         self.system_metadata = instance.system_metadata
 
+    def _load_vcpu_model(self, db_vcpu_model=None):
+        if db_vcpu_model is None:
+            self.vcpu_model = objects.VirtCPUModel.get_by_instance_uuid(
+                self._context, self.uuid)
+        else:
+            db_vcpu_model = jsonutils.loads(db_vcpu_model)
+            self.vcpu_model = objects.VirtCPUModel.obj_from_primitive(
+                db_vcpu_model)
+
     def obj_load_attr(self, attrname):
         if attrname not in INSTANCE_OPTIONAL_ATTRS:
             raise exception.ObjectActionError(
@@ -960,6 +991,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
             self._load_numa_topology()
         elif attrname == 'pci_requests':
             self._load_pci_requests()
+        elif attrname == 'vcpu_model':
+            self._load_vcpu_model()
         elif 'flavor' in attrname:
             self._load_flavor()
         else:
@@ -1057,7 +1090,8 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
     # Version 1.12: Pass expected_attrs to instance_get_active_by_window_joined
     # Version 1.13: Instance <= version 1.17
     # Version 1.14: Instance <= version 1.18
-    VERSION = '1.14'
+    # Version 1.15: Instance <= version 1.19
+    VERSION = '1.15'
 
     fields = {
         'objects': fields.ListOfObjectsField('Instance'),
@@ -1078,6 +1112,7 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
         '1.12': '1.16',
         '1.13': '1.17',
         '1.14': '1.18',
+        '1.15': '1.19',
         }
 
     @base.remotable_classmethod
