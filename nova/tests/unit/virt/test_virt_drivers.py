@@ -108,6 +108,8 @@ class _FakeDriverBackendTestCase(object):
             'nova.virt.libvirt.firewall.libvirt',
             fakelibvirt))
 
+        fakelibvirt.disable_event_thread(self)
+
         self.flags(rescue_image_id="2",
                    rescue_kernel_id="3",
                    rescue_ramdisk_id=None,

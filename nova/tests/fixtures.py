@@ -253,3 +253,35 @@ class WarningsFixture(fixtures.Fixture):
                                         ' multiple context managers')
 
         self.addCleanup(warnings.resetwarnings)
+
+
+class PoisonFunctions(fixtures.Fixture):
+    """Poison functions so they explode if we touch them.
+
+    When running under a non full stack test harness there are parts
+    of the code that you don't want to go anywhere near. These include
+    things like code that spins up extra threads, which just
+    introduces races.
+
+    """
+
+    def setUp(self):
+        super(PoisonFunctions, self).setUp()
+
+        # The nova libvirt driver starts an event thread which only
+        # causes trouble in tests. Make sure that if tests don't
+        # properly patch it the test explodes.
+
+        # explicit import because MonkeyPatch doesn't magic import
+        # correctly if we are patching a method on a class in a
+        # module.
+        import nova.virt.libvirt.host  # noqa
+
+        def evloop(*args, **kwargs):
+            import sys
+            warnings.warn("Forgot to disable libvirt event thread")
+            sys.exit(1)
+
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.virt.libvirt.host.Host._init_events',
+            evloop))

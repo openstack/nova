@@ -200,6 +200,31 @@ def _parse_disk_info(element):
     return disk_info
 
 
+def disable_event_thread(self):
+    """Disable nova libvirt driver event thread.
+
+    The Nova libvirt driver includes a native thread which monitors
+    the libvirt event channel. In a testing environment this becomes
+    problematic because it means we've got a floating thread calling
+    sleep(1) over the life of the unit test. Seems harmless? It's not,
+    because we sometimes want to test things like retry loops that
+    should have specific sleep paterns. An unlucky firing of the
+    libvirt thread will cause a test failure.
+
+    """
+    # because we are patching a method in a class MonkeyPatch doesn't
+    # auto import correctly. Import explicitly otherwise the patching
+    # may silently fail.
+    import nova.virt.libvirt.host  # noqa
+
+    def evloop(*args, **kwargs):
+        pass
+
+    self.useFixture(fixtures.MonkeyPatch(
+        'nova.virt.libvirt.host.Host._init_events',
+        evloop))
+
+
 class libvirtError(Exception):
     """This class was copied and slightly modified from
     `libvirt-python:libvirt-override.py`.
@@ -1200,3 +1225,4 @@ class FakeLibvirtFixture(fixtures.Fixture):
             # If we can't import libvirt, the tests will use
             # fakelibvirt regardless, so nothing todo here
             pass
+        disable_event_thread(self)
