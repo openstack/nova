@@ -1170,7 +1170,7 @@ class LibvirtConnTestCase(test.TestCase):
         memnodes = [vconfig.LibvirtConfigGuestNUMATuneMemNode()]
         with mock.patch.object(host.Host, 'has_min_version',
                                return_value=True):
-            self.assertIsNotNone(drvr._get_guest_numa_tune_memnodes(
+            self.assertTrue(drvr._get_guest_numa_tune_memnodes(
                               guest_cpu_numa_config, memnodes))
             self.assertEqual(guest_cpu_numa_config.cells[0].id,
                              memnodes[0].cellid)
@@ -1179,7 +1179,7 @@ class LibvirtConnTestCase(test.TestCase):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         with mock.patch.object(host.Host, 'has_min_version',
                                return_value=False):
-            self.assertIsNone(drvr._get_guest_numa_tune_memnodes(
+            self.assertFalse(drvr._get_guest_numa_tune_memnodes(
                               'something', 'something'))
 
     @mock.patch.object(objects.Flavor, 'get_by_id')
@@ -1319,6 +1319,45 @@ class LibvirtConnTestCase(test.TestCase):
             self.assertEqual(set([3]), cfg.cpuset)
             self.assertEqual(0, len(cfg.cputune.vcpupin))
             self.assertIsNone(cfg.cpu.numa)
+
+    @mock.patch.object(objects.Flavor, 'get_by_id')
+    def test_get_guest_config_numa_empty_memnode(self, mock_flavor):
+        instance_topology = objects.InstanceNUMATopology(
+                    cells=[objects.InstanceNUMACell(
+                        id=0, cpuset=set([0]), memory=1024)])
+        instance_ref = objects.Instance(**self.test_instance)
+        instance_ref.numa_topology = instance_topology
+        image_meta = {}
+        flavor = objects.Flavor(memory_mb=1, vcpus=2, root_gb=496,
+                                ephemeral_gb=8128, swap=33550336, name='fake',
+                                extra_specs={})
+        mock_flavor.return_value = flavor
+
+        caps = vconfig.LibvirtConfigCaps()
+        caps.host = vconfig.LibvirtConfigCapsHost()
+        caps.host.cpu = vconfig.LibvirtConfigCPU()
+        caps.host.cpu.arch = "x86_64"
+        caps.host.topology = self._fake_caps_numa_topology()
+
+        def fake_has_min_version(ver):
+            if ver == libvirt_driver.MIN_LIBVIRT_MEMNODE_VERSION:
+                return False
+            return True
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref,
+                                            image_meta)
+
+        with contextlib.nested(
+                mock.patch.object(host.Host, 'has_min_version',
+                                  side_effect=fake_has_min_version),
+                mock.patch.object(host.Host, "get_capabilities",
+                                  return_value=caps),
+                mock.patch.object(
+                        random, 'choice', side_effect=lambda cells: cells[0])):
+            cfg = drvr._get_guest_config(instance_ref, [], {}, disk_info)
+            self.assertFalse(cfg.numatune.memnodes)
 
     @mock.patch.object(objects.Flavor, 'get_by_id')
     def test_get_guest_config_numa_host_instance_fit_w_cpu_pinset(self,
