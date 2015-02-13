@@ -3398,8 +3398,7 @@ class ComputeManager(manager.Manager):
                   diff, instance=instance)
         self.driver.change_instance_metadata(context, instance, diff)
 
-    def _cleanup_stored_instance_types(self, migration, instance,
-                                       restore_old=False):
+    def _cleanup_stored_instance_types(self, instance, restore_old=False):
         """Clean up "old" and "new" instance_type information stored in
         instance's system_metadata. Optionally update the "current"
         instance_type to the saved old one first.
@@ -3490,7 +3489,7 @@ class ComputeManager(manager.Manager):
                                                    quotas=quotas):
             # NOTE(danms): delete stashed migration information
             sys_meta, instance_type, old_instance_type = (
-                self._cleanup_stored_instance_types(migration, instance))
+                self._cleanup_stored_instance_types(instance))
             sys_meta.pop('old_vm_state', None)
 
             instance.system_metadata = sys_meta
@@ -3617,7 +3616,7 @@ class ComputeManager(manager.Manager):
                     context, instance, "resize.revert.start")
 
             sys_meta, instance_type, drop_instance_type = (
-                self._cleanup_stored_instance_types(migration, instance, True))
+                self._cleanup_stored_instance_types(instance, True))
 
             # NOTE(mriedem): delete stashed old_vm_state information; we
             # default to ACTIVE for backwards compatibility if old_vm_state

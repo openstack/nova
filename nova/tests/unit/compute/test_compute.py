@@ -5267,8 +5267,6 @@ class ComputeTestCase(BaseTestCase):
 
     def _test_cleanup_stored_instance_types(self, old, new, revert=False):
         instance = self._create_fake_instance_obj()
-        migration = dict(old_instance_type_id=old,
-                         new_instance_type_id=new)
         instance.system_metadata = dict(instance_type_id=old)
 
         old_flavor = objects.Flavor(**test_flavor.fake_flavor)
@@ -5282,9 +5280,7 @@ class ComputeTestCase(BaseTestCase):
 
         with mock.patch.object(instance, 'save'):
             sysmeta, flavor, drop_flavor = \
-                self.compute._cleanup_stored_instance_types(migration,
-                                                            instance,
-                                                            revert)
+                self.compute._cleanup_stored_instance_types(instance, revert)
 
         self.assertEqual(int(revert and old or new), flavor['id'])
         self.assertEqual(int(revert and new or old), drop_flavor['id'])
