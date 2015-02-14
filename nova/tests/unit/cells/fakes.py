@@ -25,6 +25,7 @@ from nova.cells import utils as cells_utils
 import nova.db
 from nova.db import base
 from nova import exception
+from nova import objects
 
 CONF = cfg.CONF
 CONF.import_opt('name', 'nova.cells.opts', group='cells')
@@ -57,9 +58,6 @@ class FakeDBApi(object):
 
     def cell_get_all(self, ctxt):
         return self.cell_db_entries
-
-    def compute_node_get_all(self, ctxt):
-        return []
 
     def instance_get_all_by_filters(self, ctxt, *args, **kwargs):
         return []
@@ -105,7 +103,19 @@ class CellStubInfo(object):
         def fake_base_init(_self, *args, **kwargs):
             _self.db = FakeDBApi(db_entries)
 
+        @staticmethod
+        def _fake_compute_node_get_all(context):
+            return []
+
+        @staticmethod
+        def _fake_service_get_by_topic(context, topic):
+            return []
+
         test_case.stubs.Set(base.Base, '__init__', fake_base_init)
+        test_case.stubs.Set(objects.ComputeNodeList, 'get_all',
+                            _fake_compute_node_get_all)
+        test_case.stubs.Set(objects.ServiceList, 'get_by_topic',
+                            _fake_service_get_by_topic)
         self.cells_manager = FakeCellsManager()
         # Fix the cell name, as it normally uses CONF.cells.name
         msg_runner = self.cells_manager.msg_runner

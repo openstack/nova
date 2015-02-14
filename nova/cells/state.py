@@ -32,6 +32,7 @@ from nova import context
 from nova.db import base
 from nova import exception
 from nova.i18n import _LE
+from nova import objects
 from nova.openstack.common import fileutils
 from nova.openstack.common import log as logging
 from nova import rpc
@@ -55,6 +56,7 @@ CONF = cfg.CONF
 CONF.import_opt('name', 'nova.cells.opts', group='cells')
 CONF.import_opt('reserve_percent', 'nova.cells.opts', group='cells')
 CONF.import_opt('mute_child_interval', 'nova.cells.opts', group='cells')
+CONF.import_opt('compute_topic', 'nova.compute.rpcapi')
 CONF.register_opts(cell_state_manager_opts, group='cells')
 
 
@@ -261,12 +263,17 @@ class CellStateManager(base.Base):
         compute_hosts = {}
 
         def _get_compute_hosts():
-            compute_nodes = self.db.compute_node_get_all(ctxt)
+            service_refs = {service.host: service
+                            for service in objects.ServiceList.get_by_topic(
+                                ctxt, CONF.compute_topic)}
+
+            compute_nodes = objects.ComputeNodeList.get_all(ctxt)
             for compute in compute_nodes:
-                service = compute['service']
+                host = compute.host
+                service = service_refs.get(host)
                 if not service or service['disabled']:
                     continue
-                host = service['host']
+
                 compute_hosts[host] = {
                         'free_ram_mb': compute['free_ram_mb'],
                         'free_disk_mb': compute['free_disk_gb'] * 1024,
