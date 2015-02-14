@@ -3452,14 +3452,14 @@ class HostAPI(base.Base):
 
     def compute_node_get(self, context, compute_id):
         """Return compute node entry for particular integer ID."""
-        return self.db.compute_node_get(context, int(compute_id))
+        return objects.ComputeNode.get_by_id(context, int(compute_id))
 
     def compute_node_get_all(self, context):
-        return self.db.compute_node_get_all(context)
+        return objects.ComputeNodeList.get_all(context)
 
     def compute_node_search_by_hypervisor(self, context, hypervisor_match):
-        return self.db.compute_node_search_by_hypervisor(context,
-                hypervisor_match)
+        return objects.ComputeNodeList.get_by_hypervisor(context,
+                                                         hypervisor_match)
 
     def compute_node_statistics(self, context):
         return self.db.compute_node_statistics(context)

@@ -13,7 +13,6 @@
 #    under the License.
 
 
-from oslo_serialization import jsonutils
 from webob import exc
 
 from nova.api.openstack.compute.plugins.v3 import pci
@@ -22,18 +21,20 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import objects
+from nova.objects import pci_device_pool
 from nova.pci import device
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit.objects import test_pci_device
 
 
-fake_compute_node = {
-    'pci_stats': [{"count": 3,
-                   "vendor_id": "8086",
-                   "product_id": "1520",
-                   "extra_info": {"phys_function": '[["0x0000", "0x04", '
-                                                   '"0x00", "0x1"]]'}}]}
+pci_stats = [{"count": 3,
+              "vendor_id": "8086",
+              "product_id": "1520",
+              "extra_info": {"phys_function": '[["0x0000", "0x04", '
+                                              '"0x00", "0x1"]]'}}]
+fake_compute_node = objects.ComputeNode(
+    pci_device_pools=pci_device_pool.from_pci_stats(pci_stats))
 
 
 class FakeResponse(wsgi.ResponseObject):
@@ -120,8 +121,6 @@ class PciHypervisorControllerTestV21(test.NoDBTestCase):
 
     def test_show(self):
         def fake_get_db_compute_node(id):
-            fake_compute_node['pci_stats'] = jsonutils.dumps(
-                fake_compute_node['pci_stats'])
             return fake_compute_node
 
         req = fakes.HTTPRequest.blank('/os-hypervisors/1',
@@ -130,15 +129,11 @@ class PciHypervisorControllerTestV21(test.NoDBTestCase):
         self.stubs.Set(req, 'get_db_compute_node', fake_get_db_compute_node)
         self.controller.show(req, resp, '1')
         self.assertIn('os-pci:pci_stats', resp.obj['hypervisor'])
-        fake_compute_node['pci_stats'] = jsonutils.loads(
-            fake_compute_node['pci_stats'])
-        self.assertEqual(fake_compute_node['pci_stats'][0],
+        self.assertEqual(pci_stats[0],
                          resp.obj['hypervisor']['os-pci:pci_stats'][0])
 
     def test_detail(self):
         def fake_get_db_compute_node(id):
-            fake_compute_node['pci_stats'] = jsonutils.dumps(
-                fake_compute_node['pci_stats'])
             return fake_compute_node
 
         req = fakes.HTTPRequest.blank('/os-hypervisors/detail',
@@ -146,10 +141,8 @@ class PciHypervisorControllerTestV21(test.NoDBTestCase):
         resp = FakeResponse(self.fake_objs, '')
         self.stubs.Set(req, 'get_db_compute_node', fake_get_db_compute_node)
         self.controller.detail(req, resp)
-        fake_compute_node['pci_stats'] = jsonutils.loads(
-            fake_compute_node['pci_stats'])
         self.assertIn('os-pci:pci_stats', resp.obj['hypervisors'][0])
-        self.assertEqual(fake_compute_node['pci_stats'][0],
+        self.assertEqual(pci_stats[0],
                          resp.obj['hypervisors'][0]['os-pci:pci_stats'][0])
 
 
@@ -187,17 +180,17 @@ class PciControlletestV21(test.NoDBTestCase):
         self.assertRaises(exc.HTTPNotFound, self.controller.show, req, '0')
 
     def _fake_compute_node_get_all(self, context):
-        return [dict(id=1,
-                     service_id=1,
-                     host='fake',
-                     cpu_info='cpu_info',
-                     disk_available_least=100)]
+        return [objects.ComputeNode(id=1,
+                                    service_id=1,
+                                    host='fake',
+                                    cpu_info='cpu_info',
+                                    disk_available_least=100)]
 
     def _fake_pci_device_get_all_by_node(self, context, node):
         return [test_pci_device.fake_db_dev, test_pci_device.fake_db_dev_1]
 
     def test_index(self):
-        self.stubs.Set(db, 'compute_node_get_all',
+        self.stubs.Set(self.controller.host_api, 'compute_node_get_all',
                        self._fake_compute_node_get_all)
         self.stubs.Set(db, 'pci_device_get_all_by_node',
                        self._fake_pci_device_get_all_by_node)
@@ -217,7 +210,7 @@ class PciControlletestV21(test.NoDBTestCase):
                              result['pci_devices'][i]['address'])
 
     def test_detail(self):
-        self.stubs.Set(db, 'compute_node_get_all',
+        self.stubs.Set(self.controller.host_api, 'compute_node_get_all',
                        self._fake_compute_node_get_all)
         self.stubs.Set(db, 'pci_device_get_all_by_node',
                        self._fake_pci_device_get_all_by_node)

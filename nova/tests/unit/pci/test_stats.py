@@ -14,7 +14,6 @@
 #    under the License.
 
 import mock
-from oslo_serialization import jsonutils
 
 from nova import exception
 from nova import objects
@@ -98,8 +97,8 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
                           self.pci_stats.remove_device,
                           self.fake_dev_2)
 
-    def test_json_creat(self):
-        m = jsonutils.dumps(self.pci_stats)
+    def test_object_create(self):
+        m = objects.pci_device_pool.from_pci_stats(self.pci_stats.pools)
         new_stats = stats.PciDeviceStats(m)
 
         self.assertEqual(len(new_stats.pools), 3)

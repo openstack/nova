@@ -20,19 +20,19 @@ from nova.api.openstack.compute.contrib import hypervisors as hypervisors_v2
 from nova.api.openstack.compute.plugins.v3 import hypervisors \
     as hypervisors_v21
 from nova.api.openstack import extensions
+from nova import objects
 from nova import test
 from nova.tests.unit.api.openstack.compute.contrib import test_hypervisors
 
-TEST_HYPER = dict(test_hypervisors.TEST_HYPERS[0],
-                  service=dict(id=1,
-                      host="compute1",
-                      binary="nova-compute",
-                      topic="compute_topic",
-                      report_count=5,
-                      disabled=False,
-                      disabled_reason=None,
-                      availability_zone="nova"),
-                  )
+TEST_HYPER = test_hypervisors.TEST_HYPERS_OBJ[0].obj_clone()
+TEST_HYPER._cached_service = objects.Service(id=1,
+                                             host="compute1",
+                                             binary="nova-compute",
+                                             topic="compute_topic",
+                                             report_count=5,
+                                             disabled=False,
+                                             disabled_reason=None,
+                                             availability_zone="nova")
 
 
 class HypervisorStatusTestV21(test.NoDBTestCase):
@@ -55,6 +55,9 @@ class HypervisorStatusTestV21(test.NoDBTestCase):
         self.assertEqual('down', result['state'])
 
         hyper = copy.deepcopy(TEST_HYPER)
+        # compute.service is not considered as a ComputeNode field, we need to
+        # copy it manually
+        hyper._cached_service = TEST_HYPER._cached_service.obj_clone()
         hyper['service']['disabled'] = True
         result = self.controller._view_hypervisor(hyper, False)
         self.assertEqual('disabled', result['status'])
@@ -75,6 +78,9 @@ class HypervisorStatusTestV21(test.NoDBTestCase):
         self.assertEqual('down', result['state'])
 
         hyper = copy.deepcopy(TEST_HYPER)
+        # compute.service is not considered as a ComputeNode field, we need to
+        # copy it manually
+        hyper._cached_service = TEST_HYPER._cached_service.obj_clone()
         hyper['service']['disabled'] = True
         hyper['service']['disabled_reason'] = "fake"
         result = self.controller._view_hypervisor(hyper, True)
