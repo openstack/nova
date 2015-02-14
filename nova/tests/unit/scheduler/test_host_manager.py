@@ -17,20 +17,24 @@ Tests For HostManager
 """
 
 import mock
+from oslo_config import cfg
 from oslo_serialization import jsonutils
 import six
 
 from nova.compute import task_states
 from nova.compute import vm_states
-from nova import db
 from nova import exception
 from nova import objects
+from nova.objects import base as obj_base
 from nova.scheduler import filters
 from nova.scheduler import host_manager
 from nova import test
 from nova.tests.unit import matchers
 from nova.tests.unit.scheduler import fakes
 from nova import utils
+
+CONF = cfg.CONF
+CONF.import_opt('compute_topic', 'nova.compute.rpcapi')
 
 
 class FakeFilterClass1(filters.BaseHostFilter):
@@ -273,10 +277,11 @@ class HostManagerTestCase(test.NoDBTestCase):
 
         context = 'fake_context'
 
-        self.mox.StubOutWithMock(db, 'compute_node_get_all')
+        self.mox.StubOutWithMock(objects.ServiceList, 'get_by_topic')
+        self.mox.StubOutWithMock(objects.ComputeNodeList, 'get_all')
         self.mox.StubOutWithMock(host_manager.LOG, 'warning')
 
-        db.compute_node_get_all(context).AndReturn(fakes.COMPUTE_NODES)
+        objects.ComputeNodeList.get_all(context).AndReturn(fakes.COMPUTE_NODES)
         # node 3 host physical disk space is greater than database
         host_manager.LOG.warning("Host %(hostname)s has more disk space "
                                  "than database expected (%(physical)sgb >"
@@ -284,7 +289,9 @@ class HostManagerTestCase(test.NoDBTestCase):
                                  {'physical': 3333, 'database': 3072,
                                   'hostname': 'node3'})
         # Invalid service
-        host_manager.LOG.warning("No service for compute ID %s", 5)
+        host_manager.LOG.warning("No service record found for host %(host)s "
+                                 "on %(topic)s topic",
+                                 {'host': 'fake', 'topic': CONF.compute_topic})
 
         self.mox.ReplayAll()
         self.host_manager.get_all_host_states(context)
@@ -294,11 +301,11 @@ class HostManagerTestCase(test.NoDBTestCase):
         # Check that .service is set properly
         for i in xrange(4):
             compute_node = fakes.COMPUTE_NODES[i]
-            host = compute_node['service']['host']
+            host = compute_node['host']
             node = compute_node['hypervisor_hostname']
             state_key = (host, node)
             self.assertEqual(host_states_map[state_key].service,
-                    compute_node['service'])
+                    obj_base.obj_to_primitive(compute_node['service']))
         self.assertEqual(host_states_map[('host1', 'node1')].free_ram_mb,
                          512)
         # 511GB
@@ -342,8 +349,9 @@ class HostManagerChangedNodesTestCase(test.NoDBTestCase):
     def test_get_all_host_states(self):
         context = 'fake_context'
 
-        self.mox.StubOutWithMock(db, 'compute_node_get_all')
-        db.compute_node_get_all(context).AndReturn(fakes.COMPUTE_NODES)
+        self.mox.StubOutWithMock(objects.ServiceList, 'get_by_topic')
+        self.mox.StubOutWithMock(objects.ComputeNodeList, 'get_all')
+        objects.ComputeNodeList.get_all(context).AndReturn(fakes.COMPUTE_NODES)
         self.mox.ReplayAll()
 
         self.host_manager.get_all_host_states(context)
@@ -353,13 +361,14 @@ class HostManagerChangedNodesTestCase(test.NoDBTestCase):
     def test_get_all_host_states_after_delete_one(self):
         context = 'fake_context'
 
-        self.mox.StubOutWithMock(db, 'compute_node_get_all')
+        self.mox.StubOutWithMock(objects.ServiceList, 'get_by_topic')
+        self.mox.StubOutWithMock(objects.ComputeNodeList, 'get_all')
         # all nodes active for first call
-        db.compute_node_get_all(context).AndReturn(fakes.COMPUTE_NODES)
+        objects.ComputeNodeList.get_all(context).AndReturn(fakes.COMPUTE_NODES)
         # remove node4 for second call
         running_nodes = [n for n in fakes.COMPUTE_NODES
                          if n.get('hypervisor_hostname') != 'node4']
-        db.compute_node_get_all(context).AndReturn(running_nodes)
+        objects.ComputeNodeList.get_all(context).AndReturn(running_nodes)
         self.mox.ReplayAll()
 
         self.host_manager.get_all_host_states(context)
@@ -370,11 +379,12 @@ class HostManagerChangedNodesTestCase(test.NoDBTestCase):
     def test_get_all_host_states_after_delete_all(self):
         context = 'fake_context'
 
-        self.mox.StubOutWithMock(db, 'compute_node_get_all')
+        self.mox.StubOutWithMock(objects.ServiceList, 'get_by_topic')
+        self.mox.StubOutWithMock(objects.ComputeNodeList, 'get_all')
         # all nodes active for first call
-        db.compute_node_get_all(context).AndReturn(fakes.COMPUTE_NODES)
+        objects.ComputeNodeList.get_all(context).AndReturn(fakes.COMPUTE_NODES)
         # remove all nodes for second call
-        db.compute_node_get_all(context).AndReturn([])
+        objects.ComputeNodeList.get_all(context).AndReturn([])
         self.mox.ReplayAll()
 
         self.host_manager.get_all_host_states(context)
@@ -402,16 +412,18 @@ class HostStateTestCase(test.NoDBTestCase):
             'num_os_type_windoze': '1',
             'io_workload': '42',
         }
-        stats = jsonutils.dumps(stats)
 
         hyper_ver_int = utils.convert_version_to_int('6.0.0')
-        compute = dict(stats=stats, memory_mb=1, free_disk_gb=0, local_gb=0,
-                       local_gb_used=0, free_ram_mb=0, vcpus=0, vcpus_used=0,
-                       updated_at=None, host_ip='127.0.0.1',
-                       hypervisor_type='htype',
-                       hypervisor_hostname='hostname', cpu_info='cpu_info',
-                       supported_instances='{}',
-                       hypervisor_version=hyper_ver_int, numa_topology=None)
+        compute = objects.ComputeNode(
+            stats=stats, memory_mb=1, free_disk_gb=0, local_gb=0,
+            local_gb_used=0, free_ram_mb=0, vcpus=0, vcpus_used=0,
+            disk_available_least=None,
+            updated_at=None, host_ip='127.0.0.1',
+            hypervisor_type='htype',
+            hypervisor_hostname='hostname', cpu_info='cpu_info',
+            supported_hv_specs=[],
+            hypervisor_version=hyper_ver_int, numa_topology=None,
+            pci_device_pools=None, metrics=None)
 
         host = host_manager.HostState("fakehost", "fakenode")
         host.update_from_compute_node(compute)
@@ -420,11 +432,11 @@ class HostStateTestCase(test.NoDBTestCase):
         self.assertEqual(42, host.num_io_ops)
         self.assertEqual(10, len(host.stats))
 
-        self.assertEqual('127.0.0.1', host.host_ip)
+        self.assertEqual('127.0.0.1', str(host.host_ip))
         self.assertEqual('htype', host.hypervisor_type)
         self.assertEqual('hostname', host.hypervisor_hostname)
         self.assertEqual('cpu_info', host.cpu_info)
-        self.assertEqual({}, host.supported_instances)
+        self.assertEqual([], host.supported_instances)
         self.assertEqual(hyper_ver_int, host.hypervisor_version)
 
     def test_stat_consumption_from_compute_node_non_pci(self):
@@ -440,13 +452,18 @@ class HostStateTestCase(test.NoDBTestCase):
             'num_os_type_windoze': '1',
             'io_workload': '42',
         }
-        stats = jsonutils.dumps(stats)
 
         hyper_ver_int = utils.convert_version_to_int('6.0.0')
-        compute = dict(stats=stats, memory_mb=0, free_disk_gb=0, local_gb=0,
-                       local_gb_used=0, free_ram_mb=0, vcpus=0, vcpus_used=0,
-                       updated_at=None, host_ip='127.0.0.1',
-                       hypervisor_version=hyper_ver_int, numa_topology=None)
+        compute = objects.ComputeNode(
+            stats=stats, memory_mb=0, free_disk_gb=0, local_gb=0,
+            local_gb_used=0, free_ram_mb=0, vcpus=0, vcpus_used=0,
+            disk_available_least=None,
+            updated_at=None, host_ip='127.0.0.1',
+            hypervisor_type='htype',
+            hypervisor_hostname='hostname', cpu_info='cpu_info',
+            supported_hv_specs=[],
+            hypervisor_version=hyper_ver_int, numa_topology=None,
+            pci_device_pools=None, metrics=None)
 
         host = host_manager.HostState("fakehost", "fakenode")
         host.update_from_compute_node(compute)
@@ -466,13 +483,18 @@ class HostStateTestCase(test.NoDBTestCase):
             'num_os_type_windoze': '1',
             'io_workload': '42',
         }
-        stats = jsonutils.dumps(stats)
 
         hyper_ver_int = utils.convert_version_to_int('6.0.0')
-        compute = dict(stats=stats, memory_mb=0, free_disk_gb=0, local_gb=0,
-                       local_gb_used=0, free_ram_mb=0, vcpus=0, vcpus_used=0,
-                       updated_at=None, host_ip='127.0.0.1',
-                       hypervisor_version=hyper_ver_int, numa_topology=None)
+        compute = objects.ComputeNode(
+            stats=stats, memory_mb=0, free_disk_gb=0, local_gb=0,
+            local_gb_used=0, free_ram_mb=0, vcpus=0, vcpus_used=0,
+            disk_available_least=None,
+            updated_at=None, host_ip='127.0.0.1',
+            hypervisor_type='htype',
+            hypervisor_hostname='hostname', cpu_info='cpu_info',
+            supported_hv_specs=[],
+            hypervisor_version=hyper_ver_int, numa_topology=None,
+            pci_device_pools=None, metrics=None)
 
         host = host_manager.HostState("fakehost", "fakenode")
         host.update_from_compute_node(compute)
@@ -522,12 +544,18 @@ class HostStateTestCase(test.NoDBTestCase):
                  timestamp=None),
         ]
         hyper_ver_int = utils.convert_version_to_int('6.0.0')
-        compute = dict(metrics=jsonutils.dumps(metrics),
-                       memory_mb=0, free_disk_gb=0, local_gb=0,
-                       local_gb_used=0, free_ram_mb=0, vcpus=0, vcpus_used=0,
-                       updated_at=None, host_ip='127.0.0.1',
-                       hypervisor_version=hyper_ver_int,
-                       numa_topology=fakes.NUMA_TOPOLOGY._to_json())
+        compute = objects.ComputeNode(
+            metrics=jsonutils.dumps(metrics),
+            memory_mb=0, free_disk_gb=0, local_gb=0,
+            local_gb_used=0, free_ram_mb=0, vcpus=0, vcpus_used=0,
+            disk_available_least=None,
+            updated_at=None, host_ip='127.0.0.1',
+            hypervisor_type='htype',
+            hypervisor_hostname='hostname', cpu_info='cpu_info',
+            supported_hv_specs=[],
+            hypervisor_version=hyper_ver_int,
+            numa_topology=fakes.NUMA_TOPOLOGY._to_json(),
+            stats=None, pci_device_pools=None)
         host = host_manager.HostState("fakehost", "fakenode")
         host.update_from_compute_node(compute)
 

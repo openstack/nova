@@ -16,6 +16,7 @@ from oslo_serialization import jsonutils
 from oslo_utils import timeutils
 import requests
 
+from nova import objects
 from nova.scheduler.filters import trusted_filter
 from nova import test
 from nova.tests.unit.scheduler import fakes
@@ -96,11 +97,9 @@ class TestTrustedFilter(test.NoDBTestCase):
         # TrustedFilter's constructor creates the attestation cache, which
         # calls to get a list of all the compute nodes.
         fake_compute_nodes = [
-            {'hypervisor_hostname': 'node1',
-             'service': {'host': 'host1'},
-            }
+            objects.ComputeNode(hypervisor_hostname='node1'),
         ]
-        with mock.patch('nova.db.compute_node_get_all') as mocked:
+        with mock.patch('nova.objects.ComputeNodeList.get_all') as mocked:
             mocked.return_value = fake_compute_nodes
             self.filt_cls = trusted_filter.TrustedFilter()
 
@@ -220,14 +219,10 @@ class TestTrustedFilter(test.NoDBTestCase):
 
     def test_trusted_filter_combine_hosts(self, req_mock):
         fake_compute_nodes = [
-            {'hypervisor_hostname': 'node1',
-             'service': {'host': 'host1'},
-            },
-            {'hypervisor_hostname': 'node2',
-             'service': {'host': 'host2'},
-            },
+            objects.ComputeNode(hypervisor_hostname='node1'),
+            objects.ComputeNode(hypervisor_hostname='node2')
         ]
-        with mock.patch('nova.db.compute_node_get_all') as mocked:
+        with mock.patch('nova.objects.ComputeNodeList.get_all') as mocked:
             mocked.return_value = fake_compute_nodes
             self.filt_cls = trusted_filter.TrustedFilter()
         oat_data = {"hosts": [{"host_name": "node1",

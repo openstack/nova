@@ -49,7 +49,7 @@ from oslo_utils import timeutils
 import requests
 
 from nova import context
-from nova import db
+from nova import objects
 from nova.openstack.common import log as logging
 from nova.scheduler import filters
 
@@ -172,9 +172,9 @@ class ComputeAttestationCache(object):
         # Fetch compute node list to initialize the compute_nodes,
         # so that we don't need poll OAT service one by one for each
         # host in the first round that scheduler invokes us.
-        computes = db.compute_node_get_all(admin)
+        computes = objects.ComputeNodeList.get_all(admin)
         for compute in computes:
-            host = compute['hypervisor_hostname']
+            host = compute.hypervisor_hostname
             self._init_cache_entry(host)
 
     def _cache_valid(self, host):

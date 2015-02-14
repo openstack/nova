@@ -21,8 +21,8 @@ This host manager will consume all cpu's, disk space, and
 ram from a host / node as it is supporting Baremetal hosts, which can not be
 subdivided into multiple instances.
 """
+import iso8601
 from oslo_config import cfg
-from oslo_serialization import jsonutils
 from oslo_utils import timeutils
 
 from nova.openstack.common import log as logging
@@ -62,26 +62,27 @@ class IronicNodeState(host_manager.HostState):
     """
 
     def update_from_compute_node(self, compute):
-        """Update information about a host from its compute_node info."""
-        self.vcpus_total = compute['vcpus']
-        self.vcpus_used = compute['vcpus_used']
+        """Update information about a host from a ComputeNode object."""
+        self.vcpus_total = compute.vcpus
+        self.vcpus_used = compute.vcpus_used
 
-        self.free_ram_mb = compute['free_ram_mb']
-        self.total_usable_ram_mb = compute['memory_mb']
-        self.free_disk_mb = compute['free_disk_gb'] * 1024
+        self.free_ram_mb = compute.free_ram_mb
+        self.total_usable_ram_mb = compute.memory_mb
+        self.free_disk_mb = compute.free_disk_gb * 1024
 
-        stats = compute.get('stats', '{}')
-        self.stats = jsonutils.loads(stats)
+        self.stats = compute.stats or {}
 
-        self.total_usable_disk_gb = compute['local_gb']
-        self.hypervisor_type = compute.get('hypervisor_type')
-        self.hypervisor_version = compute.get('hypervisor_version')
-        self.hypervisor_hostname = compute.get('hypervisor_hostname')
-        self.cpu_info = compute.get('cpu_info')
-        if compute.get('supported_instances'):
-            self.supported_instances = jsonutils.loads(
-                    compute.get('supported_instances'))
-        self.updated = compute['updated_at']
+        self.total_usable_disk_gb = compute.local_gb
+        self.hypervisor_type = compute.hypervisor_type
+        self.hypervisor_version = compute.hypervisor_version
+        self.hypervisor_hostname = compute.hypervisor_hostname
+        self.cpu_info = compute.cpu_info
+        if compute.supported_hv_specs:
+            self.supported_instances = [spec.to_list() for spec
+                                        in compute.supported_hv_specs]
+        else:
+            self.supported_instances = []
+        self.updated = compute.updated_at
 
     def consume_from_instance(self, instance):
         """Consume nodes entire resources regardless of instance request."""
@@ -89,7 +90,9 @@ class IronicNodeState(host_manager.HostState):
         self.free_disk_mb = 0
         self.vcpus_used = self.vcpus_total
 
-        self.updated = timeutils.utcnow()
+        now = timeutils.utcnow()
+        # NOTE(sbauza): Objects are UTC tz-aware by default
+        self.updated = now.replace(tzinfo=iso8601.iso8601.Utc())
 
 
 class IronicHostManager(host_manager.HostManager):

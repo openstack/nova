@@ -36,7 +36,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
     driver_cls = filter_scheduler.FilterScheduler
 
-    @mock.patch('nova.db.compute_node_get_all',
+    @mock.patch('nova.objects.ComputeNodeList.get_all',
                 return_value=fakes.COMPUTE_NODES)
     @mock.patch('nova.db.instance_extra_get_by_instance_uuid',
                 return_value={'numa_topology': None,
@@ -111,7 +111,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
         self.assertEqual({'vcpus': 5}, host_state.limits)
 
-    @mock.patch('nova.db.compute_node_get_all',
+    @mock.patch('nova.objects.ComputeNodeList.get_all',
                 return_value=fakes.COMPUTE_NODES)
     @mock.patch('nova.db.instance_extra_get_by_instance_uuid',
                 return_value={'numa_topology': None,
@@ -141,7 +141,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         # one host should be chosen
         self.assertEqual(len(hosts), 1)
 
-    @mock.patch('nova.db.compute_node_get_all',
+    @mock.patch('nova.objects.ComputeNodeList.get_all',
                 return_value=fakes.COMPUTE_NODES)
     @mock.patch('nova.db.instance_extra_get_by_instance_uuid',
                 return_value={'numa_topology': None,
@@ -172,7 +172,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         # one host should be chose
         self.assertEqual(len(hosts), 1)
 
-    @mock.patch('nova.db.compute_node_get_all',
+    @mock.patch('nova.objects.ComputeNodeList.get_all',
                 return_value=fakes.COMPUTE_NODES)
     @mock.patch('nova.db.instance_extra_get_by_instance_uuid',
                 return_value={'numa_topology': None,
@@ -218,7 +218,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
         self.assertEqual(50, hosts[0].weight)
 
-    @mock.patch('nova.db.compute_node_get_all',
+    @mock.patch('nova.objects.ComputeNodeList.get_all',
                 return_value=fakes.COMPUTE_NODES)
     @mock.patch('nova.db.instance_extra_get_by_instance_uuid',
                 return_value={'numa_topology': None,
