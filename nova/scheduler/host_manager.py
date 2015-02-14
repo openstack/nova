@@ -416,11 +416,15 @@ class HostManager(object):
         in HostState are pre-populated and adjusted based on data in the db.
         """
 
+        service_refs = {service.host: service
+                        for service in objects.ServiceList.get_by_topic(
+                            context, CONF.compute_topic)}
         # Get resource usage across the available compute nodes:
         compute_nodes = objects.ComputeNodeList.get_all(context)
         seen_nodes = set()
         for compute in compute_nodes:
-            service = compute.service
+            service = service_refs.get(compute.host)
+
             if not service:
                 LOG.warning(_LW(
                     "No service record found for host %(host)s "
