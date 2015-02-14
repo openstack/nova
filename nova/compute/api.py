@@ -592,11 +592,6 @@ class API(base.Base):
         if not availability_zone:
             availability_zone = CONF.default_schedule_zone
 
-        if forced_host:
-            check_policy(context, 'create:forced_host', {})
-        if forced_node:
-            check_policy(context, 'create:forced_host', {})
-
         return availability_zone, forced_host, forced_node
 
     def _ensure_auto_disk_config_is_valid(self, auto_disk_config_img,
@@ -1093,6 +1088,9 @@ class API(base.Base):
         availability_zone, forced_host, forced_node = handle_az(context,
                                                             availability_zone)
 
+        if not self.skip_policy_check and (forced_host or forced_node):
+            check_policy(context, 'create:forced_host', {})
+
         base_options, max_net_count = self._validate_and_build_base_options(
                 context,
                 instance_type, boot_meta, image_href, image_id, kernel_id,
@@ -1415,11 +1413,11 @@ class API(base.Base):
         if not self.skip_policy_check:
             check_policy(context, 'create', target)
 
-        if requested_networks and len(requested_networks):
-            check_policy(context, 'create:attach_network', target)
+            if requested_networks and len(requested_networks):
+                check_policy(context, 'create:attach_network', target)
 
-        if block_device_mapping:
-            check_policy(context, 'create:attach_volume', target)
+            if block_device_mapping:
+                check_policy(context, 'create:attach_volume', target)
 
     def _check_multiple_instances_neutron_ports(self, requested_networks):
         """Check whether multiple instances are created from port id(s)."""
