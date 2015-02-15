@@ -335,9 +335,10 @@ class ServerSecurityGroupController(SecurityGroupControllerBase):
         self.security_group_api.ensure_default(context)
 
         try:
-            instance = self.compute_api.get(context, server_id)
+            instance = self.compute_api.get(context, server_id,
+                                            want_objects=True)
             groups = self.security_group_api.get_instance_security_groups(
-                context, instance['uuid'], True)
+                context, instance.uuid, True)
         except (exception.SecurityGroupNotFound,
                 exception.InstanceNotFound) as exp:
             msg = exp.format_message()

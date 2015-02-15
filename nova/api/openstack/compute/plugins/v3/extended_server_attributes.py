@@ -25,7 +25,7 @@ authorize = extensions.soft_extension_authorizer('compute', 'v3:' + ALIAS)
 class ExtendedServerAttributesController(wsgi.Controller):
     def _extend_server(self, context, server, instance):
         key = "OS-EXT-SRV-ATTR:hypervisor_hostname"
-        server[key] = instance['node']
+        server[key] = instance.node
 
         for attr in ['host', 'name']:
             if attr == 'name':

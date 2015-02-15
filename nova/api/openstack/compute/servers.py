@@ -1062,7 +1062,7 @@ class Controller(wsgi.Controller):
         try:
             if self.compute_api.is_volume_backed_instance(context, instance,
                                                           bdms):
-                img = instance['image_ref']
+                img = instance.image_ref
                 if not img:
                     properties = bdms.root_metadata(
                             context, self.compute_api.image_api,

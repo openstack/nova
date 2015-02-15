@@ -215,7 +215,7 @@ class MetadataRequestHandler(wsgi.Application):
         if meta_data is None:
             LOG.error(_LE('Failed to get metadata for instance id: %s'),
                       instance_id)
-        elif meta_data.instance['project_id'] != tenant_id:
+        elif meta_data.instance.project_id != tenant_id:
             LOG.warning(_LW("Tenant_id %(tenant_id)s does not match tenant_id "
                             "of instance %(instance_id)s."),
                         {'tenant_id': tenant_id, 'instance_id': instance_id})

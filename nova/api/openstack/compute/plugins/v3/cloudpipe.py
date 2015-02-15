@@ -59,10 +59,11 @@ class CloudpipeController(wsgi.Controller):
     def _get_all_cloudpipes(self, context):
         """Get all cloudpipes."""
         instances = self.compute_api.get_all(context,
-                                             search_opts={'deleted': False})
+                                             search_opts={'deleted': False},
+                                             want_objects=True)
         return [instance for instance in instances
-                if pipelib.is_vpn_image(instance['image_ref'])
-                and instance['vm_state'] != vm_states.DELETED]
+                if pipelib.is_vpn_image(instance.image_ref)
+                and instance.vm_state != vm_states.DELETED]
 
     def _get_cloudpipe_for_project(self, context):
         """Get the cloudpipe instance for a project from context."""
@@ -75,8 +76,8 @@ class CloudpipeController(wsgi.Controller):
         if not instance:
             rv['state'] = 'pending'
             return rv
-        rv['instance_id'] = instance['uuid']
-        rv['created_at'] = timeutils.isotime(instance['created_at'])
+        rv['instance_id'] = instance.uuid
+        rv['created_at'] = timeutils.isotime(instance.created_at)
         nw_info = compute_utils.get_nw_info_for_instance(instance)
         if not nw_info:
             return rv
@@ -133,7 +134,7 @@ class CloudpipeController(wsgi.Controller):
                 msg = _("Unable to claim IP for VPN instances, ensure it "
                         "isn't running, and try again in a few minutes")
                 raise exc.HTTPBadRequest(explanation=msg)
-        return {'instance_id': instance['uuid']}
+        return {'instance_id': instance.uuid}
 
     @extensions.expected_errors((400, 403, 404))
     def index(self, req):

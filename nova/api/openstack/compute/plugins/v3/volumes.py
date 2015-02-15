@@ -241,7 +241,7 @@ class VolumeAttachmentController(wsgi.Controller):
                                        want_objects=True)
 
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
-                context, instance['uuid'])
+                context, instance.uuid)
 
         if not bdms:
             msg = _("Instance %s is not attached.") % server_id
@@ -260,7 +260,7 @@ class VolumeAttachmentController(wsgi.Controller):
 
         return {'volumeAttachment': _translate_attachment_detail_view(
             volume_id,
-            instance['uuid'],
+            instance.uuid,
             assigned_mountpoint)}
 
     @extensions.expected_errors((400, 404, 409))
@@ -376,7 +376,7 @@ class VolumeAttachmentController(wsgi.Controller):
             raise exc.HTTPNotFound(explanation=e.format_message())
 
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
-                context, instance['uuid'])
+                context, instance.uuid)
         if not bdms:
             msg = _("Instance %s is not attached.") % server_id
             raise exc.HTTPNotFound(explanation=msg)
@@ -419,7 +419,7 @@ class VolumeAttachmentController(wsgi.Controller):
                                        want_objects=True)
 
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
-                context, instance['uuid'])
+                context, instance.uuid)
         limited_list = common.limited(bdms, req)
         results = []
 

@@ -243,9 +243,10 @@ class VolumeAttachmentController(wsgi.Controller):
         authorize_attach(context, action='show')
 
         volume_id = id
-        instance = common.get_instance(self.compute_api, context, server_id)
+        instance = common.get_instance(self.compute_api, context, server_id,
+                                       want_objects=True)
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
-                context, instance['uuid'])
+                context, instance.uuid)
 
         if not bdms:
             msg = _("Instance %s is not attached.") % server_id
@@ -264,7 +265,7 @@ class VolumeAttachmentController(wsgi.Controller):
 
         return {'volumeAttachment': _translate_attachment_detail_view(
             volume_id,
-            instance['uuid'],
+            instance.uuid,
             assigned_mountpoint)}
 
     def _validate_volume_id(self, volume_id):
@@ -398,7 +399,7 @@ class VolumeAttachmentController(wsgi.Controller):
         volume = self.volume_api.get(context, volume_id)
 
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
-                context, instance['uuid'])
+                context, instance.uuid)
         if not bdms:
             msg = _("Instance %s is not attached.") % server_id
             raise exc.HTTPNotFound(explanation=msg)
@@ -436,10 +437,11 @@ class VolumeAttachmentController(wsgi.Controller):
         context = req.environ['nova.context']
         authorize(context)
 
-        instance = common.get_instance(self.compute_api, context, server_id)
+        instance = common.get_instance(self.compute_api, context, server_id,
+                                       want_objects=True)
 
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
-                context, instance['uuid'])
+                context, instance.uuid)
         limited_list = common.limited(bdms, req)
         results = []
 
