@@ -4441,9 +4441,9 @@ class ComputeManager(manager.Manager):
             console = self.driver.get_vnc_console(context, instance)
             connect_info = console.get_connection_info(token, access_url)
         except exception.InstanceNotFound:
-            if instance['vm_state'] != vm_states.BUILDING:
+            if instance.vm_state != vm_states.BUILDING:
                 raise
-            raise exception.InstanceNotReady(instance_id=instance['uuid'])
+            raise exception.InstanceNotReady(instance_id=instance.uuid)
 
         return connect_info
 
@@ -4478,9 +4478,9 @@ class ComputeManager(manager.Manager):
             console = self.driver.get_spice_console(context, instance)
             connect_info = console.get_connection_info(token, access_url)
         except exception.InstanceNotFound:
-            if instance['vm_state'] != vm_states.BUILDING:
+            if instance.vm_state != vm_states.BUILDING:
                 raise
-            raise exception.InstanceNotReady(instance_id=instance['uuid'])
+            raise exception.InstanceNotReady(instance_id=instance.uuid)
 
         return connect_info
 
@@ -4513,9 +4513,9 @@ class ComputeManager(manager.Manager):
             console = self.driver.get_rdp_console(context, instance)
             connect_info = console.get_connection_info(token, access_url)
         except exception.InstanceNotFound:
-            if instance['vm_state'] != vm_states.BUILDING:
+            if instance.vm_state != vm_states.BUILDING:
                 raise
-            raise exception.InstanceNotReady(instance_id=instance['uuid'])
+            raise exception.InstanceNotReady(instance_id=instance.uuid)
 
         return connect_info
 
@@ -4551,7 +4551,7 @@ class ComputeManager(manager.Manager):
         except exception.InstanceNotFound:
             if instance.vm_state != vm_states.BUILDING:
                 raise
-            raise exception.InstanceNotReady(instance_id=instance['uuid'])
+            raise exception.InstanceNotReady(instance_id=instance.uuid)
 
         return connect_info
 
