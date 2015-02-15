@@ -3377,6 +3377,28 @@ class ComputeTestCase(BaseTestCase):
 
         self.compute.terminate_instance(self.context, instance, [], [])
 
+    def test_get_spice_console_not_implemented(self):
+        self.stubs.Set(self.compute.driver, 'get_spice_console',
+                       fake_not_implemented)
+        self.flags(vnc_enabled=False)
+        self.flags(enabled=True, group='spice')
+
+        instance = self._create_fake_instance_obj()
+        self.compute.run_instance(self.context,
+            instance, {}, {}, [], None,
+            None, True, None, False)
+
+        self.assertRaises(messaging.ExpectedException,
+                          self.compute.get_spice_console,
+                          self.context, 'spice-html5', instance=instance)
+
+        self.compute = utils.ExceptionHelper(self.compute)
+
+        self.assertRaises(NotImplementedError,
+                          self.compute.get_spice_console,
+                          self.context, 'spice-html5', instance=instance)
+        self.compute.terminate_instance(self.context, instance, [], [])
+
     def test_missing_spice_console_type(self):
         # Raise useful error is console type is None
         self.flags(vnc_enabled=False)
