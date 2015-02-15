@@ -201,3 +201,35 @@ class RescueTestV20(RescueTestV21):
         # NOTE(cyeoh): Original v2.0 code does not support disabling
         # the admin password being returned through a conf setting
         pass
+
+
+class RescuePolicyEnforcementV21(test.NoDBTestCase):
+
+    def setUp(self):
+        super(RescuePolicyEnforcementV21, self).setUp()
+        self.controller = rescue_v21.RescueController()
+        self.req = fakes.HTTPRequest.blank('')
+
+    def test_rescue_policy_failed(self):
+        rule_name = "compute_extension:v3:os-rescue"
+        self.policy.set_rules({rule_name: "project:non_fake"})
+        body = {"rescue": {"adminPass": "AABBCC112233"}}
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.controller._rescue, self.req, fakes.FAKE_UUID,
+            body=body)
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+            exc.format_message())
+
+    def test_unrescue_policy_failed(self):
+        rule_name = "compute_extension:v3:os-rescue"
+        self.policy.set_rules({rule_name: "project:non_fake"})
+        body = dict(unrescue=None)
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.controller._unrescue, self.req, fakes.FAKE_UUID,
+            body=body)
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+            exc.format_message())
