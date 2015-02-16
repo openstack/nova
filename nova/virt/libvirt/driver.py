@@ -3869,6 +3869,44 @@ class LibvirtDriver(driver.ComputeDriver):
             consolepty = vconfig.LibvirtConfigGuestConsole()
         return consolepty
 
+    def _cpu_config_to_vcpu_model(self, cpu_config, vcpu_model):
+        """Update VirtCPUModel object according to libvirt CPU config.
+
+        :param:cpu_config: vconfig.LibvirtConfigGuestCPU presenting the
+                           instance's virtual cpu configuration.
+        :param:vcpu_model: VirtCPUModel object. A new object will be created
+                           if None.
+
+        :return: Updated VirtCPUModel object, or None if cpu_config is None
+
+        """
+
+        if not cpu_config:
+            return
+        if not vcpu_model:
+            vcpu_model = objects.VirtCPUModel()
+
+        vcpu_model.arch = cpu_config.arch
+        vcpu_model.vendor = cpu_config.vendor
+        vcpu_model.model = cpu_config.model
+        vcpu_model.mode = cpu_config.mode
+        vcpu_model.match = cpu_config.match
+
+        if cpu_config.sockets:
+            vcpu_model.topology = objects.VirtCPUTopology(
+                sockets=cpu_config.sockets,
+                cores=cpu_config.cores,
+                threads=cpu_config.threads)
+        else:
+            vcpu_model.topology = None
+
+        features = [objects.VirtCPUFeature(
+            name=f.name,
+            policy=f.policy) for f in cpu_config.features]
+        vcpu_model.features = features
+
+        return vcpu_model
+
     def _get_guest_config(self, instance, network_info, image_meta,
                           disk_info, rescue=None, block_device_info=None,
                           context=None, flavor=None):
@@ -3915,6 +3953,11 @@ class LibvirtDriver(driver.ComputeDriver):
         guest.cpu = self._get_guest_cpu_config(
             flavor, image_meta, guest_numa_config.numaconfig,
             instance.numa_topology)
+
+        # Notes(yjiang5): we always sync the instance's vcpu model with
+        # the corresponding config file.
+        instance.vcpu_model = self._cpu_config_to_vcpu_model(
+            guest.cpu, instance.vcpu_model)
 
         if 'root' in disk_mapping:
             root_device_name = block_device.prepend_dev(
