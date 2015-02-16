@@ -899,7 +899,7 @@ class FloatingIpsJsonTest(ApiSampleTestBaseV2):
         # but it would be better if we could get this from the create
         response = self._do_get('os-floating-ips/%d' % 1)
         subs = self._get_regexes()
-        self._verify_response('floating-ips-create-resp', subs, response, 200)
+        self._verify_response('floating-ips-get-resp', subs, response, 200)
 
     def test_floating_ips_delete(self):
         self.test_floating_ips_create()
