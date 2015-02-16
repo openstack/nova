@@ -35,6 +35,12 @@ LOG = logging.getLogger(__name__)
 
 
 class NovaProxyRequestHandlerBase(object):
+    def address_string(self):
+        # NOTE(rpodolyaka): override the superclass implementation here and
+        # explicitly disable the reverse DNS lookup, which might fail on some
+        # deployments due to DNS configuration and break VNC access completely
+        return str(self.client_address[0])
+
     def new_websocket_client(self):
         """Called after a new WebSocket connection has been established."""
         # Reopen the eventlet hub to make sure we don't share an epoll
