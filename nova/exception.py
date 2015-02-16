@@ -636,6 +636,10 @@ class NetworkInUse(NovaException):
     msg_fmt = _("Network %(network_id)s is still in use.")
 
 
+class NetworkSetHostFailed(NovaException):
+    msg_fmt = _("Network set host failed for network %(network_id)s.")
+
+
 class NetworkNotCreated(Invalid):
     msg_fmt = _("%(req)s is required to create a network.")
 

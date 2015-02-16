@@ -5629,22 +5629,68 @@ class NetworkTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertEqual(2, network_new.vlan)
 
     def test_network_set_host_nonexistent_network(self):
-        self.assertEqual(0, db.network_set_host(
-            self.ctxt, 123456, 'nonexistent'))
+        self.assertRaises(exception.NetworkNotFound, db.network_set_host,
+                          self.ctxt, 123456, 'nonexistent')
 
-    def test_network_set_host_already_set(self):
+    def test_network_set_host_already_set_correct(self):
         values = {'host': 'example.com', 'project_id': 'project1'}
         network = db.network_create_safe(self.ctxt, values)
-        self.assertEqual(0, db.network_set_host(
-            self.ctxt, network.id, 'new.example.com'))
+        self.assertIsNone(db.network_set_host(self.ctxt, network.id,
+                          'example.com'))
+
+    def test_network_set_host_already_set_incorrect(self):
+        values = {'host': 'example.com', 'project_id': 'project1'}
+        network = db.network_create_safe(self.ctxt, values)
+        self.assertIsNone(db.network_set_host(self.ctxt, network.id,
+                                              'new.example.com'))
 
     def test_network_set_host_with_initially_no_host(self):
         values = {'project_id': 'project1'}
         network = db.network_create_safe(self.ctxt, values)
-        self.assertEqual(1, db.network_set_host(
-            self.ctxt, network.id, 'example.com'))
+        db.network_set_host(self.ctxt, network.id, 'example.com')
         self.assertEqual('example.com',
             db.network_get(self.ctxt, network.id).host)
+
+    def test_network_set_host_succeeds_retry_on_deadlock(self):
+        values = {'project_id': 'project1'}
+        network = db.network_create_safe(self.ctxt, values)
+
+        def fake_update(params):
+            if mock_update.call_count == 1:
+                raise db_exc.DBDeadlock()
+            else:
+                return 1
+
+        with mock.patch('sqlalchemy.orm.query.Query.update',
+                        side_effect=fake_update) as mock_update:
+            db.network_set_host(self.ctxt, network.id, 'example.com')
+            self.assertEqual(2, mock_update.call_count)
+
+    def test_network_set_host_succeeds_retry_on_no_rows_updated(self):
+        values = {'project_id': 'project1'}
+        network = db.network_create_safe(self.ctxt, values)
+
+        def fake_update(params):
+            if mock_update.call_count == 1:
+                return 0
+            else:
+                return 1
+
+        with mock.patch('sqlalchemy.orm.query.Query.update',
+                        side_effect=fake_update) as mock_update:
+            db.network_set_host(self.ctxt, network.id, 'example.com')
+            self.assertEqual(2, mock_update.call_count)
+
+    def test_network_set_host_failed_with_retry_on_no_rows_updated(self):
+        values = {'project_id': 'project1'}
+        network = db.network_create_safe(self.ctxt, values)
+
+        with mock.patch('sqlalchemy.orm.query.Query.update',
+                        return_value=0) as mock_update:
+            self.assertRaises(exception.NetworkSetHostFailed,
+                              db.network_set_host, self.ctxt, network.id,
+                              'example.com')
+            self.assertEqual(5, mock_update.call_count)
 
     def test_network_get_all_by_host(self):
         self.assertEqual([],
