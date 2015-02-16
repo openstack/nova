@@ -279,6 +279,13 @@ class InstanceTypeToolsTest(test.TestCase):
     def test_extract_flavor(self):
         self._test_extract_flavor('')
 
+    def test_extract_flavor_no_sysmeta(self):
+        instance = {}
+        prefix = ''
+        result = flavors.extract_flavor(instance, prefix)
+
+        self.assertIsNone(result)
+
     def test_extract_flavor_prefix(self):
         self._test_extract_flavor('foo_')
 

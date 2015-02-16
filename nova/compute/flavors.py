@@ -278,6 +278,10 @@ def extract_flavor(instance, prefix=''):
 
     flavor = objects.Flavor()
     sys_meta = utils.instance_sys_meta(instance)
+
+    if not sys_meta:
+        return None
+
     for key in system_metadata_flavor_props.keys():
         type_key = '%sinstance_type_%s' % (prefix, key)
         setattr(flavor, key, sys_meta[type_key])
