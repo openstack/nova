@@ -42,6 +42,7 @@ class ViewBuilder(common.ViewBuilder):
         "REBUILD",
         "RESIZE",
         "VERIFY_RESIZE",
+        "MIGRATING",
     )
 
     _fault_statuses = (
