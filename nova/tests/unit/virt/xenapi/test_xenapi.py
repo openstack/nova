@@ -1502,6 +1502,19 @@ iface eth0 inet6 static
                 self.conn._session._get_host_uuid)
         self.assertTrue(was['called'])
 
+    def test_session_handles_aggregate_metadata(self):
+        def fake_aggregate_get(context, host, key):
+            agg = copy.copy(test_aggregate.fake_aggregate)
+            agg['metadetails'][CONF.host] = 'this_should_be_metadata'
+            return [agg]
+        self.stubs.Set(db, 'aggregate_get_by_host',
+                       fake_aggregate_get)
+
+        self.stubs.Set(self.conn._session, "is_slave", True)
+
+        self.assertEqual('this_should_be_metadata',
+                         self.conn._session._get_host_uuid())
+
     def test_per_instance_usage_running(self):
         instance = self._create_instance(spawn=True)
         flavor = flavors.get_flavor(3)

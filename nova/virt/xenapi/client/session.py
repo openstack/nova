@@ -154,7 +154,7 @@ class XenAPISession(object):
                 LOG.error(_LE('Host is member of a pool, but DB '
                               'says otherwise'))
                 raise exception.AggregateHostNotFound()
-            return aggr.metadetails[CONF.host]
+            return aggr.metadata[CONF.host]
         else:
             with self._get_session() as session:
                 host_ref = session.xenapi.session.get_this_host(session.handle)
