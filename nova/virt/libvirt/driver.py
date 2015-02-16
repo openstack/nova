@@ -858,10 +858,17 @@ class LibvirtDriver(driver.ComputeDriver):
         virt_dom = self._host.get_domain(instance)
         xml = virt_dom.XMLDesc(0)
         tree = etree.fromstring(xml)
-        source_xpath = "./devices/serial[@type='tcp']/source"
-        if mode:
-            source_xpath = source_xpath + "[@mode='%s']" % mode
-        for source in tree.findall(source_xpath):
+
+        # The 'serial' device is the base for x86 platforms. Other platforms
+        # (e.g. kvm on system z = arch.S390X) can only use 'console' devices.
+        xpath_mode = "[@mode='%s']" % mode if mode else ""
+        serial_tcp = "./devices/serial[@type='tcp']/source" + xpath_mode
+        console_tcp = "./devices/console[@type='tcp']/source" + xpath_mode
+
+        tcp_devices = tree.findall(serial_tcp)
+        if len(tcp_devices) == 0:
+            tcp_devices = tree.findall(console_tcp)
+        for source in tcp_devices:
             yield (source.get("host"), int(source.get("service")))
 
     @staticmethod
@@ -3681,11 +3688,16 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _create_serial_console_devices(self, guest, instance, flavor,
                                        image_meta):
+        guest_arch = libvirt_utils.get_arch(image_meta)
+
         if CONF.serial_console.enabled:
             num_ports = hardware.get_number_of_serial_ports(
                 flavor, image_meta)
             for port in six.moves.range(num_ports):
-                console = vconfig.LibvirtConfigGuestSerial()
+                if guest_arch in (arch.S390, arch.S390X):
+                    console = vconfig.LibvirtConfigGuestConsole()
+                else:
+                    console = vconfig.LibvirtConfigGuestSerial()
                 console.port = port
                 console.type = "tcp"
                 console.listen_host = (
@@ -3699,7 +3711,7 @@ class LibvirtDriver(driver.ComputeDriver):
             # client app is connected. Thus we can't get away
             # with a single type=pty console. Instead we have
             # to configure two separate consoles.
-            if libvirt_utils.get_arch(image_meta) in (arch.S390, arch.S390X):
+            if guest_arch in (arch.S390, arch.S390X):
                 consolelog = vconfig.LibvirtConfigGuestConsole()
                 consolelog.target_type = "sclplm"
             else:
