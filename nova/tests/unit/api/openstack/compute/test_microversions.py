@@ -258,3 +258,29 @@ class MicroversionsTest(test.NoDBTestCase):
         self.assertEqual('update_val1', resp_json['param'])
         self.assertEqual("2.10",
                          res.headers['X-OpenStack-Compute-API-Version'])
+
+    @mock.patch("nova.api.openstack.api_version_request.max_api_version")
+    @mock.patch("nova.api.openstack.APIRouterV21.api_extension_namespace",
+                return_value='nova.api.v3.test_extensions')
+    def _test_microversions_inner_function(self, version, expected_resp,
+                                           mock_namespace,
+                                           mock_maxver):
+        mock_maxver.return_value = api_version.APIVersionRequest("2.2")
+        app = fakes.wsgi_app_v21(init_only='test-microversions')
+        req = fakes.HTTPRequest.blank('/v2/fake/microversions4')
+        req.headers = {'X-OpenStack-Compute-API-Version': version}
+        req.environ['CONTENT_TYPE'] = "application/json"
+        req.method = 'POST'
+
+        res = req.get_response(app)
+        self.assertEqual(200, res.status_int)
+        resp_json = jsonutils.loads(res.body)
+        self.assertEqual(expected_resp, resp_json['param'])
+        self.assertEqual(version,
+                         res.headers['X-OpenStack-Compute-API-Version'])
+
+    def test_microversions_inner_function_v22(self):
+        self._test_microversions_inner_function('2.2', 'controller4_val2')
+
+    def test_microversions_inner_function_v21(self):
+        self._test_microversions_inner_function('2.1', 'controller4_val1')
