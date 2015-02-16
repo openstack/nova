@@ -190,3 +190,14 @@ def required_by(instance):
             strutils.bool_from_string(CONF.force_config_drive) or
             image_prop == 'mandatory'
             )
+
+
+def update_instance(instance):
+    """Update the instance config_drive setting if necessary
+
+    The image or configuration file settings may override the default instance
+    setting. In this case the instance needs to mirror the actual
+    virtual machine configuration.
+    """
+    if not instance.config_drive and required_by(instance):
+        instance.config_drive = True
