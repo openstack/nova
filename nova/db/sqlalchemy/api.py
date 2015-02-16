@@ -2947,23 +2947,10 @@ def network_get_all_by_host(context, host):
 
 @require_admin_context
 def network_set_host(context, network_id, host_id):
-    session = get_session()
-    with session.begin():
-        network_ref = _network_get_query(context, session=session).\
-                              filter_by(id=network_id).\
-                              with_lockmode('update').\
-                              first()
-
-        if not network_ref:
-            raise exception.NetworkNotFound(network_id=network_id)
-
-        # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
-        #             then this has concurrency issues
-        if not network_ref['host']:
-            network_ref['host'] = host_id
-            session.add(network_ref)
-
-    return network_ref['host']
+    return _network_get_query(context).\
+        filter_by(id=network_id).\
+        filter_by(host=None).\
+        update({'host': host_id})
 
 
 @require_context
