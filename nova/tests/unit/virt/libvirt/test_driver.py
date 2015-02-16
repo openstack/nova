@@ -1618,7 +1618,7 @@ class LibvirtConnTestCase(test.TestCase):
         instance_topology = objects.InstanceNUMATopology(
                     cells=[objects.InstanceNUMACell(
                         id=1, cpuset=set([0, 1]), memory=1024,
-                        cpu_pinning={0: 3, 1: 2}),
+                        cpu_pinning={0: 24, 1: 25}),
                            objects.InstanceNUMACell(
                         id=0, cpuset=set([2, 3]), memory=1024,
                         cpu_pinning={2: 0, 3: 1})])
@@ -1634,7 +1634,8 @@ class LibvirtConnTestCase(test.TestCase):
         caps.host = vconfig.LibvirtConfigCapsHost()
         caps.host.cpu = vconfig.LibvirtConfigCPU()
         caps.host.cpu.arch = "x86_64"
-        caps.host.topology = self._fake_caps_numa_topology()
+        caps.host.topology = self._fake_caps_numa_topology(
+            sockets_per_cell=4, cores_per_socket=3, threads_per_core=2)
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
@@ -1654,18 +1655,20 @@ class LibvirtConnTestCase(test.TestCase):
             self.assertIsNone(cfg.cpuset)
             # Test that the pinning is correct and limited to allowed only
             self.assertEqual(0, cfg.cputune.vcpupin[0].id)
-            self.assertEqual(set([3]), cfg.cputune.vcpupin[0].cpuset)
+            self.assertEqual(set([24]), cfg.cputune.vcpupin[0].cpuset)
             self.assertEqual(1, cfg.cputune.vcpupin[1].id)
-            self.assertEqual(set([2]), cfg.cputune.vcpupin[1].cpuset)
+            self.assertEqual(set([25]), cfg.cputune.vcpupin[1].cpuset)
             self.assertEqual(2, cfg.cputune.vcpupin[2].id)
             self.assertEqual(set([0]), cfg.cputune.vcpupin[2].cpuset)
             self.assertEqual(3, cfg.cputune.vcpupin[3].id)
             self.assertEqual(set([1]), cfg.cputune.vcpupin[3].cpuset)
             self.assertIsNotNone(cfg.cpu.numa)
 
+            # Emulator must be pinned to union of cfg.cputune.vcpupin[*].cpuset
             self.assertIsInstance(cfg.cputune.emulatorpin,
                                   vconfig.LibvirtConfigGuestCPUTuneEmulatorPin)
-            self.assertEqual(set([0, 1, 2, 3]), cfg.cputune.emulatorpin.cpuset)
+            self.assertEqual(set([0, 1, 24, 25]),
+                             cfg.cputune.emulatorpin.cpuset)
 
             for i, (instance_cell, numa_cfg_cell) in enumerate(zip(
                     instance_topology.cells, cfg.cpu.numa.cells)):
