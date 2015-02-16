@@ -1418,12 +1418,12 @@ class _ComputeAPIUnitTestMixIn(object):
                                                                fake_inst)
             fake_quotas = objects.Quotas.from_reservations(self.context,
                                                            resvs)
-
-            self.compute_api._upsize_quota_delta(
-                    self.context, mox.IsA(objects.Flavor),
-                    mox.IsA(objects.Flavor)).AndReturn('deltas')
-            self.compute_api._reserve_quota_delta(self.context, 'deltas',
-                    fake_inst).AndReturn(fake_quotas)
+            if flavor_id_passed:
+                self.compute_api._upsize_quota_delta(
+                        self.context, mox.IsA(objects.Flavor),
+                        mox.IsA(objects.Flavor)).AndReturn('deltas')
+                self.compute_api._reserve_quota_delta(self.context, 'deltas',
+                        fake_inst).AndReturn(fake_quotas)
 
             def _check_state(expected_task_state=None):
                 self.assertEqual(task_states.RESIZE_PREP,
@@ -1442,8 +1442,10 @@ class _ComputeAPIUnitTestMixIn(object):
 
             if not flavor_id_passed and not allow_mig_same_host:
                 filter_properties['ignore_hosts'].append(fake_inst['host'])
-
-            expected_reservations = fake_quotas.reservations
+            if flavor_id_passed:
+                expected_reservations = fake_quotas.reservations
+            else:
+                expected_reservations = []
             if self.cell_type == 'api':
                 fake_quotas.commit(self.context)
                 expected_reservations = []

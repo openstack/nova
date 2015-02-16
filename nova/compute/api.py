@@ -2607,27 +2607,31 @@ class API(base.Base):
             raise exception.CannotResizeToSameFlavor()
 
         # ensure there is sufficient headroom for upsizes
-        deltas = self._upsize_quota_delta(context, new_instance_type,
-                                          current_instance_type)
-        try:
-            quotas = self._reserve_quota_delta(context, deltas, instance)
-        except exception.OverQuota as exc:
-            quotas = exc.kwargs['quotas']
-            overs = exc.kwargs['overs']
-            usages = exc.kwargs['usages']
-            headroom = self._get_headroom(quotas, usages, deltas)
+        if flavor_id:
+            deltas = self._upsize_quota_delta(context, new_instance_type,
+                                              current_instance_type)
+            try:
+                quotas = self._reserve_quota_delta(context, deltas, instance)
+            except exception.OverQuota as exc:
+                quotas = exc.kwargs['quotas']
+                overs = exc.kwargs['overs']
+                usages = exc.kwargs['usages']
+                headroom = self._get_headroom(quotas, usages, deltas)
 
-            resource = overs[0]
-            used = quotas[resource] - headroom[resource]
-            total_allowed = used + headroom[resource]
-            overs = ','.join(overs)
-            LOG.warning(_LW("%(overs)s quota exceeded for %(pid)s,"
-                            " tried to resize instance."),
-                        {'overs': overs, 'pid': context.project_id})
-            raise exception.TooManyInstances(overs=overs,
-                                             req=deltas[resource],
-                                             used=used, allowed=total_allowed,
-                                             resource=resource)
+                resource = overs[0]
+                used = quotas[resource] - headroom[resource]
+                total_allowed = used + headroom[resource]
+                overs = ','.join(overs)
+                LOG.warning(_LW("%(overs)s quota exceeded for %(pid)s,"
+                                " tried to resize instance."),
+                            {'overs': overs, 'pid': context.project_id})
+                raise exception.TooManyInstances(overs=overs,
+                                                 req=deltas[resource],
+                                                 used=used,
+                                                 allowed=total_allowed,
+                                                 resource=resource)
+        else:
+            quotas = objects.Quotas()
 
         instance.task_state = task_states.RESIZE_PREP
         instance.progress = 0
