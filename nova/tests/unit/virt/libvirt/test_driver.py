@@ -546,6 +546,15 @@ class LibvirtConnTestCase(test.TestCase):
         nova.tests.unit.image.fake.FakeImageService_reset()
         super(LibvirtConnTestCase, self).tearDown()
 
+    def test_driver_capabilities(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.assertTrue(drvr.capabilities['has_imagecache'],
+                        'Driver capabilities for \'has_imagecache\''
+                        'is invalid')
+        self.assertTrue(drvr.capabilities['supports_recreate'],
+                        'Driver capabilities for \'supports_recreate\''
+                        'is invalid')
+
     def create_fake_libvirt_mock(self, **kwargs):
         """Defining mocks for LibvirtDriver(libvirt is not used)."""
 
