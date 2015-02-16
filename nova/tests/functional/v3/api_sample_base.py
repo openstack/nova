@@ -54,7 +54,7 @@ class ApiSampleTestBaseV3(api_samples_test_base.ApiSampleTestBase):
         self.generate_samples = os.getenv('GENERATE_SAMPLES') is not None
 
     @classmethod
-    def _get_sample_path(cls, name, dirname, suffix=''):
+    def _get_sample_path(cls, name, dirname, suffix='', api_version=None):
         parts = [dirname]
         parts.append('api_samples')
         if cls.all_extensions:
@@ -63,17 +63,20 @@ class ApiSampleTestBaseV3(api_samples_test_base.ApiSampleTestBase):
             parts.append(cls.sample_dir)
         elif cls.extension_name:
             parts.append(cls.extension_name)
+        if api_version:
+            parts.append('v' + api_version)
         parts.append(name + "." + cls.ctype + suffix)
         return os.path.join(*parts)
 
     @classmethod
-    def _get_sample(cls, name):
+    def _get_sample(cls, name, api_version=None):
         dirname = os.path.dirname(os.path.abspath(__file__))
         dirname = os.path.normpath(os.path.join(dirname,
                                                 "../../../../doc/v3"))
-        return cls._get_sample_path(name, dirname)
+        return cls._get_sample_path(name, dirname, api_version=api_version)
 
     @classmethod
-    def _get_template(cls, name):
+    def _get_template(cls, name, api_version=None):
         dirname = os.path.dirname(os.path.abspath(__file__))
-        return cls._get_sample_path(name, dirname, suffix='.tpl')
+        return cls._get_sample_path(name, dirname, suffix='.tpl',
+                                    api_version=api_version)
