@@ -52,8 +52,18 @@ class LvmTestCase(test.NoDBTestCase):
 
     @mock.patch.object(utils, 'execute',
                        side_effect=processutils.ProcessExecutionError(
+                            stderr=('blockdev: cannot open /dev/foo: '
+                                    'No such file or directory')))
+    def test_get_volume_size_not_found_file(self, mock_execute):
+        self.assertRaises(exception.VolumeBDMPathNotFound,
+            lvm.get_volume_size, '/dev/foo')
+
+    @mock.patch.object(libvirt_utils, 'path_exists', return_value=True)
+    @mock.patch.object(utils, 'execute',
+                       side_effect=processutils.ProcessExecutionError(
                             stderr='blockdev: i am sad in other ways'))
-    def test_get_volume_size_unexpectd_error(self, mock_execute):
+    def test_get_volume_size_unexpectd_error(self, mock_execute,
+                                             mock_path_exists):
         self.assertRaises(processutils.ProcessExecutionError,
                           lvm.get_volume_size, '/dev/foo')
 
@@ -167,6 +177,13 @@ class LvmTestCase(test.NoDBTestCase):
                               'seek=0', 'count=1', 'conv=fdatasync')]
         lvm.clear_volume('/dev/vd')
         self.assertEqual(expected_commands, executes)
+
+    @mock.patch.object(utils, 'execute',
+                       side_effect=processutils.ProcessExecutionError(
+                                    stderr=('blockdev: cannot open /dev/foo: '
+                                            'No such file or directory')))
+    def test_lvm_clear_ignore_lvm_not_found(self, mock_execute):
+        lvm.clear_volume('/dev/foo')
 
     def test_fail_remove_all_logical_volumes(self):
         def fake_execute(*args, **kwargs):
