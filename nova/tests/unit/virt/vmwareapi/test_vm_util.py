@@ -1088,6 +1088,35 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         filename = vm_util.get_ephemeral_name(0)
         self.assertEqual('ephemeral_0.vmdk', filename)
 
+    def test_detach_and_delete_devices_config_spec(self):
+        fake_devices = ['device1', 'device2']
+        factory = fake.FakeFactory()
+        result = vm_util._detach_and_delete_devices_config_spec(factory,
+                                                                fake_devices)
+        expected = """{
+            'deviceChange': [{'device': 'device1',
+                               'operation': 'remove',
+                               'fileOperation': 'destroy',
+                               'obj_name': 'ns0:VirtualDeviceConfigSpec'},
+                              {'device': 'device2',
+                               'operation': 'remove',
+                               'fileOperation': 'destroy',
+                               'obj_name': 'ns0:VirtualDeviceConfigSpec'}],
+            'obj_name': 'ns0:VirtualMachineConfigSpec'}
+        """
+        expected = re.sub(r'\s+', '', expected)
+        result = re.sub(r'\s+', '', repr(result))
+        self.assertEqual(expected, result)
+
+    @mock.patch.object(vm_util, 'reconfigure_vm')
+    def test_detach_devices_from_vm(self, mock_reconfigure):
+        fake_devices = ['device1', 'device2']
+        session = fake.FakeSession()
+        vm_util.detach_devices_from_vm(session,
+                                       'fake-ref',
+                                       fake_devices)
+        mock_reconfigure.assert_called_once_with(session, 'fake-ref', mock.ANY)
+
 
 @mock.patch.object(driver.VMwareAPISession, 'vim', stubs.fake_vim_prop)
 class VMwareVMUtilGetHostRefTestCase(test.NoDBTestCase):
