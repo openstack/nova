@@ -159,8 +159,7 @@ def compute_node_get(context, compute_id):
     :param context: The security context
     :param compute_id: ID of the compute node
 
-    :returns: Dictionary-like object containing properties of the compute node,
-              including its corresponding service
+    :returns: Dictionary-like object containing properties of the compute node
 
     Raises ComputeHostNotFound if compute node with the given ID doesn't exist.
     """
@@ -197,19 +196,14 @@ def compute_node_get_by_host_and_nodename(context, host, nodename):
     return IMPL.compute_node_get_by_host_and_nodename(context, host, nodename)
 
 
-def compute_node_get_all(context, no_date_fields=False):
+def compute_node_get_all(context):
     """Get all computeNodes.
 
     :param context: The security context
-    :param no_date_fields: If set to True, excludes 'created_at', 'updated_at',
-                           'deleted_at' and 'deleted' fields from the output,
-                           thus significantly reducing its size.
-                           Set to False by default
 
-    :returns: List of dictionaries each containing compute node properties,
-              including corresponding service
+    :returns: List of dictionaries each containing compute node properties
     """
-    return IMPL.compute_node_get_all(context, no_date_fields)
+    return IMPL.compute_node_get_all(context)
 
 
 def compute_node_get_all_by_host(context, host, use_slave=False):
@@ -230,7 +224,7 @@ def compute_node_search_by_hypervisor(context, hypervisor_match):
     :param hypervisor_match: The hypervisor hostname
 
     :returns: List of dictionary-like objects each containing compute node
-              properties, including corresponding service
+              properties
     """
     return IMPL.compute_node_search_by_hypervisor(context, hypervisor_match)
 
