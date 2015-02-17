@@ -17,10 +17,12 @@ import contextlib
 import mock
 
 from nova.cells import rpcapi as cells_rpcapi
+from nova import context
 from nova import db
 from nova import exception
 from nova import objects
 from nova.objects import block_device as block_device_obj
+from nova import test
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_instance
 from nova.tests.unit.objects import test_objects
@@ -351,3 +353,21 @@ class TestBlockDeviceMappingListObject(test_objects._LocalTest,
 class TestRemoteBlockDeviceMappingListObject(
         test_objects._RemoteTest, _TestBlockDeviceMappingListObject):
     pass
+
+
+class TestBlockDeviceUtils(test.NoDBTestCase):
+    def test_make_list_from_dicts(self):
+        ctx = context.get_admin_context()
+        dicts = [{'id': 1}, {'id': 2}]
+        objs = block_device_obj.block_device_make_list_from_dicts(ctx,
+                                                                  dicts)
+        self.assertIsInstance(objs, block_device_obj.BlockDeviceMappingList)
+        self.assertEqual(2, len(objs))
+        self.assertEqual(1, objs[0].id)
+        self.assertEqual(2, objs[1].id)
+
+    def test_make_list_from_dicts_empty(self):
+        ctx = context.get_admin_context()
+        objs = block_device_obj.block_device_make_list_from_dicts(ctx, [])
+        self.assertIsInstance(objs, block_device_obj.BlockDeviceMappingList)
+        self.assertEqual(0, len(objs))
