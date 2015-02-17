@@ -1498,12 +1498,11 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                               None, self.destroy_disks)
             self.assertFalse(mock_destroy.called)
 
-    def _destroy_instance_without_vm_ref(self, resize_exists=False,
+    def _destroy_instance_without_vm_ref(self,
                                          task_state=None):
 
         def fake_vm_ref_from_name(session, vm_name):
-            if resize_exists:
-                return 'fake-ref'
+            return 'fake-ref'
 
         self._create_instance()
         with contextlib.nested(
@@ -1518,11 +1517,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
             self.conn.destroy(self.context, self.instance,
                               self.network_info,
                               None, True)
-            if resize_exists:
-                if task_state == task_states.RESIZE_REVERTING:
-                    expected = 1
-                else:
-                    expected = 2
+            if task_state == task_states.RESIZE_REVERTING:
+                expected = 0
             else:
                 expected = 1
             self.assertEqual(expected, mock_destroy.call_count)
@@ -1531,11 +1527,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
     def test_destroy_instance_without_vm_ref(self):
         self._destroy_instance_without_vm_ref()
 
-    def test_destroy_instance_without_vm_ref_with_resize(self):
-        self._destroy_instance_without_vm_ref(resize_exists=True)
-
     def test_destroy_instance_without_vm_ref_with_resize_revert(self):
-        self._destroy_instance_without_vm_ref(resize_exists=True,
+        self._destroy_instance_without_vm_ref(
             task_state=task_states.RESIZE_REVERTING)
 
     def _rescue(self, config_drive=False):
@@ -2316,87 +2309,6 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                               self.conn.detach_interface,
                               self.instance, vif)
 
-    def test_migrate_disk_and_power_off(self):
-        def fake_update_instance_progress(context, instance, step,
-                                          total_steps):
-            pass
-
-        def fake_get_host_ref_from_name(dest):
-            return None
-
-        self._create_vm(instance_type='m1.large')
-        vm_ref_orig = vm_util.get_vm_ref(self.conn._session, self.instance)
-        flavor = self._get_instance_type_by_name('m1.large')
-        self.stubs.Set(self.conn._vmops, "_update_instance_progress",
-                       fake_update_instance_progress)
-        self.stubs.Set(self.conn._vmops, "_get_host_ref_from_name",
-                       fake_get_host_ref_from_name)
-        self.conn.migrate_disk_and_power_off(self.context, self.instance,
-                                             'fake_dest', flavor,
-                                             None)
-        vm_ref = vm_util.get_vm_ref(self.conn._session, self.instance)
-        self.assertNotEqual(vm_ref_orig.value, vm_ref.value,
-                             "These should be different")
-
-    def test_disassociate_vmref_from_instance(self):
-        self._create_vm()
-        vm_ref = vm_util.get_vm_ref(self.conn._session, self.instance)
-        vm_util.disassociate_vmref_from_instance(self.conn._session,
-                                        self.instance, vm_ref, "-backup")
-        self.assertRaises(exception.InstanceNotFound,
-                    vm_util.get_vm_ref, self.conn._session, self.instance)
-
-    def test_clone_vmref_for_instance(self):
-        self._create_vm()
-        vm_ref = vm_util.get_vm_ref(self.conn._session, self.instance)
-        vm_util.disassociate_vmref_from_instance(self.conn._session,
-                                            self.instance, vm_ref, "-backup")
-        host_ref = vmwareapi_fake._get_object_refs("HostSystem")[0]
-        ds_ref = vmwareapi_fake._get_object_refs("Datastore")[0]
-        dc_obj = vmwareapi_fake._get_objects("Datacenter").objects[0]
-        vm_util.clone_vmref_for_instance(self.conn._session, self.instance,
-                                         vm_ref, host_ref, ds_ref,
-                                         dc_obj.get("vmFolder"))
-        self.assertIsNotNone(
-                        vm_util.get_vm_ref(self.conn._session, self.instance),
-                        "No VM found")
-        cloned_vm_ref = vm_util.get_vm_ref(self.conn._session, self.instance)
-        self.assertNotEqual(vm_ref.value, cloned_vm_ref.value,
-                            "Reference for the cloned VM should be different")
-        vm_obj = vmwareapi_fake._get_vm_mdo(vm_ref)
-        cloned_vm_obj = vmwareapi_fake._get_vm_mdo(cloned_vm_ref)
-        self.assertEqual(vm_obj.name, self.instance['uuid'] + "-backup",
-                       "Original VM name should be with suffix -backup")
-        self.assertEqual(cloned_vm_obj.name, self.instance['uuid'],
-                       "VM name does not match instance['uuid']")
-        self.assertRaises(vexc.MissingParameter,
-                          vm_util.clone_vmref_for_instance, self.conn._session,
-                          self.instance, None, host_ref, ds_ref,
-                          dc_obj.get("vmFolder"))
-
-    def test_associate_vmref_for_instance(self):
-        self._create_vm()
-        vm_ref = vm_util.get_vm_ref(self.conn._session, self.instance)
-        # First disassociate the VM from the instance so that we have a VM
-        # to later associate using the associate_vmref_for_instance method
-        vm_util.disassociate_vmref_from_instance(self.conn._session,
-                                            self.instance, vm_ref, "-backup")
-        # Ensure that the VM is indeed disassociated and that we cannot find
-        # the VM using the get_vm_ref method
-        self.assertRaises(exception.InstanceNotFound,
-                    vm_util.get_vm_ref, self.conn._session, self.instance)
-        # Associate the VM back to the instance
-        vm_util.associate_vmref_for_instance(self.conn._session, self.instance,
-                                             suffix="-backup")
-        # Verify if we can get the VM reference
-        self.assertIsNotNone(
-                        vm_util.get_vm_ref(self.conn._session, self.instance),
-                        "No VM found")
-
-    def test_confirm_migration(self):
-        self._create_vm()
-        self.conn.confirm_migration(self.context, self.instance, None)
-
     def test_resize_to_smaller_disk(self):
         self._create_vm(instance_type='m1.large')
         flavor = self._get_instance_type_by_name('m1.small')
@@ -2448,111 +2360,6 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
     def test_get_host_uptime(self):
         self.assertRaises(NotImplementedError,
                           self.conn.get_host_uptime)
-
-    def _test_finish_migration(self, power_on, resize_instance=False):
-        """Tests the finish_migration method on VC Driver."""
-        # setup the test instance in the database
-        self._create_vm()
-        if resize_instance:
-            self.instance.system_metadata = {'old_instance_type_root_gb': '0'}
-        vm_ref = vm_util.get_vm_ref(self.conn._session, self.instance)
-        datastore = ds_util.Datastore(ref='fake-ref', name='fake')
-        dc_info = vmops.DcInfo(ref='fake_ref', name='fake',
-                               vmFolder='fake_folder')
-        with contextlib.nested(
-                mock.patch.object(self.conn._session, "_call_method",
-                                  return_value='fake-task'),
-                mock.patch.object(self.conn._vmops,
-                                  "_update_instance_progress"),
-                mock.patch.object(self.conn._session, "_wait_for_task"),
-                mock.patch.object(vm_util, "get_vm_resize_spec",
-                                  return_value='fake-spec'),
-                mock.patch.object(ds_util, "get_datastore",
-                                  return_value=datastore),
-                mock.patch.object(self.conn._vmops,
-                                  'get_datacenter_ref_and_name',
-                                  return_value=dc_info),
-                mock.patch.object(self.conn._vmops, '_extend_virtual_disk'),
-                mock.patch.object(vm_util, "power_on_instance")
-        ) as (fake_call_method, fake_update_instance_progress,
-              fake_wait_for_task, fake_vm_resize_spec,
-              fake_get_datastore, fake_get_datacenter_ref_and_name,
-              fake_extend_virtual_disk, fake_power_on):
-            self.conn.finish_migration(context=self.context,
-                                       migration=None,
-                                       instance=self.instance,
-                                       disk_info=None,
-                                       network_info=None,
-                                       block_device_info=None,
-                                       resize_instance=resize_instance,
-                                       image_meta=None,
-                                       power_on=power_on)
-            if resize_instance:
-                fake_vm_resize_spec.assert_called_once_with(
-                    self.conn._session.vim.client.factory,
-                    self.instance.vcpus,
-                    self.instance.memory_mb)
-                fake_call_method.assert_any_call(
-                    self.conn._session.vim,
-                    "ReconfigVM_Task",
-                    vm_ref,
-                    spec='fake-spec')
-                fake_wait_for_task.assert_called_once_with('fake-task')
-                fake_extend_virtual_disk.assert_called_once_with(
-                    self.instance, self.instance['root_gb'] * units.Mi,
-                    None, dc_info.ref)
-            else:
-                self.assertFalse(fake_vm_resize_spec.called)
-                self.assertFalse(fake_call_method.called)
-                self.assertFalse(fake_wait_for_task.called)
-                self.assertFalse(fake_extend_virtual_disk.called)
-
-            if power_on:
-                fake_power_on.assert_called_once_with(self.conn._session,
-                                                      self.instance,
-                                                      vm_ref=vm_ref)
-            else:
-                self.assertFalse(fake_power_on.called)
-            fake_update_instance_progress.called_once_with(
-                self.context, self.instance, 4, vmops.RESIZE_TOTAL_STEPS)
-
-    def test_finish_migration_power_on(self):
-        self._test_finish_migration(power_on=True)
-
-    def test_finish_migration_power_off(self):
-        self._test_finish_migration(power_on=False)
-
-    def test_finish_migration_power_on_resize(self):
-        self._test_finish_migration(power_on=True,
-                                    resize_instance=True)
-
-    @mock.patch.object(vm_util, 'associate_vmref_for_instance')
-    @mock.patch.object(vm_util, 'power_on_instance')
-    def _test_finish_revert_migration(self, fake_power_on,
-                                      fake_associate_vmref, power_on):
-        """Tests the finish_revert_migration method on VC Driver."""
-
-        # setup the test instance in the database
-        self._create_instance()
-        self.conn.finish_revert_migration(self.context,
-                                          instance=self.instance,
-                                          network_info=None,
-                                          block_device_info=None,
-                                          power_on=power_on)
-        fake_associate_vmref.assert_called_once_with(self.conn._session,
-                                                     self.instance,
-                                                     suffix='-orig')
-        if power_on:
-            fake_power_on.assert_called_once_with(self.conn._session,
-                                                  self.instance)
-        else:
-            self.assertFalse(fake_power_on.called)
-
-    def test_finish_revert_migration_power_on(self):
-        self._test_finish_revert_migration(power_on=True)
-
-    def test_finish_revert_migration_power_off(self):
-        self._test_finish_revert_migration(power_on=False)
 
     def test_pbm_wsdl_location(self):
         self.flags(pbm_enabled=True,
