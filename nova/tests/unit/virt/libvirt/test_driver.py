@@ -7267,7 +7267,8 @@ class LibvirtConnTestCase(test.TestCase):
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.stubs.Set(drvr, 'plug_vifs', fake_plug_vifs)
-        self.stubs.Set(eventlet.greenthread, 'sleep', lambda x: None)
+        self.stubs.Set(eventlet.greenthread, 'sleep',
+                       lambda x: eventlet.sleep(0))
         self.assertRaises(processutils.ProcessExecutionError,
                           drvr.pre_live_migration,
                           self.context, instance, block_device_info=None,
@@ -7287,7 +7288,8 @@ class LibvirtConnTestCase(test.TestCase):
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.stubs.Set(drvr, 'plug_vifs', fake_plug_vifs)
-        self.stubs.Set(eventlet.greenthread, 'sleep', lambda x: None)
+        self.stubs.Set(eventlet.greenthread, 'sleep',
+                       lambda x: eventlet.sleep(0))
         drvr.pre_live_migration(self.context, instance, block_device_info=None,
                                 network_info=[], disk_info={})
 
@@ -8834,7 +8836,7 @@ class LibvirtConnTestCase(test.TestCase):
     def _test_clean_shutdown(self, seconds_to_shutdown,
                              timeout, retry_interval,
                              shutdown_attempts, succeeds):
-        self.stubs.Set(time, 'sleep', lambda x: None)
+        self.stubs.Set(time, 'sleep', lambda x: eventlet.sleep(0))
         info_tuple = ('fake', 'fake', 'fake', 'also_fake')
         shutdown_count = []
 
