@@ -52,7 +52,6 @@ TEST_HYPERS = [
          host_ip=netaddr.IPAddress('1.1.1.1')),
     dict(id=2,
          service_id=2,
-
          host="compute2",
          vcpus=4,
          memory_mb=10 * 1024,
@@ -73,22 +72,22 @@ TEST_HYPERS = [
 
 
 TEST_SERVICES = [
-    dict(id=1,
-         host="compute1",
-         binary="nova-compute",
-         topic="compute_topic",
-         report_count=5,
-         disabled=False,
-         disabled_reason=None,
-         availability_zone="nova"),
-    dict(id=2,
-         host="compute2",
-         binary="nova-compute",
-         topic="compute_topic",
-         report_count=5,
-         disabled=False,
-         disabled_reason=None,
-         availability_zone="nova"),
+    objects.Service(id=1,
+                    host="compute1",
+                    binary="nova-compute",
+                    topic="compute_topic",
+                    report_count=5,
+                    disabled=False,
+                    disabled_reason=None,
+                    availability_zone="nova"),
+    objects.Service(id=2,
+                    host="compute2",
+                    binary="nova-compute",
+                    topic="compute_topic",
+                    report_count=5,
+                    disabled=False,
+                    disabled_reason=None,
+                    availability_zone="nova"),
 ]
 
 TEST_HYPERS_OBJ = [objects.ComputeNode(**hyper_dct)
@@ -96,8 +95,6 @@ TEST_HYPERS_OBJ = [objects.ComputeNode(**hyper_dct)
 
 TEST_HYPERS[0].update({'service': TEST_SERVICES[0]})
 TEST_HYPERS[1].update({'service': TEST_SERVICES[1]})
-TEST_HYPERS_OBJ[0]._cached_service = objects.Service(**TEST_SERVICES[0])
-TEST_HYPERS_OBJ[1]._cached_service = objects.Service(**TEST_SERVICES[1])
 
 TEST_SERVERS = [dict(name="inst1", uuid="uuid1", host="compute1"),
                 dict(name="inst2", uuid="uuid2", host="compute2"),
@@ -118,6 +115,13 @@ def fake_compute_node_get(context, compute_id):
         if hyper.id == int(compute_id):
             return hyper
     raise exception.ComputeHostNotFound(host=compute_id)
+
+
+@classmethod
+def fake_service_get_by_host_and_topic(cls, context, host, topic):
+    for service in TEST_SERVICES:
+        if service.host == host:
+            return service
 
 
 def fake_compute_node_statistics(context):
@@ -193,6 +197,8 @@ class HypervisorsTestV21(test.NoDBTestCase):
 
         self.stubs.Set(self.controller.host_api, 'compute_node_get_all',
                        fake_compute_node_get_all)
+        self.stubs.Set(objects.Service, 'get_by_host_and_topic',
+                       fake_service_get_by_host_and_topic)
         self.stubs.Set(self.controller.host_api,
                        'compute_node_search_by_hypervisor',
                        fake_compute_node_search_by_hypervisor)
@@ -204,18 +210,21 @@ class HypervisorsTestV21(test.NoDBTestCase):
                        fake_instance_get_all_by_host)
 
     def test_view_hypervisor_nodetail_noservers(self):
-        result = self.controller._view_hypervisor(TEST_HYPERS[0], False)
+        result = self.controller._view_hypervisor(
+            TEST_HYPERS_OBJ[0], TEST_SERVICES[0], False)
 
         self.assertEqual(result, self.INDEX_HYPER_DICTS[0])
 
     def test_view_hypervisor_detail_noservers(self):
-        result = self.controller._view_hypervisor(TEST_HYPERS[0], True)
+        result = self.controller._view_hypervisor(
+            TEST_HYPERS_OBJ[0], TEST_SERVICES[0], True)
 
         self.assertEqual(result, self.DETAIL_HYPERS_DICTS[0])
 
     def test_view_hypervisor_servers(self):
-        result = self.controller._view_hypervisor(TEST_HYPERS[0], False,
-                                                  TEST_SERVERS)
+        result = self.controller._view_hypervisor(TEST_HYPERS_OBJ[0],
+                                                  TEST_SERVICES[0],
+                                                  False, TEST_SERVERS)
         expected_dict = copy.deepcopy(self.INDEX_HYPER_DICTS[0])
         expected_dict.update({'servers': [
                                   dict(name="inst1", uuid="uuid1"),

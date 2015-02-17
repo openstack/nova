@@ -104,10 +104,6 @@ class ExtendedHyervisorPciSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
             memory_mb=8192,
             memory_mb_used=512,
             running_vms=0,
-            _cached_service=objects.Service(
-                host='043b3cacf6f34c90a7245151fc8ebcda',
-                disabled=False,
-                disabled_reason=None),
             vcpus=1,
             vcpus_used=0,
             service_id=2,
@@ -122,11 +118,18 @@ class ExtendedHyervisorPciSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
                                                             '"0x04", "0x00",'
                                                             ' "0x1"]]',
                                            "key1": "value1"}}),)
+        self.fake_service = objects.Service(
+            id=2,
+            host='043b3cacf6f34c90a7245151fc8ebcda',
+            disabled=False,
+            disabled_reason=None)
 
     @mock.patch("nova.servicegroup.API.service_is_up", return_value=True)
+    @mock.patch("nova.objects.Service.get_by_host_and_topic")
     @mock.patch("nova.objects.ComputeNode.get_by_id")
-    def test_pci_show(self, mock_obj, mock_service):
+    def test_pci_show(self, mock_obj, mock_svc_get, mock_service):
         mock_obj.return_value = self.fake_compute_node
+        mock_svc_get.return_value = self.fake_service
         hypervisor_id = 1
         response = self._do_get('os-hypervisors/%s' % hypervisor_id)
         subs = {
@@ -137,9 +140,11 @@ class ExtendedHyervisorPciSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
                               subs, response, 200)
 
     @mock.patch("nova.servicegroup.API.service_is_up", return_value=True)
+    @mock.patch("nova.objects.Service.get_by_host_and_topic")
     @mock.patch("nova.objects.ComputeNodeList.get_all")
-    def test_pci_detail(self, mock_obj, mock_service):
+    def test_pci_detail(self, mock_obj, mock_svc_get, mock_service):
         mock_obj.return_value = [self.fake_compute_node]
+        mock_svc_get.return_value = self.fake_service
         hypervisor_id = 1
         subs = {
             'hypervisor_id': hypervisor_id
