@@ -83,6 +83,7 @@ from nova.tests.unit.image import fake as fake_image
 from nova.tests.unit import matchers
 from nova.tests.unit.objects import test_flavor
 from nova.tests.unit.objects import test_migration
+from nova.tests.unit import utils as test_utils
 from nova import utils
 from nova.virt import block_device as driver_block_device
 from nova.virt import event
@@ -1602,6 +1603,8 @@ class ComputeTestCase(BaseTestCase):
         self._assert_state({'vm_state': vm_states.ACTIVE,
                             'task_state': None})
 
+    @testtools.skipIf(test_utils.is_osx(),
+                      'IPv6 pretty-printing broken on OSX, see bug 1409135')
     def test_default_access_ip(self):
         self.flags(default_access_ip_network_name='test1')
         fake_network.unset_stub_network_methods(self.stubs)
