@@ -860,3 +860,15 @@ class ComputeUtilsTestCase(test.NoDBTestCase):
         fault_dict = compute_utils.exception_to_dict(exc)
         byte_message = encodeutils.safe_encode(fault_dict["message"])
         self.assertEqual(254, len(byte_message))
+
+    @mock.patch('netifaces.interfaces')
+    def test_get_machine_ips_value_error(self, mock_interfaces):
+        # Tests that the utility method does not explode if netifaces raises
+        # a ValueError.
+        iface = mock.sentinel
+        mock_interfaces.return_value = [iface]
+        with mock.patch('netifaces.ifaddresses',
+                        side_effect=ValueError) as mock_ifaddresses:
+            addresses = compute_utils.get_machine_ips()
+            self.assertEqual([], addresses)
+        mock_ifaddresses.assert_called_once_with(iface)
