@@ -39,6 +39,7 @@ VIF_TYPE_802_QBH = '802.1qbh'
 VIF_TYPE_HW_VEB = 'hw_veb'
 VIF_TYPE_MLNX_DIRECT = 'mlnx_direct'
 VIF_TYPE_MIDONET = 'midonet'
+VIF_TYPE_VHOSTUSER = 'vhostuser'
 VIF_TYPE_OTHER = 'other'
 
 # Constants for dictionary keys in the 'vif_details' field in the VIF
@@ -52,6 +53,13 @@ VIF_DETAILS_PHYSICAL_NETWORK = 'physical_network'
 # 'vlan' for VIF_TYPE_HW_VEB
 VIF_DETAILS_PROFILEID = 'profileid'
 VIF_DETAILS_VLAN = 'vlan'
+
+# Constants for vhost-user related fields in 'vif_details'.
+# Sets mode on vhost-user socket, valid values are 'client'
+# and 'server'
+VIF_DETAILS_VHOSTUSER_MODE = 'vhostuser_mode'
+# Location of the directory to store vhost-user sockets
+VIF_DETAILS_VHOSTUSER_DIR = 'vhostuser_sock_dir'
 
 # Define supported virtual NIC types. VNIC_TYPE_DIRECT and VNIC_TYPE_MACVTAP
 # are used for SR-IOV ports
