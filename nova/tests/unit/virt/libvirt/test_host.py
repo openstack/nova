@@ -371,6 +371,8 @@ class HostTestCase(test.NoDBTestCase):
     @mock.patch.object(fakelibvirt.Connection, "listAllDomains")
     @mock.patch.object(libvirt, "VIR_CONNECT_LIST_DOMAINS_ACTIVE", new=1,
                        create=True)
+    @mock.patch.object(libvirt, "VIR_CONNECT_LIST_DOMAINS_INACTIVE", new=2,
+                       create=True)
     def test_list_instance_domains_fast(self, mock_list_all):
         vm1 = FakeVirtDomain(id=3, name="instance00000001")
         vm2 = FakeVirtDomain(id=17, name="instance00000002")
