@@ -1240,7 +1240,6 @@ object_relationships = {
     'Service': {'ComputeNode': '1.10'},
     'TestSubclassedObject': {'MyOwnedObject': '1.0'},
     'VirtCPUModel': {'VirtCPUFeature': '1.0', 'VirtCPUTopology': '1.0'},
-    'TestSubclassedObject': {'MyOwnedObject': '1.0'}
 }
 
 
