@@ -6523,6 +6523,7 @@ class LibvirtConnTestCase(test.TestCase):
                                     block_device_info=bdi))
         self.assertEqual(0, mock_get_instance_disk_info.call_count)
 
+    # TODO(mriedem): Remove this stub once we're only using fakelibvirt.
     @mock.patch.object(libvirt, 'VIR_DOMAIN_XML_MIGRATABLE', 8675, create=True)
     def test_live_migration_update_graphics_xml(self):
         self.compute = importutils.import_object(CONF.compute_manager)
@@ -6584,6 +6585,7 @@ class LibvirtConnTestCase(test.TestCase):
                       self.compute._rollback_live_migration,
                       migrate_data=migrate_data)
 
+    # TODO(mriedem): Remove this stub once we're only using fakelibvirt.
     @mock.patch.object(libvirt, 'VIR_DOMAIN_XML_MIGRATABLE', 8675, create=True)
     def test_live_migration_update_volume_xml(self):
         self.compute = importutils.import_object(CONF.compute_manager)
@@ -6930,6 +6932,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEqual(vm_states.ACTIVE, instance_ref.vm_state)
         self.assertEqual(power_state.RUNNING, instance_ref.power_state)
 
+    # TODO(mriedem): Remove this stub once we're only using fakelibvirt.
     @mock.patch.object(libvirt, 'VIR_DOMAIN_XML_MIGRATABLE', 8675, create=True)
     def test_live_migration_raises_unsupported_config_exception(self):
         # Tests that when migrateToURI2 fails with VIR_ERR_CONFIG_UNSUPPORTED,

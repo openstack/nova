@@ -369,6 +369,7 @@ class HostTestCase(test.NoDBTestCase):
         fake_get_domain.assert_called_once_with("instance-0000007c")
 
     @mock.patch.object(fakelibvirt.Connection, "listAllDomains")
+    # TODO(mriedem): Remove these stubs once we're only using fakelibvirt.
     @mock.patch.object(libvirt, "VIR_CONNECT_LIST_DOMAINS_ACTIVE", new=1,
                        create=True)
     @mock.patch.object(libvirt, "VIR_CONNECT_LIST_DOMAINS_INACTIVE", new=2,
@@ -483,6 +484,7 @@ class HostTestCase(test.NoDBTestCase):
     @mock.patch.object(fakelibvirt.Connection, "numOfDomains")
     @mock.patch.object(fakelibvirt.Connection, "listDomainsID")
     @mock.patch.object(host.Host, "_get_domain_by_id")
+    # TODO(mriedem): Remove this stub once we're only using fakelibvirt.
     @mock.patch.object(libvirt, "VIR_CONNECT_LIST_DOMAINS_ACTIVE", new=1,
                        create=True)
     def test_list_instance_domains_fallback(self,
