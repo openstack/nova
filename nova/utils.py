@@ -135,7 +135,8 @@ SM_INHERITABLE_KEYS = (
 def vpn_ping(address, port, timeout=0.05, session_id=None):
     """Sends a vpn negotiation packet and returns the server session.
 
-    Returns False on a failure. Basic packet structure is below.
+    Returns Boolean indicating whether the vpn_server is listening.
+    Basic packet structure is below.
 
     Client packet (14 bytes)::
 
@@ -159,6 +160,8 @@ def vpn_ping(address, port, timeout=0.05, session_id=None):
         bit 9 was 1 and the rest were 0 in testing
 
     """
+    # NOTE(tonyb) session_id isn't used for a real VPN connection so using a
+    #             cryptographically weak value is fine.
     if session_id is None:
         session_id = random.randint(0, 0xffffffffffffffff)
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -178,8 +181,7 @@ def vpn_ping(address, port, timeout=0.05, session_id=None):
                     dict(exp=struct.calcsize(fmt), act=len(received)))
         return False
     (identifier, server_sess, client_sess) = struct.unpack(fmt, received)
-    if identifier == 0x40 and client_sess == session_id:
-        return server_sess
+    return (identifier == 0x40 and client_sess == session_id)
 
 
 def _get_root_helper():
