@@ -9197,6 +9197,47 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         # NOTE(vish): verifies destroy doesn't raise if the instance disappears
         drvr._destroy(instance)
 
+    def test_private_destroy_lxc_processes_refused_to_die(self):
+        self.flags(virt_type='lxc', group='libvirt')
+        ex = fakelibvirt.make_libvirtError(
+                libvirt.libvirtError, "",
+                error_message="internal error: Some processes refused to die",
+                error_code=libvirt.VIR_ERR_INTERNAL_ERROR)
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+        with mock.patch.object(conn._host, 'get_domain') as mock_get_domain, \
+             mock.patch.object(conn, 'get_info') as mock_get_info:
+            mock_domain = mock.MagicMock()
+            mock_domain.ID.return_value = 1
+            mock_get_domain.return_value = mock_domain
+            mock_domain.destroy.side_effect = ex
+
+            mock_info = mock.MagicMock()
+            mock_info.id = 1
+            mock_info.state = power_state.SHUTDOWN
+            mock_get_info.return_value = mock_info
+
+            instance = objects.Instance(**self.test_instance)
+            conn._destroy(instance)
+
+    def test_private_destroy_processes_refused_to_die_still_raises(self):
+        ex = fakelibvirt.make_libvirtError(
+                libvirt.libvirtError, "",
+                error_message="internal error: Some processes refused to die",
+                error_code=libvirt.VIR_ERR_INTERNAL_ERROR)
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+        with mock.patch.object(conn._host, 'get_domain') as mock_get_domain:
+            mock_domain = mock.MagicMock()
+            mock_domain.ID.return_value = 1
+            mock_get_domain.return_value = mock_domain
+            mock_domain.destroy.side_effect = ex
+
+            instance = objects.Instance(**self.test_instance)
+            self.assertRaises(libvirt.libvirtError, conn._destroy, instance)
+
     def test_undefine_domain_with_not_found_instance(self):
         def fake_get_domain(self, instance):
             raise exception.InstanceNotFound(instance_id=instance.name)

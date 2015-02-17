@@ -643,6 +643,16 @@ class LibvirtDriver(driver.ComputeDriver):
                     state = LIBVIRT_POWER_STATE[virt_dom.info()[0]]
                     if state == power_state.SHUTDOWN:
                         is_okay = True
+                elif errcode == libvirt.VIR_ERR_INTERNAL_ERROR:
+                    errmsg = e.get_error_message()
+                    if (CONF.libvirt.virt_type == 'lxc' and
+                        errmsg == 'internal error: '
+                                  'Some processes refused to die'):
+                        # Some processes in the container didn't die
+                        # fast enough for libvirt. The container will
+                        # eventually die. For now, move on and let
+                        # the wait_for_destroy logic take over.
+                        is_okay = True
                 elif errcode == libvirt.VIR_ERR_OPERATION_TIMEOUT:
                     LOG.warn(_LW("Cannot destroy instance, operation time "
                                  "out"),
