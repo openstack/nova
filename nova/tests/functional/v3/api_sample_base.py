@@ -59,6 +59,11 @@ class ApiSampleTestBaseV3(api_samples_test_base.ApiSampleTestBase):
         parts.append('api_samples')
         if cls.all_extensions:
             parts.append('all_extensions')
+        # Note(gmann): if _use_common_server_api_samples is set to True
+        # then common server sample files present in 'servers' directory
+        # will be used.
+        elif cls._use_common_server_api_samples:
+            parts.append('servers')
         elif cls.sample_dir:
             parts.append(cls.sample_dir)
         elif cls.extension_name:

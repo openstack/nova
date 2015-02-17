@@ -22,7 +22,7 @@ class DiskConfigJsonTest(test_servers.ServersSampleBase):
     extra_extensions_to_load = ["images"]
 
     def test_list_servers_detail(self):
-        uuid = self._post_server()
+        uuid = self._post_server(use_common_server_api_samples=False)
         response = self._do_get('servers/detail')
         subs = self._get_regexes()
         subs['hostid'] = '[a-f0-9]+'
@@ -30,14 +30,14 @@ class DiskConfigJsonTest(test_servers.ServersSampleBase):
         self._verify_response('list-servers-detail-get', subs, response, 200)
 
     def test_get_server(self):
-        uuid = self._post_server()
+        uuid = self._post_server(use_common_server_api_samples=False)
         response = self._do_get('servers/%s' % uuid)
         subs = self._get_regexes()
         subs['hostid'] = '[a-f0-9]+'
         self._verify_response('server-get-resp', subs, response, 200)
 
     def test_update_server(self):
-        uuid = self._post_server()
+        uuid = self._post_server(use_common_server_api_samples=False)
         response = self._do_put('servers/%s' % uuid,
                                 'server-update-put-req', {})
         subs = self._get_regexes()
@@ -46,7 +46,7 @@ class DiskConfigJsonTest(test_servers.ServersSampleBase):
 
     def test_resize_server(self):
         self.flags(allow_resize_to_same_host=True)
-        uuid = self._post_server()
+        uuid = self._post_server(use_common_server_api_samples=False)
         response = self._do_post('servers/%s/action' % uuid,
                                  'server-resize-post-req', {})
         self.assertEqual(response.status_code, 202)
@@ -55,7 +55,7 @@ class DiskConfigJsonTest(test_servers.ServersSampleBase):
         self.assertEqual(response.content, "")
 
     def test_rebuild_server(self):
-        uuid = self._post_server()
+        uuid = self._post_server(use_common_server_api_samples=False)
         subs = {
             'image_id': fake.get_valid_image_id(),
             'host': self._get_host(),
