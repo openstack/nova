@@ -8201,6 +8201,7 @@ class PciDeviceDBApiTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.admin_context = context.get_admin_context()
         self.ignored_keys = ['id', 'deleted', 'deleted_at', 'updated_at',
                              'created_at']
+        self._compute_node = None
 
     def _get_fake_pci_devs(self):
         return {'id': 3353,
@@ -8231,12 +8232,32 @@ class PciDeviceDBApiTestCase(test.TestCase, ModelsObjectComparatorMixin):
                 'request_id': None,
                 }
 
+    @property
+    def compute_node(self):
+        if self._compute_node is None:
+            self._compute_node = db.compute_node_create(self.admin_context, {
+                'vcpus': 0,
+                'memory_mb': 0,
+                'local_gb': 0,
+                'vcpus_used': 0,
+                'memory_mb_used': 0,
+                'local_gb_used': 0,
+                'hypervisor_type': 'fake',
+                'hypervisor_version': 0,
+                'cpu_info': 'fake',
+                })
+        return self._compute_node
+
     def _create_fake_pci_devs(self):
         v1, v2 = self._get_fake_pci_devs()
+        for i in v1, v2:
+            i['compute_node_id'] = self.compute_node['id']
+
         db.pci_device_update(self.admin_context, v1['compute_node_id'],
                              v1['address'], v1)
         db.pci_device_update(self.admin_context, v2['compute_node_id'],
                              v2['address'], v2)
+
         return (v1, v2)
 
     def test_pci_device_get_by_addr(self):
@@ -8291,7 +8312,7 @@ class PciDeviceDBApiTestCase(test.TestCase, ModelsObjectComparatorMixin):
                           self.context, 1)
 
     def test_pci_device_get_by_instance_uuid(self):
-        v1, v2 = self._get_fake_pci_devs()
+        v1, v2 = self._create_fake_pci_devs()
         v1['status'] = 'allocated'
         v2['status'] = 'allocated'
         db.pci_device_update(self.admin_context, v1['compute_node_id'],
@@ -8304,7 +8325,7 @@ class PciDeviceDBApiTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self._assertEqualListsOfObjects(results, [v1, v2], self.ignored_keys)
 
     def test_pci_device_get_by_instance_uuid_check_status(self):
-        v1, v2 = self._get_fake_pci_devs()
+        v1, v2 = self._create_fake_pci_devs()
         v1['status'] = 'allocated'
         v2['status'] = 'claimed'
         db.pci_device_update(self.admin_context, v1['compute_node_id'],
@@ -8317,7 +8338,7 @@ class PciDeviceDBApiTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self._assertEqualListsOfObjects(results, [v1], self.ignored_keys)
 
     def test_pci_device_update(self):
-        v1, v2 = self._get_fake_pci_devs()
+        v1, v2 = self._create_fake_pci_devs()
         v1['status'] = 'allocated'
         db.pci_device_update(self.admin_context, v1['compute_node_id'],
                              v1['address'], v1)
@@ -8340,24 +8361,22 @@ class PciDeviceDBApiTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_pci_device_destroy(self):
         v1, v2 = self._create_fake_pci_devs()
-        results = db.pci_device_get_all_by_node(self.admin_context, 1)
+        results = db.pci_device_get_all_by_node(self.admin_context,
+                                                self.compute_node['id'])
         self._assertEqualListsOfObjects(results, [v1, v2], self.ignored_keys)
         db.pci_device_destroy(self.admin_context, v1['compute_node_id'],
                               v1['address'])
-        results = db.pci_device_get_all_by_node(self.admin_context, 1)
+        results = db.pci_device_get_all_by_node(self.admin_context,
+                                                self.compute_node['id'])
         self._assertEqualListsOfObjects(results, [v2], self.ignored_keys)
 
     def test_pci_device_destroy_exception(self):
         v1, v2 = self._get_fake_pci_devs()
-        db.pci_device_update(self.admin_context, v1['compute_node_id'],
-                             v1['address'], v1)
-        results = db.pci_device_get_all_by_node(self.admin_context, 1)
-        self._assertEqualListsOfObjects(results, [v1], self.ignored_keys)
         self.assertRaises(exception.PciDeviceNotFound,
                           db.pci_device_destroy,
                           self.admin_context,
-                          v2['compute_node_id'],
-                          v2['address'])
+                          v1['compute_node_id'],
+                          v1['address'])
 
 
 class RetryOnDeadlockTestCase(test.TestCase):
