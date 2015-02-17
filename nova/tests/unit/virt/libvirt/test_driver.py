@@ -444,7 +444,7 @@ class FakeNodeDevice(object):
         return self.xml
 
 
-class LibvirtConnTestCase(test.TestCase):
+class LibvirtConnTestCase(test.NoDBTestCase):
 
     REQUIRES_LOCKING = True
 
