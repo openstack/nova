@@ -160,14 +160,12 @@ class NetworkController(wsgi.Controller):
 
     @wsgi.response(202)
     @extensions.expected_errors((400, 501))
+    @validation.schema(schema.add_network_to_project)
     def add(self, req, body):
         context = req.environ['nova.context']
         authorize(context)
-        if not body:
-            msg = _("Missing request body")
-            raise exc.HTTPBadRequest(explanation=msg)
 
-        network_id = body.get('id', None)
+        network_id = body['id']
         project_id = context.project_id
 
         try:

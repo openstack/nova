@@ -66,3 +66,12 @@ create = {
     'required': ['network'],
     'additionalProperties': False,
 }
+
+add_network_to_project = {
+    'type': 'object',
+    'properties': {
+        'id': {'type': ['string', 'null']}
+    },
+    'required': ['id'],
+    'additionalProperties': False
+}

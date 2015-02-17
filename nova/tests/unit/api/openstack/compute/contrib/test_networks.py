@@ -327,6 +327,7 @@ class NetworkCreateExceptionsTestV2(NetworkCreateExceptionsTestV21):
 
 
 class NetworksTestV21(test.NoDBTestCase):
+    validation_error = exception.ValidationError
 
     def setUp(self):
         super(NetworksTestV21, self).setUp()
@@ -420,7 +421,7 @@ class NetworksTestV21(test.NoDBTestCase):
 
     def test_network_add(self):
         uuid = FAKE_NETWORKS[1]['uuid']
-        res = self.controller.add(self.req, {'id': uuid})
+        res = self.controller.add(self.req, body={'id': uuid})
         self._check_status(res, self.controller.add, 202)
         res_dict = self.controller.show(self.admin_req, uuid)
         self.assertEqual(res_dict['network']['project_id'], 'fake')
@@ -431,7 +432,7 @@ class NetworksTestV21(test.NoDBTestCase):
     def test_network_add_no_more_networks_fail(self, mock_add):
         uuid = FAKE_NETWORKS[1]['uuid']
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.add,
-                          self.req, {'id': uuid})
+                          self.req, body={'id': uuid})
 
     @mock.patch('nova.tests.unit.api.openstack.compute.contrib.test_networks.'
                 'FakeNetworkAPI.add_network_to_project',
@@ -439,7 +440,28 @@ class NetworksTestV21(test.NoDBTestCase):
     def test_network_add_network_not_found_networks_fail(self, mock_add):
         uuid = FAKE_NETWORKS[1]['uuid']
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.add,
-                          self.req, {'id': uuid})
+                          self.req, body={'id': uuid})
+
+    def test_network_add_network_without_body(self):
+        self.assertRaises(self.validation_error, self.controller.add,
+                          self.req,
+                          body=None)
+
+    def test_network_add_network_with_invalid_id(self):
+        self.assertRaises(exception.ValidationError, self.controller.add,
+                          self.req,
+                          body={'id': 123})
+
+    def test_network_add_network_with_extra_arg(self):
+        uuid = FAKE_NETWORKS[1]['uuid']
+        self.assertRaises(exception.ValidationError, self.controller.add,
+                          self.req,
+                          body={'id': uuid,
+                                'extra_arg': 123})
+
+    def test_network_add_network_with_none_id(self):
+        res = self.controller.add(self.req, body={'id': None})
+        self._check_status(res, self.controller.add, 202)
 
     def test_network_create(self):
         res_dict = self.controller.create(self.req, body=self.new_network)
@@ -465,6 +487,7 @@ class NetworksTestV21(test.NoDBTestCase):
 
 
 class NetworksTestV2(NetworksTestV21):
+    validation_error = webob.exc.HTTPUnprocessableEntity
 
     def _setup(self):
         ext_mgr = extensions.ExtensionManager()
@@ -488,6 +511,12 @@ class NetworksTestV2(NetworksTestV21):
         self.stubs.Set(self.controller.network_api, 'create', no_mtu)
         self.new_network['network']['mtu'] = 9000
         self.controller.create(self.req, body=self.new_network)
+
+    def test_network_add_network_with_invalid_id(self):
+        pass
+
+    def test_network_add_network_with_extra_arg(self):
+        pass
 
 
 class NetworksAssociateTestV21(test.NoDBTestCase):
