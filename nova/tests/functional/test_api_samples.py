@@ -168,14 +168,27 @@ class VersionsSampleJsonTest(ApiSampleTestBaseV2):
 
 
 class ServersSampleBase(ApiSampleTestBaseV2):
-    def _post_server(self):
+    def _post_server(self, use_common_server_api_samples=True):
+        # param use_common_server_api_samples: Boolean to set whether tests use
+        # common sample files for server post request and response.
+        # Default is True which means _get_sample_path method will fetch the
+        # common server sample files.
+        # Set False if tests need to use extension specific sample files
         subs = {
             'image_id': fake.get_valid_image_id(),
             'host': self._get_host(),
         }
-        response = self._do_post('servers', 'server-post-req', subs)
-        subs = self._get_regexes()
-        return self._verify_response('server-post-resp', subs, response, 202)
+        orig_value = self.__class__._use_common_server_api_samples
+        try:
+            self.__class__._use_common_server_api_samples = (
+                                        use_common_server_api_samples)
+            response = self._do_post('servers', 'server-post-req', subs)
+            subs = self._get_regexes()
+            status = self._verify_response('server-post-resp', subs,
+                                           response, 202)
+            return status
+        finally:
+            self.__class__._use_common_server_api_samples = orig_value
 
 
 class ServersSampleJsonTest(ServersSampleBase):
@@ -717,7 +730,7 @@ class SecurityGroupsSampleJsonTest(ServersSampleBase):
 
     def test_security_groups_list_server(self):
         # Get api sample of security groups for a specific server.
-        uuid = self._post_server()
+        uuid = self._post_server(use_common_server_api_samples=False)
         response = self._do_get('servers/%s/os-security-groups' % uuid)
         subs = self._get_regexes()
         self._verify_response('server-security-groups-list-resp',
@@ -725,14 +738,14 @@ class SecurityGroupsSampleJsonTest(ServersSampleBase):
 
     def test_security_groups_add(self):
         self._create_security_group()
-        uuid = self._post_server()
+        uuid = self._post_server(use_common_server_api_samples=False)
         response = self._add_group(uuid)
         self.assertEqual(response.status_code, 202)
         self.assertEqual(response.content, '')
 
     def test_security_groups_remove(self):
         self._create_security_group()
-        uuid = self._post_server()
+        uuid = self._post_server(use_common_server_api_samples=False)
         self._add_group(uuid)
         subs = {
                 'group_name': 'test'
@@ -2273,7 +2286,7 @@ class DiskConfigJsonTest(ServersSampleBase):
                       "Disk_config")
 
     def test_list_servers_detail(self):
-        uuid = self._post_server()
+        uuid = self._post_server(use_common_server_api_samples=False)
         response = self._do_get('servers/detail')
         subs = self._get_regexes()
         subs['hostid'] = '[a-f0-9]+'
@@ -2281,14 +2294,14 @@ class DiskConfigJsonTest(ServersSampleBase):
         self._verify_response('list-servers-detail-get', subs, response, 200)
 
     def test_get_server(self):
-        uuid = self._post_server()
+        uuid = self._post_server(use_common_server_api_samples=False)
         response = self._do_get('servers/%s' % uuid)
         subs = self._get_regexes()
         subs['hostid'] = '[a-f0-9]+'
         self._verify_response('server-get-resp', subs, response, 200)
 
     def test_update_server(self):
-        uuid = self._post_server()
+        uuid = self._post_server(use_common_server_api_samples=False)
         response = self._do_put('servers/%s' % uuid,
                                 'server-update-put-req', {})
         subs = self._get_regexes()
@@ -2297,7 +2310,7 @@ class DiskConfigJsonTest(ServersSampleBase):
 
     def test_resize_server(self):
         self.flags(allow_resize_to_same_host=True)
-        uuid = self._post_server()
+        uuid = self._post_server(use_common_server_api_samples=False)
         response = self._do_post('servers/%s/action' % uuid,
                                  'server-resize-post-req', {})
         self.assertEqual(response.status_code, 202)
@@ -2306,7 +2319,7 @@ class DiskConfigJsonTest(ServersSampleBase):
         self.assertEqual(response.content, "")
 
     def test_rebuild_server(self):
-        uuid = self._post_server()
+        uuid = self._post_server(use_common_server_api_samples=False)
         subs = {
             'image_id': fake.get_valid_image_id(),
             'host': self._get_host(),
