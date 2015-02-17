@@ -523,6 +523,21 @@ def get_ip_version(network):
         return "IPv4"
 
 
+def safe_ip_format(ip):
+    """Transform ip string to "safe" format.
+
+    Will return ipv4 addresses unchanged, but will nest ipv6 addresses
+    inside square brackets.
+    """
+    try:
+        if netaddr.IPAddress(ip).version == 6:
+            return '[%s]' % ip
+    except (TypeError, netaddr.AddrFormatError):  # hostname
+        pass
+    # it's IPv4 or hostname
+    return ip
+
+
 def monkey_patch():
     """If the CONF.monkey_patch set as True,
     this function patches a decorator

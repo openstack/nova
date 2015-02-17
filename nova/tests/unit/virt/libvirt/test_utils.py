@@ -87,6 +87,31 @@ blah BLAH: bb
         ])
         self.assertEqual(2, mock_execute.call_count)
 
+    @mock.patch('nova.utils.execute')
+    def test_copy_image_rsync_ipv6(self, mock_execute):
+        libvirt_utils.copy_image('src', 'dest', host='2600::')
+
+        mock_execute.assert_has_calls([
+            self._rsync_call('--dry-run', 'src', '[2600::]:dest'),
+            self._rsync_call('src', '[2600::]:dest'),
+        ])
+        self.assertEqual(2, mock_execute.call_count)
+
+    @mock.patch('nova.utils.execute')
+    def test_copy_image_scp_ipv6(self, mock_execute):
+        mock_execute.side_effect = [
+            processutils.ProcessExecutionError,
+            mock.DEFAULT,
+        ]
+
+        libvirt_utils.copy_image('src', 'dest', host='2600::')
+
+        mock_execute.assert_has_calls([
+            self._rsync_call('--dry-run', 'src', '[2600::]:dest'),
+            mock.call('scp', 'src', '[2600::]:dest'),
+        ])
+        self.assertEqual(2, mock_execute.call_count)
+
     @mock.patch('os.path.exists', return_value=True)
     def test_disk_type(self, mock_exists):
         # Seems like lvm detection
