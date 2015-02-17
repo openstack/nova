@@ -134,3 +134,20 @@ class PathUtilsTestCase(test_base.HyperVBaseTestCase):
             self.assertRaises(vmutils.HyperVException,
                               self._pathutils._get_instances_sub_dir,
                               fake_dir_name)
+
+    @mock.patch.object(pathutils.PathUtils, 'get_configdrive_path')
+    @mock.patch.object(pathutils.PathUtils, 'copyfile')
+    def test_copy_configdrive(self, mock_copyfile, mock_get_configdrive_path):
+        mock_get_configdrive_path.side_effect = [mock.sentinel.FAKE_LOCAL_PATH,
+                                                 mock.sentinel.FAKE_REMOTE_PATH
+                                                ]
+        self._pathutils.copy_configdrive(self.fake_instance_name,
+                                         mock.sentinel.DEST_HOST)
+
+        mock_get_configdrive_path.assert_has_calls(
+            [mock.call(self.fake_instance_name, constants.DVD_FORMAT),
+             mock.call(self.fake_instance_name, constants.DVD_FORMAT,
+                       remote_server=mock.sentinel.DEST_HOST)])
+
+        mock_copyfile.assert_called_once_with(mock.sentinel.FAKE_LOCAL_PATH,
+                                              mock.sentinel.FAKE_REMOTE_PATH)
