@@ -20,7 +20,7 @@ import operator
 # 2. Note that <or> is handled in a different way below.
 # 3. If the first word in the extra_specs is not one of the operators,
 #   it is ignored.
-_op_methods = {'=': lambda x, y: float(x) >= float(y),
+op_methods = {'=': lambda x, y: float(x) >= float(y),
                '<in>': lambda x, y: y in x,
                '<all-in>': lambda x, y: all(val in x for val in y),
                '==': lambda x, y: float(x) == float(y),
@@ -41,7 +41,7 @@ def match(value, req):
     op = method = None
     if words:
         op = words.pop(0)
-        method = _op_methods.get(op)
+        method = op_methods.get(op)
 
     if op != '<or>' and not method:
         return value == req
