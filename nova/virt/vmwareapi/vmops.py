@@ -827,7 +827,7 @@ class VMwareVMOps(object):
             # TODO(vui) Add handling for when vmdk volume is attached.
             self._delete_vm_snapshot(instance, vm_ref, snapshot_ref)
 
-    def reboot(self, instance, network_info):
+    def reboot(self, instance, network_info, reboot_type="SOFT"):
         """Reboot a VM instance."""
         vm_ref = vm_util.get_vm_ref(self._session, instance)
         lst_properties = ["summary.guest.toolsStatus", "runtime.powerState",
@@ -848,7 +848,8 @@ class VMwareVMOps(object):
         # If latest vmware tools are installed in the VM, and that the tools
         # are running, then only do a guest reboot. Otherwise do a hard reset.
         if (tools_status == "toolsOk" and
-                tools_running_status == "guestToolsRunning"):
+                tools_running_status == "guestToolsRunning" and
+                reboot_type == "SOFT"):
             LOG.debug("Rebooting guest OS of VM", instance=instance)
             self._session._call_method(self._session.vim, "RebootGuest",
                                        vm_ref)
