@@ -232,29 +232,36 @@ class IronicHostManagerTestFilters(test.NoDBTestCase):
         self.flags(scheduler_available_filters=['%s.%s' % (__name__, cls) for
                                                 cls in ['FakeFilterClass1',
                                                         'FakeFilterClass2']])
+        self.flags(scheduler_default_filters=['FakeFilterClass1'])
         self.host_manager = ironic_host_manager.IronicHostManager()
         self.fake_hosts = [ironic_host_manager.IronicNodeState(
                 'fake_host%s' % x, 'fake-node') for x in range(1, 5)]
         self.fake_hosts += [ironic_host_manager.IronicNodeState(
                 'fake_multihost', 'fake-node%s' % x) for x in range(1, 5)]
 
+    def test_default_filters(self):
+        default_filters = self.host_manager.default_filters
+        self.assertEqual(1, len(default_filters))
+        self.assertIsInstance(default_filters[0], FakeFilterClass1)
+
     def test_choose_host_filters_not_found(self):
-        self.flags(scheduler_default_filters='FakeFilterClass3')
         self.assertRaises(exception.SchedulerHostFilterNotFound,
-                self.host_manager._choose_host_filters, None)
+                          self.host_manager._choose_host_filters,
+                          'FakeFilterClass3')
 
     def test_choose_host_filters(self):
-        self.flags(scheduler_default_filters=['FakeFilterClass2'])
-
-        # Test we returns 1 correct function
-        host_filters = self.host_manager._choose_host_filters(None)
+        # Test we return 1 correct filter object
+        host_filters = self.host_manager._choose_host_filters(
+                ['FakeFilterClass2'])
         self.assertEqual(1, len(host_filters))
-        self.assertEqual('FakeFilterClass2',
-                         host_filters[0].__class__.__name__)
+        self.assertIsInstance(host_filters[0], FakeFilterClass2)
 
-    def _mock_get_filtered_hosts(self, info, specified_filters=None):
-        self.mox.StubOutWithMock(self.host_manager, '_choose_host_filters')
+    def test_host_manager_default_filters(self):
+        default_filters = self.host_manager.default_filters
+        self.assertEqual(1, len(default_filters))
+        self.assertIsInstance(default_filters[0], FakeFilterClass1)
 
+    def _mock_get_filtered_hosts(self, info):
         info['got_objs'] = []
         info['got_fprops'] = []
 
@@ -264,8 +271,6 @@ class IronicHostManagerTestFilters(test.NoDBTestCase):
             return True
 
         self.stubs.Set(FakeFilterClass1, '_filter_one', fake_filter_one)
-        self.host_manager._choose_host_filters(specified_filters).AndReturn(
-                [FakeFilterClass1()])
 
     def _verify_result(self, info, result, filters=True):
         for x in info['got_fprops']:
@@ -282,20 +287,18 @@ class IronicHostManagerTestFilters(test.NoDBTestCase):
 
         self._mock_get_filtered_hosts(info)
 
-        self.mox.ReplayAll()
         result = self.host_manager.get_filtered_hosts(self.fake_hosts,
                 fake_properties)
         self._verify_result(info, result)
 
-    def test_get_filtered_hosts_with_specified_filters(self):
+    @mock.patch.object(FakeFilterClass2, '_filter_one', return_value=True)
+    def test_get_filtered_hosts_with_specified_filters(self, mock_filter_one):
         fake_properties = {'moo': 1, 'cow': 2}
 
         specified_filters = ['FakeFilterClass1', 'FakeFilterClass2']
         info = {'expected_objs': self.fake_hosts,
                 'expected_fprops': fake_properties}
-        self._mock_get_filtered_hosts(info, specified_filters)
-
-        self.mox.ReplayAll()
+        self._mock_get_filtered_hosts(info)
 
         result = self.host_manager.get_filtered_hosts(self.fake_hosts,
                 fake_properties, filter_class_names=specified_filters)
@@ -310,8 +313,6 @@ class IronicHostManagerTestFilters(test.NoDBTestCase):
                 'expected_fprops': fake_properties}
         self._mock_get_filtered_hosts(info)
 
-        self.mox.ReplayAll()
-
         result = self.host_manager.get_filtered_hosts(self.fake_hosts,
                 fake_properties)
         self._verify_result(info, result)
@@ -325,8 +326,6 @@ class IronicHostManagerTestFilters(test.NoDBTestCase):
                 'expected_fprops': fake_properties}
         self._mock_get_filtered_hosts(info)
 
-        self.mox.ReplayAll()
-
         result = self.host_manager.get_filtered_hosts(self.fake_hosts,
                 fake_properties)
         self._verify_result(info, result, False)
@@ -337,8 +336,6 @@ class IronicHostManagerTestFilters(test.NoDBTestCase):
         info = {'expected_objs': [],
                 'expected_fprops': fake_properties}
         self._mock_get_filtered_hosts(info)
-
-        self.mox.ReplayAll()
 
         result = self.host_manager.get_filtered_hosts(self.fake_hosts,
                 fake_properties)
@@ -354,8 +351,6 @@ class IronicHostManagerTestFilters(test.NoDBTestCase):
                 'expected_fprops': fake_properties}
         self._mock_get_filtered_hosts(info)
 
-        self.mox.ReplayAll()
-
         result = self.host_manager.get_filtered_hosts(self.fake_hosts,
                 fake_properties)
         self._verify_result(info, result, False)
@@ -369,8 +364,6 @@ class IronicHostManagerTestFilters(test.NoDBTestCase):
                 'expected_fprops': fake_properties}
         self._mock_get_filtered_hosts(info)
 
-        self.mox.ReplayAll()
-
         result = self.host_manager.get_filtered_hosts(self.fake_hosts,
                 fake_properties)
         self._verify_result(info, result, False)
@@ -383,8 +376,6 @@ class IronicHostManagerTestFilters(test.NoDBTestCase):
         info = {'expected_objs': [self.fake_hosts[5], self.fake_hosts[7]],
                 'expected_fprops': fake_properties}
         self._mock_get_filtered_hosts(info)
-
-        self.mox.ReplayAll()
 
         result = self.host_manager.get_filtered_hosts(self.fake_hosts,
                 fake_properties)
@@ -400,8 +391,6 @@ class IronicHostManagerTestFilters(test.NoDBTestCase):
                 'expected_fprops': fake_properties}
         self._mock_get_filtered_hosts(info)
 
-        self.mox.ReplayAll()
-
         result = self.host_manager.get_filtered_hosts(self.fake_hosts,
                 fake_properties)
         self._verify_result(info, result, False)
@@ -414,8 +403,6 @@ class IronicHostManagerTestFilters(test.NoDBTestCase):
         info = {'expected_objs': [],
                 'expected_fprops': fake_properties}
         self._mock_get_filtered_hosts(info)
-
-        self.mox.ReplayAll()
 
         result = self.host_manager.get_filtered_hosts(self.fake_hosts,
                 fake_properties)
@@ -430,8 +417,6 @@ class IronicHostManagerTestFilters(test.NoDBTestCase):
                 'expected_fprops': fake_properties}
         self._mock_get_filtered_hosts(info)
 
-        self.mox.ReplayAll()
-
         result = self.host_manager.get_filtered_hosts(self.fake_hosts,
                 fake_properties)
         self._verify_result(info, result, False)
@@ -444,8 +429,6 @@ class IronicHostManagerTestFilters(test.NoDBTestCase):
         info = {'expected_objs': [],
                 'expected_fprops': fake_properties}
         self._mock_get_filtered_hosts(info)
-
-        self.mox.ReplayAll()
 
         result = self.host_manager.get_filtered_hosts(self.fake_hosts,
                 fake_properties)

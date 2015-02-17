@@ -300,6 +300,8 @@ class HostManager(object):
                 CONF.scheduler_available_filters)
         self.filter_cls_map = {cls.__name__: cls for cls in filter_classes}
         self.filter_obj_map = {}
+        self.default_filters = self._choose_host_filters(
+                CONF.scheduler_default_filters)
         self.weight_handler = weights.HostWeightHandler()
         weigher_classes = self.weight_handler.get_matching_classes(
                 CONF.scheduler_weight_classes)
@@ -311,8 +313,6 @@ class HostManager(object):
         function checks the filter names against a predefined set
         of acceptable filters.
         """
-        if filter_cls_names is None:
-            filter_cls_names = CONF.scheduler_default_filters
         if not isinstance(filter_cls_names, (list, tuple)):
             filter_cls_names = [filter_cls_names]
 
@@ -378,7 +378,10 @@ class HostManager(object):
                         "'force_nodes' value of '%s'")
             LOG.audit(msg % forced_nodes_str)
 
-        filters = self._choose_host_filters(filter_class_names)
+        if filter_class_names is None:
+            filters = self.default_filters
+        else:
+            filters = self._choose_host_filters(filter_class_names)
         ignore_hosts = filter_properties.get('ignore_hosts', [])
         force_hosts = filter_properties.get('force_hosts', [])
         force_nodes = filter_properties.get('force_nodes', [])
