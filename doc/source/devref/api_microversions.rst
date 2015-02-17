@@ -119,6 +119,40 @@ This method will be available from version ``2.1``, validated according to
 ``dummy_schema.dummy2`` from ``2.9`` onward.
 
 
+When not using decorators
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+When you don't want to use the ``@api_version`` decorator on a method
+or you want to change behaviour within a method (say it leads to
+simpler or simply a lot less code) you can directly test for the
+requested version with a method as long as you have access to the api
+request object (commonly called ``req``). Every API method has an
+api_version_request object attached to the req object and that can be
+used to modify behaviour based on its value::
+
+    def index(self, req):
+        <common code>
+
+        req_ver = req.api_version_request
+        if req_version.matches("2.1", "2.5"):
+            ....stuff....
+        elif req_version.matches("2.6", "2.10"):
+            ....other stuff....
+        elif req_version > api_version_request.APIVersionRequest("2.10"):
+            ....more stuff.....
+
+        <common code>
+
+The first argument to the matches method is the minimum acceptable version
+and the second is maximum acceptable version. A specified version can be null::
+
+    null_version = APIVersionRequest()
+
+If the minimum version specified is null then there is no restriction on
+the minimum version, and likewise if the maximum version is null there
+is no restriction the maximum version. Alternatively a one sided comparison
+can be used as in the example above.
+
 Other necessary changes
 -----------------------
 
