@@ -18,6 +18,7 @@ import webob
 
 from nova.api.openstack.compute.plugins.v3 import (extended_volumes
                                                    as extended_volumes_v21)
+from nova.api.openstack import wsgi as os_wsgi
 from nova import compute
 from nova import db
 from nova import objects
@@ -49,10 +50,12 @@ def fake_compute_get_all(*args, **kwargs):
 def fake_bdms_get_all_by_instance(*args, **kwargs):
     return [fake_block_device.FakeDbBlockDeviceDict(
             {'volume_id': UUID1, 'source_type': 'volume',
-             'destination_type': 'volume', 'id': 1}),
+             'destination_type': 'volume', 'id': 1,
+             'delete_on_termination': True}),
             fake_block_device.FakeDbBlockDeviceDict(
             {'volume_id': UUID2, 'source_type': 'volume',
-             'destination_type': 'volume', 'id': 2})]
+             'destination_type': 'volume', 'id': 2,
+             'delete_on_termination': False})]
 
 
 def fake_volume_get(*args, **kwargs):
@@ -63,6 +66,7 @@ class ExtendedVolumesTestV21(test.TestCase):
     content_type = 'application/json'
     prefix = 'os-extended-volumes:'
     exp_volumes = [{'id': UUID1}, {'id': UUID2}]
+    wsgi_api_version = os_wsgi.DEFAULT_API_VERSION
 
     def setUp(self):
         super(ExtendedVolumesTestV21, self).setUp()
@@ -88,6 +92,8 @@ class ExtendedVolumesTestV21(test.TestCase):
     def _make_request(self, url, body=None):
         req = webob.Request.blank('/v2/fake/servers' + url)
         req.headers['Accept'] = self.content_type
+        req.headers = {os_wsgi.API_VERSION_REQUEST_HEADER:
+                       self.wsgi_api_version}
         if body:
             req.body = jsonutils.dumps(body)
             req.method = 'POST'
@@ -128,3 +134,10 @@ class ExtendedVolumesTestV2(ExtendedVolumesTestV21):
                    osapi_compute_extension=['nova.api.openstack.compute.'
                                             'contrib.select_extensions'],
                    osapi_compute_ext_list=['Extended_volumes'])
+
+
+class ExtendedVolumesTestV23(ExtendedVolumesTestV21):
+
+    exp_volumes = [{'id': UUID1, 'delete_on_termination': True},
+                   {'id': UUID2, 'delete_on_termination': False}]
+    wsgi_api_version = '2.3'

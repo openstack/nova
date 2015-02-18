@@ -13,6 +13,7 @@
 #   under the License.
 
 """The Extended Volumes API extension."""
+from nova.api.openstack import api_version_request
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import compute
@@ -29,12 +30,20 @@ class ExtendedVolumesController(wsgi.Controller):
         self.compute_api = compute.API()
         self.volume_api = volume.API()
 
-    def _extend_server(self, context, server, instance):
+    def _extend_server(self, context, server, instance, requested_version):
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                 context, instance.uuid)
-        volume_ids = [bdm['volume_id'] for bdm in bdms if bdm['volume_id']]
+        volumes_attached = []
+        api_version = api_version_request.APIVersionRequest('2.3')
+        for bdm in bdms:
+            if bdm.get('volume_id'):
+                volume_attached = {'id': bdm['volume_id']}
+                if requested_version >= api_version:
+                    volume_attached['delete_on_termination'] = (
+                        bdm['delete_on_termination'])
+                volumes_attached.append(volume_attached)
         key = "%s:volumes_attached" % ExtendedVolumes.alias
-        server[key] = [{'id': volume_id} for volume_id in volume_ids]
+        server[key] = volumes_attached
 
     @wsgi.extends
     def show(self, req, resp_obj, id):
@@ -44,7 +53,8 @@ class ExtendedVolumesController(wsgi.Controller):
             db_instance = req.get_db_instance(server['id'])
             # server['id'] is guaranteed to be in the cache due to
             # the core API adding it in its 'show' method.
-            self._extend_server(context, server, db_instance)
+            self._extend_server(context, server, db_instance,
+                                req.api_version_request)
 
     @wsgi.extends
     def detail(self, req, resp_obj):
@@ -55,7 +65,8 @@ class ExtendedVolumesController(wsgi.Controller):
                 db_instance = req.get_db_instance(server['id'])
                 # server['id'] is guaranteed to be in the cache due to
                 # the core API adding it in its 'detail' method.
-                self._extend_server(context, server, db_instance)
+                self._extend_server(context, server, db_instance,
+                                    req.api_version_request)
 
 
 class ExtendedVolumes(extensions.V3APIExtensionBase):
