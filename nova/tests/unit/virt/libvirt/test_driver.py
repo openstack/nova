@@ -5404,10 +5404,11 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     def test__create_snapshot_metadata(self):
         base = {}
-        instance = {'kernel_id': 'kernel',
+        instance_data = {'kernel_id': 'kernel',
                     'project_id': 'prj_id',
                     'ramdisk_id': 'ram_id',
                     'os_type': None}
+        instance = objects.Instance(**instance_data)
         img_fmt = 'raw'
         snp_name = 'snapshot_name'
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -7084,18 +7085,14 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         base_dir = os.path.join(CONF.instances_path,
                                 CONF.image_cache_subdirectory_name)
-        self.test_instance.update({'name': 'fake_instance',
-                                   'user_id': 'fake-user',
-                                   'os_type': None,
-                                   'project_id': 'fake-project'})
-
+        instance = objects.Instance(**self.test_instance)
         with contextlib.nested(
             mock.patch.object(drvr, '_fetch_instance_kernel_ramdisk'),
             mock.patch.object(libvirt_driver.libvirt_utils, 'fetch_image'),
             mock.patch.object(drvr, '_create_ephemeral')
         ) as (fetch_kernel_ramdisk_mock, fetch_image_mock,
                 create_ephemeral_mock):
-            drvr._create_images_and_backing(self.context, self.test_instance,
+            drvr._create_images_and_backing(self.context, instance,
                                             "/fake/instance/dir",
                                             disk_info_json)
             self.assertEqual(len(create_ephemeral_mock.call_args_list), 1)
@@ -7861,8 +7858,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     def test_chown_disk_config_for_instance(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        instance = copy.deepcopy(self.test_instance)
-        instance['name'] = 'test_name'
+        instance = objects.Instance(**self.test_instance)
         self.mox.StubOutWithMock(fake_libvirt_utils, 'get_instance_path')
         self.mox.StubOutWithMock(os.path, 'exists')
         self.mox.StubOutWithMock(fake_libvirt_utils, 'chown')
@@ -8346,7 +8342,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     @mock.patch.object(objects.Instance, 'get_by_uuid')
     @mock.patch.object(objects.Instance, 'obj_load_attr', autospec=True)
     @mock.patch.object(objects.Instance, 'save', autospec=True)
-    @mock.patch.object(libvirt_driver.LibvirtDriver, 'unplug_vifs')
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_destroy')
     @mock.patch.object(libvirt_driver.LibvirtDriver, 'delete_instance_files')
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_disconnect_volume')
@@ -8355,9 +8350,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     def _test_destroy_removes_disk(self, mock_undefine_domain, mock_mapping,
                                    mock_disconnect_volume,
                                    mock_delete_instance_files, mock_destroy,
-                                   mock_unplug_vifs, mock_inst_save,
-                                   mock_inst_obj_load_attr, mock_get_by_uuid,
-                                   volume_fail=False):
+                                   mock_inst_save, mock_inst_obj_load_attr,
+                                   mock_get_by_uuid, volume_fail=False):
         instance = objects.Instance(self.context, **self.test_instance)
         vol = {'block_device_mapping': [
               {'connection_info': 'dummy', 'mount_device': '/dev/sdb'}]}
@@ -11893,6 +11887,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         inst['ramdisk_id'] = 3
         inst['key_data'] = 'ABCDEFG'
         inst['system_metadata'] = {}
+        inst['metadata'] = {}
 
         inst.update(params)
 
@@ -12205,8 +12200,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                                                   'uuid': 'other_uuid'})
 
     def test_disk_size_from_instance_disk_info(self):
-        inst = {'root_gb': 10, 'ephemeral_gb': 20, 'swap_gb': 30}
-
+        instance_data = {'root_gb': 10, 'ephemeral_gb': 20, 'swap_gb': 30}
+        inst = objects.Instance(**instance_data)
         info = {'path': '/path/disk'}
         self.assertEqual(10 * units.Gi,
             self.drvr._disk_size_from_instance(inst, info))
@@ -12648,16 +12643,9 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
 
             self.assertEqual(disk_inject_data.called, called)
 
-    def _test_inject_data_default_driver_params(self):
+    def _test_inject_data_default_driver_params(self, **params):
         return {
-            'instance': {
-                'uuid': 'fake-uuid',
-                'id': 1,
-                'kernel_id': None,
-                'image_ref': 1,
-                'key_data': None,
-                'metadata': None
-            },
+            'instance': self._create_instance(params=params),
             'network_info': None,
             'admin_pass': None,
             'files': None,
@@ -12672,7 +12660,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             '/path',  # injection_path
             None,  # key
             None,  # net
-            None,  # metadata
+            {},  # metadata
             'foobar',  # admin_pass
             None,  # files
         ]
@@ -12691,7 +12679,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             '/path',  # injection_path
             'key-content',  # key
             None,  # net
-            None,  # metadata
+            {},  # metadata
             None,  # admin_pass
             None,  # files
         ]
@@ -12702,13 +12690,15 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         self._test_inject_data(driver_params, disk_params, called=False)
 
     def test_inject_data_metadata(self):
-        driver_params = self._test_inject_data_default_driver_params()
-        driver_params['instance']['metadata'] = 'data'
+        instance_metadata = {'metadata': {'data': 'foo'}}
+        driver_params = self._test_inject_data_default_driver_params(
+            **instance_metadata
+        )
         disk_params = [
             '/path',  # injection_path
             None,  # key
             None,  # net
-            'data',  # metadata
+            {'data': 'foo'},  # metadata
             None,  # admin_pass
             None,  # files
         ]
@@ -12721,7 +12711,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             '/path',  # injection_path
             None,  # key
             None,  # net
-            None,  # metadata
+            {},  # metadata
             None,  # admin_pass
             ['file1', 'file2'],  # files
         ]
@@ -12734,7 +12724,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             '/path',  # injection_path
             None,  # key
             {'net': 'eno1'},  # net
-            None,  # metadata
+            {},  # metadata
             None,  # admin_pass
             None,  # files
         ]
@@ -12774,7 +12764,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         objects.Flavor.get_by_id(mox.IgnoreArg(), 2).AndReturn(fake_flavor)
 
         if method == 'attach_interface':
-            fake_image_meta = {'id': instance['image_ref']}
+            fake_image_meta = {'id': instance.image_ref}
         elif method == 'detach_interface':
             fake_image_meta = None
         expected = self.drvr.vif_driver.get_config(
