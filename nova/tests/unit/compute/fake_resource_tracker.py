@@ -14,6 +14,7 @@
 #    under the License.
 
 from nova.compute import resource_tracker
+from nova import objects
 
 
 class FakeResourceTracker(resource_tracker.ResourceTracker):
@@ -29,7 +30,4 @@ class FakeResourceTracker(resource_tracker.ResourceTracker):
         self.compute_node.update(values)
 
     def _get_service(self, context):
-        return {
-            "id": 1,
-            "compute_node": None
-        }
+        return objects.Service(id=1)

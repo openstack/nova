@@ -74,21 +74,14 @@ _COMPUTE_NODE_FIXTURES = [
     },
 ]
 
-# NOTE(jaypipes): This fixture should go bye-bye once bauzas implements
-#                 the detach-compute-node-from-service blueprint.
-_SERVICE_FIXTURE = {
-    'id': 1,
-    'host': 'fake-host',
-    'binary': 'nova-compute',
-    'topic': 'compute',
-    'report_count': 1,
-    'disabled': False,
-    'disabled_reason': '',
-    # Yes, it's a list. Yes, it's a singular form of compute_node, not a
-    # pluralized form. No, it doesn't matter, because this will all be removed
-    # when the above blueprint is implemented.
-    'compute_node': _COMPUTE_NODE_FIXTURES
-}
+_SERVICE_FIXTURE = objects.Service(
+    id=1,
+    host='fake-host',
+    binary='nova-compute',
+    topic='compute',
+    report_count=1,
+    disabled=False,
+    disabled_reason='')
 
 _INSTANCE_TYPE_FIXTURES = {
     1: {
@@ -669,23 +662,19 @@ class TestUpdateAvailableResources(BaseTestCase):
 
 class TestSyncComputeNode(BaseTestCase):
 
-    def test_no_found_service_disabled(self):
+    @mock.patch('nova.objects.Service.get_by_compute_host')
+    def test_no_found_service_disabled(self, service_mock):
         self._setup_rt()
 
-        # NOTE(jaypipes): RT._get_service() calls the conductor right now to
-        #                 get the service for a compute host. Yes, this is odd,
-        #                 and yes, bauzas is fixing this problem in the
-        #                 detach-compute-node-from-service blueprint.
-        capi = self.cond_api_mock
-        service_mock = capi.service_get_by_compute_host
         service_mock.side_effect = exc.NotFound
 
         self.rt._sync_compute_node(mock.sentinel.ctx, mock.sentinel.resources)
         self.assertTrue(self.rt.disabled)
         self.assertIsNone(self.rt.compute_node)
 
+    @mock.patch('nova.objects.Service.get_by_compute_host')
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
-    def test_compute_node_created_on_empty(self, get_mock):
+    def test_compute_node_created_on_empty(self, get_mock, service_mock):
         self._setup_rt()
 
         def fake_create_node(_ctx, resources):
@@ -696,7 +685,6 @@ class TestSyncComputeNode(BaseTestCase):
         capi = self.cond_api_mock
         create_node_mock = capi.compute_node_create
         create_node_mock.side_effect = fake_create_node
-        service_mock = capi.service_get_by_compute_host
         service_obj = _SERVICE_FIXTURE
         service_mock.return_value = service_obj
         get_mock.side_effect = exc.NotFound
@@ -760,13 +748,13 @@ class TestSyncComputeNode(BaseTestCase):
                                          ('fake-host', 'fake-node'),
                                          expected_resources)
 
-    def test_existing_compute_node_updated_same_resources(self):
+    @mock.patch('nova.objects.Service.get_by_compute_host')
+    def test_existing_compute_node_updated_same_resources(self, service_mock):
         self._setup_rt()
         self.rt.compute_node = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
 
         capi = self.cond_api_mock
         create_node_mock = capi.compute_node_create
-        service_mock = capi.service_get_by_compute_host
 
         # This is the same set of resources as the fixture, deliberately. We
         # are checking below to see that update_resource_stats() is not
@@ -808,13 +796,13 @@ class TestSyncComputeNode(BaseTestCase):
         self.rt._sync_compute_node(mock.sentinel.ctx, orig_resources)
         self.assertFalse(urs_mock.called)
 
-    def test_existing_compute_node_updated_new_resources(self):
+    @mock.patch('nova.objects.Service.get_by_compute_host')
+    def test_existing_compute_node_updated_new_resources(self, service_mock):
         self._setup_rt()
         self.rt.compute_node = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
 
         capi = self.cond_api_mock
         create_node_mock = capi.compute_node_create
-        service_mock = capi.service_get_by_compute_host
 
         # Deliberately changing local_gb_used, vcpus_used, and memory_mb_used
         # below to be different from the compute node fixture's base usages.

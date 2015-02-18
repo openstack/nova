@@ -774,18 +774,21 @@ class ServiceCommands(object):
 
         """
         # Getting compute node info and related instances info
-        service_ref = db.service_get_by_compute_host(context, host)
+        service_ref = objects.Service.get_by_compute_host(context, host)
         instance_refs = db.instance_get_all_by_host(context,
-                                                    service_ref['host'])
+                                                    service_ref.host)
 
         # Getting total available/used resource
-        compute_ref = service_ref['compute_node'][0]
-        resource = {'vcpus': compute_ref['vcpus'],
-                    'memory_mb': compute_ref['memory_mb'],
-                    'local_gb': compute_ref['local_gb'],
-                    'vcpus_used': compute_ref['vcpus_used'],
-                    'memory_mb_used': compute_ref['memory_mb_used'],
-                    'local_gb_used': compute_ref['local_gb_used']}
+        # NOTE(sbauza): We're lazily loading the compute_node field here but
+        # we will change that later to get the ComputeNode object by using
+        # the Service host field
+        compute_ref = service_ref.compute_node
+        resource = {'vcpus': compute_ref.vcpus,
+                    'memory_mb': compute_ref.memory_mb,
+                    'local_gb': compute_ref.local_gb,
+                    'vcpus_used': compute_ref.vcpus_used,
+                    'memory_mb_used': compute_ref.memory_mb_used,
+                    'local_gb_used': compute_ref.local_gb_used}
         usage = dict()
         if not instance_refs:
             return {'resource': resource, 'usage': usage}

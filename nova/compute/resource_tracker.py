@@ -411,7 +411,7 @@ class ResourceTracker(object):
 
         if not self.compute_node:
             # Need to create the ComputeNode record:
-            resources['service_id'] = service['id']
+            resources['service_id'] = service.id
             resources['host'] = self.host
             self._create(context, resources)
             if self.pci_tracker:
@@ -468,8 +468,7 @@ class ResourceTracker(object):
 
     def _get_service(self, context):
         try:
-            return self.conductor_api.service_get_by_compute_host(context,
-                                                                  self.host)
+            return objects.Service.get_by_compute_host(context, self.host)
         except exception.NotFound:
             LOG.warning(_LW("No service record for host %s"), self.host)
 
