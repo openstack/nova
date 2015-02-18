@@ -125,6 +125,7 @@ class HostState(object):
         self.vcpus_total = 0
         self.vcpus_used = 0
         self.numa_topology = None
+        self.instance_numa_topology = None
 
         # Additional host information from the compute node stats:
         self.num_instances = 0
@@ -204,6 +205,7 @@ class HostState(object):
         self.vcpus_used = compute.vcpus_used
         self.updated = compute.updated_at
         self.numa_topology = compute.numa_topology
+        self.instance_numa_topology = None
         if compute.pci_device_pools is not None:
             self.pci_stats = pci_stats.PciDeviceStats(
                 compute.pci_device_pools)
@@ -267,6 +269,7 @@ class HostState(object):
                                           instance_cells)
 
         # Calculate the numa usage
+        instance['numa_topology'] = self.instance_numa_topology
         updated_numa_topology = hardware.get_host_numa_usage_from_instance(
                 self, instance)
         self.numa_topology = updated_numa_topology
