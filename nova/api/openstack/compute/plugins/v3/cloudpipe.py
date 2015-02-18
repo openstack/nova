@@ -37,16 +37,16 @@ CONF = cfg.CONF
 CONF.import_opt('keys_path', 'nova.crypto')
 
 ALIAS = 'os-cloudpipe'
-authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
+authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class CloudpipeController(wsgi.Controller):
     """Handle creating and listing cloudpipe instances."""
 
     def __init__(self):
-        self.compute_api = compute.API()
-        self.network_api = network.API()
-        self.cloudpipe = pipelib.CloudPipe()
+        self.compute_api = compute.API(skip_policy_check=True)
+        self.network_api = network.API(skip_policy_check=True)
+        self.cloudpipe = pipelib.CloudPipe(skip_policy_check=True)
         self.setup()
 
     def setup(self):
