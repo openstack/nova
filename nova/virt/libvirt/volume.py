@@ -1225,36 +1225,56 @@ class LibvirtFibreChannelVolumeDriver(LibvirtBaseVolumeDriver):
         conf.source_path = connection_info['data']['device_path']
         return conf
 
+    def _get_possible_devices(self, wwnports):
+        """Compute the possible valid fiber channel device options.
+
+        :param wwnports: possible wwn addresses. Can either be string
+        or list of strings.
+
+        :returns: list of (pci_id, wwn) tuples
+
+        Given one or more wwn (mac addresses for fiber channel) ports
+        do the matrix math to figure out a set of pci device, wwn
+        tuples that are potentially valid (they won't all be). This
+        provides a search space for the device connection.
+
+        """
+        # the wwn (think mac addresses for fiber channel devices) can
+        # either be a single value or a list. Normalize it to a list
+        # for further operations.
+        wwns = []
+        if isinstance(wwnports, list):
+            for wwn in wwnports:
+                wwns.append(str(wwn))
+        elif isinstance(wwnports, six.string_types):
+            wwns.append(str(wwnports))
+
+        raw_devices = []
+        hbas = libvirt_utils.get_fc_hbas_info()
+        for hba in hbas:
+            pci_num = self._get_pci_num(hba)
+            if pci_num is not None:
+                for wwn in wwns:
+                    target_wwn = "0x%s" % wwn.lower()
+                    raw_devices.append((pci_num, target_wwn))
+        return raw_devices
+
     @utils.synchronized('connect_volume')
     def connect_volume(self, connection_info, disk_info):
         """Attach the volume to instance_name."""
         fc_properties = connection_info['data']
         mount_device = disk_info["dev"]
 
-        ports = fc_properties['target_wwn']
-        wwns = []
-        # we support a list of wwns or a single wwn
-        if isinstance(ports, list):
-            for wwn in ports:
-                wwns.append(str(wwn))
-        elif isinstance(ports, six.string_types):
-            wwns.append(str(ports))
-
-        # We need to look for wwns on every hba
-        # because we don't know ahead of time
-        # where they will show up.
-        hbas = libvirt_utils.get_fc_hbas_info()
+        possible_devs = self._get_possible_devices(fc_properties['target_wwn'])
+        # map the raw device possibilities to possible host device paths
         host_devices = []
-        for hba in hbas:
-            pci_num = self._get_pci_num(hba)
-            if pci_num is not None:
-                for wwn in wwns:
-                    target_wwn = "0x%s" % wwn.lower()
-                    host_device = ("/dev/disk/by-path/pci-%s-fc-%s-lun-%s" %
-                                  (pci_num,
-                                   target_wwn,
-                                   fc_properties.get('target_lun', 0)))
-                    host_devices.append(host_device)
+        for device in possible_devs:
+            pci_num, target_wwn = device
+            host_device = ("/dev/disk/by-path/pci-%s-fc-%s-lun-%s" %
+                           (pci_num,
+                            target_wwn,
+                            fc_properties.get('target_lun', 0)))
+            host_devices.append(host_device)
 
         if len(host_devices) == 0:
             # this is empty because we don't have any FC HBAs
@@ -1284,7 +1304,7 @@ class LibvirtFibreChannelVolumeDriver(LibvirtBaseVolumeDriver):
                          "Will rescan & retry.  Try number: %(tries)s"),
                      {'mount_device': mount_device, 'tries': tries})
 
-            linuxscsi.rescan_hosts(hbas)
+            linuxscsi.rescan_hosts(libvirt_utils.get_fc_hbas_info())
             self.tries = self.tries + 1
 
         self.host_device = None
