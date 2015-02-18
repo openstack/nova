@@ -7411,24 +7411,6 @@ class ArchiveTestCase(test.TestCase):
                                                "instances"])
         self.domain_tablenames_to_cleanup = set(["dns_domains"])
 
-    def tearDown(self):
-        super(ArchiveTestCase, self).tearDown()
-        for tablename in self.id_tablenames_to_cleanup:
-            for name in [tablename, "shadow_" + tablename]:
-                table = sqlalchemyutils.get_table(self.engine, name)
-                del_statement = table.delete(table.c.id.in_(self.ids))
-                self.conn.execute(del_statement)
-        for tablename in self.uuid_tablenames_to_cleanup:
-            for name in [tablename, "shadow_" + tablename]:
-                table = sqlalchemyutils.get_table(self.engine, name)
-                del_statement = table.delete(table.c.uuid.in_(self.uuidstrs))
-                self.conn.execute(del_statement)
-        for tablename in self.domain_tablenames_to_cleanup:
-            for name in [tablename, "shadow_" + tablename]:
-                table = sqlalchemyutils.get_table(self.engine, name)
-                del_statement = table.delete(table.c.domain.in_(self.uuidstrs))
-                self.conn.execute(del_statement)
-
     def test_shadow_tables(self):
         metadata = MetaData(bind=self.engine)
         metadata.reflect()
