@@ -3213,6 +3213,10 @@ class CloudTestCaseNeutronProxy(test.NoDBTestCase):
 class FormatMappingTestCase(test.NoDBTestCase):
 
     def test_format_mapping(self):
+        id_to_ec2_snap_id_map = {
+            '993b31ac-452e-4fed-b745-7718385f1811': 'snap-00000001',
+            'b409a2de-1c79-46bf-aa7e-ebdb4bf427ef': 'snap-00000002',
+        }
         properties = {'block_device_mapping':
                 [{'guest_format': None, 'boot_index': 0,
                   'no_device': None, 'volume_id': None,
@@ -3244,7 +3248,6 @@ class FormatMappingTestCase(test.NoDBTestCase):
                   'rootDeviceType': 'instance-store',
                   'rootDeviceName': '/dev/vda',
                   'imageType': 'machine', 'name': 'xb'}
-        cloud._format_mappings(properties, result)
         expected = {'architecture': None,
                     'blockDeviceMapping':
                     [{'ebs': {'snapshotId': 'snap-00000002'}}],
@@ -3258,4 +3261,9 @@ class FormatMappingTestCase(test.NoDBTestCase):
                     'name': 'xb',
                     'rootDeviceName': '/dev/vda',
                     'rootDeviceType': 'instance-store'}
+
+        with mock.patch.object(ec2utils, 'id_to_ec2_snap_id',
+                               lambda id: id_to_ec2_snap_id_map[id]):
+            cloud._format_mappings(properties, result)
+
         self.assertEqual(expected, result)
