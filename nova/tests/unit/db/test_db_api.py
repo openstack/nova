@@ -6596,6 +6596,27 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
                                          'free_ram_mb': '13'})
         self.assertNotEqual(first['updated_at'], second['updated_at'])
 
+    def test_service_destroy_with_compute_node(self):
+        db.service_destroy(self.ctxt, self.service['id'])
+        self.assertRaises(exception.ComputeHostNotFound,
+                          db.compute_node_get, self.ctxt,
+                          self.item['id'])
+
+    def test_service_destroy_with_old_compute_node(self):
+        # NOTE(sbauza): This test is only for checking backwards compatibility
+        # with old versions of compute_nodes not providing host column.
+        # This test could be removed once we are sure that all compute nodes
+        # are populating the host field thanks to the ResourceTracker
+        compute_node_old_host_dict = self.compute_node_dict.copy()
+        compute_node_old_host_dict.pop('host')
+        item_old = db.compute_node_create(self.ctxt,
+                                          compute_node_old_host_dict)
+
+        db.service_destroy(self.ctxt, self.service['id'])
+        self.assertRaises(exception.ComputeHostNotFound,
+                          db.compute_node_get, self.ctxt,
+                          item_old['id'])
+
 
 class ProviderFwRuleTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
