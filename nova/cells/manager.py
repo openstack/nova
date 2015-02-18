@@ -372,7 +372,7 @@ class CellsManager(manager.Manager):
         response = self.msg_runner.compute_node_get(ctxt, cell_name,
                                                     compute_id)
         node = response.value_or_raise()
-        cells_utils.add_cell_to_compute_node(node, cell_name)
+        node = cells_utils.add_cell_to_compute_node(node, cell_name)
         return node
 
     def compute_node_get_all(self, ctxt, hypervisor_match=None):
@@ -385,8 +385,8 @@ class CellsManager(manager.Manager):
         for response in responses:
             nodes = response.value_or_raise()
             for node in nodes:
-                cells_utils.add_cell_to_compute_node(node,
-                                                     response.cell_name)
+                node = cells_utils.add_cell_to_compute_node(node,
+                                                            response.cell_name)
                 ret_nodes.append(node)
         return ret_nodes
 

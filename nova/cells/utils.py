@@ -17,14 +17,79 @@
 Cells Utility Methods
 """
 import random
+import sys
 
 from nova import db
+from nova import exception
+from nova import objects
+from nova.objects import base as obj_base
+
 
 # Separator used between cell names for the 'full cell name' and routing
 # path
 PATH_CELL_SEP = '!'
 # Separator used between cell name and item
 _CELL_ITEM_SEP = '@'
+
+
+class ProxyObjectSerializer(obj_base.NovaObjectSerializer):
+    def __init__(self):
+        super(ProxyObjectSerializer, self).__init__()
+        self.serializer = super(ProxyObjectSerializer, self)
+
+    def _process_object(self, context, objprim):
+        return _CellProxy.obj_from_primitive(self.serializer, objprim, context)
+
+
+class _CellProxy(object):
+    def __init__(self, obj, cell_path):
+        self._obj = obj
+        self._cell_path = cell_path
+
+    @property
+    def id(self):
+        return cell_with_item(self._cell_path, self._obj.id)
+
+    @property
+    def host(self):
+        return cell_with_item(self._cell_path, self._obj.host)
+
+    def __getitem__(self, key):
+        if key == 'id':
+            return self.id
+        if key == 'host':
+            return self.host
+
+        return getattr(self._obj, key)
+
+    def obj_to_primitive(self):
+        obj_p = self._obj.obj_to_primitive()
+        obj_p['cell_proxy.class_name'] = self.__class__.__name__
+        obj_p['cell_proxy.cell_path'] = self._cell_path
+        return obj_p
+
+    @classmethod
+    def obj_from_primitive(cls, serializer, primitive, context=None):
+        obj_primitive = primitive.copy()
+        cell_path = obj_primitive.pop('cell_proxy.cell_path', None)
+        klass_name = obj_primitive.pop('cell_proxy.class_name', None)
+        obj = serializer._process_object(context, obj_primitive)
+        if klass_name is not None and cell_path is not None:
+            klass = getattr(sys.modules[__name__], klass_name)
+            return klass(obj, cell_path)
+        else:
+            return obj
+
+    def __getattr__(self, key):
+        return getattr(self._obj, key)
+
+
+class ComputeNodeProxy(_CellProxy):
+    pass
+
+
+class ServiceProxy(_CellProxy):
+    pass
 
 
 def get_instances_to_sync(context, updated_since=None, project_id=None,
@@ -79,12 +144,20 @@ def add_cell_to_compute_node(compute_node, cell_name):
     """Fix compute_node attributes that should be unique.  Allows
     API cell to query the 'id' by cell@id.
     """
-    compute_node['id'] = cell_with_item(cell_name, compute_node['id'])
-    # Might have a 'service' backref.  But if is_primitive() was used
-    # on this and it recursed too deep, 'service' may be "?".
-    service = compute_node.get('service')
-    if isinstance(service, dict):
-        _add_cell_to_service(service, cell_name)
+    # NOTE(sbauza): As compute_node is a ComputeNode object, we need to wrap it
+    # for adding the cell_path information
+    compute_proxy = ComputeNodeProxy(compute_node, cell_name)
+    try:
+        service = compute_proxy.service
+    except exception.ServiceNotFound:
+        service = None
+    if isinstance(service, objects.Service):
+        # TODO(sbauza): Cells messaging service is still using the DB API for
+        # returning service_get() and service_get_all(). Until we fix that and
+        # converge all messsaging calls by using NovaObjects, we can't modify
+        # _add_cell_to_service to return a ServiceProxy
+        compute_proxy.service = ServiceProxy(service, cell_name)
+    return compute_proxy
 
 
 def add_cell_to_service(service, cell_name):

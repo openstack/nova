@@ -16,10 +16,13 @@
 Tests For Cells Utility methods
 """
 import inspect
+import mock
 import random
 
 from nova.cells import utils as cells_utils
 from nova import db
+from nova import exception
+from nova import objects
 from nova import test
 
 
@@ -101,3 +104,64 @@ class CellsUtilsTestCase(test.NoDBTestCase):
         result_cell, result_item = cells_utils.split_cell_and_item(together)
         self.assertEqual(cell, result_cell)
         self.assertEqual(item, result_item)
+
+    @mock.patch.object(objects.Service, 'get_by_id')
+    def test_add_cell_to_compute_node_no_service(self, mock_get_by_id):
+        fake_compute = objects.ComputeNode(id=1, host='fake', service_id=1)
+        mock_get_by_id.side_effect = exception.ServiceNotFound(service_id=1)
+        cell_path = 'fake_path'
+
+        proxy = cells_utils.add_cell_to_compute_node(fake_compute, cell_path)
+
+        self.assertIsInstance(proxy, cells_utils.ComputeNodeProxy)
+        self.assertEqual(cells_utils.cell_with_item(cell_path, 1), proxy.id)
+        self.assertEqual(cells_utils.cell_with_item(cell_path, 'fake'),
+                         proxy.host)
+        self.assertRaises(exception.ServiceNotFound, getattr, proxy, 'service')
+
+    @mock.patch.object(objects.Service, 'get_by_id')
+    def test_add_cell_to_compute_node_with_service(self, mock_get_by_id):
+        fake_compute = objects.ComputeNode(id=1, host='fake', service_id=1)
+        mock_get_by_id.return_value = objects.Service(id=1, host='fake-svc')
+        cell_path = 'fake_path'
+
+        proxy = cells_utils.add_cell_to_compute_node(fake_compute, cell_path)
+
+        self.assertIsInstance(proxy, cells_utils.ComputeNodeProxy)
+        self.assertEqual(cells_utils.cell_with_item(cell_path, 1), proxy.id)
+        self.assertEqual(cells_utils.cell_with_item(cell_path, 'fake'),
+                         proxy.host)
+        self.assertIsInstance(proxy.service, cells_utils.ServiceProxy)
+        self.assertEqual(cells_utils.cell_with_item(cell_path, 1),
+                         proxy.service.id)
+        self.assertEqual(cells_utils.cell_with_item(cell_path, 'fake-svc'),
+                         proxy.service.host)
+
+    def test_proxy_object_serializer_to_primitive(self):
+        obj = objects.ComputeNode(id=1, host='fake')
+        obj_proxy = cells_utils.ComputeNodeProxy(obj, 'fake_path')
+        serializer = cells_utils.ProxyObjectSerializer()
+
+        primitive = serializer.serialize_entity('ctx', obj_proxy)
+        self.assertIsInstance(primitive, dict)
+        class_name = primitive.pop('cell_proxy.class_name')
+        cell_path = primitive.pop('cell_proxy.cell_path')
+        self.assertEqual('ComputeNodeProxy', class_name)
+        self.assertEqual('fake_path', cell_path)
+        self.assertEqual(obj.obj_to_primitive(), primitive)
+
+    def test_proxy_object_serializer_from_primitive(self):
+        obj = objects.ComputeNode(id=1, host='fake')
+        serializer = cells_utils.ProxyObjectSerializer()
+
+        # Recreating the primitive by hand to isolate the test for only
+        # the deserializing method
+        primitive = obj.obj_to_primitive()
+        primitive['cell_proxy.class_name'] = 'ComputeNodeProxy'
+        primitive['cell_proxy.cell_path'] = 'fake_path'
+
+        result = serializer.deserialize_entity('ctx', primitive)
+        self.assertIsInstance(result, cells_utils.ComputeNodeProxy)
+        self.assertEqual(obj.obj_to_primitive(),
+                         result._obj.obj_to_primitive())
+        self.assertEqual('fake_path', result._cell_path)

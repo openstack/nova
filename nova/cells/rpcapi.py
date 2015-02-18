@@ -122,7 +122,10 @@ class CellsAPI(object):
         target = messaging.Target(topic=CONF.cells.topic, version='1.0')
         version_cap = self.VERSION_ALIASES.get(CONF.upgrade_levels.cells,
                                                CONF.upgrade_levels.cells)
-        serializer = objects_base.NovaObjectSerializer()
+        # NOTE(sbauza): Yes, this is ugly but cells_utils is calling cells.db
+        # which itself calls cells.rpcapi... You meant import cycling ? Gah.
+        from nova.cells import utils as cells_utils
+        serializer = cells_utils.ProxyObjectSerializer()
         self.client = rpc.get_client(target,
                                      version_cap=version_cap,
                                      serializer=serializer)
