@@ -4138,7 +4138,7 @@ class ComputeManager(manager.Manager):
 
         with self._error_out_instance_on_exception(context, instance,
              instance_state=instance.vm_state):
-            self.driver.suspend(instance)
+            self.driver.suspend(context, instance)
         instance.power_state = self._get_power_state(context, instance)
         instance.vm_state = vm_states.SUSPENDED
         instance.task_state = None

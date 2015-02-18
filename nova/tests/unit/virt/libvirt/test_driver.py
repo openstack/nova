@@ -8886,7 +8886,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         domain = FakeVirtDomain()
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
-        drvr._detach_sriov_ports(instance, domain)
+        drvr._detach_sriov_ports(self.context, instance, domain)
         mock_get_image_metadata.assert_called_once_with(mock.ANY,
             drvr._image_api, instance['image_ref'], instance)
         self.assertTrue(mock_detachDeviceFlags.called)

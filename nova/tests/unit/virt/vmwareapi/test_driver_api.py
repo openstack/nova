@@ -1326,7 +1326,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self._create_vm()
         info = self._get_info()
         self._check_vm_info(info, power_state.RUNNING)
-        self.conn.suspend(self.instance)
+        self.conn.suspend(self.context, self.instance)
         info = self._get_info()
         self._check_vm_info(info, power_state.SUSPENDED)
         self.assertRaises(exception.InstanceRebootFailure, self.conn.reboot,
@@ -1337,20 +1337,20 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self._create_vm()
         info = self._get_info()
         self._check_vm_info(info, power_state.RUNNING)
-        self.conn.suspend(self.instance)
+        self.conn.suspend(self.context, self.instance)
         info = self._get_info()
         self._check_vm_info(info, power_state.SUSPENDED)
 
     def test_suspend_non_existent(self):
         self._create_instance()
         self.assertRaises(exception.InstanceNotFound, self.conn.suspend,
-                          self.instance)
+                          self.context, self.instance)
 
     def test_resume(self):
         self._create_vm()
         info = self._get_info()
         self._check_vm_info(info, power_state.RUNNING)
-        self.conn.suspend(self.instance)
+        self.conn.suspend(self.context, self.instance)
         info = self._get_info()
         self._check_vm_info(info, power_state.SUSPENDED)
         self.conn.resume(self.context, self.instance, self.network_info)

@@ -523,7 +523,7 @@ class VMwareVCDriver(driver.ComputeDriver):
         """Unpause paused VM instance."""
         self._vmops.unpause(instance)
 
-    def suspend(self, instance):
+    def suspend(self, context, instance):
         """Suspend the specified instance."""
         self._vmops.suspend(instance)
 
