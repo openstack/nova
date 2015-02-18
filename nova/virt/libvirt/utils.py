@@ -20,6 +20,7 @@
 
 import errno
 import os
+import platform
 import re
 
 from lxml import etree
@@ -31,6 +32,7 @@ from nova.i18n import _
 from nova.i18n import _LI
 from nova.i18n import _LW
 from nova.openstack.common import log as logging
+from nova.storage import linuxscsi
 from nova import utils
 from nova.virt import images
 from nova.virt.libvirt import config as vconfig
@@ -111,6 +113,13 @@ def get_fc_hbas_info():
     hbas = get_fc_hbas()
     hbas_info = []
     for hba in hbas:
+        # Systems implementing the S390 architecture support virtual HBAs
+        # may be online, or offline. This function should only return
+        # virtual HBAs in the online state
+        if (platform.machine() in (arch.S390, arch.S390X) and
+                              hba['port_state'].lower() != 'online'):
+            continue
+
         wwpn = hba['port_name'].replace('0x', '')
         wwnn = hba['node_name'].replace('0x', '')
         device_path = hba['ClassDevicepath']
@@ -579,3 +588,51 @@ def is_mounted(mount_path, source=None):
 
 def is_valid_hostname(hostname):
     return re.match(r"^[\w\-\.:]+$", hostname)
+
+
+def perform_unit_add_for_s390(device_number, target_wwn, lun):
+    """Write the LUN to the port's unit_add attribute."""
+    # NOTE If LUN scanning is turned off on systems following the s390,
+    # or s390x architecture LUNs need to be added to the configuration
+    # using the unit_add call. The unit_add call may fail if a target_wwn
+    # is not accessible for the HBA specified by the device_number.
+    # This can be an expected situation in multipath configurations.
+    # This method will thus only log a warning message in case the
+    # unit_add call fails.
+    LOG.debug("perform unit_add for s390: device_number=(%(device_num)s) "
+              "target_wwn=(%(target_wwn)s) target_lun=(%(target_lun)s)",
+                {'device_num': device_number,
+                 'target_wwn': target_wwn,
+                 'target_lun': lun})
+    zfcp_device_command = ("/sys/bus/ccw/drivers/zfcp/%s/%s/unit_add" %
+                           (device_number, target_wwn))
+    try:
+        linuxscsi.echo_scsi_command(zfcp_device_command, lun)
+    except processutils.ProcessExecutionError as exc:
+            LOG.warn(_LW("unit_add call failed; exit code (%(code)s), "
+                         "stderr (%(stderr)s)"),
+                         {'code': exc.exit_code, 'stderr': exc.stderr})
+
+
+def perform_unit_remove_for_s390(device_number, target_wwn, lun):
+    """Write the LUN to the port's unit_remove attribute."""
+    # If LUN scanning is turned off on systems following the s390, or s390x
+    # architecture LUNs need to be removed from the configuration using the
+    # unit_remove call. The unit_remove call may fail if the LUN is not
+    # part of the configuration anymore. This may be an expected situation.
+    # For exmple, if LUN scanning is turned on.
+    # This method will thus only log a warning message in case the
+    # unit_remove call fails.
+    LOG.debug("perform unit_remove for s390: device_number=(%(device_num)s) "
+              "target_wwn=(%(target_wwn)s) target_lun=(%(target_lun)s)",
+                {'device_num': device_number,
+                 'target_wwn': target_wwn,
+                 'target_lun': lun})
+    zfcp_device_command = ("/sys/bus/ccw/drivers/zfcp/%s/%s/unit_remove" %
+                           (device_number, target_wwn))
+    try:
+        linuxscsi.echo_scsi_command(zfcp_device_command, lun)
+    except processutils.ProcessExecutionError as exc:
+            LOG.warn(_LW("unit_remove call failed; exit code (%(code)s), "
+                         "stderr (%(stderr)s)"),
+                         {'code': exc.exit_code, 'stderr': exc.stderr})

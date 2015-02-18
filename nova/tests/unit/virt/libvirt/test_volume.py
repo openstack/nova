@@ -1430,6 +1430,44 @@ Setting up iSCSI targets: unused
         pci_num = libvirt_driver._get_pci_num(hba)
         self.assertEqual("0000:06:00.6", pci_num)
 
+    def test_libvirt_fibrechan_get_device_file_path(self):
+        libvirt_driver = volume.LibvirtFibreChannelVolumeDriver(self.fake_conn)
+        pci_num = "2310"
+        wwn = '1234567890123456'
+        lun = 1
+        file_path = libvirt_driver._get_device_file_path_s390(pci_num,
+                                                              wwn, lun)
+        expected_path = ("/dev/disk/by-path/ccw-2310-zfcp-"
+                         "1234567890123456:1")
+        self.assertEqual(expected_path, file_path)
+
+    @mock.patch('nova.utils.execute')
+    def test_libvirt_fibrechan_remove_lun_from_s390(self, mock_execute):
+        libvirt_driver = volume.LibvirtFibreChannelVolumeDriver(self.fake_conn)
+        self.stubs.Set(libvirt_utils, 'get_fc_hbas_info',
+                       fake_libvirt_utils.get_fc_hbas_info)
+        connection_info = {
+                'driver_volume_type': 'fibrechan',
+                'data': {
+                    'target_wwn': ['50014380242b9751',
+                                   '50014380242b9752'],
+                    'target_lun': 1,
+                }}
+        libvirt_driver._remove_lun_from_s390(connection_info)
+
+        expected_args = [mock.call('tee', '-a',
+                                u'/sys/bus/ccw/drivers/zfcp/0000:05:00.2/'
+                                 '0x50014380242b9751/unit_remove',
+                                run_as_root=True,
+                                process_input='0x0001000000000000'),
+                         mock.call('tee', '-a',
+                                u'/sys/bus/ccw/drivers/zfcp/0000:05:00.2/'
+                                 '0x50014380242b9752/unit_remove',
+                                run_as_root=True,
+                                process_input='0x0001000000000000')]
+
+        self.assertEqual(expected_args, mock_execute.call_args_list)
+
     def test_libvirt_scality_driver(self):
         tempdir = self.useFixture(fixtures.TempDir()).path
         TEST_MOUNT = os.path.join(tempdir, 'fake_mount')

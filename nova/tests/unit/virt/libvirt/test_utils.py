@@ -721,3 +721,29 @@ disk size: 4.4M
         image_meta = {'properties': {'architecture': "X86_64"}}
         image_arch = libvirt_utils.get_arch(image_meta)
         self.assertEqual(arch.X86_64, image_arch)
+
+    @mock.patch('nova.utils.execute')
+    def test_perform_unit_add_for_s390(self, mock_execute):
+        device_number = "0.0.2319"
+        target_wwn = "0x50014380242b9751"
+        lun = 1
+        libvirt_utils.perform_unit_add_for_s390(device_number, target_wwn, lun)
+
+        mock_execute.assert_called_once_with('tee', '-a',
+                                    '/sys/bus/ccw/drivers/zfcp/'
+                                    '0.0.2319/0x50014380242b9751/unit_add',
+                                    run_as_root=True,
+                                    process_input=1)
+
+    @mock.patch('nova.utils.execute')
+    def test_perform_unit_remove_for_s390(self, mock_execute):
+        device_number = "0.0.2319"
+        target_wwn = "0x50014380242b9751"
+        lun = 1
+        libvirt_utils.perform_unit_remove_for_s390(device_number,
+                                                   target_wwn, lun)
+
+        mock_execute.assert_called_once_with('tee', '-a',
+                                    '/sys/bus/ccw/drivers/zfcp/'
+                                    '0.0.2319/0x50014380242b9751/unit_remove',
+                                    run_as_root=True, process_input=1)

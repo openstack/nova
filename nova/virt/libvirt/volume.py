@@ -19,6 +19,7 @@
 import errno
 import glob
 import os
+import platform
 import re
 import time
 import urllib2
@@ -29,6 +30,7 @@ from oslo_utils import strutils
 import six
 import six.moves.urllib.parse as urlparse
 
+from nova.compute import arch
 from nova import exception
 from nova.i18n import _
 from nova.i18n import _LE
@@ -1225,6 +1227,42 @@ class LibvirtFibreChannelVolumeDriver(LibvirtBaseVolumeDriver):
         conf.source_path = connection_info['data']['device_path']
         return conf
 
+    def _get_lun_string_for_s390(self, lun):
+        target_lun = 0
+        if lun < 256:
+            target_lun = "0x00%02x000000000000" % lun
+        elif lun <= 0xffffffff:
+            target_lun = "0x%08x00000000" % lun
+        return target_lun
+
+    def _get_device_file_path_s390(self, pci_num, target_wwn, lun):
+        """Returns device file path"""
+        # NOTE the format of device file paths depends on the system
+        # architecture. Most architectures use a PCI based format.
+        # Systems following the S390, or S390x architecture use a format
+        # which is based upon the inherent channel architecture (ccw).
+        host_device = ("/dev/disk/by-path/ccw-%s-zfcp-%s:%s" %
+                        (pci_num,
+                        target_wwn,
+                        lun))
+        return host_device
+
+    def _remove_lun_from_s390(self, connection_info):
+        """Rempove lun from s390 configuration"""
+        # If LUN scanning is turned off on systems following the s390, or
+        # s390x architecture LUNs need to be removed from the configuration
+        # using the unit_remove call. The unit_remove call needs to be issued
+        # for each (virtual) HBA and target_port.
+        fc_properties = connection_info['data']
+        lun = int(fc_properties.get('target_lun', 0))
+        target_lun = self._get_lun_string_for_s390(lun)
+        ports = fc_properties['target_wwn']
+
+        for device_num, target_wwn in self._get_possible_devices(ports):
+            libvirt_utils.perform_unit_remove_for_s390(device_num,
+                                              target_wwn,
+                                              target_lun)
+
     def _get_possible_devices(self, wwnports):
         """Compute the possible valid fiber channel device options.
 
@@ -1270,7 +1308,17 @@ class LibvirtFibreChannelVolumeDriver(LibvirtBaseVolumeDriver):
         host_devices = []
         for device in possible_devs:
             pci_num, target_wwn = device
-            host_device = ("/dev/disk/by-path/pci-%s-fc-%s-lun-%s" %
+            if platform.machine() in (arch.S390, arch.S390X):
+                target_lun = self._get_lun_string_for_s390(
+                                fc_properties.get('target_lun', 0))
+                host_device = self._get_device_file_path_s390(
+                                pci_num,
+                                target_wwn,
+                                target_lun)
+                libvirt_utils.perform_unit_add_for_s390(
+                                pci_num, target_wwn, target_lun)
+            else:
+                host_device = ("/dev/disk/by-path/pci-%s-fc-%s-lun-%s" %
                            (pci_num,
                             target_wwn,
                             fc_properties.get('target_lun', 0)))
@@ -1364,6 +1412,8 @@ class LibvirtFibreChannelVolumeDriver(LibvirtBaseVolumeDriver):
         # all of them
         for device in devices:
             linuxscsi.remove_device(device)
+        if platform.machine() in (arch.S390, arch.S390X):
+            self._remove_lun_from_s390(connection_info)
 
 
 class LibvirtScalityVolumeDriver(LibvirtBaseVolumeDriver):
