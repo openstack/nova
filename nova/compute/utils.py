@@ -467,11 +467,11 @@ def get_machine_ips():
     """
     addresses = []
     for interface in netifaces.interfaces():
-        iface_data = netifaces.ifaddresses(interface)
-        for family in iface_data:
-            if family not in (netifaces.AF_INET, netifaces.AF_INET6):
-                continue
-            try:
+        try:
+            iface_data = netifaces.ifaddresses(interface)
+            for family in iface_data:
+                if family not in (netifaces.AF_INET, netifaces.AF_INET6):
+                    continue
                 for address in iface_data[family]:
                     addr = address['addr']
 
@@ -480,8 +480,8 @@ def get_machine_ips():
                     if family == netifaces.AF_INET6:
                         addr = addr.split('%')[0]
                     addresses.append(addr)
-            except ValueError:
-                pass
+        except ValueError:
+            pass
     return addresses
 
 
