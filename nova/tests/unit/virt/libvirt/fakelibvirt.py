@@ -827,6 +827,10 @@ class Connection(object):
     def registerCloseCallback(self, cb, opaque):
         pass
 
+    def getCPUMap(self):
+        """Return spoofed CPU map, showing 2 online CPUs."""
+        return (2, [True] * 2, 2)
+
     def getCapabilities(self):
         """Return spoofed capabilities."""
         return '''<capabilities>

@@ -1234,7 +1234,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 mock.patch.object(
                         random, 'choice', side_effect=lambda cells: cells[0]),
                 mock.patch.object(pci_manager, "get_instance_pci_devs",
-                                  return_value=[pci_device])):
+                                  return_value=[pci_device]),
+                mock.patch.object(host.Host, 'get_online_cpus',
+                                  return_value=set(range(8)))):
             cfg = conn._get_guest_config(instance_ref, [], {}, disk_info)
             self.assertIsNone(instance_ref.numa_topology)
             self.assertEqual(set([2, 3]), cfg.cpuset)
@@ -1279,6 +1281,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                     host.Host, "get_capabilities", return_value=caps),
                 mock.patch.object(
                     hardware, 'get_vcpu_pin_set', return_value=set([3])),
+                mock.patch.object(host.Host, 'get_online_cpus',
+                                  return_value=set(range(8))),
                 mock.patch.object(pci_manager, "get_instance_pci_devs",
                                   return_value=[pci_device])):
             cfg = conn._get_guest_config(instance_ref, [], {}, disk_info)
@@ -1402,9 +1406,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 mock.patch.object(
                     hardware, 'get_vcpu_pin_set', return_value=set([2, 3])),
                 mock.patch.object(
-                    random, 'choice', side_effect=lambda cells: cells[0])
+                    random, 'choice', side_effect=lambda cells: cells[0]),
+                mock.patch.object(host.Host, 'get_online_cpus',
+                                  return_value=set(range(8)))
                 ) as (has_min_version_mock, get_host_cap_mock,
-                        get_vcpu_pin_set_mock, choice_mock):
+                        get_vcpu_pin_set_mock, choice_mock,
+                        get_online_cpus_mock):
             cfg = drvr._get_guest_config(instance_ref, [], {}, disk_info)
             # NOTE(ndipanov): we make sure that pin_set was taken into account
             # when choosing viable cells
@@ -1498,7 +1505,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                   return_value=caps),
                 mock.patch.object(
                     hardware, 'get_vcpu_pin_set',
-                    return_value=set([2, 3, 4, 5]))
+                    return_value=set([2, 3, 4, 5])),
+                mock.patch.object(host.Host, 'get_online_cpus',
+                                  return_value=set(range(8))),
                 ):
             cfg = drvr._get_guest_config(instance_ref, [], {}, disk_info)
             self.assertIsNone(cfg.cpuset)
@@ -1575,6 +1584,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                   return_value=True),
                 mock.patch.object(host.Host, "get_capabilities",
                                   return_value=caps),
+                mock.patch.object(host.Host, 'get_online_cpus',
+                                  return_value=set(range(8))),
                 ):
             cfg = drvr._get_guest_config(instance_ref, [], {}, disk_info)
             self.assertIsNone(cfg.cpuset)
@@ -1649,7 +1660,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 mock.patch.object(host.Host, 'has_min_version',
                                   return_value=True),
                 mock.patch.object(host.Host, "get_capabilities",
-                                  return_value=caps)
+                                  return_value=caps),
+                mock.patch.object(host.Host, 'get_online_cpus',
+                                  return_value=set(range(8))),
                 ):
             cfg = conn._get_guest_config(instance_ref, [], {}, disk_info)
             self.assertIsNone(cfg.cpuset)
@@ -9623,7 +9636,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 mock.patch.object(host.Host, "get_capabilities",
                                   return_value=caps),
                 mock.patch.object(
-                    hardware, 'get_vcpu_pin_set', return_value=set([0, 1, 3]))
+                    hardware, 'get_vcpu_pin_set',
+                    return_value=set([0, 1, 3, 4, 5])),
+                mock.patch.object(host.Host, 'get_online_cpus',
+                                  return_value=set([0, 1, 2, 3, 6])),
                 ):
             got_topo = drvr._get_host_numa_topology()
             got_topo_dict = got_topo._to_dict()

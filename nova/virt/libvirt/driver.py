@@ -4748,6 +4748,11 @@ class LibvirtDriver(driver.ComputeDriver):
 
         cells = []
         allowed_cpus = hardware.get_vcpu_pin_set()
+        online_cpus = self._host.get_online_cpus()
+        if allowed_cpus:
+            allowed_cpus &= online_cpus
+        else:
+            allowed_cpus = online_cpus
 
         for cell in topology.cells:
             cpuset = set(cpu.id for cpu in cell.cpus)
@@ -4756,9 +4761,8 @@ class LibvirtDriver(driver.ComputeDriver):
                                         if cpu.siblings else ()
                                       for cpu in cell.cpus)
                                   ))
-            if allowed_cpus:
-                cpuset &= allowed_cpus
-                siblings = [sib & allowed_cpus for sib in siblings]
+            cpuset &= allowed_cpus
+            siblings = [sib & allowed_cpus for sib in siblings]
             # Filter out singles and empty sibling sets that may be left
             siblings = [sib for sib in siblings if len(sib) > 1]
 
