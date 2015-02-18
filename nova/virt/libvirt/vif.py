@@ -348,6 +348,16 @@ class LibvirtGenericVIFDriver(object):
                                             os.path.join(path, vif['id']))
         return conf
 
+    def get_config_vrouter(self, instance, vif, image_meta,
+                           inst_type, virt_type):
+        conf = self.get_base_config(instance, vif, image_meta,
+                                    inst_type, virt_type)
+        dev = self.get_vif_devname(vif)
+        designer.set_vif_host_backend_ethernet_config(conf, dev)
+
+        designer.set_vif_bandwidth_config(conf, inst_type)
+        return conf
+
     def get_config(self, instance, vif, image_meta,
                    inst_type, virt_type):
         vif_type = vif['type']
@@ -532,6 +542,46 @@ class LibvirtGenericVIFDriver(object):
     def plug_vhostuser(self, instance, vif):
         pass
 
+    def plug_vrouter(self, instance, vif):
+        """Plug into Contrail's network port
+
+        Bind the vif to a Contrail virtual port.
+        """
+        dev = self.get_vif_devname(vif)
+        ip_addr = '0.0.0.0'
+        ip6_addr = None
+        subnets = vif['network']['subnets']
+        for subnet in subnets:
+            if not subnet['ips']:
+                continue
+            ips = subnet['ips'][0]
+            if not ips['address']:
+                continue
+            if (ips['version'] == 4):
+                if ips['address'] is not None:
+                    ip_addr = ips['address']
+            if (ips['version'] == 6):
+                if ips['address'] is not None:
+                    ip6_addr = ips['address']
+
+        ptype = 'NovaVMPort'
+        if (cfg.CONF.libvirt.virt_type == 'lxc'):
+            ptype = 'NameSpacePort'
+
+        cmd_args = ("--oper=add --uuid=%s --instance_uuid=%s --vn_uuid=%s "
+                    "--vm_project_uuid=%s --ip_address=%s --ipv6_address=%s"
+                    " --vm_name=%s --mac=%s --tap_name=%s --port_type=%s "
+                    "--tx_vlan_id=%d --rx_vlan_id=%d" % (vif['id'],
+                    instance.uuid, vif['network']['id'],
+                    instance.project_id, ip_addr, ip6_addr,
+                    instance.display_name, vif['address'],
+                    vif['devname'], ptype, -1, -1))
+        try:
+            linux_net.create_tap_dev(dev)
+            utils.execute('vrouter-port-control', cmd_args, run_as_root=True)
+        except processutils.ProcessExecutionError:
+            LOG.exception(_LE("Failed while plugging vif"), instance=instance)
+
     def plug(self, instance, vif):
         vif_type = vif['type']
 
@@ -687,6 +737,20 @@ class LibvirtGenericVIFDriver(object):
 
     def unplug_vhostuser(self, instance, vif):
         pass
+
+    def unplug_vrouter(self, instance, vif):
+        """Unplug Contrail's network port
+
+        Unbind the vif from a Contrail virtual port.
+        """
+        dev = self.get_vif_devname(vif)
+        cmd_args = ("--oper=delete --uuid=%s" % (vif['id']))
+        try:
+            utils.execute('vrouter-port-control', cmd_args, run_as_root=True)
+            linux_net.delete_net_dev(dev)
+        except processutils.ProcessExecutionError:
+            LOG.exception(
+                _LE("Failed while unplugging vif"), instance=instance)
 
     def unplug(self, instance, vif):
         vif_type = vif['type']
