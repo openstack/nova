@@ -6573,6 +6573,28 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
         stats = db.compute_node_statistics(self.ctxt)
         self.assertEqual(2, stats.pop('count'))
 
+    def test_compute_node_statistics_with_other_service(self):
+        other_service = self.service_dict.copy()
+        other_service['topic'] = 'fake-topic'
+        other_service['binary'] = 'nova-fake'
+        db.service_create(self.ctxt, other_service)
+
+        stats = db.compute_node_statistics(self.ctxt)
+        data = {'count': 1,
+                'vcpus_used': 0,
+                'local_gb_used': 0,
+                'memory_mb': 1024,
+                'current_workload': 0,
+                'vcpus': 2,
+                'running_vms': 0,
+                'free_disk_gb': 2048,
+                'disk_available_least': 100,
+                'local_gb': 2048,
+                'free_ram_mb': 1024,
+                'memory_mb_used': 0}
+        for key, value in six.iteritems(data):
+            self.assertEqual(value, stats.pop(key))
+
     def test_compute_node_not_found(self):
         self.assertRaises(exception.ComputeHostNotFound, db.compute_node_get,
                           self.ctxt, 100500)
