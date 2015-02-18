@@ -663,6 +663,10 @@ class HostTestCase(test.NoDBTestCase):
         mock_version.assert_called_once_with()
 
     @mock.patch.object(fakelibvirt.virConnect, "secretLookupByUsage")
+    # TODO(mriedem): Remove this stub, and others like it, once we're using
+    # fakelibvirt in all tests (no chance of running against a real libvirt).
+    @mock.patch.object(libvirt, 'VIR_SECRET_USAGE_TYPE_ISCSI', new=3,
+                       create=True)
     def test_find_secret(self, mock_sec):
         """finding secrets with various usage_type."""
         expected = [
