@@ -348,12 +348,34 @@ Setting up iSCSI targets: unused
         expected_device = self.generate_device(transport, 1, False)
         if transport:
             self.stubs.Set(glob, 'glob', lambda x: [expected_device])
+            self.stubs.Set(libvirt_driver, '_validate_transport',
+                           lambda x: True)
         device = libvirt_driver._get_host_device(iscsi_properties)
         self.assertEqual(expected_device, device)
 
     def test_libvirt_iscsi_get_host_device_with_transport(self):
-        self.flags(iscsi_transport='fake_transport', group='libvirt')
+        self.flags(iscsi_iface='fake_transport', group='libvirt')
         self.test_libvirt_iscsi_get_host_device('fake_transport')
+
+    @mock.patch.object(volume.utils, 'execute')
+    def test_libvirt_iscsi_validate_transport(self, mock_execute):
+        libvirt_driver = volume.LibvirtISCSIVolumeDriver(self.fake_conn)
+        sample_output = ('# BEGIN RECORD 2.0-872\n'
+                         'iface.iscsi_ifacename = %s.fake_suffix\n'
+                         'iface.net_ifacename = <empty>\n'
+                         'iface.ipaddress = <empty>\n'
+                         'iface.hwaddress = 00:53:00:00:53:00\n'
+                         'iface.transport_name = %s\n'
+                         'iface.initiatorname = <empty>\n'
+                         '# END RECORD')
+        for tport in libvirt_driver.supported_transports:
+            mock_execute.return_value = (sample_output % (tport, tport), '')
+            self.assertTrue(libvirt_driver._validate_transport(
+                                    tport + '.fake_suffix'))
+
+        mock_execute.return_value = ("", 'iscsiadm: Could not '
+                                'read iface fake_transport (6)')
+        self.assertFalse(libvirt_driver._validate_transport('fake_transport'))
 
     def test_libvirt_iscsi_driver(self, transport=None):
         # NOTE(vish) exists is to make driver assume connecting worked
@@ -364,6 +386,8 @@ Setting up iSCSI targets: unused
         if transport is not None:
             self.stubs.Set(libvirt_driver, '_get_host_device',
                            lambda x: self.generate_device(transport, 1, False))
+            self.stubs.Set(libvirt_driver, '_validate_transport',
+                           lambda x: True)
         libvirt_driver.connect_volume(connection_info, self.disk_info)
         libvirt_driver.disconnect_volume(connection_info, "vde")
         expected_commands = [('iscsiadm', '-m', 'node', '-T', self.iqn,
@@ -386,7 +410,7 @@ Setting up iSCSI targets: unused
         self.assertEqual(expected_commands, self.executes)
 
     def test_libvirt_iscsi_driver_with_transport(self):
-        self.flags(iscsi_transport='fake_transport', group='libvirt')
+        self.flags(iscsi_iface='fake_transport', group='libvirt')
         self.test_libvirt_iscsi_driver('fake_transport')
 
     def test_libvirt_iscsi_driver_still_in_use(self, transport=None):
@@ -397,6 +421,8 @@ Setting up iSCSI targets: unused
         if transport is not None:
             self.stubs.Set(libvirt_driver, '_get_host_device',
                            lambda x: self.generate_device(transport, 1, False))
+            self.stubs.Set(libvirt_driver, '_validate_transport',
+                           lambda x: True)
         devs = [self.generate_device(transport, 2, False)]
         self.stubs.Set(self.fake_conn, '_get_all_block_devices', lambda: devs)
         vol = {'id': 1, 'name': self.name}
@@ -418,7 +444,7 @@ Setting up iSCSI targets: unused
         self.assertEqual(self.executes, expected_commands)
 
     def test_libvirt_iscsi_driver_still_in_use_with_transport(self):
-        self.flags(iscsi_transport='fake_transport', group='libvirt')
+        self.flags(iscsi_iface='fake_transport', group='libvirt')
         self.test_libvirt_iscsi_driver_still_in_use('fake_transport')
 
     def test_libvirt_iscsi_driver_disconnect_multipath_error(self,
@@ -479,7 +505,7 @@ Setting up iSCSI targets: unused
         self.assertEqual(dev_path, tree.find('./source').get('dev'))
 
     def test_libvirt_iscsi_driver_get_config_with_transport(self):
-        self.flags(iscsi_transport = 'fake_transport', group='libvirt')
+        self.flags(iscsi_iface = 'fake_transport', group='libvirt')
         self.test_libvirt_iscsi_driver_get_config('fake_transport')
 
     def test_libvirt_iscsi_driver_multipath_id(self):

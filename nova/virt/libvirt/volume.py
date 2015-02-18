@@ -102,11 +102,11 @@ volume_opts = [
                     'compute node'),
     cfg.StrOpt('quobyte_client_cfg',
                help='Path to a Quobyte Client configuration file.'),
-    cfg.StrOpt('iscsi_transport',
-               default=None,
-               help='The iSCSI transport to use to connect to target in case '
-                    'offload support is desired. Supported transports are '
-                    'be2iscsi, bnx2i, cxgb3i, cxgb4i, qla4xx and ocs. '
+    cfg.StrOpt('iscsi_iface',
+               deprecated_name='iscsi_transport',
+               help='The iSCSI transport iface to use to connect to target in '
+                    'case offload support is desired. Supported transports '
+                    'are be2iscsi, bnx2i, cxgb3i, cxgb4i, qla4xxx and ocs. '
                     'Default format is transport_name.hwaddress and can be '
                     'generated manually or via iscsiadm -m iface'),
                     # iser is also supported, but use LibvirtISERVolumeDriver
@@ -296,18 +296,57 @@ class LibvirtNetVolumeDriver(LibvirtBaseVolumeDriver):
 
 class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
     """Driver to attach Network volumes to libvirt."""
+    supported_transports = ['be2iscsi', 'bnx2i', 'cxgb3i',
+                            'cxgb4i', 'qla4xxx', 'ocs']
+
     def __init__(self, connection):
         super(LibvirtISCSIVolumeDriver, self).__init__(connection,
                                                        is_block_dev=True)
         self.num_scan_tries = CONF.libvirt.num_iscsi_scan_tries
         self.use_multipath = CONF.libvirt.iscsi_use_multipath
-        if CONF.libvirt.iscsi_transport:
-            self.transport = CONF.libvirt.iscsi_transport
+        if CONF.libvirt.iscsi_iface:
+            self.transport = CONF.libvirt.iscsi_iface
         else:
             self.transport = 'default'
 
     def _get_transport(self):
+        if self._validate_transport(self.transport):
             return self.transport
+        else:
+            return 'default'
+
+    def _validate_transport(self, transport_iface):
+        """Check that given iscsi_iface uses only supported transports
+
+        Accepted transport names for provided iface param are
+        be2iscsi, bnx2i, cxgb3i, cxgb4i, qla4xxx and ocs. iSER uses it's
+        own separate driver. Note the difference between transport and
+        iface; unlike iscsi_tcp/iser, this is not one and the same for
+        offloaded transports, where the default format is
+        transport_name.hwaddress
+        """
+        # We can support iser here as well, but currently reject it as the
+        # separate iser driver has not yet been deprecated.
+        if transport_iface == 'default':
+            return True
+        # Will return (6) if iscsi_iface file was not found, or (2) if iscsid
+        # could not be contacted
+        out = self._run_iscsiadm_bare(['-m',
+                                       'iface',
+                                       '-I',
+                                       transport_iface],
+                                       check_exit_code=[0, 2, 6])[0] or ""
+        LOG.debug("iscsiadm %(iface)s configuration: stdout=%(out)s",
+                  {'iface': transport_iface, 'out': out})
+        for data in [line.split() for line in out.splitlines()]:
+            if data[0] == 'iface.transport_name':
+                if data[2] in self.supported_transports:
+                    return True
+
+        LOG.warn(_LW("No useable transport found for iscsi iface %s. "
+                     "Falling back to default transport"),
+                 transport_iface)
+        return False
 
     def _run_iscsiadm(self, iscsi_properties, iscsi_command, **kwargs):
         check_exit_code = kwargs.pop('check_exit_code', 0)
