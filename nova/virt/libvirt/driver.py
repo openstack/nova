@@ -5351,18 +5351,18 @@ class LibvirtDriver(driver.ComputeDriver):
             if ((CONF.vnc_enabled and not dest_local_vnc) or
                 (CONF.spice.enabled and not dest_local_spice)):
 
-                LOG.warn(_('Your libvirt version does not support the'
-                           ' VIR_DOMAIN_XML_MIGRATABLE flag, and the '
-                           ' graphics (VNC and/or SPICE) listen'
-                           ' addresses on the destination node do not'
-                           ' match the addresses on the source node.'
-                           ' Since the source node has listen'
-                           ' addresses set to either the catch-all'
-                           ' address (0.0.0.0 or ::) or the local'
-                           ' address (127.0.0.1 or ::1), the live'
-                           ' migration will succeed, but the VM will'
-                           ' continue to listen on the current'
-                           ' addresses.'))
+                LOG.warn(_LW('Your libvirt version does not support the'
+                             ' VIR_DOMAIN_XML_MIGRATABLE flag, and the '
+                             ' graphics (VNC and/or SPICE) listen'
+                             ' addresses on the destination node do not'
+                             ' match the addresses on the source node.'
+                             ' Since the source node has listen'
+                             ' addresses set to either the catch-all'
+                             ' address (0.0.0.0 or ::) or the local'
+                             ' address (127.0.0.1 or ::1), the live'
+                             ' migration will succeed, but the VM will'
+                             ' continue to listen on the current'
+                             ' addresses.'))
 
     def _live_migration(self, context, instance, dest, post_method,
                         recover_method, block_migration=False,
