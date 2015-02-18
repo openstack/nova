@@ -310,6 +310,17 @@ def get_datastore(session, cluster, datastore_regex=None,
         raise exception.DatastoreNotFound()
 
 
+def get_datastore_by_ref(session, ds_ref):
+    lst_properties = ["summary.type", "summary.name",
+                      "summary.capacity", "summary.freeSpace"]
+    props = session._call_method(vim_util, "get_object_properties",
+                                 None, ds_ref, "Datastore", lst_properties)
+    query = vm_util.get_values_from_object_properties(session, props)
+    return Datastore(ds_ref, query["summary.name"],
+                     capacity=query["summary.capacity"],
+                     freespace=query["summary.freeSpace"])
+
+
 def _get_allowed_datastores(data_stores, datastore_regex):
     allowed = []
     for obj_content in data_stores.objects:

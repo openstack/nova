@@ -410,11 +410,12 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
 
     def _test_finish_migration(self, power_on=True, resize_instance=False):
         with contextlib.nested(
+                mock.patch.object(self._vmops, '_resize_create_ephemerals'),
                 mock.patch.object(self._vmops, "_update_instance_progress"),
                 mock.patch.object(vm_util, "power_on_instance"),
                 mock.patch.object(vm_util, "get_vm_ref",
                                   return_value='fake-ref')
-        ) as (fake_update_instance_progress,
+        ) as (fake_resize_create_ephemerals, fake_update_instance_progress,
               fake_power_on, fake_get_vm_ref):
             self._vmops.finish_migration(context=self._context,
                                          migration=None,
@@ -425,14 +426,22 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                          resize_instance=resize_instance,
                                          image_meta=None,
                                          power_on=power_on)
+            fake_resize_create_ephemerals.called_once_with('fake-ref',
+                                                           self._instance,
+                                                           None)
             if power_on:
                 fake_power_on.assert_called_once_with(self._session,
                                                       self._instance,
                                                       vm_ref='fake-ref')
             else:
                 self.assertFalse(fake_power_on.called)
-            fake_update_instance_progress.called_once_with(
-                self._context, self._instance, 4, vmops.RESIZE_TOTAL_STEPS)
+
+        calls = [
+                mock.call(self._context, self._instance, step=5,
+                          total_steps=vmops.RESIZE_TOTAL_STEPS),
+                mock.call(self._context, self._instance, step=6,
+                          total_steps=vmops.RESIZE_TOTAL_STEPS)]
+        fake_update_instance_progress.assert_has_calls(calls)
 
     def test_finish_migration_power_on(self):
         self._test_finish_migration(power_on=True, resize_instance=False)
@@ -443,6 +452,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     def test_finish_migration_power_on_resize(self):
         self._test_finish_migration(power_on=True, resize_instance=True)
 
+    @mock.patch.object(vmops.VMwareVMOps, '_resize_create_ephemerals')
+    @mock.patch.object(vmops.VMwareVMOps, '_remove_ephemerals')
     @mock.patch.object(ds_util, 'disk_delete')
     @mock.patch.object(ds_util, 'disk_move')
     @mock.patch.object(ds_util, 'file_exists',
@@ -460,7 +471,10 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                       fake_resize_spec, fake_reconfigure_vm,
                                       fake_get_browser,
                                       fake_original_exists, fake_disk_move,
-                                      fake_disk_delete, power_on):
+                                      fake_disk_delete,
+                                      fake_remove_ephemerals,
+                                      fake_resize_create_ephemerals,
+                                      power_on):
         """Tests the finish_revert_migration method on vmops."""
         datastore = ds_util.Datastore(ref='fake-ref', name='fake')
         device = vmwareapi_fake.DataObject()
@@ -523,6 +537,10 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             mock_attach_disk.assert_called_once_with(
                     'fake-ref', self._instance, 'fake-adapter', 'fake-disk',
                     '[fake] uuid/root.vmdk')
+            fake_remove_ephemerals.called_once_with('fake-ref')
+            fake_resize_create_ephemerals.called_once_with('fake-ref',
+                                                           self._instance,
+                                                           None)
         if power_on:
             fake_power_on.assert_called_once_with(self._session,
                                                   self._instance)
@@ -637,6 +655,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             fake_disk_delete.assert_called_once_with(
                 self._session, dc_info.ref, '[fake] uuid/original.vmdk')
 
+    @mock.patch.object(vmops.VMwareVMOps, "_remove_ephemerals")
     @mock.patch.object(vm_util, 'get_vmdk_info')
     @mock.patch.object(vmops.VMwareVMOps, "_resize_disk")
     @mock.patch.object(vmops.VMwareVMOps, "_resize_vm")
@@ -645,7 +664,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     @mock.patch.object(vm_util, 'get_vm_ref', return_value='fake-ref')
     def test_migrate_disk_and_power_off(self, fake_get_vm_ref, fake_progress,
                                         fake_power_off, fake_resize_vm,
-                                        fake_resize_disk, fake_get_vmdk_info):
+                                        fake_resize_disk, fake_get_vmdk_info,
+                                        fake_remove_ephemerals):
         vmdk = vm_util.VmdkInfo('[fake] uuid/root.vmdk',
                                 'fake-adapter',
                                 'fake-disk',
@@ -668,7 +688,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         fake_resize_disk.assert_called_once_with(self._instance, 'fake-ref',
                                                  vmdk, flavor)
         calls = [mock.call(self._context, self._instance, step=i,
-                           total_steps=4) for i in range(4)]
+                           total_steps=vmops.RESIZE_TOTAL_STEPS)
+                 for i in range(4)]
         fake_progress.assert_has_calls(calls)
 
     @mock.patch.object(vmops.VMwareVMOps, '_attach_cdrom_to_vm')
@@ -1175,13 +1196,13 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         self._vmops._volumeops = mock.Mock()
         mock_attach_disk_to_vm = self._vmops._volumeops.attach_disk_to_vm
 
-        self._vmops._create_and_attach_ephemeral_disk(self._instance,
-                                                      'fake-vm-ref',
-                                                      vi, 1,
-                                                      'fake-adapter-type',
-                                                      'fake-filename')
         path = str(ds_util.DatastorePath(vi.datastore.name, 'fake_uuid',
                                          'fake-filename'))
+        self._vmops._create_and_attach_ephemeral_disk(self._instance,
+                                                      'fake-vm-ref',
+                                                      vi.dc_info, 1,
+                                                      'fake-adapter-type',
+                                                      path)
         mock_create.assert_called_once_with(
                 self._session, self._dc_info.ref, 'fake-adapter-type',
                 'thin', path, 1)
@@ -1201,10 +1222,13 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             self._vmops._create_ephemeral(block_device_info,
                                           self._instance,
                                           'fake-vm-ref',
-                                          vi)
-            mock_caa.assert_called_once_with(self._instance, 'fake-vm-ref',
-                                             vi, 1 * units.Mi, 'virtio',
-                                             'ephemeral_0.vmdk')
+                                          vi.dc_info, vi.datastore,
+                                          'fake_uuid',
+                                          vi.ii.adapter_type)
+            mock_caa.assert_called_once_with(
+                self._instance, 'fake-vm-ref',
+                vi.dc_info, 1 * units.Mi, 'virtio',
+                '[fake_ds] fake_uuid/ephemeral_0.vmdk')
 
     def _test_create_ephemeral_from_instance(self, bdi):
         vi = self._get_fake_vi()
@@ -1213,10 +1237,13 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             self._vmops._create_ephemeral(bdi,
                                           self._instance,
                                           'fake-vm-ref',
-                                          vi)
-            mock_caa.assert_called_once_with(self._instance, 'fake-vm-ref',
-                                             vi, 1 * units.Mi, 'lsiLogic',
-                                             'ephemeral_0.vmdk')
+                                          vi.dc_info, vi.datastore,
+                                          'fake_uuid',
+                                          vi.ii.adapter_type)
+            mock_caa.assert_called_once_with(
+                self._instance, 'fake-vm-ref',
+                vi.dc_info, 1 * units.Mi, 'lsiLogic',
+                '[fake_ds] fake_uuid/ephemeral_0.vmdk')
 
     def test_create_ephemeral_with_bdi_but_no_ephemerals(self):
         block_device_info = {'ephemerals': []}
