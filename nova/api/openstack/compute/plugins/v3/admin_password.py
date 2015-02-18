@@ -25,14 +25,14 @@ from nova.i18n import _
 
 
 ALIAS = "os-admin-password"
-authorize = extensions.extension_authorizer('compute', 'v3:%s' % ALIAS)
+authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class AdminPasswordController(wsgi.Controller):
 
     def __init__(self, *args, **kwargs):
         super(AdminPasswordController, self).__init__(*args, **kwargs)
-        self.compute_api = compute.API()
+        self.compute_api = compute.API(skip_policy_check=True)
 
     # TODO(eliqiao): Here should be 204(No content) instead of 202 by v2.1
     # +micorversions because the password has been changed when returning
