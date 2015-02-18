@@ -199,6 +199,7 @@ class ConductorManager(manager.Manager):
                                                  architecture)
         return jsonutils.to_primitive(info)
 
+    # NOTE(ndipanov): This can be removed in version 3.0 of the RPC API
     def block_device_mapping_update_or_create(self, context, values, create):
         if create is None:
             bdm = self.db.block_device_mapping_update_or_create(context,
