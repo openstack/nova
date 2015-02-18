@@ -1373,6 +1373,7 @@ class API(base_api.NetworkAPI):
         # Network model metadata
         should_create_bridge = None
         vif_type = port.get('binding:vif_type')
+        port_details = port.get('binding:vif_details')
         # TODO(berrange) Neutron should pass the bridge name
         # in another binding metadata field
         if vif_type == network_model.VIF_TYPE_OVS:
@@ -1385,6 +1386,11 @@ class API(base_api.NetworkAPI):
             # The name of the DVS port group will contain the neutron
             # network id
             bridge = port['network_id']
+        elif (vif_type == network_model.VIF_TYPE_VHOSTUSER and
+         port_details.get(network_model.VIF_DETAILS_VHOSTUSER_OVS_PLUG,
+                          False)):
+            bridge = CONF.neutron.ovs_bridge
+            ovs_interfaceid = port['id']
 
         # Prune the bridge name if necessary. For the DVS this is not done
         # as the bridge is a '<network-name>-<network-UUID>'.

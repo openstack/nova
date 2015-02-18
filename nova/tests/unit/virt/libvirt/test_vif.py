@@ -274,12 +274,25 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                                    type=network_model.VIF_TYPE_IOVISOR,
                                    devname='tap-xxx-yyy-zzz',
                                    ovs_interfaceid=None)
+
     vif_vhostuser = network_model.VIF(id='vif-xxx-yyy-zzz',
               address='ca:fe:de:ad:be:ef',
               network=network_bridge,
               type=network_model.VIF_TYPE_VHOSTUSER,
               details = {network_model.VIF_DETAILS_VHOSTUSER_MODE: 'client',
-                         network_model.VIF_DETAILS_VHOSTUSER_DIR: '/tmp'}
+                         network_model.VIF_DETAILS_VHOSTUSER_SOCKET:
+                                                    '/tmp/vif-xxx-yyy-zzz'}
+              )
+
+    vif_vhostuser_ovs = network_model.VIF(id='vif-xxx-yyy-zzz',
+              address='ca:fe:de:ad:be:ef',
+              network=network_bridge,
+              type=network_model.VIF_TYPE_VHOSTUSER,
+              details = {network_model.VIF_DETAILS_VHOSTUSER_MODE: 'client',
+                         network_model.VIF_DETAILS_VHOSTUSER_SOCKET:
+                                                     '/tmp/usv-xxx-yyy-zzz',
+                         network_model.VIF_DETAILS_VHOSTUSER_OVS_PLUG: True},
+              ovs_interfaceid='aaa-bbb-ccc'
               )
 
     vif_vhostuser_no_path = network_model.VIF(id='vif-xxx-yyy-zzz',
@@ -1110,3 +1123,50 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                           self._get_instance_xml,
                           d,
                           self.vif_vhostuser_no_path)
+
+    def test_vhostuser_driver_ovs(self):
+        d = vif.LibvirtGenericVIFDriver()
+        xml = self._get_instance_xml(d,
+                                     self.vif_vhostuser_ovs)
+        node = self._get_node(xml)
+        self.assertEqual(node.get("type"),
+                         network_model.VIF_TYPE_VHOSTUSER)
+
+        self._assertTypeEquals(node, network_model.VIF_TYPE_VHOSTUSER,
+                               "source", "mode", "client")
+        self._assertTypeEquals(node, network_model.VIF_TYPE_VHOSTUSER,
+                               "source", "path", "/tmp/usv-xxx-yyy-zzz")
+        self._assertTypeEquals(node, network_model.VIF_TYPE_VHOSTUSER,
+                               "source", "type", "unix")
+        self._assertMacEquals(node, self.vif_vhostuser_ovs)
+        self._assertModel(xml, network_model.VIF_MODEL_VIRTIO)
+
+    def test_vhostuser_ovs_plug(self):
+
+        calls = {
+                'create_ovs_vif_port': [mock.call('br0',
+                                                  'usv-xxx-yyy-zzz',
+                                                  'aaa-bbb-ccc',
+                                                  'ca:fe:de:ad:be:ef',
+                                                  'instance-uuid')],
+                 'ovs_set_vhostuser_port_type': [mock.call('usv-xxx-yyy-zzz')]
+        }
+        with contextlib.nested(
+                mock.patch.object(linux_net, 'create_ovs_vif_port'),
+                mock.patch.object(linux_net, 'ovs_set_vhostuser_port_type')
+        ) as (create_ovs_vif_port, ovs_set_vhostuser_port_type):
+            d = vif.LibvirtGenericVIFDriver()
+            d.plug_vhostuser(self.instance, self.vif_vhostuser_ovs)
+            create_ovs_vif_port.assert_has_calls(calls['create_ovs_vif_port'])
+            ovs_set_vhostuser_port_type.assert_has_calls(
+                                        calls['ovs_set_vhostuser_port_type'])
+
+    def test_vhostuser_ovs_unplug(self):
+        calls = {
+            'delete_ovs_vif_port': [mock.call('br0', 'usv-xxx-yyy-zzz')]
+        }
+        with mock.patch.object(linux_net,
+                               'delete_ovs_vif_port') as delete_port:
+            d = vif.LibvirtGenericVIFDriver()
+            d.unplug_vhostuser(None, self.vif_vhostuser_ovs)
+            delete_port.assert_has_calls(calls['delete_ovs_vif_port'])

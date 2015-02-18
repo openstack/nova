@@ -59,8 +59,11 @@ VIF_DETAILS_VLAN = 'vlan'
 # Sets mode on vhost-user socket, valid values are 'client'
 # and 'server'
 VIF_DETAILS_VHOSTUSER_MODE = 'vhostuser_mode'
-# Location of the directory to store vhost-user sockets
-VIF_DETAILS_VHOSTUSER_DIR = 'vhostuser_sock_dir'
+# vhost-user socket path
+VIF_DETAILS_VHOSTUSER_SOCKET = 'vhostuser_socket'
+# Specifies whether vhost-user socket should be plugged
+# into ovs bridge. Valid values are True and False
+VIF_DETAILS_VHOSTUSER_OVS_PLUG = 'vhostuser_ovs_plug'
 
 # Define supported virtual NIC types. VNIC_TYPE_DIRECT and VNIC_TYPE_MACVTAP
 # are used for SR-IOV ports
