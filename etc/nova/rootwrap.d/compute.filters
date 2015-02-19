@@ -232,3 +232,6 @@ sync: CommandFilter, sync, root
 
 # nova/virt/libvirt/imagebackend.py:
 ploop: CommandFilter, ploop, root
+
+# nova/virt/libvirt/utils.py: 'xend', 'status'
+xend: CommandFilter, xend, root
