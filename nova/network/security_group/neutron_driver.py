@@ -520,8 +520,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
     def populate_security_groups(self, instance, security_groups):
         # Setting to empty list since we do not want to populate this field
         # in the nova database if using the neutron driver
-        instance['security_groups'] = objects.SecurityGroupList()
-        instance['security_groups'].objects = []
+        instance.security_groups = objects.SecurityGroupList()
 
     def get_default_rule(self, context, id):
         msg = _("Network driver does not support this function.")

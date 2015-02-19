@@ -261,13 +261,13 @@ class API(base_api.NetworkAPI):
                     {'ip_address': str(fixed_ip)}]
             port_req_body['port']['network_id'] = network_id
             port_req_body['port']['admin_state_up'] = True
-            port_req_body['port']['tenant_id'] = instance['project_id']
+            port_req_body['port']['tenant_id'] = instance.project_id
             if security_group_ids:
                 port_req_body['port']['security_groups'] = security_group_ids
             if available_macs is not None:
                 if not available_macs:
                     raise exception.PortNotFree(
-                        instance=instance['uuid'])
+                        instance=instance.uuid)
                 mac_address = available_macs.pop()
                 port_req_body['port']['mac_address'] = mac_address
             if dhcp_opts is not None:
@@ -686,7 +686,7 @@ class API(base_api.NetworkAPI):
         # NOTE(geekinutah): It would be nice if use_slave had us call
         #                   special APIs that pummeled slaves instead of
         #                   the master. For now we just ignore this arg.
-        with lockutils.lock('refresh_cache-%s' % instance['uuid']):
+        with lockutils.lock('refresh_cache-%s' % instance.uuid):
             result = self._get_instance_nw_info(context, instance, networks,
                                                 port_ids, admin_client)
             base_api.update_instance_cache_with_nw_info(self, context,
@@ -724,7 +724,7 @@ class API(base_api.NetworkAPI):
 
         if networks is None:
             networks = self._get_available_networks(context,
-                                                    instance['project_id'],
+                                                    instance.project_id,
                                                     net_ids)
         # an interface was added/removed from instance.
         else:
@@ -749,10 +749,10 @@ class API(base_api.NetworkAPI):
         ipam_subnets = data.get('subnets', [])
         if not ipam_subnets:
             raise exception.NetworkNotFoundForInstance(
-                instance_id=instance['uuid'])
+                instance_id=instance.uuid)
 
-        zone = 'compute:%s' % instance['availability_zone']
-        search_opts = {'device_id': instance['uuid'],
+        zone = 'compute:%s' % instance.availability_zone
+        search_opts = {'device_id': instance.uuid,
                        'device_owner': zone,
                        'network_id': network_id}
         data = get_client(context).list_ports(**search_opts)
@@ -774,13 +774,13 @@ class API(base_api.NetworkAPI):
                                     'exception': ex})
 
         raise exception.NetworkNotFoundForInstance(
-                instance_id=instance['uuid'])
+                instance_id=instance.uuid)
 
     @base_api.refresh_cache
     def remove_fixed_ip_from_instance(self, context, instance, address):
         """Remove a fixed ip from the instance."""
-        zone = 'compute:%s' % instance['availability_zone']
-        search_opts = {'device_id': instance['uuid'],
+        zone = 'compute:%s' % instance.availability_zone
+        search_opts = {'device_id': instance.uuid,
                        'device_owner': zone,
                        'fixed_ips': 'ip_address=%s' % address}
         data = get_client(context).list_ports(**search_opts)
@@ -802,7 +802,7 @@ class API(base_api.NetworkAPI):
             return self._get_instance_nw_info(context, instance)
 
         raise exception.FixedIpNotFoundForSpecificInstance(
-                instance_uuid=instance['uuid'], ip=address)
+                instance_uuid=instance.uuid, ip=address)
 
     def _get_port_vnic_info(self, context, neutron, port_id):
         """Retrieve port vnic info
@@ -1000,8 +1000,8 @@ class API(base_api.NetworkAPI):
     def _get_port_id_by_fixed_address(self, client,
                                       instance, address):
         """Return port_id from a fixed address."""
-        zone = 'compute:%s' % instance['availability_zone']
-        search_opts = {'device_id': instance['uuid'],
+        zone = 'compute:%s' % instance.availability_zone
+        search_opts = {'device_id': instance.uuid,
                        'device_owner': zone}
         data = client.list_ports(**search_opts)
         ports = data['ports']
@@ -1431,8 +1431,8 @@ class API(base_api.NetworkAPI):
         :param admin_client - a neutron client for the admin context.
         """
 
-        search_opts = {'tenant_id': instance['project_id'],
-                       'device_id': instance['uuid'], }
+        search_opts = {'tenant_id': instance.project_id,
+                       'device_id': instance.uuid, }
         if admin_client is None:
             client = get_client(context, admin=True)
         else:
@@ -1586,8 +1586,8 @@ class API(base_api.NetworkAPI):
         if not self._has_port_binding_extension(context, refresh_cache=True):
             return
         neutron = get_client(context, admin=True)
-        search_opts = {'device_id': instance['uuid'],
-                       'tenant_id': instance['project_id']}
+        search_opts = {'device_id': instance.uuid,
+                       'tenant_id': instance.project_id}
         data = neutron.list_ports(**search_opts)
         ports = data['ports']
         for p in ports:
