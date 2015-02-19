@@ -28,23 +28,25 @@ from nova.db.sqlalchemy import api as db_session
 from nova import exception
 from nova.i18n import _
 
-INIT_VERSION = 215
-_REPOSITORY = None
+INIT_VERSION = {}
+INIT_VERSION['main'] = 215
+INIT_VERSION['api'] = 0
+_REPOSITORY = {}
 
 LOG = logging.getLogger(__name__)
 
 get_engine = db_session.get_engine
 
 
-def db_sync(version=None):
+def db_sync(version=None, database='main'):
     if version is not None:
         try:
             version = int(version)
         except ValueError:
             raise exception.NovaException(_("version should be an integer"))
 
-    current_version = db_version()
-    repository = _find_migrate_repo()
+    current_version = db_version(database)
+    repository = _find_migrate_repo(database)
     if version is None or version > current_version:
         return versioning_api.upgrade(get_engine(), repository, version)
     else:
@@ -52,8 +54,8 @@ def db_sync(version=None):
                                         version)
 
 
-def db_version():
-    repository = _find_migrate_repo()
+def db_version(database='main'):
+    repository = _find_migrate_repo(database)
     try:
         return versioning_api.db_version(get_engine(), repository)
     except versioning_exceptions.DatabaseNotControlledError as exc:
@@ -62,7 +64,7 @@ def db_version():
         meta.reflect(bind=engine)
         tables = meta.tables
         if len(tables) == 0:
-            db_version_control(INIT_VERSION)
+            db_version_control(INIT_VERSION[database])
             return versioning_api.db_version(get_engine(), repository)
         else:
             LOG.exception(exc)
@@ -72,8 +74,8 @@ def db_version():
                 _("Upgrade DB using Essex release first."))
 
 
-def db_initial_version():
-    return INIT_VERSION
+def db_initial_version(database='main'):
+    return INIT_VERSION[database]
 
 
 def _process_null_records(table, col_name, check_fkeys, delete=False):
@@ -151,12 +153,15 @@ def db_version_control(version=None):
     return version
 
 
-def _find_migrate_repo():
+def _find_migrate_repo(database='main'):
     """Get the path for the migrate repository."""
     global _REPOSITORY
+    rel_path = 'migrate_repo'
+    if database == 'api':
+        rel_path = os.path.join('api_migrations', 'migrate_repo')
     path = os.path.join(os.path.abspath(os.path.dirname(__file__)),
-                        'migrate_repo')
+                        rel_path)
     assert os.path.exists(path)
-    if _REPOSITORY is None:
-        _REPOSITORY = Repository(path)
-    return _REPOSITORY
+    if _REPOSITORY.get(database) is None:
+        _REPOSITORY[database] = Repository(path)
+    return _REPOSITORY[database]
