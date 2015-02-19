@@ -60,6 +60,39 @@ class IronicDriverFieldsTestCase(test.NoDBTestCase):
                 self.instance, self.image_meta, self.flavor)
         self.assertEqual(sorted(self._expected_deploy_patch), sorted(patch))
 
+    def test_generic_get_deploy_patch_capabilities(self):
+        node = ironic_utils.get_test_node(driver='fake')
+        self.flavor['extra_specs']['capabilities:boot_mode'] = 'bios'
+        expected = [{'path': '/instance_info/capabilities',
+                     'value': '{"boot_mode": "bios"}',
+                     'op': 'add'}]
+        expected += self._expected_deploy_patch
+        patch = patcher.create(node).get_deploy_patch(
+                self.instance, self.image_meta, self.flavor)
+        self.assertEqual(sorted(expected), sorted(patch))
+
+    def test_generic_get_deploy_patch_capabilities_op(self):
+        node = ironic_utils.get_test_node(driver='fake')
+        self.flavor['extra_specs']['capabilities:boot_mode'] = '<in> bios'
+        expected = [{'path': '/instance_info/capabilities',
+                     'value': '{"boot_mode": "<in> bios"}',
+                     'op': 'add'}]
+        expected += self._expected_deploy_patch
+        patch = patcher.create(node).get_deploy_patch(
+                self.instance, self.image_meta, self.flavor)
+        self.assertEqual(sorted(expected), sorted(patch))
+
+    def test_generic_get_deploy_patch_capabilities_nested_key(self):
+        node = ironic_utils.get_test_node(driver='fake')
+        self.flavor['extra_specs']['capabilities:key1:key2'] = '<in> bios'
+        expected = [{'path': '/instance_info/capabilities',
+                     'value': '{"key1:key2": "<in> bios"}',
+                     'op': 'add'}]
+        expected += self._expected_deploy_patch
+        patch = patcher.create(node).get_deploy_patch(
+                self.instance, self.image_meta, self.flavor)
+        self.assertEqual(sorted(expected), sorted(patch))
+
     def test_generic_get_deploy_patch_ephemeral(self):
         CONF.set_override('default_ephemeral_format', 'testfmt')
         node = ironic_utils.get_test_node(driver='fake')
