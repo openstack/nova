@@ -219,7 +219,7 @@ class BootFromVolumeTest(test.TestCase):
                 '/dev/vda')
 
 
-class VolumeApiTestV21(test.TestCase):
+class VolumeApiTestV21(test.NoDBTestCase):
     url_prefix = '/v2/fake'
 
     def setUp(self):
@@ -340,7 +340,7 @@ class VolumeApiTestV2(VolumeApiTestV21):
         return fakes.wsgi_app()
 
 
-class VolumeAttachTestsV21(test.TestCase):
+class VolumeAttachTestsV21(test.NoDBTestCase):
     validation_error = exception.ValidationError
 
     def setUp(self):
@@ -714,7 +714,7 @@ class CommonBadRequestTestCase(object):
 
 
 class BadRequestVolumeTestCaseV21(CommonBadRequestTestCase,
-                                  test.TestCase):
+                                  test.NoDBTestCase):
 
     resource = 'os-volumes'
     entity_name = 'volume'
@@ -728,7 +728,7 @@ class BadRequestVolumeTestCaseV2(BadRequestVolumeTestCaseV21):
 
 
 class BadRequestAttachmentTestCase(CommonBadRequestTestCase,
-                                   test.TestCase):
+                                   test.NoDBTestCase):
     resource = 'servers/' + FAKE_UUID + '/os-volume_attachments'
     entity_name = 'volumeAttachment'
     controller_cls = volumes.VolumeAttachmentController
@@ -736,7 +736,7 @@ class BadRequestAttachmentTestCase(CommonBadRequestTestCase,
 
 
 class BadRequestSnapshotTestCaseV21(CommonBadRequestTestCase,
-                                    test.TestCase):
+                                    test.NoDBTestCase):
 
     resource = 'os-snapshots'
     entity_name = 'snapshot'
@@ -749,7 +749,7 @@ class BadRequestSnapshotTestCaseV2(BadRequestSnapshotTestCaseV21):
     bad_request = exc.HTTPBadRequest
 
 
-class AssistedSnapshotCreateTestCaseV21(test.TestCase):
+class AssistedSnapshotCreateTestCaseV21(test.NoDBTestCase):
     assisted_snaps = assisted_snaps_v21
     bad_request = exception.ValidationError
 
@@ -784,7 +784,7 @@ class AssistedSnapshotCreateTestCaseV2(AssistedSnapshotCreateTestCaseV21):
     bad_request = webob.exc.HTTPBadRequest
 
 
-class AssistedSnapshotDeleteTestCaseV21(test.TestCase):
+class AssistedSnapshotDeleteTestCaseV21(test.NoDBTestCase):
     assisted_snaps = assisted_snaps_v21
 
     def _check_status(self, expected_status, res, controller_method):
