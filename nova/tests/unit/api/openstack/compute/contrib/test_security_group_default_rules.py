@@ -368,3 +368,36 @@ class TestSecurityGroupDefaultRulesV21(test.TestCase):
 class TestSecurityGroupDefaultRulesV2(test.TestCase):
     controller_cls = (security_group_default_rules_v2.
                       SecurityGroupDefaultRulesController)
+
+
+class SecurityGroupDefaultRulesPolicyEnforcementV21(test.NoDBTestCase):
+
+    def setUp(self):
+        super(SecurityGroupDefaultRulesPolicyEnforcementV21, self).setUp()
+        self.controller = (security_group_default_rules_v21.
+                           SecurityGroupDefaultRulesController())
+        self.req = fakes.HTTPRequest.blank('')
+
+    def _common_policy_check(self, func, *arg, **kwarg):
+        rule_name = "compute_extension:v3:os-security-groups"
+        rule = {rule_name: "project:non_fake"}
+        self.policy.set_rules(rule)
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized, func, *arg, **kwarg)
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." %
+            rule_name, exc.format_message())
+
+    def test_create_policy_failed(self):
+        self._common_policy_check(self.controller.create, self.req, {})
+
+    def test_show_policy_failed(self):
+        self._common_policy_check(
+            self.controller.show, self.req, fakes.FAKE_UUID)
+
+    def test_delete_policy_failed(self):
+        self._common_policy_check(
+            self.controller.delete, self.req, fakes.FAKE_UUID)
+
+    def test_index_policy_failed(self):
+        self._common_policy_check(self.controller.index, self.req)
