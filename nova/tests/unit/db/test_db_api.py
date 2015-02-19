@@ -680,11 +680,13 @@ class AggregateDBApiTestCase(test.TestCase):
         values = _get_fake_aggr_values()
         values['metadata'] = _get_fake_aggr_metadata()
         values['availability_zone'] = 'different_avail_zone'
+        expected_metadata = copy.deepcopy(values['metadata'])
+        expected_metadata['availability_zone'] = values['availability_zone']
         db.aggregate_update(ctxt, result['id'], values)
-        expected = db.aggregate_metadata_get(ctxt, result['id'])
+        metadata = db.aggregate_metadata_get(ctxt, result['id'])
         updated = db.aggregate_get(ctxt, result['id'])
-        self.assertThat(values['metadata'],
-                        matchers.DictMatches(expected))
+        self.assertThat(metadata,
+                        matchers.DictMatches(expected_metadata))
         self.assertNotEqual(result['availability_zone'],
                             updated['availability_zone'])
 
@@ -694,9 +696,10 @@ class AggregateDBApiTestCase(test.TestCase):
         values = _get_fake_aggr_values()
         values['metadata'] = _get_fake_aggr_metadata()
         values['metadata']['fake_key1'] = 'foo'
+        expected_metadata = copy.deepcopy(values['metadata'])
         db.aggregate_update(ctxt, result['id'], values)
-        expected = db.aggregate_metadata_get(ctxt, result['id'])
-        self.assertThat(values['metadata'], matchers.DictMatches(expected))
+        metadata = db.aggregate_metadata_get(ctxt, result['id'])
+        self.assertThat(metadata, matchers.DictMatches(expected_metadata))
 
     def test_aggregate_update_zone_with_existing_metadata(self):
         ctxt = context.get_admin_context()
