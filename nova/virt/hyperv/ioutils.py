@@ -38,7 +38,7 @@ class IOThread(native_threading.Thread):
 
     def run(self):
         try:
-            self._copy(self._src, self._dest)
+            self._copy()
         except IOError as err:
             # Invalid argument error means that the vm console pipe was closed,
             # probably the vm was stopped. The worker can stop it's execution.
@@ -46,7 +46,7 @@ class IOThread(native_threading.Thread):
                 LOG.error(_LE("Error writing vm console log file from "
                               "serial console pipe. Error: %s") % err)
 
-    def _copy(self, src, dest):
+    def _copy(self):
         with open(self._src, 'rb') as src:
             with open(self._dest, 'ab', 0) as dest:
                 dest.seek(0, os.SEEK_END)
