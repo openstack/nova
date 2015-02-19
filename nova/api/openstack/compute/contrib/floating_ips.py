@@ -263,8 +263,8 @@ class FloatingIPActionController(wsgi.Controller):
         if (instance and
             floating_ip.get('fixed_ip_id') and
             (uuidutils.is_uuid_like(id) and
-             [instance['uuid'] == id] or
-             [instance['id'] == id])[0]):
+             [instance.uuid == id] or
+             [instance.id == id])[0]):
             try:
                 disassociate_floating_ip(self, context, instance, address)
             except exception.FloatingIpNotAssociated:

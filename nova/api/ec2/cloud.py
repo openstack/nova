@@ -958,18 +958,18 @@ class CloudController(object):
         def _format_attr_block_device_mapping(instance, result):
             tmp = {}
             self._format_instance_root_device_name(instance, tmp)
-            self._format_instance_bdm(context, instance['uuid'],
+            self._format_instance_bdm(context, instance.uuid,
                                       tmp['rootDeviceName'], result)
 
         def _format_attr_disable_api_termination(instance, result):
-            result['disableApiTermination'] = instance['disable_terminate']
+            result['disableApiTermination'] = instance.disable_terminate
 
         def _format_attr_group_set(instance, result):
             CloudController._format_group_set(instance, result)
 
         def _format_attr_instance_initiated_shutdown_behavior(instance,
                                                                result):
-            if instance['shutdown_terminate']:
+            if instance.shutdown_terminate:
                 result['instanceInitiatedShutdownBehavior'] = 'terminate'
             else:
                 result['instanceInitiatedShutdownBehavior'] = 'stop'
@@ -990,7 +990,7 @@ class CloudController(object):
             _unsupported_attribute(instance, result)
 
         def _format_attr_user_data(instance, result):
-            result['userData'] = base64.b64decode(instance['user_data'])
+            result['userData'] = base64.b64decode(instance.user_data)
 
         attribute_formatter = {
             'blockDeviceMapping': _format_attr_block_device_mapping,
@@ -1057,9 +1057,10 @@ class CloudController(object):
                                         previous_state['shutdown_terminate'])
             try:
                 instance_uuid = ec2utils.ec2_inst_id_to_uuid(context, ec2_id)
-                instance = self.compute_api.get(context, instance_uuid)
-                i['currentState'] = _state_description(instance['vm_state'],
-                                            instance['shutdown_terminate'])
+                instance = self.compute_api.get(context, instance_uuid,
+                                                want_objects=True)
+                i['currentState'] = _state_description(instance.vm_state,
+                                            instance.shutdown_terminate)
             except exception.NotFound:
                 i['currentState'] = _state_description(
                                             inst_state.SHUTTING_DOWN, True)
@@ -1143,7 +1144,7 @@ class CloudController(object):
     def _format_group_set(instance, result):
         security_group_names = []
         if instance.get('security_groups'):
-            for security_group in instance['security_groups']:
+            for security_group in instance.security_groups:
                 security_group_names.append(security_group['name'])
         result['groupSet'] = utils.convert_to_list_dict(
             security_group_names, 'groupId')
@@ -1188,18 +1189,18 @@ class CloudController(object):
 
         for instance in instances:
             if not context.is_admin:
-                if pipelib.is_vpn_image(instance['image_ref']):
+                if pipelib.is_vpn_image(instance.image_ref):
                     continue
             i = {}
-            instance_uuid = instance['uuid']
+            instance_uuid = instance.uuid
             ec2_id = ec2utils.id_to_ec2_inst_id(instance_uuid)
             i['instanceId'] = ec2_id
-            image_uuid = instance['image_ref']
+            image_uuid = instance.image_ref
             i['imageId'] = ec2utils.glance_id_to_ec2_id(context, image_uuid)
             self._format_kernel_id(context, instance, i, 'kernelId')
             self._format_ramdisk_id(context, instance, i, 'ramdiskId')
             i['instanceState'] = _state_description(
-                instance['vm_state'], instance['shutdown_terminate'])
+                instance.vm_state, instance.shutdown_terminate)
 
             fixed_ip = None
             floating_ip = None
@@ -1213,12 +1214,12 @@ class CloudController(object):
             if CONF.ec2_private_dns_show_ip:
                 i['privateDnsName'] = fixed_ip
             else:
-                i['privateDnsName'] = instance['hostname']
+                i['privateDnsName'] = instance.hostname
             i['privateIpAddress'] = fixed_ip
             if floating_ip is not None:
                 i['ipAddress'] = floating_ip
             i['dnsName'] = floating_ip
-            i['keyName'] = instance['key_name']
+            i['keyName'] = instance.key_name
             i['tagSet'] = []
 
             for k, v in utils.instance_meta(instance).iteritems():
@@ -1230,27 +1231,27 @@ class CloudController(object):
 
             if context.is_admin:
                 i['keyName'] = '%s (%s, %s)' % (i['keyName'],
-                    instance['project_id'],
-                    instance['host'])
+                    instance.project_id,
+                    instance.host)
             i['productCodesSet'] = utils.convert_to_list_dict([],
                                                               'product_codes')
             self._format_instance_type(instance, i)
-            i['launchTime'] = instance['created_at']
-            i['amiLaunchIndex'] = instance['launch_index']
+            i['launchTime'] = instance.created_at
+            i['amiLaunchIndex'] = instance.launch_index
             self._format_instance_root_device_name(instance, i)
-            self._format_instance_bdm(context, instance['uuid'],
+            self._format_instance_bdm(context, instance.uuid,
                                       i['rootDeviceName'], i)
             zone = availability_zones.get_instance_availability_zone(context,
                                                                      instance)
             i['placement'] = {'availabilityZone': zone}
-            if instance['reservation_id'] not in reservations:
+            if instance.reservation_id not in reservations:
                 r = {}
-                r['reservationId'] = instance['reservation_id']
-                r['ownerId'] = instance['project_id']
+                r['reservationId'] = instance.reservation_id
+                r['ownerId'] = instance.project_id
                 self._format_group_set(instance, r)
                 r['instancesSet'] = []
-                reservations[instance['reservation_id']] = r
-            reservations[instance['reservation_id']]['instancesSet'].append(i)
+                reservations[instance.reservation_id] = r
+            reservations[instance.reservation_id]['instancesSet'].append(i)
 
         return list(reservations.values())
 

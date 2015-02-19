@@ -165,7 +165,7 @@ def get_ip_info_for_instance(context, instance):
         nw_info = instance.info_cache.network_info
     else:
         # FIXME(comstud): Temporary as we transition to objects.
-        info_cache = instance['info_cache'] or {}
+        info_cache = instance.info_cache or {}
         nw_info = info_cache.get('network_info')
     # Make sure empty response is turned into the model
     if not nw_info:

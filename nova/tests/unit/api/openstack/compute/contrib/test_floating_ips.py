@@ -29,12 +29,15 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import network
+from nova import objects
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_network
 
 
 FAKE_UUID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+TEST_INST = 1
+WRONG_INST = 9999
 
 
 def network_api_get_floating_ip(self, context, id):
@@ -53,7 +56,8 @@ def network_api_get_floating_ips_by_project(self, context):
              'pool': 'nova',
              'fixed_ip': {'address': '10.0.0.1',
                           'instance_uuid': FAKE_UUID,
-                          'instance': {'uuid': FAKE_UUID}}},
+                          'instance': objects.Instance(
+                              **{'uuid': FAKE_UUID})}},
             {'id': 2,
              'pool': 'nova', 'interface': 'eth0',
              'address': '10.10.10.11',
@@ -62,7 +66,8 @@ def network_api_get_floating_ips_by_project(self, context):
 
 def compute_api_get(self, context, instance_id, expected_attrs=None,
                     want_objects=False):
-    return dict(uuid=FAKE_UUID, id=instance_id, instance_type_id=1, host='bob')
+    return objects.Instance(uuid=FAKE_UUID, id=instance_id,
+                            instance_type_id=1, host='bob')
 
 
 def network_api_allocate(self, context):
@@ -86,12 +91,12 @@ def network_api_disassociate(self, context, instance, floating_address):
 
 
 def fake_instance_get(context, instance_id):
-        return {
+        return objects.Instance(**{
         "id": 1,
         "uuid": uuid.uuid4(),
         "name": 'fake',
         "user_id": 'fakeuser',
-        "project_id": '123'}
+        "project_id": '123'})
 
 
 def stub_nw_info(stubs):
@@ -486,7 +491,7 @@ class FloatingIpTestV21(test.TestCase):
                        fake_associate_floating_ip)
         body = dict(addFloatingIp=dict(address=self.floating_ip))
 
-        rsp = self.manager._add_floating_ip(self.fake_req, 'test_inst',
+        rsp = self.manager._add_floating_ip(self.fake_req, TEST_INST,
                                             body=body)
         self.assertEqual(202, rsp.status_int)
 
@@ -516,7 +521,7 @@ class FloatingIpTestV21(test.TestCase):
         body = dict(addFloatingIp=dict(address=floating_ip))
         ex = self.assertRaises(webob.exc.HTTPNotFound,
                                self.manager._add_floating_ip,
-                               self.fake_req, 'test_inst', body=body)
+                               self.fake_req, TEST_INST, body=body)
 
         self.assertIn("floating ip not found", ex.explanation)
 
@@ -526,7 +531,7 @@ class FloatingIpTestV21(test.TestCase):
         body = dict(addFloatingIp=dict(address='10.10.10.11'))
         self.assertRaises(webob.exc.HTTPForbidden,
                           self.manager._add_floating_ip, self.fake_req,
-                          'test_inst', body=body)
+                          TEST_INST, body=body)
 
     def test_associate_floating_ip_bad_address_key(self):
         body = dict(addFloatingIp=dict(bad_address='10.10.10.11'))
@@ -545,14 +550,14 @@ class FloatingIpTestV21(test.TestCase):
     def test_floating_ip_disassociate(self):
         def get_instance_by_floating_ip_addr(self, context, address):
             if address == '10.10.10.10':
-                return 'test_inst'
+                return TEST_INST
 
         self.stubs.Set(network.api.API, "get_instance_id_by_floating_address",
                        get_instance_by_floating_ip_addr)
 
         body = dict(removeFloatingIp=dict(address='10.10.10.10'))
 
-        rsp = self.manager._remove_floating_ip(self.fake_req, 'test_inst',
+        rsp = self.manager._remove_floating_ip(self.fake_req, TEST_INST,
                                                body=body)
         self.assertEqual(202, rsp.status_int)
 
@@ -578,7 +583,7 @@ class FloatingIpTestV21(test.TestCase):
         body = dict(addFloatingIp=dict(address='1.1.1.1'))
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.manager._add_floating_ip,
-                          self.fake_req, 'test_inst', body=body)
+                          self.fake_req, TEST_INST, body=body)
 
     def test_floating_ip_disassociate_non_existent_ip(self):
         def network_api_get_floating_ip_by_address(self, context,
@@ -594,12 +599,12 @@ class FloatingIpTestV21(test.TestCase):
         body = dict(removeFloatingIp=dict(address='1.1.1.1'))
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.manager._remove_floating_ip,
-                          self.fake_req, 'test_inst', body=body)
+                          self.fake_req, TEST_INST, body=body)
 
     def test_floating_ip_disassociate_wrong_instance_uuid(self):
         def get_instance_by_floating_ip_addr(self, context, address):
             if address == '10.10.10.10':
-                return 'test_inst'
+                return TEST_INST
 
         self.stubs.Set(network.api.API, "get_instance_id_by_floating_address",
                        get_instance_by_floating_ip_addr)
@@ -614,7 +619,7 @@ class FloatingIpTestV21(test.TestCase):
     def test_floating_ip_disassociate_wrong_instance_id(self):
         def get_instance_by_floating_ip_addr(self, context, address):
             if address == '10.10.10.10':
-                return 'wrong_inst'
+                return WRONG_INST
 
         self.stubs.Set(network.api.API, "get_instance_id_by_floating_address",
                        get_instance_by_floating_ip_addr)
@@ -623,7 +628,7 @@ class FloatingIpTestV21(test.TestCase):
 
         self.assertRaises(webob.exc.HTTPConflict,
                           self.manager._remove_floating_ip,
-                          self.fake_req, 'test_inst', body=body)
+                          self.fake_req, TEST_INST, body=body)
 
     def test_floating_ip_disassociate_auto_assigned(self):
         def fake_get_floating_ip_addr_auto_assigned(self, context, address):
@@ -632,7 +637,7 @@ class FloatingIpTestV21(test.TestCase):
 
         def get_instance_by_floating_ip_addr(self, context, address):
             if address == '10.10.10.10':
-                return 'test_inst'
+                return TEST_INST
 
         def network_api_disassociate(self, context, instance,
                                      floating_address):
@@ -647,7 +652,7 @@ class FloatingIpTestV21(test.TestCase):
         body = dict(removeFloatingIp=dict(address='10.10.10.10'))
         self.assertRaises(webob.exc.HTTPForbidden,
                           self.manager._remove_floating_ip,
-                          self.fake_req, 'test_inst', body=body)
+                          self.fake_req, TEST_INST, body=body)
 
     def test_floating_ip_disassociate_map_authorization_exc(self):
         def fake_get_floating_ip_addr_auto_assigned(self, context, address):
@@ -656,7 +661,7 @@ class FloatingIpTestV21(test.TestCase):
 
         def get_instance_by_floating_ip_addr(self, context, address):
             if address == '10.10.10.10':
-                return 'test_inst'
+                return TEST_INST
 
         def network_api_disassociate(self, context, instance, address):
             raise exception.Forbidden()
@@ -670,7 +675,7 @@ class FloatingIpTestV21(test.TestCase):
         body = dict(removeFloatingIp=dict(address='10.10.10.10'))
         self.assertRaises(webob.exc.HTTPForbidden,
                           self.manager._remove_floating_ip,
-                          self.fake_req, 'test_inst', body=body)
+                          self.fake_req, TEST_INST, body=body)
 
 # these are a few bad param tests
 
@@ -679,21 +684,21 @@ class FloatingIpTestV21(test.TestCase):
 
         self.assertRaises(self.validation_error,
                           self.manager._remove_floating_ip, self.fake_req,
-                          'test_inst', body=body)
+                          TEST_INST, body=body)
 
     def test_missing_dict_param_in_remove_floating_ip(self):
         body = dict(removeFloatingIp='11.0.0.1')
 
         self.assertRaises(self.validation_error,
                           self.manager._remove_floating_ip, self.fake_req,
-                          'test_inst', body=body)
+                          TEST_INST, body=body)
 
     def test_missing_dict_param_in_add_floating_ip(self):
         body = dict(addFloatingIp='11.0.0.1')
 
         self.assertRaises(self.validation_error,
                           self.manager._add_floating_ip, self.fake_req,
-                          'test_inst', body=body)
+                          TEST_INST, body=body)
 
 
 class FloatingIpTestV2(FloatingIpTestV21):
@@ -715,7 +720,7 @@ class FloatingIpTestV2(FloatingIpTestV21):
         body = dict(addFloatingIp=dict(address=self.floating_ip,
                                        fixed_address=fixed_address_requested))
 
-        rsp = self.manager._add_floating_ip(self.fake_req, 'test_inst', body)
+        rsp = self.manager._add_floating_ip(self.fake_req, TEST_INST, body)
         self.assertEqual(202, rsp.status_int)
 
     def test_floatingip_delete_invalid_id(self):
@@ -797,7 +802,7 @@ class ExtendedFloatingIpTestV21(test.TestCase):
         body = dict(addFloatingIp=dict(address=self.floating_ip,
                                        fixed_address=fixed_address))
 
-        rsp = self.manager._add_floating_ip(self.fake_req, 'test_inst',
+        rsp = self.manager._add_floating_ip(self.fake_req, TEST_INST,
                                             body=body)
         self.assertEqual(202, rsp.status_int)
 
@@ -812,7 +817,7 @@ class ExtendedFloatingIpTestV21(test.TestCase):
 
         ex = self.assertRaises(webob.exc.HTTPBadRequest,
                                self.manager._add_floating_ip,
-                               self.fake_req, 'test_inst', body=body)
+                               self.fake_req, TEST_INST, body=body)
 
         self.assertIn("Specified fixed address not assigned to instance",
                       ex.explanation)

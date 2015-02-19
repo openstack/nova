@@ -31,7 +31,7 @@ class ExtendedAZController(wsgi.Controller):
             # Likely hasn't reached a viable compute node yet so give back the
             # desired availability_zone that *may* exist in the instance
             # record itself.
-            az = instance['availability_zone']
+            az = instance.availability_zone
         server[key] = az
 
     @wsgi.extends

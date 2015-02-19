@@ -23,6 +23,7 @@ from nova.api.openstack.compute.contrib import cloudpipe as cloudpipe_v2
 from nova.api.openstack.compute.plugins.v3 import cloudpipe as cloudpipe_v21
 from nova.compute import utils as compute_utils
 from nova import exception
+from nova import objects
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_network
@@ -38,18 +39,17 @@ uuid = str(uuid_lib.uuid4())
 
 
 def fake_vpn_instance():
-    return {
-        'id': 7, 'image_ref': CONF.vpn_image_id, 'vm_state': 'active',
-        'created_at': timeutils.parse_strtime('1981-10-20T00:00:00.000000'),
-        'uuid': uuid, 'project_id': project_id,
-    }
+    return objects.Instance(
+        id=7, image_ref=CONF.vpn_image_id, vm_state='active',
+        created_at=timeutils.parse_strtime('1981-10-20T00:00:00.000000'),
+        uuid=uuid, project_id=project_id)
 
 
-def compute_api_get_all_empty(context, search_opts=None):
+def compute_api_get_all_empty(context, search_opts=None, want_objects=True):
     return []
 
 
-def compute_api_get_all(context, search_opts=None):
+def compute_api_get_all(context, search_opts=None, want_objects=True):
         return [fake_vpn_instance()]
 
 

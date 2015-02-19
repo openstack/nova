@@ -226,12 +226,12 @@ class InstanceMetadata(object):
 
         meta_data = {
             'ami-id': self.ec2_ids['ami-id'],
-            'ami-launch-index': self.instance['launch_index'],
+            'ami-launch-index': self.instance.launch_index,
             'ami-manifest-path': 'FIXME',
             'instance-id': self.ec2_ids['instance-id'],
             'hostname': hostname,
             'local-ipv4': fixed_ip or self.address,
-            'reservation-id': self.instance['reservation_id'],
+            'reservation-id': self.instance.reservation_id,
             'security-groups': fmt_sgroups}
 
         # public keys are strangely rendered in ec2 metadata service
@@ -243,10 +243,10 @@ class InstanceMetadata(object):
         # meta-data/public-keys/ : '0=%s' % keyname
         # meta-data/public-keys/0/ : 'openssh-key'
         # meta-data/public-keys/0/openssh-key : '%s' % publickey
-        if self.instance['key_name']:
+        if self.instance.key_name:
             meta_data['public-keys'] = {
-                '0': {'_name': "0=" + self.instance['key_name'],
-                      'openssh-key': self.instance['key_data']}}
+                '0': {'_name': "0=" + self.instance.key_name,
+                      'openssh-key': self.instance.key_data}}
 
         if self._check_version('2007-01-19', version):
             meta_data['local-hostname'] = hostname
@@ -305,13 +305,13 @@ class InstanceMetadata(object):
             metadata.update(self.extra_md)
         if self.network_config:
             metadata['network_config'] = self.network_config
-        if self.instance['key_name']:
+        if self.instance.key_name:
             metadata['public_keys'] = {
-                self.instance['key_name']: self.instance['key_data']
+                self.instance.key_name: self.instance.key_data
             }
         metadata['hostname'] = self._get_hostname()
-        metadata['name'] = self.instance['display_name']
-        metadata['launch_index'] = self.instance['launch_index']
+        metadata['name'] = self.instance.display_name
+        metadata['launch_index'] = self.instance.launch_index
         metadata['availability_zone'] = self.availability_zone
 
         if self._check_os_version(GRIZZLY, version):
@@ -362,7 +362,7 @@ class InstanceMetadata(object):
         return self._check_version(required, requested, OPENSTACK_VERSIONS)
 
     def _get_hostname(self):
-        return "%s%s%s" % (self.instance['hostname'],
+        return "%s%s%s" % (self.instance.hostname,
                            '.' if CONF.dhcp_domain else '',
                            CONF.dhcp_domain)
 
