@@ -17,6 +17,7 @@ from nova.api.openstack.compute.contrib import floating_ip_pools as fipp_v2
 from nova.api.openstack.compute.plugins.v3 import floating_ip_pools as\
                                                       fipp_v21
 from nova import context
+from nova import exception
 from nova import network
 from nova import test
 from nova.tests.unit.api.openstack import fakes
@@ -58,3 +59,21 @@ class FloatingIpPoolTestV21(test.NoDBTestCase):
 
 class FloatingIpPoolTestV2(FloatingIpPoolTestV21):
     floating_ip_pools = fipp_v2
+
+
+class FloatingIPPoolsPolicyEnforcementV21(test.NoDBTestCase):
+
+    def setUp(self):
+        super(FloatingIPPoolsPolicyEnforcementV21, self).setUp()
+        self.controller = fipp_v21.FloatingIPPoolsController()
+        self.req = fakes.HTTPRequest.blank('')
+
+    def test_change_password_policy_failed(self):
+        rule_name = "compute_extension:v3:os-floating-ip-pools"
+        rule = {rule_name: "project:non_fake"}
+        self.policy.set_rules(rule)
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized, self.controller.index, self.req)
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." %
+            rule_name, exc.format_message())
