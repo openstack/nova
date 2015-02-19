@@ -30,9 +30,7 @@ from nova import utils
 
 ALIAS = "os-fping"
 
-authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
-authorize_all_tenants = extensions.extension_authorizer(
-    'compute', 'v3:%s:all_tenants' % ALIAS)
+authorize = extensions.os_compute_authorizer(ALIAS)
 
 CONF = cfg.CONF
 CONF.import_opt('fping_path', 'nova.api.openstack.compute.contrib.fping')
@@ -41,7 +39,7 @@ CONF.import_opt('fping_path', 'nova.api.openstack.compute.contrib.fping')
 class FpingController(wsgi.Controller):
 
     def __init__(self, network_api=None):
-        self.compute_api = compute.API()
+        self.compute_api = compute.API(skip_policy_check=True)
         self.last_call = {}
 
     def check_fping(self):
@@ -76,7 +74,7 @@ class FpingController(wsgi.Controller):
         context = req.environ["nova.context"]
         search_opts = dict(deleted=False)
         if "all_tenants" in req.GET:
-            authorize_all_tenants(context)
+            authorize(context, action='all_tenants')
         else:
             authorize(context)
             if context.project_id:
