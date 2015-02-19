@@ -1143,6 +1143,7 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
         self._instance_data = self._get_instance_data()
         instance = db.instance_create(self._context, self._instance_data)
         instance['system_metadata'] = {}
+        instance['old_flavor'] = mock.MagicMock()
         network_info = fake_network.fake_get_instance_nw_info(self.stubs)
 
         m = fake.PathUtils.get_instance_dir(mox.IsA(str))

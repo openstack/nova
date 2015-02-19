@@ -40,12 +40,10 @@ class ImageCache(object):
         self._vhdutils = utilsfactory.get_vhdutils()
 
     def _get_root_vhd_size_gb(self, instance):
-        try:
-            # In case of resizes we need the old root disk size
-            old_flavor = instance.get_flavor('old')
-            return old_flavor.root_gb
-        except KeyError:
-            return instance['root_gb']
+        if instance.old_flavor:
+            return instance.old_flavor.root_gb
+        else:
+            return instance.root_gb
 
     def _resize_and_cache_vhd(self, instance, vhd_path):
         vhd_info = self._vhdutils.get_vhd_info(vhd_path)
