@@ -64,7 +64,7 @@ def db_version(database='main'):
         meta.reflect(bind=engine)
         tables = meta.tables
         if len(tables) == 0:
-            db_version_control(INIT_VERSION[database])
+            db_version_control(INIT_VERSION[database], database)
             return versioning_api.db_version(get_engine(), repository)
         else:
             LOG.exception(exc)
@@ -147,8 +147,8 @@ def db_null_instance_uuid_scan(delete=False):
     return processed
 
 
-def db_version_control(version=None):
-    repository = _find_migrate_repo()
+def db_version_control(version=None, database='main'):
+    repository = _find_migrate_repo(database)
     versioning_api.version_control(get_engine(), repository, version)
     return version
 
