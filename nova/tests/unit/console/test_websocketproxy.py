@@ -155,3 +155,20 @@ class NovaProxyRequestHandlerBaseTestCase(test.TestCase):
 
         self.assertRaises(exception.NovaException,
                           self.wh.new_websocket_client)
+
+    @mock.patch('socket.getfqdn')
+    def test_address_string_doesnt_do_reverse_dns_lookup(self, getfqdn):
+        request_mock = mock.MagicMock()
+        request_mock.makefile().readline.side_effect = [
+            'GET /vnc.html?token=123-456-789 HTTP/1.1\r\n',
+            ''
+        ]
+        server_mock = mock.MagicMock()
+        client_address = ('8.8.8.8', 54321)
+
+        handler = websocketproxy.NovaProxyRequestHandler(
+            request_mock, client_address, server_mock)
+        handler.log_message('log message using client address context info')
+
+        self.assertFalse(getfqdn.called)  # no reverse dns look up
+        self.assertEqual(handler.address_string(), '8.8.8.8')  # plain address
