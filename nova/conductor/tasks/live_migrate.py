@@ -52,7 +52,7 @@ class LiveMigrationTask(object):
         self.image_api = image.API()
 
     def execute(self):
-        self._check_instance_is_running()
+        self._check_instance_is_active()
         self._check_host_is_up(self.source)
 
         if not self.destination:
@@ -77,10 +77,14 @@ class LiveMigrationTask(object):
         # rollback call right now.
         raise NotImplementedError()
 
-    def _check_instance_is_running(self):
-        if self.instance.power_state != power_state.RUNNING:
-            raise exception.InstanceNotRunning(
-                    instance_id=self.instance.uuid)
+    def _check_instance_is_active(self):
+        if self.instance.power_state not in (power_state.RUNNING,
+                                             power_state.PAUSED):
+            raise exception.InstanceInvalidState(
+                    instance_uuid = self.instance.uuid,
+                    attr = 'power_state',
+                    state = self.instance.power_state,
+                    method = 'live migrate')
 
     def _check_host_is_up(self, host):
         try:

@@ -93,7 +93,6 @@ class MigrateServerController(wsgi.Controller):
                 exception.InvalidLocalStorage,
                 exception.InvalidSharedStorage,
                 exception.HypervisorUnavailable,
-                exception.InstanceNotRunning,
                 exception.MigrationPreCheckError,
                 exception.LiveMigrationWithOldNovaNotSafe) as ex:
             raise exc.HTTPBadRequest(explanation=ex.format_message())

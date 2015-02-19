@@ -240,9 +240,12 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
         self._test_migrate_live_failed_with_exception(
             exception.HypervisorUnavailable(host=""))
 
-    def test_migrate_live_instance_not_running(self):
+    def test_migrate_live_instance_not_active(self):
         self._test_migrate_live_failed_with_exception(
-            exception.InstanceNotRunning(instance_id=""))
+            exception.InstanceInvalidState(
+                instance_uuid='', state='', attr='', method=''),
+            expected_status_code=409,
+            check_response=False)
 
     def test_migrate_live_pre_check_error(self):
         self._test_migrate_live_failed_with_exception(

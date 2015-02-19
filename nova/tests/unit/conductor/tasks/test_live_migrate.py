@@ -85,13 +85,14 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         self.mox.ReplayAll()
         self.assertEqual("bob", self.task.execute())
 
-    def test_check_instance_is_running_passes(self):
-        self.task._check_instance_is_running()
+    def test_check_instance_is_active_passes_when_paused(self):
+        self.task.instance['power_state'] = power_state.PAUSED
+        self.task._check_instance_is_active()
 
-    def test_check_instance_is_running_fails_when_shutdown(self):
+    def test_check_instance_is_active_fails_when_shutdown(self):
         self.task.instance['power_state'] = power_state.SHUTDOWN
-        self.assertRaises(exception.InstanceNotRunning,
-                          self.task._check_instance_is_running)
+        self.assertRaises(exception.InstanceInvalidState,
+                          self.task._check_instance_is_active)
 
     def test_check_instance_host_is_up(self):
         self.mox.StubOutWithMock(objects.Service, 'get_by_compute_host')

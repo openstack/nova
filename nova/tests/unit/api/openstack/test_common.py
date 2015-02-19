@@ -438,6 +438,13 @@ class MiscFunctionsTest(test.TestCase):
                 expected = 'REBUILD'
                 self.assertEqual(expected, actual)
 
+    def test_status_migrating_from_state(self):
+        for vm_state in (vm_states.ACTIVE, vm_states.PAUSED):
+            task_state = task_states.MIGRATING
+            actual = common.status_from_state(vm_state, task_state)
+            expected = 'MIGRATING'
+            self.assertEqual(expected, actual)
+
     def test_task_and_vm_state_from_status(self):
         fixture1 = ['reboot']
         actual = common.task_and_vm_state_from_status(fixture1)
