@@ -5839,7 +5839,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(len(instances), 1)
 
         instance_name = instances[0]['name']
-        self.compute.driver.test_remove_vm(instance_name)
+        self.compute.driver._test_remove_vm(instance_name)
 
         # Force the compute manager to do its periodic poll
         ctxt = context.get_admin_context()
