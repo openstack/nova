@@ -820,3 +820,62 @@ class ExtendedFloatingIpTestV21(test.TestCase):
 
 class ExtendedFloatingIpTestV2(ExtendedFloatingIpTestV21):
     floating_ips = fips_v2
+
+
+class FloatingIPPolicyEnforcementV21(test.NoDBTestCase):
+
+    def setUp(self):
+        super(FloatingIPPolicyEnforcementV21, self).setUp()
+        self.controller = fips_v21.FloatingIPController()
+        self.req = fakes.HTTPRequest.blank('')
+
+    def _common_policy_check(self, func, *arg, **kwarg):
+        rule_name = "compute_extension:v3:os-floating-ips"
+        rule = {rule_name: "project:non_fake"}
+        self.policy.set_rules(rule)
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized, func, *arg, **kwarg)
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+        exc.format_message())
+
+    def test_index_policy_failed(self):
+        self._common_policy_check(self.controller.index, self.req)
+
+    def test_show_policy_failed(self):
+        self._common_policy_check(self.controller.show, self.req, FAKE_UUID)
+
+    def test_create_policy_failed(self):
+        self._common_policy_check(self.controller.create, self.req)
+
+    def test_delete_policy_failed(self):
+        self._common_policy_check(self.controller.delete, self.req, FAKE_UUID)
+
+
+class FloatingIPActionPolicyEnforcementV21(test.NoDBTestCase):
+
+    def setUp(self):
+        super(FloatingIPActionPolicyEnforcementV21, self).setUp()
+        self.controller = fips_v21.FloatingIPActionController()
+        self.req = fakes.HTTPRequest.blank('')
+
+    def _common_policy_check(self, func, *arg, **kwarg):
+        rule_name = "compute_extension:v3:os-floating-ips"
+        rule = {rule_name: "project:non_fake"}
+        self.policy.set_rules(rule)
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized, func, *arg, **kwarg)
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+        exc.format_message())
+
+    def test_add_policy_failed(self):
+        body = dict(addFloatingIp=dict(address='10.10.10.11'))
+        self._common_policy_check(
+            self.controller._add_floating_ip, self.req, FAKE_UUID, body=body)
+
+    def test_remove_policy_failed(self):
+        body = dict(removeFloatingIp=dict(address='10.10.10.10'))
+        self._common_policy_check(
+            self.controller._remove_floating_ip, self.req,
+            FAKE_UUID, body=body)
