@@ -16,6 +16,7 @@
 import contextlib
 import glob
 import os
+import platform
 import time
 
 import eventlet
@@ -24,6 +25,7 @@ import mock
 from oslo_concurrency import processutils
 from oslo_config import cfg
 
+from nova.compute import arch
 from nova import exception
 from nova.storage import linuxscsi
 from nova import test
@@ -1406,6 +1408,74 @@ Setting up iSCSI targets: unused
                           libvirt_driver.connect_volume,
                           connection_info, self.disk_info)
 
+    @mock.patch.object(volume.LibvirtFibreChannelVolumeDriver,
+                       '_remove_lun_from_s390')
+    def _test_libvirt_fibrechan_driver_s390(self, mock_remove_lun):
+        self.stubs.Set(libvirt_utils, 'get_fc_hbas',
+               fake_libvirt_utils.get_fc_hbas)
+        self.stubs.Set(libvirt_utils, 'get_fc_hbas_info',
+                       fake_libvirt_utils.get_fc_hbas_info)
+        # NOTE(vish) exists is to make driver assume connecting worked
+        self.stubs.Set(os.path, 'exists', lambda x: True)
+        self.stubs.Set(os.path, 'realpath', lambda x: '/dev/sdb')
+        libvirt_driver = volume.LibvirtFibreChannelVolumeDriver(self.fake_conn)
+        multipath_devname = '/dev/md-1'
+        devices = {"device": multipath_devname,
+                   "id": "1234567890",
+                   "devices": [{'device': '/dev/sdb',
+                                'address': '1:0:0:1',
+                                'host': 1, 'channel': 0,
+                                'id': 0, 'lun': 1}]}
+        self.stubs.Set(linuxscsi, 'find_multipath_device', lambda x: devices)
+        self.stubs.Set(linuxscsi, 'remove_device', lambda x: None)
+        # Should work for string, unicode, and list
+        wwns = ['1234567890123456', unicode('1234567890123456'),
+                ['1234567890123456']]
+        expected_remove_calls = []
+        for wwn in wwns:
+            self.executes = []
+            connection_info = self.fibrechan_connection(self.vol,
+                                                        self.location, wwn)
+            expected_remove_calls.append(mock.call(connection_info))
+            mount_device = "vde"
+            libvirt_driver.connect_volume(connection_info, self.disk_info)
+
+            # Test the scenario where multipath_id is returned
+            libvirt_driver.disconnect_volume(connection_info, mount_device)
+            self.assertEqual(multipath_devname,
+                             connection_info['data']['device_path'])
+            expected_commands = [('tee', '-a',
+                                  '/sys/bus/ccw/drivers/zfcp/0000:05:00.2/'
+                                  '0x1234567890123456/unit_add')]
+            self.assertEqual(expected_commands, self.executes)
+            # Test the scenario where multipath_id is not returned
+            connection_info["data"]["devices"] = devices["devices"]
+            del connection_info["data"]["multipath_id"]
+            libvirt_driver.disconnect_volume(connection_info, mount_device)
+
+        mock_remove_lun.assert_has_calls(expected_remove_calls)
+
+        # Should not work for anything other than string, unicode, and list
+        connection_info = self.fibrechan_connection(self.vol,
+                                                    self.location, 123)
+        self.assertRaises(exception.NovaException,
+                          libvirt_driver.connect_volume,
+                          connection_info, self.disk_info)
+
+        self.stubs.Set(libvirt_utils, 'get_fc_hbas', lambda: [])
+        self.stubs.Set(libvirt_utils, 'get_fc_hbas_info', lambda: [])
+        self.assertRaises(exception.NovaException,
+                          libvirt_driver.connect_volume,
+                          connection_info, self.disk_info)
+
+    @mock.patch.object(platform, 'machine', return_value=arch.S390)
+    def test_libvirt_fibrechan_driver_s390(self, mock_machine):
+        self._test_libvirt_fibrechan_driver_s390()
+
+    @mock.patch.object(platform, 'machine', return_value=arch.S390X)
+    def test_libvirt_fibrechan_driver_s390x(self, mock_machine):
+        self._test_libvirt_fibrechan_driver_s390()
+
     def test_libvirt_fibrechan_driver_get_config(self):
         libvirt_driver = volume.LibvirtFibreChannelVolumeDriver(self.fake_conn)
         connection_info = self.fibrechan_connection(self.vol,
@@ -1430,7 +1500,7 @@ Setting up iSCSI targets: unused
         pci_num = libvirt_driver._get_pci_num(hba)
         self.assertEqual("0000:06:00.6", pci_num)
 
-    def test_libvirt_fibrechan_get_device_file_path(self):
+    def test_libvirt_fibrechan_get_device_file_path_s390(self):
         libvirt_driver = volume.LibvirtFibreChannelVolumeDriver(self.fake_conn)
         pci_num = "2310"
         wwn = '1234567890123456'
@@ -1441,11 +1511,11 @@ Setting up iSCSI targets: unused
                          "1234567890123456:1")
         self.assertEqual(expected_path, file_path)
 
-    @mock.patch('nova.utils.execute')
-    def test_libvirt_fibrechan_remove_lun_from_s390(self, mock_execute):
-        libvirt_driver = volume.LibvirtFibreChannelVolumeDriver(self.fake_conn)
-        self.stubs.Set(libvirt_utils, 'get_fc_hbas_info',
+    @mock.patch.object(libvirt_utils, 'get_fc_hbas_info',
                        fake_libvirt_utils.get_fc_hbas_info)
+    @mock.patch.object(libvirt_utils, 'perform_unit_remove_for_s390')
+    def test_libvirt_fibrechan_remove_lun_from_s390(self, mock_unit_remove):
+        libvirt_driver = volume.LibvirtFibreChannelVolumeDriver(self.fake_conn)
         connection_info = {
                 'driver_volume_type': 'fibrechan',
                 'data': {
@@ -1455,18 +1525,15 @@ Setting up iSCSI targets: unused
                 }}
         libvirt_driver._remove_lun_from_s390(connection_info)
 
-        expected_args = [mock.call('tee', '-a',
-                                u'/sys/bus/ccw/drivers/zfcp/0000:05:00.2/'
-                                 '0x50014380242b9751/unit_remove',
-                                run_as_root=True,
-                                process_input='0x0001000000000000'),
-                         mock.call('tee', '-a',
-                                u'/sys/bus/ccw/drivers/zfcp/0000:05:00.2/'
-                                 '0x50014380242b9752/unit_remove',
-                                run_as_root=True,
-                                process_input='0x0001000000000000')]
+        expected_calls = []
+        for target_wwn in connection_info['data']['target_wwn']:
+            # NOTE(mriedem): The device_num value comes from ClassDevicePath
+            # in fake_libvirt_utils.fake_libvirt_utils.
+            expected_calls.append(mock.call('0000:05:00.2',
+                                            '0x' + target_wwn,
+                                            '0x0001000000000000'))
 
-        self.assertEqual(expected_args, mock_execute.call_args_list)
+        mock_unit_remove.assert_has_calls(expected_calls)
 
     def test_libvirt_scality_driver(self):
         tempdir = self.useFixture(fixtures.TempDir()).path
