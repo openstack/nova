@@ -900,7 +900,7 @@ class HostCommands(object):
 
 
 class DbCommands(object):
-    """Class for managing the database."""
+    """Class for managing the main database."""
 
     def __init__(self):
         pass
@@ -971,6 +971,22 @@ class DbCommands(object):
                                              flavor_cache)
         print(_('%(total)i instances matched query, %(done)i completed'),
               {'total': match, 'done': done})
+
+
+class ApiDbCommands(object):
+    """Class for managing the api database."""
+
+    def __init__(self):
+        pass
+
+    @args('--version', metavar='<version>', help='Database version')
+    def sync(self, version=None):
+        """Sync the database up to the most recent version."""
+        return migration.db_sync(version, database='api')
+
+    def version(self):
+        """Print the current database version."""
+        print(migration.db_version(database='api'))
 
 
 class AgentBuildCommands(object):
@@ -1230,6 +1246,7 @@ class CellCommands(object):
 CATEGORIES = {
     'account': AccountCommands,
     'agent': AgentBuildCommands,
+    'api_db': ApiDbCommands,
     'cell': CellCommands,
     'db': DbCommands,
     'fixed': FixedIpCommands,
