@@ -596,14 +596,11 @@ class HostTestCase(test.NoDBTestCase):
             cnt = [x.name for x in caps.host.cpu.features].count('xtpr')
             self.assertEqual(1, cnt)
 
+    # TODO(mriedem): Remove this stub once we're only using fakelibvirt.
+    @mock.patch.object(host.libvirt,
+                       'VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES', new=1,
+                       create=True)
     def test_baseline_cpu_not_supported(self):
-        # `mock` has trouble stubbing attributes that don't exist yet, so
-        # fallback to plain-Python attribute setting/deleting
-        cap_str = 'VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES'
-        if not hasattr(host.libvirt, cap_str):
-            setattr(host.libvirt, cap_str, True)
-            self.addCleanup(delattr, host.libvirt, cap_str)
-
         # Handle just the NO_SUPPORT error
         not_supported_exc = fakelibvirt.make_libvirtError(
                 libvirt.libvirtError,
@@ -631,12 +628,13 @@ class HostTestCase(test.NoDBTestCase):
             self.assertRaises(libvirt.libvirtError,
                               self.host.get_capabilities)
 
+    # TODO(mriedem): Remove this stub once we're only using fakelibvirt.
+    @mock.patch.object(libvirt, 'VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES',
+                       new=1, create=True)
     def test_lxc_get_host_capabilities_failed(self):
         with mock.patch.object(fakelibvirt.virConnect, 'baselineCPU',
                                return_value=-1):
-            setattr(libvirt, 'VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES', 1)
             caps = self.host.get_capabilities()
-            delattr(libvirt, 'VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES')
             self.assertEqual(vconfig.LibvirtConfigCaps, type(caps))
             self.assertNotIn('aes', [x.name for x in caps.host.cpu.features])
 
