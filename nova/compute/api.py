@@ -4004,7 +4004,7 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
                 context.project_id,
                 security_group_name)
 
-        instance_uuid = instance['uuid']
+        instance_uuid = instance.uuid
 
         # check if the security group is associated with the server
         if self.is_associated_with_server(security_group, instance_uuid):
@@ -4018,7 +4018,7 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
         # NOTE(comstud): No instance_uuid argument to this compute manager
         # call
         self.security_group_rpcapi.refresh_security_group_rules(context,
-                security_group['id'], host=instance['host'])
+                security_group['id'], host=instance.host)
 
     @wrap_check_security_groups_policy
     def remove_from_instance(self, context, instance, security_group_name):
@@ -4027,7 +4027,7 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
                 context.project_id,
                 security_group_name)
 
-        instance_uuid = instance['uuid']
+        instance_uuid = instance.uuid
 
         # check if the security group is associated with the server
         if not self.is_associated_with_server(security_group, instance_uuid):
@@ -4041,7 +4041,7 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
         # NOTE(comstud): No instance_uuid argument to this compute manager
         # call
         self.security_group_rpcapi.refresh_security_group_rules(context,
-                security_group['id'], host=instance['host'])
+                security_group['id'], host=instance.host)
 
     def get_rule(self, context, id):
         self.ensure_default(context)

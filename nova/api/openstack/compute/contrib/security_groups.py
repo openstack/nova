@@ -364,7 +364,8 @@ class SecurityGroupActionController(wsgi.Controller):
 
     def _invoke(self, method, context, id, group_name):
         with translate_exceptions():
-            instance = self.compute_api.get(context, id)
+            instance = self.compute_api.get(context, id,
+                                            want_objects=True)
             method(context, instance, group_name)
 
         return webob.Response(status_int=202)

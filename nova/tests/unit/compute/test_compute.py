@@ -9477,7 +9477,8 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute.run_instance(self.context,
                 instance, {}, {}, None, None,
                 None, True, None, False)
-        instance = self.compute_api.get(self.context, instance['uuid'])
+        instance = self.compute_api.get(self.context, instance.uuid,
+                                        want_objects=True)
         security_group_name = self._create_group()['name']
 
         self.security_group_api.add_to_instance(self.context,

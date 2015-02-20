@@ -212,9 +212,21 @@ class SecurityGroupBase(object):
         raise NotImplementedError()
 
     def add_to_instance(self, context, instance, security_group_name):
+        """Add security group to the instance.
+
+        :param context: The request context.
+        :param instance: nova.objects.instance.Instance object.
+        :param security_group_name: security group name to add
+        """
         raise NotImplementedError()
 
     def remove_from_instance(self, context, instance, security_group_name):
+        """Remove the security group associated with the instance.
+
+        :param context: The request context.
+        :param instance: nova.objects.instance.Instance object.
+        :param security_group_name: security group name to remove
+        """
         raise NotImplementedError()
 
     @staticmethod

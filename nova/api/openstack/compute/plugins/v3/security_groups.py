@@ -378,7 +378,7 @@ class SecurityGroupActionController(wsgi.Controller):
         return group_name
 
     def _invoke(self, method, context, id, group_name):
-        instance = self.compute_api.get(context, id)
+        instance = self.compute_api.get(context, id, want_objects=True)
         method(context, instance, group_name)
 
     @extensions.expected_errors((400, 404, 409))
