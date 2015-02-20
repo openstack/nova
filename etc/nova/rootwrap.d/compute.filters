@@ -166,9 +166,6 @@ qemu-img: CommandFilter, qemu-img, root
 # nova/virt/disk/vfs/localfs.py: 'readlink', '-e'
 readlink: CommandFilter, readlink, root
 
-# nova/virt/disk/api.py: 'touch', target
-touch: CommandFilter, touch, root
-
 # nova/virt/disk/api.py:
 mkfs.ext3: CommandFilter, mkfs.ext3, root
 mkfs.ext4: CommandFilter, mkfs.ext4, root
