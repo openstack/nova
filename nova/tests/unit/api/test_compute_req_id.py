@@ -14,12 +14,12 @@
 #    under the License.
 
 
+from oslo_context import context
 from testtools import matchers
 import webob
 import webob.dec
 
 from nova.api import compute_req_id
-from nova.openstack.common import context
 from nova import test
 
 
