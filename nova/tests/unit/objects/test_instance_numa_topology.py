@@ -100,9 +100,13 @@ class _TestInstanceNUMATopology(object):
             self.context, 'fake_uuid')
 
     def test_siblings(self):
+        inst_cell = objects.InstanceNUMACell(
+                cpuset=set([0, 1, 2]))
+        self.assertEqual([], inst_cell.siblings)
+
         topo = objects.VirtCPUTopology(sockets=1, cores=3, threads=0)
         inst_cell = objects.InstanceNUMACell(
-                cpuset=set([0, 1, 2]), topology=topo)
+                cpuset=set([0, 1, 2]), cpu_topology=topo)
         self.assertEqual([], inst_cell.siblings)
 
         # One thread actually means no threads
