@@ -3867,7 +3867,7 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
             msg = _("Quota exceeded, too many security groups.")
             self.raise_over_quota(msg)
 
-        LOG.audit(_("Create Security Group %s"), name, context=context)
+        LOG.info(_LI("Create Security Group %s"), name, context=context)
 
         try:
             self.ensure_default(context)
@@ -3972,7 +3972,7 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
             LOG.exception(_LE("Failed to update usages deallocating "
                               "security group"))
 
-        LOG.audit(_("Delete security group %s"), security_group['name'],
+        LOG.info(_LI("Delete security group %s"), security_group['name'],
                   context=context)
         self.db.security_group_destroy(context, security_group['id'])
 

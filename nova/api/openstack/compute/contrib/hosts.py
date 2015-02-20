@@ -21,6 +21,7 @@ from nova.api.openstack import extensions
 from nova import compute
 from nova import exception
 from nova.i18n import _
+from nova.i18n import _LI
 from nova import objects
 from nova.openstack.common import log as logging
 
@@ -142,7 +143,7 @@ class HostController(object):
         """Start/Stop host maintenance window. On start, it triggers
         guest VMs evacuation.
         """
-        LOG.audit(_("Putting host %(host_name)s in maintenance mode "
+        LOG.info(_LI("Putting host %(host_name)s in maintenance mode "
                     "%(mode)s."),
                   {'host_name': host_name, 'mode': mode})
         try:
@@ -165,9 +166,9 @@ class HostController(object):
         on the host
         """
         if enabled:
-            LOG.audit(_("Enabling host %s.") % host_name)
+            LOG.info(_LI("Enabling host %s.") % host_name)
         else:
-            LOG.audit(_("Disabling host %s.") % host_name)
+            LOG.info(_LI("Disabling host %s.") % host_name)
         try:
             result = self.api.set_host_enabled(context, host_name=host_name,
                     enabled=enabled)

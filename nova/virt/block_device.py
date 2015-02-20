@@ -19,7 +19,6 @@ from oslo_serialization import jsonutils
 from oslo_utils import excutils
 
 from nova import block_device
-from nova.i18n import _
 from nova.i18n import _LE
 from nova.i18n import _LI
 from nova import objects
@@ -392,7 +391,7 @@ def attach_block_devices(block_device_mapping, *attach_args, **attach_kwargs):
     def _log_and_attach(bdm):
         context = attach_args[0]
         instance = attach_args[1]
-        LOG.audit(_('Booting with volume %(volume_id)s at %(mountpoint)s'),
+        LOG.info(_LI('Booting with volume %(volume_id)s at %(mountpoint)s'),
                   {'volume_id': bdm.volume_id,
                    'mountpoint': bdm['mount_device']},
                   context=context, instance=instance)

@@ -39,6 +39,7 @@ from nova.compute import api as compute_api
 from nova.compute import vm_states
 from nova import exception
 from nova.i18n import _
+from nova.i18n import _LI
 from nova.i18n import _LW
 from nova.image import s3
 from nova import network
@@ -403,7 +404,7 @@ class CloudController(object):
 
     def create_snapshot(self, context, volume_id, **kwargs):
         validate_volume_id(volume_id)
-        LOG.audit(_("Create snapshot of volume %s"), volume_id,
+        LOG.info(_LI("Create snapshot of volume %s"), volume_id,
                   context=context)
         volume_id = ec2utils.ec2_vol_id_to_uuid(volume_id)
         args = (context, volume_id, kwargs.get('name'),
@@ -446,7 +447,7 @@ class CloudController(object):
         return {'keySet': result}
 
     def create_key_pair(self, context, key_name, **kwargs):
-        LOG.audit(_("Create key pair %s"), key_name, context=context)
+        LOG.info(_LI("Create key pair %s"), key_name, context=context)
 
         keypair, private_key = self.keypair_api.create_key_pair(
             context, context.user_id, key_name)
@@ -458,7 +459,7 @@ class CloudController(object):
 
     def import_key_pair(self, context, key_name, public_key_material,
                         **kwargs):
-        LOG.audit(_("Import key %s"), key_name, context=context)
+        LOG.info(_LI("Import key %s"), key_name, context=context)
 
         public_key = base64.b64decode(public_key_material)
 
@@ -471,7 +472,7 @@ class CloudController(object):
                 'keyFingerprint': keypair['fingerprint']}
 
     def delete_key_pair(self, context, key_name, **kwargs):
-        LOG.audit(_("Delete key pair %s"), key_name, context=context)
+        LOG.info(_LI("Delete key pair %s"), key_name, context=context)
         try:
             self.keypair_api.delete_key_pair(context, context.user_id,
                                              key_name)
@@ -774,7 +775,7 @@ class CloudController(object):
                 "passwordData": output}
 
     def get_console_output(self, context, instance_id, **kwargs):
-        LOG.audit(_("Get console output for instance %s"), instance_id,
+        LOG.info(_LI("Get console output for instance %s"), instance_id,
                   context=context)
         # instance_id may be passed in as a list of instances
         if isinstance(instance_id, list):
@@ -847,11 +848,11 @@ class CloudController(object):
         if snapshot_ec2id is not None:
             snapshot_id = ec2utils.ec2_snap_id_to_uuid(kwargs['snapshot_id'])
             snapshot = self.volume_api.get_snapshot(context, snapshot_id)
-            LOG.audit(_("Create volume from snapshot %s"), snapshot_ec2id,
+            LOG.info(_LI("Create volume from snapshot %s"), snapshot_ec2id,
                       context=context)
         else:
             snapshot = None
-            LOG.audit(_("Create volume of %s GB"),
+            LOG.info(_LI("Create volume of %s GB"),
                         kwargs.get('size'),
                         context=context)
 
@@ -891,7 +892,7 @@ class CloudController(object):
         instance_uuid = ec2utils.ec2_inst_id_to_uuid(context, instance_id)
         instance = self.compute_api.get(context, instance_uuid,
                                         want_objects=True)
-        LOG.audit(_('Attach volume %(volume_id)s to instance %(instance_id)s '
+        LOG.info(_LI('Attach volume %(volume_id)s to instance %(instance_id)s '
                     'at %(device)s'),
                   {'volume_id': volume_id,
                    'instance_id': instance_id,
@@ -921,7 +922,7 @@ class CloudController(object):
     def detach_volume(self, context, volume_id, **kwargs):
         validate_volume_id(volume_id)
         volume_id = ec2utils.ec2_vol_id_to_uuid(volume_id)
-        LOG.audit(_("Detach volume %s"), volume_id, context=context)
+        LOG.info(_LI("Detach volume %s"), volume_id, context=context)
         volume = self.volume_api.get(context, volume_id)
         instance = self._get_instance_from_volume(context, volume)
 
@@ -1288,17 +1289,17 @@ class CloudController(object):
         return address
 
     def allocate_address(self, context, **kwargs):
-        LOG.audit(_("Allocate address"), context=context)
+        LOG.info(_LI("Allocate address"), context=context)
         public_ip = self.network_api.allocate_floating_ip(context)
         return {'publicIp': public_ip}
 
     def release_address(self, context, public_ip, **kwargs):
-        LOG.audit(_('Release address %s'), public_ip, context=context)
+        LOG.info(_LI('Release address %s'), public_ip, context=context)
         self.network_api.release_floating_ip(context, address=public_ip)
         return {'return': "true"}
 
     def associate_address(self, context, instance_id, public_ip, **kwargs):
-        LOG.audit(_("Associate address %(public_ip)s to instance "
+        LOG.info(_LI("Associate address %(public_ip)s to instance "
                     "%(instance_id)s"),
                   {'public_ip': public_ip, 'instance_id': instance_id},
                   context=context)
@@ -1331,7 +1332,8 @@ class CloudController(object):
         if instance_id:
             instance = self.compute_api.get(context, instance_id,
                                             want_objects=True)
-            LOG.audit(_("Disassociate address %s"), public_ip, context=context)
+            LOG.info(_LI("Disassociate address %s"),
+                     public_ip, context=context)
             self.network_api.disassociate_floating_ip(context, instance,
                                                       address=public_ip)
         else:
@@ -1483,7 +1485,7 @@ class CloudController(object):
     def reboot_instances(self, context, instance_id, **kwargs):
         """instance_id is a list of instance ids."""
         instances = self._ec2_ids_to_instances(context, instance_id)
-        LOG.audit(_("Reboot instance %r"), instance_id, context=context)
+        LOG.info(_LI("Reboot instance %r"), instance_id, context=context)
         for instance in instances:
             self.compute_api.reboot(context, instance, 'HARD')
         return True
@@ -1598,7 +1600,7 @@ class CloudController(object):
         return {'imagesSet': images}
 
     def deregister_image(self, context, image_id, **kwargs):
-        LOG.audit(_("De-registering image %s"), image_id, context=context)
+        LOG.info(_LI("De-registering image %s"), image_id, context=context)
         image = self._get_image(context, image_id)
         internal_id = image['id']
         self.image_service.delete(context, internal_id)
@@ -1634,7 +1636,7 @@ class CloudController(object):
             metadata['properties']['block_device_mapping'] = mappings
 
         image_id = self._register_image(context, metadata)
-        LOG.audit(_('Registered image %(image_location)s with id '
+        LOG.info(_LI('Registered image %(image_location)s with id '
                     '%(image_id)s'),
                   {'image_location': image_location, 'image_id': image_id},
                   context=context)
@@ -1703,7 +1705,7 @@ class CloudController(object):
         if operation_type not in ['add', 'remove']:
             msg = _('operation_type must be add or remove')
             raise exception.InvalidParameterValue(message=msg)
-        LOG.audit(_("Updating image %s publicity"), image_id, context=context)
+        LOG.info(_LI("Updating image %s publicity"), image_id, context=context)
 
         try:
             image = self._get_image(context, image_id)

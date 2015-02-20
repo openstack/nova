@@ -1650,7 +1650,7 @@ class ComputeManager(manager.Manager):
 
     def _start_building(self, context, instance):
         """Save the host and launched_on fields and log appropriately."""
-        LOG.audit(_('Starting instance...'), context=context,
+        LOG.info(_LI('Starting instance...'), context=context,
                   instance=instance)
         self._instance_update(context, instance.uuid,
                               vm_state=vm_states.BUILDING,
@@ -2055,7 +2055,7 @@ class ComputeManager(manager.Manager):
             node=None, limits=None):
 
         try:
-            LOG.audit(_('Starting instance...'), context=context,
+            LOG.info(_LI('Starting instance...'), context=context,
                   instance=instance)
             instance.vm_state = vm_states.BUILDING
             instance.task_state = None
@@ -2427,7 +2427,8 @@ class ComputeManager(manager.Manager):
                                         trying to teardown networking
         """
         context = context.elevated()
-        LOG.audit(_('%(action_str)s instance') % {'action_str': 'Terminating'},
+        LOG.info(_LI('%(action_str)s instance') %
+                 {'action_str': 'Terminating'},
                   context=context, instance=instance)
 
         if notify:
@@ -2794,7 +2795,7 @@ class ComputeManager(manager.Manager):
 
         orig_vm_state = instance.vm_state
         with self._error_out_instance_on_exception(context, instance):
-            LOG.audit(_("Rebuilding instance"), context=context,
+            LOG.info(_LI("Rebuilding instance"), context=context,
                       instance=instance)
 
             if recreate:
@@ -2961,7 +2962,7 @@ class ComputeManager(manager.Manager):
                                task_states.REBOOT_PENDING_HARD,
                                task_states.REBOOT_STARTED_HARD)
         context = context.elevated()
-        LOG.audit(_("Rebooting instance"), context=context, instance=instance)
+        LOG.info(_LI("Rebooting instance"), context=context, instance=instance)
 
         block_device_info = self._get_instance_block_device_info(context,
                                                                  instance)
@@ -3099,7 +3100,7 @@ class ComputeManager(manager.Manager):
         try:
             instance.save()
 
-            LOG.audit(_('instance snapshotting'), context=context,
+            LOG.info(_LI('instance snapshotting'), context=context,
                   instance=instance)
 
             if instance.power_state != power_state.RUNNING:
@@ -3234,7 +3235,7 @@ class ComputeManager(manager.Manager):
 
         try:
             self.driver.set_admin_password(instance, new_pass)
-            LOG.audit(_("Root password set"), instance=instance)
+            LOG.info(_LI("Root password set"), instance=instance)
             instance.task_state = None
             instance.save(
                 expected_task_state=task_states.UPDATING_PASSWORD)
@@ -3282,7 +3283,7 @@ class ComputeManager(manager.Manager):
                         {'current_state': current_power_state,
                          'expected_state': expected_state},
                         instance=instance)
-        LOG.audit(_('injecting file to %s'), path,
+        LOG.info(_LI('injecting file to %s'), path,
                     instance=instance)
         self.driver.inject_file(instance, path, file_contents)
 
@@ -3320,7 +3321,7 @@ class ComputeManager(manager.Manager):
     def rescue_instance(self, context, instance, rescue_password,
                         rescue_image_ref=None, clean_shutdown=True):
         context = context.elevated()
-        LOG.audit(_('Rescuing'), context=context, instance=instance)
+        LOG.info(_LI('Rescuing'), context=context, instance=instance)
 
         admin_password = (rescue_password if rescue_password else
                       utils.generate_password())
@@ -3369,7 +3370,7 @@ class ComputeManager(manager.Manager):
     @wrap_instance_fault
     def unrescue_instance(self, context, instance):
         context = context.elevated()
-        LOG.audit(_('Unrescuing'), context=context, instance=instance)
+        LOG.info(_LI('Unrescuing'), context=context, instance=instance)
 
         network_info = self._get_instance_nw_info(context, instance)
         self._notify_about_instance_usage(context, instance,
@@ -3703,7 +3704,7 @@ class ComputeManager(manager.Manager):
         rt = self._get_resource_tracker(node)
         with rt.resize_claim(context, instance, instance_type,
                              image_meta=image, limits=limits) as claim:
-            LOG.audit(_('Migrating'), context=context, instance=instance)
+            LOG.info(_LI('Migrating'), context=context, instance=instance)
             self.compute_rpcapi.resize_instance(
                     context, instance, claim.migration, image,
                     instance_type, quotas.reservations,
@@ -4042,7 +4043,7 @@ class ComputeManager(manager.Manager):
     def pause_instance(self, context, instance):
         """Pause an instance on this host."""
         context = context.elevated()
-        LOG.audit(_('Pausing'), context=context, instance=instance)
+        LOG.info(_LI('Pausing'), context=context, instance=instance)
         self._notify_about_instance_usage(context, instance, 'pause.start')
         self.driver.pause(instance)
         instance.power_state = self._get_power_state(context, instance)
@@ -4058,7 +4059,7 @@ class ComputeManager(manager.Manager):
     def unpause_instance(self, context, instance):
         """Unpause a paused instance on this host."""
         context = context.elevated()
-        LOG.audit(_('Unpausing'), context=context, instance=instance)
+        LOG.info(_LI('Unpausing'), context=context, instance=instance)
         self._notify_about_instance_usage(context, instance, 'unpause.start')
         self.driver.unpause(instance)
         instance.power_state = self._get_power_state(context, instance)
@@ -4096,7 +4097,7 @@ class ComputeManager(manager.Manager):
         """Retrieve diagnostics for an instance on this host."""
         current_power_state = self._get_power_state(context, instance)
         if current_power_state == power_state.RUNNING:
-            LOG.audit(_("Retrieving diagnostics"), context=context,
+            LOG.info(_LI("Retrieving diagnostics"), context=context,
                       instance=instance)
             return self.driver.get_diagnostics(instance)
         else:
@@ -4113,7 +4114,7 @@ class ComputeManager(manager.Manager):
         """Retrieve diagnostics for an instance on this host."""
         current_power_state = self._get_power_state(context, instance)
         if current_power_state == power_state.RUNNING:
-            LOG.audit(_("Retrieving diagnostics"), context=context,
+            LOG.info(_LI("Retrieving diagnostics"), context=context,
                       instance=instance)
             diags = self.driver.get_instance_diagnostics(instance)
             return diags.serialize()
@@ -4152,7 +4153,7 @@ class ComputeManager(manager.Manager):
     def resume_instance(self, context, instance):
         """Resume the given suspended instance."""
         context = context.elevated()
-        LOG.audit(_('Resuming'), context=context, instance=instance)
+        LOG.info(_LI('Resuming'), context=context, instance=instance)
 
         self._notify_about_instance_usage(context, instance, 'resume.start')
         network_info = self._get_instance_nw_info(context, instance)
@@ -4388,7 +4389,7 @@ class ComputeManager(manager.Manager):
     def get_console_output(self, context, instance, tail_length):
         """Send the console output for the given instance."""
         context = context.elevated()
-        LOG.audit(_("Get console output"), context=context,
+        LOG.info(_LI("Get console output"), context=context,
                   instance=instance)
         output = self.driver.get_console_output(context, instance)
 
@@ -4632,7 +4633,7 @@ class ComputeManager(manager.Manager):
 
     def _attach_volume(self, context, instance, bdm):
         context = context.elevated()
-        LOG.audit(_('Attaching volume %(volume_id)s to %(mountpoint)s'),
+        LOG.info(_LI('Attaching volume %(volume_id)s to %(mountpoint)s'),
                   {'volume_id': bdm.volume_id,
                   'mountpoint': bdm['mount_device']},
                   context=context, instance=instance)
@@ -4657,7 +4658,7 @@ class ComputeManager(manager.Manager):
         mp = bdm.device_name
         volume_id = bdm.volume_id
 
-        LOG.audit(_('Detach volume %(volume_id)s from mountpoint %(mp)s'),
+        LOG.info(_LI('Detach volume %(volume_id)s from mountpoint %(mp)s'),
                   {'volume_id': volume_id, 'mp': mp},
                   context=context, instance=instance)
 
@@ -6068,7 +6069,7 @@ class ComputeManager(manager.Manager):
 
         for cn in compute_nodes_in_db:
             if cn.hypervisor_hostname not in nodenames:
-                LOG.audit(_("Deleting orphan compute node %s") % cn.id)
+                LOG.info(_LI("Deleting orphan compute node %s") % cn.id)
                 cn.destroy()
 
         self._resource_tracker_dict = new_resource_tracker_dict

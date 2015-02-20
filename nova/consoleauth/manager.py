@@ -24,7 +24,7 @@ from oslo_serialization import jsonutils
 
 from nova.cells import rpcapi as cells_rpcapi
 from nova.compute import rpcapi as compute_rpcapi
-from nova.i18n import _, _LW
+from nova.i18n import _LI, _LW
 from nova import manager
 from nova import objects
 from nova.openstack.common import log as logging
@@ -96,7 +96,7 @@ class ConsoleAuthManager(manager.Manager):
                             "into memcached"),
                         {'instance_uuid': instance_uuid})
 
-        LOG.audit(_("Received Token: %(token)s, %(token_dict)s"),
+        LOG.info(_LI("Received Token: %(token)s, %(token_dict)s"),
                   {'token': token, 'token_dict': token_dict})
 
     def _validate_token(self, context, token):
@@ -121,7 +121,7 @@ class ConsoleAuthManager(manager.Manager):
     def check_token(self, context, token):
         token_str = self.mc.get(token.encode('UTF-8'))
         token_valid = (token_str is not None)
-        LOG.audit(_("Checking Token: %(token)s, %(token_valid)s"),
+        LOG.info(_LI("Checking Token: %(token)s, %(token_valid)s"),
                   {'token': token, 'token_valid': token_valid})
         if token_valid:
             token = jsonutils.loads(token_str)

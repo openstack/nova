@@ -31,7 +31,7 @@ from nova import conductor
 from nova import context
 from nova import debugger
 from nova import exception
-from nova.i18n import _, _LE, _LW
+from nova.i18n import _, _LE, _LI, _LW
 from nova.objects import base as objects_base
 from nova.openstack.common import log as logging
 from nova.openstack.common import service
@@ -158,7 +158,7 @@ class Service(service.Service):
 
     def start(self):
         verstr = version.version_string_with_package()
-        LOG.audit(_('Starting %(topic)s node (version %(version)s)'),
+        LOG.info(_LI('Starting %(topic)s node (version %(version)s)'),
                   {'topic': self.topic, 'version': verstr})
         self.basic_config_check()
         self.manager.init_host()
