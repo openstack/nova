@@ -2900,11 +2900,29 @@ def network_get_all_by_host(context, host):
 
 
 @require_admin_context
+@_retry_on_deadlock
+@retrying.retry(stop_max_attempt_number=5, retry_on_exception=
+                lambda e: isinstance(e, exception.NetworkSetHostFailed))
 def network_set_host(context, network_id, host_id):
-    return _network_get_query(context).\
+    network_ref = _network_get_query(context).\
+        filter_by(id=network_id).\
+        first()
+
+    if not network_ref:
+        raise exception.NetworkNotFound(network_id=network_id)
+
+    if network_ref.host:
+        return None
+
+    rows_updated = _network_get_query(context).\
         filter_by(id=network_id).\
         filter_by(host=None).\
         update({'host': host_id})
+
+    if not rows_updated:
+        LOG.debug('The row was updated in a concurrent transaction, '
+                  'we will fetch another row')
+        raise exception.NetworkSetHostFailed(network_id=network_id)
 
 
 @require_context
