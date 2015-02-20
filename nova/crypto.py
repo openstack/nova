@@ -23,9 +23,11 @@ Includes root and intermediate CAs, SSH key_pairs and x509 certificates.
 from __future__ import absolute_import
 
 import base64
+import binascii
 import os
 import re
 import string
+import StringIO
 import struct
 
 from oslo_concurrency import processutils
@@ -33,6 +35,7 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import excutils
 from oslo_utils import timeutils
+import paramiko
 from pyasn1.codec.der import encoder as der_encoder
 from pyasn1.type import univ
 
@@ -126,22 +129,26 @@ def ensure_ca_filesystem():
             os.chdir(start)
 
 
-def _generate_fingerprint(public_key_file):
-    (out, err) = utils.execute('ssh-keygen', '-q', '-l', '-f', public_key_file)
-    fingerprint = out.split(' ')[1]
-    return fingerprint
-
-
 def generate_fingerprint(public_key):
-    with utils.tempdir() as tmpdir:
-        try:
-            pubfile = os.path.join(tmpdir, 'temp.pub')
-            with open(pubfile, 'w') as f:
-                f.write(public_key)
-            return _generate_fingerprint(pubfile)
-        except processutils.ProcessExecutionError:
+    try:
+        parts = public_key.split(' ')
+        ssh_alg = parts[0]
+        pub_data = parts[1].decode('base64')
+        if ssh_alg == 'ssh-rsa':
+            pkey = paramiko.RSAKey(data=pub_data)
+        elif ssh_alg == 'ssh-dss':
+            pkey = paramiko.DSSKey(data=pub_data)
+        elif ssh_alg == 'ecdsa-sha2-nistp256':
+            pkey = paramiko.ECDSAKey(data=pub_data, validate_point=False)
+        else:
             raise exception.InvalidKeypair(
-                reason=_('failed to generate fingerprint'))
+                reason=_('Unknown ssh key type %s') % ssh_alg)
+        raw_fp = binascii.hexlify(pkey.get_fingerprint())
+        return ':'.join(a + b for a, b in zip(raw_fp[::2], raw_fp[1::2]))
+    except (IndexError, UnicodeDecodeError, binascii.Error,
+            paramiko.ssh_exception.SSHException):
+        raise exception.InvalidKeypair(
+            reason=_('failed to generate fingerprint'))
 
 
 def generate_x509_fingerprint(pem_key):
@@ -157,25 +164,13 @@ def generate_x509_fingerprint(pem_key):
                      'Error message: %s') % ex)
 
 
-def generate_key_pair(bits=None):
-    with utils.tempdir() as tmpdir:
-        keyfile = os.path.join(tmpdir, 'temp')
-        args = ['ssh-keygen', '-q', '-N', '', '-t', 'rsa',
-                '-f', keyfile, '-C', 'Generated-by-Nova']
-        if bits is not None:
-            args.extend(['-b', bits])
-        utils.execute(*args)
-        fingerprint = _generate_fingerprint('%s.pub' % (keyfile))
-        if not os.path.exists(keyfile):
-            raise exception.FileNotFound(keyfile)
-        with open(keyfile) as f:
-            private_key = f.read()
-        public_key_path = keyfile + '.pub'
-        if not os.path.exists(public_key_path):
-            raise exception.FileNotFound(public_key_path)
-        with open(public_key_path) as f:
-            public_key = f.read()
-
+def generate_key_pair(bits=2048):
+    key = paramiko.RSAKey.generate(bits)
+    keyout = StringIO.StringIO()
+    key.write_private_key(keyout)
+    private_key = keyout.getvalue()
+    public_key = '%s %s Generated-by-Nova' % (key.get_name(), key.get_base64())
+    fingerprint = generate_fingerprint(public_key)
     return (private_key, public_key, fingerprint)
 
 
