@@ -31,7 +31,8 @@ class Controller(object):
 
     def _get_metadata(self, context, server_id):
         try:
-            server = self.compute_api.get(context, server_id)
+            server = self.compute_api.get(context, server_id,
+                                          want_objects=True)
             meta = self.compute_api.get_instance_metadata(context, server)
         except exception.InstanceNotFound:
             msg = _('Server does not exist')

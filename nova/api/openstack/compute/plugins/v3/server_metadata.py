@@ -36,7 +36,8 @@ class ServerMetadataController(wsgi.Controller):
         super(ServerMetadataController, self).__init__()
 
     def _get_metadata(self, context, server_id):
-        server = common.get_instance(self.compute_api, context, server_id)
+        server = common.get_instance(self.compute_api, context, server_id,
+                                     want_objects=True)
         try:
             # NOTE(mikal): get_instanc_metadata sometimes returns
             # InstanceNotFound in unit tests, even though the instance is

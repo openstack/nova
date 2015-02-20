@@ -26,6 +26,7 @@ from nova.compute import api as compute_api
 from nova import db
 from nova.db.sqlalchemy import models
 from nova import exception
+from nova import objects
 from nova.openstack.common import policy as common_policy
 from nova import policy
 from nova import test
@@ -137,7 +138,7 @@ class InstanceActionsTestV21(test.NoDBTestCase):
 
         def fake_get(self, context, instance_uuid, expected_attrs=None,
                      want_objects=False):
-            return {'uuid': instance_uuid}
+            return objects.Instance(uuid=instance_uuid)
 
         def fake_instance_get_by_uuid(context, instance_id, use_slave=False):
             return {'name': 'fake', 'project_id': context.project_id}
