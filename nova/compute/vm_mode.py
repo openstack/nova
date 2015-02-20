@@ -43,7 +43,7 @@ def get_from_instance(instance):
     :returns: canonicalized vm mode for the instance
     """
 
-    mode = instance['vm_mode']
+    mode = instance.vm_mode
     return canonicalize(mode)
 
 

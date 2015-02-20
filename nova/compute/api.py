@@ -177,24 +177,24 @@ def check_instance_state(vm_state=None, task_state=(None,),
     def outer(f):
         @functools.wraps(f)
         def inner(self, context, instance, *args, **kw):
-            if vm_state is not None and instance['vm_state'] not in vm_state:
+            if vm_state is not None and instance.vm_state not in vm_state:
                 raise exception.InstanceInvalidState(
                     attr='vm_state',
-                    instance_uuid=instance['uuid'],
-                    state=instance['vm_state'],
+                    instance_uuid=instance.uuid,
+                    state=instance.vm_state,
                     method=f.__name__)
             if (task_state is not None and
-                    instance['task_state'] not in task_state):
+                    instance.task_state not in task_state):
                 raise exception.InstanceInvalidState(
                     attr='task_state',
-                    instance_uuid=instance['uuid'],
-                    state=instance['task_state'],
+                    instance_uuid=instance.uuid,
+                    state=instance.task_state,
                     method=f.__name__)
-            if must_have_launched and not instance['launched_at']:
+            if must_have_launched and not instance.launched_at:
                 raise exception.InstanceInvalidState(
                     attr='launched_at',
-                    instance_uuid=instance['uuid'],
-                    state=instance['launched_at'],
+                    instance_uuid=instance.uuid,
+                    state=instance.launched_at,
                     method=f.__name__)
 
             return f(self, context, instance, *args, **kw)
@@ -205,8 +205,8 @@ def check_instance_state(vm_state=None, task_state=(None,),
 def check_instance_host(function):
     @functools.wraps(function)
     def wrapped(self, context, instance, *args, **kwargs):
-        if not instance['host']:
-            raise exception.InstanceNotReady(instance_id=instance['uuid'])
+        if not instance.host:
+            raise exception.InstanceNotReady(instance_id=instance.uuid)
         return function(self, context, instance, *args, **kwargs)
     return wrapped
 
@@ -214,8 +214,8 @@ def check_instance_host(function):
 def check_instance_lock(function):
     @functools.wraps(function)
     def inner(self, context, instance, *args, **kwargs):
-        if instance['locked'] and not context.is_admin:
-            raise exception.InstanceIsLocked(instance_uuid=instance['uuid'])
+        if instance.locked and not context.is_admin:
+            raise exception.InstanceIsLocked(instance_uuid=instance.uuid)
         return function(self, context, instance, *args, **kwargs)
     return inner
 
@@ -314,19 +314,19 @@ class API(base.Base):
     def _validate_cell(self, instance, method):
         if self.cell_type != 'api':
             return
-        cell_name = instance['cell_name']
+        cell_name = instance.cell_name
         if not cell_name:
             raise exception.InstanceUnknownCell(
-                    instance_uuid=instance['uuid'])
+                    instance_uuid=instance.uuid)
         if self._cell_read_only(cell_name):
             raise exception.InstanceInvalidState(
                     attr="vm_state",
-                    instance_uuid=instance['uuid'],
+                    instance_uuid=instance.uuid,
                     state="temporary_readonly",
                     method=method)
 
     def _record_action_start(self, context, instance, action):
-        objects.InstanceAction.action_start(context, instance['uuid'],
+        objects.InstanceAction.action_start(context, instance.uuid,
                                             action, want_result=False)
 
     def _check_injected_file_quota(self, context, injected_files):
@@ -624,8 +624,8 @@ class API(base.Base):
 
     def _apply_instance_name_template(self, context, instance, index):
         params = {
-            'uuid': instance['uuid'],
-            'name': instance['display_name'],
+            'uuid': instance.uuid,
+            'name': instance.display_name,
             'count': index + 1,
         }
         try:
@@ -634,7 +634,7 @@ class API(base.Base):
         except (KeyError, TypeError):
             LOG.exception(_LE('Failed to set instance name using '
                               'multi_instance_display_name_template.'))
-            new_name = instance['display_name']
+            new_name = instance.display_name
         instance.display_name = new_name
         if not instance.get('hostname', None):
             instance.hostname = utils.sanitize_hostname(new_name)
@@ -1298,7 +1298,7 @@ class API(base.Base):
             hostname = None
 
         if display_name is None:
-            display_name = self._default_display_name(instance['uuid'])
+            display_name = self._default_display_name(instance.uuid)
             instance.display_name = display_name
 
         if hostname is None and num_instances == 1:
@@ -1322,7 +1322,7 @@ class API(base.Base):
         if not instance.obj_attr_is_set('uuid'):
             # Generate the instance_uuid here so we can use it
             # for additional setup before creating the DB entry.
-            instance['uuid'] = str(uuid.uuid4())
+            instance.uuid = str(uuid.uuid4())
 
         instance.launch_index = index
         instance.vm_state = vm_states.BUILDING
@@ -1346,15 +1346,15 @@ class API(base.Base):
         if not instance.obj_attr_is_set('system_metadata'):
             instance.system_metadata = {}
         # Make sure we have the dict form that we need for instance_update.
-        instance['system_metadata'] = utils.instance_sys_meta(instance)
+        instance.system_metadata = utils.instance_sys_meta(instance)
 
         system_meta = utils.get_system_metadata_from_image(
             image, instance_type)
 
         # In case we couldn't find any suitable base_image
-        system_meta.setdefault('image_base_image_ref', instance['image_ref'])
+        system_meta.setdefault('image_base_image_ref', instance.image_ref)
 
-        instance['system_metadata'].update(system_meta)
+        instance.system_metadata.update(system_meta)
 
         self.security_group_api.populate_security_groups(instance,
                                                          security_groups)
@@ -1401,7 +1401,7 @@ class API(base.Base):
                 instance.destroy()
 
         self._create_block_device_mapping(
-                instance_type, instance['uuid'], block_device_mapping)
+                instance_type, instance.uuid, block_device_mapping)
 
         return instance
 
@@ -1501,7 +1501,7 @@ class API(base.Base):
         # Update the instance record and send a state update notification
         # if task or vm state changed
         old_ref, instance_ref = self.db.instance_update_and_get_original(
-                                  context, instance['uuid'], kwargs)
+                                  context, instance.uuid, kwargs)
         notifications.send_update(context, old_ref,
                                   instance_ref, service="api")
 
@@ -1630,7 +1630,7 @@ class API(base.Base):
                     # in soft-delete vm_state have already had quotas
                     # decremented. More details:
                     # https://bugs.launchpad.net/nova/+bug/1333145
-                    if instance['vm_state'] == vm_states.SOFT_DELETED:
+                    if instance.vm_state == vm_states.SOFT_DELETED:
                         quotas.rollback()
 
                     cb(context, instance, bdms,
@@ -1769,12 +1769,12 @@ class API(base.Base):
             orig_host = instance.host
             try:
                 if instance.vm_state == vm_states.SHELVED_OFFLOADED:
-                    instance['host'] = instance._system_metadata.get(
+                    instance.host = instance._system_metadata.get(
                         'shelved_host')
                 self.network_api.deallocate_for_instance(elevated,
                                                          instance)
             finally:
-                instance['host'] = orig_host
+                instance.host = orig_host
 
         # cleanup volumes
         for bdm in bdms:
@@ -2181,7 +2181,7 @@ class API(base.Base):
         """
         if extra_properties is None:
             extra_properties = {}
-        instance_uuid = instance['uuid']
+        instance_uuid = instance.uuid
 
         properties = {
             'instance_uuid': instance_uuid,
@@ -2218,12 +2218,12 @@ class API(base.Base):
         image_meta['name'] = name
         image_meta['is_public'] = False
         properties = image_meta['properties']
-        if instance['root_device_name']:
-            properties['root_device_name'] = instance['root_device_name']
+        if instance.root_device_name:
+            properties['root_device_name'] = instance.root_device_name
         properties.update(extra_properties or {})
 
         quiesced = False
-        if instance['vm_state'] == vm_states.ACTIVE:
+        if instance.vm_state == vm_states.ACTIVE:
             try:
                 self.compute_rpcapi.quiesce_instance(context, instance)
                 quiesced = True
@@ -2238,7 +2238,7 @@ class API(base.Base):
                              context=context, instance=instance)
 
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
-                context, instance['uuid'])
+                context, instance.uuid)
 
         mapping = []
         for bdm in bdms:
@@ -2301,17 +2301,17 @@ class API(base.Base):
     def reboot(self, context, instance, reboot_type):
         """Reboot the given instance."""
         if (reboot_type == 'SOFT' and
-            (instance['vm_state'] not in vm_states.ALLOW_SOFT_REBOOT)):
+            (instance.vm_state not in vm_states.ALLOW_SOFT_REBOOT)):
             raise exception.InstanceInvalidState(
                 attr='vm_state',
-                instance_uuid=instance['uuid'],
-                state=instance['vm_state'],
+                instance_uuid=instance.uuid,
+                state=instance.vm_state,
                 method='soft reboot')
-        if reboot_type == 'SOFT' and instance['task_state'] is not None:
+        if reboot_type == 'SOFT' and instance.task_state is not None:
             raise exception.InstanceInvalidState(
                 attr='task_state',
-                instance_uuid=instance['uuid'],
-                state=instance['task_state'],
+                instance_uuid=instance.uuid,
+                state=instance.task_state,
                 method='reboot')
         expected_task_state = [None]
         if reboot_type == 'HARD':
@@ -2659,11 +2659,11 @@ class API(base.Base):
         filter_properties = {'ignore_hosts': []}
 
         if not CONF.allow_resize_to_same_host:
-            filter_properties['ignore_hosts'].append(instance['host'])
+            filter_properties['ignore_hosts'].append(instance.host)
 
         # Here when flavor_id is None, the process is considered as migrate.
         if (not flavor_id and not CONF.allow_migrate_to_same_host):
-            filter_properties['ignore_hosts'].append(instance['host'])
+            filter_properties['ignore_hosts'].append(instance.host)
 
         if self.cell_type == 'api':
             # Commit reservations early and create migration record.
@@ -2702,7 +2702,7 @@ class API(base.Base):
 
         image_id = None
         if not self.is_volume_backed_instance(context, instance):
-            name = '%s-shelved' % instance['display_name']
+            name = '%s-shelved' % instance.display_name
             image_meta = self._create_image(context, instance, name,
                     'snapshot')
             image_id = image_meta['id']
@@ -2876,7 +2876,7 @@ class API(base.Base):
         self.consoleauth_rpcapi.authorize_console(context,
                 connect_info['token'], console_type,
                 connect_info['host'], connect_info['port'],
-                connect_info['internal_access_path'], instance['uuid'])
+                connect_info['internal_access_path'], instance.uuid)
 
         return {'url': connect_info['access_url']}
 
@@ -2896,7 +2896,7 @@ class API(base.Base):
         self.consoleauth_rpcapi.authorize_console(context,
                 connect_info['token'], console_type,
                 connect_info['host'], connect_info['port'],
-                connect_info['internal_access_path'], instance['uuid'])
+                connect_info['internal_access_path'], instance.uuid)
 
         return {'url': connect_info['access_url']}
 
@@ -2916,7 +2916,7 @@ class API(base.Base):
         self.consoleauth_rpcapi.authorize_console(context,
                 connect_info['token'], console_type,
                 connect_info['host'], connect_info['port'],
-                connect_info['internal_access_path'], instance['uuid'])
+                connect_info['internal_access_path'], instance.uuid)
 
         return {'url': connect_info['access_url']}
 
@@ -2937,7 +2937,7 @@ class API(base.Base):
         self.consoleauth_rpcapi.authorize_console(context,
                 connect_info['token'], console_type,
                 connect_info['host'], connect_info['port'],
-                connect_info['internal_access_path'], instance['uuid'])
+                connect_info['internal_access_path'], instance.uuid)
         return {'url': connect_info['access_url']}
 
     @check_instance_host
@@ -2988,7 +2988,7 @@ class API(base.Base):
     @wrap_check_policy
     def get_lock(self, context, instance):
         """Return the boolean state of given instance's lock."""
-        return self.get(context, instance['uuid'])['locked']
+        return self.get(context, instance.uuid)['locked']
 
     @wrap_check_policy
     @check_instance_lock
@@ -3071,7 +3071,7 @@ class API(base.Base):
             raise exception.InvalidVolume(reason=msg)
         # The caller likely got the instance from volume['instance_uuid']
         # in the first place, but let's sanity check.
-        if volume['instance_uuid'] != instance['uuid']:
+        if volume['instance_uuid'] != instance.uuid:
             raise exception.VolumeUnattached(volume_id=volume['id'])
         self._detach_volume(context, instance, volume)
 
@@ -3086,7 +3086,7 @@ class API(base.Base):
             raise exception.VolumeUnattached(volume_id=old_volume['id'])
         # The caller likely got the instance from volume['instance_uuid']
         # in the first place, but let's sanity check.
-        if old_volume['instance_uuid'] != instance['uuid']:
+        if old_volume['instance_uuid'] != instance.uuid:
             msg = _("Old volume is attached to a different instance.")
             raise exception.InvalidVolume(reason=msg)
         if new_volume['attach_status'] == 'attached':
@@ -3134,7 +3134,7 @@ class API(base.Base):
     @wrap_check_policy
     def get_instance_metadata(self, context, instance):
         """Get all metadata associated with an instance."""
-        rv = self.db.instance_metadata_get(context, instance['uuid'])
+        rv = self.db.instance_metadata_get(context, instance.uuid)
         return dict(rv.iteritems())
 
     def get_all_instance_metadata(self, context, search_filts):
@@ -3212,16 +3212,16 @@ class API(base.Base):
         for instance in instances:
             check_policy(context, 'get_instance_faults', instance)
 
-        uuids = [instance['uuid'] for instance in instances]
+        uuids = [instance.uuid for instance in instances]
         return self.db.instance_fault_get_by_instance_uuids(context, uuids)
 
     def is_volume_backed_instance(self, context, instance, bdms=None):
-        if not instance['image_ref']:
+        if not instance.image_ref:
             return True
 
         if bdms is None:
             bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
-                    context, instance['uuid'])
+                    context, instance.uuid)
 
         root_bdm = bdms.root_bdm()
         if not root_bdm:
@@ -3492,11 +3492,11 @@ class InstanceActionAPI(base.Base):
 
     def actions_get(self, context, instance):
         return objects.InstanceActionList.get_by_instance_uuid(
-            context, instance['uuid'])
+            context, instance.uuid)
 
     def action_get_by_request_id(self, context, instance, request_id):
         return objects.InstanceAction.get_by_request_id(
-            context, instance['uuid'], request_id)
+            context, instance.uuid, request_id)
 
     def action_events_get(self, context, instance, action_id):
         return objects.InstanceActionEventList.get_by_action(
@@ -4144,9 +4144,9 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
             context, id, columns_to_join=['instances'])
 
         for instance in security_group['instances']:
-            if instance['host'] is not None:
+            if instance.host is not None:
                 self.security_group_rpcapi.refresh_instance_security_rules(
-                        context, instance['host'], instance)
+                        context, instance.host, instance)
 
     def trigger_members_refresh(self, context, group_ids):
         """Called when a security group gains a new or loses a member.
@@ -4175,14 +4175,14 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
         instances = {}
         for security_group in security_groups:
             for instance in security_group['instances']:
-                if instance['uuid'] not in instances:
-                    instances[instance['uuid']] = instance
+                if instance.uuid not in instances:
+                    instances[instance.uuid] = instance
 
         # ..then we send a request to refresh the rules for each instance.
         for instance in instances.values():
-            if instance['host']:
+            if instance.host:
                 self.security_group_rpcapi.refresh_instance_security_rules(
-                        context, instance['host'], instance)
+                        context, instance.host, instance)
 
     def get_instance_security_groups(self, context, instance_uuid,
                                      detailed=False):

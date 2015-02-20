@@ -171,16 +171,16 @@ class ComputeCellsAPI(compute_api.API):
         self._cell_type = 'api'
 
     def _cast_to_cells(self, context, instance, method, *args, **kwargs):
-        instance_uuid = instance['uuid']
-        cell_name = instance['cell_name']
+        instance_uuid = instance.uuid
+        cell_name = instance.cell_name
         if not cell_name:
             raise exception.InstanceUnknownCell(instance_uuid=instance_uuid)
         self.cells_rpcapi.cast_compute_api_method(context, cell_name,
                 method, instance_uuid, *args, **kwargs)
 
     def _call_to_cells(self, context, instance, method, *args, **kwargs):
-        instance_uuid = instance['uuid']
-        cell_name = instance['cell_name']
+        instance_uuid = instance.uuid
+        cell_name = instance.cell_name
         if not cell_name:
             raise exception.InstanceUnknownCell(instance_uuid=instance_uuid)
         return self.cells_rpcapi.call_compute_api_method(context, cell_name,
@@ -208,11 +208,11 @@ class ComputeCellsAPI(compute_api.API):
 
     def update(self, context, instance, **kwargs):
         """Update an instance."""
-        cell_name = instance['cell_name']
+        cell_name = instance.cell_name
         if cell_name and self._cell_read_only(cell_name):
             raise exception.InstanceInvalidState(
                     attr="vm_state",
-                    instance_uuid=instance['uuid'],
+                    instance_uuid=instance.uuid,
                     state="temporary_readonly",
                     method='update')
         rv = super(ComputeCellsAPI, self).update(context,
@@ -239,12 +239,12 @@ class ComputeCellsAPI(compute_api.API):
         self._handle_cell_delete(context, instance, delete_types.DELETE)
 
     def _handle_cell_delete(self, context, instance, delete_type):
-        if not instance['cell_name']:
+        if not instance.cell_name:
             self.cells_rpcapi.instance_delete_everywhere(context,
                     instance, delete_type)
             bdms = block_device.legacy_mapping(
                 self.db.block_device_mapping_get_all_by_instance(
-                    context, instance['uuid']))
+                    context, instance.uuid))
             # NOTE(danms): If we try to delete an instance with no cell,
             # there isn't anything to salvage, so we can hard-delete here.
             super(ComputeCellsAPI, self)._local_delete(context, instance, bdms,
@@ -354,8 +354,8 @@ class ComputeCellsAPI(compute_api.API):
     @check_instance_cell
     def get_vnc_console(self, context, instance, console_type):
         """Get a url to a VNC Console."""
-        if not instance['host']:
-            raise exception.InstanceNotReady(instance_id=instance['uuid'])
+        if not instance.host:
+            raise exception.InstanceNotReady(instance_id=instance.uuid)
 
         connect_info = self._call_to_cells(context, instance,
                 'get_vnc_connect_info', console_type)
@@ -363,15 +363,15 @@ class ComputeCellsAPI(compute_api.API):
         self.consoleauth_rpcapi.authorize_console(context,
                 connect_info['token'], console_type, connect_info['host'],
                 connect_info['port'], connect_info['internal_access_path'],
-                instance['uuid'])
+                instance.uuid)
         return {'url': connect_info['access_url']}
 
     @wrap_check_policy
     @check_instance_cell
     def get_spice_console(self, context, instance, console_type):
         """Get a url to a SPICE Console."""
-        if not instance['host']:
-            raise exception.InstanceNotReady(instance_id=instance['uuid'])
+        if not instance.host:
+            raise exception.InstanceNotReady(instance_id=instance.uuid)
 
         connect_info = self._call_to_cells(context, instance,
                 'get_spice_connect_info', console_type)
@@ -379,15 +379,15 @@ class ComputeCellsAPI(compute_api.API):
         self.consoleauth_rpcapi.authorize_console(context,
                 connect_info['token'], console_type, connect_info['host'],
                 connect_info['port'], connect_info['internal_access_path'],
-                instance['uuid'])
+                instance.uuid)
         return {'url': connect_info['access_url']}
 
     @wrap_check_policy
     @check_instance_cell
     def get_rdp_console(self, context, instance, console_type):
         """Get a url to a RDP Console."""
-        if not instance['host']:
-            raise exception.InstanceNotReady(instance_id=instance['uuid'])
+        if not instance.host:
+            raise exception.InstanceNotReady(instance_id=instance.uuid)
 
         connect_info = self._call_to_cells(context, instance,
                 'get_rdp_connect_info', console_type)
@@ -395,15 +395,15 @@ class ComputeCellsAPI(compute_api.API):
         self.consoleauth_rpcapi.authorize_console(context,
                 connect_info['token'], console_type, connect_info['host'],
                 connect_info['port'], connect_info['internal_access_path'],
-                instance['uuid'])
+                instance.uuid)
         return {'url': connect_info['access_url']}
 
     @wrap_check_policy
     @check_instance_cell
     def get_serial_console(self, context, instance, console_type):
         """Get a url to a serial console."""
-        if not instance['host']:
-            raise exception.InstanceNotReady(instance_id=instance['uuid'])
+        if not instance.host:
+            raise exception.InstanceNotReady(instance_id=instance.uuid)
 
         connect_info = self._call_to_cells(context, instance,
                 'get_serial_console_connect_info', console_type)
@@ -411,7 +411,7 @@ class ComputeCellsAPI(compute_api.API):
         self.consoleauth_rpcapi.authorize_console(context,
                 connect_info['token'], console_type, connect_info['host'],
                 connect_info['port'], connect_info['internal_access_path'],
-                instance['uuid'])
+                instance.uuid)
         return {'url': connect_info['access_url']}
 
     @check_instance_cell

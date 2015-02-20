@@ -750,7 +750,7 @@ class ResourceTracker(object):
         self.ext_resources_handler.reset_resources(resources, self.driver)
 
         for instance in instances:
-            if instance['vm_state'] != vm_states.DELETED:
+            if instance.vm_state != vm_states.DELETED:
                 self._update_usage_from_instance(context, resources, instance)
 
     def _find_orphaned_instances(self):

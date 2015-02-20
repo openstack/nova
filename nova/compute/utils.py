@@ -31,7 +31,6 @@ from nova.i18n import _LW
 from nova.network import model as network_model
 from nova import notifications
 from nova import objects
-from nova.objects import base as obj_base
 from nova import rpc
 from nova import utils
 from nova.virt import driver
@@ -99,7 +98,7 @@ def add_instance_fault_from_exc(context, instance, fault, exc_info=None):
 
     fault_obj = objects.InstanceFault(context=context)
     fault_obj.host = CONF.host
-    fault_obj.instance_uuid = instance['uuid']
+    fault_obj.instance_uuid = instance.uuid
     fault_obj.update(exception_to_dict(fault))
     code = fault_obj.code
     fault_obj.details = _get_fault_details(exc_info, code)
@@ -384,16 +383,9 @@ def notify_about_host_update(context, event_suffix, host_payload):
 
 
 def get_nw_info_for_instance(instance):
-    if isinstance(instance, obj_base.NovaObject):
-        if instance.info_cache is None:
-            return network_model.NetworkInfo.hydrate([])
-        return instance.info_cache.network_info
-    # FIXME(comstud): Transitional while we convert to objects.
-    info_cache = instance['info_cache'] or {}
-    nw_info = info_cache.get('network_info') or []
-    if not isinstance(nw_info, network_model.NetworkInfo):
-        nw_info = network_model.NetworkInfo.hydrate(nw_info)
-    return nw_info
+    if instance.info_cache is None:
+        return network_model.NetworkInfo.hydrate([])
+    return instance.info_cache.network_info
 
 
 def has_audit_been_run(context, conductor, host, timestamp=None):

@@ -52,7 +52,8 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
     def test_serialized_instance_has_name(self):
         self.assertIn('name', self.fake_instance)
 
-    def _test_compute_api(self, method, rpc_method, **kwargs):
+    def _test_compute_api(self, method, rpc_method,
+                          assert_dict=False, **kwargs):
         ctxt = context.RequestContext('fake_user', 'fake_project')
 
         rpcapi = kwargs.pop('rpcapi_class', compute_rpcapi.ComputeAPI)()
@@ -76,6 +77,10 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
         else:
             expected_kwargs.pop('host', None)
         expected_kwargs.pop('destination', None)
+
+        if assert_dict:
+            expected_kwargs['instance'] = jsonutils.to_primitive(
+                expected_kwargs['instance'])
 
         cast_and_call = ['confirm_resize', 'stop_instance']
         if rpc_method == 'call' and method in cast_and_call:
@@ -227,7 +232,8 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
 
     def test_get_instance_diagnostics(self):
         self._test_compute_api('get_instance_diagnostics', 'call',
-                instance=self.fake_instance, version='3.31')
+                assert_dict=True, instance=self.fake_instance_obj,
+                version='3.31')
 
     def test_get_vnc_console(self):
         self._test_compute_api('get_vnc_console', 'call',
@@ -246,7 +252,7 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
 
     def test_get_serial_console(self):
         self._test_compute_api('get_serial_console', 'call',
-                instance=self.fake_instance, console_type='serial',
+                instance=self.fake_instance_obj, console_type='serial',
                 version='3.34')
 
     def test_validate_console_port(self):
@@ -521,7 +527,7 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
 
     def test_volume_snapshot_create(self):
         self._test_compute_api('volume_snapshot_create', 'cast',
-                instance=self.fake_instance, volume_id='fake_id',
+                instance=self.fake_instance_obj, volume_id='fake_id',
                 create_info={}, version='3.6')
 
     def test_volume_snapshot_delete(self):
