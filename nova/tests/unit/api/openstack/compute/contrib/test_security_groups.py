@@ -1456,3 +1456,101 @@ class SecurityGroupsOutputTestV2(SecurityGroupsOutputTestV21):
 
     def _setup_app(self):
         return fakes.wsgi_app(init_only=('servers',))
+
+
+class SecurityGroupsOutputPolicyEnforcementV21(test.NoDBTestCase):
+
+    def setUp(self):
+        super(SecurityGroupsOutputPolicyEnforcementV21, self).setUp()
+        self.controller = secgroups_v21.SecurityGroupsOutputController()
+        self.req = fakes.HTTPRequest.blank('')
+        self.rule_name = "compute_extension:v3:os-security-groups"
+        self.rule = {self.rule_name: "project:non_fake"}
+        self.policy.set_rules(self.rule)
+
+    def test_show_policy_failed(self):
+        self.controller.show(self.req, None, FAKE_UUID1)
+
+    def test_create_policy_failed(self):
+        self.controller.create(self.req, None, {})
+
+    def test_detail_policy_failed(self):
+        self.controller.detail(self.req, None)
+
+
+class PolicyEnforcementV21(test.NoDBTestCase):
+
+    def setUp(self):
+        super(PolicyEnforcementV21, self).setUp()
+        self.req = fakes.HTTPRequest.blank('')
+        self.rule_name = "compute_extension:v3:os-security-groups"
+        self.rule = {self.rule_name: "project:non_fake"}
+
+    def _common_policy_check(self, func, *arg, **kwarg):
+        self.policy.set_rules(self.rule)
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized, func, *arg, **kwarg)
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % self.rule_name,
+            exc.format_message())
+
+
+class SecurityGroupPolicyEnforcementV21(PolicyEnforcementV21):
+
+    def setUp(self):
+        super(SecurityGroupPolicyEnforcementV21, self).setUp()
+        self.controller = secgroups_v21.SecurityGroupController()
+
+    def test_create_policy_failed(self):
+        self._common_policy_check(self.controller.create, self.req, {})
+
+    def test_show_policy_failed(self):
+        self._common_policy_check(self.controller.show, self.req, FAKE_UUID1)
+
+    def test_delete_policy_failed(self):
+        self._common_policy_check(self.controller.delete, self.req, FAKE_UUID1)
+
+    def test_index_policy_failed(self):
+        self._common_policy_check(self.controller.index, self.req)
+
+    def test_update_policy_failed(self):
+        self._common_policy_check(
+            self.controller.update, self.req, FAKE_UUID1, {})
+
+
+class ServerSecurityGroupPolicyEnforcementV21(PolicyEnforcementV21):
+
+    def setUp(self):
+        super(ServerSecurityGroupPolicyEnforcementV21, self).setUp()
+        self.controller = secgroups_v21.ServerSecurityGroupController()
+
+    def test_index_policy_failed(self):
+        self._common_policy_check(self.controller.index, self.req, FAKE_UUID1)
+
+
+class SecurityGroupRulesPolicyEnforcementV21(PolicyEnforcementV21):
+
+    def setUp(self):
+        super(SecurityGroupRulesPolicyEnforcementV21, self).setUp()
+        self.controller = secgroups_v21.SecurityGroupRulesController()
+
+    def test_create_policy_failed(self):
+        self._common_policy_check(self.controller.create, self.req, {})
+
+    def test_delete_policy_failed(self):
+        self._common_policy_check(self.controller.delete, self.req, FAKE_UUID1)
+
+
+class SecurityGroupActionPolicyEnforcementV21(PolicyEnforcementV21):
+
+    def setUp(self):
+        super(SecurityGroupActionPolicyEnforcementV21, self).setUp()
+        self.controller = secgroups_v21.SecurityGroupActionController()
+
+    def test_add_security_group_policy_failed(self):
+        self._common_policy_check(
+            self.controller._addSecurityGroup, self.req, FAKE_UUID1, {})
+
+    def test_remove_security_group_policy_failed(self):
+        self._common_policy_check(
+            self.controller._removeSecurityGroup, self.req, FAKE_UUID1, {})
