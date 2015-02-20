@@ -26,8 +26,10 @@ def upgrade(migrate_engine):
     shadow_pci_devices = Table('shadow_pci_devices', meta, autoload=True)
 
     numa_node = Column('numa_node', Integer, default=None)
-    pci_devices.create_column(numa_node)
-    shadow_pci_devices.create_column(numa_node.copy())
+    if not hasattr(pci_devices.c, 'numa_node'):
+        pci_devices.create_column(numa_node)
+    if not hasattr(shadow_pci_devices.c, 'numa_node'):
+        shadow_pci_devices.create_column(numa_node.copy())
 
 
 def downgrade(migrate_engine):
@@ -37,5 +39,7 @@ def downgrade(migrate_engine):
     pci_devices = Table('pci_devices', meta, autoload=True)
     shadow_pci_devices = Table('shadow_pci_devices', meta, autoload=True)
 
-    pci_devices.drop_column('numa_node')
-    shadow_pci_devices.drop_column('numa_node')
+    if hasattr(pci_devices.c, 'numa_node'):
+        pci_devices.drop_column('numa_node')
+    if hasattr(shadow_pci_devices.c, 'numa_node'):
+        shadow_pci_devices.drop_column('numa_node')
