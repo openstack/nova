@@ -11248,10 +11248,10 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         flavor = objects.Flavor(memory_mb=512,
                                 swap=0,
                                 vcpu_weight=None,
-                                root_gb=1,
+                                root_gb=10,
                                 id=2,
                                 name=u'm1.tiny',
-                                ephemeral_gb=0,
+                                ephemeral_gb=20,
                                 rxtx_factor=1.0,
                                 flavorid=u'1',
                                 vcpus=1)
@@ -11267,8 +11267,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         inst['instance_type_id'] = 2
         inst['ami_launch_index'] = 0
         inst['host'] = 'host1'
-        inst['root_gb'] = 10
-        inst['ephemeral_gb'] = 20
+        inst['root_gb'] = flavor.root_gb
+        inst['ephemeral_gb'] = flavor.ephemeral_gb
         inst['config_drive'] = True
         inst['kernel_id'] = 2
         inst['ramdisk_id'] = 3
