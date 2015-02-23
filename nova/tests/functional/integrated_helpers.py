@@ -28,6 +28,7 @@ from nova import crypto
 import nova.image.glance
 from nova import service
 from nova import test
+from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client
 from nova.tests.unit import cast_as_call
 from nova.tests.unit import fake_crypto
@@ -83,11 +84,14 @@ class _IntegratedTestBase(test.TestCase):
         self.flags(scheduler_driver='nova.scheduler.'
                     'chance.ChanceScheduler')
         self._setup_services()
-        self._start_api_service()
 
-        self.api = self._get_test_client()
+        self.api_fixture = self.useFixture(
+            nova_fixtures.OSAPIFixture(self._api_version))
+        self.api = self.api_fixture.api
 
         self.useFixture(cast_as_call.CastAsCall(self.stubs))
+
+        self.addCleanup(nova.tests.unit.image.fake.FakeImageService_reset)
 
     def _setup_services(self):
         self.conductor = self.start_service('conductor',
@@ -95,14 +99,10 @@ class _IntegratedTestBase(test.TestCase):
         self.compute = self.start_service('compute')
         self.cert = self.start_service('cert')
         self.consoleauth = self.start_service('consoleauth')
+
         self.network = self.start_service('network')
         self.scheduler = self.start_service('scheduler')
         self.cells = self.start_service('cells', manager=CONF.cells.manager)
-
-    def tearDown(self):
-        self.osapi.stop()
-        nova.tests.unit.image.fake.FakeImageService_reset()
-        super(_IntegratedTestBase, self).tearDown()
 
     def _get_test_client(self):
         return client.TestOpenStackClient('fake', 'fake', self.auth_url)
@@ -115,21 +115,12 @@ class _IntegratedTestBase(test.TestCase):
             'api_version': self._api_version})
 
     def _get_flags(self):
-        """An opportunity to setup flags, before the services are started."""
-        f = {}
-
-        # Ensure tests only listen on localhost
-        f['ec2_listen'] = '127.0.0.1'
-        f['osapi_compute_listen'] = '127.0.0.1'
-        f['metadata_listen'] = '127.0.0.1'
-
-        # Auto-assign ports to allow concurrent tests
-        f['ec2_listen_port'] = 0
-        f['osapi_compute_listen_port'] = 0
-        f['metadata_listen_port'] = 0
-
-        f['fake_network'] = True
-        return f
+        """Allow subclass to modify global config before we start services."""
+        # NOTE(sdague): _get_flags is used by about 13 tests that
+        # subclass this mostly to modify the extensions list. We
+        # should instead make that declarative in the future, at which
+        # point we can get rid of this.
+        return {}
 
     def get_unused_server_name(self):
         servers = self.api.get_servers()

@@ -31,6 +31,7 @@ from nova.db import migration
 from nova.db.sqlalchemy import api as session
 from nova import rpc
 from nova import service
+from nova.tests.functional.api import client
 
 _TRUE_VALUES = ('True', 'true', '1', 'yes')
 
@@ -253,6 +254,95 @@ class WarningsFixture(fixtures.Fixture):
                                         ' multiple context managers')
 
         self.addCleanup(warnings.resetwarnings)
+
+
+class ConfPatcher(fixtures.Fixture):
+    """Fixture to patch and restore global CONF.
+
+    This also resets overrides for everything that is patched during
+    it's teardown.
+
+    """
+
+    def __init__(self, **kwargs):
+        """Constructor
+
+        :params group: if specified all config options apply to that group.
+
+        :params **kwargs: the rest of the kwargs are processed as a
+        set of key/value pairs to be set as configuration override.
+
+        """
+        super(ConfPatcher, self).__init__()
+        self.group = kwargs.pop('group', None)
+        self.args = kwargs
+
+    def setUp(self):
+        super(ConfPatcher, self).setUp()
+        for k, v in self.args.iteritems():
+            self.addCleanup(CONF.clear_override, k, self.group)
+            CONF.set_override(k, v, self.group)
+
+
+class OSAPIFixture(fixtures.Fixture):
+    """Create an OS API server as a fixture.
+
+    This spawns an OS API server as a fixture in a new greenthread in
+    the current test. The fixture has a .api paramenter with is a
+    simple rest client that can communicate with it.
+
+    This fixture is extremely useful for testing REST responses
+    through the WSGI stack easily in functional tests.
+
+    Usage:
+
+        api = self.useFixture(fixtures.OSAPIFixture()).api
+        resp = api.api_request('/someurl')
+        self.assertEqual(200, resp.status_code)
+        resp = api.api_request('/otherurl', method='POST', body='{foo}')
+
+    The resp is a requests library response. Common attributes that
+    you'll want to use are:
+
+    - resp.status_code - integer HTTP status code returned by the request
+    - resp.content - the body of the response
+    - resp.headers - dictionary of HTTP headers returned
+
+    """
+
+    def __init__(self, api_version='v2'):
+        """Constructor
+
+        :param api_version: the API version that we're interested in
+        using. Currently this expects 'v2' or 'v2.1' as possible
+        options.
+
+        """
+        super(OSAPIFixture, self).__init__()
+        self.api_version = api_version
+
+    def setUp(self):
+        super(OSAPIFixture, self).setUp()
+        # in order to run these in tests we need to bind only to local
+        # host, and dynamically allocate ports
+        conf_overrides = {
+            'ec2_listen': '127.0.0.1',
+            'osapi_compute_listen': '127.0.0.1',
+            'metadata_listen': '127.0.0.1',
+            'ec2_listen_port': 0,
+            'osapi_compute_listen_port': 0,
+            'metadata_listen_port': 0,
+            'verbose': True,
+            'debug': True
+        }
+        self.useFixture(ConfPatcher(**conf_overrides))
+        osapi = service.WSGIService("osapi_compute")
+        osapi.start()
+        self.addCleanup(osapi.stop)
+        self.auth_url = 'http://%(host)s:%(port)s/%(api_version)s' % ({
+            'host': osapi.host, 'port': osapi.port,
+            'api_version': self.api_version})
+        self.api = client.TestOpenStackClient('fake', 'fake', self.auth_url)
 
 
 class PoisonFunctions(fixtures.Fixture):
