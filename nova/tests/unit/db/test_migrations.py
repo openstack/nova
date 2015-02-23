@@ -57,6 +57,7 @@ from nova.db.sqlalchemy import models
 from nova.db.sqlalchemy import utils as db_utils
 from nova import exception
 from nova import test
+from nova.tests import fixtures as nova_fixtures
 
 
 LOG = logging.getLogger(__name__)
@@ -96,6 +97,14 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
         old_level = migrate_log.level
         migrate_log.setLevel(logging.WARN)
         self.addCleanup(migrate_log.setLevel, old_level)
+
+        # NOTE(rpodolyaka): we need to repeat the functionality of the base
+        # test case a bit here as this gets overriden by oslotest base test
+        # case and nova base test case cleanup must be the last one (as it
+        # deletes attributes of test case instances)
+        self.useFixture(nova_fixtures.Timeout(
+            os.environ.get('OS_TEST_TIMEOUT', 0),
+            self.TIMEOUT_SCALING_FACTOR))
 
     def assertColumnExists(self, engine, table_name, column):
         self.assertTrue(oslodbutils.column_exists(engine, table_name, column))
@@ -809,14 +818,14 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
 
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
-                               test.TestCase,
-                               test_base.DbTestCase):
+                               test_base.DbTestCase,
+                               test.NoDBTestCase):
     pass
 
 
 class TestNovaMigrationsMySQL(NovaMigrationsCheckers,
-                              test.TestCase,
-                              test_base.MySQLOpportunisticTestCase):
+                              test_base.MySQLOpportunisticTestCase,
+                              test.NoDBTestCase):
     def test_innodb_tables(self):
         with mock.patch.object(sa_migration, 'get_engine',
                                return_value=self.migrate_engine):
@@ -841,8 +850,8 @@ class TestNovaMigrationsMySQL(NovaMigrationsCheckers,
 
 
 class TestNovaMigrationsPostgreSQL(NovaMigrationsCheckers,
-                                   test.TestCase,
-                                   test_base.PostgreSQLOpportunisticTestCase):
+                                   test_base.PostgreSQLOpportunisticTestCase,
+                                   test.NoDBTestCase):
     pass
 
 
