@@ -30,7 +30,7 @@ CONF = cfg.CONF
 CONF.import_opt('osapi_compute_ext_list', 'nova.api.openstack.compute.contrib')
 
 
-class ServerPasswordTestV21(test.TestCase):
+class ServerPasswordTestV21(test.NoDBTestCase):
     content_type = 'application/json'
     server_password = server_password_v21
     delete_call = 'self.controller.clear'
