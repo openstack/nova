@@ -107,7 +107,7 @@ even if no resource or controller is added. Other entry points available
 are
 
 * Modify create behaviour (nova.api.v3.extensions.server.create)
-* Modify rebuild behaviour (nova.api.v3.extensions.server.rebuilt)
+* Modify rebuild behaviour (nova.api.v3.extensions.server.rebuild)
 * Modify update behaviour (nova.api.v3.extensions.server.update)
 * Modify resize behaviour (nova.api.v3.extensions.server.resize)
 
