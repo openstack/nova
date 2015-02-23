@@ -299,7 +299,6 @@ class S3ImageService(object):
 
         def delayed_create():
             """This handles the fetching and decrypting of the part files."""
-            context.update_store()
             log_vars = {'image_location': image_location,
                         'image_path': image_path}
 
