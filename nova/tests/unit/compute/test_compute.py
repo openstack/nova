@@ -11139,6 +11139,13 @@ class EvacuateHostTestCase(BaseTestCase):
         self.inst.task_state = task_states.REBUILDING
         self.inst.save()
 
+        def fake_get_compute_info(context, host):
+            cn = objects.ComputeNode(hypervisor_hostname=self.rt.nodename)
+            return cn
+
+        self.stubs.Set(self.compute, '_get_compute_info',
+                       fake_get_compute_info)
+
     def tearDown(self):
         db.instance_destroy(self.context, self.inst.uuid)
         super(EvacuateHostTestCase, self).tearDown()
