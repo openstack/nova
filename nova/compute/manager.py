@@ -4622,7 +4622,7 @@ class ComputeManager(manager.Manager):
         if not bdm:
             bdm = objects.BlockDeviceMapping.get_by_volume_id(
                     context, volume_id)
-        driver_bdm = driver_block_device.DriverVolumeBlockDevice(bdm)
+        driver_bdm = driver_block_device.convert_volume(bdm)
 
         @utils.synchronized(instance.uuid)
         def do_attach_volume(context, instance, driver_bdm):

@@ -622,6 +622,22 @@ class TestDriverBlockDevice(test.NoDBTestCase):
             [self.volume_bdm, self.ephemeral_bdm])
         self.assertEqual(converted, [self.volume_driver_bdm])
 
+    def test_convert_all_volumes(self):
+        converted = driver_block_device.convert_all_volumes()
+        self.assertEqual([], converted)
+
+        converted = driver_block_device.convert_all_volumes(
+            self.volume_bdm, self.ephemeral_bdm, self.image_bdm)
+        self.assertEqual(converted, [self.volume_driver_bdm,
+                                     self.image_driver_bdm])
+
+    def test_convert_volume(self):
+        self.assertIsNone(driver_block_device.convert_volume(self.swap_bdm))
+        self.assertEqual(self.volume_driver_bdm,
+                         driver_block_device.convert_volume(self.volume_bdm))
+        self.assertEqual(self.snapshot_driver_bdm,
+                         driver_block_device.convert_volume(self.snapshot_bdm))
+
     def test_legacy_block_devices(self):
         test_snapshot = self.driver_classes['snapshot'](
             self.snapshot_bdm)

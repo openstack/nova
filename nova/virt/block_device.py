@@ -13,6 +13,7 @@
 #    under the License.
 
 import functools
+import itertools
 import operator
 
 from oslo_log import log as logging
@@ -385,6 +386,22 @@ convert_images = functools.partial(_convert_block_devices,
 
 convert_blanks = functools.partial(_convert_block_devices,
                                    DriverBlankBlockDevice)
+
+
+def convert_all_volumes(*volume_bdms):
+    source_volume = convert_volumes(volume_bdms)
+    source_snapshot = convert_snapshots(volume_bdms)
+    source_image = convert_images(volume_bdms)
+
+    return [vol for vol in
+            itertools.chain(source_volume, source_snapshot, source_image)]
+
+
+def convert_volume(volume_bdm):
+    try:
+        return convert_all_volumes(volume_bdm)[0]
+    except IndexError:
+        pass
 
 
 def attach_block_devices(block_device_mapping, *attach_args, **attach_kwargs):
