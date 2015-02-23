@@ -347,29 +347,6 @@ def get_nw_info_for_instance(instance):
     return instance.info_cache.network_info
 
 
-def has_audit_been_run(context, conductor, host, timestamp=None):
-    begin, end = utils.last_completed_audit_period(before=timestamp)
-    task_log = conductor.task_log_get(context, "instance_usage_audit",
-                                      begin, end, host)
-    if task_log:
-        return True
-    else:
-        return False
-
-
-def start_instance_usage_audit(context, conductor, begin, end, host,
-                               num_instances):
-    conductor.task_log_begin_task(context, "instance_usage_audit", begin,
-                                  end, host, num_instances,
-                                  "Instance usage audit started...")
-
-
-def finish_instance_usage_audit(context, conductor, begin, end, host, errors,
-                                message):
-    conductor.task_log_end_task(context, "instance_usage_audit", begin, end,
-                                host, errors, message)
-
-
 def usage_volume_info(vol_usage):
     def null_safe_str(s):
         return str(s) if s else ''
