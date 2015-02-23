@@ -452,6 +452,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     def test_finish_migration_power_on_resize(self):
         self._test_finish_migration(power_on=True, resize_instance=True)
 
+    @mock.patch.object(vmops.VMwareVMOps, '_get_extra_specs')
     @mock.patch.object(vmops.VMwareVMOps, '_resize_create_ephemerals')
     @mock.patch.object(vmops.VMwareVMOps, '_remove_ephemerals')
     @mock.patch.object(ds_util, 'disk_delete')
@@ -474,6 +475,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                       fake_disk_delete,
                                       fake_remove_ephemerals,
                                       fake_resize_create_ephemerals,
+                                      fake_get_extra_specs,
                                       power_on):
         """Tests the finish_revert_migration method on vmops."""
         datastore = ds_util.Datastore(ref='fake-ref', name='fake')
@@ -488,6 +490,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                 device)
         dc_info = vmops.DcInfo(ref='fake_ref', name='fake',
                                vmFolder='fake_folder')
+        extra_specs = vm_util.ExtraSpecs()
+        fake_get_extra_specs.return_value = extra_specs
         with contextlib.nested(
             mock.patch.object(self._vmops, 'get_datacenter_ref_and_name',
                               return_value=dc_info),
@@ -512,7 +516,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             fake_resize_spec.assert_called_once_with(
                 self._session.vim.client.factory,
                 int(self._instance.vcpus),
-                int(self._instance.memory_mb))
+                int(self._instance.memory_mb),
+                extra_specs)
             fake_reconfigure_vm.assert_called_once_with(self._session,
                                                         'fake-ref',
                                                         'fake-spec')
@@ -553,14 +558,18 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     def test_finish_revert_migration_power_off(self):
         self._test_finish_revert_migration(power_on=False)
 
+    @mock.patch.object(vmops.VMwareVMOps, '_get_extra_specs')
     @mock.patch.object(vm_util, 'reconfigure_vm')
     @mock.patch.object(vm_util, 'get_vm_resize_spec',
                        return_value='fake-spec')
-    def test_resize_vm(self, fake_resize_spec, fake_reconfigure):
+    def test_resize_vm(self, fake_resize_spec, fake_reconfigure,
+                       fake_get_extra_specs):
+        extra_specs = vm_util.ExtraSpecs()
+        fake_get_extra_specs.return_value = extra_specs
         flavor = {'vcpus': 2, 'memory_mb': 1024}
         self._vmops._resize_vm('vm-ref', flavor)
         fake_resize_spec.assert_called_once_with(
-            self._session.vim.client.factory, 2, 1024)
+            self._session.vim.client.factory, 2, 1024, extra_specs)
         fake_reconfigure.assert_called_once_with(self._session,
                                                  'vm-ref', 'fake-spec')
 

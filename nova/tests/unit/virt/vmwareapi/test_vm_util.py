@@ -127,9 +127,39 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
     def test_get_resize_spec(self):
         vcpus = 2
         memory_mb = 2048
+        extra_specs = vm_util.ExtraSpecs()
         result = vm_util.get_vm_resize_spec(fake.FakeFactory(),
-                                            vcpus, memory_mb)
+                                            vcpus, memory_mb, extra_specs)
         expected = """{'memoryMB': 2048,
+                       'cpuAllocation':
+                           {'reservation': 0,
+                            'limit': -1,
+                            'shares': {'level': 'normal',
+                                       'shares': 0,
+                                       'obj_name': 'ns0:SharesInfo'},
+                            'obj_name':'ns0:ResourceAllocationInfo'},
+                       'numCPUs': 2,
+                       'obj_name': 'ns0:VirtualMachineConfigSpec'}"""
+        expected = re.sub(r'\s+', '', expected)
+        result = re.sub(r'\s+', '', repr(result))
+        self.assertEqual(expected, result)
+
+    def test_get_resize_spec_with_limits(self):
+        vcpus = 2
+        memory_mb = 2048
+        cpu_limits = vm_util.CpuLimits(cpu_limit=7,
+                                       cpu_reservation=6)
+        extra_specs = vm_util.ExtraSpecs(cpu_limits=cpu_limits)
+        result = vm_util.get_vm_resize_spec(fake.FakeFactory(),
+                                            vcpus, memory_mb, extra_specs)
+        expected = """{'memoryMB': 2048,
+                       'cpuAllocation':
+                           {'reservation': 6,
+                            'limit': 7,
+                            'shares': {'level': 'normal',
+                                       'shares': 0,
+                                       'obj_name': 'ns0:SharesInfo'},
+                            'obj_name':'ns0:ResourceAllocationInfo'},
                        'numCPUs': 2,
                        'obj_name': 'ns0:VirtualMachineConfigSpec'}"""
         expected = re.sub(r'\s+', '', expected)
@@ -516,6 +546,10 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
             'obj_name': 'ns0:ToolsConfigInfo'},
             'cpuAllocation': {'reservation': 6,
                               'limit': 7,
+                              'shares':
+                              {'level': 'normal',
+                               'shares': 0,
+                               'obj_name':'ns0:SharesInfo'},
                               'obj_name': 'ns0:ResourceAllocationInfo'},
             'numCPUs': 2}""" % {'instance_uuid': instance_uuid}
         expected = re.sub(r'\s+', '', expected)
@@ -554,7 +588,12 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
                       'afterResume': True,
                       'afterPowerOn': True,
             'obj_name': 'ns0:ToolsConfigInfo'},
-            'cpuAllocation': {'limit': 7,
+            'cpuAllocation': {'reservation': 0,
+                              'limit': 7,
+                              'shares':
+                              {'level' :'normal',
+                               'shares': 0,
+                               'obj_name':'ns0:SharesInfo'},
                               'obj_name': 'ns0:ResourceAllocationInfo'},
             'numCPUs': 2}""" % {'instance_uuid': instance_uuid}
         expected = re.sub(r'\s+', '', expected)
@@ -593,9 +632,12 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
                       'afterResume': True,
                       'afterPowerOn': True,
             'obj_name': 'ns0:ToolsConfigInfo'},
-            'cpuAllocation': {'shares': {'level': 'high',
-                                         'shares': 0,
-                                         'obj_name':'ns0:SharesInfo'},
+            'cpuAllocation': {'reservation': 0,
+                              'limit': -1,
+                              'shares':
+                              {'level': 'high',
+                               'shares': 0,
+                               'obj_name':'ns0:SharesInfo'},
                               'obj_name':'ns0:ResourceAllocationInfo'},
             'numCPUs': 2}""" % {'instance_uuid': instance_uuid}
         expected = re.sub(r'\s+', '', expected)
@@ -635,9 +677,12 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
                       'afterResume': True,
                       'afterPowerOn': True,
             'obj_name': 'ns0:ToolsConfigInfo'},
-            'cpuAllocation': {'shares': {'level': 'custom',
-                                         'shares': 1948,
-                                         'obj_name':'ns0:SharesInfo'},
+            'cpuAllocation': {'reservation': 0,
+                              'limit': -1,
+                              'shares':
+                              {'level': 'custom',
+                               'shares': 1948,
+                               'obj_name': 'ns0:SharesInfo'},
                               'obj_name':'ns0:ResourceAllocationInfo'},
             'numCPUs': 2}""" % {'instance_uuid': instance_uuid}
         expected = re.sub(r'\s+', '', expected)
