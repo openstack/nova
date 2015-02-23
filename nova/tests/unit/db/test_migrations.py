@@ -98,20 +98,26 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
         self.addCleanup(migrate_log.setLevel, old_level)
 
     def assertColumnExists(self, engine, table_name, column):
-        self.assertTrue(oslodbutils.column_exists(engine, table_name, column))
+        self.assertTrue(oslodbutils.column_exists(engine, table_name, column),
+                        'Column %s.%s does not exist' % (table_name, column))
 
     def assertColumnNotExists(self, engine, table_name, column):
-        self.assertFalse(oslodbutils.column_exists(engine, table_name, column))
+        self.assertFalse(oslodbutils.column_exists(engine, table_name, column),
+                        'Column %s.%s should not exist' % (table_name, column))
 
     def assertTableNotExists(self, engine, table):
         self.assertRaises(sqlalchemy.exc.NoSuchTableError,
                           oslodbutils.get_table, engine, table)
 
     def assertIndexExists(self, engine, table_name, index):
-        self.assertTrue(oslodbutils.index_exists(engine, table_name, index))
+        self.assertTrue(oslodbutils.index_exists(engine, table_name, index),
+                        'Index %s on table %s does not exist' %
+                        (index, table_name))
 
     def assertIndexNotExists(self, engine, table_name, index):
-        self.assertFalse(oslodbutils.index_exists(engine, table_name, index))
+        self.assertFalse(oslodbutils.index_exists(engine, table_name, index),
+                         'Index %s on table %s should not exist' %
+                         (index, table_name))
 
     def assertIndexMembers(self, engine, table, index, members):
         # NOTE(johannes): Order of columns can matter. Most SQL databases
