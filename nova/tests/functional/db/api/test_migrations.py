@@ -160,6 +160,27 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
     def _post_downgrade_001(self, engine):
         self.assertTableNotExists(engine, 'cell_mappings')
 
+    def _check_002(self, engine, data):
+        for column in ['created_at', 'updated_at', 'id', 'instance_uuid',
+                'cell_id', 'project_id']:
+            self.assertColumnExists(engine, 'instance_mappings', column)
+
+        for index in ['instance_uuid_idx', 'project_id_idx']:
+            self.assertIndexExists(engine, 'instance_mappings', index)
+
+        self.assertUniqueConstraintExists(engine, 'instance_mappings',
+                ['instance_uuid'])
+
+        inspector = reflection.Inspector.from_engine(engine)
+        # There should only be one foreign key here
+        fk = inspector.get_foreign_keys('instance_mappings')[0]
+        self.assertEqual('cell_mappings', fk['referred_table'])
+        self.assertEqual(['id'], fk['referred_columns'])
+        self.assertEqual(['cell_id'], fk['constrained_columns'])
+
+    def _post_downgrade_002(self, engine):
+        self.assertTableNotExists(engine, 'instance_mappings')
+
 
 class TestNovaAPIMigrationsWalkSQLite(NovaAPIMigrationsWalk,
                                       test_base.DbTestCase,
