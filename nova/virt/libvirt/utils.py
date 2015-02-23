@@ -309,7 +309,7 @@ def copy_image(src, dest, host=None):
         # coreutils 8.11, holes can be read efficiently too.
         execute('cp', src, dest)
     else:
-        dest = "%s:%s" % (host, dest)
+        dest = "%s:%s" % (utils.safe_ip_format(host), dest)
         # Try rsync first as that can compress and create sparse dest files.
         # Note however that rsync currently doesn't read sparse files
         # efficiently: https://bugzilla.samba.org/show_bug.cgi?id=8918

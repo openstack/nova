@@ -191,6 +191,13 @@ class GenericUtilsTestCase(test.NoDBTestCase):
                           utils.get_shortened_ipv6_cidr,
                           "failure")
 
+    def test_safe_ip_format(self):
+        self.assertEqual("[::1]", utils.safe_ip_format("::1"))
+        self.assertEqual("127.0.0.1", utils.safe_ip_format("127.0.0.1"))
+        self.assertEqual("[::ffff:127.0.0.1]", utils.safe_ip_format(
+                         "::ffff:127.0.0.1"))
+        self.assertEqual("localhost", utils.safe_ip_format("localhost"))
+
     def test_get_hash_str(self):
         base_str = "foo"
         value = hashlib.md5(base_str).hexdigest()
