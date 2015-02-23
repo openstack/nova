@@ -312,6 +312,32 @@ class API(base_api.NetworkAPI):
                     raise exception.ExternalNetworkAttachForbidden(
                         network_uuid=net['id'])
 
+    def _unbind_ports(self, context, ports, neutron, port_client=None):
+        """Unbind the specified ports.
+
+        :param context: The request context.
+        :param ports: list of port IDs.
+        :param neutron: neutron client for the current context.
+        :param port_client: The client with appropriate karma for
+            updating the ports.
+        """
+        for port_id in ports:
+            try:
+                port_req_body = {'port': {'device_id': ''}}
+                if port_client is None:
+                    # Reset device_id and device_owner for the ports
+                    port_req_body.update({'device_owner': ''})
+                    neutron.update_port(port_id, port_req_body)
+                else:
+                    # Requires admin creds to set port bindings
+                    if self._has_port_binding_extension(context,
+                                                        neutron=neutron):
+                        port_req_body['port']['binding:host_id'] = None
+                    port_client.update_port(port_id, port_req_body)
+            except Exception:
+                LOG.exception(_LE("Unable to reset device ID for port %s"),
+                              port_id)
+
     def allocate_for_instance(self, context, instance, **kwargs):
         """Allocate network resources for the instance.
 
@@ -512,18 +538,8 @@ class API(base_api.NetworkAPI):
                     ports_in_requested_order.append(created_port)
             except Exception:
                 with excutils.save_and_reraise_exception():
-                    for port_id in touched_port_ids:
-                        try:
-                            port_req_body = {'port': {'device_id': ''}}
-                            # Requires admin creds to set port bindings
-                            if self._has_port_binding_extension(context,
-                                neutron=neutron):
-                                port_req_body['port']['binding:host_id'] = None
-                            port_client.update_port(port_id, port_req_body)
-                        except Exception:
-                            LOG.exception(_LE("Failed to update port %s"),
-                                          port_id)
-
+                    self._unbind_ports(context, touched_port_ids, neutron,
+                                       port_client)
                     self._delete_ports(neutron, instance, created_port_ids)
 
         nw_info = self.get_instance_nw_info(context, instance,
@@ -625,16 +641,7 @@ class API(base_api.NetworkAPI):
         ports_to_skip = [port_id for nets, fips, port_id, pci_request_id
                          in requested_networks]
         ports = set(ports) - set(ports_to_skip)
-        # Reset device_id and device_owner for the ports that are skipped
-        for port in ports_to_skip:
-            port_req_body = {'port': {'device_id': '', 'device_owner': ''}}
-            try:
-                get_client(context).update_port(port,
-                                                          port_req_body)
-            except Exception:
-                LOG.info(_LI('Unable to reset device ID for port %s'), port,
-                         instance=instance)
-
+        self._unbind_ports(context, ports_to_skip, neutron)
         self._delete_ports(neutron, instance, ports, raise_if_fail=True)
 
         # NOTE(arosen): This clears out the network_cache only if the instance
