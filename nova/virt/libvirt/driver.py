@@ -5366,27 +5366,23 @@ class LibvirtDriver(driver.ComputeDriver):
                              ' continue to listen on the current'
                              ' addresses.'))
 
-    def _live_migration(self, context, instance, dest, post_method,
-                        recover_method, block_migration=False,
-                        migrate_data=None):
-        """Do live migration.
+    def _live_migration_operation(self, context, instance, dest,
+                                  block_migration, migrate_data, dom):
+        """Invoke the live migration operation
 
         :param context: security context
         :param instance:
             nova.db.sqlalchemy.models.Instance object
             instance object that is migrated.
         :param dest: destination host
-        :param post_method:
-            post operation method.
-            expected nova.compute.manager._post_live_migration.
-        :param recover_method:
-            recovery method when any exception occurs.
-            expected nova.compute.manager._rollback_live_migration.
         :param block_migration: if true, do block migration.
         :param migrate_data: implementation specific params
+        :param dom: the libvirt domain object
+
+        This method is intended to be run in a background thread and will
+        block that thread until the migration is finished or failed.
         """
 
-        # Do live migration.
         try:
             if block_migration:
                 flaglist = CONF.libvirt.block_migration_flag.split(',')
@@ -5394,8 +5390,6 @@ class LibvirtDriver(driver.ComputeDriver):
                 flaglist = CONF.libvirt.live_migration_flag.split(',')
             flagvals = [getattr(libvirt, x.strip()) for x in flaglist]
             logical_sum = reduce(lambda x, y: x | y, flagvals)
-
-            dom = self._host.get_domain(instance)
 
             pre_live_migrate_data = (migrate_data or {}).get(
                                         'pre_live_migration_result', {})
@@ -5451,15 +5445,233 @@ class LibvirtDriver(driver.ComputeDriver):
                             CONF.libvirt.live_migration_bandwidth)
                     else:
                         raise
-
         except Exception as e:
             with excutils.save_and_reraise_exception():
                 LOG.error(_LE("Live Migration failure: %s"), e,
                           instance=instance)
-                recover_method(context, instance, dest, block_migration)
 
-        post_method(context, instance, dest, block_migration,
-                    migrate_data)
+        # If 'migrateToURI' fails we don't know what state the
+        # VM instances on each host are in. Possibilities include
+        #
+        #  1. src==running, dst==none
+        #
+        #     Migration failed & rolled back, or never started
+        #
+        #  2. src==running, dst==paused
+        #
+        #     Migration started but is still ongoing
+        #
+        #  3. src==paused,  dst==paused
+        #
+        #     Migration data transfer completed, but switchover
+        #     is still ongoing, or failed
+        #
+        #  4. src==paused,  dst==running
+        #
+        #     Migration data transfer completed, switchover
+        #     happened but cleanup on source failed
+        #
+        #  5. src==none,    dst==running
+        #
+        #     Migration fully succeeded.
+        #
+        # Libvirt will aim to complete any migration operation
+        # or roll it back. So even if the migrateToURI call has
+        # returned an error, if the migration was not finished
+        # libvirt should clean up.
+        #
+        # So we take the error raise here with a pinch of salt
+        # and rely on the domain job info status to figure out
+        # what really happened to the VM, which is a much more
+        # reliable indicator.
+        #
+        # In particular we need to try very hard to ensure that
+        # Nova does not "forget" about the guest. ie leaving it
+        # running on a different host to the one recorded in
+        # the database, as that would be a serious resource leak
+
+        LOG.debug("Migration operation thread has finished",
+                  instance=instance)
+
+    def _live_migration_monitor(self, context, instance, dest, post_method,
+                                recover_method, block_migration,
+                                migrate_data, dom, finish_event):
+        n = 0
+        while True:
+            info = host.DomainJobInfo.for_domain(dom)
+
+            if info.type == libvirt.VIR_DOMAIN_JOB_NONE:
+                # Annoyingly this could indicate many possible
+                # states, so we must fix the mess:
+                #
+                #   1. Migration has not yet begun
+                #   2. Migration has stopped due to failure
+                #   3. Migration has stopped due to completion
+                #
+                # We can detect option 1 by seeing if thread is still
+                # running. We can distinguish 2 vs 3 by seeing if the
+                # VM still exists & running on the current host
+                #
+                if not finish_event.ready():
+                    LOG.debug("Operation thread is still running",
+                              instance=instance)
+                    # Leave type untouched
+                else:
+                    try:
+                        if dom.isActive():
+                            LOG.debug("VM running on src, migration failed",
+                                      instance=instance)
+                            info.type = libvirt.VIR_DOMAIN_JOB_FAILED
+                        else:
+                            LOG.debug("VM is shutoff, migration finished",
+                                      instance=instance)
+                            info.type = libvirt.VIR_DOMAIN_JOB_COMPLETED
+                    except libvirt.libvirtError as ex:
+                        LOG.debug("Error checking domain status %(ex)s",
+                                  ex, instance=instance)
+                        if ex.get_error_code() == libvirt.VIR_ERR_NO_DOMAIN:
+                            LOG.debug("VM is missing, migration finished",
+                                      instance=instance)
+                            info.type = libvirt.VIR_DOMAIN_JOB_COMPLETED
+                        else:
+                            LOG.info(_LI("Error %(ex)s, migration failed"),
+                                     instance=instance)
+                            info.type = libvirt.VIR_DOMAIN_JOB_FAILED
+
+                if info.type != libvirt.VIR_DOMAIN_JOB_NONE:
+                    LOG.debug("Fixed incorrect job type to be %d",
+                              info.type, instance=instance)
+
+            if info.type == libvirt.VIR_DOMAIN_JOB_NONE:
+                # Migration is not yet started
+                LOG.debug("Migration not running yet",
+                          instance=instance)
+            elif info.type == libvirt.VIR_DOMAIN_JOB_UNBOUNDED:
+                # We loop every 500ms, so don't log on every
+                # iteration to avoid spamming logs for long
+                # running migrations. Just once every 5 secs
+                # is sufficient for developers to debug problems.
+                # We log once every 30 seconds at info to help
+                # admins see slow running migration operations
+                # when debug logs are off.
+                if (n % 10) == 0:
+                    # Ignoring memory_processed, as due to repeated
+                    # dirtying of data, this can be way larger than
+                    # memory_total. Best to just look at what's
+                    # remaining to copy and ignore what's done already
+                    #
+                    # TODO(berrange) perhaps we could include disk
+                    # transfer stats in the progress too, but it
+                    # might make memory info more obscure as large
+                    # disk sizes might dwarf memory size
+                    progress = 0
+                    if info.memory_total != 0:
+                        progress = round(info.memory_remaining *
+                                          100 / info.memory_total)
+                    instance.progress = 100 - progress
+                    instance.save()
+
+                    lg = LOG.debug
+                    if (n % 60) == 0:
+                        lg = LOG.info
+
+                    lg(_LI("Migration running for %(secs)d secs, "
+                           "memory %(progress)d%% remaining; "
+                           "(bytes processed=%(processed)d, "
+                           "remaining=%(remaining)d, "
+                           "total=%(total)d)"),
+                       {"secs": n / 2, "progress": progress,
+                        "processed": info.memory_processed,
+                        "remaining": info.memory_remaining,
+                        "total": info.memory_total}, instance=instance)
+
+                # Migration is still running
+                #
+                # This is where we'd wire up calls to change live
+                # migration status. eg change max downtime, cancel
+                # the operation, change max bandwidth
+                n = n + 1
+            elif info.type == libvirt.VIR_DOMAIN_JOB_COMPLETED:
+                # Migration is all done
+                LOG.info(_LI("Migration operation has completed"),
+                         instance=instance)
+                post_method(context, instance, dest, block_migration,
+                            migrate_data)
+                break
+            elif info.type == libvirt.VIR_DOMAIN_JOB_FAILED:
+                # Migration did not succeed
+                LOG.error(_LE("Migration operation has aborted"),
+                          instance=instance)
+                recover_method(context, instance, dest, block_migration)
+                break
+            elif info.type == libvirt.VIR_DOMAIN_JOB_CANCELLED:
+                # Migration was stopped by admin
+                LOG.warn(_LW("Migration operation was cancelled"),
+                         instance=instance)
+                recover_method(context, instance, dest, block_migration)
+                break
+            else:
+                LOG.warn(_LW("Unexpected migration job type: %d"),
+                         info.type, instance=instance)
+
+            time.sleep(0.5)
+
+    def _live_migration(self, context, instance, dest, post_method,
+                        recover_method, block_migration,
+                        migrate_data):
+        """Do live migration.
+
+        :param context: security context
+        :param instance:
+            nova.db.sqlalchemy.models.Instance object
+            instance object that is migrated.
+        :param dest: destination host
+        :param post_method:
+            post operation method.
+            expected nova.compute.manager._post_live_migration.
+        :param recover_method:
+            recovery method when any exception occurs.
+            expected nova.compute.manager._rollback_live_migration.
+        :param block_migration: if true, do block migration.
+        :param migrate_data: implementation specific params
+
+        This fires off a new thread to run the blocking migration
+        operation, and then this thread monitors the progress of
+        migration and controls its operation
+        """
+
+        dom = self._host.get_domain(instance)
+
+        opthread = greenthread.spawn(self._live_migration_operation,
+                                     context, instance, dest,
+                                     block_migration,
+                                     migrate_data, dom)
+
+        finish_event = eventlet.event.Event()
+
+        def thread_finished(thread, event):
+            LOG.debug("Migration operation thread notification",
+                      instance=instance)
+            event.send()
+        opthread.link(thread_finished, finish_event)
+
+        # Let eventlet schedule the new thread right away
+        time.sleep(0)
+
+        try:
+            LOG.debug("Starting monitoring of live migration",
+                      instance=instance)
+            self._live_migration_monitor(context, instance, dest,
+                                         post_method, recover_method,
+                                         block_migration, migrate_data,
+                                         dom, finish_event)
+        except Exception as ex:
+            LOG.warn(_LW("Error monitoring migration: %(ex)s"),
+                     {"ex": ex}, instance=instance)
+            raise
+        finally:
+            LOG.debug("Live migration monitoring is all done",
+                      instance=instance)
 
     def _fetch_instance_kernel_ramdisk(self, context, instance):
         """Download kernel and ramdisk for instance in instance directory."""

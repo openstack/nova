@@ -176,6 +176,14 @@ VIR_SECRET_USAGE_TYPE_CEPH = 2
 VIR_SECRET_USAGE_TYPE_ISCSI = 3
 
 
+VIR_DOMAIN_JOB_NONE = 0
+VIR_DOMAIN_JOB_BOUNDED = 1
+VIR_DOMAIN_JOB_UNBOUNDED = 2
+VIR_DOMAIN_JOB_COMPLETED = 3
+VIR_DOMAIN_JOB_FAILED = 4
+VIR_DOMAIN_JOB_CANCELLED = 5
+
+
 def _parse_disk_info(element):
     disk_info = {}
     disk_info['type'] = element.get('type', 'file')
@@ -664,6 +672,12 @@ class Domain(object):
         return self._def['memory']
 
     def blockJobInfo(self, disk, flags):
+        return {}
+
+    def jobInfo(self):
+        return []
+
+    def jobStats(self, flags=0):
         return {}
 
 
@@ -1158,7 +1172,7 @@ class Connection(object):
         pass
 
 
-def openAuth(uri, auth, flags):
+def openAuth(uri, auth, flags=0):
 
     if type(auth) != list:
         raise Exception("Expected a list for 'auth' parameter")
