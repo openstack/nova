@@ -17,10 +17,12 @@ Websocket proxy that is compatible with OpenStack Nova
 Serial consoles. Leverages websockify.py by Joel Martin.
 Based on nova-novncproxy.
 """
+import sys
 
 from oslo_config import cfg
 
 from nova.cmd import baseproxy
+from nova import config
 
 
 opts = [
@@ -39,6 +41,7 @@ CONF.register_cli_opts(opts, group="serial_console")
 def main():
     # set default web flag option
     CONF.set_default('web', None)
+    config.parse_args(sys.argv)
 
     baseproxy.proxy(
         host=CONF.serial_console.serialproxy_host,
