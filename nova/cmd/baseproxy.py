@@ -54,7 +54,7 @@ def proxy(host, port):
     if CONF.web and not os.path.exists(CONF.web):
         exit_with_error("Can not find html/js files at %s." % CONF.web)
 
-    logging.setup("nova")
+    logging.setup(CONF, "nova")
 
     gmr.TextGuruMeditation.setup_autorun(version)
 
