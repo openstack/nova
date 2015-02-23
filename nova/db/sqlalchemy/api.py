@@ -5841,10 +5841,14 @@ def _ec2_instance_get_query(context, session=None):
 
 def _task_log_get_query(context, task_name, period_beginning,
                         period_ending, host=None, state=None, session=None):
+    values = {'period_beginning': period_beginning,
+              'period_ending': period_ending}
+    values = convert_objects_related_datetimes(values, *values.keys())
+
     query = model_query(context, models.TaskLog, session=session).\
                      filter_by(task_name=task_name).\
-                     filter_by(period_beginning=period_beginning).\
-                     filter_by(period_ending=period_ending)
+                     filter_by(period_beginning=values['period_beginning']).\
+                     filter_by(period_ending=values['period_ending'])
     if host is not None:
         query = query.filter_by(host=host)
     if state is not None:
@@ -5866,11 +5870,14 @@ def task_log_get_all(context, task_name, period_beginning, period_ending,
 
 def task_log_begin_task(context, task_name, period_beginning, period_ending,
                         host, task_items=None, message=None):
+    values = {'period_beginning': period_beginning,
+              'period_ending': period_ending}
+    values = convert_objects_related_datetimes(values, *values.keys())
 
     task = models.TaskLog()
     task.task_name = task_name
-    task.period_beginning = period_beginning
-    task.period_ending = period_ending
+    task.period_beginning = values['period_beginning']
+    task.period_ending = values['period_ending']
     task.host = host
     task.state = "RUNNING"
     if message:

@@ -1162,18 +1162,19 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         instances = [objects.Instance(uuid='foo')]
 
         @classmethod
+        def fake_task_log(*a, **k):
+            pass
+
+        @classmethod
         def fake_get(*a, **k):
             return instances
 
         self.flags(instance_usage_audit=True)
-        self.stubs.Set(compute_utils, 'has_audit_been_run',
-                       lambda *a, **k: False)
+        self.stubs.Set(objects.TaskLog, 'get', fake_task_log)
         self.stubs.Set(objects.InstanceList,
                        'get_active_by_window_joined', fake_get)
-        self.stubs.Set(compute_utils, 'start_instance_usage_audit',
-                       lambda *a, **k: None)
-        self.stubs.Set(compute_utils, 'finish_instance_usage_audit',
-                       lambda *a, **k: None)
+        self.stubs.Set(objects.TaskLog, 'begin_task', fake_task_log)
+        self.stubs.Set(objects.TaskLog, 'end_task', fake_task_log)
 
         self.mox.StubOutWithMock(compute_utils, 'notify_usage_exists')
         compute_utils.notify_usage_exists(self.compute.notifier,

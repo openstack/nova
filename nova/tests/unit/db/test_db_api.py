@@ -5299,8 +5299,8 @@ class TaskLogTestCase(test.TestCase):
         super(TaskLogTestCase, self).setUp()
         self.context = context.get_admin_context()
         now = timeutils.utcnow()
-        self.begin = now - datetime.timedelta(seconds=10)
-        self.end = now - datetime.timedelta(seconds=5)
+        self.begin = timeutils.strtime(now - datetime.timedelta(seconds=10))
+        self.end = timeutils.strtime(now - datetime.timedelta(seconds=5))
         self.task_name = 'fake-task-name'
         self.host = 'fake-host'
         self.message = 'Fake task message'
@@ -5311,8 +5311,10 @@ class TaskLogTestCase(test.TestCase):
         result = db.task_log_get(self.context, self.task_name, self.begin,
                                  self.end, self.host)
         self.assertEqual(result['task_name'], self.task_name)
-        self.assertEqual(result['period_beginning'], self.begin)
-        self.assertEqual(result['period_ending'], self.end)
+        self.assertEqual(result['period_beginning'],
+                         timeutils.parse_strtime(self.begin))
+        self.assertEqual(result['period_ending'],
+                         timeutils.parse_strtime(self.end))
         self.assertEqual(result['host'], self.host)
         self.assertEqual(result['message'], self.message)
 
