@@ -341,6 +341,12 @@ policy_data = """
     "compute_extension:v3:os-console-auth-tokens": "is_admin:True",
     "compute_extension:os-server-external-events:create": "rule:admin_api",
     "compute_extension:v3:os-server-external-events:create": "rule:admin_api",
+    "compute_extension:v3:server-metadata:create": "",
+    "compute_extension:v3:server-metadata:update": "",
+    "compute_extension:v3:server-metadata:update_all": "",
+    "compute_extension:v3:server-metadata:delete": "",
+    "compute_extension:v3:server-metadata:show": "",
+    "compute_extension:v3:server-metadata:index": "",
 
     "network:get_all": "",
     "network:get": "",
