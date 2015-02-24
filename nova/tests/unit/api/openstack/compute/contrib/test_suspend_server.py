@@ -16,6 +16,8 @@ from nova.api.openstack.compute.contrib import admin_actions as \
     suspend_server_v2
 from nova.api.openstack.compute.plugins.v3 import suspend_server as \
     suspend_server_v21
+from nova import exception
+from nova import test
 from nova.tests.unit.api.openstack.compute import admin_only_action_common
 from nova.tests.unit.api.openstack import fakes
 
@@ -70,3 +72,33 @@ class SuspendServerTestsV2(SuspendServerTestsV21):
     def _get_app(self):
         return fakes.wsgi_app(init_only=('servers',),
             fake_auth_context=self.context)
+
+
+class SuspendServerPolicyEnforcementV21(test.NoDBTestCase):
+
+    def setUp(self):
+        super(SuspendServerPolicyEnforcementV21, self).setUp()
+        self.controller = suspend_server_v21.SuspendServerController()
+        self.req = fakes.HTTPRequest.blank('')
+
+    def test_suspend_policy_failed(self):
+        rule_name = "compute_extension:v3:os-suspend-server:suspend"
+        self.policy.set_rules({rule_name: "project:non_fake"})
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.controller._suspend, self.req, fakes.FAKE_UUID,
+            body={'suspend': {}})
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+            exc.format_message())
+
+    def test_resume_policy_failed(self):
+        rule_name = "compute_extension:v3:os-suspend-server:resume"
+        self.policy.set_rules({rule_name: "project:non_fake"})
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.controller._resume, self.req, fakes.FAKE_UUID,
+            body={'resume': {}})
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+            exc.format_message())
