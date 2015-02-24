@@ -6160,7 +6160,14 @@ class LibvirtDriver(driver.ComputeDriver):
                    instance=instance)
 
         ephemerals = driver.block_device_info_get_ephemerals(block_device_info)
-        eph_size = block_device.get_bdm_ephemeral_disk_size(ephemerals)
+
+        # get_bdm_ephemeral_disk_size() will return 0 if the new
+        # instance's requested block device mapping contain no
+        # ephemeral devices. However, we still want to check if
+        # the original instance's ephemeral_gb property was set and
+        # ensure that the new requested flavor ephemeral size is greater
+        eph_size = (block_device.get_bdm_ephemeral_disk_size(ephemerals) or
+                    instance.ephemeral_gb)
 
         # Checks if the migration needs a disk resize down.
         if (flavor['root_gb'] < instance.root_gb or
