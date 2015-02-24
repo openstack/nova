@@ -20,6 +20,7 @@ import functools
 
 from oslo_config import cfg
 from oslo_log import log as logging
+from oslo_utils import strutils
 
 from nova import exception
 from nova.i18n import _LI
@@ -124,7 +125,7 @@ class API(base_api.NetworkAPI):
 
     @wrap_check_policy
     def get_floating_ip(self, context, id):
-        if not utils.is_int_like(id):
+        if not strutils.is_int_like(id):
             raise exception.InvalidID(id=id)
         return objects.FloatingIP.get_by_id(context, id)
 

@@ -428,14 +428,6 @@ def parse_server_string(server_str):
         return ('', '')
 
 
-def is_int_like(val):
-    """Check if a value looks like an int."""
-    try:
-        return str(int(val)) == str(val)
-    except Exception:
-        return False
-
-
 def is_valid_ipv6_cidr(address):
     try:
         netaddr.IPNetwork(address, version=6).cidr
