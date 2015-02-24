@@ -44,7 +44,7 @@ EXP_LINKS = {
 EXP_VERSIONS = {
     "v2.0": {
         "id": "v2.0",
-        "status": "CURRENT",
+        "status": "SUPPORTED",
         "updated": "2011-01-21T11:33:21Z",
         "links": [
             {
@@ -62,7 +62,7 @@ EXP_VERSIONS = {
     },
     "v2.1": {
         "id": "v2.1",
-        "status": "EXPERIMENTAL",
+        "status": "CURRENT",
         "updated": "2013-07-23T11:33:21Z",
         "links": [
             {
@@ -97,7 +97,7 @@ class VersionsTestV20(test.NoDBTestCase):
         expected = [
             {
                 "id": "v2.0",
-                "status": "CURRENT",
+                "status": "SUPPORTED",
                 "updated": "2011-01-21T11:33:21Z",
                 "links": [
                     {
@@ -107,7 +107,7 @@ class VersionsTestV20(test.NoDBTestCase):
             },
             {
                 "id": "v2.1",
-                "status": "EXPERIMENTAL",
+                "status": "CURRENT",
                 "updated": "2013-07-23T11:33:21Z",
                 "links": [
                     {
@@ -138,7 +138,7 @@ class VersionsTestV20(test.NoDBTestCase):
         expected = {
             "version": {
                 "id": "v2.0",
-                "status": "CURRENT",
+                "status": "SUPPORTED",
                 "updated": "2011-01-21T11:33:21Z",
                 "links": [
                     {
@@ -186,7 +186,7 @@ class VersionsTestV20(test.NoDBTestCase):
         "choices": [
             {
                 "id": "v2.0",
-                "status": "CURRENT",
+                "status": "SUPPORTED",
                 "links": [
                     {
                         "href": "http://localhost/v2/images/1",
@@ -203,7 +203,7 @@ class VersionsTestV20(test.NoDBTestCase):
             },
             {
                 "id": "v2.1",
-                "status": "EXPERIMENTAL",
+                "status": "CURRENT",
                 "links": [
                     {
                         "href": "http://localhost/v2.1/images/1",
@@ -245,7 +245,7 @@ class VersionsTestV20(test.NoDBTestCase):
         "choices": [
             {
                 "id": "v2.0",
-                "status": "CURRENT",
+                "status": "SUPPORTED",
                 "links": [
                     {
                         "href": "http://localhost/v2/servers/" + uuid,
@@ -262,7 +262,7 @@ class VersionsTestV20(test.NoDBTestCase):
             },
             {
                 "id": "v2.1",
-                "status": "EXPERIMENTAL",
+                "status": "CURRENT",
                 "links": [
                     {
                         "href": "http://localhost/v2.1/servers/" + uuid,

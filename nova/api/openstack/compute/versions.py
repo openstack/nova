@@ -35,7 +35,7 @@ LINKS = {
 VERSIONS = {
     "v2.0": {
         "id": "v2.0",
-        "status": "CURRENT",
+        "status": "SUPPORTED",
         "updated": "2011-01-21T11:33:21Z",
         "links": [
             {
@@ -53,7 +53,7 @@ VERSIONS = {
     },
     "v2.1": {
         "id": "v2.1",
-        "status": "EXPERIMENTAL",
+        "status": "CURRENT",
         "updated": "2013-07-23T11:33:21Z",
         "links": [
             {
