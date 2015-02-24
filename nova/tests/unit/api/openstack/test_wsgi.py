@@ -26,6 +26,8 @@ from nova.tests.unit import utils
 
 
 class RequestTest(test.NoDBTestCase):
+    header_name = 'X-OpenStack-Nova-API-Version'
+
     def test_content_type_missing(self):
         request = wsgi.Request.blank('/tests/123', method='POST')
         request.body = "<body />"
@@ -159,7 +161,7 @@ class RequestTest(test.NoDBTestCase):
         mock_maxver.return_value = api_version.APIVersionRequest("2.14")
 
         request = wsgi.Request.blank('/')
-        request.headers = {'X-OpenStack-Nova-API-Version': '2.14'}
+        request.headers = {self.header_name: '2.14'}
         request.set_api_version_request()
         self.assertEqual(api_version.APIVersionRequest("2.14"),
                          request.api_version_request)
@@ -169,14 +171,14 @@ class RequestTest(test.NoDBTestCase):
         mock_maxver.return_value = api_version.APIVersionRequest("3.5")
 
         request = wsgi.Request.blank('/')
-        request.headers = {'X-OpenStack-Nova-API-Version': 'latest'}
+        request.headers = {self.header_name: 'latest'}
         request.set_api_version_request()
         self.assertEqual(api_version.APIVersionRequest("3.5"),
                          request.api_version_request)
 
     def test_api_version_request_header_invalid(self):
         request = wsgi.Request.blank('/')
-        request.headers = {'X-OpenStack-Nova-API-Version': '2.1.3'}
+        request.headers = {self.header_name: '2.1.3'}
 
         self.assertRaises(exception.InvalidAPIVersionString,
                           request.set_api_version_request)
@@ -276,6 +278,7 @@ class JSONDeserializerTest(test.NoDBTestCase):
 
 
 class ResourceTest(test.NoDBTestCase):
+    header_name = 'X-OpenStack-Nova-API-Version'
 
     def get_req_id_header_name(self, request):
         header_name = 'x-openstack-request-id'
@@ -313,7 +316,7 @@ class ResourceTest(test.NoDBTestCase):
 
         app = fakes.TestRouterV21(Controller())
         req = webob.Request.blank('/tests')
-        req.headers = {'X-OpenStack-Nova-API-Version': version}
+        req.headers = {self.header_name: version}
         response = req.get_response(app)
         self.assertEqual(response.body, 'success')
         self.assertEqual(response.status_int, 200)
@@ -327,7 +330,7 @@ class ResourceTest(test.NoDBTestCase):
 
         app = fakes.TestRouterV21(Controller())
         req = webob.Request.blank('/tests')
-        req.headers = {'X-OpenStack-Nova-API-Version': invalid_version}
+        req.headers = {self.header_name: invalid_version}
         response = req.get_response(app)
         self.assertEqual(400, response.status_int)
 
