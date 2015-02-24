@@ -19,6 +19,7 @@ Utility functions for ESX Networking.
 """
 from oslo_log import log as logging
 from oslo_vmware import exceptions as vexc
+from oslo_vmware import vim_util as vutil
 
 from nova import exception
 from nova.i18n import _
@@ -28,58 +29,82 @@ from nova.virt.vmwareapi import vm_util
 LOG = logging.getLogger(__name__)
 
 
+def _get_network_obj(session, network_objects, network_name):
+    """Gets the network object for the requested network.
+
+    The network object will be used when creating the VM configuration
+    spec. The network object contains the relevant network details for
+    the specific network type, for example, a distributed port group.
+
+    The method will search for the network_name in the list of
+    network_objects.
+
+    :param session: vCenter soap session
+    :param network_objects: group of networks
+    :param network_name: the requested network
+    :return: network object
+    """
+
+    network_obj = {}
+    # network_objects is actually a RetrieveResult object from vSphere API call
+    for obj_content in network_objects:
+        # the propset attribute "need not be set" by returning API
+        if not hasattr(obj_content, 'propSet'):
+            continue
+        prop_dict = vm_util.propset_dict(obj_content.propSet)
+        network_refs = prop_dict.get('network')
+        if network_refs:
+            network_refs = network_refs.ManagedObjectReference
+            for network in network_refs:
+                # Get network properties
+                if network._type == 'DistributedVirtualPortgroup':
+                    props = session._call_method(vim_util,
+                                "get_dynamic_property", network,
+                                "DistributedVirtualPortgroup", "config")
+                    # NOTE(asomya): This only works on ESXi if the port binding
+                    # is set to ephemeral
+                    # For a VLAN the network name will be the UUID. For a VXLAN
+                    # network this will have a VXLAN prefix and then the
+                    # network name.
+                    if network_name in props.name:
+                        network_obj['type'] = 'DistributedVirtualPortgroup'
+                        network_obj['dvpg'] = props.key
+                        dvs_props = session._call_method(vim_util,
+                                        "get_dynamic_property",
+                                        props.distributedVirtualSwitch,
+                                        "VmwareDistributedVirtualSwitch",
+                                        "uuid")
+                        network_obj['dvsw'] = dvs_props
+                        return network_obj
+                else:
+                    props = session._call_method(vim_util,
+                                "get_dynamic_property", network,
+                                "Network", "summary.name")
+                    if props == network_name:
+                        network_obj['type'] = 'Network'
+                        network_obj['name'] = network_name
+                        return network_obj
+
+
 def get_network_with_the_name(session, network_name="vmnet0", cluster=None):
     """Gets reference to the network whose name is passed as the
     argument.
     """
-    host = vm_util.get_host_ref(session, cluster)
-    if cluster is not None:
-        vm_networks_ret = session._call_method(vim_util,
-                                               "get_dynamic_property", cluster,
-                                               "ClusterComputeResource",
-                                               "network")
-    else:
-        vm_networks_ret = session._call_method(vim_util,
-                                               "get_dynamic_property", host,
-                                               "HostSystem", "network")
-
-    # Meaning there are no networks on the host. suds responds with a ""
-    # in the parent property field rather than a [] in the
-    # ManagedObjectReference property field of the parent
-    if not vm_networks_ret:
-        LOG.debug("No networks configured on host!")
-        return
-    vm_networks = vm_networks_ret.ManagedObjectReference
-    network_obj = {}
-    LOG.debug("Configured networks: %s", vm_networks)
-    for network in vm_networks:
-        # Get network properties
-        if network._type == 'DistributedVirtualPortgroup':
-            props = session._call_method(vim_util,
-                        "get_dynamic_property", network,
-                        "DistributedVirtualPortgroup", "config")
-            # NOTE(asomya): This only works on ESXi if the port binding is
-            # set to ephemeral
-            # For a VLAN the network name will be the UUID. For a VXLAN
-            # network this will have a VXLAN prefix and then the network name.
-            if network_name in props.name:
-                network_obj['type'] = 'DistributedVirtualPortgroup'
-                network_obj['dvpg'] = props.key
-                dvs_props = session._call_method(vim_util,
-                                "get_dynamic_property",
-                                props.distributedVirtualSwitch,
-                                "VmwareDistributedVirtualSwitch", "uuid")
-                network_obj['dvsw'] = dvs_props
-        else:
-            props = session._call_method(vim_util,
-                        "get_dynamic_property", network,
-                        "Network", "summary.name")
-            if props == network_name:
-                network_obj['type'] = 'Network'
-                network_obj['name'] = network_name
-    if (len(network_obj) > 0):
-        return network_obj
-    LOG.debug("Network %s not found on host!", network_name)
+    vm_networks = session._call_method(vim_util,
+                                       'get_object_properties',
+                                       None, cluster,
+                                       'ClusterComputeResource', ['network'])
+    while vm_networks:
+        if vm_networks.objects:
+            network_obj = _get_network_obj(session, vm_networks.objects,
+                                           network_name)
+            if network_obj:
+                session._call_method(vutil, 'cancel_retrieval',
+                                     vm_networks)
+                return network_obj
+        vm_networks = session._call_method(vutil, 'continue_retrieval',
+                                           vm_networks)
+    LOG.debug("Network %s not found on cluster!", network_name)
 
 
 def get_vswitch_for_vlan_interface(session, vlan_interface, cluster=None):
