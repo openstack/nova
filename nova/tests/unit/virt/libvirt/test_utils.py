@@ -24,6 +24,7 @@ from oslo_config import cfg
 from nova.compute import arch
 from nova import exception
 from nova.openstack.common import fileutils
+from nova.storage import linuxscsi
 from nova import test
 from nova import utils
 from nova.virt.disk import api as disk
@@ -747,20 +748,36 @@ disk size: 4.4M
         image_arch = libvirt_utils.get_arch(image_meta)
         self.assertEqual(arch.X86_64, image_arch)
 
-    @mock.patch('nova.utils.execute')
+    @mock.patch.object(linuxscsi, 'echo_scsi_command')
     def test_perform_unit_add_for_s390(self, mock_execute):
         device_number = "0.0.2319"
         target_wwn = "0x50014380242b9751"
         lun = 1
         libvirt_utils.perform_unit_add_for_s390(device_number, target_wwn, lun)
 
-        mock_execute.assert_called_once_with('tee', '-a',
-                                    '/sys/bus/ccw/drivers/zfcp/'
-                                    '0.0.2319/0x50014380242b9751/unit_add',
-                                    run_as_root=True,
-                                    process_input=1)
+        mock_execute.assert_called_once_with(
+            '/sys/bus/ccw/drivers/zfcp/0.0.2319/0x50014380242b9751/unit_add',
+            lun)
 
-    @mock.patch('nova.utils.execute')
+    @mock.patch.object(libvirt_utils.LOG, 'warn')
+    @mock.patch.object(linuxscsi, 'echo_scsi_command')
+    def test_perform_unit_add_for_s390_failed(self, mock_execute, mock_warn):
+        mock_execute.side_effect = processutils.ProcessExecutionError(
+            exit_code=1, stderr='oops')
+        device_number = "0.0.2319"
+        target_wwn = "0x50014380242b9751"
+        lun = 1
+        libvirt_utils.perform_unit_add_for_s390(device_number, target_wwn, lun)
+
+        mock_execute.assert_called_once_with(
+            '/sys/bus/ccw/drivers/zfcp/0.0.2319/0x50014380242b9751/unit_add',
+            lun)
+        # NOTE(mriedem): A better test is to probably make sure that the stderr
+        # message is logged in the warning but that gets messy with Message
+        # objects and mock.call_args.
+        self.assertEqual(1, mock_warn.call_count)
+
+    @mock.patch.object(linuxscsi, 'echo_scsi_command')
     def test_perform_unit_remove_for_s390(self, mock_execute):
         device_number = "0.0.2319"
         target_wwn = "0x50014380242b9751"
@@ -768,7 +785,26 @@ disk size: 4.4M
         libvirt_utils.perform_unit_remove_for_s390(device_number,
                                                    target_wwn, lun)
 
-        mock_execute.assert_called_once_with('tee', '-a',
-                                    '/sys/bus/ccw/drivers/zfcp/'
-                                    '0.0.2319/0x50014380242b9751/unit_remove',
-                                    run_as_root=True, process_input=1)
+        mock_execute.assert_called_once_with(
+            '/sys/bus/ccw/drivers/zfcp/'
+            '0.0.2319/0x50014380242b9751/unit_remove', lun)
+
+    @mock.patch.object(libvirt_utils.LOG, 'warn')
+    @mock.patch.object(linuxscsi, 'echo_scsi_command')
+    def test_perform_unit_remove_for_s390_failed(self, mock_execute,
+                                                 mock_warn):
+        mock_execute.side_effect = processutils.ProcessExecutionError(
+            exit_code=1, stderr='oops')
+        device_number = "0.0.2319"
+        target_wwn = "0x50014380242b9751"
+        lun = 1
+        libvirt_utils.perform_unit_remove_for_s390(device_number,
+                                                   target_wwn, lun)
+
+        mock_execute.assert_called_once_with(
+            '/sys/bus/ccw/drivers/zfcp/'
+            '0.0.2319/0x50014380242b9751/unit_remove', lun)
+        # NOTE(mriedem): A better test is to probably make sure that the stderr
+        # message is logged in the warning but that gets messy with Message
+        # objects and mock.call_args.
+        self.assertEqual(1, mock_warn.call_count)
