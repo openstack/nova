@@ -18,7 +18,7 @@ from nova import network
 
 
 ALIAS = 'os-floating-ip-pools'
-authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
+authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 def _translate_floating_ip_view(pool_name):
@@ -38,7 +38,7 @@ class FloatingIPPoolsController(wsgi.Controller):
     """The Floating IP Pool API controller for the OpenStack API."""
 
     def __init__(self):
-        self.network_api = network.API()
+        self.network_api = network.API(skip_policy_check=True)
         super(FloatingIPPoolsController, self).__init__()
 
     @extensions.expected_errors(())
