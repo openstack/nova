@@ -73,6 +73,27 @@ class TestNeutronDriver(test.NoDBTestCase):
         del expected_sg['security_group']['tenant_id']
         self.assertEqual(expected_sg['security_group'], observed_sg)
 
+    def test_get_with_invalid_name(self):
+        sg_name = 'invalid_name'
+        expected_sg_id = '85cc3048-abc3-43cc-89b3-377341426ac5'
+        list_security_groups = {'security_groups':
+                                [{'name': sg_name,
+                                  'id': expected_sg_id,
+                                  'tenant_id': self.context.tenant,
+                                  'description': 'server',
+                                  'rules': []}
+                                ]}
+        self.moxed_client.list_security_groups(name=sg_name, fields='id',
+            tenant_id=self.context.tenant).AndReturn(list_security_groups)
+
+        self.moxed_client.show_security_group(expected_sg_id).AndRaise(
+            TypeError)
+        self.mox.ReplayAll()
+
+        sg_api = neutron_driver.SecurityGroupAPI()
+        self.assertRaises(exception.SecurityGroupNotFound,
+                          sg_api.get, self.context, name=sg_name)
+
     def test_create_security_group_exceed_quota(self):
         name = 'test-security-group'
         description = 'test-security-group'
