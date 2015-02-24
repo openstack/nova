@@ -27,7 +27,6 @@ import six
 
 from nova import exception
 from nova.i18n import _
-from nova.i18n import _LE
 from nova.i18n import _LW
 from nova.virt.libvirt import utils
 
@@ -35,8 +34,8 @@ from nova.virt.libvirt import utils
 lvm_opts = [
     cfg.StrOpt('volume_clear',
                default='zero',
-               help='Method used to wipe old volumes (valid options are: '
-                    'none, zero, shred)'),
+               choices=('none', 'zero', 'shred'),
+               help='Method used to wipe old volumes.'),
     cfg.IntOpt('volume_clear_size',
                default=0,
                help='Size in MiB to wipe at start of old volumes. 0 => all'),
@@ -215,11 +214,6 @@ def clear_volume(path):
     :param path: logical volume path
     """
     volume_clear = CONF.libvirt.volume_clear
-
-    if volume_clear not in ('none', 'shred', 'zero'):
-        LOG.error(_LE("ignoring unrecognized volume_clear='%s' value"),
-                  volume_clear)
-        volume_clear = 'zero'
 
     if volume_clear == 'none':
         return

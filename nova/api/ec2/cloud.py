@@ -66,8 +66,9 @@ ec2_opts = [
                help='The port of the EC2 API server'),
     cfg.StrOpt('ec2_scheme',
                default='http',
+               choices=('http', 'https'),
                help='The protocol to use when connecting to the EC2 API '
-                    'server (http, https)'),
+                    'server'),
     cfg.StrOpt('ec2_path',
                default='/',
                help='The path prefix used to call the ec2 API server'),

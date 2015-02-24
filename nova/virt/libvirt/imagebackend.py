@@ -45,9 +45,9 @@ from nova.virt.libvirt import utils as libvirt_utils
 __imagebackend_opts = [
     cfg.StrOpt('images_type',
                default='default',
-               help='VM Images format. Acceptable values are: raw, qcow2, lvm,'
-                    ' rbd, default. If default is specified,'
-                    ' then use_cow_images flag is used instead of this one.'),
+               choices=('raw', 'qcow2', 'lvm', 'rbd', 'ploop', 'default'),
+               help='VM Images format. If default is specified, then'
+                    ' use_cow_images flag is used instead of this one.'),
     cfg.StrOpt('images_volume_group',
                help='LVM Volume Group that is used for VM images, when you'
                     ' specify images_type=lvm.'),
@@ -62,9 +62,10 @@ __imagebackend_opts = [
                default='',  # default determined by librados
                help='Path to the ceph configuration file to use'),
     cfg.StrOpt('hw_disk_discard',
-               help='Discard option for nova managed disks (valid options '
-                    'are: ignore, unmap). Need Libvirt(1.0.6) Qemu1.5 '
-                    '(raw format) Qemu1.6(qcow2 format)'),
+               choices=('ignore', 'unmap'),
+               help='Discard option for nova managed disks. Need'
+                    ' Libvirt(1.0.6) Qemu1.5 (raw format) Qemu1.6(qcow2'
+                    ' format)'),
         ]
 
 CONF = cfg.CONF
@@ -104,7 +105,7 @@ class Image(object):
 
         self.source_type = source_type
         self.driver_format = driver_format
-        self.discard_mode = get_hw_disk_discard(CONF.libvirt.hw_disk_discard)
+        self.discard_mode = CONF.libvirt.hw_disk_discard
         self.is_block_dev = is_block_dev
         self.preallocate = False
 
@@ -655,8 +656,7 @@ class Rbd(Image):
                                  ' images_rbd_pool'
                                  ' flag to use rbd images.'))
         self.pool = CONF.libvirt.images_rbd_pool
-        self.discard_mode = get_hw_disk_discard(
-                CONF.libvirt.hw_disk_discard)
+        self.discard_mode = CONF.libvirt.hw_disk_discard
         self.rbd_user = CONF.libvirt.rbd_user
         self.ceph_conf = CONF.libvirt.images_rbd_ceph_conf
 
@@ -863,11 +863,3 @@ class Backend(object):
         """
         backend = self.backend(image_type)
         return backend(instance=instance, path=disk_path)
-
-
-def get_hw_disk_discard(hw_disk_discard):
-    """Check valid and get hw_disk_discard value from Conf.
-    """
-    if hw_disk_discard and hw_disk_discard not in ('unmap', 'ignore'):
-        raise RuntimeError(_('Unknown hw_disk_discard=%s') % hw_disk_discard)
-    return hw_disk_discard

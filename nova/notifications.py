@@ -51,6 +51,7 @@ notify_opts = [
              'in the API service.'),
     cfg.StrOpt('default_notification_level',
                default='INFO',
+               choices=('DEBUG', 'INFO', 'WARN', 'ERROR', 'CRITICAL'),
                help='Default notification level for outgoing notifications'),
     cfg.StrOpt('default_publisher_id',
                help='Default publisher_id for outgoing notifications'),

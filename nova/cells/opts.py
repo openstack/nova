@@ -44,7 +44,8 @@ cells_opts = [
                      'Affects both memory and disk utilization'),
     cfg.StrOpt('cell_type',
                default='compute',
-               help='Type of cell: api or compute'),
+               choices=('api', 'compute'),
+               help='Type of cell'),
     cfg.IntOpt("mute_child_interval",
                default=300,
                help='Number of seconds after which a lack of capability and '
