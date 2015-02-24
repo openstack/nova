@@ -420,7 +420,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
             else:
                 LOG.exception(_LE("Neutron Error:"))
                 raise exc_info[0], exc_info[1], exc_info[2]
-        params = {'device_id': instance['uuid']}
+        params = {'device_id': instance.uuid}
         try:
             ports = neutron.list_ports(**params).get('ports')
         except n_exc.NeutronClientException:
@@ -429,7 +429,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
 
         if not ports:
             msg = (_("instance_id %s could not be found as device id on"
-                   " any ports") % instance['uuid'])
+                   " any ports") % instance.uuid)
             self.raise_not_found(msg)
 
         for port in ports:
@@ -438,7 +438,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
                                 "%(instance)s since the port %(port_id)s "
                                 "does not meet security requirements"),
                             {'name': security_group_name,
-                             'instance': instance['uuid'],
+                             'instance': instance.uuid,
                              'port_id': port['id']})
                 raise exception.SecurityGroupCannotBeApplied()
             if 'security_groups' not in port:
@@ -475,7 +475,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
             else:
                 LOG.exception(_LE("Neutron Error:"))
                 raise exc_info[0], exc_info[1], exc_info[2]
-        params = {'device_id': instance['uuid']}
+        params = {'device_id': instance.uuid}
         try:
             ports = neutron.list_ports(**params).get('ports')
         except n_exc.NeutronClientException:
@@ -484,7 +484,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
 
         if not ports:
             msg = (_("instance_id %s could not be found as device id on"
-                   " any ports") % instance['uuid'])
+                   " any ports") % instance.uuid)
             self.raise_not_found(msg)
 
         found_security_group = False
@@ -514,7 +514,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
             msg = (_("Security group %(security_group_name)s not associated "
                      "with the instance %(instance)s") %
                    {'security_group_name': security_group_name,
-                    'instance': instance['uuid']})
+                    'instance': instance.uuid})
             self.raise_not_found(msg)
 
     def populate_security_groups(self, instance, security_groups):
