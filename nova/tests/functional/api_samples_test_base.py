@@ -284,7 +284,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
         headers['Content-Type'] = 'application/' + self.ctype
         headers['Accept'] = 'application/' + self.ctype
         if api_version:
-            headers['X-OpenStack-Compute-API-Version'] = api_version
+            headers['X-OpenStack-Nova-API-Version'] = api_version
         return self.api.api_request(url, body=body, method=method,
                 headers=headers, strip_version=strip_version)
 

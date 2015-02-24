@@ -9,7 +9,7 @@ to the API while preserving backward compatibility. The basic idea is
 that a user has to explicitly ask for their request to be treated with
 a particular version of the API. So breaking changes can be added to
 the API without breaking users who don't specifically ask for it. This
-is done with an HTTP header ``X-OpenStack-Compute-API-Version`` which
+is done with an HTTP header ``X-OpenStack-Nova-API-Version`` which
 is a monotonically increasing semantic version number starting from
 ``2.1``.
 
@@ -43,7 +43,7 @@ In the controller class::
         ....
 
 This method would only be available if the caller had specified an
-``X-OpenStack-Compute-API-Version`` of >= ``2.4``. If they had specified a
+``X-OpenStack-Nova-API-Version`` of >= ``2.4``. If they had specified a
 lower version (or not specified it and received the default of ``2.1``)
 the server would respond with ``HTTP/404``.
 
@@ -57,7 +57,7 @@ In the controller class::
         ....
 
 This method would only be available if the caller had specified an
-``X-OpenStack-Compute-API-Version`` of <= ``2.4``. If ``2.5`` or later
+``X-OpenStack-Nova-API-Version`` of <= ``2.4``. If ``2.5`` or later
 is specified the server will respond with ``HTTP/404``.
 
 Changing a method's behaviour
@@ -140,11 +140,11 @@ Testing Microversioned API Methods
 ----------------------------------
 
 Testing a microversioned API method is very similar to a normal controller
-method test, you just need to add the ``X-OpenStack-Compute-API-Version``
+method test, you just need to add the ``X-OpenStack-Nova-API-Version``
 header, for example::
 
     req = fakes.HTTPRequest.blank('/testable/url/endpoint')
-    req.headers = {'X-OpenStack-Compute-API-Version': '2.2'}
+    req.headers = {'X-OpenStack-Nova-API-Version': '2.2'}
     req.api_version_request = api_version.APIVersionRequest('2.6')
 
     controller = controller.TestableController()

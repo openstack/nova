@@ -14,7 +14,7 @@ user documentation.
 
   A user can specify a header in the API request:
 
-  X-OpenStack-Compute-API-Version: <version>
+  X-OpenStack-Nova-API-Version: <version>
 
   where <version> is any valid api version for this API.
 
