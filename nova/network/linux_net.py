@@ -73,7 +73,7 @@ linux_net_opts = [
                      ' as dns servers.'),
     cfg.ListOpt('dmz_cidr',
                default=[],
-               help='A list of dmz range that should be accepted'),
+               help='A list of dmz ranges that should be accepted'),
     cfg.MultiStrOpt('force_snat_range',
                default=[],
                help='Traffic to this range will always be snatted to the '
@@ -111,12 +111,12 @@ linux_net_opts = [
                help='The port for the metadata API port'),
     cfg.StrOpt('iptables_top_regex',
                default='',
-               help='Regular expression to match iptables rule that should '
-                    'always be on the top.'),
+               help='Regular expression to match the iptables rule that '
+                    'should always be on the top.'),
     cfg.StrOpt('iptables_bottom_regex',
                default='',
-               help='Regular expression to match iptables rule that should '
-                    'always be on the bottom.'),
+               help='Regular expression to match the iptables rule that '
+                    'should always be on the bottom.'),
     cfg.StrOpt('iptables_drop_action',
                default='DROP',
                help='The table that iptables to jump to when a packet is '
