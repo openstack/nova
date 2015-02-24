@@ -3441,7 +3441,7 @@ class HostAPI(base.Base):
 
     def instance_get_all_by_host(self, context, host_name):
         """Return all instances on the given host."""
-        return self.db.instance_get_all_by_host(context, host_name)
+        return objects.InstanceList.get_by_host(context, host_name)
 
     def task_log_get_all(self, context, task_name, period_beginning,
                          period_ending, host=None, state=None):
