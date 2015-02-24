@@ -171,3 +171,33 @@ class FixedIpTestV2(FixedIpTestV21):
         # NOTE(cyeoh): This test is disabled for the V2 API because it is
         # has poorer input validation.
         pass
+
+
+class MultinicPolicyEnforcementV21(test.NoDBTestCase):
+
+    def setUp(self):
+        super(MultinicPolicyEnforcementV21, self).setUp()
+        self.controller = multinic_v21.MultinicController()
+        self.req = fakes.HTTPRequest.blank('')
+
+    def test_add_fixed_ip_policy_failed(self):
+        rule_name = "compute_extension:v3:os-multinic"
+        self.policy.set_rules({rule_name: "project:non_fake"})
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.controller._add_fixed_ip, self.req, fakes.FAKE_UUID,
+            body={'addFixedIp': {'networkId': fakes.FAKE_UUID}})
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+            exc.format_message())
+
+    def test_remove_fixed_ip_policy_failed(self):
+        rule_name = "compute_extension:v3:os-multinic"
+        self.policy.set_rules({rule_name: "project:non_fake"})
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.controller._remove_fixed_ip, self.req, fakes.FAKE_UUID,
+            body={'removeFixedIp': {'address': "10.0.0.1"}})
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+            exc.format_message())
