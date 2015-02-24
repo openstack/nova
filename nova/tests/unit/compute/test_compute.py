@@ -11411,7 +11411,7 @@ class ComputeInjectedFilesTestCase(BaseTestCase):
                                   expected, None, True, None, False)
 
 
-class CheckConfigDriveTestCase(test.TestCase):
+class CheckConfigDriveTestCase(test.NoDBTestCase):
     # NOTE(sirp): `TestCase` is far too heavyweight for this test, this should
     # probably derive from a `test.FastTestCase` that omits DB and env
     # handling
