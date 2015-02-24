@@ -732,6 +732,7 @@ class Host(object):
         """
         if not self._caps:
             xmlstr = self.get_connection().getCapabilities()
+            LOG.info(_LI("Libvirt host capabilities %s"), xmlstr)
             self._caps = vconfig.LibvirtConfigCaps()
             self._caps.parse_str(xmlstr)
             if hasattr(libvirt, 'VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES'):
