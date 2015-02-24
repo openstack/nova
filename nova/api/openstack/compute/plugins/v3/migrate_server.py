@@ -27,15 +27,13 @@ from nova import exception
 ALIAS = "os-migrate-server"
 
 
-def authorize(context, action_name):
-    action = 'v3:%s:%s' % (ALIAS, action_name)
-    extensions.extension_authorizer('compute', action)(context)
+authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class MigrateServerController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
         super(MigrateServerController, self).__init__(*args, **kwargs)
-        self.compute_api = compute.API()
+        self.compute_api = compute.API(skip_policy_check=True)
 
     @wsgi.response(202)
     @extensions.expected_errors((400, 403, 404, 409))
@@ -43,7 +41,7 @@ class MigrateServerController(wsgi.Controller):
     def _migrate(self, req, id, body):
         """Permit admins to migrate a server to a new host."""
         context = req.environ['nova.context']
-        authorize(context, 'migrate')
+        authorize(context, action='migrate')
 
         instance = common.get_instance(self.compute_api, context, id,
                                        want_objects=True)
@@ -68,7 +66,7 @@ class MigrateServerController(wsgi.Controller):
     def _migrate_live(self, req, id, body):
         """Permit admins to (live) migrate a server to a new host."""
         context = req.environ["nova.context"]
-        authorize(context, 'migrate_live')
+        authorize(context, action='migrate_live')
 
         block_migration = body["os-migrateLive"]["block_migration"]
         disk_over_commit = body["os-migrateLive"]["disk_over_commit"]
