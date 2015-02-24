@@ -15,10 +15,15 @@
 
 """Policy Engine For Nova."""
 
+import logging
+
+from oslo_utils import excutils
+
 from nova import exception
 from nova.openstack.common import policy
 
 
+LOG = logging.getLogger(__name__)
 _ENFORCER = None
 
 
@@ -88,8 +93,16 @@ def enforce(context, action, target, do_raise=True, exc=None):
     credentials = context.to_dict()
     if not exc:
         exc = exception.PolicyNotAuthorized
-    return _ENFORCER.enforce(action, target, credentials, do_raise=do_raise,
-                             exc=exc, action=action)
+    try:
+        result = _ENFORCER.enforce(action, target, credentials,
+                                   do_raise=do_raise, exc=exc, action=action)
+    except Exception:
+        credentials.pop('auth_token', None)
+        with excutils.save_and_reraise_exception():
+            LOG.debug('Policy check for %(action)s failed with credentials '
+                      '%(credentials)s',
+                      {'action': action, 'credentials': credentials})
+    return result
 
 
 def check_is_admin(context):
