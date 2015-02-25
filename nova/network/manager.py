@@ -174,7 +174,7 @@ class RPCAllocateFixedIP(object):
             else:
                 address = None
             # NOTE(vish): if we are not multi_host pass to the network host
-            # NOTE(tr3buchet): but if we are, host came from instance['host']
+            # NOTE(tr3buchet): but if we are, host came from instance.host
             if not network['multi_host']:
                 host = network['host']
             # NOTE(vish): if there is no network host, set one
@@ -215,7 +215,7 @@ class RPCAllocateFixedIP(object):
         network = fixed_ip.network
 
         # NOTE(vish): if we are not multi_host pass to the network host
-        # NOTE(tr3buchet): but if we are, host came from instance['host']
+        # NOTE(tr3buchet): but if we are, host came from instance.host
         if not network.multi_host:
             host = network.host
         if host == self.host:
@@ -1459,12 +1459,12 @@ class NetworkManager(manager.Manager):
 
         instance = objects.Instance.get_by_id(context, instance_id)
         vifs = objects.VirtualInterfaceList.get_by_instance_uuid(
-                context, instance['uuid'])
+                context, instance.uuid)
         LOG.debug('Setup networks on host', instance=instance)
         for vif in vifs:
             network = objects.Network.get_by_id(context, vif.network_id)
             if not network.multi_host:
-                # NOTE (tr3buchet): if using multi_host, host is instance[host]
+                # NOTE (tr3buchet): if using multi_host, host is instance.host
                 host = network['host']
             if self.host == host or host is None:
                 # at this point i am the correct host, or host doesn't

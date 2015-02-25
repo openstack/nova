@@ -25,6 +25,7 @@ from neutronclient.common import exceptions
 from neutronclient.v2_0 import client
 from oslo_config import cfg
 from oslo_serialization import jsonutils
+from oslo_utils import timeutils
 import six
 
 from nova.compute import flavors
@@ -353,13 +354,30 @@ class TestNeutronv2Base(test.TestCase):
         self.addCleanup(self.mox.UnsetStubs)
         self.addCleanup(self.stubs.UnsetAll)
 
+    def _fake_instance_object(self, instance):
+        return fake_instance.fake_instance_obj(self.context, **instance)
+
+    def _fake_instance_info_cache(self, nw_info):
+        info_cache = {}
+        info_cache['instance_uuid'] = str(uuid.uuid4())
+        info_cache['deleted'] = False
+        info_cache['created_at'] = timeutils.utcnow()
+        info_cache['deleted_at'] = timeutils.utcnow()
+        info_cache['updated_at'] = timeutils.utcnow()
+        info_cache['network_info'] = model.NetworkInfo.hydrate(six.text_type(
+                                    jsonutils.dumps(nw_info)))
+        return info_cache
+
+    def _fake_instance_object_with_info_cache(self, instance):
+        expected_attrs = ['info_cache']
+        instance = objects.Instance._from_db_object(self.context,
+               objects.Instance(), fake_instance.fake_db_instance(**instance),
+               expected_attrs=expected_attrs)
+        return instance
+
     def _stub_allocate_for_instance(self, net_idx=1, **kwargs):
-        # TODO(mriedem): Remove this conversion when all neutronv2 APIs are
-        # converted to handling instance objects.
-        self.instance = fake_instance.fake_instance_obj(self.context,
-                                                        **self.instance)
-        self.instance2 = fake_instance.fake_instance_obj(self.context,
-                                                         **self.instance2)
+        self.instance = self._fake_instance_object(self.instance)
+        self.instance2 = self._fake_instance_object(self.instance2)
 
         api = neutronapi.API()
         self.mox.StubOutWithMock(api, 'get_instance_nw_info')
@@ -574,11 +592,6 @@ class TestNeutronv2Base(test.TestCase):
             net_info_cache.append({"network": {"id": port['network_id']},
                                    "id": port['id']})
 
-        instance = copy.copy(self.instance)
-        # This line here does not wrap net_info_cache in jsonutils.dumps()
-        # intentionally to test the other code path when it's not unicode.
-        instance['info_cache'] = {'network_info': net_info_cache}
-
         self.moxed_client.list_ports(
             tenant_id=self.instance['project_id'],
             device_id=self.instance['uuid']).AndReturn(
@@ -605,6 +618,10 @@ class TestNeutronv2Base(test.TestCase):
                 device_owner='network:dhcp').AndReturn(
                     {'ports': []})
         self.mox.ReplayAll()
+
+        self.instance['info_cache'] = self._fake_instance_info_cache(
+            net_info_cache)
+        instance = self._fake_instance_object_with_info_cache(self.instance)
         nw_inf = api.get_instance_nw_info(self.context, instance)
         for i in xrange(0, number):
             self._verify_nw_info(nw_inf, i)
@@ -778,8 +795,10 @@ class TestNeutronv2(TestNeutronv2Base):
         self.mox.ReplayAll()
 
         self.instance['info_cache'] = network_cache
-        instance = copy.copy(self.instance)
-        instance['info_cache'] = network_cache['info_cache']
+        self.instance['info_cache'] = self._fake_instance_info_cache(
+            network_cache['info_cache']['network_info'])
+
+        instance = self._fake_instance_object_with_info_cache(self.instance)
         nw_infs = api.get_instance_nw_info(self.context,
                                            instance,
                                            networks=original_networks,
@@ -813,13 +832,12 @@ class TestNeutronv2(TestNeutronv2Base):
         for port in self.port_data3:
             net_info_cache.append({"network": {"id": port['network_id']},
                                    "id": port['id']})
-        instance = copy.copy(self.instance)
-        instance['info_cache'] = {'network_info':
-                                  six.text_type(
-                                    jsonutils.dumps(net_info_cache))}
+        self.instance['info_cache'] = self._fake_instance_info_cache(
+            net_info_cache)
 
         self.mox.ReplayAll()
 
+        instance = self._fake_instance_object_with_info_cache(self.instance)
         nw_inf = api.get_instance_nw_info(self.context,
                                           instance)
 
@@ -1326,10 +1344,8 @@ class TestNeutronv2(TestNeutronv2Base):
         for port in port_data:
             net_info_cache.append({"network": {"id": port['network_id']},
                                    "id": port['id']})
-        instance = copy.copy(self.instance)
-        instance['info_cache'] = {'network_info':
-                                  six.text_type(
-                                    jsonutils.dumps(net_info_cache))}
+        self.instance['info_cache'] = self._fake_instance_info_cache(
+            net_info_cache)
         api = neutronapi.API()
         neutronapi.get_client(mox.IgnoreArg(), admin=True).AndReturn(
             self.moxed_client)
@@ -1354,6 +1370,7 @@ class TestNeutronv2(TestNeutronv2Base):
 
         self.mox.ReplayAll()
 
+        instance = self._fake_instance_object_with_info_cache(self.instance)
         nwinfo = api.deallocate_port_for_instance(self.context, instance,
                                                   port_data[0]['id'])
         self.assertEqual(len(nwinfo), len(port_data[1:]))
@@ -2173,9 +2190,10 @@ class TestNeutronv2(TestNeutronv2Base):
         address = self.fip_unassociated['floating_ip_address']
         fixed_address = self.port_address2
         fip_id = self.fip_unassociated['id']
+        instance = self._fake_instance_object(self.instance)
 
         search_opts = {'device_owner': 'compute:nova',
-                       'device_id': self.instance['uuid']}
+                       'device_id': instance.uuid}
         self.moxed_client.list_ports(**search_opts).\
             AndReturn({'ports': [self.port_data2[1]]})
         self.moxed_client.list_floatingips(floating_ip_address=address).\
@@ -2183,10 +2201,10 @@ class TestNeutronv2(TestNeutronv2Base):
         self.moxed_client.update_floatingip(
             fip_id, {'floatingip': {'port_id': self.fip_associated['port_id'],
                                     'fixed_ip_address': fixed_address}})
-        self._setup_mock_for_refresh_cache(api, [self.instance])
+        self._setup_mock_for_refresh_cache(api, [instance])
 
         self.mox.ReplayAll()
-        api.associate_floating_ip(self.context, self.instance,
+        api.associate_floating_ip(self.context, instance,
                                   address, fixed_address)
 
     @mock.patch('nova.objects.Instance.get_by_uuid')
@@ -2210,14 +2228,16 @@ class TestNeutronv2(TestNeutronv2Base):
 
         mock_get.return_value = fake_instance.fake_instance_obj(
             self.context, **self.instance)
+        instance2 = self._fake_instance_object(self.instance2)
         self._setup_mock_for_refresh_cache(api, [mock_get.return_value,
-                                                 self.instance2])
+                                                 instance2])
 
         self.mox.ReplayAll()
-        api.associate_floating_ip(self.context, self.instance2,
+        api.associate_floating_ip(self.context, instance2,
                                   address, new_fixed_address)
 
     def test_associate_floating_ip_not_found_fixed_ip(self):
+        instance = self._fake_instance_object(self.instance)
         api = neutronapi.API()
         address = self.fip_associated['floating_ip_address']
         fixed_address = self.fip_associated['fixed_ip_address']
@@ -2230,9 +2250,10 @@ class TestNeutronv2(TestNeutronv2Base):
         self.mox.ReplayAll()
         self.assertRaises(exception.FixedIpNotFoundForAddress,
                           api.associate_floating_ip, self.context,
-                          self.instance, address, fixed_address)
+                          instance, address, fixed_address)
 
     def test_disassociate_floating_ip(self):
+        instance = self._fake_instance_object(self.instance)
         api = neutronapi.API()
         address = self.fip_associated['floating_ip_address']
         fip_id = self.fip_associated['id']
@@ -2241,20 +2262,21 @@ class TestNeutronv2(TestNeutronv2Base):
             AndReturn({'floatingips': [self.fip_associated]})
         self.moxed_client.update_floatingip(
             fip_id, {'floatingip': {'port_id': None}})
-        self._setup_mock_for_refresh_cache(api, [self.instance])
+        self._setup_mock_for_refresh_cache(api, [instance])
 
         self.mox.ReplayAll()
-        api.disassociate_floating_ip(self.context, self.instance, address)
+        api.disassociate_floating_ip(self.context, instance, address)
 
     def test_add_fixed_ip_to_instance(self):
+        instance = self._fake_instance_object(self.instance)
         api = neutronapi.API()
-        self._setup_mock_for_refresh_cache(api, [self.instance])
+        self._setup_mock_for_refresh_cache(api, [instance])
         network_id = 'my_netid1'
         search_opts = {'network_id': network_id}
         self.moxed_client.list_subnets(
             **search_opts).AndReturn({'subnets': self.subnet_data_n})
 
-        search_opts = {'device_id': self.instance['uuid'],
+        search_opts = {'device_id': instance.uuid,
                        'device_owner': 'compute:nova',
                        'network_id': network_id}
         self.moxed_client.list_ports(
@@ -2271,11 +2293,14 @@ class TestNeutronv2(TestNeutronv2Base):
             MyComparator(port_req_body)).AndReturn({'port': port})
 
         self.mox.ReplayAll()
-        api.add_fixed_ip_to_instance(self.context, self.instance, network_id)
+        api.add_fixed_ip_to_instance(self.context,
+                                     instance,
+                                     network_id)
 
     def test_remove_fixed_ip_from_instance(self):
+        instance = self._fake_instance_object(self.instance)
         api = neutronapi.API()
-        self._setup_mock_for_refresh_cache(api, [self.instance])
+        self._setup_mock_for_refresh_cache(api, [instance])
         address = '10.0.0.3'
         zone = 'compute:%s' % self.instance['availability_zone']
         search_opts = {'device_id': self.instance['uuid'],
@@ -2294,7 +2319,8 @@ class TestNeutronv2(TestNeutronv2Base):
             MyComparator(port_req_body)).AndReturn({'port': port})
 
         self.mox.ReplayAll()
-        api.remove_fixed_ip_from_instance(self.context, self.instance, address)
+        api.remove_fixed_ip_from_instance(self.context, instance,
+                                          address)
 
     def test_list_floating_ips_without_l3_support(self):
         api = neutronapi.API()
@@ -2440,8 +2466,7 @@ class TestNeutronv2(TestNeutronv2Base):
 
     def test_build_network_info_model(self):
         api = neutronapi.API()
-        fake_inst = {'project_id': 'fake', 'uuid': 'uuid',
-                     'info_cache': {'network_info': []}}
+        fake_inst = {'project_id': 'fake', 'uuid': 'uuid'}
         fake_ports = [
             # admin_state_up=True and status='ACTIVE' thus vif.active=True
             {'id': 'port1',
@@ -2552,7 +2577,11 @@ class TestNeutronv2(TestNeutronv2Base):
 
         self.mox.ReplayAll()
         neutronapi.get_client('fake')
-        nw_infos = api._build_network_info_model(self.context, fake_inst,
+        instance = self._fake_instance_object(fake_inst)
+        instance.info_cache = objects.InstanceInfoCache.new(
+            self.context, 'fake-uuid')
+        instance.info_cache.network_info = model.NetworkInfo.hydrate([])
+        nw_infos = api._build_network_info_model(self.context, instance,
                                                  fake_nets,
                                                  [fake_ports[2]['id'],
                                                   fake_ports[0]['id'],
@@ -3230,18 +3259,21 @@ class TestNeutronv2Portbinding(TestNeutronv2Base):
     def test_migrate_instance_finish_binding_true(self):
         migration = {'source_compute': self.instance.get('host'),
                      'dest_compute': 'dest_host'}
+        instance = self._fake_instance_object(self.instance)
         self._test_update_port_binding_true('dest_host',
                                             'migrate_instance_finish',
-                                            self.context, self.instance,
+                                            self.context,
+                                            instance,
                                             migration)
 
     def test_migrate_instance_finish_binding_true_exception(self):
         migration = {'source_compute': self.instance.get('host'),
                      'dest_compute': 'dest_host'}
+        instance = self._fake_instance_object(self.instance)
         self._test_update_port_true_exception('dest_host',
                                               'migrate_instance_finish',
                                               self.context,
-                                              self.instance,
+                                              instance,
                                               migration)
 
     def test_setup_instance_network_on_host_false(self):
@@ -3250,16 +3282,18 @@ class TestNeutronv2Portbinding(TestNeutronv2Base):
             'fake_host')
 
     def test_setup_instance_network_on_host_true(self):
+        instance = self._fake_instance_object(self.instance)
         self._test_update_port_binding_true('fake_host',
                                             'setup_instance_network_on_host',
                                             self.context,
-                                            self.instance,
+                                            instance,
                                             'fake_host')
 
     def test_setup_instance_network_on_host_exception(self):
+        instance = self._fake_instance_object(self.instance)
         self._test_update_port_true_exception(
             'fake_host', 'setup_instance_network_on_host',
-            self.context, self.instance, 'fake_host')
+            self.context, instance, 'fake_host')
 
     def test_associate_not_implemented(self):
         api = neutronapi.API()

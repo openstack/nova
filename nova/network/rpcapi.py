@@ -163,11 +163,11 @@ class NetworkAPI(object):
                 kwargs['requested_networks'] = requested_networks
             else:
                 version = '1.0'
-            kwargs['host'] = instance['host']
+            kwargs['host'] = instance.host
             kwargs['instance_id'] = instance.uuid
             kwargs['project_id'] = instance.project_id
         if CONF.multi_host:
-            cctxt = cctxt.prepare(server=instance['host'], version=version)
+            cctxt = cctxt.prepare(server=instance.host, version=version)
         return cctxt.call(ctxt, 'deallocate_for_instance', **kwargs)
 
     def add_fixed_ip_to_instance(self, ctxt, instance_id, rxtx_factor,

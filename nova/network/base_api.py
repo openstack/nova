@@ -44,7 +44,7 @@ def update_instance_cache_with_nw_info(impl, context, instance,
         # NOTE(comstud): The save() method actually handles updating or
         # creating the instance.  We don't need to retrieve the object
         # from the DB first.
-        ic = objects.InstanceInfoCache.new(context, instance['uuid'])
+        ic = objects.InstanceInfoCache.new(context, instance.uuid)
         ic.network_info = nw_info
         ic.save(update_cells=update_cells)
     except Exception:
@@ -71,7 +71,7 @@ def refresh_cache(f):
             msg = _('instance is a required argument to use @refresh_cache')
             raise Exception(msg)
 
-        with lockutils.lock('refresh_cache-%s' % instance['uuid']):
+        with lockutils.lock('refresh_cache-%s' % instance.uuid):
             update_instance_cache_with_nw_info(self, context, instance,
                                                nw_info=res)
         # return the original function's return value
