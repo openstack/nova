@@ -14,19 +14,17 @@
 #    under the License.
 
 from oslo_log import log as logging
+from oslo_serialization import jsonutils
 
-from nova import conductor
 from nova import exception
 from nova.i18n import _LI
+from nova import objects
 
 LOG = logging.getLogger(__name__)
 
 
 class SchedulerReportClient(object):
     """Client class for updating the scheduler."""
-
-    def __init__(self):
-        self.conductor_api = conductor.API()
 
     def update_resource_stats(self, context, name, stats):
         """Creates or updates stats for the desired service.
@@ -45,9 +43,18 @@ class SchedulerReportClient(object):
         else:
             raise exception.ComputeHostNotCreated(name=str(name))
 
-        self.conductor_api.compute_node_update(context,
-                                               {'id': compute_node_id},
-                                               updates)
+        if 'stats' in updates:
+            # NOTE(danms): This is currently pre-serialized for us,
+            # which we don't want if we're using the object. So,
+            # fix it here, and follow up with removing this when the
+            # RT is converted to proper objects.
+            updates['stats'] = jsonutils.loads(updates['stats'])
+        compute_node = objects.ComputeNode(context=context,
+                                           id=compute_node_id)
+        compute_node.obj_reset_changes()
+        for k, v in updates.items():
+            setattr(compute_node, k, v)
+        compute_node.save()
 
         LOG.info(_LI('Compute_service record updated for '
                  '%s') % str(name))
