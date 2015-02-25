@@ -311,7 +311,9 @@ class ResourceTracker(object):
         declared a need for resources, but not necessarily retrieved them from
         the hypervisor layer yet.
         """
-        LOG.info(_LI("Auditing locally available compute resources"))
+        LOG.info(_LI("Auditing locally available compute resources for "
+                     "node %(node)s"),
+                 {'node': self.nodename})
         resources = self.driver.get_available_resource(self.nodename)
 
         if not resources:
@@ -486,23 +488,32 @@ class ResourceTracker(object):
         """
         free_ram_mb = resources['memory_mb'] - resources['memory_mb_used']
         free_disk_gb = resources['local_gb'] - resources['local_gb_used']
-
-        LOG.debug("Hypervisor: free ram (MB): %s" % free_ram_mb)
-        LOG.debug("Hypervisor: free disk (GB): %s" % free_disk_gb)
-
         vcpus = resources['vcpus']
         if vcpus:
             free_vcpus = vcpus - resources['vcpus_used']
             LOG.debug("Hypervisor: free VCPUs: %s" % free_vcpus)
         else:
+            free_vcpus = 'unknown'
             LOG.debug("Hypervisor: VCPU information unavailable")
 
         if ('pci_passthrough_devices' in resources and
                 resources['pci_passthrough_devices']):
             LOG.debug("Hypervisor: assignable PCI devices: %s" %
                 resources['pci_passthrough_devices'])
-        else:
-            LOG.debug("Hypervisor: no assignable PCI devices")
+
+        pci_devices = resources.get('pci_passthrough_devices')
+
+        LOG.debug("Hypervisor/Node resource view: "
+                  "name=%(node)s "
+                  "free_ram=%(free_ram)sMB "
+                  "free_disk=%(free_disk)sGB "
+                  "free_vcpus=%(free_vcpus)s "
+                  "pci_devices=%(pci_devices)s",
+                  {'node': self.nodename,
+                   'free_ram': free_ram_mb,
+                   'free_disk': free_disk_gb,
+                   'free_vcpus': free_vcpus,
+                   'pci_devices': pci_devices})
 
     def _report_final_resource_view(self, resources):
         """Report final calculate of physical memory, used virtual memory,
@@ -510,25 +521,34 @@ class ResourceTracker(object):
         including instance calculations and in-progress resource claims. These
         values will be exposed via the compute node table to the scheduler.
         """
-        LOG.info(_LI("Total physical ram (MB): %(pram)s, "
-                    "total allocated virtual ram (MB): %(vram)s"),
-                    {'pram': resources['memory_mb'],
-                     'vram': resources['memory_mb_used']})
-        LOG.info(_LI("Total physical disk (GB): %(pdisk)s, "
-                    "total allocated virtual disk (GB): %(vdisk)s"),
-                  {'pdisk': resources['local_gb'],
-                   'vdisk': resources['local_gb_used']})
-
         vcpus = resources['vcpus']
         if vcpus:
+            tcpu = vcpus
+            ucpu = resources['vcpus_used']
             LOG.info(_LI("Total usable vcpus: %(tcpu)s, "
                         "total allocated vcpus: %(ucpu)s"),
                         {'tcpu': vcpus, 'ucpu': resources['vcpus_used']})
         else:
-            LOG.info(_LI("Free VCPU information unavailable"))
-
-        if 'pci_stats' in resources:
-            LOG.info(_LI("PCI stats: %s"), resources['pci_stats'])
+            tcpu = 0
+            ucpu = 0
+        pci_stats = resources.get('pci_stats')
+        LOG.info(_LI("Final resource view: "
+                     "name=%(node)s "
+                     "phys_ram=%(phys_ram)sMB "
+                     "used_ram=%(used_ram)sMB "
+                     "phys_disk=%(phys_disk)sGB "
+                     "used_disk=%(used_disk)sGB "
+                     "total_vcpus=%(total_vcpus)s "
+                     "used_vcpus=%(used_vcpus)s "
+                     "pci_stats=%(pci_stats)s"),
+                 {'node': self.nodename,
+                  'phys_ram': resources['memory_mb'],
+                  'used_ram': resources['memory_mb_used'],
+                  'phys_disk': resources['local_gb'],
+                  'used_disk': resources['local_gb_used'],
+                  'total_vcpus': tcpu,
+                  'used_vcpus': ucpu,
+                  'pci_stats': pci_stats})
 
     def _resource_change(self, resources):
         """Check to see if any resouces have changed."""
