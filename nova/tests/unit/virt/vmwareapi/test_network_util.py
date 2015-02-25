@@ -17,7 +17,7 @@
 import collections
 
 import mock
-from oslo.vmware import vim_util
+from oslo_vmware import vim_util
 
 from nova import test
 from nova.tests.unit.virt.vmwareapi import fake

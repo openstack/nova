@@ -21,7 +21,7 @@ import functools
 import inspect
 import logging
 
-from oslo.config import cfg
+from oslo_config import cfg
 import pkg_resources
 import six
 
