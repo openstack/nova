@@ -1253,7 +1253,24 @@ class ComputeManager(manager.Manager):
             LOG.debug("Ignoring event %s", event)
 
     def init_virt_events(self):
-        self.driver.register_event_listener(self.handle_events)
+        if CONF.workarounds.handle_virt_lifecycle_events:
+            self.driver.register_event_listener(self.handle_events)
+        else:
+            # NOTE(mriedem): If the _sync_power_states periodic task is
+            # disabled we should emit a warning in the logs.
+            if CONF.sync_power_state_interval < 0:
+                LOG.warn(_LW('Instance lifecycle events from the compute '
+                             'driver have been disabled. Note that lifecycle '
+                             'changes to an instance outside of the compute '
+                             'service will not be synchronized '
+                             'automatically since the _sync_power_states '
+                             'periodic task is also disabled.'))
+            else:
+                LOG.info(_LI('Instance lifecycle events from the compute '
+                             'driver have been disabled. Note that lifecycle '
+                             'changes to an instance outside of the compute '
+                             'service will only be synchronized by the '
+                             '_sync_power_states periodic task.'))
 
     def init_host(self):
         """Initialization for a standalone compute service."""

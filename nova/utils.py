@@ -111,6 +111,26 @@ workarounds_opts = [
                      'they have previously been evacuated. This can result in '
                       'data loss if undesired. See '
                       'https://launchpad.net/bugs/1419785'),
+    cfg.BoolOpt('handle_virt_lifecycle_events',
+                default=True,
+                help="Whether or not to handle events raised from the compute "
+                     "driver's 'emit_event' method. These are lifecycle "
+                     "events raised from compute drivers that implement the "
+                     "method. An example of a lifecycle event is an instance "
+                     "starting or stopping. If the instance is going through "
+                     "task state changes due to an API operation, like "
+                     "resize, the events are ignored. However, this is an "
+                     "advanced feature which allows the hypervisor to signal "
+                     "to the compute service that an unexpected state change "
+                     "has occurred in an instance and the instance can be "
+                     "shutdown automatically - which can inherently race in "
+                     "reboot operations or when the compute service or host "
+                     "is rebooted, either planned or due to an unexpected "
+                     "outage. Care should be taken when using this and "
+                     "sync_power_state_interval is negative since then if any "
+                     "instances are out of sync between the hypervisor and "
+                     "the Nova database they will have to be synchronized "
+                     "manually. See https://bugs.launchpad.net/bugs/1444630"),
     ]
 CONF = cfg.CONF
 CONF.register_opts(monkey_patch_opts)
