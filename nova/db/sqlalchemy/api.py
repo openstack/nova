@@ -1033,6 +1033,9 @@ def dnsdomain_get_all(context):
 
 
 @require_admin_context
+@_retry_on_deadlock
+@retrying.retry(stop_max_attempt_number=5, retry_on_exception=
+                lambda exc: isinstance(exc, exception.FixedIpAssociateFailed))
 def fixed_ip_associate(context, address, instance_uuid, network_id=None,
                        reserved=False):
     """Keyword arguments:
@@ -1051,10 +1054,8 @@ def fixed_ip_associate(context, address, instance_uuid, network_id=None,
                                filter(network_or_none).\
                                filter_by(reserved=reserved).\
                                filter_by(address=address).\
-                               with_lockmode('update').\
                                first()
-        # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
-        #             then this has concurrency issues
+
         if fixed_ip_ref is None:
             raise exception.FixedIpNotFoundForNetwork(address=address,
                                             network_uuid=network_id)
@@ -1062,10 +1063,23 @@ def fixed_ip_associate(context, address, instance_uuid, network_id=None,
             raise exception.FixedIpAlreadyInUse(address=address,
                                                 instance_uuid=instance_uuid)
 
+        params = {'instance_uuid': instance_uuid}
         if not fixed_ip_ref.network_id:
-            fixed_ip_ref.network_id = network_id
-        fixed_ip_ref.instance_uuid = instance_uuid
-        session.add(fixed_ip_ref)
+            params['network_id'] = network_id
+
+        rows_updated = model_query(context, models.FixedIp, session=session,
+                                   read_deleted="no").\
+                                filter_by(id=fixed_ip_ref.id).\
+                                filter(network_or_none).\
+                                filter_by(reserved=reserved).\
+                                filter_by(address=address).\
+                                update(params, synchronize_session='evaluate')
+
+        if not rows_updated:
+            LOG.debug('The row was updated in a concurrent transaction, '
+                      'we will fetch another row')
+            raise exception.FixedIpAssociateFailed(net=network_id)
+
     return fixed_ip_ref
 
 
