@@ -359,14 +359,20 @@ MIN_LIBVIRT_BLOCKCOMMIT_RELATIVE_VERSION = (1, 2, 7)
 MIN_LIBVIRT_DISCARD_VERSION = (1, 0, 6)
 MIN_QEMU_DISCARD_VERSION = (1, 6, 0)
 REQ_HYPERVISOR_DISCARD = "QEMU"
-# libvirt numa topology support
-MIN_LIBVIRT_NUMA_TOPOLOGY_VERSION = (1, 0, 4)
+# While earlier versions could support NUMA reporting and
+# NUMA placement, not until 1.2.7 was there the ability
+# to pin guest nodes to host nodes, so mandate that. Without
+# this the scheduler cannot make guaranteed decisions, as the
+# guest placement may not match what was requested
+MIN_LIBVIRT_NUMA_VERSION = (1, 2, 7)
+# While earlier versions could support hugepage backed
+# guests, not until 1.2.8 was there the ability to request
+# a particular huge page size. Without this the scheduler
+# cannot make guaranteed decisions, as the huge page size
+# used by the guest may not match what was requested
+MIN_LIBVIRT_HUGEPAGE_VERSION = (1, 2, 8)
 # fsFreeze/fsThaw requirement
 MIN_LIBVIRT_FSFREEZE_VERSION = (1, 2, 5)
-# libvirt mempage size report
-MIN_LIBVIRT_MEMPAGES_VERSION = (1, 2, 8)
-# libvirt memory allocation policy for each guest NUMA node
-MIN_LIBVIRT_MEMNODE_VERSION = (1, 2, 7)
 
 # Hyper-V paravirtualized time source
 MIN_LIBVIRT_HYPERV_TIMER_VERSION = (1, 2, 2)
@@ -3426,6 +3432,15 @@ class LibvirtDriver(driver.ComputeDriver):
                not support NUMA, then guest_cpu_tune and guest_numa_tune
                will be None.
         """
+
+        if (not self._has_numa_support() and
+                instance_numa_topology is not None):
+            # We should not get here, since we should have avoided
+            # reporting NUMA topology from _get_host_numa_topology
+            # in the first place. Just in case of a scheduler
+            # mess up though, raise an exception
+            raise exception.NUMATopologyUnsupported()
+
         topology = self._get_host_numa_topology()
         # We have instance NUMA so translate it to the config class
         guest_cpu_numa_config = self._get_cpu_numa_config_from_instance(
@@ -3521,14 +3536,14 @@ class LibvirtDriver(driver.ComputeDriver):
                 guest_cpu_tune.vcpupin.sort(key=operator.attrgetter("id"))
 
                 guest_numa_tune.memory = numa_mem
+                guest_numa_tune.memnodes = numa_memnodes
 
                 # normalize cell.id
-                for i, cell in enumerate(guest_cpu_numa_config.cells):
+                for i, (cell, memnode) in enumerate(
+                                            zip(guest_cpu_numa_config.cells,
+                                                guest_numa_tune.memnodes)):
                     cell.id = i
-
-                guest_numa_tune.memnodes = self._get_guest_numa_tune_memnodes(
-                                                        guest_cpu_numa_config,
-                                                        numa_memnodes)
+                    memnode.cellid = i
 
                 return GuestNumaConfig(None, guest_cpu_tune,
                                        guest_cpu_numa_config,
@@ -3536,18 +3551,6 @@ class LibvirtDriver(driver.ComputeDriver):
             else:
                 return GuestNumaConfig(allowed_cpus, None,
                                        guest_cpu_numa_config, None)
-
-    def _get_guest_numa_tune_memnodes(self, guest_cpu_numa_config,
-                                      numa_memnodes):
-        if not self._host.has_min_version(MIN_LIBVIRT_MEMNODE_VERSION):
-            return []
-
-        # normalize cell.id
-        for (cell, memnode) in zip(guest_cpu_numa_config.cells,
-                                    numa_memnodes):
-            memnode.cellid = cell.id
-
-        return numa_memnodes
 
     def _get_guest_os_type(self, virt_type):
         """Returns the guest OS type based on virt type."""
@@ -3779,37 +3782,52 @@ class LibvirtDriver(driver.ComputeDriver):
             self._add_rng_device(guest, flavor)
 
     def _get_guest_memory_backing_config(self, inst_topology, numatune):
-        if not self._host.has_min_version(MIN_LIBVIRT_MEMPAGES_VERSION):
+        wantsmempages = False
+        if inst_topology:
+            for cell in inst_topology.cells:
+                if cell.pagesize:
+                    wantsmempages = True
+
+        if not wantsmempages:
             return
+
+        if not self._has_hugepage_support():
+            # We should not get here, since we should have avoided
+            # reporting NUMA topology from _get_host_numa_topology
+            # in the first place. Just in case of a scheduler
+            # mess up though, raise an exception
+            raise exception.MemoryPagesUnsupported()
 
         host_topology = self._get_host_numa_topology()
 
-        membacking = None
-        if inst_topology and host_topology:
-            # Currently libvirt does not support the smallest
-            # pagesize set as a backend memory.
-            # https://bugzilla.redhat.com/show_bug.cgi?id=1173507
-            avail_pagesize = [page.size_kb
-                              for page in host_topology.cells[0].mempages]
-            avail_pagesize.sort()
-            smallest = avail_pagesize[0]
+        if host_topology is None:
+            # As above, we should not get here but just in case...
+            raise exception.MemoryPagesUnsupported()
 
-            pages = []
-            for guest_cellid, inst_cell in enumerate(inst_topology.cells):
-                if inst_cell.pagesize and inst_cell.pagesize > smallest:
-                    for memnode in numatune.memnodes:
-                        if guest_cellid == memnode.cellid:
-                            page = (
-                                vconfig.LibvirtConfigGuestMemoryBackingPage())
-                            page.nodeset = [guest_cellid]
-                            page.size_kb = inst_cell.pagesize
-                            pages.append(page)
-                            break  # Quit early...
-            if pages:
-                membacking = vconfig.LibvirtConfigGuestMemoryBacking()
-                membacking.hugepages = pages
+        # Currently libvirt does not support the smallest
+        # pagesize set as a backend memory.
+        # https://bugzilla.redhat.com/show_bug.cgi?id=1173507
+        avail_pagesize = [page.size_kb
+                          for page in host_topology.cells[0].mempages]
+        avail_pagesize.sort()
+        smallest = avail_pagesize[0]
 
-        return membacking
+        pages = []
+        for guest_cellid, inst_cell in enumerate(inst_topology.cells):
+            if inst_cell.pagesize and inst_cell.pagesize > smallest:
+                for memnode in numatune.memnodes:
+                    if guest_cellid == memnode.cellid:
+                        page = (
+                            vconfig.LibvirtConfigGuestMemoryBackingPage())
+                        page.nodeset = [guest_cellid]
+                        page.size_kb = inst_cell.pagesize
+                        pages.append(page)
+                        break  # Quit early...
+
+        if pages:
+            membacking = vconfig.LibvirtConfigGuestMemoryBacking()
+            membacking.hugepages = pages
+            return membacking
 
     def _get_flavor(self, ctxt, instance, flavor):
         if flavor is not None:
@@ -4701,8 +4719,26 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return jsonutils.dumps(pci_info)
 
+    def _has_numa_support(self):
+        if not self._host.has_min_version(MIN_LIBVIRT_NUMA_VERSION):
+            return False
+
+        if CONF.libvirt.virt_type not in ['qemu', 'kvm']:
+            return False
+
+        return True
+
+    def _has_hugepage_support(self):
+        if not self._host.has_min_version(MIN_LIBVIRT_HUGEPAGE_VERSION):
+            return False
+
+        if CONF.libvirt.virt_type not in ['qemu', 'kvm']:
+            return False
+
+        return True
+
     def _get_host_numa_topology(self):
-        if not self._host.has_min_version(MIN_LIBVIRT_NUMA_TOPOLOGY_VERSION):
+        if not self._has_numa_support():
             return
 
         caps = self._host.get_capabilities()
@@ -4731,17 +4767,21 @@ class LibvirtDriver(driver.ComputeDriver):
             # Filter out singles and empty sibling sets that may be left
             siblings = [sib for sib in siblings if len(sib) > 1]
 
+            mempages = []
+            if self._has_hugepage_support():
+                mempages = [
+                    objects.NUMAPagesTopology(
+                        size_kb=pages.size,
+                        total=pages.total,
+                        used=0)
+                    for pages in cell.mempages]
+
             cell = objects.NUMACell(id=cell.id, cpuset=cpuset,
                                     memory=cell.memory / units.Ki,
                                     cpu_usage=0, memory_usage=0,
                                     siblings=siblings,
                                     pinned_cpus=set([]),
-                                    mempages=[
-                                        objects.NUMAPagesTopology(
-                                            size_kb=pages.size,
-                                            total=pages.total,
-                                            used=0)
-                                    for pages in cell.mempages])
+                                    mempages=mempages)
             cells.append(cell)
 
         return objects.NUMATopology(cells=cells)

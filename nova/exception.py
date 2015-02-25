@@ -1861,3 +1861,11 @@ class UnsupportedPolicyException(Invalid):
 
 class CellMappingNotFound(NotFound):
     msg_fmt = _("Cell %(uuid)s has no mapping.")
+
+
+class NUMATopologyUnsupported(Invalid):
+    msg_fmt = _("Host does not support guests with NUMA topology set")
+
+
+class MemoryPagesUnsupported(Invalid):
+    msg_fmt = _("Host does not support guests with custom memory page sizes")
