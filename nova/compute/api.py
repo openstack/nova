@@ -1941,7 +1941,7 @@ class API(base.Base):
             if uuidutils.is_uuid_like(instance_id):
                 instance = objects.Instance.get_by_uuid(
                     context, instance_id, expected_attrs=expected_attrs)
-            elif utils.is_int_like(instance_id):
+            elif strutils.is_int_like(instance_id):
                 instance = objects.Instance.get_by_id(
                     context, instance_id, expected_attrs=expected_attrs)
             else:
