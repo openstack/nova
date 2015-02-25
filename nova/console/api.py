@@ -16,11 +16,11 @@
 """Handles ConsoleProxy API requests."""
 
 from oslo_config import cfg
+from oslo_utils import uuidutils
 
 from nova.compute import rpcapi as compute_rpcapi
 from nova.console import rpcapi as console_rpcapi
 from nova.db import base
-from nova.openstack.common import uuidutils
 
 CONF = cfg.CONF
 CONF.import_opt('console_topic', 'nova.console.rpcapi')

@@ -33,6 +33,7 @@ from oslo_db.sqlalchemy import utils as sqlalchemyutils
 from oslo_log import log as logging
 from oslo_utils import excutils
 from oslo_utils import timeutils
+from oslo_utils import uuidutils
 import retrying
 import six
 from sqlalchemy import and_
@@ -61,7 +62,6 @@ import nova.context
 from nova.db.sqlalchemy import models
 from nova import exception
 from nova.i18n import _, _LI, _LE, _LW
-from nova.openstack.common import uuidutils
 from nova import quota
 
 db_opts = [

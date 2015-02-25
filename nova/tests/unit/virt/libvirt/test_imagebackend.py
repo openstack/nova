@@ -25,12 +25,12 @@ from oslo_concurrency import lockutils
 from oslo_config import cfg
 from oslo_config import fixture as config_fixture
 from oslo_utils import units
+from oslo_utils import uuidutils
 
 from nova import context
 from nova import exception
 from nova import keymgr
 from nova.openstack.common import imageutils
-from nova.openstack.common import uuidutils
 from nova import test
 from nova.tests.unit import fake_processutils
 from nova.tests.unit.virt.libvirt import fake_libvirt_utils

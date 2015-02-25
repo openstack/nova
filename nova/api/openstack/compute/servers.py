@@ -25,6 +25,7 @@ import oslo_messaging as messaging
 from oslo_utils import netutils
 from oslo_utils import strutils
 from oslo_utils import timeutils
+from oslo_utils import uuidutils
 import six
 import webob
 from webob import exc
@@ -38,7 +39,6 @@ from nova.compute import flavors
 from nova import exception
 from nova.i18n import _
 from nova import objects
-from nova.openstack.common import uuidutils
 from nova import policy
 from nova import utils
 

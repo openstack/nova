@@ -29,12 +29,12 @@ this class.
 import array
 
 from oslo_log import log as logging
+from oslo_utils import uuidutils
 
 from nova import exception
 from nova.i18n import _LW
 from nova.keymgr import key
 from nova.keymgr import key_mgr
-from nova.openstack.common import uuidutils
 from nova import utils
 
 

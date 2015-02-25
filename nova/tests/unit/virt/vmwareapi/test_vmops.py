@@ -16,6 +16,7 @@ import contextlib
 
 import mock
 from oslo_utils import units
+from oslo_utils import uuidutils
 from oslo_vmware import exceptions as vexc
 
 from nova.compute import power_state
@@ -24,7 +25,6 @@ from nova import db
 from nova import exception
 from nova.network import model as network_model
 from nova import objects
-from nova.openstack.common import uuidutils
 from nova import test
 from nova.tests.unit import fake_instance
 import nova.tests.unit.image.fake

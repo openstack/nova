@@ -13,12 +13,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_utils import uuidutils
+
 from nova.api.openstack import common
 from nova.api.openstack.compute.contrib import admin_actions as \
     create_backup_v2
 from nova.api.openstack.compute.plugins.v3 import create_backup as \
     create_backup_v21
-from nova.openstack.common import uuidutils
 from nova import test
 from nova.tests.unit.api.openstack.compute import admin_only_action_common
 from nova.tests.unit.api.openstack import fakes

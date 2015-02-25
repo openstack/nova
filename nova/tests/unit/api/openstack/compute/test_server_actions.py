@@ -19,6 +19,7 @@ import uuid
 import mock
 from mox3 import mox
 from oslo_config import cfg
+from oslo_utils import uuidutils
 import webob
 
 from nova.api.openstack.compute import plugins
@@ -31,7 +32,6 @@ from nova import db
 from nova import exception
 from nova.image import glance
 from nova import objects
-from nova.openstack.common import uuidutils
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_block_device

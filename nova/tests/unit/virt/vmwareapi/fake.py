@@ -24,10 +24,10 @@ import collections
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import units
+from oslo_utils import uuidutils
 from oslo_vmware import exceptions as vexc
 
 from nova import exception
-from nova.openstack.common import uuidutils
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import ds_util
 

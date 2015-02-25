@@ -30,6 +30,7 @@ import mock
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import timeutils
+from oslo_utils import uuidutils
 
 from nova.api.ec2 import cloud
 from nova.api.ec2 import ec2utils
@@ -53,7 +54,6 @@ from nova.network.neutronv2 import api as neutronapi
 from nova import objects
 from nova.objects import base as obj_base
 from nova.openstack.common import policy as common_policy
-from nova.openstack.common import uuidutils
 from nova import policy
 from nova import test
 from nova.tests.unit.api.openstack.compute.contrib import (

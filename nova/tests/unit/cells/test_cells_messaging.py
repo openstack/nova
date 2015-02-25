@@ -25,6 +25,7 @@ from oslo_config import cfg
 import oslo_messaging
 from oslo_serialization import jsonutils
 from oslo_utils import timeutils
+from oslo_utils import uuidutils
 
 from nova.cells import messaging
 from nova.cells import utils as cells_utils
@@ -38,7 +39,6 @@ from nova.network import model as network_model
 from nova import objects
 from nova.objects import base as objects_base
 from nova.objects import fields as objects_fields
-from nova.openstack.common import uuidutils
 from nova import rpc
 from nova import test
 from nova.tests.unit.cells import fakes

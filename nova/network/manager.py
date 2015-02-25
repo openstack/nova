@@ -42,6 +42,7 @@ from oslo_utils import importutils
 from oslo_utils import netutils
 from oslo_utils import strutils
 from oslo_utils import timeutils
+from oslo_utils import uuidutils
 
 from nova import conductor
 from nova import context
@@ -58,7 +59,6 @@ from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import quotas as quotas_obj
 from nova.openstack.common import periodic_task
-from nova.openstack.common import uuidutils
 from nova import servicegroup
 from nova import utils
 

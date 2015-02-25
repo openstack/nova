@@ -12,13 +12,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_utils import uuidutils
+
 from nova.compute import utils as compute_utils
 from nova import db
 from nova import exception
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
-from nova.openstack.common import uuidutils
 from nova import utils
 
 

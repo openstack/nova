@@ -21,6 +21,7 @@ from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_utils import excutils
 from oslo_utils import importutils
+from oslo_utils import uuidutils
 import six
 
 from nova import context
@@ -29,7 +30,6 @@ from nova import exception
 from nova.i18n import _LE, _LI, _LW
 from nova.network import rpcapi as network_rpcapi
 from nova import objects
-from nova.openstack.common import uuidutils
 from nova import quota
 from nova import rpc
 from nova import servicegroup

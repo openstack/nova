@@ -19,6 +19,7 @@ import re
 
 from oslo_log import log as logging
 from oslo_utils import timeutils
+from oslo_utils import uuidutils
 
 from nova import context
 from nova import exception
@@ -28,7 +29,6 @@ from nova.network import model as network_model
 from nova import objects
 from nova.objects import base as obj_base
 from nova.openstack.common import memorycache
-from nova.openstack.common import uuidutils
 
 LOG = logging.getLogger(__name__)
 # NOTE(vish): cache mapping for one week

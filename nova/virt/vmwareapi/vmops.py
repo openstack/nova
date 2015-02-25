@@ -30,6 +30,7 @@ from oslo_log import log as logging
 from oslo_utils import excutils
 from oslo_utils import strutils
 from oslo_utils import units
+from oslo_utils import uuidutils
 from oslo_vmware import exceptions as vexc
 
 from nova.api.metadata import base as instance_metadata
@@ -42,7 +43,6 @@ from nova import context as nova_context
 from nova import exception
 from nova.i18n import _, _LE, _LI, _LW
 from nova import objects
-from nova.openstack.common import uuidutils
 from nova import utils
 from nova.virt import configdrive
 from nova.virt import diagnostics

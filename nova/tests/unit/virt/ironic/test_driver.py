@@ -19,6 +19,7 @@ from ironicclient import exc as ironic_exception
 import mock
 from oslo_config import cfg
 from oslo_serialization import jsonutils
+from oslo_utils import uuidutils
 
 from nova.api.metadata import base as instance_metadata
 from nova.compute import power_state as nova_states
@@ -27,7 +28,6 @@ from nova import context as nova_context
 from nova import exception
 from nova import objects
 from nova.openstack.common import loopingcall
-from nova.openstack.common import uuidutils
 from nova import test
 from nova.tests.unit import fake_instance
 from nova.tests.unit import utils

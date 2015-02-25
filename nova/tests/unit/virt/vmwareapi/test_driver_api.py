@@ -30,6 +30,7 @@ from mox3 import mox
 from oslo_config import cfg
 from oslo_utils import timeutils
 from oslo_utils import units
+from oslo_utils import uuidutils
 from oslo_vmware import exceptions as vexc
 from oslo_vmware import pbm
 from oslo_vmware import vim
@@ -47,7 +48,6 @@ from nova import exception
 from nova.image import glance
 from nova.network import model as network_model
 from nova import objects
-from nova.openstack.common import uuidutils
 from nova import test
 from nova.tests.unit import fake_instance
 import nova.tests.unit.image.fake

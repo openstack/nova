@@ -41,6 +41,7 @@ from oslo_utils import encodeutils
 from oslo_utils import importutils
 from oslo_utils import timeutils
 from oslo_utils import units
+from oslo_utils import uuidutils
 import six
 
 from nova.api.metadata import base as instance_metadata
@@ -59,7 +60,6 @@ from nova.network import model as network_model
 from nova import objects
 from nova.openstack.common import fileutils
 from nova.openstack.common import loopingcall
-from nova.openstack.common import uuidutils
 from nova.pci import manager as pci_manager
 from nova import test
 from nova.tests.unit import fake_block_device
