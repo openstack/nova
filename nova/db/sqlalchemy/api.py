@@ -1912,17 +1912,19 @@ def instance_get_all_by_filters_sort(context, filters, limit=None, marker=None,
         query_prefix = query_prefix.\
                             filter(models.Instance.updated_at >= changes_since)
 
+    deleted = False
     if 'deleted' in filters:
         # Instances can be soft or hard deleted and the query needs to
         # include or exclude both
-        if filters.pop('deleted'):
+        deleted = filters.pop('deleted')
+        if deleted:
             if filters.pop('soft_deleted', True):
-                deleted = or_(
+                delete = or_(
                     models.Instance.deleted == models.Instance.id,
                     models.Instance.vm_state == vm_states.SOFT_DELETED
                     )
                 query_prefix = query_prefix.\
-                    filter(deleted)
+                    filter(delete)
             else:
                 query_prefix = query_prefix.\
                     filter(models.Instance.deleted == models.Instance.id)
@@ -1988,7 +1990,13 @@ def instance_get_all_by_filters_sort(context, filters, limit=None, marker=None,
     # paginate query
     if marker is not None:
         try:
-            marker = _instance_get_by_uuid(context, marker, session=session)
+            if deleted:
+                marker = _instance_get_by_uuid(
+                    context.elevated(read_deleted='yes'), marker,
+                    session=session)
+            else:
+                marker = _instance_get_by_uuid(context,
+                                               marker, session=session)
         except exception.InstanceNotFound:
             raise exception.MarkerNotFound(marker)
     try:

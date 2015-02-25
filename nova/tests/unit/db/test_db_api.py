@@ -420,6 +420,65 @@ class NotDbApiTestCase(DbTestCase):
                               filters={},
                               sort_keys=keys)
 
+    def test_instance_get_deleted_by_filters_sort_keys_paginate(self):
+        '''Verifies sort order with pagination for deleted instances.'''
+        ctxt = context.get_admin_context()
+        # Instances that will reply to the query
+        test1_active = self.create_instance_with_args(
+                            display_name='test1',
+                            vm_state=vm_states.ACTIVE)
+        db.instance_destroy(ctxt, test1_active['uuid'])
+        test1_error = self.create_instance_with_args(
+                           display_name='test1',
+                           vm_state=vm_states.ERROR)
+        db.instance_destroy(ctxt, test1_error['uuid'])
+        test1_error2 = self.create_instance_with_args(
+                            display_name='test1',
+                            vm_state=vm_states.ERROR)
+        db.instance_destroy(ctxt, test1_error2['uuid'])
+        test2_active = self.create_instance_with_args(
+                            display_name='test2',
+                            vm_state=vm_states.ACTIVE)
+        db.instance_destroy(ctxt, test2_active['uuid'])
+        test2_error = self.create_instance_with_args(
+                           display_name='test2',
+                           vm_state=vm_states.ERROR)
+        db.instance_destroy(ctxt, test2_error['uuid'])
+        test2_error2 = self.create_instance_with_args(
+                            display_name='test2',
+                            vm_state=vm_states.ERROR)
+        db.instance_destroy(ctxt, test2_error2['uuid'])
+        # Other instances in the DB, will not match name filter
+        self.create_instance_with_args(display_name='other')
+        self.create_instance_with_args(display_name='other')
+        filters = {'display_name': '%test%', 'deleted': True}
+        # Common sort information for every query
+        sort_keys = ['display_name', 'vm_state', 'created_at']
+        sort_dirs = ['asc', 'desc', 'asc']
+        # Overall correct instance order based on the sort keys
+        correct_order = [test1_error, test1_error2, test1_active,
+                         test2_error, test2_error2, test2_active]
+
+        # Limits of 1, 2, and 3, verify that the instances returned are in the
+        # correct sorted order, update the marker to get the next correct page
+        for limit in range(1, 4):
+            marker = None
+            # Include the maximum number of instances (ie, 6) to ensure that
+            # the last query (with marker pointing to the last instance)
+            # returns 0 servers
+            for i in range(0, 7, limit):
+                if i == len(correct_order):
+                    correct = []
+                else:
+                    correct = correct_order[i:i + limit]
+                insts = self._assert_equals_inst_order(
+                    correct, filters,
+                    sort_keys=sort_keys, sort_dirs=sort_dirs,
+                    limit=limit, marker=marker)
+                if correct:
+                    marker = insts[-1]['uuid']
+                    self.assertEqual(correct[-1]['uuid'], marker)
+
     def test_convert_objects_related_datetimes(self):
 
         t1 = timeutils.utcnow()
