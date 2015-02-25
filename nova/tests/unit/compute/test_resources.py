@@ -136,7 +136,7 @@ def fake_flavor_obj(**updates):
     return flavor
 
 
-class BaseTestCase(test.TestCase):
+class BaseTestCase(test.NoDBTestCase):
 
     def _initialize_used_res_counter(self):
         # Initialize the value for the used resource
@@ -285,7 +285,7 @@ class BaseTestCase(test.TestCase):
         self.assertIsInstance(ext.obj, vcpu.VCPU)
 
 
-class TestVCPU(test.TestCase):
+class TestVCPU(test.NoDBTestCase):
 
     def setUp(self):
         super(TestVCPU, self).setUp()

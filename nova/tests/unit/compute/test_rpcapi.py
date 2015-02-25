@@ -33,7 +33,7 @@ from nova.tests.unit import fake_instance
 CONF = cfg.CONF
 
 
-class ComputeRpcAPITestCase(test.TestCase):
+class ComputeRpcAPITestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(ComputeRpcAPITestCase, self).setUp()

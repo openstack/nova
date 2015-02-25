@@ -35,7 +35,7 @@ class ExtraSpecTestCase(test.NoDBTestCase):
         flavors.validate_extra_spec_keys(key_name_list)
 
 
-class CreateFlavorTestCase(test.TestCase):
+class CreateFlavorTestCase(test.NoDBTestCase):
     def test_create_flavor_ram_error(self):
         args = ("ram_test", "9999999999", "1", "10", "1")
         try:

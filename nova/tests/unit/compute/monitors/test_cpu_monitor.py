@@ -36,7 +36,7 @@ class FakeLibvirt(object):
         return [0, 0, 0, 800, 0, 0, 0, 0]
 
 
-class ComputeDriverCPUMonitorTestCase(test.TestCase):
+class ComputeDriverCPUMonitorTestCase(test.NoDBTestCase):
     def setUp(self):
         super(ComputeDriverCPUMonitorTestCase, self).setUp()
 

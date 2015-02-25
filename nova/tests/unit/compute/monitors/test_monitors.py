@@ -78,7 +78,7 @@ class FakeMonitorClass4(monitors.ResourceMonitorBase):
         raise test.TestingException()
 
 
-class ResourceMonitorBaseTestCase(test.TestCase):
+class ResourceMonitorBaseTestCase(test.NoDBTestCase):
     def setUp(self):
         super(ResourceMonitorBaseTestCase, self).setUp()
         self.monitor = FakeResourceMonitor(None)
@@ -102,7 +102,7 @@ class ResourceMonitorBaseTestCase(test.TestCase):
         self.assertEqual(metrics["foo.metric2"], '99.999')
 
 
-class ResourceMonitorsTestCase(test.TestCase):
+class ResourceMonitorsTestCase(test.NoDBTestCase):
     """Test case for monitors."""
 
     def setUp(self):
