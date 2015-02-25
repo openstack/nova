@@ -144,3 +144,23 @@ class AdminPasswordTestV2(AdminPasswordTestV21):
 
     def _check_status(self, expected_status, res, controller_method):
         self.assertEqual(expected_status, res.status_int)
+
+
+class AdminPasswordPolicyEnforcementV21(test.NoDBTestCase):
+
+    def setUp(self):
+        super(AdminPasswordPolicyEnforcementV21, self).setUp()
+        self.controller = admin_password_v21.AdminPasswordController()
+        self.req = fakes.HTTPRequest.blank('')
+
+    def test_change_password_policy_failed(self):
+        rule_name = "compute_extension:v3:os-admin-password"
+        rule = {rule_name: "project:non_fake"}
+        self.policy.set_rules(rule)
+        body = {'changePassword': {'adminPass': '1234pass'}}
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized, self.controller.change_password,
+            self.req, fakes.FAKE_UUID, body=body)
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+            exc.format_message())
