@@ -5669,22 +5669,38 @@ class LibvirtDriver(driver.ComputeDriver):
             LOG.debug("Live migration monitoring is all done",
                       instance=instance)
 
-    def _fetch_instance_kernel_ramdisk(self, context, instance):
+    def _try_fetch_image(self, context, path, image_id, instance,
+                         fallback_from_host=None):
+        try:
+            libvirt_utils.fetch_image(context, path,
+                                      image_id,
+                                      instance.user_id,
+                                      instance.project_id)
+        except exception.ImageNotFound:
+            if not fallback_from_host:
+                raise
+            LOG.debug("Image %(image_id)s doesn't exist anymore on "
+                      "image service, attempting to copy image "
+                      "from %(host)s",
+                      {'image_id': image_id, 'host': fallback_from_host})
+            libvirt_utils.copy_image(src=path, dest=path,
+                                     host=fallback_from_host,
+                                     receive=True)
+
+    def _fetch_instance_kernel_ramdisk(self, context, instance,
+                                       fallback_from_host=None):
         """Download kernel and ramdisk for instance in instance directory."""
         instance_dir = libvirt_utils.get_instance_path(instance)
         if instance.kernel_id:
-            libvirt_utils.fetch_image(context,
-                                      os.path.join(instance_dir, 'kernel'),
-                                      instance.kernel_id,
-                                      instance.user_id,
-                                      instance.project_id)
+            self._try_fetch_image(context,
+                                  os.path.join(instance_dir, 'kernel'),
+                                  instance.kernel_id,
+                                  instance, fallback_from_host)
             if instance.ramdisk_id:
-                libvirt_utils.fetch_image(context,
-                                          os.path.join(instance_dir,
-                                                       'ramdisk'),
-                                          instance.ramdisk_id,
-                                          instance.user_id,
-                                          instance.project_id)
+                self._try_fetch_image(context,
+                                      os.path.join(instance_dir, 'ramdisk'),
+                                      instance.ramdisk_id,
+                                      instance, fallback_from_host)
 
     def rollback_live_migration_at_destination(self, context, instance,
                                                network_info,
@@ -5742,8 +5758,9 @@ class LibvirtDriver(driver.ComputeDriver):
 
             if not is_shared_block_storage:
                 # Ensure images and backing files are present.
-                self._create_images_and_backing(context, instance,
-                                                instance_dir, disk_info)
+                self._create_images_and_backing(
+                    context, instance, instance_dir, disk_info,
+                    fallback_from_host=instance.host)
 
         if not (is_block_migration or is_shared_instance_path):
             # NOTE(angdraug): when block storage is shared between source and
@@ -5817,8 +5834,35 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return res_data
 
+    def _try_fetch_image_cache(self, image, fetch_func, context, filename,
+                               image_id, instance, size,
+                               fallback_from_host=None):
+        try:
+            image.cache(fetch_func=fetch_func,
+                        context=context,
+                        filename=filename,
+                        image_id=image_id,
+                        user_id=instance.user_id,
+                        project_id=instance.project_id,
+                        size=size)
+        except exception.ImageNotFound:
+            if not fallback_from_host:
+                raise
+            LOG.debug("Image %(image_id)s doesn't exist anymore "
+                      "on image service, attempting to copy "
+                      "image from %(host)s",
+                      {'image_id': image_id, 'host': fallback_from_host})
+
+            def copy_from_host(target, max_size):
+                libvirt_utils.copy_image(src=target,
+                                         dest=target,
+                                         host=fallback_from_host,
+                                         receive=True)
+            image.cache(fetch_func=copy_from_host,
+                        filename=filename)
+
     def _create_images_and_backing(self, context, instance, instance_dir,
-                                   disk_info_json):
+                                   disk_info_json, fallback_from_host=None):
         """:param context: security context
            :param instance:
                nova.db.sqlalchemy.models.Instance object
@@ -5828,6 +5872,9 @@ class LibvirtDriver(driver.ComputeDriver):
                migrating an instance with an old style instance path
            :param disk_info_json:
                json strings specified in get_instance_disk_info
+           :param fallback_from_host:
+               host where we can retrieve images if the glance images are
+               not available.
 
         """
         if not disk_info_json:
@@ -5865,17 +5912,18 @@ class LibvirtDriver(driver.ComputeDriver):
                                 size=swap_mb * units.Mi,
                                 swap_mb=swap_mb)
                 else:
-                    image.cache(fetch_func=libvirt_utils.fetch_image,
-                                context=context,
-                                filename=cache_name,
-                                image_id=instance.image_ref,
-                                user_id=instance.user_id,
-                                project_id=instance.project_id,
-                                size=info['virt_disk_size'])
+                    self._try_fetch_image_cache(image,
+                                                libvirt_utils.fetch_image,
+                                                context, cache_name,
+                                                instance.image_ref,
+                                                instance,
+                                                info['virt_disk_size'],
+                                                fallback_from_host)
 
         # if image has kernel and ramdisk, just download
         # following normal way.
-        self._fetch_instance_kernel_ramdisk(context, instance)
+        self._fetch_instance_kernel_ramdisk(
+            context, instance, fallback_from_host=fallback_from_host)
 
     def post_live_migration(self, context, instance, block_device_info,
                             migrate_data=None):
