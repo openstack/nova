@@ -619,20 +619,6 @@ class AggregateDBApiTestCase(test.TestCase):
         self.assertEqual(r1['fake_key1'], set(['fake_value1']))
         self.assertNotIn('badkey', r1)
 
-    def test_aggregate_metadata_get_by_metadata_key(self):
-        ctxt = context.get_admin_context()
-        values = {'aggregate_id': 'fake_id',
-                  'name': 'fake_aggregate'}
-        aggr = _create_aggregate_with_hosts(context=ctxt, values=values,
-                                            hosts=['bar.openstack.org'],
-                                            metadata={'availability_zone':
-                                                      'az1'})
-        r1 = db.aggregate_metadata_get_by_metadata_key(ctxt, aggr['id'],
-                                                        'availability_zone')
-        self.assertEqual(r1['availability_zone'], set(['az1']))
-        self.assertIn('availability_zone', r1)
-        self.assertNotIn('name', r1)
-
     def test_aggregate_metadata_get_by_host_with_key(self):
         ctxt = context.get_admin_context()
         values2 = {'name': 'fake_aggregate12'}
