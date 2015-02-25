@@ -20,13 +20,22 @@ Leverages websockify.py by Joel Martin
 
 import Cookie
 import socket
+import urlparse
 
 import websockify
 
 from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import context
+from nova import exception
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
+from oslo.config import cfg
+
+CONF = cfg.CONF
+CONF.import_opt('novncproxy_base_url', 'nova.vnc')
+CONF.import_opt('html5proxy_base_url', 'nova.spice', group='spice')
+CONF.import_opt('vnc_enabled', 'nova.vnc')
+CONF.import_opt('enabled', 'nova.spice', group='spice')
 
 LOG = logging.getLogger(__name__)
 
@@ -36,6 +45,20 @@ class NovaWebSocketProxy(websockify.WebSocketProxy):
         websockify.WebSocketProxy.__init__(self, unix_target=None,
                                            target_cfg=None,
                                            ssl_target=None, *args, **kwargs)
+
+    def verify_origin_proto(self, console_type, origin_proto):
+        if console_type == 'novnc':
+            expected_proto = \
+                urlparse.urlparse(CONF.novncproxy_base_url).scheme
+        elif console_type == 'spice-html5':
+            expected_proto = \
+                urlparse.urlparse(CONF.spice.html5proxy_base_url).scheme
+        else:
+            detail = _("Invalid Console Type for WebSocketProxy: '%s'") % \
+                        console_type
+            LOG.audit(detail)
+            raise exception.ValidationError(detail=detail)
+        return origin_proto == expected_proto
 
     def new_client(self):
         """Called after a new WebSocket connection has been established."""
@@ -54,6 +77,28 @@ class NovaWebSocketProxy(websockify.WebSocketProxy):
         if not connect_info:
             LOG.audit("Invalid Token: %s", token)
             raise Exception(_("Invalid Token"))
+
+        # Verify Origin
+        expected_origin_hostname = self.headers.getheader('Host')
+        if ':' in expected_origin_hostname:
+            e = expected_origin_hostname
+            expected_origin_hostname = e.split(':')[0]
+        origin_url = self.headers.getheader('Origin')
+        # missing origin header indicates non-browser client which is OK
+        if origin_url is not None:
+            origin = urlparse.urlparse(origin_url)
+            origin_hostname = origin.hostname
+            origin_scheme = origin.scheme
+            if origin_hostname == '' or origin_scheme == '':
+                detail = _("Origin header not valid.")
+                raise exception.ValidationError(detail=detail)
+            if expected_origin_hostname != origin_hostname:
+                detail = _("Origin header does not match this host.")
+                raise exception.ValidationError(detail=detail)
+            if not self.verify_origin_proto(connect_info['console_type'],
+                                              origin.scheme):
+                detail = _("Origin header protocol does not match this host.")
+                raise exception.ValidationError(detail=detail)
 
         host = connect_info['host']
         port = int(connect_info['port'])
