@@ -175,7 +175,7 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
         result = self.attachments.show(self.req, FAKE_UUID1, FAKE_PORT_ID1)
         self.assertEqual(self.expected_show, result)
 
-    def test_show_invalid(self):
+    def test_show_with_port_not_found(self):
         self.assertRaises(exc.HTTPNotFound,
                           self.attachments.show, self.req, FAKE_UUID2,
                           FAKE_PORT_ID1)
