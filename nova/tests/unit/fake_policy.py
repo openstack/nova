@@ -179,6 +179,8 @@ policy_data = """
     "compute_extension:extended_ips_mac": "",
     "compute_extension:extended_vif_net": "",
     "compute_extension:extended_volumes": "",
+    "compute_extension:v3:ips:index": "",
+    "compute_extension:v3:ips:show": "",
     "compute_extension:v3:os-extended-volumes": "",
     "compute_extension:v3:os-extended-volumes:swap": "",
     "compute_extension:v3:os-extended-volumes:attach": "",
