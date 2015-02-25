@@ -24,12 +24,12 @@ from nova.i18n import _
 
 
 ALIAS = "os-server-diagnostics"
-authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
+authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class ServerDiagnosticsController(wsgi.Controller):
     def __init__(self):
-        self.compute_api = compute.API()
+        self.compute_api = compute.API(skip_policy_check=True)
 
     @extensions.expected_errors((404, 409, 501))
     def index(self, req, server_id):

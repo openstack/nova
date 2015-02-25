@@ -17,6 +17,7 @@ import mock
 from oslo_serialization import jsonutils
 
 from nova.api.openstack import compute
+from nova.api.openstack.compute.plugins.v3 import server_diagnostics
 from nova.compute import api as compute_api
 from nova import exception
 from nova import test
@@ -98,3 +99,21 @@ class ServerDiagnosticsTestV2(ServerDiagnosticsTestV21):
             osapi_compute_ext_list=['Server_diagnostics'])
 
         self.router = compute.APIRouter(init_only=('servers', 'diagnostics'))
+
+
+class ServerDiagnosticsEnforcementV21(test.NoDBTestCase):
+
+    def setUp(self):
+        super(ServerDiagnosticsEnforcementV21, self).setUp()
+        self.controller = server_diagnostics.ServerDiagnosticsController()
+        self.req = fakes.HTTPRequest.blank('')
+
+    def test_get_diagnostics_policy_failed(self):
+        rule_name = "compute_extension:v3:os-server-diagnostics"
+        self.policy.set_rules({rule_name: "project:non_fake"})
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.controller.index, self.req, fakes.FAKE_UUID)
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+            exc.format_message())
