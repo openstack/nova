@@ -3461,7 +3461,7 @@ class LibvirtDriver(driver.ComputeDriver):
             # We have no NUMA topology in the host either,
             # or we can't find a single cell to acomodate the instance
             # TODO(ndipanov): Attempt to spread the instance
-            # accross NUMA nodes and expose the topology to the
+            # across NUMA nodes and expose the topology to the
             # instance as an optimisation
             return GuestNumaConfig(allowed_cpus, None, None, None)
         else:

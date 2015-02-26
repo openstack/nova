@@ -151,10 +151,10 @@ class ExtensionInfoController(wsgi.Controller):
                         extra_ext["name"], extra_ext["alias"])
         discoverable_extensions.update(extra_exts)
 
-        # Supress extensions which we don't want to see in v2
-        for supress_ext in v2_extension_suppress_list:
+        # Suppress extensions which we don't want to see in v2
+        for suppress_ext in v2_extension_suppress_list:
             try:
-                del discoverable_extensions[supress_ext]
+                del discoverable_extensions[suppress_ext]
             except KeyError:
                 pass
 
