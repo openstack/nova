@@ -18,6 +18,7 @@
 
 import sys
 
+from oslo_concurrency import processutils
 from oslo_log import log as logging
 from oslo_reports import guru_meditation_report as gmr
 from oslo_reports import opts as gmr_opts
@@ -45,5 +46,11 @@ def main():
 
     server = service.Service.create(binary='nova-scheduler',
                                     topic=scheduler_rpcapi.RPC_TOPIC)
-    service.serve(server)
+    # Determine the number of workers; if not specified in config, default
+    # to ncpu for the FilterScheduler and 1 for everything else.
+    workers = CONF.scheduler.workers
+    if not workers:
+        workers = (processutils.get_worker_count()
+                   if CONF.scheduler.driver == 'filter_scheduler' else 1)
+    service.serve(server, workers=workers)
     service.wait()
