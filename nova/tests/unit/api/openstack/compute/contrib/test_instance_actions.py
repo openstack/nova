@@ -141,7 +141,8 @@ class InstanceActionsTestV21(test.NoDBTestCase):
             return objects.Instance(uuid=instance_uuid)
 
         def fake_instance_get_by_uuid(context, instance_id, use_slave=False):
-            return {'name': 'fake', 'project_id': context.project_id}
+            return fake_instance.fake_instance_obj(None,
+                **{'name': 'fake', 'project_id': context.project_id})
 
         self.stubs.Set(compute_api.API, 'get', fake_get)
         self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)

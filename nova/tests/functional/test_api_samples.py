@@ -3051,7 +3051,7 @@ class InstanceActionsSampleJsonTest(ApiSampleTestBaseV2):
         super(InstanceActionsSampleJsonTest, self).setUp()
         self.actions = fake_server_actions.FAKE_ACTIONS
         self.events = fake_server_actions.FAKE_EVENTS
-        self.instance = test_utils.get_test_instance()
+        self.instance = test_utils.get_test_instance(obj=True)
 
         def fake_server_action_get_by_request_id(context, uuid, request_id):
             return copy.deepcopy(self.actions[uuid][request_id])
@@ -3068,7 +3068,8 @@ class InstanceActionsSampleJsonTest(ApiSampleTestBaseV2):
 
         def fake_get(self, context, instance_uuid, expected_attrs=None,
                      want_objects=True):
-            return {'uuid': instance_uuid}
+            return fake_instance.fake_instance_obj(
+                None, **{'uuid': instance_uuid})
 
         self.stubs.Set(db, 'action_get_by_request_id',
                        fake_server_action_get_by_request_id)

@@ -59,10 +59,10 @@ def _compute_host(host, instance):
         return host
     if not instance:
         raise exception.NovaException(_('No compute host specified'))
-    if not instance['host']:
+    if not instance.host:
         raise exception.NovaException(_('Unable to find host for '
-                                        'Instance %s') % instance['uuid'])
-    return instance['host']
+                                        'Instance %s') % instance.uuid)
+    return instance.host
 
 
 class ComputeAPI(object):

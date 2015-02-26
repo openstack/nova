@@ -1753,11 +1753,12 @@ class _ComputeAPIUnitTestMixIn(object):
             raise AttributeError  # Random exception
 
         # Should fail if VM state is not valid
-        instance = {'vm_state': vm_states.BUILDING,
+        instance = fake_instance.fake_instance_obj(None, **{
+                    'vm_state': vm_states.BUILDING,
                     'launched_at': timeutils.utcnow(),
                     'locked': False,
                     'availability_zone': 'fake_az',
-                    'uuid': 'fake'}
+                    'uuid': 'fake'})
         volumes = {}
         old_volume_id = uuidutils.generate_uuid()
         volumes[old_volume_id] = {'id': old_volume_id,
@@ -2320,7 +2321,8 @@ class _ComputeAPIUnitTestMixIn(object):
         return self.fake_image['id']
 
     def test_resize_with_disabled_auto_disk_config_fails(self):
-        fake_inst = self._create_instance_with_disabled_disk_config()
+        fake_inst = self._create_instance_with_disabled_disk_config(
+            object=True)
 
         self.assertRaises(exception.AutoDiskConfigDisabledByImage,
                           self.compute_api.resize,

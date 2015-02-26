@@ -15,33 +15,37 @@
 from nova.compute import vm_mode
 from nova import exception
 from nova import test
+from nova.tests.unit import fake_instance
 
 
 class ComputeVMModeTest(test.NoDBTestCase):
 
+    def _fake_object(self, updates):
+        return fake_instance.fake_instance_obj(None, **updates)
+
     def test_case(self):
-        inst = dict(vm_mode="HVM")
+        inst = self._fake_object(dict(vm_mode="HVM"))
         mode = vm_mode.get_from_instance(inst)
         self.assertEqual(mode, "hvm")
 
     def test_legacy_pv(self):
-        inst = dict(vm_mode="pv")
+        inst = self._fake_object(dict(vm_mode="pv"))
         mode = vm_mode.get_from_instance(inst)
         self.assertEqual(mode, "xen")
 
     def test_legacy_hv(self):
-        inst = dict(vm_mode="hv")
+        inst = self._fake_object(dict(vm_mode="hv"))
         mode = vm_mode.get_from_instance(inst)
         self.assertEqual(mode, "hvm")
 
     def test_bogus(self):
-        inst = dict(vm_mode="wibble")
+        inst = self._fake_object(dict(vm_mode="wibble"))
         self.assertRaises(exception.Invalid,
                           vm_mode.get_from_instance,
                           inst)
 
     def test_good(self):
-        inst = dict(vm_mode="hvm")
+        inst = self._fake_object(dict(vm_mode="hvm"))
         mode = vm_mode.get_from_instance(inst)
         self.assertEqual(mode, "hvm")
 

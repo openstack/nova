@@ -280,6 +280,9 @@ class BaseTestCase(test.TestCase):
         fake.restore_nodes()
         super(BaseTestCase, self).tearDown()
 
+    def _fake_instance(self, updates):
+        return fake_instance.fake_instance_obj(None, **updates)
+
     def _create_fake_instance_obj(self, params=None, type_name='m1.tiny',
                                   services=False):
         flavor = flavors.get_flavor_by_name(type_name)
@@ -8850,12 +8853,14 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute_api.delete(self.context, instance)
 
     def test_attach_volume_invalid(self):
+        instance = fake_instance.fake_instance_obj(None, **{
+            'locked': False, 'vm_state': vm_states.ACTIVE,
+            'task_state': None,
+            'launched_at': timeutils.utcnow()})
         self.assertRaises(exception.InvalidDevicePath,
                 self.compute_api.attach_volume,
                 self.context,
-                {'locked': False, 'vm_state': vm_states.ACTIVE,
-                 'task_state': None,
-                 'launched_at': timeutils.utcnow()},
+                instance,
                 None,
                 '/invalid')
 
@@ -8870,20 +8875,24 @@ class ComputeAPITestCase(BaseTestCase):
         self.stubs.Set(cinder.API, 'check_attach', fake)
         self.stubs.Set(cinder.API, 'reserve_volume', fake)
 
+        instance = fake_instance.fake_instance_obj(None, **{
+            'uuid': 'fake_uuid', 'locked': False,
+            'vm_state': vm_states.RESCUED})
         self.assertRaises(exception.InstanceInvalidState,
                 self.compute_api.attach_volume,
                 self.context,
-                {'uuid': 'fake_uuid', 'locked': False,
-                'vm_state': vm_states.RESCUED},
+                instance,
                 None,
                 '/dev/vdb')
 
     def test_no_attach_volume_in_suspended_state(self):
+        instance = fake_instance.fake_instance_obj(None, **{
+            'uuid': 'fake_uuid', 'locked': False,
+            'vm_state': vm_states.SUSPENDED})
         self.assertRaises(exception.InstanceInvalidState,
                 self.compute_api.attach_volume,
                 self.context,
-                {'uuid': 'fake_uuid', 'locked': False,
-                'vm_state': vm_states.SUSPENDED},
+                instance,
                 {'id': 'fake-volume-id'},
                 '/dev/vdb')
 
@@ -8919,15 +8928,15 @@ class ComputeAPITestCase(BaseTestCase):
     def test_vnc_console(self):
         # Make sure we can a vnc console for an instance.
 
-        fake_instance = {'uuid': 'fake_uuid',
-                         'host': 'fake_compute_host'}
+        fake_instance = self._fake_instance(
+            {'uuid': 'fake_uuid', 'host': 'fake_compute_host'})
         fake_console_type = "novnc"
         fake_connect_info = {'token': 'fake_token',
                              'console_type': fake_console_type,
                              'host': 'fake_console_host',
                              'port': 'fake_console_port',
                              'internal_access_path': 'fake_access_path',
-                             'instance_uuid': fake_instance['uuid'],
+                             'instance_uuid': fake_instance.uuid,
                              'access_url': 'fake_console_url'}
 
         rpcapi = compute_rpcapi.ComputeAPI
@@ -8958,15 +8967,15 @@ class ComputeAPITestCase(BaseTestCase):
     def test_spice_console(self):
         # Make sure we can a spice console for an instance.
 
-        fake_instance = {'uuid': 'fake_uuid',
-                         'host': 'fake_compute_host'}
+        fake_instance = self._fake_instance(
+            {'uuid': 'fake_uuid', 'host': 'fake_compute_host'})
         fake_console_type = "spice-html5"
         fake_connect_info = {'token': 'fake_token',
                              'console_type': fake_console_type,
                              'host': 'fake_console_host',
                              'port': 'fake_console_port',
                              'internal_access_path': 'fake_access_path',
-                             'instance_uuid': fake_instance['uuid'],
+                             'instance_uuid': fake_instance.uuid,
                              'access_url': 'fake_console_url'}
 
         rpcapi = compute_rpcapi.ComputeAPI
@@ -8997,15 +9006,15 @@ class ComputeAPITestCase(BaseTestCase):
     def test_rdp_console(self):
         # Make sure we can a rdp console for an instance.
 
-        fake_instance = {'uuid': 'fake_uuid',
-                         'host': 'fake_compute_host'}
+        fake_instance = self._fake_instance({'uuid': 'fake_uuid',
+                         'host': 'fake_compute_host'})
         fake_console_type = "rdp-html5"
         fake_connect_info = {'token': 'fake_token',
                              'console_type': fake_console_type,
                              'host': 'fake_console_host',
                              'port': 'fake_console_port',
                              'internal_access_path': 'fake_access_path',
-                             'instance_uuid': fake_instance['uuid'],
+                             'instance_uuid': fake_instance.uuid,
                              'access_url': 'fake_console_url'}
 
         rpcapi = compute_rpcapi.ComputeAPI
@@ -9036,15 +9045,15 @@ class ComputeAPITestCase(BaseTestCase):
     def test_serial_console(self):
         # Make sure we can  get a serial proxy url for an instance.
 
-        fake_instance = {'uuid': 'fake_uuid',
-                         'host': 'fake_compute_host'}
+        fake_instance = self._fake_instance({'uuid': 'fake_uuid',
+                         'host': 'fake_compute_host'})
         fake_console_type = 'serial'
         fake_connect_info = {'token': 'fake_token',
                              'console_type': fake_console_type,
                              'host': 'fake_serial_host',
                              'port': 'fake_tcp_port',
                              'internal_access_path': 'fake_access_path',
-                             'instance_uuid': fake_instance['uuid'],
+                             'instance_uuid': fake_instance.uuid,
                              'access_url': 'fake_access_url'}
 
         rpcapi = compute_rpcapi.ComputeAPI
@@ -9074,8 +9083,8 @@ class ComputeAPITestCase(BaseTestCase):
                           self.context, instance, 'serial')
 
     def test_console_output(self):
-        fake_instance = {'uuid': 'fake_uuid',
-                         'host': 'fake_compute_host'}
+        fake_instance = self._fake_instance({'uuid': 'fake_uuid',
+                         'host': 'fake_compute_host'})
         fake_tail_length = 699
         fake_console_output = 'fake console output'
 
@@ -9247,44 +9256,44 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_detach_invalid_volume(self):
         # Ensure exception is raised while detaching an un-attached volume
-        instance = {'uuid': 'uuid1',
+        fake_instance = self._fake_instance({'uuid': 'uuid1',
                     'locked': False,
                     'launched_at': timeutils.utcnow(),
                     'vm_state': vm_states.ACTIVE,
-                    'task_state': None}
+                    'task_state': None})
         volume = {'id': 1, 'attach_status': 'detached'}
 
         self.assertRaises(exception.InvalidVolume,
                           self.compute_api.detach_volume, self.context,
-                          instance, volume)
+                          fake_instance, volume)
 
     def test_detach_unattached_volume(self):
         # Ensure exception is raised when volume's idea of attached
         # instance doesn't match.
-        instance = {'uuid': 'uuid1',
+        fake_instance = self._fake_instance({'uuid': 'uuid1',
                     'locked': False,
                     'launched_at': timeutils.utcnow(),
                     'vm_state': vm_states.ACTIVE,
-                    'task_state': None}
+                    'task_state': None})
         volume = {'id': 1, 'attach_status': 'in-use',
                   'instance_uuid': 'uuid2'}
 
         self.assertRaises(exception.VolumeUnattached,
                           self.compute_api.detach_volume, self.context,
-                          instance, volume)
+                          fake_instance, volume)
 
     def test_detach_suspended_instance_fails(self):
-        instance = {'uuid': 'uuid1',
+        fake_instance = self._fake_instance({'uuid': 'uuid1',
                     'locked': False,
                     'launched_at': timeutils.utcnow(),
                     'vm_state': vm_states.SUSPENDED,
-                    'task_state': None}
+                    'task_state': None})
         volume = {'id': 1, 'attach_status': 'in-use',
                   'instance_uuid': 'uuid2'}
 
         self.assertRaises(exception.InstanceInvalidState,
                           self.compute_api.detach_volume, self.context,
-                          instance, volume)
+                          fake_instance, volume)
 
     def test_detach_volume_libvirt_is_down(self):
         # Ensure rollback during detach if libvirt goes down

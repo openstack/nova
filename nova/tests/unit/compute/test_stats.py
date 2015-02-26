@@ -19,12 +19,16 @@ from nova.compute import stats
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova import test
+from nova.tests.unit import fake_instance
 
 
 class StatsTestCase(test.NoDBTestCase):
     def setUp(self):
         super(StatsTestCase, self).setUp()
         self.stats = stats.Stats()
+
+    def _fake_object(self, updates):
+        return fake_instance.fake_instance_obj(None, **updates)
 
     def _create_instance(self, values=None):
         instance = {
@@ -37,7 +41,7 @@ class StatsTestCase(test.NoDBTestCase):
         }
         if values:
             instance.update(values)
-        return instance
+        return self._fake_object(instance)
 
     def test_os_type_count(self):
         os_type = "Linux"
@@ -77,7 +81,7 @@ class StatsTestCase(test.NoDBTestCase):
             "vcpus": 3,
             "uuid": "12-34-56-78-90",
         }
-        self.stats.update_stats_for_instance(instance)
+        self.stats.update_stats_for_instance(self._fake_object(instance))
 
         instance = {
             "os_type": "FreeBSD",
@@ -87,7 +91,7 @@ class StatsTestCase(test.NoDBTestCase):
             "vcpus": 1,
             "uuid": "23-45-67-89-01",
         }
-        self.stats.update_stats_for_instance(instance)
+        self.stats.update_stats_for_instance(self._fake_object(instance))
 
         instance = {
             "os_type": "Linux",
@@ -98,7 +102,7 @@ class StatsTestCase(test.NoDBTestCase):
             "uuid": "34-56-78-90-12",
         }
 
-        self.stats.update_stats_for_instance(instance)
+        self.stats.update_stats_for_instance(self._fake_object(instance))
 
         instance = {
             "os_type": "Linux",
@@ -109,7 +113,7 @@ class StatsTestCase(test.NoDBTestCase):
             "uuid": "34-56-78-90-13",
         }
 
-        self.stats.update_stats_for_instance(instance)
+        self.stats.update_stats_for_instance(self._fake_object(instance))
 
         instance = {
             "os_type": "Linux",
@@ -120,7 +124,7 @@ class StatsTestCase(test.NoDBTestCase):
             "uuid": "34-56-78-90-14",
         }
 
-        self.stats.update_stats_for_instance(instance)
+        self.stats.update_stats_for_instance(self._fake_object(instance))
 
         self.assertEqual(4, self.stats.num_os_type("Linux"))
         self.assertEqual(1, self.stats.num_os_type("FreeBSD"))

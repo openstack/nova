@@ -18,6 +18,7 @@ import copy
 from nova.compute import api as compute_api
 from nova import db
 from nova.tests.functional.v3 import api_sample_base
+from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_server_actions
 from nova.tests.unit import utils as test_utils
 
@@ -29,7 +30,7 @@ class ServerActionsSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
         super(ServerActionsSampleJsonTest, self).setUp()
         self.actions = fake_server_actions.FAKE_ACTIONS
         self.events = fake_server_actions.FAKE_EVENTS
-        self.instance = test_utils.get_test_instance()
+        self.instance = test_utils.get_test_instance(obj=True)
 
         def fake_instance_action_get_by_request_id(context, uuid, request_id):
             return copy.deepcopy(self.actions[uuid][request_id])
@@ -44,8 +45,10 @@ class ServerActionsSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
         def fake_instance_get_by_uuid(context, instance_id):
             return self.instance
 
-        def fake_get(self, context, instance_uuid, **kwargs):
-            return {'uuid': instance_uuid}
+        def fake_get(self, context, instance_uuid, expected_attrs=None,
+                     want_objects=True):
+            return fake_instance.fake_instance_obj(
+                None, **{'uuid': instance_uuid})
 
         self.stubs.Set(db, 'action_get_by_request_id',
                        fake_instance_action_get_by_request_id)
