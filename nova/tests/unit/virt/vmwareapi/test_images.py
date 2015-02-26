@@ -24,6 +24,7 @@ from oslo_utils import units
 from oslo_vmware import rw_handles
 
 from nova import exception
+from nova import objects
 from nova import test
 import nova.tests.unit.image.fake
 from nova.virt.vmwareapi import constants
@@ -51,9 +52,9 @@ class VMwareImagesTestCase(test.NoDBTestCase):
         read_file_handle = mock.MagicMock()
         write_file_handle = mock.MagicMock()
         read_iter = mock.MagicMock()
-        instance = {}
-        instance['image_ref'] = image_data['id']
-        instance['uuid'] = 'fake-uuid'
+        instance = objects.Instance(id=1,
+                                    uuid='fake-uuid',
+                                    image_ref=image_data['id'])
 
         def fake_read_handle(read_iter):
             return read_file_handle
