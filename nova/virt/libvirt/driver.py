@@ -2673,7 +2673,8 @@ class LibvirtDriver(driver.ComputeDriver):
                       disk_mapping, suffix='',
                       disk_images=None, network_info=None,
                       block_device_info=None, files=None,
-                      admin_pass=None, inject_files=True):
+                      admin_pass=None, inject_files=True,
+                      fallback_from_host=None):
         booted_from_volume = self._is_booted_from_volume(
             instance, disk_mapping)
 
@@ -2744,13 +2745,9 @@ class LibvirtDriver(driver.ComputeDriver):
                 fetch_func = clone_fallback_to_fetch
             else:
                 fetch_func = libvirt_utils.fetch_image
-            backend.cache(fetch_func=fetch_func,
-                          context=context,
-                          filename=root_fname,
-                          size=size,
-                          image_id=disk_images['image_id'],
-                          user_id=instance.user_id,
-                          project_id=instance.project_id)
+            self._try_fetch_image_cache(backend, fetch_func, context,
+                                        root_fname, disk_images['image_id'],
+                                        instance, size, fallback_from_host)
 
         # Lookup the filesystem type if required
         os_type_with_default = disk.get_fs_type_for_os_type(instance.os_type)
@@ -6342,7 +6339,8 @@ class LibvirtDriver(driver.ComputeDriver):
         # assume _create_image do nothing if a target file exists.
         self._create_image(context, instance, disk_info['mapping'],
                            network_info=network_info,
-                           block_device_info=None, inject_files=False)
+                           block_device_info=None, inject_files=False,
+                           fallback_from_host=migration.source_compute)
         xml = self._get_guest_xml(context, instance, network_info, disk_info,
                                   image_meta,
                                   block_device_info=block_device_info,
