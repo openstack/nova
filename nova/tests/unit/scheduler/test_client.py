@@ -19,6 +19,7 @@ import oslo_messaging as messaging
 from nova.conductor import api as conductor_api
 from nova import context
 from nova import exception
+from nova import objects
 from nova.scheduler import client as scheduler_client
 from nova.scheduler.client import query as scheduler_query_client
 from nova.scheduler.client import report as scheduler_report_client
@@ -80,6 +81,24 @@ class SchedulerQueryClientTestCase(test.TestCase):
             'fake_request_spec',
             'fake_prop')
 
+    @mock.patch.object(scheduler_rpcapi.SchedulerAPI, 'update_aggregates')
+    def test_update_aggregates(self, mock_update_aggs):
+        aggregates = [objects.Aggregate(id=1)]
+        self.client.update_aggregates(
+            context=self.context,
+            aggregates=aggregates)
+        mock_update_aggs.assert_called_once_with(
+            self.context, aggregates)
+
+    @mock.patch.object(scheduler_rpcapi.SchedulerAPI, 'delete_aggregate')
+    def test_delete_aggregate(self, mock_delete_agg):
+        aggregate = objects.Aggregate(id=1)
+        self.client.delete_aggregate(
+            context=self.context,
+            aggregate=aggregate)
+        mock_delete_agg.assert_called_once_with(
+            self.context, aggregate)
+
 
 class SchedulerClientTestCase(test.TestCase):
 
@@ -120,6 +139,26 @@ class SchedulerClientTestCase(test.TestCase):
         fake_args = ['ctxt', 'fake_spec', 'fake_prop']
         self.client.select_destinations(*fake_args)
         mock_select_destinations.assert_has_calls([mock.call(*fake_args)] * 2)
+
+    @mock.patch.object(scheduler_query_client.SchedulerQueryClient,
+                       'update_aggregates')
+    def test_update_aggregates(self, mock_update_aggs):
+        aggregates = [objects.Aggregate(id=1)]
+        self.client.update_aggregates(
+            context='context',
+            aggregates=aggregates)
+        mock_update_aggs.assert_called_once_with(
+            'context', aggregates)
+
+    @mock.patch.object(scheduler_query_client.SchedulerQueryClient,
+                       'delete_aggregate')
+    def test_delete_aggregate(self, mock_delete_agg):
+        aggregate = objects.Aggregate(id=1)
+        self.client.delete_aggregate(
+            context='context',
+            aggregate=aggregate)
+        mock_delete_agg.assert_called_once_with(
+            'context', aggregate)
 
     @mock.patch.object(scheduler_report_client.SchedulerReportClient,
                        'update_resource_stats')

@@ -32,3 +32,20 @@ class SchedulerQueryClient(object):
         """
         return self.scheduler_rpcapi.select_destinations(
             context, request_spec, filter_properties)
+
+    def update_aggregates(self, context, aggregates):
+        """Updates HostManager internal aggregates information.
+
+        :param aggregates: Aggregate(s) to update
+        :type aggregates: :class:`nova.objects.Aggregate`
+                          or :class:`nova.objects.AggregateList`
+        """
+        self.scheduler_rpcapi.update_aggregates(context, aggregates)
+
+    def delete_aggregate(self, context, aggregate):
+        """Deletes HostManager internal information about a specific aggregate.
+
+        :param aggregate: Aggregate to delete
+        :type aggregate: :class:`nova.objects.Aggregate`
+        """
+        self.scheduler_rpcapi.delete_aggregate(context, aggregate)
