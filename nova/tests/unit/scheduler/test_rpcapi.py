@@ -68,3 +68,15 @@ class SchedulerRpcAPITestCase(test.NoDBTestCase):
                 request_spec='fake_request_spec',
                 filter_properties='fake_prop',
                 version='4.0')
+
+    def test_update_aggregates(self):
+        self._test_scheduler_api('update_aggregates', rpc_method='cast',
+                aggregates='aggregates',
+                version='4.1',
+                fanout=True)
+
+    def test_delete_aggregate(self):
+        self._test_scheduler_api('delete_aggregate', rpc_method='cast',
+                aggregate='aggregate',
+                version='4.1',
+                fanout=True)

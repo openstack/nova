@@ -328,6 +328,34 @@ class HostManager(object):
             for host in agg.hosts:
                 self.host_aggregates_map[host].add(agg.id)
 
+    def update_aggregates(self, aggregates):
+        """Updates internal HostManager information about aggregates."""
+        if isinstance(aggregates, (list, objects.AggregateList)):
+            for agg in aggregates:
+                self._update_aggregate(agg)
+        else:
+            self._update_aggregate(aggregates)
+
+    def _update_aggregate(self, aggregate):
+        self.aggs_by_id[aggregate.id] = aggregate
+        for host in aggregate.hosts:
+            self.host_aggregates_map[host].add(aggregate.id)
+        # Refreshing the mapping dict to remove all hosts that are no longer
+        # part of the aggregate
+        for host in self.host_aggregates_map:
+            if (aggregate.id in self.host_aggregates_map[host]
+                    and host not in aggregate.hosts):
+                self.host_aggregates_map[host].remove(aggregate.id)
+
+    def delete_aggregate(self, aggregate):
+        """Deletes internal HostManager information about a specific aggregate.
+        """
+        if aggregate.id in self.aggs_by_id:
+            del self.aggs_by_id[aggregate.id]
+        for host in aggregate.hosts:
+            if aggregate.id in self.host_aggregates_map[host]:
+                self.host_aggregates_map[host].remove(aggregate.id)
+
     def _choose_host_filters(self, filter_cls_names):
         """Since the caller may specify which filters to use we need
         to have an authoritative list of what is permissible. This

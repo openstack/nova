@@ -87,6 +87,7 @@ class SchedulerAPI(object):
         * 3.1 - Made select_destinations() send flavor object
 
         * 4.0 - Removed backwards compat for Icehouse
+        * 4.1 - Add update_aggregates() and delete_aggregate()
 
 
     '''
@@ -112,3 +113,13 @@ class SchedulerAPI(object):
         cctxt = self.client.prepare(version='4.0')
         return cctxt.call(ctxt, 'select_destinations',
             request_spec=request_spec, filter_properties=filter_properties)
+
+    def update_aggregates(self, ctxt, aggregates):
+        # NOTE(sbauza): Yes, it's a fanout, we need to update all schedulers
+        cctxt = self.client.prepare(fanout=True, version='4.1')
+        cctxt.cast(ctxt, 'update_aggregates', aggregates=aggregates)
+
+    def delete_aggregate(self, ctxt, aggregate):
+        # NOTE(sbauza): Yes, it's a fanout, we need to update all schedulers
+        cctxt = self.client.prepare(fanout=True, version='4.1')
+        cctxt.cast(ctxt, 'delete_aggregate', aggregate=aggregate)
