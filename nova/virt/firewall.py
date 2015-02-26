@@ -166,7 +166,7 @@ class IptablesFirewallDriver(FirewallDriver):
         self.iptables.defer_apply_off()
 
     def unfilter_instance(self, instance, network_info):
-        if self.instance_info.pop(instance['id'], None):
+        if self.instance_info.pop(instance.id, None):
             self.remove_filters_for_instance(instance)
             self.iptables.apply()
         else:
@@ -174,14 +174,14 @@ class IptablesFirewallDriver(FirewallDriver):
                          'filtered'), instance=instance)
 
     def prepare_instance_filter(self, instance, network_info):
-        self.instance_info[instance['id']] = (instance, network_info)
+        self.instance_info[instance.id] = (instance, network_info)
         ipv4_rules, ipv6_rules = self.instance_rules(instance, network_info)
         self.add_filters_for_instance(instance, network_info, ipv4_rules,
                                       ipv6_rules)
-        LOG.debug('Filters added to instance: %s', instance['id'],
+        LOG.debug('Filters added to instance: %s', instance.id,
                   instance=instance)
         self.refresh_provider_fw_rules()
-        LOG.debug('Provider Firewall Rules refreshed: %s', instance['id'],
+        LOG.debug('Provider Firewall Rules refreshed: %s', instance.id,
                   instance=instance)
         # Ensure that DHCP request rule is updated if necessary
         if (self.dhcp_create and not self.dhcp_created):
@@ -255,7 +255,7 @@ class IptablesFirewallDriver(FirewallDriver):
             self.iptables.ipv6['filter'].remove_chain(chain_name)
 
     def _instance_chain_name(self, instance):
-        return 'inst-%s' % (instance['id'],)
+        return 'inst-%s' % (instance.id,)
 
     def _do_basic_rules(self, ipv4_rules, ipv6_rules, network_info):
         # Always drop invalid packets
@@ -398,7 +398,7 @@ class IptablesFirewallDriver(FirewallDriver):
                             objects.InstanceList.get_by_security_group(
                                 ctxt, rule['grantee_group']))
                         for instance in insts:
-                            if instance['info_cache']['deleted']:
+                            if instance.info_cache['deleted']:
                                 LOG.debug('ignoring deleted cache')
                                 continue
                             nw_info = compute_utils.get_nw_info_for_instance(
@@ -463,7 +463,7 @@ class IptablesFirewallDriver(FirewallDriver):
                                          ipv6_rules)
 
     def do_refresh_instance_rules(self, instance):
-        _instance, network_info = self.instance_info[instance['id']]
+        _instance, network_info = self.instance_info[instance.id]
         ipv4_rules, ipv6_rules = self.instance_rules(instance, network_info)
         self._inner_do_refresh_rules(instance, network_info, ipv4_rules,
                                      ipv6_rules)
