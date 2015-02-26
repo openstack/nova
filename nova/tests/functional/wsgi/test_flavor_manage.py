@@ -70,7 +70,7 @@ class FlavorManageFullstack(test.TestCase):
     """
     def setUp(self):
         super(FlavorManageFullstack, self).setUp()
-        self.api = self.useFixture(nova_fixtures.OSAPIFixture()).api
+        self.api = self.useFixture(nova_fixtures.OSAPIFixture()).admin_api
 
     def assertFlavorDbEqual(self, flav, flavdb):
         # a mapping of the REST params to the db fields
