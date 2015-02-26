@@ -2405,10 +2405,15 @@ class ComputeManager(manager.Manager):
                 # Make sure the async call finishes
                 if network_info is not None:
                     network_info.wait(do_raise=False)
+                # if network_info is empty we're likely here because of
+                # network allocation failure. Since nothing can be reused on
+                # rescheduling it's better to deallocate network to eliminate
+                # the chance of orphaned ports in neutron
+                deallocate_networks = False if network_info else True
                 try:
                     self._shutdown_instance(context, instance,
                             block_device_mapping, requested_networks,
-                            try_deallocate_networks=False)
+                            try_deallocate_networks=deallocate_networks)
                 except Exception:
                     ctxt.reraise = False
                     msg = _('Could not clean up failed build,'
