@@ -500,6 +500,7 @@ class HostStateTestCase(test.NoDBTestCase):
     def test_stat_consumption_from_instance(self, numa_usage_mock):
         numa_usage_mock.return_value = 'fake-consumed-once'
         host = host_manager.HostState("fakehost", "fakenode")
+        host.instance_numa_topology = 'fake-instance-topology'
 
         instance = dict(root_gb=0, ephemeral_gb=0, memory_mb=0, vcpus=0,
                         project_id='12345', vm_state=vm_states.BUILDING,
@@ -508,6 +509,7 @@ class HostStateTestCase(test.NoDBTestCase):
         host.consume_from_instance(instance)
         numa_usage_mock.assert_called_once_with(host, instance)
         self.assertEqual('fake-consumed-once', host.numa_topology)
+        self.assertEqual('fake-instance-topology', instance['numa_topology'])
 
         numa_usage_mock.return_value = 'fake-consumed-twice'
         instance = dict(root_gb=0, ephemeral_gb=0, memory_mb=0, vcpus=0,
@@ -515,6 +517,7 @@ class HostStateTestCase(test.NoDBTestCase):
                         task_state=None, os_type='Linux',
                         uuid='fake-uuid', numa_topology=None)
         host.consume_from_instance(instance)
+        self.assertEqual('fake-instance-topology', instance['numa_topology'])
 
         self.assertEqual(2, host.num_instances)
         self.assertEqual(1, host.num_io_ops)
@@ -556,3 +559,21 @@ class HostStateTestCase(test.NoDBTestCase):
         self.assertEqual('string2', host.metrics['res2'].value)
         self.assertEqual('source2', host.metrics['res2'].source)
         self.assertIsInstance(host.numa_topology, six.string_types)
+
+    def test_update_from_compute_node_resets_stashed_numa(self):
+        hyper_ver_int = utils.convert_version_to_int('6.0.0')
+        compute = objects.ComputeNode(
+            memory_mb=0, free_disk_gb=0, local_gb=0, metrics=None,
+            local_gb_used=0, free_ram_mb=0, vcpus=0, vcpus_used=0,
+            disk_available_least=None,
+            updated_at=None, host_ip='127.0.0.1',
+            hypervisor_type='htype',
+            hypervisor_hostname='hostname', cpu_info='cpu_info',
+            supported_hv_specs=[],
+            hypervisor_version=hyper_ver_int,
+            numa_topology=fakes.NUMA_TOPOLOGY._to_json(),
+            stats=None, pci_device_pools=None)
+        host = host_manager.HostState("fakehost", "fakenode")
+        host.instance_numa_topology = 'fake-instance-topology'
+        host.update_from_compute_node(compute)
+        self.assertIsNone(host.instance_numa_topology)
