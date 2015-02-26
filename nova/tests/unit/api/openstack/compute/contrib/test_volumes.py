@@ -856,3 +856,80 @@ class TestAssistedVolumeSnapshotsPolicyEnforcementV21(test.NoDBTestCase):
         self.assertEqual(
             "Policy doesn't allow %s to be performed." % rule_name,
             exc.format_message())
+
+
+class TestVolumeAttachPolicyEnforcementV21(test.NoDBTestCase):
+
+    def setUp(self):
+        super(TestVolumeAttachPolicyEnforcementV21, self).setUp()
+        self.controller = volumes_v21.VolumeAttachmentController()
+        self.req = fakes.HTTPRequest.blank('')
+
+    def _common_policy_check(self, rules, rule_name, func, *arg, **kwarg):
+        self.policy.set_rules(rules)
+        exc = self.assertRaises(
+             exception.PolicyNotAuthorized, func, *arg, **kwarg)
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+            exc.format_message())
+
+    def test_index_volume_attach_policy_failed(self):
+        rule_name = "compute_extension:v3:os-volumes-attachments:index"
+        rules = {rule_name: "project:non_fake"}
+        self._common_policy_check(rules, rule_name,
+                                  self.controller.index, self.req, FAKE_UUID)
+
+    def test_show_volume_attach_policy_failed(self):
+        rule_name = "compute_extension:v3:os-volumes"
+        rules = {"compute_extension:v3:os-volumes-attachments:show": "@",
+                 rule_name: "project:non_fake"}
+        self._common_policy_check(rules, rule_name, self.controller.show,
+                                  self.req, FAKE_UUID, FAKE_UUID_A)
+
+        rule_name = "compute_extension:v3:os-volumes-attachments:show"
+        rules = {"compute_extension:v3:os-volumes": "@",
+                 rule_name: "project:non_fake"}
+        self._common_policy_check(rules, rule_name, self.controller.show,
+                                  self.req, FAKE_UUID, FAKE_UUID_A)
+
+    def test_create_volume_attach_policy_failed(self):
+        rule_name = "compute_extension:v3:os-volumes"
+        rules = {"compute_extension:v3:os-volumes-attachments:create": "@",
+                 rule_name: "project:non_fake"}
+        body = {'volumeAttachment': {'volumeId': FAKE_UUID_A,
+                                    'device': '/dev/fake'}}
+        self._common_policy_check(rules, rule_name, self.controller.create,
+                                  self.req, FAKE_UUID, body=body)
+
+        rule_name = "compute_extension:v3:os-volumes-attachments:create"
+        rules = {"compute_extension:v3:os-volumes": "@",
+                 rule_name: "project:non_fake"}
+        self._common_policy_check(rules, rule_name, self.controller.create,
+                                  self.req, FAKE_UUID, body=body)
+
+    def test_update_volume_attach_policy_failed(self):
+        rule_name = "compute_extension:v3:os-volumes"
+        rules = {"compute_extension:v3:os-volumes-attachments:update": "@",
+                 rule_name: "project:non_fake"}
+        body = {'volumeAttachment': {'volumeId': FAKE_UUID_B}}
+        self._common_policy_check(rules, rule_name, self.controller.update,
+                                  self.req, FAKE_UUID, FAKE_UUID_A, body=body)
+
+        rule_name = "compute_extension:v3:os-volumes-attachments:update"
+        rules = {"compute_extension:v3:os-volumes": "@",
+                 rule_name: "project:non_fake"}
+        self._common_policy_check(rules, rule_name, self.controller.update,
+                                  self.req, FAKE_UUID, FAKE_UUID_A, body=body)
+
+    def test_delete_volume_attach_policy_failed(self):
+        rule_name = "compute_extension:v3:os-volumes"
+        rules = {"compute_extension:v3:os-volumes-attachments:delete": "@",
+                 rule_name: "project:non_fake"}
+        self._common_policy_check(rules, rule_name, self.controller.delete,
+                                  self.req, FAKE_UUID, FAKE_UUID_A)
+
+        rule_name = "compute_extension:v3:os-volumes-attachments:delete"
+        rules = {"compute_extension:v3:os-volumes": "@",
+                 rule_name: "project:non_fake"}
+        self._common_policy_check(rules, rule_name, self.controller.delete,
+                                  self.req, FAKE_UUID, FAKE_UUID_A)

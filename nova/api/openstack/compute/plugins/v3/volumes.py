@@ -30,9 +30,8 @@ from nova import objects
 from nova import volume
 
 ALIAS = "os-volumes"
-authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
-authorize_attach = extensions.extension_authorizer('compute',
-                                                   'v3:os-volumes-attachments')
+authorize = extensions.os_compute_authorizer(ALIAS)
+authorize_attach = extensions.os_compute_authorizer('os-volumes-attachments')
 
 
 def _translate_volume_detail_view(context, vol):
@@ -217,7 +216,7 @@ class VolumeAttachmentController(wsgi.Controller):
     """
 
     def __init__(self):
-        self.compute_api = compute.API()
+        self.compute_api = compute.API(skip_policy_check=True)
         self.volume_api = volume.API()
         super(VolumeAttachmentController, self).__init__()
 
