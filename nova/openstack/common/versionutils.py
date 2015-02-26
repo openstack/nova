@@ -17,6 +17,7 @@
 Helpers for comparing version strings.
 """
 
+import copy
 import functools
 import inspect
 import logging
@@ -32,11 +33,17 @@ LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
 
 
-opts = [
+deprecated_opts = [
     cfg.BoolOpt('fatal_deprecations',
                 default=False,
                 help='Enables or disables fatal status of deprecations.'),
 ]
+
+
+def list_opts():
+    """Entry point for oslo.config-generator.
+    """
+    return [(None, copy.deepcopy(deprecated_opts))]
 
 
 class deprecated(object):
@@ -230,7 +237,7 @@ def report_deprecated_feature(logger, msg, *args, **kwargs):
              fatal deprecations.
     """
     stdmsg = _("Deprecated: %s") % msg
-    CONF.register_opts(opts)
+    CONF.register_opts(deprecated_opts)
     if CONF.fatal_deprecations:
         logger.critical(stdmsg, *args, **kwargs)
         raise DeprecatedConfig(msg=stdmsg)
