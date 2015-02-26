@@ -712,7 +712,7 @@ class NoMoreNetworks(NovaException):
     msg_fmt = _("No more available networks.")
 
 
-class NetworkNotFoundForProject(NotFound):
+class NetworkNotFoundForProject(NetworkNotFound):
     msg_fmt = _("Either network uuid %(network_uuid)s is not present or "
                 "is not assigned to the project %(project_id)s.")
 
@@ -1616,17 +1616,17 @@ class PciDeviceNotFoundById(NotFound):
     msg_fmt = _("PCI device %(id)s not found")
 
 
-class PciDeviceNotFound(NovaException):
+class PciDeviceNotFound(NotFound):
     msg_fmt = _("PCI Device %(node_id)s:%(address)s not found.")
 
 
-class PciDeviceInvalidStatus(NovaException):
+class PciDeviceInvalidStatus(Invalid):
     msg_fmt = _(
         "PCI device %(compute_node_id)s:%(address)s is %(status)s "
         "instead of %(hopestatus)s")
 
 
-class PciDeviceInvalidOwner(NovaException):
+class PciDeviceInvalidOwner(Invalid):
     msg_fmt = _(
         "PCI device %(compute_node_id)s:%(address)s is owned by %(owner)s "
         "instead of %(hopeowner)s")
@@ -1643,7 +1643,7 @@ class PciDevicePoolEmpty(NovaException):
         "from empty pool")
 
 
-class PciInvalidAlias(NovaException):
+class PciInvalidAlias(Invalid):
     msg_fmt = _("Invalid PCI alias definition: %(reason)s")
 
 
@@ -1661,7 +1661,7 @@ class PciConfigInvalidWhitelist(Invalid):
     msg_fmt = _("Invalid PCI devices Whitelist config %(reason)s")
 
 
-class PciTrackerInvalidNodeId(NovaException):
+class PciTrackerInvalidNodeId(Invalid):
     msg_fmt = _("Cannot change %(node_id)s to %(new_node_id)s")
 
 
@@ -1750,7 +1750,7 @@ class ImageNUMATopologyIncomplete(Invalid):
                 "NUMA nodes")
 
 
-class ImageNUMATopologyForbidden(Invalid):
+class ImageNUMATopologyForbidden(Forbidden):
     msg_fmt = _("Image property '%(name)s' is not permitted to override "
                 "NUMA configuration set against the flavor")
 
@@ -1846,7 +1846,7 @@ class CPUPinningInvalid(Invalid):
                 "pinned set %(pinned)s")
 
 
-class ImageCPUPinningForbidden(Invalid):
+class ImageCPUPinningForbidden(Forbidden):
     msg_fmt = _("Image property 'hw_cpu_policy' is not permitted to override "
                 "CPU pinning policy set against the flavor")
 
