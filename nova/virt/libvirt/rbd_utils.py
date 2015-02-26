@@ -257,7 +257,7 @@ class RBDDriver(object):
         with RADOSClient(self, self.pool) as client:
 
             def belongs_to_instance(disk):
-                return disk.startswith(instance['uuid'])
+                return disk.startswith(instance.uuid)
 
             volumes = rbd.RBD().list(client.ioctx)
             for volume in filter(belongs_to_instance, volumes):

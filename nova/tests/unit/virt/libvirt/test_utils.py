@@ -26,6 +26,7 @@ from nova import exception
 from nova.openstack.common import fileutils
 from nova.storage import linuxscsi
 from nova import test
+from nova.tests.unit import fake_instance
 from nova import utils
 from nova.virt.disk import api as disk
 from nova.virt import images
@@ -723,7 +724,8 @@ disk size: 4.4M
         self.assertEqual(out, 'c')
 
     def test_get_instance_path_at_destination(self):
-        instance = dict(name='fake_inst', uuid='fake_uuid')
+        instance = fake_instance.fake_instance_obj(None, name='fake_inst',
+                                                   uuid='fake_uuid')
 
         migrate_data = None
         inst_path_at_dest = libvirt_utils.get_instance_path_at_destination(

@@ -302,10 +302,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
           details = {network_model.VIF_DETAILS_VHOSTUSER_MODE: 'client'}
           )
 
-    instance = {
-        'name': 'instance-name',
-        'uuid': 'instance-uuid'
-    }
+    instance = objects.Instance(id=1, uuid='instance-uuid')
 
     bandwidth = {
         'quota:vif_inbound_peak': '200',
@@ -795,11 +792,9 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         d = vif.LibvirtGenericVIFDriver()
         with mock.patch.object(utils, 'execute') as execute:
             execute.side_effect = processutils.ProcessExecutionError
-            instance = {
-                'name': 'instance-name',
-                'uuid': 'instance-uuid',
-                'project_id': 'myproject'
-            }
+            instance = objects.Instance(id=1,
+                                        uuid='instance-uuid',
+                                        project_id='myproject')
             d.plug_iovisor(instance, self.vif_ivs)
 
     def test_unplug_mlnx_with_details(self):

@@ -514,15 +514,15 @@ def get_instance_path(instance, forceold=False, relative=False):
 
     :returns: a path to store information about that instance
     """
-    pre_grizzly_name = os.path.join(CONF.instances_path, instance['name'])
+    pre_grizzly_name = os.path.join(CONF.instances_path, instance.name)
     if forceold or os.path.exists(pre_grizzly_name):
         if relative:
-            return instance['name']
+            return instance.name
         return pre_grizzly_name
 
     if relative:
-        return instance['uuid']
-    return os.path.join(CONF.instances_path, instance['uuid'])
+        return instance.uuid
+    return os.path.join(CONF.instances_path, instance.uuid)
 
 
 def get_instance_path_at_destination(instance, migrate_data=None):

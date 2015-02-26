@@ -63,6 +63,7 @@ from nova.openstack.common import uuidutils
 from nova.pci import manager as pci_manager
 from nova import test
 from nova.tests.unit import fake_block_device
+from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_network
 import nova.tests.unit.image.fake
 from nova.tests.unit import matchers
@@ -308,6 +309,9 @@ class CacheConcurrencyTestCase(test.NoDBTestCase):
             'nova.virt.libvirt.imagebackend.libvirt_utils',
             fake_libvirt_utils))
 
+    def _fake_instance(self, uuid):
+        return objects.Instance(id=1, uuid=uuid)
+
     def test_same_fname_concurrency(self):
         # Ensures that the same fname cache runs at a sequentially.
         uuid = uuidutils.generate_uuid()
@@ -316,8 +320,7 @@ class CacheConcurrencyTestCase(test.NoDBTestCase):
         wait1 = eventlet.event.Event()
         done1 = eventlet.event.Event()
         sig1 = eventlet.event.Event()
-        thr1 = eventlet.spawn(backend.image({'name': 'instance',
-                                             'uuid': uuid},
+        thr1 = eventlet.spawn(backend.image(self._fake_instance(uuid),
                                             'name').cache,
                 _concurrency, 'fname', None,
                 signal=sig1, wait=wait1, done=done1)
@@ -328,8 +331,7 @@ class CacheConcurrencyTestCase(test.NoDBTestCase):
         wait2 = eventlet.event.Event()
         done2 = eventlet.event.Event()
         sig2 = eventlet.event.Event()
-        thr2 = eventlet.spawn(backend.image({'name': 'instance',
-                                             'uuid': uuid},
+        thr2 = eventlet.spawn(backend.image(self._fake_instance(uuid),
                                             'name').cache,
                 _concurrency, 'fname', None,
                 signal=sig2, wait=wait2, done=done2)
@@ -356,8 +358,7 @@ class CacheConcurrencyTestCase(test.NoDBTestCase):
         wait1 = eventlet.event.Event()
         done1 = eventlet.event.Event()
         sig1 = eventlet.event.Event()
-        thr1 = eventlet.spawn(backend.image({'name': 'instance',
-                                             'uuid': uuid},
+        thr1 = eventlet.spawn(backend.image(self._fake_instance(uuid),
                                             'name').cache,
                 _concurrency, 'fname2', None,
                 signal=sig1, wait=wait1, done=done1)
@@ -368,8 +369,7 @@ class CacheConcurrencyTestCase(test.NoDBTestCase):
         wait2 = eventlet.event.Event()
         done2 = eventlet.event.Event()
         sig2 = eventlet.event.Event()
-        thr2 = eventlet.spawn(backend.image({'name': 'instance',
-                                             'uuid': uuid},
+        thr2 = eventlet.spawn(backend.image(self._fake_instance(uuid),
                                             'name').cache,
                 _concurrency, 'fname1', None,
                 signal=sig2, wait=wait2, done=done2)
@@ -8261,8 +8261,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_undefine_domain')
     def test_destroy_not_removes_disk(self, mock_undefine_domain, mock_destroy,
                                       mock_unplug_vifs):
-        instance = {"name": "instancename", "id": "instanceid",
-                    "uuid": "875a8070-d0b9-4949-8b31-104d125c9a64"}
+        instance = fake_instance.fake_instance_obj(
+            None, name='instancename', id=1,
+            uuid='875a8070-d0b9-4949-8b31-104d125c9a64')
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         drvr.destroy(self.context, instance, [], None, False)

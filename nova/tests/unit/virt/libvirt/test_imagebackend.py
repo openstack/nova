@@ -29,6 +29,7 @@ from oslo_utils import units
 from nova import context
 from nova import exception
 from nova import keymgr
+from nova import objects
 from nova.openstack.common import imageutils
 from nova.openstack.common import uuidutils
 from nova import test
@@ -57,8 +58,7 @@ class _ImageTestCase(object):
         self.fixture.config(disable_process_locking=True,
                             group='oslo_concurrency')
         self.flags(instances_path=self.INSTANCES_PATH)
-        self.INSTANCE = {'name': 'instance',
-                         'uuid': uuidutils.generate_uuid()}
+        self.INSTANCE = objects.Instance(id=1, uuid=uuidutils.generate_uuid())
         self.DISK_INFO_PATH = os.path.join(self.INSTANCES_PATH,
                                            self.INSTANCE['uuid'], 'disk.info')
         self.NAME = 'fake.vm'
@@ -1333,8 +1333,7 @@ class PloopTestCase(_ImageTestCase, test.NoDBTestCase):
 
 
 class BackendTestCase(test.NoDBTestCase):
-    INSTANCE = {'name': 'fake-instance',
-                'uuid': uuidutils.generate_uuid()}
+    INSTANCE = objects.Instance(id=1, uuid=uuidutils.generate_uuid())
     NAME = 'fake-name.suffix'
 
     def setUp(self):

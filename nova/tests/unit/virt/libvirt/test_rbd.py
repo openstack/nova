@@ -15,6 +15,7 @@ import mock
 from oslo_log import log as logging
 
 from nova import exception
+from nova import objects
 from nova import test
 from nova import utils
 from nova.virt.libvirt import rbd_utils
@@ -271,7 +272,7 @@ class RbdTestCase(test.NoDBTestCase):
     @mock.patch.object(rbd_utils, 'rados')
     @mock.patch.object(rbd_utils, 'RADOSClient')
     def test_cleanup_volumes(self, mock_client, mock_rados, mock_rbd):
-        instance = {'uuid': '12345'}
+        instance = objects.Instance(id=1, uuid='12345')
 
         rbd = mock_rbd.RBD.return_value
         rbd.list.return_value = ['12345_test', '111_test']
