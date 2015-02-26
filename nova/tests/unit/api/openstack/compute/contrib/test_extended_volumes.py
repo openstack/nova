@@ -322,7 +322,7 @@ class ExtendedVolumesAdditionTestV21(ExtendedVolumesTestV21):
         self.assertRaises(webob.exc.HTTPBadRequest, self._test_swap)
 
     @mock.patch('nova.compute.api.API.swap_volume',
-                side_effect=exception.VolumeUnattached(reason=''))
+                side_effect=exception.VolumeUnattached(volume_id='fake'))
     def test_swap_volume_with_unattached_volume(self, mock_swap):
         self.assertRaises(webob.exc.HTTPNotFound, self._test_swap)
 

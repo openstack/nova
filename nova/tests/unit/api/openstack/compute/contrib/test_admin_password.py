@@ -123,13 +123,14 @@ class AdminPasswordTestV21(test.NoDBTestCase):
         self._check_status(202, res, self._get_action())
 
     @mock.patch('nova.compute.api.API.set_admin_password',
-                side_effect=exception.InstanceInvalidState(instance="1",
-                                                           reason=''))
+                side_effect=exception.InstanceInvalidState(
+                    instance_uuid='fake', attr='vm_state', state='stopped',
+                    method='set_admin_password'))
     def test_change_password_invalid_state(self, mock_set_admin_password):
         body = {'changePassword': {'adminPass': 'test'}}
         self.assertRaises(webob.exc.HTTPConflict,
                           self._get_action(),
-                          self.fake_req, '1', body=body)
+                          self.fake_req, 'fake', body=body)
 
 
 class AdminPasswordTestV2(AdminPasswordTestV21):
