@@ -1212,13 +1212,11 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def attach_interface(self, instance, image_meta, vif):
         virt_dom = self._host.get_domain(instance)
-        flavor = objects.Flavor.get_by_id(
-            nova_context.get_admin_context(read_deleted='yes'),
-            instance.instance_type_id)
         self.vif_driver.plug(instance, vif)
         self.firewall_driver.setup_basic_filtering(instance, [vif])
         cfg = self.vif_driver.get_config(instance, vif, image_meta,
-                                         flavor, CONF.libvirt.virt_type)
+                                         instance.flavor,
+                                         CONF.libvirt.virt_type)
         try:
             flags = libvirt.VIR_DOMAIN_AFFECT_CONFIG
             state = LIBVIRT_POWER_STATE[virt_dom.info()[0]]
@@ -1234,10 +1232,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def detach_interface(self, instance, vif):
         virt_dom = self._host.get_domain(instance)
-        flavor = objects.Flavor.get_by_id(
-            nova_context.get_admin_context(read_deleted='yes'),
-            instance.instance_type_id)
-        cfg = self.vif_driver.get_config(instance, vif, None, flavor,
+        cfg = self.vif_driver.get_config(instance, vif, None, instance.flavor,
                                          CONF.libvirt.virt_type)
         try:
             self.vif_driver.unplug(instance, vif)
@@ -2937,13 +2932,10 @@ class LibvirtDriver(driver.ComputeDriver):
             raise
 
     def _prepare_args_for_get_config(self, context, instance):
-        with utils.temporary_mutation(context, read_deleted="yes"):
-            flavor = objects.Flavor.get_by_id(context,
-                instance.instance_type_id)
         image_ref = instance.image_ref
         image_meta = compute_utils.get_image_metadata(
                             context, self._image_api, image_ref, instance)
-        return flavor, image_meta
+        return instance.flavor, image_meta
 
     @staticmethod
     def _has_sriov_port(network_info):
@@ -3831,8 +3823,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def _get_flavor(self, ctxt, instance, flavor):
         if flavor is not None:
             return flavor
-        with utils.temporary_mutation(ctxt, read_deleted="yes"):
-            return objects.Flavor.get_by_id(ctxt, instance.instance_type_id)
+        return instance.flavor
 
     def _configure_guest_by_virt_type(self, guest, virt_type, caps, instance,
                                       image_meta, flavor, root_device_name):
