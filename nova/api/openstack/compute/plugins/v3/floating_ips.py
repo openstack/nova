@@ -34,7 +34,7 @@ from nova.openstack.common import uuidutils
 
 LOG = logging.getLogger(__name__)
 ALIAS = 'os-floating-ips'
-authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
+authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 def _translate_floating_ip_view(floating_ip):
@@ -88,8 +88,8 @@ class FloatingIPController(object):
     """The Floating IPs API controller for the OpenStack API."""
 
     def __init__(self):
-        self.compute_api = compute.API()
-        self.network_api = network.API()
+        self.compute_api = compute.API(skip_policy_check=True)
+        self.network_api = network.API(skip_policy_check=True)
         super(FloatingIPController, self).__init__()
 
     @extensions.expected_errors((400, 404))
@@ -178,8 +178,8 @@ class FloatingIPController(object):
 class FloatingIPActionController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
         super(FloatingIPActionController, self).__init__(*args, **kwargs)
-        self.compute_api = compute.API()
-        self.network_api = network.API()
+        self.compute_api = compute.API(skip_policy_check=True)
+        self.network_api = network.API(skip_policy_check=True)
 
     @extensions.expected_errors((400, 403, 404))
     @wsgi.action('addFloatingIp')
