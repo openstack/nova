@@ -17,8 +17,6 @@
             {
                 "name": "default"
             }
-        ],
-        "accessIPv4": "",
-        "accessIPv6": ""
+        ]
     }
 }

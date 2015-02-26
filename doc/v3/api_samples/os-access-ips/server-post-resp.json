@@ -11,8 +11,6 @@
                 "href": "http://openstack.example.com/servers/934760e1-2b0b-4f9e-a916-eac1e69839dc",
                 "rel": "bookmark"
             }
-        ],
-        "accessIPv4": "1.2.3.4",
-        "accessIPv6": "fe80::"
+        ]
     }
 }
