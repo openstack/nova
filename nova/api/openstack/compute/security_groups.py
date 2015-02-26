@@ -438,7 +438,10 @@ class SecurityGroupsOutputController(wsgi.Controller):
         if not len(servers):
             return
         key = "security_groups"
-        context = _authorize_context(req)
+        context = req.environ['nova.context']
+        if not softauth(context):
+            return
+
         if not openstack_driver.is_neutron_security_groups():
             for server in servers:
                 instance = req.get_db_instance(server['id'])
@@ -472,8 +475,6 @@ class SecurityGroupsOutputController(wsgi.Controller):
                     ATTRIBUTE_NAME, [{'name': 'default'}])
 
     def _show(self, req, resp_obj):
-        if not softauth(req.environ['nova.context']):
-            return
         if 'server' in resp_obj.obj:
             self._extend_servers(req, [resp_obj.obj['server']])
 
@@ -487,8 +488,6 @@ class SecurityGroupsOutputController(wsgi.Controller):
 
     @wsgi.extends
     def detail(self, req, resp_obj):
-        if not softauth(req.environ['nova.context']):
-            return
         self._extend_servers(req, list(resp_obj.obj['servers']))
 
 
