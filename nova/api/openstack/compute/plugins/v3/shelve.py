@@ -24,16 +24,13 @@ from nova import exception
 
 
 ALIAS = 'os-shelve'
-auth_shelve = exts.extension_authorizer('compute', 'v3:%s:shelve' % ALIAS)
-auth_shelve_offload = exts.extension_authorizer('compute',
-                                                'v3:%s:shelve_offload' % ALIAS)
-auth_unshelve = exts.extension_authorizer('compute', 'v3:%s:unshelve' % ALIAS)
+authorize = exts.os_compute_authorizer(ALIAS)
 
 
 class ShelveController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
         super(ShelveController, self).__init__(*args, **kwargs)
-        self.compute_api = compute.API()
+        self.compute_api = compute.API(skip_policy_check=True)
 
     @wsgi.response(202)
     @exts.expected_errors((404, 409))
@@ -41,7 +38,7 @@ class ShelveController(wsgi.Controller):
     def _shelve(self, req, id, body):
         """Move an instance into shelved mode."""
         context = req.environ["nova.context"]
-        auth_shelve(context)
+        authorize(context, action='shelve')
 
         instance = common.get_instance(self.compute_api, context, id,
                                        want_objects=True)
@@ -59,7 +56,7 @@ class ShelveController(wsgi.Controller):
     def _shelve_offload(self, req, id, body):
         """Force removal of a shelved instance from the compute node."""
         context = req.environ["nova.context"]
-        auth_shelve_offload(context)
+        authorize(context, action='shelve_offload')
 
         instance = common.get_instance(self.compute_api, context, id,
                                        want_objects=True)
@@ -78,7 +75,7 @@ class ShelveController(wsgi.Controller):
     def _unshelve(self, req, id, body):
         """Restore an instance from shelved mode."""
         context = req.environ["nova.context"]
-        auth_unshelve(context)
+        authorize(context, action='unshelve')
         instance = common.get_instance(self.compute_api, context, id,
                                        want_objects=True)
         try:
