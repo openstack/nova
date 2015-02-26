@@ -48,7 +48,7 @@ ALIAS = 'os-tenant-networks'
 
 QUOTAS = quota.QUOTAS
 LOG = logging.getLogger(__name__)
-authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
+authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 def network_dict(network):
@@ -62,7 +62,7 @@ def network_dict(network):
 
 class TenantNetworkController(wsgi.Controller):
     def __init__(self, network_api=None):
-        self.network_api = nova.network.API()
+        self.network_api = nova.network.API(skip_policy_check=True)
         self._default_networks = []
 
     def _refresh_default_networks(self):

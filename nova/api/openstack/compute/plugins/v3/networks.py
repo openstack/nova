@@ -28,9 +28,7 @@ from nova.objects import base as base_obj
 from nova.objects import fields as obj_fields
 
 ALIAS = 'os-networks'
-authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
-authorize_view = extensions.extension_authorizer('compute',
-                                                 'v3:' + ALIAS + ':view')
+authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 def network_dict(context, network):
@@ -81,12 +79,12 @@ def network_dict(context, network):
 class NetworkController(wsgi.Controller):
 
     def __init__(self, network_api=None):
-        self.network_api = network_api or network.API()
+        self.network_api = network_api or network.API(skip_policy_check=True)
 
     @extensions.expected_errors(())
     def index(self, req):
         context = req.environ['nova.context']
-        authorize_view(context)
+        authorize(context, action='view')
         networks = self.network_api.get_all(context)
         result = [network_dict(context, net_ref) for net_ref in networks]
         return {'networks': result}
@@ -111,7 +109,7 @@ class NetworkController(wsgi.Controller):
     @extensions.expected_errors(404)
     def show(self, req, id):
         context = req.environ['nova.context']
-        authorize_view(context)
+        authorize(context, action='view')
 
         try:
             network = self.network_api.get(context, id)

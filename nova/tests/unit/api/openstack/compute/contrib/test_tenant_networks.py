@@ -256,3 +256,56 @@ class TenantNetworksTestV2(TenantNetworksTestV21):
     def test_network_create_empty_body(self):
         self.assertRaises(webob.exc.HTTPUnprocessableEntity,
                           self.controller.create, self.req, {})
+
+
+class TenantNetworksEnforcementV21(test.NoDBTestCase):
+
+    def setUp(self):
+        super(TenantNetworksEnforcementV21, self).setUp()
+        self.controller = networks_v21.TenantNetworkController()
+        self.req = fakes.HTTPRequest.blank('')
+
+    def test_create_policy_failed(self):
+        rule_name = 'compute_extension:v3:os-tenant-networks'
+        self.policy.set_rules({rule_name: "project:non_fake"})
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.controller.create,
+            self.req, body={'network': {'label': 'test',
+                                        'cidr': '10.0.0.0/32'}})
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+            exc.format_message())
+
+    def test_index_policy_failed(self):
+        rule_name = 'compute_extension:v3:os-tenant-networks'
+        self.policy.set_rules({rule_name: "project:non_fake"})
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.controller.index,
+            self.req)
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+            exc.format_message())
+
+    def test_delete_policy_failed(self):
+        rule_name = 'compute_extension:v3:os-tenant-networks'
+        self.policy.set_rules({rule_name: "project:non_fake"})
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.controller.delete,
+            self.req, fakes.FAKE_UUID)
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+            exc.format_message())
+
+    def test_show_policy_failed(self):
+        rule_name = 'compute_extension:v3:os-tenant-networks'
+        self.policy.set_rules({rule_name: "project:non_fake"})
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.controller.show,
+            self.req, fakes.FAKE_UUID)
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+            exc.format_message())

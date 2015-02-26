@@ -22,14 +22,14 @@ from nova import network
 
 ALIAS = "os-networks-associate"
 
-authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
+authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class NetworkAssociateActionController(wsgi.Controller):
     """Network Association API Controller."""
 
     def __init__(self, network_api=None):
-        self.network_api = network_api or network.API()
+        self.network_api = network_api or network.API(skip_policy_check=True)
 
     @wsgi.action("disassociate_host")
     @wsgi.response(202)
