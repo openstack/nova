@@ -97,19 +97,19 @@ class FpingController(object):
                 exclude = set()
 
         instance_list = self.compute_api.get_all(
-            context, search_opts=search_opts)
+            context, search_opts=search_opts, want_objects=True)
         ip_list = []
         instance_ips = {}
         instance_projects = {}
 
         for instance in instance_list:
-            uuid = instance["uuid"]
+            uuid = instance.uuid
             if uuid in exclude or (include is not None and
                                    uuid not in include):
                 continue
             ips = [str(ip) for ip in self._get_instance_ips(context, instance)]
             instance_ips[uuid] = ips
-            instance_projects[uuid] = instance["project_id"]
+            instance_projects[uuid] = instance.project_id
             ip_list += ips
         alive_ips = self.fping(ip_list)
         res = []
@@ -125,13 +125,14 @@ class FpingController(object):
         context = req.environ["nova.context"]
         authorize(context)
         self.check_fping()
-        instance = common.get_instance(self.compute_api, context, id)
+        instance = common.get_instance(self.compute_api, context, id,
+                                       want_objects=True)
         ips = [str(ip) for ip in self._get_instance_ips(context, instance)]
         alive_ips = self.fping(ips)
         return {
             "server": {
-                "id": instance["uuid"],
-                "project_id": instance["project_id"],
+                "id": instance.uuid,
+                "project_id": instance.project_id,
                 "alive": bool(set(ips) & alive_ips),
             }
         }
