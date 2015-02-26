@@ -1049,6 +1049,14 @@ def fake_get_network(*args, **kwargs):
     return {'type': 'fake'}
 
 
+def assertPathExists(test, path):
+    test.assertIn(path, _db_content.get('files'))
+
+
+def assertPathNotExists(test, path):
+    test.assertNotIn(path, _db_content.get('files'))
+
+
 def get_file(file_path):
     """Check if file exists in the db."""
     return file_path in _db_content.get("files")
