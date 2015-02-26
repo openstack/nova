@@ -67,7 +67,7 @@ class HyperVNovaNetworkVIFDriver(HyperVBaseVIFDriver):
         vswitch_path = self._netutils.get_external_vswitch(
             CONF.hyperv.vswitch_name)
 
-        vm_name = instance['name']
+        vm_name = instance.name
         LOG.debug('Creating vswitch port for instance: %s', vm_name)
         if self._netutils.vswitch_port_needed():
             vswitch_data = self._netutils.create_vswitch_port(vswitch_path,

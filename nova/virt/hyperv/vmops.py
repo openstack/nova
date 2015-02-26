@@ -163,9 +163,9 @@ class VMOps(object):
         """Get information about the VM."""
         LOG.debug("get_info called for instance", instance=instance)
 
-        instance_name = instance['name']
+        instance_name = instance.name
         if not self._vmutils.vm_exists(instance_name):
-            raise exception.InstanceNotFound(instance_id=instance['uuid'])
+            raise exception.InstanceNotFound(instance_id=instance.uuid)
 
         info = self._vmutils.get_vm_summary_info(instance_name)
 
@@ -181,9 +181,9 @@ class VMOps(object):
         base_vhd_info = self._vhdutils.get_vhd_info(base_vhd_path)
         base_vhd_size = base_vhd_info['MaxInternalSize']
         format_ext = base_vhd_path.split('.')[-1]
-        root_vhd_path = self._pathutils.get_root_vhd_path(instance['name'],
+        root_vhd_path = self._pathutils.get_root_vhd_path(instance.name,
                                                           format_ext)
-        root_vhd_size = instance['root_gb'] * units.Gi
+        root_vhd_size = instance.root_gb * units.Gi
 
         try:
             if CONF.use_cow_images:
@@ -248,7 +248,7 @@ class VMOps(object):
             vhd_format = self._vhdutils.get_best_supported_vhd_format()
 
             eph_vhd_path = self._pathutils.get_ephemeral_vhd_path(
-                instance['name'], vhd_format)
+                instance.name, vhd_format)
             self._vhdutils.create_dynamic_vhd(eph_vhd_path, eph_vhd_size,
                                               vhd_format)
             return eph_vhd_path
@@ -259,7 +259,7 @@ class VMOps(object):
         """Create a new VM and start it."""
         LOG.info(_LI("Spawning new instance"), instance=instance)
 
-        instance_name = instance['name']
+        instance_name = instance.name
         if self._vmutils.vm_exists(instance_name):
             raise exception.InstanceExists(name=instance_name)
 
@@ -293,15 +293,15 @@ class VMOps(object):
 
     def create_instance(self, instance, network_info, block_device_info,
                         root_vhd_path, eph_vhd_path, vm_gen):
-        instance_name = instance['name']
+        instance_name = instance.name
 
         self._vmutils.create_vm(instance_name,
-                                instance['memory_mb'],
-                                instance['vcpus'],
+                                instance.memory_mb,
+                                instance.vcpus,
                                 CONF.hyperv.limit_cpu_features,
                                 CONF.hyperv.dynamic_memory_ratio,
                                 vm_gen,
-                                [instance['uuid']])
+                                [instance.uuid])
 
         self._vmutils.create_scsi_controller(instance_name)
         controller_type = VM_GENERATIONS_CONTROLLER_TYPES[vm_gen]
@@ -387,7 +387,7 @@ class VMOps(object):
                                                      network_info=network_info)
 
         instance_path = self._pathutils.get_instance_dir(
-            instance['name'])
+            instance.name)
         configdrive_path_iso = os.path.join(instance_path, 'configdrive.iso')
         LOG.info(_LI('Creating config drive at %(path)s'),
                  {'path': configdrive_path_iso}, instance=instance)
@@ -438,7 +438,7 @@ class VMOps(object):
 
     def destroy(self, instance, network_info=None, block_device_info=None,
                 destroy_disks=True):
-        instance_name = instance['name']
+        instance_name = instance.name
         LOG.info(_LI("Got request to destroy instance"), instance=instance)
         try:
             if self._vmutils.vm_exists(instance_name):
@@ -546,14 +546,14 @@ class VMOps(object):
         LOG.debug("Power on instance", instance=instance)
 
         if block_device_info:
-            self._volumeops.fix_instance_volume_disk_paths(instance['name'],
+            self._volumeops.fix_instance_volume_disk_paths(instance.name,
                                                            block_device_info)
 
         self._set_vm_state(instance, constants.HYPERV_VM_STATE_ENABLED)
 
     def _set_vm_state(self, instance, req_state):
-        instance_name = instance['name']
-        instance_uuid = instance['uuid']
+        instance_name = instance.name
+        instance_uuid = instance.uuid
 
         try:
             self._vmutils.set_vm_state(instance_name, req_state)
@@ -630,7 +630,7 @@ class VMOps(object):
 
     def get_console_output(self, instance):
         console_log_paths = (
-            self._pathutils.get_vm_console_log_paths(instance['name']))
+            self._pathutils.get_vm_console_log_paths(instance.name))
 
         try:
             instance_log = ''
@@ -646,9 +646,9 @@ class VMOps(object):
 
     def _delete_vm_console_log(self, instance):
         console_log_files = self._pathutils.get_vm_console_log_paths(
-            instance['name'])
+            instance.name)
 
-        vm_log_writer = self._vm_log_writers.get(instance['uuid'])
+        vm_log_writer = self._vm_log_writers.get(instance.uuid)
         if vm_log_writer:
             vm_log_writer.join()
 
@@ -669,9 +669,9 @@ class VMOps(object):
 
     def _create_vm_com_port_pipe(self, instance):
         # Creates a pipe to the COM 0 serial port of the specified vm.
-        pipe_path = r'\\.\pipe\%s' % instance['uuid']
+        pipe_path = r'\\.\pipe\%s' % instance.uuid
         self._vmutils.get_vm_serial_port_connection(
-            instance['name'], update_connection=pipe_path)
+            instance.name, update_connection=pipe_path)
 
     def restart_vm_log_writers(self):
         # Restart the VM console log writers after nova compute restarts.

@@ -101,7 +101,7 @@ class MigrationOps(object):
 
     def _check_target_flavor(self, instance, flavor):
         new_root_gb = flavor['root_gb']
-        curr_root_gb = instance['root_gb']
+        curr_root_gb = instance.root_gb
 
         if new_root_gb < curr_root_gb:
             raise exception.InstanceFaultRollback(
@@ -122,13 +122,11 @@ class MigrationOps(object):
 
         self._vmops.power_off(instance, timeout, retry_interval)
 
-        instance_name = instance["name"]
-
         (disk_files,
-         volume_drives) = self._vmutils.get_vm_storage_paths(instance_name)
+         volume_drives) = self._vmutils.get_vm_storage_paths(instance.name)
 
         if disk_files:
-            self._migrate_disk_files(instance_name, disk_files, dest)
+            self._migrate_disk_files(instance.name, disk_files, dest)
 
         self._vmops.destroy(instance, destroy_disks=False)
 
@@ -138,7 +136,7 @@ class MigrationOps(object):
     def confirm_migration(self, migration, instance, network_info):
         LOG.debug("confirm_migration called", instance=instance)
 
-        self._pathutils.get_instance_migr_revert_dir(instance['name'],
+        self._pathutils.get_instance_migr_revert_dir(instance.name,
                                                      remove_dir=True)
 
     def _revert_migration_files(self, instance_name):
@@ -165,7 +163,7 @@ class MigrationOps(object):
                                 block_device_info=None, power_on=True):
         LOG.debug("finish_revert_migration called", instance=instance)
 
-        instance_name = instance['name']
+        instance_name = instance.name
         self._revert_migration_files(instance_name)
 
         if self._volumeops.ebs_root_in_block_devices(block_device_info):
@@ -257,7 +255,7 @@ class MigrationOps(object):
                          block_device_info=None, power_on=True):
         LOG.debug("finish_migration called", instance=instance)
 
-        instance_name = instance['name']
+        instance_name = instance.name
 
         if self._volumeops.ebs_root_in_block_devices(block_device_info):
             root_vhd_path = None
@@ -275,7 +273,7 @@ class MigrationOps(object):
                                       src_base_disk_path)
 
             if resize_instance:
-                new_size = instance['root_gb'] * units.Gi
+                new_size = instance.root_gb * units.Gi
                 self._check_resize_vhd(root_vhd_path, root_vhd_info, new_size)
 
         eph_vhd_path = self._pathutils.lookup_ephemeral_vhd_path(instance_name)

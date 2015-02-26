@@ -48,7 +48,7 @@ class SnapshotOps(object):
 
     def snapshot(self, context, instance, image_id, update_task_state):
         """Create snapshot from a running VM instance."""
-        instance_name = instance["name"]
+        instance_name = instance.name
 
         LOG.debug("Creating snapshot for instance %s", instance_name)
         snapshot_path = self._vmutils.take_vm_snapshot(instance_name)
