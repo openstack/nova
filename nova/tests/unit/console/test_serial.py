@@ -24,7 +24,7 @@ from nova import exception
 from nova import test
 
 
-class SerialTestCase(test.TestCase):
+class SerialTestCase(test.NoDBTestCase):
     def setUp(self):
         super(SerialTestCase, self).setUp()
         serial.ALLOCATED_PORTS = set()

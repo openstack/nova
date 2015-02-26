@@ -98,7 +98,7 @@ class MyComparator(mox.Comparator):
         return str(self.lhs)
 
 
-class TestNeutronClient(test.TestCase):
+class TestNeutronClient(test.NoDBTestCase):
     def test_withtoken(self):
         self.flags(url='http://anyhost/', group='neutron')
         self.flags(url_timeout=30, group='neutron')
@@ -193,7 +193,7 @@ class TestNeutronClient(test.TestCase):
             self.assertEqual('new_token1', token_store.admin_auth_token)
 
 
-class TestNeutronv2Base(test.TestCase):
+class TestNeutronv2Base(test.NoDBTestCase):
 
     def setUp(self):
         super(TestNeutronv2Base, self).setUp()
@@ -2744,7 +2744,7 @@ class TestNeutronv2(TestNeutronv2Base):
         self.assertEqual(expected_results, has_pci_request_id)
 
 
-class TestNeutronv2WithMock(test.TestCase):
+class TestNeutronv2WithMock(test.NoDBTestCase):
     """Used to test Neutron V2 API with mock."""
 
     def setUp(self):
@@ -3102,7 +3102,7 @@ class TestNeutronv2WithMock(test.TestCase):
                              (net_objs[1].uuid, net_objs[1].name))
 
 
-class TestNeutronv2ModuleMethods(test.TestCase):
+class TestNeutronv2ModuleMethods(test.NoDBTestCase):
 
     def test_gather_port_ids_and_networks_wrong_params(self):
         api = neutronapi.API()
@@ -3322,7 +3322,7 @@ class TestNeutronv2ExtraDhcpOpts(TestNeutronv2Base):
         self._allocate_for_instance(1, dhcp_options=dhcp_opts)
 
 
-class TestNeutronClientForAdminScenarios(test.TestCase):
+class TestNeutronClientForAdminScenarios(test.NoDBTestCase):
 
     def _test_get_client_for_admin(self, use_id=False, admin_context=False):
 

@@ -78,7 +78,7 @@ fake_pci_requests = [
      'spec': [{'vendor_id': 'v1'}]}]
 
 
-class PciDevTrackerTestCase(test.TestCase):
+class PciDevTrackerTestCase(test.NoDBTestCase):
     def _create_fake_instance(self):
         self.inst = objects.Instance()
         self.inst.uuid = 'fake-inst-uuid'

@@ -27,7 +27,7 @@ from nova import test
 CONF = cfg.CONF
 
 
-class BaseAPITestCase(test.TestCase):
+class BaseAPITestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(BaseAPITestCase, self).setUp()

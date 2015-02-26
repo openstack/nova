@@ -27,7 +27,7 @@ from nova import test
 """Tests for Scheduler Client."""
 
 
-class SchedulerReportClientTestCase(test.TestCase):
+class SchedulerReportClientTestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(SchedulerReportClientTestCase, self).setUp()
@@ -58,7 +58,7 @@ class SchedulerReportClientTestCase(test.TestCase):
                           self.context, ('fakehost', 'fakenode'), stats)
 
 
-class SchedulerQueryClientTestCase(test.TestCase):
+class SchedulerQueryClientTestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(SchedulerQueryClientTestCase, self).setUp()
@@ -82,7 +82,7 @@ class SchedulerQueryClientTestCase(test.TestCase):
             'fake_prop')
 
 
-class SchedulerClientTestCase(test.TestCase):
+class SchedulerClientTestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(SchedulerClientTestCase, self).setUp()

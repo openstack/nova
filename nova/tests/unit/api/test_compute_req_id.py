@@ -23,7 +23,7 @@ from nova.api import compute_req_id
 from nova import test
 
 
-class RequestIdTest(test.TestCase):
+class RequestIdTest(test.NoDBTestCase):
     def test_generate_request_id(self):
         @webob.dec.wsgify
         def application(req):
