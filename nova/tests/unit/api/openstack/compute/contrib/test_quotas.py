@@ -49,18 +49,6 @@ class BaseQuotaSetsTest(test.TestCase):
         # True. Otherwise(v2.1 API test), returns False.
         return (self.plugin == quotas_v2)
 
-    def get_update_expected_response(self, base_body):
-        # NOTE(oomichi): "id" parameter is added to a response of
-        # "update quota" API since v2.1 API, because it makes the
-        # API consistent and it is not backwards incompatible change.
-        # This method adds "id" for an expected body of a response.
-        if self._is_v20_api_test():
-            expected_body = base_body
-        else:
-            expected_body = copy.deepcopy(base_body)
-            expected_body['quota_set'].update({'id': 'update_me'})
-        return expected_body
-
     def setup_mock_for_show(self):
         if self._is_v20_api_test():
             self.ext_mgr.is_loaded('os-user-quotas').AndReturn(True)
@@ -209,12 +197,11 @@ class QuotaSetsTestV21(BaseQuotaSetsTest):
             'cores': 50
         })
         body = {'quota_set': self.default_quotas}
-        expected_body = self.get_update_expected_response(body)
 
         req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/update_me',
                                       use_admin_context=True)
         res_dict = self.controller.update(req, 'update_me', body=body)
-        self.assertEqual(expected_body, res_dict)
+        self.assertEqual(body, res_dict)
 
     def test_quotas_update_zero_value_as_admin(self):
         self.setup_mock_for_update()
@@ -230,12 +217,11 @@ class QuotaSetsTestV21(BaseQuotaSetsTest):
         if self.include_server_group_quotas:
             body['quota_set']['server_groups'] = 10
             body['quota_set']['server_group_members'] = 10
-        expected_body = self.get_update_expected_response(body)
 
         req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/update_me',
                                       use_admin_context=True)
         res_dict = self.controller.update(req, 'update_me', body=body)
-        self.assertEqual(expected_body, res_dict)
+        self.assertEqual(body, res_dict)
 
     def test_quotas_update_as_user(self):
         self.setup_mock_for_update()
@@ -433,13 +419,11 @@ class UserQuotasTestV21(BaseQuotaSetsTest):
             body['quota_set']['server_groups'] = 10
             body['quota_set']['server_group_members'] = 10
 
-        expected_body = self.get_update_expected_response(body)
-
         url = '/v2/fake4/os-quota-sets/update_me?user_id=1'
         req = fakes.HTTPRequest.blank(url, use_admin_context=True)
         res_dict = self.controller.update(req, 'update_me', body=body)
 
-        self.assertEqual(expected_body, res_dict)
+        self.assertEqual(body, res_dict)
 
     def test_user_quotas_update_as_user(self):
         self.setup_mock_for_update()

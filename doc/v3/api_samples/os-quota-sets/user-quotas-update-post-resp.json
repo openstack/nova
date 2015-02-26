@@ -3,7 +3,6 @@
         "cores": 20,
         "fixed_ips": -1,
         "floating_ips": 10,
-        "id": "fake_tenant",
         "injected_file_content_bytes": 10240,
         "injected_file_path_bytes": 255,
         "injected_files": 5,
