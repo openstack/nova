@@ -118,7 +118,8 @@ class InterfaceAttachmentController(wsgi.Controller):
             vif = self.compute_api.attach_interface(context,
                 instance, network_id, port_id, req_ip)
         except (exception.NetworkDuplicated,
-                exception.NetworkAmbiguous) as e:
+                exception.NetworkAmbiguous,
+                exception.NoMoreFixedIps) as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
         except (exception.InstanceIsLocked,
                 exception.FixedIpAlreadyInUse,

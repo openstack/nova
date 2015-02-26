@@ -372,6 +372,26 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
                                          want_objects=True,
                                          expected_attrs=None)
 
+    @mock.patch.object(compute_api.API, 'get')
+    @mock.patch.object(compute_api.API, 'attach_interface')
+    def test_attach_interface_no_more_fixed_ips(self,
+                                          attach_mock,
+                                          get_mock):
+        fake_instance = objects.Instance(uuid=FAKE_UUID1)
+        get_mock.return_value = fake_instance
+        attach_mock.side_effect = exception.NoMoreFixedIps(
+              net=FAKE_NET_ID1)
+        body = {}
+        self.assertRaises(exc.HTTPBadRequest,
+                          self.attachments.create, self.req, FAKE_UUID1,
+                          body=body)
+        ctxt = self.req.environ['nova.context']
+        attach_mock.assert_called_once_with(ctxt, fake_instance, None,
+                                            None, None)
+        get_mock.assert_called_once_with(ctxt, FAKE_UUID1,
+                                         want_objects=True,
+                                         expected_attrs=None)
+
     def _test_attach_interface_with_invalid_parameter(self, param):
         self.stubs.Set(compute_api.API, 'attach_interface',
                        fake_attach_interface)
