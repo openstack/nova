@@ -1561,6 +1561,7 @@ class MultipleCreateJsonTest(ServersSampleBase):
 
 class ServicesJsonTest(ApiSampleTestBaseV2):
     extension_name = "nova.api.openstack.compute.contrib.services.Services"
+    ADMIN_API = True
 
     def setUp(self):
         super(ServicesJsonTest, self).setUp()

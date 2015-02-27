@@ -554,6 +554,11 @@ class ServicesTestV20(ServicesTestV21):
     service_is_up_exc = KeyError
     bad_request = webob.exc.HTTPBadRequest
 
+    def setUp(self):
+        super(ServicesTestV20, self).setUp()
+        self.req = fakes.HTTPRequest.blank('', use_admin_context=True)
+        self.non_admin_req = fakes.HTTPRequest.blank('')
+
     def _set_up_controller(self):
         self.controller = services_v2.ServiceController(self.ext_mgr)
 
@@ -568,6 +573,10 @@ class ServicesTestV20(ServicesTestV21):
             if not has_id:
                 service.pop('id')
         return services
+
+    def test_update_with_non_admin(self):
+        self.assertRaises(exception.AdminRequired, self.controller.update,
+                          self.non_admin_req, fakes.FAKE_UUID, body={})
 
 
 class ServicesCellsTestV21(test.TestCase):
@@ -650,3 +659,23 @@ class ServicesCellsTestV20(ServicesCellsTestV21):
 
     def _process_out(self, res_dict):
         pass
+
+
+class ServicesPolicyEnforcementV21(test.NoDBTestCase):
+
+    def setUp(self):
+        super(ServicesPolicyEnforcementV21, self).setUp()
+        self.controller = services_v21.ServiceController()
+        self.req = fakes.HTTPRequest.blank('')
+
+    def test_update_policy_failed(self):
+        rule_name = "compute_extension:v3:os-services"
+        self.policy.set_rules({rule_name: "project_id:non_fake"})
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.controller.update, self.req, fakes.FAKE_UUID,
+            body={'host': 'host1',
+                  'binary': 'nova-compute'})
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+            exc.format_message())
