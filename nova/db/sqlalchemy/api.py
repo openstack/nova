@@ -387,7 +387,6 @@ def service_get_all(context, disabled=None):
     return query.all()
 
 
-@require_admin_context
 def service_get_all_by_topic(context, topic):
     return model_query(context, models.Service, read_deleted="no").\
                 filter_by(disabled=False).\
@@ -404,7 +403,6 @@ def service_get_by_host_and_topic(context, host, topic):
                 first()
 
 
-@require_admin_context
 def service_get_all_by_binary(context, binary):
     return model_query(context, models.Service, read_deleted="no").\
                 filter_by(disabled=False).\
@@ -425,7 +423,6 @@ def service_get_by_host_and_binary(context, host, binary):
     return result
 
 
-@require_admin_context
 def service_get_all_by_host(context, host):
     return model_query(context, models.Service, read_deleted="no").\
                 filter_by(host=host).\
