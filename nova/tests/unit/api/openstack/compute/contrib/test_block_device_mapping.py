@@ -22,7 +22,7 @@ from webob import exc
 from nova.api.openstack.compute import extensions
 from nova.api.openstack.compute import plugins
 from nova.api.openstack.compute.plugins.v3 import block_device_mapping
-from nova.api.openstack.compute.plugins.v3 import servers as servers_v3
+from nova.api.openstack.compute.plugins.v3 import servers as servers_v21
 from nova.api.openstack.compute import servers as servers_v2
 from nova import block_device
 from nova.compute import api as compute_api
@@ -41,10 +41,11 @@ class BlockDeviceMappingTestV21(test.TestCase):
 
     def _setup_controller(self):
         ext_info = plugins.LoadedExtensionInfo()
-        self.controller = servers_v3.ServersController(extension_info=ext_info)
+        self.controller = servers_v21.ServersController(
+                                        extension_info=ext_info)
         CONF.set_override('extensions_blacklist', 'os-block-device-mapping',
                           'osapi_v3')
-        self.no_bdm_v2_controller = servers_v3.ServersController(
+        self.no_bdm_v2_controller = servers_v21.ServersController(
                 extension_info=ext_info)
         CONF.set_override('extensions_blacklist', '', 'osapi_v3')
 

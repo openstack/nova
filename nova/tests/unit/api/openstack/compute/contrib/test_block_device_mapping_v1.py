@@ -23,7 +23,7 @@ from nova.api.openstack.compute import extensions
 from nova.api.openstack.compute import plugins
 from nova.api.openstack.compute.plugins.v3 import block_device_mapping_v1 as \
     block_device_mapping
-from nova.api.openstack.compute.plugins.v3 import servers as servers_v3
+from nova.api.openstack.compute.plugins.v3 import servers as servers_v21
 from nova.api.openstack.compute import servers as servers_v2
 from nova.compute import api as compute_api
 from nova import exception
@@ -41,12 +41,13 @@ class BlockDeviceMappingTestV21(test.TestCase):
         ext_info = plugins.LoadedExtensionInfo()
         CONF.set_override('extensions_blacklist', 'os-block-device-mapping',
                           'osapi_v3')
-        self.controller = servers_v3.ServersController(extension_info=ext_info)
+        self.controller = servers_v21.ServersController(
+                                        extension_info=ext_info)
         CONF.set_override('extensions_blacklist',
                           ['os-block-device-mapping-v1',
                            'os-block-device-mapping'],
                           'osapi_v3')
-        self.no_volumes_controller = servers_v3.ServersController(
+        self.no_volumes_controller = servers_v21.ServersController(
                 extension_info=ext_info)
         CONF.set_override('extensions_blacklist', '', 'osapi_v3')
 
@@ -302,7 +303,7 @@ class BlockDeviceMappingTestV21(test.TestCase):
                           ['os-block-device-mapping',
                            'os-block-device-mapping-v1'],
                           'osapi_v3')
-        controller = servers_v3.ServersController(extension_info=ext_info)
+        controller = servers_v21.ServersController(extension_info=ext_info)
         bdm = [{'device_name': 'foo1',
                 'volume_id': fakes.FAKE_UUID,
                 'delete_on_termination': True}]
@@ -331,7 +332,7 @@ class BlockDeviceMappingTestV21(test.TestCase):
     def test_create_instance_both_bdm_formats(self):
         ext_info = plugins.LoadedExtensionInfo()
         CONF.set_override('extensions_blacklist', '', 'osapi_v3')
-        both_controllers = servers_v3.ServersController(
+        both_controllers = servers_v21.ServersController(
                 extension_info=ext_info)
         bdm = [{'device_name': 'foo'}]
         bdm_v2 = [{'source_type': 'volume',

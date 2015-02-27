@@ -19,7 +19,7 @@ from oslo_config import cfg
 from nova.api.openstack.compute.contrib import attach_interfaces \
     as attach_interfaces_v2
 from nova.api.openstack.compute.plugins.v3 import attach_interfaces \
-    as attach_interfaces_v3
+    as attach_interfaces_v21
 from nova.compute import api as compute_api
 from nova import exception
 from nova.network import api as network_api
@@ -127,7 +127,7 @@ def fake_get_instance(self, *args, **kwargs):
 
 
 class InterfaceAttachTestsV21(test.NoDBTestCase):
-    controller_cls = attach_interfaces_v3.InterfaceAttachmentController
+    controller_cls = attach_interfaces_v21.InterfaceAttachmentController
     validate_exc = exception.ValidationError
     in_use_exc = exc.HTTPConflict
     not_found_exc = exc.HTTPNotFound
@@ -195,7 +195,7 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
         # NOTE: on v2.1, http status code is set as wsgi_code of API
         # method instead of status_int in a response object.
         if isinstance(self.attachments,
-                      attach_interfaces_v3.InterfaceAttachmentController):
+                      attach_interfaces_v21.InterfaceAttachmentController):
             status_int = self.attachments.delete.wsgi_code
         else:
             status_int = result.status_int
