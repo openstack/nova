@@ -23,6 +23,7 @@ semantics of real hypervisor connections.
 
 """
 
+import collections
 import contextlib
 
 from oslo_config import cfg
@@ -392,6 +393,18 @@ class FakeDriver(driver.ComputeDriver):
            Since we don't have a real hypervisor, pretend we have lots of
            disk and ram.
         """
+
+        cpu_info = collections.OrderedDict([
+            ('arch', 'x86_64'),
+            ('model', 'Nehalem'),
+            ('vendor', 'Intel'),
+            ('features', ['pge', 'clflush']),
+            ('topology', {
+                'cores': 1,
+                'threads': 1,
+                'sockets': 4,
+                }),
+            ])
         if nodename not in _FAKE_NODES:
             return {}
 
@@ -399,7 +412,7 @@ class FakeDriver(driver.ComputeDriver):
         host_status['hypervisor_hostname'] = nodename
         host_status['host_hostname'] = nodename
         host_status['host_name_label'] = nodename
-        host_status['cpu_info'] = '?'
+        host_status['cpu_info'] = jsonutils.dumps(cpu_info)
         return host_status
 
     def ensure_filtering_rules_for_instance(self, instance, network_info):
