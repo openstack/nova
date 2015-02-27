@@ -585,14 +585,6 @@
             "updated": "2014-12-03T00:00:00Z"
         },
         {
-            "alias": "os-pci",
-            "description": "Pci access support.",
-            "links": [],
-            "name": "PciAccess",
-            "namespace": "http://docs.openstack.org/compute/ext/fake_xml",
-            "updated": "2014-12-03T00:00:00Z"
-        },
-        {
             "alias": "os-personality",
             "description": "Personality support.",
             "links": [],

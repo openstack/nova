@@ -58,7 +58,6 @@
         "OS-EXT-STS:task_state": null,
         "OS-EXT-STS:vm_state": "active",
         "os-extended-volumes:volumes_attached": [],
-        "os-pci:pci_devices": [{"id": 1}],
         "OS-SRV-USG:launched_at": "%(strtime)s",
         "OS-SRV-USG:terminated_at": null,
         "progress": 0,
