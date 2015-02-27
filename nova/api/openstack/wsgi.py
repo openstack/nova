@@ -507,6 +507,8 @@ class ResourceExceptionHandler(object):
         if isinstance(ex_value, exception.Forbidden):
             raise Fault(webob.exc.HTTPForbidden(
                     explanation=ex_value.format_message()))
+        elif isinstance(ex_value, exception.VersionNotFoundForAPIMethod):
+            raise
         elif isinstance(ex_value, exception.Invalid):
             raise Fault(exception.ConvertedException(
                     code=ex_value.code,
@@ -706,6 +708,11 @@ class Resource(wsgi.Application):
                     with ResourceExceptionHandler():
                         response = ext(req=request, resp_obj=resp_obj,
                                        **action_args)
+                except exception.VersionNotFoundForAPIMethod:
+                    # If an attached extension (@wsgi.extends) for the
+                    # method has no version match its not an error. We
+                    # just don't run the extends code
+                    continue
                 except Fault as ex:
                     response = ex
 

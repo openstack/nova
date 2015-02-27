@@ -264,3 +264,26 @@ class MicroversionsTest(test.NoDBTestCase):
 
     def test_microversions_inner_function_v21(self):
         self._test_microversions_inner_function('2.1', 'controller4_val1')
+
+    @mock.patch("nova.api.openstack.api_version_request.max_api_version")
+    @mock.patch("nova.api.openstack.APIRouterV21.api_extension_namespace",
+                return_value='nova.api.v3.test_extensions')
+    def test_with_extends_decorator(self, mock_namespace, mock_maxver):
+        mock_maxver.return_value = api_version.APIVersionRequest('2.4')
+
+        app = fakes.wsgi_app_v21(init_only='test-microversions')
+        req = fakes.HTTPRequest.blank('/v2/fake/microversions5/item')
+        req.headers = {'X-OpenStack-Nova-API-Version': '2.4'}
+        res = req.get_response(app)
+        self.assertEqual(200, res.status_int)
+
+        expected_res = {
+            "extend_ctrlr2": "val_2",
+            "extend_ctrlr1": "val_1",
+            "base_param": "base_val"}
+
+        resp_json = jsonutils.loads(res.body)
+        for param in resp_json:
+            self.assertIn(param, expected_res)
+            self.assertEqual(expected_res[param], resp_json[param])
+        self.assertEqual(3, len(resp_json))
