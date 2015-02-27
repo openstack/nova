@@ -44,8 +44,15 @@ class QuotaSetsController(wsgi.Controller):
 
     def _format_quota_set(self, project_id, quota_set):
         """Convert the quota object to a result dict."""
-        quota_set.update(id=str(project_id))
-        return dict(quota_set=quota_set)
+        if project_id:
+            result = dict(id=str(project_id))
+        else:
+            result = {}
+
+        for resource in QUOTAS.resources:
+            if resource in quota_set:
+                result[resource] = quota_set[resource]
+        return dict(quota_set=result)
 
     def _validate_quota_limit(self, resource, limit, minimum, maximum):
         # NOTE: -1 is a flag value for unlimited
@@ -147,8 +154,10 @@ class QuotaSetsController(wsgi.Controller):
                                             key, value, user_id=user_id)
             except exception.AdminRequired:
                 raise webob.exc.HTTPForbidden()
-        return self._format_quota_set(id, self._get_quotas(context, id,
-                                                           user_id=user_id))
+        # Note(gmann): Removed 'id' from update's response to make it same
+        # as V2. If needed it can be added with microversion.
+        return self._format_quota_set(None, self._get_quotas(context, id,
+                                                             user_id=user_id))
 
     @extensions.expected_errors(())
     def defaults(self, req, id):
