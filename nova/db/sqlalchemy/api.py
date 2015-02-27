@@ -1096,7 +1096,6 @@ def dnsdomain_get_all(context):
 ###################
 
 
-@require_admin_context
 @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True,
                            retry_on_request=True)
 def fixed_ip_associate(context, address, instance_uuid, network_id=None,
@@ -1147,7 +1146,6 @@ def fixed_ip_associate(context, address, instance_uuid, network_id=None,
     return fixed_ip_ref
 
 
-@require_admin_context
 @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True,
                            retry_on_request=True)
 def fixed_ip_associate_pool(context, network_id, instance_uuid=None,
