@@ -342,7 +342,6 @@ class InequalityCondition(object):
 ###################
 
 
-@require_admin_context
 def service_destroy(context, service_id):
     session = get_session()
     with session.begin():
@@ -373,7 +372,6 @@ def _service_get(context, service_id, session=None,
     return result
 
 
-@require_admin_context
 def service_get(context, service_id, use_slave=False):
     return _service_get(context, service_id,
                         use_slave=use_slave)
