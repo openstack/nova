@@ -27,6 +27,7 @@ CONF.import_opt('vpn_image_id', 'nova.cloudpipe.pipelib')
 
 
 class CloudPipeSampleTest(api_sample_base.ApiSampleTestBaseV3):
+    ADMIN_API = True
     extension_name = "os-cloudpipe"
 
     def setUp(self):

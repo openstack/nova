@@ -17,6 +17,7 @@ from nova.tests.functional.v3 import api_sample_base
 
 
 class FlavorExtraSpecsSampleJsonTests(api_sample_base.ApiSampleTestBaseV3):
+    ADMIN_API = True
     extension_name = 'flavor-extra-specs'
 
     def _flavor_extra_specs_create(self):

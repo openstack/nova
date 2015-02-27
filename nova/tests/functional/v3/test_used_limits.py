@@ -18,6 +18,7 @@ from nova.tests.functional.v3 import api_sample_base
 
 
 class UsedLimitsSamplesJsonTest(api_sample_base.ApiSampleTestBaseV3):
+    ADMIN_API = True
     extension_name = "os-used-limits"
     extra_extensions_to_load = ["limits"]
 
@@ -28,6 +29,8 @@ class UsedLimitsSamplesJsonTest(api_sample_base.ApiSampleTestBaseV3):
         self._verify_response('usedlimits-get-resp', subs, response, 200)
 
     def test_get_used_limits_for_admin(self):
+        # TODO(sdague): if we split the admin tests out the whole
+        # class doesn't need admin api enabled.
         tenant_id = 'openstack'
         response = self._do_get('limits?tenant_id=%s' % tenant_id)
         subs = self._get_regexes()

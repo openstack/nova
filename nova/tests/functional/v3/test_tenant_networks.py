@@ -26,6 +26,7 @@ CONF.import_opt('enable_network_quota',
 
 
 class TenantNetworksJsonTests(api_sample_base.ApiSampleTestBaseV3):
+    ADMIN_API = True
     extension_name = "os-tenant-networks"
 
     def setUp(self):

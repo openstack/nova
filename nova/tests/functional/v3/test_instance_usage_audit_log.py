@@ -19,6 +19,7 @@ from nova.tests.functional.v3 import api_sample_base
 
 
 class InstanceUsageAuditLogJsonTest(api_sample_base.ApiSampleTestBaseV3):
+    ADMIN_API = True
     extension_name = "os-instance-usage-audit-log"
 
     def test_show_instance_usage_audit_log(self):

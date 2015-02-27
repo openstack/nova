@@ -17,6 +17,7 @@ from nova.tests.functional.v3 import api_sample_base
 
 
 class HostsSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
+    ADMIN_API = True
     extension_name = "os-hosts"
 
     def test_host_startup(self):

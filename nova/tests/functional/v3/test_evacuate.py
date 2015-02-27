@@ -22,6 +22,7 @@ from nova.tests.functional.v3 import test_servers
 
 
 class EvacuateJsonTest(test_servers.ServersSampleBase):
+    ADMIN_API = True
     extension_name = "os-evacuate"
 
     def _test_evacuate(self, req_subs, server_req, server_resp,

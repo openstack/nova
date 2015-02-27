@@ -21,6 +21,7 @@ from nova.tests.unit.api.openstack.compute.contrib import test_services
 
 
 class ServicesJsonTest(api_sample_base.ApiSampleTestBaseV3):
+    ADMIN_API = True
     extension_name = "os-services"
 
     def setUp(self):

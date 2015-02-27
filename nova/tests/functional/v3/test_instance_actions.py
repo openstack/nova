@@ -24,6 +24,7 @@ from nova.tests.unit import utils as test_utils
 
 
 class ServerActionsSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
+    ADMIN_API = True
     extension_name = 'os-instance-actions'
 
     def setUp(self):

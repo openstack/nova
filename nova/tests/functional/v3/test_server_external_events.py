@@ -16,6 +16,7 @@ from nova.tests.functional.v3 import test_servers
 
 
 class ServerExternalEventsSamplesJsonTest(test_servers.ServersSampleBase):
+    ADMIN_API = True
     extension_name = "os-server-external-events"
 
     def setUp(self):
