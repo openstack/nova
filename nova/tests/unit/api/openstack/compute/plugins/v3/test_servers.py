@@ -477,26 +477,14 @@ class ServersControllerTest(ControllerTest):
         expected = {
             'addresses': {
                 'private': [
-                    {'version': 4, 'addr': '192.168.0.3',
-                     'OS-EXT-IPS:type': 'fixed',
-                     'OS-EXT-IPS-MAC:mac_addr': 'bb:bb:bb:bb:bb:bb'},
-                    {'version': 4, 'addr': '192.168.0.4',
-                     'OS-EXT-IPS:type': 'fixed',
-                     'OS-EXT-IPS-MAC:mac_addr': 'bb:bb:bb:bb:bb:bb'},
+                    {'version': 4, 'addr': '192.168.0.3'},
+                    {'version': 4, 'addr': '192.168.0.4'},
                 ],
                 'public': [
-                    {'version': 4, 'addr': '172.19.0.1',
-                     'OS-EXT-IPS:type': 'fixed',
-                     'OS-EXT-IPS-MAC:mac_addr': 'aa:aa:aa:aa:aa:aa'},
-                    {'version': 4, 'addr': '172.19.0.2',
-                     'OS-EXT-IPS:type': 'fixed',
-                     'OS-EXT-IPS-MAC:mac_addr': 'aa:aa:aa:aa:aa:aa'},
-                    {'version': 4, 'addr': '1.2.3.4',
-                     'OS-EXT-IPS:type': 'fixed',
-                     'OS-EXT-IPS-MAC:mac_addr': 'aa:aa:aa:aa:aa:aa'},
-                    {'version': 6, 'addr': 'b33f::fdee:ddff:fecc:bbaa',
-                     'OS-EXT-IPS:type': 'fixed',
-                     'OS-EXT-IPS-MAC:mac_addr': 'aa:aa:aa:aa:aa:aa'},
+                    {'version': 4, 'addr': '172.19.0.1'},
+                    {'version': 4, 'addr': '172.19.0.2'},
+                    {'version': 4, 'addr': '1.2.3.4'},
+                    {'version': 6, 'addr': 'b33f::fdee:ddff:fecc:bbaa'},
                 ],
             },
         }

@@ -28,8 +28,11 @@ authorize = extensions.os_compute_authorizer(ALIAS)
 
 class IPsController(wsgi.Controller):
     """The servers addresses API controller for the OpenStack API."""
-
-    _view_builder_class = views_addresses.ViewBuilderV3
+    # Note(gmann): here using V2 view builder instead of V3 to have V2.1
+    # server ips response same as V2 which does not include "OS-EXT-IPS:type"
+    # & "OS-EXT-IPS-MAC:mac_addr". If needed those can be added with
+    # microversion by using V3 view builder.
+    _view_builder_class = views_addresses.ViewBuilder
 
     def __init__(self, **kwargs):
         super(IPsController, self).__init__(**kwargs)
