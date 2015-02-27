@@ -1408,6 +1408,41 @@ Setting up iSCSI targets: unused
                           libvirt_driver.connect_volume,
                           connection_info, self.disk_info)
 
+    @mock.patch.object(libvirt_utils, 'get_fc_hbas',
+                       side_effect=fake_libvirt_utils.get_fc_hbas)
+    @mock.patch.object(libvirt_utils, 'get_fc_hbas_info',
+                       side_effect=fake_libvirt_utils.get_fc_hbas_info)
+    # NOTE(vish) exists is to make driver assume connecting worked
+    @mock.patch.object(os.path, 'exists', return_value=True)
+    @mock.patch.object(os.path, 'realpath', return_value='/dev/sdb')
+    @mock.patch.object(linuxscsi, 'remove_device', return_value=None)
+    @mock.patch.object(linuxscsi, 'find_multipath_device')
+    def test_libvirt_fc_find_multipath_device_none(self, mock_find,
+            mock_remove, mock_realpath, mock_exists, mock_hbasinfo, mock_hbas):
+        libvirt_driver = volume.LibvirtFibreChannelVolumeDriver(self.fake_conn)
+        multipath_devname = '/dev/md-1'
+        devices = {"device": multipath_devname,
+                   "id": "1234567890",
+                   "devices": [{'device': '/dev/sdb',
+                                'address': '1:0:0:1',
+                                'host': 1, 'channel': 0,
+                                'id': 0, 'lun': 1}]}
+        connection_info = self.fibrechan_connection(self.vol,
+                                                    self.location,
+                                                    '1234567890123456')
+        # Test the scenario where multipath_id is returned during
+        # connect volume
+        mock_find.return_value = devices
+        libvirt_driver.connect_volume(connection_info, self.disk_info)
+        self.assertEqual(0, mock_remove.call_count)
+
+        self.assertIn('multipath_id', connection_info['data'])
+
+        # But NOT during disconnect_volume
+        mock_find.return_value = None
+        libvirt_driver.disconnect_volume(connection_info, "vde")
+        self.assertEqual(0, mock_remove.call_count)
+
     @mock.patch.object(volume.LibvirtFibreChannelVolumeDriver,
                        '_remove_lun_from_s390')
     def _test_libvirt_fibrechan_driver_s390(self, mock_remove_lun):
