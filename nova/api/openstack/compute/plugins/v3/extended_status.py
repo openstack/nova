@@ -26,7 +26,10 @@ class ExtendedStatusController(wsgi.Controller):
         super(ExtendedStatusController, self).__init__(*args, **kwargs)
 
     def _extend_server(self, server, instance):
-        for state in ['task_state', 'vm_state', 'power_state', 'locked_by']:
+        # Note(gmann): Removed 'locked_by' from extended status
+        # to make it same as V2. If needed it can be added with
+        # microversion.
+        for state in ['task_state', 'vm_state', 'power_state']:
             key = "%s:%s" % ('OS-EXT-STS', state)
             server[key] = instance[state]
 
