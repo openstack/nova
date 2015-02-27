@@ -15,6 +15,7 @@
 
 """Tests for compute resource tracking."""
 
+import copy
 import uuid
 
 import mock
@@ -732,16 +733,20 @@ class SchedulerClientTrackerTestCase(BaseTrackerTestCase):
                 side_effect=self._fake_compute_node_update)
 
     def test_update_resource(self):
-        self.tracker._write_ext_resources = mock.Mock()
-        values = {'stats': {}, 'foo': 'bar', 'baz_count': 0}
-        self.tracker._update(self.context, values)
-
-        expected = {'stats': '{}', 'foo': 'bar', 'baz_count': 0,
-                    'id': 1}
+        # change a compute node value to simulate a change
+        self.tracker.compute_node['local_gb_used'] += 1
+        expected = copy.deepcopy(self.tracker.compute_node)
+        self.tracker._update(self.context)
         self.tracker.scheduler_client.update_resource_stats.\
             assert_called_once_with(self.context,
                                     ("fakehost", "fakenode"),
                                     expected)
+
+    def test_no_update_resource(self):
+        self.tracker._update(self.context)
+        update = self.tracker.scheduler_client.update_resource_stats
+        self.assertFalse(update.called, "update_resource_stats should not be "
+                                        "called when there is no change")
 
 
 class TrackerPciStatsTestCase(BaseTrackerTestCase):

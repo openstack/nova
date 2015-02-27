@@ -392,7 +392,8 @@ class TestUpdateAvailableResources(BaseTestCase):
         migr_mock.assert_called_once_with(mock.sentinel.ctx, 'fake-host',
                                           'fake-node')
 
-        expected_resources = {
+        expected_resources = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
+        expected_resources.update({
             # host is added in update_available_resources()
             # before calling _update()
             'host': 'fake-host',
@@ -414,9 +415,9 @@ class TestUpdateAvailableResources(BaseTestCase):
             'current_workload': 0,
             'vcpus': 4,
             'running_vms': 0
-        }
-        update_mock.assert_called_once_with(mock.sentinel.ctx,
-                expected_resources)
+        })
+        update_mock.assert_called_once_with(mock.sentinel.ctx)
+        self.assertEqual(expected_resources, self.rt.compute_node)
 
     @mock.patch('nova.objects.Service.get_by_compute_host')
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
@@ -437,7 +438,8 @@ class TestUpdateAvailableResources(BaseTestCase):
 
         get_cn_mock.assert_called_once_with(mock.sentinel.ctx, 'fake-host',
                                             'fake-node')
-        expected_resources = {
+        expected_resources = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
+        expected_resources.update({
             # host is added in update_available_resources()
             # before calling _update()
             'host': 'fake-host',
@@ -459,9 +461,9 @@ class TestUpdateAvailableResources(BaseTestCase):
             'current_workload': 0,
             'vcpus': 4,
             'running_vms': 0
-        }
-        update_mock.assert_called_once_with(mock.sentinel.ctx,
-                expected_resources)
+        })
+        update_mock.assert_called_once_with(mock.sentinel.ctx)
+        self.assertEqual(expected_resources, self.rt.compute_node)
 
     @mock.patch('nova.objects.Service.get_by_compute_host')
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
@@ -482,7 +484,8 @@ class TestUpdateAvailableResources(BaseTestCase):
 
         get_cn_mock.assert_called_once_with(mock.sentinel.ctx, 'fake-host',
                                             'fake-node')
-        expected_resources = {
+        expected_resources = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
+        expected_resources.update({
             # host is added in update_available_resources()
             # before calling _update()
             'host': 'fake-host',
@@ -515,9 +518,9 @@ class TestUpdateAvailableResources(BaseTestCase):
             'current_workload': 0,
             'vcpus': 4,
             'running_vms': 1  # One active instance
-        }
-        update_mock.assert_called_once_with(mock.sentinel.ctx,
-                expected_resources)
+        })
+        update_mock.assert_called_once_with(mock.sentinel.ctx)
+        self.assertEqual(expected_resources, self.rt.compute_node)
 
     @mock.patch('nova.objects.Service.get_by_compute_host')
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
@@ -558,7 +561,8 @@ class TestUpdateAvailableResources(BaseTestCase):
 
         get_cn_mock.assert_called_once_with(mock.sentinel.ctx, 'fake-host',
                                             'fake-node')
-        expected_resources = {
+        expected_resources = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
+        expected_resources.update({
             # host is added in update_available_resources()
             # before calling _update()
             'host': 'fake-host',
@@ -582,9 +586,9 @@ class TestUpdateAvailableResources(BaseTestCase):
             # Yep, for some reason, orphaned instances are not counted
             # as running VMs...
             'running_vms': 0
-        }
-        update_mock.assert_called_once_with(mock.sentinel.ctx,
-                expected_resources)
+        })
+        update_mock.assert_called_once_with(mock.sentinel.ctx)
+        self.assertEqual(expected_resources, self.rt.compute_node)
 
     @mock.patch('nova.objects.Service.get_by_compute_host')
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
@@ -622,7 +626,8 @@ class TestUpdateAvailableResources(BaseTestCase):
 
         get_cn_mock.assert_called_once_with(mock.sentinel.ctx, 'fake-host',
                                             'fake-node')
-        expected_resources = {
+        expected_resources = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
+        expected_resources.update({
             # host is added in update_available_resources()
             # before calling _update()
             'host': 'fake-host',
@@ -644,9 +649,9 @@ class TestUpdateAvailableResources(BaseTestCase):
             'current_workload': 0,
             'vcpus': 4,
             'running_vms': 0
-        }
-        update_mock.assert_called_once_with(mock.sentinel.ctx,
-                expected_resources)
+        })
+        update_mock.assert_called_once_with(mock.sentinel.ctx)
+        self.assertEqual(expected_resources, self.rt.compute_node)
 
     @mock.patch('nova.objects.Service.get_by_compute_host')
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
@@ -680,7 +685,8 @@ class TestUpdateAvailableResources(BaseTestCase):
 
         get_cn_mock.assert_called_once_with(mock.sentinel.ctx, 'fake-host',
                                             'fake-node')
-        expected_resources = {
+        expected_resources = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
+        expected_resources.update({
             # host is added in update_available_resources()
             # before calling _update()
             'host': 'fake-host',
@@ -702,9 +708,9 @@ class TestUpdateAvailableResources(BaseTestCase):
             'current_workload': 0,
             'vcpus': 4,
             'running_vms': 0
-        }
-        update_mock.assert_called_once_with(mock.sentinel.ctx,
-                expected_resources)
+        })
+        update_mock.assert_called_once_with(mock.sentinel.ctx)
+        self.assertEqual(expected_resources, self.rt.compute_node)
 
     @mock.patch('nova.objects.Service.get_by_compute_host')
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
@@ -742,7 +748,8 @@ class TestUpdateAvailableResources(BaseTestCase):
 
         get_cn_mock.assert_called_once_with(mock.sentinel.ctx, 'fake-host',
                                             'fake-node')
-        expected_resources = {
+        expected_resources = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
+        expected_resources.update({
             # host is added in update_available_resources()
             # before calling _update()
             'host': 'fake-host',
@@ -768,9 +775,9 @@ class TestUpdateAvailableResources(BaseTestCase):
             'current_workload': 1,  # One migrating instance...
             'vcpus': 4,
             'running_vms': 2
-        }
-        update_mock.assert_called_once_with(mock.sentinel.ctx,
-                expected_resources)
+        })
+        update_mock.assert_called_once_with(mock.sentinel.ctx)
+        self.assertEqual(expected_resources, self.rt.compute_node)
 
 
 class TestInitComputeNode(BaseTestCase):
@@ -898,7 +905,6 @@ class TestUpdateComputeNode(BaseTestCase):
     @mock.patch('nova.objects.Service.get_by_compute_host')
     def test_existing_compute_node_updated_same_resources(self, service_mock):
         self._setup_rt()
-        self.rt.compute_node = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
 
         capi = self.cond_api_mock
         create_node_mock = capi.compute_node_create
@@ -910,6 +916,7 @@ class TestUpdateComputeNode(BaseTestCase):
             # host is added in update_available_resources()
             # before calling _update()
             'host': 'fake-host',
+            'id': 1,
             'host_ip': 'fake-ip',
             'numa_topology': None,
             'metrics': '[]',
@@ -930,7 +937,8 @@ class TestUpdateComputeNode(BaseTestCase):
             'running_vms': 0
         }
         orig_resources = copy.deepcopy(resources)
-        self.rt._update(mock.sentinel.ctx, resources)
+        self.rt.compute_node = copy.deepcopy(orig_resources)
+        self.rt._update(mock.sentinel.ctx)
 
         self.assertFalse(self.rt.disabled)
         self.assertFalse(service_mock.called)
@@ -943,13 +951,12 @@ class TestUpdateComputeNode(BaseTestCase):
         # (unchanged) resources for the compute node
         self.sched_client_mock.reset_mock()
         urs_mock = self.sched_client_mock.update_resource_stats
-        self.rt._update(mock.sentinel.ctx, orig_resources)
+        self.rt._update(mock.sentinel.ctx)
         self.assertFalse(urs_mock.called)
 
     @mock.patch('nova.objects.Service.get_by_compute_host')
     def test_existing_compute_node_updated_new_resources(self, service_mock):
         self._setup_rt()
-        self.rt.compute_node = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
 
         capi = self.cond_api_mock
         create_node_mock = capi.compute_node_create
@@ -962,6 +969,7 @@ class TestUpdateComputeNode(BaseTestCase):
             # host is added in update_available_resources()
             # before calling _update()
             'host': 'fake-host',
+            'id': 1,
             'host_ip': 'fake-ip',
             'numa_topology': None,
             'metrics': '[]',
@@ -985,13 +993,14 @@ class TestUpdateComputeNode(BaseTestCase):
         expected_resources['id'] = 1
         expected_resources['stats'] = '{}'
 
-        self.rt.ext_resources_handler.reset_resources(resources,
+        self.rt.compute_node = copy.deepcopy(resources)
+        self.rt.ext_resources_handler.reset_resources(self.rt.compute_node,
                                                       self.rt.driver)
         # This emulates the behavior that occurs in the
         # RT.update_available_resource() method, which updates resource
         # information in the ERT differently than all other resources.
         self.rt.ext_resources_handler.update_from_instance(dict(vcpus=2))
-        self.rt._update(mock.sentinel.ctx, resources)
+        self.rt._update(mock.sentinel.ctx)
 
         self.assertFalse(self.rt.disabled)
         self.assertFalse(service_mock.called)
@@ -1070,7 +1079,8 @@ class TestInstanceClaim(BaseTestCase):
         })
         with mock.patch.object(self.rt, '_update') as update_mock:
             self.rt.instance_claim(self.ctx, self.instance, None)
-            update_mock.assert_called_once_with(self.elevated, expected)
+            update_mock.assert_called_once_with(self.elevated)
+            self.assertEqual(expected, self.rt.compute_node)
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid')
     @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
@@ -1110,8 +1120,8 @@ class TestInstanceClaim(BaseTestCase):
             cell.cpu_usage += 1
         with mock.patch.object(self.rt, '_update') as update_mock:
             self.rt.instance_claim(self.ctx, self.instance, limits)
-            self.assertTrue(update_mock.called)
-            updated_compute_node = update_mock.call_args[0][1]
+            update_mock.assert_called_once_with(self.ctx.elevated())
+            updated_compute_node = self.rt.compute_node
             new_numa = updated_compute_node['numa_topology']
             new_numa = objects.NUMATopology.obj_from_db_obj(new_numa)
             self.assertEqualNUMAHostTopology(expected_numa, new_numa)

@@ -25,9 +25,8 @@ class FakeResourceTracker(resource_tracker.ResourceTracker):
         self.compute_node = values
         self.compute_node['id'] = 1
 
-    def _update(self, context, values, prune_stats=False):
-        self._write_ext_resources(values)
-        self.compute_node.update(values)
+    def _update(self, context):
+        self._write_ext_resources(self.compute_node)
 
     def _get_service(self, context):
         return objects.Service(id=1)
