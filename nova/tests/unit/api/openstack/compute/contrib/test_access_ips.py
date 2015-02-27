@@ -350,12 +350,6 @@ class AccessIPsControllerTestV21(test.NoDBTestCase):
         self.assertEqual(resp_obj.obj['server'][access_ips.AccessIPs.v6_key],
                          '')
 
-    def test_create(self):
-        self._test_with_access_ips(self.controller.create, {'body': {}})
-
-    def test_create_without_access_ips(self):
-        self._test_with_access_ips(self.controller.create, {'body': {}})
-
     def test_show(self):
         self._test_with_access_ips(self.controller.show)
 

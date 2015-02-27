@@ -13,8 +13,6 @@
                 "rel": "bookmark"
             }
         ],
-        "accessIPv4": "",
-        "accessIPv6": "",
         "security_groups": [
             {
                 "name": "default"
