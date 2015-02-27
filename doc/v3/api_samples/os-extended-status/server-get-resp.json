@@ -46,7 +46,6 @@
             "My Server Name": "Apache1"
         },
         "name": "new-server-test",
-        "OS-EXT-STS:locked_by": null,
         "OS-EXT-STS:power_state": 1,
         "OS-EXT-STS:task_state": null,
         "OS-EXT-STS:vm_state": "active",
