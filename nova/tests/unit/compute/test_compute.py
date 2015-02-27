@@ -69,6 +69,7 @@ from nova.objects import block_device as block_device_obj
 from nova.objects import instance as instance_obj
 from nova import policy
 from nova import quota
+from nova.scheduler import client as scheduler_client
 from nova import test
 from nova.tests.unit.compute import eventlet_utils
 from nova.tests.unit.compute import fake_resource_tracker
@@ -10424,6 +10425,80 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         aggregate_list = self.api.get_aggregate_list(self.context)
         aggregate = aggregate_list[0]
         self.assertIn(values[0][1][0], aggregate.get('hosts'))
+
+
+class ComputeAPIAggrCallsSchedulerTestCase(test.NoDBTestCase):
+    """This is for making sure that all Aggregate API methods which are
+    updating the aggregates DB table also notifies the Scheduler by using
+    its client.
+    """
+
+    def setUp(self):
+        super(ComputeAPIAggrCallsSchedulerTestCase, self).setUp()
+        self.api = compute_api.AggregateAPI()
+        self.context = context.RequestContext('fake', 'fake')
+
+    @mock.patch.object(scheduler_client.SchedulerClient, 'update_aggregates')
+    def test_create_aggregate(self, update_aggregates):
+        with mock.patch.object(objects.Aggregate, 'create'):
+            agg = self.api.create_aggregate(self.context, 'fake', None)
+        update_aggregates.assert_called_once_with(self.context, [agg])
+
+    @mock.patch.object(scheduler_client.SchedulerClient, 'update_aggregates')
+    def test_update_aggregate(self, update_aggregates):
+        self.api.is_safe_to_update_az = mock.Mock()
+        agg = objects.Aggregate()
+        with mock.patch.object(objects.Aggregate, 'get_by_id',
+                               return_value=agg):
+            self.api.update_aggregate(self.context, 1, {})
+        update_aggregates.assert_called_once_with(self.context, [agg])
+
+    @mock.patch.object(scheduler_client.SchedulerClient, 'update_aggregates')
+    def test_update_aggregate_metadata(self, update_aggregates):
+        self.api.is_safe_to_update_az = mock.Mock()
+        agg = objects.Aggregate()
+        agg.update_metadata = mock.Mock()
+        with mock.patch.object(objects.Aggregate, 'get_by_id',
+                               return_value=agg):
+            self.api.update_aggregate_metadata(self.context, 1, {})
+        update_aggregates.assert_called_once_with(self.context, [agg])
+
+    @mock.patch.object(scheduler_client.SchedulerClient, 'delete_aggregate')
+    def test_delete_aggregate(self, delete_aggregate):
+        self.api.is_safe_to_update_az = mock.Mock()
+        agg = objects.Aggregate(hosts=[])
+        agg.destroy = mock.Mock()
+        with mock.patch.object(objects.Aggregate, 'get_by_id',
+                               return_value=agg):
+            self.api.delete_aggregate(self.context, 1)
+        delete_aggregate.assert_called_once_with(self.context, agg)
+
+    @mock.patch.object(scheduler_client.SchedulerClient, 'update_aggregates')
+    def test_add_host_to_aggregate(self, update_aggregates):
+        self.api.is_safe_to_update_az = mock.Mock()
+        self.api._update_az_cache_for_host = mock.Mock()
+        agg = objects.Aggregate(name='fake', metadata={})
+        agg.add_host = mock.Mock()
+        with contextlib.nested(
+                mock.patch.object(self.api.db,
+                                  'aggregate_metadata_get_by_metadata_key'),
+                mock.patch.object(objects.Service, 'get_by_compute_host'),
+                mock.patch.object(objects.Aggregate, 'get_by_id',
+                                  return_value=agg)):
+            self.api.add_host_to_aggregate(self.context, 1, 'fakehost')
+        update_aggregates.assert_called_once_with(self.context, [agg])
+
+    @mock.patch.object(scheduler_client.SchedulerClient, 'update_aggregates')
+    def test_remove_host_from_aggregate(self, update_aggregates):
+        self.api._update_az_cache_for_host = mock.Mock()
+        agg = objects.Aggregate(name='fake', metadata={})
+        agg.delete_host = mock.Mock()
+        with contextlib.nested(
+                mock.patch.object(objects.Service, 'get_by_compute_host'),
+                mock.patch.object(objects.Aggregate, 'get_by_id',
+                                  return_value=agg)):
+            self.api.remove_host_from_aggregate(self.context, 1, 'fakehost')
+        update_aggregates.assert_called_once_with(self.context, [agg])
 
 
 class ComputeAggrTestCase(BaseTestCase):
