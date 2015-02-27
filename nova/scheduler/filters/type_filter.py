@@ -56,8 +56,8 @@ class AggregateTypeAffinityFilter(filters.BaseHostFilter):
         # TODO(uni): DB query in filter is a performance hit, especially for
         # system with lots of hosts. Will need a general solution here to fix
         # all filters with aggregate DB call things.
-        aggregate_vals = utils.aggregate_values_from_db(
-            filter_properties['context'], host_state.host, 'instance_type')
+        aggregate_vals = utils.aggregate_values_from_key(
+            host_state, 'instance_type')
 
         if not aggregate_vals:
             return True

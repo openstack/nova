@@ -41,7 +41,7 @@ class TestCoreFilter(test.NoDBTestCase):
                 {'vcpus_total': 4, 'vcpus_used': 8})
         self.assertFalse(self.filt_cls.host_passes(host, filter_properties))
 
-    @mock.patch('nova.scheduler.filters.utils.aggregate_values_from_db')
+    @mock.patch('nova.scheduler.filters.utils.aggregate_values_from_key')
     def test_aggregate_core_filter_value_error(self, agg_mock):
         self.filt_cls = core_filter.AggregateCoreFilter()
         filter_properties = {'context': mock.sentinel.ctx,
@@ -51,11 +51,10 @@ class TestCoreFilter(test.NoDBTestCase):
                 {'vcpus_total': 4, 'vcpus_used': 7})
         agg_mock.return_value = set(['XXX'])
         self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
-        agg_mock.assert_called_once_with(mock.sentinel.ctx, 'host1',
-            'cpu_allocation_ratio')
+        agg_mock.assert_called_once_with(host, 'cpu_allocation_ratio')
         self.assertEqual(4 * 2, host.limits['vcpu'])
 
-    @mock.patch('nova.scheduler.filters.utils.aggregate_values_from_db')
+    @mock.patch('nova.scheduler.filters.utils.aggregate_values_from_key')
     def test_aggregate_core_filter_default_value(self, agg_mock):
         self.filt_cls = core_filter.AggregateCoreFilter()
         filter_properties = {'context': mock.sentinel.ctx,
@@ -66,14 +65,13 @@ class TestCoreFilter(test.NoDBTestCase):
         agg_mock.return_value = set([])
         # False: fallback to default flag w/o aggregates
         self.assertFalse(self.filt_cls.host_passes(host, filter_properties))
-        agg_mock.assert_called_once_with(mock.sentinel.ctx, 'host1',
-            'cpu_allocation_ratio')
+        agg_mock.assert_called_once_with(host, 'cpu_allocation_ratio')
         # True: use ratio from aggregates
         agg_mock.return_value = set(['3'])
         self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
         self.assertEqual(4 * 3, host.limits['vcpu'])
 
-    @mock.patch('nova.scheduler.filters.utils.aggregate_values_from_db')
+    @mock.patch('nova.scheduler.filters.utils.aggregate_values_from_key')
     def test_aggregate_core_filter_conflict_values(self, agg_mock):
         self.filt_cls = core_filter.AggregateCoreFilter()
         filter_properties = {'context': mock.sentinel.ctx,

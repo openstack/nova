@@ -44,9 +44,8 @@ class AvailabilityZoneFilter(filters.BaseHostFilter):
         if not availability_zone:
             return True
 
-        context = filter_properties['context']
         metadata = utils.aggregate_metadata_get_by_host(
-                context, host_state.host, key='availability_zone')
+                host_state, key='availability_zone')
 
         if 'availability_zone' in metadata:
             hosts_passes = availability_zone in metadata['availability_zone']

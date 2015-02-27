@@ -40,9 +40,7 @@ class AggregateMultiTenancyIsolation(filters.BaseHostFilter):
         props = spec.get('instance_properties', {})
         tenant_id = props.get('project_id')
 
-        context = filter_properties['context']
-        metadata = utils.aggregate_metadata_get_by_host(context,
-                                                        host_state.host,
+        metadata = utils.aggregate_metadata_get_by_host(host_state,
                                                         key="filter_tenant_id")
 
         if metadata != {}:

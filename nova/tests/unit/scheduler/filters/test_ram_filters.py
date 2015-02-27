@@ -46,7 +46,7 @@ class TestRamFilter(test.NoDBTestCase):
         self.assertEqual(2048 * 2.0, host.limits['memory_mb'])
 
 
-@mock.patch('nova.scheduler.filters.utils.aggregate_values_from_db')
+@mock.patch('nova.scheduler.filters.utils.aggregate_values_from_key')
 class TestAggregateRamFilter(test.NoDBTestCase):
 
     def setUp(self):
