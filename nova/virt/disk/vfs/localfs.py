@@ -164,6 +164,7 @@ class VFSLocalFS(vfs.VFS):
             out, err = utils.execute('blkid', '-o',
                                      'value', '-s',
                                      'TYPE', self.mount.device,
-                                     run_as_root=True)
+                                     run_as_root=True,
+                                     check_exit_code=[0, 2])
             return out.strip()
         return ""
