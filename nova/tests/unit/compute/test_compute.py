@@ -6731,6 +6731,7 @@ class ComputeTestCase(BaseTestCase):
         instance.id = 1
         instance.vm_state = vm_states.DELETED
         instance.deleted = False
+        instance.host = self.compute.host
 
         def fake_partial_deletion(context, instance):
             instance['deleted'] = instance['id']
@@ -6748,6 +6749,7 @@ class ComputeTestCase(BaseTestCase):
         instance.uuid = str(uuid.uuid4())
         instance.vm_state = vm_states.DELETED
         instance.deleted = False
+        instance.host = self.compute.host
 
         self.mox.StubOutWithMock(self.compute, '_complete_partial_deletion')
         self.compute._complete_partial_deletion(
