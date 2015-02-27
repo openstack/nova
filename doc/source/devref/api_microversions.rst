@@ -136,6 +136,23 @@ necessary to add changes to other places which describe your change:
   be enough information that it could be used by the docs team for
   release notes.
 
+Allocating a microversion
+-------------------------
+
+If you are adding a patch which adds a new microversion, it is
+necessary to allocate the next microversion number. Except under
+extremely unusual circumstances and this would have been mentioned in
+the nova spec for the change, the minor number of ``_MAX_API_VERSION``
+will be incremented. This will also be the new microversion number for
+the API change.
+
+It is possible that multiple microversion patches would be proposed in
+parallel and the microversions would conflict between patches.  This
+will cause a merge conflict. We don't reserve a microversion for each
+patch in advance as we don't know the final merge order. Developers
+may need over time to rebase their patch calculating a new version
+number as above based on the updated value of ``_MAX_API_VERSION``.
+
 Testing Microversioned API Methods
 ----------------------------------
 
