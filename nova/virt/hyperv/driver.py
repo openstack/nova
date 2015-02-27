@@ -169,7 +169,7 @@ class HyperVDriver(driver.ComputeDriver):
             context, dest_check_data)
 
     def check_can_live_migrate_source(self, context, instance,
-                                      dest_check_data):
+                                      dest_check_data, block_device_info=None):
         return self._livemigrationops.check_can_live_migrate_source(
             context, instance, dest_check_data)
 
