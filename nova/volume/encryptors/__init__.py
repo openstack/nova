@@ -36,6 +36,12 @@ def get_volume_encryptor(connection_info, **kwargs):
     if location and location.lower() == 'front-end':  # case insensitive
         provider = kwargs.get('provider')
 
+        if provider == 'LuksEncryptor':
+            provider = 'nova.volume.encryptors.luks.' + provider
+        elif provider == 'CryptsetupEncryptor':
+            provider = 'nova.volume.encryptors.cryptsetup.' + provider
+        elif provider == 'NoOpEncryptor':
+            provider = 'nova.volume.encryptors.nop.' + provider
         try:
             encryptor = importutils.import_object(provider, connection_info,
                                                   **kwargs)
