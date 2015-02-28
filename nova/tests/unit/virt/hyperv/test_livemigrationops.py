@@ -34,7 +34,10 @@ class LiveMigrationOpsTestCase(test_base.HyperVBaseTestCase):
         self._livemigrops._livemigrutils = mock.MagicMock()
 
     @mock.patch('nova.virt.hyperv.vmops.VMOps.copy_vm_console_logs')
-    def _test_live_migration(self, mock_copy_logs, side_effect):
+    @mock.patch('nova.virt.configdrive.required_by')
+    @mock.patch('nova.virt.hyperv.pathutils.PathUtils.copy_configdrive')
+    def _test_live_migration(self, mock_copy_configdrive, mock_required_by,
+                             mock_copy_logs, side_effect, configdrive=False):
         mock_instance = fake_instance.fake_instance_obj(self.context)
         mock_post = mock.MagicMock()
         mock_recover = mock.MagicMock()
@@ -49,6 +52,10 @@ class LiveMigrationOpsTestCase(test_base.HyperVBaseTestCase):
             mock_recover.assert_called_once_with(self.context, mock_instance,
                                                  fake_dest, False)
         else:
+            if configdrive:
+                mock_required_by.return_value = True
+                self.flags(config_drive_cdrom=True, group='hyperv')
+
             self._livemigrops.live_migration(context=self.context,
                                              instance_ref=mock_instance,
                                              dest=fake_dest,
@@ -57,6 +64,9 @@ class LiveMigrationOpsTestCase(test_base.HyperVBaseTestCase):
 
             mock_copy_logs.assert_called_once_with(mock_instance.name,
                                                    fake_dest)
+            if configdrive:
+                mock_copy_configdrive.assert_called_once_with(
+                    mock_instance.name, fake_dest)
             mock_live_migr = self._livemigrops._livemigrutils.live_migrate_vm
             mock_live_migr.assert_called_once_with(mock_instance.name,
                                                    fake_dest)
@@ -77,6 +87,9 @@ class LiveMigrationOpsTestCase(test_base.HyperVBaseTestCase):
                           dest=mock.sentinel.DESTINATION,
                           post_method=mock.DEFAULT,
                           recover_method=mock.DEFAULT)
+
+    def test_live_migration_with_configdrive(self):
+        self._test_live_migration(side_effect=None, configdrive=True)
 
     @mock.patch('nova.virt.hyperv.volumeops.VolumeOps'
                 '.ebs_root_in_block_devices')
