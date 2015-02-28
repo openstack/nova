@@ -23,6 +23,7 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import excutils
+from oslo_utils import strutils
 from oslo_utils import units
 import six
 
@@ -383,7 +384,8 @@ class Raw(Image):
         self.path = (path or
                      os.path.join(libvirt_utils.get_instance_path(instance),
                                   disk_name))
-        self.preallocate = CONF.preallocate_images != 'none'
+        self.preallocate = (
+            strutils.to_slug(CONF.preallocate_images) == 'space')
         self.disk_info_path = os.path.join(os.path.dirname(self.path),
                                            'disk.info')
         self.correct_format()
@@ -455,7 +457,8 @@ class Qcow2(Image):
         self.path = (path or
                      os.path.join(libvirt_utils.get_instance_path(instance),
                                   disk_name))
-        self.preallocate = CONF.preallocate_images != 'none'
+        self.preallocate = (
+            strutils.to_slug(CONF.preallocate_images) == 'space')
         self.disk_info_path = os.path.join(os.path.dirname(self.path),
                                            'disk.info')
         self.resolve_driver_format()
