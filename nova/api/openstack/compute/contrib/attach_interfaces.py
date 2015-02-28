@@ -123,6 +123,7 @@ class InterfaceAttachmentController(object):
                 instance, network_id, port_id, req_ip)
         except (exception.PortNotFound,
                 exception.FixedIpAlreadyInUse,
+                exception.NoMoreFixedIps,
                 exception.PortInUse,
                 exception.NetworkDuplicated,
                 exception.NetworkAmbiguous,
