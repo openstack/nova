@@ -16,7 +16,6 @@ import datetime
 
 from oslo_config import cfg
 from oslo_serialization import jsonutils
-import webob
 
 from nova.api.openstack.compute.contrib import availability_zone as az_v2
 from nova.api.openstack.compute import plugins
@@ -107,8 +106,7 @@ class AvailabilityZoneApiTestV21(test.NoDBTestCase):
                        fake_set_availability_zones)
         self.stubs.Set(servicegroup.API, 'service_is_up', fake_service_is_up)
         self.controller = self.availability_zone.AvailabilityZoneController()
-        self.admin_webreq = webob.Request.blank('')
-        self.admin_webreq.environ['nova.context'] = context.get_admin_context()
+        self.req = fakes.HTTPRequest.blank('')
 
     def test_filtered_availability_zones(self):
         zones = ['zone1', 'internal']
@@ -126,7 +124,7 @@ class AvailabilityZoneApiTestV21(test.NoDBTestCase):
         self.assertEqual(result, expected)
 
     def test_availability_zone_index(self):
-        resp_dict = self.controller.index(self.admin_webreq)
+        resp_dict = self.controller.index(self.req)
 
         self.assertIn('availabilityZoneInfo', resp_dict)
         zones = resp_dict['availabilityZoneInfo']
@@ -169,7 +167,7 @@ class AvailabilityZoneApiTestV21(test.NoDBTestCase):
             self.assertEqual(zone['zoneName'], name)
             self.assertEqual(zone['zoneState'], status)
 
-        resp_dict = self.controller.detail(self.admin_webreq)
+        resp_dict = self.controller.detail(self.req)
 
         self.assertIn('availabilityZoneInfo', resp_dict)
         zones = resp_dict['availabilityZoneInfo']
@@ -230,7 +228,7 @@ class AvailabilityZoneApiTestV21(test.NoDBTestCase):
         self.stubs.Set(availability_zones, 'get_availability_zones',
                        fake_get_availability_zones)
 
-        resp_dict = self.controller.detail(self.admin_webreq)
+        resp_dict = self.controller.detail(self.req)
 
         self.assertThat(resp_dict,
                         matchers.DictMatches(expected_response))
@@ -238,6 +236,15 @@ class AvailabilityZoneApiTestV21(test.NoDBTestCase):
 
 class AvailabilityZoneApiTestV2(AvailabilityZoneApiTestV21):
     availability_zone = az_v2
+
+    def setUp(self):
+        super(AvailabilityZoneApiTestV2, self).setUp()
+        self.req = fakes.HTTPRequest.blank('', use_admin_context=True)
+        self.non_admin_req = fakes.HTTPRequest.blank('')
+
+    def test_availability_zone_detail_with_non_admin(self):
+        self.assertRaises(exception.AdminRequired,
+                          self.controller.detail, self.non_admin_req)
 
 
 class ServersControllerCreateTestV21(test.TestCase):

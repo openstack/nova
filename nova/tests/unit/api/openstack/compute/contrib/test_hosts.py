@@ -412,3 +412,25 @@ class HostTestCaseV20(HostTestCaseV21):
 
     def test_list_hosts_with_invalid_service(self):
         pass
+
+    def test_list_hosts_with_non_admin(self):
+        self.assertRaises(exception.AdminRequired,
+                          self.controller.index, fakes.HTTPRequest.blank(''))
+
+
+class HostsPolicyEnforcementV21(test.NoDBTestCase):
+
+    def setUp(self):
+        super(HostsPolicyEnforcementV21, self).setUp()
+        self.controller = os_hosts_v21.HostController()
+        self.req = fakes.HTTPRequest.blank('')
+
+    def test_index_policy_failed(self):
+        rule_name = "compute_extension:v3:os-hosts"
+        self.policy.set_rules({rule_name: "project_id:non_fake"})
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.controller.index, self.req)
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+            exc.format_message())

@@ -36,6 +36,11 @@ class ServiceController(object):
     def _get_services(self, req):
         context = req.environ['nova.context']
         authorize(context)
+
+        # NOTE(alex_xu): back-compatible with db layer hard-code admin
+        # permission checks
+        nova_context.require_admin_context(context)
+
         services = self.host_api.service_get_all(
             context, set_zones=True)
 
