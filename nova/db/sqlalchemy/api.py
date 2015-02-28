@@ -499,7 +499,6 @@ def service_get_all_by_host(context, host):
                 all()
 
 
-@require_admin_context
 def service_get_by_compute_host(context, host, use_slave=False):
     result = model_query(context, models.Service, read_deleted="no",
                          use_slave=use_slave).\

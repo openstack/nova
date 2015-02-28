@@ -266,6 +266,10 @@ class EvacuateTestV2(EvacuateTestV21):
     def test_evacuate_enable_password_return(self):
         pass
 
+    def tet_evacuate_with_non_admin(self):
+        self.assertRaises(exception.AdminRequired, self.controller.evacuate,
+                          self.req, fakes.FAKE_UUID, {})
+
 
 class EvacuatePolicyEnforcementv21(test.NoDBTestCase):
 

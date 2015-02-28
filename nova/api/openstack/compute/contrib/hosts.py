@@ -119,6 +119,13 @@ class HostController(object):
                 raise webob.exc.HTTPBadRequest(explanation=msg % orig_val)
         context = req.environ['nova.context']
         authorize(context)
+
+        # NOTE(alex_xu): back-compatible with db layer hard-code admin
+        # permission checks. This has to be left only for API v2.0 because
+        # this version has to be stable even if it means that only admins
+        # can call this method while the policy could be changed.
+        nova_context.require_admin_context(context)
+
         # See what the user wants to 'update'
         params = {k.strip().lower(): v for k, v in body.iteritems()}
         orig_status = status = params.pop('status', None)
@@ -193,6 +200,11 @@ class HostController(object):
         """Reboots, shuts down or powers up the host."""
         context = req.environ['nova.context']
         authorize(context)
+        # NOTE(alex_xu): back-compatible with db layer hard-code admin
+        # permission checks. This has to be left only for API v2.0 because
+        # this version has to be stable even if it means that only admins
+        # can call this method while the policy could be changed.
+        nova_context.require_admin_context(context)
         try:
             result = self.api.host_power_action(context, host_name=host_name,
                     action=action)
