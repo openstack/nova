@@ -26,7 +26,7 @@ def rand_flavor():
     flav = {
         'name': 'name-%s' % helper.generate_random_alphanumeric(10),
         'id': helper.generate_random_alphanumeric(10),
-        'ram': int(helper.generate_random_numeric(2)),
+        'ram': int(helper.generate_random_numeric(2)) + 1,
         'disk': int(helper.generate_random_numeric(3)),
         'vcpus': int(helper.generate_random_numeric(1)) + 1,
     }
