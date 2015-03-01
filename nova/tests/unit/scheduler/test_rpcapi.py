@@ -53,7 +53,7 @@ class SchedulerRpcAPITestCase(test.NoDBTestCase):
 
         rpc_method = getattr(rpcapi.client, rpc_method)
 
-        rpc_method(ctxt, method, **expected_kwargs).AndReturn('foo')
+        rpc_method(ctxt, method, **expected_kwargs).AndReturn(expected_retval)
 
         self.mox.ReplayAll()
 
@@ -80,3 +80,24 @@ class SchedulerRpcAPITestCase(test.NoDBTestCase):
                 aggregate='aggregate',
                 version='4.1',
                 fanout=True)
+
+    def test_update_instance_info(self):
+        self._test_scheduler_api('update_instance_info', rpc_method='cast',
+                host_name='fake_host',
+                instance_info='fake_instance',
+                fanout=True,
+                version='4.2')
+
+    def test_delete_instance_info(self):
+        self._test_scheduler_api('delete_instance_info', rpc_method='cast',
+                host_name='fake_host',
+                instance_uuid='fake_uuid',
+                fanout=True,
+                version='4.2')
+
+    def test_sync_instance_info(self):
+        self._test_scheduler_api('sync_instance_info', rpc_method='cast',
+                host_name='fake_host',
+                instance_uuids=['fake1', 'fake2'],
+                fanout=True,
+                version='4.2')

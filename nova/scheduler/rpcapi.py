@@ -88,6 +88,8 @@ class SchedulerAPI(object):
 
         * 4.0 - Removed backwards compat for Icehouse
         * 4.1 - Add update_aggregates() and delete_aggregate()
+        * 4.2 - Added update_instance_info(), delete_instance_info(), and
+                sync_instance_info()  methods
 
 
     '''
@@ -123,3 +125,18 @@ class SchedulerAPI(object):
         # NOTE(sbauza): Yes, it's a fanout, we need to update all schedulers
         cctxt = self.client.prepare(fanout=True, version='4.1')
         cctxt.cast(ctxt, 'delete_aggregate', aggregate=aggregate)
+
+    def update_instance_info(self, ctxt, host_name, instance_info):
+        cctxt = self.client.prepare(version='4.2', fanout=True)
+        return cctxt.cast(ctxt, 'update_instance_info', host_name=host_name,
+                          instance_info=instance_info)
+
+    def delete_instance_info(self, ctxt, host_name, instance_uuid):
+        cctxt = self.client.prepare(version='4.2', fanout=True)
+        return cctxt.cast(ctxt, 'delete_instance_info', host_name=host_name,
+                          instance_uuid=instance_uuid)
+
+    def sync_instance_info(self, ctxt, host_name, instance_uuids):
+        cctxt = self.client.prepare(version='4.2', fanout=True)
+        return cctxt.cast(ctxt, 'sync_instance_info', host_name=host_name,
+                          instance_uuids=instance_uuids)

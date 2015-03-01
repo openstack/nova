@@ -55,7 +55,7 @@ QUOTAS = quota.QUOTAS
 class SchedulerManager(manager.Manager):
     """Chooses a host to run instances on."""
 
-    target = messaging.Target(version='4.1')
+    target = messaging.Target(version='4.2')
 
     def __init__(self, scheduler_driver=None, *args, **kwargs):
         if not scheduler_driver:
@@ -104,6 +104,27 @@ class SchedulerManager(manager.Manager):
         """
         # NOTE(sbauza): We're dropping the user context now as we don't need it
         self.driver.host_manager.delete_aggregate(aggregate)
+
+    def update_instance_info(self, context, host_name, instance_info):
+        """Receives information about changes to a host's instances, and
+        updates the driver's HostManager with that information.
+        """
+        self.driver.host_manager.update_instance_info(context, host_name,
+                                                      instance_info)
+
+    def delete_instance_info(self, context, host_name, instance_uuid):
+        """Receives information about the deletion of one of a host's
+        instances, and updates the driver's HostManager with that information.
+        """
+        self.driver.host_manager.delete_instance_info(context, host_name,
+                                                      instance_uuid)
+
+    def sync_instance_info(self, context, host_name, instance_uuids):
+        """Receives a sync request from a host, and passes it on to the
+        driver's HostManager.
+        """
+        self.driver.host_manager.sync_instance_info(context, host_name,
+                                                    instance_uuids)
 
 
 class _SchedulerManagerV3Proxy(object):

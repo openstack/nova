@@ -49,3 +49,39 @@ class SchedulerQueryClient(object):
         :type aggregate: :class:`nova.objects.Aggregate`
         """
         self.scheduler_rpcapi.delete_aggregate(context, aggregate)
+
+    def update_instance_info(self, context, host_name, instance_info):
+        """Updates the HostManager with the current information about the
+        instances on a host.
+
+        :param context: local context
+        :param host_name: name of host sending the update
+        :param instance_info: an InstanceList object.
+        """
+        self.scheduler_rpcapi.update_instance_info(context, host_name,
+                                                   instance_info)
+
+    def delete_instance_info(self, context, host_name, instance_uuid):
+        """Updates the HostManager with the current information about an
+        instance that has been deleted on a host.
+
+        :param context: local context
+        :param host_name: name of host sending the update
+        :param instance_uuid: the uuid of the deleted instance
+        """
+        self.scheduler_rpcapi.delete_instance_info(context, host_name,
+                                                   instance_uuid)
+
+    def sync_instance_info(self, context, host_name, instance_uuids):
+        """Notifies the HostManager of the current instances on a host by
+        sending a list of the uuids for those instances. The HostManager can
+        then compare that with its in-memory view of the instances to detect
+        when they are out of sync.
+
+        :param context: local context
+        :param host_name: name of host sending the update
+        :param instance_uuids: a list of UUID strings representing the current
+                               instances on the specified host
+        """
+        self.scheduler_rpcapi.sync_instance_info(context, host_name,
+                                                 instance_uuids)
