@@ -171,22 +171,18 @@ class QuotaSetsController(wsgi.Controller):
     # TODO(oomichi): Here should be 204(No Content) instead of 202 by v2.1
     # +microversions because the resource quota-set has been deleted completely
     # when returning a response.
-    @extensions.expected_errors(403)
+    @extensions.expected_errors(())
     @wsgi.response(202)
     def delete(self, req, id):
         context = req.environ['nova.context']
-        authorize(context, action='delete')
+        authorize(context, action='delete', target={'project_id': id})
         params = urlparse.parse_qs(req.environ.get('QUERY_STRING', ''))
         user_id = params.get('user_id', [None])[0]
-        try:
-            nova.context.authorize_project_context(context, id)
-            if user_id:
-                QUOTAS.destroy_all_by_project_and_user(context,
-                                                       id, user_id)
-            else:
-                QUOTAS.destroy_all_by_project(context, id)
-        except exception.Forbidden:
-            raise webob.exc.HTTPForbidden()
+        if user_id:
+            QUOTAS.destroy_all_by_project_and_user(context,
+                                                   id, user_id)
+        else:
+            QUOTAS.destroy_all_by_project(context, id)
 
 
 class QuotaSets(extensions.V3APIExtensionBase):

@@ -220,6 +220,12 @@ class QuotaSetsController(wsgi.Controller):
                 raise webob.exc.HTTPNotFound()
             try:
                 nova.context.authorize_project_context(context, id)
+                # NOTE(alex_xu): back-compatible with db layer hard-code admin
+                # permission checks. This has to be left only for API v2.0
+                # because this version has to be stable even if it means that
+                # only admins can call this method while the policy could be
+                # changed.
+                nova.context.require_admin_context(context)
                 if user_id:
                     QUOTAS.destroy_all_by_project_and_user(context,
                                                            id, user_id)

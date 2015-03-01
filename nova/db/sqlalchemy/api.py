@@ -3649,7 +3649,6 @@ def reservation_rollback(context, reservations, project_id=None, user_id=None):
         reservation_query.soft_delete(synchronize_session=False)
 
 
-@require_admin_context
 def quota_destroy_all_by_project_and_user(context, project_id, user_id):
     session = get_session()
     with session.begin():
@@ -3672,7 +3671,6 @@ def quota_destroy_all_by_project_and_user(context, project_id, user_id):
                 soft_delete(synchronize_session=False)
 
 
-@require_admin_context
 def quota_destroy_all_by_project(context, project_id):
     session = get_session()
     with session.begin():
