@@ -21,7 +21,6 @@ from nova.api.openstack.compute.schemas.v3 import quota_sets
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
-import nova.context
 from nova import exception
 from nova.i18n import _
 from nova import objects
@@ -82,37 +81,29 @@ class QuotaSetsController(wsgi.Controller):
         else:
             return {k: v['limit'] for k, v in values.items()}
 
-    @extensions.expected_errors(403)
+    @extensions.expected_errors(())
     def show(self, req, id):
         context = req.environ['nova.context']
-        authorize(context, action='show')
+        authorize(context, action='show', target={'project_id': id})
         params = urlparse.parse_qs(req.environ.get('QUERY_STRING', ''))
         user_id = params.get('user_id', [None])[0]
-        try:
-            nova.context.authorize_project_context(context, id)
-            return self._format_quota_set(id,
-                    self._get_quotas(context, id, user_id=user_id))
-        except exception.Forbidden:
-            raise webob.exc.HTTPForbidden()
+        return self._format_quota_set(id,
+            self._get_quotas(context, id, user_id=user_id))
 
-    @extensions.expected_errors(403)
+    @extensions.expected_errors(())
     def detail(self, req, id):
         context = req.environ['nova.context']
-        authorize(context, action='detail')
+        authorize(context, action='detail', target={'project_id': id})
         user_id = req.GET.get('user_id', None)
-        try:
-            nova.context.authorize_project_context(context, id)
-            return self._format_quota_set(id, self._get_quotas(context, id,
-                                                               user_id=user_id,
-                                                               usages=True))
-        except exception.Forbidden:
-            raise webob.exc.HTTPForbidden()
+        return self._format_quota_set(id, self._get_quotas(context, id,
+                                                           user_id=user_id,
+                                                           usages=True))
 
-    @extensions.expected_errors((400, 403))
+    @extensions.expected_errors(400)
     @validation.schema(quota_sets.update)
     def update(self, req, id, body):
         context = req.environ['nova.context']
-        authorize(context, action='update')
+        authorize(context, action='update', target={'project_id': id})
         project_id = id
         params = urlparse.parse_qs(req.environ.get('QUERY_STRING', ''))
         user_id = params.get('user_id', [None])[0]
@@ -120,12 +111,8 @@ class QuotaSetsController(wsgi.Controller):
         quota_set = body['quota_set']
         force_update = strutils.bool_from_string(quota_set.get('force',
                                                                'False'))
-
-        try:
-            settable_quotas = QUOTAS.get_settable_quotas(context, project_id,
-                                                         user_id=user_id)
-        except exception.Forbidden:
-            raise webob.exc.HTTPForbidden()
+        settable_quotas = QUOTAS.get_settable_quotas(context, project_id,
+                                                     user_id=user_id)
 
         # NOTE(dims): Pass #1 - In this loop for quota_set.items(), we validate
         # min/max values and bail out if any of the items in the set is bad.
@@ -154,8 +141,6 @@ class QuotaSetsController(wsgi.Controller):
             except exception.QuotaExists:
                 objects.Quotas.update_limit(context, project_id,
                                             key, value, user_id=user_id)
-            except exception.AdminRequired:
-                raise webob.exc.HTTPForbidden()
         # Note(gmann): Removed 'id' from update's response to make it same
         # as V2. If needed it can be added with microversion.
         return self._format_quota_set(None, self._get_quotas(context, id,
@@ -164,7 +149,7 @@ class QuotaSetsController(wsgi.Controller):
     @extensions.expected_errors(())
     def defaults(self, req, id):
         context = req.environ['nova.context']
-        authorize(context, action='show')
+        authorize(context, action='defaults', target={'project_id': id})
         values = QUOTAS.get_defaults(context)
         return self._format_quota_set(id, values)
 

@@ -116,6 +116,15 @@ class QuotaSetsController(wsgi.Controller):
     def update(self, req, id, body):
         context = req.environ['nova.context']
         authorize_update(context)
+        try:
+            # NOTE(alex_xu): back-compatible with db layer hard-code admin
+            # permission checks. This has to be left only for API v2.0 because
+            # this version has to be stable even if it means that only admins
+            # can call this method while the policy could be changed.
+            nova.context.require_admin_context(context)
+        except exception.AdminRequired:
+            raise webob.exc.HTTPForbidden()
+
         project_id = id
 
         bad_keys = []
@@ -137,6 +146,9 @@ class QuotaSetsController(wsgi.Controller):
             user_id = params.get('user_id', [None])[0]
 
         try:
+            # NOTE(alex_xu): back-compatible with db layer hard-code admin
+            # permission checks.
+            nova.context.authorize_project_context(context, id)
             settable_quotas = QUOTAS.get_settable_quotas(context, project_id,
                                                          user_id=user_id)
         except exception.Forbidden:
@@ -199,8 +211,6 @@ class QuotaSetsController(wsgi.Controller):
             except exception.QuotaExists:
                 objects.Quotas.update_limit(context, project_id,
                                             key, value, user_id=user_id)
-            except exception.AdminRequired:
-                raise webob.exc.HTTPForbidden()
         values = self._get_quotas(context, id, user_id=user_id)
         return self._format_quota_set(None, values)
 
