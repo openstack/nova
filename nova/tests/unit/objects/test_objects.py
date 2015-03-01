@@ -1219,7 +1219,7 @@ object_data = {
     'InstanceGroup': '1.9-95ece99f092e8f4f88327cdbb44162c9',
     'InstanceGroupList': '1.6-c6b78f3c9d9080d33c08667e80589817',
     'InstanceInfoCache': '1.5-ef64b604498bfa505a8c93747a9d8b2f',
-    'InstanceList': '1.15-20d822b2abb0051d72f81ed686a79e5b',
+    'InstanceList': '1.16-8594a8f95e717e57ee57b4aba59c688e',
     'InstanceNUMACell': '1.2-5d2dfa36e9ecca9b63f24bf3bc958ea4',
     'InstanceNUMATopology': '1.1-86b95d263c4c68411d44c6741b8d2bb0',
     'InstancePCIRequest': '1.1-e082d174f4643e5756ba098c47c1510f',

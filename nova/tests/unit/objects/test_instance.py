@@ -1348,6 +1348,21 @@ class _TestInstanceListObject(object):
             self.assertEqual(inst_list.objects[i].uuid, fakes[i]['uuid'])
         self.assertRemotes()
 
+    @mock.patch('nova.objects.instance._expected_cols')
+    @mock.patch('nova.db.instance_get_all')
+    def test_get_all(self, mock_get_all, mock_exp):
+        fakes = [self.fake_instance(1), self.fake_instance(2)]
+        mock_get_all.return_value = fakes
+        mock_exp.return_value = mock.sentinel.exp_att
+        inst_list = instance.InstanceList.get_all(
+                self.context, expected_attrs='fake')
+        mock_get_all.assert_called_once_with(
+                self.context, columns_to_join=mock.sentinel.exp_att)
+        for i in range(0, len(fakes)):
+            self.assertIsInstance(inst_list.objects[i], instance.Instance)
+            self.assertEqual(inst_list.objects[i].uuid, fakes[i]['uuid'])
+        self.assertRemotes()
+
     def test_get_hung_in_rebooting(self):
         fakes = [self.fake_instance(1),
                  self.fake_instance(2)]
