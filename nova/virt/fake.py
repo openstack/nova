@@ -130,10 +130,10 @@ class FakeDriver(driver.ComputeDriver):
         return
 
     def list_instances(self):
-        return self.instances.keys()
+        return [self.instances[uuid].name for uuid in self.instances.keys()]
 
     def list_instance_uuids(self):
-        return [self.instances[name].uuid for name in self.instances.keys()]
+        return self.instances.keys()
 
     def plug_vifs(self, instance, network_info):
         """Plug VIFs into networks."""
@@ -145,13 +145,13 @@ class FakeDriver(driver.ComputeDriver):
 
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info=None, block_device_info=None):
-        name = instance.name
+        uuid = instance.uuid
         state = power_state.RUNNING
-        fake_instance = FakeInstance(name, state, instance.uuid)
-        self.instances[name] = fake_instance
+        fake_instance = FakeInstance(instance.name, state, uuid)
+        self.instances[uuid] = fake_instance
 
     def snapshot(self, context, instance, image_id, update_task_state):
-        if instance.name not in self.instances:
+        if instance.uuid not in self.instances:
             raise exception.InstanceNotRunning(instance_id=instance.uuid)
         update_task_state(task_state=task_states.IMAGE_UPLOADING)
 
@@ -226,7 +226,7 @@ class FakeDriver(driver.ComputeDriver):
 
     def destroy(self, context, instance, network_info, block_device_info=None,
                 destroy_disks=True, migrate_data=None):
-        key = instance.name
+        key = instance.uuid
         if key in self.instances:
             del self.instances[key]
         else:
@@ -276,9 +276,9 @@ class FakeDriver(driver.ComputeDriver):
                     instance_uuid=instance.uuid)
 
     def get_info(self, instance):
-        if instance.name not in self.instances:
-            raise exception.InstanceNotFound(instance_id=instance.name)
-        i = self.instances[instance.name]
+        if instance.uuid not in self.instances:
+            raise exception.InstanceNotFound(instance_id=instance.uuid)
+        i = self.instances[instance.uuid]
         return hardware.InstanceInfo(state=i.state,
                                      max_mem_kb=0,
                                      mem_kb=0,
@@ -456,9 +456,9 @@ class FakeDriver(driver.ComputeDriver):
     def unfilter_instance(self, instance, network_info):
         return
 
-    def _test_remove_vm(self, instance_name):
+    def _test_remove_vm(self, instance_uuid):
         """Removes the named VM, as if it crashed. For testing."""
-        self.instances.pop(instance_name)
+        self.instances.pop(instance_uuid)
 
     def host_power_action(self, action):
         """Reboots, shuts down or powers up the host."""

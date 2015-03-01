@@ -5865,8 +5865,8 @@ class ComputeTestCase(BaseTestCase):
         LOG.info("Running instances: %s", instances)
         self.assertEqual(len(instances), 1)
 
-        instance_name = instances[0]['name']
-        self.compute.driver._test_remove_vm(instance_name)
+        instance_uuid = instances[0]['uuid']
+        self.compute.driver._test_remove_vm(instance_uuid)
 
         # Force the compute manager to do its periodic poll
         ctxt = context.get_admin_context()
