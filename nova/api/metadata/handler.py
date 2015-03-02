@@ -35,8 +35,6 @@ from nova.openstack.common import memorycache
 from nova import utils
 from nova import wsgi
 
-CACHE_EXPIRATION = 15  # in seconds
-
 CONF = cfg.CONF
 CONF.import_opt('use_forwarded_for', 'nova.api.auth')
 
@@ -52,7 +50,19 @@ metadata_proxy_opts = [
          help='Shared secret to validate proxies Neutron metadata requests'),
 ]
 
+metadata_opts = [
+    cfg.IntOpt('metadata_cache_expiration',
+               default=15,
+               help='Time in seconds to cache metadata; 0 to disable '
+                    'metadata caching entirely (not recommended). Increasing'
+                    'this should improve response times of the metadata API '
+                    'when under heavy load. Higher values may increase memory'
+                    'usage and result in longer times for host metadata '
+                    'changes to take effect.')
+]
+
 CONF.register_opts(metadata_proxy_opts, 'neutron')
+CONF.register_opts(metadata_opts)
 
 LOG = logging.getLogger(__name__)
 
@@ -71,6 +81,7 @@ class MetadataRequestHandler(wsgi.Application):
         cache_key = 'metadata-%s' % address
         data = self._cache.get(cache_key)
         if data:
+            LOG.debug("Using cached metadata for %s", address)
             return data
 
         try:
@@ -78,7 +89,8 @@ class MetadataRequestHandler(wsgi.Application):
         except exception.NotFound:
             return None
 
-        self._cache.set(cache_key, data, CACHE_EXPIRATION)
+        if CONF.metadata_cache_expiration > 0:
+            self._cache.set(cache_key, data, CONF.metadata_cache_expiration)
 
         return data
 
@@ -86,6 +98,7 @@ class MetadataRequestHandler(wsgi.Application):
         cache_key = 'metadata-%s' % instance_id
         data = self._cache.get(cache_key)
         if data:
+            LOG.debug("Using cached metadata for instance %s", instance_id)
             return data
 
         try:
@@ -94,7 +107,8 @@ class MetadataRequestHandler(wsgi.Application):
         except exception.NotFound:
             return None
 
-        self._cache.set(cache_key, data, CACHE_EXPIRATION)
+        if CONF.metadata_cache_expiration > 0:
+            self._cache.set(cache_key, data, CONF.metadata_cache_expiration)
 
         return data
 

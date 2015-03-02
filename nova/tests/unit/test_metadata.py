@@ -111,12 +111,13 @@ def fake_InstanceMetadata(stubs, inst_data, address=None,
 
 def fake_request(stubs, mdinst, relpath, address="127.0.0.1",
                  fake_get_metadata=None, headers=None,
-                 fake_get_metadata_by_instance_id=None):
+                 fake_get_metadata_by_instance_id=None, app=None):
 
     def get_metadata_by_remote_address(address):
         return mdinst
 
-    app = handler.MetadataRequestHandler()
+    if app is None:
+        app = handler.MetadataRequestHandler()
 
     if fake_get_metadata is None:
         fake_get_metadata = get_metadata_by_remote_address
@@ -799,6 +800,81 @@ class MetadataHandlerTestCase(test.TestCase):
                 self.assertEqual(response.status_int, 200, message=path)
 
         _test_metadata_path('/2009-04-04/meta-data')
+
+    def _metadata_handler_with_instance_id(self, hnd):
+        expected_instance_id = 'a-b-c-d'
+
+        signed = hmac.new(
+            CONF.neutron.metadata_proxy_shared_secret,
+            expected_instance_id,
+            hashlib.sha256).hexdigest()
+
+        self.flags(service_metadata_proxy=True, group='neutron')
+        response = fake_request(
+            None, self.mdinst,
+            relpath="/2009-04-04/user-data",
+            address="192.192.192.2",
+            fake_get_metadata=False,
+            app=hnd,
+            headers={'X-Forwarded-For': '192.192.192.2',
+                     'X-Instance-ID': 'a-b-c-d',
+                     'X-Tenant-ID': 'test',
+                     'X-Instance-ID-Signature': signed})
+
+        self.assertEqual(200, response.status_int)
+        self.assertEqual(base64.b64decode(self.instance['user_data']),
+                         response.body)
+
+    @mock.patch.object(base, 'get_metadata_by_instance_id')
+    def test_metadata_handler_with_instance_id(self, get_by_uuid):
+        # test twice to ensure that the cache works
+        get_by_uuid.return_value = self.mdinst
+        self.flags(metadata_cache_expiration=15)
+        hnd = handler.MetadataRequestHandler()
+        self._metadata_handler_with_instance_id(hnd)
+        self._metadata_handler_with_instance_id(hnd)
+        self.assertEqual(1, get_by_uuid.call_count)
+
+    @mock.patch.object(base, 'get_metadata_by_instance_id')
+    def test_metadata_handler_with_instance_id_no_cache(self, get_by_uuid):
+        # test twice to ensure that disabling the cache works
+        get_by_uuid.return_value = self.mdinst
+        self.flags(metadata_cache_expiration=0)
+        hnd = handler.MetadataRequestHandler()
+        self._metadata_handler_with_instance_id(hnd)
+        self._metadata_handler_with_instance_id(hnd)
+        self.assertEqual(2, get_by_uuid.call_count)
+
+    def _metadata_handler_with_remote_address(self, hnd):
+        response = fake_request(
+            None, self.mdinst,
+            fake_get_metadata=False,
+            app=hnd,
+            relpath="/2009-04-04/user-data",
+            address="192.192.192.2")
+        self.assertEqual(200, response.status_int)
+        self.assertEqual(base64.b64decode(self.instance.user_data),
+                         response.body)
+
+    @mock.patch.object(base, 'get_metadata_by_address')
+    def test_metadata_handler_with_remote_address(self, get_by_uuid):
+        # test twice to ensure that the cache works
+        get_by_uuid.return_value = self.mdinst
+        self.flags(metadata_cache_expiration=15)
+        hnd = handler.MetadataRequestHandler()
+        self._metadata_handler_with_remote_address(hnd)
+        self._metadata_handler_with_remote_address(hnd)
+        self.assertEqual(1, get_by_uuid.call_count)
+
+    @mock.patch.object(base, 'get_metadata_by_address')
+    def test_metadata_handler_with_remote_address_no_cache(self, get_by_uuid):
+        # test twice to ensure that disabling the cache works
+        get_by_uuid.return_value = self.mdinst
+        self.flags(metadata_cache_expiration=0)
+        hnd = handler.MetadataRequestHandler()
+        self._metadata_handler_with_remote_address(hnd)
+        self._metadata_handler_with_remote_address(hnd)
+        self.assertEqual(2, get_by_uuid.call_count)
 
 
 class MetadataPasswordTestCase(test.TestCase):
