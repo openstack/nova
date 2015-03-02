@@ -349,8 +349,10 @@ class DiskConfigTestCaseV21(test.TestCase):
         res = req.get_response(self.app)
         self.assertEqual(res.status_int, 400)
         expected_msg = self._get_expected_msg_for_invalid_disk_config()
-        self.assertEqual(expected_msg.format(API_DISK_CONFIG, 'server_test'),
-                         res.body)
+        expected_msg = expected_msg.format(API_DISK_CONFIG, 'server_test')
+
+        self.assertEqual(jsonutils.loads(expected_msg),
+                         jsonutils.loads(res.body))
 
     def _test_rebuild_server_disk_config(self, uuid, disk_config):
         req = fakes.HTTPRequest.blank(
