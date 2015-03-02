@@ -28,7 +28,6 @@ import six
 
 from nova import exception
 from nova.i18n import _, _LW
-from nova.openstack.common import local
 from nova import policy
 
 
@@ -61,7 +60,7 @@ class _ContextAuthPlugin(auth.BaseAuthPlugin):
                                             region_name=region_name)
 
 
-class RequestContext(object):
+class RequestContext(context.RequestContext):
     """Security context and request information.
 
     Represents the user taking a given action within the system.
@@ -87,6 +86,12 @@ class RequestContext(object):
            :param kwargs: Extra arguments that might be present, but we ignore
                 because they possibly came in from older rpc messages.
         """
+        super(RequestContext, self).__init__(auth_token=auth_token,
+                                             user=user_id,
+                                             tenant=project_id,
+                                             is_admin=is_admin,
+                                             request_id=request_id,
+                                             overwrite=overwrite)
         if kwargs:
             LOG.warning(_LW('Arguments dropped when creating context: %s') %
                         str(kwargs))
@@ -104,7 +109,6 @@ class RequestContext(object):
         if not request_id:
             request_id = context.generate_request_id()
         self.request_id = request_id
-        self.auth_token = auth_token
 
         if service_catalog:
             # Only include required parts of service_catalog
@@ -126,8 +130,6 @@ class RequestContext(object):
         self.user_auth_plugin = user_auth_plugin
         if self.is_admin is None:
             self.is_admin = policy.check_is_admin(self)
-        if overwrite or not hasattr(local.store, 'context'):
-            self.update_store()
 
     def get_auth_plugin(self):
         if self.user_auth_plugin:
@@ -150,26 +152,22 @@ class RequestContext(object):
     read_deleted = property(_get_read_deleted, _set_read_deleted,
                             _del_read_deleted)
 
-    def update_store(self):
-        local.store.context = self
-
     def to_dict(self):
-        return {'user_id': self.user_id,
-                'project_id': self.project_id,
-                'is_admin': self.is_admin,
-                'read_deleted': self.read_deleted,
-                'roles': self.roles,
-                'remote_address': self.remote_address,
-                'timestamp': timeutils.strtime(self.timestamp),
-                'request_id': self.request_id,
-                'auth_token': self.auth_token,
-                'quota_class': self.quota_class,
-                'user_name': self.user_name,
-                'service_catalog': self.service_catalog,
-                'project_name': self.project_name,
-                'instance_lock_checked': self.instance_lock_checked,
-                'tenant': self.tenant,
-                'user': self.user}
+        values = super(RequestContext, self).to_dict()
+        values.update({'user_id': self.user_id,
+                       'project_id': self.project_id,
+                       'is_admin': self.is_admin,
+                       'read_deleted': self.read_deleted,
+                       'roles': self.roles,
+                       'remote_address': self.remote_address,
+                       'timestamp': timeutils.strtime(self.timestamp),
+                       'request_id': self.request_id,
+                       'quota_class': self.quota_class,
+                       'user_name': self.user_name,
+                       'service_catalog': self.service_catalog,
+                       'project_name': self.project_name,
+                       'instance_lock_checked': self.instance_lock_checked})
+        return values
 
     @classmethod
     def from_dict(cls, values):
@@ -189,19 +187,6 @@ class RequestContext(object):
             context.read_deleted = read_deleted
 
         return context
-
-    # NOTE(sirp): the openstack/common version of RequestContext uses
-    # tenant/user whereas the Nova version uses project_id/user_id. We need
-    # this shim in order to use context-aware code from openstack/common, like
-    # logging, until we make the switch to using openstack/common's version of
-    # RequestContext.
-    @property
-    def tenant(self):
-        return self.project_id
-
-    @property
-    def user(self):
-        return self.user_id
 
 
 def get_admin_context(read_deleted="no"):

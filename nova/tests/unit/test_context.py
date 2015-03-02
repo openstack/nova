@@ -12,11 +12,18 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_context import context as o_context
+from oslo_context import fixture as o_fixture
+
 from nova import context
 from nova import test
 
 
 class ContextTestCase(test.NoDBTestCase):
+
+    def setUp(self):
+        super(ContextTestCase, self).setUp()
+        self.useFixture(o_fixture.ClearRequestContext())
 
     def test_request_context_elevated(self):
         user_ctxt = context.RequestContext('111',
@@ -130,3 +137,31 @@ class ContextTestCase(test.NoDBTestCase):
         ctxt = context.RequestContext.from_dict(ctxt.to_dict())
 
         self.assertEqual(len(warns), 0, warns)
+
+    def test_store_when_no_overwrite(self):
+        # If no context exists we store one even if overwrite is false
+        # (since we are not overwriting anything).
+        ctx = context.RequestContext('111',
+                                      '222',
+                                      overwrite=False)
+        self.assertIs(o_context.get_current(), ctx)
+
+    def test_no_overwrite(self):
+        # If there is already a context in the cache a new one will
+        # not overwrite it if overwrite=False.
+        ctx1 = context.RequestContext('111',
+                                      '222',
+                                      overwrite=True)
+        context.RequestContext('333',
+                               '444',
+                               overwrite=False)
+        self.assertIs(o_context.get_current(), ctx1)
+
+    def test_admin_no_overwrite(self):
+        # If there is already a context in the cache creating an admin
+        # context will not overwrite it.
+        ctx1 = context.RequestContext('111',
+                                      '222',
+                                      overwrite=True)
+        context.get_admin_context()
+        self.assertIs(o_context.get_current(), ctx1)
