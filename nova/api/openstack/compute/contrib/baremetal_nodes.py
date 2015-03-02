@@ -29,6 +29,7 @@ from nova.openstack.common import log as logging
 from nova.virt.baremetal import db
 
 ironic_client = importutils.try_import('ironicclient.client')
+ironic_exc = importutils.try_import('ironicclient.exc')
 
 authorize = extensions.extension_authorizer('compute', 'baremetal_nodes')
 
@@ -216,7 +217,11 @@ class BareMetalNodeController(wsgi.Controller):
         if _use_ironic():
             # proxy command to Ironic
             icli = _get_ironic_client()
-            inode = icli.node.get(id)
+            try:
+                inode = icli.node.get(id)
+            except ironic_exc.NotFound:
+                msg = _("Node %s could not be found.") % id
+                raise webob.exc.HTTPNotFound(explanation=msg)
             iports = icli.node.list_ports(id)
             node = {'id': inode.uuid,
                     'interfaces': [],
