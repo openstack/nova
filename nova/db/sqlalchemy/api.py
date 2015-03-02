@@ -5750,7 +5750,6 @@ def task_log_get_all(context, task_name, period_beginning, period_ending,
                                period_ending, host, state).all()
 
 
-@require_admin_context
 def task_log_begin_task(context, task_name, period_beginning, period_ending,
                         host, task_items=None, message=None):
 
@@ -5770,7 +5769,6 @@ def task_log_begin_task(context, task_name, period_beginning, period_ending,
         raise exception.TaskAlreadyRunning(task_name=task_name, host=host)
 
 
-@require_admin_context
 def task_log_end_task(context, task_name, period_beginning, period_ending,
                       host, errors, message=None):
     values = dict(state="DONE", errors=errors)
