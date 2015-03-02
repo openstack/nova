@@ -28,7 +28,6 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova.cells import rpcapi as cells_rpcapi
-from nova.compute import api as compute
 from nova import exception
 from nova.i18n import _
 from nova import rpc
@@ -96,7 +95,6 @@ class CellsController(wsgi.Controller):
     """Controller for Cell resources."""
 
     def __init__(self):
-        self.compute_api = compute.API()
         self.cells_rpcapi = cells_rpcapi.CellsAPI()
 
     def _get_cells(self, ctxt, req, detail=False):
