@@ -1066,19 +1066,42 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
                        'add_rule', verify_add_rule)
         linux_net.metadata_accept()
 
+    def _test_add_metadata_accept_ipv6_rule(self, expected):
+        def verify_add_rule(chain, rule):
+            self.assertEqual(chain, 'INPUT')
+            self.assertEqual(expected, rule)
+
+        self.stubs.Set(linux_net.iptables_manager.ipv6['filter'],
+                       'add_rule', verify_add_rule)
+        linux_net.metadata_accept()
+
     def test_metadata_accept(self):
         self.flags(metadata_port='8775')
         self.flags(metadata_host='10.10.10.1')
-        expected = ('-s 0.0.0.0/0 -p tcp -m tcp --dport 8775 '
+        expected = ('-p tcp -m tcp --dport 8775 '
                     '-d 10.10.10.1 -j ACCEPT')
         self._test_add_metadata_accept_rule(expected)
+
+    def test_metadata_accept_ipv6(self):
+        self.flags(metadata_port='8775')
+        self.flags(metadata_host='2600::')
+        expected = ('-p tcp -m tcp --dport 8775 '
+                    '-d 2600:: -j ACCEPT')
+        self._test_add_metadata_accept_ipv6_rule(expected)
 
     def test_metadata_accept_localhost(self):
         self.flags(metadata_port='8775')
         self.flags(metadata_host='127.0.0.1')
-        expected = ('-s 0.0.0.0/0 -p tcp -m tcp --dport 8775 '
+        expected = ('-p tcp -m tcp --dport 8775 '
                     '-m addrtype --dst-type LOCAL -j ACCEPT')
         self._test_add_metadata_accept_rule(expected)
+
+    def test_metadata_accept_ipv6_localhost(self):
+        self.flags(metadata_port='8775')
+        self.flags(metadata_host='::1')
+        expected = ('-p tcp -m tcp --dport 8775 '
+                    '-m addrtype --dst-type LOCAL -j ACCEPT')
+        self._test_add_metadata_accept_ipv6_rule(expected)
 
     def _test_add_metadata_forward_rule(self, expected):
         def verify_add_rule(chain, rule):

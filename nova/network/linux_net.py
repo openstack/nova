@@ -678,14 +678,25 @@ def metadata_forward():
     iptables_manager.apply()
 
 
+def _iptables_dest(ip):
+    if ((netaddr.IPAddress(ip).version == 4 and ip == '127.0.0.1')
+        or ip == '::1'):
+        return '-m addrtype --dst-type LOCAL'
+    else:
+        return '-d %s' % ip
+
+
 def metadata_accept():
     """Create the filter accept rule for metadata."""
-    rule = '-s 0.0.0.0/0 -p tcp -m tcp --dport %s' % CONF.metadata_port
-    if CONF.metadata_host != '127.0.0.1':
-        rule += ' -d %s -j ACCEPT' % CONF.metadata_host
+
+    rule = ('-p tcp -m tcp --dport %s %s -j ACCEPT' %
+            (CONF.metadata_port, _iptables_dest(CONF.metadata_host)))
+
+    if netaddr.IPAddress(CONF.metadata_host).version == 4:
+        iptables_manager.ipv4['filter'].add_rule('INPUT', rule)
     else:
-        rule += ' -m addrtype --dst-type LOCAL -j ACCEPT'
-    iptables_manager.ipv4['filter'].add_rule('INPUT', rule)
+        iptables_manager.ipv6['filter'].add_rule('INPUT', rule)
+
     iptables_manager.apply()
 
 
