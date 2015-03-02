@@ -703,9 +703,6 @@ class ComputeTaskManager(base.Base):
                     block_device_mapping=bdms, node=host['nodename'],
                     limits=host['limits'])
 
-    def _delete_image(self, context, image_id):
-        return self.image_api.delete(context, image_id)
-
     def _schedule_instances(self, context, image, filter_properties,
             *instances):
         request_spec = scheduler_utils.build_request_spec(context, image,
@@ -729,9 +726,6 @@ class ComputeTaskManager(base.Base):
             instance.task_state = task_states.POWERING_ON
             instance.save(expected_task_state=task_states.UNSHELVING)
             self.compute_rpcapi.start_instance(context, instance)
-            snapshot_id = sys_meta.get('shelved_image_id')
-            if snapshot_id:
-                self._delete_image(context, snapshot_id)
         elif instance.vm_state == vm_states.SHELVED_OFFLOADED:
             image = None
             image_id = sys_meta.get('shelved_image_id')
@@ -789,12 +783,6 @@ class ComputeTaskManager(base.Base):
             instance.vm_state = vm_states.ERROR
             instance.save()
             return
-
-        for key in ['shelved_at', 'shelved_image_id', 'shelved_host']:
-            if key in sys_meta:
-                del(sys_meta[key])
-        instance.system_metadata = sys_meta
-        instance.save()
 
     def rebuild_instance(self, context, instance, orig_image_ref, image_ref,
                          injected_files, new_pass, orig_sys_metadata,

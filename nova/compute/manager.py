@@ -2793,6 +2793,21 @@ class ComputeManager(manager.Manager):
                              network_info,
                              block_device_info)
 
+    def _delete_snapshot_of_shelved_instance(self, context, instance,
+                                             snapshot_id):
+        """Delete snapshot of shelved instance."""
+        try:
+            self.image_api.delete(context, snapshot_id)
+        except (exception.ImageNotFound,
+                exception.ImageNotAuthorized) as exc:
+            LOG.warning(_LW("Failed to delete snapshot "
+                            "from shelved instance (%s)."),
+                        exc.format_message(), instance=instance)
+        except Exception:
+            LOG.exception(_LE("Something wrong happened when trying to "
+                              "delete snapshot from shelved instance."),
+                          instance=instance)
+
     # NOTE(johannes): This is probably better named power_on_instance
     # so it matches the driver method, but because of other issues, we
     # can't use that name in grizzly.
@@ -2807,6 +2822,16 @@ class ComputeManager(manager.Manager):
         instance.power_state = self._get_power_state(context, instance)
         instance.vm_state = vm_states.ACTIVE
         instance.task_state = None
+
+        # Delete an image(VM snapshot) for a shelved instance
+        snapshot_id = instance.system_metadata.get('shelved_image_id')
+        if snapshot_id:
+            self._delete_snapshot_of_shelved_instance(context, instance,
+                                                      snapshot_id)
+
+        # Delete system_metadata for a shelved instance
+        compute_utils.remove_shelved_keys_from_system_metadata(instance)
+
         instance.save(expected_task_state=task_states.POWERING_ON)
         self._notify_about_instance_usage(context, instance, "power_on.end")
 
@@ -4486,10 +4511,14 @@ class ComputeManager(manager.Manager):
 
         if image:
             instance.image_ref = shelved_image_ref
-            self.image_api.delete(context, image['id'])
+            self._delete_snapshot_of_shelved_instance(context, instance,
+                                                      image['id'])
 
         self._unshelve_instance_key_restore(instance, scrubbed_keys)
         self._update_instance_after_spawn(context, instance)
+        # Delete system_metadata for a shelved instance
+        compute_utils.remove_shelved_keys_from_system_metadata(instance)
+
         instance.save(expected_task_state=task_states.SPAWNING)
         self._update_scheduler_instance_info(context, instance)
         self._notify_about_instance_usage(context, instance, 'unshelve.end')
