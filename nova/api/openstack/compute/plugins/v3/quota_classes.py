@@ -20,7 +20,6 @@ from nova.api.openstack.compute.schemas.v3 import quota_classes
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
-import nova.context
 from nova import db
 from nova import exception
 from nova import quota
@@ -62,16 +61,12 @@ class QuotaClassSetsController(wsgi.Controller):
 
         return dict(quota_class_set=result)
 
-    @extensions.expected_errors(403)
+    @extensions.expected_errors(())
     def show(self, req, id):
         context = req.environ['nova.context']
-        authorize(context)
-        try:
-            nova.context.authorize_quota_class_context(context, id)
-            values = QUOTAS.get_class_quotas(context, id)
-            return self._format_quota_set(id, values)
-        except exception.Forbidden:
-            raise webob.exc.HTTPForbidden()
+        authorize(context, action='show', target={'quota_class': id})
+        values = QUOTAS.get_class_quotas(context, id)
+        return self._format_quota_set(id, values)
 
     @extensions.expected_errors((403))
     @validation.schema(quota_classes.update)

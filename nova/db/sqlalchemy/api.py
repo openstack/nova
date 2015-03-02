@@ -3155,8 +3155,6 @@ def quota_class_get_default(context):
 
 @require_context
 def quota_class_get_all_by_name(context, class_name):
-    nova.context.authorize_quota_class_context(context, class_name)
-
     rows = model_query(context, models.QuotaClass, read_deleted="no").\
                    filter_by(class_name=class_name).\
                    all()
