@@ -28,11 +28,7 @@ from nova.virt import event
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import host
 
-try:
-    import libvirt
-except ImportError:
-    libvirt = fakelibvirt
-host.libvirt = libvirt
+host.libvirt = fakelibvirt
 
 
 class FakeVirtDomain(object):
@@ -96,13 +92,16 @@ class HostTestCase(test.NoDBTestCase):
     @mock.patch.object(fakelibvirt.virConnect, "getLibVersion")
     def test_broken_connection(self, mock_ver):
         for (error, domain) in (
-                (libvirt.VIR_ERR_SYSTEM_ERROR, libvirt.VIR_FROM_REMOTE),
-                (libvirt.VIR_ERR_SYSTEM_ERROR, libvirt.VIR_FROM_RPC),
-                (libvirt.VIR_ERR_INTERNAL_ERROR, libvirt.VIR_FROM_RPC)):
+                (fakelibvirt.VIR_ERR_SYSTEM_ERROR,
+                 fakelibvirt.VIR_FROM_REMOTE),
+                (fakelibvirt.VIR_ERR_SYSTEM_ERROR,
+                 fakelibvirt.VIR_FROM_RPC),
+                (fakelibvirt.VIR_ERR_INTERNAL_ERROR,
+                 fakelibvirt.VIR_FROM_RPC)):
 
             conn = self.host._connect("qemu:///system", False)
             mock_ver.side_effect = fakelibvirt.make_libvirtError(
-                libvirt.libvirtError,
+                fakelibvirt.libvirtError,
                 "Connection broken",
                 error_code=error,
                 error_domain=domain)
@@ -182,11 +181,8 @@ class HostTestCase(test.NoDBTestCase):
                                  fake_dom_xml,
                                  False)
 
-        hostimpl._event_lifecycle_callback(conn,
-                                           dom,
-                                           libvirt.VIR_DOMAIN_EVENT_STOPPED,
-                                           0,
-                                           hostimpl)
+        hostimpl._event_lifecycle_callback(
+            conn, dom, fakelibvirt.VIR_DOMAIN_EVENT_STOPPED, 0, hostimpl)
         hostimpl._dispatch_events()
         self.assertEqual(len(got_events), 1)
         self.assertIsInstance(got_events[0], event.LifecycleEvent)
@@ -320,10 +316,10 @@ class HostTestCase(test.NoDBTestCase):
     @mock.patch.object(fakelibvirt.virConnect, "lookupByID")
     def test_get_domain_by_id_raises(self, fake_lookup):
         fake_lookup.side_effect = fakelibvirt.make_libvirtError(
-            libvirt.libvirtError,
+            fakelibvirt.libvirtError,
             'Domain not found: no domain with matching id 7',
-            error_code=libvirt.VIR_ERR_NO_DOMAIN,
-            error_domain=libvirt.VIR_FROM_QEMU)
+            error_code=fakelibvirt.VIR_ERR_NO_DOMAIN,
+            error_domain=fakelibvirt.VIR_FROM_QEMU)
 
         self.assertRaises(exception.InstanceNotFound,
                           self.host._get_domain_by_id,
@@ -345,10 +341,10 @@ class HostTestCase(test.NoDBTestCase):
     @mock.patch.object(fakelibvirt.virConnect, "lookupByName")
     def test_get_domain_by_name_raises(self, fake_lookup):
         fake_lookup.side_effect = fakelibvirt.make_libvirtError(
-            libvirt.libvirtError,
+            fakelibvirt.libvirtError,
             'Domain not found: no domain with matching name',
-            error_code=libvirt.VIR_ERR_NO_DOMAIN,
-            error_domain=libvirt.VIR_FROM_QEMU)
+            error_code=fakelibvirt.VIR_ERR_NO_DOMAIN,
+            error_domain=fakelibvirt.VIR_FROM_QEMU)
 
         self.assertRaises(exception.InstanceNotFound,
                           self.host._get_domain_by_name,
@@ -369,11 +365,6 @@ class HostTestCase(test.NoDBTestCase):
         fake_get_domain.assert_called_once_with("instance-0000007c")
 
     @mock.patch.object(fakelibvirt.Connection, "listAllDomains")
-    # TODO(mriedem): Remove these stubs once we're only using fakelibvirt.
-    @mock.patch.object(libvirt, "VIR_CONNECT_LIST_DOMAINS_ACTIVE", new=1,
-                       create=True)
-    @mock.patch.object(libvirt, "VIR_CONNECT_LIST_DOMAINS_INACTIVE", new=2,
-                       create=True)
     def test_list_instance_domains_fast(self, mock_list_all):
         vm1 = FakeVirtDomain(id=3, name="instance00000001")
         vm2 = FakeVirtDomain(id=17, name="instance00000002")
@@ -382,9 +373,9 @@ class HostTestCase(test.NoDBTestCase):
 
         def fake_list_all(flags):
             vms = []
-            if flags & libvirt.VIR_CONNECT_LIST_DOMAINS_ACTIVE:
+            if flags & fakelibvirt.VIR_CONNECT_LIST_DOMAINS_ACTIVE:
                 vms.extend([vm1, vm2])
-            if flags & libvirt.VIR_CONNECT_LIST_DOMAINS_INACTIVE:
+            if flags & fakelibvirt.VIR_CONNECT_LIST_DOMAINS_INACTIVE:
                 vms.extend([vm3, vm4])
             return vms
 
@@ -393,7 +384,7 @@ class HostTestCase(test.NoDBTestCase):
         doms = self.host._list_instance_domains_fast()
 
         mock_list_all.assert_called_once_with(
-            libvirt.VIR_CONNECT_LIST_DOMAINS_ACTIVE)
+            fakelibvirt.VIR_CONNECT_LIST_DOMAINS_ACTIVE)
         mock_list_all.reset_mock()
 
         self.assertEqual(len(doms), 2)
@@ -403,8 +394,8 @@ class HostTestCase(test.NoDBTestCase):
         doms = self.host._list_instance_domains_fast(only_running=False)
 
         mock_list_all.assert_called_once_with(
-            libvirt.VIR_CONNECT_LIST_DOMAINS_ACTIVE |
-            libvirt.VIR_CONNECT_LIST_DOMAINS_INACTIVE)
+            fakelibvirt.VIR_CONNECT_LIST_DOMAINS_ACTIVE |
+            fakelibvirt.VIR_CONNECT_LIST_DOMAINS_INACTIVE)
 
         self.assertEqual(len(doms), 4)
         self.assertEqual(doms[0].name(), vm1.name())
@@ -484,9 +475,6 @@ class HostTestCase(test.NoDBTestCase):
     @mock.patch.object(fakelibvirt.Connection, "numOfDomains")
     @mock.patch.object(fakelibvirt.Connection, "listDomainsID")
     @mock.patch.object(host.Host, "_get_domain_by_id")
-    # TODO(mriedem): Remove this stub once we're only using fakelibvirt.
-    @mock.patch.object(libvirt, "VIR_CONNECT_LIST_DOMAINS_ACTIVE", new=1,
-                       create=True)
     def test_list_instance_domains_fallback(self,
                                             mock_get_id, mock_list_ids,
                                             mock_num_ids, mock_list_all):
@@ -505,9 +493,9 @@ class HostTestCase(test.NoDBTestCase):
 
         def fake_list_all(flags):
             ex = fakelibvirt.make_libvirtError(
-                libvirt.libvirtError,
+                fakelibvirt.libvirtError,
                 "API is not supported",
-                error_code=libvirt.VIR_ERR_NO_SUPPORT)
+                error_code=fakelibvirt.VIR_ERR_NO_SUPPORT)
             raise ex
 
         mock_get_id.side_effect = fake_get_domain_by_id
@@ -518,7 +506,7 @@ class HostTestCase(test.NoDBTestCase):
         doms = self.host.list_instance_domains()
 
         mock_list_all.assert_called_once_with(
-            libvirt.VIR_CONNECT_LIST_DOMAINS_ACTIVE)
+            fakelibvirt.VIR_CONNECT_LIST_DOMAINS_ACTIVE)
         mock_list_ids.assert_called_once_with()
         mock_num_ids.assert_called_once_with()
 
@@ -596,17 +584,13 @@ class HostTestCase(test.NoDBTestCase):
             cnt = [x.name for x in caps.host.cpu.features].count('xtpr')
             self.assertEqual(1, cnt)
 
-    # TODO(mriedem): Remove this stub once we're only using fakelibvirt.
-    @mock.patch.object(host.libvirt,
-                       'VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES', new=1,
-                       create=True)
     def test_baseline_cpu_not_supported(self):
         # Handle just the NO_SUPPORT error
         not_supported_exc = fakelibvirt.make_libvirtError(
-                libvirt.libvirtError,
+                fakelibvirt.libvirtError,
                 'this function is not supported by the connection driver:'
                 ' virConnectBaselineCPU',
-                error_code=libvirt.VIR_ERR_NO_SUPPORT)
+                error_code=fakelibvirt.VIR_ERR_NO_SUPPORT)
 
         with mock.patch.object(fakelibvirt.virConnect, 'baselineCPU',
                                side_effect=not_supported_exc):
@@ -619,18 +603,15 @@ class HostTestCase(test.NoDBTestCase):
 
         # Other errors should not be caught
         other_exc = fakelibvirt.make_libvirtError(
-            libvirt.libvirtError,
+            fakelibvirt.libvirtError,
             'other exc',
-            error_code=libvirt.VIR_ERR_NO_DOMAIN)
+            error_code=fakelibvirt.VIR_ERR_NO_DOMAIN)
 
         with mock.patch.object(fakelibvirt.virConnect, 'baselineCPU',
                                side_effect=other_exc):
-            self.assertRaises(libvirt.libvirtError,
+            self.assertRaises(fakelibvirt.libvirtError,
                               self.host.get_capabilities)
 
-    # TODO(mriedem): Remove this stub once we're only using fakelibvirt.
-    @mock.patch.object(libvirt, 'VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES',
-                       new=1, create=True)
     def test_lxc_get_host_capabilities_failed(self):
         with mock.patch.object(fakelibvirt.virConnect, 'baselineCPU',
                                return_value=-1):
@@ -663,17 +644,13 @@ class HostTestCase(test.NoDBTestCase):
         mock_version.assert_called_once_with()
 
     @mock.patch.object(fakelibvirt.virConnect, "secretLookupByUsage")
-    # TODO(mriedem): Remove this stub, and others like it, once we're using
-    # fakelibvirt in all tests (no chance of running against a real libvirt).
-    @mock.patch.object(libvirt, 'VIR_SECRET_USAGE_TYPE_ISCSI', new=3,
-                       create=True)
     def test_find_secret(self, mock_sec):
         """finding secrets with various usage_type."""
         expected = [
-            mock.call(libvirt.VIR_SECRET_USAGE_TYPE_CEPH, 'rbdvol'),
-            mock.call(libvirt.VIR_SECRET_USAGE_TYPE_CEPH, 'cephvol'),
-            mock.call(libvirt.VIR_SECRET_USAGE_TYPE_ISCSI, 'iscsivol'),
-            mock.call(libvirt.VIR_SECRET_USAGE_TYPE_VOLUME, 'vol')]
+            mock.call(fakelibvirt.VIR_SECRET_USAGE_TYPE_CEPH, 'rbdvol'),
+            mock.call(fakelibvirt.VIR_SECRET_USAGE_TYPE_CEPH, 'cephvol'),
+            mock.call(fakelibvirt.VIR_SECRET_USAGE_TYPE_ISCSI, 'iscsivol'),
+            mock.call(fakelibvirt.VIR_SECRET_USAGE_TYPE_VOLUME, 'vol')]
 
         self.host.find_secret('rbd', 'rbdvol')
         self.host.find_secret('ceph', 'cephvol')
@@ -683,7 +660,7 @@ class HostTestCase(test.NoDBTestCase):
         self.assertRaises(exception.NovaException,
                           self.host.find_secret, "foo", "foovol")
 
-        mock_sec.side_effect = libvirt.libvirtError("")
+        mock_sec.side_effect = fakelibvirt.libvirtError("")
         mock_sec.side_effect.err = (66, )
         self.assertIsNone(self.host.find_secret('rbd', 'rbdvol'))
 
@@ -735,7 +712,7 @@ class DomainJobInfoTestCase(test.NoDBTestCase):
     @mock.patch.object(fakelibvirt.virDomain, "jobStats")
     def test_job_stats(self, mock_stats, mock_info):
         mock_stats.return_value = {
-            "type": libvirt.VIR_DOMAIN_JOB_UNBOUNDED,
+            "type": fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED,
             "memory_total": 75,
             "memory_processed": 50,
             "memory_remaining": 33,
@@ -745,7 +722,7 @@ class DomainJobInfoTestCase(test.NoDBTestCase):
         info = host.DomainJobInfo.for_domain(self.dom)
 
         self.assertIsInstance(info, host.DomainJobInfo)
-        self.assertEqual(libvirt.VIR_DOMAIN_JOB_UNBOUNDED, info.type)
+        self.assertEqual(fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED, info.type)
         self.assertEqual(75, info.memory_total)
         self.assertEqual(50, info.memory_processed)
         self.assertEqual(33, info.memory_remaining)
@@ -760,18 +737,18 @@ class DomainJobInfoTestCase(test.NoDBTestCase):
     @mock.patch.object(fakelibvirt.virDomain, "jobStats")
     def test_job_info_no_support(self, mock_stats, mock_info):
         mock_stats.side_effect = fakelibvirt.make_libvirtError(
-            libvirt.libvirtError,
+            fakelibvirt.libvirtError,
             "virDomainGetJobStats not implemented",
-            libvirt.VIR_ERR_NO_SUPPORT)
+            fakelibvirt.VIR_ERR_NO_SUPPORT)
 
         mock_info.return_value = [
-            libvirt.VIR_DOMAIN_JOB_UNBOUNDED,
+            fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED,
             100, 99, 10, 11, 12, 75, 50, 33, 1, 2, 3]
 
         info = host.DomainJobInfo.for_domain(self.dom)
 
         self.assertIsInstance(info, host.DomainJobInfo)
-        self.assertEqual(libvirt.VIR_DOMAIN_JOB_UNBOUNDED, info.type)
+        self.assertEqual(fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED, info.type)
         self.assertEqual(100, info.time_elapsed)
         self.assertEqual(99, info.time_remaining)
         self.assertEqual(10, info.data_total)
@@ -793,13 +770,13 @@ class DomainJobInfoTestCase(test.NoDBTestCase):
         mock_stats.side_effect = AttributeError("No such API")
 
         mock_info.return_value = [
-            libvirt.VIR_DOMAIN_JOB_UNBOUNDED,
+            fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED,
             100, 99, 10, 11, 12, 75, 50, 33, 1, 2, 3]
 
         info = host.DomainJobInfo.for_domain(self.dom)
 
         self.assertIsInstance(info, host.DomainJobInfo)
-        self.assertEqual(libvirt.VIR_DOMAIN_JOB_UNBOUNDED, info.type)
+        self.assertEqual(fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED, info.type)
         self.assertEqual(100, info.time_elapsed)
         self.assertEqual(99, info.time_remaining)
         self.assertEqual(10, info.data_total)
@@ -819,14 +796,14 @@ class DomainJobInfoTestCase(test.NoDBTestCase):
     @mock.patch.object(fakelibvirt.virDomain, "jobStats")
     def test_job_stats_no_domain(self, mock_stats, mock_info):
         mock_stats.side_effect = fakelibvirt.make_libvirtError(
-            libvirt.libvirtError,
+            fakelibvirt.libvirtError,
             "No such domain with UUID blah",
-            libvirt.VIR_ERR_NO_DOMAIN)
+            fakelibvirt.VIR_ERR_NO_DOMAIN)
 
         info = host.DomainJobInfo.for_domain(self.dom)
 
         self.assertIsInstance(info, host.DomainJobInfo)
-        self.assertEqual(libvirt.VIR_DOMAIN_JOB_COMPLETED, info.type)
+        self.assertEqual(fakelibvirt.VIR_DOMAIN_JOB_COMPLETED, info.type)
         self.assertEqual(0, info.time_elapsed)
         self.assertEqual(0, info.time_remaining)
         self.assertEqual(0, info.memory_total)
@@ -840,19 +817,19 @@ class DomainJobInfoTestCase(test.NoDBTestCase):
     @mock.patch.object(fakelibvirt.virDomain, "jobStats")
     def test_job_info_no_domain(self, mock_stats, mock_info):
         mock_stats.side_effect = fakelibvirt.make_libvirtError(
-            libvirt.libvirtError,
+            fakelibvirt.libvirtError,
             "virDomainGetJobStats not implemented",
-            libvirt.VIR_ERR_NO_SUPPORT)
+            fakelibvirt.VIR_ERR_NO_SUPPORT)
 
         mock_info.side_effect = fakelibvirt.make_libvirtError(
-            libvirt.libvirtError,
+            fakelibvirt.libvirtError,
             "No such domain with UUID blah",
-            libvirt.VIR_ERR_NO_DOMAIN)
+            fakelibvirt.VIR_ERR_NO_DOMAIN)
 
         info = host.DomainJobInfo.for_domain(self.dom)
 
         self.assertIsInstance(info, host.DomainJobInfo)
-        self.assertEqual(libvirt.VIR_DOMAIN_JOB_COMPLETED, info.type)
+        self.assertEqual(fakelibvirt.VIR_DOMAIN_JOB_COMPLETED, info.type)
         self.assertEqual(0, info.time_elapsed)
         self.assertEqual(0, info.time_remaining)
         self.assertEqual(0, info.memory_total)
@@ -866,14 +843,14 @@ class DomainJobInfoTestCase(test.NoDBTestCase):
     @mock.patch.object(fakelibvirt.virDomain, "jobStats")
     def test_job_stats_operation_invalid(self, mock_stats, mock_info):
         mock_stats.side_effect = fakelibvirt.make_libvirtError(
-            libvirt.libvirtError,
+            fakelibvirt.libvirtError,
             "Domain is not running",
-            libvirt.VIR_ERR_OPERATION_INVALID)
+            fakelibvirt.VIR_ERR_OPERATION_INVALID)
 
         info = host.DomainJobInfo.for_domain(self.dom)
 
         self.assertIsInstance(info, host.DomainJobInfo)
-        self.assertEqual(libvirt.VIR_DOMAIN_JOB_COMPLETED, info.type)
+        self.assertEqual(fakelibvirt.VIR_DOMAIN_JOB_COMPLETED, info.type)
         self.assertEqual(0, info.time_elapsed)
         self.assertEqual(0, info.time_remaining)
         self.assertEqual(0, info.memory_total)
@@ -887,19 +864,19 @@ class DomainJobInfoTestCase(test.NoDBTestCase):
     @mock.patch.object(fakelibvirt.virDomain, "jobStats")
     def test_job_info_operation_invalid(self, mock_stats, mock_info):
         mock_stats.side_effect = fakelibvirt.make_libvirtError(
-            libvirt.libvirtError,
+            fakelibvirt.libvirtError,
             "virDomainGetJobStats not implemented",
-            libvirt.VIR_ERR_NO_SUPPORT)
+            fakelibvirt.VIR_ERR_NO_SUPPORT)
 
         mock_info.side_effect = fakelibvirt.make_libvirtError(
-            libvirt.libvirtError,
+            fakelibvirt.libvirtError,
             "Domain is not running",
-            libvirt.VIR_ERR_OPERATION_INVALID)
+            fakelibvirt.VIR_ERR_OPERATION_INVALID)
 
         info = host.DomainJobInfo.for_domain(self.dom)
 
         self.assertIsInstance(info, host.DomainJobInfo)
-        self.assertEqual(libvirt.VIR_DOMAIN_JOB_COMPLETED, info.type)
+        self.assertEqual(fakelibvirt.VIR_DOMAIN_JOB_COMPLETED, info.type)
         self.assertEqual(0, info.time_elapsed)
         self.assertEqual(0, info.time_remaining)
         self.assertEqual(0, info.memory_total)

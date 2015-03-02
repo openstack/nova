@@ -34,11 +34,6 @@ from nova.virt.libvirt import host
 from nova.virt import netutils
 from nova.virt import virtapi
 
-try:
-    import libvirt
-except ImportError:
-    libvirt = fakelibvirt
-
 _fake_network_info = fake_network.fake_get_instance_nw_info
 _fake_stub_out_get_nw_info = fake_network.stub_out_nw_api_get_instance_nw_info
 _ipv4_like = fake_network.ipv4_like
@@ -51,7 +46,7 @@ class NWFilterFakes(object):
     def nwfilterLookupByName(self, name):
         if name in self.filters:
             return self.filters[name]
-        raise libvirt.libvirtError('Filter Not Found')
+        raise fakelibvirt.libvirtError('Filter Not Found')
 
     def filterDefineXMLMock(self, xml):
         class FakeNWFilterInternal(object):
@@ -78,7 +73,7 @@ class NWFilterFakes(object):
             self.filters[name] = FakeNWFilterInternal(self, name, u, xml)
         else:
             if self.filters[name].uuid != u:
-                raise libvirt.libvirtError(
+                raise fakelibvirt.libvirtError(
                     "Mismatching name '%s' with uuid '%s' vs '%s'"
                     % (name, self.filters[name].uuid, u))
             self.filters[name].xml = xml

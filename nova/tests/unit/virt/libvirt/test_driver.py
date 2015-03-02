@@ -92,12 +92,8 @@ from nova.virt.libvirt import rbd_utils
 from nova.virt.libvirt import utils as libvirt_utils
 from nova.virt.libvirt import volume as volume_drivers
 
-try:
-    import libvirt
-except ImportError:
-    libvirt = fakelibvirt
-libvirt_driver.libvirt = libvirt
-host.libvirt = libvirt
+libvirt_driver.libvirt = fakelibvirt
+host.libvirt = fakelibvirt
 
 
 CONF = cfg.CONF
@@ -604,7 +600,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             power_on and timeout):
             events = drvr._get_neutron_events(network_info)
 
-        launch_flags = events and libvirt.VIR_DOMAIN_START_PAUSED or 0
+        launch_flags = events and fakelibvirt.VIR_DOMAIN_START_PAUSED or 0
 
         return launch_flags
 
@@ -704,7 +700,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         conn = drvr._host.get_connection()
 
         mock_lookup.side_effect = lambda x: fakelibvirt.NodeDevice(conn)
-        mock_detach.side_effect = libvirt.libvirtError("xxxx")
+        mock_detach.side_effect = fakelibvirt.libvirtError("xxxx")
 
         self.assertRaises(exception.PciDevicePrepareFailed,
                           drvr._prepare_pci_devices_for_use, pci_devices)
@@ -865,7 +861,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             calls.append('fake_get_host_capabilities')
             return caps
 
-        @mock.patch.object(libvirt, 'registerErrorHandler',
+        @mock.patch.object(fakelibvirt, 'registerErrorHandler',
                            side_effect=fake_registerErrorHandler)
         @mock.patch.object(host.Host, "get_capabilities",
                             side_effect=fake_get_host_capabilities)
@@ -5733,7 +5729,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             return
 
         def fake_raise(self):
-            raise libvirt.libvirtError('ERR')
+            raise fakelibvirt.libvirtError('ERR')
 
         class FakeTime(object):
             def __init__(self):
@@ -6025,7 +6021,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                 "bus='ide'/>".format(**dsk)])
 
         # Preparing mocks
-        mock_virDomain = mock.Mock(libvirt.virDomain)
+        mock_virDomain = mock.Mock(fakelibvirt.virDomain)
         mock_virDomain.XMLDesc = mock.Mock()
         mock_virDomain.XMLDesc.return_value = (instance_xml.format(disks_xml))
 
@@ -6173,8 +6169,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                     block_device_info=bdi))
         self.assertEqual(0, mock_get_instance_disk_info.call_count)
 
-    # TODO(mriedem): Remove this stub once we're only using fakelibvirt.
-    @mock.patch.object(libvirt, 'VIR_DOMAIN_XML_MIGRATABLE', 8675, create=True)
     def test_live_migration_update_graphics_xml(self):
         self.compute = importutils.import_object(CONF.compute_manager)
         instance_dict = dict(self.test_instance)
@@ -6202,17 +6196,18 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         target_xml = etree.tostring(etree.fromstring(target_xml))
 
         # Preparing mocks
-        vdmock = self.mox.CreateMock(libvirt.virDomain)
+        vdmock = self.mox.CreateMock(fakelibvirt.virDomain)
         self.mox.StubOutWithMock(vdmock, "migrateToURI2")
         _bandwidth = CONF.libvirt.live_migration_bandwidth
-        vdmock.XMLDesc(libvirt.VIR_DOMAIN_XML_MIGRATABLE).AndReturn(
+        vdmock.XMLDesc(fakelibvirt.VIR_DOMAIN_XML_MIGRATABLE).AndReturn(
                 initial_xml)
         vdmock.migrateToURI2(CONF.libvirt.live_migration_uri % 'dest',
                              None,
                              target_xml,
                              mox.IgnoreArg(),
                              None,
-                             _bandwidth).AndRaise(libvirt.libvirtError("ERR"))
+                             _bandwidth).AndRaise(
+                                fakelibvirt.libvirtError("ERR"))
 
         # start test
         migrate_data = {'pre_live_migration_result':
@@ -6220,13 +6215,11 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                     {'vnc': '10.0.0.1', 'spice': '10.0.0.2'}}}
         self.mox.ReplayAll()
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.assertRaises(libvirt.libvirtError,
+        self.assertRaises(fakelibvirt.libvirtError,
                           drvr._live_migration_operation,
                           self.context, instance_ref, 'dest',
                           False, migrate_data, vdmock)
 
-    # TODO(mriedem): Remove this stub once we're only using fakelibvirt.
-    @mock.patch.object(libvirt, 'VIR_DOMAIN_XML_MIGRATABLE', 8675, create=True)
     def test_live_migration_update_volume_xml(self):
         self.compute = importutils.import_object(CONF.compute_manager)
         instance_dict = dict(self.test_instance)
@@ -6261,7 +6254,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         with mock.patch.object(libvirt_driver.LibvirtDriver, 'get_info') as \
                 mget_info,\
                 mock.patch.object(drvr._host, 'get_domain') as mget_domain,\
-                mock.patch.object(libvirt.virDomain, 'migrateToURI2'),\
+                mock.patch.object(fakelibvirt.virDomain, 'migrateToURI2'),\
                 mock.patch.object(drvr, '_update_xml') as mupdate:
 
             mget_info.side_effect = exception.InstanceNotFound(
@@ -6406,7 +6399,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                              volume_xml['volume'])
             self.assertEqual(target_xml, etree.tostring(config))
 
-    @mock.patch.object(libvirt, 'VIR_DOMAIN_XML_MIGRATABLE', None, create=True)
+    @mock.patch.object(fakelibvirt, 'VIR_DOMAIN_XML_MIGRATABLE', None,
+                       create=True)
     def test_live_migration_uses_migrateToURI_without_migratable_flag(self):
         self.compute = importutils.import_object(CONF.compute_manager)
         instance_dict = dict(self.test_instance)
@@ -6416,13 +6410,14 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         instance_ref = objects.Instance(**instance_dict)
 
         # Preparing mocks
-        vdmock = self.mox.CreateMock(libvirt.virDomain)
+        vdmock = self.mox.CreateMock(fakelibvirt.virDomain)
         self.mox.StubOutWithMock(vdmock, "migrateToURI")
         _bandwidth = CONF.libvirt.live_migration_bandwidth
         vdmock.migrateToURI(CONF.libvirt.live_migration_uri % 'dest',
                             mox.IgnoreArg(),
                             None,
-                            _bandwidth).AndRaise(libvirt.libvirtError("ERR"))
+                            _bandwidth).AndRaise(
+                                fakelibvirt.libvirtError("ERR"))
 
         # start test
         migrate_data = {'pre_live_migration_result':
@@ -6430,7 +6425,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                     {'vnc': '0.0.0.0', 'spice': '0.0.0.0'}}}
         self.mox.ReplayAll()
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.assertRaises(libvirt.libvirtError,
+        self.assertRaises(fakelibvirt.libvirtError,
                           drvr._live_migration_operation,
                           self.context, instance_ref, 'dest',
                           False, migrate_data, vdmock)
@@ -6444,24 +6439,26 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         instance_ref = objects.Instance(**instance_dict)
 
         # Preparing mocks
-        vdmock = self.mox.CreateMock(libvirt.virDomain)
+        vdmock = self.mox.CreateMock(fakelibvirt.virDomain)
         self.mox.StubOutWithMock(vdmock, "migrateToURI")
         _bandwidth = CONF.libvirt.live_migration_bandwidth
         vdmock.migrateToURI(CONF.libvirt.live_migration_uri % 'dest',
                             mox.IgnoreArg(),
                             None,
-                            _bandwidth).AndRaise(libvirt.libvirtError("ERR"))
+                            _bandwidth).AndRaise(
+                                fakelibvirt.libvirtError("ERR"))
 
         # start test
         migrate_data = {}
         self.mox.ReplayAll()
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.assertRaises(libvirt.libvirtError,
+        self.assertRaises(fakelibvirt.libvirtError,
                           drvr._live_migration_operation,
                           self.context, instance_ref, 'dest',
                           False, migrate_data, vdmock)
 
-    @mock.patch.object(libvirt, 'VIR_DOMAIN_XML_MIGRATABLE', None, create=True)
+    @mock.patch.object(fakelibvirt, 'VIR_DOMAIN_XML_MIGRATABLE', None,
+                       create=True)
     def test_live_migration_fails_without_migratable_flag_or_0_addr(self):
         self.flags(vnc_enabled=True, vncserver_listen='1.2.3.4')
         self.compute = importutils.import_object(CONF.compute_manager)
@@ -6472,7 +6469,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         instance_ref = objects.Instance(**instance_dict)
 
         # Preparing mocks
-        vdmock = self.mox.CreateMock(libvirt.virDomain)
+        vdmock = self.mox.CreateMock(fakelibvirt.virDomain)
         self.mox.StubOutWithMock(vdmock, "migrateToURI")
 
         # start test
@@ -6497,17 +6494,17 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         instance_ref = objects.Instance(**instance_dict)
 
         # Preparing mocks
-        vdmock = self.mox.CreateMock(libvirt.virDomain)
+        vdmock = self.mox.CreateMock(fakelibvirt.virDomain)
         self.mox.StubOutWithMock(vdmock, "migrateToURI2")
         _bandwidth = CONF.libvirt.live_migration_bandwidth
-        if getattr(libvirt, 'VIR_DOMAIN_XML_MIGRATABLE', None) is None:
+        if getattr(fakelibvirt, 'VIR_DOMAIN_XML_MIGRATABLE', None) is None:
             vdmock.migrateToURI(CONF.libvirt.live_migration_uri % 'dest',
                                 mox.IgnoreArg(),
                                 None,
                                 _bandwidth).AndRaise(
-                                        libvirt.libvirtError('ERR'))
+                                        fakelibvirt.libvirtError('ERR'))
         else:
-            vdmock.XMLDesc(libvirt.VIR_DOMAIN_XML_MIGRATABLE).AndReturn(
+            vdmock.XMLDesc(fakelibvirt.VIR_DOMAIN_XML_MIGRATABLE).AndReturn(
                     FakeVirtDomain().XMLDesc(0))
             vdmock.migrateToURI2(CONF.libvirt.live_migration_uri % 'dest',
                                  None,
@@ -6515,7 +6512,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                  mox.IgnoreArg(),
                                  None,
                                  _bandwidth).AndRaise(
-                                         libvirt.libvirtError('ERR'))
+                                         fakelibvirt.libvirtError('ERR'))
 
         # start test
         migrate_data = {'pre_live_migration_result':
@@ -6523,7 +6520,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                     {'vnc': '127.0.0.1', 'spice': '127.0.0.1'}}}
         self.mox.ReplayAll()
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.assertRaises(libvirt.libvirtError,
+        self.assertRaises(fakelibvirt.libvirtError,
                           drvr._live_migration_operation,
                           self.context, instance_ref, 'dest',
                           False, migrate_data, vdmock)
@@ -6531,8 +6528,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual(vm_states.ACTIVE, instance_ref.vm_state)
         self.assertEqual(power_state.RUNNING, instance_ref.power_state)
 
-    # TODO(mriedem): Remove this stub once we're only using fakelibvirt.
-    @mock.patch.object(libvirt, 'VIR_DOMAIN_XML_MIGRATABLE', 8675, create=True)
     def test_live_migration_raises_unsupported_config_exception(self):
         # Tests that when migrateToURI2 fails with VIR_ERR_CONFIG_UNSUPPORTED,
         # migrateToURI is used instead.
@@ -6541,14 +6536,15 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         instance_ref = objects.Instance(**self.test_instance)
 
         # Preparing mocks
-        vdmock = self.mox.CreateMock(libvirt.virDomain)
+        vdmock = self.mox.CreateMock(fakelibvirt.virDomain)
         self.mox.StubOutWithMock(vdmock, 'migrateToURI2')
         self.mox.StubOutWithMock(vdmock, 'migrateToURI')
         _bandwidth = CONF.libvirt.live_migration_bandwidth
-        vdmock.XMLDesc(libvirt.VIR_DOMAIN_XML_MIGRATABLE).AndReturn(
+        vdmock.XMLDesc(fakelibvirt.VIR_DOMAIN_XML_MIGRATABLE).AndReturn(
                 FakeVirtDomain().XMLDesc(0))
-        unsupported_config_error = libvirt.libvirtError('ERR')
-        unsupported_config_error.err = (libvirt.VIR_ERR_CONFIG_UNSUPPORTED,)
+        unsupported_config_error = fakelibvirt.libvirtError('ERR')
+        unsupported_config_error.err = (
+            fakelibvirt.VIR_ERR_CONFIG_UNSUPPORTED,)
         # This is the first error we hit but since the error code is
         # VIR_ERR_CONFIG_UNSUPPORTED we'll try migrateToURI.
         vdmock.migrateToURI2(CONF.libvirt.live_migration_uri % 'dest', None,
@@ -6678,17 +6674,17 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         # A normal sequence where see all the normal job states
         domain_info_records = [
             host.DomainJobInfo(
-                type=libvirt.VIR_DOMAIN_JOB_NONE),
+                type=fakelibvirt.VIR_DOMAIN_JOB_NONE),
             host.DomainJobInfo(
-                type=libvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
             host.DomainJobInfo(
-                type=libvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
             host.DomainJobInfo(
-                type=libvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
             "thread-finish",
             "domain-stop",
             host.DomainJobInfo(
-                type=libvirt.VIR_DOMAIN_JOB_COMPLETED),
+                type=fakelibvirt.VIR_DOMAIN_JOB_COMPLETED),
         ]
 
         self._test_live_migration_monitoring(domain_info_records, True)
@@ -6698,17 +6694,17 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         # completed job state
         domain_info_records = [
             host.DomainJobInfo(
-                type=libvirt.VIR_DOMAIN_JOB_NONE),
+                type=fakelibvirt.VIR_DOMAIN_JOB_NONE),
             host.DomainJobInfo(
-                type=libvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
             host.DomainJobInfo(
-                type=libvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
             host.DomainJobInfo(
-                type=libvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
             "thread-finish",
             "domain-stop",
             host.DomainJobInfo(
-                type=libvirt.VIR_DOMAIN_JOB_NONE),
+                type=fakelibvirt.VIR_DOMAIN_JOB_NONE),
         ]
 
         self._test_live_migration_monitoring(domain_info_records, True)
@@ -6717,16 +6713,16 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         # A failed sequence where we see all the expected events
         domain_info_records = [
             host.DomainJobInfo(
-                type=libvirt.VIR_DOMAIN_JOB_NONE),
+                type=fakelibvirt.VIR_DOMAIN_JOB_NONE),
             host.DomainJobInfo(
-                type=libvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
             host.DomainJobInfo(
-                type=libvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
             host.DomainJobInfo(
-                type=libvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
             "thread-finish",
             host.DomainJobInfo(
-                type=libvirt.VIR_DOMAIN_JOB_FAILED),
+                type=fakelibvirt.VIR_DOMAIN_JOB_FAILED),
         ]
 
         self._test_live_migration_monitoring(domain_info_records, False)
@@ -6736,16 +6732,16 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         # failed event
         domain_info_records = [
             host.DomainJobInfo(
-                type=libvirt.VIR_DOMAIN_JOB_NONE),
+                type=fakelibvirt.VIR_DOMAIN_JOB_NONE),
             host.DomainJobInfo(
-                type=libvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
             host.DomainJobInfo(
-                type=libvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
             host.DomainJobInfo(
-                type=libvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
             "thread-finish",
             host.DomainJobInfo(
-                type=libvirt.VIR_DOMAIN_JOB_NONE),
+                type=fakelibvirt.VIR_DOMAIN_JOB_NONE),
         ]
 
         self._test_live_migration_monitoring(domain_info_records, False)
@@ -6754,17 +6750,17 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         # A cancelled sequence where we see all the events
         domain_info_records = [
             host.DomainJobInfo(
-                type=libvirt.VIR_DOMAIN_JOB_NONE),
+                type=fakelibvirt.VIR_DOMAIN_JOB_NONE),
             host.DomainJobInfo(
-                type=libvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
             host.DomainJobInfo(
-                type=libvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
             host.DomainJobInfo(
-                type=libvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
             "thread-finish",
             "domain-stop",
             host.DomainJobInfo(
-                type=libvirt.VIR_DOMAIN_JOB_CANCELLED),
+                type=fakelibvirt.VIR_DOMAIN_JOB_CANCELLED),
         ]
 
         self._test_live_migration_monitoring(domain_info_records, False)
@@ -7252,7 +7248,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                     "</devices></domain>")
 
         # Preparing mocks
-        vdmock = self.mox.CreateMock(libvirt.virDomain)
+        vdmock = self.mox.CreateMock(fakelibvirt.virDomain)
         self.mox.StubOutWithMock(vdmock, "XMLDesc")
         vdmock.XMLDesc(0).AndReturn(dummyxml)
 
@@ -7342,7 +7338,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                     "</devices></domain>")
 
         # Preparing mocks
-        vdmock = self.mox.CreateMock(libvirt.virDomain)
+        vdmock = self.mox.CreateMock(fakelibvirt.virDomain)
         self.mox.StubOutWithMock(vdmock, "XMLDesc")
         vdmock.XMLDesc(0).AndReturn(dummyxml)
 
@@ -7678,7 +7674,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                        % dict(hex='[\da-f]', oct='[0-8]'))
             pattern = re.compile(pattern)
             if pattern.match(address) is None:
-                raise libvirt.libvirtError()
+                raise fakelibvirt.libvirtError()
             return FakeLibvirtPciDevice()
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -8146,9 +8142,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         with contextlib.nested(
             mock.patch.object(drvr._host, "_connect",
                               side_effect=fakelibvirt.make_libvirtError(
-                                  libvirt.libvirtError,
+                                  fakelibvirt.libvirtError,
                                   "Failed to connect to host",
-                                  error_code=libvirt.VIR_ERR_INTERNAL_ERROR)),
+                                  error_code=
+                                  fakelibvirt.VIR_ERR_INTERNAL_ERROR)),
             mock.patch.object(drvr._host, "_init_events",
                               return_value=None),
             mock.patch.object(objects.Service, "get_by_compute_host",
@@ -8169,9 +8166,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         with contextlib.nested(
             mock.patch.object(drvr._host, "_connect",
                               side_effect=fakelibvirt.make_libvirtError(
-                                  libvirt.libvirtError,
+                                  fakelibvirt.libvirtError,
                                   "Failed to connect to host",
-                                  error_code=libvirt.VIR_ERR_INTERNAL_ERROR)),
+                                  error_code=
+                                  fakelibvirt.VIR_ERR_INTERNAL_ERROR)),
             mock.patch.object(drvr._host, "_init_events",
                               return_value=None),
             mock.patch.object(host.Host, "has_min_version",
@@ -8332,7 +8330,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.reboot_create_called = False
 
         # Mock domain
-        mock_domain = self.mox.CreateMock(libvirt.virDomain)
+        mock_domain = self.mox.CreateMock(fakelibvirt.virDomain)
         mock_domain.info().AndReturn(
             (libvirt_driver.VIR_DOMAIN_RUNNING,) + info_tuple)
         mock_domain.ID().AndReturn('some_fake_id')
@@ -8379,7 +8377,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.reboot_hard_reboot_called = False
 
         # Mock domain
-        mock_domain = mock.Mock(libvirt.virDomain)
+        mock_domain = mock.Mock(fakelibvirt.virDomain)
         return_values = [(libvirt_driver.VIR_DOMAIN_RUNNING,) + info_tuple,
                          (libvirt_driver.VIR_DOMAIN_CRASHED,) + info_tuple]
         mock_domain.info.side_effect = return_values
@@ -8406,11 +8404,11 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         # in raising a libvirtError.
         info_tuple = ('fake', 'fake', 'fake', 'also_fake')
         # setup mocks
-        mock_virDomain = mock.Mock(libvirt.virDomain)
+        mock_virDomain = mock.Mock(fakelibvirt.virDomain)
         mock_virDomain.info.return_value = (
             (libvirt_driver.VIR_DOMAIN_RUNNING,) + info_tuple)
         mock_virDomain.ID.return_value = 'some_fake_id'
-        mock_virDomain.shutdown.side_effect = libvirt.libvirtError('Err')
+        mock_virDomain.shutdown.side_effect = fakelibvirt.libvirtError('Err')
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         context = None
@@ -8425,7 +8423,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     def _test_resume_state_on_host_boot_with_state(self, state,
                                                    mock_get_domain,
                                                    mock_hard_reboot):
-        mock_virDomain = mock.Mock(libvirt.virDomain)
+        mock_virDomain = mock.Mock(fakelibvirt.virDomain)
         mock_virDomain.info.return_value = ([state, None, None, None, None])
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -8635,7 +8633,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         shutdown_count = []
 
         # Mock domain
-        mock_domain = mock.Mock(libvirt.virDomain)
+        mock_domain = mock.Mock(fakelibvirt.virDomain)
         return_infos = [(libvirt_driver.VIR_DOMAIN_RUNNING,) + info_tuple]
         return_shutdowns = [shutdown_count.append("shutdown")]
         retry_countdown = retry_interval
@@ -8834,10 +8832,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     @mock.patch.object(objects.Instance, 'save')
     def test_destroy_undefines_no_undefine_flags(self, mock_save):
-        mock = self.mox.CreateMock(libvirt.virDomain)
+        mock = self.mox.CreateMock(fakelibvirt.virDomain)
         mock.ID()
         mock.destroy()
-        mock.undefineFlags(1).AndRaise(libvirt.libvirtError('Err'))
+        mock.undefineFlags(1).AndRaise(fakelibvirt.libvirtError('Err'))
         mock.undefine()
 
         self.mox.ReplayAll()
@@ -8862,7 +8860,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     @mock.patch.object(objects.Instance, 'save')
     def test_destroy_undefines_no_attribute_with_managed_save(self, mock_save):
-        mock = self.mox.CreateMock(libvirt.virDomain)
+        mock = self.mox.CreateMock(fakelibvirt.virDomain)
         mock.ID()
         mock.destroy()
         mock.undefineFlags(1).AndRaise(AttributeError())
@@ -8892,7 +8890,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     @mock.patch.object(objects.Instance, 'save')
     def test_destroy_undefines_no_attribute_no_managed_save(self, mock_save):
-        mock = self.mox.CreateMock(libvirt.virDomain)
+        mock = self.mox.CreateMock(fakelibvirt.virDomain)
         mock.ID()
         mock.destroy()
         mock.undefineFlags(1).AndRaise(AttributeError())
@@ -8920,20 +8918,20 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         mock_save.assert_called_once_with()
 
     def test_destroy_timed_out(self):
-        mock = self.mox.CreateMock(libvirt.virDomain)
+        mock = self.mox.CreateMock(fakelibvirt.virDomain)
         mock.ID()
-        mock.destroy().AndRaise(libvirt.libvirtError("timed out"))
+        mock.destroy().AndRaise(fakelibvirt.libvirtError("timed out"))
         self.mox.ReplayAll()
 
         def fake_get_domain(self, instance):
             return mock
 
         def fake_get_error_code(self):
-            return libvirt.VIR_ERR_OPERATION_TIMEOUT
+            return fakelibvirt.VIR_ERR_OPERATION_TIMEOUT
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.stubs.Set(host.Host, 'get_domain', fake_get_domain)
-        self.stubs.Set(libvirt.libvirtError, 'get_error_code',
+        self.stubs.Set(fakelibvirt.libvirtError, 'get_error_code',
                 fake_get_error_code)
         instance = objects.Instance(**self.test_instance)
         self.assertRaises(exception.InstancePowerOffFailure,
@@ -8941,10 +8939,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     def test_private_destroy_not_found(self):
         ex = fakelibvirt.make_libvirtError(
-                libvirt.libvirtError,
+                fakelibvirt.libvirtError,
                 "No such domain",
-                error_code=libvirt.VIR_ERR_NO_DOMAIN)
-        mock = self.mox.CreateMock(libvirt.virDomain)
+                error_code=fakelibvirt.VIR_ERR_NO_DOMAIN)
+        mock = self.mox.CreateMock(fakelibvirt.virDomain)
         mock.ID()
         mock.destroy().AndRaise(ex)
         mock.info().AndRaise(ex)
@@ -8962,9 +8960,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     def test_private_destroy_lxc_processes_refused_to_die(self):
         self.flags(virt_type='lxc', group='libvirt')
         ex = fakelibvirt.make_libvirtError(
-                libvirt.libvirtError, "",
+                fakelibvirt.libvirtError, "",
                 error_message="internal error: Some processes refused to die",
-                error_code=libvirt.VIR_ERR_INTERNAL_ERROR)
+                error_code=fakelibvirt.VIR_ERR_INTERNAL_ERROR)
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
@@ -8985,9 +8983,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     def test_private_destroy_processes_refused_to_die_still_raises(self):
         ex = fakelibvirt.make_libvirtError(
-                libvirt.libvirtError, "",
+                fakelibvirt.libvirtError, "",
                 error_message="internal error: Some processes refused to die",
-                error_code=libvirt.VIR_ERR_INTERNAL_ERROR)
+                error_code=fakelibvirt.VIR_ERR_INTERNAL_ERROR)
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
@@ -8998,14 +8996,15 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             mock_domain.destroy.side_effect = ex
 
             instance = objects.Instance(**self.test_instance)
-            self.assertRaises(libvirt.libvirtError, conn._destroy, instance)
+            self.assertRaises(fakelibvirt.libvirtError, conn._destroy,
+                              instance)
 
     def test_undefine_domain_with_not_found_instance(self):
         def fake_get_domain(self, instance):
             raise exception.InstanceNotFound(instance_id=instance.name)
 
         self.stubs.Set(host.Host, 'get_domain', fake_get_domain)
-        self.mox.StubOutWithMock(libvirt.libvirtError, "get_error_code")
+        self.mox.StubOutWithMock(fakelibvirt.libvirtError, "get_error_code")
 
         self.mox.ReplayAll()
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -9225,10 +9224,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         # Handle just the NO_SUPPORT error
         not_supported_exc = fakelibvirt.make_libvirtError(
-                libvirt.libvirtError,
+                fakelibvirt.libvirtError,
                 'this function is not supported by the connection driver:'
                 ' virNodeNumOfDevices',
-                error_code=libvirt.VIR_ERR_NO_SUPPORT)
+                error_code=fakelibvirt.VIR_ERR_NO_SUPPORT)
 
         with mock.patch.object(drvr._conn, 'listDevices',
                                side_effect=not_supported_exc):
@@ -9240,13 +9239,13 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         # Other errors should not be caught
         other_exc = fakelibvirt.make_libvirtError(
-            libvirt.libvirtError,
+            fakelibvirt.libvirtError,
             'other exc',
-            error_code=libvirt.VIR_ERR_NO_DOMAIN)
+            error_code=fakelibvirt.VIR_ERR_NO_DOMAIN)
 
         with mock.patch.object(drvr._conn, 'listDevices',
                                side_effect=other_exc):
-            self.assertRaises(libvirt.libvirtError,
+            self.assertRaises(fakelibvirt.libvirtError,
                               drvr._get_pci_passthrough_devices)
 
     def test_get_pci_passthrough_devices(self):
@@ -9461,7 +9460,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 super(DiagFakeDomain, self).__init__(fake_xml=xml)
 
             def vcpus(self):
-                raise libvirt.libvirtError('vcpus missing')
+                raise fakelibvirt.libvirtError('vcpus missing')
 
             def blockStats(self, path):
                 return (169L, 688640L, 0L, 0L, -1L)
@@ -9581,7 +9580,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                          (True, False)])
 
             def blockStats(self, path):
-                raise libvirt.libvirtError('blockStats missing')
+                raise fakelibvirt.libvirtError('blockStats missing')
 
             def interfaceStats(self, path):
                 return (4408L, 82L, 0L, 0L, 0L, 0L, 0L, 0L)
@@ -9687,7 +9686,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 return (169L, 688640L, 0L, 0L, -1L)
 
             def interfaceStats(self, path):
-                raise libvirt.libvirtError('interfaceStat missing')
+                raise fakelibvirt.libvirtError('interfaceStat missing')
 
             def memoryStats(self):
                 return {'actual': 220160L, 'rss': 200164L}
@@ -9798,7 +9797,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 return (4408L, 82L, 0L, 0L, 0L, 0L, 0L, 0L)
 
             def memoryStats(self):
-                raise libvirt.libvirtError('memoryStats missing')
+                raise fakelibvirt.libvirtError('memoryStats missing')
 
             def maxMemory(self):
                 return 280160L
@@ -10163,7 +10162,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
             def vcpus(self):
                 if self._vcpus is None:
-                    raise libvirt.libvirtError("fake-error")
+                    raise fakelibvirt.libvirtError("fake-error")
                 else:
                     return ([1] * self._vcpus, [True] * self._vcpus)
 
@@ -10571,7 +10570,7 @@ Active:          8381604 kB
 
         def fake_defineXML(xml):
             self.assertEqual(fake_xml, xml)
-            raise libvirt.libvirtError('virDomainDefineXML() failed')
+            raise fakelibvirt.libvirtError('virDomainDefineXML() failed')
 
         self.log_error_called = False
 
@@ -10585,7 +10584,8 @@ Active:          8381604 kB
         self.mox.ReplayAll()
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
 
-        self.assertRaises(libvirt.libvirtError, drvr._create_domain, fake_xml)
+        self.assertRaises(fakelibvirt.libvirtError, drvr._create_domain,
+                          fake_xml)
         self.assertTrue(self.log_error_called)
 
     def test_create_domain_with_flags_fails(self):
@@ -10596,7 +10596,7 @@ Active:          8381604 kB
         fake_domain = FakeVirtDomain(fake_xml)
 
         def fake_createWithFlags(launch_flags):
-            raise libvirt.libvirtError('virDomainCreateWithFlags() failed')
+            raise fakelibvirt.libvirtError('virDomainCreateWithFlags() failed')
 
         self.log_error_called = False
 
@@ -10611,7 +10611,7 @@ Active:          8381604 kB
         self.mox.ReplayAll()
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
 
-        self.assertRaises(libvirt.libvirtError, drvr._create_domain,
+        self.assertRaises(fakelibvirt.libvirtError, drvr._create_domain,
                           domain=fake_domain)
         self.assertTrue(self.log_error_called)
 
@@ -10651,7 +10651,7 @@ Active:          8381604 kB
                     "<graphics type='vnc' port='5900'/>"
                     "</devices></domain>")
 
-        vdmock = self.mox.CreateMock(libvirt.virDomain)
+        vdmock = self.mox.CreateMock(fakelibvirt.virDomain)
         self.mox.StubOutWithMock(vdmock, "XMLDesc")
         vdmock.XMLDesc(0).AndReturn(dummyxml)
 
@@ -10670,7 +10670,7 @@ Active:          8381604 kB
         dummyxml = ("<domain type='kvm'><name>instance-0000000a</name>"
                     "<devices></devices></domain>")
 
-        vdmock = self.mox.CreateMock(libvirt.virDomain)
+        vdmock = self.mox.CreateMock(fakelibvirt.virDomain)
         self.mox.StubOutWithMock(vdmock, "XMLDesc")
         vdmock.XMLDesc(0).AndReturn(dummyxml)
 
@@ -10691,7 +10691,7 @@ Active:          8381604 kB
                     "<graphics type='spice' port='5950'/>"
                     "</devices></domain>")
 
-        vdmock = self.mox.CreateMock(libvirt.virDomain)
+        vdmock = self.mox.CreateMock(fakelibvirt.virDomain)
         self.mox.StubOutWithMock(vdmock, "XMLDesc")
         vdmock.XMLDesc(0).AndReturn(dummyxml)
 
@@ -10710,7 +10710,7 @@ Active:          8381604 kB
         dummyxml = ("<domain type='kvm'><name>instance-0000000a</name>"
                     "<devices></devices></domain>")
 
-        vdmock = self.mox.CreateMock(libvirt.virDomain)
+        vdmock = self.mox.CreateMock(fakelibvirt.virDomain)
         self.mox.StubOutWithMock(vdmock, "XMLDesc")
         vdmock.XMLDesc(0).AndReturn(dummyxml)
 
@@ -10871,7 +10871,7 @@ Active:          8381604 kB
 
     def test_post_live_migration_at_destination_with_block_device_info(self):
         # Preparing mocks
-        mock_domain = self.mox.CreateMock(libvirt.virDomain)
+        mock_domain = self.mox.CreateMock(fakelibvirt.virDomain)
         self.resultXML = None
 
         def fake_none(*args, **kwargs):
@@ -11347,8 +11347,8 @@ Active:          8381604 kB
                 fakelibvirt.VIR_DOMAIN_XML_SECURE)
             mock_dom.blockRebase.assert_called_once_with(
                 srcfile, dstfile, 0,
-                libvirt.VIR_DOMAIN_BLOCK_REBASE_COPY |
-                libvirt.VIR_DOMAIN_BLOCK_REBASE_REUSE_EXT)
+                fakelibvirt.VIR_DOMAIN_BLOCK_REBASE_COPY |
+                fakelibvirt.VIR_DOMAIN_BLOCK_REBASE_REUSE_EXT)
             mock_dom.blockResize.assert_called_once_with(
                 srcfile, 1 * units.Gi / units.Ki)
             mock_define.assert_called_once_with(xmldoc)
@@ -11446,9 +11446,9 @@ Active:          8381604 kB
                 fakelibvirt.VIR_DOMAIN_XML_SECURE)
             mock_dom.blockRebase.assert_called_once_with(
                 srcfile, dltfile, 0,
-                libvirt.VIR_DOMAIN_BLOCK_REBASE_COPY |
-                libvirt.VIR_DOMAIN_BLOCK_REBASE_REUSE_EXT |
-                libvirt.VIR_DOMAIN_BLOCK_REBASE_SHALLOW)
+                fakelibvirt.VIR_DOMAIN_BLOCK_REBASE_COPY |
+                fakelibvirt.VIR_DOMAIN_BLOCK_REBASE_REUSE_EXT |
+                fakelibvirt.VIR_DOMAIN_BLOCK_REBASE_SHALLOW)
 
             mock_size.assert_called_once_with(srcfile)
             mock_backing.assert_called_once_with(srcfile, basename=False)
@@ -11669,7 +11669,7 @@ class HostStateTestCase(test.NoDBTestCase):
         def _get_host_numa_topology(self):
             return HostStateTestCase.numa_topology
 
-    @mock.patch.object(libvirt, "openAuth")
+    @mock.patch.object(fakelibvirt, "openAuth")
     def test_update_status(self, mock_open):
         mock_open.return_value = fakelibvirt.Connection("qemu:///system")
 
@@ -12438,7 +12438,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                 super(FakeExceptionDomain, self).__init__()
 
             def XMLDesc(self, *args):
-                raise libvirt.libvirtError("Libvirt error")
+                raise fakelibvirt.libvirtError("Libvirt error")
 
         def fake_get_domain(self, instance):
             return FakeExceptionDomain()
@@ -12654,36 +12654,36 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
     def test_attach_interface_with_running_instance(self):
         self._test_attach_detach_interface(
             'attach_interface', power_state.RUNNING,
-            expected_flags=(libvirt.VIR_DOMAIN_AFFECT_CONFIG |
-                            libvirt.VIR_DOMAIN_AFFECT_LIVE))
+            expected_flags=(fakelibvirt.VIR_DOMAIN_AFFECT_CONFIG |
+                            fakelibvirt.VIR_DOMAIN_AFFECT_LIVE))
 
     def test_attach_interface_with_pause_instance(self):
         self._test_attach_detach_interface(
             'attach_interface', power_state.PAUSED,
-            expected_flags=(libvirt.VIR_DOMAIN_AFFECT_CONFIG |
-                            libvirt.VIR_DOMAIN_AFFECT_LIVE))
+            expected_flags=(fakelibvirt.VIR_DOMAIN_AFFECT_CONFIG |
+                            fakelibvirt.VIR_DOMAIN_AFFECT_LIVE))
 
     def test_attach_interface_with_shutdown_instance(self):
         self._test_attach_detach_interface(
             'attach_interface', power_state.SHUTDOWN,
-            expected_flags=(libvirt.VIR_DOMAIN_AFFECT_CONFIG))
+            expected_flags=(fakelibvirt.VIR_DOMAIN_AFFECT_CONFIG))
 
     def test_detach_interface_with_running_instance(self):
         self._test_attach_detach_interface(
             'detach_interface', power_state.RUNNING,
-            expected_flags=(libvirt.VIR_DOMAIN_AFFECT_CONFIG |
-                            libvirt.VIR_DOMAIN_AFFECT_LIVE))
+            expected_flags=(fakelibvirt.VIR_DOMAIN_AFFECT_CONFIG |
+                            fakelibvirt.VIR_DOMAIN_AFFECT_LIVE))
 
     def test_detach_interface_with_pause_instance(self):
         self._test_attach_detach_interface(
             'detach_interface', power_state.PAUSED,
-            expected_flags=(libvirt.VIR_DOMAIN_AFFECT_CONFIG |
-                            libvirt.VIR_DOMAIN_AFFECT_LIVE))
+            expected_flags=(fakelibvirt.VIR_DOMAIN_AFFECT_CONFIG |
+                            fakelibvirt.VIR_DOMAIN_AFFECT_LIVE))
 
     def test_detach_interface_with_shutdown_instance(self):
         self._test_attach_detach_interface(
             'detach_interface', power_state.SHUTDOWN,
-            expected_flags=(libvirt.VIR_DOMAIN_AFFECT_CONFIG))
+            expected_flags=(fakelibvirt.VIR_DOMAIN_AFFECT_CONFIG))
 
     def test_rescue(self):
         instance = self._create_instance({'config_drive': None})
@@ -13273,22 +13273,22 @@ class LibvirtNonblockingTestCase(test.NoDBTestCase):
         jsonutils.to_primitive(drvr._conn, convert_instances=True)
 
     def test_tpool_execute_calls_libvirt(self):
-        conn = libvirt.virConnect()
+        conn = fakelibvirt.virConnect()
         conn.is_expected = True
 
         self.mox.StubOutWithMock(eventlet.tpool, 'execute')
         eventlet.tpool.execute(
-            libvirt.openAuth,
+            fakelibvirt.openAuth,
             'test:///default',
             mox.IgnoreArg(),
             mox.IgnoreArg()).AndReturn(conn)
         eventlet.tpool.execute(
             conn.domainEventRegisterAny,
             None,
-            libvirt.VIR_DOMAIN_EVENT_ID_LIFECYCLE,
+            fakelibvirt.VIR_DOMAIN_EVENT_ID_LIFECYCLE,
             mox.IgnoreArg(),
             mox.IgnoreArg())
-        if hasattr(libvirt.virConnect, 'registerCloseCallback'):
+        if hasattr(fakelibvirt.virConnect, 'registerCloseCallback'):
             eventlet.tpool.execute(
                 conn.registerCloseCallback,
                 mox.IgnoreArg(),
@@ -13443,20 +13443,22 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
            '</domainsnapshot>\n')
 
         # Older versions of libvirt may be missing these.
-        libvirt.VIR_DOMAIN_SNAPSHOT_CREATE_REUSE_EXT = 32
-        libvirt.VIR_DOMAIN_SNAPSHOT_CREATE_QUIESCE = 64
+        fakelibvirt.VIR_DOMAIN_SNAPSHOT_CREATE_REUSE_EXT = 32
+        fakelibvirt.VIR_DOMAIN_SNAPSHOT_CREATE_QUIESCE = 64
 
-        snap_flags = (libvirt.VIR_DOMAIN_SNAPSHOT_CREATE_DISK_ONLY |
-                      libvirt.VIR_DOMAIN_SNAPSHOT_CREATE_NO_METADATA |
-                      libvirt.VIR_DOMAIN_SNAPSHOT_CREATE_REUSE_EXT)
+        snap_flags = (fakelibvirt.VIR_DOMAIN_SNAPSHOT_CREATE_DISK_ONLY |
+                      fakelibvirt.VIR_DOMAIN_SNAPSHOT_CREATE_NO_METADATA |
+                      fakelibvirt.VIR_DOMAIN_SNAPSHOT_CREATE_REUSE_EXT)
 
-        snap_flags_q = snap_flags | libvirt.VIR_DOMAIN_SNAPSHOT_CREATE_QUIESCE
+        snap_flags_q = (snap_flags |
+                        fakelibvirt.VIR_DOMAIN_SNAPSHOT_CREATE_QUIESCE)
 
         if quiesce:
             domain.snapshotCreateXML(snap_xml_src, snap_flags_q)
         else:
             domain.snapshotCreateXML(snap_xml_src, snap_flags_q).\
-                AndRaise(libvirt.libvirtError('quiescing failed, no qemu-ga'))
+                AndRaise(fakelibvirt.libvirtError(
+                            'quiescing failed, no qemu-ga'))
             domain.snapshotCreateXML(snap_xml_src, snap_flags).AndReturn(0)
 
         self.mox.ReplayAll()
@@ -13510,20 +13512,22 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
            '</domainsnapshot>\n')
 
         # Older versions of libvirt may be missing these.
-        libvirt.VIR_DOMAIN_SNAPSHOT_CREATE_REUSE_EXT = 32
-        libvirt.VIR_DOMAIN_SNAPSHOT_CREATE_QUIESCE = 64
+        fakelibvirt.VIR_DOMAIN_SNAPSHOT_CREATE_REUSE_EXT = 32
+        fakelibvirt.VIR_DOMAIN_SNAPSHOT_CREATE_QUIESCE = 64
 
-        snap_flags = (libvirt.VIR_DOMAIN_SNAPSHOT_CREATE_DISK_ONLY |
-                      libvirt.VIR_DOMAIN_SNAPSHOT_CREATE_NO_METADATA |
-                      libvirt.VIR_DOMAIN_SNAPSHOT_CREATE_REUSE_EXT)
+        snap_flags = (fakelibvirt.VIR_DOMAIN_SNAPSHOT_CREATE_DISK_ONLY |
+                      fakelibvirt.VIR_DOMAIN_SNAPSHOT_CREATE_NO_METADATA |
+                      fakelibvirt.VIR_DOMAIN_SNAPSHOT_CREATE_REUSE_EXT)
 
-        snap_flags_q = snap_flags | libvirt.VIR_DOMAIN_SNAPSHOT_CREATE_QUIESCE
+        snap_flags_q = (snap_flags |
+                        fakelibvirt.VIR_DOMAIN_SNAPSHOT_CREATE_QUIESCE)
 
         if quiesce:
             domain.snapshotCreateXML(snap_xml_src, snap_flags_q)
         else:
             domain.snapshotCreateXML(snap_xml_src, snap_flags_q).\
-                AndRaise(libvirt.libvirtError('quiescing failed, no qemu-ga'))
+                AndRaise(fakelibvirt.libvirtError(
+                    'quiescing failed, no qemu-ga'))
             domain.snapshotCreateXML(snap_xml_src, snap_flags).AndReturn(0)
 
         self.mox.ReplayAll()
