@@ -4454,7 +4454,8 @@ class ComputeManager(manager.Manager):
     @messaging.expected_exceptions(exception.ConsoleTypeInvalid,
                                    exception.InstanceNotReady,
                                    exception.InstanceNotFound,
-                                   exception.ConsoleTypeUnavailable)
+                                   exception.ConsoleTypeUnavailable,
+                                   NotImplementedError)
     @wrap_exception()
     @wrap_instance_fault
     def get_spice_console(self, context, console_type, instance):
