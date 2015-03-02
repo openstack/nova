@@ -4673,7 +4673,6 @@ def _flavor_access_query(context, session=None):
                        read_deleted="no")
 
 
-@require_admin_context
 def flavor_access_get_by_flavor_id(context, flavor_id):
     """Get flavor access list by flavor id."""
     instance_type_id_subq = \
@@ -4684,7 +4683,6 @@ def flavor_access_get_by_flavor_id(context, flavor_id):
     return access_refs
 
 
-@require_admin_context
 def flavor_access_add(context, flavor_id, project_id):
     """Add given tenant to the flavor access list."""
     instance_type_id = _flavor_get_id_from_flavor(context, flavor_id)
@@ -4700,7 +4698,6 @@ def flavor_access_add(context, flavor_id, project_id):
     return access_ref
 
 
-@require_admin_context
 def flavor_access_remove(context, flavor_id, project_id):
     """Remove given tenant from the flavor access list."""
     instance_type_id = _flavor_get_id_from_flavor(context, flavor_id)

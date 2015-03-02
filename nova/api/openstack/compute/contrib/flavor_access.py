@@ -19,6 +19,7 @@ import webob
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
 from nova import objects
@@ -47,7 +48,9 @@ class FlavorAccessController(object):
     def index(self, req, flavor_id):
         context = req.environ['nova.context']
         authorize(context)
-
+        # NOTE(alex_xu): back-compatible with db layer hard-code admin
+        # permission checks.
+        nova_context.require_admin_context(context)
         try:
             flavor = objects.Flavor.get_by_flavor_id(context, flavor_id)
         except exception.FlavorNotFound:
@@ -103,7 +106,9 @@ class FlavorActionController(wsgi.Controller):
     def _addTenantAccess(self, req, id, body):
         context = req.environ['nova.context']
         authorize(context, action="addTenantAccess")
-
+        # NOTE(alex_xu): back-compatible with db layer hard-code admin
+        # permission checks.
+        nova_context.require_admin_context(context)
         self._check_body(body)
 
         vals = body['addTenantAccess']
@@ -126,7 +131,9 @@ class FlavorActionController(wsgi.Controller):
     def _removeTenantAccess(self, req, id, body):
         context = req.environ['nova.context']
         authorize(context, action="removeTenantAccess")
-
+        # NOTE(alex_xu): back-compatible with db layer hard-code admin
+        # permission checks.
+        nova_context.require_admin_context(context)
         self._check_body(body)
 
         vals = body['removeTenantAccess']

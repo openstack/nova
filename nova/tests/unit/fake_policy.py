@@ -189,13 +189,11 @@ policy_data = """
     "compute_extension:fixed_ips": "",
     "compute_extension:v3:os-fixed-ips": "",
     "compute_extension:flavor_access": "",
-    "compute_extension:flavor_access:addTenantAccess": "rule:admin_api",
-    "compute_extension:flavor_access:removeTenantAccess": "rule:admin_api",
+    "compute_extension:flavor_access:addTenantAccess": "",
+    "compute_extension:flavor_access:removeTenantAccess": "",
     "compute_extension:v3:os-flavor-access": "",
-    "compute_extension:v3:os-flavor-access:remove_tenant_access":
-    "rule:admin_api",
-    "compute_extension:v3:os-flavor-access:add_tenant_access":
-    "rule:admin_api",
+    "compute_extension:v3:os-flavor-access:remove_tenant_access": "",
+    "compute_extension:v3:os-flavor-access:add_tenant_access": "",
     "compute_extension:flavor_disabled": "",
     "compute_extension:v3:os-flavor-disabled": "",
     "compute_extension:flavor_rxtx": "",
