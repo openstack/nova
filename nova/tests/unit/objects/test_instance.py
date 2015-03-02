@@ -349,6 +349,7 @@ class _TestInstanceObject(object):
         inst.vm_state = 'meow'
         inst.task_state = 'wuff'
         inst.user_data = 'new'
+        save_kwargs.pop('context', None)
         inst.save(**save_kwargs)
         self.assertEqual('newhost', inst.host)
         self.assertEqual('meow', inst.vm_state)

@@ -127,8 +127,7 @@ class _TestServiceObject(object):
         service_obj = service.Service(context=self.context)
         service_obj.host = 'fake-host'
         service_obj.create()
-        self.assertRaises(exception.ObjectActionError, service_obj.create,
-                          self.context)
+        self.assertRaises(exception.ObjectActionError, service_obj.create)
 
     def test_save(self):
         self.mox.StubOutWithMock(db, 'service_update')

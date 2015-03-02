@@ -285,9 +285,9 @@ class BaseTestCase(test.TestCase):
         return fake_instance.fake_instance_obj(None, **updates)
 
     def _create_fake_instance_obj(self, params=None, type_name='m1.tiny',
-                                  services=False):
+                                  services=False, context=None):
         flavor = flavors.get_flavor_by_name(type_name)
-        inst = objects.Instance(context=self.context)
+        inst = objects.Instance(context=context or self.context)
         inst.vm_state = vm_states.ACTIVE
         inst.task_state = None
         inst.power_state = power_state.RUNNING
@@ -5538,7 +5538,7 @@ class ComputeTestCase(BaseTestCase):
         # Confirm live_migration() works as expected correctly.
         # creating instance testdata
         c = context.get_admin_context()
-        instance = self._create_fake_instance_obj()
+        instance = self._create_fake_instance_obj(context=c)
         instance.host = self.compute.host
         dest = 'desthost'
 
@@ -5579,7 +5579,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertIsNone(ret)
 
         # cleanup
-        instance.destroy(c)
+        instance.destroy()
 
     def test_post_live_migration_no_shared_storage_working_correctly(self):
         """Confirm post_live_migration() works correctly as expected
@@ -5649,11 +5649,12 @@ class ComputeTestCase(BaseTestCase):
         instance = self._create_fake_instance_obj({
                                         'host': srchost,
                                         'state_description': 'migrating',
-                                        'state': power_state.PAUSED})
+                                        'state': power_state.PAUSED},
+                                                  context=c)
 
         instance.update({'task_state': task_states.MIGRATING,
                         'power_state': power_state.PAUSED})
-        instance.save(c)
+        instance.save()
 
         # creating mocks
         with contextlib.nested(
@@ -5701,10 +5702,11 @@ class ComputeTestCase(BaseTestCase):
         instance = self._create_fake_instance_obj({
                                         'host': self.compute.host,
                                         'state_description': 'migrating',
-                                        'state': power_state.PAUSED})
+                                        'state': power_state.PAUSED},
+                                                  context=c)
         instance.update({'task_state': task_states.MIGRATING,
                          'power_state': power_state.PAUSED})
-        instance.save(c)
+        instance.save()
 
         bdms = block_device_obj.block_device_make_list(c,
                 [fake_block_device.FakeDbBlockDeviceDict({
@@ -7208,10 +7210,11 @@ class ComputeTestCase(BaseTestCase):
         instance = self._create_fake_instance_obj(
                 params={'root_device_name': '/dev/hda'})
         bdm = objects.BlockDeviceMapping(
+                context=self.context,
                 **{'source_type': 'image', 'destination_type': 'local',
                    'image_id': 'fake-image-id', 'device_name': '/dev/hda',
                    'instance_uuid': instance.uuid})
-        bdm.create(self.context)
+        bdm.create()
 
         self.compute.reserve_block_device_name(self.context, instance,
                                                '/dev/vdb', 'fake-volume-id',

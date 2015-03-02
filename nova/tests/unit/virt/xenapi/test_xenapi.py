@@ -3082,10 +3082,10 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
                     pool_states.POOL_FLAG: "XenAPI",
                     pool_states.KEY: pool_states.CREATED}
 
-        aggregate = objects.Aggregate()
+        aggregate = objects.Aggregate(context=self.context)
         aggregate.name = 'fake_aggregate'
         aggregate.metadata = dict(metadata)
-        aggregate.create(self.context)
+        aggregate.create()
         aggregate.add_host('host')
         self.assertEqual(["host"], aggregate.hosts)
         self.assertEqual(metadata, aggregate.metadata)
@@ -3149,7 +3149,7 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
                          aggr_zone='fake_zone',
                          aggr_state=pool_states.CREATED,
                          hosts=['host'], metadata=None):
-        aggregate = objects.Aggregate()
+        aggregate = objects.Aggregate(context=self.context)
         aggregate.name = aggr_name
         aggregate.metadata = {'availability_zone': aggr_zone,
                               pool_states.POOL_FLAG: 'XenAPI',
@@ -3157,7 +3157,7 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
                               }
         if metadata:
             aggregate.metadata.update(metadata)
-        aggregate.create(self.context)
+        aggregate.create()
         for aggregate_host in hosts:
             aggregate.add_host(aggregate_host)
         return aggregate

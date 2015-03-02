@@ -87,8 +87,8 @@ class _TestBandwidthUsage(test.TestCase):
     def test_create(self, mock_create):
         mock_create.return_value = self.expected_bw_usage
 
-        bw_usage = bandwidth_usage.BandwidthUsage()
-        bw_usage.create(self.context, 'fake_uuid', 'fake_mac',
+        bw_usage = bandwidth_usage.BandwidthUsage(context=self.context)
+        bw_usage.create('fake_uuid', 'fake_mac',
                         100, 200, 12345, 67890,
                         start_period=self.expected_bw_usage['start_period'])
 
@@ -103,12 +103,12 @@ class _TestBandwidthUsage(test.TestCase):
 
         mock_update.side_effect = [expected_bw_usage1, self.expected_bw_usage]
 
-        bw_usage = bandwidth_usage.BandwidthUsage()
-        bw_usage.create(self.context, 'fake_uuid1', 'fake_mac1',
+        bw_usage = bandwidth_usage.BandwidthUsage(context=self.context)
+        bw_usage.create('fake_uuid1', 'fake_mac1',
                         100, 200, 42, 42,
                         start_period=self.expected_bw_usage['start_period'])
         self._compare(self, expected_bw_usage1, bw_usage)
-        bw_usage.create(self.context, 'fake_uuid1', 'fake_mac1',
+        bw_usage.create('fake_uuid1', 'fake_mac1',
                         100, 200, 12345, 67890,
                         start_period=self.expected_bw_usage['start_period'])
         self._compare(self, self.expected_bw_usage, bw_usage)
