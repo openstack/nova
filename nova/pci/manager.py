@@ -81,7 +81,8 @@ class PciDevTracker(object):
     def save(self, context):
         for dev in self.pci_devs:
             if dev.obj_what_changed():
-                dev.save(context)
+                with dev.obj_alternate_context(context):
+                    dev.save()
 
         self.pci_devs = [dev for dev in self.pci_devs
                          if dev['status'] != 'deleted']
@@ -148,6 +149,7 @@ class PciDevTracker(object):
         for dev in [dev for dev in devices if
                     dev['address'] in new_addrs - exist_addrs]:
             dev['compute_node_id'] = self.node_id
+            # NOTE(danms): These devices are created with no context
             dev_obj = objects.PciDevice.create(dev)
             self.pci_devs.append(dev_obj)
             self.stats.add_device(dev_obj)
