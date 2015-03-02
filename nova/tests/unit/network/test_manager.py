@@ -2575,7 +2575,7 @@ class CommonNetworkTestCase(test.TestCase):
                           manager.deallocate_fixed_ip,
                           self.context, 'fake', 'fake',
                           instance=fake_inst(uuid='ignoreduuid'))
-        rollback.assert_called_once_with(self.context)
+        rollback.assert_called_once_with()
 
     def test_fixed_cidr_out_of_range(self):
         manager = network_manager.NetworkManager()

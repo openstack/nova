@@ -88,12 +88,12 @@ class ServerGroupController(wsgi.Controller):
         except nova.exception.InstanceGroupNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
-        quotas = objects.Quotas()
+        quotas = objects.Quotas(context=context)
         project_id, user_id = objects.quotas.ids_from_server_group(context, sg)
         try:
             # We have to add the quota back to the user that created
             # the server group
-            quotas.reserve(context, project_id=project_id,
+            quotas.reserve(project_id=project_id,
                            user_id=user_id, server_groups=-1)
         except Exception:
             quotas = None
@@ -131,9 +131,9 @@ class ServerGroupController(wsgi.Controller):
         """Creates a new server group."""
         context = _authorize_context(req)
 
-        quotas = objects.Quotas()
+        quotas = objects.Quotas(context=context)
         try:
-            quotas.reserve(context, project_id=context.project_id,
+            quotas.reserve(project_id=context.project_id,
                            user_id=context.user_id, server_groups=1)
         except nova.exception.OverQuota:
             msg = _("Quota exceeded, too many server groups.")
