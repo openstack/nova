@@ -1988,6 +1988,48 @@ class ComputeTestCase(BaseTestCase):
         inst_obj.task_state = task_states.POWERING_ON
         inst_obj.save()
         self.compute.start_instance(self.context, instance=inst_obj)
+
+        self.compute.terminate_instance(self.context, instance, [], [])
+
+    def test_start_shelved_instance(self):
+        # Ensure shelved instance can be started.
+        self.deleted_image_id = None
+
+        def fake_delete(self_, ctxt, image_id):
+            self.deleted_image_id = image_id
+
+        fake_image.stub_out_image_service(self.stubs)
+        self.stubs.Set(fake_image._FakeImageService, 'delete', fake_delete)
+
+        instance = self._create_fake_instance_obj()
+        image = {'id': 'fake_id'}
+        # Adding shelved information to instance system metadata.
+        shelved_time = timeutils.strtime(at=timeutils.utcnow())
+        instance.system_metadata['shelved_at'] = shelved_time
+        instance.system_metadata['shelved_image_id'] = image['id']
+        instance.system_metadata['shelved_host'] = 'fake-mini'
+        instance.save()
+
+        self.compute.build_and_run_instance(self.context, instance, {}, {}, {},
+                                            block_device_mapping=[])
+        db.instance_update(self.context, instance['uuid'],
+                           {"task_state": task_states.POWERING_OFF,
+                            "vm_state": vm_states.SHELVED})
+        extra = ['system_metadata', 'metadata']
+        inst_uuid = instance['uuid']
+        inst_obj = objects.Instance.get_by_uuid(self.context,
+                                                inst_uuid,
+                                                expected_attrs=extra)
+        self.compute.stop_instance(self.context, instance=inst_obj,
+                                   clean_shutdown=True)
+        inst_obj.task_state = task_states.POWERING_ON
+        inst_obj.save()
+        self.compute.start_instance(self.context, instance=inst_obj)
+        self.assertEqual(image['id'], self.deleted_image_id)
+        self.assertNotIn('shelved_at', inst_obj.system_metadata)
+        self.assertNotIn('shelved_image_id', inst_obj.system_metadata)
+        self.assertNotIn('shelved_host', inst_obj.system_metadata)
+
         self.compute.terminate_instance(self.context, instance, [], [])
 
     def test_stop_start_no_image(self):

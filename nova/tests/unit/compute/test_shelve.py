@@ -185,6 +185,15 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         node = test_compute.NODENAME
         limits = {}
         filter_properties = {'limits': limits}
+        host = 'fake-mini'
+        cur_time = timeutils.utcnow()
+        # Adding shelved_* keys in system metadata to verify
+        # whether those are deleted after unshelve call.
+        sys_meta = dict(instance.system_metadata)
+        sys_meta['shelved_at'] = timeutils.strtime(at=cur_time)
+        sys_meta['shelved_image_id'] = image['id']
+        sys_meta['shelved_host'] = host
+        instance.system_metadata = sys_meta
 
         self.mox.StubOutWithMock(self.compute, '_notify_about_instance_usage')
         self.mox.StubOutWithMock(self.compute, '_prep_block_device')
@@ -249,6 +258,9 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                 self.context, instance, image=image,
                 filter_properties=filter_properties,
                 node=node)
+        self.assertNotIn('shelved_at', instance.system_metadata)
+        self.assertNotIn('shelved_image_id', instance.system_metadata)
+        self.assertNotIn('shelved_host', instance.system_metadata)
         self.assertEqual(image['id'], self.deleted_image_id)
         self.assertEqual(instance.host, self.compute.host)
 

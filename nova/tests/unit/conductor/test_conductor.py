@@ -1186,14 +1186,11 @@ class _BaseTaskTestCase(object):
 
         self.mox.StubOutWithMock(self.conductor_manager.compute_rpcapi,
                 'start_instance')
-        self.mox.StubOutWithMock(self.conductor_manager, '_delete_image')
         self.mox.StubOutWithMock(self.conductor_manager.compute_rpcapi,
                 'unshelve_instance')
 
         self.conductor_manager.compute_rpcapi.start_instance(self.context,
                 instance)
-        self.conductor_manager._delete_image(self.context,
-                'fake_image_id')
         self.mox.ReplayAll()
 
         system_metadata['shelved_at'] = timeutils.utcnow()
