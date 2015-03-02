@@ -32,13 +32,13 @@ CONF.import_opt('enable_instance_password',
                 'nova.api.openstack.compute.servers')
 
 ALIAS = "os-evacuate"
-authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
+authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class EvacuateController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
         super(EvacuateController, self).__init__(*args, **kwargs)
-        self.compute_api = compute.API()
+        self.compute_api = compute.API(skip_policy_check=True)
         self.host_api = compute.HostAPI()
 
     # TODO(eliqiao): Should be responding here with 202 Accept
