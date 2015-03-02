@@ -39,6 +39,7 @@ from nova.api.metadata import password
 from nova import availability_zones
 from nova.compute import api as compute_api
 from nova.compute import flavors
+from nova.compute import manager as compute_manager
 from nova.compute import power_state
 from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import utils as compute_utils
@@ -201,6 +202,12 @@ class CloudTestCase(test.TestCase):
                                               is_admin=True)
         self.volume_api = volume.API()
 
+        self.stubs.Set(compute_manager.ComputeManager,
+                       '_update_scheduler_instance_info', dumb)
+        self.stubs.Set(compute_manager.ComputeManager,
+                       '_delete_scheduler_instance_info', dumb)
+        self.stubs.Set(compute_manager.ComputeManager,
+                       '_sync_scheduler_instance_info', dumb)
         self.useFixture(cast_as_call.CastAsCall(self.stubs))
 
         # make sure we can map ami-00000001/2 to a uuid in FakeImageService
