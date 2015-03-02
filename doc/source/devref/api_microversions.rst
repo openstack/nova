@@ -19,7 +19,7 @@ the ``DEFAULT_API_VERSION`` as defined in
 is expected to remain so for quite a long time.
 
 There is a special value ``latest`` which can be specified, which will
-allow a client to always recieve the most recent version of API
+allow a client to always receive the most recent version of API
 responses from the server.
 
 For full details please read the `Kilo spec for microversions
