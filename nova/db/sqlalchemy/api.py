@@ -1072,7 +1072,6 @@ def _dnsdomain_get_or_create(context, session, fqdomain):
     return domain_ref
 
 
-@require_admin_context
 def dnsdomain_register_for_zone(context, fqdomain, zone):
     session = get_session()
     with session.begin():
@@ -1082,7 +1081,6 @@ def dnsdomain_register_for_zone(context, fqdomain, zone):
         session.add(domain_ref)
 
 
-@require_admin_context
 def dnsdomain_register_for_project(context, fqdomain, project):
     session = get_session()
     with session.begin():
@@ -1092,7 +1090,6 @@ def dnsdomain_register_for_project(context, fqdomain, project):
         session.add(domain_ref)
 
 
-@require_admin_context
 def dnsdomain_unregister(context, fqdomain):
     model_query(context, models.DNSDomain).\
                  filter_by(domain=fqdomain).\

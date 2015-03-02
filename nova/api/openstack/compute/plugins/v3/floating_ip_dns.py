@@ -111,7 +111,7 @@ class FloatingIPDNSDomainController(wsgi.Controller):
     def update(self, req, id, body):
         """Add or modify domain entry."""
         context = req.environ['nova.context']
-        authorize(context)
+        authorize(context, action="domain:update")
         fqdomain = _unquote_domain(id)
         entry = body['domain_entry']
         scope = entry['scope']
@@ -146,7 +146,7 @@ class FloatingIPDNSDomainController(wsgi.Controller):
     def delete(self, req, id):
         """Delete the domain identified by id."""
         context = req.environ['nova.context']
-        authorize(context)
+        authorize(context, action="domain:delete")
         domain = _unquote_domain(id)
 
         # Delete the whole domain

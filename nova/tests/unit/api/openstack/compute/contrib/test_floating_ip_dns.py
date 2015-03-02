@@ -143,6 +143,7 @@ class FloatingIpDNSTestV21(test.TestCase):
         self.domain_controller = temp
         self.entry_controller = self.floating_ip_dns.\
                                 FloatingIPDNSEntryController()
+        self.admin_req = fakes.HTTPRequest.blank('', use_admin_context=True)
         self.req = fakes.HTTPRequest.blank('')
 
     def tearDown(self):
@@ -211,25 +212,28 @@ class FloatingIpDNSTestV21(test.TestCase):
         self.assertEqual(entry['dns_entry']['ip'], test_ipv4_address)
 
     def test_create_domain(self):
+        self._test_create_domain(self.req)
+
+    def _test_create_domain(self, req):
         body = {'domain_entry':
                 {'scope': 'private',
                  'project': 'testproject'}}
         self.assertRaises(self._bad_request(),
-                          self.domain_controller.update,
-                          self.req, _quote_domain(domain), body=body)
+                          self.domain_controller.update, req,
+                          _quote_domain(domain), body=body)
 
         body = {'domain_entry':
                 {'scope': 'public',
                  'availability_zone': 'zone1'}}
         self.assertRaises(self._bad_request(),
-                          self.domain_controller.update,
-                          self.req, _quote_domain(domain), body=body)
+                          self.domain_controller.update, req,
+                          _quote_domain(domain), body=body)
 
         body = {'domain_entry':
                 {'scope': 'public',
                  'project': 'testproject'}}
-        entry = self.domain_controller.update(self.req, _quote_domain(domain),
-                    body=body)
+        entry = self.domain_controller.update(req,
+                                              _quote_domain(domain), body=body)
         self.assertEqual(entry['domain_entry']['domain'], domain)
         self.assertEqual(entry['domain_entry']['scope'], 'public')
         self.assertEqual(entry['domain_entry']['project'], 'testproject')
@@ -237,8 +241,8 @@ class FloatingIpDNSTestV21(test.TestCase):
         body = {'domain_entry':
                 {'scope': 'private',
                  'availability_zone': 'zone1'}}
-        entry = self.domain_controller.update(self.req, _quote_domain(domain),
-            body=body)
+        entry = self.domain_controller.update(req,
+                                              _quote_domain(domain), body=body)
         self.assertEqual(entry['domain_entry']['domain'], domain)
         self.assertEqual(entry['domain_entry']['scope'], 'private')
         self.assertEqual(entry['domain_entry']['availability_zone'], 'zone1')
@@ -270,6 +274,9 @@ class FloatingIpDNSTestV21(test.TestCase):
             name)
 
     def test_delete_domain(self):
+        self._test_delete_domain(self.req)
+
+    def _test_delete_domain(self, req):
         calls = []
 
         def network_delete_dns_domain(fakeself, context, fqdomain):
@@ -278,20 +285,25 @@ class FloatingIpDNSTestV21(test.TestCase):
         self.stubs.Set(network.api.API, "delete_dns_domain",
                        network_delete_dns_domain)
 
-        res = self.domain_controller.delete(self.req, _quote_domain(domain))
+        res = self.domain_controller.delete(req,
+                                            _quote_domain(domain))
 
         self._check_status(202, res, self.domain_controller.delete)
         self.assertEqual([domain], calls)
 
     def test_delete_domain_notfound(self):
+        self._test_delete_domain_notfound(self.req)
+
+    def _test_delete_domain_notfound(self, req):
         def delete_dns_domain_notfound(fakeself, context, fqdomain):
             raise exception.NotFound
 
         self.stubs.Set(network.api.API, "delete_dns_domain",
                        delete_dns_domain_notfound)
 
-        self.assertRaises(webob.exc.HTTPNotFound,
-            self.domain_controller.delete, self.req, _quote_domain(domain))
+        self.assertRaises(
+            webob.exc.HTTPNotFound, self.domain_controller.delete,
+            req, _quote_domain(domain))
 
     def test_modify(self):
         body = {'dns_entry':
@@ -329,7 +341,7 @@ class FloatingIpDNSTestV21(test.TestCase):
         with mock.patch.object(network.api.API, 'delete_dns_domain',
                                side_effect=NotImplementedError()):
             self.assertRaises(webob.exc.HTTPNotImplemented,
-                              self.domain_controller.delete, self.req,
+                              self.domain_controller.delete, self.admin_req,
                               _quote_domain(domain))
 
     def test_not_implemented_create_domain(self):
@@ -339,8 +351,8 @@ class FloatingIpDNSTestV21(test.TestCase):
         with mock.patch.object(network.api.API, 'create_private_dns_domain',
                                side_effect=NotImplementedError()):
             self.assertRaises(webob.exc.HTTPNotImplemented,
-                              self.domain_controller.update,
-                              self.req, _quote_domain(domain), body=body)
+                              self.domain_controller.update, self.admin_req,
+                              _quote_domain(domain), body=body)
 
     def test_not_implemented_dns_domains_list(self):
         with mock.patch.object(network.api.API, 'get_dns_domains',
@@ -358,6 +370,28 @@ class FloatingIpDNSTestV2(FloatingIpDNSTestV21):
     def _bad_request(self):
         return webob.exc.HTTPUnprocessableEntity
 
+    def test_update_dns_domain_with_non_admin(self):
+        body = {'domain_entry':
+                {'scope': 'private',
+                 'project': 'testproject'}}
+        self.assertRaises(exception.AdminRequired,
+                          self.domain_controller.update,
+                          self.req, _quote_domain(domain), body=body)
+
+    def test_delete_dns_domain_with_non_admin(self):
+        self.assertRaises(exception.AdminRequired,
+                          self.domain_controller.delete,
+                          self.req, _quote_domain(domain))
+
+    def test_create_domain(self):
+        self._test_create_domain(self.admin_req)
+
+    def test_delete_domain(self):
+        self._test_delete_domain(self.admin_req)
+
+    def test_delete_domain_notfound(self):
+        self._test_delete_domain_notfound(self.admin_req)
+
 
 class FloatingIPDNSDomainPolicyEnforcementV21(test.NoDBTestCase):
 
@@ -369,14 +403,18 @@ class FloatingIPDNSDomainPolicyEnforcementV21(test.NoDBTestCase):
         self.req = fakes.HTTPRequest.blank('')
 
     def test_get_floating_ip_dns_policy_failed(self):
+        rule_name = "os_compute_api:os-floating-ip-dns"
+        self.policy.set_rules({rule_name: "project:non_fake"})
         exc = self.assertRaises(
             exception.PolicyNotAuthorized,
             self.controller.index, self.req)
         self.assertEqual(
-            "Policy doesn't allow %s to be performed." % self.rule_name,
+            "Policy doesn't allow %s to be performed." % rule_name,
             exc.format_message())
 
     def test_update_floating_ip_dns_policy_failed(self):
+        rule_name = "os_compute_api:os-floating-ip-dns:domain:update"
+        self.policy.set_rules({rule_name: "project:non_fake"})
         body = {'domain_entry':
                 {'scope': 'public',
                  'project': 'testproject'}}
@@ -384,15 +422,17 @@ class FloatingIPDNSDomainPolicyEnforcementV21(test.NoDBTestCase):
             exception.PolicyNotAuthorized,
             self.controller.update, self.req, _quote_domain(domain), body=body)
         self.assertEqual(
-            "Policy doesn't allow %s to be performed." % self.rule_name,
+            "Policy doesn't allow %s to be performed." % rule_name,
             exc.format_message())
 
     def test_delete_floating_ip_dns_policy_failed(self):
+        rule_name = "os_compute_api:os-floating-ip-dns:domain:delete"
+        self.policy.set_rules({rule_name: "project:non_fake"})
         exc = self.assertRaises(
             exception.PolicyNotAuthorized,
             self.controller.delete, self.req, _quote_domain(domain))
         self.assertEqual(
-            "Policy doesn't allow %s to be performed." % self.rule_name,
+            "Policy doesn't allow %s to be performed." % rule_name,
             exc.format_message())
 
 

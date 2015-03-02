@@ -3188,21 +3188,14 @@ class FloatingIPTestCase(test.TestCase):
                           name1, zone)
 
     def test_floating_dns_domains_public(self):
-        zone1 = "testzone"
         domain1 = "example.org"
         domain2 = "example.com"
         address1 = '10.10.10.10'
         entryname = 'testentry'
 
-        context_admin = context.RequestContext('testuser', 'testproject',
-                                               is_admin=True)
-
-        self.assertRaises(exception.AdminRequired,
-                          self.network.create_public_dns_domain, self.context,
-                          domain1, zone1)
-        self.network.create_public_dns_domain(context_admin, domain1,
+        self.network.create_public_dns_domain(self.context, domain1,
                                               'testproject')
-        self.network.create_public_dns_domain(context_admin, domain2,
+        self.network.create_public_dns_domain(self.context, domain2,
                                               'fakeproject')
 
         domains = self.network.get_dns_domains(self.context)
@@ -3219,11 +3212,8 @@ class FloatingIPTestCase(test.TestCase):
         self.assertEqual(len(entries), 1)
         self.assertEqual(entries[0], address1)
 
-        self.assertRaises(exception.AdminRequired,
-                          self.network.delete_dns_domain, self.context,
-                          domain1)
-        self.network.delete_dns_domain(context_admin, domain1)
-        self.network.delete_dns_domain(context_admin, domain2)
+        self.network.delete_dns_domain(self.context, domain1)
+        self.network.delete_dns_domain(self.context, domain2)
 
         # Verify that deleting the domain deleted the associated entry
         entries = self.network.get_dns_entries_by_name(self.context,
@@ -3436,23 +3426,13 @@ class InstanceDNSTestCase(test.TestCase):
         zone1 = 'testzone'
         domain1 = 'example.org'
 
-        context_admin = context.RequestContext('testuser', 'testproject',
-                                              is_admin=True)
-
-        self.assertRaises(exception.AdminRequired,
-                          self.network.create_private_dns_domain, self.context,
-                          domain1, zone1)
-
-        self.network.create_private_dns_domain(context_admin, domain1, zone1)
+        self.network.create_private_dns_domain(self.context, domain1, zone1)
         domains = self.network.get_dns_domains(self.context)
         self.assertEqual(len(domains), 1)
         self.assertEqual(domains[0]['domain'], domain1)
         self.assertEqual(domains[0]['availability_zone'], zone1)
 
-        self.assertRaises(exception.AdminRequired,
-                          self.network.delete_dns_domain, self.context,
-                          domain1)
-        self.network.delete_dns_domain(context_admin, domain1)
+        self.network.delete_dns_domain(self.context, domain1)
 
 
 domain1 = "example.org"

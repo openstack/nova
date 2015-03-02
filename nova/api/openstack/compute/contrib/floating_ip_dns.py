@@ -19,6 +19,7 @@ import webob
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
 from nova import network
@@ -105,6 +106,9 @@ class FloatingIPDNSDomainController(object):
         """Add or modify domain entry."""
         context = req.environ['nova.context']
         authorize(context)
+        # NOTE(shaohe-feng): back-compatible with db layer hard-code
+        # admin permission checks.
+        nova_context.require_admin_context(context)
         fqdomain = _unquote_domain(id)
         try:
             entry = body['domain_entry']
@@ -138,6 +142,9 @@ class FloatingIPDNSDomainController(object):
         """Delete the domain identified by id."""
         context = req.environ['nova.context']
         authorize(context)
+        # NOTE(shaohe-feng): back-compatible with db layer hard-code
+        # admin permission checks.
+        nova_context.require_admin_context(context)
         domain = _unquote_domain(id)
 
         # Delete the whole domain
