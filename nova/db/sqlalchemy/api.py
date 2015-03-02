@@ -4865,7 +4865,6 @@ def flavor_extra_specs_update_or_create(context, flavor_id, specs,
 ####################
 
 
-@require_admin_context
 def cell_create(context, values):
     cell = models.Cell()
     cell.update(values)
@@ -4881,7 +4880,6 @@ def _cell_get_by_name_query(context, cell_name, session=None):
                        session=session).filter_by(name=cell_name)
 
 
-@require_admin_context
 def cell_update(context, cell_name, values):
     session = get_session()
     with session.begin():
@@ -4893,12 +4891,10 @@ def cell_update(context, cell_name, values):
     return cell
 
 
-@require_admin_context
 def cell_delete(context, cell_name):
     return _cell_get_by_name_query(context, cell_name).soft_delete()
 
 
-@require_admin_context
 def cell_get(context, cell_name):
     result = _cell_get_by_name_query(context, cell_name).first()
     if not result:
@@ -4906,7 +4902,6 @@ def cell_get(context, cell_name):
     return result
 
 
-@require_admin_context
 def cell_get_all(context):
     return model_query(context, models.Cell, read_deleted="no").all()
 
