@@ -337,7 +337,7 @@
     "os_compute_api:os-quota-sets:update": "rule:admin_api",
     "os_compute_api:os-quota-sets:delete": "rule:admin_api",
     "os_compute_api:os-quota-sets:detail": "rule:admin_api",
-    "os_compute_api:os-quota-class-sets": "",
+    "os_compute_api:os-quota-class-sets:update": "rule:admin_api",
     "os_compute_api:os-quota-class-sets:show": "is_admin:True or quota_class:%(quota_class)s",
     "os_compute_api:os-quota-class-sets:discoverable": "",
     "os_compute_api:os-rescue": "",
