@@ -17,7 +17,6 @@
 """Fixtures for Nova tests."""
 from __future__ import absolute_import
 
-import gettext
 import logging as std_logging
 import os
 import uuid
@@ -54,17 +53,6 @@ class ServiceFixture(fixtures.Fixture):
         self.service = service.Service.create(**self.kwargs)
         self.service.start()
         self.addCleanup(self.service.kill)
-
-
-class TranslationFixture(fixtures.Fixture):
-    """Use gettext NullTranslation objects in tests."""
-
-    def setUp(self):
-        super(TranslationFixture, self).setUp()
-        nulltrans = gettext.NullTranslations()
-        gettext_fixture = fixtures.MonkeyPatch('gettext.translation',
-                                               lambda *x, **y: nulltrans)
-        self.gettext_patcher = self.useFixture(gettext_fixture)
 
 
 class NullHandler(std_logging.Handler):
