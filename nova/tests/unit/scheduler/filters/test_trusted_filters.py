@@ -236,8 +236,12 @@ class TestTrustedFilter(test.NoDBTestCase):
         host = fakes.FakeHostState('host1', 'node1', {})
 
         self.filt_cls.host_passes(host, filter_properties)  # Fill the caches
-        req_mock.assert_called_once_with("POST", "PollHosts",
-                                         ["node1", "node2"])
+        self.assertTrue(req_mock.called)
+        self.assertEqual(1, req_mock.call_count)
+        call_args = list(req_mock.call_args[0])
+
+        expected_call_args = ['POST', 'PollHosts', ['node2', 'node1']]
+        self.assertJsonEqual(call_args, expected_call_args)
 
     def test_trusted_filter_trusted_and_locale_formated_vtime_passes(self,
             req_mock):

@@ -638,8 +638,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
             key = 'vm-data/networking/DEADBEEF0001'
             xenstore_value = xenstore_data[key]
             tcpip_data = ast.literal_eval(xenstore_value)
-            self.assertEqual(tcpip_data,
-                             {'broadcast': '192.168.1.255',
+            self.assertJsonEqual({'broadcast': '192.168.1.255',
                               'dns': ['192.168.1.4', '192.168.1.3'],
                               'gateway': '192.168.1.1',
                               'gateway_v6': '2001:db8:0:1::1',
@@ -656,7 +655,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
                                        'netmask': '255.255.255.0',
                                        'gateway': '192.168.1.1'}],
                               'label': 'test1',
-                              'mac': 'DE:AD:BE:EF:00:01'})
+                              'mac': 'DE:AD:BE:EF:00:01'}, tcpip_data)
 
     def check_vm_params_for_windows(self):
         self.assertEqual(self.vm['platform']['nx'], 'true')
