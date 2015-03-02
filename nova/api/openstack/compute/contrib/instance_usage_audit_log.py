@@ -21,6 +21,7 @@ import webob.exc
 
 from nova.api.openstack import extensions
 from nova import compute
+from nova import context as nova_context
 from nova.i18n import _
 from nova import utils
 
@@ -74,6 +75,9 @@ class InstanceUsageAuditLogController(object):
             completed before this datetime. Has no effect if both begin and end
             are specified.
         """
+        # NOTE(alex_xu): back-compatible with db layer hard-code admin
+        # permission checks.
+        nova_context.require_admin_context(context)
         defbegin, defend = utils.last_completed_audit_period(before=before)
         if begin is None:
             begin = defbegin
