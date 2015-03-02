@@ -165,3 +165,61 @@ class ContextTestCase(test.NoDBTestCase):
                                       overwrite=True)
         context.get_admin_context()
         self.assertIs(o_context.get_current(), ctx1)
+
+    def test_convert_from_rc_to_dict(self):
+        ctx = context.RequestContext(
+            111, 222, request_id='req-679033b7-1755-4929-bf85-eb3bfaef7e0b',
+            timestamp='2015-03-02T22:31:56.641629')
+        values2 = ctx.to_dict()
+        expected_values = {'auth_token': None,
+                           'domain': None,
+                           'instance_lock_checked': False,
+                           'is_admin': False,
+                           'project_id': 222,
+                           'project_domain': None,
+                           'project_name': None,
+                           'quota_class': None,
+                           'read_deleted': 'no',
+                           'read_only': False,
+                           'remote_address': None,
+                           'request_id':
+                               'req-679033b7-1755-4929-bf85-eb3bfaef7e0b',
+                           'resource_uuid': None,
+                           'roles': [],
+                           'service_catalog': [],
+                           'show_deleted': False,
+                           'tenant': 222,
+                           'timestamp': '2015-03-02T22:31:56.641629',
+                           'user': 111,
+                           'user_domain': None,
+                           'user_id': 111,
+                           'user_identity': '111 222 - - -',
+                           'user_name': None}
+        self.assertEqual(expected_values, values2)
+
+    def test_convert_from_dict_then_to_dict(self):
+        values = {'user': '111',
+                  'user_id': '111',
+                  'tenant': '222',
+                  'project_id': '222',
+                  'domain': None, 'project_domain': None,
+                  'auth_token': None,
+                  'resource_uuid': None, 'read_only': False,
+                  'user_identity': '111 222 - - -',
+                  'instance_lock_checked': False,
+                  'user_name': None, 'project_name': None,
+                  'timestamp': '2015-03-02T20:03:59.416299',
+                  'remote_address': None, 'quota_class': None,
+                  'is_admin': True,
+                  'service_catalog': [],
+                  'read_deleted': 'no', 'show_deleted': False,
+                  'roles': [],
+                  'request_id': 'req-956637ad-354a-4bc5-b969-66fd1cc00f50',
+                  'user_domain': None}
+        ctx = context.RequestContext.from_dict(values)
+        self.assertEqual(ctx.user, '111')
+        self.assertEqual(ctx.tenant, '222')
+        self.assertEqual(ctx.user_id, '111')
+        self.assertEqual(ctx.project_id, '222')
+        values2 = ctx.to_dict()
+        self.assertEqual(values, values2)

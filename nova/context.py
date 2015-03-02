@@ -67,7 +67,8 @@ class RequestContext(context.RequestContext):
 
     """
 
-    def __init__(self, user_id, project_id, is_admin=None, read_deleted="no",
+    def __init__(self, user_id=None, project_id=None,
+                 is_admin=None, read_deleted="no",
                  roles=None, remote_address=None, timestamp=None,
                  request_id=None, auth_token=None, overwrite=True,
                  quota_class=None, user_name=None, project_name=None,
@@ -86,16 +87,22 @@ class RequestContext(context.RequestContext):
            :param kwargs: Extra arguments that might be present, but we ignore
                 because they possibly came in from older rpc messages.
         """
-        super(RequestContext, self).__init__(auth_token=auth_token,
-                                             user=user_id,
-                                             tenant=project_id,
-                                             is_admin=is_admin,
-                                             request_id=request_id,
-                                             overwrite=overwrite)
+        user = kwargs.pop('user', None)
+        tenant = kwargs.pop('tenant', None)
+        super(RequestContext, self).__init__(
+            auth_token=auth_token,
+            user=user_id or user,
+            tenant=project_id or tenant,
+            is_admin=is_admin,
+            request_id=request_id,
+            overwrite=overwrite)
         if kwargs:
             LOG.warning(_LW('Arguments dropped when creating context: %s') %
                         str(kwargs))
 
+        # FIXME(dims): user_id and project_id duplicate information that is
+        # already present in the oslo_context's RequestContext. We need to
+        # get rid of them.
         self.user_id = user_id
         self.project_id = project_id
         self.roles = roles or []
@@ -106,9 +113,6 @@ class RequestContext(context.RequestContext):
         if isinstance(timestamp, six.string_types):
             timestamp = timeutils.parse_strtime(timestamp)
         self.timestamp = timestamp
-        if not request_id:
-            request_id = context.generate_request_id()
-        self.request_id = request_id
 
         if service_catalog:
             # Only include required parts of service_catalog
@@ -154,25 +158,30 @@ class RequestContext(context.RequestContext):
 
     def to_dict(self):
         values = super(RequestContext, self).to_dict()
-        values.update({'user_id': self.user_id,
-                       'project_id': self.project_id,
-                       'is_admin': self.is_admin,
-                       'read_deleted': self.read_deleted,
-                       'roles': self.roles,
-                       'remote_address': self.remote_address,
-                       'timestamp': timeutils.strtime(self.timestamp),
-                       'request_id': self.request_id,
-                       'quota_class': self.quota_class,
-                       'user_name': self.user_name,
-                       'service_catalog': self.service_catalog,
-                       'project_name': self.project_name,
-                       'instance_lock_checked': self.instance_lock_checked})
+        # FIXME(dims): defensive hasattr() checks need to be
+        # removed once we figure out why we are seeing stack
+        # traces
+        values.update({
+            'user_id': getattr(self, 'user_id', None),
+            'project_id': getattr(self, 'project_id', None),
+            'is_admin': getattr(self, 'is_admin', None),
+            'read_deleted': getattr(self, 'read_deleted', 'no'),
+            'roles': getattr(self, 'roles', None),
+            'remote_address': getattr(self, 'remote_address', None),
+            'timestamp': timeutils.strtime(self.timestamp) if hasattr(
+                self, 'timestamp') else None,
+            'request_id': getattr(self, 'request_id', None),
+            'quota_class': getattr(self, 'quota_class', None),
+            'user_name': getattr(self, 'user_name', None),
+            'service_catalog': getattr(self, 'service_catalog', None),
+            'project_name': getattr(self, 'project_name', None),
+            'instance_lock_checked': getattr(self, 'instance_lock_checked',
+                                             False)
+        })
         return values
 
     @classmethod
     def from_dict(cls, values):
-        values.pop('user', None)
-        values.pop('tenant', None)
         return cls(**values)
 
     def elevated(self, read_deleted=None, overwrite=False):
