@@ -3258,7 +3258,6 @@ def _quota_usage_create(project_id, user_id, resource, in_use,
     return quota_usage_ref
 
 
-@require_admin_context
 def quota_usage_update(context, project_id, user_id, resource, **kwargs):
     updates = {}
 
