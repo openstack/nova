@@ -19,12 +19,14 @@ import mock
 from oslo_serialization import jsonutils
 import webob
 
-from nova.api.openstack.compute.contrib import flavor_access
+from nova.api.openstack.compute.contrib import flavor_access as \
+    flavor_access_v2
 from nova.api.openstack.compute.contrib import flavormanage as flavormanage_v2
+from nova.api.openstack.compute.plugins.v3 import flavor_access as \
+    flavor_access_v21
 from nova.api.openstack.compute.plugins.v3 import flavor_manage as \
     flavormanage_v21
 from nova.compute import flavors
-from nova import context
 from nova import db
 from nova import exception
 from nova import test
@@ -103,8 +105,6 @@ class FlavorManageTestV21(test.NoDBTestCase):
                        fake_get_flavor_by_flavor_id)
         self.stubs.Set(flavors, "destroy", fake_destroy)
         self.stubs.Set(db, "flavor_create", fake_create)
-        self.ctxt = context.RequestContext('fake', 'fake',
-                                           is_admin=True, auth_token=True)
         self.app = self._setup_app()
 
         self.request_body = {
@@ -122,6 +122,9 @@ class FlavorManageTestV21(test.NoDBTestCase):
         }
         self.expected_flavor = self.request_body
 
+    def _get_http_request(self, url=''):
+        return fakes.HTTPRequest.blank(url)
+
     def _setup_app(self):
         return fakes.wsgi_app_v21(init_only=('os-flavor-manage',
                                              'os-flavor-rxtx',
@@ -129,8 +132,7 @@ class FlavorManageTestV21(test.NoDBTestCase):
                                              'os-flavor-extra-data'))
 
     def test_delete(self):
-        req = fakes.HTTPRequest.blank(self.base_url + '/1234')
-        res = self.controller._delete(req, 1234)
+        res = self.controller._delete(self._get_http_request(), 1234)
 
         # NOTE: on v2.1, http status code is set as wsgi_code of API
         # method instead of status_int in a response object.
@@ -143,7 +145,8 @@ class FlavorManageTestV21(test.NoDBTestCase):
 
         # subsequent delete should fail
         self.assertRaises(webob.exc.HTTPNotFound,
-                          self.controller._delete, req, "failtest")
+                          self.controller._delete, self._get_http_request(),
+                          "failtest")
 
     def _test_create_missing_parameter(self, parameter):
         body = {
@@ -162,9 +165,8 @@ class FlavorManageTestV21(test.NoDBTestCase):
 
         del body['flavor'][parameter]
 
-        req = fakes.HTTPRequest.blank(self.base_url)
         self.assertRaises(self.validation_error, self.controller._create,
-                          req, body=body)
+                          self._get_http_request(), body=body)
 
     def test_create_missing_name(self):
         self._test_create_missing_parameter('name')
@@ -179,7 +181,7 @@ class FlavorManageTestV21(test.NoDBTestCase):
         self._test_create_missing_parameter('disk')
 
     def _create_flavor_success_case(self, body):
-        req = webob.Request.blank(self.base_url)
+        req = self._get_http_request(url=self.base_url)
         req.headers['Content-Type'] = 'application/json'
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
@@ -210,9 +212,8 @@ class FlavorManageTestV21(test.NoDBTestCase):
     def _create_flavor_bad_request_case(self, body):
         self.stubs.UnsetAll()
 
-        req = fakes.HTTPRequest.blank('')
         self.assertRaises(self.validation_error, self.controller._create,
-                          req, body=body)
+                          self._get_http_request(), body=body)
 
     def test_create_invalid_name(self):
         self.request_body['flavor']['name'] = 'bad !@#!$%\x00 name'
@@ -319,9 +320,8 @@ class FlavorManageTestV21(test.NoDBTestCase):
             raise exception.FlavorExists(name=name)
 
         self.stubs.Set(flavors, "create", fake_create)
-        req = fakes.HTTPRequest.blank('')
         self.assertRaises(webob.exc.HTTPConflict, self.controller._create,
-                          req, body=expected)
+                          self._get_http_request(), body=expected)
 
     @mock.patch('nova.compute.flavors.create',
                 side_effect=exception.FlavorCreateFailed)
@@ -339,10 +339,9 @@ class FlavorManageTestV21(test.NoDBTestCase):
                 "os-flavor-access:is_public": True,
             }
         }
-        req = fakes.HTTPRequest.blank('')
         ex = self.assertRaises(webob.exc.HTTPInternalServerError,
                                self.controller._create,
-                               req, body=request_dict)
+                               self._get_http_request(), body=request_dict)
         self.assertIn('Unable to create flavor', ex.explanation)
 
     def test_invalid_memory_mb(self):
@@ -361,19 +360,14 @@ class FlavorManageTestV21(test.NoDBTestCase):
                           "test_memory_mb", 2, None, 1, 1234, 512, 1, True)
 
 
-class FakeRequest(object):
-    environ = {"nova.context": context.get_admin_context()}
-
-
 class PrivateFlavorManageTestV21(test.TestCase):
     controller = flavormanage_v21.FlavorManageController()
     base_url = '/v2/fake/flavors'
 
     def setUp(self):
         super(PrivateFlavorManageTestV21, self).setUp()
-        self.flavor_access_controller = flavor_access.FlavorAccessController()
-        self.ctxt = context.RequestContext('fake', 'fake',
-                                           is_admin=True, auth_token=True)
+        self.flavor_access_controller = (flavor_access_v21.
+                                         FlavorAccessController())
         self.app = self._setup_app()
         self.expected = {
             "flavor": {
@@ -392,10 +386,14 @@ class PrivateFlavorManageTestV21(test.TestCase):
                                              'os-flavor-access',
                                              'os-flavor-rxtx', 'flavors',
                                              'os-flavor-extra-data'),
-                                 fake_auth_context=self.ctxt)
+                                 fake_auth_context=self._get_http_request().
+                                     environ['nova.context'])
+
+    def _get_http_request(self, url=''):
+        return fakes.HTTPRequest.blank(url)
 
     def _get_response(self):
-        req = webob.Request.blank(self.base_url)
+        req = self._get_http_request(self.base_url)
         req.headers['Content-Type'] = 'application/json'
         req.method = 'POST'
         req.body = jsonutils.dumps(self.expected)
@@ -407,10 +405,13 @@ class PrivateFlavorManageTestV21(test.TestCase):
         body = self._get_response()
         for key in self.expected["flavor"]:
             self.assertEqual(body["flavor"][key], self.expected["flavor"][key])
+        # Because for normal user can't access the non-public flavor without
+        # access. So it need admin context at here.
         flavor_access_body = self.flavor_access_controller.index(
-            FakeRequest(), body["flavor"]["id"])
+            fakes.HTTPRequest.blank('', use_admin_context=True),
+            body["flavor"]["id"])
         expected_flavor_access_body = {
-            "tenant_id": "%s" % self.ctxt.project_id,
+            "tenant_id": 'fake',
             "flavor_id": "%s" % body["flavor"]["id"]
         }
         self.assertNotIn(expected_flavor_access_body,
@@ -437,7 +438,11 @@ class FlavorManageTestV2(FlavorManageTestV21):
 
     def _setup_app(self):
         return fakes.wsgi_app(init_only=('flavors',),
-                              fake_auth_context=self.ctxt)
+                              fake_auth_context=self._get_http_request().
+                                  environ['nova.context'])
+
+    def _get_http_request(self, url=''):
+        return fakes.HTTPRequest.blank(url, use_admin_context=True)
 
 
 class PrivateFlavorManageTestV2(PrivateFlavorManageTestV21):
@@ -450,7 +455,51 @@ class PrivateFlavorManageTestV2(PrivateFlavorManageTestV21):
                 'nova.api.openstack.compute.contrib.select_extensions'],
             osapi_compute_ext_list=['Flavormanage', 'Flavorextradata',
                 'Flavor_access', 'Flavor_rxtx', 'Flavor_swap'])
+        self.flavor_access_controller = (flavor_access_v2.
+                                         FlavorAccessController())
 
     def _setup_app(self):
         return fakes.wsgi_app(init_only=('flavors',),
-                              fake_auth_context=self.ctxt)
+                              fake_auth_context=self._get_http_request().
+                                  environ['nova.context'])
+
+    def _get_http_request(self, url=''):
+        return fakes.HTTPRequest.blank(url, use_admin_context=True)
+
+
+class FlavorManagerPolicyEnforcementV21(test.NoDBTestCase):
+
+    def setUp(self):
+        super(FlavorManagerPolicyEnforcementV21, self).setUp()
+        self.controller = flavormanage_v21.FlavorManageController()
+
+    def test_create_policy_failed(self):
+        rule_name = "compute_extension:v3:os-flavor-manage"
+        self.policy.set_rules({rule_name: "project:non_fake"})
+        req = fakes.HTTPRequest.blank('')
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.controller._create, req,
+            body={"flavor": {
+                "name": "test",
+                "ram": 512,
+                "vcpus": 2,
+                "disk": 1,
+                "swap": 512,
+                "rxtx_factor": 1,
+            }})
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+            exc.format_message())
+
+    def test_delete_policy_failed(self):
+        rule_name = "compute_extension:v3:os-flavor-manage"
+        self.policy.set_rules({rule_name: "project:non_fake"})
+        req = fakes.HTTPRequest.blank('')
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.controller._delete, req,
+            fakes.FAKE_UUID)
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+            exc.format_message())

@@ -4462,7 +4462,6 @@ def console_get(context, console_id, instance_uuid=None):
 ##################
 
 
-@require_admin_context
 def flavor_create(context, values, projects=None):
     """Create a new instance type. In order to pass in extra specs,
     the values dict should contain a 'extra_specs' key/value pair:
@@ -4645,7 +4644,6 @@ def flavor_get_by_flavor_id(context, flavor_id, read_deleted):
     return _dict_with_extra_specs(result)
 
 
-@require_admin_context
 def flavor_destroy(context, name):
     """Marks specific flavor as deleted."""
     session = get_session()
