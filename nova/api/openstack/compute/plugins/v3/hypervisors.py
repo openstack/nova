@@ -22,7 +22,6 @@ from nova.api.openstack import wsgi
 from nova import compute
 from nova import exception
 from nova.i18n import _
-from nova import objects
 from nova import servicegroup
 
 
@@ -82,8 +81,8 @@ class HypervisorsController(wsgi.Controller):
         req.cache_db_compute_nodes(compute_nodes)
         return dict(hypervisors=[self._view_hypervisor(
                                  hyp,
-                                 objects.Service.get_by_host_and_binary(
-                                     context, hyp.host, 'nova-compute'),
+                                 self.host_api.service_get_by_compute_host(
+                                     context, hyp.host),
                                  False)
                                  for hyp in compute_nodes])
 
@@ -95,8 +94,8 @@ class HypervisorsController(wsgi.Controller):
         req.cache_db_compute_nodes(compute_nodes)
         return dict(hypervisors=[self._view_hypervisor(
                                  hyp,
-                                 objects.Service.get_by_host_and_binary(
-                                     context, hyp.host, 'nova-compute'),
+                                 self.host_api.service_get_by_compute_host(
+                                     context, hyp.host),
                                  True)
                                  for hyp in compute_nodes])
 
@@ -110,8 +109,7 @@ class HypervisorsController(wsgi.Controller):
         except (ValueError, exception.ComputeHostNotFound):
             msg = _("Hypervisor with ID '%s' could not be found.") % id
             raise webob.exc.HTTPNotFound(explanation=msg)
-        service = objects.Service.get_by_host_and_binary(
-            context, hyp.host, 'nova-compute')
+        service = self.host_api.service_get_by_compute_host(context, hyp.host)
         return dict(hypervisor=self._view_hypervisor(hyp, service, True))
 
     @extensions.expected_errors((404, 501))
@@ -133,8 +131,7 @@ class HypervisorsController(wsgi.Controller):
             msg = _("Virt driver does not implement uptime function.")
             raise webob.exc.HTTPNotImplemented(explanation=msg)
 
-        service = objects.Service.get_by_host_and_binary(
-            context, host, 'nova-compute')
+        service = self.host_api.service_get_by_compute_host(context, host)
         return dict(hypervisor=self._view_hypervisor(hyp, service, False,
                                                      uptime=uptime))
 
@@ -147,9 +144,8 @@ class HypervisorsController(wsgi.Controller):
         if hypervisors:
             return dict(hypervisors=[self._view_hypervisor(
                                      hyp,
-                                     objects.Service.get_by_host_and_binary(
-                                         context,
-                                         hyp.host, 'nova-compute'),
+                                     self.host_api.service_get_by_compute_host(
+                                         context, hyp.host),
                                      False)
                                      for hyp in hypervisors])
         else:
@@ -169,8 +165,8 @@ class HypervisorsController(wsgi.Controller):
         for compute_node in compute_nodes:
             instances = self.host_api.instance_get_all_by_host(context,
                     compute_node.host)
-            service = objects.Service.get_by_host_and_binary(
-                context, compute_node.host, 'nova-compute')
+            service = self.host_api.service_get_by_compute_host(
+                context, compute_node.host)
             hyp = self._view_hypervisor(compute_node, service, False,
                                         instances)
             hypervisors.append(hyp)

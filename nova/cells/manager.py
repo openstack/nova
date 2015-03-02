@@ -366,6 +366,7 @@ class CellsManager(manager.Manager):
                 ret_task_logs.append(task_log)
         return ret_task_logs
 
+    @oslo_messaging.expected_exceptions(exception.CellRoutingInconsistency)
     def compute_node_get(self, ctxt, compute_id):
         """Get a compute node by ID in a specific cell."""
         cell_name, compute_id = cells_utils.split_cell_and_item(
