@@ -37,6 +37,10 @@ class CastAsCall(fixtures.Fixture):
         orig_prepare = obj.prepare
 
         def prepare(self, *args, **kwargs):
+            # Casts with fanout=True would throw errors if its monkeypatched to
+            # the call method, so we must override fanout to False
+            if 'fanout' in kwargs:
+                kwargs['fanout'] = False
             cctxt = orig_prepare(self, *args, **kwargs)
             CastAsCall._stub_out(stubs, cctxt)  # woo, recurse!
             return cctxt
