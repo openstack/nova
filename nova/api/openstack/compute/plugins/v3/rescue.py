@@ -32,13 +32,13 @@ CONF = cfg.CONF
 CONF.import_opt('enable_instance_password',
                 'nova.api.openstack.compute.servers')
 
-authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
+authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class RescueController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
         super(RescueController, self).__init__(*args, **kwargs)
-        self.compute_api = compute.API()
+        self.compute_api = compute.API(skip_policy_check=True)
 
     # TODO(cyeoh): Should be responding here with 202 Accept
     # because rescue is an async call, but keep to 200
