@@ -15,6 +15,7 @@
 import abc
 import datetime
 
+import copy
 import iso8601
 import netaddr
 from oslo_utils import timeutils
@@ -161,7 +162,7 @@ class Field(object):
             # NOTE(danms): We coerce the default value each time the field
             # is set to None as our contract states that we'll let the type
             # examine the object and attribute name at that time.
-            return self._type.coerce(obj, attr, self._default)
+            return self._type.coerce(obj, attr, copy.deepcopy(self._default))
         else:
             raise ValueError(_("Field `%s' cannot be None") % attr)
 

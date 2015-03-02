@@ -490,7 +490,7 @@ class NovaObject(object):
                      if field.default != obj_fields.UnspecifiedDefault]
 
         for attr in attrs:
-            default = self.fields[attr].default
+            default = copy.deepcopy(self.fields[attr].default)
             if default is obj_fields.UnspecifiedDefault:
                 raise exception.ObjectActionError(
                     action='set_defaults',
