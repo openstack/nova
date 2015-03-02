@@ -14,7 +14,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova import db
 from nova.scheduler import filters
 from nova.scheduler.filters import utils
 
@@ -32,12 +31,11 @@ class TypeAffinityFilter(filters.BaseHostFilter):
         Return False if host has any instance types other than the requested
         type. Return True if all instance types match or if host is empty.
         """
-
         instance_type = filter_properties.get('instance_type')
-        context = filter_properties['context'].elevated()
-        instances_other_type = db.instance_get_all_by_host_and_not_type(
-                     context, host_state.host, instance_type['id'])
-        return len(instances_other_type) == 0
+        instance_type_id = instance_type['id']
+        other_types_on_host = utils.other_types_on_host(host_state,
+                                                        instance_type_id)
+        return not other_types_on_host
 
 
 class AggregateTypeAffinityFilter(filters.BaseHostFilter):
