@@ -155,6 +155,7 @@ class FilterScheduler(driver.Scheduler):
 
             chosen_host = random.choice(
                 weighed_hosts[0:scheduler_host_subset_size])
+            LOG.debug("Selected host: %(host)s", {'host': chosen_host})
             selected_hosts.append(chosen_host)
 
             # Now consume the resources so the filter/weights
