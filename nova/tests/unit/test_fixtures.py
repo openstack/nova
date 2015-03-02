@@ -151,6 +151,8 @@ class TestTimeout(testtools.TestCase):
 class TestOSAPIFixture(testtools.TestCase):
     def test_responds_to_version(self):
         """Ensure the OSAPI server responds to calls sensibly."""
+        self.useFixture(fixtures.OutputStreamCapture())
+        self.useFixture(fixtures.StandardLogging())
         self.useFixture(conf_fixture.ConfFixture())
         api = self.useFixture(fixtures.OSAPIFixture()).api
 
