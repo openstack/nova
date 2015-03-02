@@ -30,8 +30,14 @@ from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import context
 from nova import exception
 from nova.i18n import _
+from oslo_config import cfg
 
 LOG = logging.getLogger(__name__)
+
+CONF = cfg.CONF
+CONF.import_opt('novncproxy_base_url', 'nova.vnc')
+CONF.import_opt('html5proxy_base_url', 'nova.spice', group='spice')
+CONF.import_opt('base_url', 'nova.console.serial', group='serial_console')
 
 
 class NovaProxyRequestHandlerBase(object):
@@ -40,6 +46,22 @@ class NovaProxyRequestHandlerBase(object):
         # explicitly disable the reverse DNS lookup, which might fail on some
         # deployments due to DNS configuration and break VNC access completely
         return str(self.client_address[0])
+
+    def verify_origin_proto(self, console_type, origin_proto):
+        if console_type == 'novnc':
+            expected_proto = \
+                urlparse.urlparse(CONF.novncproxy_base_url).scheme
+        elif console_type == 'spice-html5':
+            expected_proto = \
+                urlparse.urlparse(CONF.spice.html5proxy_base_url).scheme
+        elif console_type == 'serial':
+            expected_proto = \
+                urlparse.urlparse(CONF.serial_console.base_url).scheme
+        else:
+            detail = _("Invalid Console Type for WebSocketProxy: '%s'") % \
+                        console_type
+            raise exception.ValidationError(detail=detail)
+        return origin_proto == expected_proto
 
     def new_websocket_client(self):
         """Called after a new WebSocket connection has been established."""
@@ -78,6 +100,28 @@ class NovaProxyRequestHandlerBase(object):
 
         if not connect_info:
             raise exception.InvalidToken(token=token)
+
+        # Verify Origin
+        expected_origin_hostname = self.headers.getheader('Host')
+        if ':' in expected_origin_hostname:
+            e = expected_origin_hostname
+            expected_origin_hostname = e.split(':')[0]
+        origin_url = self.headers.getheader('Origin')
+        # missing origin header indicates non-browser client which is OK
+        if origin_url is not None:
+            origin = urlparse.urlparse(origin_url)
+            origin_hostname = origin.hostname
+            origin_scheme = origin.scheme
+            if origin_hostname == '' or origin_scheme == '':
+                detail = _("Origin header not valid.")
+                raise exception.ValidationError(detail=detail)
+            if expected_origin_hostname != origin_hostname:
+                detail = _("Origin header does not match this host.")
+                raise exception.ValidationError(detail=detail)
+            if not self.verify_origin_proto(connect_info['console_type'],
+                                              origin.scheme):
+                detail = _("Origin header protocol does not match this host.")
+                raise exception.ValidationError(detail=detail)
 
         self.msg(_('connect info: %s'), str(connect_info))
         host = connect_info['host']
