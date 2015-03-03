@@ -12,6 +12,7 @@
 
 from nova.api.openstack import extensions
 from nova import compute
+from nova import context as nova_context
 from nova.objects import base as obj_base
 
 
@@ -46,6 +47,9 @@ class MigrationsController(object):
         """Return all migrations in progress."""
         context = req.environ['nova.context']
         authorize(context, "index")
+        # NOTE(alex_xu): back-compatible with db layer hard-code admin
+        # permission checks.
+        nova_context.require_admin_context(context)
         migrations = self.compute_api.get_migrations(context, req.GET)
         return {'migrations': output(migrations)}
 
