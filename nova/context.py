@@ -188,6 +188,9 @@ class RequestContext(context.RequestContext):
 
         return context
 
+    def __str__(self):
+        return "<Context %s>" % self.to_dict()
+
 
 def get_admin_context(read_deleted="no"):
     return RequestContext(user_id=None,
