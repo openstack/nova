@@ -69,6 +69,16 @@ class X509Test(test.TestCase):
             dec = crypto.decrypt_text(project_id, enc)
             self.assertEqual(text, dec)
 
+    @mock.patch.object(utils, 'execute',
+                       side_effect=processutils.ProcessExecutionError)
+    def test_ensure_ca_filesystem_chdir(self, *args, **kargs):
+        with utils.tempdir() as tmpdir:
+            self.flags(ca_path=tmpdir)
+            start = os.getcwd()
+            self.assertRaises(processutils.ProcessExecutionError,
+                              crypto.ensure_ca_filesystem)
+            self.assertEqual(start, os.getcwd())
+
 
 class RevokeCertsTest(test.TestCase):
 
