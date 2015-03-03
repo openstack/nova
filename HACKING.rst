@@ -78,6 +78,14 @@ Python packages may also have dependencies that are outside of tox's ability
 to install. Please refer to doc/source/devref/development.environment.rst for
 a list of those packages on Ubuntu, Fedora and Mac OS X.
 
+To run a single or restricted set of tests, pass a regex that matches
+the class name containing the tests as an extra ``tox`` argument;
+e.g. ``tox -- TestWSGIServer`` (note the double-hypen) will test all
+WSGI server tests from ``nova/tests/test_wsgi.py``; ``--
+TestWSGIServer.test_uri_length_limit`` would run just that test, and
+``-- TestWSGIServer|TestWSGIServerWithSSL`` would run tests from both
+classes.
+
 It is also possible to run the tests inside of a virtual environment
 you have created, or it is possible that you have all of the dependencies
 installed locally already. In this case, you can interact with the testr
