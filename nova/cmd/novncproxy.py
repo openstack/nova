@@ -18,9 +18,12 @@ Websocket proxy that is compatible with OpenStack Nova
 noVNC consoles. Leverages websockify.py by Joel Martin
 """
 
+import sys
+
 from oslo_config import cfg
 
 from nova.cmd import baseproxy
+from nova import config
 
 
 opts = [
@@ -39,6 +42,7 @@ CONF.register_cli_opts(opts)
 def main():
     # set default web flag option
     CONF.set_default('web', '/usr/share/novnc')
+    config.parse_args(sys.argv)
 
     baseproxy.proxy(
         host=CONF.novncproxy_host,

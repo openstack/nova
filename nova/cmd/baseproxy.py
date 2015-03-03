@@ -23,7 +23,6 @@ import sys
 from oslo_config import cfg
 from oslo_log import log as logging
 
-from nova import config
 from nova.console import websocketproxy
 from nova.openstack.common.report import guru_meditation_report as gmr
 from nova import version
@@ -44,8 +43,6 @@ def exit_with_error(msg, errno=-1):
 
 
 def proxy(host, port):
-    # Setup flags
-    config.parse_args(sys.argv)
 
     if CONF.ssl_only and not os.path.exists(CONF.cert):
         exit_with_error("SSL only and %s not found" % CONF.cert)

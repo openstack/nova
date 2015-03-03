@@ -18,9 +18,12 @@ Websocket proxy that is compatible with OpenStack Nova
 SPICE HTML5 consoles. Leverages websockify.py by Joel Martin
 """
 
+import sys
+
 from oslo_config import cfg
 
 from nova.cmd import baseproxy
+from nova import config
 
 
 opts = [
@@ -37,6 +40,7 @@ CONF.register_cli_opts(opts, group='spice')
 
 
 def main():
+    config.parse_args(sys.argv)
 
     baseproxy.proxy(
         host=CONF.spice.html5proxy_host,
