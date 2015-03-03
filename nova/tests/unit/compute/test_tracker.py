@@ -14,16 +14,19 @@ import contextlib
 import copy
 
 import mock
-from oslo_serialization import jsonutils
 from oslo_utils import units
 
+from nova.compute import arch
 from nova.compute import claims
+from nova.compute import hv_type
 from nova.compute import power_state
 from nova.compute import resource_tracker
 from nova.compute import task_states
+from nova.compute import vm_mode
 from nova.compute import vm_states
 from nova import exception as exc
 from nova import objects
+from nova.objects import base as obj_base
 from nova import test
 
 _VIRT_DRIVER_AVAIL_RESOURCES = {
@@ -41,39 +44,40 @@ _VIRT_DRIVER_AVAIL_RESOURCES = {
 }
 
 _COMPUTE_NODE_FIXTURES = [
-    {
-        'id': 1,
+    objects.ComputeNode(
+        id=1,
         # NOTE(jaypipes): Will be removed with the
         #                 detach-compute-node-from-service blueprint
         #                 implementation.
-        'service_id': 1,
-        'host': 'fake-host',
-        'service': None,
-        'vcpus': _VIRT_DRIVER_AVAIL_RESOURCES['vcpus'],
-        'memory_mb': _VIRT_DRIVER_AVAIL_RESOURCES['memory_mb'],
-        'local_gb': _VIRT_DRIVER_AVAIL_RESOURCES['local_gb'],
-        'vcpus_used': _VIRT_DRIVER_AVAIL_RESOURCES['vcpus_used'],
-        'memory_mb_used': _VIRT_DRIVER_AVAIL_RESOURCES['memory_mb_used'],
-        'local_gb_used': _VIRT_DRIVER_AVAIL_RESOURCES['local_gb_used'],
-        'hypervisor_type': 'fake',
-        'hypervisor_version': 0,
-        'hypervisor_hostname': 'fake-host',
-        'free_ram_mb': (_VIRT_DRIVER_AVAIL_RESOURCES['memory_mb'] -
-                        _VIRT_DRIVER_AVAIL_RESOURCES['memory_mb_used']),
-        'free_disk_gb': (_VIRT_DRIVER_AVAIL_RESOURCES['local_gb'] -
-                         _VIRT_DRIVER_AVAIL_RESOURCES['local_gb_used']),
-        'current_workload': 0,
-        'running_vms': 0,
-        'cpu_info': '{}',
-        'disk_available_least': 0,
-        'host_ip': 'fake-ip',
-        'supported_instances': None,
-        'metrics': None,
-        'pci_stats': None,
-        'extra_resources': None,
-        'stats': '{}',
-        'numa_topology': None
-    },
+        service_id=1,
+        host='fake-host',
+        vcpus=_VIRT_DRIVER_AVAIL_RESOURCES['vcpus'],
+        memory_mb=_VIRT_DRIVER_AVAIL_RESOURCES['memory_mb'],
+        local_gb=_VIRT_DRIVER_AVAIL_RESOURCES['local_gb'],
+        vcpus_used=_VIRT_DRIVER_AVAIL_RESOURCES['vcpus_used'],
+        memory_mb_used=_VIRT_DRIVER_AVAIL_RESOURCES['memory_mb_used'],
+        local_gb_used=_VIRT_DRIVER_AVAIL_RESOURCES['local_gb_used'],
+        hypervisor_type='fake',
+        hypervisor_version=0,
+        hypervisor_hostname='fake-host',
+        free_ram_mb=(_VIRT_DRIVER_AVAIL_RESOURCES['memory_mb'] -
+                     _VIRT_DRIVER_AVAIL_RESOURCES['memory_mb_used']),
+        free_disk_gb=(_VIRT_DRIVER_AVAIL_RESOURCES['local_gb'] -
+                      _VIRT_DRIVER_AVAIL_RESOURCES['local_gb_used']),
+        current_workload=0,
+        running_vms=0,
+        cpu_info='{}',
+        disk_available_least=0,
+        host_ip='1.1.1.1',
+        supported_hv_specs=[
+            objects.HVSpec.from_list([arch.I686, hv_type.KVM, vm_mode.HVM])
+        ],
+        metrics=None,
+        pci_device_pools=None,
+        extra_resources=None,
+        stats={},
+        numa_topology=None,
+        ),
 ]
 
 _SERVICE_FIXTURE = objects.Service(
@@ -354,7 +358,7 @@ class BaseTestCase(test.NoDBTestCase):
     def setUp(self):
         super(BaseTestCase, self).setUp()
         self.rt = None
-        self.flags(my_ip='fake-ip')
+        self.flags(my_ip='1.1.1.1')
 
     def _setup_rt(self, virt_resources=_VIRT_DRIVER_AVAIL_RESOURCES,
                   estimate_overhead=overhead_zero):
@@ -410,7 +414,7 @@ class TestUpdateAvailableResources(BaseTestCase):
             # host is added in update_available_resources()
             # before calling _update()
             'host': 'fake-host',
-            'host_ip': 'fake-ip',
+            'host_ip': '1.1.1.1',
             'numa_topology': None,
             'metrics': '[]',
             'cpu_info': '',
@@ -420,7 +424,7 @@ class TestUpdateAvailableResources(BaseTestCase):
             'local_gb': 6,
             'free_ram_mb': 512,
             'memory_mb_used': 0,
-            'pci_device_pools': [],
+            'pci_device_pools': objects.PciDevicePoolList(),
             'vcpus_used': 0,
             'hypervisor_type': 'fake',
             'local_gb_used': 0,
@@ -430,7 +434,8 @@ class TestUpdateAvailableResources(BaseTestCase):
             'running_vms': 0
         })
         update_mock.assert_called_once_with(mock.sentinel.ctx)
-        self.assertEqual(expected_resources, self.rt.compute_node)
+        self.assertTrue(obj_base.obj_equal_prims(expected_resources,
+                                                 self.rt.compute_node))
 
     @mock.patch('nova.objects.Service.get_by_compute_host')
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
@@ -456,7 +461,7 @@ class TestUpdateAvailableResources(BaseTestCase):
             # host is added in update_available_resources()
             # before calling _update()
             'host': 'fake-host',
-            'host_ip': 'fake-ip',
+            'host_ip': '1.1.1.1',
             'numa_topology': None,
             'metrics': '[]',
             'cpu_info': '',
@@ -466,7 +471,7 @@ class TestUpdateAvailableResources(BaseTestCase):
             'local_gb': 6,
             'free_ram_mb': 0,  # 512MB avail - 512MB reserved
             'memory_mb_used': 512,  # 0MB used + 512MB reserved
-            'pci_device_pools': [],
+            'pci_device_pools': objects.PciDevicePoolList(),
             'vcpus_used': 0,
             'hypervisor_type': 'fake',
             'local_gb_used': 1,  # 0GB used + 1 GB reserved
@@ -476,7 +481,8 @@ class TestUpdateAvailableResources(BaseTestCase):
             'running_vms': 0
         })
         update_mock.assert_called_once_with(mock.sentinel.ctx)
-        self.assertEqual(expected_resources, self.rt.compute_node)
+        self.assertTrue(obj_base.obj_equal_prims(expected_resources,
+                                                 self.rt.compute_node))
 
     @mock.patch('nova.objects.Service.get_by_compute_host')
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
@@ -502,7 +508,7 @@ class TestUpdateAvailableResources(BaseTestCase):
             # host is added in update_available_resources()
             # before calling _update()
             'host': 'fake-host',
-            'host_ip': 'fake-ip',
+            'host_ip': '1.1.1.1',
             'numa_topology': None,
             'metrics': '[]',
             'cpu_info': '',
@@ -512,7 +518,7 @@ class TestUpdateAvailableResources(BaseTestCase):
             'local_gb': 6,
             'free_ram_mb': 384,  # 512 - 128 used
             'memory_mb_used': 128,
-            'pci_device_pools': [],
+            'pci_device_pools': objects.PciDevicePoolList(),
             # NOTE(jaypipes): Due to the design of the ERT, which now is used
             #                 track VCPUs, the actual used VCPUs isn't
             #                 "written" to the resources dictionary that is
@@ -533,7 +539,8 @@ class TestUpdateAvailableResources(BaseTestCase):
             'running_vms': 1  # One active instance
         })
         update_mock.assert_called_once_with(mock.sentinel.ctx)
-        self.assertEqual(expected_resources, self.rt.compute_node)
+        self.assertTrue(obj_base.obj_equal_prims(expected_resources,
+                                                 self.rt.compute_node))
 
     @mock.patch('nova.objects.Service.get_by_compute_host')
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
@@ -579,7 +586,7 @@ class TestUpdateAvailableResources(BaseTestCase):
             # host is added in update_available_resources()
             # before calling _update()
             'host': 'fake-host',
-            'host_ip': 'fake-ip',
+            'host_ip': '1.1.1.1',
             'numa_topology': None,
             'metrics': '[]',
             'cpu_info': '',
@@ -589,7 +596,7 @@ class TestUpdateAvailableResources(BaseTestCase):
             'local_gb': 6,
             'free_ram_mb': 448,  # 512 - 64 orphaned usage
             'memory_mb_used': 64,
-            'pci_device_pools': [],
+            'pci_device_pools': objects.PciDevicePoolList(),
             'vcpus_used': 0,
             'hypervisor_type': 'fake',
             'local_gb_used': 0,
@@ -601,7 +608,8 @@ class TestUpdateAvailableResources(BaseTestCase):
             'running_vms': 0
         })
         update_mock.assert_called_once_with(mock.sentinel.ctx)
-        self.assertEqual(expected_resources, self.rt.compute_node)
+        self.assertTrue(obj_base.obj_equal_prims(expected_resources,
+                                                 self.rt.compute_node))
 
     @mock.patch('nova.objects.Service.get_by_compute_host')
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
@@ -644,7 +652,7 @@ class TestUpdateAvailableResources(BaseTestCase):
             # host is added in update_available_resources()
             # before calling _update()
             'host': 'fake-host',
-            'host_ip': 'fake-ip',
+            'host_ip': '1.1.1.1',
             'numa_topology': None,
             'metrics': '[]',
             'cpu_info': '',
@@ -654,7 +662,7 @@ class TestUpdateAvailableResources(BaseTestCase):
             'local_gb': 6,
             'free_ram_mb': 384,  # 512 total - 128 for possible revert of orig
             'memory_mb_used': 128,  # 128 possible revert amount
-            'pci_device_pools': [],
+            'pci_device_pools': objects.PciDevicePoolList(),
             'vcpus_used': 0,
             'hypervisor_type': 'fake',
             'local_gb_used': 1,
@@ -664,7 +672,8 @@ class TestUpdateAvailableResources(BaseTestCase):
             'running_vms': 0
         })
         update_mock.assert_called_once_with(mock.sentinel.ctx)
-        self.assertEqual(expected_resources, self.rt.compute_node)
+        self.assertTrue(obj_base.obj_equal_prims(expected_resources,
+                                                 self.rt.compute_node))
 
     @mock.patch('nova.objects.Service.get_by_compute_host')
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
@@ -703,7 +712,7 @@ class TestUpdateAvailableResources(BaseTestCase):
             # host is added in update_available_resources()
             # before calling _update()
             'host': 'fake-host',
-            'host_ip': 'fake-ip',
+            'host_ip': '1.1.1.1',
             'numa_topology': None,
             'metrics': '[]',
             'cpu_info': '',
@@ -713,7 +722,7 @@ class TestUpdateAvailableResources(BaseTestCase):
             'local_gb': 6,
             'free_ram_mb': 256,  # 512 total - 256 for possible confirm of new
             'memory_mb_used': 256,  # 256 possible confirmed amount
-            'pci_device_pools': [],
+            'pci_device_pools': objects.PciDevicePoolList(),
             'vcpus_used': 0,  # See NOTE(jaypipes) above about why this is 0
             'hypervisor_type': 'fake',
             'local_gb_used': 5,
@@ -723,7 +732,8 @@ class TestUpdateAvailableResources(BaseTestCase):
             'running_vms': 0
         })
         update_mock.assert_called_once_with(mock.sentinel.ctx)
-        self.assertEqual(expected_resources, self.rt.compute_node)
+        self.assertTrue(obj_base.obj_equal_prims(expected_resources,
+                                                 self.rt.compute_node))
 
     @mock.patch('nova.objects.Service.get_by_compute_host')
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
@@ -766,7 +776,7 @@ class TestUpdateAvailableResources(BaseTestCase):
             # host is added in update_available_resources()
             # before calling _update()
             'host': 'fake-host',
-            'host_ip': 'fake-ip',
+            'host_ip': '1.1.1.1',
             'numa_topology': None,
             'metrics': '[]',
             'cpu_info': '',
@@ -778,7 +788,7 @@ class TestUpdateAvailableResources(BaseTestCase):
             # 512 total - 128 existing - 256 new flav - 128 old flav
             'free_ram_mb': 0,
             'memory_mb_used': 512,  # 128 exist + 256 new flav + 128 old flav
-            'pci_device_pools': [],
+            'pci_device_pools': objects.PciDevicePoolList(),
             # See NOTE(jaypipes) above for reason why this isn't accurate until
             # _update() is called.
             'vcpus_used': 0,
@@ -790,7 +800,8 @@ class TestUpdateAvailableResources(BaseTestCase):
             'running_vms': 2
         })
         update_mock.assert_called_once_with(mock.sentinel.ctx)
-        self.assertEqual(expected_resources, self.rt.compute_node)
+        self.assertTrue(obj_base.obj_equal_prims(expected_resources,
+                                                 self.rt.compute_node))
 
 
 class TestInitComputeNode(BaseTestCase):
@@ -848,25 +859,19 @@ class TestInitComputeNode(BaseTestCase):
         self.assertFalse(create_mock.called)
         self.assertFalse(self.rt.disabled)
 
+    @mock.patch('nova.objects.ComputeNode.create')
     @mock.patch('nova.objects.Service.get_by_compute_host')
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
-    def test_compute_node_created_on_empty(self, get_mock, service_mock):
+    def test_compute_node_created_on_empty(self, get_mock, service_mock,
+                                           create_mock):
         self._setup_rt()
 
-        def fake_create_node(_ctx, resources):
-            res = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
-            res.update(resources)
-            return res
-
-        capi = self.cond_api_mock
-        create_node_mock = capi.compute_node_create
-        create_node_mock.side_effect = fake_create_node
         service_obj = _SERVICE_FIXTURE
         service_mock.return_value = service_obj
         get_mock.side_effect = exc.NotFound
 
         resources = {
-            'host_ip': 'fake-ip',
+            'host_ip': '1.1.1.1',
             'numa_topology': None,
             'metrics': '[]',
             'cpu_info': '',
@@ -886,22 +891,28 @@ class TestInitComputeNode(BaseTestCase):
             'running_vms': 0,
             'pci_passthrough_devices': '[]'
         }
-        # We need to do this because _update() actually modifies
-        # the supplied dictionary :(
-        expected_resources = copy.deepcopy(resources)
-        # NOTE(pmurray): This will go away when the ComputeNode object is used
-        expected_resources['stats'] = '{}'
-        # NOTE(pmurray): no initial values are calculated before the initial
-        # creation. vcpus is derived from ERT resources, so this means its
-        # value will be 0
-        expected_resources['vcpus'] = 0
-        # NOTE(jaypipes): This will go away once
-        #                 detach-compute-node-from-service blueprint is done
-        expected_resources['service_id'] = 1
-        # NOTE(sbauza): ResourceTracker adds host field
-        expected_resources['host'] = 'fake-host'
-        # pci_passthrough_devices should is not held in compute nodes
-        del expected_resources['pci_passthrough_devices']
+        # The expected compute represents the initial values used
+        # when creating a compute node.
+        expected_compute = objects.ComputeNode(
+            host_ip=resources['host_ip'],
+            vcpus=resources['vcpus'],
+            memory_mb=resources['memory_mb'],
+            local_gb=resources['local_gb'],
+            cpu_info=resources['cpu_info'],
+            vcpus_used=resources['vcpus_used'],
+            memory_mb_used=resources['memory_mb_used'],
+            local_gb_used=resources['local_gb_used'],
+            numa_topology=resources['numa_topology'],
+            hypervisor_type=resources['hypervisor_type'],
+            hypervisor_version=resources['hypervisor_version'],
+            hypervisor_hostname=resources['hypervisor_hostname'],
+            # NOTE(jaypipes): This will go away once
+            #                 detach-compute-node-from-service blueprint
+            #                 is done
+            service_id=1,
+            # NOTE(sbauza): ResourceTracker adds host field
+            host='fake-host',
+        )
 
         self.rt._init_compute_node(mock.sentinel.ctx, resources)
 
@@ -909,8 +920,9 @@ class TestInitComputeNode(BaseTestCase):
         service_mock.assert_called_once_with(mock.sentinel.ctx, 'fake-host')
         get_mock.assert_called_once_with(mock.sentinel.ctx, 'fake-host',
                                          'fake-node')
-        create_node_mock.assert_called_once_with(mock.sentinel.ctx,
-                                                 expected_resources)
+        create_mock.assert_called_once_with()
+        self.assertTrue(obj_base.obj_equal_prims(expected_compute,
+                                                 self.rt.compute_node))
 
 
 class TestUpdateComputeNode(BaseTestCase):
@@ -919,43 +931,34 @@ class TestUpdateComputeNode(BaseTestCase):
     def test_existing_compute_node_updated_same_resources(self, service_mock):
         self._setup_rt()
 
-        capi = self.cond_api_mock
-        create_node_mock = capi.compute_node_create
-
         # This is the same set of resources as the fixture, deliberately. We
         # are checking below to see that update_resource_stats() is not
         # needlessly called when the resources don't actually change.
-        resources = {
-            # host is added in update_available_resources()
-            # before calling _update()
-            'host': 'fake-host',
-            'id': 1,
-            'host_ip': 'fake-ip',
-            'numa_topology': None,
-            'metrics': '[]',
-            'cpu_info': '',
-            'hypervisor_hostname': 'fakehost',
-            'free_disk_gb': 6,
-            'hypervisor_version': 0,
-            'local_gb': 6,
-            'free_ram_mb': 512,
-            'memory_mb_used': 0,
-            'pci_device_pools': [],
-            'vcpus_used': 0,
-            'hypervisor_type': 'fake',
-            'local_gb_used': 0,
-            'memory_mb': 512,
-            'current_workload': 0,
-            'vcpus': 4,
-            'running_vms': 0
-        }
-        orig_resources = copy.deepcopy(resources)
-        self.rt.compute_node = copy.deepcopy(orig_resources)
+        compute = objects.ComputeNode(
+            host_ip='1.1.1.1',
+            numa_topology=None,
+            metrics='[]',
+            cpu_info='',
+            hypervisor_hostname='fakehost',
+            free_disk_gb=6,
+            hypervisor_version=0,
+            local_gb=6,
+            free_ram_mb=512,
+            memory_mb_used=0,
+            pci_device_pools=objects.PciDevicePoolList(),
+            vcpus_used=0,
+            hypervisor_type='fake',
+            local_gb_used=0,
+            memory_mb=512,
+            current_workload=0,
+            vcpus=4,
+            running_vms=0
+        )
+        self.rt.compute_node = compute
         self.rt._update(mock.sentinel.ctx)
 
         self.assertFalse(self.rt.disabled)
         self.assertFalse(service_mock.called)
-        self.assertFalse(create_node_mock.called)
 
         # The above call to _update() will populate the
         # RT.old_resources collection with the resources. Here, we check that
@@ -971,42 +974,37 @@ class TestUpdateComputeNode(BaseTestCase):
     def test_existing_compute_node_updated_new_resources(self, service_mock):
         self._setup_rt()
 
-        capi = self.cond_api_mock
-        create_node_mock = capi.compute_node_create
-
         # Deliberately changing local_gb_used, vcpus_used, and memory_mb_used
         # below to be different from the compute node fixture's base usages.
         # We want to check that the code paths update the stored compute node
         # usage records with what is supplied to _update().
-        resources = {
-            # host is added in update_available_resources()
-            # before calling _update()
-            'host': 'fake-host',
-            'id': 1,
-            'host_ip': 'fake-ip',
-            'numa_topology': None,
-            'metrics': '[]',
-            'cpu_info': '',
-            'hypervisor_hostname': 'fakehost',
-            'free_disk_gb': 2,
-            'hypervisor_version': 0,
-            'local_gb': 6,
-            'free_ram_mb': 384,
-            'memory_mb_used': 128,
-            'pci_device_pools': [],
-            'vcpus_used': 2,
-            'hypervisor_type': 'fake',
-            'local_gb_used': 4,
-            'memory_mb': 512,
-            'current_workload': 0,
-            'vcpus': 4,
-            'running_vms': 0
-        }
-        expected_resources = copy.deepcopy(resources)
-        expected_resources['id'] = 1
-        expected_resources['stats'] = '{}'
+        compute = objects.ComputeNode(
+            host='fake-host',
+            host_ip='1.1.1.1',
+            numa_topology=None,
+            metrics='[]',
+            cpu_info='',
+            hypervisor_hostname='fakehost',
+            free_disk_gb=2,
+            hypervisor_version=0,
+            local_gb=6,
+            free_ram_mb=384,
+            memory_mb_used=128,
+            pci_device_pools=objects.PciDevicePoolList(),
+            vcpus_used=2,
+            hypervisor_type='fake',
+            local_gb_used=4,
+            memory_mb=512,
+            current_workload=0,
+            vcpus=4,
+            running_vms=0
+        )
+        expected_resources = copy.deepcopy(compute)
+        expected_resources.stats = {}
+        expected_resources.vcpus = 4
+        expected_resources.vcpus_used = 2
 
-        self.rt.compute_node = copy.deepcopy(resources)
+        self.rt.compute_node = compute
         self.rt.ext_resources_handler.reset_resources(self.rt.compute_node,
                                                       self.rt.driver)
         # This emulates the behavior that occurs in the
@@ -1017,11 +1015,8 @@ class TestUpdateComputeNode(BaseTestCase):
 
         self.assertFalse(self.rt.disabled)
         self.assertFalse(service_mock.called)
-        self.assertFalse(create_node_mock.called)
         urs_mock = self.sched_client_mock.update_resource_stats
-        urs_mock.assert_called_once_with(mock.sentinel.ctx,
-                                         ('fake-host', 'fake-node'),
-                                         expected_resources)
+        urs_mock.assert_called_once_with(self.rt.compute_node)
 
 
 class TestInstanceClaim(BaseTestCase):
@@ -1090,13 +1085,14 @@ class TestInstanceClaim(BaseTestCase):
             "free_ram_mb": expected['memory_mb'] - self.instance.memory_mb,
             'running_vms': 1,
             # 'vcpus_used': 0,  # vcpus are not claimed
-            'pci_device_pools': [],
+            'pci_device_pools': objects.PciDevicePoolList(),
         })
         with mock.patch.object(self.rt, '_update') as update_mock:
             with mock.patch.object(self.instance, 'save'):
                 self.rt.instance_claim(self.ctx, self.instance, None)
             update_mock.assert_called_once_with(self.elevated)
-            self.assertEqual(expected, self.rt.compute_node)
+            self.assertTrue(obj_base.obj_equal_prims(expected,
+                                                     self.rt.compute_node))
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid')
     @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
@@ -1205,11 +1201,11 @@ class TestResizeClaim(BaseTestCase):
 
     def adjust_expected(self, expected, flavor):
         disk_used = flavor['root_gb'] + flavor['ephemeral_gb']
-        expected['free_disk_gb'] -= disk_used
-        expected['local_gb_used'] += disk_used
-        expected['free_ram_mb'] -= flavor['memory_mb']
-        expected['memory_mb_used'] += flavor['memory_mb']
-        expected['vcpus_used'] += flavor['vcpus']
+        expected.free_disk_gb -= disk_used
+        expected.local_gb_used += disk_used
+        expected.free_ram_mb -= flavor['memory_mb']
+        expected.memory_mb_used += flavor['memory_mb']
+        expected.vcpus_used += flavor['vcpus']
 
     @mock.patch('nova.objects.Flavor.get_by_id')
     def test_claim(self, flavor_mock, pci_mock, inst_list_mock, inst_by_uuid,
@@ -1231,7 +1227,8 @@ class TestResizeClaim(BaseTestCase):
                 self.ctx, self.instance, self.flavor, None)
 
         self.assertIsInstance(claim, claims.ResizeClaim)
-        self.assertEqual(expected, self.rt.compute_node)
+        self.assertTrue(obj_base.obj_equal_prims(expected,
+                                                 self.rt.compute_node))
 
     def test_same_host(self, pci_mock, inst_list_mock, inst_by_uuid,
             migr_mock):
@@ -1257,7 +1254,8 @@ class TestResizeClaim(BaseTestCase):
         self.assertNotEqual(expected, self.rt.compute_node)
 
         claim.abort()
-        self.assertEqual(expected, self.rt.compute_node)
+        self.assertTrue(obj_base.obj_equal_prims(expected,
+                                                 self.rt.compute_node))
 
     def test_revert_reserve_source(
             self, pci_mock, inst_list_mock, inst_by_uuid, migr_mock):
@@ -1286,42 +1284,39 @@ class TestResizeClaim(BaseTestCase):
 
         # Register the instance with dst_rt
         expected = copy.deepcopy(dst_rt.compute_node)
-        del expected['stats']
         with mock.patch.object(dst_instance, 'save'):
             dst_rt.instance_claim(self.ctx, dst_instance)
         self.adjust_expected(expected, new_itype)
-        expected_stats = {'num_task_resize_migrating': 1,
+        expected.stats = {'num_task_resize_migrating': 1,
                              'io_workload': 1,
                              'num_instances': 1,
                              'num_proj_fake-project': 1,
                              'num_vm_active': 1,
                              'num_os_type_fake-os': 1}
-        expected['current_workload'] = 1
-        expected['running_vms'] = 1
-        actual_stats = dst_rt.compute_node.pop('stats')
-        actual_stats = jsonutils.loads(actual_stats)
-        self.assertEqual(expected_stats, actual_stats)
-        self.assertEqual(expected, dst_rt.compute_node)
+        expected.current_workload = 1
+        expected.running_vms = 1
+        self.assertTrue(obj_base.obj_equal_prims(expected,
+                                                 dst_rt.compute_node))
 
         # Provide the migration via a mock, then audit dst_rt to check that
         # the instance + migration resources are not double-counted
         self.audit(dst_rt, [dst_instance], [dst_migr], dst_instance)
-        actual_stats = dst_rt.compute_node.pop('stats')
-        actual_stats = jsonutils.loads(actual_stats)
-        self.assertEqual(expected_stats, actual_stats)
-        self.assertEqual(expected, dst_rt.compute_node)
+        self.assertTrue(obj_base.obj_equal_prims(expected,
+                                                 dst_rt.compute_node))
 
         # Audit src_rt with src_migr
         expected = copy.deepcopy(src_rt.compute_node)
         self.adjust_expected(expected, old_itype)
         self.audit(src_rt, [], [src_migr], src_instance)
-        self.assertEqual(expected, src_rt.compute_node)
+        self.assertTrue(obj_base.obj_equal_prims(expected,
+                                                 src_rt.compute_node))
 
         # Flag the instance as reverting and re-audit
         src_instance['vm_state'] = vm_states.RESIZED
         src_instance['task_state'] = task_states.RESIZE_REVERTING
         self.audit(src_rt, [], [src_migr], src_instance)
-        self.assertEqual(expected, src_rt.compute_node)
+        self.assertTrue(obj_base.obj_equal_prims(expected,
+                                                 src_rt.compute_node))
 
     def test_dupe_filter(self, pci_mock, inst_list_mock, inst_by_uuid,
             migr_mock):

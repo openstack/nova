@@ -16,6 +16,7 @@
 """Tests for compute resource tracking."""
 
 import copy
+import six
 import uuid
 
 import mock
@@ -31,6 +32,7 @@ from nova import db
 from nova import exception
 from nova import objects
 from nova.objects import base as obj_base
+from nova.objects import pci_device_pool
 from nova import rpc
 from nova import test
 from nova.tests.unit.compute.monitors import test_monitors
@@ -57,6 +59,7 @@ EPHEMERAL_GB = 1
 FAKE_VIRT_LOCAL_GB = ROOT_GB + EPHEMERAL_GB
 FAKE_VIRT_VCPUS = 1
 FAKE_VIRT_STATS = {'virt_stat': 10}
+FAKE_VIRT_STATS_COERCED = {'virt_stat': '10'}
 FAKE_VIRT_STATS_JSON = jsonutils.dumps(FAKE_VIRT_STATS)
 RESOURCE_NAMES = ['vcpu']
 CONF = cfg.CONF
@@ -227,6 +230,7 @@ class BaseTestCase(test.TestCase):
         self.update_call_count = 0
 
     def _create_compute_node(self, values=None):
+        # This creates a db representation of a compute_node.
         compute = {
             "id": 1,
             "service_id": 1,
@@ -258,6 +262,16 @@ class BaseTestCase(test.TestCase):
         if values:
             compute.update(values)
         return compute
+
+    def _create_compute_node_obj(self, context):
+        # Use the db representation of a compute node returned
+        # by _create_compute_node() to create an equivalent compute
+        # node object.
+        compute = self._create_compute_node()
+        compute_obj = objects.ComputeNode()
+        compute_obj = objects.ComputeNode._from_db_object(
+            context, compute_obj, compute)
+        return compute_obj
 
     def _create_service(self, host="fakehost", compute=None):
         if compute:
@@ -411,7 +425,7 @@ class BaseTestCase(test.TestCase):
         driver = self._driver()
 
         tracker = resource_tracker.ResourceTracker(host, driver, node)
-        tracker.compute_node = self._create_compute_node()
+        tracker.compute_node = self._create_compute_node_obj(self.context)
         tracker.ext_resources_handler = \
             resources.ResourceHandler(RESOURCE_NAMES, True)
         return tracker
@@ -556,8 +570,6 @@ class BaseTrackerTestCase(BaseTestCase):
         patcher = pci_fakes.fake_pci_whitelist()
         self.addCleanup(patcher.stop)
 
-        self.stubs.Set(self.tracker.scheduler_client, 'update_resource_stats',
-                self._fake_compute_node_update)
         self._init_tracker()
         self.limits = self._limits()
 
@@ -641,6 +653,19 @@ class BaseTrackerTestCase(BaseTestCase):
                                          "%(expected)s, but got: %(got)s" %
                                          {'expected': expected, 'got': got})
 
+    def assertEqualPciDevicePool(self, expected, observed):
+        self.assertEqual(expected.product_id, observed.product_id)
+        self.assertEqual(expected.vendor_id, observed.vendor_id)
+        self.assertEqual(expected.tags, observed.tags)
+        self.assertEqual(expected.count, observed.count)
+
+    def assertEqualPciDevicePoolList(self, expected, observed):
+        ex_objs = expected.objects
+        ob_objs = observed.objects
+        self.assertEqual(len(ex_objs), len(ob_objs))
+        for i in range(len(ex_objs)):
+            self.assertEqualPciDevicePool(ex_objs[i], ob_objs[i])
+
     def _assert(self, value, field, tracker=None):
 
         if tracker is None:
@@ -663,12 +688,12 @@ class TrackerTestCase(BaseTrackerTestCase):
     def test_free_ram_resource_value(self):
         driver = FakeVirtDriver()
         mem_free = driver.memory_mb - driver.memory_mb_used
-        self.assertEqual(mem_free, self.tracker.compute_node['free_ram_mb'])
+        self.assertEqual(mem_free, self.tracker.compute_node.free_ram_mb)
 
     def test_free_disk_resource_value(self):
         driver = FakeVirtDriver()
         mem_free = driver.local_gb - driver.local_gb_used
-        self.assertEqual(mem_free, self.tracker.compute_node['free_disk_gb'])
+        self.assertEqual(mem_free, self.tracker.compute_node.free_disk_gb)
 
     def test_update_compute_node(self):
         self.assertFalse(self.tracker.disabled)
@@ -687,9 +712,10 @@ class TrackerTestCase(BaseTrackerTestCase):
         self._assert(FAKE_VIRT_MEMORY_MB, 'free_ram_mb')
         self._assert(FAKE_VIRT_LOCAL_GB, 'free_disk_gb')
         self.assertFalse(self.tracker.disabled)
-        self.assertEqual(0, self.tracker.compute_node['current_workload'])
-        self.assertEqual(driver.pci_stats,
-            self.tracker.compute_node['pci_device_pools'])
+        self.assertEqual(0, self.tracker.compute_node.current_workload)
+        expected = pci_device_pool.from_pci_stats(driver.pci_stats)
+        self.assertEqual(expected,
+                         self.tracker.compute_node.pci_device_pools)
 
     def test_set_instance_host_and_node(self):
         inst = objects.Instance()
@@ -705,22 +731,30 @@ class SchedulerClientTrackerTestCase(BaseTrackerTestCase):
 
     def setUp(self):
         super(SchedulerClientTrackerTestCase, self).setUp()
-        self.tracker.scheduler_client.update_resource_stats = mock.Mock(
-                side_effect=self._fake_compute_node_update)
+        self.tracker.scheduler_client.update_resource_stats = mock.Mock()
 
     def test_update_resource(self):
-        # change a compute node value to simulate a change
-        self.tracker.compute_node['local_gb_used'] += 1
-        expected = copy.deepcopy(self.tracker.compute_node)
+        # NOTE(pmurray): we are not doing a full pass through the resource
+        # trackers update path, so safest to do two updates and look for
+        # differences then to rely on the initial state being the same
+        # as an update
+        urs_mock = self.tracker.scheduler_client.update_resource_stats
         self.tracker._update(self.context)
-        self.tracker.scheduler_client.update_resource_stats.\
-            assert_called_once_with(self.context,
-                                    ("fakehost", "fakenode"),
-                                    expected)
+        urs_mock.reset_mock()
+        # change a compute node value to simulate a change
+        self.tracker.compute_node.local_gb_used += 1
+        self.tracker._update(self.context)
+        urs_mock.assert_called_once_with(self.tracker.compute_node)
 
     def test_no_update_resource(self):
+        # NOTE(pmurray): we are not doing a full pass through the resource
+        # trackers update path, so safest to do two updates and look for
+        # differences then to rely on the initial state being the same
+        # as an update
         self.tracker._update(self.context)
         update = self.tracker.scheduler_client.update_resource_stats
+        update.reset_mock()
+        self.tracker._update(self.context)
         self.assertFalse(update.called, "update_resource_stats should not be "
                                         "called when there is no change")
 
@@ -744,13 +778,10 @@ class TrackerPciStatsTestCase(BaseTrackerTestCase):
         self._assert(FAKE_VIRT_MEMORY_MB, 'free_ram_mb')
         self._assert(FAKE_VIRT_LOCAL_GB, 'free_disk_gb')
         self.assertFalse(self.tracker.disabled)
-        self.assertEqual(0, self.tracker.compute_node['current_workload'])
-
-        # NOTE(danms): PciDeviceStats only supports iteration, so we have to
-        # listify it before we can examine the contents by index.
-        pools = list(self.tracker.compute_node['pci_device_pools'])
-        self.assertEqual(driver.pci_stats[0]['product_id'],
-                         pools[0]['product_id'])
+        self.assertEqual(0, self.tracker.compute_node.current_workload)
+        expected_pools = pci_device_pool.from_pci_stats(driver.pci_stats)
+        observed_pools = self.tracker.compute_node.pci_device_pools
+        self.assertEqualPciDevicePoolList(expected_pools, observed_pools)
 
     def _driver(self):
         return FakeVirtDriver(pci_support=True)
@@ -758,18 +789,11 @@ class TrackerPciStatsTestCase(BaseTrackerTestCase):
 
 class TrackerExtraResourcesTestCase(BaseTrackerTestCase):
 
-    def setUp(self):
-        super(TrackerExtraResourcesTestCase, self).setUp()
-        self.driver = self._driver()
-
-    def _driver(self):
-        return FakeVirtDriver()
-
     def test_set_empty_ext_resources(self):
-        resources = self.driver.get_available_resource(self.tracker.nodename)
-        self.assertNotIn('stats', resources)
+        resources = self._create_compute_node_obj(self.context)
+        del resources.stats
         self.tracker._write_ext_resources(resources)
-        self.assertIn('stats', resources)
+        self.assertEqual({}, resources.stats)
 
     def test_set_extra_resources(self):
         def fake_write_resources(resources):
@@ -780,12 +804,13 @@ class TrackerExtraResourcesTestCase(BaseTrackerTestCase):
                        'write_resources',
                        fake_write_resources)
 
-        resources = self.driver.get_available_resource(self.tracker.nodename)
+        resources = self._create_compute_node_obj(self.context)
+        del resources.stats
         self.tracker._write_ext_resources(resources)
 
-        expected = {"resA": "123", "resB": 12}
+        expected = {"resA": "123", "resB": "12"}
         self.assertEqual(sorted(expected),
-                         sorted(resources['stats']))
+                         sorted(resources.stats))
 
 
 class InstanceClaimTestCase(BaseTrackerTestCase):
@@ -910,13 +935,13 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
         with mock.patch.object(instance, 'save'):
             self.tracker.instance_claim(self.context, instance, limits)
         self.assertEqual(memory_mb + FAKE_VIRT_MEMORY_OVERHEAD,
-                self.tracker.compute_node['memory_mb_used'])
+                self.tracker.compute_node.memory_mb_used)
         self.assertEqualNUMAHostTopology(
                 claim_topology,
                 objects.NUMATopology.obj_from_db_obj(
                     self.compute['numa_topology']))
         self.assertEqual(root_gb * 2,
-                self.tracker.compute_node['local_gb_used'])
+                self.tracker.compute_node.local_gb_used)
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid',
                 return_value=objects.InstancePCIRequests(requests=[]))
@@ -938,11 +963,11 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
             pass
 
         self.assertEqual(2 * (flavor['memory_mb'] + FAKE_VIRT_MEMORY_OVERHEAD),
-                self.tracker.compute_node['memory_mb_used'])
+                self.tracker.compute_node.memory_mb_used)
         self.assertEqual(2 * (flavor['root_gb'] + flavor['ephemeral_gb']),
-                self.tracker.compute_node['local_gb_used'])
+                self.tracker.compute_node.local_gb_used)
         self.assertEqual(2 * flavor['vcpus'],
-                self.tracker.compute_node['vcpus_used'])
+                self.tracker.compute_node.vcpus_used)
 
         self.assertEqualNUMAHostTopology(
                 claim_topology,
@@ -962,8 +987,8 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
         except test.TestingException:
             pass
 
-        self.assertEqual(0, self.tracker.compute_node['memory_mb_used'])
-        self.assertEqual(0, self.tracker.compute_node['local_gb_used'])
+        self.assertEqual(0, self.tracker.compute_node.memory_mb_used)
+        self.assertEqual(0, self.tracker.compute_node.local_gb_used)
         self.assertEqual(0, self.compute['memory_mb_used'])
         self.assertEqual(0, self.compute['local_gb_used'])
         self.assertEqualNUMAHostTopology(
@@ -986,9 +1011,9 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
         with self.tracker.instance_claim(self.context, instance):
             # <insert exciting things that utilize resources>
             self.assertEqual(flavor['memory_mb'] + FAKE_VIRT_MEMORY_OVERHEAD,
-                             self.tracker.compute_node['memory_mb_used'])
+                             self.tracker.compute_node.memory_mb_used)
             self.assertEqual(flavor['root_gb'] + flavor['ephemeral_gb'],
-                             self.tracker.compute_node['local_gb_used'])
+                             self.tracker.compute_node.local_gb_used)
             self.assertEqual(flavor['memory_mb'] + FAKE_VIRT_MEMORY_OVERHEAD,
                              self.compute['memory_mb_used'])
             self.assertEqualNUMAHostTopology(
@@ -1003,9 +1028,9 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
         mock_get_all.return_value = [instance]
         self.tracker.update_available_resource(self.context)
         self.assertEqual(flavor['memory_mb'] + FAKE_VIRT_MEMORY_OVERHEAD,
-                         self.tracker.compute_node['memory_mb_used'])
+                         self.tracker.compute_node.memory_mb_used)
         self.assertEqual(flavor['root_gb'] + flavor['ephemeral_gb'],
-                         self.tracker.compute_node['local_gb_used'])
+                         self.tracker.compute_node.local_gb_used)
         self.assertEqual(flavor['memory_mb'] + FAKE_VIRT_MEMORY_OVERHEAD,
                          self.compute['memory_mb_used'])
         self.assertEqualNUMAHostTopology(
@@ -1023,49 +1048,49 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
             with self.tracker.instance_claim(self.context, instance):
                 pass
 
-        self.assertEqual(1, self.tracker.compute_node['current_workload'])
+        self.assertEqual(1, self.tracker.compute_node.current_workload)
 
         instance['vm_state'] = vm_states.ACTIVE
         instance['task_state'] = None
         instance['host'] = 'fakehost'
 
         self.tracker.update_usage(self.context, instance)
-        self.assertEqual(0, self.tracker.compute_node['current_workload'])
+        self.assertEqual(0, self.tracker.compute_node.current_workload)
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid',
                 return_value=objects.InstancePCIRequests(requests=[]))
     @mock.patch('nova.objects.Instance.save')
     def test_cpu_stats(self, mock_save, mock_get):
         limits = {'disk_gb': 100, 'memory_mb': 100}
-        self.assertEqual(0, self.tracker.compute_node['vcpus_used'])
+        self.assertEqual(0, self.tracker.compute_node.vcpus_used)
 
         vcpus = 1
         instance = self._fake_instance_obj(vcpus=vcpus)
 
         # should not do anything until a claim is made:
         self.tracker.update_usage(self.context, instance)
-        self.assertEqual(0, self.tracker.compute_node['vcpus_used'])
+        self.assertEqual(0, self.tracker.compute_node.vcpus_used)
 
         with self.tracker.instance_claim(self.context, instance, limits):
             pass
-        self.assertEqual(vcpus, self.tracker.compute_node['vcpus_used'])
+        self.assertEqual(vcpus, self.tracker.compute_node.vcpus_used)
 
         # instance state can change without modifying vcpus in use:
         instance['task_state'] = task_states.SCHEDULING
         self.tracker.update_usage(self.context, instance)
-        self.assertEqual(vcpus, self.tracker.compute_node['vcpus_used'])
+        self.assertEqual(vcpus, self.tracker.compute_node.vcpus_used)
 
         add_vcpus = 10
         vcpus += add_vcpus
         instance = self._fake_instance_obj(vcpus=add_vcpus)
         with self.tracker.instance_claim(self.context, instance, limits):
             pass
-        self.assertEqual(vcpus, self.tracker.compute_node['vcpus_used'])
+        self.assertEqual(vcpus, self.tracker.compute_node.vcpus_used)
 
         instance['vm_state'] = vm_states.DELETED
         self.tracker.update_usage(self.context, instance)
         vcpus -= add_vcpus
-        self.assertEqual(vcpus, self.tracker.compute_node['vcpus_used'])
+        self.assertEqual(vcpus, self.tracker.compute_node.vcpus_used)
 
     def test_skip_deleted_instances(self):
         # ensure that the audit process skips instances that have vm_state
@@ -1073,8 +1098,8 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
         self._fake_instance_obj(vm_state=vm_states.DELETED, host=self.host)
         self.tracker.update_available_resource(self.context)
 
-        self.assertEqual(0, self.tracker.compute_node['memory_mb_used'])
-        self.assertEqual(0, self.tracker.compute_node['local_gb_used'])
+        self.assertEqual(0, self.tracker.compute_node.memory_mb_used)
+        self.assertEqual(0, self.tracker.compute_node.local_gb_used)
 
     @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
     def test_deleted_instances_with_migrations(self, mock_migration_list):
@@ -1083,8 +1108,8 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
                                       instance_uuid='invalid')
         mock_migration_list.return_value = [migration]
         self.tracker.update_available_resource(self.context)
-        self.assertEqual(0, self.tracker.compute_node['memory_mb_used'])
-        self.assertEqual(0, self.tracker.compute_node['local_gb_used'])
+        self.assertEqual(0, self.tracker.compute_node.memory_mb_used)
+        self.assertEqual(0, self.tracker.compute_node.local_gb_used)
         mock_migration_list.assert_called_once_with(self.context,
                                                     "fakehost",
                                                     "fakenode")
@@ -1237,7 +1262,7 @@ class OrphanTestCase(BaseTrackerTestCase):
 
     def test_usage(self):
         self.assertEqual(2 * FAKE_VIRT_MEMORY_WITH_OVERHEAD,
-                self.tracker.compute_node['memory_mb_used'])
+                self.tracker.compute_node.memory_mb_used)
 
     def test_find(self):
         # create one legit instance and verify the 2 orphans remain
@@ -1369,30 +1394,28 @@ class StatsDictTestCase(BaseTrackerTestCase):
     def _driver(self):
         return FakeVirtDriver(stats=FAKE_VIRT_STATS)
 
-    def _get_stats(self):
-        return jsonutils.loads(self.tracker.compute_node['stats'])
-
     def test_virt_stats(self):
         # start with virt driver stats
-        stats = self._get_stats()
-        self.assertEqual(FAKE_VIRT_STATS, stats)
+        stats = self.tracker.compute_node.stats
+        self.assertEqual(FAKE_VIRT_STATS_COERCED, stats)
 
         # adding an instance should keep virt driver stats
         self._fake_instance_obj(vm_state=vm_states.ACTIVE, host=self.host)
         self.tracker.update_available_resource(self.context)
 
-        stats = self._get_stats()
-        expected_stats = {}
-        expected_stats.update(FAKE_VIRT_STATS)
-        expected_stats.update(self.tracker.stats)
+        stats = self.tracker.compute_node.stats
+        # compute node stats are coerced to strings
+        expected_stats = copy.deepcopy(FAKE_VIRT_STATS_COERCED)
+        for k, v in self.tracker.stats.iteritems():
+            expected_stats[k] = six.text_type(v)
         self.assertEqual(expected_stats, stats)
 
         # removing the instances should keep only virt driver stats
         self._instances = {}
         self.tracker.update_available_resource(self.context)
 
-        stats = self._get_stats()
-        self.assertEqual(FAKE_VIRT_STATS, stats)
+        stats = self.tracker.compute_node.stats
+        self.assertEqual(FAKE_VIRT_STATS_COERCED, stats)
 
 
 class StatsJsonTestCase(BaseTrackerTestCase):
@@ -1402,30 +1425,28 @@ class StatsJsonTestCase(BaseTrackerTestCase):
     def _driver(self):
         return FakeVirtDriver(stats=FAKE_VIRT_STATS_JSON)
 
-    def _get_stats(self):
-        return jsonutils.loads(self.tracker.compute_node['stats'])
-
     def test_virt_stats(self):
         # start with virt driver stats
-        stats = self._get_stats()
-        self.assertEqual(FAKE_VIRT_STATS, stats)
+        stats = self.tracker.compute_node.stats
+        self.assertEqual(FAKE_VIRT_STATS_COERCED, stats)
 
         # adding an instance should keep virt driver stats
         # and add rt stats
         self._fake_instance_obj(vm_state=vm_states.ACTIVE, host=self.host)
         self.tracker.update_available_resource(self.context)
 
-        stats = self._get_stats()
-        expected_stats = {}
-        expected_stats.update(FAKE_VIRT_STATS)
-        expected_stats.update(self.tracker.stats)
+        stats = self.tracker.compute_node.stats
+        # compute node stats are coerced to strings
+        expected_stats = copy.deepcopy(FAKE_VIRT_STATS_COERCED)
+        for k, v in self.tracker.stats.iteritems():
+            expected_stats[k] = six.text_type(v)
         self.assertEqual(expected_stats, stats)
 
         # removing the instances should keep only virt driver stats
         self._instances = {}
         self.tracker.update_available_resource(self.context)
-        stats = self._get_stats()
-        self.assertEqual(FAKE_VIRT_STATS, stats)
+        stats = self.tracker.compute_node.stats
+        self.assertEqual(FAKE_VIRT_STATS_COERCED, stats)
 
 
 class StatsInvalidJsonTestCase(BaseTrackerTestCase):
