@@ -193,7 +193,6 @@ class TestCase(testtools.TestCase):
 
         self.useFixture(fixtures.NestedTempfile())
         self.useFixture(fixtures.TempHomeDir())
-        self.useFixture(nova_fixtures.TranslationFixture())
         self.useFixture(log_fixture.get_logging_handle_error_fixture())
 
         self.useFixture(nova_fixtures.OutputStreamCapture())
