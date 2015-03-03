@@ -1143,12 +1143,12 @@ def restart_dhcp(context, dev, network_ref, fixedips):
     if CONF.dhcp_domain:
         cmd.append('--domain=%s' % CONF.dhcp_domain)
 
-    dns_servers = set(CONF.dns_server)
+    dns_servers = CONF.dns_server
     if CONF.use_network_dns_servers:
         if network_ref.get('dns1'):
-            dns_servers.add(network_ref.get('dns1'))
+            dns_servers.append(network_ref.get('dns1'))
         if network_ref.get('dns2'):
-            dns_servers.add(network_ref.get('dns2'))
+            dns_servers.append(network_ref.get('dns2'))
     if network_ref['multi_host']:
         cmd.append('--addn-hosts=%s' % _dhcp_file(dev, 'hosts'))
     if dns_servers:
