@@ -16,6 +16,7 @@ import collections
 
 import mock
 from oslo_serialization import jsonutils
+import testtools
 
 from nova import db
 from nova import objects
@@ -23,6 +24,7 @@ from nova.objects import pci_device_pool
 from nova.tests.functional.v3 import api_sample_base
 from nova.tests.functional.v3 import test_servers
 
+skip_msg = "Bug 1426241"
 
 fake_db_dev_1 = {
     'created_at': None,
@@ -68,6 +70,9 @@ fake_db_dev_2 = {
 class ExtendedServerPciSampleJsonTest(test_servers.ServersSampleBase):
     extension_name = "os-pci"
 
+    def setUp(self):
+        raise testtools.TestCase.skipException(skip_msg)
+
     def test_show(self):
         uuid = self._post_server()
         response = self._do_get('servers/%s' % uuid)
@@ -88,6 +93,7 @@ class ExtendedHyervisorPciSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
     extension_name = 'os-pci'
 
     def setUp(self):
+        raise testtools.TestCase.skipException(skip_msg)
         super(ExtendedHyervisorPciSampleJsonTest, self).setUp()
         cpu_info = collections.OrderedDict([
             ('arch', 'x86_64'),
@@ -172,6 +178,9 @@ class ExtendedHyervisorPciSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
 
 class PciSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
     extension_name = "os-pci"
+
+    def setUp(self):
+        raise testtools.TestCase.skipException(skip_msg)
 
     def _fake_pci_device_get_by_id(self, context, id):
         return fake_db_dev_1
