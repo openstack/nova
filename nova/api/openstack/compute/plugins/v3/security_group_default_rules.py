@@ -26,12 +26,6 @@ ALIAS = "os-security-group-default-rules"
 authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
 
 
-def _authorize_context(req):
-    context = req.environ['nova.context']
-    authorize(context)
-    return context
-
-
 class SecurityGroupDefaultRulesController(sg.SecurityGroupControllerBase):
 
     def __init__(self):
