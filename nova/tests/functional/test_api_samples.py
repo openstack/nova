@@ -161,6 +161,8 @@ class ApiSamplesTrap(ApiSampleTestBaseV2):
 
 
 class VersionsSampleJsonTest(ApiSampleTestBaseV2):
+    sample_dir = 'versions'
+
     def test_versions_get(self):
         response = self._do_get('', strip_version=True)
         subs = self._get_regexes()
@@ -192,6 +194,8 @@ class ServersSampleBase(ApiSampleTestBaseV2):
 
 
 class ServersSampleJsonTest(ServersSampleBase):
+    sample_dir = 'servers'
+
     def test_servers_post(self):
         return self._post_server()
 
@@ -228,6 +232,7 @@ class ServersSampleAllExtensionJsonTest(ServersSampleJsonTest):
 
 
 class ServersSampleHideAddressesJsonTest(ServersSampleJsonTest):
+    sample_dir = None
     extension_name = '.'.join(('nova.api.openstack.compute.contrib',
                                'hide_server_addresses',
                                'Hide_server_addresses'))
@@ -247,6 +252,8 @@ class ServersSampleMultiStatusJsonTest(ServersSampleBase):
 
 
 class ServersMetadataJsonTest(ServersSampleBase):
+    sample_dir = 'servers'
+
     def _create_and_set(self, subs):
         uuid = self._post_server()
         response = self._do_put('servers/%s/metadata' % uuid,
@@ -308,6 +315,8 @@ class ServersMetadataJsonTest(ServersSampleBase):
 
 
 class ServersIpsJsonTest(ServersSampleBase):
+    sample_dir = 'servers'
+
     def test_get(self):
         # Test getting a server's IP information.
         uuid = self._post_server()
@@ -333,6 +342,7 @@ class ExtensionsSampleJsonTest(ApiSampleTestBaseV2):
 
 
 class FlavorsSampleJsonTest(ApiSampleTestBaseV2):
+    sample_dir = 'flavors'
 
     def test_flavors_get(self):
         response = self._do_get('flavors/1')
@@ -386,6 +396,8 @@ class FlavorsSampleAllExtensionJsonTest(FlavorsSampleJsonTest):
 
 
 class ImagesSampleJsonTest(ApiSampleTestBaseV2):
+    sample_dir = 'images'
+
     def test_images_list(self):
         # Get api sample of images get list request.
         response = self._do_get('images')
@@ -450,6 +462,8 @@ class ImagesSampleJsonTest(ApiSampleTestBaseV2):
 
 
 class LimitsSampleJsonTest(ApiSampleTestBaseV2):
+    sample_dir = 'limits'
+
     def test_limits_get(self):
         response = self._do_get('limits')
         subs = self._get_regexes()
@@ -457,6 +471,8 @@ class LimitsSampleJsonTest(ApiSampleTestBaseV2):
 
 
 class ServersActionsJsonTest(ServersSampleBase):
+    sample_dir = 'servers'
+
     def _test_server_action(self, uuid, action,
                             subs=None, resp_tpl=None, code=202):
         subs = subs or {}
@@ -4057,6 +4073,7 @@ class ServerGroupsSampleJsonTest(ServersSampleBase):
 
 
 class ServerGroupQuotas_LimitsSampleJsonTest(LimitsSampleJsonTest):
+    sample_dir = None
     extension_name = ("nova.api.openstack.compute.contrib."
                       "server_group_quotas.Server_group_quotas")
 
