@@ -242,11 +242,3 @@ class PathUtils(object):
                 if force:
                     raise vmutils.HyperVException(
                         _("Could not unmount share: %s"), smbfs_share)
-
-    def copy_configdrive(self, instance_name, dest_host):
-        local_configdrive_path = self.get_configdrive_path(
-                        instance_name, constants.DVD_FORMAT)
-        remote_configdrive_path = self.get_configdrive_path(
-                instance_name, constants.DVD_FORMAT, remote_server=dest_host)
-        self.copyfile(local_configdrive_path,
-                                 remote_configdrive_path)

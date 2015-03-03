@@ -235,3 +235,15 @@ class VMUtilsV2TestCase(test_vmutils.VMUtilsTestCase):
 
         self._vmutils._conn.query.assert_called_once_with(expected_query)
         self.assertEqual(expected_disks, ret_disks)
+
+    def test_get_vm_dvd_disk_paths(self):
+        mock_vm = self._lookup_vm()
+        mock_sasd1 = mock.MagicMock(
+            ResourceSubType=self._vmutils._DVD_DISK_RES_SUB_TYPE,
+            HostResource=[mock.sentinel.FAKE_DVD_PATH1])
+        mock_settings = mock.MagicMock()
+        mock_settings.associators.return_value = [mock_sasd1]
+        mock_vm.associators.return_value = [mock_settings]
+
+        ret_val = self._vmutils.get_vm_dvd_disk_paths(self._FAKE_VM_NAME)
+        self.assertEqual(mock.sentinel.FAKE_DVD_PATH1, ret_val[0])

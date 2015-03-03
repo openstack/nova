@@ -23,16 +23,15 @@ from oslo_log import log as logging
 from oslo_utils import excutils
 
 from nova.i18n import _
-from nova.virt import configdrive
 from nova.virt.hyperv import imagecache
 from nova.virt.hyperv import utilsfactory
 from nova.virt.hyperv import vmops
+from nova.virt.hyperv import vmutilsv2
 from nova.virt.hyperv import volumeops
 
 LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
 CONF.import_opt('use_cow_images', 'nova.virt.driver')
-CONF.import_opt('config_drive_cdrom', 'nova.virt.hyperv.vmops', 'hyperv')
 
 
 def check_os_version_requirement(function):
@@ -58,6 +57,7 @@ class LiveMigrationOps(object):
         self._vmops = vmops.VMOps()
         self._volumeops = volumeops.VolumeOps()
         self._imagecache = imagecache.ImageCache()
+        self._vmutils = vmutilsv2.VMUtilsV2()
 
     @check_os_version_requirement
     def live_migration(self, context, instance_ref, dest, post_method,
@@ -68,10 +68,7 @@ class LiveMigrationOps(object):
 
         try:
             self._vmops.copy_vm_console_logs(instance_name, dest)
-            if (configdrive.required_by(instance_ref) and
-                    CONF.hyperv.config_drive_cdrom):
-                self._pathutils.copy_configdrive(instance_name, dest)
-
+            self._vmops.copy_vm_dvd_disks(instance_name, dest)
             self._livemigrutils.live_migrate_vm(instance_name,
                                                 dest)
         except Exception:
