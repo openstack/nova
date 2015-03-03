@@ -88,7 +88,7 @@ will reboot into the final operating system. It is now ready to
 deploy an OpenStack development environment.
 
 ---------------------------------
-Setting up a devstack environemnt
+Setting up a devstack environment
 ---------------------------------
 
 For later ease of use, copy your SSH public key into the virtual
@@ -262,7 +262,7 @@ The guest can now be started again, and ssh back into it
   # ssh <IP of VM>
 
 
-Before starting OpenStack services again, it is neccessary to
+Before starting OpenStack services again, it is necessary to
 reconfigure Nova to enable the NUMA schedular filter. The libvirt
 virtualization type must also be explicitly set to KVM, so that
 guests can take advantage of nested KVM.
@@ -396,7 +396,7 @@ The XML shows:
 * Each guest CPU has been pinned to the physical CPUs
   associated with a particular NUMA node
 * The emulator threads have been pinned to the union
-  of all phyusical CPUs in the host NUMA nodes that
+  of all physical CPUs in the host NUMA nodes that
   the guest is placed on
 * The guest has been given a virtual NUMA topology
   splitting RAM and CPUs symmetrically
