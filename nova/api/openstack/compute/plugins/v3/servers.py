@@ -382,7 +382,7 @@ class ServersController(wsgi.Controller):
     def _get_server(self, context, req, instance_uuid):
         """Utility function for looking up an instance by uuid."""
         instance = common.get_instance(self.compute_api, context,
-                                       instance_uuid, want_objects=True,
+                                       instance_uuid,
                                        expected_attrs=['pci_devices',
                                                        'flavor'])
         req.cache_db_instance(instance)
@@ -474,7 +474,6 @@ class ServersController(wsgi.Controller):
         """Returns server details by server id."""
         context = req.environ['nova.context']
         instance = common.get_instance(self.compute_api, context, id,
-                                       want_objects=True,
                                        expected_attrs=['pci_devices',
                                                        'flavor'])
         req.cache_db_instance(instance)
@@ -718,7 +717,6 @@ class ServersController(wsgi.Controller):
                                               body['server'], update_dict)
 
         instance = common.get_instance(self.compute_api, ctxt, id,
-                                       want_objects=True,
                                        expected_attrs=['pci_devices'])
         try:
             # NOTE(mikal): this try block needs to stay because save() still

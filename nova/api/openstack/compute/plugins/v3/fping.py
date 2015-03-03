@@ -123,8 +123,7 @@ class FpingController(wsgi.Controller):
         context = req.environ["nova.context"]
         authorize(context)
         self.check_fping()
-        instance = common.get_instance(self.compute_api, context, id,
-                                       want_objects=True)
+        instance = common.get_instance(self.compute_api, context, id)
         ips = [str(ip) for ip in self._get_instance_ips(context, instance)]
         alive_ips = self.fping(ips)
         return {

@@ -80,8 +80,7 @@ class Controller(wsgi.Controller):
                 msg = _("Compute host %s not found.") % host
                 raise exc.HTTPNotFound(explanation=msg)
 
-        instance = common.get_instance(self.compute_api, context, id,
-                                       want_objects=True)
+        instance = common.get_instance(self.compute_api, context, id)
         try:
             if instance.host == host:
                 msg = _("The target host can't be the same one.")

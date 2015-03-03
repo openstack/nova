@@ -43,8 +43,7 @@ class MigrateServerController(wsgi.Controller):
         context = req.environ['nova.context']
         authorize(context, action='migrate')
 
-        instance = common.get_instance(self.compute_api, context, id,
-                                       want_objects=True)
+        instance = common.get_instance(self.compute_api, context, id)
         try:
             self.compute_api.resize(req.environ['nova.context'], instance)
         except (exception.TooManyInstances, exception.QuotaError) as e:
@@ -78,8 +77,7 @@ class MigrateServerController(wsgi.Controller):
                                                      strict=True)
 
         try:
-            instance = common.get_instance(self.compute_api, context, id,
-                                           want_objects=True)
+            instance = common.get_instance(self.compute_api, context, id)
             self.compute_api.live_migrate(context, instance, block_migration,
                                           disk_over_commit, host)
         except (exception.NoValidHost,

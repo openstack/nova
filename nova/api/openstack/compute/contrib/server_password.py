@@ -33,8 +33,7 @@ class ServerPasswordController(object):
     def index(self, req, server_id):
         context = req.environ['nova.context']
         authorize(context)
-        instance = common.get_instance(self.compute_api, context, server_id,
-                                       want_objects=True)
+        instance = common.get_instance(self.compute_api, context, server_id)
 
         passw = password.extract_password(instance)
         return {'password': passw or ''}
@@ -43,8 +42,7 @@ class ServerPasswordController(object):
     def delete(self, req, server_id):
         context = req.environ['nova.context']
         authorize(context)
-        instance = common.get_instance(self.compute_api, context, server_id,
-                                       want_objects=True)
+        instance = common.get_instance(self.compute_api, context, server_id)
         meta = password.convert_password(context, None)
         instance.system_metadata.update(meta)
         instance.save()

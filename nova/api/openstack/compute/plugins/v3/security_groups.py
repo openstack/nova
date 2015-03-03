@@ -335,8 +335,8 @@ class ServerSecurityGroupController(SecurityGroupControllerBase):
         self.security_group_api.ensure_default(context)
 
         try:
-            instance = self.compute_api.get(context, server_id,
-                                            want_objects=True)
+            instance = common.get_instance(self.compute_api, context,
+                                           server_id)
             groups = self.security_group_api.get_instance_security_groups(
                 context, instance.uuid, True)
         except (exception.SecurityGroupNotFound,
@@ -378,7 +378,7 @@ class SecurityGroupActionController(wsgi.Controller):
         return group_name
 
     def _invoke(self, method, context, id, group_name):
-        instance = self.compute_api.get(context, id, want_objects=True)
+        instance = common.get_instance(self.compute_api, context, id)
         method(context, instance, group_name)
 
     @extensions.expected_errors((400, 404, 409))

@@ -39,8 +39,7 @@ class PauseServerController(wsgi.Controller):
         """Permit Admins to pause the server."""
         ctxt = req.environ['nova.context']
         authorize(ctxt, action='pause')
-        server = common.get_instance(self.compute_api, ctxt, id,
-                                     want_objects=True)
+        server = common.get_instance(self.compute_api, ctxt, id)
         try:
             self.compute_api.pause(ctxt, server)
         except exception.InstanceIsLocked as e:
@@ -61,8 +60,7 @@ class PauseServerController(wsgi.Controller):
         """Permit Admins to unpause the server."""
         ctxt = req.environ['nova.context']
         authorize(ctxt, action='unpause')
-        server = common.get_instance(self.compute_api, ctxt, id,
-                                     want_objects=True)
+        server = common.get_instance(self.compute_api, ctxt, id)
         try:
             self.compute_api.unpause(ctxt, server)
         except exception.InstanceIsLocked as e:

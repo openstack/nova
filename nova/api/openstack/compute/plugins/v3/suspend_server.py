@@ -39,8 +39,7 @@ class SuspendServerController(wsgi.Controller):
         context = req.environ['nova.context']
         authorize(context, action='suspend')
         try:
-            server = common.get_instance(self.compute_api, context, id,
-                                         want_objects=True)
+            server = common.get_instance(self.compute_api, context, id)
             self.compute_api.suspend(context, server)
         except exception.InstanceIsLocked as e:
             raise exc.HTTPConflict(explanation=e.format_message())
@@ -56,8 +55,7 @@ class SuspendServerController(wsgi.Controller):
         context = req.environ['nova.context']
         authorize(context, action='resume')
         try:
-            server = common.get_instance(self.compute_api, context, id,
-                                         want_objects=True)
+            server = common.get_instance(self.compute_api, context, id)
             self.compute_api.resume(context, server)
         except exception.InstanceIsLocked as e:
             raise exc.HTTPConflict(explanation=e.format_message())

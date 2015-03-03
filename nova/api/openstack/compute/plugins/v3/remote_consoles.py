@@ -45,8 +45,7 @@ class RemoteConsolesController(wsgi.Controller):
         console_type = body['os-getVNCConsole'].get('type')
 
         try:
-            instance = common.get_instance(self.compute_api, context, id,
-                                           want_objects=True)
+            instance = common.get_instance(self.compute_api, context, id)
             output = self.compute_api.get_vnc_console(context,
                                                       instance,
                                                       console_type)
@@ -74,8 +73,7 @@ class RemoteConsolesController(wsgi.Controller):
         console_type = body['os-getSPICEConsole'].get('type')
 
         try:
-            instance = common.get_instance(self.compute_api, context, id,
-                                           want_objects=True)
+            instance = common.get_instance(self.compute_api, context, id)
             output = self.compute_api.get_spice_console(context,
                                                         instance,
                                                         console_type)
@@ -103,8 +101,7 @@ class RemoteConsolesController(wsgi.Controller):
         # If type is not supplied or unknown, get_rdp_console below will cope
         console_type = body['os-getRDPConsole'].get('type')
 
-        instance = common.get_instance(self.compute_api, context, id,
-                                       want_objects=True)
+        instance = common.get_instance(self.compute_api, context, id)
         try:
             # NOTE(mikal): get_rdp_console() can raise InstanceNotFound, so
             # we still need to catch it here.
@@ -134,7 +131,7 @@ class RemoteConsolesController(wsgi.Controller):
         # If type is not supplied or unknown get_serial_console below will cope
         console_type = body['os-getSerialConsole'].get('type')
         try:
-            instance = self.compute_api.get(context, id, want_objects=True)
+            instance = common.get_instance(self.compute_api, context, id)
             output = self.compute_api.get_serial_console(context,
                                                          instance,
                                                          console_type)

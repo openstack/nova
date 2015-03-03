@@ -46,8 +46,7 @@ class AdminPasswordController(wsgi.Controller):
         authorize(context)
 
         password = body['changePassword']['adminPass']
-        instance = common.get_instance(self.compute_api, context, id,
-                                       want_objects=True)
+        instance = common.get_instance(self.compute_api, context, id)
         try:
             self.compute_api.set_admin_password(context, instance, password)
         except exception.InstancePasswordSetFailed as e:

@@ -42,8 +42,7 @@ class IPsController(wsgi.Controller):
     def index(self, req, server_id):
         context = req.environ["nova.context"]
         authorize(context, action='index')
-        instance = common.get_instance(self._compute_api, context, server_id,
-                                       want_objects=True)
+        instance = common.get_instance(self._compute_api, context, server_id)
         networks = common.get_networks_for_instance(context, instance)
         return self._view_builder.index(networks)
 
@@ -51,8 +50,7 @@ class IPsController(wsgi.Controller):
     def show(self, req, server_id, id):
         context = req.environ["nova.context"]
         authorize(context, action='show')
-        instance = common.get_instance(self._compute_api, context, server_id,
-                                       want_objects=True)
+        instance = common.get_instance(self._compute_api, context, server_id)
         networks = common.get_networks_for_instance(context, instance)
         if id not in networks:
             msg = _("Instance is not a member of specified network")

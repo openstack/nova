@@ -46,8 +46,7 @@ class AdminActionsController(wsgi.Controller):
         context = req.environ['nova.context']
         authorize(context, action='reset_network')
         try:
-            instance = common.get_instance(self.compute_api, context, id,
-                                           want_objects=True)
+            instance = common.get_instance(self.compute_api, context, id)
             self.compute_api.reset_network(context, instance)
         except exception.InstanceIsLocked as e:
             raise exc.HTTPConflict(explanation=e.format_message())
@@ -60,8 +59,7 @@ class AdminActionsController(wsgi.Controller):
         context = req.environ['nova.context']
         authorize(context, action='inject_network_info')
         try:
-            instance = common.get_instance(self.compute_api, context, id,
-                                           want_objects=True)
+            instance = common.get_instance(self.compute_api, context, id)
             self.compute_api.inject_network_info(context, instance)
         except exception.InstanceIsLocked as e:
             raise exc.HTTPConflict(explanation=e.format_message())
@@ -78,8 +76,7 @@ class AdminActionsController(wsgi.Controller):
         # Identify the desired state from the body
         state = state_map[body["os-resetState"]["state"]]
 
-        instance = common.get_instance(self.compute_api, context, id,
-                                       want_objects=True)
+        instance = common.get_instance(self.compute_api, context, id)
         instance.vm_state = state
         instance.task_state = None
         instance.save(admin_state_reset=True)

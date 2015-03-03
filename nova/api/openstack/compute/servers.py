@@ -239,7 +239,7 @@ class Controller(wsgi.Controller):
     def _get_server(self, context, req, instance_uuid):
         """Utility function for looking up an instance by uuid."""
         instance = common.get_instance(self.compute_api, context,
-                                       instance_uuid, want_objects=True,
+                                       instance_uuid,
                                        expected_attrs=['flavor'])
         req.cache_db_instance(instance)
         return instance

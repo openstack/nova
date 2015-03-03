@@ -61,8 +61,7 @@ class CreateBackupController(wsgi.Controller):
         common.check_img_metadata_properties_quota(context, metadata)
         props.update(metadata)
 
-        instance = common.get_instance(self.compute_api, context, id,
-                                       want_objects=True)
+        instance = common.get_instance(self.compute_api, context, id)
 
         try:
             image = self.compute_api.backup(context, instance, image_name,

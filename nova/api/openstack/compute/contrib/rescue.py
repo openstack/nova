@@ -47,8 +47,7 @@ class RescueController(wsgi.Controller):
         else:
             password = utils.generate_password()
 
-        instance = common.get_instance(self.compute_api, context, id,
-                                       want_objects=True)
+        instance = common.get_instance(self.compute_api, context, id)
         try:
             rescue_image_ref = None
             if self.ext_mgr.is_loaded("os-extended-rescue-with-image"):
@@ -74,8 +73,7 @@ class RescueController(wsgi.Controller):
         """Unrescue an instance."""
         context = req.environ["nova.context"]
         authorize(context)
-        instance = common.get_instance(self.compute_api, context, id,
-                                       want_objects=True)
+        instance = common.get_instance(self.compute_api, context, id)
         try:
             self.compute_api.unrescue(context, instance)
         except exception.InstanceIsLocked as e:

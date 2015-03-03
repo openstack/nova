@@ -116,8 +116,7 @@ class InterfaceAttachmentController(object):
 
         try:
             instance = common.get_instance(self.compute_api,
-                                           context, server_id,
-                                           want_objects=True)
+                                           context, server_id)
             LOG.info(_LI("Attach interface"), instance=instance)
             vif = self.compute_api.attach_interface(context,
                 instance, network_id, port_id, req_ip)
@@ -149,8 +148,7 @@ class InterfaceAttachmentController(object):
         authorize(context)
         port_id = id
         instance = common.get_instance(self.compute_api,
-                                       context, server_id,
-                                       want_objects=True)
+                                       context, server_id)
         LOG.info(_LI("Detach interface %s"), port_id, instance=instance)
         try:
             self.compute_api.detach_interface(context,
@@ -172,8 +170,7 @@ class InterfaceAttachmentController(object):
         """Returns a list of attachments, transformed through entity_maker."""
         context = req.environ['nova.context']
         authorize(context)
-        instance = common.get_instance(self.compute_api, context, server_id,
-                                       want_objects=True)
+        instance = common.get_instance(self.compute_api, context, server_id)
         results = []
         search_opts = {'device_id': instance.uuid}
 

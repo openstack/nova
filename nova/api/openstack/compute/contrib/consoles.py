@@ -38,8 +38,7 @@ class ConsolesController(wsgi.Controller):
 
         # If type is not supplied or unknown, get_vnc_console below will cope
         console_type = body['os-getVNCConsole'].get('type')
-        instance = common.get_instance(self.compute_api, context, id,
-                                       want_objects=True)
+        instance = common.get_instance(self.compute_api, context, id)
 
         try:
             output = self.compute_api.get_vnc_console(context,
@@ -67,8 +66,7 @@ class ConsolesController(wsgi.Controller):
 
         # If type is not supplied or unknown, get_spice_console below will cope
         console_type = body['os-getSPICEConsole'].get('type')
-        instance = common.get_instance(self.compute_api, context, id,
-                                       want_objects=True)
+        instance = common.get_instance(self.compute_api, context, id)
 
         try:
             output = self.compute_api.get_spice_console(context,
@@ -96,8 +94,7 @@ class ConsolesController(wsgi.Controller):
 
         # If type is not supplied or unknown, get_rdp_console below will cope
         console_type = body['os-getRDPConsole'].get('type')
-        instance = common.get_instance(self.compute_api, context, id,
-                                       want_objects=True)
+        instance = common.get_instance(self.compute_api, context, id)
 
         try:
             output = self.compute_api.get_rdp_console(context,
@@ -124,8 +121,7 @@ class ConsolesController(wsgi.Controller):
 
         # If type is not supplied or unknown get_serial_console below will cope
         console_type = body['os-getSerialConsole'].get('type')
-        instance = common.get_instance(self.compute_api, context, id,
-                                       want_objects=True)
+        instance = common.get_instance(self.compute_api, context, id)
         try:
             output = self.compute_api.get_serial_console(context,
                                                          instance,

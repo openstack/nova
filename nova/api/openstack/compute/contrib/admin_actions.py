@@ -53,8 +53,7 @@ class AdminActionsController(wsgi.Controller):
         """Permit Admins to pause the server."""
         ctxt = req.environ['nova.context']
         authorize(ctxt, 'pause')
-        server = common.get_instance(self.compute_api, ctxt, id,
-                                     want_objects=True)
+        server = common.get_instance(self.compute_api, ctxt, id)
         try:
             self.compute_api.pause(ctxt, server)
         except exception.InstanceIsLocked as e:
@@ -76,8 +75,7 @@ class AdminActionsController(wsgi.Controller):
         """Permit Admins to unpause the server."""
         ctxt = req.environ['nova.context']
         authorize(ctxt, 'unpause')
-        server = common.get_instance(self.compute_api, ctxt, id,
-                                     want_objects=True)
+        server = common.get_instance(self.compute_api, ctxt, id)
         try:
             self.compute_api.unpause(ctxt, server)
         except exception.InstanceIsLocked as e:
@@ -99,8 +97,7 @@ class AdminActionsController(wsgi.Controller):
         """Permit admins to suspend the server."""
         context = req.environ['nova.context']
         authorize(context, 'suspend')
-        server = common.get_instance(self.compute_api, context, id,
-                                     want_objects=True)
+        server = common.get_instance(self.compute_api, context, id)
         try:
             self.compute_api.suspend(context, server)
         except exception.InstanceIsLocked as e:
@@ -122,8 +119,7 @@ class AdminActionsController(wsgi.Controller):
         """Permit admins to resume the server from suspend."""
         context = req.environ['nova.context']
         authorize(context, 'resume')
-        server = common.get_instance(self.compute_api, context, id,
-                                     want_objects=True)
+        server = common.get_instance(self.compute_api, context, id)
         try:
             self.compute_api.resume(context, server)
         except exception.InstanceIsLocked as e:
@@ -145,8 +141,7 @@ class AdminActionsController(wsgi.Controller):
         """Permit admins to migrate a server to a new host."""
         context = req.environ['nova.context']
         authorize(context, 'migrate')
-        instance = common.get_instance(self.compute_api, context, id,
-                                       want_objects=True)
+        instance = common.get_instance(self.compute_api, context, id)
         try:
             self.compute_api.resize(req.environ['nova.context'], instance)
         except exception.QuotaError as error:
@@ -170,8 +165,7 @@ class AdminActionsController(wsgi.Controller):
         """Permit admins to reset networking on a server."""
         context = req.environ['nova.context']
         authorize(context, 'resetNetwork')
-        instance = common.get_instance(self.compute_api, context, id,
-                                       want_objects=True)
+        instance = common.get_instance(self.compute_api, context, id)
         try:
             self.compute_api.reset_network(context, instance)
         except exception.InstanceNotFound:
@@ -190,8 +184,7 @@ class AdminActionsController(wsgi.Controller):
         """Permit admins to inject network info into a server."""
         context = req.environ['nova.context']
         authorize(context, 'injectNetworkInfo')
-        instance = common.get_instance(self.compute_api, context, id,
-                                       want_objects=True)
+        instance = common.get_instance(self.compute_api, context, id)
         try:
             self.compute_api.inject_network_info(context, instance)
         except exception.InstanceNotFound:
@@ -210,8 +203,7 @@ class AdminActionsController(wsgi.Controller):
         """Lock a server instance."""
         context = req.environ['nova.context']
         authorize(context, 'lock')
-        instance = common.get_instance(self.compute_api, context, id,
-                                       want_objects=True)
+        instance = common.get_instance(self.compute_api, context, id)
         try:
             self.compute_api.lock(context, instance)
         except exception.InstanceNotFound:
@@ -228,8 +220,7 @@ class AdminActionsController(wsgi.Controller):
         """Unlock a server instance."""
         context = req.environ['nova.context']
         authorize(context, 'unlock')
-        instance = common.get_instance(self.compute_api, context, id,
-                                       want_objects=True)
+        instance = common.get_instance(self.compute_api, context, id)
         try:
             self.compute_api.unlock(context, instance)
         except exception.PolicyNotAuthorized as e:
@@ -291,8 +282,7 @@ class AdminActionsController(wsgi.Controller):
             msg = _("Invalid metadata")
             raise exc.HTTPBadRequest(explanation=msg)
 
-        instance = common.get_instance(self.compute_api, context, id,
-                                       want_objects=True)
+        instance = common.get_instance(self.compute_api, context, id)
         try:
             image = self.compute_api.backup(context, instance, image_name,
                     backup_type, rotation, extra_properties=props)
@@ -333,8 +323,7 @@ class AdminActionsController(wsgi.Controller):
         except ValueError as err:
             raise exc.HTTPBadRequest(explanation=six.text_type(err))
 
-        instance = common.get_instance(self.compute_api, context, id,
-                                       want_objects=True)
+        instance = common.get_instance(self.compute_api, context, id)
         try:
             self.compute_api.live_migrate(context, instance, block_migration,
                                           disk_over_commit, host)
@@ -384,8 +373,7 @@ class AdminActionsController(wsgi.Controller):
                     "are: %s") % ', '.join(sorted(state_map.keys()))
             raise exc.HTTPBadRequest(explanation=msg)
 
-        instance = common.get_instance(self.compute_api, context, id,
-                                       want_objects=True)
+        instance = common.get_instance(self.compute_api, context, id)
         try:
             instance.vm_state = state
             instance.task_state = None
