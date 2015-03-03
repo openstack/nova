@@ -1939,14 +1939,19 @@ class API(base.Base):
         # NOTE(ameade): we still need to support integer ids for ec2
         try:
             if uuidutils.is_uuid_like(instance_id):
+                LOG.debug("Fetching instance by UUID",
+                           instance_uuid=instance_id)
                 instance = objects.Instance.get_by_uuid(
                     context, instance_id, expected_attrs=expected_attrs)
             elif strutils.is_int_like(instance_id):
+                LOG.debug("Fetching instance by numeric id %s", instance_id)
                 instance = objects.Instance.get_by_id(
                     context, instance_id, expected_attrs=expected_attrs)
             else:
+                LOG.debug("Failed to fetch instance by id %s", instance_id)
                 raise exception.InstanceNotFound(instance_id=instance_id)
         except exception.InvalidID:
+            LOG.debug("Invalid instance id %s", instance_id)
             raise exception.InstanceNotFound(instance_id=instance_id)
 
         if not self.skip_policy_check:
