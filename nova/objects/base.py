@@ -592,6 +592,16 @@ class NovaObject(object):
     def obj_fields(self):
         return self.fields.keys() + self.obj_extra_fields
 
+    # NOTE(danms): This is nova-specific, so don't copy this to o.vo
+    @contextlib.contextmanager
+    def obj_alternate_context(self, context):
+        original_context = self._context
+        self._context = context
+        try:
+            yield
+        finally:
+            self._context = original_context
+
 
 class NovaObjectDictCompat(object):
     """Mix-in to provide dictionary key access compat

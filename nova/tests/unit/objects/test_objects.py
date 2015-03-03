@@ -745,6 +745,13 @@ class _TestObject(object):
                 pass
         self.assertRaises(exception.OrphanedObjectError, testme)
 
+    def test_obj_alternate_context(self):
+        obj = MyObj(context=self.context)
+        with obj.obj_alternate_context(mock.sentinel.alt_ctx):
+            self.assertEqual(mock.sentinel.alt_ctx,
+                             obj._context)
+        self.assertEqual(self.context, obj._context)
+
     def test_get_changes(self):
         obj = MyObj()
         self.assertEqual({}, obj.obj_get_changes())
