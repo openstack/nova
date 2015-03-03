@@ -3129,7 +3129,7 @@ class ComputeManager(manager.Manager):
         except exception.ImageNotFound:
             instance.task_state = None
             instance.save()
-            msg = _("Image not found during snapshot")
+            msg = _LW("Image not found during snapshot")
             LOG.warn(msg, instance=instance)
 
     def _post_interrupted_snapshot_cleanup(self, context, instance):
@@ -6124,7 +6124,7 @@ class ComputeManager(manager.Manager):
                         # and power it off
                         self.driver.power_off(instance)
                     except Exception:
-                        msg = _("Failed to power off instance")
+                        msg = _LW("Failed to power off instance")
                         LOG.warn(msg, instance=instance, exc_info=True)
 
                 elif action == 'reap':

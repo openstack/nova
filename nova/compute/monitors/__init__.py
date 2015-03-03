@@ -28,7 +28,7 @@ from oslo_log import log as logging
 from oslo_utils import timeutils
 import six
 
-from nova.i18n import _, _LW
+from nova.i18n import _LW
 from nova import loadables
 
 compute_monitors_opts = [
@@ -172,16 +172,16 @@ class ResourceMonitorHandler(loadables.BaseLoader):
                     metric_names = metric_names | metric_names_tmp
                     good_monitors.append(monitor)
                 else:
-                    msg = (_("Excluding monitor %(monitor_name)s due to "
-                             "metric name overlap; overlapping "
-                             "metrics: %(overlap)s") %
-                             {'monitor_name': monitor_name,
-                              'overlap': ', '.join(overlap)})
+                    msg = (_LW("Excluding monitor %(monitor_name)s due to "
+                               "metric name overlap; overlapping "
+                               "metrics: %(overlap)s") %
+                               {'monitor_name': monitor_name,
+                                'overlap': ', '.join(overlap)})
                     LOG.warn(msg)
                     bad_monitors.append(monitor_name)
             except Exception as ex:
-                msg = (_("Monitor %(monitor_name)s cannot be used: %(ex)s") %
-                         {'monitor_name': monitor_name, 'ex': ex})
+                msg = (_LW("Monitor %(monitor_name)s cannot be used: %(ex)s") %
+                          {'monitor_name': monitor_name, 'ex': ex})
                 LOG.warn(msg)
                 bad_monitors.append(monitor_name)
 
