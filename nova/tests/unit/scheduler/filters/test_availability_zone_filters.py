@@ -41,6 +41,12 @@ class TestAvailabilityZoneFilter(test.NoDBTestCase):
         host = fakes.FakeHostState('host1', 'node1', {})
         self.assertTrue(self.filt_cls.host_passes(host, request))
 
+    def test_availability_zone_filter_same_comma(self, agg_mock):
+        agg_mock.return_value = {'availability_zone': 'nova,nova2'}
+        request = self._make_zone_request('nova')
+        host = fakes.FakeHostState('host1', 'node1', {})
+        self.assertTrue(self.filt_cls.host_passes(host, request))
+
     def test_availability_zone_filter_different(self, agg_mock):
         agg_mock.return_value = {'availability_zone': 'nova'}
         request = self._make_zone_request('bad')

@@ -36,7 +36,10 @@ def aggregate_values_from_db(context, host, key_name):
 
 
 def aggregate_metadata_get_by_host(context, host, key=None):
-    """Returns a dict of all metadata for a specific host."""
+    """Returns a dict of all metadata for a specific host.
+
+    Specify multiple values for the same key using a comma
+    """
     # TODO(pmurray): DB query in filter is a performance hit. Will need a
     # general solution here.
     aggrlist = objects.AggregateList.get_by_host(
@@ -45,7 +48,9 @@ def aggregate_metadata_get_by_host(context, host, key=None):
     metadata = collections.defaultdict(set)
     for aggr in aggrlist:
         for k, v in aggr.metadata.iteritems():
-            metadata[k].add(v)
+            values = v.split(',')
+            for value in values:
+                metadata[k].add(value.strip())
     return metadata
 
 

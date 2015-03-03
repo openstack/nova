@@ -32,6 +32,12 @@ _AGGREGATE_FIXTURES = [
         hosts=['fake-host'],
         metadata={'k1': '3', 'k2': '4'},
     ),
+    objects.Aggregate(
+        id=3,
+        name='bar',
+        hosts=['fake-host'],
+        metadata={'k1': '6,7', 'k2': '8, 9'},
+    ),
 ]
 
 
@@ -56,7 +62,7 @@ class UtilsTestCase(test.NoDBTestCase):
 
         get_by_host.assert_called_with(context.elevated(),
                                        'fake-host', key='k1')
-        self.assertEqual(set(['1', '3']), values)
+        self.assertEqual(set(['1', '3', '6,7']), values)
 
     @mock.patch("nova.objects.aggregate.AggregateList.get_by_host")
     def test_aggregate_metadata_get_by_host_no_key(self, get_by_host):
@@ -69,9 +75,9 @@ class UtilsTestCase(test.NoDBTestCase):
         get_by_host.assert_called_with(context.elevated(),
                                        'fake-host', key=None)
         self.assertIn('k1', metadata)
-        self.assertEqual(set(['1', '3']), metadata['k1'])
+        self.assertEqual(set(['1', '3', '7', '6']), metadata['k1'])
         self.assertIn('k2', metadata)
-        self.assertEqual(set(['2', '4']), metadata['k2'])
+        self.assertEqual(set(['9', '8', '2', '4']), metadata['k2'])
 
     @mock.patch("nova.objects.aggregate.AggregateList.get_by_host")
     def test_aggregate_metadata_get_by_host_with_key(self, get_by_host):
@@ -85,7 +91,7 @@ class UtilsTestCase(test.NoDBTestCase):
         get_by_host.assert_called_with(context.elevated(),
                                        'fake-host', key='k1')
         self.assertIn('k1', metadata)
-        self.assertEqual(set(['1', '3']), metadata['k1'])
+        self.assertEqual(set(['1', '3', '7', '6']), metadata['k1'])
 
     @mock.patch("nova.objects.aggregate.AggregateList.get_by_host")
     def test_aggregate_metadata_get_by_host_empty_result(self, get_by_host):

@@ -33,6 +33,15 @@ class TestAggImagePropsIsolationFilter(test.NoDBTestCase):
         host = fakes.FakeHostState('host1', 'compute', {})
         self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
 
+    def test_aggregate_image_properties_isolation_passes_comma(self, agg_mock):
+        agg_mock.return_value = {'foo': 'bar,bar2'}
+        filter_properties = {'context': mock.sentinel.ctx,
+                             'request_spec': {
+                                 'image': {
+                                     'properties': {'foo': 'bar'}}}}
+        host = fakes.FakeHostState('host1', 'compute', {})
+        self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
+
     def test_aggregate_image_properties_isolation_multi_props_passes(self,
             agg_mock):
         agg_mock.return_value = {'foo': 'bar', 'foo2': 'bar2'}

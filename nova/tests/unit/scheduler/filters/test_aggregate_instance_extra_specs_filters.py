@@ -53,6 +53,18 @@ class TestAggregateInstanceExtraSpecsFilter(test.NoDBTestCase):
         }
         self._do_test_aggregate_filter_extra_specs(especs, passes=True)
 
+    def test_aggregate_filter_passes_extra_specs_simple_comma(self, agg_mock):
+        agg_mock.return_value = {'opt1': '1,3', 'opt2': '2'}
+        especs = {
+            # Un-scoped extra spec
+            'opt1': '1',
+            # Scoped extra spec that applies to this filter
+            'aggregate_instance_extra_specs:opt1': '3',
+            # Scoped extra spec that does not apply to this filter
+            'trust:trusted_host': 'true',
+        }
+        self._do_test_aggregate_filter_extra_specs(especs, passes=True)
+
     def test_aggregate_filter_passes_with_key_same_as_scope(self, agg_mock):
         agg_mock.return_value = {'aggregate_instance_extra_specs': '1'}
         especs = {
