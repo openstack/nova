@@ -400,8 +400,8 @@ class IptablesFirewallTestCase(test.NoDBTestCase):
         self.fw.do_refresh_security_group_rules("fake")
 
     def test_do_refresh_security_group_rules_instance_gone(self):
-        instance1 = {'id': 1, 'uuid': 'fake-uuid1'}
-        instance2 = {'id': 2, 'uuid': 'fake-uuid2'}
+        instance1 = objects.Instance(None, id=1, uuid='fake-uuid1')
+        instance2 = objects.Instance(None, id=2, uuid='fake-uuid2')
         self.fw.instance_info = {1: (instance1, 'netinfo1'),
                                  2: (instance2, 'netinfo2')}
         mock_filter = mock.MagicMock()

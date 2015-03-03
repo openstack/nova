@@ -1580,7 +1580,7 @@ iface eth0 inet6 static
         self.stubs.Set(vm_utils, "destroy_kernel_ramdisk",
                        fake_destroy_kernel_ramdisk)
 
-        instance = self._create_instance(spawn=True)
+        instance = self._create_instance(spawn=True, obj=True)
         network_info = fake_network.fake_get_instance_nw_info(self.stubs)
         self.conn.destroy(self.context, instance, network_info)
 

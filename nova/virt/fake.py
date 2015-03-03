@@ -146,14 +146,14 @@ class FakeDriver(driver.ComputeDriver):
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info=None, block_device_info=None,
               flavor=None):
-        name = instance['name']
+        name = instance.name
         state = power_state.RUNNING
-        fake_instance = FakeInstance(name, state, instance['uuid'])
+        fake_instance = FakeInstance(name, state, instance.uuid)
         self.instances[name] = fake_instance
 
     def snapshot(self, context, instance, image_id, update_task_state):
-        if instance['name'] not in self.instances:
-            raise exception.InstanceNotRunning(instance_id=instance['uuid'])
+        if instance.name not in self.instances:
+            raise exception.InstanceNotRunning(instance_id=instance.uuid)
         update_task_state(task_state=task_states.IMAGE_UPLOADING)
 
     def reboot(self, context, instance, network_info, reboot_type,
@@ -227,7 +227,7 @@ class FakeDriver(driver.ComputeDriver):
 
     def destroy(self, context, instance, network_info, block_device_info=None,
                 destroy_disks=True, migrate_data=None):
-        key = instance['name']
+        key = instance.name
         if key in self.instances:
             del self.instances[key]
         else:
@@ -242,7 +242,7 @@ class FakeDriver(driver.ComputeDriver):
     def attach_volume(self, context, connection_info, instance, mountpoint,
                       disk_bus=None, device_type=None, encryption=None):
         """Attach the disk to the instance at mountpoint using info."""
-        instance_name = instance['name']
+        instance_name = instance.name
         if instance_name not in self._mounts:
             self._mounts[instance_name] = {}
         self._mounts[instance_name][mountpoint] = connection_info
@@ -251,14 +251,14 @@ class FakeDriver(driver.ComputeDriver):
                       encryption=None):
         """Detach the disk attached to the instance."""
         try:
-            del self._mounts[instance['name']][mountpoint]
+            del self._mounts[instance.name][mountpoint]
         except KeyError:
             pass
 
     def swap_volume(self, old_connection_info, new_connection_info,
                     instance, mountpoint, resize_to):
         """Replace the disk attached to the instance."""
-        instance_name = instance['name']
+        instance_name = instance.name
         if instance_name not in self._mounts:
             self._mounts[instance_name] = {}
         self._mounts[instance_name][mountpoint] = new_connection_info
@@ -266,7 +266,7 @@ class FakeDriver(driver.ComputeDriver):
     def attach_interface(self, instance, image_meta, vif):
         if vif['id'] in self._interfaces:
             raise exception.InterfaceAttachFailed(
-                    instance_uuid=instance['uuid'])
+                    instance_uuid=instance.uuid)
         self._interfaces[vif['id']] = vif
 
     def detach_interface(self, instance, vif):
@@ -274,12 +274,12 @@ class FakeDriver(driver.ComputeDriver):
             del self._interfaces[vif['id']]
         except KeyError:
             raise exception.InterfaceDetachFailed(
-                    instance_uuid=instance['uuid'])
+                    instance_uuid=instance.uuid)
 
     def get_info(self, instance):
-        if instance['name'] not in self.instances:
-            raise exception.InstanceNotFound(instance_id=instance['name'])
-        i = self.instances[instance['name']]
+        if instance.name not in self.instances:
+            raise exception.InstanceNotFound(instance_id=instance.name)
+        i = self.instances[instance.name]
         return hardware.InstanceInfo(state=i.state,
                                      max_mem_kb=0,
                                      mem_kb=0,
