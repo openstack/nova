@@ -23,6 +23,7 @@ from nova import i18n
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import utils
+from oslo_serialization import jsonutils
 
 
 class RequestTest(test.NoDBTestCase):
@@ -383,10 +384,11 @@ class ResourceTest(test.NoDBTestCase):
         # the body is validated in the controller
         expected_body = {'body': None}
         response = req.get_response(app)
-        expected_unsupported_type_body = ('{"badRequest": '
-            '{"message": "The request body invalid", "code": 400}}')
+        expected_unsupported_type_body = {'badRequest':
+            {'message': 'The request body invalid', 'code': 400}}
         self.assertEqual(response.status_int, 400)
-        self.assertEqual(expected_unsupported_type_body, response.body)
+        self.assertEqual(expected_unsupported_type_body,
+                         jsonutils.loads(response.body))
 
     def test_resource_call_with_method_put(self):
         class Controller(object):
@@ -415,10 +417,11 @@ class ResourceTest(test.NoDBTestCase):
         req.content_type = None
         req.body = '{"body": {"key": "value"}}'
         response = req.get_response(app)
-        expected_unsupported_type_body = ('{"badRequest": '
-            '{"message": "Unsupported Content-Type", "code": 400}}')
+        expected_unsupported_type_body = {'badRequest':
+            {'message': 'Unsupported Content-Type', 'code': 400}}
         self.assertEqual(response.status_int, 400)
-        self.assertEqual(expected_unsupported_type_body, response.body)
+        self.assertEqual(expected_unsupported_type_body,
+                         jsonutils.loads(response.body))
 
     def test_resource_call_with_method_delete(self):
         class Controller(object):
