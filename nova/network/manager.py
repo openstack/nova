@@ -543,12 +543,17 @@ class NetworkManager(manager.Manager):
                 if isinstance(requested_networks, objects.NetworkRequestList):
                     requested_networks = requested_networks.as_tuples()
 
+                network_ids = set([net_id for (net_id, ip)
+                                   in requested_networks])
                 fixed_ips = [ip for (net_id, ip) in requested_networks if ip]
             else:
                 fixed_ip_list = objects.FixedIPList.get_by_instance_uuid(
                     read_deleted_context, instance_uuid)
+                network_ids = set([str(fixed_ip.network_id) for fixed_ip
+                               in fixed_ip_list])
                 fixed_ips = [str(ip.address) for ip in fixed_ip_list]
         except exception.FixedIpNotFoundForInstance:
+            network_ids = set([])
             fixed_ips = []
         LOG.debug("Network deallocation for instance",
                   context=context, instance_uuid=instance_uuid)
@@ -558,8 +563,7 @@ class NetworkManager(manager.Manager):
                     instance=instance)
 
         if CONF.update_dns_entries:
-            network_ids = [fixed_ip.network_id for fixed_ip in fixed_ips]
-            self.network_rpcapi.update_dns(context, network_ids)
+            self.network_rpcapi.update_dns(context, list(network_ids))
 
         # deallocate vifs (mac addresses)
         objects.VirtualInterface.delete_by_instance_uuid(

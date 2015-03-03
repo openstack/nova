@@ -2023,6 +2023,29 @@ class CommonNetworkTestCase(test.TestCase):
             (ctx, '1.2.3.4', 'fake-host')
         ], manager.deallocate_fixed_ip_calls)
 
+    @mock.patch('nova.db.fixed_ip_get_by_instance')
+    def test_deallocate_for_instance_passes_host_info_with_update_dns_entries(
+            self, fixed_get):
+        self.flags(update_dns_entries=True)
+        manager = fake_network.FakeNetworkManager()
+        db = manager.db
+        db.virtual_interface_delete_by_instance = lambda _x, _y: None
+        ctx = context.RequestContext('igonre', 'igonre')
+
+        fixed_get.return_value = [dict(test_fixed_ip.fake_fixed_ip,
+                                       address='1.2.3.4',
+                                       network_id=123)]
+
+        with mock.patch.object(manager.network_rpcapi,
+                               'update_dns') as mock_update_dns:
+            manager.deallocate_for_instance(
+                ctx, instance=fake_instance.fake_instance_obj(ctx))
+            mock_update_dns.assert_called_once_with(ctx, ['123'])
+
+        self.assertEqual([
+            (ctx, '1.2.3.4', 'fake-host')
+        ], manager.deallocate_fixed_ip_calls)
+
     def test_deallocate_for_instance_with_requested_networks(self):
         manager = fake_network.FakeNetworkManager()
         db = manager.db
@@ -2036,6 +2059,27 @@ class CommonNetworkTestCase(test.TestCase):
             ctx,
             instance=fake_instance.fake_instance_obj(ctx),
             requested_networks=requested_networks)
+
+        self.assertEqual([
+            (ctx, '1.2.3.4', 'fake-host'), (ctx, '4.3.2.1', 'fake-host')
+        ], manager.deallocate_fixed_ip_calls)
+
+    def test_deallocate_for_instance_with_update_dns_entries(self):
+        self.flags(update_dns_entries=True)
+        manager = fake_network.FakeNetworkManager()
+        db = manager.db
+        db.virtual_interface_delete_by_instance = mock.Mock()
+        ctx = context.RequestContext('igonre', 'igonre')
+        requested_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest.from_tuple(t)
+                     for t in [('123', '1.2.3.4'), ('123', '4.3.2.1')]])
+        with mock.patch.object(manager.network_rpcapi,
+                               'update_dns') as mock_update_dns:
+            manager.deallocate_for_instance(
+                ctx,
+                instance=fake_instance.fake_instance_obj(ctx),
+                requested_networks=requested_networks)
+            mock_update_dns.assert_called_once_with(ctx, ['123'])
 
         self.assertEqual([
             (ctx, '1.2.3.4', 'fake-host'), (ctx, '4.3.2.1', 'fake-host')
