@@ -574,9 +574,9 @@ class MetadataToDictTestCase(test.NoDBTestCase):
     def test_dict_to_metadata(self):
         expected = [{'key': 'foo1', 'value': 'bar1'},
                     {'key': 'foo2', 'value': 'bar2'}]
-        self.assertEqual(utils.dict_to_metadata(dict(foo1='bar1',
-                                                     foo2='bar2')),
-                         expected)
+        self.assertEqual(sorted(utils.dict_to_metadata(dict(foo1='bar1',
+                                                     foo2='bar2'))),
+                         sorted(expected))
 
     def test_dict_to_metadata_empty(self):
         self.assertEqual(utils.dict_to_metadata({}), [])
