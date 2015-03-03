@@ -1476,11 +1476,11 @@ class VMOps(object):
         if rescue_vm_ref:
             self._destroy_rescue_instance(rescue_vm_ref, vm_ref)
 
-        # NOTE(sirp): `block_device_info` is not used, information about which
-        # volumes should be detached is determined by the
-        # VBD.other_config['osvol'] attribute
-        # NOTE(alaski): `block_device_info` is used to determine if there's a
-        # volume still attached if the VM is not present.
+        # NOTE(sirp): information about which volumes should be detached is
+        # determined by the VBD.other_config['osvol'] attribute
+        # NOTE(alaski): `block_device_info` is used to efficiently determine if
+        # there's a volume attached, or which volumes to cleanup if there is
+        # no VM present.
         return self._destroy(instance, vm_ref, network_info=network_info,
                              destroy_disks=destroy_disks,
                              block_device_info=block_device_info)
@@ -1528,7 +1528,15 @@ class VMOps(object):
                             volume_id, instance=instance)
             return
 
-        vm_utils.hard_shutdown_vm(self._session, instance, vm_ref)
+        # NOTE(alaski): Attempt clean shutdown first if there's an attached
+        # volume to reduce the risk of corruption.
+        if block_device_info and block_device_info['block_device_mapping']:
+            if not vm_utils.clean_shutdown_vm(self._session, instance, vm_ref):
+                LOG.debug("Clean shutdown did not complete successfully, "
+                          "trying hard shutdown.", instance=instance)
+                vm_utils.hard_shutdown_vm(self._session, instance, vm_ref)
+        else:
+            vm_utils.hard_shutdown_vm(self._session, instance, vm_ref)
 
         if destroy_disks:
             self._volumeops.detach_all(vm_ref)
