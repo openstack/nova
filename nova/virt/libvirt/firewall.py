@@ -250,8 +250,9 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
             xml = flt.XMLDesc(0)
             doc = etree.fromstring(xml)
             u = doc.find("./uuid").text
-        except Exception as e:
-            LOG.debug("Cannot find UUID for filter '%s': '%s'" % (name, e))
+        except Exception:
+            LOG.debug("Cannot find UUID for filter '%s'", name,
+                      exc_info=True)
             u = uuid.uuid4().hex
 
         LOG.debug("UUID for filter '%s' is '%s'" % (name, u))
