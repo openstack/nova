@@ -20,6 +20,7 @@ from nova import exception
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
+from nova import utils
 
 
 LOG = logging.getLogger(__name__)
@@ -38,7 +39,8 @@ class Service(base.NovaPersistentObject, base.NovaObject,
     # Version 1.7: ComputeNode version 1.8
     # Version 1.8: ComputeNode version 1.9
     # Version 1.9: ComputeNode version 1.10
-    VERSION = '1.9'
+    # Version 1.10: Changes behaviour of loading compute_node
+    VERSION = '1.10'
 
     fields = {
         'id': fields.IntegerField(read_only=True),
@@ -57,17 +59,25 @@ class Service(base.NovaPersistentObject, base.NovaObject,
                          ('1.7', '1.8'), ('1.8', '1.9'), ('1.9', '1.10')],
     }
 
-    @staticmethod
-    def _do_compute_node(context, service, db_service):
+    def obj_make_compatible(self, primitive, target_version):
+        super(Service, self).obj_make_compatible(primitive, target_version)
+        target_version = utils.convert_version_to_tuple(target_version)
+        if target_version < (1, 10):
+            # service.compute_node was not lazy-loaded, we need to provide it
+            # when called
+            self._do_compute_node(self._context, primitive)
+
+    def _do_compute_node(self, context, primitive):
         try:
-            # NOTE(danms): The service.compute_node relationship returns
-            # a list, which should only have one item in it. If it's empty
-            # or otherwise malformed, ignore it.
-            db_compute = db_service['compute_node'][0]
+            # NOTE(sbauza): Some drivers (VMware, Ironic) can have multiple
+            # nodes for the same service, but for keeping same behaviour,
+            # returning only the first elem of the list
+            compute = objects.ComputeNodeList.get_all_by_host(
+                context, primitive['host'])[0]
         except Exception:
             return
-        service.compute_node = objects.ComputeNode._from_db_object(
-            context, objects.ComputeNode(), db_compute)
+        primitive['compute_node'] = compute.obj_to_primitive(
+            target_version='1.10')
 
     @staticmethod
     def _from_db_object(context, service, db_service):
@@ -76,7 +86,8 @@ class Service(base.NovaPersistentObject, base.NovaObject,
             if key in allow_missing and key not in db_service:
                 continue
             if key == 'compute_node':
-                service._do_compute_node(context, service, db_service)
+                #  NOTE(sbauza); We want to only lazy-load compute_node
+                continue
             else:
                 service[key] = db_service[key]
         service._context = context
@@ -96,8 +107,18 @@ class Service(base.NovaPersistentObject, base.NovaObject,
             raise exception.ObjectActionError(
                 action='obj_load_attr',
                 reason='attribute %s not lazy-loadable' % attrname)
-        self.compute_node = objects.ComputeNode.get_by_service_id(
-            self._context, self.id)
+        if self.binary == 'nova-compute':
+            # Only n-cpu services have attached compute_node(s)
+            compute_nodes = objects.ComputeNodeList.get_all_by_host(
+                self._context, self.host)
+        else:
+            # NOTE(sbauza); Previous behaviour was raising a ServiceNotFound,
+            # we keep it for backwards compatibility
+            raise exception.ServiceNotFound(service_id=self.id)
+        # NOTE(sbauza): Some drivers (VMware, Ironic) can have multiple nodes
+        # for the same service, but for keeping same behaviour, returning only
+        # the first elem of the list
+        self.compute_node = compute_nodes[0]
 
     @base.remotable_classmethod
     def get_by_id(cls, context, service_id):
@@ -150,7 +171,8 @@ class ServiceList(base.ObjectListBase, base.NovaObject):
     # Version 1.5: Service version 1.7
     # Version 1.6: Service version 1.8
     # Version 1.7: Service version 1.9
-    VERSION = '1.7'
+    # Version 1.8: Service version 1.10
+    VERSION = '1.8'
 
     fields = {
         'objects': fields.ListOfObjectsField('Service'),
@@ -165,6 +187,7 @@ class ServiceList(base.ObjectListBase, base.NovaObject):
         '1.5': '1.7',
         '1.6': '1.8',
         '1.7': '1.9',
+        '1.8': '1.10',
         }
 
     @base.remotable_classmethod
