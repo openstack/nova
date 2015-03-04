@@ -413,3 +413,4 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
 
     def test_not_implemented_rollback(self):
         self.assertRaises(NotImplementedError, self.task.rollback)
+
