@@ -1902,8 +1902,9 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
             }
         inst = db.instance_create(self.ctxt, {})
         inst = db.instance_update(self.ctxt, inst['uuid'], values)
-        self.assertEqual({'foo': 'bar'}, meta)
-        self.assertEqual({'sfoo': 'sbar'}, sys_meta)
+        self.assertEqual(meta, utils.metadata_to_dict(inst['metadata']))
+        self.assertEqual(sys_meta,
+                         utils.metadata_to_dict(inst['system_metadata']))
 
     def test_instance_get_all_with_meta(self):
         inst = self.create_instance_with_args()
