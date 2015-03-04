@@ -175,6 +175,18 @@ _fake_NodeDevXml = \
         </capability>
     </device>"""}
 
+_fake_cpu_info = {
+    "arch": "test_arch",
+    "model": "test_model",
+    "vendor": "test_vendor",
+    "topology": {
+        "sockets": 1,
+        "cores": 8,
+        "threads": 16
+    },
+    "features": ["feature1", "feature2"]
+}
+
 
 def _concurrency(signal, wait, done, target, is_block_dev=False):
     signal.send()
@@ -5876,6 +5888,49 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                           drvr.check_can_live_migrate_destination,
                           self.context, instance_ref,
                           compute_info, compute_info, False)
+
+    @mock.patch('nova.virt.libvirt.LibvirtDriver._conn')
+    @mock.patch.object(nova.virt.libvirt, 'config')
+    def test_compare_cpu_compatible_host_cpu(self, mock_vconfig, mock_conn):
+        mock_conn.compareCPU.return_value = 5
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        ret = conn._compare_cpu(None, jsonutils.dumps(_fake_cpu_info))
+        self.assertIsNone(ret)
+
+    @mock.patch('nova.virt.libvirt.LibvirtDriver._conn')
+    @mock.patch.object(nova.virt.libvirt.LibvirtDriver,
+                       '_vcpu_model_to_cpu_config')
+    def test_compare_cpu_compatible_guest_cpu(self, mock_vcpu_to_cpu,
+                                              mock_conn):
+        mock_conn.compareCPU.return_value = 6
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        ret = conn._compare_cpu(jsonutils.dumps(_fake_cpu_info), None)
+        self.assertIsNone(ret)
+
+    def test_compare_cpu_virt_type_xen(self):
+        self.flags(virt_type='xen', group='libvirt')
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        ret = conn._compare_cpu(None, None)
+        self.assertIsNone(ret)
+
+    @mock.patch('nova.virt.libvirt.LibvirtDriver._conn')
+    @mock.patch.object(nova.virt.libvirt, 'config')
+    def test_compare_cpu_invalid_cpuinfo_raises(self, mock_vconfig, mock_conn):
+        mock_conn.compareCPU.return_value = 0
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.assertRaises(exception.InvalidCPUInfo,
+                          conn._compare_cpu, None,
+                          jsonutils.dumps(_fake_cpu_info))
+
+    @mock.patch('nova.virt.libvirt.LibvirtDriver._conn')
+    @mock.patch.object(nova.virt.libvirt, 'config')
+    def test_compare_cpu_incompatible_cpu_raises(self, mock_vconfig,
+                                                 mock_conn):
+        mock_conn.compareCPU.side_effect = fakelibvirt.libvirtError('cpu')
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.assertRaises(exception.MigrationPreCheckError,
+                          conn._compare_cpu, None,
+                          jsonutils.dumps(_fake_cpu_info))
 
     def test_check_can_live_migrate_dest_cleanup_works_correctly(self):
         objects.Instance(**self.test_instance)

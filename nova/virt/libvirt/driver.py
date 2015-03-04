@@ -5143,8 +5143,9 @@ class LibvirtDriver(driver.ComputeDriver):
         try:
             ret = self._conn.compareCPU(cpu.to_xml(), 0)
         except libvirt.libvirtError as e:
-            with excutils.save_and_reraise_exception():
-                LOG.error(m, {'ret': e, 'u': u})
+            LOG.error(m, {'ret': e, 'u': u})
+            raise exception.MigrationPreCheckError(
+                reason=m % {'ret': e, 'u': u})
 
         if ret <= 0:
             LOG.error(m, {'ret': ret, 'u': u})
