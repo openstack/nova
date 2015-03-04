@@ -32,6 +32,7 @@ from oslo_db.sqlalchemy import test_base
 from oslo_db.sqlalchemy import utils as sqlalchemyutils
 from oslo_serialization import jsonutils
 from oslo_utils import timeutils
+from oslo_utils import uuidutils
 import six
 from sqlalchemy import Column
 from sqlalchemy.dialects import sqlite
@@ -56,7 +57,6 @@ from nova.db.sqlalchemy import utils as db_utils
 from nova import exception
 from nova import objects
 from nova.objects import base as obj_base
-from nova.openstack.common import uuidutils
 from nova import quota
 from nova import test
 from nova.tests.unit import matchers

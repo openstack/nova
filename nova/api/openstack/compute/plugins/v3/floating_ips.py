@@ -16,6 +16,7 @@
 #    under the License.
 
 from oslo_log import log as logging
+from oslo_utils import uuidutils
 import webob
 
 from nova.api.openstack import common
@@ -29,7 +30,6 @@ from nova import exception
 from nova.i18n import _
 from nova.i18n import _LW
 from nova import network
-from nova.openstack.common import uuidutils
 
 
 LOG = logging.getLogger(__name__)

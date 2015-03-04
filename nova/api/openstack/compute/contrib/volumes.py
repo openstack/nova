@@ -17,6 +17,7 @@
 
 from oslo_log import log as logging
 from oslo_utils import strutils
+from oslo_utils import uuidutils
 import webob
 from webob import exc
 
@@ -28,7 +29,6 @@ from nova import exception
 from nova.i18n import _
 from nova.i18n import _LI
 from nova import objects
-from nova.openstack.common import uuidutils
 from nova import volume
 
 LOG = logging.getLogger(__name__)

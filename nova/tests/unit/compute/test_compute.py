@@ -36,6 +36,7 @@ from oslo_serialization import jsonutils
 from oslo_utils import importutils
 from oslo_utils import timeutils
 from oslo_utils import units
+from oslo_utils import uuidutils
 import six
 import testtools
 from testtools import matchers as testtools_matchers
@@ -66,7 +67,6 @@ from nova.network.security_group import openstack_driver
 from nova import objects
 from nova.objects import block_device as block_device_obj
 from nova.objects import instance as instance_obj
-from nova.openstack.common import uuidutils
 from nova import policy
 from nova import quota
 from nova import test

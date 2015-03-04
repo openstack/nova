@@ -13,12 +13,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_utils import uuidutils
+
 from nova.api.openstack.compute.contrib import admin_actions as \
     migrate_server_v2
 from nova.api.openstack.compute.plugins.v3 import migrate_server as \
     migrate_server_v21
 from nova import exception
-from nova.openstack.common import uuidutils
 from nova import test
 from nova.tests.unit.api.openstack.compute import admin_only_action_common
 from nova.tests.unit.api.openstack import fakes

@@ -19,6 +19,7 @@ import copy
 import time
 
 from oslo_config import cfg
+from oslo_utils import uuidutils
 
 from nova import block_device
 from nova.cells import filters
@@ -29,7 +30,6 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import objects
-from nova.openstack.common import uuidutils
 from nova.scheduler import utils as scheduler_utils
 from nova import test
 from nova.tests.unit.cells import fakes

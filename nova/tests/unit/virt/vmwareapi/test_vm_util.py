@@ -18,13 +18,13 @@ import collections
 import contextlib
 
 import mock
+from oslo_utils import uuidutils
 from oslo_vmware import exceptions as vexc
 from oslo_vmware import pbm
 
 from nova import context
 from nova import exception
 from nova.network import model as network_model
-from nova.openstack.common import uuidutils
 from nova import test
 from nova.tests.unit import fake_instance
 from nova.tests.unit.virt.vmwareapi import fake

@@ -33,6 +33,7 @@ from oslo_utils import excutils
 from oslo_utils import strutils
 from oslo_utils import timeutils
 from oslo_utils import units
+from oslo_utils import uuidutils
 import six
 
 from nova import availability_zones
@@ -68,7 +69,6 @@ from nova.objects import block_device as block_device_obj
 from nova.objects import keypair as keypair_obj
 from nova.objects import quotas as quotas_obj
 from nova.objects import security_group as security_group_obj
-from nova.openstack.common import uuidutils
 from nova.pci import request as pci_request
 import nova.policy
 from nova import rpc

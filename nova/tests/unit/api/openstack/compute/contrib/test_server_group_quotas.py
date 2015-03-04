@@ -14,6 +14,7 @@
 #    under the License.
 
 from oslo_config import cfg
+from oslo_utils import uuidutils
 import webob
 
 from nova.api.openstack.compute.contrib import server_groups
@@ -21,7 +22,6 @@ from nova.api.openstack.compute.plugins.v3 import server_groups as sg_v3
 from nova.api.openstack import extensions
 from nova import context
 import nova.db
-from nova.openstack.common import uuidutils
 from nova import quota
 from nova import test
 from nova.tests.unit.api.openstack import fakes

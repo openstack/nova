@@ -24,6 +24,7 @@ from oslo_config import cfg
 import oslo_messaging as messaging
 from oslo_utils import importutils
 from oslo_utils import timeutils
+from oslo_utils import uuidutils
 
 from nova.compute import build_results
 from nova.compute import manager
@@ -40,7 +41,6 @@ from nova.network import api as network_api
 from nova.network import model as network_model
 from nova import objects
 from nova.objects import block_device as block_device_obj
-from nova.openstack.common import uuidutils
 from nova import test
 from nova.tests.unit.compute import fake_resource_tracker
 from nova.tests.unit import fake_block_device

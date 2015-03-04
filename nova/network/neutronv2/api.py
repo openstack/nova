@@ -24,6 +24,7 @@ from oslo_concurrency import lockutils
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import excutils
+from oslo_utils import uuidutils
 import six
 
 from nova.api.openstack import extensions
@@ -34,7 +35,6 @@ from nova.network import base_api
 from nova.network import model as network_model
 from nova.network.neutronv2 import constants
 from nova import objects
-from nova.openstack.common import uuidutils
 from nova.pci import manager as pci_manager
 from nova.pci import request as pci_request
 from nova.pci import whitelist as pci_whitelist

@@ -783,10 +783,10 @@ class UuidTestCase(APIValidationTestCase):
 
     def test_validate_uuid_fails(self):
         detail = ("Invalid input for field/attribute foo."
-                  " Value: 70a599e031e749b7b260868f441e862b."
-                  " '70a599e031e749b7b260868f441e862b' is not a 'uuid'")
+                  " Value: 70a599e031e749b7b260868f441e862."
+                  " '70a599e031e749b7b260868f441e862' is not a 'uuid'")
         self.check_validation_error(self.post,
-            body={'foo': '70a599e031e749b7b260868f441e862b'},
+            body={'foo': '70a599e031e749b7b260868f441e862'},
             expected_detail=detail)
 
         detail = ("Invalid input for field/attribute foo. Value: 1."

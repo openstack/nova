@@ -38,6 +38,7 @@ from oslo_serialization import jsonutils
 from oslo_utils import excutils
 from oslo_utils import importutils
 from oslo_utils import timeutils
+from oslo_utils import uuidutils
 import six
 
 from nova.cells import state as cells_state
@@ -55,7 +56,6 @@ from nova.i18n import _, _LE, _LI, _LW
 from nova.network import model as network_model
 from nova import objects
 from nova.objects import base as objects_base
-from nova.openstack.common import uuidutils
 from nova import rpc
 from nova import utils
 
