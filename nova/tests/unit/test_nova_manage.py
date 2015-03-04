@@ -23,6 +23,7 @@ from nova.cmd import manage
 from nova import context
 from nova import db
 from nova.db import migration
+from nova.db.sqlalchemy import migration as sqla_migration
 from nova import exception
 from nova import objects
 from nova import test
@@ -414,6 +415,32 @@ class DBCommandsTestCase(test.TestCase):
 
     def test_migrate_flavor_data_negative(self):
         self.assertEqual(1, self.commands.migrate_flavor_data(-1))
+
+    @mock.patch.object(sqla_migration, 'db_version', return_value=2)
+    def test_version(self, sqla_migrate):
+        self.commands.version()
+        sqla_migrate.assert_called_once_with(database='main')
+
+    @mock.patch.object(sqla_migration, 'db_sync')
+    def test_sync(self, sqla_sync):
+        self.commands.sync(version=4)
+        sqla_sync.assert_called_once_with(version=4, database='main')
+
+
+class ApiDbCommandsTestCase(test.TestCase):
+    def setUp(self):
+        super(ApiDbCommandsTestCase, self).setUp()
+        self.commands = manage.ApiDbCommands()
+
+    @mock.patch.object(sqla_migration, 'db_version', return_value=2)
+    def test_version(self, sqla_migrate):
+        self.commands.version()
+        sqla_migrate.assert_called_once_with(database='api')
+
+    @mock.patch.object(sqla_migration, 'db_sync')
+    def test_sync(self, sqla_sync):
+        self.commands.sync(version=4)
+        sqla_sync.assert_called_once_with(version=4, database='api')
 
 
 class ServiceCommandsTestCase(test.TestCase):
