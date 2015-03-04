@@ -14,6 +14,7 @@
 
 from oslo.config import cfg
 
+from nova.compute import flavors
 from nova.compute import power_state
 from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import utils as compute_utils
@@ -24,8 +25,11 @@ from nova.objects import base as obj_base
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.scheduler import rpcapi as scheduler_rpcapi
-from nova.scheduler import utils as scheduler_utils
 from nova import servicegroup
+from nova.scheduler.filters import utils
+from nova.objects import aggregate
+
+
 
 LOG = logging.getLogger(__name__)
 
@@ -106,19 +110,60 @@ class LiveMigrationTask(object):
             raise exception.UnableToMigrateToSelf(
                     instance_id=self.instance.uuid, host=self.destination)
 
+    def _get_aggregate_metadata(self,instance_uuid, dest):
+        aggregate_list = db.aggregate_get_by_host(self.context, self.destination)
+        LOG.debug(_("lwatta::====> aggregate_list size %s"), len(aggregate_list))
+        if len(aggregate_list) == 1:
+            return aggregate_list[0]
+
+        # Check to see if host is in an aggregate or in more than one aggregate (cause we do stupid stuff)
+        if len(aggregate_list) > 1:
+            agg_name = []
+            for i in aggregate_list:
+                agg_name.append(i.name)
+                LOG.debug(_("lwatta::====> agg_name %s"), agg_name)
+                reason = _("Unable to migrate %(instance_uuid)s to %(dest)s: "
+                "Destination host is in more then one aggregate:%(agg_name)s")
+                raise exception.MigrationPreCheckError(reason=reason % dict(
+                    instance_uuid=instance_uuid, dest=dest, agg_name=agg_name))
+        elif len(aggregate_list) < 1:
+            LOG.debug(_("lwatta::====> Host is not in an aggregate %s"), dest)
+            reason = _("Unable to migrate %(instance_uuid)s to %(dest)s: "
+            "Destination host is not in any aggregates")
+            raise exception.MigrationPreCheckError(
+                reason=reason % dict(instance_uuid=instance_uuid, dest=dest))
+
+
     def _check_destination_has_enough_memory(self):
-        avail = self._get_compute_info(self.destination)['free_ram_mb']
+        instance_uuid = self.instance.uuid
+        dest = self.destination
+        aggr = self._get_aggregate_metadata(instance_uuid, dest)
+        # for icehouse replace aggr.metadetails with aggr.metadata.
+
+        ram_ratio = float(aggr.get('metadetails')['ram_allocation_ratio'])
+        LOG.debug(_("lwatta::====> Ram_allocation_ratio %s"), ram_ratio)
+
+        total = self._get_compute_info(self.destination)['memory_mb']
+
+        LOG.debug(_("lwatta::====> Total physical memory on host %s"), total)
+
+        used = self._get_compute_info(self.destination)['memory_mb_used']
+
         mem_inst = self.instance.memory_mb
+        LOG.debug(_("lwatta::====> instance total memory %s"), mem_inst)
+        real_total = total * ram_ratio
+        LOG.debug(_("lwatta::====> Oversubscribed total memory %s"), real_total)
+        avail = real_total - used
+        LOG.debug(_("lwatta::====> Ratio calculated avail is  %s"), avail)
 
         if not mem_inst or avail <= mem_inst:
-            instance_uuid = self.instance.uuid
-            dest = self.destination
             reason = _("Unable to migrate %(instance_uuid)s to %(dest)s: "
                        "Lack of memory(host:%(avail)s <= "
                        "instance:%(mem_inst)s)")
             raise exception.MigrationPreCheckError(reason=reason % dict(
                     instance_uuid=instance_uuid, dest=dest, avail=avail,
                     mem_inst=mem_inst))
+
 
     def _get_compute_info(self, host):
         service_ref = db.service_get_by_compute_host(self.context, host)
@@ -152,16 +197,14 @@ class LiveMigrationTask(object):
                                                      self.image_service,
                                                      self.instance.image_ref,
                                                      self.instance)
-        instance_p = obj_base.obj_to_primitive(self.instance)
-        request_spec = scheduler_utils.build_request_spec(self.context, image,
-                                                          [instance_p])
+        instance_type = flavors.extract_flavor(self.instance)
 
         host = None
         while host is None:
             self._check_not_over_max_retries(attempted_hosts)
-            filter_properties = {'ignore_hosts': attempted_hosts}
-            host = self.scheduler_rpcapi.select_hosts(self.context,
-                            request_spec, filter_properties)[0]
+
+            host = self._get_candidate_destination(image,
+                    instance_type, attempted_hosts)
             try:
                 self._check_compatible_with_source_hypervisor(host)
                 self._call_livem_checks_on_host(host)
@@ -171,6 +214,18 @@ class LiveMigrationTask(object):
                 attempted_hosts.append(host)
                 host = None
         return host
+
+    def _get_candidate_destination(self, image, instance_type,
+                                   attempted_hosts):
+        instance_p = obj_base.obj_to_primitive(self.instance)
+        request_spec = {'instance_properties': instance_p,
+                        'instance_type': instance_type,
+                        'instance_uuids': [self.instance.uuid]}
+        if image:
+            request_spec['image'] = image
+        filter_properties = {'ignore_hosts': attempted_hosts}
+        return self.scheduler_rpcapi.select_hosts(self.context,
+                        request_spec, filter_properties)[0]
 
     def _check_not_over_max_retries(self, attempted_hosts):
         if CONF.migrate_max_retries == -1:
