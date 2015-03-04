@@ -384,6 +384,17 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.assertIsInstance(compute._build_semaphore,
                               compute_utils.UnlimitedSemaphore)
 
+    def test_nil_out_inst_obj_host_and_node_sets_nil(self):
+        instance = fake_instance.fake_instance_obj(self.context,
+                                                   uuid='foo-uuid',
+                                                   host='foo-host',
+                                                   node='foo-node')
+        self.assertIsNotNone(instance.host)
+        self.assertIsNotNone(instance.node)
+        self.compute._nil_out_instance_obj_host_and_node(instance)
+        self.assertIsNone(instance.host)
+        self.assertIsNone(instance.node)
+
     def test_init_host(self):
         our_host = self.compute.host
         inst = fake_instance.fake_db_instance(
@@ -2804,6 +2815,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(self.compute, '_cleanup_allocated_networks')
         self.mox.StubOutWithMock(self.compute, '_cleanup_volumes')
         self.mox.StubOutWithMock(compute_utils, 'add_instance_fault_from_exc')
+        self.mox.StubOutWithMock(self.compute,
+                                 '_nil_out_instance_obj_host_and_node')
         self.mox.StubOutWithMock(self.compute, '_set_instance_obj_error_state')
         self.mox.StubOutWithMock(self.compute.compute_task_api,
                                  'build_instances')
@@ -2821,6 +2834,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.block_device_mapping, raise_exc=False)
         compute_utils.add_instance_fault_from_exc(self.context,
                 self.instance, mox.IgnoreArg(), mox.IgnoreArg())
+        self.compute._nil_out_instance_obj_host_and_node(self.instance)
         self.compute._set_instance_obj_error_state(self.context, self.instance)
         self._instance_action_events()
         self.mox.ReplayAll()
@@ -2845,6 +2859,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(self.compute, '_set_instance_obj_error_state')
         self.mox.StubOutWithMock(self.compute.compute_task_api,
                                  'build_instances')
+        self.mox.StubOutWithMock(self.compute,
+                                 '_nil_out_instance_obj_host_and_node')
         self.mox.StubOutWithMock(self.compute.network_api,
                                  'cleanup_instance_network_on_host')
         self._do_build_instance_update(reschedule_update=True)
@@ -2857,6 +2873,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                             instance_uuid=self.instance.uuid))
         self.compute.network_api.cleanup_instance_network_on_host(self.context,
             self.instance, self.compute.host)
+        self.compute._nil_out_instance_obj_host_and_node(self.instance)
         self.compute.compute_task_api.build_instances(self.context,
                 [self.instance], self.image, self.filter_properties,
                 self.admin_pass, self.injected_files, self.requested_networks,
@@ -2964,6 +2981,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(self.compute, '_set_instance_obj_error_state')
         self.mox.StubOutWithMock(self.compute, '_cleanup_allocated_networks')
         self.mox.StubOutWithMock(self.compute, '_cleanup_volumes')
+        self.mox.StubOutWithMock(self.compute,
+                '_nil_out_instance_obj_host_and_node')
         self._do_build_instance_update()
         self.compute._build_and_run_instance(self.context, self.instance,
                 self.image, self.injected_files, self.admin_pass,
@@ -2976,6 +2995,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             self.requested_networks)
         compute_utils.add_instance_fault_from_exc(self.context, self.instance,
                 mox.IgnoreArg(), mox.IgnoreArg())
+        self.compute._nil_out_instance_obj_host_and_node(self.instance)
         self.compute._set_instance_obj_error_state(self.context,
                                                self.instance)
         self._instance_action_events()
@@ -3002,6 +3022,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(self.compute.driver,
                                  'deallocate_networks_on_reschedule')
         self.mox.StubOutWithMock(self.compute, '_cleanup_allocated_networks')
+        self.mox.StubOutWithMock(self.compute,
+                '_nil_out_instance_obj_host_and_node')
         self.mox.StubOutWithMock(self.compute.compute_task_api,
                 'build_instances')
         self.mox.StubOutWithMock(self.compute.network_api,
@@ -3018,6 +3040,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.instance).AndReturn(False)
         self.compute.network_api.cleanup_instance_network_on_host(
             self.context, self.instance, self.compute.host)
+        self.compute._nil_out_instance_obj_host_and_node(self.instance)
         self.compute.compute_task_api.build_instances(self.context,
                 [self.instance], self.image, self.filter_properties,
                 self.admin_pass, self.injected_files, self.requested_networks,
@@ -3046,6 +3069,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(self.compute.driver,
                                  'deallocate_networks_on_reschedule')
         self.mox.StubOutWithMock(self.compute, '_cleanup_allocated_networks')
+        self.mox.StubOutWithMock(self.compute,
+                '_nil_out_instance_obj_host_and_node')
         self.mox.StubOutWithMock(self.compute.compute_task_api,
                 'build_instances')
         self._do_build_instance_update(reschedule_update=True)
@@ -3060,6 +3085,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.instance).AndReturn(True)
         self.compute._cleanup_allocated_networks(self.context, self.instance,
                 self.requested_networks)
+        self.compute._nil_out_instance_obj_host_and_node(self.instance)
         self.compute.compute_task_api.build_instances(self.context,
                 [self.instance], self.image, self.filter_properties,
                 self.admin_pass, self.injected_files, self.requested_networks,
@@ -3080,7 +3106,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                                                 build_results.RESCHEDULED)
 
     def _test_build_and_run_exceptions(self, exc, set_error=False,
-            cleanup_volumes=False):
+            cleanup_volumes=False, nil_out_host_and_node=False):
         self.mox.StubOutWithMock(self.compute, '_build_and_run_instance')
         self.mox.StubOutWithMock(self.compute, '_cleanup_allocated_networks')
         self.mox.StubOutWithMock(self.compute, '_cleanup_volumes')
@@ -3097,6 +3123,10 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         if cleanup_volumes:
             self.compute._cleanup_volumes(self.context, self.instance.uuid,
                     self.block_device_mapping, raise_exc=False)
+        if nil_out_host_and_node:
+            self.mox.StubOutWithMock(self.compute,
+                    '_nil_out_instance_obj_host_and_node')
+            self.compute._nil_out_instance_obj_host_and_node(self.instance)
         if set_error:
             self.mox.StubOutWithMock(self.compute,
                     '_set_instance_obj_error_state')
@@ -3139,12 +3169,14 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                     instance_uuid='fake_uuid', expected={}, actual={}))
 
     def test_build_and_run_buildabort_exception(self):
-        self._test_build_and_run_exceptions(exception.BuildAbortException(
-            instance_uuid='', reason=''), set_error=True, cleanup_volumes=True)
+        self._test_build_and_run_exceptions(
+            exception.BuildAbortException(instance_uuid='', reason=''),
+            set_error=True, cleanup_volumes=True, nil_out_host_and_node=True)
 
     def test_build_and_run_unhandled_exception(self):
         self._test_build_and_run_exceptions(test.TestingException(),
-                set_error=True, cleanup_volumes=True)
+                set_error=True, cleanup_volumes=True,
+                nil_out_host_and_node=True)
 
     def test_instance_not_found(self):
         exc = exception.InstanceNotFound(instance_id=1)
@@ -3310,6 +3342,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 'build_instances')
         self.mox.StubOutWithMock(self.compute.network_api,
                 'cleanup_instance_network_on_host')
+        self.mox.StubOutWithMock(self.compute,
+                '_nil_out_instance_obj_host_and_node')
         self.compute._get_resource_tracker(self.node).AndReturn(
             FakeResourceTracker())
         self._do_build_instance_update(reschedule_update=True)
@@ -3319,6 +3353,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             fault=exc, stub=False)
         self.compute.network_api.cleanup_instance_network_on_host(
             self.context, self.instance, self.compute.host)
+        self.compute._nil_out_instance_obj_host_and_node(self.instance)
         self.compute.compute_task_api.build_instances(self.context,
                 [self.instance], self.image, self.filter_properties,
                 self.admin_pass, self.injected_files, self.requested_networks,

@@ -741,6 +741,14 @@ class ComputeManager(manager.Manager):
         self._update_resource_tracker(context, instance_ref)
         return instance_ref
 
+    def _nil_out_instance_obj_host_and_node(self, instance):
+        # NOTE(jwcroppe): We don't do instance.save() here for performance
+        # reasons; a call to this is expected to be immediately followed by
+        # another call that does instance.save(), thus avoiding two writes
+        # to the database layer.
+        instance.host = None
+        instance.node = None
+
     def _set_instance_obj_error_state(self, context, instance):
         try:
             instance.vm_state = vm_states.ERROR
@@ -1456,7 +1464,7 @@ class ComputeManager(manager.Manager):
         """Attempt to re-schedule a compute operation."""
 
         instance_uuid = instance.uuid
-        retry = filter_properties.get('retry', None)
+        retry = filter_properties.get('retry')
         if not retry:
             # no retry information, do not reschedule.
             LOG.debug("Retry info not present, will not reschedule",
@@ -1893,7 +1901,7 @@ class ComputeManager(manager.Manager):
                     filter_properties)
             return build_results.ACTIVE
         except exception.RescheduledException as e:
-            retry = filter_properties.get('retry', None)
+            retry = filter_properties.get('retry')
             if not retry:
                 # no retry information, do not reschedule.
                 LOG.debug("Retry info not present, will not reschedule",
@@ -1902,6 +1910,7 @@ class ComputeManager(manager.Manager):
                     requested_networks)
                 compute_utils.add_instance_fault_from_exc(context,
                         instance, e, sys.exc_info())
+                self._nil_out_instance_obj_host_and_node(instance)
                 self._set_instance_obj_error_state(context, instance)
                 return build_results.FAILED
             LOG.debug(e.format_message(), instance=instance)
@@ -1914,11 +1923,12 @@ class ComputeManager(manager.Manager):
             else:
                 # NOTE(alex_xu): Network already allocated and we don't
                 # want to deallocate them before rescheduling. But we need
-                # cleanup those network resource setup on this host before
+                # to cleanup those network resources setup on this host before
                 # rescheduling.
                 self.network_api.cleanup_instance_network_on_host(
                     context, instance, self.host)
 
+            self._nil_out_instance_obj_host_and_node(instance)
             instance.task_state = task_states.SCHEDULING
             instance.save()
 
@@ -1942,6 +1952,7 @@ class ComputeManager(manager.Manager):
                     block_device_mapping, raise_exc=False)
             compute_utils.add_instance_fault_from_exc(context, instance,
                     e, sys.exc_info())
+            self._nil_out_instance_obj_host_and_node(instance)
             self._set_instance_obj_error_state(context, instance)
             return build_results.FAILED
         except Exception as e:
@@ -1954,6 +1965,7 @@ class ComputeManager(manager.Manager):
                     block_device_mapping, raise_exc=False)
             compute_utils.add_instance_fault_from_exc(context, instance,
                     e, sys.exc_info())
+            self._nil_out_instance_obj_host_and_node(instance)
             self._set_instance_obj_error_state(context, instance)
             return build_results.FAILED
 
@@ -2634,7 +2646,7 @@ class ComputeManager(manager.Manager):
                                  " '%s'"), str(image_ref))
 
                 # NOTE(mriedem): On a recreate (evacuate), we need to update
-                # the instance's host and node properties to reflect it's
+                # the instance's host and node properties to reflect its
                 # destination node for the recreate.
                 node_name = None
                 try:
