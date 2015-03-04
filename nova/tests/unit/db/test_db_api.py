@@ -209,24 +209,11 @@ def _create_aggregate_with_hosts(context=context.get_admin_context(),
     return result
 
 
-class NotDbApiTestCase(DbTestCase):
-    def setUp(self):
-        super(NotDbApiTestCase, self).setUp()
-        self.flags(connection='notdb://', group='database')
+@mock.patch.object(sqlalchemy_api, '_get_regexp_op_for_connection',
+        return_value='LIKE')
+class UnsupportedDbRegexpTestCase(DbTestCase):
 
-    def test_instance_get_all_by_filters_regex_unsupported_db(self):
-        # Ensure that the 'LIKE' operator is used for unsupported dbs.
-        self.create_instance_with_args(display_name='test1')
-        self.create_instance_with_args(display_name='test2')
-        self.create_instance_with_args(display_name='diff')
-        result = db.instance_get_all_by_filters(self.context,
-                                                {'display_name': 'test'})
-        self.assertEqual(2, len(result))
-        result = db.instance_get_all_by_filters(self.context,
-                                                {'display_name': 'di'})
-        self.assertEqual(1, len(result))
-
-    def test_instance_get_all_by_filters_paginate(self):
+    def test_instance_get_all_by_filters_paginate(self, mock_get_regexp):
         test1 = self.create_instance_with_args(display_name='test1')
         test2 = self.create_instance_with_args(display_name='test2')
         test3 = self.create_instance_with_args(display_name='test3')
@@ -274,7 +261,7 @@ class NotDbApiTestCase(DbTestCase):
                 self.assertEqual(inst1.get(key), inst2.get(key))
         return result
 
-    def test_instance_get_all_by_filters_sort_keys(self):
+    def test_instance_get_all_by_filters_sort_keys(self, mock_get_regexp):
         '''Verifies sort order and direction for multiple instances.'''
         # Instances that will reply to the query
         test1_active = self.create_instance_with_args(
@@ -359,7 +346,8 @@ class NotDbApiTestCase(DbTestCase):
                          test1_error2, test1_error, test1_active]
         self._assert_equals_inst_order(correct_order, {})
 
-    def test_instance_get_all_by_filters_sort_keys_paginate(self):
+    def test_instance_get_all_by_filters_sort_keys_paginate(self,
+            mock_get_regexp):
         '''Verifies sort order with pagination.'''
         # Instances that will reply to the query
         test1_active = self.create_instance_with_args(
@@ -411,16 +399,8 @@ class NotDbApiTestCase(DbTestCase):
                     marker = insts[-1]['uuid']
                     self.assertEqual(correct[-1]['uuid'], marker)
 
-    def test_instance_get_all_by_filters_sort_key_invalid(self):
-        '''InvalidSortKey raised if an invalid key is given.'''
-        for keys in [['foo'], ['uuid', 'foo']]:
-            self.assertRaises(exception.InvalidSortKey,
-                              db.instance_get_all_by_filters_sort,
-                              self.context,
-                              filters={},
-                              sort_keys=keys)
-
-    def test_instance_get_deleted_by_filters_sort_keys_paginate(self):
+    def test_instance_get_deleted_by_filters_sort_keys_paginate(self,
+            mock_get_regexp):
         '''Verifies sort order with pagination for deleted instances.'''
         ctxt = context.get_admin_context()
         # Instances that will reply to the query
@@ -479,32 +459,8 @@ class NotDbApiTestCase(DbTestCase):
                     marker = insts[-1]['uuid']
                     self.assertEqual(correct[-1]['uuid'], marker)
 
-    def test_convert_objects_related_datetimes(self):
 
-        t1 = timeutils.utcnow()
-        t2 = t1 + datetime.timedelta(seconds=10)
-        t3 = t2 + datetime.timedelta(hours=1)
-
-        t2_utc = t2.replace(tzinfo=iso8601.iso8601.Utc())
-        t3_utc = t3.replace(tzinfo=iso8601.iso8601.Utc())
-
-        datetime_keys = ('created_at', 'deleted_at')
-
-        test1 = {'created_at': t1, 'deleted_at': t2, 'updated_at': t3}
-        expected_dict = {'created_at': t1, 'deleted_at': t2, 'updated_at': t3}
-        sqlalchemy_api.convert_objects_related_datetimes(test1, *datetime_keys)
-        self.assertEqual(test1, expected_dict)
-
-        test2 = {'created_at': t1, 'deleted_at': t2_utc, 'updated_at': t3}
-        expected_dict = {'created_at': t1, 'deleted_at': t2, 'updated_at': t3}
-        sqlalchemy_api.convert_objects_related_datetimes(test2, *datetime_keys)
-        self.assertEqual(test2, expected_dict)
-
-        test3 = {'deleted_at': t2_utc, 'updated_at': t3_utc}
-        expected_dict = {'deleted_at': t2, 'updated_at': t3_utc}
-        sqlalchemy_api.convert_objects_related_datetimes(test3, *datetime_keys)
-        self.assertEqual(test3, expected_dict)
-
+class ModelQueryTestCase(DbTestCase):
     def test_model_query_invalid_arguments(self):
         # read_deleted shouldn't accept invalid values
         self.assertRaises(ValueError, sqlalchemy_api.model_query,
@@ -960,6 +916,50 @@ class SqlAlchemyDbApiNoDbTestCase(test.NoDBTestCase):
         self.assertEqual(['test'], columns_to_join2)
         self.assertEqual(['system_metadata', 'test'], columns_to_join)
 
+    def test_convert_objects_related_datetimes(self):
+
+        t1 = timeutils.utcnow()
+        t2 = t1 + datetime.timedelta(seconds=10)
+        t3 = t2 + datetime.timedelta(hours=1)
+
+        t2_utc = t2.replace(tzinfo=iso8601.iso8601.Utc())
+        t3_utc = t3.replace(tzinfo=iso8601.iso8601.Utc())
+
+        datetime_keys = ('created_at', 'deleted_at')
+
+        test1 = {'created_at': t1, 'deleted_at': t2, 'updated_at': t3}
+        expected_dict = {'created_at': t1, 'deleted_at': t2, 'updated_at': t3}
+        sqlalchemy_api.convert_objects_related_datetimes(test1, *datetime_keys)
+        self.assertEqual(test1, expected_dict)
+
+        test2 = {'created_at': t1, 'deleted_at': t2_utc, 'updated_at': t3}
+        expected_dict = {'created_at': t1, 'deleted_at': t2, 'updated_at': t3}
+        sqlalchemy_api.convert_objects_related_datetimes(test2, *datetime_keys)
+        self.assertEqual(test2, expected_dict)
+
+        test3 = {'deleted_at': t2_utc, 'updated_at': t3_utc}
+        expected_dict = {'deleted_at': t2, 'updated_at': t3_utc}
+        sqlalchemy_api.convert_objects_related_datetimes(test3, *datetime_keys)
+        self.assertEqual(test3, expected_dict)
+
+    def test_get_regexp_op_for_database_sqlite(self):
+        op = sqlalchemy_api._get_regexp_op_for_connection('sqlite:///')
+        self.assertEqual('REGEXP', op)
+
+    def test_get_regexp_op_for_database_mysql(self):
+        op = sqlalchemy_api._get_regexp_op_for_connection(
+                'mysql://root@localhost')
+        self.assertEqual('REGEXP', op)
+
+    def test_get_regexp_op_for_database_postgresql(self):
+        op = sqlalchemy_api._get_regexp_op_for_connection(
+                'postgresql://localhost')
+        self.assertEqual('~', op)
+
+    def test_get_regexp_op_for_database_unknown(self):
+        op = sqlalchemy_api._get_regexp_op_for_connection('notdb:///')
+        self.assertEqual('LIKE', op)
+
 
 class SqlAlchemyDbApiTestCase(DbTestCase):
     def test_instance_get_all_by_host(self):
@@ -1060,6 +1060,15 @@ class SqlAlchemyDbApiTestCase(DbTestCase):
         mock_get_all_filters_sort.assert_called_once_with(ctxt, {'foo': 'bar'},
             limit=100, marker='uuid', columns_to_join='columns',
             use_slave=True, sort_keys=['sort_key'], sort_dirs=['sort_dir'])
+
+    def test_instance_get_all_by_filters_sort_key_invalid(self):
+        '''InvalidSortKey raised if an invalid key is given.'''
+        for keys in [['foo'], ['uuid', 'foo']]:
+            self.assertRaises(exception.InvalidSortKey,
+                              db.instance_get_all_by_filters_sort,
+                              self.context,
+                              filters={},
+                              sort_keys=keys)
 
 
 class ProcessSortParamTestCase(test.TestCase):

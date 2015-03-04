@@ -2078,6 +2078,16 @@ def _tag_instance_filter(context, query, filters):
     return query
 
 
+def _get_regexp_op_for_connection(db_connection):
+    db_string = db_connection.split(':')[0].split('+')[0]
+    regexp_op_map = {
+        'postgresql': '~',
+        'mysql': 'REGEXP',
+        'sqlite': 'REGEXP'
+    }
+    return regexp_op_map.get(db_string, 'LIKE')
+
+
 def _regex_instance_filter(query, filters):
     """Applies regular expression filtering to an Instance query.
 
@@ -2088,13 +2098,7 @@ def _regex_instance_filter(query, filters):
     """
 
     model = models.Instance
-    regexp_op_map = {
-        'postgresql': '~',
-        'mysql': 'REGEXP',
-        'sqlite': 'REGEXP'
-    }
-    db_string = CONF.database.connection.split(':')[0].split('+')[0]
-    db_regexp_op = regexp_op_map.get(db_string, 'LIKE')
+    db_regexp_op = _get_regexp_op_for_connection(CONF.database.connection)
     for filter_name in filters.iterkeys():
         try:
             column_attr = getattr(model, filter_name)
