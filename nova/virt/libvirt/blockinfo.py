@@ -473,7 +473,7 @@ def default_device_names(virt_type, context, instance, root_device_name,
 
 def has_default_ephemeral(instance, disk_bus, block_device_info, mapping):
     ephemerals = driver.block_device_info_get_ephemerals(block_device_info)
-    if instance['ephemeral_gb'] <= 0 or ephemerals:
+    if instance.ephemeral_gb <= 0 or ephemerals:
         return None
     else:
         info = get_next_disk_info(mapping, disk_bus)

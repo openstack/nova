@@ -545,7 +545,7 @@ class Lvm(Image):
                                      ' images_volume_group'
                                      ' flag to use LVM images.'))
             self.vg = CONF.libvirt.images_volume_group
-            self.lv = '%s_%s' % (instance['uuid'],
+            self.lv = '%s_%s' % (instance.uuid,
                                  self.escape(disk_name))
             if self.ephemeral_key_uuid is None:
                 self.path = os.path.join('/dev', self.vg, self.lv)
@@ -647,7 +647,7 @@ class Rbd(Image):
             except IndexError:
                 raise exception.InvalidDevicePath(path=path)
         else:
-            self.rbd_name = '%s_%s' % (instance['uuid'], disk_name)
+            self.rbd_name = '%s_%s' % (instance.uuid, disk_name)
 
         if not CONF.libvirt.images_rbd_pool:
             raise RuntimeError(_('You should specify'

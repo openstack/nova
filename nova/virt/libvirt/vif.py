@@ -164,7 +164,7 @@ class LibvirtGenericVIFDriver(object):
             self.get_vif_devname(vif))
 
         mac_id = vif['address'].replace(':', '')
-        name = "nova-instance-" + instance['name'] + "-" + mac_id
+        name = "nova-instance-" + instance.name + "-" + mac_id
         if self.get_firewall_required(vif):
             conf.filtername = name
         designer.set_vif_bandwidth_config(conf, inst_type)
@@ -427,10 +427,10 @@ class LibvirtGenericVIFDriver(object):
             if port == 'ovs':
                 linux_net.create_ovs_vif_port(self.get_bridge_name(vif),
                                               v2_name, iface_id,
-                                              vif['address'], instance['uuid'])
+                                              vif['address'], instance.uuid)
             elif port == 'ivs':
                 linux_net.create_ivs_vif_port(v2_name, iface_id,
-                                              vif['address'], instance['uuid'])
+                                              vif['address'], instance.uuid)
 
     def plug_ovs_hybrid(self, instance, vif):
         """Plug using hybrid strategy
@@ -453,7 +453,7 @@ class LibvirtGenericVIFDriver(object):
         dev = self.get_vif_devname(vif)
         linux_net.create_tap_dev(dev)
         linux_net.create_ivs_vif_port(dev, iface_id, vif['address'],
-                                      instance['uuid'])
+                                      instance.uuid)
 
     def plug_ivs_hybrid(self, instance, vif):
         """Plug using hybrid strategy (same as OVS)
@@ -473,7 +473,7 @@ class LibvirtGenericVIFDriver(object):
 
     def plug_mlnx_direct(self, instance, vif):
         vnic_mac = vif['address']
-        device_id = instance['uuid']
+        device_id = instance.uuid
         fabric = vif.get_physical_network()
         if not fabric:
             raise exception.NetworkMissingPhysicalNetwork(
@@ -523,7 +523,7 @@ class LibvirtGenericVIFDriver(object):
         iface_id = vif['id']
         linux_net.create_tap_dev(dev)
         net_id = vif['network']['id']
-        tenant_id = instance["project_id"]
+        tenant_id = instance.project_id
         try:
             utils.execute('ifc_ctl', 'gateway', 'add_port', dev,
                           run_as_root=True)
@@ -545,7 +545,7 @@ class LibvirtGenericVIFDriver(object):
                     vif['details'][network_model.VIF_DETAILS_VHOSTUSER_SOCKET])
             linux_net.create_ovs_vif_port(self.get_bridge_name(vif),
                                           port_name, iface_id, vif['address'],
-                                          instance['uuid'])
+                                          instance.uuid)
             linux_net.ovs_set_vhostuser_port_type(port_name)
 
     def plug_vrouter(self, instance, vif):
