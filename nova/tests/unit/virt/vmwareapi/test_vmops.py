@@ -83,6 +83,9 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         }
         self._instance = fake_instance.fake_instance_obj(
                                  self._context, **self._instance_values)
+        self._flavor = objects.Flavor(name='m1.small', memory_mb=512, vcpus=1,
+                                      root_gb=10, ephemeral_gb=0, swap=0,
+                                      extra_specs={})
 
         self._vmops = vmops.VMwareVMOps(self._session, self._virtapi, None,
                                         cluster=cluster.obj)
@@ -722,16 +725,18 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 vm_ref, self._instance, self._ds.ref, str(upload_iso_path))
 
     @mock.patch.object(vmops.LOG, 'debug')
+    @mock.patch.object(vmops.VMwareVMOps, '_fetch_image_if_missing')
     @mock.patch.object(vmops.VMwareVMOps, '_get_vm_config_info')
     @mock.patch.object(vmops.VMwareVMOps, 'build_virtual_machine')
-    def test_spawn_mask_block_device_info_password(self,
-                                                   mock_build_virtual_machine,
-                                                   mock_get_vm_config_info,
-                                                   mock_debug):
+    @mock.patch.object(vmops.lockutils, 'lock')
+    def test_spawn_mask_block_device_info_password(self, mock_lock,
+        mock_build_virtual_machine, mock_get_vm_config_info,
+        mock_fetch_image_if_missing, mock_debug):
         # Very simple test that just ensures block_device_info auth_password
         # is masked when logged; the rest of the test just fails out early.
         data = {'auth_password': 'scrubme'}
-        bdm = [{'connection_info': {'data': data}}]
+        bdm = [{'boot_index': 0, 'disk_bus': constants.DEFAULT_ADAPTER_TYPE,
+                'connection_info': {'data': data}}]
         bdi = {'block_device_mapping': bdm}
 
         self.password_logged = False
@@ -762,6 +767,189 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         # Check that the relevant log message was generated, and therefore
         # that we checked it was scrubbed
         self.assertTrue(self.password_logged)
+
+    @mock.patch('nova.virt.vmwareapi.vm_util.power_on_instance')
+    @mock.patch.object(vmops.VMwareVMOps, '_use_disk_image_as_linked_clone')
+    @mock.patch.object(vmops.VMwareVMOps, '_fetch_image_if_missing')
+    @mock.patch(
+        'nova.virt.vmwareapi.imagecache.ImageCacheManager.enlist_image')
+    @mock.patch.object(vmops.VMwareVMOps, 'build_virtual_machine')
+    @mock.patch.object(objects.Flavor, 'get_by_id')
+    @mock.patch.object(vmops.VMwareVMOps, '_get_vm_config_info')
+    @mock.patch.object(vmops.VMwareVMOps, '_get_extra_specs')
+    @mock.patch.object(nova.virt.vmwareapi.images.VMwareImage,
+                       'from_image')
+    def test_spawn_non_root_block_device(self, from_image,
+                                         get_extra_specs,
+                                         get_vm_config_info,
+                                         get_by_id,
+                                         build_virtual_machine,
+                                         enlist_image, fetch_image,
+                                         use_disk_image,
+                                         power_on_instance):
+        extra_specs = get_extra_specs.return_value
+        get_by_id.return_value = self._flavor
+
+        connection_info1 = {'data': 'fake-data1', 'serial': 'volume-fake-id1'}
+        connection_info2 = {'data': 'fake-data2', 'serial': 'volume-fake-id2'}
+        bdm = [{'connection_info': connection_info1,
+                'disk_bus': constants.ADAPTER_TYPE_IDE,
+                'mount_device': '/dev/sdb'},
+               {'connection_info': connection_info2,
+                'disk_bus': constants.DEFAULT_ADAPTER_TYPE,
+                'mount_device': '/dev/sdc'}]
+        bdi = {'block_device_mapping': bdm, 'root_device_name': '/dev/sda'}
+        self.flags(flat_injected=False, vnc_enabled=False)
+
+        image_size = (self._instance.root_gb) * units.Gi / 2
+        image_info = images.VMwareImage(
+                image_id=self._image_id,
+                file_size=image_size)
+        vi = get_vm_config_info.return_value
+        from_image.return_value = image_info
+        build_virtual_machine.return_value = 'fake-vm-ref'
+
+        with mock.patch.object(self._vmops, '_volumeops') as volumeops:
+            self._vmops.spawn(self._context, self._instance, {},
+                              injected_files=None, admin_password=None,
+                              network_info=[], block_device_info=bdi)
+
+            from_image.assert_called_once_with(self._instance.image_ref, {})
+            get_vm_config_info.assert_called_once_with(self._instance,
+                image_info, None, extra_specs.storage_policy)
+            build_virtual_machine.assert_called_once_with(self._instance,
+                vi.instance_name, image_info, vi.dc_info, vi.datastore, [],
+                extra_specs)
+            enlist_image.assert_called_once_with(image_info.image_id,
+                                                 vi.datastore, vi.dc_info.ref)
+            fetch_image.assert_called_once_with(self._context, vi)
+            use_disk_image.assert_called_once_with('fake-vm-ref', vi)
+            volumeops.attach_volume.assert_any_call(
+                connection_info1, self._instance, constants.ADAPTER_TYPE_IDE)
+            volumeops.attach_volume.assert_any_call(
+                connection_info2, self._instance,
+                constants.DEFAULT_ADAPTER_TYPE)
+
+    @mock.patch('nova.virt.vmwareapi.vm_util.power_on_instance')
+    @mock.patch.object(vmops.VMwareVMOps, 'build_virtual_machine')
+    @mock.patch.object(objects.Flavor, 'get_by_id')
+    @mock.patch.object(vmops.VMwareVMOps, '_get_vm_config_info')
+    @mock.patch.object(vmops.VMwareVMOps, '_get_extra_specs')
+    @mock.patch.object(nova.virt.vmwareapi.images.VMwareImage,
+                       'from_image')
+    def test_spawn_with_no_image_and_block_devices(self, from_image,
+                                                   get_extra_specs,
+                                                   get_vm_config_info,
+                                                   get_by_id,
+                                                   build_virtual_machine,
+                                                   power_on_instance):
+        instance_values = {
+            'name': 'fake_name',
+            'uuid': 'fake_uuid',
+            'vcpus': 1,
+            'memory_mb': 512,
+            'image_ref': None,
+            'root_gb': 10,
+            'node': 'respool-1001(MyResPoolName)',
+            'expected_attrs': ['system_metadata'],
+        }
+        instance = fake_instance.fake_instance_obj(
+            self._context, **instance_values)
+        extra_specs = get_extra_specs.return_value
+        get_by_id.return_value = self._flavor
+
+        connection_info1 = {'data': 'fake-data1', 'serial': 'volume-fake-id1'}
+        connection_info2 = {'data': 'fake-data2', 'serial': 'volume-fake-id2'}
+        connection_info3 = {'data': 'fake-data3', 'serial': 'volume-fake-id3'}
+        bdm = [{'boot_index': 0,
+                'connection_info': connection_info1,
+                'disk_bus': constants.ADAPTER_TYPE_IDE},
+               {'boot_index': 1,
+                'connection_info': connection_info2,
+                'disk_bus': constants.DEFAULT_ADAPTER_TYPE},
+               {'boot_index': 2,
+                'connection_info': connection_info3,
+                'disk_bus': constants.ADAPTER_TYPE_LSILOGICSAS}]
+        bdi = {'block_device_mapping': bdm}
+        self.flags(flat_injected=False, vnc_enabled=False)
+
+        image_info = mock.sentinel.image_info
+        vi = get_vm_config_info.return_value
+        from_image.return_value = image_info
+        build_virtual_machine.return_value = 'fake-vm-ref'
+
+        with mock.patch.object(self._vmops, '_volumeops') as volumeops:
+            self._vmops.spawn(self._context, instance, {},
+                              injected_files=None, admin_password=None,
+                              network_info=[], block_device_info=bdi)
+
+            from_image.assert_called_once_with(instance.image_ref, {})
+            get_vm_config_info.assert_called_once_with(instance, image_info,
+                None, extra_specs.storage_policy)
+            build_virtual_machine.assert_called_once_with(instance,
+                vi.instance_name, image_info, vi.dc_info, vi.datastore, [],
+                extra_specs)
+            volumeops.attach_root_volume.assert_called_once_with(
+                connection_info1, instance, vi.datastore.ref,
+                constants.ADAPTER_TYPE_IDE)
+            volumeops.attach_volume.assert_any_call(
+                connection_info2, instance,
+                constants.DEFAULT_ADAPTER_TYPE)
+            volumeops.attach_volume.assert_any_call(
+                connection_info3, instance,
+                constants.ADAPTER_TYPE_LSILOGICSAS)
+
+    @mock.patch('nova.virt.vmwareapi.vm_util.power_on_instance')
+    @mock.patch.object(vmops.VMwareVMOps, 'build_virtual_machine')
+    @mock.patch.object(objects.Flavor, 'get_by_id')
+    @mock.patch.object(vmops.VMwareVMOps, '_get_vm_config_info')
+    @mock.patch.object(vmops.VMwareVMOps, '_get_extra_specs')
+    @mock.patch.object(nova.virt.vmwareapi.images.VMwareImage,
+                       'from_image')
+    def test_spawn_unsupported_hardware(self, from_image,
+                                        get_extra_specs,
+                                        get_vm_config_info,
+                                        get_by_id,
+                                        build_virtual_machine,
+                                        power_on_instance):
+        instance_values = {
+            'name': 'fake_name',
+            'uuid': 'fake_uuid',
+            'vcpus': 1,
+            'memory_mb': 512,
+            'image_ref': None,
+            'root_gb': 10,
+            'node': 'respool-1001(MyResPoolName)',
+            'expected_attrs': ['system_metadata'],
+        }
+        instance = fake_instance.fake_instance_obj(
+            self._context, **instance_values)
+        extra_specs = get_extra_specs.return_value
+        get_by_id.return_value = self._flavor
+
+        connection_info = {'data': 'fake-data', 'serial': 'volume-fake-id'}
+        bdm = [{'boot_index': 0,
+                'connection_info': connection_info,
+                'disk_bus': 'invalid_adapter_type'}]
+        bdi = {'block_device_mapping': bdm}
+        self.flags(flat_injected=False, vnc_enabled=False)
+
+        image_info = mock.sentinel.image_info
+        vi = get_vm_config_info.return_value
+        from_image.return_value = image_info
+        build_virtual_machine.return_value = 'fake-vm-ref'
+
+        self.assertRaises(exception.UnsupportedHardware, self._vmops.spawn,
+                          self._context, instance, {}, injected_files=None,
+                          admin_password=None, network_info=[],
+                          block_device_info=bdi)
+
+        from_image.assert_called_once_with(instance.image_ref, {})
+        get_vm_config_info.assert_called_once_with(instance, image_info, None,
+                                                   extra_specs.storage_policy)
+        build_virtual_machine.assert_called_once_with(instance,
+            vi.instance_name, image_info, vi.dc_info, vi.datastore, [],
+            extra_specs)
 
     def test_get_ds_browser(self):
         cache = self._vmops._datastore_browser_mapping
@@ -982,12 +1170,19 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                    extra_specs=None,
                    config_drive=False):
 
-        self._vmops._volumeops = mock.Mock()
+        image_size = (self._instance.root_gb) * units.Gi / 2
         image = {
-            'id': 'fake-image-d',
+            'id': self._image_id,
             'disk_format': 'vmdk',
-            'size': 1 * units.Gi,
+            'size': image_size,
         }
+        image_info = images.VMwareImage(
+            image_id=self._image_id,
+            file_size=image_size)
+        vi = self._vmops._get_vm_config_info(
+            self._instance, image_info)
+
+        self._vmops._volumeops = mock.Mock()
         network_info = mock.Mock()
         mock_get_datastore.return_value = self._ds
         mock_get_datacenter_ref_and_name.return_value = self._dc_info
@@ -1016,15 +1211,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
 
             mock_is_neutron.assert_called_once_with()
 
-            expected_mkdir_calls = 2
-            if block_device_info and len(block_device_info.get(
-                    'block_device_mapping', [])) > 0:
-                # if block_device_info contains key 'block_device_mapping'
-                # with any information, method mkdir wouldn't be called in
-                # method self._vmops.spawn()
-                expected_mkdir_calls = 0
-
-            self.assertEqual(expected_mkdir_calls, len(mock_mkdir.mock_calls))
+            self.assertEqual(2, mock_mkdir.call_count)
 
             mock_get_vif_info.assert_called_once_with(
                     self._session, self._cluster.obj, False,
@@ -1061,47 +1248,54 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
 
             if (block_device_info and
                 'block_device_mapping' in block_device_info):
-                root_disk = block_device_info['block_device_mapping'][0]
-                mock_attach = self._vmops._volumeops.attach_root_volume
-                mock_attach.assert_called_once_with(
-                        root_disk['connection_info'], self._instance,
-                        self._ds.ref)
-                self.assertFalse(_wait_for_task.called)
-                self.assertFalse(_fetch_image.called)
-                self.assertFalse(_call_method.called)
-            else:
-                mock_enlist_image.assert_called_once_with(
+                bdms = block_device_info['block_device_mapping']
+                for bdm in bdms:
+                    mock_attach_root = (
+                        self._vmops._volumeops.attach_root_volume)
+                    mock_attach = self._vmops._volumeops.attach_volume
+                    adapter_type = bdm.get('disk_bus') or vi.ii.adapter_type
+                    if bdm.get('boot_index') == 0:
+                        mock_attach_root.assert_any_call(
+                            bdm['connection_info'], self._instance,
+                            self._ds.ref, adapter_type)
+                    else:
+                        mock_attach.assert_any_call(
+                            bdm['connection_info'], self._instance,
+                            self._ds.ref, adapter_type)
+
+            mock_enlist_image.assert_called_once_with(
                         self._image_id, self._ds, self._dc_info.ref)
 
-                upload_file_name = 'vmware_temp/tmp-uuid/%s/%s-flat.vmdk' % (
-                        self._image_id, self._image_id)
-                _fetch_image.assert_called_once_with(
-                        self._context,
-                        self._instance,
-                        self._session._host,
-                        self._session._port,
-                        self._dc_info.name,
-                        self._ds.name,
-                        upload_file_name,
-                        cookies='Fake-CookieJar')
-                self.assertTrue(len(_wait_for_task.mock_calls) > 0)
-                extras = None
-                if block_device_info and 'ephemerals' in block_device_info:
-                    extras = ['CreateVirtualDisk_Task']
-                self._verify_spawn_method_calls(_call_method, extras)
+            upload_file_name = 'vmware_temp/tmp-uuid/%s/%s-flat.vmdk' % (
+                    self._image_id, self._image_id)
+            _fetch_image.assert_called_once_with(
+                    self._context,
+                    self._instance,
+                    self._session._host,
+                    self._session._port,
+                    self._dc_info.name,
+                    self._ds.name,
+                    upload_file_name,
+                    cookies='Fake-CookieJar')
+            self.assertTrue(len(_wait_for_task.mock_calls) > 0)
+            extras = None
+            if block_device_info and 'ephemerals' in block_device_info:
+                extras = ['CreateVirtualDisk_Task']
+            self._verify_spawn_method_calls(_call_method, extras)
 
-                dc_ref = 'fake_dc_ref'
-                source_file = unicode('[fake_ds] vmware_base/%s/%s.vmdk' %
-                              (self._image_id, self._image_id))
-                dest_file = unicode('[fake_ds] vmware_base/%s/%s.%d.vmdk' %
-                              (self._image_id, self._image_id,
-                              self._instance['root_gb']))
-                # TODO(dims): add more tests for copy_virtual_disk after
-                # the disk/image code in spawn gets refactored
-                mock_copy_virtual_disk.assert_called_with(self._session,
-                                                          dc_ref,
-                                                          source_file,
-                                                          dest_file)
+            dc_ref = 'fake_dc_ref'
+            source_file = unicode('[fake_ds] vmware_base/%s/%s.vmdk' %
+                          (self._image_id, self._image_id))
+            dest_file = unicode('[fake_ds] vmware_base/%s/%s.%d.vmdk' %
+                          (self._image_id, self._image_id,
+                          self._instance['root_gb']))
+            # TODO(dims): add more tests for copy_virtual_disk after
+            # the disk/image code in spawn gets refactored
+            mock_copy_virtual_disk.assert_called_with(self._session,
+                                                      dc_ref,
+                                                      source_file,
+                                                      dest_file)
+
             if config_drive:
                 mock_configure_config_drive.assert_called_once_with(
                         self._instance, 'fake_vm_ref', self._dc_info,
@@ -1169,14 +1363,18 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
 
     def test_spawn_with_block_device_info(self):
         block_device_info = {
-            'block_device_mapping': [{'connection_info': 'fake'}]
+            'block_device_mapping': [{'boot_index': 0,
+                                      'connection_info': 'fake',
+                                      'mount_device': '/dev/vda'}]
         }
         self._test_spawn(block_device_info=block_device_info)
 
     def test_spawn_with_block_device_info_with_config_drive(self):
         self.flags(force_config_drive=True)
         block_device_info = {
-            'block_device_mapping': [{'connection_info': 'fake'}]
+            'block_device_mapping': [{'boot_index': 0,
+                                      'connection_info': 'fake',
+                                      'mount_device': '/dev/vda'}]
         }
         self._test_spawn(block_device_info=block_device_info,
                          config_drive=True)

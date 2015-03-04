@@ -606,24 +606,7 @@ class VMwareVMOps(object):
             block_device_mapping = driver.block_device_info_get_mapping(
                 block_device_info)
 
-        # NOTE(mdbooth): the logic here is that we ignore the image if there
-        # are block device mappings. This behaviour is incorrect, and a bug in
-        # the driver.  We should be able to accept an image and block device
-        # mappings.
-        if len(block_device_mapping) > 0:
-            msg = "Block device information present: %s" % block_device_info
-            # NOTE(mriedem): block_device_info can contain an auth_password
-            # so we have to scrub the message before logging it.
-            LOG.debug(strutils.mask_password(msg), instance=instance)
-
-            for root_disk in block_device_mapping:
-                connection_info = root_disk['connection_info']
-                # TODO(hartsocks): instance is unnecessary, remove it
-                # we still use instance in many locations for no other purpose
-                # than logging, can we simplify this?
-                self._volumeops.attach_root_volume(connection_info, instance,
-                                                   vi.datastore.ref)
-        else:
+        if instance.image_ref:
             self._imagecache.enlist_image(
                     image_info.image_id, vi.datastore, vi.dc_info.ref)
             self._fetch_image_if_missing(context, vi)
@@ -634,6 +617,30 @@ class VMwareVMOps(object):
                 self._use_disk_image_as_linked_clone(vm_ref, vi)
             else:
                 self._use_disk_image_as_full_clone(vm_ref, vi)
+
+        if len(block_device_mapping) > 0:
+            msg = "Block device information present: %s" % block_device_info
+            # NOTE(mriedem): block_device_info can contain an auth_password
+            # so we have to scrub the message before logging it.
+            LOG.debug(strutils.mask_password(msg), instance=instance)
+
+            # Before attempting to attach any volume, make sure the
+            # block_device_mapping (i.e. disk_bus) is valid
+            self._is_bdm_valid(block_device_mapping)
+
+            for disk in block_device_mapping:
+                connection_info = disk['connection_info']
+                adapter_type = disk.get('disk_bus') or vi.ii.adapter_type
+
+                # TODO(hartsocks): instance is unnecessary, remove it
+                # we still use instance in many locations for no other purpose
+                # than logging, can we simplify this?
+                if disk.get('boot_index') == 0:
+                    self._volumeops.attach_root_volume(connection_info,
+                        instance, vi.datastore.ref, adapter_type)
+                else:
+                    self._volumeops.attach_volume(connection_info,
+                        instance, adapter_type)
 
         # Create ephemeral disks
         self._create_ephemeral(block_device_info, instance, vm_ref,
@@ -647,6 +654,20 @@ class VMwareVMOps(object):
 
         if power_on:
             vm_util.power_on_instance(self._session, instance, vm_ref=vm_ref)
+
+    def _is_bdm_valid(self, block_device_mapping):
+        """Checks if the block device mapping is valid."""
+        valid_bus = (constants.DEFAULT_ADAPTER_TYPE,
+                     constants.ADAPTER_TYPE_BUSLOGIC,
+                     constants.ADAPTER_TYPE_IDE,
+                     constants.ADAPTER_TYPE_LSILOGICSAS,
+                     constants.ADAPTER_TYPE_PARAVIRTUAL)
+
+        for disk in block_device_mapping:
+            adapter_type = disk.get('disk_bus')
+            if (adapter_type is not None and adapter_type not in valid_bus):
+                raise exception.UnsupportedHardware(model=adapter_type,
+                                                    virt="vmware")
 
     def _create_config_drive(self, instance, injected_files, admin_password,
                              data_store_name, dc_name, upload_folder, cookies):

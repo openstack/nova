@@ -1100,7 +1100,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(block_device, 'volume_in_mapping')
         self.mox.StubOutWithMock(v_driver, 'block_device_info_get_mapping')
         connection_info = self._test_vmdk_connection_info('vmdk')
-        root_disk = [{'connection_info': connection_info}]
+        root_disk = [{'connection_info': connection_info,
+                      'boot_index': 0}]
         v_driver.block_device_info_get_mapping(
                 mox.IgnoreArg()).AndReturn(root_disk)
         self.mox.StubOutWithMock(volumeops.VMwareVolumeOps,
@@ -1114,9 +1115,9 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(volumeops.VMwareVolumeOps,
                                  'attach_volume')
         volumeops.VMwareVolumeOps.attach_volume(connection_info,
-                self.instance)
+                self.instance, constants.DEFAULT_ADAPTER_TYPE)
         self.mox.ReplayAll()
-        block_device_info = {'mount_device': 'vda'}
+        block_device_info = {'block_device_mapping': root_disk}
         self.conn.spawn(self.context, self.instance, self.image,
                         injected_files=[], admin_password=None,
                         network_info=self.network_info,
@@ -1127,13 +1128,14 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(block_device, 'volume_in_mapping')
         self.mox.StubOutWithMock(v_driver, 'block_device_info_get_mapping')
         connection_info = self._test_vmdk_connection_info('iscsi')
-        root_disk = [{'connection_info': connection_info}]
+        root_disk = [{'connection_info': connection_info,
+                      'boot_index': 0}]
         v_driver.block_device_info_get_mapping(
                 mox.IgnoreArg()).AndReturn(root_disk)
         self.mox.StubOutWithMock(volumeops.VMwareVolumeOps,
                                  'attach_volume')
         volumeops.VMwareVolumeOps.attach_volume(connection_info,
-                self.instance)
+                self.instance, constants.DEFAULT_ADAPTER_TYPE)
         self.mox.ReplayAll()
         block_device_info = {'mount_device': 'vda'}
         self.conn.spawn(self.context, self.instance, self.image,
@@ -1723,7 +1725,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(volumeops.VMwareVolumeOps,
                                  '_attach_volume_vmdk')
         volumeops.VMwareVolumeOps._attach_volume_vmdk(connection_info,
-                self.instance)
+                self.instance, None)
         self.mox.ReplayAll()
         self.conn.attach_volume(None, connection_info, self.instance,
                                 mount_point)
@@ -1821,7 +1823,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(volumeops.VMwareVolumeOps,
                                  '_attach_volume_iscsi')
         volumeops.VMwareVolumeOps._attach_volume_iscsi(connection_info,
-                self.instance)
+                self.instance, None)
         self.mox.ReplayAll()
         self.conn.attach_volume(None, connection_info, self.instance,
                                 mount_point)
