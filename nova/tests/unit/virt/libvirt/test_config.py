@@ -2092,30 +2092,30 @@ class LibvirtConfigNodeDevicePciCapTest(LibvirtConfigBaseTest):
         self.assertEqual(obj.fun_capability[1].device_addrs,
                          [(0, 10, 1, 1), ])
 
-        def test_config_read_only_disk(self):
-            obj = config.LibvirtConfigGuestDisk()
-            obj.source_type = "disk"
-            obj.source_device = "disk"
-            obj.driver_name = "kvm"
-            obj.target_dev = "/dev/hdc"
-            obj.target_bus = "virtio"
-            obj.readonly = True
+    def test_config_read_only_disk(self):
+        obj = config.LibvirtConfigGuestDisk()
+        obj.source_type = "disk"
+        obj.source_device = "disk"
+        obj.driver_name = "kvm"
+        obj.target_dev = "/dev/hdc"
+        obj.target_bus = "virtio"
+        obj.readonly = True
 
-            xml = obj.to_xml()
-            self.assertXmlEqual(xml, """
-                <disk type="disk" device="disk">
-                    <driver name="kvm"/>
-                    <target bus="virtio" dev="/dev/hdc"/>
-                    <readonly/>
-                </disk>""")
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <disk type="disk" device="disk">
+                <driver name="kvm"/>
+                <target bus="virtio" dev="/dev/hdc"/>
+                <readonly/>
+            </disk>""")
 
-            obj.readonly = False
-            xml = obj.to_xml()
-            self.assertXmlEqual(xml, """
-                <disk type="disk" device="disk">
-                    <driver name="kvm"/>
-                    <target bus="virtio" dev="/dev/hdc"/>
-                </disk>""")
+        obj.readonly = False
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <disk type="disk" device="disk">
+                <driver name="kvm"/>
+                <target bus="virtio" dev="/dev/hdc"/>
+            </disk>""")
 
 
 class LibvirtConfigNodeDevicePciSubFunctionCap(LibvirtConfigBaseTest):
