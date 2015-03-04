@@ -26,6 +26,8 @@ from nova.openstack.common import log as logging
 from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova.scheduler import utils as scheduler_utils
 from nova import servicegroup
+from nova.objects import aggregate
+
 
 LOG = logging.getLogger(__name__)
 
@@ -106,13 +108,54 @@ class LiveMigrationTask(object):
             raise exception.UnableToMigrateToSelf(
                     instance_id=self.instance.uuid, host=self.destination)
 
+    def _get_aggregate_metadata(self,instance_uuid, dest):
+        aggregate_list = db.aggregate_get_by_host(self.context, self.destination)
+        LOG.debug(_("lwatta::====> aggregate_list size %s"), len(aggregate_list))
+        if len(aggregate_list) == 1:
+            return aggregate_list[0]
+
+        # Check to see if host is in an aggregate or in more than one aggregate (cause we do stupid stuff)
+        if len(aggregate_list) > 1:
+            agg_name = []
+            for i in aggregate_list:
+                agg_name.append(i.name)
+                LOG.debug(_("lwatta::====> agg_name %s"), agg_name)
+                reason = _("Unable to migrate %(instance_uuid)s to %(dest)s: "
+                "Destination host is in more then one aggregate:%(agg_name)s")
+                raise exception.MigrationPreCheckError(reason=reason % dict(
+                    instance_uuid=instance_uuid, dest=dest, agg_name=agg_name))
+        elif len(aggregate_list) < 1:
+            LOG.debug(_("lwatta::====> Host is not in an aggregate %s"), dest)
+            reason = _("Unable to migrate %(instance_uuid)s to %(dest)s: "
+            "Destination host is not in any aggregates")
+            raise exception.MigrationPreCheckError(
+                reason=reason % dict(instance_uuid=instance_uuid, dest=dest))
+
     def _check_destination_has_enough_memory(self):
-        avail = self._get_compute_info(self.destination)['free_ram_mb']
+        instance_uuid = self.instance.uuid
+        dest = self.destination
+        aggr = self._get_aggregate_metadata(instance_uuid, dest)
+        # for icehouse replace aggr.metadetails with aggr.metadata.
+
+        # (schoksey replaced) ram_ratio = float(aggr.metadetails['ram_allocation_ratio'])
+        ram_ratio = float(aggr.get('metadetails')['ram_allocation_ratio'])
+        LOG.debug(_("lwatta::====> Ram_allocation_ratio %s"), ram_ratio)
+
+        # (schoksey replaced) total = self._get_compute_info(self.destination)['memory_mb']
+        total = self._get_compute_info(self.destination)['memory_mb']
+
+        LOG.debug(_("lwatta::====> Total physical memory on host %s"), total)
+
+        used = self._get_compute_info(self.destination)['memory_mb_used']
+
         mem_inst = self.instance.memory_mb
+        # LOG.debug(_("lwatta::====> instance total memory %s"), mem_inst)
+        real_total = total * ram_ratio
+        LOG.debug(_("lwatta::====> Oversubscribed total memory %s"), real_total)
+        avail = real_total - used
+        LOG.debug(_("lwatta::====> Ratio calculated avail is  %s"), avail)
 
         if not mem_inst or avail <= mem_inst:
-            instance_uuid = self.instance.uuid
-            dest = self.destination
             reason = _("Unable to migrate %(instance_uuid)s to %(dest)s: "
                        "Lack of memory(host:%(avail)s <= "
                        "instance:%(mem_inst)s)")
