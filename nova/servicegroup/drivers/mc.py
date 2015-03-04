@@ -31,7 +31,6 @@ from nova.servicegroup.drivers import base
 
 CONF = cfg.CONF
 CONF.import_opt('service_down_time', 'nova.service')
-CONF.import_opt('memcached_servers', 'nova.openstack.common.memorycache')
 
 
 LOG = logging.getLogger(__name__)
@@ -40,8 +39,7 @@ LOG = logging.getLogger(__name__)
 class MemcachedDriver(base.Driver):
 
     def __init__(self, *args, **kwargs):
-        test = kwargs.get('test')
-        if not CONF.memcached_servers and not test:
+        if not CONF.memcached_servers:
             raise RuntimeError(_('memcached_servers not defined'))
         self.mc = memorycache.get_client()
         self.db_allowed = kwargs.get('db_allowed', True)

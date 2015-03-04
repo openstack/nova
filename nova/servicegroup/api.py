@@ -23,6 +23,12 @@ from oslo_utils import importutils
 from nova.i18n import _, _LW
 
 LOG = logging.getLogger(__name__)
+
+_driver_name_class_mapping = {
+    'db': 'nova.servicegroup.drivers.db.DbDriver',
+    'zk': 'nova.servicegroup.drivers.zk.ZooKeeperDriver',
+    'mc': 'nova.servicegroup.drivers.mc.MemcachedDriver'
+}
 _default_driver = 'db'
 servicegroup_driver_opt = cfg.StrOpt('servicegroup_driver',
                                      default=_default_driver,
@@ -39,42 +45,12 @@ INITIAL_REPORTING_DELAY = 5
 
 class API(object):
 
-    _driver = None
-    _driver_name_class_mapping = {
-        'db': 'nova.servicegroup.drivers.db.DbDriver',
-        'zk': 'nova.servicegroup.drivers.zk.ZooKeeperDriver',
-        'mc': 'nova.servicegroup.drivers.mc.MemcachedDriver'
-    }
-
-    def __new__(cls, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         '''Create an instance of the servicegroup API.
 
         args and kwargs are passed down to the servicegroup driver when it gets
-        created.  No args currently exist, though.  Valid kwargs are:
-
-        db_allowed - Boolean. False if direct db access is not allowed and
-                     alternative data access (conductor) should be used
-                     instead.
+        created.
         '''
-
-        if not cls._driver:
-            LOG.debug('ServiceGroup driver defined as an instance of %s',
-                      str(CONF.servicegroup_driver))
-            driver_name = CONF.servicegroup_driver
-            try:
-                driver_class = cls._driver_name_class_mapping[driver_name]
-            except KeyError:
-                raise TypeError(_("unknown ServiceGroup driver name: %s")
-                                % driver_name)
-            cls._driver = importutils.import_object(driver_class,
-                                                    *args, **kwargs)
-        return super(API, cls).__new__(cls)
-
-    def __init__(self, *args, **kwargs):
-        self.basic_config_check()
-
-    def basic_config_check(self):
-        """Perform basic config check."""
         # Make sure report interval is less than service down time
         report_interval = CONF.report_interval
         if CONF.service_down_time <= report_interval:
@@ -88,6 +64,16 @@ class API(object):
                          'report_interval': report_interval,
                          'new_service_down_time': new_service_down_time})
             CONF.set_override('service_down_time', new_service_down_time)
+        LOG.debug('ServiceGroup driver defined as an instance of %s',
+                  str(CONF.servicegroup_driver))
+        driver_name = CONF.servicegroup_driver
+        try:
+            driver_class = _driver_name_class_mapping[driver_name]
+        except KeyError:
+            raise TypeError(_("unknown ServiceGroup driver name: %s")
+                            % driver_name)
+        self._driver = importutils.import_object(driver_class,
+                                                 *args, **kwargs)
 
     def join(self, member_id, group_id, service=None):
         """Add a new member to the ServiceGroup

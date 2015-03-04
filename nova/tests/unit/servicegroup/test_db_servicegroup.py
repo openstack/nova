@@ -13,132 +13,95 @@
 #    under the License.
 
 import datetime
+import mock
 
-import fixtures
-from oslo_utils import timeutils
-
-from nova import context
-from nova import db
-from nova import service
 from nova import servicegroup
 from nova import test
 
 
-class ServiceFixture(fixtures.Fixture):
-
-    def __init__(self, host, binary, topic):
-        super(ServiceFixture, self).__init__()
-        self.host = host
-        self.binary = binary
-        self.topic = topic
-        self.serv = None
-
-    def setUp(self):
-        super(ServiceFixture, self).setUp()
-        self.serv = service.Service(self.host,
-                                    self.binary,
-                                    self.topic,
-                                    'nova.tests.unit.test_service.FakeManager',
-                                    1, 1)
-        self.addCleanup(self.serv.kill)
-
-
-class DBServiceGroupTestCase(test.TestCase):
+class DBServiceGroupTestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(DBServiceGroupTestCase, self).setUp()
-        servicegroup.API._driver = None
-        self.flags(servicegroup_driver='db')
         self.down_time = 15
-        self.flags(enable_new_services=True)
-        self.flags(service_down_time=self.down_time)
+        self.flags(service_down_time=self.down_time,
+                   servicegroup_driver='db')
         self.servicegroup_api = servicegroup.API()
-        self._host = 'foo'
-        self._binary = 'nova-fake'
-        self._topic = 'unittest'
-        self._ctx = context.get_admin_context()
 
-    def test_DB_driver(self):
-        serv = self.useFixture(
-            ServiceFixture(self._host, self._binary, self._topic)).serv
-        serv.start()
-        service_ref = db.service_get_by_args(self._ctx,
-                                             self._host,
-                                             self._binary)
-
-        self.assertTrue(self.servicegroup_api.service_is_up(service_ref))
-        self.useFixture(test.TimeOverride())
-        timeutils.advance_time_seconds(self.down_time + 1)
-        self.servicegroup_api._driver._report_state(serv)
-        service_ref = db.service_get_by_args(self._ctx,
-                                             self._host,
-                                             self._binary)
-
-        self.assertTrue(self.servicegroup_api.service_is_up(service_ref))
-        serv.stop()
-        timeutils.advance_time_seconds(self.down_time + 1)
-        service_ref = db.service_get_by_args(self._ctx,
-                                             self._host,
-                                             self._binary)
-        self.assertFalse(self.servicegroup_api.service_is_up(service_ref))
-
-    def test_get_all(self):
-        host1 = self._host + '_1'
-        host2 = self._host + '_2'
-
-        serv1 = self.useFixture(
-            ServiceFixture(host1, self._binary, self._topic)).serv
-        serv1.start()
-
-        serv2 = self.useFixture(
-            ServiceFixture(host2, self._binary, self._topic)).serv
-        serv2.start()
-
-        service_ref1 = db.service_get_by_args(self._ctx,
-                                              host1,
-                                              self._binary)
-        service_ref2 = db.service_get_by_args(self._ctx,
-                                              host2,
-                                              self._binary)
-
-        services = self.servicegroup_api.get_all(self._topic)
-
-        self.assertIn(service_ref1['host'], services)
-        self.assertIn(service_ref2['host'], services)
-
-        service_id = self.servicegroup_api.get_one(self._topic)
-        self.assertIn(service_id, services)
-
-    def test_service_is_up(self):
+    @mock.patch('oslo_utils.timeutils.utcnow')
+    def test_is_up(self, now_mock):
+        service_ref = {
+            'host': 'fake-host',
+            'topic': 'compute',
+        }
         fts_func = datetime.datetime.fromtimestamp
         fake_now = 1000
-        down_time = 15
-        self.flags(service_down_time=down_time)
-        self.mox.StubOutWithMock(timeutils, 'utcnow')
-        self.servicegroup_api = servicegroup.API()
 
         # Up (equal)
-        timeutils.utcnow().AndReturn(fts_func(fake_now))
-        service = {'updated_at': fts_func(fake_now - self.down_time),
-                   'created_at': fts_func(fake_now - self.down_time)}
-        self.mox.ReplayAll()
-        result = self.servicegroup_api.service_is_up(service)
+        now_mock.return_value = fts_func(fake_now)
+        service_ref['updated_at'] = fts_func(fake_now - self.down_time)
+        service_ref['created_at'] = fts_func(fake_now - self.down_time)
+
+        result = self.servicegroup_api.service_is_up(service_ref)
         self.assertTrue(result)
 
-        self.mox.ResetAll()
         # Up
-        timeutils.utcnow().AndReturn(fts_func(fake_now))
-        service = {'updated_at': fts_func(fake_now - self.down_time + 1),
-                   'created_at': fts_func(fake_now - self.down_time + 1)}
-        self.mox.ReplayAll()
-        result = self.servicegroup_api.service_is_up(service)
+        service_ref['updated_at'] = fts_func(fake_now - self.down_time + 1)
+        service_ref['created_at'] = fts_func(fake_now - self.down_time + 1)
+        result = self.servicegroup_api.service_is_up(service_ref)
         self.assertTrue(result)
 
-        self.mox.ResetAll()
         # Down
-        timeutils.utcnow().AndReturn(fts_func(fake_now))
-        service = {'updated_at': fts_func(fake_now - self.down_time - 3),
-                   'created_at': fts_func(fake_now - self.down_time - 3)}
-        self.mox.ReplayAll()
-        result = self.servicegroup_api.service_is_up(service)
+        service_ref['updated_at'] = fts_func(fake_now - self.down_time - 3)
+        service_ref['created_at'] = fts_func(fake_now - self.down_time - 3)
+        result = self.servicegroup_api.service_is_up(service_ref)
         self.assertFalse(result)
+
+    @mock.patch('nova.conductor.api.LocalAPI.service_get_all_by_topic')
+    def test_get_all(self, ga_mock):
+        service_refs = [
+            {
+                'host': 'fake-host1',
+                'topic': 'compute'
+            },
+            {
+                'host': 'fake-host2',
+                'topic': 'compute'
+            },
+            {
+                'host': 'fake-host3',
+                'topic': 'compute'
+            },
+        ]
+        ga_mock.return_value = service_refs
+        with mock.patch.object(self.servicegroup_api._driver,
+                'is_up', side_effect=[
+                    None,
+                    True,  # fake host 2 is enabled, all others disabled
+                    None
+                    ]):
+            services = self.servicegroup_api.get_all('compute')
+        self.assertEqual(['fake-host2'], services)
+        ga_mock.assert_called_once_with(mock.ANY, 'compute')
+
+    def test_join(self):
+        service = mock.MagicMock(report_interval=1)
+
+        self.servicegroup_api.join('fake-host', 'fake-topic', service)
+        fn = self.servicegroup_api._driver._report_state
+        service.tg.add_timer.assert_called_once_with(1, fn, 5, service)
+
+    @mock.patch('nova.conductor.api.LocalAPI.service_update')
+    def test_report_state(self, upd_mock):
+        service_ref = {
+            'host': 'fake-host',
+            'topic': 'compute',
+            'report_count': 10
+        }
+        service = mock.MagicMock(model_disconnected=False,
+                                 service_ref=service_ref)
+        fn = self.servicegroup_api._driver._report_state
+        fn(service)
+        upd_mock.assert_called_once_with(mock.ANY,
+                                         service_ref,
+                                         dict(report_count=11))
