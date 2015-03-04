@@ -1734,8 +1734,8 @@ class VlanNetworkTestCase(test.TestCase):
     @mock.patch('nova.db.fixed_ip_get_by_address')
     @mock.patch('nova.db.network_get')
     @mock.patch('nova.db.fixed_ip_update')
-    def test_deallocate_fixed_with_dhcp_exception(self, fixed_update, net_get,
-                                                  fixed_get):
+    def _deallocate_fixed_with_dhcp(self, mock_dev_exists, fixed_update,
+                                    net_get, fixed_get):
         net_get.return_value = dict(test_network.fake_network,
                                     **networks[1])
 
@@ -1769,11 +1769,21 @@ class VlanNetworkTestCase(test.TestCase):
                                              'fake')
             fixed_update.assert_called_once_with(context1, fix_addr.address,
                                                  {'allocated': False})
-            _execute.assert_called_once_with('dhcp_release',
-                                             networks[1]['bridge'],
-                                             fix_addr.address,
-                                             'DE:AD:BE:EF:00:00',
-                                             run_as_root=True)
+            mock_dev_exists.assert_called_once_with(networks[1]['bridge'])
+            if mock_dev_exists.return_value:
+                _execute.assert_called_once_with('dhcp_release',
+                                                 networks[1]['bridge'],
+                                                 fix_addr.address,
+                                                 'DE:AD:BE:EF:00:00',
+                                                 run_as_root=True)
+
+    @mock.patch('nova.network.linux_net.device_exists', return_value=True)
+    def test_deallocate_fixed_with_dhcp(self, mock_dev_exists):
+        self._deallocate_fixed_with_dhcp(mock_dev_exists)
+
+    @mock.patch('nova.network.linux_net.device_exists', return_value=False)
+    def test_deallocate_fixed_without_dhcp(self, mock_dev_exists):
+        self._deallocate_fixed_with_dhcp(mock_dev_exists)
 
     def test_deallocate_fixed_deleted(self):
         # Verify doesn't deallocate deleted fixed_ip from deleted network.
