@@ -417,7 +417,6 @@ class InterfaceAttachTestsV2(InterfaceAttachTestsV21):
     controller_cls = attach_interfaces_v2.InterfaceAttachmentController
     validate_exc = exc.HTTPBadRequest
     in_use_exc = exc.HTTPBadRequest
-    not_found_exc = exc.HTTPBadRequest
 
     def test_attach_interface_instance_with_non_uuid_net_id(self):
         pass
