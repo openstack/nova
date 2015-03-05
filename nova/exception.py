@@ -624,6 +624,10 @@ class StorageRepositoryNotFound(NotFound):
     msg_fmt = _("Cannot find SR to read/write VDI.")
 
 
+class InstanceMappingNotFound(NotFound):
+    msg_fmt = _("Instance %(uuid)s has no mapping to a cell.")
+
+
 class NetworkDuplicated(Invalid):
     msg_fmt = _("Network %(network_id)s is duplicated.")
 
