@@ -969,7 +969,7 @@ class VMwareVMOps(object):
 
         # If there is a rescue VM then we need to destroy that one too.
         LOG.debug("Destroying instance", instance=instance)
-        if instance['vm_state'] == vm_states.RESCUED:
+        if instance.vm_state == vm_states.RESCUED:
             LOG.debug("Rescue VM configured", instance=instance)
             try:
                 self.unrescue(instance, power_on=False)
@@ -1115,7 +1115,7 @@ class VMwareVMOps(object):
         vm_util.reconfigure_vm(self._session, vm_ref, vm_resize_spec)
 
     def _resize_disk(self, instance, vm_ref, vmdk, flavor):
-        if (flavor['root_gb'] > instance['root_gb'] and
+        if (flavor['root_gb'] > instance.root_gb and
             flavor['root_gb'] > vmdk.capacity_in_bytes / units.Gi):
             root_disk_in_kb = flavor['root_gb'] * units.Mi
             ds_ref = vmdk.device.backing.datastore
@@ -1164,7 +1164,7 @@ class VMwareVMOps(object):
                                      uuid=instance.uuid)
 
         # Checks if the migration needs a disk resize down.
-        if (flavor['root_gb'] < instance['root_gb'] or
+        if (flavor['root_gb'] < instance.root_gb or
             flavor['root_gb'] < vmdk.capacity_in_bytes / units.Gi):
             reason = _("Unable to shrink disk.")
             raise exception.InstanceFaultRollback(

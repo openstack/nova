@@ -107,7 +107,7 @@ def _vm_ref_cache(id, func, session, data):
 def vm_ref_cache_from_instance(func):
     @functools.wraps(func)
     def wrapper(session, instance):
-        id = instance['uuid']
+        id = instance.uuid
         return _vm_ref_cache(id, func, session, instance)
     return wrapper
 
@@ -196,8 +196,8 @@ def get_vm_create_spec(client_factory, instance, name, data_store_name,
     tools_info.beforeGuestReboot = True
 
     config_spec.tools = tools_info
-    config_spec.numCPUs = int(instance['vcpus'])
-    config_spec.memoryMB = int(instance['memory_mb'])
+    config_spec.numCPUs = int(instance.vcpus)
+    config_spec.memoryMB = int(instance.memory_mb)
 
     # Configure cpu information
     if extra_specs.has_cpu_limits():
@@ -217,7 +217,7 @@ def get_vm_create_spec(client_factory, instance, name, data_store_name,
     extra_config = []
     opt = client_factory.create('ns0:OptionValue')
     opt.key = "nvp.vm-uuid"
-    opt.value = instance['uuid']
+    opt.value = instance.uuid
     extra_config.append(opt)
 
     port_index = 0
@@ -961,9 +961,9 @@ def _get_vm_ref_from_extraconfig(session, instance_uuid):
 @vm_ref_cache_from_instance
 def get_vm_ref(session, instance):
     """Get reference to the VM through uuid or vm name."""
-    uuid = instance['uuid']
+    uuid = instance.uuid
     vm_ref = (search_vm_ref_by_identifier(session, uuid) or
-              _get_vm_ref_from_name(session, instance['name']))
+              _get_vm_ref_from_name(session, instance.name))
     if vm_ref is None:
         raise exception.InstanceNotFound(instance_id=uuid)
     return vm_ref

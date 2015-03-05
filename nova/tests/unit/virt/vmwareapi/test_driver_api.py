@@ -244,7 +244,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.fake_image_uuid = self.image['id']
         nova.tests.unit.image.fake.stub_out_image_service(self.stubs)
         self.vnc_host = 'ha-host'
-        self.instance_without_compute = {'node': None,
+        self.instance_without_compute = fake_instance.fake_instance_obj(None,
+                                        **{'node': None,
                                          'vm_state': 'building',
                                          'project_id': 'fake',
                                          'user_id': 'fake',
@@ -256,7 +257,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                                             {'address': 'de:ad:be:ef:be:ef'}
                                          ],
                                          'memory_mb': 8192,
-                                         'instance_type': 'm1.large',
+                                         'instance_type_id': 2,
                                          'vcpus': 4,
                                          'root_gb': 80,
                                          'image_ref': self.image['id'],
@@ -266,7 +267,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                                          'reservation_id': 'r-3t8muvr0',
                                          'id': 1,
                                          'uuid': 'fake-uuid',
-                                         'metadata': []}
+                                         'metadata': []})
 
     def tearDown(self):
         super(VMwareAPIVMTestCase, self).tearDown()
@@ -428,9 +429,11 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         uuid = uuid if uuid else self.uuid
         node = node if node else self.instance_node
         name = name if node else '1'
-        return self.conn.get_info({'uuid': uuid,
-                                   'name': name,
-                                   'node': node})
+        return self.conn.get_info(fake_instance.fake_instance_obj(
+            None,
+            **{'uuid': uuid,
+               'name': name,
+               'node': node}))
 
     def _check_vm_record(self, num_instances=1, powered_on=True, uuid=None):
         """Check if the spawned VM's properties correspond to the instance in
@@ -495,7 +498,9 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
     def test_instance_exists(self):
         self._create_vm()
         self.assertTrue(self.conn.instance_exists(self.instance))
-        invalid_instance = dict(uuid='foo', name='bar', node=self.node_name)
+        invalid_instance = fake_instance.fake_instance_obj(None, uuid='foo',
+                                                           name='bar',
+                                                           node=self.node_name)
         self.assertFalse(self.conn.instance_exists(invalid_instance))
 
     def test_list_instances_1(self):
@@ -1650,9 +1655,12 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                     'cpuReservation': 0, 'overallCpuDemand': 0,
                     'numVirtualDisks': 1, 'hostMemoryUsage': 141}
         expected = {'vmware:' + k: v for k, v in expected.items()}
+        instance = fake_instance.fake_instance_obj(None,
+                                                   name=1,
+                                                   uuid=self.uuid,
+                                                   node=self.instance_node)
         self.assertThat(
-                self.conn.get_diagnostics({'name': 1, 'uuid': self.uuid,
-                                           'node': self.instance_node}),
+                self.conn.get_diagnostics(instance),
                 matchers.DictMatches(expected))
 
     def test_get_instance_diagnostics(self):
@@ -1666,9 +1674,12 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                     'cpu_details': [],
                     'disk_details': [],
                     'hypervisor_os': 'esxi',
-                    'config_drive': False}
-        actual = self.conn.get_instance_diagnostics(
-                {'name': 1, 'uuid': self.uuid, 'node': self.instance_node})
+                    'config_drive': 'False'}
+        instance = objects.Instance(uuid=self.uuid,
+                                    config_drive=False,
+                                    system_metadata={},
+                                    node=self.instance_node)
+        actual = self.conn.get_instance_diagnostics(instance)
         self.assertThat(actual.serialize(), matchers.DictMatches(expected))
 
     def test_get_console_output(self):

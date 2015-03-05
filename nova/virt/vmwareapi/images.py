@@ -238,7 +238,7 @@ def upload_iso_to_datastore(iso_path, instance, **kwargs):
 def fetch_image(context, instance, host, port, dc_name, ds_name, file_path,
                 cookies=None):
     """Download image from the glance image server."""
-    image_ref = instance['image_ref']
+    image_ref = instance.image_ref
     LOG.debug("Downloading image file data %(image_ref)s to the "
               "data store %(data_store_name)s",
               {'image_ref': image_ref,
@@ -360,7 +360,7 @@ def fetch_image_stream_optimized(context, instance, session, vm_name,
     imported_vm_ref = write_handle.get_imported_vm()
 
     LOG.info(_LI("Downloaded image file data %(image_ref)s"),
-             {'image_ref': instance['image_ref']}, instance=instance)
+             {'image_ref': instance.image_ref}, instance=instance)
     session._call_method(session.vim, "UnregisterVM", imported_vm_ref)
     LOG.info(_LI("The imported VM was unregistered"), instance=instance)
 

@@ -44,7 +44,7 @@ class VMwareVolumeOps(object):
                           disk_size=None, linked_clone=False,
                           device_name=None):
         """Attach disk to VM by reconfiguration."""
-        instance_name = instance['name']
+        instance_name = instance.name
         client_factory = self._session.vim.client.factory
         devices = self._session._call_method(vim_util,
                                     "get_dynamic_property", vm_ref,
@@ -104,7 +104,7 @@ class VMwareVolumeOps(object):
     def detach_disk_from_vm(self, vm_ref, instance, device,
                             destroy_disk=False):
         """Detach disk from VM by reconfiguration."""
-        instance_name = instance['name']
+        instance_name = instance.name
         client_factory = self._session.vim.client.factory
         vmdk_detach_config_spec = vm_util.get_vmdk_detach_config_spec(
                                     client_factory, device, destroy_disk)

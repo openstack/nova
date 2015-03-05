@@ -467,7 +467,7 @@ class VMwareVCDriver(driver.ComputeDriver):
               admin_password, network_info=None, block_device_info=None,
               flavor=None):
         """Create VM instance."""
-        _vmops = self._get_vmops_for_compute_node(instance['node'])
+        _vmops = self._get_vmops_for_compute_node(instance.node)
         _vmops.spawn(context, instance, image_meta, injected_files,
               admin_password, network_info, block_device_info,
               flavor=flavor)
@@ -475,14 +475,14 @@ class VMwareVCDriver(driver.ComputeDriver):
     def attach_volume(self, context, connection_info, instance, mountpoint,
                       disk_bus=None, device_type=None, encryption=None):
         """Attach volume storage to VM instance."""
-        _volumeops = self._get_volumeops_for_compute_node(instance['node'])
+        _volumeops = self._get_volumeops_for_compute_node(instance.node)
         return _volumeops.attach_volume(connection_info,
                                         instance)
 
     def detach_volume(self, connection_info, instance, mountpoint,
                       encryption=None):
         """Detach volume storage to VM instance."""
-        _volumeops = self._get_volumeops_for_compute_node(instance['node'])
+        _volumeops = self._get_volumeops_for_compute_node(instance.node)
         return _volumeops.detach_volume(connection_info,
                                         instance)
 
@@ -510,7 +510,7 @@ class VMwareVCDriver(driver.ComputeDriver):
         # Destroy gets triggered when Resource Claim in resource_tracker
         # is not successful. When resource claim is not successful,
         # node is not set in instance. Perform destroy only if node is set
-        if not instance['node']:
+        if not instance.node:
             return
 
         self._vmops.destroy(instance, destroy_disks)
@@ -605,12 +605,12 @@ class VMwareVCDriver(driver.ComputeDriver):
         # Running instances per cluster
         cluster_instances = {}
         for instance in all_instances:
-            instances = cluster_instances.get(instance['node'])
+            instances = cluster_instances.get(instance.node)
             if instances:
                 instances.append(instance)
             else:
                 instances = [instance]
-            cluster_instances[instance['node']] = instances
+            cluster_instances[instance.node] = instances
 
         # Invoke the image aging per cluster
         for resource in self._resources.keys():

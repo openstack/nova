@@ -47,6 +47,9 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         stubs.set_stubs(self.stubs)
         vm_util.vm_refs_cache_reset()
 
+    def fake_instance_obj(self, updates):
+        return fake_instance.fake_instance_obj(None, **updates)
+
     def _test_get_stats_from_cluster(self, connection_state="connected",
                                      maintenance_mode=False):
         ManagedObjectRefs = [fake.ManagedObjectReference("host1",
@@ -459,9 +462,9 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
 
     def test_get_vm_create_spec(self):
         instance_uuid = uuidutils.generate_uuid()
-        fake_instance = {'id': 7, 'name': 'fake!',
+        fake_instance = self.fake_instance_obj({'id': 7, 'name': 'fake!',
                          'uuid': instance_uuid,
-                         'vcpus': 2, 'memory_mb': 2048}
+                         'vcpus': 2, 'memory_mb': 2048})
         extra_specs = vm_util.ExtraSpecs()
         fake_factory = fake.FakeFactory()
         result = vm_util.get_vm_create_spec(fake_factory,
@@ -502,9 +505,9 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
 
     def test_get_vm_create_spec_with_allocations(self):
         instance_uuid = uuidutils.generate_uuid()
-        fake_instance = {'id': 7, 'name': 'fake!',
+        fake_instance = self.fake_instance_obj({'id': 7, 'name': 'fake!',
                          'uuid': instance_uuid,
-                         'vcpus': 2, 'memory_mb': 2048}
+                         'vcpus': 2, 'memory_mb': 2048})
         cpu_limits = vm_util.CpuLimits(cpu_limit=7,
                                        cpu_reservation=6)
         extra_specs = vm_util.ExtraSpecs(cpu_limits=cpu_limits)
@@ -553,9 +556,9 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
 
     def test_get_vm_create_spec_with_limit(self):
         instance_uuid = uuidutils.generate_uuid()
-        fake_instance = {'id': 7, 'name': 'fake!',
+        fake_instance = self.fake_instance_obj({'id': 7, 'name': 'fake!',
                          'uuid': instance_uuid,
-                         'vcpus': 2, 'memory_mb': 2048}
+                         'vcpus': 2, 'memory_mb': 2048})
         cpu_limits = vm_util.CpuLimits(cpu_limit=7)
         extra_specs = vm_util.ExtraSpecs(cpu_limits=cpu_limits)
         fake_factory = fake.FakeFactory()
@@ -605,10 +608,9 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
 
     def test_get_vm_create_spec_with_share(self):
         instance_uuid = uuidutils.generate_uuid()
-        fake_instance = {'id': 7, 'name': 'fake!',
+        fake_instance = self.fake_instance_obj({'id': 7, 'name': 'fake!',
                          'uuid': instance_uuid,
-                         'vcpus': 2, 'memory_mb': 2048}
-
+                         'vcpus': 2, 'memory_mb': 2048})
         cpu_limits = vm_util.CpuLimits(cpu_shares_level='high')
         extra_specs = vm_util.ExtraSpecs(cpu_limits=cpu_limits)
         fake_factory = fake.FakeFactory()
@@ -659,9 +661,9 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
 
     def test_get_vm_create_spec_with_share_custom(self):
         instance_uuid = uuidutils.generate_uuid()
-        fake_instance = {'id': 7, 'name': 'fake!',
+        fake_instance = self.fake_instance_obj({'id': 7, 'name': 'fake!',
                          'uuid': instance_uuid,
-                         'vcpus': 2, 'memory_mb': 2048}
+                         'vcpus': 2, 'memory_mb': 2048})
         cpu_limits = vm_util.CpuLimits(cpu_shares_level='custom',
                                        cpu_shares_share=1948)
         extra_specs = vm_util.ExtraSpecs(cpu_limits=cpu_limits)
@@ -1123,9 +1125,9 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
     def test_get_vm_create_spec_updated_hw_version(self):
         extra_specs = vm_util.ExtraSpecs(hw_version='vmx-08')
         instance_uuid = uuidutils.generate_uuid()
-        fake_instance = {'id': 7, 'name': 'fake!',
+        fake_instance = self.fake_instance_obj({'id': 7, 'name': 'fake!',
                          'uuid': instance_uuid,
-                         'vcpus': 2, 'memory_mb': 2048}
+                         'vcpus': 2, 'memory_mb': 2048})
         result = vm_util.get_vm_create_spec(fake.FakeFactory(),
                                             fake_instance, instance_uuid,
                                             'fake-datastore', [],
@@ -1134,9 +1136,9 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
 
     def test_vm_create_spec_with_profile_spec(self):
         instance_uuid = uuidutils.generate_uuid()
-        fake_instance = {'id': 7, 'name': 'fake!',
+        fake_instance = self.fake_instance_obj({'id': 7, 'name': 'fake!',
                          'uuid': instance_uuid,
-                         'vcpus': 2, 'memory_mb': 2048}
+                         'vcpus': 2, 'memory_mb': 2048})
         datastore = ds_util.Datastore('fake-ds-ref', 'fake-ds-name')
         extra_specs = vm_util.ExtraSpecs()
         create_spec = vm_util.get_vm_create_spec(fake.FakeFactory(),
