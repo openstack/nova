@@ -86,6 +86,11 @@ def not_equal(*values):
     return IMPL.not_equal(*values)
 
 
+def create_context_manager(connection):
+    """Return a context manager for a cell database connection."""
+    return IMPL.create_context_manager(connection=connection)
+
+
 ###################
 
 

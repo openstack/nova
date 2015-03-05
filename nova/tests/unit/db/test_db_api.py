@@ -1070,6 +1070,13 @@ class SqlAlchemyDbApiNoDbTestCase(test.NoDBTestCase):
         mock_create_facade.assert_called_once_with()
         mock_facade.get_engine.assert_called_once_with(use_slave=False)
 
+    def test_get_db_conf_with_connection(self):
+        mock_conf_group = mock.MagicMock()
+        mock_conf_group.connection = 'fakemain://'
+        db_conf = sqlalchemy_api._get_db_conf(mock_conf_group,
+                                              connection='fake://')
+        self.assertEqual('fake://', db_conf['connection'])
+
     @mock.patch.object(sqlalchemy_api.api_context_manager._factory,
                        'get_legacy_facade')
     def test_get_api_engine(self, mock_create_facade):
