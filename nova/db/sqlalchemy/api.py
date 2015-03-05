@@ -457,7 +457,6 @@ def service_get_by_args(context, host, binary):
     return result
 
 
-@require_admin_context
 def service_create(context, values):
     service_ref = models.Service()
     service_ref.update(values)
