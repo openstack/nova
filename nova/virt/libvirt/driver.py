@@ -4944,7 +4944,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     (disk_available_gb * units.Ki) - CONF.reserved_host_disk_mb
 
         # Compare CPU
-        if not instance.vcpu_model:
+        if not instance.vcpu_model or not instance.vcpu_model.model:
             source_cpu_info = src_compute_info['cpu_info']
             self._compare_cpu(None, source_cpu_info)
         else:
