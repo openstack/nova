@@ -250,9 +250,9 @@ class NetworkCreateExceptionsTestV21(test.TestCase):
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
         self.new_network = copy.deepcopy(NEW_NETWORK)
-        self.req = fakes.HTTPRequest.blank('')
 
     def _setup(self):
+        self.req = fakes.HTTPRequest.blank('')
         self.controller = networks_v21.NetworkController(self.PassthroughAPI())
 
     def test_network_create_bad_vlan(self):
@@ -314,6 +314,7 @@ class NetworkCreateExceptionsTestV2(NetworkCreateExceptionsTestV21):
     def _setup(self):
         ext_mgr = extensions.ExtensionManager()
         ext_mgr.extensions = {'os-extended-networks': 'fake'}
+        self.req = fakes.HTTPRequest.blank('', use_admin_context=True)
 
         self.controller = networks.NetworkController(
                 self.PassthroughAPI(), ext_mgr)
@@ -533,6 +534,12 @@ class NetworksTestV2(NetworksTestV21):
             exception.AdminRequired,
             self.controller.add,
             self.non_admin_req, body={'id': uuid})
+
+    def test_network_create_with_non_admin(self):
+        self.assertRaises(
+            exception.AdminRequired,
+            self.controller.create,
+            self.non_admin_req, body=self.new_network)
 
 
 class NetworksAssociateTestV21(test.NoDBTestCase):

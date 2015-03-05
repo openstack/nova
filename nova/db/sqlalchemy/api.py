@@ -2771,7 +2771,6 @@ def network_count_reserved_ips(context, network_id):
                     count()
 
 
-@require_admin_context
 def network_create_safe(context, values):
     network_ref = models.Network()
     network_ref['uuid'] = str(uuid.uuid4())
