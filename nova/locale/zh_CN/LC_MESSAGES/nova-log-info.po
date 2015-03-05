@@ -9,8 +9,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-03-02 06:57+0000\n"
-"PO-Revision-Date: 2015-02-27 23:53+0000\n"
+"POT-Creation-Date: 2015-03-05 06:16+0000\n"
+"PO-Revision-Date: 2015-03-03 21:36+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: Chinese (China) (http://www.transifex.com/projects/p/nova/"
 "language/zh_CN/)\n"
@@ -355,129 +355,129 @@ msgstr "nova-compute重启后，实例正在重启。"
 msgid "VM %(state)s (Lifecycle Event)"
 msgstr ""
 
-#: nova/compute/manager.py:1653 nova/compute/manager.py:2058
+#: nova/compute/manager.py:1638 nova/compute/manager.py:2043
 msgid "Starting instance..."
 msgstr "正在启动虚拟机"
 
-#: nova/compute/manager.py:2430
+#: nova/compute/manager.py:2415
 #, python-format
 msgid "%(action_str)s instance"
 msgstr "%(action_str)s 实例"
 
-#: nova/compute/manager.py:2591
+#: nova/compute/manager.py:2576
 msgid "Instance disappeared during terminate"
 msgstr ""
 
-#: nova/compute/manager.py:2635
+#: nova/compute/manager.py:2620
 msgid "Instance is already powered off in the hypervisor when stop is called."
 msgstr ""
 
-#: nova/compute/manager.py:2798
+#: nova/compute/manager.py:2783
 msgid "Rebuilding instance"
 msgstr "正在重建实例"
 
-#: nova/compute/manager.py:2815
+#: nova/compute/manager.py:2800
 msgid "disk on shared storage, recreating using existing disk"
 msgstr "磁盘在共享存储器上，正在使用现有磁盘来重新创建"
 
-#: nova/compute/manager.py:2819
+#: nova/compute/manager.py:2804
 #, python-format
 msgid "disk not on shared storage, rebuilding from: '%s'"
 msgstr ""
 
-#: nova/compute/manager.py:2907
+#: nova/compute/manager.py:2892
 #, python-format
 msgid "bringing vm to original state: '%s'"
 msgstr "正在将 vm 置于原始状态：“%s”"
 
-#: nova/compute/manager.py:2938
+#: nova/compute/manager.py:2923
 #, python-format
 msgid "Detaching from volume api: %s"
 msgstr "正在从卷 API 断开连接：%s"
 
-#: nova/compute/manager.py:2965
+#: nova/compute/manager.py:2950
 msgid "Rebooting instance"
 msgstr "正在重新引导实例"
 
-#: nova/compute/manager.py:3103
+#: nova/compute/manager.py:3088
 msgid "instance snapshotting"
 msgstr "正在对实例生成快照"
 
-#: nova/compute/manager.py:3238
+#: nova/compute/manager.py:3223
 msgid "Root password set"
 msgstr "已设置 root 用户密码"
 
-#: nova/compute/manager.py:3286
+#: nova/compute/manager.py:3271
 #, python-format
 msgid "injecting file to %s"
 msgstr ""
 
-#: nova/compute/manager.py:3324
+#: nova/compute/manager.py:3309
 msgid "Rescuing"
 msgstr "正在进行拯救"
 
-#: nova/compute/manager.py:3373
+#: nova/compute/manager.py:3358
 msgid "Unrescuing"
 msgstr "正在取消拯救"
 
-#: nova/compute/manager.py:3451
+#: nova/compute/manager.py:3436
 #, python-format
 msgid "Migration %s is already confirmed"
 msgstr ""
 
-#: nova/compute/manager.py:3472
+#: nova/compute/manager.py:3457
 msgid "Instance is not found during confirmation"
 msgstr ""
 
-#: nova/compute/manager.py:3660
+#: nova/compute/manager.py:3645
 #, python-format
 msgid "Updating instance to original state: '%s'"
 msgstr ""
 
-#: nova/compute/manager.py:3707
+#: nova/compute/manager.py:3692
 msgid "Migrating"
 msgstr "正在迁移"
 
-#: nova/compute/manager.py:4049
+#: nova/compute/manager.py:4034
 msgid "Pausing"
 msgstr "正在暂停"
 
-#: nova/compute/manager.py:4065
+#: nova/compute/manager.py:4050
 msgid "Unpausing"
 msgstr "正在取消暂停"
 
-#: nova/compute/manager.py:4103 nova/compute/manager.py:4120
+#: nova/compute/manager.py:4088 nova/compute/manager.py:4105
 msgid "Retrieving diagnostics"
 msgstr "正在检索诊断"
 
-#: nova/compute/manager.py:4159
+#: nova/compute/manager.py:4144
 msgid "Resuming"
 msgstr "正在进行恢复"
 
-#: nova/compute/manager.py:4395
+#: nova/compute/manager.py:4380
 msgid "Get console output"
 msgstr "请获取控制台输出"
 
-#: nova/compute/manager.py:4640
+#: nova/compute/manager.py:4625
 #, python-format
 msgid "Attaching volume %(volume_id)s to %(mountpoint)s"
 msgstr "正在把卷 %(volume_id)s 附加到 %(mountpoint)s"
 
-#: nova/compute/manager.py:4665
+#: nova/compute/manager.py:4650
 #, python-format
 msgid "Detach volume %(volume_id)s from mountpoint %(mp)s"
 msgstr "卷 %(volume_id)s 从挂载点 %(mp)s 分离"
 
-#: nova/compute/manager.py:5126
+#: nova/compute/manager.py:5111
 msgid "_post_live_migration() is started.."
 msgstr "已启动 _post_live_migration()。"
 
-#: nova/compute/manager.py:5206
+#: nova/compute/manager.py:5191
 #, python-format
 msgid "Migrating instance to %s finished successfully."
 msgstr ""
 
-#: nova/compute/manager.py:5208
+#: nova/compute/manager.py:5193
 msgid ""
 "You may see the error \"libvirt: QEMU error: Domain not found: no domain "
 "with matching name.\" This error can be safely ignored."
@@ -485,30 +485,30 @@ msgstr ""
 "你会看到错误“libvirt: QEMU error: Domain not found: no domain with matching "
 "name。”这个错误可以放心的忽略。"
 
-#: nova/compute/manager.py:5233
+#: nova/compute/manager.py:5218
 msgid "Post operation of migration started"
 msgstr "已启动迁移的后操作"
 
-#: nova/compute/manager.py:5497
+#: nova/compute/manager.py:5482
 #, python-format
 msgid ""
 "Found %(migration_count)d unconfirmed migrations older than "
 "%(confirm_window)d seconds"
 msgstr "发现 %(migration_count)d 个超过 %(confirm_window)d 秒未经确认的迁移"
 
-#: nova/compute/manager.py:5512
+#: nova/compute/manager.py:5497
 #, python-format
 msgid ""
 "Automatically confirming migration %(migration_id)s for instance "
 "%(instance_uuid)s"
 msgstr "正在自动为实例 %(instance_uuid)s 确认迁移 %(migration_id)s"
 
-#: nova/compute/manager.py:5566
+#: nova/compute/manager.py:5551
 #, python-format
 msgid "Error auto-confirming resize: %s. Will retry later."
 msgstr ""
 
-#: nova/compute/manager.py:5614
+#: nova/compute/manager.py:5599
 #, python-format
 msgid ""
 "Running instance usage audit for host %(host)s from %(begin_time)s to "
@@ -517,52 +517,52 @@ msgstr ""
 "正在为主机 %(host)s 运行实例使用量审计（从 %(begin_time)s 至 %(end_time)s）。"
 "存在 %(number_instances)s 个实例。"
 
-#: nova/compute/manager.py:5662
+#: nova/compute/manager.py:5647
 msgid "Updating bandwidth usage cache"
 msgstr "更新带宽使用缓存"
 
-#: nova/compute/manager.py:5843 nova/compute/manager.py:5900
+#: nova/compute/manager.py:5828 nova/compute/manager.py:5885
 #, python-format
 msgid ""
 "During sync_power_state the instance has a pending task (%(task)s). Skip."
 msgstr ""
 
-#: nova/compute/manager.py:5887
+#: nova/compute/manager.py:5872
 #, python-format
 msgid ""
 "During the sync_power process the instance has moved from host %(src)s to "
 "host %(dst)s"
 msgstr "在 sync_power 过程中，实例已从主机 %(src)s 移到主机 %(dst)s"
 
-#: nova/compute/manager.py:6046
+#: nova/compute/manager.py:6031
 msgid "Reclaiming deleted instance"
 msgstr "回收删除的实例"
 
-#: nova/compute/manager.py:6076
+#: nova/compute/manager.py:6061
 #, python-format
 msgid "Deleting orphan compute node %s"
 msgstr ""
 
-#: nova/compute/manager.py:6128
+#: nova/compute/manager.py:6113
 #, python-format
 msgid ""
 "Powering off instance with name label '%s' which is marked as DELETED but "
 "still present on host."
 msgstr ""
 
-#: nova/compute/manager.py:6146
+#: nova/compute/manager.py:6131
 #, python-format
 msgid ""
 "Destroying instance with name label '%s' which is marked as DELETED but "
 "still present on host."
 msgstr ""
 
-#: nova/compute/manager.py:6194
+#: nova/compute/manager.py:6179
 #, python-format
 msgid "Setting instance back to %(state)s after: %(error)s"
 msgstr ""
 
-#: nova/compute/manager.py:6204
+#: nova/compute/manager.py:6189
 #, python-format
 msgid "Setting instance back to ACTIVE after: %s"
 msgstr ""
@@ -633,7 +633,7 @@ msgstr ""
 msgid "Checking Token: %(token)s, %(token_valid)s"
 msgstr ""
 
-#: nova/db/sqlalchemy/api.py:3326
+#: nova/db/sqlalchemy/api.py:3342
 #, python-format
 msgid ""
 "quota_usages out of sync, updating. project_id: %(project_id)s, user_id: "
@@ -641,7 +641,7 @@ msgid ""
 "usage: %(in_use)s"
 msgstr ""
 
-#: nova/db/sqlalchemy/api.py:5125
+#: nova/db/sqlalchemy/api.py:5141
 #, python-format
 msgid ""
 "Volume(%s) has lower stats then what is in the database. Instance must have "
@@ -753,11 +753,6 @@ msgstr "正在跳过周期性任务 %(task)s，因为其时间间隔为负"
 msgid "Skipping periodic task %(task)s because it is disabled"
 msgstr "正在跳过周期性任务 %(task)s，因为它已禁用"
 
-#: nova/openstack/common/policy.py:275
-#, python-format
-msgid "Can not find policy directory: %s"
-msgstr "无法找到策略目录:%s"
-
 #: nova/openstack/common/service.py:173
 #, python-format
 msgid "Caught %s, exiting"
@@ -820,7 +815,7 @@ msgstr "正在从调度程序除去已终止的计算节点 %(host)s:%(node)s"
 msgid "Compute_service record updated for %s"
 msgstr ""
 
-#: nova/scheduler/filters/utils.py:66
+#: nova/scheduler/filters/utils.py:71
 #, python-format
 msgid "%(num_values)d values found, of which the minimum value will be used."
 msgstr ""
@@ -840,7 +835,7 @@ msgstr "卷 %(volume_id)s 正在 %(mountpoint)s 上启动"
 msgid "Loading compute driver '%s'"
 msgstr "正在装入计算驱动程序“%s”"
 
-#: nova/virt/firewall.py:173 nova/virt/libvirt/firewall.py:344
+#: nova/virt/firewall.py:173 nova/virt/libvirt/firewall.py:345
 msgid "Attempted to unfilter instance which is not filtered"
 msgstr "试图不过滤没有过滤的实例"
 
@@ -875,7 +870,7 @@ msgstr "找不到 ISCSI 发起方名称。正在选择缺省的名称"
 msgid "Spawning new instance"
 msgstr "正在衍生新实例"
 
-#: nova/virt/hyperv/vmops.py:378 nova/virt/vmwareapi/vmops.py:658
+#: nova/virt/hyperv/vmops.py:378 nova/virt/vmwareapi/vmops.py:679
 msgid "Using config drive for instance"
 msgstr ""
 
@@ -1012,37 +1007,37 @@ msgstr "对于实例 %s，在 libvirt 中找不到域。无法获取设备的块
 msgid "Instance launched has CPU info: %s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:5521
+#: nova/virt/libvirt/driver.py:5522
 #, python-format
 msgid "Error %(ex)s, migration failed"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:5562
+#: nova/virt/libvirt/driver.py:5563
 #, python-format
 msgid ""
 "Migration running for %(secs)d secs, memory %(progress)d%% remaining; (bytes "
 "processed=%(processed)d, remaining=%(remaining)d, total=%(total)d)"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:5580
+#: nova/virt/libvirt/driver.py:5581
 msgid "Migration operation has completed"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:6256
+#: nova/virt/libvirt/driver.py:6262
 msgid "Instance running successfully."
 msgstr "实例正在成功运行。"
 
-#: nova/virt/libvirt/driver.py:6605
+#: nova/virt/libvirt/driver.py:6611
 #, python-format
 msgid "Deleting instance files %s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:6618
+#: nova/virt/libvirt/driver.py:6624
 #, python-format
 msgid "Deletion of %s failed"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:6622
+#: nova/virt/libvirt/driver.py:6628
 #, python-format
 msgid "Deletion of %s complete"
 msgstr ""
@@ -1198,20 +1193,20 @@ msgstr ""
 msgid "Destroyed the VM"
 msgstr "已销毁 VM"
 
-#: nova/virt/vmwareapi/vmops.py:762
+#: nova/virt/vmwareapi/vmops.py:783
 msgid "Created linked-clone VM from snapshot"
 msgstr ""
 
-#: nova/virt/vmwareapi/vmops.py:1297 nova/virt/xenapi/vmops.py:1669
+#: nova/virt/vmwareapi/vmops.py:1318 nova/virt/xenapi/vmops.py:1677
 #, python-format
 msgid "Found %(instance_count)d hung reboots older than %(timeout)d seconds"
 msgstr "找到%(instance_count)d个超过%(timeout)d秒悬挂的重启"
 
-#: nova/virt/vmwareapi/vmops.py:1301 nova/virt/xenapi/vmops.py:1673
+#: nova/virt/vmwareapi/vmops.py:1322 nova/virt/xenapi/vmops.py:1681
 msgid "Automatically hard rebooting"
 msgstr "正在自动执行硬重新引导"
 
-#: nova/virt/vmwareapi/volumeops.py:441
+#: nova/virt/vmwareapi/volumeops.py:445
 #, python-format
 msgid ""
 "The volume's backing has been relocated to %s. Need to consolidate backing "
