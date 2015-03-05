@@ -2881,7 +2881,6 @@ def _network_get_query(context, session=None):
                        read_deleted="no")
 
 
-@require_admin_context
 def network_get_by_uuid(context, uuid):
     result = _network_get_query(context).filter_by(uuid=uuid).first()
 
