@@ -364,12 +364,10 @@ def get_networks_for_instance_from_nw_info(nw_info):
         label = vif['network']['label']
         if label not in networks:
             networks[label] = {'ips': [], 'floating_ips': []}
-
+        for ip in itertools.chain(ips, floaters):
+            ip['mac_address'] = vif['address']
         networks[label]['ips'].extend(ips)
         networks[label]['floating_ips'].extend(floaters)
-        for ip in itertools.chain(networks[label]['ips'],
-                                  networks[label]['floating_ips']):
-            ip['mac_address'] = vif['address']
     return networks
 
 

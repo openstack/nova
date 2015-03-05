@@ -2769,12 +2769,14 @@ class ServersViewBuilderTest(test.TestCase):
         super(ServersViewBuilderTest, self).setUp()
         CONF.set_override('host', 'localhost', group='glance')
         self.flags(use_ipv6=True)
+        nw_cache_info = self._generate_nw_cache_info()
         db_inst = fakes.stub_instance(
             id=1,
             image_ref="5",
             uuid="deadbeef-feed-edee-beef-d0ea7beefedd",
             display_name="test_server",
-            include_fake_metadata=False)
+            include_fake_metadata=False,
+            nw_cache=nw_cache_info)
 
         privates = ['172.19.0.1']
         publics = ['192.168.0.3']
@@ -2797,6 +2799,39 @@ class ServersViewBuilderTest(test.TestCase):
                     self.request.context,
                     expected_attrs=instance_obj.INSTANCE_DEFAULT_FIELDS,
                     **db_inst)
+
+    def _generate_nw_cache_info(self):
+        fixed_ipv4 = ('192.168.1.100', '192.168.2.100', '192.168.3.100')
+        fixed_ipv6 = ('2001:db8:0:1::1',)
+
+        def _ip(ip):
+            return {'address': ip, 'type': 'fixed'}
+
+        nw_cache = [
+            {'address': 'aa:aa:aa:aa:aa:aa',
+             'id': 1,
+             'network': {'bridge': 'br0',
+                         'id': 1,
+                         'label': 'test1',
+                         'subnets': [{'cidr': '192.168.1.0/24',
+                                      'ips': [_ip(fixed_ipv4[0])]},
+                                      {'cidr': 'b33f::/64',
+                                       'ips': [_ip(fixed_ipv6[0])]}]}},
+            {'address': 'bb:bb:bb:bb:bb:bb',
+             'id': 2,
+             'network': {'bridge': 'br0',
+                         'id': 1,
+                         'label': 'test1',
+                         'subnets': [{'cidr': '192.168.2.0/24',
+                                      'ips': [_ip(fixed_ipv4[1])]}]}},
+            {'address': 'cc:cc:cc:cc:cc:cc',
+             'id': 3,
+             'network': {'bridge': 'br0',
+                         'id': 2,
+                         'label': 'test2',
+                         'subnets': [{'cidr': '192.168.3.0/24',
+                                      'ips': [_ip(fixed_ipv4[2])]}]}}]
+        return nw_cache
 
     def test_get_flavor_valid_instance_type(self):
         flavor_bookmark = "http://localhost/flavors/1"
@@ -2892,7 +2927,15 @@ class ServersViewBuilderTest(test.TestCase):
                          'OS-EXT-IPS-MAC:mac_addr': 'aa:aa:aa:aa:aa:aa'},
                         {'version': 6, 'addr': '2001:db8:0:1::1',
                          'OS-EXT-IPS:type': 'fixed',
-                         'OS-EXT-IPS-MAC:mac_addr': 'aa:aa:aa:aa:aa:aa'}
+                         'OS-EXT-IPS-MAC:mac_addr': 'aa:aa:aa:aa:aa:aa'},
+                        {'version': 4, 'addr': '192.168.2.100',
+                         'OS-EXT-IPS:type': 'fixed',
+                         'OS-EXT-IPS-MAC:mac_addr': 'bb:bb:bb:bb:bb:bb'}
+                    ],
+                    'test2': [
+                        {'version': 4, 'addr': '192.168.3.100',
+                         'OS-EXT-IPS:type': 'fixed',
+                         'OS-EXT-IPS-MAC:mac_addr': 'cc:cc:cc:cc:cc:cc'},
                     ]
                 },
                 "metadata": {},
@@ -2956,7 +2999,15 @@ class ServersViewBuilderTest(test.TestCase):
                          'OS-EXT-IPS-MAC:mac_addr': 'aa:aa:aa:aa:aa:aa'},
                         {'version': 6, 'addr': '2001:db8:0:1::1',
                          'OS-EXT-IPS:type': 'fixed',
-                         'OS-EXT-IPS-MAC:mac_addr': 'aa:aa:aa:aa:aa:aa'}
+                         'OS-EXT-IPS-MAC:mac_addr': 'aa:aa:aa:aa:aa:aa'},
+                        {'version': 4, 'addr': '192.168.2.100',
+                         'OS-EXT-IPS:type': 'fixed',
+                         'OS-EXT-IPS-MAC:mac_addr': 'bb:bb:bb:bb:bb:bb'}
+                    ],
+                    'test2': [
+                        {'version': 4, 'addr': '192.168.3.100',
+                         'OS-EXT-IPS:type': 'fixed',
+                         'OS-EXT-IPS-MAC:mac_addr': 'cc:cc:cc:cc:cc:cc'},
                     ]
                 },
                 "metadata": {},
@@ -3108,7 +3159,15 @@ class ServersViewBuilderTest(test.TestCase):
                          'OS-EXT-IPS-MAC:mac_addr': 'aa:aa:aa:aa:aa:aa'},
                         {'version': 6, 'addr': '2001:db8:0:1::1',
                          'OS-EXT-IPS:type': 'fixed',
-                         'OS-EXT-IPS-MAC:mac_addr': 'aa:aa:aa:aa:aa:aa'}
+                         'OS-EXT-IPS-MAC:mac_addr': 'aa:aa:aa:aa:aa:aa'},
+                        {'version': 4, 'addr': '192.168.2.100',
+                         'OS-EXT-IPS:type': 'fixed',
+                         'OS-EXT-IPS-MAC:mac_addr': 'bb:bb:bb:bb:bb:bb'}
+                    ],
+                    'test2': [
+                        {'version': 4, 'addr': '192.168.3.100',
+                         'OS-EXT-IPS:type': 'fixed',
+                         'OS-EXT-IPS-MAC:mac_addr': 'cc:cc:cc:cc:cc:cc'},
                     ]
                 },
                 "metadata": {},
@@ -3176,6 +3235,14 @@ class ServersViewBuilderTest(test.TestCase):
                         {'version': 6, 'addr': '2001:db8:0:1::1',
                          'OS-EXT-IPS:type': 'fixed',
                          'OS-EXT-IPS-MAC:mac_addr': 'aa:aa:aa:aa:aa:aa'},
+                        {'version': 4, 'addr': '192.168.2.100',
+                         'OS-EXT-IPS:type': 'fixed',
+                         'OS-EXT-IPS-MAC:mac_addr': 'bb:bb:bb:bb:bb:bb'}
+                    ],
+                    'test2': [
+                        {'version': 4, 'addr': '192.168.3.100',
+                         'OS-EXT-IPS:type': 'fixed',
+                         'OS-EXT-IPS-MAC:mac_addr': 'cc:cc:cc:cc:cc:cc'},
                     ]
                 },
                 "metadata": {"Open": "Stack"},
