@@ -19,22 +19,35 @@ from oslo_config import cfg
 from oslo_serialization import jsonutils
 
 from nova.openstack.common import policy as common_policy
+from nova import paths
 import nova.policy
 from nova.tests.unit import fake_policy
 
 CONF = cfg.CONF
 
 
-class PolicyFixture(fixtures.Fixture):
+class RealPolicyFixture(fixtures.Fixture):
+    """Load the live policy for tests.
+
+    A base policy fixture that starts with the assumption that you'd
+    like to load and enforce the shipped default policy in tests.
+
+    Provides interfaces to tinker with both the contents and location
+    of the policy file before loading to allow overrides. To do this
+    implement ``_prepare_policy`` in the subclass, and adjust the
+    ``policy_file`` accordingly.
+
+    """
+    def _prepare_policy(self):
+        """Allow changing of the policy before we get started"""
+        pass
 
     def setUp(self):
-        super(PolicyFixture, self).setUp()
-        self.policy_dir = self.useFixture(fixtures.TempDir())
-        self.policy_file_name = os.path.join(self.policy_dir.path,
-                                             'policy.json')
-        with open(self.policy_file_name, 'w') as policy_file:
-            policy_file.write(fake_policy.policy_data)
-        CONF.set_override('policy_file', self.policy_file_name)
+        super(RealPolicyFixture, self).setUp()
+        # policy_file can be overridden by subclasses
+        self.policy_file = paths.state_path_def('etc/nova/policy.json')
+        self._prepare_policy()
+        CONF.set_override('policy_file', self.policy_file)
         nova.policy.reset()
         nova.policy.init()
         self.addCleanup(nova.policy.reset)
@@ -45,17 +58,47 @@ class PolicyFixture(fixtures.Fixture):
                           for k, v in rules.items()})
 
 
-class RoleBasedPolicyFixture(fixtures.Fixture):
+class PolicyFixture(RealPolicyFixture):
+    """Load a fake policy from nova.tests.unit.fake_policy
+
+    This overrides the policy with a completely fake and synthetic
+    policy file.
+
+    NOTE(sdague): the use of this is deprecated, and we should unwind
+    the tests so that they can function with the real policy. This is
+    mostly legacy because our default test instances and default test
+    contexts don't match up. It appears that in many cases fake_policy
+    was just modified to whatever makes tests pass, which makes it
+    dangerous to be used in tree. Long term a NullPolicy fixture might
+    be better in those cases.
+
+    """
+    def _prepare_policy(self):
+        self.policy_dir = self.useFixture(fixtures.TempDir())
+        self.policy_file = os.path.join(self.policy_dir.path,
+                                        'policy.json')
+        with open(self.policy_file, 'w') as f:
+            f.write(fake_policy.policy_data)
+
+
+class RoleBasedPolicyFixture(RealPolicyFixture):
+    """Load a modified policy which allows all actions only be a single roll.
+
+    This fixture can be used for testing role based permissions as it
+    provides a version of the policy which stomps over all previous
+    declaration and makes every action only available to a single
+    role.
+
+    NOTE(sdague): we could probably do this simpler by only loading a
+    single default rule.
+
+    """
 
     def __init__(self, role="admin", *args, **kwargs):
         super(RoleBasedPolicyFixture, self).__init__(*args, **kwargs)
         self.role = role
 
-    def setUp(self):
-        """Copy live policy.json file and convert all actions to
-           allow users of the specified role only
-        """
-        super(RoleBasedPolicyFixture, self).setUp()
+    def _prepare_policy(self):
         policy = jsonutils.load(open(CONF.policy_file))
 
         # Convert all actions to require specified role
@@ -63,11 +106,7 @@ class RoleBasedPolicyFixture(fixtures.Fixture):
             policy[action] = 'role:%s' % self.role
 
         self.policy_dir = self.useFixture(fixtures.TempDir())
-        self.policy_file_name = os.path.join(self.policy_dir.path,
+        self.policy_file = os.path.join(self.policy_dir.path,
                                             'policy.json')
-        with open(self.policy_file_name, 'w') as policy_file:
-            jsonutils.dump(policy, policy_file)
-        CONF.set_override('policy_file', self.policy_file_name)
-        nova.policy.reset()
-        nova.policy.init()
-        self.addCleanup(nova.policy.reset)
+        with open(self.policy_file, 'w') as f:
+            jsonutils.dump(policy, f)
