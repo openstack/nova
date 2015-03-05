@@ -1380,7 +1380,7 @@ class FakeVim(object):
             for file in _db_content.get("files"):
                 if file.find(ds_path) != -1:
                     if not file.endswith(ds_path):
-                        path = file.lstrip(dname).split('/')
+                        path = file.replace(dname, '', 1).split('/')
                         if path:
                             matched_files.add(path[0])
             if not matched_files:
