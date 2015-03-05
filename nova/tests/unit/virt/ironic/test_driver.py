@@ -568,23 +568,22 @@ class IronicDriverTestCase(test.NoDBTestCase):
     @mock.patch.object(objects.Instance, 'save')
     @mock.patch.object(loopingcall, 'FixedIntervalLoopingCall')
     @mock.patch.object(FAKE_CLIENT, 'node')
-    @mock.patch.object(objects.Flavor, 'get_by_id')
     @mock.patch.object(ironic_driver.IronicDriver, '_wait_for_active')
     @mock.patch.object(ironic_driver.IronicDriver, '_add_driver_fields')
     @mock.patch.object(ironic_driver.IronicDriver, '_plug_vifs')
     @mock.patch.object(ironic_driver.IronicDriver, '_start_firewall')
     def _test_spawn(self, mock_sf, mock_pvifs, mock_adf, mock_wait_active,
-                    mock_fg_bid, mock_node, mock_looping, mock_save):
+                    mock_node, mock_looping, mock_save):
         node_uuid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
         node = ironic_utils.get_test_node(driver='fake', uuid=node_uuid)
         instance = fake_instance.fake_instance_obj(self.ctx, node=node_uuid)
-        fake_flavor = {'ephemeral_gb': 0}
+        fake_flavor = objects.Flavor(ephemeral_gb=0)
+        instance.flavor = fake_flavor
 
         mock_node.get.return_value = node
         mock_node.validate.return_value = ironic_utils.get_test_validation()
         mock_node.get_by_instance_uuid.return_value = node
         mock_node.set_provision_state.return_value = mock.MagicMock()
-        mock_fg_bid.return_value = fake_flavor
 
         fake_looping_call = FakeLoopingCall()
         mock_looping.return_value = fake_looping_call
@@ -593,8 +592,6 @@ class IronicDriverTestCase(test.NoDBTestCase):
 
         mock_node.get.assert_called_once_with(node_uuid)
         mock_node.validate.assert_called_once_with(node_uuid)
-        mock_fg_bid.assert_called_once_with(self.ctx,
-                                            instance.instance_type_id)
         mock_adf.assert_called_once_with(node, instance, None, fake_flavor)
         mock_pvifs.assert_called_once_with(node, instance, None)
         mock_sf.assert_called_once_with(instance, None)
@@ -631,7 +628,6 @@ class IronicDriverTestCase(test.NoDBTestCase):
     @mock.patch.object(configdrive, 'required_by')
     @mock.patch.object(loopingcall, 'FixedIntervalLoopingCall')
     @mock.patch.object(FAKE_CLIENT, 'node')
-    @mock.patch.object(objects.Flavor, 'get_by_id')
     @mock.patch.object(ironic_driver.IronicDriver, 'destroy')
     @mock.patch.object(ironic_driver.IronicDriver, '_wait_for_active')
     @mock.patch.object(ironic_driver.IronicDriver, '_add_driver_fields')
@@ -639,19 +635,19 @@ class IronicDriverTestCase(test.NoDBTestCase):
     @mock.patch.object(ironic_driver.IronicDriver, '_start_firewall')
     def test_spawn_destroyed_after_failure(self, mock_sf, mock_pvifs, mock_adf,
                                            mock_wait_active, mock_destroy,
-                                           mock_fg_bid, mock_node,
-                                           mock_looping, mock_required_by):
+                                           mock_node, mock_looping,
+                                           mock_required_by):
         mock_required_by.return_value = False
         node_uuid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
         node = ironic_utils.get_test_node(driver='fake', uuid=node_uuid)
+        fake_flavor = objects.Flavor(ephemeral_gb=0)
         instance = fake_instance.fake_instance_obj(self.ctx, node=node_uuid)
-        fake_flavor = {'ephemeral_gb': 0}
+        instance.flavor = fake_flavor
 
         mock_node.get.return_value = node
         mock_node.validate.return_value = ironic_utils.get_test_validation()
         mock_node.get_by_instance_uuid.return_value = node
         mock_node.set_provision_state.return_value = mock.MagicMock()
-        mock_fg_bid.return_value = fake_flavor
 
         fake_looping_call = FakeLoopingCall()
         mock_looping.return_value = fake_looping_call
@@ -705,51 +701,42 @@ class IronicDriverTestCase(test.NoDBTestCase):
         expected_patch = [{'path': '/instance_uuid', 'op': 'remove'}]
         mock_update.assert_called_once_with(node.uuid, expected_patch)
 
-    @mock.patch.object(objects.Flavor, 'get_by_id')
     @mock.patch.object(FAKE_CLIENT.node, 'update')
-    def test__cleanup_deploy_without_flavor(self, mock_update, mock_flavor):
-        self._get_by_id_reads_deleted = False
-
-        def side_effect(context, id):
-            self._get_by_id_reads_deleted = context._read_deleted == 'yes'
-
-        mock_flavor.side_effect = side_effect
-        mock_flavor.return_value = ironic_utils.get_test_flavor(extra_specs={})
+    def test__cleanup_deploy_without_flavor(self, mock_update):
         node = ironic_utils.get_test_node(driver='fake',
                                           instance_uuid=self.instance_uuid)
+        flavor = ironic_utils.get_test_flavor(extra_specs={})
         instance = fake_instance.fake_instance_obj(self.ctx,
                                                    node=node.uuid)
+        instance.flavor = flavor
         self.driver._cleanup_deploy(self.ctx, node, instance, None)
 
-        self.assertTrue(self._get_by_id_reads_deleted,
-                        'Flavor.get_by_id was not called with '
-                        'read_deleted set in the context')
         expected_patch = [{'path': '/instance_uuid', 'op': 'remove'}]
         mock_update.assert_called_once_with(node.uuid, expected_patch)
 
-    @mock.patch.object(objects.Flavor, 'get_by_id')
     @mock.patch.object(FAKE_CLIENT.node, 'update')
-    def test__cleanup_deploy_fail(self, mock_update, mock_flavor):
-        mock_flavor.return_value = ironic_utils.get_test_flavor(extra_specs={})
+    def test__cleanup_deploy_fail(self, mock_update):
         mock_update.side_effect = ironic_exception.BadRequest()
         node = ironic_utils.get_test_node(driver='fake',
                                           instance_uuid=self.instance_uuid)
+        flavor = ironic_utils.get_test_flavor(extra_specs={})
         instance = fake_instance.fake_instance_obj(self.ctx,
                                                    node=node.uuid)
+        instance.flavor = flavor
         self.assertRaises(exception.InstanceTerminationFailure,
                           self.driver._cleanup_deploy,
                           self.ctx, node, instance, None)
 
     @mock.patch.object(configdrive, 'required_by')
     @mock.patch.object(FAKE_CLIENT, 'node')
-    @mock.patch.object(objects.Flavor, 'get_by_id')
-    def test_spawn_node_driver_validation_fail(self, mock_flavor, mock_node,
+    def test_spawn_node_driver_validation_fail(self, mock_node,
                                                mock_required_by):
         mock_required_by.return_value = False
-        mock_flavor.return_value = ironic_utils.get_test_flavor()
         node_uuid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
         node = ironic_utils.get_test_node(driver='fake', uuid=node_uuid)
+        flavor = ironic_utils.get_test_flavor()
         instance = fake_instance.fake_instance_obj(self.ctx, node=node_uuid)
+        instance.flavor = flavor
 
         mock_node.validate.return_value = ironic_utils.get_test_validation(
             power=False, deploy=False)
@@ -760,26 +747,23 @@ class IronicDriverTestCase(test.NoDBTestCase):
                           self.ctx, instance, image_meta, [], None)
         mock_node.get.assert_called_once_with(node_uuid)
         mock_node.validate.assert_called_once_with(node_uuid)
-        mock_flavor.assert_called_with(mock.ANY, instance.instance_type_id)
 
     @mock.patch.object(configdrive, 'required_by')
     @mock.patch.object(FAKE_CLIENT, 'node')
-    @mock.patch.object(objects.Flavor, 'get_by_id')
     @mock.patch.object(ironic_driver.IronicDriver, '_start_firewall')
     @mock.patch.object(ironic_driver.IronicDriver, '_plug_vifs')
     @mock.patch.object(ironic_driver.IronicDriver, '_cleanup_deploy')
     def test_spawn_node_prepare_for_deploy_fail(self, mock_cleanup_deploy,
                                                 mock_pvifs, mock_sf,
-                                                mock_flavor, mock_node,
-                                                mock_required_by):
+                                                mock_node, mock_required_by):
         mock_required_by.return_value = False
         node_uuid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
         node = ironic_utils.get_test_node(driver='fake', uuid=node_uuid)
+        flavor = ironic_utils.get_test_flavor()
         instance = fake_instance.fake_instance_obj(self.ctx, node=node_uuid)
+        instance.flavor = flavor
         mock_node.get.return_value = node
         mock_node.validate.return_value = ironic_utils.get_test_validation()
-        flavor = ironic_utils.get_test_flavor()
-        mock_flavor.return_value = flavor
         image_meta = ironic_utils.get_test_image_meta()
 
         class TestException(Exception):
@@ -791,27 +775,23 @@ class IronicDriverTestCase(test.NoDBTestCase):
 
         mock_node.get.assert_called_once_with(node_uuid)
         mock_node.validate.assert_called_once_with(node_uuid)
-        mock_flavor.assert_called_once_with(self.ctx,
-                                            instance.instance_type_id)
         mock_cleanup_deploy.assert_called_with(self.ctx, node, instance, None,
                                                flavor=flavor)
 
     @mock.patch.object(configdrive, 'required_by')
     @mock.patch.object(FAKE_CLIENT, 'node')
-    @mock.patch.object(objects.Flavor, 'get_by_id')
     @mock.patch.object(ironic_driver.IronicDriver, '_start_firewall')
     @mock.patch.object(ironic_driver.IronicDriver, '_plug_vifs')
     @mock.patch.object(ironic_driver.IronicDriver, '_cleanup_deploy')
     def test_spawn_node_trigger_deploy_fail(self, mock_cleanup_deploy,
                                             mock_pvifs, mock_sf,
-                                            mock_flavor, mock_node,
-                                            mock_required_by):
+                                            mock_node, mock_required_by):
         mock_required_by.return_value = False
         node_uuid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
         node = ironic_utils.get_test_node(driver='fake', uuid=node_uuid)
-        instance = fake_instance.fake_instance_obj(self.ctx, node=node_uuid)
         flavor = ironic_utils.get_test_flavor()
-        mock_flavor.return_value = flavor
+        instance = fake_instance.fake_instance_obj(self.ctx, node=node_uuid)
+        instance.flavor = flavor
         image_meta = ironic_utils.get_test_image_meta()
 
         mock_node.get.return_value = node
@@ -823,28 +803,24 @@ class IronicDriverTestCase(test.NoDBTestCase):
 
         mock_node.get.assert_called_once_with(node_uuid)
         mock_node.validate.assert_called_once_with(node_uuid)
-        mock_flavor.assert_called_once_with(self.ctx,
-                                            instance.instance_type_id)
         mock_cleanup_deploy.assert_called_once_with(self.ctx, node,
                                                     instance, None,
                                                     flavor=flavor)
 
     @mock.patch.object(configdrive, 'required_by')
     @mock.patch.object(FAKE_CLIENT, 'node')
-    @mock.patch.object(objects.Flavor, 'get_by_id')
     @mock.patch.object(ironic_driver.IronicDriver, '_start_firewall')
     @mock.patch.object(ironic_driver.IronicDriver, '_plug_vifs')
     @mock.patch.object(ironic_driver.IronicDriver, '_cleanup_deploy')
     def test_spawn_node_trigger_deploy_fail2(self, mock_cleanup_deploy,
                                              mock_pvifs, mock_sf,
-                                             mock_flavor, mock_node,
-                                             mock_required_by):
+                                             mock_node, mock_required_by):
         mock_required_by.return_value = False
         node_uuid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
         node = ironic_utils.get_test_node(driver='fake', uuid=node_uuid)
-        instance = fake_instance.fake_instance_obj(self.ctx, node=node_uuid)
         flavor = ironic_utils.get_test_flavor()
-        mock_flavor.return_value = flavor
+        instance = fake_instance.fake_instance_obj(self.ctx, node=node_uuid)
+        instance.flavor = flavor
         image_meta = ironic_utils.get_test_image_meta()
 
         mock_node.get.return_value = node
@@ -856,8 +832,6 @@ class IronicDriverTestCase(test.NoDBTestCase):
 
         mock_node.get.assert_called_once_with(node_uuid)
         mock_node.validate.assert_called_once_with(node_uuid)
-        mock_flavor.assert_called_once_with(self.ctx,
-                                            instance.instance_type_id)
         mock_cleanup_deploy.assert_called_once_with(self.ctx, node,
                                                     instance, None,
                                                     flavor=flavor)
@@ -865,20 +839,20 @@ class IronicDriverTestCase(test.NoDBTestCase):
     @mock.patch.object(configdrive, 'required_by')
     @mock.patch.object(loopingcall, 'FixedIntervalLoopingCall')
     @mock.patch.object(FAKE_CLIENT, 'node')
-    @mock.patch.object(objects.Flavor, 'get_by_id')
     @mock.patch.object(ironic_driver.IronicDriver, '_start_firewall')
     @mock.patch.object(ironic_driver.IronicDriver, '_plug_vifs')
     @mock.patch.object(ironic_driver.IronicDriver, 'destroy')
     def test_spawn_node_trigger_deploy_fail3(self, mock_destroy,
                                              mock_pvifs, mock_sf,
-                                             mock_flavor, mock_node,
-                                             mock_looping, mock_required_by):
+                                             mock_node, mock_looping,
+                                             mock_required_by):
         mock_required_by.return_value = False
         node_uuid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
         fake_net_info = utils.get_test_network_info()
         node = ironic_utils.get_test_node(driver='fake', uuid=node_uuid)
+        flavor = ironic_utils.get_test_flavor()
         instance = fake_instance.fake_instance_obj(self.ctx, node=node_uuid)
-        mock_flavor.return_value = ironic_utils.get_test_flavor()
+        instance.flavor = flavor
         image_meta = ironic_utils.get_test_image_meta()
 
         mock_node.get.return_value = node
@@ -899,27 +873,24 @@ class IronicDriverTestCase(test.NoDBTestCase):
     @mock.patch.object(loopingcall, 'FixedIntervalLoopingCall')
     @mock.patch.object(objects.Instance, 'save')
     @mock.patch.object(FAKE_CLIENT, 'node')
-    @mock.patch.object(objects.Flavor, 'get_by_id')
     @mock.patch.object(ironic_driver.IronicDriver, '_wait_for_active')
     @mock.patch.object(ironic_driver.IronicDriver, '_plug_vifs')
     @mock.patch.object(ironic_driver.IronicDriver, '_start_firewall')
     def test_spawn_sets_default_ephemeral_device(self, mock_sf, mock_pvifs,
-                                                 mock_wait, mock_flavor,
-                                                 mock_node, mock_save,
-                                                 mock_looping,
+                                                 mock_wait, mock_node,
+                                                 mock_save, mock_looping,
                                                  mock_required_by):
         mock_required_by.return_value = False
-        mock_flavor.return_value = ironic_utils.get_test_flavor(ephemeral_gb=1)
         node_uuid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
         node = ironic_utils.get_test_node(driver='fake', uuid=node_uuid)
+        flavor = ironic_utils.get_test_flavor(ephemeral_gb=1)
         instance = fake_instance.fake_instance_obj(self.ctx, node=node_uuid)
+        instance.flavor = flavor
         mock_node.get_by_instance_uuid.return_value = node
         mock_node.set_provision_state.return_value = mock.MagicMock()
         image_meta = ironic_utils.get_test_image_meta()
 
         self.driver.spawn(self.ctx, instance, image_meta, [], None)
-        mock_flavor.assert_called_once_with(self.ctx,
-                                            instance.instance_type_id)
         self.assertTrue(mock_save.called)
         self.assertEqual('/dev/sda1', instance.default_ephemeral_device)
 
@@ -1240,13 +1211,12 @@ class IronicDriverTestCase(test.NoDBTestCase):
     @mock.patch.object(ironic_driver.IronicDriver, '_wait_for_active')
     @mock.patch.object(loopingcall, 'FixedIntervalLoopingCall')
     @mock.patch.object(FAKE_CLIENT.node, 'set_provision_state')
-    @mock.patch.object(objects.Flavor, 'get_by_id')
     @mock.patch.object(ironic_driver.IronicDriver, '_add_driver_fields')
     @mock.patch.object(FAKE_CLIENT.node, 'get')
     @mock.patch.object(objects.Instance, 'save')
     def _test_rebuild(self, mock_save, mock_get, mock_driver_fields,
-                      mock_fg_bid, mock_set_pstate, mock_looping,
-                      mock_wait_active, preserve=False):
+                      mock_set_pstate, mock_looping, mock_wait_active,
+                      preserve=False):
         node_uuid = uuidutils.generate_uuid()
         node = ironic_utils.get_test_node(uuid=node_uuid,
                                           instance_uuid=self.instance_uuid,
@@ -1255,13 +1225,13 @@ class IronicDriverTestCase(test.NoDBTestCase):
 
         image_meta = ironic_utils.get_test_image_meta()
         flavor_id = 5
-        flavor = {'id': flavor_id, 'name': 'baremetal'}
-        mock_fg_bid.return_value = flavor
+        flavor = objects.Flavor(flavor_id=flavor_id, name='baremetal')
 
         instance = fake_instance.fake_instance_obj(self.ctx,
                                                    uuid=self.instance_uuid,
                                                    node=node_uuid,
                                                    instance_type_id=flavor_id)
+        instance.flavor = flavor
 
         fake_looping_call = FakeLoopingCall()
         mock_looping.return_value = fake_looping_call
@@ -1292,12 +1262,11 @@ class IronicDriverTestCase(test.NoDBTestCase):
         self._test_rebuild(preserve=False)
 
     @mock.patch.object(FAKE_CLIENT.node, 'set_provision_state')
-    @mock.patch.object(objects.Flavor, 'get_by_id')
     @mock.patch.object(ironic_driver.IronicDriver, '_add_driver_fields')
     @mock.patch.object(FAKE_CLIENT.node, 'get')
     @mock.patch.object(objects.Instance, 'save')
     def test_rebuild_failures(self, mock_save, mock_get, mock_driver_fields,
-                              mock_fg_bid, mock_set_pstate):
+                              mock_set_pstate):
         node_uuid = uuidutils.generate_uuid()
         node = ironic_utils.get_test_node(uuid=node_uuid,
                                           instance_uuid=self.instance_uuid,
@@ -1306,13 +1275,13 @@ class IronicDriverTestCase(test.NoDBTestCase):
 
         image_meta = ironic_utils.get_test_image_meta()
         flavor_id = 5
-        flavor = {'id': flavor_id, 'name': 'baremetal'}
-        mock_fg_bid.return_value = flavor
+        flavor = objects.Flavor(flavor_id=flavor_id, name='baremetal')
 
         instance = fake_instance.fake_instance_obj(self.ctx,
                                                    uuid=self.instance_uuid,
                                                    node=node_uuid,
                                                    instance_type_id=flavor_id)
+        instance.flavor = flavor
 
         exceptions = [
             exception.NovaException(),

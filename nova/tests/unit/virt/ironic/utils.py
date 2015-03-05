@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova import objects
 from nova.virt.ironic import ironic_states
 
 
@@ -63,10 +64,11 @@ def get_test_flavor(**kw):
                                        'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
                            'baremetal:deploy_ramdisk_id':
                                        'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'}
-    return {'name': kw.get('name', 'fake.flavor'),
-            'extra_specs': kw.get('extra_specs', default_extra_specs),
-            'swap': kw.get('swap', 0),
-            'ephemeral_gb': kw.get('ephemeral_gb', 0)}
+    flavor = {'name': kw.get('name', 'fake.flavor'),
+              'extra_specs': kw.get('extra_specs', default_extra_specs),
+              'swap': kw.get('swap', 0),
+              'ephemeral_gb': kw.get('ephemeral_gb', 0)}
+    return objects.Flavor(**flavor)
 
 
 def get_test_image_meta(**kw):
