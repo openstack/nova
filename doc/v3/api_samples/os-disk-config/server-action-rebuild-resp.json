@@ -5,8 +5,6 @@
             "private": [
                 {
                     "addr": "192.168.0.3",
-                    "OS-EXT-IPS-MAC:mac_addr": "aa:bb:cc:dd:ee:ff",
-                    "OS-EXT-IPS:type": "fixed",
                     "version": 4
                 }
             ]

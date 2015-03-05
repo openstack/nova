@@ -727,7 +727,8 @@ class ServersController(wsgi.Controller):
             policy.enforce(ctxt, 'compute:update', instance)
             instance.update(update_dict)
             instance.save()
-            return self._view_builder.show(req, instance)
+            return self._view_builder.show(req, instance,
+                                           extend_address=False)
         except exception.InstanceNotFound:
             msg = _("Instance could not be found")
             raise exc.HTTPNotFound(explanation=msg)
@@ -956,7 +957,7 @@ class ServersController(wsgi.Controller):
 
         instance = self._get_server(context, req, id)
 
-        view = self._view_builder.show(req, instance)
+        view = self._view_builder.show(req, instance, extend_address=False)
 
         # Add on the admin_password attribute since the view doesn't do it
         # unless instance passwords are disabled

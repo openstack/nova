@@ -170,10 +170,11 @@ class ViewBuilder(common.ViewBuilder):
             sha_hash = hashlib.sha224(project + host)
             return sha_hash.hexdigest()
 
-    def _get_addresses(self, request, instance):
+    def _get_addresses(self, request, instance, extend_address=False):
         context = request.environ["nova.context"]
         networks = common.get_networks_for_instance(context, instance)
-        return self._address_builder.index(networks)["addresses"]
+        return self._address_builder.index(networks,
+                                           extend_address)["addresses"]
 
     def _get_image(self, request, instance):
         image_ref = instance["image_ref"]
@@ -246,7 +247,7 @@ class ViewBuilderV3(ViewBuilder):
         # use glance endpoint. We revert back it to use nova endpoint for v2.1.
         self._image_builder = views_images.ViewBuilder()
 
-    def show(self, request, instance):
+    def show(self, request, instance, extend_address=True):
         """Detailed view of a single instance."""
         server = {
             "server": {
@@ -264,7 +265,8 @@ class ViewBuilderV3(ViewBuilder):
                 "flavor": self._get_flavor(request, instance),
                 "created": timeutils.isotime(instance["created_at"]),
                 "updated": timeutils.isotime(instance["updated_at"]),
-                "addresses": self._get_addresses(request, instance),
+                "addresses": self._get_addresses(request, instance,
+                                                 extend_address),
                 "links": self._get_links(request,
                                          instance["uuid"],
                                          self._collection_name),
