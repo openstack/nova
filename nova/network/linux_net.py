@@ -1424,6 +1424,17 @@ def delete_net_dev(dev):
                 LOG.error(_LE("Failed removing net device: '%s'"), dev)
 
 
+def delete_bridge_dev(dev):
+    """Delete a network bridge."""
+    if device_exists(dev):
+        try:
+            utils.execute('ip', 'link', 'set', dev, 'down', run_as_root=True)
+            utils.execute('brctl', 'delbr', dev, run_as_root=True)
+        except processutils.ProcessExecutionError:
+            with excutils.save_and_reraise_exception():
+                LOG.error(_LE("Failed removing bridge device: '%s'"), dev)
+
+
 # Similar to compute virt layers, the Linux network node
 # code uses a flexible driver model to support different ways
 # of creating ethernet interfaces and attaching them to the network.
@@ -1677,7 +1688,7 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
                         ipv4_filter.remove_rule('FORWARD',
                                                 ('--out-interface %s -j %s'
                                                  % (bridge, drop_action)))
-            delete_net_dev(bridge)
+            delete_bridge_dev(bridge)
 
 
 # NOTE(cfb): This is a temporary fix to LP #1316621. We really want to call
