@@ -407,6 +407,23 @@ def service_get_by_host_and_topic(context, host, topic):
 
 
 @require_admin_context
+def service_get_all_by_binary(context, binary):
+    return model_query(context, models.Service, read_deleted="no").\
+                filter_by(disabled=False).\
+                filter_by(binary=binary).\
+                all()
+
+
+@require_admin_context
+def service_get_by_host_and_binary(context, host, binary):
+    return model_query(context, models.Service, read_deleted="no").\
+                filter_by(disabled=False).\
+                filter_by(host=host).\
+                filter_by(binary=binary).\
+                first()
+
+
+@require_admin_context
 def service_get_all_by_host(context, host):
     return model_query(context, models.Service, read_deleted="no").\
                 filter_by(host=host).\
@@ -418,7 +435,7 @@ def service_get_by_compute_host(context, host, use_slave=False):
     result = model_query(context, models.Service, read_deleted="no",
                          use_slave=use_slave).\
                 filter_by(host=host).\
-                filter_by(topic=CONF.compute_topic).\
+                filter_by(binary='nova-compute').\
                 first()
 
     if not result:

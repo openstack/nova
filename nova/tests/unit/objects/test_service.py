@@ -83,6 +83,10 @@ class _TestServiceObject(object):
         self._test_query('service_get_by_host_and_topic',
                          'get_by_host_and_topic', 'fake-host', 'fake-topic')
 
+    def test_get_by_host_and_binary(self):
+        self._test_query('service_get_by_host_and_binary',
+                         'get_by_host_and_binary', 'fake-host', 'fake-binary')
+
     def test_get_by_compute_host(self):
         self._test_query('service_get_by_compute_host', 'get_by_compute_host',
                          'fake-host')
@@ -155,6 +159,14 @@ class _TestServiceObject(object):
         services = service.ServiceList.get_by_topic(self.context, 'fake-topic')
         self.assertEqual(1, len(services))
         self.compare_obj(services[0], fake_service, allow_missing=OPTIONAL)
+
+    @mock.patch('nova.db.service_get_all_by_binary')
+    def test_get_by_binary(self, mock_get):
+        mock_get.return_value = [fake_service]
+        services = service.ServiceList.get_by_binary(self.context,
+                                                     'fake-binary')
+        self.assertEqual(1, len(services))
+        mock_get.assert_called_once_with(self.context, 'fake-binary')
 
     def test_get_by_host(self):
         self.mox.StubOutWithMock(db, 'service_get_all_by_host')

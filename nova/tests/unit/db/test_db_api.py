@@ -2789,6 +2789,15 @@ class ServiceTestCase(test.TestCase, ModelsObjectComparatorMixin):
                                                          topic='topic1')
         self._assertEqualObjects(service1, real_service1)
 
+    def test_service_get_by_host_and_binary(self):
+        service1 = self._create_service({'host': 'host1', 'binary': 'foo'})
+        self._create_service({'host': 'host2', 'binary': 'bar'})
+
+        real_service1 = db.service_get_by_host_and_binary(self.ctxt,
+                                                         host='host1',
+                                                         binary='foo')
+        self._assertEqualObjects(service1, real_service1)
+
     def test_service_get_all(self):
         values = [
             {'host': 'host1', 'topic': 'topic1'},
@@ -2819,6 +2828,18 @@ class ServiceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         real = db.service_get_all_by_topic(self.ctxt, 't1')
         self._assertEqualListsOfObjects(expected, real)
 
+    def test_service_get_all_by_binary(self):
+        values = [
+            {'host': 'host1', 'binary': 'b1'},
+            {'host': 'host2', 'binary': 'b1'},
+            {'disabled': True, 'binary': 'b1'},
+            {'host': 'host3', 'binary': 'b2'}
+        ]
+        services = [self._create_service(vals) for vals in values]
+        expected = services[:2]
+        real = db.service_get_all_by_binary(self.ctxt, 'b1')
+        self._assertEqualListsOfObjects(expected, real)
+
     def test_service_get_all_by_host(self):
         values = [
             {'host': 'host1', 'topic': 't11', 'binary': 'b11'},
@@ -2834,9 +2855,9 @@ class ServiceTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_service_get_by_compute_host(self):
         values = [
-            {'host': 'host1', 'topic': CONF.compute_topic},
-            {'host': 'host2', 'topic': 't1'},
-            {'host': 'host3', 'topic': CONF.compute_topic}
+            {'host': 'host1', 'binary': 'nova-compute'},
+            {'host': 'host2', 'binary': 'nova-scheduler'},
+            {'host': 'host3', 'binary': 'nova-compute'}
         ]
         services = [self._create_service(vals) for vals in values]
 
