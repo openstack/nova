@@ -224,8 +224,8 @@ class RPCAllocateFixedIP(object):
                     address, instance=instance)
 
         if network.multi_host:
-            service = objects.Service.get_by_host_and_topic(
-                context, host, CONF.network_topic)
+            service = objects.Service.get_by_host_and_binary(
+                context, host, 'nova-network')
             if not service or not self.servicegroup_api.service_is_up(service):
                 # NOTE(vish): deallocate the fixed ip locally but don't
                 #             teardown network devices

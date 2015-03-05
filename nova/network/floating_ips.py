@@ -436,8 +436,8 @@ class FloatingIP(object):
         if network.multi_host:
             instance = objects.Instance.get_by_uuid(
                 context, fixed_ip.instance_uuid)
-            service = objects.Service.get_by_host_and_topic(
-                context.elevated(), instance.host, CONF.network_topic)
+            service = objects.Service.get_by_host_and_binary(
+                context.elevated(), instance.host, 'nova-network')
             if service and self.servicegroup_api.service_is_up(service):
                 host = instance.host
             else:

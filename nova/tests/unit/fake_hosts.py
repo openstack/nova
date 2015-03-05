@@ -33,5 +33,7 @@ HOST_LIST_NOVA_ZONE = [
 service_base = test_service.fake_service
 
 SERVICES_LIST = [
-        dict(service_base, host='host_c1', topic='compute'),
-        dict(service_base, host='host_c2', topic='compute')]
+        dict(service_base, host='host_c1', topic='compute',
+             binary='nova-compute'),
+        dict(service_base, host='host_c2', topic='compute',
+             binary='nova-compute')]
