@@ -400,24 +400,30 @@ class ComputeHostAPICellsTestCase(ComputeHostAPITestCase):
         self.mox.StubOutWithMock(self.host_api.cells_rpcapi,
                                  'service_get_by_compute_host')
 
+        # Cells return services with full cell_path prepended to IDs
+        fake_service = dict(test_service.fake_service, id='cell1@1')
+        exp_service = fake_service.copy()
+
         self.host_api.cells_rpcapi.service_get_by_compute_host(self.ctxt,
-                'fake-host').AndReturn(test_service.fake_service)
+                'fake-host').AndReturn(fake_service)
         self.mox.ReplayAll()
         result = self.host_api.service_get_by_compute_host(self.ctxt,
                                                            'fake-host')
-        self._compare_obj(result, test_service.fake_service)
+        self._compare_obj(result, exp_service)
 
     def test_service_update(self):
         host_name = 'fake-host'
         binary = 'nova-compute'
         params_to_update = dict(disabled=True)
-        service_id = 42
-        expected_result = dict(test_service.fake_service, id=service_id)
+        service_id = 'cell1@42'   # Cells prepend full cell path to ID
+
+        update_result = dict(test_service.fake_service, id=service_id)
+        expected_result = update_result.copy()
 
         self.mox.StubOutWithMock(self.host_api.cells_rpcapi, 'service_update')
         self.host_api.cells_rpcapi.service_update(
             self.ctxt, host_name,
-            binary, params_to_update).AndReturn(expected_result)
+            binary, params_to_update).AndReturn(update_result)
 
         self.mox.ReplayAll()
 
