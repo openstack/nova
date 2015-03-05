@@ -37,6 +37,13 @@ class _TestPciDevicePoolObject(object):
         self.assertEqual(pool_obj.tags, {'t1': 'v1', 't2': 'v2'})
         self.assertEqual(pool_obj.count, 2)
 
+    def test_pci_pool_from_dict_bad_tags(self):
+        bad_dict = copy.deepcopy(fake_pci.fake_pool_dict)
+        bad_dict['bad'] = {'foo': 'bar'}
+        self.assertRaises(ValueError,
+                          objects.PciDevicePool.from_dict,
+                          value=bad_dict)
+
     def test_pci_pool_from_dict_no_tags(self):
         dict_notag = copy.copy(fake_pci.fake_pool_dict)
         dict_notag.pop('t1')

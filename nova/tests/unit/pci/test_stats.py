@@ -112,7 +112,7 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
         self.assertNotEqual(self.pci_stats, pci_stats2)
 
     def test_object_create(self):
-        m = objects.pci_device_pool.from_pci_stats(self.pci_stats.pools)
+        m = self.pci_stats.to_device_pools_obj()
         new_stats = stats.PciDeviceStats(m)
 
         self.assertEqual(len(new_stats.pools), 3)
