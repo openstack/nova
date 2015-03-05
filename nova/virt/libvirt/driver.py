@@ -6351,6 +6351,11 @@ class LibvirtDriver(driver.ComputeDriver):
                                   image_meta,
                                   block_device_info=block_device_info,
                                   write_to_disk=True)
+        # NOTE(mriedem): vifs_already_plugged=True here, regardless of whether
+        # or not we've migrated to another host, because we unplug VIFs locally
+        # and the status change in the port might go undetected by the neutron
+        # L2 agent (or neutron server) so neutron may not know that the VIF was
+        # unplugged in the first place and never send an event.
         self._create_domain_and_network(context, xml, instance, network_info,
                                         disk_info,
                                         block_device_info=block_device_info,
