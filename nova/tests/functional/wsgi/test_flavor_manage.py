@@ -20,6 +20,7 @@ from nova import exception as ex
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import integrated_helpers as helper
+from nova.tests.unit import policy_fixture
 
 
 def rand_flavor(**kwargs):
@@ -70,7 +71,13 @@ class FlavorManageFullstack(test.TestCase):
     """
     def setUp(self):
         super(FlavorManageFullstack, self).setUp()
-        self.api = self.useFixture(nova_fixtures.OSAPIFixture()).admin_api
+        self.useFixture(policy_fixture.RealPolicyFixture())
+        api_fixture = self.useFixture(nova_fixtures.OSAPIFixture())
+
+        # NOTE(sdague): because this test is primarily an admin API
+        # test default self.api to the admin api.
+        self.api = api_fixture.admin_api
+        self.user_api = api_fixture.api
 
     def assertFlavorDbEqual(self, flav, flavdb):
         # a mapping of the REST params to the db fields
@@ -207,3 +214,30 @@ class FlavorManageFullstack(test.TestCase):
         resp = self.api.api_delete('flavors/%s' % flav1['flavor']['id'],
                                    check_response_status=False)
         self.assertEqual(404, resp.status)
+
+    def test_flavor_manage_permissions(self):
+        """Ensure that regular users can't create or delete flavors.
+
+        """
+        ctx = context.get_admin_context()
+        flav1 = {'flavor': rand_flavor()}
+
+        # Ensure user can't create flavor
+        resp = self.user_api.api_post('flavors', flav1,
+                                      check_response_status=False)
+        self.assertEqual(403, resp.status)
+        # ... and that it didn't leak through
+        self.assertRaises(ex.FlavorNotFound,
+                        db.flavor_get_by_flavor_id,
+                        ctx, flav1['flavor']['id'])
+
+        # Create the flavor as the admin user
+        self.api.api_post('flavors', flav1)
+
+        # Ensure user can't delete flavors from our cloud
+        resp = self.user_api.api_delete('flavors/%s' % flav1['flavor']['id'],
+                                        check_response_status=False)
+        self.assertEqual(403, resp.status)
+        # ... and ensure that we didn't actually delete the flavor,
+        # this will throw an exception if we did.
+        db.flavor_get_by_flavor_id(ctx, flav1['flavor']['id'])
