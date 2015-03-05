@@ -990,6 +990,16 @@ class SqlAlchemyDbApiNoDbTestCase(test.NoDBTestCase):
                 CONF.database)
         mock_facade.get_session.assert_called_once_with(use_slave=False)
 
+    @mock.patch.object(sqlalchemy_api, '_create_facade_lazily')
+    def test_get_api_session(self, mock_create_facade):
+        mock_facade = mock.MagicMock()
+        mock_create_facade.return_value = mock_facade
+
+        sqlalchemy_api.get_api_session()
+        mock_create_facade.assert_called_once_with(sqlalchemy_api._API_FACADE,
+                CONF.api_database)
+        mock_facade.get_session.assert_called_once_with()
+
 
 class SqlAlchemyDbApiTestCase(DbTestCase):
     def test_instance_get_all_by_host(self):

@@ -186,6 +186,12 @@ def get_session(use_slave=False, **kwargs):
     return facade.get_session(use_slave=use_slave, **kwargs)
 
 
+def get_api_session(**kwargs):
+    conf_group = CONF.api_database
+    facade = _create_facade_lazily(_API_FACADE, conf_group)
+    return facade.get_session(**kwargs)
+
+
 _SHADOW_TABLE_PREFIX = 'shadow_'
 _DEFAULT_QUOTA_NAME = 'default'
 PER_PROJECT_QUOTAS = ['fixed_ips', 'floating_ips', 'networks']
