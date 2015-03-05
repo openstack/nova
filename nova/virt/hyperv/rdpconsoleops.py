@@ -32,7 +32,7 @@ class RDPConsoleOps(object):
         LOG.debug("get_rdp_console called", instance=instance)
         host = self._hostops.get_host_ip_addr()
         port = self._rdpconsoleutils.get_rdp_console_port()
-        vm_id = self._vmutils.get_vm_id(instance['name'])
+        vm_id = self._vmutils.get_vm_id(instance.name)
 
         LOG.debug("RDP console: %(host)s:%(port)s, %(vm_id)s",
                   {"host": host, "port": port, "vm_id": vm_id})
