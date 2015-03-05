@@ -104,6 +104,12 @@ workarounds_opts = [
                      'mechanism to disable livesnapshot while this is '
                      'resolved.  See '
                      'https://bugs.launchpad.net/nova/+bug/1334398'),
+    cfg.BoolOpt('destroy_after_evacuate',
+                default=True,
+                help='Whether to destroy instances on startup when we suspect '
+                     'they have previously been evacuated. This can result in '
+                      'data loss if undesired. See '
+                      'https://launchpad.net/bugs/1419785'),
     ]
 CONF = cfg.CONF
 CONF.register_opts(monkey_patch_opts)
