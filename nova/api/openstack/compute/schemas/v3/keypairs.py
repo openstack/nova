@@ -32,6 +32,24 @@ create = {
     'additionalProperties': False,
 }
 
+create_v22 = {
+    'type': 'object',
+    'properties': {
+        'keypair': {
+            'type': 'object',
+            'properties': {
+                'name': parameter_types.name,
+                'type': {'type': 'string'},
+                'public_key': {'type': 'string'},
+            },
+            'required': ['name'],
+            'additionalProperties': False,
+        },
+    },
+    'required': ['keypair'],
+    'additionalProperties': False,
+}
+
 server_create = {
     'key_name': parameter_types.name,
 }

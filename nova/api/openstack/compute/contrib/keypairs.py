@@ -107,11 +107,8 @@ class KeypairController(object):
         authorize(context, action='show')
 
         try:
-            # Since this method returns the whole object, functional test
-            # test_keypairs_get is failing, receiving an unexpected field
-            # 'type', which was added to the keypair object.
-            # TODO(claudiub): Revert the changes in the next commit, which will
-            # enable nova-api to return the keypair type.
+            # The return object needs to be a dict in order to pop the 'type'
+            # field, since it is incompatible with API version <= 2.1.
             keypair = self.api.get_key_pair(context, context.user_id, id)
             keypair = self._filter_keypair(keypair, created_at=True,
                                            deleted=True, deleted_at=True,

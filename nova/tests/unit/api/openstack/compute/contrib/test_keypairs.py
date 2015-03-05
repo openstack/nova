@@ -18,6 +18,7 @@ import webob
 
 from nova.api.openstack.compute.contrib import keypairs as keypairs_v2
 from nova.api.openstack.compute.plugins.v3 import keypairs as keypairs_v21
+from nova.api.openstack import wsgi as os_wsgi
 from nova import db
 from nova import exception
 from nova.openstack.common import policy as common_policy
@@ -62,6 +63,7 @@ def db_key_pair_create_duplicate(context, keypair):
 class KeypairsTestV21(test.TestCase):
     base_url = '/v2/fake'
     validation_error = exception.ValidationError
+    wsgi_api_version = os_wsgi.DEFAULT_API_VERSION
 
     def _setup_app_and_controller(self):
         self.app_server = fakes.wsgi_app_v21(init_only=('os-keypairs',
@@ -85,7 +87,7 @@ class KeypairsTestV21(test.TestCase):
             osapi_compute_ext_list=['Keypairs'])
         self._setup_app_and_controller()
 
-        self.req = fakes.HTTPRequest.blank('')
+        self.req = fakes.HTTPRequest.blank('', version=self.wsgi_api_version)
 
     def test_keypair_list(self):
         res_dict = self.controller.index(self.req)
@@ -97,6 +99,7 @@ class KeypairsTestV21(test.TestCase):
         res_dict = self.controller.create(self.req, body=body)
         self.assertTrue(len(res_dict['keypair']['fingerprint']) > 0)
         self.assertTrue(len(res_dict['keypair']['private_key']) > 0)
+        self._assert_keypair_type(res_dict)
 
     def _test_keypair_create_bad_request_case(self,
                                               body,
@@ -161,6 +164,7 @@ class KeypairsTestV21(test.TestCase):
         # FIXME(ja): sholud we check that public_key was sent to create?
         self.assertTrue(len(res_dict['keypair']['fingerprint']) > 0)
         self.assertNotIn('private_key', res_dict['keypair'])
+        self._assert_keypair_type(res_dict)
 
     def test_keypair_import_quota_limit(self):
 
@@ -234,7 +238,8 @@ class KeypairsTestV21(test.TestCase):
 
         def _db_key_pair_get(context, user_id, name):
             return dict(test_keypair.fake_keypair,
-                        name='foo', public_key='XXX', fingerprint='YYY')
+                        name='foo', public_key='XXX', fingerprint='YYY',
+                        type='ssh')
 
         self.stubs.Set(db, "key_pair_get", _db_key_pair_get)
 
@@ -242,6 +247,7 @@ class KeypairsTestV21(test.TestCase):
         self.assertEqual('foo', res_dict['keypair']['name'])
         self.assertEqual('XXX', res_dict['keypair']['public_key'])
         self.assertEqual('YYY', res_dict['keypair']['fingerprint'])
+        self._assert_keypair_type(res_dict)
 
     def test_keypair_show_not_found(self):
 
@@ -283,6 +289,9 @@ class KeypairsTestV21(test.TestCase):
             self.assertIn('key_name', server_dict)
             self.assertEqual(server_dict['key_name'], '')
 
+    def _assert_keypair_type(self, res_dict):
+        self.assertNotIn('type', res_dict['keypair'])
+
 
 class KeypairPolicyTestV21(test.TestCase):
     KeyPairController = keypairs_v21.KeypairController()
@@ -293,7 +302,8 @@ class KeypairPolicyTestV21(test.TestCase):
 
         def _db_key_pair_get(context, user_id, name):
             return dict(test_keypair.fake_keypair,
-                        name='foo', public_key='XXX', fingerprint='YYY')
+                        name='foo', public_key='XXX', fingerprint='YYY',
+                        type='ssh')
 
         self.stubs.Set(db, "key_pair_get",
                        _db_key_pair_get)
@@ -365,15 +375,7 @@ class KeypairPolicyTestV21(test.TestCase):
         rules = {self.policy_path + ':delete':
                      common_policy.parse_rule('')}
         policy.set_rules(rules)
-        res = self.KeyPairController.delete(self.req, 'FAKE')
-
-        # NOTE: on v2.1, http status code is set as wsgi_code of API
-        # method instead of status_int in a response object.
-        if isinstance(self.KeyPairController, keypairs_v21.KeypairController):
-            status_int = self.KeyPairController.delete.wsgi_code
-        else:
-            status_int = res.status_int
-        self.assertEqual(202, status_int)
+        self.KeyPairController.delete(self.req, 'FAKE')
 
 
 class KeypairsTestV2(KeypairsTestV21):
@@ -382,6 +384,19 @@ class KeypairsTestV2(KeypairsTestV21):
     def _setup_app_and_controller(self):
         self.app_server = fakes.wsgi_app(init_only=('servers',))
         self.controller = keypairs_v2.KeypairController()
+
+
+class KeypairsTestV22(KeypairsTestV21):
+    wsgi_api_version = '2.2'
+
+    def test_keypair_list(self):
+        res_dict = self.controller.index(self.req)
+        expected = {'keypairs': [{'keypair': dict(keypair_data, name='FAKE',
+                                                  type='ssh')}]}
+        self.assertEqual(expected, res_dict)
+
+    def _assert_keypair_type(self, res_dict):
+        self.assertEqual('ssh', res_dict['keypair']['type'])
 
 
 class KeypairPolicyTestV2(KeypairPolicyTestV21):

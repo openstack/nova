@@ -20,3 +20,18 @@ user documentation.
 
   If no version is specified then the API will behave as if a version
   request of v2.1 was requested.
+
+- **2.2**
+
+  Added Keypair type.
+
+  A user can request the creation of a certain 'type' of keypair (ssh or x509)
+  in the os-keypairs plugin
+
+  If no keypair type is specified, then the default 'ssh' type of keypair is
+  created.
+
+  Fixes status code for os-keypairs create method from 200 to 201
+
+  Fixes status code for os-keypairs delete method from 202 to 204
+

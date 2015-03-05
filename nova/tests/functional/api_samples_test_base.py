@@ -270,6 +270,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             'public_key': 'ssh-rsa[ a-zA-Z0-9/+=]*'
                           'Generated-by-Nova',
             'fingerprint': '([0-9a-f]{2}:){15}[0-9a-f]{2}',
+            'keypair_type': 'ssh|x509',
             'host': self._get_host(),
             'host_name': '[0-9a-z]{32}',
             'glance_host': self._get_glance_host(),

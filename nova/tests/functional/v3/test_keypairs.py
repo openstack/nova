@@ -15,30 +15,44 @@
 
 import uuid
 
+from nova.objects import keypair as keypair_obj
 from nova.tests.functional.v3 import api_sample_base
 
 
 class KeyPairsSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
+    request_api_version = None
     sample_dir = "keypairs"
+    expected_delete_status_code = 202
+    expected_post_status_code = 200
 
     def generalize_subs(self, subs, vanilla_regexes):
         subs['keypair_name'] = 'keypair-[0-9a-f-]+'
         return subs
 
     def test_keypairs_post(self, public_key=None):
+        return self._check_keypairs_post(public_key,
+                                         api_version=self.request_api_version)
+
+    def _check_keypairs_post(self, public_key, **kwargs):
         """Get api sample of key pairs post request."""
         key_name = 'keypair-' + str(uuid.uuid4())
-        response = self._do_post('os-keypairs', 'keypairs-post-req',
-                                 {'keypair_name': key_name})
+        subs = dict(keypair_name=key_name, **kwargs)
+        response = self._do_post('os-keypairs', 'keypairs-post-req', subs,
+                                 api_version=self.request_api_version)
+
         subs = self._get_regexes()
         subs['keypair_name'] = '(%s)' % key_name
-        self._verify_response('keypairs-post-resp', subs, response, 200)
+        self._verify_response('keypairs-post-resp', subs, response,
+                              self.expected_post_status_code)
         # NOTE(maurosr): return the key_name is necessary cause the
         # verification returns the label of the last compared information in
         # the response, not necessarily the key name.
         return key_name
 
     def test_keypairs_import_key_post(self):
+        self._check_keypairs_import_key_post()
+
+    def _check_keypairs_import_key_post(self, **kwargs):
         # Get api sample of key pairs post to import user's key.
         key_name = 'keypair-' + str(uuid.uuid4())
         subs = {
@@ -49,16 +63,19 @@ class KeyPairsSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
                           "9FhY+2YiUkpwFOcLImyrxEsYXpD/0d3ac30bNH6Sw9JD9UZHYc"
                           "pSxsIbECHw== Generated-by-Nova"
         }
+        subs.update(**kwargs)
         response = self._do_post('os-keypairs', 'keypairs-import-post-req',
-                                 subs)
+                                 subs, api_version=self.request_api_version)
         subs = self._get_regexes()
         subs['keypair_name'] = '(%s)' % key_name
-        self._verify_response('keypairs-import-post-resp', subs, response, 200)
+        self._verify_response('keypairs-import-post-resp', subs, response,
+                              self.expected_post_status_code)
 
     def test_keypairs_list(self):
         # Get api sample of key pairs list request.
         key_name = self.test_keypairs_post()
-        response = self._do_get('os-keypairs')
+        response = self._do_get('os-keypairs',
+                                api_version=self.request_api_version)
         subs = self._get_regexes()
         subs['keypair_name'] = '(%s)' % key_name
         self._verify_response('keypairs-list-resp', subs, response, 200)
@@ -66,7 +83,30 @@ class KeyPairsSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
     def test_keypairs_get(self):
         # Get api sample of key pairs get request.
         key_name = self.test_keypairs_post()
-        response = self._do_get('os-keypairs/%s' % key_name)
+        response = self._do_get('os-keypairs/%s' % key_name,
+                                api_version=self.request_api_version)
         subs = self._get_regexes()
         subs['keypair_name'] = '(%s)' % key_name
         self._verify_response('keypairs-get-resp', subs, response, 200)
+
+    def test_keypairs_delete(self):
+        # Get api sample of key pairs delete request.
+        key_name = self.test_keypairs_post()
+        response = self._do_delete('os-keypairs/%s' % key_name,
+                                    api_version=self.request_api_version)
+        self.assertEqual(self.expected_delete_status_code,
+                         response.status_code)
+
+
+class KeyPairsV22SampleJsonTest(KeyPairsSampleJsonTest):
+    request_api_version = '2.2'
+    expected_post_status_code = 201
+    expected_delete_status_code = 204
+
+    def test_keypairs_post(self, public_key=None):
+        return self._check_keypairs_post(
+            public_key, keypair_type=keypair_obj.KEYPAIR_TYPE_SSH)
+
+    def test_keypairs_import_key_post(self):
+        self._check_keypairs_import_key_post(
+            keypair_type=keypair_obj.KEYPAIR_TYPE_SSH)

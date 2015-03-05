@@ -21,6 +21,7 @@ from nova.compute import api as compute_api
 from nova import context
 from nova import db
 from nova import exception
+from nova.objects import keypair as keypair_obj
 from nova import quota
 from nova.tests.unit.compute import test_compute
 from nova.tests.unit import fake_notifier
@@ -46,6 +47,7 @@ class KeypairAPITestCase(test_compute.BaseTestCase):
                         'HJAXVI+oCiyMMfffoTq16M1xfV58JstgtTqAXG+ZFpicGajREU'
                         'E/E3hO5MGgcHmyzIrWHKpe1n3oEGuz')
         self.fingerprint = '4e:48:c6:a0:4a:f9:dd:b5:4c:85:54:5a:af:43:47:5a'
+        self.keypair_type = keypair_obj.KEYPAIR_TYPE_SSH
         self.key_destroyed = False
 
     def _keypair_db_call_stubs(self):
@@ -108,12 +110,13 @@ class CreateImportSharedTestMixIn(object):
     up by the test runner unless they are part of a 'concrete' test case.
     """
 
-    def assertKeyNameRaises(self, exc_class, expected_message, name):
+    def assertKeypairRaises(self, exc_class, expected_message, name):
         func = getattr(self.keypair_api, self.func_name)
 
         args = []
         if self.func_name == 'import_key_pair':
             args.append(self.pub_key)
+        args.append(self.keypair_type)
 
         exc = self.assertRaises(exc_class, func, self.ctxt, self.ctxt.user_id,
                                 name, *args)
@@ -121,7 +124,7 @@ class CreateImportSharedTestMixIn(object):
 
     def assertInvalidKeypair(self, expected_message, name):
         msg = 'Keypair data is invalid: %s' % expected_message
-        self.assertKeyNameRaises(exception.InvalidKeypair, msg, name)
+        self.assertKeypairRaises(exception.InvalidKeypair, msg, name)
 
     def test_name_too_short(self):
         msg = ('Keypair name must be string and between 1 '
@@ -137,6 +140,11 @@ class CreateImportSharedTestMixIn(object):
         msg = "Keypair name contains unsafe characters"
         self.assertInvalidKeypair(msg, '* BAD CHARACTERS!  *')
 
+    def test_invalid_keypair_type(self):
+        self.keypair_type = 'fakey_type'
+        msg = 'Specified Keypair type "fakey_type" is invalid'
+        self.assertInvalidKeypair(msg, 'test')
+
     def test_already_exists(self):
         def db_key_pair_create_duplicate(context, keypair):
             raise exception.KeyPairExists(key_name=keypair.get('name', ''))
@@ -145,7 +153,7 @@ class CreateImportSharedTestMixIn(object):
 
         msg = ("Key pair '%(key_name)s' already exists." %
                {'key_name': self.existing_key_name})
-        self.assertKeyNameRaises(exception.KeyPairExists, msg,
+        self.assertKeypairRaises(exception.KeyPairExists, msg,
                                  self.existing_key_name)
 
     def test_quota_limit(self):
@@ -155,7 +163,7 @@ class CreateImportSharedTestMixIn(object):
         self.stubs.Set(QUOTAS, "count", fake_quotas_count)
 
         msg = "Maximum number of key pairs exceeded"
-        self.assertKeyNameRaises(exception.KeypairLimitExceeded, msg, 'foo')
+        self.assertKeypairRaises(exception.KeypairLimitExceeded, msg, 'foo')
 
 
 class CreateKeypairTestCase(KeypairAPITestCase, CreateImportSharedTestMixIn):
@@ -165,6 +173,7 @@ class CreateKeypairTestCase(KeypairAPITestCase, CreateImportSharedTestMixIn):
         keypair, private_key = self.keypair_api.create_key_pair(
             self.ctxt, self.ctxt.user_id, 'foo')
         self.assertEqual('foo', keypair['name'])
+        self.assertEqual(self.keypair_type, keypair['type'])
         self._check_notifications()
 
 
@@ -180,6 +189,7 @@ class ImportKeypairTestCase(KeypairAPITestCase, CreateImportSharedTestMixIn):
         self.assertEqual('foo', keypair['name'])
         self.assertEqual(self.fingerprint, keypair['fingerprint'])
         self.assertEqual(self.pub_key, keypair['public_key'])
+        self.assertEqual(self.keypair_type, keypair['type'])
         self._check_notifications(action='import')
 
     def test_bad_key_data(self):
