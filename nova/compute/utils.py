@@ -21,7 +21,6 @@ import traceback
 import netifaces
 from oslo_config import cfg
 from oslo_log import log
-from oslo_utils import encodeutils
 
 from nova import block_device
 from nova.compute import power_state
@@ -64,20 +63,7 @@ def exception_to_dict(fault):
     # NOTE(dripton) The message field in the database is limited to 255 chars.
     # MySQL silently truncates overly long messages, but PostgreSQL throws an
     # error if we don't truncate it.
-    b_message = encodeutils.safe_encode(message)[:255]
-
-    # NOTE(chaochin) UTF-8 character byte size varies from 1 to 6. If
-    # truncating a long byte string to 255, the last character may be
-    # cut in the middle, so that UnicodeDecodeError will occur when
-    # converting it back to unicode.
-    decode_ok = False
-    while not decode_ok:
-        try:
-            u_message = encodeutils.safe_decode(b_message)
-            decode_ok = True
-        except UnicodeDecodeError:
-            b_message = b_message[:-1]
-
+    u_message = utils.safe_truncate(message, 255)
     fault_dict = dict(exception=fault)
     fault_dict["message"] = u_message
     fault_dict["code"] = code

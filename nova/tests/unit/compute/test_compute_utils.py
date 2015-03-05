@@ -23,7 +23,6 @@ import uuid
 import mock
 from oslo_config import cfg
 from oslo_serialization import jsonutils
-from oslo_utils import encodeutils
 from oslo_utils import importutils
 import six
 import testtools
@@ -835,26 +834,6 @@ class ComputeUtilsGetRebootTypes(test.NoDBTestCase):
 
 
 class ComputeUtilsTestCase(test.NoDBTestCase):
-    def test_exception_to_dict_with_long_message_3_bytes(self):
-        # Generate Chinese byte string whose length is 300. This Chinese UTF-8
-        # character occupies 3 bytes. After truncating, the byte string length
-        # should be 255.
-        msg = encodeutils.safe_decode('\xe8\xb5\xb5' * 100)
-        exc = exception.NovaException(message=msg)
-        fault_dict = compute_utils.exception_to_dict(exc)
-        byte_message = encodeutils.safe_encode(fault_dict["message"])
-        self.assertEqual(255, len(byte_message))
-
-    def test_exception_to_dict_with_long_message_2_bytes(self):
-        # Generate Russian byte string whose length is 300. This Russian UTF-8
-        # character occupies 2 bytes. After truncating, the byte string length
-        # should be 254.
-        msg = encodeutils.safe_decode('\xd0\x92' * 150)
-        exc = exception.NovaException(message=msg)
-        fault_dict = compute_utils.exception_to_dict(exc)
-        byte_message = encodeutils.safe_encode(fault_dict["message"])
-        self.assertEqual(254, len(byte_message))
-
     @mock.patch('netifaces.interfaces')
     def test_get_machine_ips_value_error(self, mock_interfaces):
         # Tests that the utility method does not explode if netifaces raises
