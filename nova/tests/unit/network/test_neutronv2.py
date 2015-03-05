@@ -3101,6 +3101,29 @@ class TestNeutronv2WithMock(test.TestCase):
             self.assertEqual(('fake-uuid2', 'fake-network2'),
                              (net_objs[1].uuid, net_objs[1].name))
 
+    @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
+    def test_update_port_bindings_for_instance_same_host(self,
+                                                         get_client_mock):
+        instance = fake_instance.fake_instance_obj(self.context)
+        self.api._has_port_binding_extension = mock.Mock(return_value=True)
+
+        # We test two ports, one with the same host as the host passed in and
+        # one where binding:host_id isn't set, so we update that port.
+        fake_ports = {'ports': [
+                        {'id': 'fake-port-1',
+                         'binding:host_id': instance.host},
+                        {'id': 'fake-port-2'}]}
+        list_ports_mock = mock.Mock(return_value=fake_ports)
+        get_client_mock.return_value.list_ports = list_ports_mock
+        update_port_mock = mock.Mock()
+        get_client_mock.return_value.update_port = update_port_mock
+
+        self.api._update_port_binding_for_instance(self.context, instance,
+                                                   instance.host)
+        # Assert that update_port was only called on the port without a host.
+        update_port_mock.assert_called_once_with(
+            'fake-port-2', {'port': {'binding:host_id': instance.host}})
+
 
 class TestNeutronv2ModuleMethods(test.TestCase):
 
