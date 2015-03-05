@@ -4759,7 +4759,6 @@ class ComputeTestCase(BaseTestCase):
         timeutils.set_time_override(old_time)
         instance = self._create_fake_instance_obj()
         new_type = flavors.get_flavor_by_name('m1.small')
-        new_type = jsonutils.to_primitive(new_type)
         new_type_id = new_type['id']
         flavor_id = new_type['flavorid']
         self.compute.build_and_run_instance(self.context, instance, {}, {}, {},
@@ -5093,12 +5092,10 @@ class ComputeTestCase(BaseTestCase):
         instance.power_state = p_state
         instance.save()
 
-        new_instance_type_ref = db.flavor_get_by_flavor_id(
-                self.context, 3)
-        new_instance_type_p = jsonutils.to_primitive(new_instance_type_ref)
+        new_instance_type_ref = flavors.get_flavor_by_flavor_id(3)
         self.compute.prep_resize(self.context,
                 instance=instance,
-                instance_type=new_instance_type_p,
+                instance_type=new_instance_type_ref,
                 image={}, reservations=reservations, request_spec={},
                 filter_properties={}, node=None, clean_shutdown=True)
 
@@ -5115,7 +5112,7 @@ class ComputeTestCase(BaseTestCase):
                                      migration=migration,
                                      image={},
                                      reservations=[],
-                                     instance_type=new_instance_type_p,
+                                     instance_type=new_instance_type_ref,
                                      clean_shutdown=True)
         self.compute.finish_resize(self.context,
                     migration=migration, reservations=[],
@@ -5198,12 +5195,10 @@ class ComputeTestCase(BaseTestCase):
         instance.vm_state = old_vm_state
         instance.save()
 
-        new_instance_type_ref = db.flavor_get_by_flavor_id(
-                self.context, 3)
-        new_instance_type_p = jsonutils.to_primitive(new_instance_type_ref)
+        new_instance_type_ref = flavors.get_flavor_by_flavor_id(3)
         self.compute.prep_resize(self.context,
                 instance=instance,
-                instance_type=new_instance_type_p,
+                instance_type=new_instance_type_ref,
                 image={}, reservations=reservations, request_spec={},
                 filter_properties={}, node=None,
                 clean_shutdown=True)
@@ -5221,15 +5216,14 @@ class ComputeTestCase(BaseTestCase):
                                      migration=migration,
                                      image={},
                                      reservations=[],
-                                     instance_type=new_instance_type_p,
+                                     instance_type=new_instance_type_ref,
                                      clean_shutdown=True)
         self.compute.finish_resize(self.context,
                     migration=migration, reservations=[],
                     disk_info={}, image={}, instance=instance)
 
         # Prove that the instance size is now the new size
-        instance_type_ref = db.flavor_get(self.context,
-                                          instance['instance_type_id'])
+        instance_type_ref = flavors.get_flavor_by_flavor_id(3)
         self.assertEqual(instance_type_ref['flavorid'], '3')
 
         instance.task_state = task_states.RESIZE_REVERTING

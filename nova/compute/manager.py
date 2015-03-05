@@ -644,7 +644,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='4.0')
+    target = messaging.Target(version='4.1')
 
     # How long to wait in seconds before re-issuing a shutdown
     # signal to a instance during power off.  The overall
@@ -3473,7 +3473,7 @@ class ComputeManager(manager.Manager):
 
         same_host = instance.host == self.host
         # if the flavor IDs match, it's migrate; otherwise resize
-        if same_host and instance_type['id'] == instance['instance_type_id']:
+        if same_host and instance_type.id == instance['instance_type_id']:
             # check driver whether support migrate to same host
             if not self.driver.capabilities['supports_migrate_to_same_host']:
                 raise exception.UnableToMigrateToSelf(
@@ -3547,8 +3547,8 @@ class ComputeManager(manager.Manager):
                         filter_properties)
             finally:
                 extra_usage_info = dict(
-                        new_instance_type=instance_type['name'],
-                        new_instance_type_id=instance_type['id'])
+                        new_instance_type=instance_type.name,
+                        new_instance_type_id=instance_type.id)
 
                 self._notify_about_instance_usage(
                     context, instance, "resize.prep.end",
@@ -3612,6 +3612,7 @@ class ComputeManager(manager.Manager):
                                                   instance=instance)
         with self._error_out_instance_on_exception(context, instance,
                                                    quotas=quotas):
+            # TODO(chaochin) Remove this until v5 RPC API
             # Code downstream may expect extra_specs to be populated since it
             # is receiving an object, so lookup the flavor to ensure this.
             if (not instance_type or
