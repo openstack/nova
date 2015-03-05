@@ -274,8 +274,9 @@ class ComputeHostAPITestCase(test.TestCase):
         service_id = 42
         expected_result = dict(test_service.fake_service, id=service_id)
 
-        self.mox.StubOutWithMock(self.host_api.db, 'service_get_by_args')
-        self.host_api.db.service_get_by_args(self.ctxt,
+        self.mox.StubOutWithMock(self.host_api.db,
+                                 'service_get_by_host_and_binary')
+        self.host_api.db.service_get_by_host_and_binary(self.ctxt,
             host_name, binary).AndReturn(expected_result)
 
         self.mox.StubOutWithMock(self.host_api.db, 'service_update')

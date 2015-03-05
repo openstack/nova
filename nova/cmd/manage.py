@@ -737,7 +737,7 @@ class ServiceCommands(object):
         """Enable scheduling for a service."""
         ctxt = context.get_admin_context()
         try:
-            svc = db.service_get_by_args(ctxt, host, service)
+            svc = db.service_get_by_host_and_binary(ctxt, host, service)
             db.service_update(ctxt, svc['id'], {'disabled': False})
         except exception.NotFound as ex:
             print(_("error: %s") % ex)
@@ -751,7 +751,7 @@ class ServiceCommands(object):
         """Disable scheduling for a service."""
         ctxt = context.get_admin_context()
         try:
-            svc = db.service_get_by_args(ctxt, host, service)
+            svc = db.service_get_by_host_and_binary(ctxt, host, service)
             db.service_update(ctxt, svc['id'], {'disabled': True})
         except exception.NotFound as ex:
             print(_("error: %s") % ex)
