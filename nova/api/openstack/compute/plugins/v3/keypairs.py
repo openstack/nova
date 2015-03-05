@@ -41,7 +41,7 @@ class KeypairController(wsgi.Controller):
 
     def _filter_keypair(self, keypair, **attrs):
         # TODO(claudiub): After v2 and v2.1 is no longer supported,
-        # keypair_type can be added to the clean dict below
+        # keypair.type can be added to the clean dict below
         clean = {
             'name': keypair.name,
             'public_key': keypair.public_key,
@@ -61,14 +61,14 @@ class KeypairController(wsgi.Controller):
         Sending name will generate a key and return private_key
         and fingerprint.
 
-        Keypair will have the type ssh or x509, specified by key_type.
+        Keypair will have the type ssh or x509, specified by type.
 
         You can send a public_key to add an existing ssh/x509 key.
 
         params: keypair object with:
             name (required) - string
             public_key (optional) - string
-            key_type (optional) - string
+            type (optional) - string
         """
         return self._create(req, body, type=True)
 
@@ -95,7 +95,7 @@ class KeypairController(wsgi.Controller):
 
         params = body['keypair']
         name = params['name']
-        key_type = params.get('key_type', keypair_obj.KEYPAIR_TYPE_SSH)
+        key_type = params.get('type', keypair_obj.KEYPAIR_TYPE_SSH)
 
         try:
             if 'public_key' in params:

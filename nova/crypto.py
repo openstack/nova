@@ -150,7 +150,7 @@ def generate_x509_fingerprint(pem_key):
                                     '-fingerprint', '-noout',
                                     process_input=pem_key)
         fingerprint = string.strip(out.rpartition('=')[2])
-        return fingerprint
+        return fingerprint.lower()
     except processutils.ProcessExecutionError as ex:
         raise exception.InvalidKeypair(
             reason=_('failed to generate X509 fingerprint. '
