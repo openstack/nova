@@ -111,6 +111,88 @@ class _TestNUMA(object):
             cell = objects.NUMATopology.obj_from_primitive(prim).cells[0]
             self.assertEqual(cell_ver, cell.VERSION)
 
+    def test_numa_pages_equivalent(self):
+        pt1 = objects.NUMAPagesTopology(size_kb=1024, total=32, used=0)
+        pt2 = objects.NUMAPagesTopology(size_kb=1024, total=32, used=0)
+        self.assertEqual(pt1, pt2)
+
+    def test_numa_pages_not_equivalent(self):
+        pt1 = objects.NUMAPagesTopology(size_kb=1024, total=32, used=0)
+        pt2 = objects.NUMAPagesTopology(size_kb=1024, total=33, used=0)
+        self.assertNotEqual(pt1, pt2)
+
+    def test_numa_pages_not_equivalent_missing_a(self):
+        pt1 = objects.NUMAPagesTopology(size_kb=1024, used=0)
+        pt2 = objects.NUMAPagesTopology(size_kb=1024, total=32, used=0)
+        self.assertNotEqual(pt1, pt2)
+
+    def test_numa_pages_not_equivalent_missing_b(self):
+        pt1 = objects.NUMAPagesTopology(size_kb=1024, total=32, used=0)
+        pt2 = objects.NUMAPagesTopology(size_kb=1024, used=0)
+        self.assertNotEqual(pt1, pt2)
+
+    def test_numa_cell_equivalent(self):
+        cell1 = objects.NUMACell(id=1, cpuset=set([1, 2]), memory=32,
+                                 cpu_usage=10, pinned_cpus=set([3, 4]),
+                                 siblings=[set([5, 6])])
+        cell2 = objects.NUMACell(id=1, cpuset=set([1, 2]), memory=32,
+                                 cpu_usage=10, pinned_cpus=set([3, 4]),
+                                 siblings=[set([5, 6])])
+        self.assertEqual(cell1, cell2)
+
+    def test_numa_cell_not_equivalent(self):
+        cell1 = objects.NUMACell(id=1, cpuset=set([1, 2]), memory=32,
+                                 cpu_usage=10, pinned_cpus=set([3, 4]),
+                                 siblings=[set([5, 6])])
+        cell2 = objects.NUMACell(id=2, cpuset=set([1, 2]), memory=32,
+                                 cpu_usage=10, pinned_cpus=set([3, 4]),
+                                 siblings=[set([5, 6])])
+        self.assertNotEqual(cell1, cell2)
+
+    def test_numa_cell_not_equivalent_missing_a(self):
+        cell1 = objects.NUMACell(id=1, cpuset=set([1, 2]), memory=32,
+                                 pinned_cpus=set([3, 4]),
+                                 siblings=[set([5, 6])])
+        cell2 = objects.NUMACell(id=2, cpuset=set([1, 2]), memory=32,
+                                 cpu_usage=10, pinned_cpus=set([3, 4]),
+                                 siblings=[set([5, 6])])
+        self.assertNotEqual(cell1, cell2)
+
+    def test_numa_cell_not_equivalent_missing_b(self):
+        cell1 = objects.NUMACell(id=1, cpuset=set([1, 2]), memory=32,
+                                 cpu_usage=10, pinned_cpus=set([3, 4]),
+                                 siblings=[set([5, 6])])
+        cell2 = objects.NUMACell(id=2, cpuset=set([1, 2]), memory=32,
+                                 pinned_cpus=set([3, 4]),
+                                 siblings=[set([5, 6])])
+        self.assertNotEqual(cell1, cell2)
+
+    def test_numa_cell_equivalent_different_pages(self):
+        pt1 = objects.NUMAPagesTopology(size_kb=1024, total=32, used=0)
+        pt2 = objects.NUMAPagesTopology(size_kb=1024, total=32, used=0)
+        cell1 = objects.NUMACell(id=1, cpuset=set([1, 2]), memory=32,
+                                 cpu_usage=10, pinned_cpus=set([3, 4]),
+                                 siblings=[set([5, 6])],
+                                 mempages=[pt1])
+        cell2 = objects.NUMACell(id=1, cpuset=set([1, 2]), memory=32,
+                                 cpu_usage=10, pinned_cpus=set([3, 4]),
+                                 siblings=[set([5, 6])],
+                                 mempages=[pt2])
+        self.assertEqual(cell1, cell2)
+
+    def test_numa_cell_not_equivalent_different_pages(self):
+        pt1 = objects.NUMAPagesTopology(size_kb=1024, total=32, used=0)
+        pt2 = objects.NUMAPagesTopology(size_kb=1024, total=32, used=1)
+        cell1 = objects.NUMACell(id=1, cpuset=set([1, 2]), memory=32,
+                                 cpu_usage=10, pinned_cpus=set([3, 4]),
+                                 siblings=[set([5, 6])],
+                                 mempages=[pt1])
+        cell2 = objects.NUMACell(id=1, cpuset=set([1, 2]), memory=32,
+                                 cpu_usage=10, pinned_cpus=set([3, 4]),
+                                 siblings=[set([5, 6])],
+                                 mempages=[pt2])
+        self.assertNotEqual(cell1, cell2)
+
 
 class TestNUMA(test_objects._LocalTest,
                _TestNUMA):

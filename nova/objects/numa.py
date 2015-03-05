@@ -20,6 +20,20 @@ from nova.objects import fields
 from nova.virt import hardware
 
 
+def all_things_equal(obj_a, obj_b):
+    for name in obj_a.fields:
+        set_a = obj_a.obj_attr_is_set(name)
+        set_b = obj_b.obj_attr_is_set(name)
+        if set_a != set_b:
+            return False
+        elif not set_a:
+            continue
+
+        if getattr(obj_a, name) != getattr(obj_b, name):
+                return False
+    return True
+
+
 # TODO(berrange): Remove NovaObjectDictCompat
 class NUMACell(base.NovaObject,
                base.NovaObjectDictCompat):
@@ -42,6 +56,12 @@ class NUMACell(base.NovaObject,
     obj_relationships = {
         'mempages': [('1.2', '1.0')]
     }
+
+    def __eq__(self, other):
+        return all_things_equal(self, other)
+
+    def __ne__(self, other):
+        return not (self == other)
 
     @property
     def free_cpus(self):
@@ -121,6 +141,12 @@ class NUMAPagesTopology(base.NovaObject,
         'total': fields.IntegerField(),
         'used': fields.IntegerField(default=0),
         }
+
+    def __eq__(self, other):
+        return all_things_equal(self, other)
+
+    def __ne__(self, other):
+        return not (self == other)
 
     @property
     def free(self):
