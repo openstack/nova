@@ -449,19 +449,13 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                 self._flavor_from_db(db_inst['extra']['flavor'])
                 sysmeta = self.system_metadata
                 flavors.save_flavor_info(sysmeta, self.flavor)
-                # FIXME(danms): Unfortunately NovaObject doesn't have
-                # a __del__ which means we have to peer behind the
-                # facade here to get these attributes deleted. Since
-                # they're stored as "_$name" we can do that here, but
-                # I need to follow up with a proper handler on the
-                # base class.
-                del self._flavor
+                del self.flavor
                 if self.old_flavor:
                     flavors.save_flavor_info(sysmeta, self.old_flavor, 'old_')
-                    del self._old_flavor
+                    del self.old_flavor
                 if self.new_flavor:
                     flavors.save_flavor_info(sysmeta, self.new_flavor, 'new_')
-                    del self._new_flavor
+                    del self.new_flavor
                 self.system_metadata = sysmeta
         else:
             # Migrate the flavor from system_metadata to extra,
