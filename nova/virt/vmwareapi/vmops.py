@@ -42,7 +42,6 @@ from nova.console import type as ctype
 from nova import context as nova_context
 from nova import exception
 from nova.i18n import _, _LE, _LI, _LW
-from nova import objects
 from nova import utils
 from nova.virt import configdrive
 from nova.virt import diagnostics
@@ -568,9 +567,7 @@ class VMwareVMOps(object):
                                                    image_meta)
         # Read flavors for extra_specs
         if flavor is None:
-            flavor = objects.Flavor.get_by_id(
-                nova_context.get_admin_context(read_deleted='yes'),
-                instance.instance_type_id)
+            flavor = instance.flavor
 
         extra_specs = self._get_extra_specs(flavor)
 
@@ -1228,10 +1225,7 @@ class VMwareVMOps(object):
         vm_util.power_off_instance(self._session, instance, vm_ref)
         client_factory = self._session.vim.client.factory
         # Reconfigure the VM properties
-        flavor = objects.Flavor.get_by_id(
-            nova_context.get_admin_context(read_deleted='yes'),
-            instance.instance_type_id)
-        extra_specs = self._get_extra_specs(flavor)
+        extra_specs = self._get_extra_specs(instance.flavor)
         vm_resize_spec = vm_util.get_vm_resize_spec(client_factory,
                                                     int(instance.vcpus),
                                                     int(instance.memory_mb),

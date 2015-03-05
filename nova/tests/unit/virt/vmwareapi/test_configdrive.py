@@ -19,6 +19,7 @@ from mox3 import mox
 
 from nova import context
 from nova.image import glance
+from nova import objects
 from nova import test
 from nova.tests.unit import fake_instance
 import nova.tests.unit.image.fake
@@ -81,6 +82,7 @@ class ConfigDriveTestCase(test.NoDBTestCase):
         }
         self.test_instance = fake_instance.fake_instance_obj(self.context,
                                                              **instance_values)
+        self.test_instance.flavor = objects.Flavor(extra_specs={})
 
         (image_service, image_id) = glance.get_remote_image_service(context,
                                     image_ref)

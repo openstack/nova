@@ -22,8 +22,6 @@ import contextlib
 import mock
 from oslo_vmware import exceptions as vexc
 
-from nova import db
-from nova.tests.unit import test_flavors
 from nova.tests.unit.virt.vmwareapi import fake
 from nova.virt.vmwareapi import driver
 from nova.virt.vmwareapi import images
@@ -70,18 +68,6 @@ def fake_session_permission_exception():
     raise vexc.VimFaultException(fault_list, fault_string, details=details)
 
 
-def _fake_flavor_get(context, id):
-    for instance_type in test_flavors.DEFAULT_FLAVORS:
-        if instance_type['id'] == id:
-            return instance_type
-    return {'memory_mb': 128, 'root_gb': 0, 'deleted_at': None,
-            'name': 'm1.micro', 'deleted': 0, 'created_at': None,
-            'ephemeral_gb': 0, 'updated_at': None,
-            'disabled': False, 'vcpus': 1, 'extra_specs': {},
-            'swap': 0, 'rxtx_factor': 1.0, 'is_public': True,
-            'flavorid': '1', 'vcpu_weight': None, 'id': 2}
-
-
 def set_stubs(stubs):
     """Set the stubs."""
     stubs.Set(network_util, 'get_network_with_the_name',
@@ -91,7 +77,6 @@ def set_stubs(stubs):
     stubs.Set(driver.VMwareAPISession, "vim", fake_vim_prop)
     stubs.Set(driver.VMwareAPISession, "_is_vim_object",
               fake_is_vim_object)
-    stubs.Set(db, 'flavor_get', _fake_flavor_get)
 
 
 def fake_suds_context(calls=None):
