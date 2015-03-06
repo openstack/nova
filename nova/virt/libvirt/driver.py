@@ -184,6 +184,19 @@ libvirt_opts = [
                     'of the migration downtime. Minimum delay is %d seconds. '
                     'Value is per GiB of guest RAM, with lower bound of a '
                     'minimum of 2 GiB' % LIVE_MIGRATION_DOWNTIME_DELAY_MIN),
+    cfg.IntOpt('live_migration_completion_timeout',
+               default=800,
+               help='Time to wait, in seconds, for migration to successfully '
+                    'complete transferring data before aborting the '
+                    'operation. Value is per GiB of guest RAM, with lower '
+                    'bound of a minimum of 2 GiB. Should usually be larger '
+                    'than downtime delay * downtime steps. Set to 0 to '
+                    'disable timeouts.'),
+    cfg.IntOpt('live_migration_progress_timeout',
+               default=150,
+               help='Time to wait, in seconds, for migration to make forward '
+                    'progress in transferring data before aborting the '
+                    'operation. Set to 0 to disable timeouts.'),
     cfg.StrOpt('snapshot_image_format',
                choices=('raw', 'qcow2', 'vmdk', 'vdi'),
                help='Snapshot image format. Defaults to same as source image'),
@@ -5683,9 +5696,14 @@ class LibvirtDriver(driver.ComputeDriver):
                                 migrate_data, dom, finish_event):
         data_gb = self._live_migration_data_gb(instance)
         downtime_steps = list(self._migration_downtime_steps(data_gb))
+        completion_timeout = int(
+            CONF.libvirt.live_migration_completion_timeout * data_gb)
+        progress_timeout = CONF.libvirt.live_migration_progress_timeout
 
         n = 0
         start = time.time()
+        progress_time = start
+        progress_watermark = None
         while True:
             info = host.DomainJobInfo.for_domain(dom)
 
@@ -5743,6 +5761,32 @@ class LibvirtDriver(driver.ComputeDriver):
                 # the operation, change max bandwidth
                 now = time.time()
                 elapsed = now - start
+                abort = False
+
+                if ((progress_watermark is None) or
+                    (progress_watermark > info.data_remaining)):
+                    progress_watermark = info.data_remaining
+                    progress_time = now
+
+                if (progress_timeout != 0 and
+                    (now - progress_time) > progress_timeout):
+                    LOG.warn(_LW("Live migration stuck for %d sec"),
+                             (now - progress_time), instance=instance)
+                    abort = True
+
+                if (completion_timeout != 0 and
+                    elapsed > completion_timeout):
+                    LOG.warn(_LW("Live migration not completed after %d sec"),
+                             completion_timeout, instance=instance)
+                    abort = True
+
+                if abort:
+                    try:
+                        dom.abortJob()
+                    except libvirt.libvirtError as e:
+                        LOG.warn(_LW("Failed to abort migration %s"),
+                                 e, instance=instance)
+                        raise
 
                 # See if we need to increase the max downtime. We
                 # ignore failures, since we'd rather continue trying
@@ -5801,6 +5845,13 @@ class LibvirtDriver(driver.ComputeDriver):
                         "processed_memory": info.memory_processed,
                         "remaining_memory": info.memory_remaining,
                         "total_memory": info.memory_total}, instance=instance)
+                    if info.data_remaining > progress_watermark:
+                        lg(_LI("Data remaining %(remaining)d bytes, "
+                               "low watermark %(watermark)d bytes "
+                               "%(last)d seconds ago"),
+                           {"remaining": info.data_remaining,
+                            "watermark": progress_watermark,
+                            "last": (now - progress_time)}, instance=instance)
 
                 n = n + 1
             elif info.type == libvirt.VIR_DOMAIN_JOB_COMPLETED:
