@@ -106,7 +106,7 @@ class CallPluginTestCase(stubs.XenAPITestBaseNoDB):
         self.session = self._get_fake_xapisession()
 
     def test_serialized_with_retry_socket_error_conn_reset(self):
-        exc = socket.error
+        exc = socket.error()
         exc.errno = errno.ECONNRESET
         plugin = 'glance'
         fn = 'download_vhd'
@@ -124,7 +124,7 @@ class CallPluginTestCase(stubs.XenAPITestBaseNoDB):
             self.assertEqual(2, retry_cb.call_count)
 
     def test_serialized_with_retry_socket_error_reraised(self):
-        exc = socket.error
+        exc = socket.error()
         exc.errno = errno.ECONNREFUSED
         plugin = 'glance'
         fn = 'download_vhd'
@@ -141,7 +141,7 @@ class CallPluginTestCase(stubs.XenAPITestBaseNoDB):
             self.assertEqual(0, retry_cb.call_count)
 
     def test_serialized_with_retry_socket_reset_reraised(self):
-        exc = socket.error
+        exc = socket.error()
         exc.errno = errno.ECONNRESET
         plugin = 'glance'
         fn = 'download_vhd'
