@@ -28,6 +28,7 @@ from oslo_utils import timeutils
 
 from nova.compute import task_states
 from nova.compute import vm_states
+from nova import context as ctxt_mod
 from nova import exception
 from nova.i18n import _, _LI, _LW
 from nova import objects
@@ -138,6 +139,9 @@ class HostState(object):
 
         # Generic metrics from compute nodes
         self.metrics = {}
+
+        # List of aggregates the host belongs to
+        self.aggregates = []
 
         self.updated = None
         if compute:
@@ -303,6 +307,20 @@ class HostManager(object):
         weigher_classes = self.weight_handler.get_matching_classes(
                 CONF.scheduler_weight_classes)
         self.weighers = [cls() for cls in weigher_classes]
+        # Dict of aggregates keyed by their ID
+        self.aggs_by_id = {}
+        # Dict of set of aggregate IDs keyed by the name of the host belonging
+        # to those aggregates
+        self.host_aggregates_map = collections.defaultdict(set)
+        self._init_aggregates()
+
+    def _init_aggregates(self):
+        elevated = ctxt_mod.get_admin_context()
+        aggs = objects.AggregateList.get_all(elevated)
+        for agg in aggs:
+            self.aggs_by_id[agg.id] = agg
+            for host in agg.hosts:
+                self.host_aggregates_map[host].add(agg.id)
 
     def _choose_host_filters(self, filter_cls_names):
         """Since the caller may specify which filters to use we need
@@ -440,6 +458,12 @@ class HostManager(object):
             else:
                 host_state = self.host_state_cls(host, node, compute=compute)
                 self.host_state_map[state_key] = host_state
+            # We force to update the aggregates info each time a new request
+            # comes in, because some changes on the aggregates could have been
+            # happening after setting this field for the first time
+            host_state.aggregates = [self.aggs_by_id[agg_id] for agg_id in
+                                     self.host_aggregates_map[
+                                         host_state.host]]
             host_state.update_service(dict(service.iteritems()))
             seen_nodes.add(state_key)
 

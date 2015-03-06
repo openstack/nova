@@ -48,9 +48,11 @@ class IronicHostManagerTestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(IronicHostManagerTestCase, self).setUp()
-        self.host_manager = ironic_host_manager.IronicHostManager()
+        with mock.patch.object(host_manager.HostManager, '_init_aggregates'):
+            self.host_manager = ironic_host_manager.IronicHostManager()
 
-    def test_manager_public_api_signatures(self):
+    @mock.patch.object(host_manager.HostManager, '_init_aggregates')
+    def test_manager_public_api_signatures(self, mock_init_aggs):
         self.assertPublicAPISignatures(host_manager.HostManager(),
                                        self.host_manager)
 
@@ -99,7 +101,8 @@ class IronicHostManagerChangedNodesTestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(IronicHostManagerChangedNodesTestCase, self).setUp()
-        self.host_manager = ironic_host_manager.IronicHostManager()
+        with mock.patch.object(host_manager.HostManager, '_init_aggregates'):
+            self.host_manager = ironic_host_manager.IronicHostManager()
         ironic_driver = "nova.virt.ironic.driver.IronicDriver"
         supported_instances = [
             objects.HVSpec.from_list(["i386", "baremetal", "baremetal"])]
@@ -233,7 +236,8 @@ class IronicHostManagerTestFilters(test.NoDBTestCase):
                                                 cls in ['FakeFilterClass1',
                                                         'FakeFilterClass2']])
         self.flags(scheduler_default_filters=['FakeFilterClass1'])
-        self.host_manager = ironic_host_manager.IronicHostManager()
+        with mock.patch.object(host_manager.HostManager, '_init_aggregates'):
+            self.host_manager = ironic_host_manager.IronicHostManager()
         self.fake_hosts = [ironic_host_manager.IronicNodeState(
                 'fake_host%s' % x, 'fake-node') for x in range(1, 5)]
         self.fake_hosts += [ironic_host_manager.IronicNodeState(
