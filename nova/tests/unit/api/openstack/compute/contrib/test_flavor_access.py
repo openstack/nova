@@ -22,7 +22,7 @@ from nova.api.openstack.compute.contrib import flavor_access \
     as flavor_access_v2
 from nova.api.openstack.compute import flavors as flavors_api
 from nova.api.openstack.compute.plugins.v3 import flavor_access \
-    as flavor_access_v3
+    as flavor_access_v21
 from nova import context
 from nova import db
 from nova import exception
@@ -123,8 +123,8 @@ class FakeResponse(object):
 
 class FlavorAccessTestV21(test.NoDBTestCase):
     api_version = "2.1"
-    FlavorAccessController = flavor_access_v3.FlavorAccessController
-    FlavorActionController = flavor_access_v3.FlavorActionController
+    FlavorAccessController = flavor_access_v21.FlavorAccessController
+    FlavorActionController = flavor_access_v21.FlavorActionController
     _prefix = "/v3"
     validation_ex = exception.ValidationError
 
@@ -170,7 +170,7 @@ class FlavorAccessTestV21(test.NoDBTestCase):
             raise exception.PolicyNotAuthorized(action='index')
 
         if self.api_version == "2.1":
-            self.stubs.Set(flavor_access_v3,
+            self.stubs.Set(flavor_access_v21,
                            'authorize',
                            fake_authorize)
         else:

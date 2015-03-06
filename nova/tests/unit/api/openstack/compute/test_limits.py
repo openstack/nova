@@ -26,7 +26,7 @@ import six
 import webob
 
 from nova.api.openstack.compute import limits
-from nova.api.openstack.compute.plugins.v3 import limits as limits_v3
+from nova.api.openstack.compute.plugins.v3 import limits as limits_v21
 from nova.api.openstack.compute import views
 from nova.api.openstack import wsgi
 import nova.context
@@ -75,7 +75,7 @@ class BaseLimitTestSuite(test.NoDBTestCase):
 
 class LimitsControllerTestV21(BaseLimitTestSuite):
     """Tests for `limits.LimitsController` class."""
-    limits_controller = limits_v3.LimitsController
+    limits_controller = limits_v21.LimitsController
 
     def setUp(self):
         """Run before each test."""

@@ -17,7 +17,7 @@ import testtools
 import webob.exc
 
 from nova.api.openstack.compute.contrib import hosts as os_hosts_v2
-from nova.api.openstack.compute.plugins.v3 import hosts as os_hosts_v3
+from nova.api.openstack.compute.plugins.v3 import hosts as os_hosts_v21
 from nova.compute import power_state
 from nova.compute import vm_states
 from nova import context as context_maker
@@ -144,7 +144,7 @@ class FakeRequestWithInvalidNovaService(object):
 class HostTestCaseV21(test.TestCase):
     """Test Case for hosts."""
     validation_ex = exception.ValidationError
-    Controller = os_hosts_v3.HostController
+    Controller = os_hosts_v21.HostController
     policy_ex = exception.PolicyNotAuthorized
 
     def _setup_stubs(self):

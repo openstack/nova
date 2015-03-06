@@ -18,7 +18,7 @@ from oslo_utils import uuidutils
 import webob
 
 from nova.api.openstack.compute.contrib import server_groups
-from nova.api.openstack.compute.plugins.v3 import server_groups as sg_v3
+from nova.api.openstack.compute.plugins.v3 import server_groups as sg_v21
 from nova.api.openstack import extensions
 from nova import context
 import nova.db
@@ -79,7 +79,7 @@ class ServerGroupQuotasTestV21(test.TestCase):
         self.req = fakes.HTTPRequest.blank('')
 
     def _setup_controller(self):
-        self.controller = sg_v3.ServerGroupController()
+        self.controller = sg_v21.ServerGroupController()
 
     def _setup_quotas(self):
         pass
@@ -156,7 +156,7 @@ class ServerGroupQuotasTestV21(test.TestCase):
 
         # NOTE: on v2.1, http status code is set as wsgi_code of API
         # method instead of status_int in a response object.
-        if isinstance(self.controller, sg_v3.ServerGroupController):
+        if isinstance(self.controller, sg_v21.ServerGroupController):
             status_int = self.controller.delete.wsgi_code
         else:
             status_int = resp.status_int

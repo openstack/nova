@@ -18,7 +18,7 @@ import webob
 
 from nova.api.openstack import common
 from nova.api.openstack.compute import flavors as flavors_v2
-from nova.api.openstack.compute.plugins.v3 import flavors as flavors_v3
+from nova.api.openstack.compute.plugins.v3 import flavors as flavors_v21
 import nova.compute.flavors
 from nova import context
 from nova import db
@@ -113,7 +113,7 @@ def return_flavor_not_found(flavor_id, ctxt=None):
 
 class FlavorsTestV21(test.TestCase):
     _prefix = "/v3"
-    Controller = flavors_v3.FlavorsController
+    Controller = flavors_v21.FlavorsController
     fake_request = fakes.HTTPRequestV3
     _rspv = "v3"
     _fake = ""
@@ -577,7 +577,7 @@ class FlavorsTestV20(FlavorsTestV21):
 
 class DisabledFlavorsWithRealDBTestV21(test.TestCase):
     """Tests that disabled flavors should not be shown nor listed."""
-    Controller = flavors_v3.FlavorsController
+    Controller = flavors_v21.FlavorsController
     _prefix = "/v3"
     fake_request = fakes.HTTPRequestV3
 
@@ -672,7 +672,7 @@ class DisabledFlavorsWithRealDBTestV20(DisabledFlavorsWithRealDBTestV21):
 
 
 class ParseIsPublicTestV21(test.TestCase):
-    Controller = flavors_v3.FlavorsController
+    Controller = flavors_v21.FlavorsController
 
     def setUp(self):
         super(ParseIsPublicTestV21, self).setUp()
