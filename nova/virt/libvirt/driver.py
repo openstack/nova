@@ -6176,7 +6176,8 @@ class LibvirtDriver(driver.ComputeDriver):
         if (CONF.libvirt.images_type == 'lvm' and
                 not self._is_booted_from_volume(instance, disk_info_text)):
             reason = _("Migration is not supported for LVM backed instances")
-            raise exception.MigrationPreCheckError(reason=reason)
+            raise exception.InstanceFaultRollback(
+                exception.MigrationPreCheckError(reason=reason))
 
         # copy disks to destination
         # rename instance dir to +_resize at first for using
