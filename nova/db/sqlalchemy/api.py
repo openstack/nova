@@ -416,11 +416,15 @@ def service_get_all_by_binary(context, binary):
 
 @require_admin_context
 def service_get_by_host_and_binary(context, host, binary):
-    return model_query(context, models.Service, read_deleted="no").\
-                filter_by(disabled=False).\
-                filter_by(host=host).\
-                filter_by(binary=binary).\
-                first()
+    result = model_query(context, models.Service, read_deleted="no").\
+                    filter_by(host=host).\
+                    filter_by(binary=binary).\
+                    first()
+
+    if not result:
+        raise exception.HostBinaryNotFound(host=host, binary=binary)
+
+    return result
 
 
 @require_admin_context

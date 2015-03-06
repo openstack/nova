@@ -283,7 +283,8 @@ class ConductorManager(manager.Manager):
                 result = self.db.service_get_by_host_and_topic(context,
                                                                host, topic)
         elif all((host, binary)):
-            result = self.db.service_get_by_args(context, host, binary)
+            result = self.db.service_get_by_host_and_binary(
+                context, host, binary)
         elif topic:
             result = self.db.service_get_all_by_topic(context, topic)
         elif host:

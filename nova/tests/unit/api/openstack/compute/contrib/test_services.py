@@ -175,7 +175,7 @@ class ServicesTestV21(test.TestCase):
         self.stubs.Set(timeutils, "utcnow", fake_utcnow)
         self.stubs.Set(timeutils, "utcnow_ts", fake_utcnow_ts)
 
-        self.stubs.Set(db, "service_get_by_args",
+        self.stubs.Set(db, "service_get_by_host_and_binary",
                        fake_db_service_get_by_host_binary(fake_services_list))
         self.stubs.Set(db, "service_update",
                        fake_db_service_update(fake_services_list))

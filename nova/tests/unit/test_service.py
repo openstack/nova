@@ -127,7 +127,7 @@ class ServiceTestCase(test.TestCase):
         self.binary = 'nova-fake'
         self.topic = 'fake'
         self.mox.StubOutWithMock(db, 'service_create')
-        self.mox.StubOutWithMock(db, 'service_get_by_args')
+        self.mox.StubOutWithMock(db, 'service_get_by_host_and_binary')
         self.flags(use_local=True, group='conductor')
 
     def test_create(self):
@@ -150,7 +150,7 @@ class ServiceTestCase(test.TestCase):
                           'report_count': 0,
                           'id': 1}
 
-        db.service_get_by_args(mox.IgnoreArg(),
+        db.service_get_by_host_and_binary(mox.IgnoreArg(),
                 self.host, self.binary).AndRaise(exception.NotFound())
         db.service_create(mox.IgnoreArg(),
                 service_create).AndReturn(service_ref)
@@ -199,16 +199,17 @@ class ServiceTestCase(test.TestCase):
         # init_host is called before any service record is created
         self.manager_mock.init_host()
 
-        db.service_get_by_args(mox.IgnoreArg(), self.host, self.binary
-                               ).AndRaise(exception.NotFound)
+        db.service_get_by_host_and_binary(
+            mox.IgnoreArg(), self.host, self.binary).AndRaise(
+                exception.NotFound)
         db.service_create(mox.IgnoreArg(), mox.IgnoreArg()
                           ).AndRaise(ex)
 
         class TestException(Exception):
             pass
 
-        db.service_get_by_args(mox.IgnoreArg(), self.host, self.binary
-                               ).AndRaise(TestException)
+        db.service_get_by_host_and_binary(
+            mox.IgnoreArg(), self.host, self.binary).AndRaise(TestException)
 
         self.mox.ReplayAll()
 
@@ -263,11 +264,10 @@ class ServiceTestCase(test.TestCase):
         serv.stop()
 
     @mock.patch('nova.servicegroup.API')
-    @mock.patch('nova.conductor.api.LocalAPI.service_get_by_args')
-    def test_parent_graceful_shutdown_with_cleanup_host(self,
-                                                        mock_svc_get_by_args,
-                                                        mock_API):
-        mock_svc_get_by_args.return_value = {'id': 'some_value'}
+    @mock.patch('nova.conductor.api.LocalAPI.service_get_by_host_and_binary')
+    def test_parent_graceful_shutdown_with_cleanup_host(
+            self, mock_svc_get_by_host_and_binary, mock_API):
+        mock_svc_get_by_host_and_binary.return_value = {'id': 'some_value'}
         mock_manager = mock.Mock()
 
         serv = service.Service(self.host,
@@ -285,11 +285,11 @@ class ServiceTestCase(test.TestCase):
         serv.manager.cleanup_host.assert_called_with()
 
     @mock.patch('nova.servicegroup.API')
-    @mock.patch('nova.conductor.api.LocalAPI.service_get_by_args')
+    @mock.patch('nova.conductor.api.LocalAPI.service_get_by_host_and_binary')
     @mock.patch.object(rpc, 'get_server')
     def test_service_stop_waits_for_rpcserver(
-            self, mock_rpc, mock_svc_get_by_args, mock_API):
-        mock_svc_get_by_args.return_value = {'id': 'some_value'}
+            self, mock_rpc, mock_svc_get_by_host_and_binary, mock_API):
+        mock_svc_get_by_host_and_binary.return_value = {'id': 'some_value'}
         serv = service.Service(self.host,
                                self.binary,
                                self.topic,

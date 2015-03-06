@@ -2172,16 +2172,16 @@ class XenAPIHostTestCase(stubs.XenAPITestBase):
         _create_service_entries(self.context, values={'nova': ['fake-mini']})
         self._test_host_action_no_param(self.conn.set_host_enabled,
                                         True, 'enabled')
-        service = db.service_get_by_args(self.context, 'fake-mini',
-                                         'nova-compute')
+        service = db.service_get_by_host_and_binary(self.context, 'fake-mini',
+                                                    'nova-compute')
         self.assertEqual(service.disabled, False)
 
     def test_set_enable_host_disable(self):
         _create_service_entries(self.context, values={'nova': ['fake-mini']})
         self._test_host_action_no_param(self.conn.set_host_enabled,
                                         False, 'disabled')
-        service = db.service_get_by_args(self.context, 'fake-mini',
-                                         'nova-compute')
+        service = db.service_get_by_host_and_binary(self.context, 'fake-mini',
+                                                    'nova-compute')
         self.assertEqual(service.disabled, True)
 
     def test_get_host_uptime(self):

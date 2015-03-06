@@ -134,7 +134,11 @@ class Service(base.NovaPersistentObject, base.NovaObject,
 
     @base.remotable_classmethod
     def get_by_host_and_binary(cls, context, host, binary):
-        db_service = db.service_get_by_host_and_binary(context, host, binary)
+        try:
+            db_service = db.service_get_by_host_and_binary(context,
+                                                           host, binary)
+        except exception.HostBinaryNotFound:
+            return
         return cls._from_db_object(context, cls(), db_service)
 
     @base.remotable_classmethod
@@ -142,9 +146,11 @@ class Service(base.NovaPersistentObject, base.NovaObject,
         db_service = db.service_get_by_compute_host(context, host)
         return cls._from_db_object(context, cls(), db_service)
 
+    # NOTE(ndipanov): This is deprecated and should be removed on the next
+    # major version bump
     @base.remotable_classmethod
     def get_by_args(cls, context, host, binary):
-        db_service = db.service_get_by_args(context, host, binary)
+        db_service = db.service_get_by_host_and_binary(context, host, binary)
         return cls._from_db_object(context, cls(), db_service)
 
     @base.remotable

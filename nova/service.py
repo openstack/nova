@@ -165,8 +165,9 @@ class Service(service.Service):
         self.model_disconnected = False
         ctxt = context.get_admin_context()
         try:
-            self.service_ref = self.conductor_api.service_get_by_args(ctxt,
-                    self.host, self.binary)
+            self.service_ref = (
+                self.conductor_api.service_get_by_host_and_binary(
+                    ctxt, self.host, self.binary))
             self.service_id = self.service_ref['id']
         except exception.NotFound:
             try:
@@ -175,8 +176,9 @@ class Service(service.Service):
                     exception.ServiceBinaryExists):
                 # NOTE(danms): If we race to create a record with a sibling
                 # worker, don't fail here.
-                self.service_ref = self.conductor_api.service_get_by_args(ctxt,
-                    self.host, self.binary)
+                self.service_ref = (
+                    self.conductor_api.service_get_by_host_and_binary(
+                        ctxt, self.host, self.binary))
 
         self.manager.pre_start_hook()
 

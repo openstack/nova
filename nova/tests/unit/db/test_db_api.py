@@ -2798,6 +2798,11 @@ class ServiceTestCase(test.TestCase, ModelsObjectComparatorMixin):
                                                          binary='foo')
         self._assertEqualObjects(service1, real_service1)
 
+    def test_service_get_by_host_and_binary_raises(self):
+        self.assertRaises(exception.HostBinaryNotFound,
+                          db.service_get_by_host_and_binary, self.ctxt,
+                          host='host1', binary='baz')
+
     def test_service_get_all(self):
         values = [
             {'host': 'host1', 'topic': 'topic1'},

@@ -69,12 +69,20 @@ class _TestServiceObject(object):
 
     def _test_query(self, db_method, obj_method, *args, **kwargs):
         self.mox.StubOutWithMock(db, db_method)
-        getattr(db, db_method)(self.context, *args, **kwargs).AndReturn(
-            fake_service)
+        db_exception = kwargs.pop('db_exception', None)
+        if db_exception:
+            getattr(db, db_method)(self.context, *args, **kwargs).AndRaise(
+                db_exception)
+        else:
+            getattr(db, db_method)(self.context, *args, **kwargs).AndReturn(
+                fake_service)
         self.mox.ReplayAll()
         obj = getattr(service.Service, obj_method)(self.context, *args,
                                                    **kwargs)
-        self.compare_obj(obj, fake_service, allow_missing=OPTIONAL)
+        if db_exception:
+            self.assertIsNone(obj)
+        else:
+            self.compare_obj(obj, fake_service, allow_missing=OPTIONAL)
 
     def test_get_by_id(self):
         self._test_query('service_get', 'get_by_id', 123)
@@ -87,13 +95,19 @@ class _TestServiceObject(object):
         self._test_query('service_get_by_host_and_binary',
                          'get_by_host_and_binary', 'fake-host', 'fake-binary')
 
+    def test_get_by_host_and_binary_raises(self):
+        self._test_query('service_get_by_host_and_binary',
+                         'get_by_host_and_binary', 'fake-host', 'fake-binary',
+                         db_exception=exception.HostBinaryNotFound(
+                             host='fake-host', binary='fake-binary'))
+
     def test_get_by_compute_host(self):
         self._test_query('service_get_by_compute_host', 'get_by_compute_host',
                          'fake-host')
 
     def test_get_by_args(self):
-        self._test_query('service_get_by_args', 'get_by_args', 'fake-host',
-                         'fake-service')
+        self._test_query('service_get_by_host_and_binary', 'get_by_args',
+                         'fake-host', 'fake-binary')
 
     def test_create(self):
         self.mox.StubOutWithMock(db, 'service_create')

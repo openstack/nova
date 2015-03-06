@@ -503,7 +503,7 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
                            db_result_listified=True)
 
     def test_service_get_by_args(self):
-        self._test_stubbed('service_get_by_args',
+        self._test_stubbed('service_get_by_host_and_binary',
                            ('host', 'binary'),
                            dict(host='host', binary='binary', topic=None))
 
@@ -514,7 +514,7 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
                            db_exception=exc.ComputeHostNotFound(host='host'))
 
     def test_service_get_by_args_not_found(self):
-        self._test_stubbed('service_get_by_args',
+        self._test_stubbed('service_get_by_host_and_binary',
                            ('host', 'binary'),
                            dict(host='host', binary='binary', topic=None),
                            db_exception=exc.HostBinaryNotFound(binary='binary',
@@ -843,7 +843,7 @@ class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):
                            db_result_listified=True)
 
     def test_service_get_by_args(self):
-        self._test_stubbed('service_get_by_args',
+        self._test_stubbed('service_get_by_host_and_binary',
                            ('host', 'binary'),
                            dict(host='host', binary='binary', topic=None))
 
@@ -854,7 +854,7 @@ class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):
                            db_exception=exc.ComputeHostNotFound(host='host'))
 
     def test_service_get_by_args_not_found(self):
-        self._test_stubbed('service_get_by_args',
+        self._test_stubbed('service_get_by_host_and_binary',
                            ('host', 'binary'),
                            dict(host='host', binary='binary', topic=None),
                            db_exception=exc.HostBinaryNotFound(binary='binary',
@@ -947,6 +947,7 @@ class ConductorAPITestCase(_BaseTestCase, test.TestCase):
                                                              'fake-bdm')
 
     def _test_stubbed(self, name, *args, **kwargs):
+
         if args and isinstance(args[0], FakeContext):
             ctxt = args[0]
             args = args[1:]
@@ -990,14 +991,14 @@ class ConductorAPITestCase(_BaseTestCase, test.TestCase):
         self._test_stubbed('service_get_by_compute_host', 'host')
 
     def test_service_get_by_args(self):
-        self._test_stubbed('service_get_by_args', 'host', 'binary')
+        self._test_stubbed('service_get_by_host_and_binary', 'host', 'binary')
 
     def test_service_get_by_compute_host_not_found(self):
         self._test_stubbed('service_get_by_compute_host', 'host',
                            db_exception=exc.ComputeHostNotFound(host='host'))
 
     def test_service_get_by_args_not_found(self):
-        self._test_stubbed('service_get_by_args', 'host', 'binary',
+        self._test_stubbed('service_get_by_host_and_binary', 'host', 'binary',
                            db_exception=exc.HostBinaryNotFound(binary='binary',
                                                                host='host'))
 

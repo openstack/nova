@@ -1560,7 +1560,7 @@ class ServicesJsonTest(ApiSampleTestBaseV2):
                        test_services.fake_db_api_service_get_all)
         self.stubs.Set(timeutils, "utcnow", test_services.fake_utcnow)
         self.stubs.Set(timeutils, "utcnow_ts", test_services.fake_utcnow_ts)
-        self.stubs.Set(db, "service_get_by_args",
+        self.stubs.Set(db, "service_get_by_host_and_binary",
                        test_services.fake_service_get_by_host_binary)
         self.stubs.Set(db, "service_update",
                        test_services.fake_service_update)
@@ -1645,7 +1645,7 @@ class ExtendedServicesJsonTest(ApiSampleTestBaseV2):
 
 @mock.patch.object(db, 'service_get_all',
                    side_effect=test_services.fake_db_api_service_get_all)
-@mock.patch.object(db, 'service_get_by_args',
+@mock.patch.object(db, 'service_get_by_host_and_binary',
                    side_effect=test_services.fake_service_get_by_host_binary)
 class ExtendedServicesDeleteJsonTest(ApiSampleTestBaseV2):
     extends_name = ("nova.api.openstack.compute.contrib.services.Services")
