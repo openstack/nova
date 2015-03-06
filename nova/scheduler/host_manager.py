@@ -72,7 +72,8 @@ class ReadOnlyDict(UserDict.IterableUserDict):
     """A read-only dict."""
     def __init__(self, source=None):
         self.data = {}
-        self.update(source)
+        if source:
+            self.data.update(source)
 
     def __setitem__(self, key, item):
         raise TypeError()
@@ -89,15 +90,8 @@ class ReadOnlyDict(UserDict.IterableUserDict):
     def popitem(self):
         raise TypeError()
 
-    def update(self, source=None):
-        if source is None:
-            return
-        elif isinstance(source, UserDict.UserDict):
-            self.data = source.data
-        elif isinstance(source, type({})):
-            self.data = source
-        else:
-            raise TypeError()
+    def update(self):
+        raise TypeError()
 
 
 # Representation of a single metric value from a compute node.
