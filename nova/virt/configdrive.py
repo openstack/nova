@@ -38,8 +38,10 @@ configdrive_opts = [
     # force_config_drive is a string option, to allow for future behaviors
     #  (e.g. use config_drive based on image properties)
     cfg.StrOpt('force_config_drive',
-               help='Set to force injection to take place on a config drive '
-                    '(if set, valid options are: always)'),
+               choices=('always', 'True', 'False'),
+               help='Set to "always" to force injection to take place on a '
+                    'config drive. NOTE: The "always" will be deprecated in '
+                    'the Liberty release cycle.'),
     cfg.StrOpt('mkisofs_cmd',
                default='genisoimage',
                help='Name and optionally path of the tool used for '
@@ -57,6 +59,9 @@ class ConfigDriveBuilder(object):
     """Build config drives, optionally as a context manager."""
 
     def __init__(self, instance_md=None):
+        if CONF.force_config_drive == 'always':
+            LOG.warning(_LW('The setting "always" will be deprecated in the '
+                            'Liberty version. Please use "True" instead'))
         self.imagefile = None
         self.mdfiles = []
 
