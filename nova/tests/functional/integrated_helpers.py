@@ -88,6 +88,7 @@ class _IntegratedTestBase(test.TestCase):
         self.api_fixture = self.useFixture(
             nova_fixtures.OSAPIFixture(self._api_version))
         self.api = self.api_fixture.api
+        self.admin_api = self.api_fixture.admin_api
 
         self.useFixture(cast_as_call.CastAsCall(self.stubs))
 

@@ -531,6 +531,6 @@ class Loader(object):
             LOG.debug("Loading app %(name)s from %(path)s",
                       {'name': name, 'path': self.config_path})
             return deploy.loadapp("config:%s" % self.config_path, name=name)
-        except LookupError as err:
-            LOG.error(err)
+        except LookupError:
+            LOG.exception(_LE("Couldn't lookup app: %s"), name)
             raise exception.PasteAppNotFound(name=name, path=self.config_path)

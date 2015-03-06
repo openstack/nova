@@ -29,7 +29,7 @@ CONF.import_opt('use_forwarded_for', 'nova.api.auth')
 class NoAuthMiddlewareBase(base_wsgi.Middleware):
     """Return a fake token if one isn't specified."""
 
-    def base_call(self, req, project_id_in_path):
+    def base_call(self, req, project_id_in_path, always_admin=True):
         if 'X-Auth-Token' not in req.headers:
             user_id = req.headers.get('X-Auth-User', 'admin')
             project_id = req.headers.get('X-Auth-Project-Id', 'admin')
@@ -53,9 +53,10 @@ class NoAuthMiddlewareBase(base_wsgi.Middleware):
         remote_address = getattr(req, 'remote_address', '127.0.0.1')
         if CONF.use_forwarded_for:
             remote_address = req.headers.get('X-Forwarded-For', remote_address)
+        is_admin = always_admin or (user_id == 'admin')
         ctx = context.RequestContext(user_id,
                                      project_id,
-                                     is_admin=True,
+                                     is_admin=is_admin,
                                      remote_address=remote_address)
 
         req.environ['nova.context'] = ctx
@@ -63,7 +64,27 @@ class NoAuthMiddlewareBase(base_wsgi.Middleware):
 
 
 class NoAuthMiddleware(NoAuthMiddlewareBase):
-    """Return a fake token if one isn't specified."""
+    """Return a fake token if one isn't specified.
+
+    noauth2 is a variation on noauth that only provides admin privs if
+    'admin' is provided as the user id. We will deprecate the
+    NoAuthMiddlewareOld for future removal so we don't need to
+    maintain both code paths.
+
+    """
+    @webob.dec.wsgify(RequestClass=wsgi.Request)
+    def __call__(self, req):
+        return self.base_call(req, True, always_admin=False)
+
+
+# TODO(sdague): remove in Liberty
+class NoAuthMiddlewareOld(NoAuthMiddlewareBase):
+    """Return a fake token if one isn't specified.
+
+    This is the Deprecated version of noauth, and should be removed in
+    the Liberty cycle.
+
+    """
     @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
         return self.base_call(req, True)

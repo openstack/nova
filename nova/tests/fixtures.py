@@ -331,6 +331,8 @@ class OSAPIFixture(fixtures.Fixture):
             'host': osapi.host, 'port': osapi.port,
             'api_version': self.api_version})
         self.api = client.TestOpenStackClient('fake', 'fake', self.auth_url)
+        self.admin_api = client.TestOpenStackClient(
+            'admin', 'admin', self.auth_url)
 
 
 class PoisonFunctions(fixtures.Fixture):
