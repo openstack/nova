@@ -36,8 +36,7 @@ class ServerMetadataController(wsgi.Controller):
         super(ServerMetadataController, self).__init__()
 
     def _get_metadata(self, context, server_id):
-        server = common.get_instance(self.compute_api, context, server_id,
-                                     want_objects=True)
+        server = common.get_instance(self.compute_api, context, server_id)
         try:
             # NOTE(mikal): get_instanc_metadata sometimes returns
             # InstanceNotFound in unit tests, even though the instance is
@@ -106,8 +105,7 @@ class ServerMetadataController(wsgi.Controller):
     def _update_instance_metadata(self, context, server_id, metadata,
                                   delete=False):
         try:
-            server = common.get_instance(self.compute_api, context, server_id,
-                                         want_objects=True)
+            server = common.get_instance(self.compute_api, context, server_id)
             return self.compute_api.update_instance_metadata(context,
                                                              server,
                                                              metadata,
@@ -148,8 +146,7 @@ class ServerMetadataController(wsgi.Controller):
             msg = _("Metadata item was not found")
             raise exc.HTTPNotFound(explanation=msg)
 
-        server = common.get_instance(self.compute_api, context, server_id,
-                                     want_objects=True)
+        server = common.get_instance(self.compute_api, context, server_id)
         try:
             self.compute_api.delete_instance_metadata(context, server, id)
 

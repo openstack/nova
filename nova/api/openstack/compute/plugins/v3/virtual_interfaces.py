@@ -47,8 +47,7 @@ class ServerVirtualInterfaceController(wsgi.Controller):
         """Returns a list of VIFs, transformed through entity_maker."""
         context = req.environ['nova.context']
         authorize(context)
-        instance = common.get_instance(self.compute_api, context, server_id,
-                                       want_objects=True)
+        instance = common.get_instance(self.compute_api, context, server_id)
 
         vifs = self.network_api.get_vifs_by_instance(context, instance)
         limited_list = common.limited(vifs, req)

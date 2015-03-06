@@ -35,8 +35,7 @@ class LockServerController(wsgi.Controller):
         """Lock a server instance."""
         context = req.environ['nova.context']
         authorize(context, action='lock')
-        instance = common.get_instance(self.compute_api, context, id,
-                                       want_objects=True)
+        instance = common.get_instance(self.compute_api, context, id)
         self.compute_api.lock(context, instance)
 
     @wsgi.response(202)
@@ -46,8 +45,7 @@ class LockServerController(wsgi.Controller):
         """Unlock a server instance."""
         context = req.environ['nova.context']
         authorize(context, action='unlock')
-        instance = common.get_instance(self.compute_api, context, id,
-                                       want_objects=True)
+        instance = common.get_instance(self.compute_api, context, id)
         self.compute_api.unlock(context, instance)
 
 

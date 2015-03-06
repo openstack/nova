@@ -36,8 +36,7 @@ class ServerDiagnosticsController(wsgi.Controller):
         context = req.environ["nova.context"]
         authorize(context)
 
-        instance = common.get_instance(self.compute_api, context, server_id,
-                                       want_objects=True)
+        instance = common.get_instance(self.compute_api, context, server_id)
 
         try:
             # NOTE(gmann): To make V21 same as V2 API, this method will call

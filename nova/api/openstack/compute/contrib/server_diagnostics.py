@@ -33,8 +33,7 @@ class ServerDiagnosticsController(object):
         context = req.environ["nova.context"]
         authorize(context)
 
-        instance = common.get_instance(self.compute_api, context, server_id,
-                                       want_objects=True)
+        instance = common.get_instance(self.compute_api, context, server_id)
 
         try:
             return self.compute_api.get_diagnostics(context, instance)

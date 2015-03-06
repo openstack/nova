@@ -51,8 +51,7 @@ class ServerPasswordController(wsgi.Controller):
 
         context = req.environ['nova.context']
         authorize(context)
-        instance = common.get_instance(self.compute_api, context, server_id,
-                                       want_objects=True)
+        instance = common.get_instance(self.compute_api, context, server_id)
         meta = password.convert_password(context, None)
         instance.system_metadata.update(meta)
         instance.save()

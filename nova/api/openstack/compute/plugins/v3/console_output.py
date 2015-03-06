@@ -44,8 +44,7 @@ class ConsoleOutputController(wsgi.Controller):
         context = req.environ['nova.context']
         authorize(context)
 
-        instance = common.get_instance(self.compute_api, context, id,
-                                       want_objects=True)
+        instance = common.get_instance(self.compute_api, context, id)
         length = body['os-getConsoleOutput'].get('length')
         # TODO(cyeoh): In a future API update accept a length of -1
         # as meaning unlimited length (convert to None)

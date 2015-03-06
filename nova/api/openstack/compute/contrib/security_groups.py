@@ -324,8 +324,8 @@ class ServerSecurityGroupController(SecurityGroupControllerBase):
         self.security_group_api.ensure_default(context)
 
         with translate_exceptions():
-            instance = self.compute_api.get(context, server_id,
-                                            want_objects=True)
+            instance = common.get_instance(self.compute_api, context,
+                                           server_id)
             groups = self.security_group_api.get_instance_security_groups(
                 context, instance.uuid, True)
 
@@ -364,8 +364,7 @@ class SecurityGroupActionController(wsgi.Controller):
 
     def _invoke(self, method, context, id, group_name):
         with translate_exceptions():
-            instance = self.compute_api.get(context, id,
-                                            want_objects=True)
+            instance = common.get_instance(self.compute_api, context, id)
             method(context, instance, group_name)
 
         return webob.Response(status_int=202)

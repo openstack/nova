@@ -112,8 +112,7 @@ class InterfaceAttachmentController(wsgi.Controller):
             msg = _("Must input network_id when request IP address")
             raise exc.HTTPBadRequest(explanation=msg)
 
-        instance = common.get_instance(self.compute_api, context,
-                                       server_id, want_objects=True)
+        instance = common.get_instance(self.compute_api, context, server_id)
         try:
             vif = self.compute_api.attach_interface(context,
                 instance, network_id, port_id, req_ip)
@@ -147,8 +146,7 @@ class InterfaceAttachmentController(wsgi.Controller):
         authorize(context)
         port_id = id
 
-        instance = common.get_instance(self.compute_api, context, server_id,
-                                       want_objects=True)
+        instance = common.get_instance(self.compute_api, context, server_id)
         try:
             self.compute_api.detach_interface(context,
                 instance, port_id=port_id)
@@ -167,8 +165,7 @@ class InterfaceAttachmentController(wsgi.Controller):
         context = req.environ['nova.context']
         authorize(context)
 
-        instance = common.get_instance(self.compute_api, context, server_id,
-                                       want_objects=True)
+        instance = common.get_instance(self.compute_api, context, server_id)
         results = []
         search_opts = {'device_id': instance.uuid}
 
