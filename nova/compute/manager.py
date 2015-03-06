@@ -85,6 +85,7 @@ from nova import safe_utils
 from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova import utils
 from nova.virt import block_device as driver_block_device
+from nova.virt import configdrive
 from nova.virt import driver
 from nova.virt import event as virtevent
 from nova.virt import storage_users
@@ -1901,6 +1902,13 @@ class ComputeManager(manager.Manager):
                           instance=instance)
             raise exception.InvalidBDM()
 
+    def _update_instance_after_spawn(self, context, instance):
+        instance.power_state = self._get_power_state(context, instance)
+        instance.vm_state = vm_states.ACTIVE
+        instance.task_state = None
+        instance.launched_at = timeutils.utcnow()
+        configdrive.update_instance(instance)
+
     @object_compat
     def _spawn(self, context, instance, image_meta, network_info,
                block_device_info, injected_files, admin_password,
@@ -1920,10 +1928,7 @@ class ComputeManager(manager.Manager):
                 LOG.exception(_LE('Instance failed to spawn'),
                               instance=instance)
 
-        instance.power_state = self._get_power_state(context, instance)
-        instance.vm_state = vm_states.ACTIVE
-        instance.task_state = None
-        instance.launched_at = timeutils.utcnow()
+        self._update_instance_after_spawn(context, instance)
 
         def _set_access_ip_values():
             """Add access ip values for a given instance.
@@ -2248,10 +2253,7 @@ class ComputeManager(manager.Manager):
         # NOTE(alaski): This is only useful during reschedules, remove it now.
         instance.system_metadata.pop('network_allocated', None)
 
-        instance.power_state = self._get_power_state(context, instance)
-        instance.vm_state = vm_states.ACTIVE
-        instance.task_state = None
-        instance.launched_at = timeutils.utcnow()
+        self._update_instance_after_spawn(context, instance)
 
         try:
             instance.save(expected_task_state=task_states.SPAWNING)
@@ -2909,10 +2911,7 @@ class ComputeManager(manager.Manager):
                 # NOTE(rpodolyaka): driver doesn't provide specialized version
                 # of rebuild, fall back to the default implementation
                 self._rebuild_default_impl(**kwargs)
-            instance.power_state = self._get_power_state(context, instance)
-            instance.vm_state = vm_states.ACTIVE
-            instance.task_state = None
-            instance.launched_at = timeutils.utcnow()
+            self._update_instance_after_spawn(context, instance)
             instance.save(expected_task_state=[task_states.REBUILD_SPAWNING])
 
             if orig_vm_state == vm_states.STOPPED:
@@ -4367,10 +4366,7 @@ class ComputeManager(manager.Manager):
             self.image_api.delete(context, image['id'])
 
         self._unshelve_instance_key_restore(instance, scrubbed_keys)
-        instance.power_state = self._get_power_state(context, instance)
-        instance.vm_state = vm_states.ACTIVE
-        instance.task_state = None
-        instance.launched_at = timeutils.utcnow()
+        self._update_instance_after_spawn(context, instance)
         instance.save(expected_task_state=task_states.SPAWNING)
         self._notify_about_instance_usage(context, instance, 'unshelve.end')
 

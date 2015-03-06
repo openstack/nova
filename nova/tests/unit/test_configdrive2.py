@@ -17,6 +17,7 @@
 import os
 import tempfile
 
+import mock
 from mox3 import mox
 from oslo_config import cfg
 
@@ -102,3 +103,26 @@ class ConfigDriveTestCase(test.NoDBTestCase):
         inst.system_metadata = {
             utils.SM_IMAGE_PROP_PREFIX + 'img_config_drive': 'optional'}
         self.assertFalse(configdrive.required_by(inst))
+
+    @mock.patch.object(configdrive, 'required_by', return_value=False)
+    def test_config_drive_update_instance_required_by_false(self,
+                                                            mock_required):
+        inst = fake_instance.fake_instance_obj(context.get_admin_context())
+        inst.config_drive = ''
+        configdrive.update_instance(inst)
+        self.assertEqual('', inst.config_drive)
+
+        inst.config_drive = True
+        configdrive.update_instance(inst)
+        self.assertTrue(inst.config_drive)
+
+    @mock.patch.object(configdrive, 'required_by', return_value=True)
+    def test_config_drive_update_instance(self, mock_required):
+        inst = fake_instance.fake_instance_obj(context.get_admin_context())
+        inst.config_drive = ''
+        configdrive.update_instance(inst)
+        self.assertTrue(inst.config_drive)
+
+        inst.config_drive = True
+        configdrive.update_instance(inst)
+        self.assertTrue(inst.config_drive)
