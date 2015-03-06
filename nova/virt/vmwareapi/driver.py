@@ -501,7 +501,7 @@ class VMwareVCDriver(driver.ComputeDriver):
     def reboot(self, context, instance, network_info, reboot_type,
                block_device_info=None, bad_volumes_callback=None):
         """Reboot VM instance."""
-        self._vmops.reboot(instance, network_info)
+        self._vmops.reboot(instance, network_info, reboot_type)
 
     def destroy(self, context, instance, network_info, block_device_info=None,
                 destroy_disks=True, migrate_data=None):

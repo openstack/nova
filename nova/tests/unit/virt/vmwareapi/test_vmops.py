@@ -1874,3 +1874,51 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         self.flags(image_cache_subdirectory_name='_base')
         base_folder = self._vmops._get_base_folder()
         self.assertEqual('my_prefix_base', base_folder)
+
+    def _test_reboot_vm(self, reboot_type="SOFT"):
+
+        expected_methods = ['get_object_properties']
+        if reboot_type == "SOFT":
+            expected_methods.append('RebootGuest')
+        else:
+            expected_methods.append('ResetVM_Task')
+
+        query = {}
+        query['runtime.powerState'] = "poweredOn"
+        query['summary.guest.toolsStatus'] = "toolsOk"
+        query['summary.guest.toolsRunningStatus'] = "guestToolsRunning"
+
+        def fake_call_method(module, method, *args, **kwargs):
+            expected_method = expected_methods.pop(0)
+            self.assertEqual(expected_method, method)
+            if (expected_method == 'get_object_properties'):
+                return 'fake-props'
+            elif (expected_method == 'ResetVM_Task'):
+                return 'fake-task'
+
+        with contextlib.nested(
+                mock.patch.object(vm_util, "get_vm_ref",
+                                  return_value='fake-vm-ref'),
+                mock.patch.object(vm_util, "get_values_from_object_properties",
+                                  return_value=query),
+                mock.patch.object(self._session, "_call_method",
+                                  fake_call_method),
+                mock.patch.object(self._session, "_wait_for_task")
+        ) as (_get_vm_ref, _get_values_from_object_properties,
+              fake_call_method, _wait_for_task):
+            self._vmops.reboot(self._instance, self.network_info, reboot_type)
+            _get_vm_ref.assert_called_once_with(self._session,
+                                                self._instance)
+
+            _get_values_from_object_properties.assert_called_once_with(
+                                                              self._session,
+                                                              'fake-props')
+            if reboot_type == "HARD":
+                _wait_for_task.assert_has_calls([
+                       mock.call('fake-task')])
+
+    def test_reboot_vm_soft(self):
+        self._test_reboot_vm()
+
+    def test_reboot_vm_hard(self):
+        self._test_reboot_vm(reboot_type="HARD")

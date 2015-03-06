@@ -1303,6 +1303,16 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         info = self._get_info()
         self._check_vm_info(info, power_state.RUNNING)
 
+    def test_reboot_hard(self):
+        self._create_vm()
+        info = self._get_info()
+        self._check_vm_info(info, power_state.RUNNING)
+        reboot_type = "HARD"
+        self.conn.reboot(self.context, self.instance, self.network_info,
+                         reboot_type)
+        info = self._get_info()
+        self._check_vm_info(info, power_state.RUNNING)
+
     def test_reboot_with_uuid(self):
         """Test fall back to use name when can't find by uuid."""
         self._create_vm()
