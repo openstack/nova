@@ -1448,6 +1448,7 @@ class API(base_api.NetworkAPI):
         data = client.list_ports(**search_opts)
 
         current_neutron_ports = data.get('ports', [])
+        nw_info_refresh = networks is None and port_ids is None
         networks, port_ids = self._gather_port_ids_and_networks(
                 context, instance, networks, port_ids)
         nw_info = network_model.NetworkInfo()
@@ -1490,6 +1491,12 @@ class API(base_api.NetworkAPI):
                     ovs_interfaceid=ovs_interfaceid,
                     devname=devname,
                     active=vif_active))
+
+            elif nw_info_refresh:
+                LOG.info(_LI('Port %s from network info_cache is no '
+                             'longer associated with instance in Neutron. '
+                             'Removing from network info_cache.'), port_id,
+                         instance=instance)
 
         return nw_info
 
