@@ -27,7 +27,7 @@ from nova import network
 
 
 ALIAS = "os-floating-ip-dns"
-authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
+authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 def _translate_dns_entry_view(dns_entry):
@@ -84,7 +84,7 @@ class FloatingIPDNSDomainController(wsgi.Controller):
 
     def __init__(self):
         super(FloatingIPDNSDomainController, self).__init__()
-        self.network_api = network.API()
+        self.network_api = network.API(skip_policy_check=True)
 
     @extensions.expected_errors(501)
     def index(self, req):
@@ -165,7 +165,7 @@ class FloatingIPDNSEntryController(wsgi.Controller):
 
     def __init__(self):
         super(FloatingIPDNSEntryController, self).__init__()
-        self.network_api = network.API()
+        self.network_api = network.API(skip_policy_check=True)
 
     @extensions.expected_errors((404, 501))
     def show(self, req, domain_id, id):
