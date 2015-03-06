@@ -112,6 +112,13 @@ libvirt = None
 
 LOG = logging.getLogger(__name__)
 
+# Downtime period in milliseconds
+LIVE_MIGRATION_DOWNTIME_MIN = 100
+# Step count
+LIVE_MIGRATION_DOWNTIME_STEPS_MIN = 3
+# Delay in seconds
+LIVE_MIGRATION_DOWNTIME_DELAY_MIN = 10
+
 libvirt_opts = [
     cfg.StrOpt('rescue_image_id',
                help='Rescue ami image. This will not be used if an image id '
@@ -160,6 +167,23 @@ libvirt_opts = [
     cfg.IntOpt('live_migration_bandwidth',
                default=0,
                help='Maximum bandwidth to be used during migration, in Mbps'),
+    cfg.IntOpt('live_migration_downtime',
+               default=500,
+               help='Maximum permitted downtime, in milliseconds, for live '
+                    'migration switchover. Will be rounded up to a minimum '
+                    'of %dms. Use a large value if guest liveness is '
+                    'unimportant.' % LIVE_MIGRATION_DOWNTIME_MIN),
+    cfg.IntOpt('live_migration_downtime_steps',
+               default=10,
+               help='Number of incremental steps to reach max downtime value. '
+                    'Will be rounded up to a minimum of %d steps' %
+                    LIVE_MIGRATION_DOWNTIME_STEPS_MIN),
+    cfg.IntOpt('live_migration_downtime_delay',
+               default=75,
+               help='Time to wait, in seconds, between each step increase '
+                    'of the migration downtime. Minimum delay is %d seconds. '
+                    'Value is per GiB of guest RAM, with lower bound of a '
+                    'minimum of 2 GiB' % LIVE_MIGRATION_DOWNTIME_DELAY_MIN),
     cfg.StrOpt('snapshot_image_format',
                choices=('raw', 'qcow2', 'vmdk', 'vdi'),
                help='Snapshot image format. Defaults to same as source image'),
@@ -5583,10 +5607,85 @@ class LibvirtDriver(driver.ComputeDriver):
         LOG.debug("Migration operation thread has finished",
                   instance=instance)
 
+    @staticmethod
+    def _migration_downtime_steps(data_gb):
+        '''Calculate downtime value steps and time between increases.
+
+        :param data_gb: total GB of RAM and disk to transfer
+
+        This looks at the total downtime steps and upper bound
+        downtime value and uses an exponential backoff. So initially
+        max downtime is increased by small amounts, and as time goes
+        by it is increased by ever larger amounts
+
+        For example, with 10 steps, 30 second step delay, 3 GB
+        of RAM and 400ms target maximum downtime, the downtime will
+        be increased every 90 seconds in the following progression:
+
+        -   0 seconds -> set downtime to  37ms
+        -  90 seconds -> set downtime to  38ms
+        - 180 seconds -> set downtime to  39ms
+        - 270 seconds -> set downtime to  42ms
+        - 360 seconds -> set downtime to  46ms
+        - 450 seconds -> set downtime to  55ms
+        - 540 seconds -> set downtime to  70ms
+        - 630 seconds -> set downtime to  98ms
+        - 720 seconds -> set downtime to 148ms
+        - 810 seconds -> set downtime to 238ms
+        - 900 seconds -> set downtime to 400ms
+
+        This allows the guest a good chance to complete migration
+        with a small downtime value.
+        '''
+        downtime = CONF.libvirt.live_migration_downtime
+        steps = CONF.libvirt.live_migration_downtime_steps
+        delay = CONF.libvirt.live_migration_downtime_delay
+
+        if downtime < LIVE_MIGRATION_DOWNTIME_MIN:
+            downtime = LIVE_MIGRATION_DOWNTIME_MIN
+        if steps < LIVE_MIGRATION_DOWNTIME_STEPS_MIN:
+            steps = LIVE_MIGRATION_DOWNTIME_STEPS_MIN
+        if delay < LIVE_MIGRATION_DOWNTIME_DELAY_MIN:
+            delay = LIVE_MIGRATION_DOWNTIME_DELAY_MIN
+        delay = int(delay * data_gb)
+
+        offset = downtime / float(steps + 1)
+        base = (downtime - offset) ** (1 / float(steps))
+
+        for i in range(steps + 1):
+            yield (int(delay * i), int(offset + base ** i))
+
+    def _live_migration_data_gb(self, instance):
+        '''Calculate total amount of data to be transferred
+
+        :param instance: the nova.objects.Instance being migrated
+
+        Calculates the total amount of data that needs to be
+        transferred during the live migration. The actual
+        amount copied will be larger than this, due to the
+        guest OS continuing to dirty RAM while the migration
+        is taking place. So this value represents the minimal
+        data size possible.
+
+        :returns: data size to be copied in GB
+        '''
+
+        ram_gb = instance.flavor.memory_mb * units.Mi / units.Gi
+        if ram_gb < 2:
+            ram_gb = 2
+
+        # TODO(berrange) calculate size of any disks when doing
+        # a block migration
+        return ram_gb
+
     def _live_migration_monitor(self, context, instance, dest, post_method,
                                 recover_method, block_migration,
                                 migrate_data, dom, finish_event):
+        data_gb = self._live_migration_data_gb(instance)
+        downtime_steps = list(self._migration_downtime_steps(data_gb))
+
         n = 0
+        start = time.time()
         while True:
             info = host.DomainJobInfo.for_domain(dom)
 
@@ -5637,6 +5736,34 @@ class LibvirtDriver(driver.ComputeDriver):
                 LOG.debug("Migration not running yet",
                           instance=instance)
             elif info.type == libvirt.VIR_DOMAIN_JOB_UNBOUNDED:
+                # Migration is still running
+                #
+                # This is where we wire up calls to change live
+                # migration status. eg change max downtime, cancel
+                # the operation, change max bandwidth
+                now = time.time()
+                elapsed = now - start
+
+                # See if we need to increase the max downtime. We
+                # ignore failures, since we'd rather continue trying
+                # to migrate
+                if (len(downtime_steps) > 0 and
+                    elapsed > downtime_steps[0][0]):
+                    downtime = downtime_steps.pop(0)
+                    LOG.info(_LI("Increasing downtime to %(downtime)dms "
+                                 "after %(waittime)d sec elapsed time"),
+                             {"downtime": downtime[1],
+                              "waittime": downtime[0]},
+                             instance=instance)
+
+                    try:
+                        dom.migrateSetMaxDowntime(downtime[1])
+                    except libvirt.libvirtError as e:
+                        LOG.warn(
+                            _LW("Unable to increase max downtime to %(time)d"
+                                "ms: %(e)s"),
+                            {"time": downtime[1], "e": e}, instance=instance)
+
                 # We loop every 500ms, so don't log on every
                 # iteration to avoid spamming logs for long
                 # running migrations. Just once every 5 secs
@@ -5675,11 +5802,6 @@ class LibvirtDriver(driver.ComputeDriver):
                         "remaining_memory": info.memory_remaining,
                         "total_memory": info.memory_total}, instance=instance)
 
-                # Migration is still running
-                #
-                # This is where we'd wire up calls to change live
-                # migration status. eg change max downtime, cancel
-                # the operation, change max bandwidth
                 n = n + 1
             elif info.type == libvirt.VIR_DOMAIN_JOB_COMPLETED:
                 # Migration is all done
