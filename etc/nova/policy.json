@@ -303,6 +303,7 @@
     "os_compute_api:os-lock-server:discoverable": "",
     "os_compute_api:os-lock-server:lock": "rule:admin_or_owner",
     "os_compute_api:os-lock-server:unlock": "rule:admin_or_owner",
+    "os_compute_api:os-lock-server:unlock:unlock_override": "rule:admin_api",
     "os_compute_api:os-migrate-server:discoverable": "",
     "os_compute_api:os-migrate-server:migrate": "rule:admin_api",
     "os_compute_api:os-migrate-server:migrate_live": "rule:admin_api",

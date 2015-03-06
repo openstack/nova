@@ -15,14 +15,19 @@
 
 import webob
 
+import mock
+
+from nova.api.openstack import common
 from nova.api.openstack.compute.contrib import (admin_actions as
                                                 lock_server_v2)
 from nova.api.openstack.compute.plugins.v3 import (lock_server as
                                                    lock_server_v21)
+from nova import context
 from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack.compute import admin_only_action_common
 from nova.tests.unit.api.openstack import fakes
+from nova.tests.unit import fake_instance
 
 
 class LockServerTestsV21(admin_only_action_common.CommonTests):
@@ -101,3 +106,22 @@ class LockServerPolicyEnforcementV21(test.NoDBTestCase):
         self.assertEqual(
                       "Policy doesn't allow %s to be performed." % rule_name,
                       exc.format_message())
+
+    @mock.patch.object(common, 'get_instance')
+    def test_unlock_policy_failed_with_unlock_override(self,
+                                                       get_instance_mock):
+        ctxt = context.RequestContext('fake', 'fake')
+        instance = fake_instance.fake_instance_obj(ctxt)
+        instance.locked_by = "fake"
+        get_instance_mock.return_value = instance
+        rule_name = ("os_compute_api:os-lock-server:"
+                     "unlock:unlock_override")
+        rules = {"os_compute_api:os-lock-server:unlock": "@",
+                 rule_name: "project:non_fake"}
+        self.policy.set_rules(rules)
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized, self.controller._unlock,
+            self.req, fakes.FAKE_UUID, body={'unlock': {}})
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+            exc.format_message())

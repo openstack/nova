@@ -46,6 +46,10 @@ class LockServerController(wsgi.Controller):
         context = req.environ['nova.context']
         authorize(context, action='unlock')
         instance = common.get_instance(self.compute_api, context, id)
+        if not self.compute_api.is_expected_locked_by(context, instance):
+            authorize(context, target=instance,
+                      action='unlock:unlock_override')
+
         self.compute_api.unlock(context, instance)
 
 
