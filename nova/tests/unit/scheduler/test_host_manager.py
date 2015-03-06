@@ -94,6 +94,36 @@ class HostManagerTestCase(test.NoDBTestCase):
         self.assertEqual({'fake-host': set([1])},
                          self.host_manager.host_aggregates_map)
 
+    def test_update_aggregates(self):
+        fake_agg = objects.Aggregate(id=1, hosts=['fake-host'])
+        self.host_manager.update_aggregates([fake_agg])
+        self.assertEqual({1: fake_agg}, self.host_manager.aggs_by_id)
+        self.assertEqual({'fake-host': set([1])},
+                         self.host_manager.host_aggregates_map)
+
+    def test_update_aggregates_remove_hosts(self):
+        fake_agg = objects.Aggregate(id=1, hosts=['fake-host'])
+        self.host_manager.update_aggregates([fake_agg])
+        self.assertEqual({1: fake_agg}, self.host_manager.aggs_by_id)
+        self.assertEqual({'fake-host': set([1])},
+                         self.host_manager.host_aggregates_map)
+        # Let's remove the host from the aggregate and update again
+        fake_agg.hosts = []
+        self.host_manager.update_aggregates([fake_agg])
+        self.assertEqual({1: fake_agg}, self.host_manager.aggs_by_id)
+        self.assertEqual({'fake-host': set([])},
+                         self.host_manager.host_aggregates_map)
+
+    def test_delete_aggregate(self):
+        fake_agg = objects.Aggregate(id=1, hosts=['fake-host'])
+        self.host_manager.host_aggregates_map = collections.defaultdict(
+            set, {'fake-host': set([1])})
+        self.host_manager.aggs_by_id = {1: fake_agg}
+        self.host_manager.delete_aggregate(fake_agg)
+        self.assertEqual({}, self.host_manager.aggs_by_id)
+        self.assertEqual({'fake-host': set([])},
+                         self.host_manager.host_aggregates_map)
+
     def test_choose_host_filters_not_found(self):
         self.assertRaises(exception.SchedulerHostFilterNotFound,
                           self.host_manager._choose_host_filters,

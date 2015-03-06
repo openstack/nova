@@ -58,6 +58,20 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
             self.manager.select_destinations(None, None, {})
             select_destinations.assert_called_once_with(None, None, {})
 
+    def test_update_aggregates(self):
+        with mock.patch.object(self.manager.driver.host_manager,
+                               'update_aggregates'
+                ) as update_aggregates:
+            self.manager.update_aggregates(None, aggregates='agg')
+            update_aggregates.assert_called_once_with('agg')
+
+    def test_delete_aggregate(self):
+        with mock.patch.object(self.manager.driver.host_manager,
+                               'delete_aggregate'
+                ) as delete_aggregate:
+            self.manager.delete_aggregate(None, aggregate='agg')
+            delete_aggregate.assert_called_once_with('agg')
+
 
 class SchedulerV3PassthroughTestCase(test.TestCase):
     def setUp(self):

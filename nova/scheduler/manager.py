@@ -55,7 +55,7 @@ QUOTAS = quota.QUOTAS
 class SchedulerManager(manager.Manager):
     """Chooses a host to run instances on."""
 
-    target = messaging.Target(version='4.0')
+    target = messaging.Target(version='4.1')
 
     def __init__(self, scheduler_driver=None, *args, **kwargs):
         if not scheduler_driver:
@@ -85,6 +85,25 @@ class SchedulerManager(manager.Manager):
         dests = self.driver.select_destinations(context, request_spec,
             filter_properties)
         return jsonutils.to_primitive(dests)
+
+    def update_aggregates(self, ctxt, aggregates):
+        """Updates HostManager internal aggregates information.
+
+        :param aggregates: Aggregate(s) to update
+        :type aggregates: :class:`nova.objects.Aggregate`
+                          or :class:`nova.objects.AggregateList`
+        """
+        # NOTE(sbauza): We're dropping the user context now as we don't need it
+        self.driver.host_manager.update_aggregates(aggregates)
+
+    def delete_aggregate(self, ctxt, aggregate):
+        """Deletes HostManager internal information about a specific aggregate.
+
+        :param aggregate: Aggregate to delete
+        :type aggregate: :class:`nova.objects.Aggregate`
+        """
+        # NOTE(sbauza): We're dropping the user context now as we don't need it
+        self.driver.host_manager.delete_aggregate(aggregate)
 
 
 class _SchedulerManagerV3Proxy(object):
