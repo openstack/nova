@@ -40,6 +40,8 @@ REST_API_VERSION_HISTORY = """REST API Version History:
     * 2.1 - Initial version. Equivalent to v2.0 code
     * 2.2 - Adds (keypair) type parameter for os-keypairs plugin
             Fixes success status code for create/delete a keypair method
+    * 2.3 - Exposes additional os-extended-server-attributes
+            Exposes delete_on_termination for os-extended-volumes
 """
 
 # The minimum and maximum versions of the API supported
@@ -48,7 +50,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
 # Note(cyeoh): This only applies for the v2.1 API once microversions
 # support is fully merged. It does not affect the V2 API.
 _MIN_API_VERSION = "2.1"
-_MAX_API_VERSION = "2.2"
+_MAX_API_VERSION = "2.3"
 DEFAULT_API_VERSION = _MIN_API_VERSION
 
 

@@ -35,3 +35,14 @@ user documentation.
 
   Fixes status code for os-keypairs delete method from 202 to 204
 
+- **2.3**
+
+  Exposed additional attributes in os-extended-server-attributes:
+  reservation_id, launch_index, ramdisk_id, kernel_id, hostname,
+  root_device_name, userdata.
+
+  Exposed delete_on_termination for attached_volumes in os-extended-volumes.
+
+  This change is required for the extraction of EC2 API into a standalone
+  service. It exposes necessary properties absent in public nova APIs yet.
+  Add info for Standalone EC2 API to cut access to Nova DB.
