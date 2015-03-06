@@ -1179,7 +1179,6 @@ def fixed_ip_disassociate(context, address):
                                          'virtual_interface_id': None})
 
 
-@require_admin_context
 def fixed_ip_disassociate_all_by_timeout(context, host, time):
     session = get_session()
     # NOTE(vish): only update fixed ips that "belong" to this
