@@ -734,3 +734,12 @@ class NWFilterTestCase(test.NoDBTestCase):
                          expected=['nova-base'])
         assert_filterref(instance_ref, network_info[1],
                          expected=['nova-nodhcp'])
+
+    @mock.patch.object(firewall.LOG, 'debug')
+    def test_get_filter_uuid_unicode_exception_logging(self, debug):
+        with mock.patch.object(self.fw._conn, 'nwfilterLookupByName') as look:
+            look.side_effect = fakelibvirt.libvirtError(u"\U0001F4A9")
+            self.fw._get_filter_uuid('test')
+        self.assertEqual(2, debug.call_count)
+        self.assertEqual(u"Cannot find UUID for filter '%(name)s': '%(e)s'",
+                         debug.call_args_list[0][0][0])
