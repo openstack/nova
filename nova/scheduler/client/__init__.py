@@ -51,5 +51,11 @@ class SchedulerClient(object):
         return self.queryclient.select_destinations(
             context, request_spec, filter_properties)
 
+    def update_aggregates(self, context, aggregates):
+        self.queryclient.update_aggregates(context, aggregates)
+
+    def delete_aggregate(self, context, aggregate):
+        self.queryclient.delete_aggregate(context, aggregate)
+
     def update_resource_stats(self, context, name, stats):
         self.reportclient.update_resource_stats(context, name, stats)
