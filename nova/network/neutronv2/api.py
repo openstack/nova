@@ -1605,13 +1605,16 @@ class API(base_api.NetworkAPI):
         data = neutron.list_ports(**search_opts)
         ports = data['ports']
         for p in ports:
-            try:
-                neutron.update_port(p['id'],
-                                    {'port': {'binding:host_id': host}})
-            except Exception:
-                with excutils.save_and_reraise_exception():
-                    LOG.exception(_LE("Unable to update host of port %s"),
-                                  p['id'])
+            # If the host hasn't changed, like in the case of resizing to the
+            # same host, there is nothing to do.
+            if p.get('binding:host_id') != host:
+                try:
+                    neutron.update_port(p['id'],
+                                        {'port': {'binding:host_id': host}})
+                except Exception:
+                    with excutils.save_and_reraise_exception():
+                        LOG.exception(_LE("Unable to update host of port %s"),
+                                      p['id'])
 
 
 def _ensure_requested_network_ordering(accessor, unordered, preferred):
