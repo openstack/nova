@@ -159,3 +159,34 @@ class CloudpipeTestV2(CloudpipeTestV21):
 
     def test_cloudpipe_create_with_bad_project_id_failed(self):
         pass
+
+
+class CloudpipePolicyEnforcementV21(test.NoDBTestCase):
+
+    def setUp(self):
+        super(CloudpipePolicyEnforcementV21, self).setUp()
+        self.controller = cloudpipe_v21.CloudpipeController()
+        self.req = fakes.HTTPRequest.blank('')
+
+    def _common_policy_check(self, func, *arg, **kwarg):
+        rule_name = "compute_extension:v3:os-cloudpipe"
+        rule = {rule_name: "project:non_fake"}
+        self.policy.set_rules(rule)
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized, func, *arg, **kwarg)
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+            exc.format_message())
+
+    def test_list_policy_failed(self):
+        self._common_policy_check(self.controller.index, self.req)
+
+    def test_create_policy_failed(self):
+        body = {'cloudpipe': {'project_id': uuid}}
+        self._common_policy_check(self.controller.create, self.req, body=body)
+
+    def test_update_policy_failed(self):
+        body = {"configure_project": {'vpn_ip': '192.168.1.1',
+                                      'vpn_port': 2000}}
+        self._common_policy_check(
+            self.controller.update, self.req, uuid, body=body)
