@@ -20,6 +20,7 @@ from nova.objects import fields
 from nova import utils
 
 KEYPAIR_TYPE_SSH = 'ssh'
+KEYPAIR_TYPE_X509 = 'x509'
 
 
 # TODO(berrange): Remove NovaObjectDictCompat

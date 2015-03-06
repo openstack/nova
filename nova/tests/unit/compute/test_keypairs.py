@@ -24,6 +24,7 @@ from nova import exception
 from nova.objects import keypair as keypair_obj
 from nova import quota
 from nova.tests.unit.compute import test_compute
+from nova.tests.unit import fake_crypto
 from nova.tests.unit import fake_notifier
 from nova.tests.unit.objects import test_keypair
 
@@ -169,28 +170,47 @@ class CreateImportSharedTestMixIn(object):
 class CreateKeypairTestCase(KeypairAPITestCase, CreateImportSharedTestMixIn):
     func_name = 'create_key_pair'
 
-    def test_success(self):
+    def _check_success(self):
         keypair, private_key = self.keypair_api.create_key_pair(
-            self.ctxt, self.ctxt.user_id, 'foo')
+            self.ctxt, self.ctxt.user_id, 'foo', key_type=self.keypair_type)
         self.assertEqual('foo', keypair['name'])
         self.assertEqual(self.keypair_type, keypair['type'])
         self._check_notifications()
+
+    def test_success_ssh(self):
+        self._check_success()
+
+    def test_success_x509(self):
+        self.keypair_type = keypair_obj.KEYPAIR_TYPE_X509
+        self._check_success()
 
 
 class ImportKeypairTestCase(KeypairAPITestCase, CreateImportSharedTestMixIn):
     func_name = 'import_key_pair'
 
-    def test_success(self):
+    def _check_success(self):
         keypair = self.keypair_api.import_key_pair(self.ctxt,
                                                    self.ctxt.user_id,
                                                    'foo',
-                                                   self.pub_key)
+                                                   self.pub_key,
+                                                   self.keypair_type)
 
         self.assertEqual('foo', keypair['name'])
+        self.assertEqual(self.keypair_type, keypair['type'])
         self.assertEqual(self.fingerprint, keypair['fingerprint'])
         self.assertEqual(self.pub_key, keypair['public_key'])
         self.assertEqual(self.keypair_type, keypair['type'])
         self._check_notifications(action='import')
+
+    def test_success_ssh(self):
+        self._check_success()
+
+    def test_success_x509(self):
+        self.keypair_type = keypair_obj.KEYPAIR_TYPE_X509
+        certif, fingerprint = fake_crypto.get_x509_cert_and_fingerprint()
+        self.pub_key = certif
+        self.fingerprint = fingerprint
+        self._check_success()
 
     def test_bad_key_data(self):
         exc = self.assertRaises(exception.InvalidKeypair,
