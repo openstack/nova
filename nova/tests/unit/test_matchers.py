@@ -11,7 +11,7 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations
 # under the License.
-
+from collections import OrderedDict
 import testtools
 from testtools.tests.matchers import helpers
 
@@ -20,9 +20,10 @@ from nova.tests.unit import matchers
 
 class TestDictMatches(testtools.TestCase, helpers.TestMatchersInterface):
 
+    matches_dict = OrderedDict(sorted({'foo': 'bar', 'baz': 'DONTCARE',
+         'cat': {'tabby': True, 'fluffy': False}}.items()))
     matches_matcher = matchers.DictMatches(
-        {'foo': 'bar', 'baz': 'DONTCARE',
-         'cat': {'tabby': True, 'fluffy': False}}
+            matches_dict
         )
 
     matches_matches = [
@@ -41,14 +42,13 @@ class TestDictMatches(testtools.TestCase, helpers.TestMatchersInterface):
         ]
 
     str_examples = [
-        ("DictMatches({'baz': 'DONTCARE', 'cat':"
-         " {'fluffy': False, 'tabby': True}, 'foo': 'bar'})",
+        ("DictMatches({0})".format(matches_dict),
          matches_matcher),
         ]
 
     describe_examples = [
-        ("Keys in d1 and not d2: set(['foo', 'baz', 'cat'])."
-         " Keys in d2 and not d1: set([])", {}, matches_matcher),
+        ("Keys in d1 and not d2: {0}. Keys in d2 and not d1: []"
+         .format(str(sorted(matches_dict.keys()))), {}, matches_matcher),
         ("Dictionaries do not match at fluffy. d1: False d2: True",
          {'foo': 'bar', 'baz': 'quux',
           'cat': {'tabby': True, 'fluffy': True}}, matches_matcher),
@@ -109,8 +109,8 @@ class TestDictListMatches(testtools.TestCase, helpers.TestMatchersInterface):
 class TestIsSubDictOf(testtools.TestCase, helpers.TestMatchersInterface):
 
     matches_matcher = matchers.IsSubDictOf(
-        {'foo': 'bar', 'baz': 'DONTCARE',
-         'cat': {'tabby': True, 'fluffy': False}}
+        OrderedDict(sorted({'foo': 'bar', 'baz': 'DONTCARE',
+         'cat': {'tabby': True, 'fluffy': False}}.items()))
         )
 
     matches_matches = [
@@ -127,10 +127,12 @@ class TestIsSubDictOf(testtools.TestCase, helpers.TestMatchersInterface):
         ]
 
     str_examples = [
-        ("IsSubDictOf({'foo': 'bar', 'baz': 'DONTCARE',"
-         " 'cat': {'fluffy': False, 'tabby': True}})",
+        ("IsSubDictOf({0})".format(
+            str(OrderedDict(sorted({'foo': 'bar', 'baz': 'DONTCARE',
+                                    'cat': {'tabby': True,
+                                            'fluffy': False}}.items())))),
          matches_matcher),
-        ]
+    ]
 
     describe_examples = [
         ("Dictionaries do not match at fluffy. d1: False d2: True",

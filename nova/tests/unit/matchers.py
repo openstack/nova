@@ -81,8 +81,8 @@ class DictMatches(object):
         d1keys = set(self.d1.keys())
         d2keys = set(d2.keys())
         if d1keys != d2keys:
-            d1only = d1keys - d2keys
-            d2only = d2keys - d1keys
+            d1only = sorted(d1keys - d2keys)
+            d2only = sorted(d2keys - d1keys)
             return DictKeysMismatch(d1only, d2only)
 
         for key in d1keys:
