@@ -91,7 +91,13 @@ def make_class_properties(cls):
                 LOG.exception(_LE('Error setting %(attr)s'), {'attr': attr})
                 raise
 
-        setattr(cls, name, property(getter, setter))
+        def deleter(self, name=name):
+            attrname = get_attrname(name)
+            if not hasattr(self, attrname):
+                raise AttributeError('No such attribute `%s' % name)
+            delattr(self, get_attrname(name))
+
+        setattr(cls, name, property(getter, setter, deleter))
 
 
 class NovaObjectMetaclass(type):
