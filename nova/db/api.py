@@ -139,11 +139,6 @@ def service_get_by_compute_host(context, host, use_slave=False):
                                             use_slave=use_slave)
 
 
-def service_get_by_args(context, host, binary):
-    """Get the state of a service by node name and binary."""
-    return IMPL.service_get_by_args(context, host, binary)
-
-
 def service_create(context, values):
     """Create a service from the values dictionary."""
     return IMPL.service_create(context, values)

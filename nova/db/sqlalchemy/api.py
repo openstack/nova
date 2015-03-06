@@ -448,19 +448,6 @@ def service_get_by_compute_host(context, host, use_slave=False):
     return result
 
 
-@require_admin_context
-def service_get_by_args(context, host, binary):
-    result = model_query(context, models.Service).\
-                     filter_by(host=host).\
-                     filter_by(binary=binary).\
-                     first()
-
-    if not result:
-        raise exception.HostBinaryNotFound(host=host, binary=binary)
-
-    return result
-
-
 def service_create(context, values):
     service_ref = models.Service()
     service_ref.update(values)
