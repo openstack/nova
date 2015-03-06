@@ -19,6 +19,7 @@ from nova.tests.unit.api.openstack.compute.contrib import test_networks
 
 
 class NetworksJsonTests(api_sample_base.ApiSampleTestBaseV3):
+    ADMIN_API = True
     extension_name = "os-networks"
 
     def setUp(self):

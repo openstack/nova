@@ -24,6 +24,7 @@ CONF.import_opt('public_interface', 'nova.network.linux_net')
 
 
 class FloatingIpsBulkTest(api_sample_base.ApiSampleTestBaseV3):
+    ADMIN_API = True
     extension_name = "os-floating-ips-bulk"
 
     def setUp(self):

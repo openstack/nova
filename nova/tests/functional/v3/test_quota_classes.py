@@ -17,6 +17,7 @@ from nova.tests.functional.v3 import api_sample_base
 
 
 class QuotaClassesSampleJsonTests(api_sample_base.ApiSampleTestBaseV3):
+    ADMIN_API = True
     extension_name = "os-quota-class-sets"
     set_id = 'test_class'
 

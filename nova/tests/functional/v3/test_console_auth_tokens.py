@@ -20,6 +20,7 @@ from nova.tests.functional.v3 import test_servers
 
 
 class ConsoleAuthTokensSampleJsonTests(test_servers.ServersSampleBase):
+    ADMIN_API = True
     extension_name = "os-console-auth-tokens"
     extra_extensions_to_load = ["os-remote-consoles"]
 

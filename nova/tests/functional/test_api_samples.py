@@ -333,6 +333,7 @@ class FlavorsSampleJsonTest(ApiSampleTestBaseV2):
 
 
 class HostsSampleJsonTest(ApiSampleTestBaseV2):
+    ADMIN_API = True
     extension_name = "nova.api.openstack.compute.contrib.hosts.Hosts"
 
     def test_host_startup(self):
@@ -743,6 +744,7 @@ class SecurityGroupsSampleJsonTest(ServersSampleBase):
 
 
 class SecurityGroupDefaultRulesSampleJsonTest(ServersSampleBase):
+    ADMIN_API = True
     extension_name = ('nova.api.openstack.compute.contrib'
                       '.security_group_default_rules'
                       '.Security_group_default_rules')
@@ -916,6 +918,7 @@ class ExtendedFloatingIpsJsonTest(FloatingIpsJsonTest):
 
 
 class FloatingIpsBulkJsonTest(ApiSampleTestBaseV2):
+    ADMIN_API = True
     extension_name = "nova.api.openstack.compute.contrib." \
         "floating_ips_bulk.Floating_ips_bulk"
 
@@ -1165,6 +1168,7 @@ class VirtualInterfacesJsonTest(ServersSampleBase):
 
 
 class CloudPipeSampleJsonTest(ApiSampleTestBaseV2):
+    ADMIN_API = True
     extension_name = "nova.api.openstack.compute.contrib.cloudpipe.Cloudpipe"
 
     def setUp(self):
@@ -1210,6 +1214,7 @@ class CloudPipeSampleJsonTest(ApiSampleTestBaseV2):
 
 
 class CloudPipeUpdateJsonTest(ApiSampleTestBaseV2):
+    ADMIN_API = True
     extension_name = ("nova.api.openstack.compute.contrib"
                       ".cloudpipe_update.Cloudpipe_update")
 
@@ -1232,6 +1237,7 @@ class CloudPipeUpdateJsonTest(ApiSampleTestBaseV2):
 
 
 class AgentsJsonTest(ApiSampleTestBaseV2):
+    ADMIN_API = True
     extension_name = "nova.api.openstack.compute.contrib.agents.Agents"
 
     def _get_flags(self):
@@ -1411,6 +1417,7 @@ class FixedIpJsonTest(ApiSampleTestBaseV2):
 
 
 class AggregatesSampleJsonTest(ServersSampleBase):
+    ADMIN_API = True
     extension_name = "nova.api.openstack.compute.contrib" + \
                                      ".aggregates.Aggregates"
     create_subs = {
@@ -1508,6 +1515,7 @@ class UsedLimitsSamplesJsonTest(ApiSampleTestBaseV2):
 
 
 class UsedLimitsForAdminSamplesJsonTest(ApiSampleTestBaseV2):
+    ADMIN_API = True
     extends_name = ("nova.api.openstack.compute.contrib.used_limits."
                     "Used_limits")
     extension_name = (
@@ -1638,7 +1646,7 @@ class ExtendedServicesJsonTest(ApiSampleTestBaseV2):
     Services extension so the funcionalities introduced by this extension
     are tested in the ServicesJsonTest and ServicesXmlTest classes.
     """
-
+    ADMIN_API = True
     extension_name = ("nova.api.openstack.compute.contrib."
                       "extended_services.Extended_services")
 
@@ -1648,6 +1656,7 @@ class ExtendedServicesJsonTest(ApiSampleTestBaseV2):
 @mock.patch.object(db, 'service_get_by_host_and_binary',
                    side_effect=test_services.fake_service_get_by_host_binary)
 class ExtendedServicesDeleteJsonTest(ApiSampleTestBaseV2):
+    ADMIN_API = True
     extends_name = ("nova.api.openstack.compute.contrib.services.Services")
     extension_name = ("nova.api.openstack.compute.contrib."
                       "extended_services_delete.Extended_services_delete")
@@ -1930,6 +1939,7 @@ class ConsolesSampleJsonTests(ServersSampleBase):
 
 
 class ConsoleAuthTokensSampleJsonTests(ServersSampleBase):
+    ADMIN_API = True
     extends_name = ("nova.api.openstack.compute.contrib.consoles.Consoles")
     extension_name = ("nova.api.openstack.compute.contrib.console_auth_tokens."
                       "Console_auth_tokens")
@@ -1990,6 +2000,7 @@ class DeferredDeleteSampleJsonTests(ServersSampleBase):
 
 
 class QuotasSampleJsonTests(ApiSampleTestBaseV2):
+    ADMIN_API = True
     extension_name = "nova.api.openstack.compute.contrib.quotas.Quotas"
 
     def test_show_quotas(self):
@@ -2012,6 +2023,7 @@ class QuotasSampleJsonTests(ApiSampleTestBaseV2):
 
 
 class ExtendedQuotasSampleJsonTests(ApiSampleTestBaseV2):
+    ADMIN_API = True
     extends_name = "nova.api.openstack.compute.contrib.quotas.Quotas"
     extension_name = ("nova.api.openstack.compute.contrib"
                       ".extended_quotas.Extended_quotas")
@@ -2032,6 +2044,7 @@ class ExtendedQuotasSampleJsonTests(ApiSampleTestBaseV2):
 
 
 class UserQuotasSampleJsonTests(ApiSampleTestBaseV2):
+    ADMIN_API = True
     extends_name = "nova.api.openstack.compute.contrib.quotas.Quotas"
     extension_name = ("nova.api.openstack.compute.contrib"
                       ".user_quotas.User_quotas")
@@ -2319,6 +2332,7 @@ class DiskConfigJsonTest(ServersSampleBase):
 
 
 class OsNetworksJsonTests(ApiSampleTestBaseV2):
+    ADMIN_API = True
     extension_name = ("nova.api.openstack.compute.contrib.os_tenant_networks"
                       ".Os_tenant_networks")
 
@@ -2356,6 +2370,7 @@ class OsNetworksJsonTests(ApiSampleTestBaseV2):
 
 
 class NetworksJsonTests(ApiSampleTestBaseV2):
+    ADMIN_API = True
     extension_name = ("nova.api.openstack.compute.contrib"
                       ".os_networks.Os_networks")
 
@@ -2412,6 +2427,7 @@ class NetworksJsonTests(ApiSampleTestBaseV2):
 
 
 class ExtendedNetworksJsonTests(ApiSampleTestBaseV2):
+    ADMIN_API = True
     extends_name = ("nova.api.openstack.compute.contrib."
                     "os_networks.Os_networks")
     extension_name = ("nova.api.openstack.compute.contrib."
@@ -2524,6 +2540,7 @@ class FlavorDisabledSampleJsonTests(ApiSampleTestBaseV2):
 
 
 class QuotaClassesSampleJsonTests(ApiSampleTestBaseV2):
+    ADMIN_API = True
     extension_name = ("nova.api.openstack.compute.contrib.quota_classes."
                       "Quota_classes")
     set_id = 'test_class'
@@ -2731,6 +2748,7 @@ class FloatingIPPoolsSampleJsonTests(ApiSampleTestBaseV2):
 
 
 class MultinicSampleJsonTest(ServersSampleBase):
+    ADMIN_API = True
     extension_name = "nova.api.openstack.compute.contrib.multinic.Multinic"
 
     def _disable_instance_dns_manager(self):
@@ -2764,6 +2782,7 @@ class MultinicSampleJsonTest(ServersSampleBase):
 
 
 class InstanceUsageAuditLogJsonTest(ApiSampleTestBaseV2):
+    ADMIN_API = True
     extension_name = ("nova.api.openstack.compute.contrib."
                       "instance_usage_audit_log.Instance_usage_audit_log")
 
@@ -2784,6 +2803,7 @@ class InstanceUsageAuditLogJsonTest(ApiSampleTestBaseV2):
 
 
 class FlavorExtraSpecsSampleJsonTests(ApiSampleTestBaseV2):
+    ADMIN_API = True
     extension_name = ("nova.api.openstack.compute.contrib.flavorextraspecs."
                       "Flavorextraspecs")
 
@@ -2876,6 +2896,7 @@ class ExtendedAvailabilityZoneJsonTests(ServersSampleBase):
 
 
 class EvacuateJsonTest(ServersSampleBase):
+    ADMIN_API = True
 
     extension_name = ("nova.api.openstack.compute.contrib"
                       ".evacuate.Evacuate")
@@ -2924,6 +2945,7 @@ class EvacuateJsonTest(ServersSampleBase):
 
 
 class EvacuateFindHostSampleJsonTest(ServersSampleBase):
+    ADMIN_API = True
     extends_name = ("nova.api.openstack.compute.contrib"
                       ".evacuate.Evacuate")
 
@@ -2967,6 +2989,7 @@ class EvacuateFindHostSampleJsonTest(ServersSampleBase):
 
 
 class FloatingIpDNSJsonTest(ApiSampleTestBaseV2):
+    ADMIN_API = True
     extension_name = ("nova.api.openstack.compute.contrib.floating_ip_dns."
                       "Floating_ip_dns")
 
@@ -3044,6 +3067,7 @@ class FloatingIpDNSJsonTest(ApiSampleTestBaseV2):
 
 
 class InstanceActionsSampleJsonTest(ApiSampleTestBaseV2):
+    ADMIN_API = True
     extension_name = ('nova.api.openstack.compute.contrib.instance_actions.'
                       'Instance_actions')
 
@@ -3159,6 +3183,7 @@ class ConfigDriveSampleJsonTest(ServersSampleBase):
 
 
 class FlavorAccessSampleJsonTests(ApiSampleTestBaseV2):
+    ADMIN_API = True
     extension_name = ("nova.api.openstack.compute.contrib.flavor_access."
                       "Flavor_access")
 
@@ -3243,6 +3268,7 @@ class FlavorAccessSampleJsonTests(ApiSampleTestBaseV2):
 
 @mock.patch.object(service_group_api.API, "service_is_up", lambda _: True)
 class HypervisorsSampleJsonTests(ApiSampleTestBaseV2):
+    ADMIN_API = True
     extension_name = ("nova.api.openstack.compute.contrib.hypervisors."
                       "Hypervisors")
 
@@ -3287,6 +3313,7 @@ class HypervisorsSampleJsonTests(ApiSampleTestBaseV2):
 
 
 class ExtendedHypervisorsJsonTest(ApiSampleTestBaseV2):
+    ADMIN_API = True
     extends_name = ("nova.api.openstack.compute.contrib."
                     "hypervisors.Hypervisors")
     extension_name = ("nova.api.openstack.compute.contrib."
@@ -3304,6 +3331,7 @@ class ExtendedHypervisorsJsonTest(ApiSampleTestBaseV2):
 
 
 class HypervisorStatusJsonTest(ApiSampleTestBaseV2):
+    ADMIN_API = True
     extends_name = ("nova.api.openstack.compute.contrib."
                     "hypervisors.Hypervisors")
     extension_name = ("nova.api.openstack.compute.contrib."
@@ -3322,6 +3350,7 @@ class HypervisorStatusJsonTest(ApiSampleTestBaseV2):
 
 @mock.patch("nova.servicegroup.API.service_is_up", return_value=True)
 class HypervisorsCellsSampleJsonTests(ApiSampleTestBaseV2):
+    ADMIN_API = True
     extension_name = ("nova.api.openstack.compute.contrib.hypervisors."
                       "Hypervisors")
 
@@ -3834,6 +3863,7 @@ class VolumesSampleJsonTest(ServersSampleBase):
 
 
 class MigrationsSamplesJsonTest(ApiSampleTestBaseV2):
+    ADMIN_API = True
     extension_name = ("nova.api.openstack.compute.contrib.migrations."
                       "Migrations")
 
@@ -3943,6 +3973,7 @@ class PreserveEphemeralOnRebuildJsonTest(ServersSampleBase):
 
 
 class ServerExternalEventsJsonTest(ServersSampleBase):
+    ADMIN_API = True
     extension_name = ('nova.api.openstack.compute.contrib.'
                       'server_external_events.Server_external_events')
 

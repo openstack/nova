@@ -20,6 +20,7 @@ from nova.tests.functional.v3 import api_sample_base
 
 
 class MigrationsSamplesJsonTest(api_sample_base.ApiSampleTestBaseV3):
+    ADMIN_API = True
     extension_name = "os-migrations"
 
     def _stub_migrations(self, context, filters):

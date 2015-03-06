@@ -21,6 +21,7 @@ CONF.import_opt('manager', 'nova.cells.opts', group='cells')
 
 
 class AvailabilityZoneJsonTest(test_servers.ServersSampleBase):
+    ADMIN_API = True
     extension_name = "os-availability-zone"
 
     def _setup_services(self):

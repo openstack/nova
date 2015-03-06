@@ -66,6 +66,7 @@ def generate_new_element(items, prefix, numeric=False):
 
 class _IntegratedTestBase(test.TestCase):
     REQUIRES_LOCKING = True
+    ADMIN_API = False
 
     def setUp(self):
         super(_IntegratedTestBase, self).setUp()
@@ -87,8 +88,13 @@ class _IntegratedTestBase(test.TestCase):
 
         self.api_fixture = self.useFixture(
             nova_fixtures.OSAPIFixture(self._api_version))
-        self.api = self.api_fixture.api
-        self.admin_api = self.api_fixture.admin_api
+
+        # if the class needs to run as admin, make the api endpoint
+        # the admin, otherwise it's safer to run as non admin user.
+        if self.ADMIN_API:
+            self.api = self.api_fixture.admin_api
+        else:
+            self.api = self.api_fixture.api
 
         self.useFixture(cast_as_call.CastAsCall(self.stubs))
 

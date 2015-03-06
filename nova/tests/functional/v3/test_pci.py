@@ -89,6 +89,7 @@ class ExtendedServerPciSampleJsonTest(test_servers.ServersSampleBase):
 
 
 class ExtendedHyervisorPciSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
+    ADMIN_API = True
     extra_extensions_to_load = ['os-hypervisors']
     extension_name = 'os-pci'
 
@@ -177,6 +178,7 @@ class ExtendedHyervisorPciSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
 
 
 class PciSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
+    ADMIN_API = True
     extension_name = "os-pci"
 
     def setUp(self):

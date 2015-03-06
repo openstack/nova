@@ -16,6 +16,7 @@ from nova.tests.functional.v3 import api_sample_base
 
 
 class FlavorAccessSampleJsonTests(api_sample_base.ApiSampleTestBaseV3):
+    ADMIN_API = True
     extension_name = 'flavor-access'
 
     def _add_tenant(self):
