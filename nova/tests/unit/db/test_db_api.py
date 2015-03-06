@@ -7605,24 +7605,22 @@ class ArchiveTestCase(test.TestCase):
         self.context = context.get_admin_context()
         self.engine = get_engine()
         self.conn = self.engine.connect()
-        self.instance_id_mappings = sqlalchemyutils.get_table(
-            self.engine, "instance_id_mappings")
+        self.instance_id_mappings = models.InstanceIdMapping.__table__
         self.shadow_instance_id_mappings = sqlalchemyutils.get_table(
             self.engine, "shadow_instance_id_mappings")
-        self.dns_domains = sqlalchemyutils.get_table(
-            self.engine, "dns_domains")
+        self.dns_domains = models.DNSDomain.__table__
         self.shadow_dns_domains = sqlalchemyutils.get_table(
             self.engine, "shadow_dns_domains")
-        self.consoles = sqlalchemyutils.get_table(self.engine, "consoles")
-        self.console_pools = sqlalchemyutils.get_table(
-            self.engine, "console_pools")
+        self.consoles = models.Console.__table__
         self.shadow_consoles = sqlalchemyutils.get_table(
             self.engine, "shadow_consoles")
+        self.console_pools = models.ConsolePool.__table__
         self.shadow_console_pools = sqlalchemyutils.get_table(
             self.engine, "shadow_console_pools")
-        self.instances = sqlalchemyutils.get_table(self.engine, "instances")
+        self.instances = models.Instance.__table__
         self.shadow_instances = sqlalchemyutils.get_table(
             self.engine, "shadow_instances")
+
         self.uuidstrs = []
         for unused in range(6):
             self.uuidstrs.append(stdlib_uuid.uuid4().hex)

@@ -5837,8 +5837,12 @@ def archive_deleted_rows_for_table(context, tablename, max_rows):
     conn = engine.connect()
     metadata = MetaData()
     metadata.bind = engine
-    table = Table(tablename, metadata, autoload=True)
-    default_deleted_value = _get_default_deleted_value(table)
+    # NOTE(tdurakov): table metadata should be received
+    # from models, not db tables. Default value specified by SoftDeleteMixin
+    # is known only by models, not DB layer.
+    # IMPORTANT: please do not change source of metadata information for table.
+    table = models.BASE.metadata.tables[tablename]
+
     shadow_tablename = _SHADOW_TABLE_PREFIX + tablename
     rows_archived = 0
     try:
@@ -5853,22 +5857,24 @@ def archive_deleted_rows_for_table(context, tablename, max_rows):
         column = table.c.domain
     else:
         column = table.c.id
-    # NOTE(guochbo): Use InsertFromSelect and DeleteFromSelect to avoid
+    # NOTE(guochbo): Use DeleteFromSelect to avoid
     # database's limit of maximum parameter in one SQL statement.
-    query_insert = sql.select([table],
-                          table.c.deleted != default_deleted_value).\
-                          order_by(column).limit(max_rows)
+    deleted_column = table.c.deleted
+    columns = [c.name for c in table.c]
+    insert = shadow_table.insert(inline=True).\
+        from_select(columns,
+                    sql.select([table],
+                               deleted_column != deleted_column.default.arg).
+                    order_by(column).limit(max_rows))
     query_delete = sql.select([column],
-                          table.c.deleted != default_deleted_value).\
+                          deleted_column != deleted_column.default.arg).\
                           order_by(column).limit(max_rows)
 
-    insert_statement = sqlalchemyutils.InsertFromSelect(
-        shadow_table, query_insert)
     delete_statement = db_utils.DeleteFromSelect(table, query_delete, column)
     try:
         # Group the insert and delete in a transaction.
         with conn.begin():
-            conn.execute(insert_statement)
+            conn.execute(insert)
             result_delete = conn.execute(delete_statement)
     except db_exc.DBError:
         # TODO(ekudryashova): replace by DBReferenceError when db layer
