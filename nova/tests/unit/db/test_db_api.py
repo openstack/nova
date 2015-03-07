@@ -8586,23 +8586,28 @@ class TestDBInstanceTags(test.TestCase):
         self.assertEqual([], tags)
 
     def test_instance_tag_add_to_non_existing_instance(self):
+        self._create_instance()
         self.assertRaises(exception.InstanceNotFound, db.instance_tag_add,
                           self.context, 'fake_uuid', 'tag')
 
     def test_instance_tag_set_to_non_existing_instance(self):
+        self._create_instance()
         self.assertRaises(exception.InstanceNotFound, db.instance_tag_set,
                           self.context, 'fake_uuid', ['tag1', 'tag2'])
 
     def test_instance_tag_get_from_non_existing_instance(self):
+        self._create_instance()
         self.assertRaises(exception.InstanceNotFound,
                           db.instance_tag_get_by_instance_uuid, self.context,
                           'fake_uuid')
 
     def test_instance_tag_delete_from_non_existing_instance(self):
+        self._create_instance()
         self.assertRaises(exception.InstanceNotFound, db.instance_tag_delete,
                           self.context, 'fake_uuid', 'tag')
 
     def test_instance_tag_delete_all_from_non_existing_instance(self):
+        self._create_instance()
         self.assertRaises(exception.InstanceNotFound,
                           db.instance_tag_delete_all,
                           self.context, 'fake_uuid')

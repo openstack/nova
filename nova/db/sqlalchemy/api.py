@@ -1545,7 +1545,8 @@ def _handle_objects_related_type_conversions(values):
 
 def _check_instance_exists(context, session, instance_uuid):
     if not model_query(context, models.Instance, session=session,
-                       read_deleted="no").first():
+                       read_deleted="no").filter_by(
+                       uuid=instance_uuid).first():
         raise exception.InstanceNotFound(instance_id=instance_uuid)
 
 
