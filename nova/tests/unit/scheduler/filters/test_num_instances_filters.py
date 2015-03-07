@@ -35,7 +35,7 @@ class TestNumInstancesFilter(test.NoDBTestCase):
         filter_properties = {}
         self.assertFalse(self.filt_cls.host_passes(host, filter_properties))
 
-    @mock.patch('nova.scheduler.filters.utils.aggregate_values_from_db')
+    @mock.patch('nova.scheduler.filters.utils.aggregate_values_from_key')
     def test_filter_aggregate_num_instances_value(self, agg_mock):
         self.flags(max_instances_per_host=4)
         self.filt_cls = num_instances_filter.AggregateNumInstancesFilter()
@@ -45,13 +45,12 @@ class TestNumInstancesFilter(test.NoDBTestCase):
         agg_mock.return_value = set([])
         # No aggregate defined for that host.
         self.assertFalse(self.filt_cls.host_passes(host, filter_properties))
-        agg_mock.assert_called_once_with(mock.sentinel.ctx, 'host1',
-            'max_instances_per_host')
+        agg_mock.assert_called_once_with(host, 'max_instances_per_host')
         agg_mock.return_value = set(['6'])
         # Aggregate defined for that host.
         self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
 
-    @mock.patch('nova.scheduler.filters.utils.aggregate_values_from_db')
+    @mock.patch('nova.scheduler.filters.utils.aggregate_values_from_key')
     def test_filter_aggregate_num_instances_value_error(self, agg_mock):
         self.flags(max_instances_per_host=6)
         self.filt_cls = num_instances_filter.AggregateNumInstancesFilter()
@@ -59,5 +58,4 @@ class TestNumInstancesFilter(test.NoDBTestCase):
         filter_properties = {'context': mock.sentinel.ctx}
         agg_mock.return_value = set(['XXX'])
         self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
-        agg_mock.assert_called_once_with(mock.sentinel.ctx, 'host1',
-            'max_instances_per_host')
+        agg_mock.assert_called_once_with(host, 'max_instances_per_host')

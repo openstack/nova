@@ -38,7 +38,7 @@ class TestTypeFilter(test.NoDBTestCase):
         # False since not empty
         self.assertFalse(self.filt_cls.host_passes(host, filter_properties))
 
-    @mock.patch('nova.scheduler.filters.utils.aggregate_values_from_db')
+    @mock.patch('nova.scheduler.filters.utils.aggregate_values_from_key')
     def test_aggregate_type_filter(self, agg_mock):
         self.filt_cls = type_filter.AggregateTypeAffinityFilter()
 
@@ -50,7 +50,6 @@ class TestTypeFilter(test.NoDBTestCase):
         agg_mock.return_value = set(['fake1'])
         # True since no aggregates
         self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
-        agg_mock.assert_called_once_with(mock.sentinel.ctx, 'fake_host',
-                                         'instance_type')
+        agg_mock.assert_called_once_with(host, 'instance_type')
         # False since type matches aggregate, metadata
         self.assertFalse(self.filt_cls.host_passes(host, filter2_properties))

@@ -65,9 +65,8 @@ class AggregateIoOpsFilter(IoOpsFilter):
         # TODO(uni): DB query in filter is a performance hit, especially for
         # system with lots of hosts. Will need a general solution here to fix
         # all filters with aggregate DB call things.
-        aggregate_vals = utils.aggregate_values_from_db(
-            filter_properties['context'],
-            host_state.host,
+        aggregate_vals = utils.aggregate_values_from_key(
+            host_state,
             'max_io_ops_per_host')
         try:
             value = utils.validate_num_values(

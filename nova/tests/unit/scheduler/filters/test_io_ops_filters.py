@@ -36,7 +36,7 @@ class TestNumInstancesFilter(test.NoDBTestCase):
         filter_properties = {}
         self.assertFalse(self.filt_cls.host_passes(host, filter_properties))
 
-    @mock.patch('nova.scheduler.filters.utils.aggregate_values_from_db')
+    @mock.patch('nova.scheduler.filters.utils.aggregate_values_from_key')
     def test_aggregate_filter_num_iops_value(self, agg_mock):
         self.flags(max_io_ops_per_host=7)
         self.filt_cls = io_ops_filter.AggregateIoOpsFilter()
@@ -45,12 +45,11 @@ class TestNumInstancesFilter(test.NoDBTestCase):
         filter_properties = {'context': mock.sentinel.ctx}
         agg_mock.return_value = set([])
         self.assertFalse(self.filt_cls.host_passes(host, filter_properties))
-        agg_mock.assert_called_once_with(mock.sentinel.ctx, 'host1',
-            'max_io_ops_per_host')
+        agg_mock.assert_called_once_with(host, 'max_io_ops_per_host')
         agg_mock.return_value = set(['8'])
         self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
 
-    @mock.patch('nova.scheduler.filters.utils.aggregate_values_from_db')
+    @mock.patch('nova.scheduler.filters.utils.aggregate_values_from_key')
     def test_aggregate_filter_num_iops_value_error(self, agg_mock):
         self.flags(max_io_ops_per_host=8)
         self.filt_cls = io_ops_filter.AggregateIoOpsFilter()
@@ -59,5 +58,4 @@ class TestNumInstancesFilter(test.NoDBTestCase):
         agg_mock.return_value = set(['XXX'])
         filter_properties = {'context': mock.sentinel.ctx}
         self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
-        agg_mock.assert_called_once_with(mock.sentinel.ctx, 'host1',
-            'max_io_ops_per_host')
+        agg_mock.assert_called_once_with(host, 'max_io_ops_per_host')

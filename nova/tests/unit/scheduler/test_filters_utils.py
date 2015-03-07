@@ -12,11 +12,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mock
-
 from nova import objects
 from nova.scheduler.filters import utils
 from nova import test
+from nova.tests.unit.scheduler import fakes
 
 
 _AGGREGATE_FIXTURES = [
@@ -51,56 +50,46 @@ class UtilsTestCase(test.NoDBTestCase):
         self.assertEqual(1, f(set([1, 2]), based_on=min))
         self.assertEqual(2, f(set([1, 2]), based_on=max))
 
-    @mock.patch("nova.objects.aggregate.AggregateList.get_by_host")
-    def test_aggregate_values_from_db(self, get_by_host):
-        context = mock.MagicMock()
-        get_by_host.return_value = objects.AggregateList(
-            objects=_AGGREGATE_FIXTURES)
+    def test_aggregate_values_from_key(self):
+        host_state = fakes.FakeHostState(
+            'fake', 'node', {'aggregates': _AGGREGATE_FIXTURES})
 
-        values = utils.aggregate_values_from_db(context,
-                                                'fake-host', key_name='k1')
+        values = utils.aggregate_values_from_key(host_state, key_name='k1')
 
-        get_by_host.assert_called_with(context.elevated(),
-                                       'fake-host', key='k1')
         self.assertEqual(set(['1', '3', '6,7']), values)
 
-    @mock.patch("nova.objects.aggregate.AggregateList.get_by_host")
-    def test_aggregate_metadata_get_by_host_no_key(self, get_by_host):
-        context = mock.MagicMock()
-        get_by_host.return_value = objects.AggregateList(
-            objects=_AGGREGATE_FIXTURES)
+    def test_aggregate_values_from_key_with_wrong_key(self):
+        host_state = fakes.FakeHostState(
+            'fake', 'node', {'aggregates': _AGGREGATE_FIXTURES})
 
-        metadata = utils.aggregate_metadata_get_by_host(context, 'fake-host')
+        values = utils.aggregate_values_from_key(host_state, key_name='k3')
 
-        get_by_host.assert_called_with(context.elevated(),
-                                       'fake-host', key=None)
+        self.assertEqual(set(), values)
+
+    def test_aggregate_metadata_get_by_host_no_key(self):
+        host_state = fakes.FakeHostState(
+            'fake', 'node', {'aggregates': _AGGREGATE_FIXTURES})
+
+        metadata = utils.aggregate_metadata_get_by_host(host_state)
+
         self.assertIn('k1', metadata)
         self.assertEqual(set(['1', '3', '7', '6']), metadata['k1'])
         self.assertIn('k2', metadata)
         self.assertEqual(set(['9', '8', '2', '4']), metadata['k2'])
 
-    @mock.patch("nova.objects.aggregate.AggregateList.get_by_host")
-    def test_aggregate_metadata_get_by_host_with_key(self, get_by_host):
-        context = mock.MagicMock()
-        get_by_host.return_value = objects.AggregateList(
-            objects=_AGGREGATE_FIXTURES)
+    def test_aggregate_metadata_get_by_host_with_key(self):
+        host_state = fakes.FakeHostState(
+            'fake', 'node', {'aggregates': _AGGREGATE_FIXTURES})
 
-        metadata = utils.aggregate_metadata_get_by_host(context,
-                                                        'fake-host', 'k1')
+        metadata = utils.aggregate_metadata_get_by_host(host_state, 'k1')
 
-        get_by_host.assert_called_with(context.elevated(),
-                                       'fake-host', key='k1')
         self.assertIn('k1', metadata)
         self.assertEqual(set(['1', '3', '7', '6']), metadata['k1'])
 
-    @mock.patch("nova.objects.aggregate.AggregateList.get_by_host")
-    def test_aggregate_metadata_get_by_host_empty_result(self, get_by_host):
-        context = mock.MagicMock()
-        get_by_host.return_value = objects.AggregateList(objects=[])
+    def test_aggregate_metadata_get_by_host_empty_result(self):
+        host_state = fakes.FakeHostState(
+            'fake', 'node', {'aggregates': []})
 
-        metadata = utils.aggregate_metadata_get_by_host(context,
-                                                        'fake-host', 'k3')
+        metadata = utils.aggregate_metadata_get_by_host(host_state, 'k3')
 
-        get_by_host.assert_called_with(context.elevated(),
-                                       'fake-host', key='k3')
         self.assertEqual({}, metadata)
