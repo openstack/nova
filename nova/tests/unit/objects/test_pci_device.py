@@ -78,8 +78,9 @@ class _TestPciDeviceObject(object):
         self.inst.uuid = 'fake-inst-uuid'
         self.inst.pci_devices = pci_device.PciDeviceList()
 
-    def _create_fake_pci_device(self):
-        ctxt = context.get_admin_context()
+    def _create_fake_pci_device(self, ctxt=None):
+        if not ctxt:
+            ctxt = context.get_admin_context()
         self.mox.StubOutWithMock(db, 'pci_device_get_by_addr')
         db.pci_device_get_by_addr(ctxt, 1, 'a').AndReturn(fake_db_dev)
         self.mox.ReplayAll()
@@ -146,7 +147,7 @@ class _TestPciDeviceObject(object):
 
     def test_save(self):
         ctxt = context.get_admin_context()
-        self._create_fake_pci_device()
+        self._create_fake_pci_device(ctxt=ctxt)
         return_dev = dict(fake_db_dev, status='available',
                           instance_uuid='fake-uuid-3')
         self.pci_device.status = 'allocated'
@@ -157,7 +158,7 @@ class _TestPciDeviceObject(object):
         db.pci_device_update(ctxt, 1, 'a',
                              expected_updates).AndReturn(return_dev)
         self.mox.ReplayAll()
-        self.pci_device.save(ctxt)
+        self.pci_device.save()
         self.assertEqual(self.pci_device.status, 'available')
         self.assertEqual(self.pci_device.instance_uuid,
                          'fake-uuid-3')
@@ -174,17 +175,18 @@ class _TestPciDeviceObject(object):
         ctxt = context.get_admin_context()
         self.stubs.Set(db, 'pci_device_update', _fake_update)
         self.pci_device = pci_device.PciDevice.create(dev_dict)
-        self.pci_device.save(ctxt)
+        self.pci_device._context = ctxt
+        self.pci_device.save()
         self.assertEqual(self.extra_info, '{}')
 
     def test_save_removed(self):
         ctxt = context.get_admin_context()
-        self._create_fake_pci_device()
+        self._create_fake_pci_device(ctxt=ctxt)
         self.pci_device.status = 'removed'
         self.mox.StubOutWithMock(db, 'pci_device_destroy')
         db.pci_device_destroy(ctxt, 1, 'a')
         self.mox.ReplayAll()
-        self.pci_device.save(ctxt)
+        self.pci_device.save()
         self.assertEqual(self.pci_device.status, 'deleted')
         self.assertRemotes()
 
@@ -194,13 +196,12 @@ class _TestPciDeviceObject(object):
 
         def _fake_update(ctxt, node_id, addr, updates):
             self.called = True
-        ctxt = context.get_admin_context()
         self.stubs.Set(db, 'pci_device_destroy', _fake_destroy)
         self.stubs.Set(db, 'pci_device_update', _fake_update)
         self._create_fake_pci_device()
         self.pci_device.status = 'deleted'
         self.called = False
-        self.pci_device.save(ctxt)
+        self.pci_device.save()
         self.assertEqual(self.called, False)
 
     def test_update_numa_node(self):
