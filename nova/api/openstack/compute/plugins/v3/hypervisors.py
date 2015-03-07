@@ -15,7 +15,6 @@
 
 """The hypervisors admin extension."""
 
-from oslo_config import cfg
 import webob.exc
 
 from nova.api.openstack import extensions
@@ -29,9 +28,6 @@ from nova import servicegroup
 
 ALIAS = "os-hypervisors"
 authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
-
-CONF = cfg.CONF
-CONF.import_opt('compute_topic', 'nova.compute.rpcapi')
 
 
 class HypervisorsController(wsgi.Controller):
@@ -86,8 +82,8 @@ class HypervisorsController(wsgi.Controller):
         req.cache_db_compute_nodes(compute_nodes)
         return dict(hypervisors=[self._view_hypervisor(
                                  hyp,
-                                 objects.Service.get_by_host_and_topic(
-                                     context, hyp.host, CONF.compute_topic),
+                                 objects.Service.get_by_host_and_binary(
+                                     context, hyp.host, 'nova-compute'),
                                  False)
                                  for hyp in compute_nodes])
 
@@ -99,8 +95,8 @@ class HypervisorsController(wsgi.Controller):
         req.cache_db_compute_nodes(compute_nodes)
         return dict(hypervisors=[self._view_hypervisor(
                                  hyp,
-                                 objects.Service.get_by_host_and_topic(
-                                     context, hyp.host, CONF.compute_topic),
+                                 objects.Service.get_by_host_and_binary(
+                                     context, hyp.host, 'nova-compute'),
                                  True)
                                  for hyp in compute_nodes])
 
@@ -114,8 +110,8 @@ class HypervisorsController(wsgi.Controller):
         except (ValueError, exception.ComputeHostNotFound):
             msg = _("Hypervisor with ID '%s' could not be found.") % id
             raise webob.exc.HTTPNotFound(explanation=msg)
-        service = objects.Service.get_by_host_and_topic(
-            context, hyp.host, CONF.compute_topic)
+        service = objects.Service.get_by_host_and_binary(
+            context, hyp.host, 'nova-compute')
         return dict(hypervisor=self._view_hypervisor(hyp, service, True))
 
     @extensions.expected_errors((404, 501))
@@ -137,8 +133,8 @@ class HypervisorsController(wsgi.Controller):
             msg = _("Virt driver does not implement uptime function.")
             raise webob.exc.HTTPNotImplemented(explanation=msg)
 
-        service = objects.Service.get_by_host_and_topic(
-            context, host, CONF.compute_topic)
+        service = objects.Service.get_by_host_and_binary(
+            context, host, 'nova-compute')
         return dict(hypervisor=self._view_hypervisor(hyp, service, False,
                                                      uptime=uptime))
 
@@ -151,9 +147,9 @@ class HypervisorsController(wsgi.Controller):
         if hypervisors:
             return dict(hypervisors=[self._view_hypervisor(
                                      hyp,
-                                     objects.Service.get_by_host_and_topic(
+                                     objects.Service.get_by_host_and_binary(
                                          context,
-                                         hyp.host, CONF.compute_topic),
+                                         hyp.host, 'nova-compute'),
                                      False)
                                      for hyp in hypervisors])
         else:
@@ -173,8 +169,8 @@ class HypervisorsController(wsgi.Controller):
         for compute_node in compute_nodes:
             instances = self.host_api.instance_get_all_by_host(context,
                     compute_node.host)
-            service = objects.Service.get_by_host_and_topic(
-                context, compute_node.host, CONF.compute_topic)
+            service = objects.Service.get_by_host_and_binary(
+                context, compute_node.host, 'nova-compute')
             hyp = self._view_hypervisor(compute_node, service, False,
                                         instances)
             hypervisors.append(hyp)

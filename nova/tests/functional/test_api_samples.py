@@ -3370,14 +3370,14 @@ class HypervisorsCellsSampleJsonTests(ApiSampleTestBaseV2):
             return fake_hypervisor
 
         @classmethod
-        def fake_service_get_by_host_and_topic(cls, context, host, topic):
+        def fake_service_get_by_host_and_binary(cls, context, host, binary):
             return objects.Service(host='fake-mini', disabled=False,
                                    disabled_reason=None)
 
         self.stubs.Set(cells_api.HostAPI, 'compute_node_get',
                        fake_compute_node_get)
-        self.stubs.Set(objects.Service, 'get_by_host_and_topic',
-                       fake_service_get_by_host_and_topic)
+        self.stubs.Set(objects.Service, 'get_by_host_and_binary',
+                       fake_service_get_by_host_and_binary)
 
         self.stubs.Set(cells_api.HostAPI,
                        'get_host_uptime', fake_get_host_uptime)
