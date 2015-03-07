@@ -2878,24 +2878,6 @@ class ServiceTestCase(test.TestCase, ModelsObjectComparatorMixin):
                           db.service_get_by_compute_host,
                           self.ctxt, 'non-exists-host')
 
-    def test_service_get_by_args(self):
-        values = [
-            {'host': 'host1', 'binary': 'a'},
-            {'host': 'host2', 'binary': 'b'}
-        ]
-        services = [self._create_service(vals) for vals in values]
-
-        service1 = db.service_get_by_args(self.ctxt, 'host1', 'a')
-        self._assertEqualObjects(services[0], service1)
-
-        service2 = db.service_get_by_args(self.ctxt, 'host2', 'b')
-        self._assertEqualObjects(services[1], service2)
-
-    def test_service_get_by_args_not_found_exception(self):
-        self.assertRaises(exception.HostBinaryNotFound,
-                          db.service_get_by_args,
-                          self.ctxt, 'non-exists-host', 'a')
-
     def test_service_binary_exists_exception(self):
         db.service_create(self.ctxt, self._get_base_values())
         values = self._get_base_values()
