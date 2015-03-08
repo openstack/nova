@@ -869,10 +869,10 @@ class ComputeManager(manager.Manager):
                                   check_instance_shared_storage(context,
                                   instance, data, host=host))
         except NotImplementedError:
-            LOG.warning(_LW('Hypervisor driver does not support '
-                            'instance shared storage check, '
-                            'assuming it\'s not on shared storage'),
-                        instance=instance)
+            LOG.debug('Hypervisor driver does not support '
+                      'instance shared storage check, '
+                      'assuming it\'s not on shared storage',
+                      instance=instance)
             shared_storage = False
         except Exception:
             LOG.exception(_LE('Failed to check if instance shared'),
