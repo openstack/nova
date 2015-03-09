@@ -17,6 +17,7 @@
 
 import webob.exc
 
+from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import compute
@@ -129,8 +130,7 @@ class HypervisorsController(wsgi.Controller):
             host = hyp.host
             uptime = self.host_api.get_host_uptime(context, host)
         except NotImplementedError:
-            msg = _("Virt driver does not implement uptime function.")
-            raise webob.exc.HTTPNotImplemented(explanation=msg)
+            common.raise_feature_not_supported()
 
         service = self.host_api.service_get_by_compute_host(context, host)
         return dict(hypervisor=self._view_hypervisor(hyp, service, False,

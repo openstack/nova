@@ -56,7 +56,7 @@ class AdminPasswordController(wsgi.Controller):
                 e, 'changePassword', id)
         except NotImplementedError:
             msg = _("Unable to set password on instance")
-            raise exc.HTTPNotImplemented(explanation=msg)
+            common.raise_feature_not_supported(msg=msg)
 
 
 class AdminPassword(extensions.V3APIExtensionBase):

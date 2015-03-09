@@ -19,13 +19,13 @@ from oslo_log import log as logging
 import six
 import webob.exc
 
+from nova.api.openstack import common
 from nova.api.openstack.compute.schemas.v3 import hosts
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import compute
 from nova import exception
-from nova.i18n import _
 from nova.i18n import _LI
 from nova import objects
 
@@ -138,8 +138,7 @@ class HostController(wsgi.Controller):
         try:
             result = self.api.set_host_maintenance(context, host_name, mode)
         except NotImplementedError:
-            msg = _("Virt driver does not implement host maintenance mode.")
-            raise webob.exc.HTTPNotImplemented(explanation=msg)
+            common.raise_feature_not_supported()
         except exception.HostNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
         except exception.ComputeServiceUnavailable as e:
@@ -161,8 +160,7 @@ class HostController(wsgi.Controller):
             result = self.api.set_host_enabled(context, host_name=host_name,
                                                enabled=enabled)
         except NotImplementedError:
-            msg = _("Virt driver does not implement host disabled status.")
-            raise webob.exc.HTTPNotImplemented(explanation=msg)
+            common.raise_feature_not_supported()
         except exception.HostNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
         except exception.ComputeServiceUnavailable as e:
@@ -179,8 +177,7 @@ class HostController(wsgi.Controller):
             result = self.api.host_power_action(context, host_name=host_name,
                                                 action=action)
         except NotImplementedError:
-            msg = _("Virt driver does not implement host power management.")
-            raise webob.exc.HTTPNotImplemented(explanation=msg)
+            common.raise_feature_not_supported()
         except exception.HostNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
         except exception.ComputeServiceUnavailable as e:

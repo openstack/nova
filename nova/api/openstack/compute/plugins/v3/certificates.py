@@ -14,6 +14,7 @@
 
 import webob.exc
 
+from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 import nova.cert.rpcapi
@@ -47,7 +48,10 @@ class CertificatesController(wsgi.Controller):
         authorize(context, action='show')
         if id != 'root':
             msg = _("Only root certificate can be retrieved.")
-            raise webob.exc.HTTPNotImplemented(explanation=msg)
+            # TODO(oomichi): This seems a HTTPBadRequest case because of the
+            # above message. This will be changed with a microversion in the
+            # future.
+            common.raise_feature_not_supported(msg=msg)
         try:
             cert = self.cert_rpcapi.fetch_ca(context,
                                              project_id=context.project_id)
