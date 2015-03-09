@@ -290,7 +290,7 @@ def _get_group_details(context, instance_uuid, user_group_hosts=None):
             msg = _("ServerGroupAntiAffinityFilter not configured")
             LOG.error(msg)
             raise exception.UnsupportedPolicyException(reason=msg)
-        group_hosts = set(group.get_hosts(context))
+        group_hosts = set(group.get_hosts())
         user_hosts = set(user_group_hosts) if user_group_hosts else set()
         return GroupDetails(hosts=user_hosts | group_hosts,
                             policies=group.policies)
