@@ -21,7 +21,6 @@ from oslo_vmware import exceptions as vexc
 
 from nova.compute import power_state
 from nova import context
-from nova import db
 from nova import exception
 from nova.network import model as network_model
 from nova import objects
@@ -86,6 +85,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         self._flavor = objects.Flavor(name='m1.small', memory_mb=512, vcpus=1,
                                       root_gb=10, ephemeral_gb=0, swap=0,
                                       extra_specs={})
+        self._instance.flavor = self._flavor
 
         self._vmops = vmops.VMwareVMOps(self._session, self._virtapi, None,
                                         cluster=cluster.obj)
@@ -774,7 +774,6 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     @mock.patch(
         'nova.virt.vmwareapi.imagecache.ImageCacheManager.enlist_image')
     @mock.patch.object(vmops.VMwareVMOps, 'build_virtual_machine')
-    @mock.patch.object(objects.Flavor, 'get_by_id')
     @mock.patch.object(vmops.VMwareVMOps, '_get_vm_config_info')
     @mock.patch.object(vmops.VMwareVMOps, '_get_extra_specs')
     @mock.patch.object(nova.virt.vmwareapi.images.VMwareImage,
@@ -782,13 +781,11 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     def test_spawn_non_root_block_device(self, from_image,
                                          get_extra_specs,
                                          get_vm_config_info,
-                                         get_by_id,
                                          build_virtual_machine,
                                          enlist_image, fetch_image,
                                          use_disk_image,
                                          power_on_instance):
         extra_specs = get_extra_specs.return_value
-        get_by_id.return_value = self._flavor
 
         connection_info1 = {'data': 'fake-data1', 'serial': 'volume-fake-id1'}
         connection_info2 = {'data': 'fake-data2', 'serial': 'volume-fake-id2'}
@@ -832,7 +829,6 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
 
     @mock.patch('nova.virt.vmwareapi.vm_util.power_on_instance')
     @mock.patch.object(vmops.VMwareVMOps, 'build_virtual_machine')
-    @mock.patch.object(objects.Flavor, 'get_by_id')
     @mock.patch.object(vmops.VMwareVMOps, '_get_vm_config_info')
     @mock.patch.object(vmops.VMwareVMOps, '_get_extra_specs')
     @mock.patch.object(nova.virt.vmwareapi.images.VMwareImage,
@@ -840,7 +836,6 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     def test_spawn_with_no_image_and_block_devices(self, from_image,
                                                    get_extra_specs,
                                                    get_vm_config_info,
-                                                   get_by_id,
                                                    build_virtual_machine,
                                                    power_on_instance):
         instance_values = {
@@ -855,8 +850,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         }
         instance = fake_instance.fake_instance_obj(
             self._context, **instance_values)
+        instance.flavor = self._flavor
         extra_specs = get_extra_specs.return_value
-        get_by_id.return_value = self._flavor
 
         connection_info1 = {'data': 'fake-data1', 'serial': 'volume-fake-id1'}
         connection_info2 = {'data': 'fake-data2', 'serial': 'volume-fake-id2'}
@@ -901,7 +896,6 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
 
     @mock.patch('nova.virt.vmwareapi.vm_util.power_on_instance')
     @mock.patch.object(vmops.VMwareVMOps, 'build_virtual_machine')
-    @mock.patch.object(objects.Flavor, 'get_by_id')
     @mock.patch.object(vmops.VMwareVMOps, '_get_vm_config_info')
     @mock.patch.object(vmops.VMwareVMOps, '_get_extra_specs')
     @mock.patch.object(nova.virt.vmwareapi.images.VMwareImage,
@@ -909,7 +903,6 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     def test_spawn_unsupported_hardware(self, from_image,
                                         get_extra_specs,
                                         get_vm_config_info,
-                                        get_by_id,
                                         build_virtual_machine,
                                         power_on_instance):
         instance_values = {
@@ -924,8 +917,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         }
         instance = fake_instance.fake_instance_obj(
             self._context, **instance_values)
+        instance.flavor = self._flavor
         extra_specs = get_extra_specs.return_value
-        get_by_id.return_value = self._flavor
 
         connection_info = {'data': 'fake-data', 'serial': 'volume-fake-id'}
         bdm = [{'boot_index': 0,
@@ -1551,17 +1544,10 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                          actual.cpu_limits.cpu_shares_share)
 
     def _validate_flavor_extra_specs(self, flavor_extra_specs, expected):
-
-        def _fake_flavor_get(context, id):
-            flavor = stubs._fake_flavor_get(context, id)
-            flavor['extra_specs'] = flavor_extra_specs
-            return flavor
-
-        with mock.patch.object(db, 'flavor_get', _fake_flavor_get):
-            # Validate that the extra specs are parsed correctly
-            flavor = objects.Flavor.get_by_id(self._context, 1)
-            flavor_extra_specs = self._vmops._get_extra_specs(flavor)
-            self._validate_extra_specs(expected, flavor_extra_specs)
+        # Validate that the extra specs are parsed correctly
+        flavor = objects.Flavor(extra_specs=flavor_extra_specs)
+        flavor_extra_specs = self._vmops._get_extra_specs(flavor)
+        self._validate_extra_specs(expected, flavor_extra_specs)
 
     def test_extra_specs_cpu_limit(self):
         flavor_extra_specs = {'quota:cpu_limit': 7}

@@ -43,7 +43,6 @@ from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova import context
-from nova import db
 from nova import exception
 from nova.image import glance
 from nova.network import model as network_model
@@ -366,12 +365,14 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
 
     def _create_instance(self, node=None, set_image_ref=True,
                          uuid=None, instance_type='m1.large',
-                         ephemeral=None):
+                         ephemeral=None, instance_type_updates=None):
         if not node:
             node = self.node_name
         if not uuid:
             uuid = uuidutils.generate_uuid()
         self.type_data = self._get_instance_type_by_name(instance_type)
+        if instance_type_updates:
+            self.type_data.update(instance_type_updates)
         if ephemeral is not None:
             self.type_data['ephemeral_gb'] = ephemeral
         values = {'name': 'fake_name',
@@ -397,16 +398,18 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.uuid = uuid
         self.instance = fake_instance.fake_instance_obj(
                 self.context, **values)
+        self.instance.flavor = objects.Flavor(**self.type_data)
 
     def _create_vm(self, node=None, num_instances=1, uuid=None,
                    instance_type='m1.large', powered_on=True,
-                   ephemeral=None, bdi=None):
+                   ephemeral=None, bdi=None, instance_type_updates=None):
         """Create and spawn the VM."""
         if not node:
             node = self.node_name
         self._create_instance(node=node, uuid=uuid,
                               instance_type=instance_type,
-                              ephemeral=ephemeral)
+                              ephemeral=ephemeral,
+                              instance_type_updates=instance_type_updates)
         self.assertIsNone(vm_util.vm_ref_cache_get(self.uuid))
         self.conn.spawn(self.context, self.instance, self.image,
                         injected_files=[], admin_password=None,
@@ -1149,13 +1152,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                         block_device_info=block_device_info)
 
     def test_spawn_hw_versions(self):
-        def _fake_flavor_get(context, id):
-            flavor = stubs._fake_flavor_get(context, id)
-            flavor['extra_specs'] = {'vmware:hw_version': 'vmx-08'}
-            return flavor
-
-        with mock.patch.object(db, 'flavor_get', _fake_flavor_get):
-            self._create_vm()
+        updates = {'extra_specs': {'vmware:hw_version': 'vmx-08'}}
+        self._create_vm(instance_type_updates=updates)
         vm = self._get_vm_record()
         version = vm.get("version")
         self.assertEqual('vmx-08', version)
