@@ -263,9 +263,13 @@ class VMwareVolumeOps(object):
                        'target_portal': target_portal})
         return (device_name, uuid)
 
-    def _iscsi_get_host_iqn(self):
+    def _iscsi_get_host_iqn(self, instance):
         """Return the host iSCSI IQN."""
-        host_mor = vm_util.get_host_ref(self._session, self._cluster)
+        try:
+            host_mor = vm_util.get_host_ref_for_vm(self._session, instance)
+        except exception.InstanceNotFound:
+            host_mor = vm_util.get_host_ref(self._session, self._cluster)
+
         hbas_ret = self._session._call_method(
             vim_util, "get_dynamic_property",
             host_mor, "HostSystem",
@@ -287,7 +291,7 @@ class VMwareVolumeOps(object):
             vm_ref = vm_util.get_vm_ref(self._session, instance)
         except exception.InstanceNotFound:
             vm_ref = None
-        iqn = self._iscsi_get_host_iqn()
+        iqn = self._iscsi_get_host_iqn(instance)
         connector = {'ip': CONF.vmware.host_ip,
                      'initiator': iqn,
                      'host': CONF.vmware.host_ip}

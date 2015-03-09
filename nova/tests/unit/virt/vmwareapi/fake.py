@@ -288,10 +288,11 @@ class DataObject(object):
 class HostInternetScsiHba(DataObject):
     """iSCSI Host Bus Adapter."""
 
-    def __init__(self):
+    def __init__(self, iscsi_name=None):
         super(HostInternetScsiHba, self).__init__()
         self.device = 'vmhba33'
         self.key = 'key-vmhba33'
+        self.iScsiName = iscsi_name
 
 
 class FileAlreadyExists(DataObject):
