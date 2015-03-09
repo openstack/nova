@@ -279,7 +279,7 @@ class API(object):
         volume['status'] = 'available'
 
     def begin_detaching(self, context, volume_id):
-        LOG.info('beging detaching volume %s', volume_id)
+        LOG.info('begin detaching volume %s', volume_id)
         volume = self.get(context, volume_id)
         volume['status'] = 'detaching'
 
