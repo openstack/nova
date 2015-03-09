@@ -56,7 +56,6 @@ CONF = cfg.CONF
 CONF.import_opt('name', 'nova.cells.opts', group='cells')
 CONF.import_opt('reserve_percent', 'nova.cells.opts', group='cells')
 CONF.import_opt('mute_child_interval', 'nova.cells.opts', group='cells')
-CONF.import_opt('compute_topic', 'nova.compute.rpcapi')
 CONF.register_opts(cell_state_manager_opts, group='cells')
 
 
@@ -264,8 +263,8 @@ class CellStateManager(base.Base):
 
         def _get_compute_hosts():
             service_refs = {service.host: service
-                            for service in objects.ServiceList.get_by_topic(
-                                ctxt, CONF.compute_topic)}
+                            for service in objects.ServiceList.get_by_binary(
+                                ctxt, 'nova-compute')}
 
             compute_nodes = objects.ComputeNodeList.get_all(ctxt)
             for compute in compute_nodes:

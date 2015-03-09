@@ -108,14 +108,14 @@ class CellStubInfo(object):
             return []
 
         @staticmethod
-        def _fake_service_get_by_topic(context, topic):
+        def _fake_service_get_by_binary(context, binary):
             return []
 
         test_case.stubs.Set(base.Base, '__init__', fake_base_init)
         test_case.stubs.Set(objects.ComputeNodeList, 'get_all',
                             _fake_compute_node_get_all)
-        test_case.stubs.Set(objects.ServiceList, 'get_by_topic',
-                            _fake_service_get_by_topic)
+        test_case.stubs.Set(objects.ServiceList, 'get_by_binary',
+                            _fake_service_get_by_binary)
         self.cells_manager = FakeCellsManager()
         # Fix the cell name, as it normally uses CONF.cells.name
         msg_runner = self.cells_manager.msg_runner
