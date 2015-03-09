@@ -56,6 +56,7 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
     def _from_db_object(context, flavor, db_flavor, expected_attrs=None):
         if expected_attrs is None:
             expected_attrs = []
+        flavor._context = context
         for name, field in flavor.fields.items():
             if name in OPTIONAL_FIELDS:
                 continue
@@ -68,9 +69,8 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
             flavor.extra_specs = db_flavor['extra_specs']
 
         if 'projects' in expected_attrs:
-            flavor._load_projects(context)
+            flavor._load_projects()
 
-        flavor._context = context
         flavor.obj_reset_changes()
         return flavor
 
@@ -151,7 +151,7 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
             raise exception.ObjectActionError(action='add_access',
                                               reason='projects modified')
         db.flavor_access_add(context, self.flavorid, project_id)
-        self._load_projects(context)
+        self._load_projects()
 
     @base.remotable
     def remove_access(self, context, project_id):
@@ -159,7 +159,7 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
             raise exception.ObjectActionError(action='remove_access',
                                               reason='projects modified')
         db.flavor_access_remove(context, self.flavorid, project_id)
-        self._load_projects(context)
+        self._load_projects()
 
     @base.remotable
     def create(self, context):
