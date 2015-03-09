@@ -1111,7 +1111,7 @@ def restart_dhcp(context, dev, network_ref, fixedips):
                 _add_dnsmasq_accept_rules(dev)
                 return
             except Exception as exc:
-                LOG.error(_LE('Hupping dnsmasq threw %s'), exc)
+                LOG.error(_LE('kill -HUP dnsmasq threw %s'), exc)
         else:
             LOG.debug('Pid %d is stale, relaunching dnsmasq', pid)
 
