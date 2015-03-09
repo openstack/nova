@@ -34,6 +34,7 @@ from nova.api.openstack import extensions
 import nova.context
 from nova import exception
 from nova.network import manager
+from nova.network.neutronv2 import api as neutron
 from nova import objects
 from nova import test
 from nova.tests.unit.api.openstack import fakes
@@ -339,6 +340,8 @@ class NetworksTestV21(test.NoDBTestCase):
     def _setup(self):
         self.controller = networks_v21.NetworkController(
             self.fake_network_api)
+        self.neutron_ctrl = networks_v21.NetworkController(
+            neutron.API(skip_policy_check=True))
 
     def _check_status(self, res, method, code):
         self.assertEqual(method.wsgi_code, code)
@@ -476,10 +479,8 @@ class NetworksTestV21(test.NoDBTestCase):
 
     def test_network_neutron_disassociate_not_implemented(self):
         uuid = FAKE_NETWORKS[1]['uuid']
-        self.flags(network_api_class='nova.network.neutronv2.api.API')
-        controller = networks.NetworkController()
         self.assertRaises(webob.exc.HTTPNotImplemented,
-                          controller._disassociate_host_and_project,
+                          self.neutron_ctrl._disassociate_host_and_project,
                           self.req, uuid, {'disassociate': None})
 
 
@@ -491,6 +492,8 @@ class NetworksTestV2(NetworksTestV21):
         ext_mgr.extensions = {'os-extended-networks': 'fake'}
         self.controller = networks.NetworkController(self.fake_network_api,
                                                      ext_mgr)
+        self.neutron_ctrl = networks.NetworkController(
+            neutron.API(skip_policy_check=False))
 
     def _check_status(self, res, method, code):
         self.assertEqual(res.status_int, code)
@@ -531,6 +534,9 @@ class NetworksAssociateTestV21(test.NoDBTestCase):
         self.controller = networks.NetworkController(self.fake_network_api)
         self.associate_controller = networks_associate_v21\
             .NetworkAssociateActionController(self.fake_network_api)
+        self.neutron_assoc_ctrl = (
+            networks_associate_v21.NetworkAssociateActionController(
+                neutron.API(skip_policy_check=True)))
 
     def _check_status(self, res, method, code):
         self.assertEqual(method.wsgi_code, code)
@@ -581,12 +587,9 @@ class NetworksAssociateTestV21(test.NoDBTestCase):
 
     def test_network_neutron_associate_not_implemented(self):
         uuid = FAKE_NETWORKS[1]['uuid']
-        self.flags(network_api_class='nova.network.neutronv2.api.API')
-        assoc_ctrl = networks_associate.NetworkAssociateActionController()
-
         self.assertRaises(webob.exc.HTTPNotImplemented,
-                          assoc_ctrl._associate_host,
-                          self.req, uuid, {'associate_host': "TestHost"})
+                          self.neutron_assoc_ctrl._associate_host,
+                          self.req, uuid, body={'associate_host': "TestHost"})
 
     def _test_network_neutron_associate_host_validation_failed(self, body):
         uuid = FAKE_NETWORKS[1]['uuid']
@@ -614,19 +617,14 @@ class NetworksAssociateTestV21(test.NoDBTestCase):
 
     def test_network_neutron_disassociate_project_not_implemented(self):
         uuid = FAKE_NETWORKS[1]['uuid']
-        self.flags(network_api_class='nova.network.neutronv2.api.API')
-        assoc_ctrl = networks_associate.NetworkAssociateActionController()
-
         self.assertRaises(webob.exc.HTTPNotImplemented,
-                          assoc_ctrl._disassociate_project_only,
+                          self.neutron_assoc_ctrl._disassociate_project_only,
                           self.req, uuid, {'disassociate_project': None})
 
     def test_network_neutron_disassociate_host_not_implemented(self):
         uuid = FAKE_NETWORKS[1]['uuid']
-        self.flags(network_api_class='nova.network.neutronv2.api.API')
-        assoc_ctrl = networks_associate.NetworkAssociateActionController()
         self.assertRaises(webob.exc.HTTPNotImplemented,
-                          assoc_ctrl._disassociate_host_only,
+                          self.neutron_assoc_ctrl._disassociate_host_only,
                           self.req, uuid, {'disassociate_host': None})
 
 
@@ -640,6 +638,9 @@ class NetworksAssociateTestV2(NetworksAssociateTestV21):
                                                 ext_mgr)
         self.associate_controller = networks_associate\
             .NetworkAssociateActionController(self.fake_network_api)
+        self.neutron_assoc_ctrl = (
+            networks_associate.NetworkAssociateActionController(
+                neutron.API(skip_policy_check=False)))
 
     def _check_status(self, res, method, code):
         self.assertEqual(res.status_int, code)
