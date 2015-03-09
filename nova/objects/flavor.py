@@ -213,7 +213,6 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
         self.obj_reset_changes(['extra_specs'])
 
     def save(self):
-        context = self._context
         updates = self.obj_get_changes()
         projects = updates.pop('projects', None)
         extra_specs = updates.pop('extra_specs', None)
@@ -240,10 +239,10 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
         # call these methods to update them.
 
         if added_keys or deleted_keys:
-            self.save_extra_specs(context, self.extra_specs, deleted_keys)
+            self.save_extra_specs(self.extra_specs, deleted_keys)
 
         if added_projects or deleted_projects:
-            self.save_projects(context, added_projects, deleted_projects)
+            self.save_projects(added_projects, deleted_projects)
 
     @base.remotable
     def destroy(self, context):

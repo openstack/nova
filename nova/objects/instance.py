@@ -642,12 +642,14 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
 
     def _save_info_cache(self, context):
         if self.info_cache:
-            self.info_cache.save(context)
+            with self.info_cache.obj_alternate_context(context):
+                self.info_cache.save()
 
     def _save_security_groups(self, context):
         security_groups = self.security_groups or []
         for secgroup in security_groups:
-            secgroup.save(context)
+            with secgroup.obj_alternate_context(context):
+                secgroup.save()
         self.security_groups.obj_reset_changes()
 
     def _save_fault(self, context):
