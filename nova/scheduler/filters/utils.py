@@ -48,7 +48,7 @@ def aggregate_metadata_get_by_host(host_state, key=None):
 
 
 def validate_num_values(vals, default=None, cast_to=int, based_on=min):
-    """Returns a corretly casted value based on a set of values.
+    """Returns a correctly casted value based on a set of values.
 
     This method is useful to work with per-aggregate filters, It takes
     a set of values then return the 'based_on'{min/max} converted to
