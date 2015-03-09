@@ -309,12 +309,7 @@ class IronicDriver(virt_driver.ComputeDriver):
     def _cleanup_deploy(self, context, node, instance, network_info,
                         flavor=None):
         if flavor is None:
-            # TODO(mrda): It would be better to use instance.get_flavor() here
-            # but right now that doesn't include extra_specs which are required
-            # NOTE(pmurray): Flavor may have been deleted
-            ctxt = context.elevated(read_deleted="yes")
-            flavor = objects.Flavor.get_by_id(ctxt,
-                                              instance.instance_type_id)
+            flavor = instance.flavor
         patch = patcher.create(node).get_cleanup_patch(instance, network_info,
                                                        flavor)
 
@@ -638,15 +633,14 @@ class IronicDriver(virt_driver.ComputeDriver):
                   "driver for instance %s.") % instance.uuid)
 
         node = self.ironicclient.call("node.get", node_uuid)
-        flavor = objects.Flavor.get_by_id(context,
-                                          instance.instance_type_id)
+        flavor = instance.flavor
 
         self._add_driver_fields(node, instance, image_meta, flavor)
 
         # NOTE(Shrews): The default ephemeral device needs to be set for
         # services (like cloud-init) that depend on it being returned by the
         # metadata server. Addresses bug https://launchpad.net/bugs/1324286.
-        if flavor['ephemeral_gb']:
+        if flavor.ephemeral_gb:
             instance.default_ephemeral_device = '/dev/sda1'
             instance.save()
 
@@ -1044,10 +1038,8 @@ class IronicDriver(virt_driver.ComputeDriver):
 
         node_uuid = instance.node
         node = self.ironicclient.call("node.get", node_uuid)
-        flavor = objects.Flavor.get_by_id(context,
-                                          instance.instance_type_id)
 
-        self._add_driver_fields(node, instance, image_meta, flavor,
+        self._add_driver_fields(node, instance, image_meta, instance.flavor,
                                 preserve_ephemeral)
 
         # Trigger the node rebuild/redeploy.
