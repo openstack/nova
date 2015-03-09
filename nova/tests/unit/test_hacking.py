@@ -533,3 +533,25 @@ class HackingTestCase(test.NoDBTestCase):
 
         self.assertEqual(0, len(list(checks.dict_constructor_with_list_copy(
             "      self._render_dict(xml, data_el, data.__dict__)"))))
+
+    def test_check_http_not_implemented(self):
+        code = """
+               except NotImplementedError:
+                   common.raise_http_not_implemented_error()
+               """
+        filename = "nova/api/openstack/compute/plugins/v3/test.py"
+        self._assert_has_no_errors(code, checks.check_http_not_implemented,
+                                   filename=filename)
+
+        code = """
+               except NotImplementedError:
+                   msg = _("Unable to set password on instance")
+                   raise exc.HTTPNotImplemented(explanation=msg)
+               """
+        errors = [(3, 4, 'N339')]
+        self._assert_has_errors(code, checks.check_http_not_implemented,
+                                expected_errors=errors, filename=filename)
+
+        filename = "nova/api/openstack/compute/contrib/test.py"
+        self._assert_has_no_errors(code, checks.check_http_not_implemented,
+                                   filename=filename)

@@ -50,6 +50,7 @@ Nova Specific Commandments
 - [N338] Change assertEqual(A in B, True), assertEqual(True, A in B),
   assertEqual(A in B, False) or assertEqual(False, A in B) to the more specific
   assertIn/NotIn(A, B)
+- [N339] Check common raise_feature_not_supported() is used for v2.1 HTTPNotImplemented response.
 
 Creating Unit Tests
 -------------------
