@@ -19,7 +19,6 @@ Tests For HostManager
 import collections
 
 import mock
-from oslo_config import cfg
 from oslo_serialization import jsonutils
 import six
 
@@ -34,9 +33,6 @@ from nova import test
 from nova.tests.unit import matchers
 from nova.tests.unit.scheduler import fakes
 from nova import utils
-
-CONF = cfg.CONF
-CONF.import_opt('compute_topic', 'nova.compute.rpcapi')
 
 
 class FakeFilterClass1(filters.BaseHostFilter):
@@ -313,12 +309,12 @@ class HostManagerTestCase(test.NoDBTestCase):
 
         context = 'fake_context'
 
-        self.mox.StubOutWithMock(objects.ServiceList, 'get_by_topic')
+        self.mox.StubOutWithMock(objects.ServiceList, 'get_by_binary')
         self.mox.StubOutWithMock(objects.ComputeNodeList, 'get_all')
         self.mox.StubOutWithMock(host_manager.LOG, 'warning')
 
-        objects.ServiceList.get_by_topic(
-            context, CONF.compute_topic).AndReturn(fakes.SERVICES)
+        objects.ServiceList.get_by_binary(
+            context, 'nova-compute').AndReturn(fakes.SERVICES)
         objects.ComputeNodeList.get_all(context).AndReturn(fakes.COMPUTE_NODES)
         # node 3 host physical disk space is greater than database
         host_manager.LOG.warning("Host %(hostname)s has more disk space "
@@ -327,9 +323,9 @@ class HostManagerTestCase(test.NoDBTestCase):
                                  {'physical': 3333, 'database': 3072,
                                   'hostname': 'node3'})
         # Invalid service
-        host_manager.LOG.warning("No service record found for host %(host)s "
-                                 "on %(topic)s topic",
-                                 {'host': 'fake', 'topic': CONF.compute_topic})
+        host_manager.LOG.warning("No compute service record found for "
+                                 "host %(host)s",
+                                 {'host': 'fake'})
         self.mox.ReplayAll()
         self.host_manager.get_all_host_states(context)
         host_states_map = self.host_manager.host_state_map
@@ -371,10 +367,10 @@ class HostManagerTestCase(test.NoDBTestCase):
 
     @mock.patch.object(host_manager.HostState, 'update_from_compute_node')
     @mock.patch.object(objects.ComputeNodeList, 'get_all')
-    @mock.patch.object(objects.ServiceList, 'get_by_topic')
-    def test_get_all_host_states_with_no_aggs(self, svc_get_by_topic,
+    @mock.patch.object(objects.ServiceList, 'get_by_binary')
+    def test_get_all_host_states_with_no_aggs(self, svc_get_by_binary,
                                               cn_get_all, update_from_cn):
-        svc_get_by_topic.return_value = [objects.Service(host='fake')]
+        svc_get_by_binary.return_value = [objects.Service(host='fake')]
         cn_get_all.return_value = [
             objects.ComputeNode(host='fake', hypervisor_hostname='fake')]
 
@@ -386,11 +382,11 @@ class HostManagerTestCase(test.NoDBTestCase):
 
     @mock.patch.object(host_manager.HostState, 'update_from_compute_node')
     @mock.patch.object(objects.ComputeNodeList, 'get_all')
-    @mock.patch.object(objects.ServiceList, 'get_by_topic')
-    def test_get_all_host_states_with_matching_aggs(self, svc_get_by_topic,
+    @mock.patch.object(objects.ServiceList, 'get_by_binary')
+    def test_get_all_host_states_with_matching_aggs(self, svc_get_by_binary,
                                                     cn_get_all,
                                                     update_from_cn):
-        svc_get_by_topic.return_value = [objects.Service(host='fake')]
+        svc_get_by_binary.return_value = [objects.Service(host='fake')]
         cn_get_all.return_value = [
             objects.ComputeNode(host='fake', hypervisor_hostname='fake')]
         fake_agg = objects.Aggregate(id=1)
@@ -404,12 +400,13 @@ class HostManagerTestCase(test.NoDBTestCase):
 
     @mock.patch.object(host_manager.HostState, 'update_from_compute_node')
     @mock.patch.object(objects.ComputeNodeList, 'get_all')
-    @mock.patch.object(objects.ServiceList, 'get_by_topic')
-    def test_get_all_host_states_with_not_matching_aggs(self, svc_get_by_topic,
+    @mock.patch.object(objects.ServiceList, 'get_by_binary')
+    def test_get_all_host_states_with_not_matching_aggs(self,
+                                                        svc_get_by_binary,
                                                         cn_get_all,
                                                         update_from_cn):
-        svc_get_by_topic.return_value = [objects.Service(host='fake'),
-                                         objects.Service(host='other')]
+        svc_get_by_binary.return_value = [objects.Service(host='fake'),
+                                          objects.Service(host='other')]
         cn_get_all.return_value = [
             objects.ComputeNode(host='fake', hypervisor_hostname='fake'),
             objects.ComputeNode(host='other', hypervisor_hostname='other')]
@@ -440,10 +437,10 @@ class HostManagerChangedNodesTestCase(test.NoDBTestCase):
     def test_get_all_host_states(self):
         context = 'fake_context'
 
-        self.mox.StubOutWithMock(objects.ServiceList, 'get_by_topic')
+        self.mox.StubOutWithMock(objects.ServiceList, 'get_by_binary')
         self.mox.StubOutWithMock(objects.ComputeNodeList, 'get_all')
-        objects.ServiceList.get_by_topic(
-            context, CONF.compute_topic).AndReturn(fakes.SERVICES)
+        objects.ServiceList.get_by_binary(
+            context, 'nova-compute').AndReturn(fakes.SERVICES)
         objects.ComputeNodeList.get_all(context).AndReturn(fakes.COMPUTE_NODES)
         self.mox.ReplayAll()
 
@@ -454,17 +451,17 @@ class HostManagerChangedNodesTestCase(test.NoDBTestCase):
     def test_get_all_host_states_after_delete_one(self):
         context = 'fake_context'
 
-        self.mox.StubOutWithMock(objects.ServiceList, 'get_by_topic')
+        self.mox.StubOutWithMock(objects.ServiceList, 'get_by_binary')
         self.mox.StubOutWithMock(objects.ComputeNodeList, 'get_all')
         # all nodes active for first call
-        objects.ServiceList.get_by_topic(
-            context, CONF.compute_topic).AndReturn(fakes.SERVICES)
+        objects.ServiceList.get_by_binary(
+            context, 'nova-compute').AndReturn(fakes.SERVICES)
         objects.ComputeNodeList.get_all(context).AndReturn(fakes.COMPUTE_NODES)
         # remove node4 for second call
         running_nodes = [n for n in fakes.COMPUTE_NODES
                          if n.get('hypervisor_hostname') != 'node4']
-        objects.ServiceList.get_by_topic(
-            context, CONF.compute_topic).AndReturn(fakes.SERVICES)
+        objects.ServiceList.get_by_binary(
+            context, 'nova-compute').AndReturn(fakes.SERVICES)
         objects.ComputeNodeList.get_all(context).AndReturn(running_nodes)
         self.mox.ReplayAll()
 
@@ -476,15 +473,15 @@ class HostManagerChangedNodesTestCase(test.NoDBTestCase):
     def test_get_all_host_states_after_delete_all(self):
         context = 'fake_context'
 
-        self.mox.StubOutWithMock(objects.ServiceList, 'get_by_topic')
+        self.mox.StubOutWithMock(objects.ServiceList, 'get_by_binary')
         self.mox.StubOutWithMock(objects.ComputeNodeList, 'get_all')
         # all nodes active for first call
-        objects.ServiceList.get_by_topic(
-            context, CONF.compute_topic).AndReturn(fakes.SERVICES)
+        objects.ServiceList.get_by_binary(
+            context, 'nova-compute').AndReturn(fakes.SERVICES)
         objects.ComputeNodeList.get_all(context).AndReturn(fakes.COMPUTE_NODES)
         # remove all nodes for second call
-        objects.ServiceList.get_by_topic(
-            context, CONF.compute_topic).AndReturn(fakes.SERVICES)
+        objects.ServiceList.get_by_binary(
+            context, 'nova-compute').AndReturn(fakes.SERVICES)
         objects.ComputeNodeList.get_all(context).AndReturn([])
         self.mox.ReplayAll()
 

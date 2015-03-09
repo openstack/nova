@@ -64,7 +64,6 @@ host_manager_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(host_manager_opts)
-CONF.import_opt('compute_topic', 'nova.compute.rpcapi')
 
 LOG = logging.getLogger(__name__)
 
@@ -463,8 +462,8 @@ class HostManager(object):
         """
 
         service_refs = {service.host: service
-                        for service in objects.ServiceList.get_by_topic(
-                            context, CONF.compute_topic)}
+                        for service in objects.ServiceList.get_by_binary(
+                            context, 'nova-compute')}
         # Get resource usage across the available compute nodes:
         compute_nodes = objects.ComputeNodeList.get_all(context)
         seen_nodes = set()
@@ -473,9 +472,8 @@ class HostManager(object):
 
             if not service:
                 LOG.warning(_LW(
-                    "No service record found for host %(host)s "
-                    "on %(topic)s topic"),
-                    {'host': compute.host, 'topic': CONF.compute_topic})
+                    "No compute service record found for host %(host)s"),
+                    {'host': compute.host})
                 continue
             host = compute.host
             node = compute.hypervisor_hostname
