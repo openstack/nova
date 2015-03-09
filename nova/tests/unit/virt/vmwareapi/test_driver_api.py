@@ -708,13 +708,12 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
 
         def _fake_spawn(context, instance, image_meta, injected_files,
             admin_password, network_info, block_device_info=None,
-            instance_name=None, power_on=True, flavor=None):
+            instance_name=None, power_on=True):
             return self._spawn(context, instance, image_meta,
                                injected_files, admin_password, network_info,
                                block_device_info=block_device_info,
                                instance_name=instance_name,
-                               power_on=self._power_on,
-                               flavor=flavor)
+                               power_on=self._power_on)
 
         with (
             mock.patch.object(self.conn._vmops, 'spawn', _fake_spawn)

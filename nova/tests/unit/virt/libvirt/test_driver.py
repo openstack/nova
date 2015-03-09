@@ -7489,7 +7489,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         instance_ref['image_ref'] = 123456  # we send an int to test sha1 call
         instance = objects.Instance(**instance_ref)
         image_meta = {}
-        flavor = instance.get_flavor()
 
         # Mock out the get_info method of the LibvirtDriver so that the polling
         # in the spawn method of the LibvirtDriver returns immediately
@@ -7515,7 +7514,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                         fake_none)
 
             drvr.spawn(self.context, instance, image_meta, [], 'herp',
-                        network_info=network_info, flavor=flavor)
+                        network_info=network_info)
 
         path = os.path.join(CONF.instances_path, instance['name'])
         if os.path.isdir(path):
