@@ -740,10 +740,6 @@ class ExtendedFloatingIpTestV21(test.TestCase):
         elif not isinstance(floating_ips, (list, tuple)):
             floating_ips = [floating_ips]
 
-        def make_ip_dict(ip):
-            """Shortcut for creating floating ip dict."""
-            return
-
         dict_ = {'pool': 'nova', 'host': 'fake_host'}
         return db.floating_ip_bulk_create(
             self.context, [dict(address=ip, **dict_) for ip in floating_ips],
