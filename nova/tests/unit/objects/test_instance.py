@@ -81,7 +81,7 @@ class _TestInstanceObject(object):
                         {'uuid': 'fake-uuid',
                          'launched_at': '1955-11-05T00:00:00Z'},
                     'nova_object.changes': ['launched_at', 'uuid']}
-        self.assertEqual(primitive, expected)
+        self.assertJsonEqual(primitive, expected)
         inst2 = instance.Instance.obj_from_primitive(primitive)
         self.assertIsInstance(inst2.launched_at, datetime.datetime)
         self.assertEqual(inst2.launched_at, red_letter_date)
@@ -99,7 +99,7 @@ class _TestInstanceObject(object):
                          'access_ip_v6': '::1'},
                     'nova_object.changes': ['uuid', 'access_ip_v6',
                                             'access_ip_v4']}
-        self.assertEqual(primitive, expected)
+        self.assertJsonEqual(primitive, expected)
         inst2 = instance.Instance.obj_from_primitive(primitive)
         self.assertIsInstance(inst2.access_ip_v4, netaddr.IPAddress)
         self.assertIsInstance(inst2.access_ip_v6, netaddr.IPAddress)
@@ -478,10 +478,15 @@ class _TestInstanceObject(object):
         inst = fake_instance.fake_instance_obj(self.context)
         inst.vcpu_model = test_vcpu_model.fake_vcpumodel
         inst.save()
-        mock_update.assert_called_once_with(
-            self.context, inst.uuid,
-            {'vcpu_model': jsonutils.dumps(
-                test_vcpu_model.fake_vcpumodel.obj_to_primitive())})
+        self.assertTrue(mock_update.called)
+        self.assertEqual(mock_update.call_count, 1)
+        actual_args = mock_update.call_args
+        self.assertEqual(self.context, actual_args[0][0])
+        self.assertEqual(inst.uuid, actual_args[0][1])
+        self.assertEqual(actual_args[0][2].keys(), ['vcpu_model'])
+        self.assertJsonEqual(jsonutils.dumps(
+                test_vcpu_model.fake_vcpumodel.obj_to_primitive()),
+                             actual_args[0][2]['vcpu_model'])
         mock_update.reset_mock()
         inst.vcpu_model = None
         inst.save()
@@ -724,10 +729,10 @@ class _TestInstanceObject(object):
     def test_iteritems_with_extra_attrs(self):
         self.stubs.Set(instance.Instance, 'name', 'foo')
         inst = instance.Instance(uuid='fake-uuid')
-        self.assertEqual(inst.items(),
-                         {'uuid': 'fake-uuid',
-                          'name': 'foo',
-                          }.items())
+        self.assertEqual(sorted(inst.items()),
+                         sorted({'uuid': 'fake-uuid',
+                                 'name': 'foo',
+                                }.items()))
 
     def _test_metadata_change_tracking(self, which):
         inst = instance.Instance(uuid='fake-uuid')
