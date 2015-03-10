@@ -97,6 +97,31 @@ another one in the future. Note that a 'discoverable' policy needs to be added
 for each plugin that you wish to appear in the ``/extension`` output. Also
 look at the authorize call in plugins currently merged.
 
+Modularity
+~~~~~~~~~~
+
+The Nova REST API is separated into different plugins in the directory
+'nova/api/openstack/compute/plugins/v3/'
+
+Because microversions are supported in the Nova REST API, the API can be
+extended without any new plugin. But for code readability, the Nova REST API
+code still needs modularity. Here are rules for how to separate modules:
+
+* You are adding a new resource
+  The new resource should be in standalone module. There isn't any reason to
+  put different resources in a single module.
+
+* Add sub-resource for existing resource
+  To prevent an existing resource module becoming over-inflated, the
+  sub-resource should be implemented in a separate module.
+
+* Add extended attributes for existing resource
+  In normally, the extended attributes is part of existing resource's data
+  model too. So this can be added into existing resource module directly and
+  lightly.
+  To avoid namespace complexity, we should avoid to add extended attributes
+  in existing extended models. New extended attributes needn't any namespace
+  prefix anymore.
 
 Support files
 -------------
