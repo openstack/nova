@@ -838,11 +838,6 @@ class MockClient(object):
                 del self._fake_subnets[subnet['id']]
         del self._fake_networks[network]
 
-    def delete_subnet(self, subnet):
-        subnet = self.show_subnet(subnet).get('subnet')
-        self._check_ports_on_network(subnet['network_id'])
-        del self._fake_subnet[subnet]
-
     def delete_port(self, port):
         self.show_port(port)
         del self._fake_ports[port]
