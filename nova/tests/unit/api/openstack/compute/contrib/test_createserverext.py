@@ -98,11 +98,6 @@ class CreateserverextTest(test.TestCase):
             osapi_compute_ext_list=['Createserverext', 'User_data',
                 'Security_groups', 'Os_networks'])
 
-    def _make_stub_method(self, canned_return):
-        def stub_method(*args, **kwargs):
-            return canned_return
-        return stub_method
-
     def _create_security_group_request_dict(self, security_groups):
         server = {}
         server['name'] = 'new-server-test'
