@@ -6704,26 +6704,30 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         mock_job_info.side_effect = fake_job_info
 
-        def fake_post_method(self, *args, **kwargs):
-            fake_post_method.called = True
+        dest = mock.sentinel.migrate_dest
+        migrate_data = mock.sentinel.migrate_data
 
-        def fake_recover_method(self, *args, **kwargs):
-            fake_recover_method.called = True
-
-        fake_post_method.called = False
-        fake_recover_method.called = False
-
+        fake_post_method = mock.MagicMock()
+        fake_recover_method = mock.MagicMock()
         drvr._live_migration_monitor(self.context, instance,
-                                     "somehostname",
+                                     dest,
                                      fake_post_method,
                                      fake_recover_method,
                                      False,
-                                     {},
+                                     migrate_data,
                                      dom,
                                      finish_event)
 
-        self.assertEqual(fake_post_method.called, expect_success)
-        self.assertEqual(fake_recover_method.called, not expect_success)
+        if expect_success:
+            self.assertFalse(fake_recover_method.called,
+                             'Recover method called when success expected')
+            fake_post_method.assert_called_once_with(
+                self.context, instance, dest, False, migrate_data)
+        else:
+            self.assertFalse(fake_post_method.called,
+                             'Post method called when success not expected')
+            fake_recover_method.assert_called_once_with(
+                self.context, instance, dest, False, migrate_data)
 
     def test_live_migration_monitor_success(self):
         # A normal sequence where see all the normal job states
