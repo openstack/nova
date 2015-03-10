@@ -1906,9 +1906,6 @@ class ServersControllerCreateTest(test.TestCase):
         def project_get_networks(context, user_id):
             return dict(id='1', host='localhost')
 
-        def queue_get_for(context, *args):
-            return 'network_topic'
-
         fakes.stub_out_rate_limiting(self.stubs)
         fakes.stub_out_key_pair_funcs(self.stubs)
         fake.stub_out_image_service(self.stubs)
