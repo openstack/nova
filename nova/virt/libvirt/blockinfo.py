@@ -266,6 +266,9 @@ def get_disk_bus_for_device_type(virt_type,
             return "ide"
         elif device_type == "disk":
             return "sata"
+    else:
+        # If virt-type not in list then it is unsupported
+        raise exception.UnsupportedVirtType(virt=virt_type)
 
     return None
 

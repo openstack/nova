@@ -654,6 +654,13 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
         for res, args in expected:
             self.assertEqual(res, blockinfo.get_disk_bus_for_disk_dev(*args))
 
+    def test_fail_get_disk_bus_for_disk_dev_unsupported_virt_type(self):
+        image_meta = {}
+        self.assertRaises(exception.UnsupportedVirtType,
+                         blockinfo.get_disk_bus_for_device_type,
+                         'kvm1',
+                         image_meta)
+
     def test_fail_get_disk_bus_for_disk_dev(self):
         self.assertRaises(exception.NovaException,
                 blockinfo.get_disk_bus_for_disk_dev, 'inv', 'val')
