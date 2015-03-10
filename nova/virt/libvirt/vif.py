@@ -592,7 +592,7 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
                    'vif': vif})
 
         if vif_type is None:
-            raise exception.NovaException(
+            raise exception.VirtualInterfacePlugException(
                 _("vif_type parameter must be present "
                   "for this vif_driver implementation"))
         elif vif_type == network_model.VIF_TYPE_BRIDGE:
@@ -612,7 +612,7 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
         elif vif_type == network_model.VIF_TYPE_MIDONET:
             self.plug_midonet(instance, vif)
         else:
-            raise exception.NovaException(
+            raise exception.VirtualInterfacePlugException(
                 _("Unexpected vif_type=%s") % vif_type)
 
     def unplug_bridge(self, instance, vif):

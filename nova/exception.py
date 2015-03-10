@@ -156,6 +156,10 @@ class VirtualInterfaceMacAddressException(NovaException):
                 "unique mac address failed")
 
 
+class VirtualInterfacePlugException(NovaException):
+    msg_fmt = _("Virtual interface plugin failed")
+
+
 class GlanceConnectionFailed(NovaException):
     msg_fmt = _("Connection to glance host %(host)s:%(port)s failed: "
         "%(reason)s")
