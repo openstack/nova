@@ -305,6 +305,14 @@ class API(base_api.NetworkAPI):
             LOG.debug('Successfully created port: %s', port_id,
                       instance=instance)
             return port_id
+        except neutron_client_exc.InvalidIpForNetworkClient:
+            LOG.warning(_LW('Neutron error: %(ip)s is not a valid ip address '
+                            'for network %(network_id)s.'),
+                        {'ip': fixed_ip, 'network_id': network_id})
+            msg = (_('Fixed IP %(ip)s is not a valid ip address for '
+                    'network %(network_id)s.'),
+                   {'ip': fixed_ip, 'network_id': network_id})
+            raise exception.InvalidInput(reason=msg)
         except neutron_client_exc.IpAddressInUseClient:
             LOG.warning(_LW('Neutron error: Fixed IP %s is '
                             'already in use.'), fixed_ip)
