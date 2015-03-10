@@ -871,6 +871,14 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
         self.assertIn('uniq_compute_nodes0host0hypervisor_hostname',
                       constraint_names)
 
+    def _check_280(self, engine, data):
+        key_pairs = oslodbutils.get_table(engine, 'key_pairs')
+        self.assertFalse(key_pairs.c.name.nullable)
+
+    def _post_downgrade_280(self, engine):
+        key_pairs = oslodbutils.get_table(engine, 'key_pairs')
+        self.assertTrue(key_pairs.c.name.nullable)
+
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
                                test_base.DbTestCase,
