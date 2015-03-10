@@ -13,6 +13,7 @@
 #    under the License.
 
 import abc
+from collections import OrderedDict
 import datetime
 
 import copy
@@ -139,6 +140,7 @@ class Field(object):
             'nullable': self._nullable,
             'default': self._default,
             }
+        args = OrderedDict(sorted(args.items()))
         return '%s(%s)' % (self._type.__class__.__name__,
                            ','.join(['%s=%s' % (k, v)
                                      for k, v in args.items()]))
@@ -611,6 +613,7 @@ class EnumField(AutoTypedField):
             }
         if valid_values:
             args.update({'valid_values': valid_values})
+        args = OrderedDict(sorted(args.items()))
         return '%s(%s)' % (self._type.__class__.__name__,
                            ','.join(['%s=%s' % (k, v)
                                      for k, v in args.items()]))
@@ -693,6 +696,7 @@ class ListOfEnumField(AutoTypedField):
             }
         if valid_values:
             args.update({'valid_values': valid_values})
+        args = OrderedDict(sorted(args.items()))
         return '%s(%s)' % (self._type.__class__.__name__,
                            ','.join(['%s=%s' % (k, v)
                                      for k, v in args.items()]))
