@@ -156,22 +156,10 @@ class TestGlanceSerializer(test.NoDBTestCase):
                              'device_name': '/dev/fake'},
                             {'virtual_device': 'ephemeral0',
                              'device_name': '/dev/fake0'}]}}
-
-        converted_expected = {
-            'name': 'image1',
-            'is_public': True,
-            'foo': 'bar',
-            'properties': {
-                'prop1': 'propvalue1',
-                'mappings':
-                '[{"device": "bbb", "virtual": "aaa"}, '
-                '{"device": "yyy", "virtual": "xxx"}]',
-                'block_device_mapping':
-                '[{"virtual_device": "fake", "device_name": "/dev/fake"}, '
-                '{"virtual_device": "ephemeral0", '
-                '"device_name": "/dev/fake0"}]'}}
+        # NOTE(tdurakov): Assertion of serialized objects won't work
+        # during using of random PYTHONHASHSEED. Assertion of
+        # serialized/deserialized object and initial one is enough
         converted = glance._convert_to_string(metadata)
-        self.assertEqual(converted, converted_expected)
         self.assertEqual(glance._convert_from_string(converted), metadata)
 
 
