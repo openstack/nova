@@ -624,11 +624,20 @@ class VMOps(object):
             instance_name)[0]
         pipe_path = r'\\.\pipe\%s' % instance_uuid
 
-        vm_log_writer = ioutils.IOThread(pipe_path, console_log_path,
-                                         self._MAX_CONSOLE_LOG_FILE_SIZE)
-        self._vm_log_writers[instance_uuid] = vm_log_writer
+        @utils.synchronized(pipe_path)
+        def log_serial_output():
+            vm_log_writer = self._vm_log_writers.get(instance_uuid)
+            if vm_log_writer and vm_log_writer.is_active():
+                LOG.debug("Instance %s log writer is already running.",
+                          instance_name)
+            else:
+                vm_log_writer = ioutils.IOThread(
+                    pipe_path, console_log_path,
+                    self._MAX_CONSOLE_LOG_FILE_SIZE)
+                vm_log_writer.start()
+                self._vm_log_writers[instance_uuid] = vm_log_writer
 
-        vm_log_writer.start()
+        log_serial_output()
 
     def get_console_output(self, instance):
         console_log_paths = (

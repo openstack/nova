@@ -25,6 +25,7 @@ from nova.tests.unit import fake_instance
 from nova.tests.unit.virt.hyperv import test_base
 from nova.virt import hardware
 from nova.virt.hyperv import constants
+from nova.virt.hyperv import ioutils
 from nova.virt.hyperv import vmops
 from nova.virt.hyperv import vmutils
 
@@ -886,6 +887,44 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
         result = self._vmops._wait_for_power_off(
             mock.sentinel.FAKE_VM_NAME, vmops.SHUTDOWN_TIME_INCREMENT)
         self.assertFalse(result)
+
+    @mock.patch.object(ioutils, 'IOThread')
+    def _test_log_vm_serial_output(self, mock_io_thread,
+                                   worker_running=False,
+                                   worker_exists=False):
+        self._vmops._pathutils.get_vm_console_log_paths.return_value = (
+            mock.sentinel.log_path, )
+        fake_instance_uuid = 'fake-uuid'
+        fake_existing_worker = mock.Mock()
+        fake_existing_worker.is_active.return_value = worker_running
+        fake_log_writers = {fake_instance_uuid: fake_existing_worker}
+        self._vmops._vm_log_writers = (
+            fake_log_writers if worker_exists else {})
+
+        self._vmops.log_vm_serial_output(mock.sentinel.instance_name,
+                                         fake_instance_uuid)
+
+        if not (worker_exists and worker_running):
+            expected_pipe_path = r'\\.\pipe\%s' % fake_instance_uuid
+            expected_current_worker = mock_io_thread.return_value
+            expected_current_worker.start.assert_called_once_with()
+            mock_io_thread.assert_called_once_with(
+                expected_pipe_path, mock.sentinel.log_path,
+                self._vmops._MAX_CONSOLE_LOG_FILE_SIZE)
+        else:
+            expected_current_worker = fake_existing_worker
+        self.assertEqual(expected_current_worker,
+                        self._vmops._vm_log_writers[fake_instance_uuid])
+
+    def test_log_vm_serial_output_unexisting_worker(self):
+        self._test_log_vm_serial_output()
+
+    def test_log_vm_serial_output_worker_stopped(self):
+        self._test_log_vm_serial_output(worker_exists=True)
+
+    def test_log_vm_serial_output_worker_running(self):
+        self._test_log_vm_serial_output(worker_exists=True,
+                                        worker_running=True)
 
     def test_copy_vm_console_logs(self):
         fake_local_paths = (mock.sentinel.FAKE_PATH,
