@@ -126,7 +126,7 @@ class FlavorAccessTestV21(test.NoDBTestCase):
     api_version = "2.1"
     FlavorAccessController = flavor_access_v21.FlavorAccessController
     FlavorActionController = flavor_access_v21.FlavorActionController
-    _prefix = "/v3"
+    _prefix = "/v2/fake"
     validation_ex = exception.ValidationError
 
     def setUp(self):
@@ -167,7 +167,7 @@ class FlavorAccessTestV21(test.NoDBTestCase):
 
     def test_list_flavor_with_admin_default_proj1(self):
         expected = {'flavors': [{'id': '0'}, {'id': '1'}]}
-        req = fakes.HTTPRequest.blank(self._prefix + '/fake/flavors',
+        req = fakes.HTTPRequest.blank(self._prefix + '/flavors',
                                       use_admin_context=True)
         req.environ['nova.context'].project_id = 'proj1'
         result = self.flavor_controller.index(req)
@@ -345,7 +345,6 @@ class FlavorAccessTestV20(FlavorAccessTestV21):
     api_version = "2.0"
     FlavorAccessController = flavor_access_v2.FlavorAccessController
     FlavorActionController = flavor_access_v2.FlavorActionController
-    _prefix = "/v2/fake"
     validation_ex = exc.HTTPBadRequest
 
     def setUp(self):
