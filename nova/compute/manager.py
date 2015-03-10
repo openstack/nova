@@ -985,6 +985,12 @@ class ComputeManager(manager.Manager):
             self.driver.plug_vifs(instance, net_info)
         except NotImplementedError as e:
             LOG.debug(e, instance=instance)
+        except exception.VirtualInterfacePlugException:
+            # we don't want an exception to block the init_host
+            LOG.exception(_LE("Vifs plug failed"), instance=instance)
+            self._set_instance_error_state(context, instance)
+            return
+
         if instance.task_state == task_states.RESIZE_MIGRATING:
             # We crashed during resize/migration, so roll back for safety
             try:

@@ -531,14 +531,15 @@ class LibvirtGenericVIFDriver(object):
                    'vif': vif})
 
         if vif_type is None:
-            raise exception.NovaException(
+            raise exception.VirtualInterfacePlugException(
                 _("vif_type parameter must be present "
                   "for this vif_driver implementation"))
         vif_slug = self._normalize_vif_type(vif_type)
         func = getattr(self, 'plug_%s' % vif_slug, None)
         if not func:
-            raise exception.NovaException(
-                _("Unexpected vif_type=%s") % vif_type)
+            raise exception.VirtualInterfacePlugException(
+                _("Plug vif failed because of unexpected "
+                  "vif_type=%s") % vif_type)
         func(instance, vif)
 
     def unplug_bridge(self, instance, vif):
