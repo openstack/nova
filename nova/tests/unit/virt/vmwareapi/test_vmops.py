@@ -378,7 +378,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     @mock.patch.object(vm_util, 'get_vm_boot_spec')
     @mock.patch.object(vm_util, 'reconfigure_vm')
     @mock.patch.object(vm_util, 'power_on_instance')
-    @mock.patch.object(ds_util, 'get_datastore_by_ref')
+    @mock.patch.object(ds_obj, 'get_datastore_by_ref')
     def test_rescue(self, mock_get_ds_by_ref, mock_power_on, mock_reconfigure,
                     mock_get_boot_spec, mock_find_rescue,
                     mock_get_values, mock_get_vm_ref, mock_disk_copy,
