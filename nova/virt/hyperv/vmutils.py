@@ -248,13 +248,13 @@ class VMUtils(object):
             raise HyperVAuthorizationException(msg)
 
     def create_vm(self, vm_name, memory_mb, vcpus_num, limit_cpu_features,
-                  dynamic_memory_ratio, vm_gen, notes=None):
+                  dynamic_memory_ratio, vm_gen, instance_path, notes=None):
         """Creates a VM."""
         vs_man_svc = self._conn.Msvm_VirtualSystemManagementService()[0]
 
         LOG.debug('Creating VM %s', vm_name)
         vm = self._create_vm_obj(vs_man_svc, vm_name, vm_gen, notes,
-                                 dynamic_memory_ratio)
+                                 dynamic_memory_ratio, instance_path)
 
         vmsetting = self._get_vm_setting_data(vm)
 
@@ -265,11 +265,13 @@ class VMUtils(object):
         self._set_vm_vcpus(vm, vmsetting, vcpus_num, limit_cpu_features)
 
     def _create_vm_obj(self, vs_man_svc, vm_name, vm_gen, notes,
-                       dynamic_memory_ratio):
+                       dynamic_memory_ratio, instance_path):
         vs_gs_data = self._conn.Msvm_VirtualSystemGlobalSettingData.new()
         vs_gs_data.ElementName = vm_name
         # Don't start automatically on host boot
         vs_gs_data.AutomaticStartupAction = self._AUTOMATIC_STARTUP_ACTION_NONE
+        vs_gs_data.ExternalDataRoot = instance_path
+        vs_gs_data.SnapshotDataRoot = instance_path
 
         (vm_path,
          job_path,

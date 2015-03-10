@@ -372,6 +372,8 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
         fake_network_info = {'id': mock.sentinel.ID,
                              'address': mock.sentinel.ADDRESS}
         mock_instance = fake_instance.fake_instance_obj(self.context)
+        instance_path = os.path.join(CONF.instances_path, mock_instance.name)
+
         self._vmops.create_instance(instance=mock_instance,
                                     network_info=[fake_network_info],
                                     block_device_info=mock.sentinel.DEV_INFO,
@@ -381,7 +383,7 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
         self._vmops._vmutils.create_vm.assert_called_once_with(
             mock_instance.name, mock_instance.memory_mb,
             mock_instance.vcpus, CONF.hyperv.limit_cpu_features,
-            CONF.hyperv.dynamic_memory_ratio, vm_gen,
+            CONF.hyperv.dynamic_memory_ratio, vm_gen, instance_path,
             [mock_instance.uuid])
         expected = []
         ctrl_type = vmops.VM_GENERATIONS_CONTROLLER_TYPES[vm_gen]

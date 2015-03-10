@@ -157,6 +157,7 @@ class VMUtilsV2TestCase(test_vmutils.VMUtilsTestCase):
         mock_job = mock.MagicMock()
         fake_job_path = 'fake job path'
         fake_ret_val = 'fake return value'
+        fake_vm_name = 'fake_vm_name'
         _conn = self._vmutils._conn.Msvm_VirtualSystemSettingData
 
         mock_check_ret_val.return_value = mock_job
@@ -168,17 +169,18 @@ class VMUtilsV2TestCase(test_vmutils.VMUtilsTestCase):
 
         response = self._vmutils._create_vm_obj(
             vs_man_svc=mock_vs_man_svc,
-            vm_name='fake vm',
+            vm_name=fake_vm_name,
             vm_gen='fake vm gen',
             notes='fake notes',
-            dynamic_memory_ratio=dynamic_memory_ratio)
+            dynamic_memory_ratio=dynamic_memory_ratio,
+            instance_path=mock.sentinel.instance_path)
 
         if not vm_path:
             mock_job.associators.assert_called_once_with(
                 self._vmutils._AFFECTED_JOB_ELEMENT_CLASS)
 
         _conn.new.assert_called_once_with()
-        self.assertEqual(mock_vs_data.ElementName, 'fake vm')
+        self.assertEqual(mock_vs_data.ElementName, fake_vm_name)
         mock_vs_man_svc.DefineSystem.assert_called_once_with(
             ResourceSettings=[], ReferenceConfiguration=None,
             SystemSettings=mock_vs_data.GetText_(1))
@@ -190,6 +192,15 @@ class VMUtilsV2TestCase(test_vmutils.VMUtilsTestCase):
         mock_get_wmi_obj.assert_called_with('fake vm path')
 
         self.assertEqual(mock_vs_data.Notes, 'fake notes')
+        self.assertEqual(mock.sentinel.instance_path,
+                         mock_vs_data.ConfigurationDataRoot)
+        self.assertEqual(mock.sentinel.instance_path, mock_vs_data.LogDataRoot)
+        self.assertEqual(mock.sentinel.instance_path,
+                         mock_vs_data.SnapshotDataRoot)
+        self.assertEqual(mock.sentinel.instance_path,
+                         mock_vs_data.SuspendDataRoot)
+        self.assertEqual(mock.sentinel.instance_path,
+                         mock_vs_data.SwapFileDataRoot)
         self.assertEqual(response, mock_get_wmi_obj())
 
     def test_create_vm_obj(self):
