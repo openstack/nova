@@ -40,6 +40,5 @@ oslo.rootwrap>=1.5.0  # Apache-2.0
 oslo.messaging>=1.6.0  # Apache-2.0
 oslo.i18n>=1.3.0  # Apache-2.0
 rfc3986>=0.2.0  # Apache-2.0
-oslo.vmware>=0.11.0                      # Apache-2.0
 oslo.middleware>=0.3.0                  # Apache-2.0
 psutil>=1.1.1,<2.0.0
