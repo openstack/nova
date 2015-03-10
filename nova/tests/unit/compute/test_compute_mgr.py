@@ -72,7 +72,10 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         event_map = {virtevent.EVENT_LIFECYCLE_STOPPED: power_state.SHUTDOWN,
                      virtevent.EVENT_LIFECYCLE_STARTED: power_state.RUNNING,
                      virtevent.EVENT_LIFECYCLE_PAUSED: power_state.PAUSED,
-                     virtevent.EVENT_LIFECYCLE_RESUMED: power_state.RUNNING}
+                     virtevent.EVENT_LIFECYCLE_RESUMED: power_state.RUNNING,
+                     virtevent.EVENT_LIFECYCLE_SUSPENDED:
+                         power_state.SUSPENDED,
+        }
         event = mock.Mock()
         event.get_instance_uuid.return_value = mock.sentinel.uuid
         for transition, pwr_state in event_map.iteritems():
