@@ -91,6 +91,7 @@ APIs Development
    api_plugins
    api_microversions
    policy_enforcement
+   stable_api
 
 Concepts
 ---------
