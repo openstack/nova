@@ -498,8 +498,8 @@ class TestNeutronv2Base(test.TestCase):
             else:
                 request.address = fixed_ips.get(request.network_id)
                 if request.address:
-                    port_req_body['port']['fixed_ips'] = [{'ip_address':
-                                                           request.address}]
+                    port_req_body['port']['fixed_ips'] = [
+                        {'ip_address': str(request.address)}]
                 port_req_body['port']['network_id'] = request.network_id
                 port_req_body['port']['admin_state_up'] = True
                 port_req_body['port']['tenant_id'] = \
