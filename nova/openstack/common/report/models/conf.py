@@ -15,7 +15,7 @@
 """Provides OpenStack Configuration Model
 
 This module defines a class representing the data
-model for :mod:`oslo.config` configuration options
+model for :mod:`oslo_config` configuration options
 """
 
 from nova.openstack.common.report.models import with_default_views as mwdv
@@ -26,11 +26,11 @@ class ConfigModel(mwdv.ModelWithDefaultViews):
     """A Configuration Options Model
 
     This model holds data about a set of configuration options
-    from :mod:`oslo.config`.  It supports both the default group
+    from :mod:`oslo_config`.  It supports both the default group
     of options and named option groups.
 
     :param conf_obj: a configuration object
-    :type conf_obj: :class:`oslo.config.cfg.ConfigOpts`
+    :type conf_obj: :class:`oslo_config.cfg.ConfigOpts`
     """
 
     def __init__(self, conf_obj):

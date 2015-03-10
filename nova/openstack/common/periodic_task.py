@@ -38,7 +38,7 @@ DEFAULT_INTERVAL = 60.0
 
 
 def list_opts():
-    """Entry point for oslo.config-generator."""
+    """Entry point for oslo-config-generator."""
     return [(None, copy.deepcopy(periodic_opts))]
 
 

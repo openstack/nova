@@ -115,7 +115,7 @@ class GuruMeditation(object):
 
         :param version: the version object for the current product
         :param service_name: this program name used to construct logfile name
-        :param log_dir: path to a log directory where to create a file
+        :param logdir: path to a log directory where to create a file
         :param signum: the signal to associate with running the report
         """
 
@@ -143,7 +143,7 @@ class GuruMeditation(object):
 
         :param version: the version object for the current product
         :param service_name: this program name used to construct logfile name
-        :param log_dir: path to a log directory where to create a file
+        :param logdir: path to a log directory where to create a file
         :param traceback: the traceback provided to the signal handler
         """
 

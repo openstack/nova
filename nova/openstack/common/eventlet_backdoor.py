@@ -50,7 +50,7 @@ LOG = logging.getLogger(__name__)
 
 
 def list_opts():
-    """Entry point for oslo.config-generator.
+    """Entry point for oslo-config-generator.
     """
     return [(None, copy.deepcopy(eventlet_backdoor_opts))]
 

@@ -31,7 +31,7 @@ CONF.register_opts(memcache_opts)
 
 
 def list_opts():
-    """Entry point for oslo.config-generator."""
+    """Entry point for oslo-config-generator."""
     return [(None, copy.deepcopy(memcache_opts))]
 
 
