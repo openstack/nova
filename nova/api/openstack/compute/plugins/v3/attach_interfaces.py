@@ -30,8 +30,7 @@ from nova import network
 
 
 ALIAS = 'os-attach-interfaces'
-authorize = extensions.extension_authorizer('compute',
-                                            'v3:' + ALIAS)
+authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 def _translate_interface_attachment_view(port_info):
@@ -49,8 +48,8 @@ class InterfaceAttachmentController(wsgi.Controller):
     """The interface attachment API controller for the OpenStack API."""
 
     def __init__(self):
-        self.compute_api = compute.API()
-        self.network_api = network.API()
+        self.compute_api = compute.API(skip_policy_check=True)
+        self.network_api = network.API(skip_policy_check=True)
         super(InterfaceAttachmentController, self).__init__()
 
     @extensions.expected_errors((404, 501))
