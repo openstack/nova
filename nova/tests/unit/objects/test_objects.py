@@ -565,9 +565,8 @@ class _TestObject(object):
         ctxt1 = context.RequestContext('foo', 'foo')
         ctxt2 = context.RequestContext('bar', 'alternate')
         obj = MyObj.query(ctxt1)
-        obj._update_test(ctxt2)
-        self.assertEqual(obj.bar, 'alternate-context')
-        self.assertRemotes()
+        self.assertRaises(exception.ObjectActionError,
+                          obj._update_test, ctxt2)
 
     def test_orphaned_object(self):
         obj = MyObj.query(self.context)
@@ -580,7 +579,7 @@ class _TestObject(object):
         obj = MyObj.query(self.context)
         obj.foo = 123
         self.assertEqual(obj.obj_what_changed(), set(['foo']))
-        obj._update_test(self.context)
+        obj._update_test()
         self.assertEqual(obj.obj_what_changed(), set(['foo', 'bar']))
         self.assertEqual(obj.foo, 123)
         self.assertRemotes()
@@ -608,7 +607,7 @@ class _TestObject(object):
         obj = MyObj.query(self.context)
         obj.bar = 'something'
         self.assertEqual(obj.obj_what_changed(), set(['bar']))
-        obj.modify_save_modify(self.context)
+        obj.modify_save_modify()
         self.assertEqual(obj.obj_what_changed(), set(['foo', 'rel_object']))
         self.assertEqual(obj.foo, 42)
         self.assertEqual(obj.bar, 'meow')
