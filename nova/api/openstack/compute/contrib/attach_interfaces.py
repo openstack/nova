@@ -121,12 +121,13 @@ class InterfaceAttachmentController(object):
             vif = self.compute_api.attach_interface(context,
                 instance, network_id, port_id, req_ip)
         except (exception.PortNotFound,
-                exception.FixedIpAlreadyInUse,
+                exception.NetworkNotFound) as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
+        except (exception.FixedIpAlreadyInUse,
                 exception.NoMoreFixedIps,
                 exception.PortInUse,
                 exception.NetworkDuplicated,
-                exception.NetworkAmbiguous,
-                exception.NetworkNotFound) as e:
+                exception.NetworkAmbiguous) as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
         except exception.InstanceIsLocked as e:
             raise exc.HTTPConflict(explanation=e.format_message())
