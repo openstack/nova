@@ -26,7 +26,6 @@ from nova import block_device
 from nova.cells import manager
 from nova.compute import api as compute_api
 from nova.compute import cells_api as compute_cells_api
-from nova.compute import delete_types
 from nova.compute import flavors
 from nova.compute import vm_states
 from nova import context
@@ -150,7 +149,7 @@ class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
                                  'instance_delete_everywhere')
         inst = self._create_fake_instance_obj()
         cells_rpcapi.instance_delete_everywhere(self.context,
-                inst, delete_types.DELETE)
+                inst, 'hard')
         self.mox.ReplayAll()
         self.stubs.Set(self.compute_api.network_api, 'deallocate_for_instance',
                        lambda *a, **kw: None)
@@ -162,7 +161,7 @@ class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
                                  'instance_delete_everywhere')
         inst = self._create_fake_instance_obj()
         cells_rpcapi.instance_delete_everywhere(self.context,
-                inst, delete_types.SOFT_DELETE)
+                inst, 'soft')
         self.mox.ReplayAll()
         self.stubs.Set(self.compute_api.network_api, 'deallocate_for_instance',
                        lambda *a, **kw: None)

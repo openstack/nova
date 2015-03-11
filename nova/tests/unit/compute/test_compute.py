@@ -47,7 +47,6 @@ from nova import block_device
 from nova import compute
 from nova.compute import api as compute_api
 from nova.compute import arch
-from nova.compute import delete_types
 from nova.compute import flavors
 from nova.compute import manager as compute_manager
 from nova.compute import power_state
@@ -4347,7 +4346,7 @@ class ComputeTestCase(BaseTestCase):
         def fake_soft_delete(*args, **kwargs):
             raise test.TestingException()
 
-        self.stubs.Set(self.compute.driver, delete_types.SOFT_DELETE,
+        self.stubs.Set(self.compute.driver, 'soft_delete',
                        fake_soft_delete)
 
         resvs = self._ensure_quota_reservations_rolledback(instance)
