@@ -30,6 +30,7 @@ Programming HowTos and Tutorials
     unit_tests
     addmethod.openstackapi
     gmr
+    api_plugins
     api_microversions
 
 Background Concepts for Nova
