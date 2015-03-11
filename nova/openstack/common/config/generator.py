@@ -179,6 +179,10 @@ def _list_opts(obj):
                 not isinstance(o, cfg.SubCommandOpt))
 
     opts = list()
+
+    if 'list_opts' in dir(obj):
+        return getattr(obj, 'list_opts')()
+
     for attr_str in dir(obj):
         attr_obj = getattr(obj, attr_str)
         if is_opt(attr_obj):
