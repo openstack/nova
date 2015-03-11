@@ -299,7 +299,7 @@ class VIF(Model):
                  details=None, devname=None, ovs_interfaceid=None,
                  qbh_params=None, qbg_params=None, active=False,
                  vnic_type=VNIC_TYPE_NORMAL, profile=None,
-                 **kwargs):
+                 preserve_on_delete=False, **kwargs):
         super(VIF, self).__init__()
 
         self['id'] = id
@@ -315,6 +315,7 @@ class VIF(Model):
         self['active'] = active
         self['vnic_type'] = vnic_type
         self['profile'] = profile
+        self['preserve_on_delete'] = preserve_on_delete
 
         self._set_meta(kwargs)
 
@@ -322,7 +323,7 @@ class VIF(Model):
         keys = ['id', 'address', 'network', 'vnic_type',
                 'type', 'profile', 'details', 'devname',
                 'ovs_interfaceid', 'qbh_params', 'qbg_params',
-                'active']
+                'active', 'preserve_on_delete']
         return all(self[k] == other[k] for k in keys)
 
     def __ne__(self, other):
