@@ -401,7 +401,7 @@ class API(base.Base):
         # Check the quota
         try:
             quotas = objects.Quotas(context)
-            quotas.reserve(context, instances=max_count,
+            quotas.reserve(instances=max_count,
                            cores=req_cores, ram=req_ram)
         except exception.OverQuota as exc:
             # OK, we exceeded quota; let's figure out why...
@@ -1737,8 +1737,7 @@ class API(base.Base):
                               instance=instance)
 
         quotas = objects.Quotas(context)
-        quotas.reserve(context,
-                       project_id=project_id,
+        quotas.reserve(project_id=project_id,
                        user_id=user_id,
                        instances=-1,
                        cores=-instance_vcpus,
@@ -2439,14 +2438,14 @@ class API(base.Base):
             instance.save(expected_task_state=[None])
         except Exception:
             with excutils.save_and_reraise_exception():
-                quotas.rollback(context)
+                quotas.rollback()
 
         migration.status = 'reverting'
         migration.save()
         # With cells, the best we can do right now is commit the reservations
         # immediately...
         if CONF.cells.enable:
-            quotas.commit(context)
+            quotas.commit()
 
         self._record_action_start(context, instance,
                                   instance_actions.REVERT_RESIZE)
@@ -2476,7 +2475,7 @@ class API(base.Base):
         # With cells, the best we can do right now is commit the reservations
         # immediately...
         if CONF.cells.enable:
-            quotas.commit(context)
+            quotas.commit()
 
         self._record_action_start(context, instance,
                                   instance_actions.CONFIRM_RESIZE)
@@ -2551,11 +2550,11 @@ class API(base.Base):
                            quotas can use the correct project_id/user_id.
         @return: nova.objects.quotas.Quotas
         """
-        quotas = objects.Quotas()
+        quotas = objects.Quotas(context=context)
         if deltas:
             project_id, user_id = quotas_obj.ids_from_instance(context,
                                                                instance)
-            quotas.reserve(context, project_id=project_id, user_id=user_id,
+            quotas.reserve(project_id=project_id, user_id=user_id,
                            **deltas)
         return quotas
 
@@ -2565,7 +2564,7 @@ class API(base.Base):
         """Special API cell logic for resize."""
         # With cells, the best we can do right now is commit the
         # reservations immediately...
-        quotas.commit(context)
+        quotas.commit()
         # NOTE(johannes/comstud): The API cell needs a local migration
         # record for later resize_confirm and resize_reverts to deal
         # with quotas.  We don't need source and/or destination
@@ -2655,7 +2654,7 @@ class API(base.Base):
                                                  allowed=total_allowed,
                                                  resource=resource)
         else:
-            quotas = objects.Quotas()
+            quotas = objects.Quotas(context=context)
 
         instance.task_state = task_states.RESIZE_PREP
         instance.progress = 0
@@ -3693,7 +3692,7 @@ class AggregateAPI(base.Base):
         self.is_safe_to_update_az(context, metadata, hosts=[host_name],
                                   aggregate=aggregate)
 
-        aggregate.add_host(context, host_name)
+        aggregate.add_host(host_name)
         self.scheduler_client.update_aggregates(context, [aggregate])
         self._update_az_cache_for_host(context, host_name, aggregate.metadata)
         # NOTE(jogo): Send message to host to support resource pools
@@ -3995,11 +3994,11 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
             msg = _("Security group is still in use")
             self.raise_invalid_group(msg)
 
-        quotas = objects.Quotas()
+        quotas = objects.Quotas(context=context)
         quota_project, quota_user = quotas_obj.ids_from_security_group(
                                 context, security_group)
         try:
-            quotas.reserve(context, project_id=quota_project,
+            quotas.reserve(project_id=quota_project,
                            user_id=quota_user, security_groups=-1)
         except Exception:
             LOG.exception(_LE("Failed to update usages deallocating "

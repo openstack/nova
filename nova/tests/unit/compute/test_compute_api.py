@@ -1250,7 +1250,7 @@ class _ComputeAPIUnitTestMixIn(object):
         fake_mig.save().WithSideEffects(_check_mig)
 
         if self.cell_type:
-            fake_quotas.commit(self.context)
+            fake_quotas.commit()
 
         self.compute_api._record_action_start(self.context, fake_inst,
                                               'confirmResize')
@@ -1318,7 +1318,7 @@ class _ComputeAPIUnitTestMixIn(object):
         fake_mig.save().WithSideEffects(_check_mig)
 
         if self.cell_type:
-            fake_quotas.commit(self.context)
+            fake_quotas.commit()
 
         self.compute_api._record_action_start(self.context, fake_inst,
                                               'revertResize')
@@ -1365,7 +1365,7 @@ class _ComputeAPIUnitTestMixIn(object):
             actual=task_states.RESIZE_REVERTING, expected=None)
         fake_inst.save(expected_task_state=[None]).AndRaise(exc)
 
-        fake_quotas.rollback(self.context)
+        fake_quotas.rollback()
 
         self.mox.ReplayAll()
         self.assertRaises(exception.UnexpectedTaskStateError,
@@ -1448,7 +1448,7 @@ class _ComputeAPIUnitTestMixIn(object):
             else:
                 expected_reservations = []
             if self.cell_type == 'api':
-                fake_quotas.commit(self.context)
+                fake_quotas.commit()
                 expected_reservations = []
                 mig = objects.Migration()
 
