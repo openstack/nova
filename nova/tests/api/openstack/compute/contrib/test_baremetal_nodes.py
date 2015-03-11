@@ -13,8 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from ironicclient import exc as ironic_exc
 import mock
 from oslo.config import cfg
+import six
 from webob import exc
 
 from nova.api.openstack.compute.contrib import baremetal_nodes
@@ -261,6 +263,14 @@ class BareMetalNodesTest(test.NoDBTestCase):
 
     def test_show_no_interfaces_ext_status(self):
         self._test_show_no_interfaces(ext_status=True)
+
+    @mock.patch.object(FAKE_IRONIC_CLIENT.node, 'get',
+                       side_effect=ironic_exc.NotFound())
+    def test_show_ironic_node_not_found(self, mock_get):
+        CONF.set_override('compute_driver', 'nova.virt.ironic.driver')
+        error = self.assertRaises(exc.HTTPNotFound, self.controller.show,
+                                  self.request, 'fake-uuid')
+        self.assertIn('fake-uuid', six.text_type(error))
 
     def test_add_interface(self):
         node_id = 1
