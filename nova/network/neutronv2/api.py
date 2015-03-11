@@ -87,8 +87,13 @@ neutron_opts = [
                      'neutron client requests.'),
     cfg.BoolOpt('allow_duplicate_networks',
                 default=False,
-                help='Allow an instance to have multiple vNICs attached to '
-                    'the same Neutron network.'),
+                help='DEPRECATED: Allow an instance to have multiple vNICs '
+                     'attached to the same Neutron network. This option is '
+                     'deprecated in the 2015.1 release and will be removed '
+                     'in the 2015.2 release where the default behavior will '
+                     'be to always allow multiple ports from the same network '
+                     'to be attached to an instance.',
+                deprecated_for_removal=True),
    ]
 
 CONF = cfg.CONF
