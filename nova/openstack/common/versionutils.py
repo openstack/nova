@@ -90,6 +90,7 @@ class deprecated(object):
     ICEHOUSE = 'I'
     JUNO = 'J'
     KILO = 'K'
+    LIBERTY = 'L'
 
     _RELEASES = {
         # NOTE(morganfainberg): Bexar is used for unit test purposes, it is
@@ -101,6 +102,7 @@ class deprecated(object):
         'I': 'Icehouse',
         'J': 'Juno',
         'K': 'Kilo',
+        'L': 'Liberty',
     }
 
     _deprecated_msg_with_alternative = _(
