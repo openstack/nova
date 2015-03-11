@@ -152,25 +152,15 @@ class CellsAPITestCase(test.NoDBTestCase):
         self.assertEqual(capacity_info, result)
 
     def test_instance_update_at_top(self):
-        fake_info_cache = {'id': 1,
-                           'instance': 'fake_instance',
-                           'other': 'moo'}
-        fake_sys_metadata = [{'id': 1,
-                              'key': 'key1',
-                              'value': 'value1'},
-                             {'id': 2,
-                              'key': 'key2',
-                              'value': 'value2'}]
-        fake_instance = {'id': 2,
-                         'security_groups': 'fake',
-                         'instance_type': 'fake',
-                         'volumes': 'fake',
-                         'cell_name': 'fake',
-                         'name': 'fake',
-                         'metadata': 'fake',
-                         'info_cache': fake_info_cache,
-                         'system_metadata': fake_sys_metadata,
-                         'other': 'meow'}
+        fake_info_cache = objects.InstanceInfoCache(instance_uuid='fake-uuid')
+        fake_sys_metadata = {'key1': 'value1',
+                             'key2': 'value2'}
+        fake_attrs = {'id': 2,
+                      'cell_name': 'fake',
+                      'metadata': {'fake': 'fake'},
+                      'info_cache': fake_info_cache,
+                      'system_metadata': fake_sys_metadata}
+        fake_instance = objects.Instance(**fake_attrs)
 
         call_info = self._stub_rpc_method('cast', None)
 
@@ -179,10 +169,10 @@ class CellsAPITestCase(test.NoDBTestCase):
 
         expected_args = {'instance': fake_instance}
         self._check_result(call_info, 'instance_update_at_top',
-                expected_args)
+                expected_args, version='1.35')
 
     def test_instance_destroy_at_top(self):
-        fake_instance = {'uuid': 'fake-uuid'}
+        fake_instance = objects.Instance(uuid='fake-uuid')
 
         call_info = self._stub_rpc_method('cast', None)
 
@@ -191,7 +181,7 @@ class CellsAPITestCase(test.NoDBTestCase):
 
         expected_args = {'instance': fake_instance}
         self._check_result(call_info, 'instance_destroy_at_top',
-                expected_args)
+                expected_args, version='1.35')
 
     def test_instance_delete_everywhere(self):
         instance = fake_instance.fake_instance_obj(self.fake_context)

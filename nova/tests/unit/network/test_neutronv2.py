@@ -2209,12 +2209,10 @@ class TestNeutronv2(TestNeutronv2Base):
                           api.release_floating_ip, self.context, address)
 
     def _setup_mock_for_refresh_cache(self, api, instances):
-        nw_info = self.mox.CreateMock(model.NetworkInfo)
+        nw_info = model.NetworkInfo()
         self.mox.StubOutWithMock(api, '_get_instance_nw_info')
         self.mox.StubOutWithMock(api.db, 'instance_info_cache_update')
         for instance in instances:
-            nw_info.__str__().AndReturn('')
-            nw_info.json().AndReturn({})
             api._get_instance_nw_info(mox.IgnoreArg(), instance).\
                 AndReturn(nw_info)
             api.db.instance_info_cache_update(mox.IgnoreArg(),

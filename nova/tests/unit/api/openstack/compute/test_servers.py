@@ -89,7 +89,6 @@ def return_security_group(context, instance_id, security_group_id):
 
 
 def instance_update_and_get_original(context, instance_uuid, values,
-                                     update_cells=True,
                                      columns_to_join=None,
                                      ):
     inst = fakes.stub_instance(INSTANCE_IDS.get(instance_uuid),
@@ -98,7 +97,7 @@ def instance_update_and_get_original(context, instance_uuid, values,
     return (inst, inst)
 
 
-def instance_update(context, instance_uuid, values, update_cells=True):
+def instance_update(context, instance_uuid, values):
     inst = fakes.stub_instance(INSTANCE_IDS.get(instance_uuid),
                                name=values.get('display_name'))
     inst = dict(inst, **values)
@@ -1900,8 +1899,7 @@ class ServersControllerCreateTest(test.TestCase):
             return instance
 
         def server_update_and_get_original(
-                context, instance_uuid, params, update_cells=False,
-                columns_to_join=None):
+                context, instance_uuid, params, columns_to_join=None):
             inst = self.instance_cache_by_uuid[instance_uuid]
             inst.update(params)
             return (inst, inst)

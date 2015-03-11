@@ -254,9 +254,9 @@ class CellsSchedulerTestCase(test.TestCase):
         def fake_sleep(_secs):
             return
 
-        def fake_instance_update(ctxt, instance_uuid, values):
-            self.assertEqual(vm_states.ERROR, values['vm_state'])
-            call_info['errored_uuids'].append(instance_uuid)
+        def fake_instance_save(inst):
+            self.assertEqual(vm_states.ERROR, inst.vm_state)
+            call_info['errored_uuids'].append(inst.uuid)
 
         def fake_build_request_spec(ctxt, image, instances):
             request_spec = {
@@ -267,7 +267,7 @@ class CellsSchedulerTestCase(test.TestCase):
         self.stubs.Set(self.scheduler, '_grab_target_cells',
                 fake_grab_target_cells)
         self.stubs.Set(time, 'sleep', fake_sleep)
-        self.stubs.Set(db, 'instance_update', fake_instance_update)
+        self.stubs.Set(objects.Instance, 'save', fake_instance_save)
         self.stubs.Set(scheduler_utils, 'build_request_spec',
                 fake_build_request_spec)
 
@@ -280,7 +280,8 @@ class CellsSchedulerTestCase(test.TestCase):
     def test_schedule_method_on_random_exception(self):
         self.flags(scheduler_retries=7, group='cells')
 
-        instances = [{'uuid': uuid} for uuid in self.instance_uuids]
+        instances = [objects.Instance(uuid=uuid) for uuid in
+                     self.instance_uuids]
         method_kwargs = {
                 'image': 'fake_image',
                 'instances': instances,
@@ -294,9 +295,9 @@ class CellsSchedulerTestCase(test.TestCase):
             call_info['num_tries'] += 1
             raise test.TestingException()
 
-        def fake_instance_update(ctxt, instance_uuid, values):
-            self.assertEqual(vm_states.ERROR, values['vm_state'])
-            call_info['errored_uuids1'].append(instance_uuid)
+        def fake_instance_save(inst):
+            self.assertEqual(vm_states.ERROR, inst.vm_state)
+            call_info['errored_uuids1'].append(inst.uuid)
 
         def fake_instance_update_at_top(ctxt, instance):
             self.assertEqual(vm_states.ERROR, instance['vm_state'])
@@ -310,7 +311,7 @@ class CellsSchedulerTestCase(test.TestCase):
 
         self.stubs.Set(self.scheduler, '_grab_target_cells',
                 fake_grab_target_cells)
-        self.stubs.Set(db, 'instance_update', fake_instance_update)
+        self.stubs.Set(objects.Instance, 'save', fake_instance_save)
         self.stubs.Set(self.msg_runner, 'instance_update_at_top',
                 fake_instance_update_at_top)
         self.stubs.Set(scheduler_utils, 'build_request_spec',

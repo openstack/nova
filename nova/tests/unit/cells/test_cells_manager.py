@@ -230,6 +230,7 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
             call_info['get_instances'] += 1
             return iter(instances)
 
+        @staticmethod
         def instance_get_by_uuid(context, uuid):
             return instances[int(uuid[-1]) - 1]
 
@@ -239,7 +240,7 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
 
         self.stubs.Set(cells_utils, 'get_instances_to_sync',
                 get_instances_to_sync)
-        self.stubs.Set(self.cells_manager.db, 'instance_get_by_uuid',
+        self.stubs.Set(objects.Instance, 'get_by_uuid',
                 instance_get_by_uuid)
         self.stubs.Set(self.cells_manager, '_sync_instance',
                 sync_instance)
@@ -608,17 +609,16 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
     def test_validate_console_port(self):
         instance_uuid = 'fake-instance-uuid'
         cell_name = 'fake-cell-name'
-        instance = {'cell_name': cell_name}
+        instance = objects.Instance(cell_name=cell_name)
         console_port = 'fake-console-port'
         console_type = 'fake-console-type'
 
         self.mox.StubOutWithMock(self.msg_runner,
                                  'validate_console_port')
-        self.mox.StubOutWithMock(self.cells_manager.db,
-                                 'instance_get_by_uuid')
+        self.mox.StubOutWithMock(objects.Instance, 'get_by_uuid')
         fake_response = self._get_fake_response()
 
-        self.cells_manager.db.instance_get_by_uuid(self.ctxt,
+        objects.Instance.get_by_uuid(self.ctxt,
                 instance_uuid).AndReturn(instance)
         self.msg_runner.validate_console_port(self.ctxt, cell_name,
                 instance_uuid, console_port,

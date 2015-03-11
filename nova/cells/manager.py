@@ -76,7 +76,7 @@ class CellsManager(manager.Manager):
     Scheduling requests get passed to the scheduler class.
     """
 
-    target = oslo_messaging.Target(version='1.34')
+    target = oslo_messaging.Target(version='1.35')
 
     def __init__(self, *args, **kwargs):
         LOG.warning(_LW('The cells feature of Nova is considered experimental '
@@ -179,7 +179,7 @@ class CellsManager(manager.Manager):
                 if not instance_uuid:
                     return
                 try:
-                    instance = self.db.instance_get_by_uuid(rd_context,
+                    instance = objects.Instance.get_by_uuid(rd_context,
                             instance_uuid)
                 except exception.InstanceNotFound:
                     continue
@@ -190,7 +190,7 @@ class CellsManager(manager.Manager):
         """Broadcast an instance_update or instance_destroy message up to
         parent cells.
         """
-        if instance['deleted']:
+        if instance.deleted:
             self.instance_destroy_at_top(ctxt, instance)
         else:
             self.instance_update_at_top(ctxt, instance)
@@ -428,11 +428,11 @@ class CellsManager(manager.Manager):
     def validate_console_port(self, ctxt, instance_uuid, console_port,
                               console_type):
         """Validate console port with child cell compute node."""
-        instance = self.db.instance_get_by_uuid(ctxt, instance_uuid)
-        if not instance['cell_name']:
+        instance = objects.Instance.get_by_uuid(ctxt, instance_uuid)
+        if not instance.cell_name:
             raise exception.InstanceUnknownCell(instance_uuid=instance_uuid)
         response = self.msg_runner.validate_console_port(ctxt,
-                instance['cell_name'], instance_uuid, console_port,
+                instance.cell_name, instance_uuid, console_port,
                 console_type)
         return response.value_or_raise()
 

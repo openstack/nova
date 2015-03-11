@@ -20,7 +20,6 @@ import mock
 import random
 
 from nova.cells import utils as cells_utils
-from nova import db
 from nova import exception
 from nova import objects
 from nova import test
@@ -36,16 +35,17 @@ class CellsUtilsTestCase(test.NoDBTestCase):
         def random_shuffle(_list):
             call_info['shuffle'] += 1
 
+        @staticmethod
         def instance_get_all_by_filters(context, filters,
-                sort_key, sort_order):
+                sort_key, sort_dir):
             self.assertEqual(context, fake_context)
             self.assertEqual(sort_key, 'deleted')
-            self.assertEqual(sort_order, 'asc')
+            self.assertEqual(sort_dir, 'asc')
             call_info['got_filters'] = filters
             call_info['get_all'] += 1
             return ['fake_instance1', 'fake_instance2', 'fake_instance3']
 
-        self.stubs.Set(db, 'instance_get_all_by_filters',
+        self.stubs.Set(objects.InstanceList, 'get_by_filters',
                 instance_get_all_by_filters)
         self.stubs.Set(random, 'shuffle', random_shuffle)
 
