@@ -44,7 +44,6 @@ import six
 from nova.cells import state as cells_state
 from nova.cells import utils as cells_utils
 from nova import compute
-from nova.compute import delete_types
 from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import task_states
 from nova.compute import vm_states
@@ -853,7 +852,7 @@ class _TargetedMessageMethods(_BaseMessageMethods):
                 self.msg_runner.instance_destroy_at_top(ctxt,
                                                         instance)
         except exception.InstanceInfoCacheNotFound:
-            if method != delete_types.DELETE:
+            if method != 'delete':
                 raise
 
         fn = getattr(self.compute_api, method, None)
@@ -887,12 +886,10 @@ class _TargetedMessageMethods(_BaseMessageMethods):
         return self.host_api.get_host_uptime(message.ctxt, host_name)
 
     def terminate_instance(self, message, instance):
-        self._call_compute_api_with_obj(message.ctxt, instance,
-                                        delete_types.DELETE)
+        self._call_compute_api_with_obj(message.ctxt, instance, 'delete')
 
     def soft_delete_instance(self, message, instance):
-        self._call_compute_api_with_obj(message.ctxt, instance,
-                                        delete_types.SOFT_DELETE)
+        self._call_compute_api_with_obj(message.ctxt, instance, 'soft_delete')
 
     def pause_instance(self, message, instance):
         """Pause an instance via compute_api.pause()."""
@@ -1109,7 +1106,7 @@ class _BroadcastMessageMethods(_BaseMessageMethods):
         """
         LOG.debug("Got broadcast to %(delete_type)s delete instance",
                   {'delete_type': delete_type}, instance=instance)
-        if delete_type == delete_types.SOFT_DELETE:
+        if delete_type == 'soft':
             self.compute_api.soft_delete(message.ctxt, instance)
         else:
             self.compute_api.delete(message.ctxt, instance)

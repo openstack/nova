@@ -43,7 +43,6 @@ from nova.api.openstack.compute.schemas.v3 import servers as servers_schema
 from nova.api.openstack.compute import views
 from nova.api.openstack import extensions
 from nova.compute import api as compute_api
-from nova.compute import delete_types
 from nova.compute import flavors
 from nova.compute import task_states
 from nova.compute import vm_states
@@ -1311,9 +1310,9 @@ class ServersControllerDeleteTest(ControllerTest):
 
     def test_delete_locked_server(self):
         req = self._create_delete_request(FAKE_UUID)
-        self.stubs.Set(compute_api.API, delete_types.SOFT_DELETE,
+        self.stubs.Set(compute_api.API, 'soft_delete',
                        fakes.fake_actions_to_locked_server)
-        self.stubs.Set(compute_api.API, delete_types.DELETE,
+        self.stubs.Set(compute_api.API, 'delete',
                        fakes.fake_actions_to_locked_server)
 
         self.assertRaises(webob.exc.HTTPConflict, self.controller.delete,

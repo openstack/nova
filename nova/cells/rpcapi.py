@@ -195,8 +195,8 @@ class CellsAPI(object):
         self.client.cast(ctxt, 'instance_destroy_at_top', instance=instance_p)
 
     def instance_delete_everywhere(self, ctxt, instance, delete_type):
-        """Delete instance everywhere.  delete_type may be 'soft_delete'
-        or 'delete'.  This is generally only used to resolve races
+        """Delete instance everywhere.  delete_type may be 'soft'
+        or 'hard'.  This is generally only used to resolve races
         when API cell doesn't know to what cell an instance belongs.
         """
         if not CONF.cells.enable:
