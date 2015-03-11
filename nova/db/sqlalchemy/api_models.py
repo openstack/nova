@@ -14,6 +14,7 @@
 from oslo_db.sqlalchemy import models
 from sqlalchemy import Column
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import ForeignKey
 from sqlalchemy import Index
 from sqlalchemy import Integer
 from sqlalchemy import schema
@@ -40,3 +41,18 @@ class CellMapping(API_BASE):
     name = Column(String(255))
     transport_url = Column(Text())
     database_connection = Column(Text())
+
+
+class InstanceMapping(API_BASE):
+    """Contains the mapping of an instance to which cell it is in"""
+    __tablename__ = 'instance_mappings'
+    __table_args__ = (Index('project_id_idx', 'project_id'),
+                      Index('instance_uuid_idx', 'instance_uuid'),
+                      schema.UniqueConstraint('instance_uuid',
+                          name='uniq_instance_mappings0instance_uuid'))
+
+    id = Column(Integer, primary_key=True)
+    instance_uuid = Column(String(36), nullable=False)
+    cell_id = Column(Integer, ForeignKey('cell_mappings.id'),
+            nullable=False)
+    project_id = Column(String(255), nullable=False)
