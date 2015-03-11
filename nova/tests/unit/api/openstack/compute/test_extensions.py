@@ -616,7 +616,7 @@ class ControllerExtensionTest(ExtensionTestCase):
         self.assertEqual(extension_body, response.body)
 
 
-class ExtensionControllerIdFormatTest(test.TestCase):
+class ExtensionControllerIdFormatTest(test.NoDBTestCase):
 
     def _bounce_id(self, test_id):
 

@@ -23,7 +23,7 @@ from nova import utils
 from nova.virt import volumeutils
 
 
-class VolumeUtilsTestCase(test.TestCase):
+class VolumeUtilsTestCase(test.NoDBTestCase):
     def test_get_iscsi_initiator(self):
         self.mox.StubOutWithMock(utils, 'execute')
         initiator = 'fake.initiator.iqn'

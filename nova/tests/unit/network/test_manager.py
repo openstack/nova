@@ -2590,7 +2590,7 @@ class TestRPCFixedManager(network_manager.RPCAllocateFixedIP,
     """Dummy manager that implements RPCAllocateFixedIP."""
 
 
-class RPCAllocateTestCase(test.TestCase):
+class RPCAllocateTestCase(test.NoDBTestCase):
     """Tests nova.network.manager.RPCAllocateFixedIP."""
     def setUp(self):
         super(RPCAllocateTestCase, self).setUp()
@@ -3301,7 +3301,7 @@ class FloatingIPTestCase(test.TestCase):
                                                                'public'))
 
 
-class InstanceDNSTestCase(test.TestCase):
+class InstanceDNSTestCase(test.NoDBTestCase):
     """Tests nova.network.manager instance DNS."""
     def setUp(self):
         super(InstanceDNSTestCase, self).setUp()
@@ -3341,7 +3341,7 @@ domain1 = "example.org"
 domain2 = "example.com"
 
 
-class LdapDNSTestCase(test.TestCase):
+class LdapDNSTestCase(test.NoDBTestCase):
     """Tests nova.network.ldapdns.LdapDNS."""
     def setUp(self):
         super(LdapDNSTestCase, self).setUp()

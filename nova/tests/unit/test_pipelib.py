@@ -24,7 +24,7 @@ from nova import utils
 CONF = cfg.CONF
 
 
-class PipelibTest(test.TestCase):
+class PipelibTest(test.NoDBTestCase):
     def setUp(self):
         super(PipelibTest, self).setUp()
         self.cloudpipe = pipelib.CloudPipe()

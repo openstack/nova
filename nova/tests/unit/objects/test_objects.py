@@ -141,7 +141,7 @@ class TestSubclassedObject(RandomMixInWithNoFields, MyObj):
     fields = {'new_field': fields.Field(fields.String())}
 
 
-class TestMetaclass(test.TestCase):
+class TestMetaclass(test.NoDBTestCase):
     def test_obj_tracking(self):
 
         @six.add_metaclass(base.NovaObjectMetaclass)
@@ -206,7 +206,7 @@ class TestMetaclass(test.TestCase):
                           create_class, int)
 
 
-class TestObjToPrimitive(test.TestCase):
+class TestObjToPrimitive(test.NoDBTestCase):
 
     def test_obj_to_primitive_list(self):
         class MyObjElement(base.NovaObject):
@@ -249,7 +249,7 @@ class TestObjToPrimitive(test.TestCase):
                          base.obj_to_primitive(obj))
 
 
-class TestObjMakeList(test.TestCase):
+class TestObjMakeList(test.NoDBTestCase):
 
     def test_obj_make_list(self):
         class MyList(base.ObjectListBase, base.NovaObject):
@@ -969,7 +969,7 @@ class TestRemoteObject(_RemoteTest, _TestObject):
         self.assertEqual('bar', obj.bar)
 
 
-class TestObjectListBase(test.TestCase):
+class TestObjectListBase(test.NoDBTestCase):
     def test_list_like_operations(self):
         class MyElement(base.NovaObject):
             fields = {'foo': fields.IntegerField()}
@@ -1291,7 +1291,7 @@ object_relationships = {
 }
 
 
-class TestObjectVersions(test.TestCase):
+class TestObjectVersions(test.NoDBTestCase):
     def _find_remotable_method(self, cls, thing, parent_was_remotable=False):
         """Follow a chain of remotable things down to the original function."""
         if isinstance(thing, classmethod):

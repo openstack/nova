@@ -25,7 +25,7 @@ class FakeRequest(object):
     api_version_request = api_version.APIVersionRequest("2.1")
 
 
-class APIValidationTestCase(test.TestCase):
+class APIValidationTestCase(test.NoDBTestCase):
 
     def check_validation_error(self, method, body, expected_detail):
         try:

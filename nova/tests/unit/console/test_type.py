@@ -17,7 +17,7 @@ from nova.console import type as ctype
 from nova import test
 
 
-class TypeTestCase(test.TestCase):
+class TypeTestCase(test.NoDBTestCase):
     def test_console(self):
         c = ctype.Console(host='127.0.0.1', port=8945)
 

@@ -41,7 +41,7 @@ dev_dict = {
     }
 
 
-class PciDeviceTestCase(test.TestCase):
+class PciDeviceTestCase(test.NoDBTestCase):
     def setUp(self):
         super(PciDeviceTestCase, self).setUp()
         self.ctxt = context.get_admin_context()

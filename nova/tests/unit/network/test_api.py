@@ -45,7 +45,7 @@ from nova import utils
 FAKE_UUID = 'a47ae74e-ab08-547f-9eee-ffd23fc46c16'
 
 
-class NetworkPolicyTestCase(test.TestCase):
+class NetworkPolicyTestCase(test.NoDBTestCase):
     def setUp(self):
         super(NetworkPolicyTestCase, self).setUp()
 
@@ -544,7 +544,7 @@ class ApiTestCase(test.TestCase):
 
 @mock.patch('nova.network.api.API')
 @mock.patch('nova.db.instance_info_cache_update')
-class TestUpdateInstanceCache(test.TestCase):
+class TestUpdateInstanceCache(test.NoDBTestCase):
     def setUp(self):
         super(TestUpdateInstanceCache, self).setUp()
         self.context = context.get_admin_context()

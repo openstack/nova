@@ -73,7 +73,7 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
             delete_aggregate.assert_called_once_with('agg')
 
 
-class SchedulerV3PassthroughTestCase(test.TestCase):
+class SchedulerV3PassthroughTestCase(test.NoDBTestCase):
     def setUp(self):
         super(SchedulerV3PassthroughTestCase, self).setUp()
         self.manager = manager.SchedulerManager()
@@ -128,7 +128,7 @@ class SchedulerDriverBaseTestCase(SchedulerTestCase):
                 self.driver.select_destinations, self.context, {}, {})
 
 
-class SchedulerInstanceGroupData(test.TestCase):
+class SchedulerInstanceGroupData(test.NoDBTestCase):
 
     driver_cls = driver.Scheduler
 

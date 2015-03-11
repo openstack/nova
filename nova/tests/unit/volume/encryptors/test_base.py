@@ -24,7 +24,7 @@ from nova.volume.encryptors import luks
 from nova.volume.encryptors import nop
 
 
-class VolumeEncryptorTestCase(test.TestCase):
+class VolumeEncryptorTestCase(test.NoDBTestCase):
     def _create(self, device_path):
         pass
 

@@ -22,7 +22,7 @@ from nova import exception
 from nova import test
 
 
-class NovaProxyRequestHandlerBaseTestCase(test.TestCase):
+class NovaProxyRequestHandlerBaseTestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(NovaProxyRequestHandlerBaseTestCase, self).setUp()

@@ -36,7 +36,7 @@ from nova.tests.unit import matchers
 CONF = cfg.CONF
 
 
-class BlockDeviceMappingTestV21(test.TestCase):
+class BlockDeviceMappingTestV21(test.NoDBTestCase):
     validation_error = exception.ValidationError
 
     def _setup_controller(self):
