@@ -1420,7 +1420,7 @@ def _keypair_get_count_by_user(*args, **kwargs):
 
 def _server_group_count_members_by_user(context, group, user_id):
     """Helper method to avoid referencing objects.InstanceGroup on import."""
-    return group.count_members_by_user(context, user_id)
+    return group.count_members_by_user(user_id)
 
 
 QUOTAS = QuotaEngine()
