@@ -24,6 +24,9 @@ from nova.scheduler import utils as scheduler_utils
 from nova import test
 from nova.tests import fake_instance
 
+from nova.openstack.common import timeutils
+
+NOW = timeutils.utcnow().replace(microsecond=0)
 
 class LiveMigrationTaskTestCase(test.NoDBTestCase):
     def setUp(self):
@@ -130,11 +133,25 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
             self.task._check_host_is_up, "host")
 
     def test_check_requested_destination(self):
+        self.mox.StubOutWithMock(self.task, '_get_aggregate_metadata')
         self.mox.StubOutWithMock(db, 'service_get_by_compute_host')
         self.mox.StubOutWithMock(self.task, '_get_compute_info')
         self.mox.StubOutWithMock(self.task.servicegroup_api, 'service_is_up')
         self.mox.StubOutWithMock(self.task.compute_rpcapi,
                                  'check_can_live_migrate_destination')
+
+        fake_aggregate = {
+            'created_at': NOW,
+            'updated_at': None,
+            'deleted_at': None,
+            'deleted': False,
+            'id': 123,
+            'name': 'fake-aggregate',
+            'hosts': ['host1', 'host2'],
+            'metadetails': {'ram_allocation_ratio': '1.5'},
+        }
+        self.task._get_aggregate_metadata(self.instance_uuid, self.destination)\
+            .AndReturn(fake_aggregate)
 
         db.service_get_by_compute_host(self.context,
                                        self.destination).AndReturn("service")
@@ -142,8 +159,12 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         hypervisor_details = {
             "hypervisor_type": "a",
             "hypervisor_version": 6.1,
-            "free_ram_mb": 513
+            "free_ram_mb": 2048,
+            "memory_mb": 8192,
+            "memory_mb_used": 1024
         }
+        self.task._get_compute_info(self.destination)\
+                .AndReturn(hypervisor_details)
         self.task._get_compute_info(self.destination)\
                 .AndReturn(hypervisor_details)
         self.task._get_compute_info(self.instance_host)\
@@ -178,13 +199,34 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
 
     def test_check_requested_destination_fails_with_not_enough_memory(self):
         self.mox.StubOutWithMock(self.task, '_check_host_is_up')
-        self.mox.StubOutWithMock(db, 'service_get_by_compute_host')
+        self.mox.StubOutWithMock(self.task, '_get_aggregate_metadata')
+        self.mox.StubOutWithMock(self.task, '_get_compute_info')
 
         self.task._check_host_is_up(self.destination)
-        db.service_get_by_compute_host(self.context,
-            self.destination).AndReturn({
-                "compute_node": [{"free_ram_mb": 511}]
-            })
+        fake_aggregate = {
+            'created_at': NOW,
+            'updated_at': None,
+            'deleted_at': None,
+            'deleted': False,
+            'id': 123,
+            'name': 'fake-aggregate',
+            'hosts': ['host1', 'host2'],
+            'metadetails': {'ram_allocation_ratio': '1.5'},
+        }
+        self.task._get_aggregate_metadata(self.instance_uuid, self.destination)\
+                    .AndReturn(fake_aggregate)
+
+        hypervisor_details = {
+            "hypervisor_type": "a",
+            "hypervisor_version": 6.1,
+            "free_ram_mb": 1024,
+            "memory_mb": 1024,
+            "memory_mb_used": 1024
+        }
+        self.task._get_compute_info(self.destination)\
+                .AndReturn(hypervisor_details)
+        self.task._get_compute_info(self.destination)\
+                .AndReturn(hypervisor_details)
 
         self.mox.ReplayAll()
         self.assertRaises(exception.MigrationPreCheckError,
@@ -371,3 +413,4 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
 
     def test_not_implemented_rollback(self):
         self.assertRaises(NotImplementedError, self.task.rollback)
+
