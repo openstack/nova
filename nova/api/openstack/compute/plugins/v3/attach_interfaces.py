@@ -117,7 +117,8 @@ class InterfaceAttachmentController(wsgi.Controller):
                 instance, network_id, port_id, req_ip)
         except (exception.NetworkDuplicated,
                 exception.NetworkAmbiguous,
-                exception.NoMoreFixedIps) as e:
+                exception.NoMoreFixedIps,
+                exception.PortNotUsable) as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
         except (exception.InstanceIsLocked,
                 exception.FixedIpAlreadyInUse,

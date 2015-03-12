@@ -399,6 +399,9 @@ class API(base_api.NetworkAPI):
                         port = neutron.show_port(request.port_id)['port']
                     except neutron_client_exc.PortNotFoundClient:
                         raise exception.PortNotFound(port_id=request.port_id)
+                    if port['tenant_id'] != instance.project_id:
+                        raise exception.PortNotUsable(port_id=request.port_id,
+                                                      instance=instance.uuid)
                     if port.get('device_id'):
                         raise exception.PortInUse(port_id=request.port_id)
                     if hypervisor_macs is not None:

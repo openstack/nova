@@ -127,7 +127,8 @@ class InterfaceAttachmentController(object):
                 exception.NoMoreFixedIps,
                 exception.PortInUse,
                 exception.NetworkDuplicated,
-                exception.NetworkAmbiguous) as e:
+                exception.NetworkAmbiguous,
+                exception.PortNotUsable) as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
         except exception.InstanceIsLocked as e:
             raise exc.HTTPConflict(explanation=e.format_message())
