@@ -94,6 +94,9 @@ class ServiceController(object):
 
         context = req.environ['nova.context']
         authorize(context)
+        # NOTE(alex_xu): back-compatible with db layer hard-code admin
+        # permission checks
+        nova_context.require_admin_context(context)
 
         try:
             self.host_api.service_delete(context, id)
