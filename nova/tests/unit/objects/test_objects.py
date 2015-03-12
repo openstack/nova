@@ -1435,6 +1435,69 @@ class TestObjectVersions(test.NoDBTestCase):
                          (obj_name, test_version))
                 obj_class().obj_to_primitive(target_version=test_version)
 
+    def _get_obj_to_test(self, obj_class):
+        obj = obj_class()
+        for fname, ftype in obj.fields.items():
+            if isinstance(ftype, fields.ObjectField):
+                fobjname = ftype.AUTO_TYPE._obj_name
+                fobjcls = base.NovaObject._obj_classes[fobjname][0]
+                setattr(obj, fname, self._get_obj_to_test(fobjcls))
+            elif isinstance(ftype, fields.ListOfObjectsField):
+                # FIXME(danms): This will result in no tests for this
+                # field type...
+                setattr(obj, fname, [])
+        return obj
+
+    def _find_version_mapping(self, my_ver, versions):
+        closest = None
+        my_ver = utils.convert_version_to_tuple(my_ver)
+        for _my, _child in versions:
+            _my = utils.convert_version_to_tuple(_my)
+            _child = utils.convert_version_to_tuple(_child)
+            if _my == my_ver:
+                return '%s.%s' % _child
+            elif _my < my_ver:
+                closest = _child
+        if closest:
+            return '%s.%s' % closest
+        else:
+            return None
+
+    def _validate_object_fields(self, obj_class, primitive):
+        for fname, ftype in obj_class.fields.items():
+            if isinstance(ftype, fields.ObjectField):
+                exp_vers = obj_class.obj_relationships[fname]
+                exp_ver = self._find_version_mapping(
+                    primitive['nova_object.version'], exp_vers)
+                if exp_ver is None:
+                    self.assertNotIn(fname, primitive['nova_object.data'])
+                else:
+                    child_p = primitive['nova_object.data'][fname]
+                    self.assertEqual(exp_ver,
+                                     child_p['nova_object.version'])
+
+    def test_obj_make_compatible_with_data(self):
+        # Iterate all object classes and verify that we can run
+        # obj_make_compatible with every older version than current.
+        # This doesn't actually test the data conversions, but it at least
+        # makes sure the method doesn't blow up on something basic like
+        # expecting the wrong version format.
+        for obj_name in base.NovaObject._obj_classes:
+            obj_class = base.NovaObject._obj_classes[obj_name][0]
+            if 'tests.unit' in obj_class.__module__:
+                # NOTE(danms): Skip test objects. When we move to
+                # oslo.versionedobjects, we won't have to do this
+                continue
+            version = utils.convert_version_to_tuple(obj_class.VERSION)
+            for n in range(version[1]):
+                test_version = '%d.%d' % (version[0], n)
+                LOG.info('testing obj: %s version: %s' %
+                         (obj_name, test_version))
+                test_object = self._get_obj_to_test(obj_class)
+                obj_p = test_object.obj_to_primitive(
+                    target_version=test_version)
+                self._validate_object_fields(obj_class, obj_p)
+
     def test_obj_relationships_in_order(self):
         # Iterate all object classes and verify that we can run
         # obj_make_compatible with every older version than current.
