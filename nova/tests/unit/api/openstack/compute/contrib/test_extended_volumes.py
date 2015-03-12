@@ -141,3 +141,23 @@ class ExtendedVolumesTestV23(ExtendedVolumesTestV21):
     exp_volumes = [{'id': UUID1, 'delete_on_termination': True},
                    {'id': UUID2, 'delete_on_termination': False}]
     wsgi_api_version = '2.3'
+
+
+class ExtendedVolumesEnforcementV21(test.NoDBTestCase):
+
+    def setUp(self):
+        super(ExtendedVolumesEnforcementV21, self).setUp()
+        self.controller = extended_volumes_v21.ExtendedVolumesController()
+        self.req = fakes.HTTPRequest.blank('')
+
+    def test_extend_show_policy_failed(self):
+        rule_name = 'compute_extension:v3:os-extended-volumes'
+        self.policy.set_rules({rule_name: "project:non_fake"})
+        # Pass ResponseObj as None, the code shouldn't touch the None.
+        self.controller.show(self.req, None, fakes.FAKE_UUID)
+
+    def test_extend_detail_policy_failed(self):
+        rule_name = 'compute_extension:v3:os-extended-volumes'
+        self.policy.set_rules({rule_name: "project:non_fake"})
+        # Pass ResponseObj as None, the code shouldn't touch the None.
+        self.controller.detail(self.req, None)
