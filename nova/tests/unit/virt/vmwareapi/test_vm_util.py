@@ -925,15 +925,6 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         fake_objects.add_object(fake.VirtualMachine())
         return fake_objects
 
-    def test_get_values(self):
-        objects = self._create_fake_vm_objects()
-        query = vm_util.get_values_from_object_properties(
-            fake.FakeObjectRetrievalSession(objects), objects)
-        self.assertEqual('poweredOn', query['runtime.powerState'])
-        self.assertEqual('guestToolsRunning',
-                         query['summary.guest.toolsRunningStatus'])
-        self.assertEqual('toolsOk', query['summary.guest.toolsStatus'])
-
     def test_reconfigure_vm(self):
         session = fake.FakeSession()
         with contextlib.nested(

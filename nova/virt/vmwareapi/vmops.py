@@ -801,14 +801,12 @@ class VMwareVMOps(object):
                 raise error_util.NoRootDiskDefined()
 
             lst_properties = ["datastore", "summary.config.guestId"]
-            props = self._session._call_method(vim_util,
-                                               "get_object_properties",
-                                               None, vm_ref, "VirtualMachine",
+            props = self._session._call_method(vutil,
+                                               "get_object_properties_dict",
+                                               vm_ref,
                                                lst_properties)
-            query = vm_util.get_values_from_object_properties(self._session,
-                                                              props)
-            os_type = query['summary.config.guestId']
-            datastores = query['datastore']
+            os_type = props['summary.config.guestId']
+            datastores = props['datastore']
             return (vmdk, datastores, os_type)
 
         vmdk, datastores, os_type = _get_vm_and_vmdk_attribs()
@@ -846,13 +844,13 @@ class VMwareVMOps(object):
         vm_ref = vm_util.get_vm_ref(self._session, instance)
         lst_properties = ["summary.guest.toolsStatus", "runtime.powerState",
                           "summary.guest.toolsRunningStatus"]
-        props = self._session._call_method(vim_util, "get_object_properties",
-                           None, vm_ref, "VirtualMachine",
-                           lst_properties)
-        query = vm_util.get_values_from_object_properties(self._session, props)
-        pwr_state = query['runtime.powerState']
-        tools_status = query['summary.guest.toolsStatus']
-        tools_running_status = query['summary.guest.toolsRunningStatus']
+        props = self._session._call_method(vutil,
+                                           "get_object_properties_dict",
+                                           vm_ref,
+                                           lst_properties)
+        pwr_state = props['runtime.powerState']
+        tools_status = props['summary.guest.toolsStatus']
+        tools_running_status = props['summary.guest.toolsRunningStatus']
 
         # Raise an exception if the VM is not powered On.
         if pwr_state not in ["poweredOn"]:
@@ -881,14 +879,13 @@ class VMwareVMOps(object):
             vm_ref = vm_util.get_vm_ref(self._session, instance)
             lst_properties = ["config.files.vmPathName", "runtime.powerState",
                               "datastore"]
-            props = self._session._call_method(vim_util,
-                        "get_object_properties",
-                        None, vm_ref, "VirtualMachine", lst_properties)
-            query = vm_util.get_values_from_object_properties(
-                    self._session, props)
-            pwr_state = query['runtime.powerState']
+            props = self._session._call_method(vutil,
+                                               "get_object_properties_dict",
+                                               vm_ref,
+                                               lst_properties)
+            pwr_state = props['runtime.powerState']
 
-            vm_config_pathname = query.get('config.files.vmPathName')
+            vm_config_pathname = props.get('config.files.vmPathName')
             vm_ds_path = None
             if vm_config_pathname is not None:
                 vm_ds_path = ds_obj.DatastorePath.parse(
@@ -917,7 +914,7 @@ class VMwareVMOps(object):
                               "datastore %(datastore_name)s",
                               {'datastore_name': vm_ds_path.datastore},
                               instance=instance)
-                    ds_ref_ret = query['datastore']
+                    ds_ref_ret = props['datastore']
                     ds_ref = ds_ref_ret.ManagedObjectReference[0]
                     dc_info = self.get_datacenter_ref_and_name(ds_ref)
                     ds_util.file_delete(self._session,
@@ -1321,15 +1318,14 @@ class VMwareVMOps(object):
         lst_properties = ["summary.config.numCpu",
                     "summary.config.memorySizeMB",
                     "runtime.powerState"]
-        vm_props = self._session._call_method(vim_util,
-                    "get_object_properties", None, vm_ref, "VirtualMachine",
-                    lst_properties)
-        query = vm_util.get_values_from_object_properties(
-                self._session, vm_props)
-        max_mem = int(query.get('summary.config.memorySizeMB', 0)) * 1024
-        num_cpu = int(query.get('summary.config.numCpu', 0))
+        vm_props = self._session._call_method(vutil,
+                                              "get_object_properties_dict",
+                                              vm_ref,
+                                              lst_properties)
+        max_mem = int(vm_props.get('summary.config.memorySizeMB', 0)) * 1024
+        num_cpu = int(vm_props.get('summary.config.numCpu', 0))
         return hardware.InstanceInfo(
-            state=VMWARE_POWER_STATES[query['runtime.powerState']],
+            state=VMWARE_POWER_STATES[vm_props['runtime.powerState']],
             max_mem_kb=max_mem,
             mem_kb=max_mem,
             num_cpu=num_cpu)
@@ -1340,14 +1336,13 @@ class VMwareVMOps(object):
         lst_properties = ["summary.config",
                           "summary.quickStats",
                           "summary.runtime"]
-        vm_props = self._session._call_method(vim_util,
-                    "get_object_properties", None, vm_ref, "VirtualMachine",
-                    lst_properties)
-        query = vm_util.get_values_from_object_properties(self._session,
-                                                          vm_props)
+        vm_props = self._session._call_method(vutil,
+                                              "get_object_properties_dict",
+                                              vm_ref,
+                                              lst_properties)
         data = {}
         # All of values received are objects. Convert them to dictionaries
-        for value in query.values():
+        for value in vm_props.values():
             prop_dict = vim_util.object_to_dict(value, list_depth=1)
             data.update(prop_dict)
         return data

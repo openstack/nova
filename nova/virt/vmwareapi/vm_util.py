@@ -1394,21 +1394,6 @@ def power_on_instance(session, instance, vm_ref=None):
         LOG.debug("VM already powered on", instance=instance)
 
 
-def get_values_from_object_properties(session, props):
-    """Get the specific values from a object list.
-
-    The object values will be returned as a dictionary.
-    """
-    dictionary = {}
-    while props:
-        for elem in props.objects:
-            propdict = propset_dict(elem.propSet)
-            dictionary.update(propdict)
-        props = session._call_method(vutil, 'continue_retrieval',
-                                     props)
-    return dictionary
-
-
 def _get_vm_port_indices(session, vm_ref):
     extra_config = session._call_method(vim_util,
                                         'get_dynamic_property',
