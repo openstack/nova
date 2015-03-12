@@ -205,3 +205,18 @@ class TestDatabaseFixture(testtools.TestCase):
         result = conn.execute("select * from instance_types")
         rows = result.fetchall()
         self.assertEqual(len(rows), 5, "Rows %s" % rows)
+
+    def test_fixture_cleanup(self):
+        # because this sets up reasonable db connection strings
+        self.useFixture(conf_fixture.ConfFixture())
+        fix = fixtures.Database()
+        self.useFixture(fix)
+
+        # manually do the cleanup that addCleanup will do
+        fix.cleanup()
+
+        # ensure the db contains nothing
+        engine = session.get_engine()
+        conn = engine.connect()
+        schema = "".join(line for line in conn.connection.iterdump())
+        self.assertEqual(schema, "BEGIN TRANSACTION;COMMIT;")

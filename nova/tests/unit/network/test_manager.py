@@ -3301,7 +3301,7 @@ class FloatingIPTestCase(test.TestCase):
                                                                'public'))
 
 
-class InstanceDNSTestCase(test.NoDBTestCase):
+class InstanceDNSTestCase(test.TestCase):
     """Tests nova.network.manager instance DNS."""
     def setUp(self):
         super(InstanceDNSTestCase, self).setUp()

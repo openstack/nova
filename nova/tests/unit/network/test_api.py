@@ -45,7 +45,7 @@ from nova import utils
 FAKE_UUID = 'a47ae74e-ab08-547f-9eee-ffd23fc46c16'
 
 
-class NetworkPolicyTestCase(test.NoDBTestCase):
+class NetworkPolicyTestCase(test.TestCase):
     def setUp(self):
         super(NetworkPolicyTestCase, self).setUp()
 

@@ -34,7 +34,7 @@ from nova.tests.unit.image import fake
 CONF = cfg.CONF
 
 
-class BlockDeviceMappingTestV21(test.NoDBTestCase):
+class BlockDeviceMappingTestV21(test.TestCase):
     validation_error = exception.ValidationError
 
     def _setup_controller(self):
