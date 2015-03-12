@@ -389,7 +389,7 @@ class NovaObject(object):
 
         def _do_backport(to_version):
             obj = getattr(self, field)
-            if not obj:
+            if obj is None:
                 return
             if isinstance(obj, NovaObject):
                 obj.obj_make_compatible(

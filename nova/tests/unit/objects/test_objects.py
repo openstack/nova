@@ -884,6 +884,24 @@ class _TestObject(object):
         self.assertRaises(exception.ObjectActionError,
                           obj.obj_make_compatible, {}, '1.0')
 
+    def test_obj_make_compatible_doesnt_skip_falsey_sub_objects(self):
+        class MyList(base.ObjectListBase, base.NovaObject):
+            VERSION = '1.2'
+            fields = {'objects': fields.ListOfObjectsField('MyObjElement')}
+
+        mylist = MyList(objects=[])
+
+        class MyOwner(base.NovaObject):
+            VERSION = '1.2'
+            fields = {'mylist': fields.ObjectField('MyList')}
+            obj_relationships = {
+                'mylist': [('1.1', '1.1')],
+            }
+
+        myowner = MyOwner(mylist=mylist)
+        primitive = myowner.obj_to_primitive('1.1')
+        self.assertIn('mylist', primitive['nova_object.data'])
+
     def test_obj_make_compatible_handles_list_of_objects(self):
         subobj = MyOwnedObject(baz=1)
         obj = MyObj(rel_objects=[subobj])
