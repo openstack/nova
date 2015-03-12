@@ -22,7 +22,7 @@ from nova.i18n import _
 from nova import objects
 
 ALIAS = 'os-fixed-ips'
-authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
+authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class FixedIPController(wsgi.Controller):

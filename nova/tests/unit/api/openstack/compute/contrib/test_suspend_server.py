@@ -82,7 +82,7 @@ class SuspendServerPolicyEnforcementV21(test.NoDBTestCase):
         self.req = fakes.HTTPRequest.blank('')
 
     def test_suspend_policy_failed(self):
-        rule_name = "compute_extension:v3:os-suspend-server:suspend"
+        rule_name = "os_compute_api:os-suspend-server:suspend"
         self.policy.set_rules({rule_name: "project:non_fake"})
         exc = self.assertRaises(
             exception.PolicyNotAuthorized,
@@ -93,7 +93,7 @@ class SuspendServerPolicyEnforcementV21(test.NoDBTestCase):
             exc.format_message())
 
     def test_resume_policy_failed(self):
-        rule_name = "compute_extension:v3:os-suspend-server:resume"
+        rule_name = "os_compute_api:os-suspend-server:resume"
         self.policy.set_rules({rule_name: "project:non_fake"})
         exc = self.assertRaises(
             exception.PolicyNotAuthorized,

@@ -26,9 +26,8 @@ from nova.i18n import _
 from nova import objects
 
 ALIAS = 'os-flavor-access'
-soft_authorize = extensions.soft_extension_authorizer('compute',
-                                                      'v3:' + ALIAS)
-authorize = extensions.extension_authorizer('compute', 'v3:%s' % ALIAS)
+soft_authorize = extensions.os_compute_soft_authorizer(ALIAS)
+authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 def _marshall_flavor_access(flavor):

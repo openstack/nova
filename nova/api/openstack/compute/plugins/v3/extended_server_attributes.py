@@ -20,7 +20,7 @@ from nova.api.openstack import wsgi
 
 
 ALIAS = "os-extended-server-attributes"
-authorize = extensions.soft_extension_authorizer('compute', 'v3:' + ALIAS)
+authorize = extensions.os_compute_soft_authorizer(ALIAS)
 
 
 class ExtendedServerAttributesController(wsgi.Controller):

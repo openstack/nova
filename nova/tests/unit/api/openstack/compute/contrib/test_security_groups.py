@@ -1464,7 +1464,7 @@ class SecurityGroupsOutputPolicyEnforcementV21(test.NoDBTestCase):
         super(SecurityGroupsOutputPolicyEnforcementV21, self).setUp()
         self.controller = secgroups_v21.SecurityGroupsOutputController()
         self.req = fakes.HTTPRequest.blank('')
-        self.rule_name = "compute_extension:v3:os-security-groups"
+        self.rule_name = "os_compute_api:os-security-groups"
         self.rule = {self.rule_name: "project:non_fake"}
         self.policy.set_rules(self.rule)
 
@@ -1483,7 +1483,7 @@ class PolicyEnforcementV21(test.NoDBTestCase):
     def setUp(self):
         super(PolicyEnforcementV21, self).setUp()
         self.req = fakes.HTTPRequest.blank('')
-        self.rule_name = "compute_extension:v3:os-security-groups"
+        self.rule_name = "os_compute_api:os-security-groups"
         self.rule = {self.rule_name: "project:non_fake"}
 
     def _common_policy_check(self, func, *arg, **kwarg):

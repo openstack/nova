@@ -21,7 +21,7 @@ QUOTAS = quota.QUOTAS
 
 
 ALIAS = "os-used-limits"
-authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
+authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class UsedLimitsController(wsgi.Controller):

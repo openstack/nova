@@ -26,7 +26,7 @@ from nova import objects
 from nova import utils
 
 ALIAS = 'os-flavor-extra-specs'
-authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
+authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class FlavorExtraSpecsController(wsgi.Controller):

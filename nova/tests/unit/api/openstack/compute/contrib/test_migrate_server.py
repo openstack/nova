@@ -287,7 +287,7 @@ class MigrateServerPolicyEnforcementV21(test.NoDBTestCase):
         self.req = fakes.HTTPRequest.blank('')
 
     def test_migrate_policy_failed(self):
-        rule_name = "compute_extension:v3:os-migrate-server:migrate"
+        rule_name = "os_compute_api:os-migrate-server:migrate"
         self.policy.set_rules({rule_name: "project:non_fake"})
         exc = self.assertRaises(
                                 exception.PolicyNotAuthorized,
@@ -299,7 +299,7 @@ class MigrateServerPolicyEnforcementV21(test.NoDBTestCase):
                       exc.format_message())
 
     def test_migrate_live_policy_failed(self):
-        rule_name = "compute_extension:v3:os-migrate-server:migrate_live"
+        rule_name = "os_compute_api:os-migrate-server:migrate_live"
         self.policy.set_rules({rule_name: "project:non_fake"})
         body_args = {'os-migrateLive': {'host': 'hostname',
                 'block_migration': False,

@@ -100,7 +100,7 @@ class ServerVirtualInterfaceEnforcementV21(test.NoDBTestCase):
         self.req = fakes.HTTPRequest.blank('')
 
     def test_index_virtual_interfaces_policy_failed(self):
-        rule_name = "compute_extension:v3:os-virtual-interfaces"
+        rule_name = "os_compute_api:os-virtual-interfaces"
         self.policy.set_rules({rule_name: "project:non_fake"})
         exc = self.assertRaises(
             exception.PolicyNotAuthorized,

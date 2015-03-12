@@ -90,7 +90,7 @@ class LockServerPolicyEnforcementV21(test.NoDBTestCase):
         self.req = fakes.HTTPRequest.blank('')
 
     def test_lock_policy_failed(self):
-        rule_name = "compute_extension:v3:os-lock-server:lock"
+        rule_name = "os_compute_api:os-lock-server:lock"
         self.policy.set_rules({rule_name: "project:non_fake"})
         exc = self.assertRaises(
                                 exception.PolicyNotAuthorized,
@@ -102,7 +102,7 @@ class LockServerPolicyEnforcementV21(test.NoDBTestCase):
                       exc.format_message())
 
     def test_unlock_policy_failed(self):
-        rule_name = "compute_extension:v3:os-lock-server:unlock"
+        rule_name = "os_compute_api:os-lock-server:unlock"
         self.policy.set_rules({rule_name: "project:non_fake"})
         exc = self.assertRaises(
                                 exception.PolicyNotAuthorized,

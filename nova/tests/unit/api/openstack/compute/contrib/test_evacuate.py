@@ -278,7 +278,7 @@ class EvacuatePolicyEnforcementv21(test.NoDBTestCase):
         self.controller = evacuate_v21.EvacuateController()
 
     def test_evacuate_policy_failed(self):
-        rule_name = "compute_extension:v3:os-evacuate"
+        rule_name = "os_compute_api:os-evacuate"
         self.policy.set_rules({rule_name: "project:non_fake"})
         req = fakes.HTTPRequest.blank('')
         body = {'evacuate': {'host': 'my-host',

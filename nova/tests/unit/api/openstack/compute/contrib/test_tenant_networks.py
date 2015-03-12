@@ -266,7 +266,7 @@ class TenantNetworksEnforcementV21(test.NoDBTestCase):
         self.req = fakes.HTTPRequest.blank('')
 
     def test_create_policy_failed(self):
-        rule_name = 'compute_extension:v3:os-tenant-networks'
+        rule_name = 'os_compute_api:os-tenant-networks'
         self.policy.set_rules({rule_name: "project:non_fake"})
         exc = self.assertRaises(
             exception.PolicyNotAuthorized,
@@ -278,7 +278,7 @@ class TenantNetworksEnforcementV21(test.NoDBTestCase):
             exc.format_message())
 
     def test_index_policy_failed(self):
-        rule_name = 'compute_extension:v3:os-tenant-networks'
+        rule_name = 'os_compute_api:os-tenant-networks'
         self.policy.set_rules({rule_name: "project:non_fake"})
         exc = self.assertRaises(
             exception.PolicyNotAuthorized,
@@ -289,7 +289,7 @@ class TenantNetworksEnforcementV21(test.NoDBTestCase):
             exc.format_message())
 
     def test_delete_policy_failed(self):
-        rule_name = 'compute_extension:v3:os-tenant-networks'
+        rule_name = 'os_compute_api:os-tenant-networks'
         self.policy.set_rules({rule_name: "project:non_fake"})
         exc = self.assertRaises(
             exception.PolicyNotAuthorized,
@@ -300,7 +300,7 @@ class TenantNetworksEnforcementV21(test.NoDBTestCase):
             exc.format_message())
 
     def test_show_policy_failed(self):
-        rule_name = 'compute_extension:v3:os-tenant-networks'
+        rule_name = 'os_compute_api:os-tenant-networks'
         self.policy.set_rules({rule_name: "project:non_fake"})
         exc = self.assertRaises(
             exception.PolicyNotAuthorized,

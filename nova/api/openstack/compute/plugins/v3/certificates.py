@@ -22,7 +22,7 @@ from nova.i18n import _
 from nova import network
 
 ALIAS = "os-certificates"
-authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
+authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 def _translate_certificate_view(certificate, private_key=None):

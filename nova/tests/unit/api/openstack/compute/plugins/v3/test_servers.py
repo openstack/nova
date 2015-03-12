@@ -851,9 +851,9 @@ class ServersControllerTest(ControllerTest):
                        fake_get_all)
 
         rules = {
-            "compute:v3:servers:index":
+            "os_compute_api:servers:index":
                 common_policy.parse_rule("project_id:fake"),
-            "compute:v3:servers:index:get_all_tenants":
+            "os_compute_api:servers:index:get_all_tenants":
                 common_policy.parse_rule("project_id:fake")
         }
         policy.set_rules(rules)
@@ -869,9 +869,9 @@ class ServersControllerTest(ControllerTest):
             return [fakes.stub_instance(100)]
 
         rules = {
-            "compute:v3:servers:index:get_all_tenants":
+            "os_compute_api:servers:index:get_all_tenants":
                 common_policy.parse_rule("project_id:non_fake"),
-            "compute:v3:servers:get_all":
+            "os_compute_api:servers:get_all":
                 common_policy.parse_rule("project_id:fake"),
         }
 
@@ -1533,7 +1533,7 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
 
     def test_start_policy_failed(self):
         rules = {
-            "compute:v3:servers:start":
+            "os_compute_api:servers:start":
                 common_policy.parse_rule("project_id:non_fake")
         }
         policy.set_rules(rules)
@@ -1542,7 +1542,7 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
         exc = self.assertRaises(exception.PolicyNotAuthorized,
                                 self.controller._start_server,
                                 req, FAKE_UUID, body)
-        self.assertIn("compute:v3:servers:start", exc.format_message())
+        self.assertIn("os_compute_api:servers:start", exc.format_message())
 
     def test_start_not_ready(self):
         self.stubs.Set(compute_api.API, 'start', fake_start_stop_not_ready)
@@ -1577,7 +1577,7 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
 
     def test_stop_policy_failed(self):
         rules = {
-            "compute:v3:servers:stop":
+            "os_compute_api:servers:stop":
                 common_policy.parse_rule("project_id:non_fake")
         }
         policy.set_rules(rules)
@@ -1586,7 +1586,7 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
         exc = self.assertRaises(exception.PolicyNotAuthorized,
                                 self.controller._stop_server,
                                 req, FAKE_UUID, body)
-        self.assertIn("compute:v3:servers:stop", exc.format_message())
+        self.assertIn("os_compute_api:servers:stop", exc.format_message())
 
     def test_stop_not_ready(self):
         self.stubs.Set(compute_api.API, 'stop', fake_start_stop_not_ready)
@@ -3410,7 +3410,7 @@ class IPsPolicyEnforcementV21(test.NoDBTestCase):
         self.req = fakes.HTTPRequest.blank('')
 
     def test_index_policy_failed(self):
-        rule_name = "compute_extension:v3:ips:index"
+        rule_name = "os_compute_api:ips:index"
         self.policy.set_rules({rule_name: "project:non_fake"})
         exc = self.assertRaises(
             exception.PolicyNotAuthorized,
@@ -3420,7 +3420,7 @@ class IPsPolicyEnforcementV21(test.NoDBTestCase):
             exc.format_message())
 
     def test_show_policy_failed(self):
-        rule_name = "compute_extension:v3:ips:show"
+        rule_name = "os_compute_api:ips:show"
         self.policy.set_rules({rule_name: "project:non_fake"})
         exc = self.assertRaises(
             exception.PolicyNotAuthorized,
@@ -3451,7 +3451,7 @@ class ServersPolicyEnforcementV21(test.NoDBTestCase):
     @mock.patch.object(servers.ServersController, '_get_instance')
     def test_start_policy_failed(self, _get_instance_mock):
         _get_instance_mock.return_value = None
-        rule_name = "compute:v3:servers:start"
+        rule_name = "os_compute_api:servers:start"
         rule = {rule_name: "project:non_fake"}
         self._common_policy_check(
             rule, rule_name, self.controller._start_server,
@@ -3460,20 +3460,20 @@ class ServersPolicyEnforcementV21(test.NoDBTestCase):
     @mock.patch.object(servers.ServersController, '_get_instance')
     def test_stop_policy_failed(self, _get_instance_mock):
         _get_instance_mock.return_value = None
-        rule_name = "compute:v3:servers:stop"
+        rule_name = "os_compute_api:servers:stop"
         rule = {rule_name: "project:non_fake"}
         self._common_policy_check(
             rule, rule_name, self.controller._stop_server,
             self.req, FAKE_UUID, body={})
 
     def test_index_policy_failed(self):
-        rule_name = "compute:v3:servers:index"
+        rule_name = "os_compute_api:servers:index"
         rule = {rule_name: "project:non_fake"}
         self._common_policy_check(
             rule, rule_name, self.controller.index, self.req)
 
     def test_detail_policy_failed(self):
-        rule_name = "compute:v3:servers:detail"
+        rule_name = "os_compute_api:servers:detail"
         rule = {rule_name: "project:non_fake"}
         self._common_policy_check(
             rule, rule_name, self.controller.detail, self.req)
@@ -3481,7 +3481,7 @@ class ServersPolicyEnforcementV21(test.NoDBTestCase):
     def test_detail_get_tenants_policy_failed(self):
         req = fakes.HTTPRequest.blank('')
         req.GET["all_tenants"] = "True"
-        rule_name = "compute:v3:servers:detail:get_all_tenants"
+        rule_name = "os_compute_api:servers:detail:get_all_tenants"
         rule = {rule_name: "project:non_fake"}
         self._common_policy_check(
             rule, rule_name, self.controller._get_servers, req, True)
@@ -3489,7 +3489,7 @@ class ServersPolicyEnforcementV21(test.NoDBTestCase):
     def test_index_get_tenants_policy_failed(self):
         req = fakes.HTTPRequest.blank('')
         req.GET["all_tenants"] = "True"
-        rule_name = "compute:v3:servers:index:get_all_tenants"
+        rule_name = "os_compute_api:servers:index:get_all_tenants"
         rule = {rule_name: "project:non_fake"}
         self._common_policy_check(
             rule, rule_name, self.controller._get_servers, req, False)
@@ -3497,19 +3497,19 @@ class ServersPolicyEnforcementV21(test.NoDBTestCase):
     @mock.patch.object(common, 'get_instance')
     def test_show_policy_failed(self, get_instance_mock):
         get_instance_mock.return_value = None
-        rule_name = "compute:v3:servers:show"
+        rule_name = "os_compute_api:servers:show"
         rule = {rule_name: "project:non_fake"}
         self._common_policy_check(
             rule, rule_name, self.controller.show, self.req, FAKE_UUID)
 
     def test_delete_policy_failed(self):
-        rule_name = "compute:v3:servers:delete"
+        rule_name = "os_compute_api:servers:delete"
         rule = {rule_name: "project:non_fake"}
         self._common_policy_check(
             rule, rule_name, self.controller.delete, self.req, FAKE_UUID)
 
     def test_update_policy_failed(self):
-        rule_name = "compute:v3:servers:update"
+        rule_name = "os_compute_api:servers:update"
         rule = {rule_name: "project:non_fake"}
         body = {'server': {'name': 'server_test'}}
         self._common_policy_check(
@@ -3517,7 +3517,7 @@ class ServersPolicyEnforcementV21(test.NoDBTestCase):
             FAKE_UUID, body=body)
 
     def test_confirm_resize_policy_failed(self):
-        rule_name = "compute:v3:servers:confirm_resize"
+        rule_name = "os_compute_api:servers:confirm_resize"
         rule = {rule_name: "project:non_fake"}
         body = {'server': {'name': 'server_test'}}
         self._common_policy_check(
@@ -3525,7 +3525,7 @@ class ServersPolicyEnforcementV21(test.NoDBTestCase):
             self.req, FAKE_UUID, body=body)
 
     def test_revert_resize_policy_failed(self):
-        rule_name = "compute:v3:servers:revert_resize"
+        rule_name = "os_compute_api:servers:revert_resize"
         rule = {rule_name: "project:non_fake"}
         body = {'server': {'name': 'server_test'}}
         self._common_policy_check(
@@ -3533,7 +3533,7 @@ class ServersPolicyEnforcementV21(test.NoDBTestCase):
             self.req, FAKE_UUID, body=body)
 
     def test_reboot_policy_failed(self):
-        rule_name = "compute:v3:servers:reboot"
+        rule_name = "os_compute_api:servers:reboot"
         rule = {rule_name: "project:non_fake"}
         body = {'reboot': {'type': 'HARD'}}
         self._common_policy_check(
@@ -3541,7 +3541,7 @@ class ServersPolicyEnforcementV21(test.NoDBTestCase):
             self.req, FAKE_UUID, body=body)
 
     def test_resize_policy_failed(self):
-        rule_name = "compute:v3:servers:resize"
+        rule_name = "os_compute_api:servers:resize"
         rule = {rule_name: "project:non_fake"}
         flavor_id = 1
         self._common_policy_check(
@@ -3549,7 +3549,7 @@ class ServersPolicyEnforcementV21(test.NoDBTestCase):
             FAKE_UUID, flavor_id)
 
     def test_create_image_policy_failed(self):
-        rule_name = "compute:v3:servers:create_image"
+        rule_name = "os_compute_api:servers:create_image"
         rule = {rule_name: "project:non_fake"}
         body = {
             'createImage': {
@@ -3580,27 +3580,27 @@ class ServersPolicyEnforcementV21(test.NoDBTestCase):
             rules, rule_name, self.controller.create, self.req, body=body)
 
     def test_create_policy_failed(self):
-        rule_name = "compute:v3:servers:create"
+        rule_name = "os_compute_api:servers:create"
         rules = {rule_name: "project:non_fake"}
         self._create_policy_check(rules, rule_name)
 
     def test_create_forced_host_policy_failed(self):
-        rule_name = "compute:v3:servers:create:forced_host"
-        rule = {"compute:v3:servers:create": "@",
+        rule_name = "os_compute_api:servers:create:forced_host"
+        rule = {"os_compute_api:servers:create": "@",
                 rule_name: "project:non_fake"}
         self._create_policy_check(rule, rule_name)
 
     def test_create_attach_volume_policy_failed(self):
-        rule_name = "compute:v3:servers:create:attach_volume"
-        rules = {"compute:v3:servers:create": "@",
-                 "compute:v3:servers:create:forced_host": "@",
+        rule_name = "os_compute_api:servers:create:attach_volume"
+        rules = {"os_compute_api:servers:create": "@",
+                 "os_compute_api:servers:create:forced_host": "@",
                  rule_name: "project:non_fake"}
         self._create_policy_check(rules, rule_name)
 
     def test_create_attach_attach_network_policy_failed(self):
-        rule_name = "compute:v3:servers:create:attach_network"
-        rules = {"compute:v3:servers:create": "@",
-                 "compute:v3:servers:create:forced_host": "@",
-                 "compute:v3:servers:create:attach_volume": "@",
+        rule_name = "os_compute_api:servers:create:attach_network"
+        rules = {"os_compute_api:servers:create": "@",
+                 "os_compute_api:servers:create:forced_host": "@",
+                 "os_compute_api:servers:create:attach_volume": "@",
                  rule_name: "project:non_fake"}
         self._create_policy_check(rules, rule_name)

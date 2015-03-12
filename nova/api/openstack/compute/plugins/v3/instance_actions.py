@@ -22,10 +22,8 @@ from nova import compute
 from nova.i18n import _
 
 ALIAS = "os-instance-actions"
-authorize_actions = extensions.extension_authorizer('compute',
-                                                    'v3:' + ALIAS)
-authorize_events = extensions.soft_extension_authorizer('compute',
-                                                    'v3:' + ALIAS + ':events')
+authorize = extensions.os_compute_authorizer(ALIAS)
+soft_authorize = extensions.os_compute_soft_authorizer(ALIAS)
 
 ACTION_KEYS = ['action', 'instance_uuid', 'request_id', 'user_id',
                'project_id', 'start_time', 'message']
@@ -56,7 +54,7 @@ class InstanceActionsController(wsgi.Controller):
         """Returns the list of actions recorded for a given instance."""
         context = req.environ["nova.context"]
         instance = common.get_instance(self.compute_api, context, server_id)
-        authorize_actions(context, target=instance)
+        authorize(context, target=instance)
         actions_raw = self.action_api.actions_get(context, instance)
         actions = [self._format_action(action) for action in actions_raw]
         return {'instanceActions': actions}
@@ -66,7 +64,7 @@ class InstanceActionsController(wsgi.Controller):
         """Return data about the given instance action."""
         context = req.environ['nova.context']
         instance = common.get_instance(self.compute_api, context, server_id)
-        authorize_actions(context, target=instance)
+        authorize(context, target=instance)
         action = self.action_api.action_get_by_request_id(context, instance,
                                                           id)
         if action is None:
@@ -75,7 +73,7 @@ class InstanceActionsController(wsgi.Controller):
 
         action_id = action['id']
         action = self._format_action(action)
-        if authorize_events(context):
+        if soft_authorize(context, action='events'):
             events_raw = self.action_api.action_events_get(context, instance,
                                                            action_id)
             action['events'] = [self._format_event(evt) for evt in events_raw]

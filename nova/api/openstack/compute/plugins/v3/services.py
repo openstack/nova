@@ -24,7 +24,7 @@ from nova.i18n import _
 from nova import servicegroup
 
 ALIAS = "os-services"
-authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
+authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class ServiceController(wsgi.Controller):

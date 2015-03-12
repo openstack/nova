@@ -136,7 +136,7 @@ class MigrationsPolicyEnforcement(test.NoDBTestCase):
         self.req = fakes.HTTPRequest.blank('')
 
     def test_list_policy_failed(self):
-        rule_name = "compute_extension:v3:os-migrations:index"
+        rule_name = "os_compute_api:os-migrations:index"
         self.policy.set_rules({rule_name: "project_id:non_fake"})
         exc = self.assertRaises(
             exception.PolicyNotAuthorized,

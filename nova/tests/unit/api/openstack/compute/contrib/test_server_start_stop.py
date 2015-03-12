@@ -54,8 +54,8 @@ def fake_start_stop_invalid_state(self, context, instance):
 
 
 class ServerStartStopTestV21(test.TestCase):
-    start_policy = "compute:v3:servers:start"
-    stop_policy = "compute:v3:servers:stop"
+    start_policy = "os_compute_api:servers:start"
+    stop_policy = "os_compute_api:servers:stop"
 
     def setUp(self):
         super(ServerStartStopTestV21, self).setUp()

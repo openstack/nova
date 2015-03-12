@@ -295,7 +295,7 @@ class KeypairsTestV21(test.TestCase):
 
 class KeypairPolicyTestV21(test.TestCase):
     KeyPairController = keypairs_v21.KeypairController()
-    policy_path = 'compute_extension:v3:os-keypairs'
+    policy_path = 'os_compute_api:os-keypairs'
 
     def setUp(self):
         super(KeypairPolicyTestV21, self).setUp()

@@ -211,7 +211,7 @@ class RescuePolicyEnforcementV21(test.NoDBTestCase):
         self.req = fakes.HTTPRequest.blank('')
 
     def test_rescue_policy_failed(self):
-        rule_name = "compute_extension:v3:os-rescue"
+        rule_name = "os_compute_api:os-rescue"
         self.policy.set_rules({rule_name: "project:non_fake"})
         body = {"rescue": {"adminPass": "AABBCC112233"}}
         exc = self.assertRaises(
@@ -223,7 +223,7 @@ class RescuePolicyEnforcementV21(test.NoDBTestCase):
             exc.format_message())
 
     def test_unrescue_policy_failed(self):
-        rule_name = "compute_extension:v3:os-rescue"
+        rule_name = "os_compute_api:os-rescue"
         self.policy.set_rules({rule_name: "project:non_fake"})
         body = dict(unrescue=None)
         exc = self.assertRaises(

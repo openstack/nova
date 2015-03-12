@@ -23,10 +23,8 @@ from nova import objects
 
 
 ALIAS = 'os-pci'
-instance_authorize = extensions.soft_extension_authorizer(
-    'compute', 'v3:' + ALIAS + ':pci_servers')
-
-authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
+soft_authorize = extensions.os_compute_soft_authorizer(ALIAS + ':pci_servers')
+authorize = extensions.os_compute_authorizer(ALIAS)
 
 PCI_ADMIN_KEYS = ['id', 'address', 'vendor_id', 'product_id', 'status',
                   'compute_node_id']
@@ -44,7 +42,7 @@ class PciServerController(wsgi.Controller):
     @wsgi.extends
     def show(self, req, resp_obj, id):
         context = req.environ['nova.context']
-        if instance_authorize(context):
+        if soft_authorize(context):
             server = resp_obj.obj['server']
             instance = req.get_db_instance(server['id'])
             self._extend_server(server, instance)
@@ -52,7 +50,7 @@ class PciServerController(wsgi.Controller):
     @wsgi.extends
     def detail(self, req, resp_obj):
         context = req.environ['nova.context']
-        if instance_authorize(context):
+        if soft_authorize(context):
             servers = list(resp_obj.obj['servers'])
             for server in servers:
                 instance = req.get_db_instance(server['id'])

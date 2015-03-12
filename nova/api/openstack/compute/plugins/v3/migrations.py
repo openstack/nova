@@ -20,8 +20,7 @@ ALIAS = "os-migrations"
 
 
 def authorize(context, action_name):
-    action = 'v3:%s:%s' % (ALIAS, action_name)
-    extensions.extension_authorizer('compute', action)(context)
+    extensions.os_compute_authorizer(ALIAS)(context, action=action_name)
 
 
 def output(migrations_obj):

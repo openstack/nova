@@ -18,7 +18,7 @@ from nova import compute
 
 
 ALIAS = "os-server-usage"
-authorize = extensions.soft_extension_authorizer('compute', 'v3:' + ALIAS)
+authorize = extensions.os_compute_soft_authorizer(ALIAS)
 
 resp_topic = "OS-SRV-USG"
 

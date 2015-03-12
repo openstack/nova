@@ -33,7 +33,7 @@ EXTENDED_QUOTAS = {'server_groups': 'os-server-group-quotas',
                    'server_group_members': 'os-server-group-quotas'}
 
 
-authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
+authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class QuotaClassSetsController(wsgi.Controller):

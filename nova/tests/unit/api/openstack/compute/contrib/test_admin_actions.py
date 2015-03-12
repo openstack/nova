@@ -100,19 +100,19 @@ class AdminActionsPolicyEnforcementV21(test.NoDBTestCase):
             rule.popitem()[0], exc.format_message())
 
     def test_reset_network_policy_failed(self):
-        rule = {"compute_extension:v3:os-admin-actions:reset_network":
+        rule = {"os_compute_api:os-admin-actions:reset_network":
             "project:non_fake"}
         self.common_policy_check(
             rule, "_reset_network", self.req, self.fake_id, body={})
 
     def test_inject_network_info_policy_failed(self):
-        rule = {"compute_extension:v3:os-admin-actions:inject_network_info":
+        rule = {"os_compute_api:os-admin-actions:inject_network_info":
             "project:non_fake"}
         self.common_policy_check(
             rule, "_inject_network_info", self.req, self.fake_id, body={})
 
     def test_reset_state_policy_failed(self):
-        rule = {"compute_extension:v3:os-admin-actions:reset_state":
+        rule = {"os_compute_api:os-admin-actions:reset_state":
             "project:non_fake"}
         self.common_policy_check(
             rule, "_reset_state", self.req,

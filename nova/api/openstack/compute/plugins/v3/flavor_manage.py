@@ -22,7 +22,7 @@ from nova import exception
 
 ALIAS = "os-flavor-manage"
 
-authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
+authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class FlavorManageController(wsgi.Controller):
