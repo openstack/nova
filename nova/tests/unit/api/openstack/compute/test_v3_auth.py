@@ -17,7 +17,6 @@
 import webob
 import webob.dec
 
-from nova import context
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 
@@ -26,7 +25,6 @@ class TestNoAuthMiddlewareV3(test.NoDBTestCase):
 
     def setUp(self):
         super(TestNoAuthMiddlewareV3, self).setUp()
-        self.stubs.Set(context, 'RequestContext', fakes.FakeRequestContext)
         fakes.stub_out_rate_limiting(self.stubs)
         fakes.stub_out_networking(self.stubs)
 
