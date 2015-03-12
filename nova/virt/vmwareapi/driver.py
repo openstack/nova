@@ -32,6 +32,7 @@ from oslo_vmware import vim_util
 
 from nova import exception
 from nova.i18n import _, _LI, _LW
+from nova.openstack.common import versionutils
 from nova.virt import driver
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import error_util
@@ -146,6 +147,14 @@ class VMwareVCDriver(driver.ComputeDriver):
 
         # Get the list of clusters to be used
         self._cluster_names = CONF.vmware.cluster_name
+        if len(self._cluster_names) > 1:
+            versionutils.report_deprecated_feature(
+                LOG,
+                _LW('The "cluster_name" setting should have only one '
+                    'cluster name. The capability of allowing '
+                    'multiple clusters may be dropped in the '
+                    'Liberty release.'))
+
         self.dict_mors = vm_util.get_all_cluster_refs_by_name(self._session,
                                           self._cluster_names)
         if not self.dict_mors:
