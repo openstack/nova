@@ -5783,15 +5783,25 @@ class LibvirtDriver(driver.ComputeDriver):
         """Download kernel and ramdisk for instance in instance directory."""
         instance_dir = libvirt_utils.get_instance_path(instance)
         if instance.kernel_id:
-            self._try_fetch_image(context,
-                                  os.path.join(instance_dir, 'kernel'),
-                                  instance.kernel_id,
-                                  instance, fallback_from_host)
-            if instance.ramdisk_id:
+            kernel_path = os.path.join(instance_dir, 'kernel')
+            # NOTE(dsanders): only fetch image if it's not available at
+            # kernel_path. This also avoids ImageNotFound exception if
+            # the image has been deleted from glance
+            if not os.path.exists(kernel_path):
                 self._try_fetch_image(context,
-                                      os.path.join(instance_dir, 'ramdisk'),
-                                      instance.ramdisk_id,
+                                      kernel_path,
+                                      instance.kernel_id,
                                       instance, fallback_from_host)
+            if instance.ramdisk_id:
+                ramdisk_path = os.path.join(instance_dir, 'ramdisk')
+                # NOTE(dsanders): only fetch image if it's not available at
+                # ramdisk_path. This also avoids ImageNotFound exception if
+                # the image has been deleted from glance
+                if not os.path.exists(ramdisk_path):
+                    self._try_fetch_image(context,
+                                          ramdisk_path,
+                                          instance.ramdisk_id,
+                                          instance, fallback_from_host)
 
     def rollback_live_migration_at_destination(self, context, instance,
                                                network_info,
