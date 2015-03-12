@@ -28,6 +28,7 @@ from mox3 import mox
 import netaddr
 from oslo_concurrency import processutils
 from oslo_config import cfg
+from oslo_utils import encodeutils
 from oslo_utils import timeutils
 
 import nova
@@ -992,3 +993,23 @@ class ResourceFilterTestCase(test.NoDBTestCase):
         # Make sure bug #1365887 is fixed
         i1['metadata']['key3'] = 'a'
         self._assert_filtering(rl, {'value': 'banana'}, [])
+
+
+class SafeTruncateTestCase(test.NoDBTestCase):
+    def test_exception_to_dict_with_long_message_3_bytes(self):
+        # Generate Chinese byte string whose length is 300. This Chinese UTF-8
+        # character occupies 3 bytes. After truncating, the byte string length
+        # should be 255.
+        msg = encodeutils.safe_decode('\xe8\xb5\xb5' * 100)
+        truncated_msg = utils.safe_truncate(msg, 255)
+        byte_message = encodeutils.safe_encode(truncated_msg)
+        self.assertEqual(255, len(byte_message))
+
+    def test_exception_to_dict_with_long_message_2_bytes(self):
+        # Generate Russian byte string whose length is 300. This Russian UTF-8
+        # character occupies 2 bytes. After truncating, the byte string length
+        # should be 254.
+        msg = encodeutils.safe_decode('\xd0\x92' * 150)
+        truncated_msg = utils.safe_truncate(msg, 255)
+        byte_message = encodeutils.safe_encode(truncated_msg)
+        self.assertEqual(254, len(byte_message))
