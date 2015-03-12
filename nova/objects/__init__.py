@@ -28,6 +28,7 @@ def register_all():
     __import__('nova.objects.aggregate')
     __import__('nova.objects.bandwidth_usage')
     __import__('nova.objects.block_device')
+    __import__('nova.objects.cell_mapping')
     __import__('nova.objects.compute_node')
     __import__('nova.objects.dns_domain')
     __import__('nova.objects.ec2')

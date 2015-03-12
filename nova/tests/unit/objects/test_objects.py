@@ -1183,6 +1183,7 @@ object_data = {
     'BandwidthUsageList': '1.2-5b564cbfd5ae6e106443c086938e7602',
     'BlockDeviceMapping': '1.8-c87e9c7e5cfd6a402f32727aa74aca95',
     'BlockDeviceMappingList': '1.9-0faaeebdca213010c791bc37a22546e3',
+    'CellMapping': '1.0-4b1616970814c3c819e10c7ef6b9c3d5',
     'ComputeNode': '1.10-5f8cd6948ad98fcc0c39b79d49acc4b6',
     'ComputeNodeList': '1.10-4ae1f844c247029fbcdb5fdccbe9e619',
     'DNSDomain': '1.0-5bdc288d7c3b723ce86ede998fd5c9ba',
