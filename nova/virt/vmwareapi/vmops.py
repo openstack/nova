@@ -1699,7 +1699,7 @@ class VMwareVMOps(object):
                                       '%(error)s'),
                                   {'source': vi.cache_image_path,
                                    'dest': sized_disk_ds_loc,
-                                   'error': e.message})
+                                   'error': e})
                         try:
                             ds_util.file_delete(self._session,
                                                 sized_disk_ds_loc,
