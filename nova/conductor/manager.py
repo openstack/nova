@@ -277,6 +277,12 @@ class ConductorManager(manager.Manager):
         elif all((topic, host)):
             if topic == 'compute':
                 result = self.db.service_get_by_compute_host(context, host)
+                # NOTE(sbauza): Only Juno computes are still calling this
+                # conductor method for getting service_get_by_compute_node,
+                # but expect a compute_node field so we can safely add it.
+                result['compute_node'
+                       ] = objects.ComputeNodeList.get_all_by_host(
+                           context, result['host'])
                 # FIXME(comstud) Potentially remove this on bump to v3.0
                 result = [result]
             else:
