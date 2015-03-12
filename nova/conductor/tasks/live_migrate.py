@@ -137,9 +137,14 @@ class LiveMigrationTask(object):
         aggr = self._get_aggregate_metadata(instance_uuid, dest)
         # for icehouse replace aggr.metadetails with aggr.metadata.
 
-        # (schoksey replaced) ram_ratio = float(aggr.metadetails['ram_allocation_ratio'])
-        ram_ratio = float(aggr.get('metadetails')['ram_allocation_ratio'])
-        LOG.debug(_("lwatta::====> Ram_allocation_ratio %s"), ram_ratio)
+	try: 
+            # (schoksey replaced) ram_ratio = float(aggr.metadetails['ram_allocation_ratio'])
+	    ram_ratio = float(aggr.get('metadetails')['ram_allocation_ratio'])
+            LOG.debug(_("lwatta::====> Ram_allocation_ratio %s"), ram_ratio)
+	except:
+       	    LOG.debug(_("lwatta::====> No ram_ratio in aggregate use default 1.5"))
+	    ram_ratio = 1.5
+
 
         # (schoksey replaced) total = self._get_compute_info(self.destination)['memory_mb']
         total = self._get_compute_info(self.destination)['memory_mb']
