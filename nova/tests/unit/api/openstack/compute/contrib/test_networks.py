@@ -122,9 +122,6 @@ class FakeNetworkAPI(object):
     def __init__(self, skip_policy_check=False):
         self.networks = copy.deepcopy(FAKE_NETWORKS)
 
-    def disable_vlan(self):
-        self._vlan_is_disabled = True
-
     def delete(self, context, network_id):
         if network_id == 'always_delete':
             return True
