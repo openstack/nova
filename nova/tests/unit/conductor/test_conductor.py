@@ -457,7 +457,13 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
             getattr(db, name)(self.context, *dbargs).AndRaise(db_exception)
             getattr(db, name)(self.context, *dbargs).AndRaise(db_exception)
         else:
-            getattr(db, name)(self.context, *dbargs).AndReturn('fake-result')
+            getattr(db, name)(self.context, *dbargs).AndReturn(condargs)
+            if name == 'service_get_by_compute_host':
+                self.mox.StubOutWithMock(
+                    objects.ComputeNodeList, 'get_all_by_host')
+                objects.ComputeNodeList.get_all_by_host(
+                    self.context, mox.IgnoreArg()
+                ).AndReturn(['fake-compute'])
         self.mox.ReplayAll()
         if db_exception:
             self.assertRaises(messaging.ExpectedException,
@@ -473,9 +479,11 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
             result = self.conductor.service_get_all_by(self.context,
                                                        **condargs)
             if db_result_listified:
-                self.assertEqual(['fake-result'], result)
+                if name == 'service_get_by_compute_host':
+                    condargs['compute_node'] = ['fake-compute']
+                self.assertEqual([condargs], result)
             else:
-                self.assertEqual('fake-result', result)
+                self.assertEqual(condargs, result)
 
     def test_service_get_all(self):
         self._test_stubbed('service_get_all', (),
@@ -806,7 +814,13 @@ class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):
         if db_exception:
             getattr(db, name)(self.context, *dbargs).AndRaise(db_exception)
         else:
-            getattr(db, name)(self.context, *dbargs).AndReturn('fake-result')
+            getattr(db, name)(self.context, *dbargs).AndReturn(condargs)
+            if name == 'service_get_by_compute_host':
+                self.mox.StubOutWithMock(
+                    objects.ComputeNodeList, 'get_all_by_host')
+                objects.ComputeNodeList.get_all_by_host(
+                    self.context, mox.IgnoreArg()
+                ).AndReturn(['fake-compute'])
         self.mox.ReplayAll()
         if db_exception:
             self.assertRaises(db_exception.__class__,
@@ -816,9 +830,11 @@ class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):
             result = self.conductor.service_get_all_by(self.context,
                                                        **condargs)
             if db_result_listified:
-                self.assertEqual(['fake-result'], result)
+                if name == 'service_get_by_compute_host':
+                    condargs['compute_node'] = ['fake-compute']
+                self.assertEqual([condargs], result)
             else:
-                self.assertEqual('fake-result', result)
+                self.assertEqual(condargs, result)
 
     def test_service_get_all(self):
         self._test_stubbed('service_get_all', (),
@@ -961,7 +977,13 @@ class ConductorAPITestCase(_BaseTestCase, test.TestCase):
         if db_exception:
             getattr(db, name)(ctxt, *args).AndRaise(db_exception)
         else:
-            getattr(db, name)(ctxt, *args).AndReturn('fake-result')
+            getattr(db, name)(ctxt, *args).AndReturn(dict(host='fake'))
+            if name == 'service_get_by_compute_host':
+                self.mox.StubOutWithMock(
+                    objects.ComputeNodeList, 'get_all_by_host')
+                objects.ComputeNodeList.get_all_by_host(
+                    self.context, mox.IgnoreArg()
+                ).AndReturn(['fake-compute'])
         if name == 'service_destroy':
             # TODO(russellb) This is a hack ... SetUp() starts the conductor()
             # service.  There is a cleanup step that runs after this test which
@@ -975,8 +997,12 @@ class ConductorAPITestCase(_BaseTestCase, test.TestCase):
                               self.context, *args)
         else:
             result = getattr(self.conductor, name)(self.context, *args)
+            expected = dict(host='fake')
+            if name == 'service_get_by_compute_host':
+                expected = dict(host='fake', compute_node=['fake-compute'])
             self.assertEqual(
-                result, 'fake-result' if kwargs.get('returns', True) else None)
+                result, expected
+                if kwargs.get('returns', True) else None)
 
     def test_service_get_all(self):
         self._test_stubbed('service_get_all')
