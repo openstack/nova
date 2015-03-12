@@ -828,7 +828,7 @@ class _TargetedMessageMethods(_BaseMessageMethods):
         # NOTE(alaski): A cell should be authoritative for its system_metadata
         # and metadata so we don't want to sync it down from the api.
         instance.obj_reset_changes(['metadata', 'system_metadata'])
-        instance.save(message.ctxt, expected_vm_state=expected_vm_state,
+        instance.save(expected_vm_state=expected_vm_state,
                       expected_task_state=expected_task_state)
 
     def _call_compute_api_with_obj(self, ctxt, instance, method, *args,

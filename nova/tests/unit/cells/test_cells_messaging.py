@@ -1205,7 +1205,7 @@ class CellsTargetedMethodsTestCase(test.TestCase):
                 self.assertEqual(set(['user_data']),
                                  instance.obj_what_changed())
 
-        instance.save(self.ctxt, expected_task_state='exp_task',
+        instance.save(expected_task_state='exp_task',
                       expected_vm_state='exp_vm').WithSideEffects(
                               _check_object)
 
