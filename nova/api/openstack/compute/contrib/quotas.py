@@ -147,6 +147,9 @@ class QuotaSetsController(wsgi.Controller):
             raise webob.exc.HTTPBadRequest(explanation=msg)
         quota_set = body['quota_set']
 
+        # NOTE(dims): Pass #1 - In this loop for quota_set.items(), we figure
+        # out if we have bad keys or if we need to forcibly set quotas or
+        # if some of the values for the quotas can be converted to integers.
         for key, value in quota_set.items():
             if (key not in self.supported_quotas
                 and key not in NON_QUOTA_KEYS):
@@ -167,6 +170,11 @@ class QuotaSetsController(wsgi.Controller):
             msg = _("Bad key(s) %s in quota_set") % ",".join(bad_keys)
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
+        # NOTE(dims): Pass #2 - In this loop for quota_set.items(), based on
+        # force_update flag we validate the quota limit. A loop just for
+        # the validation of min/max values ensure that we can bail out if
+        # any of the items in the set is bad.
+        valid_quotas = {}
         for key, value in quota_set.items():
             if key in NON_QUOTA_KEYS or (not value and value != 0):
                 continue
@@ -178,7 +186,13 @@ class QuotaSetsController(wsgi.Controller):
                 minimum = settable_quotas[key]['minimum']
                 maximum = settable_quotas[key]['maximum']
                 self._validate_quota_limit(key, value, minimum, maximum)
+            valid_quotas[key] = value
 
+        # NOTE(dims): Pass #3 - At this point we know that all the keys and
+        # values are valid and we can iterate and update them all in one
+        # shot without having to worry about rolling back etc as we have done
+        # the validation up front in the 2 loops above.
+        for key, value in valid_quotas.items():
             try:
                 objects.Quotas.create_limit(context, project_id,
                                             key, value, user_id=user_id)
