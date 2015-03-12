@@ -1089,7 +1089,8 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
     # Version 1.13: Instance <= version 1.17
     # Version 1.14: Instance <= version 1.18
     # Version 1.15: Instance <= version 1.19
-    VERSION = '1.15'
+    # Version 1.16: Added get_all() method
+    VERSION = '1.16'
 
     fields = {
         'objects': fields.ListOfObjectsField('Instance'),
@@ -1111,6 +1112,7 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
         '1.13': '1.17',
         '1.14': '1.18',
         '1.15': '1.19',
+        '1.16': '1.19',
         }
 
     @base.remotable_classmethod
@@ -1153,6 +1155,14 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
         db_inst_list = db.instance_get_all_by_host_and_not_type(
             context, host, type_id=type_id)
         return _make_instance_list(context, cls(), db_inst_list,
+                                   expected_attrs)
+
+    @base.remotable_classmethod
+    def get_all(cls, context, expected_attrs=None):
+        """Returns all instances on all nodes."""
+        db_instances = db.instance_get_all(
+                context, columns_to_join=_expected_cols(expected_attrs))
+        return _make_instance_list(context, cls(), db_instances,
                                    expected_attrs)
 
     @base.remotable_classmethod
