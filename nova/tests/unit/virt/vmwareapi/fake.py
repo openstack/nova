@@ -1481,8 +1481,8 @@ class FakeVim(object):
                         prop_list.append(prop)
                     obj_content = ObjectContent(mdo.obj, prop_list)
                     lst_ret_objs.add_object(obj_content)
-            except Exception as exc:
-                LOG.exception(exc)
+            except Exception:
+                LOG.exception("_retrieve_properties error")
                 continue
         return lst_ret_objs
 

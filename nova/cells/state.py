@@ -172,11 +172,11 @@ class CellStateManager(base.Base):
             try:
                 self._cell_data_sync(force=True)
                 break
-            except db_exc.DBError as e:
+            except db_exc.DBError:
                 attempts += 1
                 if attempts > 120:
                     raise
-                LOG.exception(_LE('DB error: %s'), e)
+                LOG.exception(_LE('DB error'))
                 time.sleep(30)
 
         my_cell_capabs = {}

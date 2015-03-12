@@ -343,8 +343,8 @@ class GlanceImageService(object):
                                 "using %s") % o.scheme
                         LOG.info(msg)
                         return
-                    except Exception as ex:
-                        LOG.exception(ex)
+                    except Exception:
+                        LOG.exception(_LE("Download image error"))
 
         try:
             image_chunks = self._client.call(context, 1, 'data', image_id)

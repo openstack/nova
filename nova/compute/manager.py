@@ -1067,7 +1067,7 @@ class ComputeManager(manager.Manager):
                 self.driver.finish_revert_migration(context,
                     instance, net_info, block_dev_info, power_on)
 
-            except Exception as e:
+            except Exception:
                 LOG.exception(_LE('Failed to revert crashed migration'),
                               instance=instance)
             finally:
@@ -3277,9 +3277,9 @@ class ComputeManager(manager.Manager):
             # interrupted by another (most likely delete) task
             # do not retry
             raise
-        except Exception as e:
+        except Exception:
             # Catch all here because this could be anything.
-            LOG.exception(_LE('set_admin_password failed: %s'), e,
+            LOG.exception(_LE('set_admin_password failed'),
                           instance=instance)
             self._set_instance_obj_error_state(context, instance)
             # We create a new exception here so that we won't
@@ -4009,10 +4009,10 @@ class ComputeManager(manager.Manager):
             with excutils.save_and_reraise_exception():
                 try:
                     quotas.rollback()
-                except Exception as qr_error:
+                except Exception:
                     LOG.exception(_LE("Failed to rollback quota for failed "
-                                      "finish_resize: %s"),
-                                  qr_error, instance=instance)
+                                      "finish_resize"),
+                                  instance=instance)
                 self._set_instance_error_state(context, instance)
 
     @object_compat

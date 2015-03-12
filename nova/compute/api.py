@@ -1555,7 +1555,7 @@ class API(base.Base):
                 LOG.warning(_LW("Failed to delete snapshot "
                                 "from shelved instance (%s)."),
                             exc.format_message(), instance=instance)
-            except Exception as exc:
+            except Exception:
                 LOG.exception(_LE("Something wrong happened when trying to "
                                   "delete snapshot from shelved instance."),
                               instance=instance)

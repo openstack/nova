@@ -155,8 +155,8 @@ class AdminActionsController(wsgi.Controller):
             raise exc.HTTPNotFound(explanation=e.format_message())
         except exception.NoValidHost as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
-        except Exception as e:
-            LOG.exception(_LE("Error in migrate %s"), e)
+        except Exception:
+            LOG.exception(_LE("Error in migrate"))
             raise exc.HTTPBadRequest()
         return webob.Response(status_int=202)
 

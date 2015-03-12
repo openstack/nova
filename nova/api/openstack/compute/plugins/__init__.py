@@ -42,8 +42,8 @@ class LoadedExtensionInfo(object):
         """Checks for required methods in extension objects."""
         try:
             extension.is_valid()
-        except AttributeError as ex:
-            LOG.exception(_LE("Exception loading extension: %s"), ex)
+        except AttributeError:
+            LOG.exception(_LE("Exception loading extension"))
             return False
 
         return True

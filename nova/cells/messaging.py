@@ -199,11 +199,10 @@ class _BaseMessage(object):
         try:
             resp_value = self.msg_runner._process_message_locally(self)
             failure = False
-        except Exception as exc:
+        except Exception:
             resp_value = sys.exc_info()
             failure = True
-            LOG.exception(_LE("Error processing message locally: %(exc)s"),
-                          {'exc': exc})
+            LOG.exception(_LE("Error processing message locally"))
         return Response(self.routing_path, resp_value, failure)
 
     def _setup_response_queue(self):
@@ -410,10 +409,9 @@ class _TargetedMessage(_BaseMessage):
         """
         try:
             next_hop = self._get_next_hop()
-        except Exception as exc:
+        except Exception:
             exc_info = sys.exc_info()
-            LOG.exception(_LE("Error locating next hop for message: %(exc)s"),
-                          {'exc': exc})
+            LOG.exception(_LE("Error locating next hop for message"))
             return self._send_response_from_exception(exc_info)
 
         if next_hop.is_me:
@@ -437,11 +435,10 @@ class _TargetedMessage(_BaseMessage):
                 raise exception.CellMaxHopCountReached(
                         hop_count=self.hop_count)
             next_hop.send_message(self)
-        except Exception as exc:
+        except Exception:
             exc_info = sys.exc_info()
-            err_str = _("Failed to send message to cell: %(next_hop)s: "
-                        "%(exc)s")
-            LOG.exception(err_str, {'exc': exc, 'next_hop': next_hop})
+            err_str = _LE("Failed to send message to cell: %(next_hop)s")
+            LOG.exception(err_str, {'next_hop': next_hop})
             self._cleanup_response_queue()
             return self._send_response_from_exception(exc_info)
 
@@ -516,10 +513,9 @@ class _BroadcastMessage(_BaseMessage):
         """
         try:
             next_hops = self._get_next_hops()
-        except Exception as exc:
+        except Exception:
             exc_info = sys.exc_info()
-            LOG.exception(_LE("Error locating next hops for message: %(exc)s"),
-                          {'exc': exc})
+            LOG.exception(_LE("Error locating next hops for message"))
             return self._send_response_from_exception(exc_info)
 
         # Short circuit if we don't need to respond
@@ -534,12 +530,11 @@ class _BroadcastMessage(_BaseMessage):
         try:
             self._setup_response_queue()
             self._send_to_cells(next_hops)
-        except Exception as exc:
+        except Exception:
             # Error just trying to send to cells.  Send a single response
             # with the failure.
             exc_info = sys.exc_info()
-            LOG.exception(_LE("Error sending message to next hops: %(exc)s"),
-                          {'exc': exc})
+            LOG.exception(_LE("Error sending message to next hops."))
             self._cleanup_response_queue()
             return self._send_response_from_exception(exc_info)
 
@@ -552,13 +547,12 @@ class _BroadcastMessage(_BaseMessage):
         try:
             remote_responses = self._wait_for_json_responses(
                     num_responses=len(next_hops))
-        except Exception as exc:
+        except Exception:
             # Error waiting for responses, most likely a timeout.
             # Send a single response back with the failure.
             exc_info = sys.exc_info()
-            err_str = _("Error waiting for responses from neighbor cells: "
-                        "%(exc)s")
-            LOG.exception(err_str, {'exc': exc})
+            LOG.exception(_LE("Error waiting for responses from"
+                              " neighbor cells"))
             return self._send_response_from_exception(exc_info)
 
         if local_response:

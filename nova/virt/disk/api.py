@@ -445,8 +445,8 @@ def teardown_container(container_dir, container_root_device=None):
                 LOG.debug('Release nbd device %s', container_root_device)
                 utils.execute('qemu-nbd', '-d', container_root_device,
                               run_as_root=True)
-    except Exception as exn:
-        LOG.exception(_LE('Failed to teardown container filesystem: %s'), exn)
+    except Exception:
+        LOG.exception(_LE('Failed to teardown container filesystem'))
 
 
 def clean_lxc_namespace(container_dir):
@@ -458,8 +458,8 @@ def clean_lxc_namespace(container_dir):
     try:
         img = _DiskImage(image=None, mount_dir=container_dir)
         img.umount()
-    except Exception as exn:
-        LOG.exception(_LE('Failed to umount container filesystem: %s'), exn)
+    except Exception:
+        LOG.exception(_LE('Failed to umount container filesystem'))
 
 
 def inject_data_into_fs(fs, key, net, metadata, admin_password, files,

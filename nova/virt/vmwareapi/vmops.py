@@ -949,8 +949,9 @@ class VMwareVMOps(object):
                     LOG.warning(_LW("In vmwareapi:vmops:_destroy_instance, "
                                     "exception while deleting the VM contents "
                                     "from the disk"), exc_info=True)
-        except Exception as exc:
-            LOG.exception(exc, instance=instance)
+        except Exception:
+            LOG.exception(_LE('Destroy instance failed'),
+                          instance=instance)
         finally:
             vm_util.vm_ref_cache_delete(instance_name)
 
