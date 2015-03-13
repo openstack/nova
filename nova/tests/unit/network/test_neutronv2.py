@@ -193,7 +193,7 @@ class TestNeutronClient(test.NoDBTestCase):
             self.assertEqual('new_token1', token_store.admin_auth_token)
 
 
-class TestNeutronv2Base(test.NoDBTestCase):
+class TestNeutronv2Base(test.TestCase):
 
     def setUp(self):
         super(TestNeutronv2Base, self).setUp()
@@ -2798,7 +2798,7 @@ class TestNeutronv2(TestNeutronv2Base):
         self.assertEqual(expected_results, has_pci_request_id)
 
 
-class TestNeutronv2WithMock(test.NoDBTestCase):
+class TestNeutronv2WithMock(test.TestCase):
     """Used to test Neutron V2 API with mock."""
 
     def setUp(self):

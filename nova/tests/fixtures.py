@@ -199,6 +199,10 @@ class Database(fixtures.Fixture):
             DB_SCHEMA = "".join(line for line in conn.connection.iterdump())
             engine.dispose()
 
+    def cleanup(self):
+        engine = session.get_engine()
+        engine.dispose()
+
     def reset(self):
         self._cache_schema()
         engine = session.get_engine()
@@ -209,6 +213,7 @@ class Database(fixtures.Fixture):
     def setUp(self):
         super(Database, self).setUp()
         self.reset()
+        self.addCleanup(self.cleanup)
 
 
 class RPCFixture(fixtures.Fixture):

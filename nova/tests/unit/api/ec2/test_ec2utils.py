@@ -18,7 +18,7 @@ from nova import objects
 from nova import test
 
 
-class EC2UtilsTestCase(test.NoDBTestCase):
+class EC2UtilsTestCase(test.TestCase):
     def setUp(self):
         self.ctxt = context.get_admin_context()
         ec2utils.reset_cache()

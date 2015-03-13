@@ -73,7 +73,7 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
             delete_aggregate.assert_called_once_with('agg')
 
 
-class SchedulerV3PassthroughTestCase(test.NoDBTestCase):
+class SchedulerV3PassthroughTestCase(test.TestCase):
     def setUp(self):
         super(SchedulerV3PassthroughTestCase, self).setUp()
         self.manager = manager.SchedulerManager()
