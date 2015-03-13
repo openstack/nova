@@ -21,6 +21,7 @@ import mock
 from oslo_serialization import jsonutils
 
 from nova.compute import claims
+from nova import context
 from nova import db
 from nova import exception
 from nova import objects
@@ -43,8 +44,10 @@ class FakeResourceHandler(object):
 class DummyTracker(object):
     icalled = False
     rcalled = False
-    pci_tracker = pci_manager.PciDevTracker()
     ext_resources_handler = FakeResourceHandler()
+
+    def __init__(self):
+        self.new_pci_tracker()
 
     def abort_instance_claim(self, *args, **kwargs):
         self.icalled = True
@@ -53,7 +56,8 @@ class DummyTracker(object):
         self.rcalled = True
 
     def new_pci_tracker(self):
-        self.pci_tracker = pci_manager.PciDevTracker()
+        ctxt = context.RequestContext('testuser', 'testproject')
+        self.pci_tracker = pci_manager.PciDevTracker(ctxt)
 
 
 @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid',

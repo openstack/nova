@@ -17,6 +17,7 @@ import copy
 
 import mock
 
+import nova
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova import context
@@ -109,6 +110,7 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(PciDevTrackerTestCase, self).setUp()
+        self.fake_context = context.get_admin_context()
         self.stubs.Set(db, 'pci_device_get_all_by_node',
             self._fake_get_pci_devices)
         # The fake_pci_whitelist must be called before creating the fake
@@ -116,7 +118,7 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
         patcher = pci_fakes.fake_pci_whitelist()
         self.addCleanup(patcher.stop)
         self._create_fake_instance()
-        self.tracker = manager.PciDevTracker(1)
+        self.tracker = manager.PciDevTracker(self.fake_context, 1)
 
     def test_pcidev_tracker_create(self):
         self.assertEqual(len(self.tracker.pci_devs), 3)
@@ -126,9 +128,16 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
         self.assertEqual(len(self.tracker.stats.pools), 3)
         self.assertEqual(self.tracker.node_id, 1)
 
-    def test_pcidev_tracker_create_no_nodeid(self):
-        self.tracker = manager.PciDevTracker()
+    @mock.patch.object(nova.objects.PciDeviceList, 'get_by_compute_node')
+    def test_pcidev_tracker_create_no_nodeid(self, mock_get_cn):
+        self.tracker = manager.PciDevTracker(self.fake_context)
         self.assertEqual(len(self.tracker.pci_devs), 0)
+        self.assertFalse(mock_get_cn.called)
+
+    @mock.patch.object(nova.objects.PciDeviceList, 'get_by_compute_node')
+    def test_pcidev_tracker_create_with_nodeid(self, mock_get_cn):
+        self.tracker = manager.PciDevTracker(self.fake_context, node_id=1)
+        mock_get_cn.assert_called_once_with(self.fake_context, 1)
 
     def test_set_hvdev_new_dev(self):
         fake_pci_3 = dict(fake_pci, address='0000:00:00.4', vendor_id='v2')
@@ -278,30 +287,28 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
 
     def test_save(self):
         self.stubs.Set(db, "pci_device_update", self._fake_pci_device_update)
-        ctxt = context.get_admin_context()
         fake_pci_v3 = dict(fake_pci, address='0000:00:00.2', vendor_id='v3')
         fake_pci_devs = [copy.deepcopy(fake_pci), copy.deepcopy(fake_pci_2),
                          copy.deepcopy(fake_pci_v3)]
         self.tracker.set_hvdevs(fake_pci_devs)
         self.update_called = 0
-        self.tracker.save(ctxt)
+        self.tracker.save(self.fake_context)
         self.assertEqual(self.update_called, 3)
 
     def test_save_removed(self):
         self.stubs.Set(db, "pci_device_update", self._fake_pci_device_update)
         self.stubs.Set(db, "pci_device_destroy", self._fake_pci_device_destroy)
         self.destroy_called = 0
-        ctxt = context.get_admin_context()
         self.assertEqual(len(self.tracker.pci_devs), 3)
         dev = self.tracker.pci_devs[0]
         self.update_called = 0
         device.remove(dev)
-        self.tracker.save(ctxt)
+        self.tracker.save(self.fake_context)
         self.assertEqual(len(self.tracker.pci_devs), 2)
         self.assertEqual(self.destroy_called, 1)
 
     def test_set_compute_node_id(self):
-        self.tracker = manager.PciDevTracker()
+        self.tracker = manager.PciDevTracker(self.fake_context)
         fake_pci_devs = [copy.deepcopy(fake_pci), copy.deepcopy(fake_pci_1),
                          copy.deepcopy(fake_pci_2)]
         self.tracker.set_hvdevs(fake_pci_devs)
@@ -379,6 +386,10 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
 
 
 class PciGetInstanceDevs(test.TestCase):
+    def setUp(self):
+        super(PciGetInstanceDevs, self).setUp()
+        self.fake_context = context.get_admin_context()
+
     def test_get_devs_object(self):
         def _fake_obj_load_attr(foo, attrname):
             if attrname == 'pci_devices':
@@ -386,12 +397,12 @@ class PciGetInstanceDevs(test.TestCase):
                 foo.pci_devices = objects.PciDeviceList()
 
         inst = fakes.stub_instance(id='1')
-        ctxt = context.get_admin_context()
         self.mox.StubOutWithMock(db, 'instance_get')
-        db.instance_get(ctxt, '1', columns_to_join=[]
+        db.instance_get(self.fake_context, '1', columns_to_join=[]
                         ).AndReturn(inst)
         self.mox.ReplayAll()
-        inst = objects.Instance.get_by_id(ctxt, '1', expected_attrs=[])
+        inst = objects.Instance.get_by_id(self.fake_context, '1',
+                                          expected_attrs=[])
         self.stubs.Set(objects.Instance, 'obj_load_attr', _fake_obj_load_attr)
 
         self.load_attr_called = False

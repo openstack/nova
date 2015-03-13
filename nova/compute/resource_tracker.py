@@ -345,9 +345,6 @@ class ResourceTracker(object):
     @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE)
     def _update_available_resource(self, context, resources):
         if 'pci_passthrough_devices' in resources:
-            if not self.pci_tracker:
-                self.pci_tracker = pci_manager.PciDevTracker()
-
             devs = []
             for dev in jsonutils.loads(resources.pop(
                 'pci_passthrough_devices')):
@@ -357,6 +354,10 @@ class ResourceTracker(object):
                 if self.pci_filter.device_assignable(dev):
                     devs.append(dev)
 
+            if not self.pci_tracker:
+                n_id = self.compute_node['id'] if self.compute_node else None
+                self.pci_tracker = pci_manager.PciDevTracker(context,
+                                                             node_id=n_id)
             self.pci_tracker.set_hvdevs(devs)
 
         # Grab all instances assigned to this node:
