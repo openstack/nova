@@ -15,6 +15,7 @@
 
 
 import datetime
+import StringIO
 
 import glanceclient.exc
 import mock
@@ -499,6 +500,26 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
                 ]
         )
         self.assertFalse(data.close.called)
+
+    @mock.patch('__builtin__.open')
+    @mock.patch('nova.image.glance.GlanceImageService.show')
+    def test_download_data_dest_path_write_fails(self, show_mock, open_mock):
+        client = mock.MagicMock()
+        client.call.return_value = [1, 2, 3]
+        ctx = mock.sentinel.ctx
+        service = glance.GlanceImageService(client)
+
+        # NOTE(mikal): data is a file like object, which in our case always
+        # raises an exception when we attempt to write to the file.
+        class FakeDiskException(Exception):
+            pass
+
+        class Exceptionator(StringIO.StringIO):
+            def write(self, _):
+                raise FakeDiskException('Disk full!')
+
+        self.assertRaises(FakeDiskException, service.download, ctx,
+                          mock.sentinel.image_id, data=Exceptionator())
 
     @mock.patch('nova.image.glance.GlanceImageService._get_transfer_module')
     @mock.patch('nova.image.glance.GlanceImageService.show')
