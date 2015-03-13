@@ -69,12 +69,12 @@ class KeyPair(base.NovaPersistentObject, base.NovaObject,
             raise exception.ObjectActionError(action='create',
                                               reason='already created')
         updates = self.obj_get_changes()
-        db_keypair = db.key_pair_create(context, updates)
-        self._from_db_object(context, self, db_keypair)
+        db_keypair = db.key_pair_create(self._context, updates)
+        self._from_db_object(self._context, self, db_keypair)
 
     @base.remotable
     def destroy(self, context):
-        db.key_pair_destroy(context, self.user_id, self.name)
+        db.key_pair_destroy(self._context, self.user_id, self.name)
 
 
 class KeyPairList(base.ObjectListBase, base.NovaObject):
