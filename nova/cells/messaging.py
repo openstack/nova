@@ -745,8 +745,8 @@ class _TargetedMessageMethods(_BaseMessageMethods):
         :param params_to_update: eg. {'disabled': True}
         """
         return jsonutils.to_primitive(
-            self.host_api.service_update(message.ctxt, host_name, binary,
-                                         params_to_update))
+            self.host_api._service_update(message.ctxt, host_name, binary,
+                                          params_to_update))
 
     def service_delete(self, message, service_id):
         """Deletes the specified service."""

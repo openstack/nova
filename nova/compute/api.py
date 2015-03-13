@@ -3438,16 +3438,21 @@ class HostAPI(base.Base):
         """Get service entry for the given compute hostname."""
         return objects.Service.get_by_compute_host(context, host_name)
 
+    def _service_update(self, context, host_name, binary, params_to_update):
+        """Performs the actual service update operation."""
+        service = objects.Service.get_by_args(context, host_name, binary)
+        service.update(params_to_update)
+        service.save()
+        return service
+
     def service_update(self, context, host_name, binary, params_to_update):
         """Enable / Disable a service.
 
         For compute services, this stops new builds and migrations going to
         the host.
         """
-        service = objects.Service.get_by_args(context, host_name, binary)
-        service.update(params_to_update)
-        service.save()
-        return service
+        return self._service_update(context, host_name, binary,
+                                    params_to_update)
 
     def _service_delete(self, context, service_id):
         """Performs the actual Service deletion operation."""
