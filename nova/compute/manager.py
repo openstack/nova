@@ -4901,7 +4901,23 @@ class ComputeManager(manager.Manager):
         image_meta = compute_utils.get_image_metadata(
             context, self.image_api, image_ref, instance)
 
-        self.driver.attach_interface(instance, image_meta, network_info[0])
+        try:
+            self.driver.attach_interface(instance, image_meta, network_info[0])
+        except exception.NovaException as ex:
+            port_id = network_info[0].get('id')
+            LOG.warn(_LW("attach interface failed , try to deallocate "
+                         "port %(port_id)s, reason: %(msg)s"),
+                     {'port_id': port_id, 'msg': ex},
+                     instance=instance)
+            try:
+                self.network_api.deallocate_port_for_instance(
+                    context, instance, port_id)
+            except Exception:
+                LOG.warn(_LW("deallocate port %(port_id)s failed"),
+                             {'port_id': port_id}, instance=instance)
+            raise exception.InterfaceAttachFailed(
+                instance_uuid=instance.uuid)
+
         return network_info[0]
 
     @object_compat

@@ -9146,6 +9146,34 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertEqual(vif['id'], network_id)
         return nwinfo, port_id
 
+    def test_attach_interface_failed(self):
+        new_type = flavors.get_flavor_by_flavor_id('4')
+        sys_meta = flavors.save_flavor_info({}, new_type)
+        instance = objects.Instance(uuid='fake_id', image_ref='foo',
+                                    system_metadata=sys_meta)
+        nwinfo = [fake_network_cache_model.new_vif()]
+        network_id = nwinfo[0]['network']['id']
+        port_id = nwinfo[0]['id']
+        req_ip = '1.2.3.4'
+
+        with contextlib.nested(
+            mock.patch.object(self.compute.driver, 'attach_interface'),
+            mock.patch.object(self.compute.network_api,
+                              'allocate_port_for_instance'),
+            mock.patch.object(self.compute.network_api,
+                              'deallocate_port_for_instance')) as (
+            mock_attach, mock_allocate, mock_deallocate):
+
+            mock_allocate.return_value = nwinfo
+            mock_attach.side_effect = exception.NovaException("attach_failed")
+            self.assertRaises(exception.InterfaceAttachFailed,
+                              self.compute.attach_interface, self.context,
+                              instance, network_id, port_id, req_ip)
+            mock_allocate.assert_called_once_with(self.context, instance,
+                                                  network_id, port_id, req_ip)
+            mock_deallocate.assert_called_once_with(self.context, instance,
+                                                    port_id)
+
     def test_detach_interface(self):
         nwinfo, port_id = self.test_attach_interface()
         self.stubs.Set(self.compute.network_api,
