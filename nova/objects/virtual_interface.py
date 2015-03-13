@@ -72,8 +72,8 @@ class VirtualInterface(base.NovaPersistentObject, base.NovaObject,
             raise exception.ObjectActionError(action='create',
                                               reason='already created')
         updates = self.obj_get_changes()
-        db_vif = db.virtual_interface_create(context, updates)
-        self._from_db_object(context, self, db_vif)
+        db_vif = db.virtual_interface_create(self._context, updates)
+        self._from_db_object(self._context, self, db_vif)
 
     @base.remotable_classmethod
     def delete_by_instance_uuid(cls, context, instance_uuid):
