@@ -12,6 +12,7 @@
 
 from oslo_config import cfg
 
+from nova import objects
 from nova.scheduler import filters
 from nova.virt import hardware
 
@@ -35,22 +36,17 @@ class NUMATopologyFilter(filters.BaseHostFilter):
         if pci_requests:
             pci_requests = pci_requests.requests
         if requested_topology and host_topology:
-            limit_cells = []
-            for cell in host_topology.cells:
-                max_cell_memory = int(cell.memory * ram_ratio)
-                max_cell_cpu = len(cell.cpuset) * cpu_ratio
-                limit_cells.append(hardware.VirtNUMATopologyCellLimit(
-                    cell.id, cell.cpuset, cell.memory,
-                    max_cell_cpu, max_cell_memory))
-            limits = hardware.VirtNUMALimitTopology(cells=limit_cells)
+            limits = objects.NUMATopologyLimits(
+                cpu_allocation_ratio=cpu_ratio,
+                ram_allocation_ratio=ram_ratio)
             instance_topology = (hardware.numa_fit_instance_to_host(
                         host_topology, requested_topology,
-                        limits_topology=limits,
+                        limits=limits,
                         pci_requests=pci_requests,
                         pci_stats=host_state.pci_stats))
             if not instance_topology:
                 return False
-            host_state.limits['numa_topology'] = limits.to_json()
+            host_state.limits['numa_topology'] = limits
             host_state.instance_numa_topology = instance_topology
             return True
         elif requested_topology:

@@ -19,7 +19,6 @@ from nova.scheduler.filters import numa_topology_filter
 from nova import test
 from nova.tests.unit import fake_instance
 from nova.tests.unit.scheduler import fakes
-from nova.virt import hardware
 
 
 class TestNUMATopologyFilter(test.NoDBTestCase):
@@ -151,9 +150,6 @@ class TestNUMATopologyFilter(test.NoDBTestCase):
         self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
         self.assertIsInstance(host.instance_numa_topology,
                               objects.InstanceNUMATopology)
-        limits_topology = hardware.VirtNUMALimitTopology.from_json(
-                host.limits['numa_topology'])
-        self.assertEqual(limits_topology.cells[0].cpu_limit, 42)
-        self.assertEqual(limits_topology.cells[1].cpu_limit, 42)
-        self.assertEqual(limits_topology.cells[0].memory_limit, 665)
-        self.assertEqual(limits_topology.cells[1].memory_limit, 665)
+        limits = host.limits['numa_topology']
+        self.assertEqual(limits.cpu_allocation_ratio, 21)
+        self.assertEqual(limits.ram_allocation_ratio, 1.3)

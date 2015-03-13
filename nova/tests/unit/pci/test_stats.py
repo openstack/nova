@@ -21,7 +21,6 @@ from nova.pci import stats
 from nova.pci import whitelist
 from nova import test
 from nova.tests.unit.pci import fakes
-from nova.virt import hardware
 fake_pci_1 = {
     'compute_node_id': 1,
     'address': '0000:00:00.1',
@@ -148,39 +147,39 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
             pci_requests_multiple)
 
     def test_support_requests_numa(self):
-        cells = [hardware.VirtNUMATopologyCell(0, None, None),
-                 hardware.VirtNUMATopologyCell(1, None, None)]
+        cells = [objects.NUMACell(id=0, cpuset=set(), memory=0),
+                 objects.NUMACell(id=1, cpuset=set(), memory=0)]
         self.assertEqual(True, self.pci_stats.support_requests(
                                                         pci_requests, cells))
 
     def test_support_requests_numa_failed(self):
-        cells = [hardware.VirtNUMATopologyCell(0, None, None)]
+        cells = [objects.NUMACell(id=0, cpuset=set(), memory=0)]
         self.assertEqual(False, self.pci_stats.support_requests(
                                                         pci_requests, cells))
 
     def test_support_requests_no_numa_info(self):
-        cells = [hardware.VirtNUMATopologyCell(0, None, None)]
+        cells = [objects.NUMACell(id=0, cpuset=set(), memory=0)]
         pci_request = [objects.InstancePCIRequest(count=1,
                     spec=[{'vendor_id': 'v3'}])]
         self.assertEqual(True, self.pci_stats.support_requests(
                                                         pci_request, cells))
 
     def test_consume_requests_numa(self):
-        cells = [hardware.VirtNUMATopologyCell(0, None, None),
-                 hardware.VirtNUMATopologyCell(1, None, None)]
+        cells = [objects.NUMACell(id=0, cpuset=set(), memory=0),
+                 objects.NUMACell(id=1, cpuset=set(), memory=0)]
         devs = self.pci_stats.consume_requests(pci_requests, cells)
         self.assertEqual(2, len(devs))
         self.assertEqual(set(['v1', 'v2']),
                          set([dev['vendor_id'] for dev in devs]))
 
     def test_consume_requests_numa_failed(self):
-        cells = [hardware.VirtNUMATopologyCell(0, None, None)]
+        cells = [objects.NUMACell(id=0, cpuset=set(), memory=0)]
         self.assertRaises(exception.PciDeviceRequestFailed,
             self.pci_stats.consume_requests,
             pci_requests, cells)
 
     def test_consume_requests_no_numa_info(self):
-        cells = [hardware.VirtNUMATopologyCell(0, None, None)]
+        cells = [objects.NUMACell(id=0, cpuset=set(), memory=0)]
         pci_request = [objects.InstancePCIRequest(count=1,
                     spec=[{'vendor_id': 'v3'}])]
         devs = self.pci_stats.consume_requests(pci_request, cells)

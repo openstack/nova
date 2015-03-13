@@ -283,6 +283,8 @@ class ComputeAPI(object):
                  shelve_offload
         * 3.38 - Add clean_shutdown to prep_resize
         * 3.39 - Add quiesce_instance and unquiesce_instance methods
+        * 3.40 - Make build_and_run_instance() take a new-world topology
+                 limits object
     '''
 
     VERSION_ALIASES = {
@@ -952,7 +954,24 @@ class ComputeAPI(object):
             filter_properties, admin_password=None, injected_files=None,
             requested_networks=None, security_groups=None,
             block_device_mapping=None, node=None, limits=None):
-        version = '3.36'
+
+        version = '3.40'
+        if not self.client.can_send_version(version):
+            version = '3.36'
+            if 'numa_topology' in limits and limits['numa_topology']:
+                topology_limits = limits['numa_topology']
+                if node is not None:
+                    cnode = objects.ComputeNode.get_by_host_and_nodename(
+                        ctxt, host, node)
+                else:
+                    cnode = (
+                        objects.ComputeNode.
+                        get_first_node_by_host_for_old_compat(
+                            ctxt, host))
+                host_topology = objects.NUMATopology.obj_from_db_obj(
+                    cnode.numa_topology)
+                limits['numa_topology'] = jsonutils.dumps(
+                    topology_limits.to_dict_legacy(host_topology))
         if not self.client.can_send_version(version):
             version = '3.33'
             if 'instance_type' in filter_properties:

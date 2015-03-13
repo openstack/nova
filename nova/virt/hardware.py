@@ -599,88 +599,6 @@ def get_best_cpu_topology(flavor, image_meta, allow_threads=True,
                                          allow_threads, numa_topology)[0]
 
 
-class VirtNUMATopologyCell(object):
-    """Class for reporting NUMA resources in a cell
-
-    The VirtNUMATopologyCell class represents the
-    hardware resources present in a NUMA cell.
-    """
-
-    def __init__(self, id, cpuset, memory):
-        """Create a new NUMA Cell
-
-        :param id: integer identifier of cell
-        :param cpuset: set containing list of CPU indexes
-        :param memory: RAM measured in MiB
-
-        Creates a new NUMA cell object to record the hardware
-        resources.
-
-        :returns: a new NUMA cell object
-        """
-
-        super(VirtNUMATopologyCell, self).__init__()
-
-        self.id = id
-        self.cpuset = cpuset
-        self.memory = memory
-
-    def _to_dict(self):
-        return {'cpus': format_cpu_spec(self.cpuset, allow_ranges=False),
-                'mem': {'total': self.memory},
-                'id': self.id}
-
-    @classmethod
-    def _from_dict(cls, data_dict):
-        cpuset = parse_cpu_spec(data_dict.get('cpus', ''))
-        memory = data_dict.get('mem', {}).get('total', 0)
-        cell_id = data_dict.get('id')
-        return cls(cell_id, cpuset, memory)
-
-
-class VirtNUMATopologyCellLimit(VirtNUMATopologyCell):
-    def __init__(self, id, cpuset, memory, cpu_limit, memory_limit):
-        """Create a new NUMA Cell with usage
-
-        :param id: integer identifier of cell
-        :param cpuset: set containing list of CPU indexes
-        :param memory: RAM measured in MiB
-        :param cpu_limit: maximum number of  CPUs allocated
-        :param memory_limit: maxumum RAM allocated in MiB
-
-        Creates a new NUMA cell object to represent the max hardware
-        resources and utilization. The number of CPUs specified
-        by the @cpu_usage parameter may be larger than the number
-        of bits set in @cpuset if CPU overcommit is used. Likewise
-        the amount of RAM specified by the @memory_limit parameter
-        may be larger than the available RAM in @memory if RAM
-        overcommit is used.
-
-        :returns: a new NUMA cell object
-        """
-
-        super(VirtNUMATopologyCellLimit, self).__init__(
-            id, cpuset, memory)
-
-        self.cpu_limit = cpu_limit
-        self.memory_limit = memory_limit
-
-    def _to_dict(self):
-        data_dict = super(VirtNUMATopologyCellLimit, self)._to_dict()
-        data_dict['mem']['limit'] = self.memory_limit
-        data_dict['cpu_limit'] = self.cpu_limit
-        return data_dict
-
-    @classmethod
-    def _from_dict(cls, data_dict):
-        cpuset = parse_cpu_spec(data_dict.get('cpus', ''))
-        memory = data_dict.get('mem', {}).get('total', 0)
-        cpu_limit = data_dict.get('cpu_limit', len(cpuset))
-        memory_limit = data_dict.get('mem', {}).get('limit', memory)
-        cell_id = data_dict.get('id')
-        return cls(cell_id, cpuset, memory, cpu_limit, memory_limit)
-
-
 def _numa_cell_supports_pagesize_request(host_cell, inst_cell):
     """Determines whether the cell can accept the request.
 
@@ -816,7 +734,7 @@ def _numa_fit_instance_cell(host_cell, instance_cell, limit_cell=None):
 
     :param host_cell: host cell to fit the instance cell onto
     :param instance_cell: instance cell we want to fit
-    :param limit_cell: cell with limits of the host_cell if any
+    :param limit_cell: an objects.NUMATopologyLimit or None
 
     Make sure we can fit the instance cell onto a host cell and if so,
     return a new objects.InstanceNUMACell with the id set to that of
@@ -841,8 +759,9 @@ def _numa_fit_instance_cell(host_cell, instance_cell, limit_cell=None):
     elif limit_cell:
         memory_usage = host_cell.memory_usage + instance_cell.memory
         cpu_usage = host_cell.cpu_usage + len(instance_cell.cpuset)
-        if (memory_usage > limit_cell.memory_limit or
-                cpu_usage > limit_cell.cpu_limit):
+        cpu_limit = len(host_cell.cpuset) * limit_cell.cpu_allocation_ratio
+        ram_limit = host_cell.memory * limit_cell.ram_allocation_ratio
+        if memory_usage > ram_limit or cpu_usage > cpu_limit:
             return None
 
     pagesize = None
@@ -855,49 +774,6 @@ def _numa_fit_instance_cell(host_cell, instance_cell, limit_cell=None):
     instance_cell.id = host_cell.id
     instance_cell.pagesize = pagesize
     return instance_cell
-
-
-class VirtNUMATopology(object):
-    """Base class for tracking NUMA topology information
-
-    The VirtNUMATopology class represents the NUMA hardware
-    topology for memory and CPUs in any machine. It is
-    later specialized for handling either guest instance
-    or compute host NUMA topology.
-    """
-
-    def __init__(self, cells=None):
-        """Create a new NUMA topology object
-
-        :param cells: list of VirtNUMATopologyCell instances
-
-        """
-
-        super(VirtNUMATopology, self).__init__()
-
-        self.cells = cells or []
-
-    def __len__(self):
-        """Defined so that boolean testing works the same as for lists."""
-        return len(self.cells)
-
-    def __repr__(self):
-        return "<%s: %s>" % (self.__class__.__name__, str(self._to_dict()))
-
-    def _to_dict(self):
-        return {'cells': [cell._to_dict() for cell in self.cells]}
-
-    @classmethod
-    def _from_dict(cls, data_dict):
-        return cls(cells=[cls.cell_class._from_dict(cell_dict)
-                          for cell_dict in data_dict.get('cells', [])])
-
-    def to_json(self):
-        return jsonutils.dumps(self._to_dict())
-
-    @classmethod
-    def from_json(cls, json_string):
-        return cls._from_dict(jsonutils.loads(json_string))
 
 
 def _numa_get_flavor_or_image_prop(flavor, image_meta, propname):
@@ -1117,22 +993,14 @@ def numa_get_constraints(flavor, image_meta):
     return _add_cpu_pinning_constraint(flavor, image_meta, numa_topology)
 
 
-class VirtNUMALimitTopology(VirtNUMATopology):
-    """Class to represent the max resources of a compute node used
-    for checking oversubscription limits.
-    """
-
-    cell_class = VirtNUMATopologyCellLimit
-
-
 def numa_fit_instance_to_host(
-        host_topology, instance_topology, limits_topology=None,
+        host_topology, instance_topology, limits=None,
         pci_requests=None, pci_stats=None):
     """Fit the instance topology onto the host topology given the limits
 
     :param host_topology: objects.NUMATopology object to fit an instance on
     :param instance_topology: objects.InstanceNUMATopology to be fitted
-    :param limits_topology: VirtNUMALimitTopology that defines limits
+    :param limits: objects.NUMATopologyLimits that defines limits
     :param pci_requests: instance pci_requests
     :param pci_stats: pci_stats for the host
 
@@ -1146,22 +1014,15 @@ def numa_fit_instance_to_host(
         len(host_topology) < len(instance_topology)):
         return
     else:
-        if limits_topology is None:
-            limits_topology_cells = itertools.repeat(
-                None, len(host_topology))
-        else:
-            limits_topology_cells = limits_topology.cells
         # TODO(ndipanov): We may want to sort permutations differently
         # depending on whether we want packing/spreading over NUMA nodes
         for host_cell_perm in itertools.permutations(
-                zip(host_topology.cells, limits_topology_cells),
-                len(instance_topology)
-        ):
+                host_topology.cells, len(instance_topology)):
             cells = []
-            for (host_cell, limit_cell), instance_cell in zip(
+            for host_cell, instance_cell in zip(
                     host_cell_perm, instance_topology.cells):
                 got_cell = _numa_fit_instance_cell(
-                    host_cell, instance_cell, limit_cell)
+                    host_cell, instance_cell, limits)
                 if got_cell is None:
                     break
                 cells.append(got_cell)
@@ -1333,7 +1194,7 @@ def get_host_numa_usage_from_instance(host, instance, free=False,
     This is a convenience method to help us handle the fact that we use several
     different types throughout the code (ComputeNode and Instance objects,
     dicts, scheduler HostState) which may have both json and deserialized
-    versions of VirtNUMATopology classes.
+    versions of objects.numa classes.
 
     Handles all the complexity without polluting the class method with it.
 

@@ -208,3 +208,41 @@ class NUMATopology(base.NovaObject,
         return cls(cells=[
             NUMACell._from_dict(cell_dict)
             for cell_dict in data_dict.get('cells', [])])
+
+
+class NUMATopologyLimits(base.NovaObject):
+    # Version 1.0: Initial version
+    VERSION = '1.0'
+
+    fields = {
+        'cpu_allocation_ratio': fields.FloatField(),
+        'ram_allocation_ratio': fields.FloatField(),
+        }
+
+    def to_dict_legacy(self, host_topology):
+        cells = []
+        for cell in host_topology.cells:
+            cells.append(
+                {'cpus': hardware.format_cpu_spec(
+                    cell.cpuset, allow_ranges=False),
+                 'mem': {'total': cell.memory,
+                         'limit': cell.memory * self.ram_allocation_ratio},
+                 'cpu_limit': len(cell.cpuset) * self.cpu_allocation_ratio,
+                 'id': cell.id})
+        return {'cells': cells}
+
+    @classmethod
+    def obj_from_db_obj(cls, db_obj):
+        if 'nova_object.name' in db_obj:
+            obj_topology = cls.obj_from_primitive(db_obj)
+        else:
+            # NOTE(sahid): This compatibility code needs to stay until we can
+            # guarantee that all compute nodes are using RPC API => 3.40.
+            cell = db_obj['cells'][0]
+            ram_ratio = cell['mem']['limit'] / float(cell['mem']['total'])
+            cpu_ratio = cell['cpu_limit'] / float(len(hardware.parse_cpu_spec(
+                cell['cpus'])))
+            obj_topology = NUMATopologyLimits(
+                cpu_allocation_ratio=cpu_ratio,
+                ram_allocation_ratio=ram_ratio)
+        return obj_topology
