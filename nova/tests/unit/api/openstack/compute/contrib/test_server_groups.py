@@ -152,6 +152,17 @@ class ServerGroupTestV21(test.TestCase):
         self.assertEqual(1, len(result_members))
         self.assertIn(instances[0].uuid, result_members)
 
+    def test_create_server_group_with_non_alphanumeric_in_name(self):
+        # The fix for bug #1434335 expanded the allowable character set
+        # for server group names to include non-alphanumeric characters
+        # if they are printable.
+
+        sgroup = server_group_template(name='good* $%name',
+                                       policies=['affinity'])
+        res_dict = self.controller.create(self.req,
+                                          body={'server_group': sgroup})
+        self.assertEqual(res_dict['server_group']['name'], 'good* $%name')
+
     def test_create_server_group_with_illegal_name(self):
         # blank name
         sgroup = server_group_template(name='', policies=['test_policy'])
@@ -184,6 +195,18 @@ class ServerGroupTestV21(test.TestCase):
         # name with all spaces
         sgroup = server_group_template(name='    ',
                                        policies=['test_policy'])
+        self.assertRaises(self.validation_error, self.controller.create,
+                          self.req, body={'server_group': sgroup})
+
+        # name with unprintable character
+        sgroup = server_group_template(name='bad\x00name',
+                                       policies=['test_policy'])
+        self.assertRaises(self.validation_error, self.controller.create,
+                          self.req, body={'server_group': sgroup})
+
+        # name with out of range char U0001F4A9
+        sgroup = server_group_template(name=u"\U0001F4A9",
+                                       policies=['affinity'])
         self.assertRaises(self.validation_error, self.controller.create,
                           self.req, body={'server_group': sgroup})
 
