@@ -23,6 +23,7 @@ from oslo_utils import uuidutils
 import testtools
 
 from nova.db.sqlalchemy import api as session
+from nova.objects import base as obj_base
 from nova.tests import fixtures
 from nova.tests.unit import conf_fixture
 
@@ -274,3 +275,20 @@ class TestDatabaseFixture(testtools.TestCase):
         conn = engine.connect()
         schema = "".join(line for line in conn.connection.iterdump())
         self.assertEqual(schema, "BEGIN TRANSACTION;COMMIT;")
+
+
+class TestIndirectionAPIFixture(testtools.TestCase):
+    def test_indirection_api(self):
+        # Should initially be None
+        self.assertIsNone(obj_base.NovaObject.indirection_api)
+
+        # make sure the fixture correctly sets the value
+        fix = fixtures.IndirectionAPIFixture('foo')
+        self.useFixture(fix)
+        self.assertEqual('foo', obj_base.NovaObject.indirection_api)
+
+        # manually do the cleanup that addCleanup will do
+        fix.cleanup()
+
+        # ensure the initial value is restored
+        self.assertIsNone(obj_base.NovaObject.indirection_api)
