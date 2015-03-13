@@ -49,6 +49,7 @@ class UtilsTestCase(test.NoDBTestCase):
         self.assertEqual(1.0, f(set(["1"]), cast_to=float))
         self.assertEqual(1, f(set([1, 2]), based_on=min))
         self.assertEqual(2, f(set([1, 2]), based_on=max))
+        self.assertEqual(9, f(set(['10', '9']), based_on=min))
 
     def test_aggregate_values_from_key(self):
         host_state = fakes.FakeHostState(
