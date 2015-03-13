@@ -67,6 +67,7 @@ class MyObj(base.NovaPersistentObject, base.NovaObject,
         self.bar = db_obj['bar']
         self.missing = db_obj['missing']
         self.readonly = 1
+        self._context = context
         return self
 
     def obj_load_attr(self, attrname):
@@ -84,10 +85,7 @@ class MyObj(base.NovaPersistentObject, base.NovaObject,
 
     @base.remotable
     def _update_test(self, context):
-        if context.project_id == 'alternate':
-            self.bar = 'alternate-context'
-        else:
-            self.bar = 'updated'
+        self.bar = 'updated'
 
     @base.remotable
     def save(self, context):
@@ -560,13 +558,6 @@ class _TestObject(object):
 
         self.assertIsNotNone(error)
         self.assertEqual('1.6', error.kwargs['supported'])
-
-    def test_with_alternate_context(self):
-        ctxt1 = context.RequestContext('foo', 'foo')
-        ctxt2 = context.RequestContext('bar', 'alternate')
-        obj = MyObj.query(ctxt1)
-        self.assertRaises(exception.ObjectActionError,
-                          obj._update_test, ctxt2)
 
     def test_orphaned_object(self):
         obj = MyObj.query(self.context)
