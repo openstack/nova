@@ -53,6 +53,41 @@ class IsolationTestCase(test.TestCase):
         server.start()
 
 
+class JsonTestCase(test.TestCase):
+    def test_json_equal(self):
+        expected = {
+            "employees": [
+                {"firstName": "Anna", "lastName": "Smith"},
+                {"firstName": "John", "lastName": "Doe"},
+                {"firstName": "Peter", "lastName": "Jones"}
+            ],
+            "locations": set(['Boston', 'Mumbai', 'Beijing', 'Perth'])
+        }
+        observed = """{
+    "employees": [
+        {
+            "lastName": "Doe",
+            "firstName": "John"
+        },
+        {
+            "lastName": "Smith",
+            "firstName": "Anna"
+        },
+        {
+            "lastName": "Jones",
+            "firstName": "Peter"
+        }
+    ],
+    "locations": [
+        "Perth",
+        "Boston",
+        "Mumbai",
+        "Beijing"
+    ]
+}"""
+        self.assertJsonEqual(expected, observed)
+
+
 class BadLogTestCase(test.TestCase):
     """Make sure a mis-formatted debug log will get caught."""
 
