@@ -38,7 +38,7 @@ class EC2InstanceMapping(base.NovaPersistentObject, base.NovaObject,
         return imap
 
     @base.remotable
-    def create(self, context):
+    def create(self):
         if self.obj_attr_is_set('id'):
             raise exception.ObjectActionError(action='create',
                                               reason='already created')
@@ -78,7 +78,7 @@ class EC2VolumeMapping(base.NovaPersistentObject, base.NovaObject,
         return vmap
 
     @base.remotable
-    def create(self, context):
+    def create(self):
         if self.obj_attr_is_set('id'):
             raise exception.ObjectActionError(action='create',
                                               reason='already created')
@@ -118,7 +118,7 @@ class EC2SnapshotMapping(base.NovaPersistentObject, base.NovaObject,
         return smap
 
     @base.remotable
-    def create(self, context):
+    def create(self):
         if self.obj_attr_is_set('id'):
             raise exception.ObjectActionError(action='create',
                                               reason='already created')
@@ -158,7 +158,7 @@ class S3ImageMapping(base.NovaPersistentObject, base.NovaObject,
         return s3imap
 
     @base.remotable
-    def create(self, context):
+    def create(self):
         if self.obj_attr_is_set('id'):
             raise exception.ObjectActionError(action='create',
                                               reason='already created')

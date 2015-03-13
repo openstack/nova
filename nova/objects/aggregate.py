@@ -60,7 +60,7 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject,
         return cls._from_db_object(context, cls(), db_aggregate)
 
     @base.remotable
-    def create(self, context):
+    def create(self):
         if self.obj_attr_is_set('id'):
             raise exception.ObjectActionError(action='create',
                                               reason='already created')
@@ -83,7 +83,7 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject,
                                                     payload)
 
     @base.remotable
-    def save(self, context):
+    def save(self):
         self._assert_no_hosts('save')
         updates = self.obj_get_changes()
 
@@ -101,7 +101,7 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject,
         self._from_db_object(self._context, self, db_aggregate)
 
     @base.remotable
-    def update_metadata(self, context, updates):
+    def update_metadata(self, updates):
         payload = {'aggregate_id': self.id,
                    'meta_data': updates}
         compute_utils.notify_about_aggregate_update(self._context,
@@ -128,11 +128,11 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject,
         self.obj_reset_changes(fields=['metadata'])
 
     @base.remotable
-    def destroy(self, context):
+    def destroy(self):
         db.aggregate_delete(self._context, self.id)
 
     @base.remotable
-    def add_host(self, context, host):
+    def add_host(self, host):
         db.aggregate_host_add(self._context, self.id, host)
         if self.hosts is None:
             self.hosts = []
@@ -140,7 +140,7 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject,
         self.obj_reset_changes(fields=['hosts'])
 
     @base.remotable
-    def delete_host(self, context, host):
+    def delete_host(self, host):
         db.aggregate_host_delete(self._context, self.id, host)
         self.hosts.remove(host)
         self.obj_reset_changes(fields=['hosts'])

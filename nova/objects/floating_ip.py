@@ -144,7 +144,7 @@ class FloatingIP(obj_base.NovaPersistentObject, obj_base.NovaObject,
         return cls._get_addresses_by_instance_uuid(context, instance['uuid'])
 
     @obj_base.remotable
-    def save(self, context):
+    def save(self):
         updates = self.obj_get_changes()
         if 'address' in updates:
             raise exception.ObjectActionError(action='save',

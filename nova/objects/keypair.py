@@ -64,7 +64,7 @@ class KeyPair(base.NovaPersistentObject, base.NovaObject,
         db.key_pair_destroy(context, user_id, name)
 
     @base.remotable
-    def create(self, context):
+    def create(self):
         if self.obj_attr_is_set('id'):
             raise exception.ObjectActionError(action='create',
                                               reason='already created')
@@ -73,7 +73,7 @@ class KeyPair(base.NovaPersistentObject, base.NovaObject,
         self._from_db_object(self._context, self, db_keypair)
 
     @base.remotable
-    def destroy(self, context):
+    def destroy(self):
         db.key_pair_destroy(self._context, self.user_id, self.name)
 
 

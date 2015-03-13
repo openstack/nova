@@ -64,7 +64,7 @@ class InstanceFault(base.NovaPersistentObject, base.NovaObject,
                                        db_faults[instance_uuid][0])
 
     @base.remotable
-    def create(self, context):
+    def create(self):
         if self.obj_attr_is_set('id'):
             raise exception.ObjectActionError(action='create',
                                               reason='already created')

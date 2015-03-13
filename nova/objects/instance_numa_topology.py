@@ -154,7 +154,7 @@ class InstanceNUMATopology(base.NovaObject,
 
     # TODO(ndipanov) Remove this method on the major version bump to 2.0
     @base.remotable
-    def create(self, context):
+    def create(self):
         self._save()
 
     # NOTE(ndipanov): We can't rename create and want to avoid version bump

@@ -147,7 +147,7 @@ class InstancePCIRequests(base.NovaObject,
         return jsonutils.dumps(blob)
 
     @base.remotable
-    def save(self, context):
+    def save(self):
         blob = self.to_json()
         db.instance_extra_update_by_uuid(self._context, self.instance_uuid,
                                          {'pci_requests': blob})

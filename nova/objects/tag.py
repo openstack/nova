@@ -34,7 +34,7 @@ class Tag(base.NovaObject):
         return tag
 
     @base.remotable
-    def create(self, context):
+    def create(self):
         db_tag = db.instance_tag_add(self._context, self.resource_id, self.tag)
         self._from_db_object(self._context, self, db_tag)
 

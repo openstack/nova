@@ -204,7 +204,7 @@ def remotable(fn):
             self._changed_fields = set(updates.get('obj_what_changed', []))
             return result
         else:
-            return fn(self, None, *args, **kwargs)
+            return fn(self, *args, **kwargs)
 
     wrapper.remotable = True
     wrapper.original_fn = fn

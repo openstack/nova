@@ -64,7 +64,7 @@ class SecurityGroupRule(base.NovaPersistentObject, base.NovaObject,
         return rule
 
     @base.remotable
-    def create(self, context):
+    def create(self):
         if self.obj_attr_is_set('id'):
             raise exception.ObjectActionError(action='create',
                                       reason='already created')

@@ -59,7 +59,7 @@ class Migration(base.NovaPersistentObject, base.NovaObject,
         return cls._from_db_object(context, cls(), db_migration)
 
     @base.remotable
-    def create(self, context):
+    def create(self):
         if self.obj_attr_is_set('id'):
             raise exception.ObjectActionError(action='create',
                                               reason='already created')
@@ -68,7 +68,7 @@ class Migration(base.NovaPersistentObject, base.NovaObject,
         self._from_db_object(self._context, self, db_migration)
 
     @base.remotable
-    def save(self, context):
+    def save(self):
         updates = self.obj_get_changes()
         updates.pop('id', None)
         db_migration = db.migration_update(self._context, self.id, updates)

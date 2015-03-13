@@ -163,7 +163,7 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject,
         return pci_device
 
     @base.remotable
-    def save(self, context):
+    def save(self):
         if self.status == 'removed':
             self.status = 'deleted'
             db.pci_device_destroy(self._context, self.compute_node_id,

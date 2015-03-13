@@ -140,15 +140,15 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject,
                     context, self, create=cells_create)
 
     @base.remotable
-    def create(self, context):
+    def create(self):
         self._create(self._context)
 
     @base.remotable
-    def update_or_create(self, context):
+    def update_or_create(self):
         self._create(self._context, update_or_create=True)
 
     @base.remotable
-    def destroy(self, context):
+    def destroy(self):
         if not self.obj_attr_is_set('id'):
             raise exception.ObjectActionError(action='destroy',
                                               reason='already destroyed')
@@ -163,7 +163,7 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject,
                                          volume_id=self.volume_id)
 
     @base.remotable
-    def save(self, context):
+    def save(self):
         updates = self.obj_get_changes()
         if 'instance' in updates:
             raise exception.ObjectActionError(action='save',
