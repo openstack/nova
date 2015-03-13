@@ -7632,6 +7632,20 @@ class ArchiveTestCase(test.TestCase):
                                                "instances"])
         self.domain_tablenames_to_cleanup = set(["dns_domains"])
 
+    def _assert_shadow_tables_empty_except(self, *exceptions):
+        """Ensure shadow tables are empty
+
+        This method ensures that all the shadow tables in the schema,
+        except for specificially named exceptions, are empty. This
+        makes sure that archiving isn't moving unexpected content.
+        """
+        metadata = MetaData(bind=self.engine)
+        metadata.reflect()
+        for table in metadata.tables:
+            if table.startswith("shadow_") and table not in exceptions:
+                rows = self.conn.execute("select * from %s" % table).fetchall()
+                self.assertEqual(rows, [], "Table %s not empty" % table)
+
     def test_shadow_tables(self):
         metadata = MetaData(bind=self.engine)
         metadata.reflect()
@@ -7653,6 +7667,7 @@ class ArchiveTestCase(test.TestCase):
                 continue
             self.assertTrue(db_utils.check_shadow_table(self.engine,
                                                         table_name))
+        self._assert_shadow_tables_empty_except()
 
     def test_archive_deleted_rows(self):
         # Add 6 rows to table
@@ -7699,6 +7714,10 @@ class ArchiveTestCase(test.TestCase):
         rows = self.conn.execute(qsiim).fetchall()
         # Verify we still have 4 in shadow
         self.assertEqual(len(rows), 4)
+
+        # Ensure only deleted rows were deleted
+        self._assert_shadow_tables_empty_except(
+            'shadow_instance_id_mappings')
 
     def test_archive_deleted_rows_for_every_uuid_table(self):
         tablenames = []
@@ -7790,6 +7809,9 @@ class ArchiveTestCase(test.TestCase):
         self.assertEqual(len(rows), 0)
         rows = self.conn.execute(qsdd).fetchall()
         self.assertEqual(len(rows), 1)
+        self._assert_shadow_tables_empty_except(
+            'shadow_dns_domains',
+        )
 
     def test_archive_deleted_rows_fk_constraint(self):
         # consoles.pool_id depends on console_pools.id
@@ -7824,6 +7846,10 @@ class ArchiveTestCase(test.TestCase):
         # Then archiving console_pools should work.
         num = db.archive_deleted_rows_for_table(self.context, "console_pools")
         self.assertEqual(num, 1)
+        self._assert_shadow_tables_empty_except(
+            'shadow_console_pools',
+            'shadow_consoles'
+        )
 
     def test_archive_deleted_rows_2_tables(self):
         # Add 6 rows to each table
@@ -7890,6 +7916,10 @@ class ArchiveTestCase(test.TestCase):
         siim_rows = self.conn.execute(qsiim).fetchall()
         si_rows = self.conn.execute(qsi).fetchall()
         self.assertEqual(len(siim_rows) + len(si_rows), 8)
+        self._assert_shadow_tables_empty_except(
+            'shadow_instances',
+            'shadow_instance_id_mappings'
+        )
 
 
 class InstanceGroupDBApiTestCase(test.TestCase, ModelsObjectComparatorMixin):
