@@ -337,6 +337,11 @@ class TestSecurityGroupDefaultRulesV2(test.TestCase):
         self.assertRaises(exception.AdminRequired, self.controller.create,
                           self.non_admin_req, sgr_dict)
 
+    def test_delete_security_group_default_rules_with_non_admin(self):
+        self.controller = self.controller_cls()
+        self.assertRaises(exception.AdminRequired,
+                          self.controller.delete, self.non_admin_req, 1)
+
 
 class SecurityGroupDefaultRulesPolicyEnforcementV21(test.NoDBTestCase):
 
