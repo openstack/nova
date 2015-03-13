@@ -117,16 +117,16 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject,
         payload = dict(updates)
         payload['server_group_id'] = self.uuid
 
-        db.instance_group_update(context, self.uuid, updates)
-        db_inst = db.instance_group_get(context, self.uuid)
-        self._from_db_object(context, self, db_inst)
-        compute_utils.notify_about_server_group_update(context,
+        db.instance_group_update(self._context, self.uuid, updates)
+        db_inst = db.instance_group_get(self._context, self.uuid)
+        self._from_db_object(self._context, self, db_inst)
+        compute_utils.notify_about_server_group_update(self._context,
                                                        "update", payload)
 
     @base.remotable
     def refresh(self, context):
         """Refreshes the instance group."""
-        current = self.__class__.get_by_uuid(context, self.uuid)
+        current = self.__class__.get_by_uuid(self._context, self.uuid)
         for field in self.fields:
             if self.obj_attr_is_set(field) and self[field] != current[field]:
                 self[field] = current[field]
@@ -143,20 +143,20 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject,
         policies = updates.pop('policies', None)
         members = updates.pop('members', None)
 
-        db_inst = db.instance_group_create(context, updates,
+        db_inst = db.instance_group_create(self._context, updates,
                                            policies=policies,
                                            members=members)
-        self._from_db_object(context, self, db_inst)
+        self._from_db_object(self._context, self, db_inst)
         payload['server_group_id'] = self.uuid
-        compute_utils.notify_about_server_group_update(context,
+        compute_utils.notify_about_server_group_update(self._context,
                                                        "create", payload)
 
     @base.remotable
     def destroy(self, context):
         payload = {'server_group_id': self.uuid}
-        db.instance_group_delete(context, self.uuid)
+        db.instance_group_delete(self._context, self.uuid)
         self.obj_reset_changes()
-        compute_utils.notify_about_server_group_update(context,
+        compute_utils.notify_about_server_group_update(self._context,
                                                        "delete", payload)
 
     @base.remotable_classmethod
@@ -182,7 +182,7 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject,
         if exclude:
             filter_uuids = set(filter_uuids) - set(exclude)
         filters = {'uuid': filter_uuids, 'deleted': False}
-        instances = objects.InstanceList.get_by_filters(context,
+        instances = objects.InstanceList.get_by_filters(self._context,
                                                         filters=filters)
         return list(set([instance.host for instance in instances
                          if instance.host]))
@@ -192,7 +192,7 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject,
         """Count the number of instances in a group belonging to a user."""
         filter_uuids = self.members
         filters = {'uuid': filter_uuids, 'user_id': user_id, 'deleted': False}
-        instances = objects.InstanceList.get_by_filters(context,
+        instances = objects.InstanceList.get_by_filters(self._context,
                                                         filters=filters)
         return len(instances)
 

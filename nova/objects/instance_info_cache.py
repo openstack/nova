@@ -90,19 +90,20 @@ class InstanceInfoCache(base.NovaPersistentObject, base.NovaObject,
         if 'network_info' in self.obj_what_changed():
             nw_info_json = self.fields['network_info'].to_primitive(
                 self, 'network_info', self.network_info)
-            rv = db.instance_info_cache_update(context, self.instance_uuid,
+            rv = db.instance_info_cache_update(self._context,
+                                               self.instance_uuid,
                                                {'network_info': nw_info_json})
             if update_cells and rv:
-                self._info_cache_cells_update(context, rv)
+                self._info_cache_cells_update(self._context, rv)
         self.obj_reset_changes()
 
     @base.remotable
     def delete(self, context):
-        db.instance_info_cache_delete(context, self.instance_uuid)
+        db.instance_info_cache_delete(self._context, self.instance_uuid)
 
     @base.remotable
     def refresh(self, context):
-        current = self.__class__.get_by_instance_uuid(context,
+        current = self.__class__.get_by_instance_uuid(self._context,
                                                       self.instance_uuid)
         current._context = None
 
