@@ -89,12 +89,6 @@ def get_object_properties(vim, collector, mobj, type, properties):
                                     options=options)
 
 
-def get_dynamic_property(vim, mobj, type, property_name):
-    """Gets a particular property of the Managed Object."""
-    property_dict = get_dynamic_properties(vim, mobj, type, [property_name])
-    return property_dict.get(property_name)
-
-
 def get_dynamic_properties(vim, mobj, type, property_names):
     """Gets the specified properties of the Managed Object."""
     obj_content = get_object_properties(vim, None, mobj, type, property_names)

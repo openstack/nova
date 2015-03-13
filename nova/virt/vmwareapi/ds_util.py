@@ -105,10 +105,10 @@ def get_datastore(session, cluster, datastore_regex=None,
                   storage_policy=None,
                   allowed_ds_types=ALL_SUPPORTED_DS_TYPES):
     """Get the datastore list and choose the most preferable one."""
-    datastore_ret = session._call_method(
-                                vim_util,
-                                "get_dynamic_property", cluster,
-                                "ClusterComputeResource", "datastore")
+    datastore_ret = session._call_method(vutil,
+                                         "get_object_property",
+                                         cluster,
+                                         "datastore")
     # If there are no hosts in the cluster then an empty string is
     # returned
     if not datastore_ret:
@@ -167,8 +167,10 @@ def _get_allowed_datastores(data_stores, datastore_regex):
 
 def get_available_datastores(session, cluster=None, datastore_regex=None):
     """Get the datastore list and choose the first local storage."""
-    ds = session._call_method(vim_util, "get_dynamic_property", cluster,
-                              "ClusterComputeResource", "datastore")
+    ds = session._call_method(vutil,
+                              "get_object_property",
+                              cluster,
+                              "datastore")
     if not ds:
         return []
     data_store_mors = ds.ManagedObjectReference

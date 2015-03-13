@@ -98,7 +98,7 @@ class GetNetworkWithTheNameTestCase(test.NoDBTestCase):
         def mock_call_method(module, method, *args, **kwargs):
             if method == 'get_object_properties':
                 return networks
-            if method == 'get_dynamic_property':
+            if method == 'get_object_property':
                 result = fake.DataObject()
                 result.name = 'no-match'
                 return result
@@ -121,7 +121,7 @@ class GetNetworkWithTheNameTestCase(test.NoDBTestCase):
         def mock_call_method(module, method, *args, **kwargs):
             if method == 'get_object_properties':
                 return networks
-            if method == 'get_dynamic_property':
+            if method == 'get_object_property':
                 result = fake.DataObject()
                 if not token or self._continue_retrieval_called:
                     result.name = name
@@ -169,7 +169,7 @@ class GetNetworkWithTheNameTestCase(test.NoDBTestCase):
         def mock_call_method(module, method, *args, **kwargs):
             if method == 'get_object_properties':
                 return networks
-            if method == 'get_dynamic_property':
+            if method == 'get_object_property':
                 return 'fake_net'
 
         with mock.patch.object(self._session, '_call_method',

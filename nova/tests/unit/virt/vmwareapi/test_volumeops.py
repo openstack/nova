@@ -16,6 +16,7 @@ import contextlib
 
 import mock
 from oslo_vmware import exceptions as oslo_vmw_exceptions
+from oslo_vmware import vim_util as vutil
 
 from nova.compute import vm_states
 from nova import context
@@ -27,7 +28,6 @@ from nova.tests.unit.virt.vmwareapi import fake as vmwareapi_fake
 from nova.tests.unit.virt.vmwareapi import stubs
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import driver
-from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
 from nova.virt.vmwareapi import volumeops
 
@@ -91,27 +91,29 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
     def test_detach_without_destroy_disk_from_vm(self):
         self._test_detach_disk_from_vm(destroy_disk=False)
 
-    def _fake_call_get_dynamic_property(self, uuid, result):
-        def fake_call_method(vim, method, vm_ref, type, prop):
+    def _fake_call_get_object_property(self, uuid, result):
+        def fake_call_method(vim, method, vm_ref, prop):
             expected_prop = 'config.extraConfig["volume-%s"]' % uuid
-            self.assertEqual('VirtualMachine', type)
+            self.assertEqual('VirtualMachine', vm_ref._type)
             self.assertEqual(expected_prop, prop)
             return result
         return fake_call_method
 
     def test_get_volume_uuid(self):
-        vm_ref = mock.Mock()
+        vm_ref = vmwareapi_fake.ManagedObjectReference('VirtualMachine',
+                                                       'vm-134')
         uuid = '1234'
         opt_val = vmwareapi_fake.OptionValue('volume-%s' % uuid, 'volume-val')
-        fake_call = self._fake_call_get_dynamic_property(uuid, opt_val)
+        fake_call = self._fake_call_get_object_property(uuid, opt_val)
         with mock.patch.object(self._session, "_call_method", fake_call):
             val = self._volumeops._get_volume_uuid(vm_ref, uuid)
             self.assertEqual('volume-val', val)
 
     def test_get_volume_uuid_not_found(self):
-        vm_ref = mock.Mock()
+        vm_ref = vmwareapi_fake.ManagedObjectReference('VirtualMachine',
+                                                       'vm-134')
         uuid = '1234'
-        fake_call = self._fake_call_get_dynamic_property(uuid, None)
+        fake_call = self._fake_call_get_object_property(uuid, None)
         with mock.patch.object(self._session, "_call_method", fake_call):
             val = self._volumeops._get_volume_uuid(vm_ref, uuid)
             self.assertIsNone(val)
@@ -456,9 +458,9 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
 
             fake_get_host_ref_for_vm.assert_called_once_with(
                             self._volumeops._session, self._instance)
-            fake_call_method.assert_called_once_with(vim_util,
-                                    "get_dynamic_property",
-                                    host_mor, "HostSystem",
+            fake_call_method.assert_called_once_with(vutil,
+                                    "get_object_property",
+                                    host_mor,
                                     "config.storageDevice.hostBusAdapter")
 
             self.assertEqual(iqn, result)
@@ -485,9 +487,9 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
                         self._volumeops._session, self._instance)
             fake_get_host_ref.assert_called_once_with(
                         self._volumeops._session, self._volumeops._cluster)
-            fake_call_method.assert_called_once_with(vim_util,
-                                    "get_dynamic_property",
-                                    host_mor, "HostSystem",
+            fake_call_method.assert_called_once_with(vutil,
+                                    "get_object_property",
+                                    host_mor,
                                     "config.storageDevice.hostBusAdapter")
 
             self.assertEqual(iqn, result)

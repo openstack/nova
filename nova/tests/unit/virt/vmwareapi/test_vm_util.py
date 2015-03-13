@@ -811,16 +811,9 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
 
     def test_create_vm(self):
 
-        method_list = ['CreateVM_Task', 'get_dynamic_property']
-
         def fake_call_method(module, method, *args, **kwargs):
-            expected_method = method_list.pop(0)
-            self.assertEqual(expected_method, method)
-            if (expected_method == 'CreateVM_Task'):
+            if (method == 'CreateVM_Task'):
                 return 'fake_create_vm_task'
-            elif (expected_method == 'get_dynamic_property'):
-                task_info = mock.Mock(state="success", result="fake_vm_ref")
-                return task_info
             else:
                 self.fail('Should not get here....')
 
@@ -1465,8 +1458,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
             device = vm_util.get_swap(session, vm_ref)
 
             mock_call.assert_called_once_with(mock.ANY,
-                "get_dynamic_property", vm_ref, "VirtualMachine",
-                "config.hardware.device")
+                "get_object_property", vm_ref, "config.hardware.device")
             self.assertEqual(swap_disk, device)
 
 

@@ -602,9 +602,10 @@ def _get_device_disk_type(device):
 
 def get_vmdk_info(session, vm_ref, uuid=None):
     """Returns information for the primary VMDK attached to the given VM."""
-    hardware_devices = session._call_method(vim_util,
-            "get_dynamic_property", vm_ref, "VirtualMachine",
-            "config.hardware.device")
+    hardware_devices = session._call_method(vutil,
+                                            "get_object_property",
+                                            vm_ref,
+                                            "config.hardware.device")
     if hardware_devices.__class__.__name__ == "ArrayOfVirtualDevice":
         hardware_devices = hardware_devices.VirtualDevice
     vmdk_file_path = None
@@ -1099,22 +1100,22 @@ def get_host_ref_for_vm(session, instance):
     """Get a MoRef to the ESXi host currently running an instance."""
 
     vm_ref = get_vm_ref(session, instance)
-    return session._call_method(vim_util, "get_dynamic_property",
-                                vm_ref, "VirtualMachine", "runtime.host")
+    return session._call_method(vutil, "get_object_property",
+                                vm_ref, "runtime.host")
 
 
 def get_host_name_for_vm(session, instance):
     """Get the hostname of the ESXi host currently running an instance."""
 
     host_ref = get_host_ref_for_vm(session, instance)
-    return session._call_method(vim_util, "get_dynamic_property",
-                                host_ref, "HostSystem", "name")
+    return session._call_method(vutil, "get_object_property",
+                                host_ref, "name")
 
 
 def get_vm_state(session, instance):
     vm_ref = get_vm_ref(session, instance)
-    vm_state = session._call_method(vim_util, "get_dynamic_property",
-                vm_ref, "VirtualMachine", "runtime.powerState")
+    vm_state = session._call_method(vutil, "get_object_property",
+                                    vm_ref, "runtime.powerState")
     return vm_state
 
 
@@ -1145,8 +1146,8 @@ def get_stats_from_cluster(session, cluster):
 
         res_mor = prop_dict.get('resourcePool')
         if res_mor:
-            res_usage = session._call_method(vim_util, "get_dynamic_property",
-                            res_mor, "ResourcePool", "summary.runtime.memory")
+            res_usage = session._call_method(vutil, "get_object_property",
+                                             res_mor, "summary.runtime.memory")
             if res_usage:
                 # maxUsage is the memory limit of the cluster available to VM's
                 mem_info['total'] = int(res_usage.maxUsage / units.Mi)
@@ -1166,9 +1167,8 @@ def get_host_ref(session, cluster=None):
                              results)
         host_mor = results.objects[0].obj
     else:
-        host_ret = session._call_method(vim_util, "get_dynamic_property",
-                                        cluster, "ClusterComputeResource",
-                                        "host")
+        host_ret = session._call_method(vutil, "get_object_property",
+                                        cluster, "host")
         if not host_ret or not host_ret.ManagedObjectReference:
             msg = _('No host available on cluster')
             raise exception.NoValidHost(reason=msg)
@@ -1222,10 +1222,9 @@ def get_vmdk_volume_disk(hardware_devices, path=None):
 def get_res_pool_ref(session, cluster):
     """Get the resource pool."""
     # Get the root resource pool of the cluster
-    res_pool_ref = session._call_method(vim_util,
-                                        "get_dynamic_property",
+    res_pool_ref = session._call_method(vutil,
+                                        "get_object_property",
                                         cluster,
-                                        "ClusterComputeResource",
                                         "resourcePool")
     return res_pool_ref
 
@@ -1396,9 +1395,9 @@ def power_on_instance(session, instance, vm_ref=None):
 
 
 def _get_vm_port_indices(session, vm_ref):
-    extra_config = session._call_method(vim_util,
-                                        'get_dynamic_property',
-                                        vm_ref, 'VirtualMachine',
+    extra_config = session._call_method(vutil,
+                                        'get_object_property',
+                                        vm_ref,
                                         'config.extraConfig')
     ports = []
     if extra_config is not None:
@@ -1426,9 +1425,9 @@ def get_attach_port_index(session, vm_ref):
 
 
 def get_vm_detach_port_index(session, vm_ref, iface_id):
-    extra_config = session._call_method(vim_util,
-                                        'get_dynamic_property',
-                                        vm_ref, 'VirtualMachine',
+    extra_config = session._call_method(vutil,
+                                        'get_object_property',
+                                        vm_ref,
                                         'config.extraConfig')
     if extra_config is not None:
         options = extra_config.OptionValue
@@ -1502,9 +1501,10 @@ def detach_devices_from_vm(session, vm_ref, devices):
 
 def get_ephemerals(session, vm_ref):
     devices = []
-    hardware_devices = session._call_method(vim_util,
-            "get_dynamic_property", vm_ref, "VirtualMachine",
-            "config.hardware.device")
+    hardware_devices = session._call_method(vutil,
+                                            "get_object_property",
+                                            vm_ref,
+                                            "config.hardware.device")
 
     if hardware_devices.__class__.__name__ == "ArrayOfVirtualDevice":
         hardware_devices = hardware_devices.VirtualDevice
@@ -1519,9 +1519,8 @@ def get_ephemerals(session, vm_ref):
 
 
 def get_swap(session, vm_ref):
-    hardware_devices = session._call_method(vim_util,
-            "get_dynamic_property", vm_ref, "VirtualMachine",
-            "config.hardware.device")
+    hardware_devices = session._call_method(vutil, "get_object_property",
+                                            vm_ref, "config.hardware.device")
 
     if hardware_devices.__class__.__name__ == "ArrayOfVirtualDevice":
         hardware_devices = hardware_devices.VirtualDevice

@@ -252,10 +252,9 @@ class DsUtilTestCase(test.NoDBTestCase):
 
         def fake_call_method(module, method, *args, **kwargs):
             # Mock the call which returns a list of datastores for the cluster
-            if (module == ds_util.vim_util and
-                    method == 'get_dynamic_property' and
-                    args == ('fake-cluster', 'ClusterComputeResource',
-                             'datastore')):
+            if (module == ds_util.vutil and
+                    method == 'get_object_property' and
+                    args == ('fake-cluster', 'datastore')):
                 fake_ds_mor = fake.DataObject()
                 fake_ds_mor.ManagedObjectReference = fake_ds_list
                 return fake_ds_mor
