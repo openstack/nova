@@ -42,8 +42,8 @@ class EC2InstanceMapping(base.NovaPersistentObject, base.NovaObject,
         if self.obj_attr_is_set('id'):
             raise exception.ObjectActionError(action='create',
                                               reason='already created')
-        db_imap = db.ec2_instance_create(context, self.uuid)
-        self._from_db_object(context, self, db_imap)
+        db_imap = db.ec2_instance_create(self._context, self.uuid)
+        self._from_db_object(self._context, self, db_imap)
 
     @base.remotable_classmethod
     def get_by_uuid(cls, context, instance_uuid):
@@ -82,8 +82,8 @@ class EC2VolumeMapping(base.NovaPersistentObject, base.NovaObject,
         if self.obj_attr_is_set('id'):
             raise exception.ObjectActionError(action='create',
                                               reason='already created')
-        db_vmap = db.ec2_volume_create(context, self.uuid)
-        self._from_db_object(context, self, db_vmap)
+        db_vmap = db.ec2_volume_create(self._context, self.uuid)
+        self._from_db_object(self._context, self, db_vmap)
 
     @base.remotable_classmethod
     def get_by_uuid(cls, context, volume_uuid):
@@ -122,8 +122,8 @@ class EC2SnapshotMapping(base.NovaPersistentObject, base.NovaObject,
         if self.obj_attr_is_set('id'):
             raise exception.ObjectActionError(action='create',
                                               reason='already created')
-        db_smap = db.ec2_snapshot_create(context, self.uuid)
-        self._from_db_object(context, self, db_smap)
+        db_smap = db.ec2_snapshot_create(self._context, self.uuid)
+        self._from_db_object(self._context, self, db_smap)
 
     @base.remotable_classmethod
     def get_by_uuid(cls, context, snapshot_uuid):
@@ -162,8 +162,8 @@ class S3ImageMapping(base.NovaPersistentObject, base.NovaObject,
         if self.obj_attr_is_set('id'):
             raise exception.ObjectActionError(action='create',
                                               reason='already created')
-        db_s3imap = db.s3_image_create(context, self.uuid)
-        self._from_db_object(context, self, db_s3imap)
+        db_s3imap = db.s3_image_create(self._context, self.uuid)
+        self._from_db_object(self._context, self, db_s3imap)
 
     @base.remotable_classmethod
     def get_by_uuid(cls, context, s3_image_uuid):
