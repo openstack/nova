@@ -192,12 +192,36 @@ class IronicDriver(virt_driver.ComputeDriver):
         """Determine whether the node's resources are in an acceptable state.
 
         Determines whether the node's resources should be presented
-        to Nova for use based on the current power and maintenance state.
-        Returns True if unacceptable.
+        to Nova for use based on the current power, provision and maintenance
+        state. This is called after _node_resources_used, so any node that
+        is not used and not in AVAILABLE should be considered in a 'bad' state,
+        and unavailable for scheduling. Returns True if unacceptable.
         """
-        bad_states = [ironic_states.ERROR, ironic_states.NOSTATE]
+        bad_power_states = [
+            ironic_states.ERROR, ironic_states.NOSTATE]
+        # keep NOSTATE around for compatibility
+        good_provision_states = [
+            ironic_states.AVAILABLE, ironic_states.NOSTATE]
         return (node_obj.maintenance or
-                node_obj.power_state in bad_states)
+                node_obj.power_state in bad_power_states or
+                node_obj.provision_state not in good_provision_states)
+
+    def _node_resources_used(self, node_obj):
+        """Determine whether the node's resources are currently used.
+
+        Determines whether the node's resources should be considered used
+        or not. A node is used when it is either in the process of putting
+        a new instance on the node, has an instance on the node, or is in
+        the process of cleaning up from a deleted instance. Returns True if
+        used.
+        """
+        used_provision_states = [
+            ironic_states.CLEANING, ironic_states.DEPLOYING,
+            ironic_states.DEPLOYWAIT, ironic_states.DEPLOYDONE,
+            ironic_states.ACTIVE, ironic_states.DELETING,
+            ironic_states.DELETED]
+        return (node_obj.instance_uuid is not None or
+                node_obj.provision_state in used_provision_states)
 
     def _node_resource(self, node):
         """Helper method to create resource dict from node stats."""
@@ -245,8 +269,10 @@ class IronicDriver(virt_driver.ComputeDriver):
         memory_mb_used = 0
         local_gb_used = 0
 
-        if node.instance_uuid:
-            # Node has an instance, report all resource as unavailable
+        if self._node_resources_used(node):
+            # Node is in the process of deploying, is deployed, or is in
+            # the process of cleaning up from a deploy. Report all of its
+            # resources as in use.
             vcpus_used = vcpus
             memory_mb_used = memory_mb
             local_gb_used = local_gb

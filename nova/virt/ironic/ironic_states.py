@@ -44,6 +44,13 @@ when the node was available for provisioning. During Kilo cycle, this was
 changed to the AVAILABLE state.
 """
 
+MANAGEABLE = 'manageable'
+""" Node is in a manageable state.
+This state indicates that Ironic has verified, at least once, that it had
+sufficient information to manage the hardware. While in this state, the node
+is not available for provisioning (it must be in the AVAILABLE state for that).
+"""
+
 AVAILABLE = 'available'
 """ Node is available for use and scheduling.
 
@@ -85,9 +92,16 @@ DELETING = 'deleting'
 DELETED = 'deleted'
 """ Node tear down was successful.
 
-This is mainly a target provision state used during node tear down. A
-successful tear down leaves the node with a `provision_state` of NOSTATE.
+In Juno, target_provision_state was set to this value during node tear down.
+In Kilo, this will be a transitory value of provision_state, and never
+represented in target_provision_state.
 """
+
+CLEANING = 'cleaning'
+""" Node is being automatically cleaned to prepare it for provisioning. """
+
+CLEANFAIL = 'clean failed'
+""" Node failed cleaning. This requires operator intervention to resolve. """
 
 ERROR = 'error'
 """ An error occurred during node processing.
@@ -96,7 +110,20 @@ The `last_error` attribute of the node details should contain an error message.
 """
 
 REBUILD = 'rebuild'
-""" Node is currently being rebuilt. """
+""" Node is to be rebuilt.
+This is not used as a state, but rather as a "verb" when changing the node's
+provision_state via the REST API.
+"""
+
+INSPECTING = 'inspecting'
+""" Node is under inspection.
+This is the provision state used when inspection is started. A successfully
+inspected node shall transition to MANAGEABLE status.
+"""
+
+
+INSPECTFAIL = 'inspect failed'
+""" Node inspection failed. """
 
 
 ##############
