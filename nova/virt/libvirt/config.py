@@ -31,6 +31,7 @@ from oslo_utils import units
 import six
 
 from nova import exception
+from nova.i18n import _
 from nova.pci import utils as pci_utils
 from nova.virt import hardware
 
@@ -71,9 +72,9 @@ class LibvirtConfigObject(object):
 
     def parse_dom(self, xmldoc):
         if self.root_name != xmldoc.tag:
-            raise exception.InvalidInput(
-                "Root element name should be '%s' not '%s'"
-                % (self.root_name, xmldoc.tag))
+            msg = (_("Root element name should be '%(name)s' not '%(tag)s'") %
+                   {'name': self.root_name, 'tag': xmldoc.tag})
+            raise exception.InvalidInput(msg)
 
     def to_xml(self, pretty_print=True):
         root = self.format_dom()
