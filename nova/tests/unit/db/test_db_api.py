@@ -7624,13 +7624,8 @@ class ArchiveTestCase(test.TestCase):
         self.shadow_instances = sqlalchemyutils.get_table(
             self.engine, "shadow_instances")
         self.uuidstrs = []
-        for unused in range(6):
+        for _ in range(6):
             self.uuidstrs.append(stdlib_uuid.uuid4().hex)
-        self.ids = []
-        self.id_tablenames_to_cleanup = set(["console_pools", "consoles"])
-        self.uuid_tablenames_to_cleanup = set(["instance_id_mappings",
-                                               "instances"])
-        self.domain_tablenames_to_cleanup = set(["dns_domains"])
 
     def _assert_shadow_tables_empty_except(self, *exceptions):
         """Ensure shadow tables are empty
@@ -7726,9 +7721,7 @@ class ArchiveTestCase(test.TestCase):
                 tablenames.append(model_class.__tablename__)
         tablenames.sort()
         for tablename in tablenames:
-            ret = self._test_archive_deleted_rows_for_one_uuid_table(tablename)
-            if ret == 0:
-                self.uuid_tablenames_to_cleanup.add(tablename)
+            self._test_archive_deleted_rows_for_one_uuid_table(tablename)
 
     def _test_archive_deleted_rows_for_one_uuid_table(self, tablename):
         """:returns: 0 on success, 1 if no uuid column, 2 if insert failed."""
@@ -7831,12 +7824,10 @@ class ArchiveTestCase(test.TestCase):
         ins_stmt = self.console_pools.insert().values(deleted=1)
         result = self.conn.execute(ins_stmt)
         id1 = result.inserted_primary_key[0]
-        self.ids.append(id1)
         ins_stmt = self.consoles.insert().values(deleted=1,
                                                          pool_id=id1)
         result = self.conn.execute(ins_stmt)
-        id2 = result.inserted_primary_key[0]
-        self.ids.append(id2)
+        result.inserted_primary_key[0]
         # The first try to archive console_pools should fail, due to FK.
         num = db.archive_deleted_rows_for_table(self.context, "console_pools")
         self.assertEqual(num, 0)
