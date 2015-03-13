@@ -182,8 +182,8 @@ class FixedIP(obj_base.NovaPersistentObject, obj_base.NovaObject,
                                               reason='already created')
         if 'address' in updates:
             updates['address'] = str(updates['address'])
-        db_fixedip = db.fixed_ip_create(context, updates)
-        self._from_db_object(context, self, db_fixedip)
+        db_fixedip = db.fixed_ip_create(self._context, updates)
+        self._from_db_object(self._context, self, db_fixedip)
 
     @obj_base.remotable
     def save(self, context):
@@ -191,12 +191,12 @@ class FixedIP(obj_base.NovaPersistentObject, obj_base.NovaObject,
         if 'address' in updates:
             raise exception.ObjectActionError(action='save',
                                               reason='address is not mutable')
-        db.fixed_ip_update(context, str(self.address), updates)
+        db.fixed_ip_update(self._context, str(self.address), updates)
         self.obj_reset_changes()
 
     @obj_base.remotable
     def disassociate(self, context):
-        db.fixed_ip_disassociate(context, str(self.address))
+        db.fixed_ip_disassociate(self._context, str(self.address))
         self.instance_uuid = None
         self.instance = None
         self.obj_reset_changes(['instance_uuid', 'instance'])
