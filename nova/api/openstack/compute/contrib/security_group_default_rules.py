@@ -18,6 +18,7 @@ from webob import exc
 
 from nova.api.openstack.compute.contrib import security_groups as sg
 from nova.api.openstack import extensions
+from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
 from nova.network.security_group import openstack_driver
@@ -36,6 +37,9 @@ class SecurityGroupDefaultRulesController(sg.SecurityGroupControllerBase):
     def create(self, req, body):
         context = sg._authorize_context(req)
         authorize(context)
+        # NOTE(shaohe-feng): back-compatible with db layer hard-code
+        # admin permission checks.
+        nova_context.require_admin_context(context)
 
         sg_rule = self._from_body(body, 'security_group_default_rule')
 
