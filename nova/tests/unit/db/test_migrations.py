@@ -831,6 +831,28 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
         self.assertIndexNotExists(engine, 'fixed_ips',
                                   'fixed_ips_deleted_allocated_updated_at_idx')
 
+    def _check_278(self, engine, data):
+        compute_nodes = oslodbutils.get_table(engine, 'compute_nodes')
+        self.assertEqual(0, len([fk for fk in compute_nodes.foreign_keys
+                                 if fk.parent.name == 'service_id']))
+        self.assertTrue(compute_nodes.c.service_id.nullable)
+
+    def _post_downgrade_278(self, engine):
+        compute_nodes = oslodbutils.get_table(engine, 'compute_nodes')
+        service_id_fks = [fk for fk in compute_nodes.foreign_keys
+                          if fk.parent.name == 'service_id'
+                          and fk.column.name == 'id']
+        self.assertEqual(1, len(service_id_fks))
+        self.assertFalse(compute_nodes.c.service_id.nullable)
+        if engine.name == 'postgresql':
+            # Only make sure that posgresql at least adds a name for the FK
+            self.assertIsNotNone(service_id_fks[0].name)
+        elif engine.name != 'sqlite':
+            # Erm, SQLA<1.0 doesn't return FK names for sqlite so we need to
+            # check only for other engines
+            self.assertEqual('fk_compute_nodes_service_id',
+                             service_id_fks[0].name)
+
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
                                test_base.DbTestCase,
