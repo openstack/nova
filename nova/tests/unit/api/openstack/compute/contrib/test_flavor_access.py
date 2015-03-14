@@ -132,7 +132,8 @@ class FlavorAccessTestV21(test.NoDBTestCase):
         super(FlavorAccessTestV21, self).setUp()
         self.flavor_controller = flavors_api.Controller()
         self.req = FakeRequest()
-        self.context = self.req.environ['nova.context']
+        self.req.environ = {"nova.context": context.RequestContext('fake_user',
+                                                                   'fake')}
         self.stubs.Set(db, 'flavor_get_by_flavor_id',
                        fake_get_flavor_by_flavor_id)
         self.stubs.Set(db, 'flavor_get_all',
@@ -162,25 +163,6 @@ class FlavorAccessTestV21(test.NoDBTestCase):
             {'flavor_id': '2', 'tenant_id': 'proj3'}]}
         result = self.flavor_access_controller.index(self.req, '2')
         self.assertEqual(result, expected)
-
-    def test_list_with_no_context(self):
-        req = fakes.HTTPRequest.blank(self._prefix + '/flavors/fake/flavors')
-
-        def fake_authorize(context, target=None, action=None):
-            raise exception.PolicyNotAuthorized(action='index')
-
-        if self.api_version == "2.1":
-            self.stubs.Set(flavor_access_v21,
-                           'authorize',
-                           fake_authorize)
-        else:
-            self.stubs.Set(flavor_access_v2,
-                           'authorize',
-                           fake_authorize)
-
-        self.assertRaises(exception.PolicyNotAuthorized,
-                          self.flavor_access_controller.index,
-                          req, 'fake')
 
     def test_list_flavor_with_admin_default_proj1(self):
         expected = {'flavors': [{'id': '0'}, {'id': '1'}]}
@@ -313,14 +295,6 @@ class FlavorAccessTestV21(test.NoDBTestCase):
         result = add_access(req, '3', body=body)
         self.assertEqual(result, expected)
 
-    def test_add_tenant_access_with_no_admin_user(self):
-        req = fakes.HTTPRequest.blank(self._prefix + '/flavors/2/action',
-                                      use_admin_context=False)
-        body = {'addTenantAccess': {'tenant': 'proj2'}}
-        add_access = self._get_add_access()
-        self.assertRaises(exception.PolicyNotAuthorized,
-                          add_access, req, '2', body=body)
-
     def test_add_tenant_access_with_no_tenant(self):
         req = fakes.HTTPRequest.blank(self._prefix + '/flavors/2/action',
                                       use_admin_context=True)
@@ -365,14 +339,6 @@ class FlavorAccessTestV21(test.NoDBTestCase):
         self.assertRaises(self.validation_ex,
                           remove_access, req, '2', body=body)
 
-    def test_remove_tenant_access_with_no_admin_user(self):
-        req = fakes.HTTPRequest.blank(self._prefix + '/flavors/2/action',
-                                      use_admin_context=False)
-        body = {'removeTenantAccess': {'tenant': 'proj2'}}
-        remove_access = self._get_remove_access()
-        self.assertRaises(exception.PolicyNotAuthorized,
-                          remove_access, req, '2', body=body)
-
 
 class FlavorAccessTestV20(FlavorAccessTestV21):
     api_version = "2.0"
@@ -380,3 +346,89 @@ class FlavorAccessTestV20(FlavorAccessTestV21):
     FlavorActionController = flavor_access_v2.FlavorActionController
     _prefix = "/v2/fake"
     validation_ex = exc.HTTPBadRequest
+
+    def setUp(self):
+        super(FlavorAccessTestV20, self).setUp()
+        self.req = FakeRequest()
+        self.req.environ = {"nova.context": context.get_admin_context()}
+
+    def test_remove_tenant_access_with_no_admin_user(self):
+        req = fakes.HTTPRequest.blank(self._prefix + '/flavors/2/action',
+                                      use_admin_context=False)
+        body = {'removeTenantAccess': {'tenant': 'proj2'}}
+        remove_access = self._get_remove_access()
+        self.assertRaises(exception.AdminRequired,
+                          remove_access, req, '2', body=body)
+
+    def test_add_tenant_access_with_no_admin_user(self):
+        req = fakes.HTTPRequest.blank(self._prefix + '/flavors/2/action',
+                                      use_admin_context=False)
+        body = {'addTenantAccess': {'tenant': 'proj2'}}
+        add_access = self._get_add_access()
+        self.assertRaises(exception.AdminRequired,
+                          add_access, req, '2', body=body)
+
+    def test_list_with_no_admin(self):
+        req = fakes.HTTPRequest.blank(self._prefix + '/flavors/fake/flavors')
+        self.assertRaises(exception.AdminRequired,
+                          self.flavor_access_controller.index,
+                          req, 'fake')
+
+
+class FlavorAccessPolicyEnforcementV21(test.NoDBTestCase):
+
+    def setUp(self):
+        super(FlavorAccessPolicyEnforcementV21, self).setUp()
+        self.act_controller = flavor_access_v21.FlavorActionController()
+        self.access_controller = flavor_access_v21.FlavorAccessController()
+        self.req = fakes.HTTPRequest.blank('')
+
+    def test_add_tenant_access_policy_failed(self):
+        rule_name = "compute_extension:v3:os-flavor-access:add_tenant_access"
+        self.policy.set_rules({rule_name: "project:non_fake"})
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.act_controller._add_tenant_access, self.req, fakes.FAKE_UUID,
+            body={'addTenantAccess': {'tenant': fakes.FAKE_UUID}})
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+            exc.format_message())
+
+    def test_remove_tenant_access_policy_failed(self):
+        rule_name = ("compute_extension:v3:os-flavor-access:"
+                     "remove_tenant_access")
+        self.policy.set_rules({rule_name: "project:non_fake"})
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.act_controller._remove_tenant_access, self.req,
+            fakes.FAKE_UUID,
+            body={'removeTenantAccess': {'tenant': fakes.FAKE_UUID}})
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+            exc.format_message())
+
+    def test_extend_create_policy_failed(self):
+        rule_name = "compute_extension:v3:os-flavor-access"
+        self.policy.set_rules({rule_name: "project:non_fake"})
+        self.act_controller.create(self.req, None, None)
+
+    def test_extend_show_policy_failed(self):
+        rule_name = "compute_extension:v3:os-flavor-access"
+        self.policy.set_rules({rule_name: "project:non_fake"})
+        self.act_controller.show(self.req, None, None)
+
+    def test_extend_detail_policy_failed(self):
+        rule_name = "compute_extension:v3:os-flavor-access"
+        self.policy.set_rules({rule_name: "project:non_fake"})
+        self.act_controller.detail(self.req, None)
+
+    def test_index_policy_failed(self):
+        rule_name = "compute_extension:v3:os-flavor-access"
+        self.policy.set_rules({rule_name: "project:non_fake"})
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.access_controller.index, self.req,
+            fakes.FAKE_UUID)
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+            exc.format_message())
