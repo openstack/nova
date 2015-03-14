@@ -821,45 +821,43 @@ class _TestObject(object):
 
     def test_obj_make_obj_compatible(self):
         subobj = MyOwnedObject(baz=1)
+        subobj.VERSION = '1.2'
         obj = MyObj(rel_object=subobj)
         obj.obj_relationships = {
             'rel_object': [('1.5', '1.1'), ('1.7', '1.2')],
         }
-        primitive = obj.obj_to_primitive()['nova_object.data']
+        orig_primitive = obj.obj_to_primitive()['nova_object.data']
         with mock.patch.object(subobj, 'obj_make_compatible') as mock_compat:
-            obj._obj_make_obj_compatible(copy.copy(primitive), '1.8',
-                                         'rel_object')
+            primitive = copy.deepcopy(orig_primitive)
+            obj._obj_make_obj_compatible(primitive, '1.8', 'rel_object')
             self.assertFalse(mock_compat.called)
 
         with mock.patch.object(subobj, 'obj_make_compatible') as mock_compat:
-            obj._obj_make_obj_compatible(copy.copy(primitive),
-                                         '1.7', 'rel_object')
-            mock_compat.assert_called_once_with(
-                primitive['rel_object']['nova_object.data'], '1.2')
-            self.assertEqual('1.2',
-                             primitive['rel_object']['nova_object.version'])
+            primitive = copy.deepcopy(orig_primitive)
+            obj._obj_make_obj_compatible(primitive, '1.7', 'rel_object')
+            self.assertFalse(mock_compat.called)
 
         with mock.patch.object(subobj, 'obj_make_compatible') as mock_compat:
-            obj._obj_make_obj_compatible(copy.copy(primitive),
-                                         '1.6', 'rel_object')
+            primitive = copy.deepcopy(orig_primitive)
+            obj._obj_make_obj_compatible(primitive, '1.6', 'rel_object')
             mock_compat.assert_called_once_with(
                 primitive['rel_object']['nova_object.data'], '1.1')
             self.assertEqual('1.1',
                              primitive['rel_object']['nova_object.version'])
 
         with mock.patch.object(subobj, 'obj_make_compatible') as mock_compat:
-            obj._obj_make_obj_compatible(copy.copy(primitive), '1.5',
-                                         'rel_object')
+            primitive = copy.deepcopy(orig_primitive)
+            obj._obj_make_obj_compatible(primitive, '1.5', 'rel_object')
             mock_compat.assert_called_once_with(
                 primitive['rel_object']['nova_object.data'], '1.1')
             self.assertEqual('1.1',
                              primitive['rel_object']['nova_object.version'])
 
         with mock.patch.object(subobj, 'obj_make_compatible') as mock_compat:
-            _prim = copy.copy(primitive)
-            obj._obj_make_obj_compatible(_prim, '1.4', 'rel_object')
+            primitive = copy.deepcopy(orig_primitive)
+            obj._obj_make_obj_compatible(primitive, '1.4', 'rel_object')
             self.assertFalse(mock_compat.called)
-            self.assertNotIn('rel_object', _prim)
+            self.assertNotIn('rel_object', primitive)
 
     def test_obj_make_compatible_hits_sub_objects(self):
         subobj = MyOwnedObject(baz=1)
