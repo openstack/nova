@@ -93,9 +93,18 @@ class RequestContext(context.RequestContext):
             auth_token=auth_token,
             user=user_id or user,
             tenant=project_id or tenant,
+            domain=kwargs.pop('domain', None),
+            user_domain=kwargs.pop('user_domain', None),
+            project_domain=kwargs.pop('project_domain', None),
             is_admin=is_admin,
+            read_only=kwargs.pop('read_only', False),
+            show_deleted=kwargs.pop('show_deleted', False),
             request_id=request_id,
+            resource_uuid=kwargs.pop('resource_uuid', None),
             overwrite=overwrite)
+        # oslo_context's RequestContext.to_dict() generates this field, we can
+        # safely ignore this as we don't use it.
+        kwargs.pop('user_identity', None)
         if kwargs:
             LOG.warning(_LW('Arguments dropped when creating context: %s') %
                         str(kwargs))
