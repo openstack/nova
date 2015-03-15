@@ -1199,6 +1199,49 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
                                        fake_devices)
         mock_reconfigure.assert_called_once_with(session, 'fake-ref', mock.ANY)
 
+    def test_get_vm_boot_spec(self):
+        disk = fake.VirtualDisk()
+        disk.key = 7
+        fake_factory = fake.FakeFactory()
+        result = vm_util.get_vm_boot_spec(fake_factory,
+                                          disk)
+        expected = fake_factory.create('ns0:VirtualMachineConfigSpec')
+        boot_disk = fake_factory.create(
+            'ns0:VirtualMachineBootOptionsBootableDiskDevice')
+        boot_disk.deviceKey = disk.key
+        boot_options = fake_factory.create('ns0:VirtualMachineBootOptions')
+        boot_options.bootOrder = [boot_disk]
+        expected.bootOptions = boot_options
+        self.assertEqual(expected, result)
+
+    def _get_devices(self, filename):
+        devices = fake._create_array_of_type('VirtualDevice')
+        devices.VirtualDevice = self._vmdk_path_and_adapter_type_devices(
+            filename)
+        return devices
+
+    def test_find_rescue_device(self):
+        instance_uuid = uuidutils.generate_uuid()
+        fake_instance = self.fake_instance_obj({'id': 7, 'name': 'fake!',
+                         'uuid': instance_uuid,
+                         'vcpus': 2, 'memory_mb': 2048})
+        filename = '[test_datastore] uuid/uuid-rescue.vmdk'
+        devices = self._get_devices(filename)
+        device = vm_util.find_rescue_device(devices, fake_instance)
+        self.assertEqual(filename, device.backing.fileName)
+
+    def test_find_rescue_device_not_found(self):
+        instance_uuid = uuidutils.generate_uuid()
+        fake_instance = self.fake_instance_obj({'id': 7, 'name': 'fake!',
+                         'uuid': instance_uuid,
+                         'vcpus': 2, 'memory_mb': 2048})
+        filename = '[test_datastore] uuid/uuid.vmdk'
+        devices = self._get_devices(filename)
+        self.assertRaises(exception.NotFound,
+                          vm_util.find_rescue_device,
+                          devices,
+                          fake_instance)
+
 
 @mock.patch.object(driver.VMwareAPISession, 'vim', stubs.fake_vim_prop)
 class VMwareVMUtilGetHostRefTestCase(test.NoDBTestCase):
