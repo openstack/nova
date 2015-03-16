@@ -11073,8 +11073,7 @@ class ComputeRescheduleOrErrorTestCase(BaseTestCase):
                 expected=task_states.SPAWNING, actual=task_states.DELETING)
         self.compute._spawn(mox.IgnoreArg(), self.instance, mox.IgnoreArg(),
                 mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg(),
-                mox.IgnoreArg(), set_access_ip=False,
-                flavor=None).AndRaise(exc)
+                mox.IgnoreArg(), set_access_ip=False).AndRaise(exc)
 
         self.mox.ReplayAll()
         # test succeeds if mocked method '_reschedule_or_error' is not
@@ -11092,8 +11091,7 @@ class ComputeRescheduleOrErrorTestCase(BaseTestCase):
                 actual=task_states.SCHEDULING)
         self.compute._spawn(mox.IgnoreArg(), self.instance, mox.IgnoreArg(),
                 mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg(),
-                mox.IgnoreArg(), set_access_ip=False,
-                flavor=None).AndRaise(exc)
+                mox.IgnoreArg(), set_access_ip=False).AndRaise(exc)
 
         self.mox.ReplayAll()
         self.assertRaises(exception.UnexpectedTaskStateError,
@@ -11467,8 +11465,7 @@ class ComputeInjectedFilesTestCase(BaseTestCase):
         self.stubs.Set(self.compute.driver, 'spawn', self._spawn)
 
     def _spawn(self, context, instance, image_meta, injected_files,
-               admin_password, nw_info, block_device_info, db_api=None,
-               flavor=None):
+               admin_password, nw_info, block_device_info, db_api=None):
         self.assertEqual(self.expected, injected_files)
 
     def _test(self, injected_files, decoded_files):

@@ -1494,14 +1494,10 @@ class ComputeManager(manager.Manager):
                                  not instance.access_ip_v4 and
                                  not instance.access_ip_v6)
 
-                flavor = None
-                if filter_properties is not None:
-                    flavor = filter_properties.get('instance_type')
                 instance = self._spawn(context, instance, image_meta,
                                        network_info, block_device_info,
                                        injected_files, admin_password,
-                                       set_access_ip=set_access_ip,
-                                       flavor=flavor)
+                                       set_access_ip=set_access_ip)
         except (exception.InstanceNotFound,
                 exception.UnexpectedDeletingTaskStateError):
             # the instance got deleted during the spawn
@@ -1921,7 +1917,7 @@ class ComputeManager(manager.Manager):
     @object_compat
     def _spawn(self, context, instance, image_meta, network_info,
                block_device_info, injected_files, admin_password,
-               set_access_ip=False, flavor=None):
+               set_access_ip=False):
         """Spawn an instance with error logging and update its power state."""
         instance.vm_state = vm_states.BUILDING
         instance.task_state = task_states.SPAWNING
@@ -1930,8 +1926,7 @@ class ComputeManager(manager.Manager):
             self.driver.spawn(context, instance, image_meta,
                               injected_files, admin_password,
                               network_info,
-                              block_device_info,
-                              flavor=flavor)
+                              block_device_info)
         except Exception:
             with excutils.save_and_reraise_exception():
                 LOG.exception(_LE('Instance failed to spawn'),
@@ -2209,14 +2204,10 @@ class ComputeManager(manager.Manager):
                             task_states.BLOCK_DEVICE_MAPPING)
                     block_device_info = resources['block_device_info']
                     network_info = resources['network_info']
-                    flavor = None
-                    if filter_properties is not None:
-                        flavor = filter_properties.get('instance_type')
                     self.driver.spawn(context, instance, image,
                                       injected_files, admin_password,
                                       network_info=network_info,
-                                      block_device_info=block_device_info,
-                                      flavor=flavor)
+                                      block_device_info=block_device_info)
         except (exception.InstanceNotFound,
                 exception.UnexpectedDeletingTaskStateError) as e:
             with excutils.save_and_reraise_exception():
@@ -4371,14 +4362,10 @@ class ComputeManager(manager.Manager):
         network_info = self._get_instance_nw_info(context, instance)
         try:
             with rt.instance_claim(context, instance, limits):
-                flavor = None
-                if filter_properties is not None:
-                    flavor = filter_properties.get('instance_type')
                 self.driver.spawn(context, instance, image, injected_files=[],
                                   admin_password=None,
                                   network_info=network_info,
-                                  block_device_info=block_device_info,
-                                  flavor=flavor)
+                                  block_device_info=block_device_info)
         except Exception:
             with excutils.save_and_reraise_exception():
                 LOG.exception(_LE('Instance failed to spawn'),

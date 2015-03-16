@@ -607,8 +607,7 @@ class IronicDriver(virt_driver.ComputeDriver):
                 return base64.b64encode(compressed.read())
 
     def spawn(self, context, instance, image_meta, injected_files,
-              admin_password, network_info=None, block_device_info=None,
-              flavor=None):
+              admin_password, network_info=None, block_device_info=None):
         """Deploy an instance.
 
         :param context: The security context.
@@ -622,7 +621,6 @@ class IronicDriver(virt_driver.ComputeDriver):
         :param network_info: Instance network information.
         :param block_device_info: Instance block device
             information. Ignored by this driver.
-        :param flavor: The flavor for the instance to be spawned.
         """
         # The compute manager is meant to know the node uuid, so missing uuid
         # is a significant issue. It may mean we've been passed the wrong data.

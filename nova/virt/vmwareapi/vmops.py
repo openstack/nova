@@ -556,17 +556,12 @@ class VMwareVMOps(object):
 
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info, block_device_info=None,
-              instance_name=None, power_on=True,
-              flavor=None):
+              instance_name=None, power_on=True):
 
         client_factory = self._session.vim.client.factory
         image_info = images.VMwareImage.from_image(instance.image_ref,
                                                    image_meta)
-        # Read flavors for extra_specs
-        if flavor is None:
-            flavor = instance.flavor
-
-        extra_specs = self._get_extra_specs(flavor)
+        extra_specs = self._get_extra_specs(instance.flavor)
 
         vi = self._get_vm_config_info(instance, image_info, instance_name,
                                       extra_specs.storage_policy)

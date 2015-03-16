@@ -235,8 +235,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         self.compute.driver.spawn(self.context, instance, image,
                 injected_files=[], admin_password=None,
                 network_info=[],
-                block_device_info='fake_bdm',
-                flavor=None)
+                block_device_info='fake_bdm')
         self.compute._get_power_state(self.context, instance).AndReturn(123)
         self.compute._notify_about_instance_usage(self.context, instance,
                 'unshelve.end')
@@ -306,8 +305,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         self.compute.driver.spawn(self.context, instance, None,
                 injected_files=[], admin_password=None,
                 network_info=[],
-                block_device_info='fake_bdm',
-                flavor=None)
+                block_device_info='fake_bdm')
         self.compute._get_power_state(self.context, instance).AndReturn(123)
         self.compute._notify_about_instance_usage(self.context, instance,
                 'unshelve.end')
