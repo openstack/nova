@@ -19,6 +19,7 @@ import sys
 import fixtures as fx
 from oslo_config import cfg
 from oslo_log import log as logging
+from oslo_utils import uuidutils
 import testtools
 
 from nova.db.sqlalchemy import api as session
@@ -206,6 +207,34 @@ class TestDatabaseFixture(testtools.TestCase):
         rows = result.fetchall()
         self.assertEqual(len(rows), 5, "Rows %s" % rows)
 
+    def test_api_fixture_reset(self):
+        # This sets up reasonable db connection strings
+        self.useFixture(conf_fixture.ConfFixture())
+        self.useFixture(fixtures.Database(database='api'))
+        engine = session.get_api_engine()
+        conn = engine.connect()
+        result = conn.execute("select * from cell_mappings")
+        rows = result.fetchall()
+        self.assertEqual(len(rows), 0, "Rows %s" % rows)
+
+        uuid = uuidutils.generate_uuid()
+        conn.execute("insert into cell_mappings (uuid, name) VALUES "
+                     "('%s', 'fake-cell')" % (uuid,))
+        result = conn.execute("select * from cell_mappings")
+        rows = result.fetchall()
+        self.assertEqual(len(rows), 1, "Rows %s" % rows)
+
+        # reset by invoking the fixture again
+        #
+        # NOTE(sdague): it's important to reestablish the db
+        # connection because otherwise we have a reference to the old
+        # in mem db.
+        self.useFixture(fixtures.Database(database='api'))
+        conn = engine.connect()
+        result = conn.execute("select * from cell_mappings")
+        rows = result.fetchall()
+        self.assertEqual(len(rows), 0, "Rows %s" % rows)
+
     def test_fixture_cleanup(self):
         # because this sets up reasonable db connection strings
         self.useFixture(conf_fixture.ConfFixture())
@@ -217,6 +246,31 @@ class TestDatabaseFixture(testtools.TestCase):
 
         # ensure the db contains nothing
         engine = session.get_engine()
+        conn = engine.connect()
+        schema = "".join(line for line in conn.connection.iterdump())
+        self.assertEqual(schema, "BEGIN TRANSACTION;COMMIT;")
+
+    def test_api_fixture_cleanup(self):
+        # This sets up reasonable db connection strings
+        self.useFixture(conf_fixture.ConfFixture())
+        fix = fixtures.Database(database='api')
+        self.useFixture(fix)
+
+        # No data inserted by migrations so we need to add a row
+        engine = session.get_api_engine()
+        conn = engine.connect()
+        uuid = uuidutils.generate_uuid()
+        conn.execute("insert into cell_mappings (uuid, name) VALUES "
+                     "('%s', 'fake-cell')" % (uuid,))
+        result = conn.execute("select * from cell_mappings")
+        rows = result.fetchall()
+        self.assertEqual(len(rows), 1, "Rows %s" % rows)
+
+        # Manually do the cleanup that addCleanup will do
+        fix.cleanup()
+
+        # Ensure the db contains nothing
+        engine = session.get_api_engine()
         conn = engine.connect()
         schema = "".join(line for line in conn.connection.iterdump())
         self.assertEqual(schema, "BEGIN TRANSACTION;COMMIT;")
