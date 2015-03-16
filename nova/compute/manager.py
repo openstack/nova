@@ -2115,7 +2115,6 @@ class ComputeManager(manager.Manager):
                     filter_properties)
             return build_results.ACTIVE
         except exception.RescheduledException as e:
-            LOG.debug(e.format_message(), instance=instance)
             retry = filter_properties.get('retry', None)
             if not retry:
                 # no retry information, do not reschedule.
@@ -2127,6 +2126,7 @@ class ComputeManager(manager.Manager):
                         instance, e, sys.exc_info())
                 self._set_instance_error_state(context, instance)
                 return build_results.FAILED
+            LOG.debug(e.format_message(), instance=instance)
             retry['exc'] = traceback.format_exception(*sys.exc_info())
             # NOTE(comstud): Deallocate networks if the driver wants
             # us to do so.
