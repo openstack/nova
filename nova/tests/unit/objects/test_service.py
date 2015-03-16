@@ -252,6 +252,24 @@ class _TestServiceObject(object):
             fake_compute_obj.obj_to_primitive(target_version='1.10'),
             fake_service_dict['compute_node'])
 
+    @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host')
+    def test_obj_make_compatible_with_juno_computes(self, get_all_by_host):
+        service_obj = objects.Service(
+            context=self.context, **fake_service)
+        service_obj.binary = 'nova-compute'
+        fake_service_dict = fake_service.copy()
+        fake_service_dict['binary'] = 'nova-compute'
+        fake_compute_obj = objects.ComputeNode(host=fake_service['host'])
+        get_all_by_host.return_value = [fake_compute_obj]
+
+        # Juno versions :
+        #   Service : 1.4
+        #   ComputeNode : 1.5
+        service_obj.obj_make_compatible(fake_service_dict, '1.4')
+        self.assertEqual(
+            '1.5',
+            fake_service_dict['compute_node']['nova_object.version'])
+
 
 class TestServiceObject(test_objects._LocalTest,
                         _TestServiceObject):
