@@ -36,7 +36,9 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
     driver_cls = driver.Scheduler
     driver_cls_name = 'nova.scheduler.driver.Scheduler'
 
-    def setUp(self):
+    @mock.patch.object(host_manager.HostManager, '_init_instance_info')
+    @mock.patch.object(host_manager.HostManager, '_init_aggregates')
+    def setUp(self, mock_init_agg, mock_init_inst):
         super(SchedulerManagerTestCase, self).setUp()
         self.flags(scheduler_driver=self.driver_cls_name)
         with mock.patch.object(host_manager.HostManager, '_init_aggregates'):
@@ -74,7 +76,10 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
 
 
 class SchedulerV3PassthroughTestCase(test.TestCase):
-    def setUp(self):
+
+    @mock.patch.object(host_manager.HostManager, '_init_instance_info')
+    @mock.patch.object(host_manager.HostManager, '_init_aggregates')
+    def setUp(self, mock_init_agg, mock_init_inst):
         super(SchedulerV3PassthroughTestCase, self).setUp()
         self.manager = manager.SchedulerManager()
         self.proxy = manager._SchedulerManagerV3Proxy(self.manager)
@@ -92,10 +97,11 @@ class SchedulerTestCase(test.NoDBTestCase):
     # So we can subclass this test and re-use tests if we need.
     driver_cls = driver.Scheduler
 
-    def setUp(self):
+    @mock.patch.object(host_manager.HostManager, '_init_instance_info')
+    @mock.patch.object(host_manager.HostManager, '_init_aggregates')
+    def setUp(self, mock_init_agg, mock_init_inst):
         super(SchedulerTestCase, self).setUp()
-        with mock.patch.object(host_manager.HostManager, '_init_aggregates'):
-            self.driver = self.driver_cls()
+        self.driver = self.driver_cls()
         self.context = context.RequestContext('fake_user', 'fake_project')
         self.topic = 'fake_topic'
         self.servicegroup_api = servicegroup.API()

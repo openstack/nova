@@ -19,6 +19,7 @@ Tests For IronicHostManager
 
 import mock
 
+import nova
 from nova import exception
 from nova import objects
 from nova.objects import base as obj_base
@@ -42,13 +43,16 @@ class FakeFilterClass2(filters.BaseHostFilter):
 class IronicHostManagerTestCase(test.NoDBTestCase):
     """Test case for IronicHostManager class."""
 
-    def setUp(self):
-        super(IronicHostManagerTestCase, self).setUp()
-        with mock.patch.object(host_manager.HostManager, '_init_aggregates'):
-            self.host_manager = ironic_host_manager.IronicHostManager()
-
+    @mock.patch.object(host_manager.HostManager, '_init_instance_info')
     @mock.patch.object(host_manager.HostManager, '_init_aggregates')
-    def test_manager_public_api_signatures(self, mock_init_aggs):
+    def setUp(self, mock_init_agg, mock_init_inst):
+        super(IronicHostManagerTestCase, self).setUp()
+        self.host_manager = ironic_host_manager.IronicHostManager()
+
+    @mock.patch.object(host_manager.HostManager, '_init_instance_info')
+    @mock.patch.object(host_manager.HostManager, '_init_aggregates')
+    def test_manager_public_api_signatures(self, mock_init_aggs,
+                                           mock_init_inst):
         self.assertPublicAPISignatures(host_manager.HostManager(),
                                        self.host_manager)
 
@@ -72,7 +76,8 @@ class IronicHostManagerTestCase(test.NoDBTestCase):
             ironic_fakes.COMPUTE_NODES)
         self.mox.ReplayAll()
 
-        self.host_manager.get_all_host_states(context)
+        with mock.patch.object(nova.objects.InstanceList, 'get_by_host'):
+            self.host_manager.get_all_host_states(context)
         host_states_map = self.host_manager.host_state_map
 
         self.assertEqual(len(host_states_map), 4)
@@ -95,10 +100,11 @@ class IronicHostManagerTestCase(test.NoDBTestCase):
 class IronicHostManagerChangedNodesTestCase(test.NoDBTestCase):
     """Test case for IronicHostManager class."""
 
-    def setUp(self):
+    @mock.patch.object(host_manager.HostManager, '_init_instance_info')
+    @mock.patch.object(host_manager.HostManager, '_init_aggregates')
+    def setUp(self, mock_init_agg, mock_init_inst):
         super(IronicHostManagerChangedNodesTestCase, self).setUp()
-        with mock.patch.object(host_manager.HostManager, '_init_aggregates'):
-            self.host_manager = ironic_host_manager.IronicHostManager()
+        self.host_manager = ironic_host_manager.IronicHostManager()
         ironic_driver = "nova.virt.ironic.driver.IronicDriver"
         supported_instances = [
             objects.HVSpec.from_list(["i386", "baremetal", "baremetal"])]
@@ -149,8 +155,9 @@ class IronicHostManagerChangedNodesTestCase(test.NoDBTestCase):
         objects.ComputeNodeList.get_all(context).AndReturn(running_nodes)
         self.mox.ReplayAll()
 
-        self.host_manager.get_all_host_states(context)
-        self.host_manager.get_all_host_states(context)
+        with mock.patch.object(nova.objects.InstanceList, 'get_by_host'):
+            self.host_manager.get_all_host_states(context)
+            self.host_manager.get_all_host_states(context)
         host_states_map = self.host_manager.host_state_map
         self.assertEqual(3, len(host_states_map))
 
@@ -170,8 +177,9 @@ class IronicHostManagerChangedNodesTestCase(test.NoDBTestCase):
         objects.ComputeNodeList.get_all(context).AndReturn([])
         self.mox.ReplayAll()
 
-        self.host_manager.get_all_host_states(context)
-        self.host_manager.get_all_host_states(context)
+        with mock.patch.object(nova.objects.InstanceList, 'get_by_host'):
+            self.host_manager.get_all_host_states(context)
+            self.host_manager.get_all_host_states(context)
         host_states_map = self.host_manager.host_state_map
         self.assertEqual(0, len(host_states_map))
 
@@ -226,14 +234,15 @@ class IronicHostManagerChangedNodesTestCase(test.NoDBTestCase):
 class IronicHostManagerTestFilters(test.NoDBTestCase):
     """Test filters work for IronicHostManager."""
 
-    def setUp(self):
+    @mock.patch.object(host_manager.HostManager, '_init_instance_info')
+    @mock.patch.object(host_manager.HostManager, '_init_aggregates')
+    def setUp(self, mock_init_agg, mock_init_inst):
         super(IronicHostManagerTestFilters, self).setUp()
         self.flags(scheduler_available_filters=['%s.%s' % (__name__, cls) for
                                                 cls in ['FakeFilterClass1',
                                                         'FakeFilterClass2']])
         self.flags(scheduler_default_filters=['FakeFilterClass1'])
-        with mock.patch.object(host_manager.HostManager, '_init_aggregates'):
-            self.host_manager = ironic_host_manager.IronicHostManager()
+        self.host_manager = ironic_host_manager.IronicHostManager()
         self.fake_hosts = [ironic_host_manager.IronicNodeState(
                 'fake_host%s' % x, 'fake-node') for x in range(1, 5)]
         self.fake_hosts += [ironic_host_manager.IronicNodeState(
