@@ -26,7 +26,6 @@ from nova.compute import vm_states
 from nova import exception
 from nova.i18n import _, _LI, _LW
 from nova.virt.vmwareapi import constants
-from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
 
 CONF = cfg.CONF
@@ -124,9 +123,10 @@ class VMwareVolumeOps(object):
         lst_properties = ["config.storageDevice.hostBusAdapter",
                           "config.storageDevice.scsiTopology",
                           "config.storageDevice.scsiLun"]
-        prop_dict = self._session._call_method(
-            vim_util, "get_dynamic_properties",
-            host_mor, "HostSystem", lst_properties)
+        prop_dict = self._session._call_method(vutil,
+                                               "get_object_properties_dict",
+                                               host_mor,
+                                               lst_properties)
         result = (None, None)
         hbas_ret = None
         scsi_topology = None

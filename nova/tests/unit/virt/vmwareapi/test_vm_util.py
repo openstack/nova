@@ -94,7 +94,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         respool_resource_usage.overallUsage = 2147483648
 
         def fake_call_method(*args):
-            if "get_dynamic_properties" in args:
+            if "get_object_properties_dict" in args:
                 return prop_dict
             elif "get_properties_for_a_collection_of_objects" in args:
                 return fake_objects
