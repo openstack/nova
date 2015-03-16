@@ -26,7 +26,6 @@ import string
 import uuid
 
 from oslo.config import cfg
-from oslo.utils import units
 import six
 
 from nova import availability_zones
@@ -68,6 +67,7 @@ from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import strutils
 from nova.openstack.common import timeutils
+from nova.openstack.common import units
 from nova.openstack.common import uuidutils
 import nova.policy
 from nova import quota
