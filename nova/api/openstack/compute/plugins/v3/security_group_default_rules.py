@@ -23,14 +23,15 @@ from nova.network.security_group import openstack_driver
 
 
 ALIAS = "os-security-group-default-rules"
-authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
+authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class SecurityGroupDefaultRulesController(sg.SecurityGroupControllerBase):
 
     def __init__(self):
         self.security_group_api = (
-            openstack_driver.get_openstack_security_group_driver())
+            openstack_driver.get_openstack_security_group_driver(
+                skip_policy_check=True))
 
     @extensions.expected_errors((400, 409, 501))
     def create(self, req, body):
