@@ -123,6 +123,7 @@ class NetworkController(object):
                 QUOTAS.rollback(context, reservation)
 
         try:
+            self.network_api.disassociate(context, id)
             self.network_api.delete(context, id)
         except exception.PolicyNotAuthorized as e:
             _rollback_quota(reservation)
