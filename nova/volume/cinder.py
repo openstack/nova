@@ -29,6 +29,7 @@ from keystoneclient import session
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import strutils
+import six
 import six.moves.urllib.parse as urlparse
 
 from nova import availability_zones as az
@@ -219,13 +220,14 @@ def translate_volume_exception(method):
                 exc_value = exception.VolumeNotFound(volume_id=volume_id)
             elif isinstance(exc_value, (keystone_exception.BadRequest,
                                         cinder_exception.BadRequest)):
-                exc_value = exception.InvalidInput(reason=exc_value.message)
+                exc_value = exception.InvalidInput(
+                    reason=six.text_type(exc_value))
             raise exc_value, None, exc_trace
         except (cinder_exception.ConnectionError,
                 keystone_exception.ConnectionError):
             exc_type, exc_value, exc_trace = sys.exc_info()
             exc_value = exception.CinderConnectionFailed(
-                                                   reason=exc_value.message)
+                reason=six.text_type(exc_value))
             raise exc_value, None, exc_trace
         return res
     return wrapper
@@ -248,8 +250,8 @@ def translate_snapshot_exception(method):
         except (cinder_exception.ConnectionError,
                 keystone_exception.ConnectionError):
             exc_type, exc_value, exc_trace = sys.exc_info()
-            exc_value = exception.CinderConnectionFailed(
-                                                  reason=exc_value.message)
+            reason = six.text_type(exc_value)
+            exc_value = exception.CinderConnectionFailed(reason=reason)
             raise exc_value, None, exc_trace
         return res
     return wrapper
