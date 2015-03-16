@@ -41,7 +41,6 @@ from nova.i18n import _
 from nova.i18n import _LW
 from nova.image import glance
 from nova import objects
-from nova import policy
 from nova import utils
 
 ALIAS = 'servers'
@@ -55,7 +54,7 @@ CONF.import_opt('extensions_blacklist', 'nova.api.openstack', group='osapi_v3')
 CONF.import_opt('extensions_whitelist', 'nova.api.openstack', group='osapi_v3')
 
 LOG = logging.getLogger(__name__)
-authorizer = extensions.core_authorizer('compute:v3', 'servers')
+authorize = extensions.os_compute_authorizer(ALIAS, True)
 
 
 class ServersController(wsgi.Controller):
@@ -142,7 +141,7 @@ class ServersController(wsgi.Controller):
 
         self.extension_info = kwargs.pop('extension_info')
         super(ServersController, self).__init__(**kwargs)
-        self.compute_api = compute.API()
+        self.compute_api = compute.API(skip_policy_check=True)
 
         # Look for implementation of extension point of server creation
         self.create_extension_manager = \
@@ -247,6 +246,8 @@ class ServersController(wsgi.Controller):
     @extensions.expected_errors((400, 403))
     def index(self, req):
         """Returns a list of server names and ids for a given user."""
+        context = req.environ['nova.context']
+        authorize(context, action="index")
         try:
             servers = self._get_servers(req, is_detail=False)
         except exception.Invalid as err:
@@ -256,6 +257,8 @@ class ServersController(wsgi.Controller):
     @extensions.expected_errors((400, 403))
     def detail(self, req):
         """Returns a list of server details for a given user."""
+        context = req.environ['nova.context']
+        authorize(context, action="detail")
         try:
             servers = self._get_servers(req, is_detail=True)
         except exception.Invalid as err:
@@ -346,9 +349,10 @@ class ServersController(wsgi.Controller):
                 raise exception.InvalidInput(six.text_type(err))
 
         if 'all_tenants' in search_opts:
-            policy.enforce(context, 'compute:get_all_tenants',
-                           {'project_id': context.project_id,
-                            'user_id': context.user_id})
+            if is_detail:
+                authorize(context, action="detail:get_all_tenants")
+            else:
+                authorize(context, action="index:get_all_tenants")
             del search_opts['all_tenants']
         else:
             if context.project_id:
@@ -476,6 +480,7 @@ class ServersController(wsgi.Controller):
         instance = common.get_instance(self.compute_api, context, id,
                                        expected_attrs=['pci_devices',
                                                        'flavor'])
+        authorize(context, action="show")
         req.cache_db_instance(instance)
         return self._view_builder.show(req, instance)
 
@@ -504,6 +509,28 @@ class ServersController(wsgi.Controller):
             self.create_extension_manager.map(self._create_extension_point,
                                               server_dict, create_kwargs, body)
 
+        availability_zone = create_kwargs.get("availability_zone")
+
+        target = {
+            'project_id': context.project_id,
+            'user_id': context.user_id,
+            'availability_zone': availability_zone}
+        authorize(context, target, 'create')
+
+        # TODO(Shao He, Feng) move this policy check to os-availabilty-zone
+        # extension after refactor it.
+        if availability_zone:
+            _dummy, host, node = self.compute_api._handle_availability_zone(
+                context, availability_zone)
+            if host or node:
+                authorize(context, {}, 'create:forced_host')
+
+        block_device_mapping = create_kwargs.get("block_device_mapping")
+        # TODO(Shao He, Feng) move this policy check to os-block-device-mapping
+        # extension after refactor it.
+        if block_device_mapping:
+            authorize(context, target, 'create:attach_volume')
+
         image_uuid = self._image_from_req_data(server_dict, create_kwargs)
 
         # NOTE(cyeoh): Although an extension can set
@@ -524,6 +551,9 @@ class ServersController(wsgi.Controller):
         if requested_networks is not None:
             requested_networks = self._get_requested_networks(
                 requested_networks)
+
+        if requested_networks and len(requested_networks):
+            authorize(context, target, 'create:attach_network')
 
         try:
             flavor_id = self._flavor_id_from_req_data(body)
@@ -689,6 +719,7 @@ class ServersController(wsgi.Controller):
         resize_schema['properties']['resize']['properties'].update(schema)
 
     def _delete(self, context, req, instance_uuid):
+        authorize(context, action='delete')
         instance = self._get_server(context, req, instance_uuid)
         if CONF.reclaim_instance_interval:
             try:
@@ -708,6 +739,7 @@ class ServersController(wsgi.Controller):
 
         ctxt = req.environ['nova.context']
         update_dict = {}
+        authorize(ctxt, action='update')
 
         if 'name' in body['server']:
             update_dict['display_name'] = body['server']['name']
@@ -722,7 +754,6 @@ class ServersController(wsgi.Controller):
             # NOTE(mikal): this try block needs to stay because save() still
             # might throw an exception.
             req.cache_db_instance(instance)
-            policy.enforce(ctxt, 'compute:update', instance)
             instance.update(update_dict)
             instance.save()
             return self._view_builder.show(req, instance,
@@ -739,6 +770,7 @@ class ServersController(wsgi.Controller):
     @wsgi.action('confirmResize')
     def _action_confirm_resize(self, req, id, body):
         context = req.environ['nova.context']
+        authorize(context, action='confirm_resize')
         instance = self._get_server(context, req, id)
         try:
             self.compute_api.confirm_resize(context, instance)
@@ -756,6 +788,7 @@ class ServersController(wsgi.Controller):
     @wsgi.action('revertResize')
     def _action_revert_resize(self, req, id, body):
         context = req.environ['nova.context']
+        authorize(context, action='revert_resize')
         instance = self._get_server(context, req, id)
         try:
             self.compute_api.revert_resize(context, instance)
@@ -779,6 +812,7 @@ class ServersController(wsgi.Controller):
 
         reboot_type = body['reboot']['type'].upper()
         context = req.environ['nova.context']
+        authorize(context, action='reboot')
         instance = self._get_server(context, req, id)
 
         try:
@@ -792,6 +826,7 @@ class ServersController(wsgi.Controller):
     def _resize(self, req, instance_id, flavor_id, **kwargs):
         """Begin the resize process with given instance/flavor."""
         context = req.environ["nova.context"]
+        authorize(context, action='resize')
         instance = self._get_server(context, req, instance_id)
 
         try:
@@ -907,6 +942,7 @@ class ServersController(wsgi.Controller):
         password = self._get_server_admin_password(rebuild_dict)
 
         context = req.environ['nova.context']
+        authorize(context, action='rebuild')
         instance = self._get_server(context, req, id)
 
         attr_map = {
@@ -973,6 +1009,7 @@ class ServersController(wsgi.Controller):
     def _action_create_image(self, req, id, body):
         """Snapshot a server instance."""
         context = req.environ['nova.context']
+        authorize(context, action='create_image')
 
         entity = body["createImage"]
         image_name = entity["name"]
@@ -1051,7 +1088,7 @@ class ServersController(wsgi.Controller):
         """Start an instance."""
         context = req.environ['nova.context']
         instance = self._get_instance(context, id)
-        authorizer(context, instance, 'start')
+        authorize(context, instance, 'start')
         LOG.debug('start instance', instance=instance)
         try:
             self.compute_api.start(context, instance)
@@ -1068,7 +1105,7 @@ class ServersController(wsgi.Controller):
         """Stop an instance."""
         context = req.environ['nova.context']
         instance = self._get_instance(context, id)
-        authorizer(context, instance, 'stop')
+        authorize(context, instance, 'stop')
         LOG.debug('stop instance', instance=instance)
         try:
             self.compute_api.stop(context, instance)
