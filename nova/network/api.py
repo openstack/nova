@@ -96,7 +96,7 @@ class API(base_api.NetworkAPI):
 
     @wrap_check_policy
     def get(self, context, network_uuid):
-        return objects.Network.get_by_uuid(context.elevated(), network_uuid)
+        return objects.Network.get_by_uuid(context, network_uuid)
 
     @wrap_check_policy
     def create(self, context, **kwargs):
