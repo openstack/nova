@@ -170,6 +170,8 @@ class TenantNetworkController(wsgi.Controller):
             msg = _("Quota exceeded, too many networks.")
             raise exc.HTTPBadRequest(explanation=msg)
 
+        kwargs['project_id'] = context.project_id
+
         try:
             networks = self.network_api.create(context,
                                                label=label, **kwargs)
