@@ -29,6 +29,7 @@ import uuid
 from eventlet import greenthread
 import mock
 from mox3 import mox
+from neutronclient.common import exceptions as neutron_exceptions
 from oslo_config import cfg
 from oslo_log import log as logging
 import oslo_messaging as messaging
@@ -9206,6 +9207,37 @@ class ComputeAPITestCase(BaseTestCase):
                               self.compute.detach_interface, self.context,
                               instance, port_id)
             self.assertFalse(mock_deallocate.called)
+
+    @mock.patch.object(compute_manager.LOG, 'warning')
+    def test_detach_interface_deallocate_port_for_instance_failed(self,
+                                                                  warn_mock):
+        # Tests that when deallocate_port_for_instance fails we log the failure
+        # before exiting compute.detach_interface.
+        nwinfo, port_id = self.test_attach_interface()
+        instance = objects.Instance(uuid=uuidutils.generate_uuid())
+        instance.info_cache = objects.InstanceInfoCache.new(
+            self.context, 'fake-uuid')
+        instance.info_cache.network_info = network_model.NetworkInfo.hydrate(
+            nwinfo)
+
+        # Sometimes neutron errors slip through the neutronv2 API so we want
+        # to make sure we catch those in the compute manager and not just
+        # NovaExceptions.
+        error = neutron_exceptions.PortNotFoundClient()
+        with contextlib.nested(
+            mock.patch.object(self.compute.driver, 'detach_interface'),
+            mock.patch.object(self.compute.network_api,
+                              'deallocate_port_for_instance',
+                              side_effect=error),
+            mock.patch.object(self.compute, '_instance_update')) as (
+            mock_detach, mock_deallocate, mock_instance_update):
+            ex = self.assertRaises(neutron_exceptions.PortNotFoundClient,
+                                   self.compute.detach_interface, self.context,
+                                   instance, port_id)
+            self.assertEqual(error, ex)
+        mock_deallocate.assert_called_once_with(
+            self.context, instance, port_id)
+        self.assertEqual(1, warn_mock.call_count)
 
     def test_attach_volume(self):
         fake_bdm = fake_block_device.FakeDbBlockDeviceDict(
