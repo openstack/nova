@@ -3894,9 +3894,9 @@ class ComputeTestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance, {}, {}, None, None,
                 None, True, None, False)
 
-    def _create_server_group(self):
+    def _create_server_group(self, policies, instance_host):
         group_instance = self._create_fake_instance_obj(
-                params=dict(host=self.compute.host))
+                params=dict(host=instance_host))
 
         instance_group = objects.InstanceGroup(self.context)
         instance_group.user_id = self.user_id
@@ -3904,7 +3904,7 @@ class ComputeTestCase(BaseTestCase):
         instance_group.name = 'messi'
         instance_group.uuid = str(uuid.uuid4())
         instance_group.members = [group_instance.uuid]
-        instance_group.policies = ['anti-affinity']
+        instance_group.policies = policies
         fake_notifier.NOTIFICATIONS = []
         instance_group.create()
         self.assertEqual(1, len(fake_notifier.NOTIFICATIONS))
@@ -3917,7 +3917,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual('servergroup.create', msg.event_type)
         return instance_group
 
-    def _run_instance_reschedules_on_anti_affinity_violation(self, group,
+    def _run_instance_reschedules_on_policy_violation(self, group,
                                                              hint):
         instance = self._create_fake_instance_obj()
         filter_properties = {'scheduler_hints': {'group': hint}}
@@ -3928,14 +3928,18 @@ class ComputeTestCase(BaseTestCase):
                           None, False)
 
     def test_run_instance_reschedules_on_anti_affinity_violation_by_name(self):
-        group = self._create_server_group()
-        self._run_instance_reschedules_on_anti_affinity_violation(group,
-                group.name)
+        group = self._create_server_group(['anti-affinity'], self.compute.host)
+        self._run_instance_reschedules_on_policy_violation(group, group.name)
 
     def test_run_instance_reschedules_on_anti_affinity_violation_by_uuid(self):
-        group = self._create_server_group()
-        self._run_instance_reschedules_on_anti_affinity_violation(group,
-                group.uuid)
+        group = self._create_server_group(['anti-affinity'], self.compute.host)
+        self._run_instance_reschedules_on_policy_violation(group, group.uuid)
+
+    def test_run_instance_reschedules_on_affinity_violation_by_uuid(self):
+        # Put the fake instance already in the group on a different host
+        hostname = self.compute.host + '.1'
+        group = self._create_server_group(['affinity'], hostname)
+        self._run_instance_reschedules_on_policy_violation(group, group.uuid)
 
     def test_instance_set_to_error_on_uncaught_exception(self):
         # Test that instance is set to error state when exception is raised.

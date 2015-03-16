@@ -1466,10 +1466,12 @@ class ComputeManager(manager.Manager):
             filter_properties):
         # NOTE(russellb) Instance group policy is enforced by the scheduler.
         # However, there is a race condition with the enforcement of
-        # anti-affinity.  Since more than one instance may be scheduled at the
+        # the policy.  Since more than one instance may be scheduled at the
         # same time, it's possible that more than one instance with an
-        # anti-affinity policy may end up here.  This is a validation step to
-        # make sure that starting the instance here doesn't violate the policy.
+        # anti-affinity policy may end up here.  It's also possible that
+        # multiple instances with an affinity policy could end up on different
+        # hosts.  This is a validation step to make sure that starting the
+        # instance here doesn't violate the policy.
 
         scheduler_hints = filter_properties.get('scheduler_hints') or {}
         group_hint = scheduler_hints.get('group')
@@ -1479,15 +1481,21 @@ class ComputeManager(manager.Manager):
         @utils.synchronized(group_hint)
         def _do_validation(context, instance, group_hint):
             group = objects.InstanceGroup.get_by_hint(context, group_hint)
-            if 'anti-affinity' not in group.policies:
-                return
-
-            group_hosts = group.get_hosts(exclude=[instance.uuid])
-            if self.host in group_hosts:
-                msg = _("Anti-affinity instance group policy was violated.")
-                raise exception.RescheduledException(
-                        instance_uuid=instance.uuid,
-                        reason=msg)
+            if 'anti-affinity' in group.policies:
+                group_hosts = group.get_hosts(exclude=[instance.uuid])
+                if self.host in group_hosts:
+                    msg = _("Anti-affinity instance group policy "
+                            "was violated.")
+                    raise exception.RescheduledException(
+                            instance_uuid=instance.uuid,
+                            reason=msg)
+            elif 'affinity' in group.policies:
+                group_hosts = group.get_hosts(exclude=[instance.uuid])
+                if group_hosts and self.host not in group_hosts:
+                    msg = _("Affinity instance group policy was violated.")
+                    raise exception.RescheduledException(
+                            instance_uuid=instance.uuid,
+                            reason=msg)
 
         _do_validation(context, instance, group_hint)
 
