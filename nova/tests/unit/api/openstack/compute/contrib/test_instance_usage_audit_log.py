@@ -131,7 +131,6 @@ class InstanceUsageAuditLogTestV21(test.NoDBTestCase):
                        fake_task_log_get_all)
 
         self.req = fakes.HTTPRequest.blank('')
-        self.admin_req = fakes.HTTPRequest.blank('', use_admin_context=True)
 
     def _set_up_controller(self):
         self.controller = v21_ial.InstanceUsageAuditLogController()
@@ -141,7 +140,7 @@ class InstanceUsageAuditLogTestV21(test.NoDBTestCase):
         timeutils.clear_time_override()
 
     def test_index(self):
-        result = self.controller.index(self.admin_req)
+        result = self.controller.index(self.req)
         self.assertIn('instance_usage_audit_logs', result)
         logs = result['instance_usage_audit_logs']
         self.assertEqual(57, logs['total_instances'])
@@ -153,12 +152,8 @@ class InstanceUsageAuditLogTestV21(test.NoDBTestCase):
         self.assertEqual(0, logs['num_hosts_not_run'])
         self.assertEqual("ALL hosts done. 0 errors.", logs['overall_status'])
 
-    def test_index_non_admin(self):
-        self.assertRaises(exception.PolicyNotAuthorized,
-                          self.controller.index, self.req)
-
     def test_show(self):
-        result = self.controller.show(self.admin_req, '2012-07-05 10:00:00')
+        result = self.controller.show(self.req, '2012-07-05 10:00:00')
         self.assertIn('instance_usage_audit_log', result)
         logs = result['instance_usage_audit_log']
         self.assertEqual(57, logs['total_instances'])
@@ -170,13 +165,8 @@ class InstanceUsageAuditLogTestV21(test.NoDBTestCase):
         self.assertEqual(0, logs['num_hosts_not_run'])
         self.assertEqual("ALL hosts done. 0 errors.", logs['overall_status'])
 
-    def test_show_non_admin(self):
-        self.assertRaises(exception.PolicyNotAuthorized,
-                          self.controller.show, self.req,
-                          '2012-07-05 10:00:00')
-
     def test_show_with_running(self):
-        result = self.controller.show(self.admin_req, '2012-07-06 10:00:00')
+        result = self.controller.show(self.req, '2012-07-06 10:00:00')
         self.assertIn('instance_usage_audit_log', result)
         logs = result['instance_usage_audit_log']
         self.assertEqual(57, logs['total_instances'])
@@ -190,7 +180,7 @@ class InstanceUsageAuditLogTestV21(test.NoDBTestCase):
                          logs['overall_status'])
 
     def test_show_with_errors(self):
-        result = self.controller.show(self.admin_req, '2012-07-07 10:00:00')
+        result = self.controller.show(self.req, '2012-07-07 10:00:00')
         self.assertIn('instance_usage_audit_log', result)
         logs = result['instance_usage_audit_log']
         self.assertEqual(57, logs['total_instances'])
@@ -205,5 +195,47 @@ class InstanceUsageAuditLogTestV21(test.NoDBTestCase):
 
 
 class InstanceUsageAuditLogTest(InstanceUsageAuditLogTestV21):
+    def setUp(self):
+        super(InstanceUsageAuditLogTest, self).setUp()
+        self.req = fakes.HTTPRequest.blank('', use_admin_context=True)
+        self.non_admin_req = fakes.HTTPRequest.blank('')
+
     def _set_up_controller(self):
         self.controller = ial.InstanceUsageAuditLogController()
+
+    def test_index_non_admin(self):
+        self.assertRaises(exception.PolicyNotAuthorized,
+                          self.controller.index, self.non_admin_req)
+
+    def test_show_non_admin(self):
+        self.assertRaises(exception.PolicyNotAuthorized,
+                          self.controller.show, self.non_admin_req,
+                          '2012-07-05 10:00:00')
+
+
+class InstanceUsageAuditPolicyEnforcementV21(test.NoDBTestCase):
+
+    def setUp(self):
+        super(InstanceUsageAuditPolicyEnforcementV21, self).setUp()
+        self.controller = v21_ial.InstanceUsageAuditLogController()
+        self.req = fakes.HTTPRequest.blank('')
+
+    def test_index_policy_failed(self):
+        rule_name = "compute_extension:v3:os-instance-usage-audit-log"
+        self.policy.set_rules({rule_name: "project_id:non_fake"})
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.controller.index, self.req)
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+            exc.format_message())
+
+    def test_show_policy_failed(self):
+        rule_name = "compute_extension:v3:os-instance-usage-audit-log"
+        self.policy.set_rules({rule_name: "project_id:non_fake"})
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.controller.show, self.req, '2012-07-05 10:00:00')
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+            exc.format_message())
