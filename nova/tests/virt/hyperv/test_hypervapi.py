@@ -415,7 +415,8 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
     def _setup_spawn_config_drive_mocks(self, use_cdrom):
         instance_metadata.InstanceMetadata(mox.IgnoreArg(),
                                            content=mox.IsA(list),
-                                           extra_md=mox.IsA(dict))
+                                           extra_md=mox.IsA(dict),
+                                           network_info=mox.IsA(list))
 
         m = fake.PathUtils.get_instance_dir(mox.IsA(str))
         m.AndReturn(self._test_instance_dir)
