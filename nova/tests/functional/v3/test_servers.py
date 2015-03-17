@@ -18,15 +18,29 @@ from nova.tests.unit.image import fake
 
 
 class ServersSampleBase(api_sample_base.ApiSampleTestBaseV3):
-    def _post_server(self):
+    def _post_server(self, use_common_server_api_samples=True):
+        # param use_common_server_api_samples: Boolean to set whether tests use
+        # common sample files for server post request and response.
+        # Default is True which means _get_sample_path method will fetch the
+        # common server sample files from 'servers' directory.
+        # Set False if tests need to use extension specific sample files
+
         subs = {
             'image_id': fake.get_valid_image_id(),
             'host': self._get_host(),
             'glance_host': self._get_glance_host()
         }
-        response = self._do_post('servers', 'server-post-req', subs)
-        subs = self._get_regexes()
-        return self._verify_response('server-post-resp', subs, response, 202)
+        orig_value = self.__class__._use_common_server_api_samples
+        try:
+            self.__class__._use_common_server_api_samples = (
+                                        use_common_server_api_samples)
+            response = self._do_post('servers', 'server-post-req', subs)
+            subs = self._get_regexes()
+            status = self._verify_response('server-post-resp', subs,
+                                           response, 202)
+            return status
+        finally:
+            self.__class__._use_common_server_api_samples = orig_value
 
 
 class ServersSampleJsonTest(ServersSampleBase):

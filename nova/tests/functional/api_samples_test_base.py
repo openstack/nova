@@ -33,6 +33,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
     all_extensions = False
     extension_name = None
     request_api_version = None
+    _use_common_server_api_samples = False
 
     def _pretty_data(self, data):
         data = jsonutils.dumps(jsonutils.loads(data), sort_keys=True,

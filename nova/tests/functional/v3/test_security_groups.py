@@ -84,17 +84,17 @@ class SecurityGroupsJsonTest(test_servers.ServersSampleBase):
                        fake_create_security_group)
 
     def test_server_create(self):
-        self._post_server()
+        self._post_server(use_common_server_api_samples=False)
 
     def test_server_get(self):
-        uuid = self._post_server()
+        uuid = self._post_server(use_common_server_api_samples=False)
         response = self._do_get('servers/%s' % uuid)
         subs = self._get_regexes()
         subs['hostid'] = '[a-f0-9]+'
         self._verify_response('server-get-resp', subs, response, 200)
 
     def test_server_detail(self):
-        self._post_server()
+        self._post_server(use_common_server_api_samples=False)
         response = self._do_get('servers/detail')
         subs = self._get_regexes()
         subs['hostid'] = '[a-f0-9]+'
@@ -140,7 +140,7 @@ class SecurityGroupsJsonTest(test_servers.ServersSampleBase):
 
     def test_security_groups_list_server(self):
         # Get api sample of security groups for a specific server.
-        uuid = self._post_server()
+        uuid = self._post_server(use_common_server_api_samples=False)
         response = self._do_get('servers/%s/os-security-groups' % uuid)
         subs = self._get_regexes()
         self._verify_response('server-security-groups-list-resp',
@@ -148,14 +148,14 @@ class SecurityGroupsJsonTest(test_servers.ServersSampleBase):
 
     def test_security_groups_add(self):
         self._create_security_group()
-        uuid = self._post_server()
+        uuid = self._post_server(use_common_server_api_samples=False)
         response = self._add_group(uuid)
         self.assertEqual(response.status_code, 202)
         self.assertEqual(response.content, '')
 
     def test_security_groups_remove(self):
         self._create_security_group()
-        uuid = self._post_server()
+        uuid = self._post_server(use_common_server_api_samples=False)
         self._add_group(uuid)
         subs = {
                 'group_name': 'test'
