@@ -80,10 +80,19 @@ quota_opts = [
                help='Number of seconds until a reservation expires'),
     cfg.IntOpt('until_refresh',
                default=0,
-               help='Count of reservations until usage is refreshed'),
+               help='Count of reservations until usage is refreshed. This '
+                    'defaults to 0(off) to avoid additional load but it is '
+                    'useful to turn on to help keep quota usage up to date '
+                    'and reduce the impact of out of sync usage issues.'),
     cfg.IntOpt('max_age',
                default=0,
-               help='Number of seconds between subsequent usage refreshes'),
+               help='Number of seconds between subsequent usage refreshes. '
+                    'This defaults to 0(off) to avoid additional load but it '
+                    'is useful to turn on to help keep quota usage up to date '
+                    'and reduce the impact of out of sync usage issues. '
+                    'Note that quotas are not updated on a periodic task, '
+                    'they will update on a new reservation if max_age has '
+                    'passed since the last reservation'),
     cfg.StrOpt('quota_driver',
                default='nova.quota.DbQuotaDriver',
                help='Default driver to use for quota checks'),
