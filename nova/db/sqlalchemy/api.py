@@ -28,6 +28,7 @@ import uuid
 
 from oslo_config import cfg
 from oslo_db import exception as db_exc
+from oslo_db import options as oslo_db_options
 from oslo_db.sqlalchemy import session as db_session
 from oslo_db.sqlalchemy import utils as sqlalchemyutils
 from oslo_log import log as logging
@@ -75,33 +76,113 @@ db_opts = [
                     'Should be empty, "project" or "global".'),
 ]
 
+api_db_opts = [
+    cfg.StrOpt('connection',
+               help='The SQLAlchemy connection string to use to connect to '
+                    'the Nova API database.',
+               secret=True),
+    cfg.BoolOpt('sqlite_synchronous',
+                default=True,
+                help='If True, SQLite uses synchronous mode.'),
+    cfg.StrOpt('slave_connection',
+               secret=True,
+               help='The SQLAlchemy connection string to use to connect to the'
+                    ' slave database.'),
+    cfg.StrOpt('mysql_sql_mode',
+               default='TRADITIONAL',
+               help='The SQL mode to be used for MySQL sessions. '
+                    'This option, including the default, overrides any '
+                    'server-set SQL mode. To use whatever SQL mode '
+                    'is set by the server configuration, '
+                    'set this to no value. Example: mysql_sql_mode='),
+    cfg.IntOpt('idle_timeout',
+               default=3600,
+               help='Timeout before idle SQL connections are reaped.'),
+    cfg.IntOpt('max_pool_size',
+               help='Maximum number of SQL connections to keep open in a '
+                    'pool.'),
+    cfg.IntOpt('max_retries',
+               default=10,
+               help='Maximum number of database connection retries '
+                    'during startup. Set to -1 to specify an infinite '
+                    'retry count.'),
+    cfg.IntOpt('retry_interval',
+               default=10,
+               help='Interval between retries of opening a SQL connection.'),
+    cfg.IntOpt('max_overflow',
+               help='If set, use this value for max_overflow with '
+                    'SQLAlchemy.'),
+    cfg.IntOpt('connection_debug',
+               default=0,
+               help='Verbosity of SQL debugging information: 0=None, '
+                    '100=Everything.'),
+    cfg.BoolOpt('connection_trace',
+                default=False,
+                help='Add Python stack traces to SQL as comment strings.'),
+    cfg.IntOpt('pool_timeout',
+               help='If set, use this value for pool_timeout with '
+                    'SQLAlchemy.'),
+]
+
 CONF = cfg.CONF
 CONF.register_opts(db_opts)
+CONF.register_opts(oslo_db_options.database_opts, 'database')
+CONF.register_opts(api_db_opts, group='api_database')
 CONF.import_opt('compute_topic', 'nova.compute.rpcapi')
 
 LOG = logging.getLogger(__name__)
 
-
-_ENGINE_FACADE = None
+_ENGINE_FACADE = {'main': None, 'api': None}
+_MAIN_FACADE = 'main'
+_API_FACADE = 'api'
 _LOCK = threading.Lock()
 
 
-def _create_facade_lazily():
+def _create_facade(conf_group):
+
+    # NOTE(dheeraj): This fragment is copied from oslo.db
+    return db_session.EngineFacade(
+        sql_connection=conf_group.connection,
+        slave_connection=conf_group.slave_connection,
+        sqlite_fk=False,
+        autocommit=True,
+        expire_on_commit=False,
+        mysql_sql_mode=conf_group.mysql_sql_mode,
+        idle_timeout=conf_group.idle_timeout,
+        connection_debug=conf_group.connection_debug,
+        max_pool_size=conf_group.max_pool_size,
+        max_overflow=conf_group.max_overflow,
+        pool_timeout=conf_group.pool_timeout,
+        sqlite_synchronous=conf_group.sqlite_synchronous,
+        connection_trace=conf_group.connection_trace,
+        max_retries=conf_group.max_retries,
+        retry_interval=conf_group.retry_interval)
+
+
+def _create_facade_lazily(facade, conf_group):
     global _LOCK, _ENGINE_FACADE
-    if _ENGINE_FACADE is None:
+    if _ENGINE_FACADE[facade] is None:
         with _LOCK:
-            if _ENGINE_FACADE is None:
-                _ENGINE_FACADE = db_session.EngineFacade.from_config(CONF)
-    return _ENGINE_FACADE
+            if _ENGINE_FACADE[facade] is None:
+                _ENGINE_FACADE[facade] = _create_facade(conf_group)
+    return _ENGINE_FACADE[facade]
 
 
 def get_engine(use_slave=False):
-    facade = _create_facade_lazily()
+    conf_group = CONF.database
+    facade = _create_facade_lazily(_MAIN_FACADE, conf_group)
     return facade.get_engine(use_slave=use_slave)
 
 
+def get_api_engine():
+    conf_group = CONF.api_database
+    facade = _create_facade_lazily(_API_FACADE, conf_group)
+    return facade.get_engine()
+
+
 def get_session(use_slave=False, **kwargs):
-    facade = _create_facade_lazily()
+    conf_group = CONF.database
+    facade = _create_facade_lazily(_MAIN_FACADE, conf_group)
     return facade.get_session(use_slave=use_slave, **kwargs)
 
 
