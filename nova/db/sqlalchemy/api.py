@@ -2807,7 +2807,6 @@ def network_create_safe(context, values):
         raise exception.DuplicateVlan(vlan=values['vlan'])
 
 
-@require_admin_context
 def network_delete_safe(context, network_id):
     session = get_session()
     with session.begin():
