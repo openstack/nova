@@ -60,8 +60,8 @@ class ViewBuilder(object):
         limits = {}
         for name, value in absolute_limits.iteritems():
             if name in self.limit_names and value is not None:
-                for name in self.limit_names[name]:
-                    limits[name] = value
+                for limit_name in self.limit_names[name]:
+                    limits[limit_name] = value
         return limits
 
     def _build_rate_limits(self, rate_limits):
