@@ -2788,7 +2788,6 @@ def _network_ips_query(context, network_id):
                    filter_by(network_id=network_id)
 
 
-@require_admin_context
 def network_count_reserved_ips(context, network_id):
     return _network_ips_query(context, network_id).\
                     filter_by(reserved=True).\
