@@ -53,7 +53,9 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
         parts.append('api_samples')
         if cls.all_extensions:
             parts.append('all_extensions')
-        if cls.extension_name:
+        # Note(gmann): if _use_common_server_api_samples is set to True
+        # then common server sample files will be used.
+        if not cls._use_common_server_api_samples and cls.extension_name:
             alias = importutils.import_class(cls.extension_name).alias
             parts.append(alias)
         parts.append(name + "." + cls.ctype + suffix)
