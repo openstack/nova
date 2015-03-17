@@ -944,6 +944,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                     'image_id': image_id,
                     'version': version.version_string_with_package()})
 
+    @mock.patch.object(vmops.VMwareVMOps, '_create_folders',
+                       return_value='fake_vm_folder')
     @mock.patch('nova.virt.vmwareapi.vm_util.power_on_instance')
     @mock.patch.object(vmops.VMwareVMOps, '_use_disk_image_as_linked_clone')
     @mock.patch.object(vmops.VMwareVMOps, '_fetch_image_if_missing')
@@ -960,7 +962,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                          build_virtual_machine,
                                          enlist_image, fetch_image,
                                          use_disk_image,
-                                         power_on_instance):
+                                         power_on_instance,
+                                         create_folders):
         self._instance.flavor = self._flavor
         extra_specs = get_extra_specs.return_value
         connection_info1 = {'data': 'fake-data1', 'serial': 'volume-fake-id1'}
@@ -1004,6 +1007,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 connection_info2, self._instance,
                 constants.DEFAULT_ADAPTER_TYPE)
 
+    @mock.patch.object(vmops.VMwareVMOps, '_create_folders',
+                       return_value='fake_vm_folder')
     @mock.patch('nova.virt.vmwareapi.vm_util.power_on_instance')
     @mock.patch.object(vmops.VMwareVMOps, 'build_virtual_machine')
     @mock.patch.object(vmops.VMwareVMOps, '_get_vm_config_info')
@@ -1014,7 +1019,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                                    get_extra_specs,
                                                    get_vm_config_info,
                                                    build_virtual_machine,
-                                                   power_on_instance):
+                                                   power_on_instance,
+                                                   create_folders):
         self._instance.image_ref = None
         self._instance.flavor = self._flavor
         extra_specs = get_extra_specs.return_value
@@ -1062,6 +1068,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 connection_info3, self._instance,
                 constants.ADAPTER_TYPE_LSILOGICSAS)
 
+    @mock.patch.object(vmops.VMwareVMOps, '_create_folders',
+                       return_value='fake_vm_folder')
     @mock.patch('nova.virt.vmwareapi.vm_util.power_on_instance')
     @mock.patch.object(vmops.VMwareVMOps, 'build_virtual_machine')
     @mock.patch.object(vmops.VMwareVMOps, '_get_vm_config_info')
@@ -1072,7 +1080,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                         get_extra_specs,
                                         get_vm_config_info,
                                         build_virtual_machine,
-                                        power_on_instance):
+                                        power_on_instance,
+                                        create_folders):
         self._instance.image_ref = None
         self._instance.flavor = self._flavor
         extra_specs = get_extra_specs.return_value
@@ -1288,6 +1297,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         recorded_methods = [c[1][1] for c in mock_call_method.mock_calls]
         self.assertEqual(expected_methods, recorded_methods)
 
+    @mock.patch.object(vmops.VMwareVMOps, '_create_folders',
+                       return_value='fake_vm_folder')
     @mock.patch(
         'nova.virt.vmwareapi.vmops.VMwareVMOps._update_vnic_index')
     @mock.patch(
@@ -1327,6 +1338,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                    mock_get_datastore,
                    mock_configure_config_drive,
                    mock_update_vnic_index,
+                   mock_create_folders,
                    block_device_info=None,
                    extra_specs=None,
                    config_drive=False):
@@ -1748,7 +1760,9 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     def test_create_swap_with_no_bdi(self):
         self._test_create_swap_from_instance(None)
 
-    def test_build_virtual_machine(self):
+    @mock.patch.object(vmops.VMwareVMOps, '_create_folders',
+                       return_value='fake_vm_folder')
+    def test_build_virtual_machine(self, mock_create_folder):
         image_id = nova.tests.unit.image.fake.get_valid_image_id()
         image = images.VMwareImage(image_id=image_id)
 
@@ -2420,3 +2434,16 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                 extra_specs=extra_specs)
         extra_specs = self._vmops._get_extra_specs(flavor, None)
         self.assertEqual(4, int(extra_specs.cores_per_socket))
+
+    def test_get_folder_name(self):
+        uuid = uuidutils.generate_uuid()
+        name = 'fira'
+        expected = 'fira (%s)' % uuid
+        folder_name = self._vmops._get_folder_name(name, uuid)
+        self.assertEqual(expected, folder_name)
+
+        name = 'X' * 255
+        expected = '%s (%s)' % ('X' * 40, uuid)
+        folder_name = self._vmops._get_folder_name(name, uuid)
+        self.assertEqual(expected, folder_name)
+        self.assertEqual(79, len(folder_name))
