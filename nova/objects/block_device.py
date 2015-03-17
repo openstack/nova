@@ -141,24 +141,24 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject,
 
     @base.remotable
     def create(self, context):
-        self._create(context)
+        self._create(self._context)
 
     @base.remotable
     def update_or_create(self, context):
-        self._create(context, update_or_create=True)
+        self._create(self._context, update_or_create=True)
 
     @base.remotable
     def destroy(self, context):
         if not self.obj_attr_is_set('id'):
             raise exception.ObjectActionError(action='destroy',
                                               reason='already destroyed')
-        db.block_device_mapping_destroy(context, self.id)
+        db.block_device_mapping_destroy(self._context, self.id)
         delattr(self, base.get_attrname('id'))
 
         cell_type = cells_opts.get_cell_type()
         if cell_type == 'compute':
             cells_api = cells_rpcapi.CellsAPI()
-            cells_api.bdm_destroy_at_top(context, self.instance_uuid,
+            cells_api.bdm_destroy_at_top(self._context, self.instance_uuid,
                                          device_name=self.device_name,
                                          volume_id=self.volume_id)
 
@@ -171,11 +171,11 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject,
         updates.pop('id', None)
         updated = db.block_device_mapping_update(self._context, self.id,
                                                  updates, legacy=False)
-        self._from_db_object(context, self, updated)
+        self._from_db_object(self._context, self, updated)
         cell_type = cells_opts.get_cell_type()
         if cell_type == 'compute':
             cells_api = cells_rpcapi.CellsAPI()
-            cells_api.bdm_update_or_create_at_top(context, self)
+            cells_api.bdm_update_or_create_at_top(self._context, self)
 
     @base.remotable_classmethod
     def get_by_volume_id(cls, context, volume_id,
