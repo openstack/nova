@@ -20,6 +20,7 @@ import webob
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 import nova.context
+from nova import db
 from nova import exception
 from nova.i18n import _
 from nova import objects
@@ -65,11 +66,16 @@ class QuotaSetsController(wsgi.Controller):
         return dict(quota_set=result)
 
     def _validate_quota_limit(self, resource, limit, minimum, maximum):
-        # NOTE: -1 is a flag value for unlimited
-        if limit < -1:
+        # NOTE: -1 is a flag value for unlimited, maximum value is limited
+        # by SQL standard integer type `INT` which is `0x7FFFFFFF`, it's a
+        # general value for SQL, using a hardcoded value here is not a
+        # `nice` way, but it seems like the only way for now:
+        # http://dev.mysql.com/doc/refman/5.0/en/integer-types.html
+        # http://www.postgresql.org/docs/9.1/static/datatype-numeric.html
+        if limit < -1 or limit > db.MAX_INT:
             msg = (_("Quota limit %(limit)s for %(resource)s "
-                     "must be -1 or greater.") %
-                   {'limit': limit, 'resource': resource})
+                     "must be in the range of -1 and %(max)s.") %
+                   {'limit': limit, 'resource': resource, 'max': db.MAX_INT})
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
         def conv_inf(value):
