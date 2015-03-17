@@ -4925,10 +4925,16 @@ class ComputeManager(manager.Manager):
         if condemned is None:
             raise exception.PortNotFound(_("Port %s is not "
                                            "attached") % port_id)
-
-        self.network_api.deallocate_port_for_instance(context, instance,
-                                                      port_id)
-        self.driver.detach_interface(instance, condemned)
+        try:
+            self.driver.detach_interface(instance, condemned)
+        except exception.NovaException as ex:
+            LOG.warning(_LW("Detach interface failed, port_id=%(port_id)s,"
+                            " reason: %(msg)s"),
+                        {'port_id': port_id, 'msg': ex}, instance=instance)
+            raise exception.InterfaceDetachFailed(instance_uuid=instance.uuid)
+        else:
+            self.network_api.deallocate_port_for_instance(context, instance,
+                                                          port_id)
 
     def _get_compute_info(self, context, host):
         return objects.ComputeNode.get_first_node_by_host_for_old_compat(
