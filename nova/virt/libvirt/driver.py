@@ -5586,13 +5586,15 @@ class LibvirtDriver(driver.ComputeDriver):
                 # Migration did not succeed
                 LOG.error(_LE("Migration operation has aborted"),
                           instance=instance)
-                recover_method(context, instance, dest, block_migration)
+                recover_method(context, instance, dest, block_migration,
+                               migrate_data)
                 break
             elif info.type == libvirt.VIR_DOMAIN_JOB_CANCELLED:
                 # Migration was stopped by admin
                 LOG.warn(_LW("Migration operation was cancelled"),
                          instance=instance)
-                recover_method(context, instance, dest, block_migration)
+                recover_method(context, instance, dest, block_migration,
+                               migrate_data)
                 break
             else:
                 LOG.warn(_LW("Unexpected migration job type: %d"),
