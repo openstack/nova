@@ -378,7 +378,7 @@ class TestDriverBlockDevice(test.NoDBTestCase):
             self.volume_api.attach(elevated_context, fake_volume['id'],
                                    'fake_uuid', bdm_dict['device_name'],
                                    mode=access_mode).AndReturn(None)
-        driver_bdm._bdm_obj.save().AndReturn(None)
+        driver_bdm._bdm_obj.save().MultipleTimes().AndReturn(None)
         return instance, expected_conn_info
 
     def test_volume_attach(self):
