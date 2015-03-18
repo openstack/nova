@@ -166,15 +166,17 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject,
     def save(self, context):
         if self.status == 'removed':
             self.status = 'deleted'
-            db.pci_device_destroy(context, self.compute_node_id, self.address)
+            db.pci_device_destroy(self._context, self.compute_node_id,
+                                  self.address)
         elif self.status != 'deleted':
             updates = self.obj_get_changes()
             if 'extra_info' in updates:
                 updates['extra_info'] = jsonutils.dumps(updates['extra_info'])
             if updates:
-                db_pci = db.pci_device_update(context, self.compute_node_id,
+                db_pci = db.pci_device_update(self._context,
+                                              self.compute_node_id,
                                               self.address, updates)
-                self._from_db_object(context, self, db_pci)
+                self._from_db_object(self._context, self, db_pci)
 
 
 class PciDeviceList(base.ObjectListBase, base.NovaObject):
