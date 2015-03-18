@@ -87,6 +87,40 @@ class FakeInstance(object):
         return getattr(self, key)
 
 
+class Resources(object):
+    vcpus = 0
+    memory_mb = 0
+    local_gb = 0
+    vcpus_used = 0
+    memory_mb_used = 0
+    local_gb_used = 0
+
+    def __init__(self, vcpus=8, memory_mb=8000, local_gb=500):
+        self.vcpus = vcpus
+        self.memory_mb = memory_mb
+        self.local_gb = local_gb
+
+    def claim(self, vcpus=0, mem=0, disk=0):
+        self.vcpus_used += vcpus
+        self.memory_mb_used += mem
+        self.local_gb_used += disk
+
+    def release(self, vcpus=0, mem=0, disk=0):
+        self.vcpus_used -= vcpus
+        self.memory_mb_used -= mem
+        self.local_gb_used -= disk
+
+    def dump(self):
+        return {
+            'vcpus': self.vcpus,
+            'memory_mb': self.memory_mb,
+            'local_gb': self.local_gb,
+            'vcpus_used': self.vcpus_used,
+            'memory_mb_used': self.memory_mb_used,
+            'local_gb_used': self.local_gb_used
+        }
+
+
 class FakeDriver(driver.ComputeDriver):
     capabilities = {
         "has_imagecache": True,
@@ -104,13 +138,11 @@ class FakeDriver(driver.ComputeDriver):
     def __init__(self, virtapi, read_only=False):
         super(FakeDriver, self).__init__(virtapi)
         self.instances = {}
+        self.resources = Resources(
+            vcpus=self.vcpus,
+            memory_mb=self.memory_mb,
+            local_gb=self.local_gb)
         self.host_status_base = {
-          'vcpus': self.vcpus,
-          'memory_mb': self.memory_mb,
-          'local_gb': self.local_gb,
-          'vcpus_used': 0,
-          'memory_mb_used': 0,
-          'local_gb_used': 100000000000,
           'hypervisor_type': 'fake',
           'hypervisor_version': utils.convert_version_to_int('1.0'),
           'hypervisor_hostname': CONF.host,
@@ -147,6 +179,11 @@ class FakeDriver(driver.ComputeDriver):
               admin_password, network_info=None, block_device_info=None):
         uuid = instance.uuid
         state = power_state.RUNNING
+        flavor = instance.flavor
+        self.resources.claim(
+            vcpus=flavor.vcpus,
+            mem=flavor.memory_mb,
+            disk=flavor.root_gb)
         fake_instance = FakeInstance(instance.name, state, uuid)
         self.instances[uuid] = fake_instance
 
@@ -228,6 +265,11 @@ class FakeDriver(driver.ComputeDriver):
                 destroy_disks=True, migrate_data=None):
         key = instance.uuid
         if key in self.instances:
+            flavor = instance.flavor
+            self.resources.release(
+                vcpus=flavor.vcpus,
+                mem=flavor.memory_mb,
+                disk=flavor.root_gb)
             del self.instances[key]
         else:
             LOG.warning(_LW("Key '%(key)s' not in instances '%(inst)s'"),
@@ -392,7 +434,6 @@ class FakeDriver(driver.ComputeDriver):
            Since we don't have a real hypervisor, pretend we have lots of
            disk and ram.
         """
-
         cpu_info = collections.OrderedDict([
             ('arch', 'x86_64'),
             ('model', 'Nehalem'),
@@ -408,6 +449,7 @@ class FakeDriver(driver.ComputeDriver):
             return {}
 
         host_status = self.host_status_base.copy()
+        host_status.update(self.resources.dump())
         host_status['hypervisor_hostname'] = nodename
         host_status['host_hostname'] = nodename
         host_status['host_name_label'] = nodename
