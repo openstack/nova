@@ -6367,7 +6367,6 @@ def instance_group_policies_get(context, group_uuid):
 ####################
 
 
-@require_admin_context
 def pci_device_get_by_addr(context, node_id, dev_addr):
     pci_dev_ref = model_query(context, models.PciDevice).\
                         filter_by(compute_node_id=node_id).\
@@ -6378,7 +6377,6 @@ def pci_device_get_by_addr(context, node_id, dev_addr):
     return pci_dev_ref
 
 
-@require_admin_context
 def pci_device_get_by_id(context, id):
     pci_dev_ref = model_query(context, models.PciDevice).\
                         filter_by(id=id).\
@@ -6388,7 +6386,6 @@ def pci_device_get_by_id(context, id):
     return pci_dev_ref
 
 
-@require_admin_context
 def pci_device_get_all_by_node(context, node_id):
     return model_query(context, models.PciDevice).\
                        filter_by(compute_node_id=node_id).\
@@ -6409,7 +6406,6 @@ def _instance_pcidevs_get_multi(context, instance_uuids, session=None):
         filter(models.PciDevice.instance_uuid.in_(instance_uuids))
 
 
-@require_admin_context
 def pci_device_destroy(context, node_id, address):
     result = model_query(context, models.PciDevice).\
                          filter_by(compute_node_id=node_id).\
@@ -6419,7 +6415,6 @@ def pci_device_destroy(context, node_id, address):
         raise exception.PciDeviceNotFound(node_id=node_id, address=address)
 
 
-@require_admin_context
 def pci_device_update(context, node_id, address, values):
     session = get_session()
     with session.begin():
