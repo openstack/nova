@@ -35,7 +35,7 @@ from nova.tests.functional.api import client
 _TRUE_VALUES = ('True', 'true', '1', 'yes')
 
 CONF = cfg.CONF
-DB_SCHEMA = ""
+DB_SCHEMA = {'main': "", 'api': ""}
 
 
 class ServiceFixture(fixtures.Fixture):
@@ -190,25 +190,34 @@ class Timeout(fixtures.Fixture):
 
 
 class Database(fixtures.Fixture):
+    def __init__(self, database='main'):
+        super(Database, self).__init__()
+        self.database = database
+        if database == 'main':
+            self.get_engine = session.get_engine
+        elif database == 'api':
+            self.get_engine = session.get_api_engine
+
     def _cache_schema(self):
         global DB_SCHEMA
-        if not DB_SCHEMA:
-            engine = session.get_engine()
+        if not DB_SCHEMA[self.database]:
+            engine = self.get_engine()
             conn = engine.connect()
-            migration.db_sync()
-            DB_SCHEMA = "".join(line for line in conn.connection.iterdump())
+            migration.db_sync(database=self.database)
+            DB_SCHEMA[self.database] = "".join(line for line
+                                               in conn.connection.iterdump())
             engine.dispose()
 
     def cleanup(self):
-        engine = session.get_engine()
+        engine = self.get_engine()
         engine.dispose()
 
     def reset(self):
         self._cache_schema()
-        engine = session.get_engine()
+        engine = self.get_engine()
         engine.dispose()
         conn = engine.connect()
-        conn.connection.executescript(DB_SCHEMA)
+        conn.connection.executescript(DB_SCHEMA[self.database])
 
     def setUp(self):
         super(Database, self).setUp()

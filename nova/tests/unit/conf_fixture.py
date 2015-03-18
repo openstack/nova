@@ -58,7 +58,10 @@ class ConfFixture(config_fixture.Config):
         self.conf.set_default('auth_strategy', 'noauth2')
         config.parse_args([], default_config_files=[])
         self.conf.set_default('connection', "sqlite://", group='database')
+        self.conf.set_default('connection', "sqlite://", group='api_database')
         self.conf.set_default('sqlite_synchronous', False, group='database')
+        self.conf.set_default('sqlite_synchronous', False,
+                group='api_database')
         self.conf.set_default('fatal_exception_format_errors', True)
         self.conf.set_default('enabled', True, 'osapi_v3')
         self.conf.set_default('force_dhcp_release', False)
