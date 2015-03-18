@@ -49,15 +49,12 @@ def _load_config():
         cfg = ConfigParser.RawConfigParser()
         cfg.read(cfgfile)
 
-        NOVA_VENDOR = cfg.get("Nova", "vendor")
         if cfg.has_option("Nova", "vendor"):
             NOVA_VENDOR = cfg.get("Nova", "vendor")
 
-        NOVA_PRODUCT = cfg.get("Nova", "product")
         if cfg.has_option("Nova", "product"):
             NOVA_PRODUCT = cfg.get("Nova", "product")
 
-        NOVA_PACKAGE = cfg.get("Nova", "package")
         if cfg.has_option("Nova", "package"):
             NOVA_PACKAGE = cfg.get("Nova", "package")
     except Exception as ex:
