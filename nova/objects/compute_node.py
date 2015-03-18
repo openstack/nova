@@ -241,8 +241,8 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject,
         self._convert_supported_instances_to_db_format(updates)
         self._convert_pci_stats_to_db_format(updates)
 
-        db_compute = db.compute_node_create(context, updates)
-        self._from_db_object(context, self, db_compute)
+        db_compute = db.compute_node_create(self._context, updates)
+        self._from_db_object(self._context, self, db_compute)
 
     @base.remotable
     def save(self, context, prune_stats=False):
@@ -255,12 +255,12 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject,
         self._convert_supported_instances_to_db_format(updates)
         self._convert_pci_stats_to_db_format(updates)
 
-        db_compute = db.compute_node_update(context, self.id, updates)
-        self._from_db_object(context, self, db_compute)
+        db_compute = db.compute_node_update(self._context, self.id, updates)
+        self._from_db_object(self._context, self, db_compute)
 
     @base.remotable
     def destroy(self, context):
-        db.compute_node_delete(context, self.id)
+        db.compute_node_delete(self._context, self.id)
 
     @property
     def service(self):
