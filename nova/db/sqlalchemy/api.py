@@ -967,7 +967,6 @@ def _floating_ip_get_all(context, session=None):
                        session=session)
 
 
-@require_admin_context
 def floating_ip_get_all(context):
     floating_ip_refs = _floating_ip_get_all(context).\
                        options(joinedload('fixed_ip')).\
@@ -977,7 +976,6 @@ def floating_ip_get_all(context):
     return floating_ip_refs
 
 
-@require_admin_context
 def floating_ip_get_all_by_host(context, host):
     floating_ip_refs = _floating_ip_get_all(context).\
                        filter_by(host=host).\
