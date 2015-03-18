@@ -624,6 +624,29 @@ class NovaObject(object):
         finally:
             self._context = original_context
 
+    @contextlib.contextmanager
+    def obj_as_admin(self):
+        """Context manager to make an object call as an admin.
+
+        This temporarily modifies the context embedded in an object to
+        be elevated() and restores it after the call completes. Example
+        usage:
+
+           with obj.obj_as_admin():
+               obj.save()
+
+        """
+        if self._context is None:
+            raise exception.OrphanedObjectError(method='obj_as_admin',
+                                                objtype=self.obj_name())
+
+        original_context = self._context
+        self._context = self._context.elevated()
+        try:
+            yield
+        finally:
+            self._context = original_context
+
 
 class NovaObjectDictCompat(object):
     """Mix-in to provide dictionary key access compat
@@ -696,9 +719,22 @@ class NovaObjectDictCompat(object):
             setattr(self, key, value)
 
 
+class NovaTimestampObject(object):
+    """Mixin class for db backed objects with timestamp fields.
+
+    Sqlalchemy models that inherit from the oslo_db TimestampMixin will include
+    these fields and the corresponding objects will benefit from this mixin.
+    """
+    fields = {
+        'created_at': obj_fields.DateTimeField(nullable=True),
+        'updated_at': obj_fields.DateTimeField(nullable=True),
+        }
+
+
 class NovaPersistentObject(object):
     """Mixin class for Persistent objects.
-    This adds the fields that we use in common for all persistent objects.
+
+    This adds the fields that we use in common for most persistent objects.
     """
     fields = {
         'created_at': obj_fields.DateTimeField(nullable=True),
@@ -706,29 +742,6 @@ class NovaPersistentObject(object):
         'deleted_at': obj_fields.DateTimeField(nullable=True),
         'deleted': obj_fields.BooleanField(default=False),
         }
-
-    @contextlib.contextmanager
-    def obj_as_admin(self):
-        """Context manager to make an object call as an admin.
-
-        This temporarily modifies the context embedded in an object to
-        be elevated() and restores it after the call completes. Example
-        usage:
-
-           with obj.obj_as_admin():
-               obj.save()
-
-        """
-        if self._context is None:
-            raise exception.OrphanedObjectError(method='obj_as_admin',
-                                                objtype=self.obj_name())
-
-        original_context = self._context
-        self._context = self._context.elevated()
-        try:
-            yield
-        finally:
-            self._context = original_context
 
 
 class ObjectListBase(object):
