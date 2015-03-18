@@ -17,6 +17,7 @@ from oslo_config import cfg
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import availability_zones
+from nova import context as nova_context
 from nova import objects
 from nova import servicegroup
 
@@ -111,7 +112,9 @@ class AvailabilityZoneController(wsgi.Controller):
         """Returns a detailed list of availability zone."""
         context = req.environ['nova.context']
         authorize_detail(context)
-
+        # NOTE(alex_xu): back-compatible with db layer hard-code admin
+        # permission checks.
+        nova_context.require_admin_context(context)
         return self._describe_availability_zones_verbose(context)
 
 

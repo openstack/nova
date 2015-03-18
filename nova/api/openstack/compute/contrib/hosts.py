@@ -20,6 +20,7 @@ import webob.exc
 
 from nova.api.openstack import extensions
 from nova import compute
+from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
 from nova.i18n import _LI
@@ -75,6 +76,11 @@ class HostController(object):
         """
         context = req.environ['nova.context']
         authorize(context)
+
+        # NOTE(alex_xu): back-compatible with db layer hard-code admin
+        # permission checks
+        nova_context.require_admin_context(context)
+
         filters = {'disabled': False}
         zone = req.GET.get('zone', None)
         if zone:
