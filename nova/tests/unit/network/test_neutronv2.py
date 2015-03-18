@@ -99,22 +99,23 @@ class MyComparator(mox.Comparator):
 
 
 class TestNeutronClient(test.NoDBTestCase):
+
+    def setUp(self):
+        super(TestNeutronClient, self).setUp()
+        neutronapi.reset_state()
+
     def test_withtoken(self):
         self.flags(url='http://anyhost/', group='neutron')
-        self.flags(url_timeout=30, group='neutron')
+        self.flags(timeout=30, group='neutron')
         my_context = context.RequestContext('userid',
                                             'my_tenantid',
                                             auth_token='token')
-        self.mox.StubOutWithMock(client.Client, "__init__")
-        client.Client.__init__(
-            auth_strategy=CONF.neutron.auth_strategy,
-            endpoint_url=CONF.neutron.url,
-            token=my_context.auth_token,
-            timeout=CONF.neutron.url_timeout,
-            insecure=False,
-            ca_cert=None).AndReturn(None)
-        self.mox.ReplayAll()
-        neutronapi.get_client(my_context)
+        cl = neutronapi.get_client(my_context)
+
+        self.assertEqual(CONF.neutron.url, cl.httpclient.endpoint_override)
+        self.assertEqual(my_context.auth_token,
+                         cl.httpclient.auth.auth_token)
+        self.assertEqual(CONF.neutron.timeout, cl.httpclient.session.timeout)
 
     def test_withouttoken(self):
         my_context = context.RequestContext('userid', 'my_tenantid')
@@ -124,24 +125,17 @@ class TestNeutronClient(test.NoDBTestCase):
 
     def test_withtoken_context_is_admin(self):
         self.flags(url='http://anyhost/', group='neutron')
-        self.flags(url_timeout=30, group='neutron')
+        self.flags(timeout=30, group='neutron')
         my_context = context.RequestContext('userid',
                                             'my_tenantid',
                                             auth_token='token',
                                             is_admin=True)
-        self.mox.StubOutWithMock(client.Client, "__init__")
-        client.Client.__init__(
-            auth_strategy=CONF.neutron.auth_strategy,
-            endpoint_url=CONF.neutron.url,
-            token=my_context.auth_token,
-            timeout=CONF.neutron.url_timeout,
-            insecure=False,
-            ca_cert=None).AndReturn(None)
-        self.mox.ReplayAll()
-        # Note that although we have admin set in the context we
-        # are not asking for an admin client, and so we auth with
-        # our own token
-        neutronapi.get_client(my_context)
+        cl = neutronapi.get_client(my_context)
+
+        self.assertEqual(CONF.neutron.url, cl.httpclient.endpoint_override)
+        self.assertEqual(my_context.auth_token,
+                         cl.httpclient.auth.auth_token)
+        self.assertEqual(CONF.neutron.timeout, cl.httpclient.session.timeout)
 
     def test_withouttoken_keystone_connection_error(self):
         self.flags(auth_strategy='keystone', group='neutron')
@@ -151,46 +145,27 @@ class TestNeutronClient(test.NoDBTestCase):
                           neutronapi.get_client,
                           my_context)
 
-    def test_reuse_admin_token(self):
+    @mock.patch('nova.network.neutronv2.api._ADMIN_AUTH')
+    @mock.patch.object(client.Client, "list_networks", new=mock.Mock())
+    def test_reuse_admin_token(self, m):
         self.flags(url='http://anyhost/', group='neutron')
-        self.flags(url_timeout=30, group='neutron')
-        token_store = neutronapi.AdminTokenStore.get()
-        token_store.admin_auth_token = 'new_token'
         my_context = context.RequestContext('userid', 'my_tenantid',
                                             auth_token='token')
-        with contextlib.nested(
-            mock.patch.object(client.Client, "list_networks",
-                              side_effect=mock.Mock),
-            mock.patch.object(client.Client, 'get_auth_info',
-                              return_value={'auth_token': 'new_token1'}),
-            ):
-            client1 = neutronapi.get_client(my_context, True)
-            client1.list_networks(retrieve_all=False)
-            self.assertEqual('new_token1', token_store.admin_auth_token)
-            client1 = neutronapi.get_client(my_context, True)
-            client1.list_networks(retrieve_all=False)
-            self.assertEqual('new_token1', token_store.admin_auth_token)
 
-    def test_admin_token_updated(self):
-        self.flags(url='http://anyhost/', group='neutron')
-        self.flags(url_timeout=30, group='neutron')
-        token_store = neutronapi.AdminTokenStore.get()
-        token_store.admin_auth_token = 'new_token'
-        tokens = [{'auth_token': 'new_token1'}, {'auth_token': 'new_token'}]
-        my_context = context.RequestContext('userid', 'my_tenantid',
-                                            auth_token='token')
-        with contextlib.nested(
-            mock.patch.object(client.Client, "list_networks",
-                              side_effect=mock.Mock),
-            mock.patch.object(client.Client, 'get_auth_info',
-                              side_effect=tokens.pop),
-            ):
-            client1 = neutronapi.get_client(my_context, True)
-            client1.list_networks(retrieve_all=False)
-            self.assertEqual('new_token', token_store.admin_auth_token)
-            client1 = neutronapi.get_client(my_context, True)
-            client1.list_networks(retrieve_all=False)
-            self.assertEqual('new_token1', token_store.admin_auth_token)
+        tokens = ['new_token2', 'new_token1']
+
+        def token_vals(*args, **kwargs):
+            return tokens.pop()
+
+        m.get_token.side_effect = token_vals
+
+        client1 = neutronapi.get_client(my_context, True)
+        client1.list_networks(retrieve_all=False)
+        self.assertEqual('new_token1', client1.httpclient.auth.get_token(None))
+
+        client1 = neutronapi.get_client(my_context, True)
+        client1.list_networks(retrieve_all=False)
+        self.assertEqual('new_token2', client1.httpclient.auth.get_token(None))
 
 
 class TestNeutronv2Base(test.TestCase):
@@ -3595,14 +3570,15 @@ class TestNeutronv2ExtraDhcpOpts(TestNeutronv2Base):
 
 class TestNeutronClientForAdminScenarios(test.NoDBTestCase):
 
-    def _test_get_client_for_admin(self, use_id=False, admin_context=False):
-
-        def client_mock(*args, **kwargs):
-            client.Client.httpclient = mock.MagicMock()
+    @mock.patch('keystoneclient.auth.identity.v2.Password.get_token')
+    def _test_get_client_for_admin(self, auth_mock,
+                                   use_id=False, admin_context=False):
+        token_value = uuid.uuid4().hex
+        auth_mock.return_value = token_value
 
         self.flags(auth_strategy=None, group='neutron')
         self.flags(url='http://anyhost/', group='neutron')
-        self.flags(url_timeout=30, group='neutron')
+        self.flags(timeout=30, group='neutron')
         if use_id:
             self.flags(admin_tenant_id='admin_tenant_id', group='neutron')
             self.flags(admin_user_id='admin_user_id', group='neutron')
@@ -3611,39 +3587,47 @@ class TestNeutronClientForAdminScenarios(test.NoDBTestCase):
             my_context = context.get_admin_context()
         else:
             my_context = context.RequestContext('userid', 'my_tenantid',
-                                            auth_token='token')
-        self.mox.StubOutWithMock(client.Client, "__init__")
-        kwargs = {
-            'auth_url': CONF.neutron.admin_auth_url,
-            'password': CONF.neutron.admin_password,
-            'endpoint_url': CONF.neutron.url,
-            'auth_strategy': None,
-            'timeout': CONF.neutron.url_timeout,
-            'insecure': False,
-            'ca_cert': None,
-            'token': None}
-        if use_id:
-            kwargs['tenant_id'] = CONF.neutron.admin_tenant_id
-            kwargs['user_id'] = CONF.neutron.admin_user_id
-        else:
-            kwargs['tenant_name'] = CONF.neutron.admin_tenant_name
-            kwargs['username'] = CONF.neutron.admin_username
-        client.Client.__init__(**kwargs).WithSideEffects(client_mock)
-        self.mox.ReplayAll()
+                                                auth_token='token')
 
         # clean global
-        token_store = neutronapi.AdminTokenStore.get()
-        token_store.admin_auth_token = None
+        neutronapi.reset_state()
+
         if admin_context:
             # Note that the context does not contain a token but is
             # an admin context  which will force an elevation to admin
             # credentials.
-            neutronapi.get_client(my_context)
+            context_client = neutronapi.get_client(my_context)
         else:
             # Note that the context is not elevated, but the True is passed in
             # which will force an elevation to admin credentials even though
             # the context has an auth_token.
-            neutronapi.get_client(my_context, True)
+            context_client = neutronapi.get_client(my_context, True)
+
+        admin_auth = neutronapi._ADMIN_AUTH
+
+        self.assertEqual(CONF.neutron.admin_auth_url, admin_auth.auth_url)
+        self.assertEqual(CONF.neutron.admin_password, admin_auth.password)
+
+        if use_id:
+            self.assertEqual(CONF.neutron.admin_tenant_id,
+                             admin_auth.tenant_id)
+            self.assertEqual(CONF.neutron.admin_user_id, admin_auth.user_id)
+
+            self.assertIsNone(admin_auth.tenant_name)
+            self.assertIsNone(admin_auth.username)
+        else:
+            self.assertEqual(CONF.neutron.admin_tenant_name,
+                             admin_auth.tenant_name)
+            self.assertEqual(CONF.neutron.admin_username, admin_auth.username)
+
+            self.assertIsNone(admin_auth.tenant_id)
+            self.assertIsNone(admin_auth.user_id)
+
+        self.assertEqual(CONF.neutron.timeout, neutronapi._SESSION.timeout)
+
+        self.assertEqual(token_value, context_client.httpclient.auth.token)
+        self.assertEqual(CONF.neutron.url,
+                         context_client.httpclient.auth.endpoint)
 
     def test_get_client_for_admin(self):
         self._test_get_client_for_admin()

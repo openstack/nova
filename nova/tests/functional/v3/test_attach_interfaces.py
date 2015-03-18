@@ -91,7 +91,7 @@ class AttachInterfacesSampleJsonTest(test_servers.ServersSampleBase):
                        fake_detach_interface)
         self.flags(auth_strategy=None, group='neutron')
         self.flags(url='http://anyhost/', group='neutron')
-        self.flags(url_timeout=30, group='neutron')
+        self.flags(timeout=30, group='neutron')
 
     def generalize_subs(self, subs, vanilla_regexes):
         subs['subnet_id'] = vanilla_regexes['uuid']
