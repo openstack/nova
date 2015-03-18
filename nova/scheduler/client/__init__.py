@@ -59,3 +59,14 @@ class SchedulerClient(object):
 
     def update_resource_stats(self, context, name, stats):
         self.reportclient.update_resource_stats(context, name, stats)
+
+    def update_instance_info(self, context, host_name, instance_info):
+        self.queryclient.update_instance_info(context, host_name,
+                                              instance_info)
+
+    def delete_instance_info(self, context, host_name, instance_uuid):
+        self.queryclient.delete_instance_info(context, host_name,
+                                              instance_uuid)
+
+    def sync_instance_info(self, context, host_name, instance_uuids):
+        self.queryclient.sync_instance_info(context, host_name, instance_uuids)

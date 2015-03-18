@@ -74,6 +74,36 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
             self.manager.delete_aggregate(None, aggregate='agg')
             delete_aggregate.assert_called_once_with('agg')
 
+    def test_update_instance_info(self):
+        with mock.patch.object(self.manager.driver.host_manager,
+                               'update_instance_info') as mock_update:
+            self.manager.update_instance_info(mock.sentinel.context,
+                                              mock.sentinel.host_name,
+                                              mock.sentinel.instance_info)
+            mock_update.assert_called_once_with(mock.sentinel.context,
+                                                mock.sentinel.host_name,
+                                                mock.sentinel.instance_info)
+
+    def test_delete_instance_info(self):
+        with mock.patch.object(self.manager.driver.host_manager,
+                               'delete_instance_info') as mock_delete:
+            self.manager.delete_instance_info(mock.sentinel.context,
+                                              mock.sentinel.host_name,
+                                              mock.sentinel.instance_uuid)
+            mock_delete.assert_called_once_with(mock.sentinel.context,
+                                                mock.sentinel.host_name,
+                                                mock.sentinel.instance_uuid)
+
+    def test_sync_instance_info(self):
+        with mock.patch.object(self.manager.driver.host_manager,
+                               'sync_instance_info') as mock_sync:
+            self.manager.sync_instance_info(mock.sentinel.context,
+                                            mock.sentinel.host_name,
+                                            mock.sentinel.instance_uuids)
+            mock_sync.assert_called_once_with(mock.sentinel.context,
+                                              mock.sentinel.host_name,
+                                              mock.sentinel.instance_uuids)
+
 
 class SchedulerV3PassthroughTestCase(test.TestCase):
 
