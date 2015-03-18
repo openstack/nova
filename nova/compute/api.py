@@ -2110,7 +2110,7 @@ class API(base.Base):
                extra_properties=None):
         """Backup the given instance
 
-        :param instance: nova.db.sqlalchemy.models.Instance
+        :param instance: nova.objects.instance.Instance object
         :param name: name of the backup
         :param backup_type: 'daily' or 'weekly'
         :param rotation: int representing how many backups to keep around;
@@ -2144,7 +2144,7 @@ class API(base.Base):
     def snapshot(self, context, instance, name, extra_properties=None):
         """Snapshot the given instance.
 
-        :param instance: nova.db.sqlalchemy.models.Instance
+        :param instance: nova.objects.instance.Instance object
         :param name: name of the snapshot
         :param extra_properties: dict of extra image properties to include
                                  when creating the image.
@@ -2171,7 +2171,7 @@ class API(base.Base):
         or backup.
 
         :param context: security context
-        :param instance: nova.db.sqlalchemy.models.Instance
+        :param instance: nova.objects.instance.Instance object
         :param name: string for name of the snapshot
         :param image_type: snapshot | backup
         :param extra_properties: dict of extra image properties to include
@@ -2206,7 +2206,7 @@ class API(base.Base):
                                extra_properties=None):
         """Snapshot the given volume-backed instance.
 
-        :param instance: nova.db.sqlalchemy.models.Instance
+        :param instance: nova.objects.instance.Instance object
         :param image_meta: metadata for the new image
         :param name: name of the backup or snapshot
         :param extra_properties: dict of extra image properties to include

@@ -5328,7 +5328,7 @@ class ComputeManager(manager.Manager):
         """Recovers Instance/volume state from migrating -> running.
 
         :param context: security context
-        :param instance: nova.db.sqlalchemy.models.Instance
+        :param instance: nova.objects.instance.Instance object
         :param dest:
             This method is called from live migration src host.
             This param specifies destination host.
