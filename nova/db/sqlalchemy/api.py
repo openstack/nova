@@ -2980,7 +2980,6 @@ def network_get_by_uuid(context, uuid):
     return result
 
 
-@require_admin_context
 def network_get_by_cidr(context, cidr):
     result = _network_get_query(context).\
                 filter(or_(models.Network.cidr == cidr,
