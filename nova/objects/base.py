@@ -197,9 +197,10 @@ def remotable(fn):
                     # deserialized any object fields into objects already,
                     # we do not try to deserialize them again here.
                     if isinstance(value, NovaObject):
-                        self[key] = value
+                        setattr(self, key, value)
                     else:
-                        self[key] = field.from_primitive(self, key, value)
+                        setattr(self, key,
+                                field.from_primitive(self, key, value))
             self.obj_reset_changes()
             self._changed_fields = set(updates.get('obj_what_changed', []))
             return result
