@@ -19,9 +19,11 @@ Tests For HostManager
 import collections
 
 import mock
+from oslo_config import cfg
 from oslo_serialization import jsonutils
 import six
 
+import nova
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova import exception
@@ -30,9 +32,14 @@ from nova.objects import base as obj_base
 from nova.scheduler import filters
 from nova.scheduler import host_manager
 from nova import test
+from nova.tests.unit import fake_instance
 from nova.tests.unit import matchers
 from nova.tests.unit.scheduler import fakes
 from nova import utils
+
+CONF = cfg.CONF
+CONF.import_opt('scheduler_tracks_instance_changes',
+                'nova.scheduler.host_manager')
 
 
 class FakeFilterClass1(filters.BaseHostFilter):
@@ -48,41 +55,84 @@ class FakeFilterClass2(filters.BaseHostFilter):
 class HostManagerTestCase(test.NoDBTestCase):
     """Test case for HostManager class."""
 
-    def setUp(self):
+    @mock.patch.object(host_manager.HostManager, '_init_instance_info')
+    @mock.patch.object(host_manager.HostManager, '_init_aggregates')
+    def setUp(self, mock_init_agg, mock_init_inst):
         super(HostManagerTestCase, self).setUp()
         self.flags(scheduler_available_filters=['%s.%s' % (__name__, cls) for
                                                 cls in ['FakeFilterClass1',
                                                         'FakeFilterClass2']])
         self.flags(scheduler_default_filters=['FakeFilterClass1'])
-        with mock.patch.object(host_manager.HostManager, '_init_aggregates'):
-            self.host_manager = host_manager.HostManager()
+        self.host_manager = host_manager.HostManager()
         self.fake_hosts = [host_manager.HostState('fake_host%s' % x,
                 'fake-node') for x in xrange(1, 5)]
         self.fake_hosts += [host_manager.HostState('fake_multihost',
                 'fake-node%s' % x) for x in xrange(1, 5)]
+
+    @mock.patch.object(nova.objects.InstanceList, 'get_by_filters')
+    @mock.patch.object(nova.objects.ComputeNodeList, 'get_all')
+    @mock.patch('nova.utils.spawn_n')
+    def test_init_instance_info_batches(self, mock_spawn, mock_get_all,
+                                        mock_get_by_filters):
+        mock_spawn.side_effect = lambda f, *a, **k: f(*a, **k)
+        cn_list = objects.ComputeNodeList()
+        for num in range(22):
+            host_name = 'host_%s' % num
+            cn_list.objects.append(objects.ComputeNode(host=host_name))
+        mock_get_all.return_value = cn_list
+        self.host_manager._init_instance_info()
+        self.assertEqual(mock_get_by_filters.call_count, 3)
+
+    @mock.patch.object(nova.objects.InstanceList, 'get_by_filters')
+    @mock.patch.object(nova.objects.ComputeNodeList, 'get_all')
+    @mock.patch('nova.utils.spawn_n')
+    def test_init_instance_info(self, mock_spawn, mock_get_all,
+                                mock_get_by_filters):
+        mock_spawn.side_effect = lambda f, *a, **k: f(*a, **k)
+        cn1 = objects.ComputeNode(host='host1')
+        cn2 = objects.ComputeNode(host='host2')
+        inst1 = objects.Instance(host='host1', uuid='uuid1')
+        inst2 = objects.Instance(host='host1', uuid='uuid2')
+        inst3 = objects.Instance(host='host2', uuid='uuid3')
+        mock_get_all.return_value = objects.ComputeNodeList(objects=[cn1, cn2])
+        mock_get_by_filters.return_value = objects.InstanceList(
+                objects=[inst1, inst2, inst3])
+        hm = self.host_manager
+        hm._instance_info = {}
+        hm._init_instance_info()
+        self.assertEqual(len(hm._instance_info), 2)
+        fake_info = hm._instance_info['host1']
+        self.assertIn('uuid1', fake_info['instances'])
+        self.assertIn('uuid2', fake_info['instances'])
+        self.assertNotIn('uuid3', fake_info['instances'])
 
     def test_default_filters(self):
         default_filters = self.host_manager.default_filters
         self.assertEqual(1, len(default_filters))
         self.assertIsInstance(default_filters[0], FakeFilterClass1)
 
+    @mock.patch.object(host_manager.HostManager, '_init_instance_info')
     @mock.patch.object(objects.AggregateList, 'get_all')
-    def test_init_aggregates_no_aggs(self, agg_get_all):
+    def test_init_aggregates_no_aggs(self, agg_get_all, mock_init_info):
         agg_get_all.return_value = []
         self.host_manager = host_manager.HostManager()
         self.assertEqual({}, self.host_manager.aggs_by_id)
         self.assertEqual({}, self.host_manager.host_aggregates_map)
 
+    @mock.patch.object(host_manager.HostManager, '_init_instance_info')
     @mock.patch.object(objects.AggregateList, 'get_all')
-    def test_init_aggregates_one_agg_no_hosts(self, agg_get_all):
+    def test_init_aggregates_one_agg_no_hosts(self, agg_get_all,
+                                              mock_init_info):
         fake_agg = objects.Aggregate(id=1, hosts=[])
         agg_get_all.return_value = [fake_agg]
         self.host_manager = host_manager.HostManager()
         self.assertEqual({1: fake_agg}, self.host_manager.aggs_by_id)
         self.assertEqual({}, self.host_manager.host_aggregates_map)
 
+    @mock.patch.object(host_manager.HostManager, '_init_instance_info')
     @mock.patch.object(objects.AggregateList, 'get_all')
-    def test_init_aggregates_one_agg_with_hosts(self, agg_get_all):
+    def test_init_aggregates_one_agg_with_hosts(self, agg_get_all,
+                                                mock_init_info):
         fake_agg = objects.Aggregate(id=1, hosts=['fake-host'])
         agg_get_all.return_value = [fake_agg]
         self.host_manager = host_manager.HostManager()
@@ -305,10 +355,10 @@ class HostManagerTestCase(test.NoDBTestCase):
                 fake_properties)
         self._verify_result(info, result, False)
 
-    def test_get_all_host_states(self):
-
+    @mock.patch.object(nova.objects.InstanceList, 'get_by_host')
+    def test_get_all_host_states(self, mock_get_by_host):
+        mock_get_by_host.return_value = objects.InstanceList()
         context = 'fake_context'
-
         self.mox.StubOutWithMock(objects.ServiceList, 'get_by_binary')
         self.mox.StubOutWithMock(objects.ComputeNodeList, 'get_all')
         self.mox.StubOutWithMock(host_manager.LOG, 'warning')
@@ -365,30 +415,35 @@ class HostManagerTestCase(test.NoDBTestCase):
         self.assertEqual(host_states_map[('host4', 'node4')].free_disk_mb,
                          8388608)
 
+    @mock.patch.object(nova.objects.InstanceList, 'get_by_host')
     @mock.patch.object(host_manager.HostState, 'update_from_compute_node')
     @mock.patch.object(objects.ComputeNodeList, 'get_all')
     @mock.patch.object(objects.ServiceList, 'get_by_binary')
     def test_get_all_host_states_with_no_aggs(self, svc_get_by_binary,
-                                              cn_get_all, update_from_cn):
+                                              cn_get_all, update_from_cn,
+                                              mock_get_by_host):
         svc_get_by_binary.return_value = [objects.Service(host='fake')]
         cn_get_all.return_value = [
             objects.ComputeNode(host='fake', hypervisor_hostname='fake')]
-
+        mock_get_by_host.return_value = objects.InstanceList()
         self.host_manager.host_aggregates_map = collections.defaultdict(set)
 
         self.host_manager.get_all_host_states('fake-context')
         host_state = self.host_manager.host_state_map[('fake', 'fake')]
         self.assertEqual([], host_state.aggregates)
 
+    @mock.patch.object(nova.objects.InstanceList, 'get_by_host')
     @mock.patch.object(host_manager.HostState, 'update_from_compute_node')
     @mock.patch.object(objects.ComputeNodeList, 'get_all')
     @mock.patch.object(objects.ServiceList, 'get_by_binary')
     def test_get_all_host_states_with_matching_aggs(self, svc_get_by_binary,
                                                     cn_get_all,
-                                                    update_from_cn):
+                                                    update_from_cn,
+                                                    mock_get_by_host):
         svc_get_by_binary.return_value = [objects.Service(host='fake')]
         cn_get_all.return_value = [
             objects.ComputeNode(host='fake', hypervisor_hostname='fake')]
+        mock_get_by_host.return_value = objects.InstanceList()
         fake_agg = objects.Aggregate(id=1)
         self.host_manager.host_aggregates_map = collections.defaultdict(
             set, {'fake': set([1])})
@@ -398,18 +453,21 @@ class HostManagerTestCase(test.NoDBTestCase):
         host_state = self.host_manager.host_state_map[('fake', 'fake')]
         self.assertEqual([fake_agg], host_state.aggregates)
 
+    @mock.patch.object(nova.objects.InstanceList, 'get_by_host')
     @mock.patch.object(host_manager.HostState, 'update_from_compute_node')
     @mock.patch.object(objects.ComputeNodeList, 'get_all')
     @mock.patch.object(objects.ServiceList, 'get_by_binary')
     def test_get_all_host_states_with_not_matching_aggs(self,
                                                         svc_get_by_binary,
                                                         cn_get_all,
-                                                        update_from_cn):
+                                                        update_from_cn,
+                                                        mock_get_by_host):
         svc_get_by_binary.return_value = [objects.Service(host='fake'),
                                           objects.Service(host='other')]
         cn_get_all.return_value = [
             objects.ComputeNode(host='fake', hypervisor_hostname='fake'),
             objects.ComputeNode(host='other', hypervisor_hostname='other')]
+        mock_get_by_host.return_value = objects.InstanceList()
         fake_agg = objects.Aggregate(id=1)
         self.host_manager.host_aggregates_map = collections.defaultdict(
             set, {'other': set([1])})
@@ -419,14 +477,205 @@ class HostManagerTestCase(test.NoDBTestCase):
         host_state = self.host_manager.host_state_map[('fake', 'fake')]
         self.assertEqual([], host_state.aggregates)
 
+    @mock.patch('nova.objects.ServiceList.get_by_binary')
+    @mock.patch('nova.objects.ComputeNodeList.get_all')
+    @mock.patch('nova.objects.InstanceList.get_by_host')
+    def test_get_all_host_states_updated(self, mock_get_by_host,
+                                         mock_get_all_comp,
+                                         mock_get_svc_by_binary):
+        mock_get_all_comp.return_value = fakes.COMPUTE_NODES
+        mock_get_svc_by_binary.return_value = fakes.SERVICES
+        context = 'fake_context'
+        hm = self.host_manager
+        inst1 = objects.Instance(uuid='uuid1')
+        cn1 = objects.ComputeNode(host='host1')
+        hm._instance_info = {'host1': {'instances': {'uuid1': inst1},
+                                       'updated': True}}
+        host_state = host_manager.HostState('host1', cn1)
+        self.assertFalse(host_state.instances)
+        mock_get_by_host.return_value = None
+        hm._add_instance_info(context, cn1, host_state)
+        self.assertFalse(mock_get_by_host.called)
+        self.assertTrue(host_state.instances)
+        self.assertEqual(host_state.instances['uuid1'], inst1)
+
+    @mock.patch('nova.objects.ServiceList.get_by_binary')
+    @mock.patch('nova.objects.ComputeNodeList.get_all')
+    @mock.patch('nova.objects.InstanceList.get_by_host')
+    def test_get_all_host_states_not_updated(self, mock_get_by_host,
+                                             mock_get_all_comp,
+                                             mock_get_svc_by_binary):
+        mock_get_all_comp.return_value = fakes.COMPUTE_NODES
+        mock_get_svc_by_binary.return_value = fakes.SERVICES
+        context = 'fake_context'
+        hm = self.host_manager
+        inst1 = objects.Instance(uuid='uuid1')
+        cn1 = objects.ComputeNode(host='host1')
+        hm._instance_info = {'host1': {'instances': {'uuid1': inst1},
+                                       'updated': False}}
+        host_state = host_manager.HostState('host1', cn1)
+        self.assertFalse(host_state.instances)
+        mock_get_by_host.return_value = objects.InstanceList(objects=[inst1])
+        hm._add_instance_info(context, cn1, host_state)
+        mock_get_by_host.assert_called_once_with(context, cn1.host)
+        self.assertTrue(host_state.instances)
+        self.assertEqual(host_state.instances['uuid1'], inst1)
+
+    @mock.patch('nova.objects.InstanceList.get_by_host')
+    def test_recreate_instance_info(self, mock_get_by_host):
+        host_name = 'fake_host'
+        inst1 = fake_instance.fake_instance_obj('fake_context', uuid='aaa',
+                                                host=host_name)
+        inst2 = fake_instance.fake_instance_obj('fake_context', uuid='bbb',
+                                                host=host_name)
+        orig_inst_dict = {inst1.uuid: inst1, inst2.uuid: inst2}
+        new_inst_list = objects.InstanceList(objects=[inst1, inst2])
+        mock_get_by_host.return_value = new_inst_list
+        self.host_manager._instance_info = {
+                host_name: {
+                    'instances': orig_inst_dict,
+                    'updated': True,
+                }}
+        self.host_manager._recreate_instance_info('fake_context', host_name)
+        new_info = self.host_manager._instance_info[host_name]
+        self.assertEqual(len(new_info['instances']), len(new_inst_list))
+        self.assertFalse(new_info['updated'])
+
+    def test_update_instance_info(self):
+        host_name = 'fake_host'
+        inst1 = fake_instance.fake_instance_obj('fake_context', uuid='aaa',
+                                                host=host_name)
+        inst2 = fake_instance.fake_instance_obj('fake_context', uuid='bbb',
+                                                host=host_name)
+        orig_inst_dict = {inst1.uuid: inst1, inst2.uuid: inst2}
+        self.host_manager._instance_info = {
+                host_name: {
+                    'instances': orig_inst_dict,
+                    'updated': False,
+                }}
+        inst3 = fake_instance.fake_instance_obj('fake_context', uuid='ccc',
+                                                host=host_name)
+        inst4 = fake_instance.fake_instance_obj('fake_context', uuid='ddd',
+                                                host=host_name)
+        update = objects.InstanceList(objects=[inst3, inst4])
+        self.host_manager.update_instance_info('fake_context', host_name,
+                                               update)
+        new_info = self.host_manager._instance_info[host_name]
+        self.assertEqual(len(new_info['instances']), 4)
+        self.assertTrue(new_info['updated'])
+
+    def test_update_instance_info_unknown_host(self):
+        self.host_manager._recreate_instance_info = mock.MagicMock()
+        host_name = 'fake_host'
+        inst1 = fake_instance.fake_instance_obj('fake_context', uuid='aaa',
+                                                host=host_name)
+        inst2 = fake_instance.fake_instance_obj('fake_context', uuid='bbb',
+                                                host=host_name)
+        orig_inst_dict = {inst1.uuid: inst1, inst2.uuid: inst2}
+        self.host_manager._instance_info = {
+                host_name: {
+                    'instances': orig_inst_dict,
+                    'updated': False,
+                }}
+        bad_host = 'bad_host'
+        inst3 = fake_instance.fake_instance_obj('fake_context', uuid='ccc',
+                                                host=bad_host)
+        inst_list3 = objects.InstanceList(objects=[inst3])
+        self.host_manager.update_instance_info('fake_context', bad_host,
+                                               inst_list3)
+        new_info = self.host_manager._instance_info[host_name]
+        self.host_manager._recreate_instance_info.assert_called_once_with(
+                'fake_context', bad_host)
+        self.assertEqual(len(new_info['instances']), len(orig_inst_dict))
+        self.assertFalse(new_info['updated'])
+
+    def test_delete_instance_info(self):
+        host_name = 'fake_host'
+        inst1 = fake_instance.fake_instance_obj('fake_context', uuid='aaa',
+                                                host=host_name)
+        inst2 = fake_instance.fake_instance_obj('fake_context', uuid='bbb',
+                                                host=host_name)
+        orig_inst_dict = {inst1.uuid: inst1, inst2.uuid: inst2}
+        self.host_manager._instance_info = {
+                host_name: {
+                    'instances': orig_inst_dict,
+                    'updated': False,
+                }}
+        self.host_manager.delete_instance_info('fake_context', host_name,
+                                               inst1.uuid)
+        new_info = self.host_manager._instance_info[host_name]
+        self.assertEqual(len(new_info['instances']), 1)
+        self.assertTrue(new_info['updated'])
+
+    def test_delete_instance_info_unknown_host(self):
+        self.host_manager._recreate_instance_info = mock.MagicMock()
+        host_name = 'fake_host'
+        inst1 = fake_instance.fake_instance_obj('fake_context', uuid='aaa',
+                                                host=host_name)
+        inst2 = fake_instance.fake_instance_obj('fake_context', uuid='bbb',
+                                                host=host_name)
+        orig_inst_dict = {inst1.uuid: inst1, inst2.uuid: inst2}
+        self.host_manager._instance_info = {
+                host_name: {
+                    'instances': orig_inst_dict,
+                    'updated': False,
+                }}
+        bad_host = 'bad_host'
+        self.host_manager.delete_instance_info('fake_context', bad_host, 'aaa')
+        new_info = self.host_manager._instance_info[host_name]
+        self.host_manager._recreate_instance_info.assert_called_once_with(
+                'fake_context', bad_host)
+        self.assertEqual(len(new_info['instances']), len(orig_inst_dict))
+        self.assertFalse(new_info['updated'])
+
+    def test_sync_instance_info(self):
+        self.host_manager._recreate_instance_info = mock.MagicMock()
+        host_name = 'fake_host'
+        inst1 = fake_instance.fake_instance_obj('fake_context', uuid='aaa',
+                                                host=host_name)
+        inst2 = fake_instance.fake_instance_obj('fake_context', uuid='bbb',
+                                                host=host_name)
+        orig_inst_dict = {inst1.uuid: inst1, inst2.uuid: inst2}
+        self.host_manager._instance_info = {
+                host_name: {
+                    'instances': orig_inst_dict,
+                    'updated': False,
+                }}
+        self.host_manager.sync_instance_info('fake_context', host_name,
+                                             ['bbb', 'aaa'])
+        new_info = self.host_manager._instance_info[host_name]
+        self.assertFalse(self.host_manager._recreate_instance_info.called)
+        self.assertTrue(new_info['updated'])
+
+    def test_sync_instance_info_fail(self):
+        self.host_manager._recreate_instance_info = mock.MagicMock()
+        host_name = 'fake_host'
+        inst1 = fake_instance.fake_instance_obj('fake_context', uuid='aaa',
+                                                host=host_name)
+        inst2 = fake_instance.fake_instance_obj('fake_context', uuid='bbb',
+                                                host=host_name)
+        orig_inst_dict = {inst1.uuid: inst1, inst2.uuid: inst2}
+        self.host_manager._instance_info = {
+                host_name: {
+                    'instances': orig_inst_dict,
+                    'updated': False,
+                }}
+        self.host_manager.sync_instance_info('fake_context', host_name,
+                                             ['bbb', 'aaa', 'new'])
+        new_info = self.host_manager._instance_info[host_name]
+        self.host_manager._recreate_instance_info.assert_called_once_with(
+                'fake_context', host_name)
+        self.assertFalse(new_info['updated'])
+
 
 class HostManagerChangedNodesTestCase(test.NoDBTestCase):
     """Test case for HostManager class."""
 
-    def setUp(self):
+    @mock.patch.object(host_manager.HostManager, '_init_instance_info')
+    @mock.patch.object(host_manager.HostManager, '_init_aggregates')
+    def setUp(self, mock_init_agg, mock_init_inst):
         super(HostManagerChangedNodesTestCase, self).setUp()
-        with mock.patch.object(host_manager.HostManager, '_init_aggregates'):
-            self.host_manager = host_manager.HostManager()
+        self.host_manager = host_manager.HostManager()
         self.fake_hosts = [
               host_manager.HostState('host1', 'node1'),
               host_manager.HostState('host2', 'node2'),
@@ -434,7 +683,9 @@ class HostManagerChangedNodesTestCase(test.NoDBTestCase):
               host_manager.HostState('host4', 'node4')
             ]
 
-    def test_get_all_host_states(self):
+    @mock.patch('nova.objects.InstanceList.get_by_host')
+    def test_get_all_host_states(self, mock_get_by_host):
+        mock_get_by_host.return_value = objects.InstanceList()
         context = 'fake_context'
 
         self.mox.StubOutWithMock(objects.ServiceList, 'get_by_binary')
@@ -448,7 +699,9 @@ class HostManagerChangedNodesTestCase(test.NoDBTestCase):
         host_states_map = self.host_manager.host_state_map
         self.assertEqual(len(host_states_map), 4)
 
-    def test_get_all_host_states_after_delete_one(self):
+    @mock.patch('nova.objects.InstanceList.get_by_host')
+    def test_get_all_host_states_after_delete_one(self, mock_get_by_host):
+        mock_get_by_host.return_value = objects.InstanceList()
         context = 'fake_context'
 
         self.mox.StubOutWithMock(objects.ServiceList, 'get_by_binary')
@@ -470,7 +723,9 @@ class HostManagerChangedNodesTestCase(test.NoDBTestCase):
         host_states_map = self.host_manager.host_state_map
         self.assertEqual(len(host_states_map), 3)
 
-    def test_get_all_host_states_after_delete_all(self):
+    @mock.patch('nova.objects.InstanceList.get_by_host')
+    def test_get_all_host_states_after_delete_all(self, mock_get_by_host):
+        mock_get_by_host.return_value = objects.InstanceList()
         context = 'fake_context'
 
         self.mox.StubOutWithMock(objects.ServiceList, 'get_by_binary')

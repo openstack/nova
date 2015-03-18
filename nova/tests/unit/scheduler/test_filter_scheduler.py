@@ -38,13 +38,14 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
     @mock.patch('nova.objects.ServiceList.get_by_binary',
                 return_value=fakes.SERVICES)
+    @mock.patch('nova.objects.InstanceList.get_by_host')
     @mock.patch('nova.objects.ComputeNodeList.get_all',
                 return_value=fakes.COMPUTE_NODES)
     @mock.patch('nova.db.instance_extra_get_by_instance_uuid',
                 return_value={'numa_topology': None,
                               'pci_requests': None})
     def test_schedule_happy_day(self, mock_get_extra, mock_get_all,
-                                mock_get_by_binary):
+                                mock_by_host, mock_get_by_binary):
         """Make sure there's nothing glaringly wrong with _schedule()
         by doing a happy day pass through.
         """
@@ -116,13 +117,14 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
     @mock.patch('nova.objects.ServiceList.get_by_binary',
                 return_value=fakes.SERVICES)
+    @mock.patch('nova.objects.InstanceList.get_by_host')
     @mock.patch('nova.objects.ComputeNodeList.get_all',
                 return_value=fakes.COMPUTE_NODES)
     @mock.patch('nova.db.instance_extra_get_by_instance_uuid',
                 return_value={'numa_topology': None,
                               'pci_requests': None})
     def test_schedule_host_pool(self, mock_get_extra, mock_get_all,
-                                mock_get_by_binary):
+                                mock_by_host, mock_get_by_binary):
         """Make sure the scheduler_host_subset_size property works properly."""
 
         self.flags(scheduler_host_subset_size=2)
@@ -149,13 +151,14 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
     @mock.patch('nova.objects.ServiceList.get_by_binary',
                 return_value=fakes.SERVICES)
+    @mock.patch('nova.objects.InstanceList.get_by_host')
     @mock.patch('nova.objects.ComputeNodeList.get_all',
                 return_value=fakes.COMPUTE_NODES)
     @mock.patch('nova.db.instance_extra_get_by_instance_uuid',
                 return_value={'numa_topology': None,
                               'pci_requests': None})
     def test_schedule_large_host_pool(self, mock_get_extra, mock_get_all,
-                                      mock_get_by_binary):
+                                      mock_by_host, mock_get_by_binary):
         """Hosts should still be chosen if pool size
         is larger than number of filtered hosts.
         """
@@ -181,6 +184,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         # one host should be chose
         self.assertEqual(len(hosts), 1)
 
+    @mock.patch('nova.scheduler.host_manager.HostManager._add_instance_info')
     @mock.patch('nova.objects.ServiceList.get_by_binary',
                 return_value=fakes.SERVICES)
     @mock.patch('nova.objects.ComputeNodeList.get_all',
@@ -188,8 +192,9 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
     @mock.patch('nova.db.instance_extra_get_by_instance_uuid',
                 return_value={'numa_topology': None,
                               'pci_requests': None})
-    def test_schedule_chooses_best_host(self, mock_get_extra, mock_get_all,
-                                        mock_get_by_binary):
+    def test_schedule_chooses_best_host(self, mock_get_extra, mock_cn_get_all,
+                                        mock_get_by_binary,
+                                        mock_add_inst_info):
         """If scheduler_host_subset_size is 1, the largest host with greatest
         weight should be returned.
         """
@@ -223,7 +228,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         filter_properties = {}
         self.mox.ReplayAll()
         hosts = self.driver._schedule(self.context, request_spec,
-                filter_properties=filter_properties)
+                                      filter_properties=filter_properties)
 
         # one host should be chosen
         self.assertEqual(1, len(hosts))
@@ -232,13 +237,14 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
     @mock.patch('nova.objects.ServiceList.get_by_binary',
                 return_value=fakes.SERVICES)
+    @mock.patch('nova.objects.InstanceList.get_by_host')
     @mock.patch('nova.objects.ComputeNodeList.get_all',
                 return_value=fakes.COMPUTE_NODES)
     @mock.patch('nova.db.instance_extra_get_by_instance_uuid',
                 return_value={'numa_topology': None,
                               'pci_requests': None})
     def test_select_destinations(self, mock_get_extra, mock_get_all,
-                                 mock_get_by_binary):
+                                 mock_by_host, mock_get_by_binary):
         """select_destinations is basically a wrapper around _schedule().
 
         Similar to the _schedule tests, this just does a happy path test to

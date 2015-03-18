@@ -18,6 +18,7 @@ Manage hosts in the current zone.
 """
 
 import collections
+import time
 import UserDict
 
 import iso8601
@@ -28,13 +29,14 @@ from oslo_utils import timeutils
 
 from nova.compute import task_states
 from nova.compute import vm_states
-from nova import context as ctxt_mod
+from nova import context as context_module
 from nova import exception
 from nova.i18n import _, _LI, _LW
 from nova import objects
 from nova.pci import stats as pci_stats
 from nova.scheduler import filters
 from nova.scheduler import weights
+from nova import utils
 from nova.virt import hardware
 
 host_manager_opts = [
@@ -60,12 +62,17 @@ host_manager_opts = [
     cfg.ListOpt('scheduler_weight_classes',
                 default=['nova.scheduler.weights.all_weighers'],
                 help='Which weight class names to use for weighing hosts'),
-    ]
+    cfg.BoolOpt('scheduler_tracks_instance_changes',
+               default=True,
+               help='Determines if the Scheduler tracks changes to instances '
+                    'to help with its filtering decisions.'),
+]
 
 CONF = cfg.CONF
 CONF.register_opts(host_manager_opts)
 
 LOG = logging.getLogger(__name__)
+HOST_INSTANCE_SEMAPHORE = "host_instance"
 
 
 class ReadOnlyDict(UserDict.IterableUserDict):
@@ -141,6 +148,9 @@ class HostState(object):
 
         # List of aggregates the host belongs to
         self.aggregates = []
+
+        # Instances on this host
+        self.instances = {}
 
         self.updated = None
         if compute:
@@ -312,9 +322,14 @@ class HostManager(object):
         # to those aggregates
         self.host_aggregates_map = collections.defaultdict(set)
         self._init_aggregates()
+        self.tracks_instance_changes = CONF.scheduler_tracks_instance_changes
+        # Dict of instances and status, keyed by host
+        self._instance_info = {}
+        if self.tracks_instance_changes:
+            self._init_instance_info()
 
     def _init_aggregates(self):
-        elevated = ctxt_mod.get_admin_context()
+        elevated = context_module.get_admin_context()
         aggs = objects.AggregateList.get_all(elevated)
         for agg in aggs:
             self.aggs_by_id[agg.id] = agg
@@ -348,6 +363,51 @@ class HostManager(object):
         for host in aggregate.hosts:
             if aggregate.id in self.host_aggregates_map[host]:
                 self.host_aggregates_map[host].remove(aggregate.id)
+
+    def _init_instance_info(self):
+        """Creates the initial view of instances for all hosts.
+
+        As this initial population of instance information may take some time,
+        we don't wish to block the scheduler's startup while this completes.
+        The async method allows us to simply mock out the _init_instance_info()
+        method in tests.
+        """
+
+        def _async_init_instance_info():
+            context = context_module.get_admin_context()
+            LOG.debug("START:_async_init_instance_info")
+            self._instance_info = {}
+            compute_nodes = objects.ComputeNodeList.get_all(context).objects
+            LOG.debug("Total number of compute nodes: %s", len(compute_nodes))
+            # Break the queries into batches of 10 to reduce the total number
+            # of calls to the DB.
+            batch_size = 10
+            start_node = 0
+            end_node = batch_size
+            while start_node <= len(compute_nodes):
+                curr_nodes = compute_nodes[start_node:end_node]
+                start_node += batch_size
+                end_node += batch_size
+                filters = {"host": [curr_node.host
+                                    for curr_node in curr_nodes]}
+                result = objects.InstanceList.get_by_filters(context,
+                                                             filters)
+                instances = result.objects
+                LOG.debug("Adding %s instances for hosts %s-%s",
+                          len(instances), start_node, end_node)
+                for instance in instances:
+                    host = instance.host
+                    if host not in self._instance_info:
+                        self._instance_info[host] = {"instances": {},
+                                                     "updated": False}
+                    inst_dict = self._instance_info[host]
+                    inst_dict["instances"][instance.uuid] = instance
+                # Call sleep() to cooperatively yield
+                time.sleep(0)
+            LOG.debug("END:_async_init_instance_info")
+
+        # Run this async so that we don't block the scheduler start-up
+        utils.spawn_n(_async_init_instance_info)
 
     def _choose_host_filters(self, filter_cls_names):
         """Since the caller may specify which filters to use we need
@@ -491,6 +551,7 @@ class HostManager(object):
                                      self.host_aggregates_map[
                                          host_state.host]]
             host_state.update_service(dict(service.iteritems()))
+            self._add_instance_info(context, compute, host_state)
             seen_nodes.add(state_key)
 
         # remove compute nodes from host_state_map if they are not active
@@ -502,3 +563,106 @@ class HostManager(object):
             del self.host_state_map[state_key]
 
         return self.host_state_map.itervalues()
+
+    def _add_instance_info(self, context, compute, host_state):
+        """Adds the host instance info to the host_state object.
+
+        Some older compute nodes may not be sending instance change updates to
+        the Scheduler; other sites may disable this feature for performance
+        reasons. In either of these cases, there will either be no information
+        for the host, or the 'updated' value for that host dict will be False.
+        In those cases, we need to grab the current InstanceList instead of
+        relying on the version in _instance_info.
+        """
+        host_name = compute.host
+        host_info = self._instance_info.get(host_name)
+        if host_info and host_info.get("updated"):
+            inst_dict = host_info["instances"]
+        else:
+            # Host is running old version, or updates aren't flowing.
+            inst_list = objects.InstanceList.get_by_host(context, host_name)
+            inst_dict = {instance.uuid: instance
+                         for instance in inst_list.objects}
+        host_state.instances = inst_dict
+
+    def _recreate_instance_info(self, context, host_name):
+        """Get the InstanceList for the specified host, and store it in the
+        _instance_info dict.
+        """
+        instances = objects.InstanceList.get_by_host(context, host_name)
+        inst_dict = {instance.uuid: instance for instance in instances}
+        host_info = self._instance_info[host_name] = {}
+        host_info["instances"] = inst_dict
+        host_info["updated"] = False
+
+    @utils.synchronized(HOST_INSTANCE_SEMAPHORE)
+    def update_instance_info(self, context, host_name, instance_info):
+        """Receives an InstanceList object from a compute node.
+
+        This method receives information from a compute node when it starts up,
+        or when its instances have changed, and updates its view of hosts and
+        instances with it.
+        """
+        host_info = self._instance_info.get(host_name)
+        if host_info:
+            inst_dict = host_info.get("instances")
+            for instance in instance_info.objects:
+                # Overwrite the entry (if any) with the new info.
+                inst_dict[instance.uuid] = instance
+            host_info["updated"] = True
+        else:
+            instances = instance_info.objects
+            if len(instances) > 1:
+                # This is a host sending its full instance list, so use it.
+                host_info = self._instance_info[host_name] = {}
+                host_info["instances"] = {instance.uuid: instance
+                                          for instance in instances}
+                host_info["updated"] = True
+            else:
+                self._recreate_instance_info(context, host_name)
+                LOG.info(_LI("Received an update from an unknown host '%s'. "
+                             "Re-created its InstanceList."), host_name)
+
+    @utils.synchronized(HOST_INSTANCE_SEMAPHORE)
+    def delete_instance_info(self, context, host_name, instance_uuid):
+        """Receives the UUID from a compute node when one of its instances is
+        terminated.
+
+        The instance in the local view of the host's instances is removed.
+        """
+        host_info = self._instance_info.get(host_name)
+        if host_info:
+            inst_dict = host_info["instances"]
+            # Remove the existing Instance object, if any
+            inst_dict.pop(instance_uuid, None)
+            host_info["updated"] = True
+        else:
+            self._recreate_instance_info(context, host_name)
+            LOG.info(_LI("Received a delete update from an unknown host '%s'. "
+                         "Re-created its InstanceList."), host_name)
+
+    @utils.synchronized(HOST_INSTANCE_SEMAPHORE)
+    def sync_instance_info(self, context, host_name, instance_uuids):
+        """Receives the uuids of the instances on a host.
+
+        This method is periodically called by the compute nodes, which send a
+        list of all the UUID values for the instances on that node. This is
+        used by the scheduler's HostManager to detect when its view of the
+        compute node's instances is out of sync.
+        """
+        host_info = self._instance_info.get(host_name)
+        if host_info:
+            local_set = set(host_info["instances"].keys())
+            compute_set = set(instance_uuids)
+            if not local_set == compute_set:
+                self._recreate_instance_info(context, host_name)
+                LOG.info(_LI("The instance sync for host '%s' did not match. "
+                             "Re-created its InstanceList."), host_name)
+                return
+            host_info["updated"] = True
+            LOG.info(_LI("Successfully synced instances from host '%s'."),
+                     host_name)
+        else:
+            self._recreate_instance_info(context, host_name)
+            LOG.info(_LI("Received a sync request from an unknown host '%s'. "
+                         "Re-created its InstanceList."), host_name)

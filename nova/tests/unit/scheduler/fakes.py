@@ -82,7 +82,11 @@ def get_service_by_host(host):
 
 
 class FakeHostState(host_manager.HostState):
-    def __init__(self, host, node, attribute_dict):
+    def __init__(self, host, node, attribute_dict, instances=None):
         super(FakeHostState, self).__init__(host, node)
+        if instances:
+            self.instances = {inst.uuid: inst for inst in instances}
+        else:
+            self.instances = {}
         for (key, val) in attribute_dict.iteritems():
             setattr(self, key, val)
