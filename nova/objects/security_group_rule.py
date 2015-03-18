@@ -75,8 +75,8 @@ class SecurityGroupRule(base.NovaPersistentObject, base.NovaObject,
         grantee_group = updates.pop('grantee_group', None)
         if grantee_group:
             updates['group_id'] = grantee_group.id
-        db_rule = db.security_group_rule_create(context, updates)
-        self._from_db_object(context, self, db_rule)
+        db_rule = db.security_group_rule_create(self._context, updates)
+        self._from_db_object(self._context, self, db_rule)
 
     @base.remotable_classmethod
     def get_by_id(cls, context, rule_id):
