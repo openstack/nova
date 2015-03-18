@@ -107,7 +107,7 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject,
             return cls.get_by_name(context, hint)
 
     @base.remotable
-    def save(self, context):
+    def save(self):
         """Save updates to this instance group."""
 
         updates = self.obj_get_changes()
@@ -124,7 +124,7 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject,
                                                        "update", payload)
 
     @base.remotable
-    def refresh(self, context):
+    def refresh(self):
         """Refreshes the instance group."""
         current = self.__class__.get_by_uuid(self._context, self.uuid)
         for field in self.fields:
@@ -133,7 +133,7 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject,
         self.obj_reset_changes()
 
     @base.remotable
-    def create(self, context):
+    def create(self):
         if self.obj_attr_is_set('id'):
             raise exception.ObjectActionError(action='create',
                                               reason='already created')
@@ -152,7 +152,7 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject,
                                                        "create", payload)
 
     @base.remotable
-    def destroy(self, context):
+    def destroy(self):
         payload = {'server_group_id': self.uuid}
         db.instance_group_delete(self._context, self.uuid)
         self.obj_reset_changes()
@@ -170,7 +170,7 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject,
         return list(members)
 
     @base.remotable
-    def get_hosts(self, context, exclude=None):
+    def get_hosts(self, exclude=None):
         """Get a list of hosts for non-deleted instances in the group
 
         This method allows you to get a list of the hosts where instances in
@@ -188,7 +188,7 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject,
                          if instance.host]))
 
     @base.remotable
-    def count_members_by_user(self, context, user_id):
+    def count_members_by_user(self, user_id):
         """Count the number of instances in a group belonging to a user."""
         filter_uuids = self.members
         filters = {'uuid': filter_uuids, 'user_id': user_id, 'deleted': False}

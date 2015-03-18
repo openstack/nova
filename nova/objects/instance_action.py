@@ -87,7 +87,7 @@ class InstanceAction(base.NovaPersistentObject, base.NovaObject,
             return cls._from_db_object(context, cls(), db_action)
 
     @base.remotable
-    def finish(self, context):
+    def finish(self):
         values = self.pack_action_finish(self._context, self.instance_uuid)
         db_action = db.action_finish(self._context, values)
         self._from_db_object(self._context, self, db_action)
@@ -191,7 +191,7 @@ class InstanceActionEvent(base.NovaPersistentObject, base.NovaObject,
                                              want_result=want_result)
 
     @base.remotable
-    def finish_with_failure(self, context, exc_val, exc_tb):
+    def finish_with_failure(self, exc_val, exc_tb):
         values = self.pack_action_event_finish(self._context,
                                                self.instance_uuid,
                                                self.event, exc_val=exc_val,
@@ -200,7 +200,7 @@ class InstanceActionEvent(base.NovaPersistentObject, base.NovaObject,
         self._from_db_object(self._context, self, db_event)
 
     @base.remotable
-    def finish(self, context):
+    def finish(self):
         self.finish_with_failure(self._context, exc_val=None, exc_tb=None)
 
 

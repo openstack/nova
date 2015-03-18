@@ -570,7 +570,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                                    expected_attrs)
 
     @base.remotable
-    def create(self, context):
+    def create(self):
         if self.obj_attr_is_set('id'):
             raise exception.ObjectActionError(action='create',
                                               reason='already created')
@@ -618,7 +618,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         self._from_db_object(self._context, self, db_inst, expected_attrs)
 
     @base.remotable
-    def destroy(self, context):
+    def destroy(self):
         if not self.obj_attr_is_set('id'):
             raise exception.ObjectActionError(action='destroy',
                                               reason='already destroyed')
@@ -737,7 +737,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                 setattr(self, attr, None)
 
     @base.remotable
-    def save(self, context, expected_vm_state=None,
+    def save(self, expected_vm_state=None,
              expected_task_state=None, admin_state_reset=False):
         """Save updates to this instance
 
@@ -856,7 +856,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         self.obj_reset_changes()
 
     @base.remotable
-    def refresh(self, context, use_slave=False):
+    def refresh(self, use_slave=False):
         extra = [field for field in INSTANCE_OPTIONAL_ATTRS
                        if self.obj_attr_is_set(field)]
         current = self.__class__.get_by_uuid(self._context, uuid=self.uuid,
@@ -1030,7 +1030,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         self.save()
 
     @base.remotable
-    def delete_metadata_key(self, context, key):
+    def delete_metadata_key(self, key):
         """Optimized metadata delete method.
 
         This provides a more efficient way to delete a single metadata

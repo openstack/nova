@@ -85,7 +85,7 @@ class Quotas(base.NovaObject,
         return quotas
 
     @base.remotable
-    def reserve(self, context, expire=None, project_id=None, user_id=None,
+    def reserve(self, expire=None, project_id=None, user_id=None,
                 **deltas):
         reservations = quota.QUOTAS.reserve(self._context, expire=expire,
                                             project_id=project_id,
@@ -97,7 +97,7 @@ class Quotas(base.NovaObject,
         self.obj_reset_changes()
 
     @base.remotable
-    def commit(self, context=None):
+    def commit(self):
         if not self.reservations:
             return
         quota.QUOTAS.commit(self._context, self.reservations,
@@ -107,7 +107,7 @@ class Quotas(base.NovaObject,
         self.obj_reset_changes()
 
     @base.remotable
-    def rollback(self, context=None):
+    def rollback(self):
         """Rollback quotas."""
         if not self.reservations:
             return

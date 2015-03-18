@@ -55,11 +55,11 @@ class SecurityGroup(base.NovaPersistentObject, base.NovaObject,
         return cls._from_db_object(context, cls(), db_secgroup)
 
     @base.remotable
-    def in_use(self, context):
+    def in_use(self):
         return db.security_group_in_use(self._context, self.id)
 
     @base.remotable
-    def save(self, context):
+    def save(self):
         updates = self.obj_get_changes()
         if updates:
             db_secgroup = db.security_group_update(self._context, self.id,
@@ -68,7 +68,7 @@ class SecurityGroup(base.NovaPersistentObject, base.NovaObject,
         self.obj_reset_changes()
 
     @base.remotable
-    def refresh(self, context):
+    def refresh(self):
         self._from_db_object(self._context, self,
                              db.security_group_get(self._context, self.id))
 

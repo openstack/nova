@@ -175,7 +175,7 @@ class FixedIP(obj_base.NovaPersistentObject, obj_base.NovaObject,
                                                 timeutils.isotime(time))
 
     @obj_base.remotable
-    def create(self, context):
+    def create(self):
         updates = self.obj_get_changes()
         if 'id' in updates:
             raise exception.ObjectActionError(action='create',
@@ -186,7 +186,7 @@ class FixedIP(obj_base.NovaPersistentObject, obj_base.NovaObject,
         self._from_db_object(self._context, self, db_fixedip)
 
     @obj_base.remotable
-    def save(self, context):
+    def save(self):
         updates = self.obj_get_changes()
         if 'address' in updates:
             raise exception.ObjectActionError(action='save',
@@ -195,7 +195,7 @@ class FixedIP(obj_base.NovaPersistentObject, obj_base.NovaObject,
         self.obj_reset_changes()
 
     @obj_base.remotable
-    def disassociate(self, context):
+    def disassociate(self):
         db.fixed_ip_disassociate(self._context, str(self.address))
         self.instance_uuid = None
         self.instance = None
