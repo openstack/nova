@@ -88,9 +88,9 @@ class InstanceAction(base.NovaPersistentObject, base.NovaObject,
 
     @base.remotable
     def finish(self, context):
-        values = self.pack_action_finish(context, self.instance_uuid)
-        db_action = db.action_finish(context, values)
-        self._from_db_object(context, self, db_action)
+        values = self.pack_action_finish(self._context, self.instance_uuid)
+        db_action = db.action_finish(self._context, values)
+        self._from_db_object(self._context, self, db_action)
 
 
 class InstanceActionList(base.ObjectListBase, base.NovaObject):
@@ -192,15 +192,16 @@ class InstanceActionEvent(base.NovaPersistentObject, base.NovaObject,
 
     @base.remotable
     def finish_with_failure(self, context, exc_val, exc_tb):
-        values = self.pack_action_event_finish(context, self.instance_uuid,
+        values = self.pack_action_event_finish(self._context,
+                                               self.instance_uuid,
                                                self.event, exc_val=exc_val,
                                                exc_tb=exc_tb)
-        db_event = db.action_event_finish(context, values)
-        self._from_db_object(context, self, db_event)
+        db_event = db.action_event_finish(self._context, values)
+        self._from_db_object(self._context, self, db_event)
 
     @base.remotable
     def finish(self, context):
-        self.finish_with_failure(context, exc_val=None, exc_tb=None)
+        self.finish_with_failure(self._context, exc_val=None, exc_tb=None)
 
 
 class InstanceActionEventList(base.ObjectListBase, base.NovaObject):

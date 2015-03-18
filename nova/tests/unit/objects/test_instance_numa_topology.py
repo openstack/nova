@@ -65,7 +65,7 @@ class _TestInstanceNUMATopology(object):
     def test_save(self, mock_update):
         topo_obj = get_fake_obj_numa_topology(self.context)
         topo_obj.instance_uuid = fake_db_topology['instance_uuid']
-        topo_obj._save(self.context)
+        topo_obj._save()
         self.assertEqual(1, len(mock_update.call_args_list))
 
     def _test_get_by_instance_uuid(self):

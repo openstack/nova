@@ -75,8 +75,8 @@ class InstanceFault(base.NovaPersistentObject, base.NovaObject,
             'details': self.details,
             'host': self.host,
             }
-        db_fault = db.instance_fault_create(context, values)
-        self._from_db_object(context, self, db_fault)
+        db_fault = db.instance_fault_create(self._context, values)
+        self._from_db_object(self._context, self, db_fault)
         self.obj_reset_changes()
         # Cells should only try sending a message over to nova-cells
         # if cells is enabled and we're not the API cell. Otherwise,
@@ -85,7 +85,7 @@ class InstanceFault(base.NovaPersistentObject, base.NovaObject,
         if cells_opts.get_cell_type() == 'compute':
             try:
                 cells_rpcapi.CellsAPI().instance_fault_create_at_top(
-                    context, db_fault)
+                    self._context, db_fault)
             except Exception:
                 LOG.exception(_LE("Failed to notify cells of instance fault"))
 
