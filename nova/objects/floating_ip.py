@@ -157,9 +157,9 @@ class FloatingIP(obj_base.NovaPersistentObject, obj_base.NovaObject,
         # relationship to the DB update method
         updates.pop('fixed_ip', None)
 
-        db_floatingip = db.floating_ip_update(context, str(self.address),
+        db_floatingip = db.floating_ip_update(self._context, str(self.address),
                                               updates)
-        self._from_db_object(context, self, db_floatingip)
+        self._from_db_object(self._context, self, db_floatingip)
 
 
 class FloatingIPList(obj_base.ObjectListBase, obj_base.NovaObject):
