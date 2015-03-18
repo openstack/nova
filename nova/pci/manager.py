@@ -143,7 +143,7 @@ class PciDevTracker(object):
                     # by force in future.
                     self.stale[new_value['address']] = new_value
                 else:
-                    device.update_device(existed, new_value)
+                    existed.update_device(new_value)
 
         for dev in [dev for dev in devices if
                     dev['address'] in new_addrs - exist_addrs]:
@@ -185,7 +185,7 @@ class PciDevTracker(object):
         device.free(dev, instance)
         stale = self.stale.pop(dev['address'], None)
         if stale:
-            device.update_device(dev, stale)
+            dev.update_device(stale)
         self.stats.add_device(dev)
 
     def _free_instance(self, instance):

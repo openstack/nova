@@ -95,29 +95,3 @@ def free(devobj, instance=None):
             instance['pci_devices'].remove(existed)
         else:
             instance.pci_devices.objects.remove(existed)
-
-
-def update_device(devobj, dev_dict):
-    """Sync the content from device dictionary to device object.
-
-    The resource tracker updates the available devices periodically.
-    To avoid meaningless syncs with the database, we update the device
-    object only if a value changed.
-    """
-
-    # Note(yjiang5): status/instance_uuid should only be updated by
-    # functions like claim/allocate etc. The id is allocated by
-    # database. The extra_info is created by the object.
-    no_changes = ('status', 'instance_uuid', 'id', 'extra_info')
-    map(lambda x: dev_dict.pop(x, None),
-        [key for key in no_changes])
-
-    for k, v in dev_dict.items():
-        if k in devobj.fields.keys():
-            devobj[k] = v
-        else:
-            # Note (yjiang5) extra_info.update does not update
-            # obj_what_changed, set it explicitely
-            extra_info = devobj.extra_info
-            extra_info.update({k: v})
-            devobj.extra_info = extra_info
