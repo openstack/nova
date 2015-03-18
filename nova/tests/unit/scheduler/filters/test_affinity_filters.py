@@ -13,6 +13,7 @@
 import mock
 from oslo_config import cfg
 
+from nova import objects
 from nova.scheduler.filters import affinity_filter
 from nova import test
 from nova.tests.unit.scheduler import fakes
@@ -22,122 +23,86 @@ CONF = cfg.CONF
 CONF.import_opt('my_ip', 'nova.netconf')
 
 
-@mock.patch('nova.compute.api.API.get_all')
 class TestDifferentHostFilter(test.NoDBTestCase):
 
     def setUp(self):
         super(TestDifferentHostFilter, self).setUp()
         self.filt_cls = affinity_filter.DifferentHostFilter()
 
-    def test_affinity_different_filter_passes(self, get_all_mock):
+    def test_affinity_different_filter_passes(self):
         host = fakes.FakeHostState('host1', 'node1', {})
-        get_all_mock.return_value = []
-
+        inst1 = objects.Instance(uuid='different')
+        host.instances = {inst1.uuid: inst1}
         filter_properties = {'context': mock.sentinel.ctx,
                              'scheduler_hints': {
-                                'different_host': ['fake'], }}
-
+                                'different_host': ['same'], }}
         self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
-        get_all_mock.assert_called_once_with(mock.sentinel.ctx,
-                                             {'host': 'host1',
-                                              'uuid': ['fake'],
-                                              'deleted': False})
 
-    def test_affinity_different_filter_no_list_passes(self, get_all_mock):
+    def test_affinity_different_filter_no_list_passes(self):
         host = fakes.FakeHostState('host1', 'node1', {})
-        get_all_mock.return_value = []
-
+        host.instances = {}
         filter_properties = {'context': mock.sentinel.ctx,
                              'scheduler_hints': {
-                                 'different_host': 'fake'}}
-
+                                 'different_host': 'same'}}
         self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
-        get_all_mock.assert_called_once_with(mock.sentinel.ctx,
-                                             {'host': 'host1',
-                                              'uuid': ['fake'],
-                                              'deleted': False})
 
-    def test_affinity_different_filter_fails(self, get_all_mock):
+    def test_affinity_different_filter_fails(self):
+        inst1 = objects.Instance(uuid='same')
         host = fakes.FakeHostState('host1', 'node1', {})
-        get_all_mock.return_value = [mock.sentinel.instances]
-
+        host.instances = {inst1.uuid: inst1}
         filter_properties = {'context': mock.sentinel.ctx,
                              'scheduler_hints': {
-                                'different_host': ['fake'], }}
-
+                                'different_host': ['same'], }}
         self.assertFalse(self.filt_cls.host_passes(host, filter_properties))
-        get_all_mock.assert_called_once_with(mock.sentinel.ctx,
-                                             {'host': 'host1',
-                                              'uuid': ['fake'],
-                                              'deleted': False})
 
-    def test_affinity_different_filter_handles_none(self, get_all_mock):
+    def test_affinity_different_filter_handles_none(self):
+        inst1 = objects.Instance(uuid='same')
         host = fakes.FakeHostState('host1', 'node1', {})
-
+        host.instances = {inst1.uuid: inst1}
         filter_properties = {'context': mock.sentinel.ctx,
                              'scheduler_hints': None}
-
         self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
-        self.assertFalse(get_all_mock.called)
 
 
-@mock.patch('nova.compute.api.API.get_all')
 class TestSameHostFilter(test.NoDBTestCase):
 
     def setUp(self):
         super(TestSameHostFilter, self).setUp()
         self.filt_cls = affinity_filter.SameHostFilter()
 
-    def test_affinity_same_filter_passes(self, get_all_mock):
+    def test_affinity_same_filter_passes(self):
+        inst1 = objects.Instance(uuid='same')
         host = fakes.FakeHostState('host1', 'node1', {})
-        get_all_mock.return_value = [mock.sentinel.images]
-
+        host.instances = {inst1.uuid: inst1}
         filter_properties = {'context': mock.sentinel.ctx,
                              'scheduler_hints': {
-                                'same_host': ['fake'], }}
-
+                                'same_host': ['same'], }}
         self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
-        get_all_mock.assert_called_once_with(mock.sentinel.ctx,
-                                             {'host': 'host1',
-                                              'uuid': ['fake'],
-                                              'deleted': False})
 
-    def test_affinity_same_filter_no_list_passes(self, get_all_mock):
+    def test_affinity_same_filter_no_list_passes(self):
         host = fakes.FakeHostState('host1', 'node1', {})
-        get_all_mock.return_value = [mock.sentinel.images]
-
+        host.instances = {}
         filter_properties = {'context': mock.sentinel.ctx,
                              'scheduler_hints': {
-                                 'same_host': 'fake'}}
-
+                                 'same_host': 'same'}}
         self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
-        get_all_mock.assert_called_once_with(mock.sentinel.ctx,
-                                             {'host': 'host1',
-                                              'uuid': ['fake'],
-                                              'deleted': False})
 
-    def test_affinity_same_filter_fails(self, get_all_mock):
+    def test_affinity_same_filter_fails(self):
+        inst1 = objects.Instance(uuid='different')
         host = fakes.FakeHostState('host1', 'node1', {})
-        get_all_mock.return_value = []
-
+        host.instances = {inst1.uuid: inst1}
         filter_properties = {'context': mock.sentinel.ctx,
                              'scheduler_hints': {
-                                'same_host': ['fake'], }}
-
+                                'same_host': ['same'], }}
         self.assertFalse(self.filt_cls.host_passes(host, filter_properties))
-        get_all_mock.assert_called_once_with(mock.sentinel.ctx,
-                                             {'host': 'host1',
-                                              'uuid': ['fake'],
-                                              'deleted': False})
 
-    def test_affinity_same_filter_handles_none(self, get_all_mock):
+    def test_affinity_same_filter_handles_none(self):
+        inst1 = objects.Instance(uuid='different')
         host = fakes.FakeHostState('host1', 'node1', {})
-
+        host.instances = {inst1.uuid: inst1}
         filter_properties = {'context': mock.sentinel.ctx,
                              'scheduler_hints': None}
-
         self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
-        self.assertFalse(get_all_mock.called)
 
 
 class TestSimpleCIDRAffinityFilter(test.NoDBTestCase):

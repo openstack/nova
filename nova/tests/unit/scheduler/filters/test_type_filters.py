@@ -12,6 +12,7 @@
 
 import mock
 
+from nova import objects
 from nova.scheduler.filters import type_filter
 from nova import test
 from nova.tests.unit.scheduler import fakes
@@ -19,23 +20,25 @@ from nova.tests.unit.scheduler import fakes
 
 class TestTypeFilter(test.NoDBTestCase):
 
-    @mock.patch('nova.db.instance_get_all_by_host_and_not_type')
-    def test_type_filter(self, get_mock):
+    def test_type_filter(self):
         self.filt_cls = type_filter.TypeAffinityFilter()
-
         host = fakes.FakeHostState('fake_host', 'fake_node', {})
+        host.instances = {}
+        target_id = 1
         filter_properties = {'context': mock.MagicMock(),
-                             'instance_type': {'id': 'fake1'}}
-        get_mock.return_value = []
-        # True since empty
+                             'instance_type': {'id': target_id}}
+        # True since no instances on host
         self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
-        get_mock.assert_called_once_with(
-            mock.ANY,  # context...
-            'fake_host',
-            'fake1'
-        )
-        get_mock.return_value = [mock.sentinel.instances]
-        # False since not empty
+        # Add an instance with the same instance_type_id
+        inst1 = objects.Instance(uuid='aa', instance_type_id=target_id)
+        host.instances = {inst1.uuid: inst1}
+        # True since only same instance_type_id on host
+        self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
+        # Add an instance with a different instance_type_id
+        diff_type = target_id + 1
+        inst2 = objects.Instance(uuid='bb', instance_type_id=diff_type)
+        host.instances.update({inst2.uuid: inst2})
+        # False since host now has an instance of a different type
         self.assertFalse(self.filt_cls.host_passes(host, filter_properties))
 
     @mock.patch('nova.scheduler.filters.utils.aggregate_values_from_key')
