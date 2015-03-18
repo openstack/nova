@@ -162,19 +162,19 @@ class Service(base.NovaPersistentObject, base.NovaObject,
             raise exception.ObjectActionError(action='create',
                                               reason='already created')
         updates = self.obj_get_changes()
-        db_service = db.service_create(context, updates)
-        self._from_db_object(context, self, db_service)
+        db_service = db.service_create(self._context, updates)
+        self._from_db_object(self._context, self, db_service)
 
     @base.remotable
     def save(self, context):
         updates = self.obj_get_changes()
         updates.pop('id', None)
-        db_service = db.service_update(context, self.id, updates)
-        self._from_db_object(context, self, db_service)
+        db_service = db.service_update(self._context, self.id, updates)
+        self._from_db_object(self._context, self, db_service)
 
     @base.remotable
     def destroy(self, context):
-        db.service_destroy(context, self.id)
+        db.service_destroy(self._context, self.id)
 
 
 class ServiceList(base.ObjectListBase, base.NovaObject):
