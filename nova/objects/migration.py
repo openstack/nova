@@ -64,15 +64,15 @@ class Migration(base.NovaPersistentObject, base.NovaObject,
             raise exception.ObjectActionError(action='create',
                                               reason='already created')
         updates = self.obj_get_changes()
-        db_migration = db.migration_create(context, updates)
-        self._from_db_object(context, self, db_migration)
+        db_migration = db.migration_create(self._context, updates)
+        self._from_db_object(self._context, self, db_migration)
 
     @base.remotable
     def save(self, context):
         updates = self.obj_get_changes()
         updates.pop('id', None)
-        db_migration = db.migration_update(context, self.id, updates)
-        self._from_db_object(context, self, db_migration)
+        db_migration = db.migration_update(self._context, self.id, updates)
+        self._from_db_object(self._context, self, db_migration)
         self.obj_reset_changes()
 
     @property
