@@ -26,6 +26,7 @@ from nova.tests.unit.api.openstack import fakes
 class PauseServerTestsV21(admin_only_action_common.CommonTests):
     pause_server = pause_server_v21
     controller_name = 'PauseServerController'
+    _api_version = '2.1'
 
     def setUp(self):
         super(PauseServerTestsV21, self).setUp()
@@ -37,53 +38,38 @@ class PauseServerTestsV21(admin_only_action_common.CommonTests):
 
         self.stubs.Set(self.pause_server, self.controller_name,
                        _fake_controller)
-        self.app = self._get_app()
         self.mox.StubOutWithMock(self.compute_api, 'get')
 
-    def _get_app(self):
-        return fakes.wsgi_app_v21(init_only=('servers',
-                                             'os-pause-server'),
-                                  fake_auth_context=self.context)
-
     def test_pause_unpause(self):
-        self._test_actions(['pause', 'unpause'])
+        self._test_actions(['_pause', '_unpause'])
 
     def test_actions_raise_on_not_implemented(self):
-        for action in ['pause', 'unpause']:
-            self.mox.StubOutWithMock(self.compute_api, action)
+        for action in ['_pause', '_unpause']:
+            self.mox.StubOutWithMock(self.compute_api,
+                                     action.replace('_', ''))
             self._test_not_implemented_state(action)
             # Re-mock this.
             self.mox.StubOutWithMock(self.compute_api, 'get')
 
     def test_pause_unpause_with_non_existed_instance(self):
-        self._test_actions_with_non_existed_instance(['pause', 'unpause'])
+        self._test_actions_with_non_existed_instance(['_pause', '_unpause'])
 
     def test_pause_unpause_with_non_existed_instance_in_compute_api(self):
-        self._test_actions_instance_not_found_in_compute_api(['pause',
-                                                              'unpause'])
+        self._test_actions_instance_not_found_in_compute_api(['_pause',
+                                                              '_unpause'])
 
     def test_pause_unpause_raise_conflict_on_invalid_state(self):
-        self._test_actions_raise_conflict_on_invalid_state(['pause',
-                                                            'unpause'])
+        self._test_actions_raise_conflict_on_invalid_state(['_pause',
+                                                            '_unpause'])
 
     def test_actions_with_locked_instance(self):
-        self._test_actions_with_locked_instance(['pause', 'unpause'])
+        self._test_actions_with_locked_instance(['_pause', '_unpause'])
 
 
 class PauseServerTestsV2(PauseServerTestsV21):
     pause_server = pause_server_v2
     controller_name = 'AdminActionsController'
-
-    def setUp(self):
-        super(PauseServerTestsV2, self).setUp()
-        self.flags(
-            osapi_compute_extension=[
-            'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Admin_actions'])
-
-    def _get_app(self):
-        return fakes.wsgi_app(init_only=('servers',),
-            fake_auth_context=self.context)
+    _api_version = '2'
 
     def test_actions_raise_on_not_implemented(self):
         pass
