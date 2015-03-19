@@ -82,6 +82,7 @@ from nova.openstack.common import periodic_task
 from nova import paths
 from nova import rpc
 from nova import safe_utils
+from nova.scheduler import client as scheduler_client
 from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova import utils
 from nova.virt import block_device as driver_block_device
@@ -171,7 +172,14 @@ interval_opts = [
     cfg.IntOpt('block_device_allocate_retries_interval',
                default=3,
                help='Waiting time interval (seconds) between block'
-                    ' device allocation retries on failures')
+                    ' device allocation retries on failures'),
+    cfg.IntOpt('scheduler_instance_sync_interval',
+               default=120,
+               help='Waiting time interval (seconds) between sending the '
+                    'scheduler a list of current instance UUIDs to verify '
+                    'that its view of instances is in sync with nova. If the '
+                    'CONF option `scheduler_tracks_instance_changes` is '
+                    'False, changing this option will have no effect.'),
 ]
 
 timeout_opts = [
@@ -241,7 +249,8 @@ CONF.import_opt('html5_proxy_base_url', 'nova.rdp', group='rdp')
 CONF.import_opt('enabled', 'nova.console.serial', group='serial_console')
 CONF.import_opt('base_url', 'nova.console.serial', group='serial_console')
 CONF.import_opt('destroy_after_evacuate', 'nova.utils', group='workarounds')
-
+CONF.import_opt('scheduler_tracks_instance_changes',
+                'nova.scheduler.host_manager')
 
 LOG = logging.getLogger(__name__)
 
@@ -632,10 +641,12 @@ class ComputeManager(manager.Manager):
         self.consoleauth_rpcapi = consoleauth.rpcapi.ConsoleAuthAPI()
         self.cells_rpcapi = cells_rpcapi.CellsAPI()
         self.scheduler_rpcapi = scheduler_rpcapi.SchedulerAPI()
+        self.scheduler_client = scheduler_client.SchedulerClient()
         self._resource_tracker_dict = {}
         self.instance_events = InstanceEvents()
         self._sync_power_pool = eventlet.GreenPool()
         self._syncs_in_progress = {}
+        self.send_instance_updates = CONF.scheduler_tracks_instance_changes
         if CONF.max_concurrent_builds != 0:
             self._build_semaphore = eventlet.semaphore.Semaphore(
                 CONF.max_concurrent_builds)
@@ -864,6 +875,7 @@ class ComputeManager(manager.Manager):
             else:
                 self.consoleauth_rpcapi.delete_tokens_for_instance(context,
                         instance.uuid)
+        self._delete_scheduler_instance_info(context, instance.uuid)
 
     def _init_instance(self, context, instance):
         '''Initialize this instance during service init.'''
@@ -1225,6 +1237,7 @@ class ComputeManager(manager.Manager):
         finally:
             if CONF.defer_iptables_apply:
                 self.driver.filter_defer_apply_off()
+            self._update_scheduler_instance_info(context, instances)
 
     def cleanup_host(self):
         self.driver.cleanup_host(host=self.host)
@@ -1977,6 +1990,40 @@ class ComputeManager(manager.Manager):
         instance.save(expected_task_state=task_states.SPAWNING)
         return instance
 
+    def _update_scheduler_instance_info(self, context, instance):
+        """Sends an InstanceList with created or updated Instance objects to
+        the Scheduler client.
+
+        In the case of init_host, the value passed will already be an
+        InstanceList. Other calls will send individual Instance objects that
+        have been created or resized. In this case, we create an InstanceList
+        object containing that Instance.
+        """
+        if not self.send_instance_updates:
+            return
+        if isinstance(instance, objects.Instance):
+            instance = objects.InstanceList(objects=[instance])
+        context = context.elevated()
+        self.scheduler_client.update_instance_info(context, self.host,
+                                                   instance)
+
+    def _delete_scheduler_instance_info(self, context, instance_uuid):
+        """Sends the uuid of the deleted Instance to the Scheduler client."""
+        if not self.send_instance_updates:
+            return
+        context = context.elevated()
+        self.scheduler_client.delete_instance_info(context, self.host,
+                                                   instance_uuid)
+
+    @periodic_task.periodic_task(spacing=CONF.scheduler_instance_sync_interval)
+    def _sync_scheduler_instance_info(self, context):
+        if not self.send_instance_updates:
+            return
+        context = context.elevated()
+        instances = objects.InstanceList.get_by_host(context, self.host)
+        uuids = [instance.uuid for instance in instances]
+        self.scheduler_client.sync_instance_info(context, self.host, uuids)
+
     def _notify_about_instance_usage(self, context, instance, event_suffix,
                                      network_info=None, system_metadata=None,
                                      extra_usage_info=None, fault=None):
@@ -2283,6 +2330,7 @@ class ComputeManager(manager.Manager):
                 self._notify_about_instance_usage(context, instance,
                     'create.end', fault=e)
 
+        self._update_scheduler_instance_info(context, instance)
         self._notify_about_instance_usage(context, instance, 'create.end',
                 extra_usage_info={'message': _('Success')},
                 network_info=network_info)
@@ -2947,7 +2995,7 @@ class ComputeManager(manager.Manager):
                 instance.progress = 0
                 instance.save()
                 self.stop_instance(context, instance)
-
+            self._update_scheduler_instance_info(context, instance)
             self._notify_about_instance_usage(
                     context, instance, "rebuild.end",
                     network_info=network_info,
@@ -3993,6 +4041,7 @@ class ComputeManager(manager.Manager):
         instance.launched_at = timeutils.utcnow()
         instance.save(expected_task_state=task_states.RESIZE_FINISH)
 
+        self._update_scheduler_instance_info(context, instance)
         self._notify_about_instance_usage(
             context, instance, "finish_resize.end",
             network_info=network_info)
@@ -4306,6 +4355,7 @@ class ComputeManager(manager.Manager):
         instance.task_state = None
         instance.save(expected_task_state=[task_states.SHELVING,
                                            task_states.SHELVING_OFFLOADING])
+        self._delete_scheduler_instance_info(context, instance.uuid)
         self._notify_about_instance_usage(context, instance,
                 'shelve_offload.end')
 
@@ -4391,6 +4441,7 @@ class ComputeManager(manager.Manager):
         self._unshelve_instance_key_restore(instance, scrubbed_keys)
         self._update_instance_after_spawn(context, instance)
         instance.save(expected_task_state=task_states.SPAWNING)
+        self._update_scheduler_instance_info(context, instance)
         self._notify_about_instance_usage(context, instance, 'unshelve.end')
 
     @messaging.expected_exceptions(NotImplementedError)
@@ -5253,6 +5304,7 @@ class ComputeManager(manager.Manager):
         # host even before next periodic task.
         self.update_available_resource(ctxt)
 
+        self._update_scheduler_instance_info(ctxt, instance)
         self._notify_about_instance_usage(ctxt, instance,
                                           "live_migration._post.end",
                                           network_info=network_info)

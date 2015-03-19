@@ -26,6 +26,7 @@ from nova.api.ec2 import cloud
 from nova.api.ec2 import ec2utils
 from nova.compute import api as compute_api
 from nova.compute import flavors
+from nova.compute import manager as compute_manager
 from nova.compute import utils as compute_utils
 from nova import context
 from nova import db
@@ -153,6 +154,12 @@ class CinderCloudTestCase(test.TestCase):
         self.volume_api = volume.API()
         self.volume_api.reset_fake_api(self.context)
 
+        self.stubs.Set(compute_manager.ComputeManager,
+                       '_update_scheduler_instance_info', dumb)
+        self.stubs.Set(compute_manager.ComputeManager,
+                       '_delete_scheduler_instance_info', dumb)
+        self.stubs.Set(compute_manager.ComputeManager,
+                       '_sync_scheduler_instance_info', dumb)
         self.useFixture(cast_as_call.CastAsCall(self.stubs))
 
         # make sure we can map ami-00000001/2 to a uuid in FakeImageService
