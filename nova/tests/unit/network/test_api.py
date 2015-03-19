@@ -113,12 +113,8 @@ class ApiTestCase(test.TestCase):
     @mock.patch('nova.objects.Network.get_by_uuid')
     def test_get(self, mock_get):
         mock_get.return_value = mock.sentinel.get_by_uuid
-        with mock.patch.object(self.context, 'elevated') as elevated:
-            elevated.return_value = mock.sentinel.elevated_context
-            self.assertEqual(mock.sentinel.get_by_uuid,
-                             self.network_api.get(self.context, 'fake-uuid'))
-        mock_get.assert_called_once_with(mock.sentinel.elevated_context,
-                                         'fake-uuid')
+        self.assertEqual(mock.sentinel.get_by_uuid,
+                         self.network_api.get(self.context, 'fake-uuid'))
 
     @mock.patch('nova.objects.Network.get_by_id')
     @mock.patch('nova.db.virtual_interface_get_by_instance')
