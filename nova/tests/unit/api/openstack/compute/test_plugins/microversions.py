@@ -73,6 +73,13 @@ class MicroversionsController3(wsgi.Controller):
         data = {'param': 'update_val1'}
         return data
 
+    @wsgi.Controller.api_version("2.1", "2.2")
+    @wsgi.response(202)
+    @wsgi.action('foo')
+    def _foo(self, req, id, body):
+        data = {'foo': 'bar'}
+        return data
+
 
 class MicroversionsController4(wsgi.Controller):
 
@@ -130,7 +137,8 @@ class Microversions(extensions.V3APIExtensionBase):
         res2 = extensions.ResourceExtension('microversions2',
                                             MicroversionsController2())
         res3 = extensions.ResourceExtension('microversions3',
-                                            MicroversionsController3())
+                                            MicroversionsController3(),
+                                            member_actions={"action": "POST"})
         res4 = extensions.ResourceExtension('microversions4',
                                             MicroversionsController4())
         res5 = extensions.ResourceExtension(
