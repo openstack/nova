@@ -353,7 +353,6 @@ class Host(object):
                 event = self._event_queue.get(block=False)
                 if isinstance(event, virtevent.LifecycleEvent):
                     # call possibly with delay
-                    self._event_delayed_cleanup(event)
                     self._event_emit_delayed(event)
 
                 elif 'conn' in event and 'reason' in event:
@@ -373,16 +372,6 @@ class Host(object):
                 if self._conn_event_handler is not None:
                     self._conn_event_handler(False, msg)
 
-    def _event_delayed_cleanup(self, event):
-        """Cleanup possible delayed stop events."""
-        if (event.transition == virtevent.EVENT_LIFECYCLE_STARTED or
-            event.transition == virtevent.EVENT_LIFECYCLE_RESUMED):
-            if event.uuid in self._events_delayed.keys():
-                self._events_delayed[event.uuid].cancel()
-                self._events_delayed.pop(event.uuid, None)
-                LOG.debug("Removed pending event for %s due to "
-                          "lifecycle event", event.uuid)
-
     def _event_emit_delayed(self, event):
         """Emit events - possibly delayed."""
         def event_cleanup(gt, *args, **kwargs):
@@ -394,13 +383,24 @@ class Host(object):
             self._events_delayed.pop(event.uuid, None)
 
         if self._lifecycle_delay > 0:
-            if event.uuid not in self._events_delayed.keys():
+            # Cleanup possible delayed stop events.
+            if event.uuid in self._events_delayed.keys():
+                self._events_delayed[event.uuid].cancel()
+                self._events_delayed.pop(event.uuid, None)
+                LOG.debug("Removed pending event for %s due to "
+                          "lifecycle event", event.uuid)
+
+            if event.transition == virtevent.EVENT_LIFECYCLE_STOPPED:
+                # Delay STOPPED event, as they may be followed by a STARTED
+                # event in case the instance is rebooting, when runned with Xen
                 id_ = greenthread.spawn_after(self._lifecycle_delay,
                                               self._event_emit, event)
                 self._events_delayed[event.uuid] = id_
                 # add callback to cleanup self._events_delayed dict after
                 # event was called
                 id_.link(event_cleanup, event)
+            else:
+                self._event_emit(event)
         else:
             self._event_emit(event)
 

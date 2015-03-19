@@ -222,11 +222,13 @@ class HostTestCase(test.NoDBTestCase):
                              lifecycle_event_handler=lambda e: None)
 
         uuid = "cef19ce0-0ca2-11df-855d-b19fbce37686"
-        hostimpl._events_delayed[uuid] = None
+        gt_mock = mock.Mock()
+        hostimpl._events_delayed[uuid] = gt_mock
         ev = event.LifecycleEvent(
             uuid, event.EVENT_LIFECYCLE_STOPPED)
         hostimpl._event_emit_delayed(ev)
-        self.assertFalse(spawn_after_mock.called)
+        gt_mock.cancel.assert_called_once_with()
+        self.assertTrue(spawn_after_mock.called)
 
     def test_event_delayed_cleanup(self):
         hostimpl = host.Host("xen:///",
@@ -236,7 +238,7 @@ class HostTestCase(test.NoDBTestCase):
             uuid, event.EVENT_LIFECYCLE_STARTED)
         gt_mock = mock.Mock()
         hostimpl._events_delayed[uuid] = gt_mock
-        hostimpl._event_delayed_cleanup(ev)
+        hostimpl._event_emit_delayed(ev)
         gt_mock.cancel.assert_called_once_with()
         self.assertNotIn(uuid, hostimpl._events_delayed.keys())
 
