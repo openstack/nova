@@ -146,8 +146,8 @@ interval_opts = [
                     'Setting this to 0 will run at the default rate.'),
     cfg.IntOpt("heal_instance_info_cache_interval",
                default=60,
-               help="Number of seconds between instance info_cache self "
-                    "healing updates"),
+               help="Number of seconds between instance network information "
+                    "cache updates"),
     cfg.IntOpt('reclaim_instance_interval',
                default=0,
                help='Interval in seconds for reclaiming deleted instances'),
