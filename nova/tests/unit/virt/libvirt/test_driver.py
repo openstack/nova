@@ -81,7 +81,6 @@ from nova.virt import driver
 from nova.virt import fake
 from nova.virt import firewall as base_firewall
 from nova.virt import hardware
-from nova.virt import images
 from nova.virt.libvirt import blockinfo
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import driver as libvirt_driver
@@ -452,6 +451,51 @@ class FakeNodeDevice(object):
         return self.xml
 
 
+def _create_test_instance():
+    flavor = objects.Flavor(memory_mb=2048,
+                            swap=0,
+                            vcpu_weight=None,
+                            root_gb=1,
+                            id=2,
+                            name=u'm1.small',
+                            ephemeral_gb=0,
+                            rxtx_factor=1.0,
+                            flavorid=u'1',
+                            vcpus=1,
+                            extra_specs={})
+    return {
+        'id': 1,
+        'uuid': '32dfcb37-5af1-552b-357c-be8c3aa38310',
+        'memory_kb': '1024000',
+        'basepath': '/some/path',
+        'bridge_name': 'br100',
+        'display_name': "Acme webserver",
+        'vcpus': 2,
+        'project_id': 'fake',
+        'bridge': 'br101',
+        'image_ref': '155d900f-4e14-4e4c-a73d-069cbf4541e6',
+        'root_gb': 10,
+        'ephemeral_gb': 20,
+        'instance_type_id': '5',  # m1.small
+        'extra_specs': {},
+        'system_metadata': {},
+        'flavor': flavor,
+        'new_flavor': None,
+        'old_flavor': None,
+        'pci_devices': objects.PciDeviceList(),
+        'numa_topology': None,
+        'config_drive': None,
+        'vm_mode': None,
+        'kernel_id': None,
+        'ramdisk_id': None,
+        'os_type': 'linux',
+        'user_id': '838a72b0-0d54-4827-8fd6-fb1227633ceb',
+        'ephemeral_key_uuid': None,
+        'vcpu_model': None,
+        'host': 'fake-host',
+    }
+
+
 class LibvirtConnTestCase(test.NoDBTestCase):
 
     REQUIRES_LOCKING = True
@@ -487,53 +531,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                        imagebackend.Image._get_driver_format)
 
         self.useFixture(fakelibvirt.FakeLibvirtFixture())
-
-        flavor = objects.Flavor(memory_mb=2048,
-                                swap=0,
-                                vcpu_weight=None,
-                                root_gb=1,
-                                id=2,
-                                name=u'm1.small',
-                                ephemeral_gb=0,
-                                rxtx_factor=1.0,
-                                flavorid=u'1',
-                                vcpus=1,
-                                extra_specs={})
-
+        self.test_instance = _create_test_instance()
         self.image_service = nova.tests.unit.image.fake.stub_out_image_service(
                 self.stubs)
-        self.test_instance = {
-            'id': 1,
-            'uuid': '32dfcb37-5af1-552b-357c-be8c3aa38310',
-            'memory_kb': '1024000',
-            'basepath': '/some/path',
-            'bridge_name': 'br100',
-            'display_name': "Acme webserver",
-            'vcpus': 2,
-            'project_id': 'fake',
-            'bridge': 'br101',
-            'image_ref': '155d900f-4e14-4e4c-a73d-069cbf4541e6',
-            'root_gb': 10,
-            'ephemeral_gb': 20,
-            'instance_type_id': '5',  # m1.small
-            'extra_specs': {},
-            'system_metadata': {},
-            'flavor': flavor,
-            'new_flavor': None,
-            'old_flavor': None,
-            'pci_devices': objects.PciDeviceList(),
-            'numa_topology': None,
-            'config_drive': None,
-            'vm_mode': None,
-            'kernel_id': None,
-            'ramdisk_id': None,
-            'os_type': 'linux',
-            'user_id': '838a72b0-0d54-4827-8fd6-fb1227633ceb',
-            'ephemeral_key_uuid': None,
-            'vcpu_model': None,
-            'host': 'fake-host',
-        }
-
         self.device_xml_tmpl = """
         <domain type='kvm'>
           <devices>
@@ -4331,752 +4331,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                        "os_require_quiesce": "yes"}}
             self.assertIsNone(drvr.unquiesce(self.context, instance, img_meta))
             mock_fsthaw.assert_called_once_with()
-
-    def test_snapshot_in_ami_format(self):
-        expected_calls = [
-            {'args': (),
-             'kwargs':
-                 {'task_state': task_states.IMAGE_PENDING_UPLOAD}},
-            {'args': (),
-             'kwargs':
-                 {'task_state': task_states.IMAGE_UPLOADING,
-                  'expected_state': task_states.IMAGE_PENDING_UPLOAD}}]
-        func_call_matcher = matchers.FunctionCallMatcher(expected_calls)
-
-        self.flags(snapshots_directory='./', group='libvirt')
-
-        # Assign different image_ref from nova/images/fakes for testing ami
-        test_instance = copy.deepcopy(self.test_instance)
-        test_instance["image_ref"] = 'c905cedb-7281-47e4-8a62-f26bc5fc4c77'
-
-        # Assuming that base image already exists in image_service
-        instance_ref = objects.Instance(**test_instance)
-        instance_ref.info_cache = objects.InstanceInfoCache(
-            network_info=None)
-
-        properties = {'instance_id': instance_ref['id'],
-                      'user_id': str(self.context.user_id)}
-        snapshot_name = 'test-snap'
-        sent_meta = {'name': snapshot_name, 'is_public': False,
-                     'status': 'creating', 'properties': properties}
-        # Create new image. It will be updated in snapshot method
-        # To work with it from snapshot, the single image_service is needed
-        recv_meta = self.image_service.create(context, sent_meta)
-
-        self.stubs.Set(host.Host, "get_domain", lambda a, b: FakeVirtDomain())
-        self.mox.StubOutWithMock(libvirt_driver.utils, 'execute')
-        libvirt_driver.utils.execute = self.fake_execute
-        libvirt_driver.libvirt_utils.disk_type = "qcow2"
-
-        self.mox.ReplayAll()
-
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        drvr.snapshot(self.context, instance_ref, recv_meta['id'],
-                      func_call_matcher.call)
-
-        snapshot = self.image_service.show(context, recv_meta['id'])
-        self.assertIsNone(func_call_matcher.match())
-        self.assertEqual(snapshot['properties']['image_state'], 'available')
-        self.assertEqual(snapshot['status'], 'active')
-        self.assertEqual(snapshot['disk_format'], 'ami')
-        self.assertEqual(snapshot['name'], snapshot_name)
-
-    def test_lxc_snapshot_in_ami_format(self):
-        expected_calls = [
-            {'args': (),
-             'kwargs':
-                 {'task_state': task_states.IMAGE_PENDING_UPLOAD}},
-            {'args': (),
-             'kwargs':
-                 {'task_state': task_states.IMAGE_UPLOADING,
-                  'expected_state': task_states.IMAGE_PENDING_UPLOAD}}]
-        func_call_matcher = matchers.FunctionCallMatcher(expected_calls)
-
-        self.flags(snapshots_directory='./',
-                   virt_type='lxc',
-                   group='libvirt')
-
-        # Assign different image_ref from nova/images/fakes for testing ami
-        test_instance = copy.deepcopy(self.test_instance)
-        test_instance["image_ref"] = 'c905cedb-7281-47e4-8a62-f26bc5fc4c77'
-
-        # Assuming that base image already exists in image_service
-        instance_ref = objects.Instance(**test_instance)
-        instance_ref.info_cache = objects.InstanceInfoCache(
-            network_info=None)
-
-        properties = {'instance_id': instance_ref['id'],
-                      'user_id': str(self.context.user_id)}
-        snapshot_name = 'test-snap'
-        sent_meta = {'name': snapshot_name, 'is_public': False,
-                     'status': 'creating', 'properties': properties}
-        # Create new image. It will be updated in snapshot method
-        # To work with it from snapshot, the single image_service is needed
-        recv_meta = self.image_service.create(context, sent_meta)
-
-        self.stubs.Set(host.Host, "get_domain", lambda a, b: FakeVirtDomain())
-        self.mox.StubOutWithMock(libvirt_driver.utils, 'execute')
-        libvirt_driver.utils.execute = self.fake_execute
-        libvirt_driver.libvirt_utils.disk_type = "qcow2"
-
-        self.mox.ReplayAll()
-
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        drvr.snapshot(self.context, instance_ref, recv_meta['id'],
-                      func_call_matcher.call)
-
-        snapshot = self.image_service.show(context, recv_meta['id'])
-        self.assertIsNone(func_call_matcher.match())
-        self.assertEqual(snapshot['properties']['image_state'], 'available')
-        self.assertEqual(snapshot['status'], 'active')
-        self.assertEqual(snapshot['disk_format'], 'ami')
-        self.assertEqual(snapshot['name'], snapshot_name)
-
-    def test_snapshot_in_raw_format(self):
-        expected_calls = [
-            {'args': (),
-             'kwargs':
-                 {'task_state': task_states.IMAGE_PENDING_UPLOAD}},
-            {'args': (),
-             'kwargs':
-                 {'task_state': task_states.IMAGE_UPLOADING,
-                  'expected_state': task_states.IMAGE_PENDING_UPLOAD}}]
-        func_call_matcher = matchers.FunctionCallMatcher(expected_calls)
-
-        self.flags(snapshots_directory='./', group='libvirt')
-
-        # Assuming that base image already exists in image_service
-        instance_ref = objects.Instance(**self.test_instance)
-        instance_ref.info_cache = objects.InstanceInfoCache(
-            network_info=None)
-
-        properties = {'instance_id': instance_ref['id'],
-                      'user_id': str(self.context.user_id)}
-        snapshot_name = 'test-snap'
-        sent_meta = {'name': snapshot_name, 'is_public': False,
-                     'status': 'creating', 'properties': properties}
-        # Create new image. It will be updated in snapshot method
-        # To work with it from snapshot, the single image_service is needed
-        recv_meta = self.image_service.create(context, sent_meta)
-
-        self.stubs.Set(host.Host, "get_domain", lambda a, b: FakeVirtDomain())
-        self.mox.StubOutWithMock(libvirt_driver.utils, 'execute')
-        libvirt_driver.utils.execute = self.fake_execute
-        self.stubs.Set(libvirt_driver.libvirt_utils, 'disk_type', 'raw')
-
-        def convert_image(source, dest, out_format):
-            libvirt_driver.libvirt_utils.files[dest] = ''
-
-        self.stubs.Set(images, 'convert_image', convert_image)
-
-        self.mox.ReplayAll()
-
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        drvr.snapshot(self.context, instance_ref, recv_meta['id'],
-                      func_call_matcher.call)
-
-        snapshot = self.image_service.show(context, recv_meta['id'])
-        self.assertIsNone(func_call_matcher.match())
-        self.assertEqual(snapshot['properties']['image_state'], 'available')
-        self.assertEqual(snapshot['status'], 'active')
-        self.assertEqual(snapshot['disk_format'], 'raw')
-        self.assertEqual(snapshot['name'], snapshot_name)
-
-    def test_lvm_snapshot_in_raw_format(self):
-        # Tests Lvm backend snapshot functionality with raw format
-        # snapshots.
-        xml = """
-              <domain type='kvm'>
-                   <devices>
-                       <disk type='block' device='disk'>
-                           <source dev='/dev/some-vg/some-lv'/>
-                       </disk>
-                   </devices>
-              </domain>
-              """
-        update_task_state_calls = [
-            mock.call(task_state=task_states.IMAGE_PENDING_UPLOAD),
-            mock.call(task_state=task_states.IMAGE_UPLOADING,
-                      expected_state=task_states.IMAGE_PENDING_UPLOAD)]
-        mock_update_task_state = mock.Mock()
-        mock_get_domain = mock.Mock(return_value=FakeVirtDomain(xml),
-                                    autospec=True)
-        volume_info = {'VG': 'nova-vg', 'LV': 'disk'}
-        mock_volume_info = mock.Mock(return_value=volume_info,
-                                             autospec=True)
-        mock_volume_info_calls = [mock.call('/dev/nova-vg/lv')]
-        mock_convert_image = mock.Mock()
-
-        def convert_image_side_effect(source, dest, out_format,
-                                      run_as_root=True):
-            libvirt_driver.libvirt_utils.files[dest] = ''
-        mock_convert_image.side_effect = convert_image_side_effect
-
-        self.flags(snapshots_directory='./',
-                   snapshot_image_format='raw',
-                   images_type='lvm',
-                   images_volume_group='nova-vg', group='libvirt')
-        libvirt_driver.libvirt_utils.disk_type = "lvm"
-
-        # Start test
-        image_service = nova.tests.unit.image.fake.FakeImageService()
-        instance_ref = objects.Instance(**self.test_instance)
-        instance_ref.info_cache = objects.InstanceInfoCache(
-            network_info=None)
-
-        properties = {'instance_id': instance_ref['id'],
-                      'user_id': str(self.context.user_id)}
-        snapshot_name = 'test-snap'
-        sent_meta = {'name': snapshot_name, 'is_public': False,
-                     'status': 'creating', 'properties': properties}
-        recv_meta = image_service.create(context, sent_meta)
-
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        with contextlib.nested(
-                mock.patch.object(libvirt_driver.LibvirtDriver,
-                                   '_conn',
-                                   autospec=True),
-                mock.patch.object(libvirt_driver.imagebackend.lvm,
-                                  'volume_info',
-                                  mock_volume_info),
-                mock.patch.object(libvirt_driver.imagebackend.images,
-                                  'convert_image',
-                                  mock_convert_image),
-                mock.patch.object(host.Host,
-                                  'get_domain',
-                                  mock_get_domain)):
-            drvr.snapshot(self.context, instance_ref, recv_meta['id'],
-                      mock_update_task_state)
-
-        mock_get_domain.assert_called_once_with(instance_ref)
-        mock_volume_info.assert_has_calls(mock_volume_info_calls)
-        mock_convert_image.assert_called_once_with('/dev/nova-vg/lv',
-                                                   mock.ANY,
-                                                   'raw',
-                                                   run_as_root=True)
-        snapshot = image_service.show(context, recv_meta['id'])
-        mock_update_task_state.assert_has_calls(update_task_state_calls)
-        self.assertEqual('available', snapshot['properties']['image_state'])
-        self.assertEqual('active', snapshot['status'])
-        self.assertEqual('raw', snapshot['disk_format'])
-        self.assertEqual(snapshot_name, snapshot['name'])
-        # This is for all the subsequent tests that do not set the value of
-        # images type
-        self.flags(images_type='default', group='libvirt')
-        libvirt_driver.libvirt_utils.disk_type = "qcow2"
-
-    def test_lxc_snapshot_in_raw_format(self):
-        expected_calls = [
-            {'args': (),
-             'kwargs':
-                 {'task_state': task_states.IMAGE_PENDING_UPLOAD}},
-            {'args': (),
-             'kwargs':
-                 {'task_state': task_states.IMAGE_UPLOADING,
-                  'expected_state': task_states.IMAGE_PENDING_UPLOAD}}]
-        func_call_matcher = matchers.FunctionCallMatcher(expected_calls)
-
-        self.flags(snapshots_directory='./',
-                   virt_type='lxc',
-                   group='libvirt')
-
-        # Assuming that base image already exists in image_service
-        instance_ref = objects.Instance(**self.test_instance)
-        instance_ref.info_cache = objects.InstanceInfoCache(
-            network_info=None)
-
-        properties = {'instance_id': instance_ref['id'],
-                      'user_id': str(self.context.user_id)}
-        snapshot_name = 'test-snap'
-        sent_meta = {'name': snapshot_name, 'is_public': False,
-                     'status': 'creating', 'properties': properties}
-        # Create new image. It will be updated in snapshot method
-        # To work with it from snapshot, the single image_service is needed
-        recv_meta = self.image_service.create(context, sent_meta)
-
-        self.stubs.Set(host.Host, "get_domain", lambda a, b: FakeVirtDomain())
-        self.mox.StubOutWithMock(libvirt_driver.utils, 'execute')
-        libvirt_driver.utils.execute = self.fake_execute
-        self.stubs.Set(libvirt_driver.libvirt_utils, 'disk_type', 'raw')
-        libvirt_driver.libvirt_utils.disk_type = "raw"
-
-        def convert_image(source, dest, out_format):
-            libvirt_driver.libvirt_utils.files[dest] = ''
-
-        self.stubs.Set(images, 'convert_image', convert_image)
-
-        self.mox.ReplayAll()
-
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        drvr.snapshot(self.context, instance_ref, recv_meta['id'],
-                      func_call_matcher.call)
-
-        snapshot = self.image_service.show(context, recv_meta['id'])
-        self.assertIsNone(func_call_matcher.match())
-        self.assertEqual(snapshot['properties']['image_state'], 'available')
-        self.assertEqual(snapshot['status'], 'active')
-        self.assertEqual(snapshot['disk_format'], 'raw')
-        self.assertEqual(snapshot['name'], snapshot_name)
-
-    def test_snapshot_in_qcow2_format(self):
-        expected_calls = [
-            {'args': (),
-             'kwargs':
-                 {'task_state': task_states.IMAGE_PENDING_UPLOAD}},
-            {'args': (),
-             'kwargs':
-                 {'task_state': task_states.IMAGE_UPLOADING,
-                  'expected_state': task_states.IMAGE_PENDING_UPLOAD}}]
-        func_call_matcher = matchers.FunctionCallMatcher(expected_calls)
-
-        self.flags(snapshot_image_format='qcow2',
-                   snapshots_directory='./',
-                   group='libvirt')
-
-        # Assuming that base image already exists in image_service
-        instance_ref = objects.Instance(**self.test_instance)
-        instance_ref.info_cache = objects.InstanceInfoCache(
-            network_info=None)
-
-        properties = {'instance_id': instance_ref['id'],
-                      'user_id': str(self.context.user_id)}
-        snapshot_name = 'test-snap'
-        sent_meta = {'name': snapshot_name, 'is_public': False,
-                     'status': 'creating', 'properties': properties}
-        # Create new image. It will be updated in snapshot method
-        # To work with it from snapshot, the single image_service is needed
-        recv_meta = self.image_service.create(context, sent_meta)
-
-        self.stubs.Set(host.Host, "get_domain", lambda a, b: FakeVirtDomain())
-        self.mox.StubOutWithMock(libvirt_driver.utils, 'execute')
-        libvirt_driver.utils.execute = self.fake_execute
-        libvirt_driver.libvirt_utils.disk_type = "qcow2"
-
-        self.mox.ReplayAll()
-
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        drvr.snapshot(self.context, instance_ref, recv_meta['id'],
-                      func_call_matcher.call)
-
-        snapshot = self.image_service.show(context, recv_meta['id'])
-        self.assertIsNone(func_call_matcher.match())
-        self.assertEqual(snapshot['properties']['image_state'], 'available')
-        self.assertEqual(snapshot['status'], 'active')
-        self.assertEqual(snapshot['disk_format'], 'qcow2')
-        self.assertEqual(snapshot['name'], snapshot_name)
-
-    def test_lxc_snapshot_in_qcow2_format(self):
-        expected_calls = [
-            {'args': (),
-             'kwargs':
-                 {'task_state': task_states.IMAGE_PENDING_UPLOAD}},
-            {'args': (),
-             'kwargs':
-                 {'task_state': task_states.IMAGE_UPLOADING,
-                  'expected_state': task_states.IMAGE_PENDING_UPLOAD}}]
-        func_call_matcher = matchers.FunctionCallMatcher(expected_calls)
-
-        self.flags(snapshot_image_format='qcow2',
-                   snapshots_directory='./',
-                   virt_type='lxc',
-                   group='libvirt')
-
-        # Assuming that base image already exists in image_service
-        instance_ref = objects.Instance(**self.test_instance)
-        instance_ref.info_cache = objects.InstanceInfoCache(
-            network_info=None)
-
-        properties = {'instance_id': instance_ref['id'],
-                      'user_id': str(self.context.user_id)}
-        snapshot_name = 'test-snap'
-        sent_meta = {'name': snapshot_name, 'is_public': False,
-                     'status': 'creating', 'properties': properties}
-        # Create new image. It will be updated in snapshot method
-        # To work with it from snapshot, the single image_service is needed
-        recv_meta = self.image_service.create(context, sent_meta)
-
-        self.stubs.Set(host.Host, "get_domain", lambda a, b: FakeVirtDomain())
-        self.mox.StubOutWithMock(libvirt_driver.utils, 'execute')
-        libvirt_driver.utils.execute = self.fake_execute
-        libvirt_driver.libvirt_utils.disk_type = "qcow2"
-
-        self.mox.ReplayAll()
-
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        drvr.snapshot(self.context, instance_ref, recv_meta['id'],
-                      func_call_matcher.call)
-
-        snapshot = self.image_service.show(context, recv_meta['id'])
-        self.assertIsNone(func_call_matcher.match())
-        self.assertEqual(snapshot['properties']['image_state'], 'available')
-        self.assertEqual(snapshot['status'], 'active')
-        self.assertEqual(snapshot['disk_format'], 'qcow2')
-        self.assertEqual(snapshot['name'], snapshot_name)
-
-    def test_lvm_snapshot_in_qcow2_format(self):
-        # Tests Lvm backend snapshot functionality with raw format
-        # snapshots.
-        xml = """
-              <domain type='kvm'>
-                   <devices>
-                       <disk type='block' device='disk'>
-                           <source dev='/dev/some-vg/some-lv'/>
-                       </disk>
-                   </devices>
-              </domain>
-              """
-        update_task_state_calls = [
-            mock.call(task_state=task_states.IMAGE_PENDING_UPLOAD),
-            mock.call(task_state=task_states.IMAGE_UPLOADING,
-                      expected_state=task_states.IMAGE_PENDING_UPLOAD)]
-        mock_update_task_state = mock.Mock()
-        mock_get_domain = mock.Mock(return_value=FakeVirtDomain(xml),
-                                    autospec=True)
-        volume_info = {'VG': 'nova-vg', 'LV': 'disk'}
-        mock_volume_info = mock.Mock(return_value=volume_info, autospec=True)
-        mock_volume_info_calls = [mock.call('/dev/nova-vg/lv')]
-        mock_convert_image = mock.Mock()
-
-        def convert_image_side_effect(source, dest, out_format,
-                                      run_as_root=True):
-            libvirt_driver.libvirt_utils.files[dest] = ''
-        mock_convert_image.side_effect = convert_image_side_effect
-
-        self.flags(snapshots_directory='./',
-                   snapshot_image_format='qcow2',
-                   images_type='lvm',
-                   images_volume_group='nova-vg', group='libvirt')
-        libvirt_driver.libvirt_utils.disk_type = "lvm"
-
-        # Start test
-        image_service = nova.tests.unit.image.fake.FakeImageService()
-        instance_ref = objects.Instance(**self.test_instance)
-        instance_ref.info_cache = objects.InstanceInfoCache(
-            network_info=None)
-
-        properties = {'instance_id': instance_ref['id'],
-                      'user_id': str(self.context.user_id)}
-        snapshot_name = 'test-snap'
-        sent_meta = {'name': snapshot_name, 'is_public': False,
-                     'status': 'creating', 'properties': properties}
-        recv_meta = image_service.create(context, sent_meta)
-
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        with contextlib.nested(
-                mock.patch.object(libvirt_driver.LibvirtDriver,
-                                   '_conn',
-                                   autospec=True),
-                mock.patch.object(libvirt_driver.imagebackend.lvm,
-                                  'volume_info',
-                                   mock_volume_info),
-                mock.patch.object(libvirt_driver.imagebackend.images,
-                                   'convert_image',
-                                   mock_convert_image),
-                mock.patch.object(host.Host,
-                                  'get_domain',
-                                  mock_get_domain)):
-            drvr.snapshot(self.context, instance_ref, recv_meta['id'],
-                      mock_update_task_state)
-
-        mock_get_domain.assert_called_once_with(instance_ref)
-        mock_volume_info.assert_has_calls(mock_volume_info_calls)
-        mock_convert_image.assert_called_once_with('/dev/nova-vg/lv',
-                                                   mock.ANY,
-                                                   'qcow2',
-                                                   run_as_root=True)
-        snapshot = image_service.show(context, recv_meta['id'])
-        mock_update_task_state.assert_has_calls(update_task_state_calls)
-        self.assertEqual('available', snapshot['properties']['image_state'])
-        self.assertEqual('active', snapshot['status'])
-        self.assertEqual('qcow2', snapshot['disk_format'])
-        self.assertEqual(snapshot_name, snapshot['name'])
-        self.flags(images_type='default', group='libvirt')
-        libvirt_driver.libvirt_utils.disk_type = "qcow2"
-
-    def test_snapshot_no_image_architecture(self):
-        expected_calls = [
-            {'args': (),
-             'kwargs':
-                 {'task_state': task_states.IMAGE_PENDING_UPLOAD}},
-            {'args': (),
-             'kwargs':
-                 {'task_state': task_states.IMAGE_UPLOADING,
-                  'expected_state': task_states.IMAGE_PENDING_UPLOAD}}]
-        func_call_matcher = matchers.FunctionCallMatcher(expected_calls)
-
-        self.flags(snapshots_directory='./',
-                   group='libvirt')
-
-        # Assign different image_ref from nova/images/fakes for
-        # testing different base image
-        test_instance = copy.deepcopy(self.test_instance)
-        test_instance["image_ref"] = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-
-        # Assuming that base image already exists in image_service
-        instance_ref = objects.Instance(**test_instance)
-        instance_ref.info_cache = objects.InstanceInfoCache(
-            network_info=None)
-
-        properties = {'instance_id': instance_ref['id'],
-                      'user_id': str(self.context.user_id)}
-        snapshot_name = 'test-snap'
-        sent_meta = {'name': snapshot_name, 'is_public': False,
-                     'status': 'creating', 'properties': properties}
-        # Create new image. It will be updated in snapshot method
-        # To work with it from snapshot, the single image_service is needed
-        recv_meta = self.image_service.create(context, sent_meta)
-
-        self.stubs.Set(host.Host, "get_domain", lambda a, b: FakeVirtDomain())
-        self.mox.StubOutWithMock(libvirt_driver.utils, 'execute')
-        libvirt_driver.utils.execute = self.fake_execute
-
-        self.mox.ReplayAll()
-
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        drvr.snapshot(self.context, instance_ref, recv_meta['id'],
-                      func_call_matcher.call)
-
-        snapshot = self.image_service.show(context, recv_meta['id'])
-        self.assertIsNone(func_call_matcher.match())
-        self.assertEqual(snapshot['properties']['image_state'], 'available')
-        self.assertEqual(snapshot['status'], 'active')
-        self.assertEqual(snapshot['name'], snapshot_name)
-
-    def test_lxc_snapshot_no_image_architecture(self):
-        expected_calls = [
-            {'args': (),
-             'kwargs':
-                 {'task_state': task_states.IMAGE_PENDING_UPLOAD}},
-            {'args': (),
-             'kwargs':
-                 {'task_state': task_states.IMAGE_UPLOADING,
-                  'expected_state': task_states.IMAGE_PENDING_UPLOAD}}]
-        func_call_matcher = matchers.FunctionCallMatcher(expected_calls)
-
-        self.flags(snapshots_directory='./',
-                   virt_type='lxc',
-                   group='libvirt')
-
-        # Assign different image_ref from nova/images/fakes for
-        # testing different base image
-        test_instance = copy.deepcopy(self.test_instance)
-        test_instance["image_ref"] = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-
-        # Assuming that base image already exists in image_service
-        instance_ref = objects.Instance(**test_instance)
-        properties = {'instance_id': instance_ref['id'],
-                      'user_id': str(self.context.user_id)}
-        snapshot_name = 'test-snap'
-        sent_meta = {'name': snapshot_name, 'is_public': False,
-                     'status': 'creating', 'properties': properties}
-        # Create new image. It will be updated in snapshot method
-        # To work with it from snapshot, the single image_service is needed
-        recv_meta = self.image_service.create(context, sent_meta)
-
-        self.stubs.Set(host.Host, "get_domain", lambda a, b: FakeVirtDomain())
-        self.mox.StubOutWithMock(libvirt_driver.utils, 'execute')
-        libvirt_driver.utils.execute = self.fake_execute
-        libvirt_driver.libvirt_utils.disk_type = "qcow2"
-
-        self.mox.ReplayAll()
-
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        drvr.snapshot(self.context, instance_ref, recv_meta['id'],
-                      func_call_matcher.call)
-
-        snapshot = self.image_service.show(context, recv_meta['id'])
-        self.assertIsNone(func_call_matcher.match())
-        self.assertEqual(snapshot['properties']['image_state'], 'available')
-        self.assertEqual(snapshot['status'], 'active')
-        self.assertEqual(snapshot['name'], snapshot_name)
-
-    def test_snapshot_no_original_image(self):
-        expected_calls = [
-            {'args': (),
-             'kwargs':
-                 {'task_state': task_states.IMAGE_PENDING_UPLOAD}},
-            {'args': (),
-             'kwargs':
-                 {'task_state': task_states.IMAGE_UPLOADING,
-                  'expected_state': task_states.IMAGE_PENDING_UPLOAD}}]
-        func_call_matcher = matchers.FunctionCallMatcher(expected_calls)
-
-        self.flags(snapshots_directory='./',
-                   group='libvirt')
-
-        # Assign a non-existent image
-        test_instance = copy.deepcopy(self.test_instance)
-        test_instance["image_ref"] = '661122aa-1234-dede-fefe-babababababa'
-
-        instance_ref = objects.Instance(**test_instance)
-        instance_ref.info_cache = objects.InstanceInfoCache(
-            network_info=None)
-
-        properties = {'instance_id': instance_ref['id'],
-                      'user_id': str(self.context.user_id)}
-        snapshot_name = 'test-snap'
-        sent_meta = {'name': snapshot_name, 'is_public': False,
-                     'status': 'creating', 'properties': properties}
-        recv_meta = self.image_service.create(context, sent_meta)
-
-        self.stubs.Set(host.Host, "get_domain", lambda a, b: FakeVirtDomain())
-        self.mox.StubOutWithMock(libvirt_driver.utils, 'execute')
-        libvirt_driver.utils.execute = self.fake_execute
-
-        self.mox.ReplayAll()
-
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        drvr.snapshot(self.context, instance_ref, recv_meta['id'],
-                      func_call_matcher.call)
-
-        snapshot = self.image_service.show(context, recv_meta['id'])
-        self.assertIsNone(func_call_matcher.match())
-        self.assertEqual(snapshot['properties']['image_state'], 'available')
-        self.assertEqual(snapshot['status'], 'active')
-        self.assertEqual(snapshot['name'], snapshot_name)
-
-    def test_lxc_snapshot_no_original_image(self):
-        expected_calls = [
-            {'args': (),
-             'kwargs':
-                 {'task_state': task_states.IMAGE_PENDING_UPLOAD}},
-            {'args': (),
-             'kwargs':
-                 {'task_state': task_states.IMAGE_UPLOADING,
-                  'expected_state': task_states.IMAGE_PENDING_UPLOAD}}]
-        func_call_matcher = matchers.FunctionCallMatcher(expected_calls)
-
-        self.flags(snapshots_directory='./',
-                   virt_type='lxc',
-                   group='libvirt')
-        libvirt_driver.libvirt_utils.disk_type = "qcow2"
-
-        # Assign a non-existent image
-        test_instance = copy.deepcopy(self.test_instance)
-        test_instance["image_ref"] = '661122aa-1234-dede-fefe-babababababa'
-
-        instance_ref = objects.Instance(**test_instance)
-        properties = {'instance_id': instance_ref['id'],
-                      'user_id': str(self.context.user_id)}
-        snapshot_name = 'test-snap'
-        sent_meta = {'name': snapshot_name, 'is_public': False,
-                     'status': 'creating', 'properties': properties}
-        recv_meta = self.image_service.create(context, sent_meta)
-
-        self.stubs.Set(host.Host, "get_domain", lambda a, b: FakeVirtDomain())
-        self.mox.StubOutWithMock(libvirt_driver.utils, 'execute')
-        libvirt_driver.utils.execute = self.fake_execute
-
-        self.mox.ReplayAll()
-
-        drvr = libvirt_driver.LibvirtDriver(False)
-        drvr.snapshot(self.context, instance_ref, recv_meta['id'],
-                      func_call_matcher.call)
-
-        snapshot = self.image_service.show(context, recv_meta['id'])
-        self.assertIsNone(func_call_matcher.match())
-        self.assertEqual(snapshot['properties']['image_state'], 'available')
-        self.assertEqual(snapshot['status'], 'active')
-        self.assertEqual(snapshot['name'], snapshot_name)
-
-    def test_snapshot_metadata_image(self):
-        expected_calls = [
-            {'args': (),
-             'kwargs':
-                 {'task_state': task_states.IMAGE_PENDING_UPLOAD}},
-            {'args': (),
-             'kwargs':
-                 {'task_state': task_states.IMAGE_UPLOADING,
-                  'expected_state': task_states.IMAGE_PENDING_UPLOAD}}]
-        func_call_matcher = matchers.FunctionCallMatcher(expected_calls)
-
-        self.flags(snapshots_directory='./',
-                   group='libvirt')
-
-        # Assign an image with an architecture defined (x86_64)
-        test_instance = copy.deepcopy(self.test_instance)
-        test_instance["image_ref"] = 'a440c04b-79fa-479c-bed1-0b816eaec379'
-
-        instance_ref = objects.Instance(**test_instance)
-        instance_ref.info_cache = objects.InstanceInfoCache(
-            network_info=None)
-
-        properties = {'instance_id': instance_ref['id'],
-                      'user_id': str(self.context.user_id),
-                      'architecture': 'fake_arch',
-                      'key_a': 'value_a',
-                      'key_b': 'value_b'}
-        snapshot_name = 'test-snap'
-        sent_meta = {'name': snapshot_name, 'is_public': False,
-                     'status': 'creating', 'properties': properties}
-        recv_meta = self.image_service.create(context, sent_meta)
-
-        self.stubs.Set(host.Host, "get_domain", lambda a, b: FakeVirtDomain())
-        self.mox.StubOutWithMock(libvirt_driver.utils, 'execute')
-        libvirt_driver.utils.execute = self.fake_execute
-
-        self.mox.ReplayAll()
-
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        drvr.snapshot(self.context, instance_ref, recv_meta['id'],
-                      func_call_matcher.call)
-
-        snapshot = self.image_service.show(context, recv_meta['id'])
-        self.assertIsNone(func_call_matcher.match())
-        self.assertEqual(snapshot['properties']['image_state'], 'available')
-        self.assertEqual(snapshot['properties']['architecture'], 'fake_arch')
-        self.assertEqual(snapshot['properties']['key_a'], 'value_a')
-        self.assertEqual(snapshot['properties']['key_b'], 'value_b')
-        self.assertEqual(snapshot['status'], 'active')
-        self.assertEqual(snapshot['name'], snapshot_name)
-
-    def test_snapshot_with_os_type(self):
-        expected_calls = [
-            {'args': (),
-             'kwargs':
-                 {'task_state': task_states.IMAGE_PENDING_UPLOAD}},
-            {'args': (),
-             'kwargs':
-                 {'task_state': task_states.IMAGE_UPLOADING,
-                  'expected_state': task_states.IMAGE_PENDING_UPLOAD}}]
-        func_call_matcher = matchers.FunctionCallMatcher(expected_calls)
-
-        self.flags(snapshots_directory='./',
-                   group='libvirt')
-
-        # Assign a non-existent image
-        test_instance = copy.deepcopy(self.test_instance)
-        test_instance["image_ref"] = '661122aa-1234-dede-fefe-babababababa'
-        test_instance["os_type"] = 'linux'
-
-        instance_ref = objects.Instance(**test_instance)
-        instance_ref.info_cache = objects.InstanceInfoCache(
-            network_info=None)
-        properties = {'instance_id': instance_ref['id'],
-                      'user_id': str(self.context.user_id),
-                      'os_type': instance_ref['os_type']}
-        snapshot_name = 'test-snap'
-        sent_meta = {'name': snapshot_name, 'is_public': False,
-                     'status': 'creating', 'properties': properties}
-        recv_meta = self.image_service.create(context, sent_meta)
-
-        self.stubs.Set(host.Host, "get_domain", lambda a, b: FakeVirtDomain())
-        self.mox.StubOutWithMock(libvirt_driver.utils, 'execute')
-        libvirt_driver.utils.execute = self.fake_execute
-
-        self.mox.ReplayAll()
-
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        drvr.snapshot(self.context, instance_ref, recv_meta['id'],
-                      func_call_matcher.call)
-
-        snapshot = self.image_service.show(context, recv_meta['id'])
-        self.assertIsNone(func_call_matcher.match())
-        self.assertEqual(snapshot['properties']['image_state'], 'available')
-        self.assertEqual(snapshot['properties']['os_type'],
-                         instance_ref['os_type'])
-        self.assertEqual(snapshot['status'], 'active')
-        self.assertEqual(snapshot['name'], snapshot_name)
 
     def test__create_snapshot_metadata(self):
         base = {}
@@ -13957,3 +13211,152 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
                                           self.delete_info_netdisk)
 
         self.mox.VerifyAll()
+
+
+def _fake_convert_image(source, dest, out_format,
+                               run_as_root=True):
+    libvirt_driver.libvirt_utils.files[dest] = ''
+
+
+class _BaseSnapshotTests(test.NoDBTestCase):
+    def setUp(self):
+        super(_BaseSnapshotTests, self).setUp()
+        self.flags(snapshots_directory='./', group='libvirt')
+        self.context = context.get_admin_context()
+
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.virt.libvirt.driver.libvirt_utils',
+            fake_libvirt_utils))
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.virt.libvirt.imagebackend.libvirt_utils',
+            fake_libvirt_utils))
+
+        self.image_service = nova.tests.unit.image.fake.stub_out_image_service(
+                self.stubs)
+
+        self.mock_update_task_state = mock.Mock()
+
+        test_instance = _create_test_instance()
+        self.instance_ref = objects.Instance(**test_instance)
+        self.instance_ref.info_cache = objects.InstanceInfoCache(
+            network_info=None)
+
+    def _assert_snapshot(self, snapshot, disk_format,
+                         expected_properties=None):
+        self.mock_update_task_state.assert_has_calls([
+            mock.call(task_state=task_states.IMAGE_PENDING_UPLOAD),
+            mock.call(task_state=task_states.IMAGE_UPLOADING,
+                      expected_state=task_states.IMAGE_PENDING_UPLOAD)])
+
+        props = snapshot['properties']
+        self.assertEqual(props['image_state'], 'available')
+        self.assertEqual(snapshot['status'], 'active')
+        self.assertEqual(snapshot['disk_format'], disk_format)
+        self.assertEqual(snapshot['name'], 'test-snap')
+
+        if expected_properties:
+            for expected_key, expected_value in \
+                    expected_properties.iteritems():
+                self.assertEqual(expected_value, props[expected_key])
+
+    def _create_image(self, extra_properties=None):
+        properties = {'instance_id': self.instance_ref['id'],
+                      'user_id': str(self.context.user_id)}
+        if extra_properties:
+            properties.update(extra_properties)
+
+        sent_meta = {'name': 'test-snap',
+                     'is_public': False,
+                     'status': 'creating',
+                     'properties': properties}
+
+        # Create new image. It will be updated in snapshot method
+        # To work with it from snapshot, the single image_service is needed
+        recv_meta = self.image_service.create(self.context, sent_meta)
+        return recv_meta
+
+    @mock.patch.object(imagebackend.Image, 'resolve_driver_format')
+    @mock.patch.object(host.Host, 'get_domain')
+    def _snapshot(self, image_id, mock_get_domain, mock_resolve):
+        mock_get_domain.return_value = FakeVirtDomain()
+        driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        driver.snapshot(self.context, self.instance_ref, image_id,
+                        self.mock_update_task_state)
+        snapshot = self.image_service.show(self.context, image_id)
+        return snapshot
+
+    def _test_snapshot(self, disk_format, extra_properties=None):
+        recv_meta = self._create_image(extra_properties=extra_properties)
+        snapshot = self._snapshot(recv_meta['id'])
+        self._assert_snapshot(snapshot, disk_format=disk_format,
+                              expected_properties=extra_properties)
+
+
+class LibvirtSnapshotTests(_BaseSnapshotTests):
+    def test_ami(self):
+        # Assign different image_ref from nova/images/fakes for testing ami
+        self.instance_ref.image_ref = 'c905cedb-7281-47e4-8a62-f26bc5fc4c77'
+
+        self._test_snapshot(disk_format='ami')
+
+    @mock.patch.object(fake_libvirt_utils, 'disk_type', new='raw')
+    @mock.patch.object(libvirt_driver.imagebackend.images,
+                       'convert_image',
+                       side_effect=_fake_convert_image)
+    def test_raw(self, mock_convert_image):
+        self._test_snapshot(disk_format='raw')
+
+    def test_qcow2(self):
+        self._test_snapshot(disk_format='qcow2')
+
+    def test_no_image_architecture(self):
+        self.instance_ref.image_ref = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+        self._test_snapshot(disk_format='qcow2')
+
+    def test_no_original_image(self):
+        self.instance_ref.image_ref = '661122aa-1234-dede-fefe-babababababa'
+        self._test_snapshot(disk_format='qcow2')
+
+    def test_snapshot_metadata_image(self):
+        # Assign an image with an architecture defined (x86_64)
+        self.instance_ref.image_ref = 'a440c04b-79fa-479c-bed1-0b816eaec379'
+
+        extra_properties = {'architecture': 'fake_arch',
+                            'key_a': 'value_a',
+                            'key_b': 'value_b',
+                            'os_type': 'linux'}
+
+        self._test_snapshot(disk_format='qcow2',
+                            extra_properties=extra_properties)
+
+
+class LXCSnapshotTests(LibvirtSnapshotTests):
+    """Repeat all of the Libvirt snapshot tests, but with LXC enabled"""
+    def setUp(self):
+        super(LXCSnapshotTests, self).setUp()
+        self.flags(virt_type='lxc', group='libvirt')
+
+
+class LVMSnapshotTests(_BaseSnapshotTests):
+    @mock.patch.object(fake_libvirt_utils, 'disk_type', new='lvm')
+    @mock.patch.object(libvirt_driver.imagebackend.images,
+                       'convert_image',
+                       side_effect=_fake_convert_image)
+    @mock.patch.object(libvirt_driver.imagebackend.lvm, 'volume_info')
+    def _test_lvm_snapshot(self, disk_format, mock_volume_info,
+                           mock_convert_image):
+        self.flags(images_type='lvm',
+                   images_volume_group='nova-vg', group='libvirt')
+
+        self._test_snapshot(disk_format=disk_format)
+
+        mock_volume_info.assert_has_calls([mock.call('/dev/nova-vg/lv')])
+        mock_convert_image.assert_called_once_with(
+                '/dev/nova-vg/lv', mock.ANY, disk_format, run_as_root=True)
+
+    def test_raw(self):
+        self._test_lvm_snapshot('raw')
+
+    def test_qcow2(self):
+        self.flags(snapshot_image_format='qcow2', group='libvirt')
+        self._test_lvm_snapshot('qcow2')
