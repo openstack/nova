@@ -67,10 +67,9 @@ class BaseRamFilter(filters.BaseHostFilter):
 
 class RamFilter(BaseRamFilter):
     """Ram Filter with over subscription flag."""
-    ram_allocation_ratio = CONF.ram_allocation_ratio
 
     def _get_ram_allocation_ratio(self, host_state, filter_properties):
-        return self.ram_allocation_ratio
+        return CONF.ram_allocation_ratio
 
 
 class AggregateRamFilter(BaseRamFilter):

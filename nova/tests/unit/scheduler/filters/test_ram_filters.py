@@ -24,21 +24,21 @@ class TestRamFilter(test.NoDBTestCase):
         self.filt_cls = ram_filter.RamFilter()
 
     def test_ram_filter_fails_on_memory(self):
-        ram_filter.RamFilter.ram_allocation_ratio = 1.0
+        self.flags(ram_allocation_ratio=1.0)
         filter_properties = {'instance_type': {'memory_mb': 1024}}
         host = fakes.FakeHostState('host1', 'node1',
                 {'free_ram_mb': 1023, 'total_usable_ram_mb': 1024})
         self.assertFalse(self.filt_cls.host_passes(host, filter_properties))
 
     def test_ram_filter_passes(self):
-        ram_filter.RamFilter.ram_allocation_ratio = 1.0
+        self.flags(ram_allocation_ratio=1.0)
         filter_properties = {'instance_type': {'memory_mb': 1024}}
         host = fakes.FakeHostState('host1', 'node1',
                 {'free_ram_mb': 1024, 'total_usable_ram_mb': 1024})
         self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
 
     def test_ram_filter_oversubscribe(self):
-        ram_filter.RamFilter.ram_allocation_ratio = 2.0
+        self.flags(ram_allocation_ratio=2.0)
         filter_properties = {'instance_type': {'memory_mb': 1024}}
         host = fakes.FakeHostState('host1', 'node1',
                 {'free_ram_mb': -1024, 'total_usable_ram_mb': 2048})
