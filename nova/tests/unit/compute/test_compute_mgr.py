@@ -2365,22 +2365,26 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.assertEqual(args[1], self.compute.host)
         self.assertEqual(args[2], mock.sentinel.inst_uuid)
 
+    @mock.patch.object(nova.context.RequestContext, 'elevated')
     @mock.patch.object(nova.objects.InstanceList, 'get_by_host')
     @mock.patch.object(nova.scheduler.client.SchedulerClient,
                        'sync_instance_info')
-    def test_sync_scheduler_instance_info(self, mock_sync, mock_get_by_host):
+    def test_sync_scheduler_instance_info(self, mock_sync, mock_get_by_host,
+            mock_elevated):
         inst1 = objects.Instance(uuid='fake1')
         inst2 = objects.Instance(uuid='fake2')
         inst3 = objects.Instance(uuid='fake3')
+        exp_uuids = [inst.uuid for inst in [inst1, inst2, inst3]]
         mock_get_by_host.return_value = objects.InstanceList(
                 objects=[inst1, inst2, inst3])
+        fake_elevated = context.get_admin_context()
+        mock_elevated.return_value = fake_elevated
         self.compute._sync_scheduler_instance_info(self.context)
-        self.assertEqual(mock_sync.call_count, 1)
-        args = mock_sync.call_args[0]
-        exp_uuids = [inst.uuid for inst in [inst1, inst2, inst3]]
-        self.assertIsInstance(args[0], self.context.__class__)
-        self.assertEqual(args[1], self.compute.host)
-        self.assertEqual(args[2], exp_uuids)
+        mock_get_by_host.assert_called_once_with(
+                fake_elevated, self.compute.host, expected_attrs=[],
+                use_slave=True)
+        mock_sync.assert_called_once_with(fake_elevated, self.compute.host,
+                                          exp_uuids)
 
     @mock.patch.object(nova.scheduler.client.SchedulerClient,
                        'sync_instance_info')
