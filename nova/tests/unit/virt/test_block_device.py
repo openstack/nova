@@ -238,12 +238,23 @@ class TestDriverBlockDevice(test.NoDBTestCase):
 
         # Test the save method
         with mock.patch.object(test_bdm._bdm_obj, 'save') as save_mock:
+            for fld, alias in test_bdm._update_on_save.iteritems():
+                test_bdm[alias or fld] = 'fake_changed_value'
             test_bdm.save()
             for fld, alias in test_bdm._update_on_save.iteritems():
                 self.assertEqual(test_bdm[alias or fld],
                                  getattr(test_bdm._bdm_obj, fld))
 
             save_mock.assert_called_once_with()
+
+        def check_save():
+            self.assertEqual(set([]), test_bdm._bdm_obj.obj_what_changed())
+
+        # Test that nothing is set on the object if there are no actual changes
+        test_bdm._bdm_obj.obj_reset_changes()
+        with mock.patch.object(test_bdm._bdm_obj, 'save') as save_mock:
+            save_mock.side_effect = check_save
+            test_bdm.save()
 
     def _test_driver_default_size(self, name):
         size = 'swap_size' if name == 'swap' else 'size'

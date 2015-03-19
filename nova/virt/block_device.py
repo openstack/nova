@@ -133,7 +133,9 @@ class DriverBlockDevice(dict):
 
     def save(self):
         for attr_name, key_name in self._update_on_save.iteritems():
-            setattr(self._bdm_obj, attr_name, self[key_name or attr_name])
+            lookup_name = key_name or attr_name
+            if self[lookup_name] != getattr(self._bdm_obj, attr_name):
+                setattr(self._bdm_obj, attr_name, self[lookup_name])
         self._bdm_obj.save()
 
 
@@ -285,8 +287,10 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
         # NOTE(ndipanov): we might want to generalize this by adding it to the
         # _update_on_save and adding a transformation function.
         try:
-            self._bdm_obj.connection_info = jsonutils.dumps(
-                    self.get('connection_info'))
+            connection_info_string = jsonutils.dumps(
+                self.get('connection_info'))
+            if connection_info_string != self._bdm_obj.connection_info:
+                self._bdm_obj.connection_info = connection_info_string
         except TypeError:
             pass
         super(DriverVolumeBlockDevice, self).save()
