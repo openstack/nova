@@ -471,10 +471,9 @@ class InstanceEvents(object):
         """
         @utils.synchronized(self._lock_name(instance))
         def _create_or_get_event():
-            if instance.uuid not in self._events:
-                self._events.setdefault(instance.uuid, {})
-            return self._events[instance.uuid].setdefault(
-                event_name, eventlet.event.Event())
+            instance_events = self._events.setdefault(instance.uuid, {})
+            return instance_events.setdefault(event_name,
+                                              eventlet.event.Event())
         LOG.debug('Preparing to wait for external event %(event)s',
                   {'event': event_name}, instance=instance)
         return _create_or_get_event()
