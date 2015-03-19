@@ -26,7 +26,7 @@ $ nosetests nova.tests.unit.servicegroup.test_zk_driver
 """
 import os
 
-import eventlet
+import mock
 
 from nova import servicegroup
 from nova.servicegroup.drivers import zk
@@ -37,33 +37,23 @@ class ZKServiceGroupTestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(ZKServiceGroupTestCase, self).setUp()
-        from nova.servicegroup.drivers import zk
         self.flags(servicegroup_driver='zk')
         self.flags(address='localhost:2181', group="zookeeper")
         try:
-            zk.ZooKeeperDriver()
+            __import__('evzookeeper')
+            __import__('zookeeper')
         except ImportError:
             self.skipTest("Unable to test due to lack of ZooKeeper")
 
-    def test_join_leave(self):
+    # Need to do this here, as opposed to the setUp() method, otherwise
+    # the decorate will cause an import error...
+    @mock.patch('evzookeeper.ZKSession')
+    def _setup_sg_api(self, zk_sess_mock):
+        self.zk_sess = mock.MagicMock()
+        zk_sess_mock.return_value = self.zk_sess
+        self.flags(servicegroup_driver='zk')
+        self.flags(address='ignored', group="zookeeper")
         self.servicegroup_api = servicegroup.API()
-        service_id = {'topic': 'unittest', 'host': 'serviceA'}
-        self.servicegroup_api.join(service_id['host'], service_id['topic'])
-        self.assertTrue(self.servicegroup_api.service_is_up(service_id))
-        self.servicegroup_api.leave(service_id['host'], service_id['topic'])
-        # make sure zookeeper is updated and watcher is triggered
-        eventlet.sleep(1)
-        self.assertFalse(self.servicegroup_api.service_is_up(service_id))
-
-    def test_stop(self):
-        self.servicegroup_api = servicegroup.API()
-        service_id = {'topic': 'unittest', 'host': 'serviceA'}
-        pulse = self.servicegroup_api.join(service_id['host'],
-                                         service_id['topic'], None)
-        self.assertTrue(self.servicegroup_api.service_is_up(service_id))
-        pulse.stop()
-        eventlet.sleep(1)
-        self.assertFalse(self.servicegroup_api.service_is_up(service_id))
 
     def test_zookeeper_hierarchy_structure(self):
         """Test that hierarchy created by join method contains process id."""
@@ -100,3 +90,12 @@ class ZKServiceGroupTestCase(test.NoDBTestCase):
         # check that internal private session attribute is ready
         self.assertIsInstance(driver.__dict__['_ZooKeeperDriver__session'],
                               evzookeeper.ZKSession)
+
+    @mock.patch('evzookeeper.membership.Membership')
+    def test_join(self, mem_mock):
+        self._setup_sg_api()
+        mem_mock.return_value = mock.sentinel.zk_mem
+        self.servicegroup_api.join('fake-host', 'fake-topic')
+        mem_mock.assert_called_once_with(self.zk_sess,
+                                         '/fake-topic',
+                                         'fake-host')

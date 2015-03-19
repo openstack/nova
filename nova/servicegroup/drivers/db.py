@@ -46,12 +46,16 @@ class DbDriver(base.Driver):
         self.conductor_api = conductor.API(use_local=self.db_allowed)
         self.service_down_time = CONF.service_down_time
 
-    def join(self, member_id, group_id, service=None):
-        """Join the given service with its group."""
+    def join(self, member, group, service=None):
+        """Add a new member to a service group.
 
-        LOG.debug('DB_Driver: join new ServiceGroup member %(member_id)s to '
-                  'the %(group_id)s group, service = %(service)s',
-                  {'member_id': member_id, 'group_id': group_id,
+        :param member: the joined member ID/name
+        :param group: the group ID/name, of the joined member
+        :param service: a `nova.service.Service` object
+        """
+        LOG.debug('DB_Driver: join new ServiceGroup member %(member)s to '
+                  'the %(group)s group, service = %(service)s',
+                  {'member': member, 'group': group,
                    'service': service})
         if service is None:
             raise RuntimeError(_('service is a mandatory argument for DB based'

@@ -17,16 +17,17 @@ import random
 class Driver(object):
     """Base class for all ServiceGroup drivers."""
 
-    def join(self, member_id, group_id, service=None):
-        """Join the given service with its group."""
+    def join(self, member, group, service=None):
+        """Add a new member to a service group.
+
+        :param member: the joined member ID/name
+        :param group: the group ID/name, of the joined member
+        :param service: a `nova.service.Service` object
+        """
         raise NotImplementedError()
 
     def is_up(self, member):
         """Check whether the given member is up."""
-        raise NotImplementedError()
-
-    def leave(self, member_id, group_id):
-        """Remove the given member from the ServiceGroup monitoring."""
         raise NotImplementedError()
 
     def get_all(self, group_id):
