@@ -507,12 +507,12 @@ class InstanceEvents(object):
             return _event
 
         result = _pop_event()
-        if result == no_events_sentinel:
+        if result is no_events_sentinel:
             LOG.debug('No waiting events found dispatching %(event)s',
                       {'event': event.key},
                       instance=instance)
             return None
-        elif result == no_matching_event_sentinel:
+        elif result is no_matching_event_sentinel:
             LOG.debug('No event matching %(event)s in %(events)s',
                       {'event': event.key,
                        'events': self._events.get(instance.uuid, {}).keys()},
