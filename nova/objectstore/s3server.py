@@ -39,14 +39,20 @@ import os.path
 import urllib
 
 from oslo_config import cfg
+from oslo_log import log as logging
 import routes
 import six
 import webob
 
+from nova.i18n import _LW
 from nova.openstack.common import fileutils
+from nova.openstack.common import versionutils
 from nova import paths
 from nova import utils
 from nova import wsgi
+
+
+LOG = logging.getLogger(__name__)
 
 
 s3_opts = [
@@ -82,6 +88,13 @@ class S3Application(wsgi.Router):
     """
 
     def __init__(self, root_directory, bucket_depth=0, mapper=None):
+        versionutils.report_deprecated_feature(
+            LOG,
+            _LW('The in tree EC2 API is deprecated as of Kilo release and may '
+                'be removed in a future release. The stackforge ec2-api '
+                'project http://git.openstack.org/cgit/stackforge/ec2-api/ '
+                'is the target replacement for this functionality.')
+        )
         if mapper is None:
             mapper = routes.Mapper()
 
