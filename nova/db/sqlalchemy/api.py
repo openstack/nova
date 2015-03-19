@@ -4351,7 +4351,6 @@ def project_get_networks(context, project_id, associate=True):
 ###################
 
 
-@require_admin_context
 def migration_create(context, values):
     migration = models.Migration()
     migration.update(values)
@@ -4359,7 +4358,6 @@ def migration_create(context, values):
     return migration
 
 
-@require_admin_context
 def migration_update(context, id, values):
     session = get_session()
     with session.begin():
