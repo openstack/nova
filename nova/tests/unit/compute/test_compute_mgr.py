@@ -872,6 +872,25 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.compute._init_instance(self.context, instance)
         self.mox.VerifyAll()
 
+    def test_init_instance_resize_prep(self):
+        instance = fake_instance.fake_instance_obj(
+                self.context,
+                uuid='fake',
+                vm_state=vm_states.ACTIVE,
+                host=self.compute.host,
+                task_state=task_states.RESIZE_PREP,
+                power_state=power_state.RUNNING)
+
+        with contextlib.nested(
+            mock.patch.object(self.compute, '_get_power_state',
+                              return_value=power_state.RUNNING),
+            mock.patch.object(compute_utils, 'get_nw_info_for_instance'),
+            mock.patch.object(instance, 'save', autospec=True)
+        ) as (mock_get_power_state, mock_nw_info, mock_instance_save):
+            self.compute._init_instance(self.context, instance)
+            mock_instance_save.assert_called_once_with()
+            self.assertIsNone(instance.task_state)
+
     @mock.patch('nova.context.RequestContext.elevated')
     @mock.patch('nova.compute.utils.get_nw_info_for_instance')
     @mock.patch(

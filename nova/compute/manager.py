@@ -949,6 +949,14 @@ class ComputeManager(manager.Manager):
             instance.task_state = None
             instance.save()
 
+        if (instance.vm_state != vm_states.ERROR and
+            instance.task_state in [task_states.RESIZE_PREP]):
+            LOG.debug("Instance in transitional state %s at start-up "
+                      "clearing task state",
+                      instance['task_state'], instance=instance)
+            instance.task_state = None
+            instance.save()
+
         if instance.task_state == task_states.DELETING:
             try:
                 LOG.info(_LI('Service started deleting the instance during '
