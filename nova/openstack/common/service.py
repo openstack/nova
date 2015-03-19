@@ -199,6 +199,13 @@ class ServiceWrapper(object):
 
 
 class ProcessLauncher(object):
+    _signal_handlers_set = set()
+
+    @classmethod
+    def _handle_class_signals(cls, *args, **kwargs):
+        for handler in cls._signal_handlers_set:
+            handler(*args, **kwargs)
+
     def __init__(self):
         """Constructor."""
 
@@ -210,7 +217,8 @@ class ProcessLauncher(object):
         self.handle_signal()
 
     def handle_signal(self):
-        _set_signals_handler(self._handle_signal)
+        self._signal_handlers_set.add(self._handle_signal)
+        _set_signals_handler(self._handle_class_signals)
 
     def _handle_signal(self, signo, frame):
         self.sigcaught = signo
