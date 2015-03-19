@@ -1857,3 +1857,7 @@ class ImageCPUPinningForbidden(Forbidden):
 
 class UnsupportedPolicyException(Invalid):
     msg_fmt = _("ServerGroup policy is not supported: %(reason)s")
+
+
+class CellMappingNotFound(NotFound):
+    msg_fmt = _("Cell %(uuid)s has no mapping.")
