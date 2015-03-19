@@ -203,6 +203,36 @@ class QuotaSetsTestV21(BaseQuotaSetsTest):
         res_dict = self.controller.update(req, 'update_me', body=body)
         self.assertEqual(body, res_dict)
 
+    @mock.patch('nova.objects.Quotas.create_limit')
+    def test_quotas_update_with_good_data_as_admin(self, mock_createlimit):
+        self.setup_mock_for_update()
+        self.default_quotas.update({})
+        body = {'quota_set': self.default_quotas}
+
+        req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/update_me',
+                                      use_admin_context=True)
+        self.controller.update(req, 'update_me', body=body)
+        self.assertEqual(len(self.default_quotas),
+                         len(mock_createlimit.mock_calls))
+
+    @mock.patch('nova.api.validation.validators._SchemaValidator.validate')
+    @mock.patch('nova.objects.Quotas.create_limit')
+    def test_quotas_update_with_bad_data_as_admin(self, mock_createlimit,
+                                                  mock_validate):
+        self.setup_mock_for_update()
+        self.default_quotas.update({
+            'instances': 50,
+            'cores': -50
+        })
+        body = {'quota_set': self.default_quotas}
+
+        req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/update_me',
+                                      use_admin_context=True)
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
+                          req, 'update_me', body=body)
+        self.assertEqual(0,
+                         len(mock_createlimit.mock_calls))
+
     def test_quotas_update_zero_value_as_admin(self):
         self.setup_mock_for_update()
         body = {'quota_set': {'instances': 0, 'cores': 0,
@@ -377,6 +407,33 @@ class ExtendedQuotasTestV21(BaseQuotaSetsTest):
         self.controller.update(req, 'update_me', body=body)
         mock.patch.stopall()
 
+    @mock.patch('nova.objects.Quotas.create_limit')
+    def test_quotas_update_good_data(self, mock_createlimit):
+        body = {'quota_set': {'cores': 1,
+                              'instances': 1}}
+        req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/update_me',
+                                      use_admin_context=True)
+        self.controller.update(req, 'update_me', body=body)
+        self.assertEqual(2,
+                         len(mock_createlimit.mock_calls))
+
+    @mock.patch('nova.objects.Quotas.create_limit')
+    def test_quotas_update_bad_data(self, mock_createlimit):
+        patcher = mock.patch.object(quota.QUOTAS, 'get_settable_quotas')
+        get_settable_quotas = patcher.start()
+
+        body = {'quota_set': {'cores': 10,
+                              'instances': 1}}
+
+        get_settable_quotas.side_effect = self.fake_get_settable_quotas
+        req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/update_me',
+                                      use_admin_context=True)
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
+                          req, 'update_me', body=body)
+        mock.patch.stopall()
+        self.assertEqual(0,
+                         len(mock_createlimit.mock_calls))
+
 
 class UserQuotasTestV21(BaseQuotaSetsTest):
     plugin = quotas_v21
@@ -473,6 +530,31 @@ class UserQuotasTestV21(BaseQuotaSetsTest):
         res = self.controller.delete(self.req, 1234)
         self.mox.VerifyAll()
         self.assertEqual(202, self.get_delete_status_int(res))
+
+    @mock.patch('nova.objects.Quotas.create_limit')
+    def test_user_quotas_update_good_data(self, mock_createlimit):
+        self.setup_mock_for_update()
+        body = {'quota_set': {'instances': 1,
+                              'cores': 1}}
+
+        url = '/v2/fake4/os-quota-sets/update_me?user_id=1'
+        req = fakes.HTTPRequest.blank(url, use_admin_context=True)
+        self.controller.update(req, 'update_me', body=body)
+        self.assertEqual(2,
+                         len(mock_createlimit.mock_calls))
+
+    @mock.patch('nova.objects.Quotas.create_limit')
+    def test_user_quotas_update_bad_data(self, mock_createlimit):
+        self.setup_mock_for_update()
+        body = {'quota_set': {'instances': 20,
+                              'cores': 1}}
+
+        url = '/v2/fake4/os-quota-sets/update_me?user_id=1'
+        req = fakes.HTTPRequest.blank(url, use_admin_context=True)
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
+                          req, 'update_me', body=body)
+        self.assertEqual(0,
+                         len(mock_createlimit.mock_calls))
 
 
 class QuotaSetsTestV2(QuotaSetsTestV21):
