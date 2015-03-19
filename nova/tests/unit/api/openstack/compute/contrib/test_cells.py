@@ -88,7 +88,7 @@ class BaseCellsTest(test.NoDBTestCase):
 
 
 class CellsTestV21(BaseCellsTest):
-    cell_extension = 'compute_extension:v3:os-cells'
+    cell_extension = 'os_compute_api:os-cells'
     bad_request = exception.ValidationError
 
     def _get_cell_controller(self, ext_mgr):
