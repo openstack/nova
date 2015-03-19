@@ -9223,11 +9223,11 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                        get_host_capabilities_stub)
 
         want = {"vendor": "AMD",
-                "features": ["extapic", "3dnow"],
+                "features": set(["extapic", "3dnow"]),
                 "model": "Opteron_G4",
                 "arch": arch.X86_64,
                 "topology": {"cores": 2, "threads": 1, "sockets": 4}}
-        got = jsonutils.loads(drvr._get_cpu_info())
+        got = drvr._get_cpu_info()
         self.assertEqual(want, got)
 
     def test_get_pcidev_info(self):
@@ -11657,11 +11657,11 @@ Active:          8381604 kB
 
 class HostStateTestCase(test.NoDBTestCase):
 
-    cpu_info = ('{"vendor": "Intel", "model": "pentium", "arch": "i686", '
-                 '"features": ["ssse3", "monitor", "pni", "sse2", "sse", '
-                 '"fxsr", "clflush", "pse36", "pat", "cmov", "mca", "pge", '
-                 '"mtrr", "sep", "apic"], '
-                 '"topology": {"cores": "1", "threads": "1", "sockets": "1"}}')
+    cpu_info = {"vendor": "Intel", "model": "pentium", "arch": "i686",
+                 "features": ["ssse3", "monitor", "pni", "sse2", "sse",
+                 "fxsr", "clflush", "pse36", "pat", "cmov", "mca", "pge",
+                 "mtrr", "sep", "apic"],
+                 "topology": {"cores": "1", "threads": "1", "sockets": "1"}}
     instance_caps = [(arch.X86_64, "kvm", "hvm"),
                      (arch.I686, "kvm", "hvm")]
     pci_devices = [{
@@ -11744,7 +11744,8 @@ class HostStateTestCase(test.NoDBTestCase):
         self.assertEqual(stats["hypervisor_type"], 'QEMU')
         self.assertEqual(stats["hypervisor_version"], 9011)
         self.assertEqual(stats["hypervisor_hostname"], 'compute1')
-        self.assertEqual(jsonutils.loads(stats["cpu_info"]),
+        cpu_info = jsonutils.loads(stats["cpu_info"])
+        self.assertEqual(cpu_info,
                 {"vendor": "Intel", "model": "pentium",
                  "arch": arch.I686,
                  "features": ["ssse3", "monitor", "pni", "sse2", "sse",

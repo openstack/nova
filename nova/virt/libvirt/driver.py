@@ -4588,8 +4588,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def _get_cpu_info(self):
         """Get cpuinfo information.
 
-        Obtains cpu feature from virConnect.getCapabilities,
-        and returns as a json string.
+        Obtains cpu feature from virConnect.getCapabilities.
 
         :return: see above description
 
@@ -4608,21 +4607,11 @@ class LibvirtDriver(driver.ComputeDriver):
         topology['threads'] = caps.host.cpu.threads
         cpu_info['topology'] = topology
 
-        features = list()
+        features = set()
         for f in caps.host.cpu.features:
-            features.append(f.name)
+            features.add(f.name)
         cpu_info['features'] = features
-
-        # TODO(berrange): why do we bother converting the
-        # libvirt capabilities XML into a special JSON format ?
-        # The data format is different across all the drivers
-        # so we could just return the raw capabilities XML
-        # which 'compare_cpu' could use directly
-        #
-        # That said, arch_filter.py now seems to rely on
-        # the libvirt drivers format which suggests this
-        # data format needs to be standardized across drivers
-        return jsonutils.dumps(cpu_info)
+        return cpu_info
 
     def _get_pcidev_info(self, devname):
         """Returns a dict of PCI device."""
@@ -4866,7 +4855,16 @@ class LibvirtDriver(driver.ComputeDriver):
         data["hypervisor_type"] = self._host.get_driver_type()
         data["hypervisor_version"] = self._host.get_version()
         data["hypervisor_hostname"] = self._host.get_hostname()
-        data["cpu_info"] = self._get_cpu_info()
+        # TODO(berrange): why do we bother converting the
+        # libvirt capabilities XML into a special JSON format ?
+        # The data format is different across all the drivers
+        # so we could just return the raw capabilities XML
+        # which 'compare_cpu' could use directly
+        #
+        # That said, arch_filter.py now seems to rely on
+        # the libvirt drivers format which suggests this
+        # data format needs to be standardized across drivers
+        data["cpu_info"] = jsonutils.dumps(self._get_cpu_info())
 
         disk_free_gb = disk_info_dict['free']
         disk_over_committed = self._get_disk_over_committed_size_total()
