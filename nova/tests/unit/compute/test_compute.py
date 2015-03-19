@@ -560,7 +560,7 @@ class ComputeVolumeTestCase(BaseTestCase):
             })]
             prepped_bdm = self.compute._prep_block_device(
                     self.context, self.instance_object, block_device_mapping)
-            mock_save.assert_called_once_with()
+            self.assertEqual(2, mock_save.call_count)
             volume_driver_bdm = prepped_bdm['block_device_mapping'][0]
             self.assertEqual(volume_driver_bdm['connection_info']['serial'],
                              self.volume_id)
