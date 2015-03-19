@@ -3199,7 +3199,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.compute._cleanup_allocated_networks(self.context, self.instance,
             self.requested_networks)
         compute_utils.add_instance_fault_from_exc(self.context, self.instance,
-                mox.IgnoreArg(), mox.IgnoreArg())
+                mox.IgnoreArg(), mox.IgnoreArg(),
+                fault_message=mox.IgnoreArg())
         self.compute._nil_out_instance_obj_host_and_node(self.instance)
         self.compute._set_instance_obj_error_state(self.context, self.instance,
                                                    clean_task_state=True)

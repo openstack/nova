@@ -41,7 +41,7 @@ CONF.import_opt('host', 'nova.netconf')
 LOG = log.getLogger(__name__)
 
 
-def exception_to_dict(fault):
+def exception_to_dict(fault, message=None):
     """Converts exceptions to a dict for use in notifications."""
     # TODO(johngarbutt) move to nova/exception.py to share with wrap_exception
 
@@ -52,7 +52,8 @@ def exception_to_dict(fault):
     # get the message from the exception that was thrown
     # if that does not exist, use the name of the exception class itself
     try:
-        message = fault.format_message()
+        if not message:
+            message = fault.format_message()
     # These exception handlers are broad so we don't fail to log the fault
     # just because there is an unexpected error retrieving the message
     except Exception:
@@ -81,13 +82,14 @@ def _get_fault_details(exc_info, error_code):
     return six.text_type(details)
 
 
-def add_instance_fault_from_exc(context, instance, fault, exc_info=None):
+def add_instance_fault_from_exc(context, instance, fault, exc_info=None,
+                                fault_message=None):
     """Adds the specified fault to the database."""
 
     fault_obj = objects.InstanceFault(context=context)
     fault_obj.host = CONF.host
     fault_obj.instance_uuid = instance.uuid
-    fault_obj.update(exception_to_dict(fault))
+    fault_obj.update(exception_to_dict(fault, message=fault_message))
     code = fault_obj.code
     fault_obj.details = _get_fault_details(exc_info, code)
     fault_obj.create()
