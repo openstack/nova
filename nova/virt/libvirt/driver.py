@@ -5730,11 +5730,13 @@ class LibvirtDriver(driver.ComputeDriver):
             instance.system_metadata)
 
         if not (is_shared_instance_path and is_shared_block_storage):
-            # NOTE(mikal): live migration of instances using config drive is
-            # not supported because of a bug in libvirt (read only devices
-            # are not copied by libvirt). See bug/1246201
-            if configdrive.required_by(instance):
-                raise exception.NoLiveMigrationForConfigDriveInLibVirt()
+            # NOTE(dims): Using config drive with iso format does not work
+            # because of a bug in libvirt with read only devices. However
+            # one can use vfat as config_drive_format which works fine.
+            # Please see bug/1246201 for details on the libvirt bug.
+            if CONF.config_drive_format != 'vfat':
+                if configdrive.required_by(instance):
+                    raise exception.NoLiveMigrationForConfigDriveInLibVirt()
 
         if not is_shared_instance_path:
             instance_dir = libvirt_utils.get_instance_path_at_destination(
