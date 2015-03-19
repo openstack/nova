@@ -1300,14 +1300,6 @@ class MigrationTestCase(test.TestCase):
             hosts = [migration['source_compute'], migration['dest_compute']]
             self.assertIn(filters["host"], hosts)
 
-    def test_only_admin_can_get_all_migrations_by_filters(self):
-        user_ctxt = context.RequestContext(user_id=None, project_id=None,
-                                   is_admin=False, read_deleted="no",
-                                   overwrite=False)
-
-        self.assertRaises(exception.AdminRequired,
-                          db.migration_get_all_by_filters, user_ctxt, {})
-
     def test_migration_get_unconfirmed_by_dest_compute(self):
         # Ensure no migrations are returned.
         results = db.migration_get_unconfirmed_by_dest_compute(self.ctxt, 10,

@@ -4379,12 +4379,10 @@ def _migration_get(context, id, session=None):
     return result
 
 
-@require_admin_context
 def migration_get(context, id):
     return _migration_get(context, id)
 
 
-@require_admin_context
 def migration_get_by_instance_and_status(context, instance_uuid, status):
     result = model_query(context, models.Migration, read_deleted="yes").\
                      filter_by(instance_uuid=instance_uuid).\
@@ -4398,7 +4396,6 @@ def migration_get_by_instance_and_status(context, instance_uuid, status):
     return result
 
 
-@require_admin_context
 def migration_get_unconfirmed_by_dest_compute(context, confirm_window,
                                               dest_compute, use_slave=False):
     confirm_window = (timeutils.utcnow() -
@@ -4412,7 +4409,6 @@ def migration_get_unconfirmed_by_dest_compute(context, confirm_window,
              all()
 
 
-@require_admin_context
 def migration_get_in_progress_by_host_and_node(context, host, node):
 
     return model_query(context, models.Migration).\
@@ -4426,7 +4422,6 @@ def migration_get_in_progress_by_host_and_node(context, host, node):
             all()
 
 
-@require_admin_context
 def migration_get_all_by_filters(context, filters):
     query = model_query(context, models.Migration)
     if "status" in filters:
