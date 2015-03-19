@@ -4997,8 +4997,17 @@ class ComputeManager(manager.Manager):
                         {'port_id': port_id, 'msg': ex}, instance=instance)
             raise exception.InterfaceDetachFailed(instance_uuid=instance.uuid)
         else:
-            self.network_api.deallocate_port_for_instance(context, instance,
-                                                          port_id)
+            try:
+                self.network_api.deallocate_port_for_instance(
+                    context, instance, port_id)
+            except Exception as ex:
+                with excutils.save_and_reraise_exception():
+                    # Since this is a cast operation, log the failure for
+                    # triage.
+                    LOG.warning(_LW('Failed to deallocate port %(port_id)s '
+                                    'for instance. Error: %(error)s'),
+                                {'port_id': port_id, 'error': ex},
+                                instance=instance)
 
     def _get_compute_info(self, context, host):
         return objects.ComputeNode.get_first_node_by_host_for_old_compat(
