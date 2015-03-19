@@ -153,7 +153,7 @@ class LibvirtConfigCapsNUMACell(LibvirtConfigObject):
                                                         **kwargs)
 
         self.id = None
-        self.memory = None
+        self.memory = 0
         self.mempages = []
         self.cpus = []
 

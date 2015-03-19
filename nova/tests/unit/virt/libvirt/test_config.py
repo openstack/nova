@@ -125,6 +125,28 @@ class LibvirtConfigCapsTest(LibvirtConfigBaseTest):
 
         self.assertXmlEqual(xmlin, xmlout)
 
+    def test_config_host_numa_cell_no_memory_caps(self):
+        xmlin = """
+          <cell id='0'>
+            <cpus num='1'>
+              <cpu id='0' socket_id='0' core_id='0' siblings='0'/>
+            </cpus>
+          </cell>"""
+        obj = config.LibvirtConfigCapsNUMACell()
+        obj.parse_str(xmlin)
+        self.assertEqual(0, obj.memory)
+        self.assertEqual(1, len(obj.cpus))
+
+    def test_config_host_numa_cell_no_cpus_caps(self):
+        xmlin = """
+          <cell id='0'>
+            <memory unit='KiB'>128</memory>
+          </cell>"""
+        obj = config.LibvirtConfigCapsNUMACell()
+        obj.parse_str(xmlin)
+        self.assertEqual(128, obj.memory)
+        self.assertEqual(0, len(obj.cpus))
+
 
 class LibvirtConfigGuestTimerTest(LibvirtConfigBaseTest):
     def test_config_platform(self):
