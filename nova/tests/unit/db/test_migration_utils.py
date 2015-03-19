@@ -15,9 +15,9 @@
 
 import uuid
 
+from oslo_db.sqlalchemy.compat import utils as compat_utils
 from oslo_db.sqlalchemy import test_base
 from oslo_db.sqlalchemy import utils as oslodbutils
-import sqlalchemy
 from sqlalchemy import Integer, String
 from sqlalchemy import MetaData, Table, Column
 from sqlalchemy.exc import NoSuchTableError
@@ -28,8 +28,7 @@ from nova.db.sqlalchemy import api as db
 from nova.db.sqlalchemy import utils
 from nova import exception
 
-
-SA_VERSION = tuple(map(int, sqlalchemy.__version__.split('.')))
+SA_VERSION = compat_utils.SQLA_VERSION
 
 
 class CustomType(UserDefinedType):
