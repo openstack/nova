@@ -1012,14 +1012,13 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
             _wait_for_task.assert_called_once_with(
                 'fake_reconfigure_task')
 
-    def test_get_network_attach_config_spec_opaque(self):
-        vif_info = {'network_name': 'br-int',
-            'mac_address': '00:00:00:ca:fe:01',
-            'network_ref': {'type': 'OpaqueNetwork',
-                            'network-id': 'fake-network-id',
-                            'network-type': 'opaque'},
-            'iface_id': 7,
-            'vif_model': 'VirtualE1000'}
+    def _get_network_attach_config_spec_opaque(self, network_ref,
+                                               vc6_onwards=False):
+        vif_info = {'network_name': 'fake-name',
+                    'mac_address': '00:00:00:ca:fe:01',
+                    'network_ref': network_ref,
+                    'iface_id': 7,
+                    'vif_model': 'VirtualE1000'}
         fake_factory = fake.FakeFactory()
         result = vm_util.get_network_attach_config_spec(
                 fake_factory, vif_info, 1)
@@ -1038,6 +1037,14 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
 
         device = fake_factory.create('ns0:VirtualE1000')
         device.macAddress = vif_info['mac_address']
+        if network_ref['use-external-id']:
+            if vc6_onwards:
+                device.externalId = vif_info['iface_id']
+            else:
+                dp = fake_factory.create('ns0:DynamicProperty')
+                dp.name = '__externalId__'
+                dp.val = vif_info['iface_id']
+                device.dynamicProperty = [dp]
         device.addressType = 'manual'
         connectable = fake_factory.create('ns0:VirtualDeviceConnectInfo')
         connectable.allowGuestControl = True
@@ -1054,6 +1061,37 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         expected.deviceChange.append(device_change)
 
         self.assertEqual(expected, result)
+
+    def test_get_network_attach_config_spec_opaque_integration_bridge(self):
+        network_ref = {'type': 'OpaqueNetwork',
+                       'network-id': 'fake-network-id',
+                       'network-type': 'opaque',
+                       'use-external-id': False}
+        self._get_network_attach_config_spec_opaque(network_ref)
+
+    def test_get_network_attach_config_spec_opaque(self):
+        network_ref = {'type': 'OpaqueNetwork',
+                       'network-id': 'fake-network-id',
+                       'network-type': 'nsx.LogicalSwitch',
+                       'use-external-id': True}
+        self._get_network_attach_config_spec_opaque(network_ref)
+
+    @mock.patch.object(fake, 'DataObject')
+    def test_get_network_attach_config_spec_opaque_vc6_onwards(self,
+                                                               mock_object):
+        # Add new attribute externalId supported from VC6
+        class FakeVirtualE1000(fake.DataObject):
+            def __init__(self):
+                super(FakeVirtualE1000, self).__init__()
+                self.externalId = None
+
+        mock_object.return_value = FakeVirtualE1000
+        network_ref = {'type': 'OpaqueNetwork',
+                       'network-id': 'fake-network-id',
+                       'network-type': 'nsx.LogicalSwitch',
+                       'use-external-id': True}
+        self._get_network_attach_config_spec_opaque(network_ref,
+                                                    vc6_onwards=True)
 
     def test_get_network_attach_config_spec_dvs(self):
         vif_info = {'network_name': 'br100',

@@ -428,6 +428,16 @@ def _create_vif_spec(client_factory, vif_info):
                 'ns0:VirtualEthernetCardOpaqueNetworkBackingInfo')
         backing.opaqueNetworkId = network_ref['network-id']
         backing.opaqueNetworkType = network_ref['network-type']
+        # Configure externalId
+        if network_ref['use-external-id']:
+            # externalId is only supported from vCenter 6.0 onwards
+            if hasattr(net_device, 'externalId'):
+                net_device.externalId = vif_info['iface_id']
+            else:
+                dp = client_factory.create('ns0:DynamicProperty')
+                dp.name = "__externalId__"
+                dp.val = vif_info['iface_id']
+                net_device.dynamicProperty = [dp]
     elif (network_ref and
             network_ref['type'] == "DistributedVirtualPortgroup"):
         backing = client_factory.create(
