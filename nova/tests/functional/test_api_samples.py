@@ -583,6 +583,7 @@ class UserDataJsonTest(ApiSampleTestBaseV2):
 
 
 class FlavorsExtraDataJsonTest(ApiSampleTestBaseV2):
+    ADMIN_API = True
     extension_name = ('nova.api.openstack.compute.contrib.flavorextradata.'
                       'Flavorextradata')
 
@@ -625,6 +626,7 @@ class FlavorsExtraDataJsonTest(ApiSampleTestBaseV2):
 
 
 class FlavorRxtxJsonTest(ApiSampleTestBaseV2):
+    ADMIN_API = True
     extension_name = ('nova.api.openstack.compute.contrib.flavor_rxtx.'
                       'Flavor_rxtx')
 
@@ -664,6 +666,7 @@ class FlavorRxtxJsonTest(ApiSampleTestBaseV2):
 
 
 class FlavorSwapJsonTest(ApiSampleTestBaseV2):
+    ADMIN_API = True
     extension_name = ('nova.api.openstack.compute.contrib.flavor_swap.'
                       'Flavor_swap')
 
@@ -2243,6 +2246,7 @@ class ExtendedVIFNetSampleJsonTests(ServersSampleBase):
 
 
 class FlavorManageSampleJsonTests(ApiSampleTestBaseV2):
+    ADMIN_API = True
     extension_name = ("nova.api.openstack.compute.contrib.flavormanage."
                       "Flavormanage")
 
