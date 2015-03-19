@@ -95,10 +95,3 @@ class API(object):
         LOG.debug('Returns ALL members of the [%s] '
                   'ServiceGroup', group_id)
         return self._driver.get_all(group_id)
-
-    def get_one(self, group_id):
-        """Returns one member of the given group. The strategy to select
-        the member is decided by the driver (e.g. random or round-robin).
-        """
-        LOG.debug('Returns one member of the [%s] group', group_id)
-        return self._driver.get_one(group_id)
