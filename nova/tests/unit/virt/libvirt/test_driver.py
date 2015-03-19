@@ -12082,6 +12082,16 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             self.drvr.migrate_disk_and_power_off,
             'ctx', instance, '10.0.0.1', flavor_obj, None)
 
+    def test_migrate_disk_and_power_off_resize_error_default_ephemeral(self):
+        # Note(Mike_D): The size of this instance's ephemeral_gb is 20 gb.
+        instance = self._create_instance()
+        flavor = {'root_gb': 10, 'ephemeral_gb': 0}
+        flavor_obj = objects.Flavor(**flavor)
+
+        self.assertRaises(exception.InstanceFaultRollback,
+                          self.drvr.migrate_disk_and_power_off,
+                          'ctx', instance, '10.0.0.1', flavor_obj, None)
+
     @mock.patch('nova.virt.driver.block_device_info_get_ephemerals')
     def test_migrate_disk_and_power_off_resize_error_eph(self, mock_get):
         mappings = [
