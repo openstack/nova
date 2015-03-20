@@ -2,14 +2,7 @@
     "server": {
         "accessIPv4": "",
         "accessIPv6": "",
-        "addresses": {
-            "private": [
-                {
-                    "addr": "%(ip)s",
-                    "version": 4
-                }
-            ]
-        },
+        "addresses": {},
         "created": "%(isotime)s",
         "flavor": {
             "id": "1",

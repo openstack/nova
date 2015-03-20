@@ -40,6 +40,7 @@ from nova.compute import api as compute_api
 from nova.compute import cells_api as cells_api
 from nova.compute import manager as compute_manager
 from nova.compute import rpcapi as compute_rpcapi
+from nova.compute import vm_states
 from nova.conductor import manager as conductor_manager
 from nova.console import manager as console_manager  # noqa - only for cfg
 from nova import context
@@ -236,6 +237,14 @@ class ServersSampleHideAddressesJsonTest(ServersSampleJsonTest):
     extension_name = '.'.join(('nova.api.openstack.compute.contrib',
                                'hide_server_addresses',
                                'Hide_server_addresses'))
+
+    def setUp(self):
+        # We override osapi_hide_server_address_states in order
+        # to have an example of in the json samples of the
+        # addresses being hidden
+        CONF.set_override("osapi_hide_server_address_states",
+                          [vm_states.ACTIVE])
+        super(ServersSampleHideAddressesJsonTest, self).setUp()
 
 
 class ServersSampleMultiStatusJsonTest(ServersSampleBase):
