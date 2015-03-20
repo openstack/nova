@@ -674,6 +674,12 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
         # check
         pass
 
+    def _check_292(self, engine, data):
+        self.assertTableNotExists(engine, 'iscsi_targets')
+        self.assertTableNotExists(engine, 'volumes')
+        self.assertTableNotExists(engine, 'shadow_iscsi_targets')
+        self.assertTableNotExists(engine, 'shadow_volumes')
+
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
                                test_base.DbTestCase,
