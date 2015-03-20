@@ -1144,9 +1144,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.stubs.Set(compute_utils, 'finish_instance_usage_audit',
                        lambda *a, **k: None)
 
-        self.mox.StubOutWithMock(self.compute.conductor_api,
-                                 'notify_usage_exists')
-        self.compute.conductor_api.notify_usage_exists(
+        self.mox.StubOutWithMock(compute_utils, 'notify_usage_exists')
+        compute_utils.notify_usage_exists(self.compute.notifier,
             self.context, instances[0], ignore_missing_network_data=False)
         self.mox.ReplayAll()
         self.compute._instance_usage_audit(self.context)
@@ -1761,8 +1760,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             mock.patch.object(self.compute, '_notify_about_instance_usage'),
             mock.patch.object(self.compute, '_power_off_instance'),
             mock.patch.object(self.compute.driver, 'rescue'),
-            mock.patch.object(self.compute.conductor_api,
-                              'notify_usage_exists'),
+            mock.patch.object(compute_utils, 'notify_usage_exists'),
             mock.patch.object(self.compute, '_get_power_state',
                               return_value=power_state.RUNNING),
             mock.patch.object(instance, 'save')
@@ -1804,7 +1802,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 self.context, instance, fake_nw_info, rescue_image_meta,
                 'verybadpass')
 
-            notify_usage_exists.assert_called_once_with(
+            notify_usage_exists.assert_called_once_with(self.compute.notifier,
                 self.context, instance, current_period=True)
 
             instance_save.assert_called_once_with(
@@ -3545,7 +3543,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         @mock.patch.object(self.compute.driver, 'destroy')
         @mock.patch.object(self.compute.network_api, 'setup_networks_on_host')
         @mock.patch.object(self.compute.network_api, 'migrate_instance_start')
-        @mock.patch.object(self.compute.conductor_api, 'notify_usage_exists')
+        @mock.patch.object(compute_utils, 'notify_usage_exists')
         @mock.patch.object(self.migration, 'save')
         @mock.patch.object(objects.BlockDeviceMappingList,
                            'get_by_instance_uuid')
