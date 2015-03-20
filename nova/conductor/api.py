@@ -84,19 +84,6 @@ class LocalAPI(object):
                                                             host,
                                                             key)
 
-    def bw_usage_get(self, context, uuid, start_period, mac):
-        return self._manager.bw_usage_update(context, uuid, mac, start_period,
-                None, None, None, None, None, False)
-
-    def bw_usage_update(self, context, uuid, mac, start_period,
-                        bw_in, bw_out, last_ctr_in, last_ctr_out,
-                        last_refreshed=None, update_cells=True):
-        return self._manager.bw_usage_update(context, uuid, mac, start_period,
-                                             bw_in, bw_out,
-                                             last_ctr_in, last_ctr_out,
-                                             last_refreshed,
-                                             update_cells=update_cells)
-
     def provider_fw_rule_get_all(self, context):
         return self._manager.provider_fw_rule_get_all(context)
 
@@ -194,13 +181,6 @@ class LocalAPI(object):
         return self._manager.task_log_end_task(context, task_name,
                                                begin, end, host,
                                                errors, message)
-
-    def notify_usage_exists(self, context, instance, current_period=False,
-                            ignore_missing_network_data=True,
-                            system_metadata=None, extra_usage_info=None):
-        return self._manager.notify_usage_exists(
-            context, instance, current_period, ignore_missing_network_data,
-            system_metadata, extra_usage_info)
 
     def security_groups_trigger_handler(self, context, event, *args):
         return self._manager.security_groups_trigger_handler(context,
