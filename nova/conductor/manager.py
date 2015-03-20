@@ -758,6 +758,8 @@ class ComputeTaskManager(base.Base):
                 with compute_utils.EventReporter(context, 'schedule_instances',
                                                  instance.uuid):
                     filter_properties = {}
+                    scheduler_utils.populate_retry(filter_properties,
+                                                   instance.uuid)
                     hosts = self._schedule_instances(context, image,
                                                      filter_properties,
                                                      instance)
