@@ -184,43 +184,6 @@ class _BaseTestCase(object):
                                                     'fake-values')
         self.assertEqual(result, 'fake-result')
 
-    def test_task_log_get(self):
-        self.mox.StubOutWithMock(db, 'task_log_get')
-        db.task_log_get(self.context, 'task', 'begin', 'end', 'host',
-                        'state').AndReturn('result')
-        self.mox.ReplayAll()
-        result = self.conductor.task_log_get(self.context, 'task', 'begin',
-                                             'end', 'host', 'state')
-        self.assertEqual(result, 'result')
-
-    def test_task_log_get_with_no_state(self):
-        self.mox.StubOutWithMock(db, 'task_log_get')
-        db.task_log_get(self.context, 'task', 'begin', 'end',
-                        'host', None).AndReturn('result')
-        self.mox.ReplayAll()
-        result = self.conductor.task_log_get(self.context, 'task', 'begin',
-                                             'end', 'host', None)
-        self.assertEqual(result, 'result')
-
-    def test_task_log_begin_task(self):
-        self.mox.StubOutWithMock(db, 'task_log_begin_task')
-        db.task_log_begin_task(self.context.elevated(), 'task', 'begin',
-                               'end', 'host', 'items',
-                               'message').AndReturn('result')
-        self.mox.ReplayAll()
-        result = self.conductor.task_log_begin_task(
-            self.context, 'task', 'begin', 'end', 'host', 'items', 'message')
-        self.assertEqual(result, 'result')
-
-    def test_task_log_end_task(self):
-        self.mox.StubOutWithMock(db, 'task_log_end_task')
-        db.task_log_end_task(self.context.elevated(), 'task', 'begin', 'end',
-                             'host', 'errors', 'message').AndReturn('result')
-        self.mox.ReplayAll()
-        result = self.conductor.task_log_end_task(
-            self.context, 'task', 'begin', 'end', 'host', 'errors', 'message')
-        self.assertEqual(result, 'result')
-
     def test_security_groups_trigger_members_refresh(self):
         self.mox.StubOutWithMock(self.conductor_manager.security_group_api,
                                  'trigger_members_refresh')
@@ -775,6 +738,43 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
         self.mox.ReplayAll()
         result = self.conductor.compute_node_delete(self.context, node)
         self.assertIsNone(result)
+
+    def test_task_log_get(self):
+        self.mox.StubOutWithMock(db, 'task_log_get')
+        db.task_log_get(self.context, 'task', 'begin', 'end', 'host',
+                        'state').AndReturn('result')
+        self.mox.ReplayAll()
+        result = self.conductor.task_log_get(self.context, 'task', 'begin',
+                                             'end', 'host', 'state')
+        self.assertEqual(result, 'result')
+
+    def test_task_log_get_with_no_state(self):
+        self.mox.StubOutWithMock(db, 'task_log_get')
+        db.task_log_get(self.context, 'task', 'begin', 'end',
+                        'host', None).AndReturn('result')
+        self.mox.ReplayAll()
+        result = self.conductor.task_log_get(self.context, 'task', 'begin',
+                                             'end', 'host', None)
+        self.assertEqual(result, 'result')
+
+    def test_task_log_begin_task(self):
+        self.mox.StubOutWithMock(db, 'task_log_begin_task')
+        db.task_log_begin_task(self.context.elevated(), 'task', 'begin',
+                               'end', 'host', 'items',
+                               'message').AndReturn('result')
+        self.mox.ReplayAll()
+        result = self.conductor.task_log_begin_task(
+            self.context, 'task', 'begin', 'end', 'host', 'items', 'message')
+        self.assertEqual(result, 'result')
+
+    def test_task_log_end_task(self):
+        self.mox.StubOutWithMock(db, 'task_log_end_task')
+        db.task_log_end_task(self.context.elevated(), 'task', 'begin', 'end',
+                             'host', 'errors', 'message').AndReturn('result')
+        self.mox.ReplayAll()
+        result = self.conductor.task_log_end_task(
+            self.context, 'task', 'begin', 'end', 'host', 'errors', 'message')
+        self.assertEqual(result, 'result')
 
 
 class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):

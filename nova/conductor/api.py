@@ -81,22 +81,6 @@ class LocalAPI(object):
     def compute_node_create(self, context, values):
         return self._manager.compute_node_create(context, values)
 
-    def task_log_get(self, context, task_name, begin, end, host, state=None):
-        return self._manager.task_log_get(context, task_name, begin, end,
-                                          host, state)
-
-    def task_log_begin_task(self, context, task_name, begin, end, host,
-                            task_items=None, message=None):
-        return self._manager.task_log_begin_task(context, task_name,
-                                                 begin, end, host,
-                                                 task_items, message)
-
-    def task_log_end_task(self, context, task_name, begin, end, host,
-                          errors, message=None):
-        return self._manager.task_log_end_task(context, task_name,
-                                               begin, end, host,
-                                               errors, message)
-
     def security_groups_trigger_members_refresh(self, context, group_ids):
         return self._manager.security_groups_trigger_members_refresh(context,
                                                                      group_ids)
