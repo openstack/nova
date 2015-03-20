@@ -47,6 +47,11 @@ class BlockDeviceMapping(extensions.V3APIExtensionBase):
     # NOTE(gmann): This function is not supposed to use 'body_deprecated_param'
     # parameter as this is placed to handle scheduler_hint extension for V2.1.
     def server_create(self, server_dict, create_kwargs, body_deprecated_param):
+
+        # Have to check whether --image is given, see bug 1433609
+        image_href = server_dict.get('imageRef')
+        image_uuid_specified = image_href is not None
+
         bdm = server_dict.get(ATTRIBUTE_NAME, [])
         legacy_bdm = server_dict.get(LEGACY_ATTRIBUTE_NAME, [])
 
@@ -57,7 +62,8 @@ class BlockDeviceMapping(extensions.V3APIExtensionBase):
 
         try:
             block_device_mapping = [
-                block_device.BlockDeviceDict.from_api(bdm_dict)
+                block_device.BlockDeviceDict.from_api(bdm_dict,
+                    image_uuid_specified)
                 for bdm_dict in bdm]
         except exception.InvalidBDMFormat as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
