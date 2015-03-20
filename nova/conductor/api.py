@@ -108,9 +108,6 @@ class LocalAPI(object):
         return self._manager.block_device_mapping_get_all_by_instance(
             context, instance, legacy)
 
-    def vol_get_usage_by_time(self, context, start_time):
-        return self._manager.vol_get_usage_by_time(context, start_time)
-
     def vol_usage_update(self, context, vol_id, rd_req, rd_bytes, wr_req,
                          wr_bytes, instance, last_refreshed=None,
                          update_totals=False):
