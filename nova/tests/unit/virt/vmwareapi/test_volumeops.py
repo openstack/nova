@@ -177,22 +177,24 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
         volume_device = mock.MagicMock()
         volume_device.backing.fileName = 'fake-path'
         default_adapter_type = constants.DEFAULT_ADAPTER_TYPE
+        disk_type = constants.DEFAULT_DISK_TYPE
+        disk_uuid = 'e97f357b-331e-4ad1-b726-89be048fb811'
+        backing = mock.Mock(uuid=disk_uuid)
+        device = mock.Mock(backing=backing)
         vmdk_info = vm_util.VmdkInfo('fake-path', default_adapter_type,
-                                     constants.DISK_TYPE_PREALLOCATED, 1024,
-                                     'fake-device')
+                                     disk_type, 1024,
+                                     device)
         adapter_type = adapter_type or default_adapter_type
 
         with contextlib.nested(
             mock.patch.object(vm_util, 'get_vm_ref', return_value=vm_ref),
             mock.patch.object(self._volumeops, '_get_volume_ref'),
-            mock.patch.object(self._volumeops, '_get_vmdk_base_volume_device',
-                              return_value=volume_device),
             mock.patch.object(vm_util, 'get_vmdk_info',
                               return_value=vmdk_info),
             mock.patch.object(self._volumeops, 'attach_disk_to_vm'),
             mock.patch.object(self._volumeops, '_update_volume_details')
-        ) as (get_vm_ref, get_volume_ref, get_vmdk_base_volume_device,
-              get_vmdk_info, attach_disk_to_vm, update_volume_details):
+        ) as (get_vm_ref, get_volume_ref, get_vmdk_info, attach_disk_to_vm,
+              update_volume_details):
             self._volumeops.attach_volume(connection_info, self._instance,
                                           adapter_type)
 
@@ -201,11 +203,11 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
             get_volume_ref.assert_called_once_with(
                 connection_info['data']['volume'])
             self.assertTrue(get_vmdk_info.called)
-            attach_disk_to_vm.assert_called_once_with(vm_ref,
-                self._instance, adapter_type,
+            attach_disk_to_vm.assert_called_once_with(
+                vm_ref, self._instance, adapter_type,
                 constants.DISK_TYPE_PREALLOCATED, vmdk_path='fake-path')
-            update_volume_details.assert_called_once_with(vm_ref,
-                self._instance, connection_info['data']['volume_id'])
+            update_volume_details.assert_called_once_with(
+                vm_ref, connection_info['data']['volume_id'], disk_uuid)
 
     def _test_attach_volume_iscsi(self, adapter_type=None):
         connection_info = {'driver_volume_type': 'iscsi',
