@@ -853,6 +853,24 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
             self.assertEqual('fk_compute_nodes_service_id',
                              service_id_fks[0].name)
 
+    def _check_279(self, engine, data):
+        inspector = reflection.Inspector.from_engine(engine)
+        constraints = inspector.get_unique_constraints('compute_nodes')
+        constraint_names = [constraint['name'] for constraint in constraints]
+        self.assertNotIn('uniq_compute_nodes0host0hypervisor_hostname',
+                         constraint_names)
+        self.assertIn('uniq_compute_nodes0host0hypervisor_hostname0deleted',
+                      constraint_names)
+
+    def _post_downgrade_279(self, engine):
+        inspector = reflection.Inspector.from_engine(engine)
+        constraints = inspector.get_unique_constraints('compute_nodes')
+        constraint_names = [constraint['name'] for constraint in constraints]
+        self.assertNotIn('uniq_compute_nodes0host0hypervisor_hostname0deleted',
+                      constraint_names)
+        self.assertIn('uniq_compute_nodes0host0hypervisor_hostname',
+                      constraint_names)
+
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
                                test_base.DbTestCase,
