@@ -38,7 +38,7 @@ CONF.import_opt('name', 'nova.cells.opts', group='cells')
 CONF.import_opt('capabilities', 'nova.cells.opts', group='cells')
 
 ALIAS = "os-cells"
-authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
+authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 def _filter_keys(item, keys):

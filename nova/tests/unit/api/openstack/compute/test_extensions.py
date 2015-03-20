@@ -167,7 +167,7 @@ class ExtensionTestCase(test.TestCase):
         authorize = base_extensions.os_compute_authorizer(
             'used_limits_for_admin')
         self._test_extension_authorizer_throws_exception_if_policy_fails(
-            "compute_extension:v3:used_limits_for_admin",
+            "os_compute_api:used_limits_for_admin",
             authorize)
 
     def _test_core_authorizer_throws_exception_if_policy_fails(self,
@@ -190,13 +190,6 @@ class ExtensionTestCase(test.TestCase):
                                                     'used_limits_for_admin')
         self._test_core_authorizer_throws_exception_if_policy_fails(
             "compute:used_limits_for_admin", authorize)
-
-    def test_os_compute_api_core_authorizer_throws_exception_if_policy_fails(
-            self):
-        authorize = base_extensions.os_compute_authorizer(
-            'used_limits_for_admin', core=True)
-        self._test_core_authorizer_throws_exception_if_policy_fails(
-            "compute:v3:used_limits_for_admin", authorize)
 
 
 class ExtensionControllerTest(ExtensionTestCase):

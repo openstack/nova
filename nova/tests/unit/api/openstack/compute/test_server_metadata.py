@@ -779,7 +779,7 @@ class ServerMetaPolicyEnforcementV21(test.NoDBTestCase):
         self.req = fakes.HTTPRequest.blank('')
 
     def test_create_policy_failed(self):
-        rule_name = "compute_extension:v3:server-metadata:create"
+        rule_name = "os_compute_api:server-metadata:create"
         self.policy.set_rules({rule_name: "project:non_fake"})
         exc = self.assertRaises(
             exception.PolicyNotAuthorized,
@@ -790,7 +790,7 @@ class ServerMetaPolicyEnforcementV21(test.NoDBTestCase):
             exc.format_message())
 
     def test_index_policy_failed(self):
-        rule_name = "compute_extension:v3:server-metadata:index"
+        rule_name = "os_compute_api:server-metadata:index"
         self.policy.set_rules({rule_name: "project:non_fake"})
         exc = self.assertRaises(
             exception.PolicyNotAuthorized,
@@ -800,7 +800,7 @@ class ServerMetaPolicyEnforcementV21(test.NoDBTestCase):
             exc.format_message())
 
     def test_update_policy_failed(self):
-        rule_name = "compute_extension:v3:server-metadata:update"
+        rule_name = "os_compute_api:server-metadata:update"
         self.policy.set_rules({rule_name: "project:non_fake"})
         exc = self.assertRaises(
             exception.PolicyNotAuthorized,
@@ -811,7 +811,7 @@ class ServerMetaPolicyEnforcementV21(test.NoDBTestCase):
             exc.format_message())
 
     def test_update_all_policy_failed(self):
-        rule_name = "compute_extension:v3:server-metadata:update_all"
+        rule_name = "os_compute_api:server-metadata:update_all"
         self.policy.set_rules({rule_name: "project:non_fake"})
         exc = self.assertRaises(
             exception.PolicyNotAuthorized,
@@ -822,7 +822,7 @@ class ServerMetaPolicyEnforcementV21(test.NoDBTestCase):
             exc.format_message())
 
     def test_delete_policy_failed(self):
-        rule_name = "compute_extension:v3:server-metadata:delete"
+        rule_name = "os_compute_api:server-metadata:delete"
         self.policy.set_rules({rule_name: "project:non_fake"})
         exc = self.assertRaises(
             exception.PolicyNotAuthorized,
@@ -832,7 +832,7 @@ class ServerMetaPolicyEnforcementV21(test.NoDBTestCase):
             exc.format_message())
 
     def test_show_policy_failed(self):
-        rule_name = "compute_extension:v3:server-metadata:show"
+        rule_name = "os_compute_api:server-metadata:show"
         self.policy.set_rules({rule_name: "project:non_fake"})
         exc = self.assertRaises(
             exception.PolicyNotAuthorized,

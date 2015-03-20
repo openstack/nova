@@ -82,7 +82,7 @@ class PauseServerPolicyEnforcementV21(test.NoDBTestCase):
         self.controller = pause_server_v21.PauseServerController()
 
     def test_pause_policy_failed(self):
-        rule_name = "compute_extension:v3:os-pause-server:pause"
+        rule_name = "os_compute_api:os-pause-server:pause"
         self.policy.set_rules({rule_name: "project:non_fake"})
         req = fakes.HTTPRequest.blank('')
         exc = self.assertRaises(
@@ -94,7 +94,7 @@ class PauseServerPolicyEnforcementV21(test.NoDBTestCase):
             exc.format_message())
 
     def test_unpause_policy_failed(self):
-        rule_name = "compute_extension:v3:os-pause-server:unpause"
+        rule_name = "os_compute_api:os-pause-server:unpause"
         self.policy.set_rules({rule_name: "project:non_fake"})
         req = fakes.HTTPRequest.blank('')
         exc = self.assertRaises(

@@ -138,7 +138,7 @@ class ShelvePolicyEnforcementV21(test.NoDBTestCase):
         self.req = fakes.HTTPRequest.blank('')
 
     def test_shelve_policy_failed(self):
-        rule_name = "compute_extension:v3:os-shelve:shelve"
+        rule_name = "os_compute_api:os-shelve:shelve"
         self.policy.set_rules({rule_name: "project:non_fake"})
         exc = self.assertRaises(
             exception.PolicyNotAuthorized,
@@ -149,7 +149,7 @@ class ShelvePolicyEnforcementV21(test.NoDBTestCase):
             exc.format_message())
 
     def test_shelve_offload_policy_failed(self):
-        rule_name = "compute_extension:v3:os-shelve:shelve_offload"
+        rule_name = "os_compute_api:os-shelve:shelve_offload"
         self.policy.set_rules({rule_name: "project:non_fake"})
         exc = self.assertRaises(
             exception.PolicyNotAuthorized,
@@ -160,7 +160,7 @@ class ShelvePolicyEnforcementV21(test.NoDBTestCase):
             exc.format_message())
 
     def test_unshelve_policy_failed(self):
-        rule_name = "compute_extension:v3:os-shelve:unshelve"
+        rule_name = "os_compute_api:os-shelve:unshelve"
         self.policy.set_rules({rule_name: "project:non_fake"})
         exc = self.assertRaises(
             exception.PolicyNotAuthorized,

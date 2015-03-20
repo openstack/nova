@@ -832,7 +832,7 @@ class TestAssistedVolumeSnapshotsPolicyEnforcementV21(test.NoDBTestCase):
         self.req = fakes.HTTPRequest.blank('')
 
     def test_create_assisted_volumes_snapshots_policy_failed(self):
-        rule_name = "compute_extension:v3:os-assisted-volume-snapshots:create"
+        rule_name = "os_compute_api:os-assisted-volume-snapshots:create"
         self.policy.set_rules({rule_name: "project:non_fake"})
         body = {'snapshot':
                    {'volume_id': '1',
@@ -847,7 +847,7 @@ class TestAssistedVolumeSnapshotsPolicyEnforcementV21(test.NoDBTestCase):
             exc.format_message())
 
     def test_delete_assisted_volumes_snapshots_policy_failed(self):
-        rule_name = "compute_extension:v3:os-assisted-volume-snapshots:delete"
+        rule_name = "os_compute_api:os-assisted-volume-snapshots:delete"
         self.policy.set_rules({rule_name: "project:non_fake"})
         exc = self.assertRaises(
             exception.PolicyNotAuthorized,
@@ -874,62 +874,62 @@ class TestVolumeAttachPolicyEnforcementV21(test.NoDBTestCase):
             exc.format_message())
 
     def test_index_volume_attach_policy_failed(self):
-        rule_name = "compute_extension:v3:os-volumes-attachments:index"
+        rule_name = "os_compute_api:os-volumes-attachments:index"
         rules = {rule_name: "project:non_fake"}
         self._common_policy_check(rules, rule_name,
                                   self.controller.index, self.req, FAKE_UUID)
 
     def test_show_volume_attach_policy_failed(self):
-        rule_name = "compute_extension:v3:os-volumes"
-        rules = {"compute_extension:v3:os-volumes-attachments:show": "@",
+        rule_name = "os_compute_api:os-volumes"
+        rules = {"os_compute_api:os-volumes-attachments:show": "@",
                  rule_name: "project:non_fake"}
         self._common_policy_check(rules, rule_name, self.controller.show,
                                   self.req, FAKE_UUID, FAKE_UUID_A)
 
-        rule_name = "compute_extension:v3:os-volumes-attachments:show"
-        rules = {"compute_extension:v3:os-volumes": "@",
+        rule_name = "os_compute_api:os-volumes-attachments:show"
+        rules = {"os_compute_api:os-volumes": "@",
                  rule_name: "project:non_fake"}
         self._common_policy_check(rules, rule_name, self.controller.show,
                                   self.req, FAKE_UUID, FAKE_UUID_A)
 
     def test_create_volume_attach_policy_failed(self):
-        rule_name = "compute_extension:v3:os-volumes"
-        rules = {"compute_extension:v3:os-volumes-attachments:create": "@",
+        rule_name = "os_compute_api:os-volumes"
+        rules = {"os_compute_api:os-volumes-attachments:create": "@",
                  rule_name: "project:non_fake"}
         body = {'volumeAttachment': {'volumeId': FAKE_UUID_A,
                                     'device': '/dev/fake'}}
         self._common_policy_check(rules, rule_name, self.controller.create,
                                   self.req, FAKE_UUID, body=body)
 
-        rule_name = "compute_extension:v3:os-volumes-attachments:create"
-        rules = {"compute_extension:v3:os-volumes": "@",
+        rule_name = "os_compute_api:os-volumes-attachments:create"
+        rules = {"os_compute_api:os-volumes": "@",
                  rule_name: "project:non_fake"}
         self._common_policy_check(rules, rule_name, self.controller.create,
                                   self.req, FAKE_UUID, body=body)
 
     def test_update_volume_attach_policy_failed(self):
-        rule_name = "compute_extension:v3:os-volumes"
-        rules = {"compute_extension:v3:os-volumes-attachments:update": "@",
+        rule_name = "os_compute_api:os-volumes"
+        rules = {"os_compute_api:os-volumes-attachments:update": "@",
                  rule_name: "project:non_fake"}
         body = {'volumeAttachment': {'volumeId': FAKE_UUID_B}}
         self._common_policy_check(rules, rule_name, self.controller.update,
                                   self.req, FAKE_UUID, FAKE_UUID_A, body=body)
 
-        rule_name = "compute_extension:v3:os-volumes-attachments:update"
-        rules = {"compute_extension:v3:os-volumes": "@",
+        rule_name = "os_compute_api:os-volumes-attachments:update"
+        rules = {"os_compute_api:os-volumes": "@",
                  rule_name: "project:non_fake"}
         self._common_policy_check(rules, rule_name, self.controller.update,
                                   self.req, FAKE_UUID, FAKE_UUID_A, body=body)
 
     def test_delete_volume_attach_policy_failed(self):
-        rule_name = "compute_extension:v3:os-volumes"
-        rules = {"compute_extension:v3:os-volumes-attachments:delete": "@",
+        rule_name = "os_compute_api:os-volumes"
+        rules = {"os_compute_api:os-volumes-attachments:delete": "@",
                  rule_name: "project:non_fake"}
         self._common_policy_check(rules, rule_name, self.controller.delete,
                                   self.req, FAKE_UUID, FAKE_UUID_A)
 
-        rule_name = "compute_extension:v3:os-volumes-attachments:delete"
-        rules = {"compute_extension:v3:os-volumes": "@",
+        rule_name = "os_compute_api:os-volumes-attachments:delete"
+        rules = {"os_compute_api:os-volumes": "@",
                  rule_name: "project:non_fake"}
         self._common_policy_check(rules, rule_name, self.controller.delete,
                                   self.req, FAKE_UUID, FAKE_UUID_A)

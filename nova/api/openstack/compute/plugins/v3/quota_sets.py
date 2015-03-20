@@ -30,14 +30,7 @@ from nova import quota
 
 ALIAS = "os-quota-sets"
 QUOTAS = quota.QUOTAS
-authorize_update = extensions.extension_authorizer('compute',
-                                                   'v3:%s:update' % ALIAS)
-authorize_show = extensions.extension_authorizer('compute',
-                                                 'v3:%s:show' % ALIAS)
-authorize_delete = extensions.extension_authorizer('compute',
-                                                   'v3:%s:delete' % ALIAS)
-authorize_detail = extensions.extension_authorizer('compute',
-                                                   'v3:%s:detail' % ALIAS)
+authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class QuotaSetsController(wsgi.Controller):
@@ -92,7 +85,7 @@ class QuotaSetsController(wsgi.Controller):
     @extensions.expected_errors(403)
     def show(self, req, id):
         context = req.environ['nova.context']
-        authorize_show(context)
+        authorize(context, action='show')
         params = urlparse.parse_qs(req.environ.get('QUERY_STRING', ''))
         user_id = params.get('user_id', [None])[0]
         try:
@@ -105,7 +98,7 @@ class QuotaSetsController(wsgi.Controller):
     @extensions.expected_errors(403)
     def detail(self, req, id):
         context = req.environ['nova.context']
-        authorize_detail(context)
+        authorize(context, action='detail')
         user_id = req.GET.get('user_id', None)
         try:
             nova.context.authorize_project_context(context, id)
@@ -119,7 +112,7 @@ class QuotaSetsController(wsgi.Controller):
     @validation.schema(quota_sets.update)
     def update(self, req, id, body):
         context = req.environ['nova.context']
-        authorize_update(context)
+        authorize(context, action='update')
         project_id = id
         params = urlparse.parse_qs(req.environ.get('QUERY_STRING', ''))
         user_id = params.get('user_id', [None])[0]
@@ -171,7 +164,7 @@ class QuotaSetsController(wsgi.Controller):
     @extensions.expected_errors(())
     def defaults(self, req, id):
         context = req.environ['nova.context']
-        authorize_show(context)
+        authorize(context, action='show')
         values = QUOTAS.get_defaults(context)
         return self._format_quota_set(id, values)
 
@@ -182,7 +175,7 @@ class QuotaSetsController(wsgi.Controller):
     @wsgi.response(202)
     def delete(self, req, id):
         context = req.environ['nova.context']
-        authorize_delete(context)
+        authorize(context, action='delete')
         params = urlparse.parse_qs(req.environ.get('QUERY_STRING', ''))
         user_id = params.get('user_id', [None])[0]
         try:

@@ -19,7 +19,7 @@ from nova.api.openstack import extensions as api_extensions
 from nova.tests.functional.v3 import api_sample_base
 
 
-def fake_soft_extension_authorizer(api_name, extension_name):
+def fake_soft_extension_authorizer(extension_name, core=False):
     def authorize(context, action=None):
         return True
     return authorize
@@ -28,7 +28,7 @@ def fake_soft_extension_authorizer(api_name, extension_name):
 class ExtensionInfoAllSamplesJsonTest(api_sample_base.ApiSampleTestBaseV3):
     all_extensions = True
 
-    @mock.patch.object(api_extensions, 'soft_extension_authorizer')
+    @mock.patch.object(api_extensions, 'os_compute_soft_authorizer')
     def test_list_extensions(self, soft_auth):
         soft_auth.side_effect = fake_soft_extension_authorizer
         response = self._do_get('extensions')
@@ -40,7 +40,7 @@ class ExtensionInfoSamplesJsonTest(api_sample_base.ApiSampleTestBaseV3):
     sample_dir = "extension-info"
     extra_extensions_to_load = ["os-create-backup"]
 
-    @mock.patch.object(api_extensions, 'soft_extension_authorizer')
+    @mock.patch.object(api_extensions, 'os_compute_soft_authorizer')
     def test_get_extensions(self, soft_auth):
         soft_auth.side_effect = fake_soft_extension_authorizer
         response = self._do_get('extensions/os-create-backup')

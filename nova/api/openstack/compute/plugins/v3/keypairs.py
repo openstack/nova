@@ -29,8 +29,8 @@ from nova.objects import keypair as keypair_obj
 
 
 ALIAS = 'os-keypairs'
-authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
-soft_authorize = extensions.soft_extension_authorizer('compute', 'v3:' + ALIAS)
+authorize = extensions.os_compute_authorizer(ALIAS)
+soft_authorize = extensions.os_compute_soft_authorizer(ALIAS)
 
 
 class KeypairController(wsgi.Controller):

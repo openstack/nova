@@ -30,7 +30,7 @@ from nova import objects
 
 LOG = logging.getLogger(__name__)
 ALIAS = 'os-hosts'
-authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
+authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class HostController(wsgi.Controller):

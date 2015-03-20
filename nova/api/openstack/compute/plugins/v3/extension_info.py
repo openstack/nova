@@ -134,8 +134,7 @@ class ExtensionInfoController(wsgi.Controller):
 
         discoverable_extensions = dict()
         for alias, ext in self.extension_info.get_extensions().iteritems():
-            authorize = extensions.soft_extension_authorizer(
-                'compute', 'v3:' + alias)
+            authorize = extensions.os_compute_soft_authorizer(alias)
             if authorize(context, action='discoverable'):
                 discoverable_extensions[alias] = ext
             else:

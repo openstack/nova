@@ -95,9 +95,9 @@ class ServerPasswordPolicyEnforcementV21(test.NoDBTestCase):
             exc.format_message())
 
     def test_get_password_policy_failed(self):
-        rule_name = "compute_extension:v3:os-server-password"
+        rule_name = "os_compute_api:os-server-password"
         self._test_policy_failed(self.controller.index, rule_name)
 
     def test_clear_password_policy_failed(self):
-        rule_name = "compute_extension:v3:os-server-password"
+        rule_name = "os_compute_api:os-server-password"
         self._test_policy_failed(self.controller.clear, rule_name)

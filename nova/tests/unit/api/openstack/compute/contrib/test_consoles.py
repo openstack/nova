@@ -450,7 +450,7 @@ class TestRemoteConsolePolicyEnforcementV21(test.NoDBTestCase):
         self.req = fakes.HTTPRequest.blank('')
 
     def _common_policy_check(self, func, *arg, **kwarg):
-        rule_name = "compute_extension:v3:os-remote-consoles"
+        rule_name = "os_compute_api:os-remote-consoles"
         rule = {rule_name: "project:non_fake"}
         self.policy.set_rules(rule)
         exc = self.assertRaises(

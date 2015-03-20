@@ -28,10 +28,7 @@ from nova.i18n import _
 from nova import objects
 
 ALIAS = "os-simple-tenant-usage"
-authorize_show = extensions.extension_authorizer('compute',
-                                                 'v3:%s:show' % ALIAS)
-authorize_list = extensions.extension_authorizer('compute',
-                                                 'v3:%s:list' % ALIAS)
+authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 def parse_strtime(dstr, fmt):
@@ -226,7 +223,7 @@ class SimpleTenantUsageController(wsgi.Controller):
         """Retrieve tenant_usage for all tenants."""
         context = req.environ['nova.context']
 
-        authorize_list(context)
+        authorize(context, action='list')
 
         try:
             (period_start, period_stop, detailed) = self._get_datetime_range(
@@ -249,7 +246,7 @@ class SimpleTenantUsageController(wsgi.Controller):
         tenant_id = id
         context = req.environ['nova.context']
 
-        authorize_show(context, {'project_id': tenant_id})
+        authorize(context, action='show', target={'project_id': tenant_id})
 
         try:
             (period_start, period_stop, ignore) = self._get_datetime_range(

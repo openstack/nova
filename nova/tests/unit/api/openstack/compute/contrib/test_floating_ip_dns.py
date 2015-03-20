@@ -364,7 +364,7 @@ class FloatingIPDNSDomainPolicyEnforcementV21(test.NoDBTestCase):
     def setUp(self):
         super(FloatingIPDNSDomainPolicyEnforcementV21, self).setUp()
         self.controller = fipdns_v21.FloatingIPDNSDomainController()
-        self.rule_name = "compute_extension:v3:os-floating-ip-dns"
+        self.rule_name = "os_compute_api:os-floating-ip-dns"
         self.policy.set_rules({self.rule_name: "project:non_fake"})
         self.req = fakes.HTTPRequest.blank('')
 
@@ -401,7 +401,7 @@ class FloatingIPDNSEntryPolicyEnforcementV21(test.NoDBTestCase):
     def setUp(self):
         super(FloatingIPDNSEntryPolicyEnforcementV21, self).setUp()
         self.controller = fipdns_v21.FloatingIPDNSEntryController()
-        self.rule_name = "compute_extension:v3:os-floating-ip-dns"
+        self.rule_name = "os_compute_api:os-floating-ip-dns"
         self.policy.set_rules({self.rule_name: "project:non_fake"})
         self.req = fakes.HTTPRequest.blank('')
 

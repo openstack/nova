@@ -28,8 +28,7 @@ from nova import objects
 
 LOG = logging.getLogger(__name__)
 ALIAS = 'os-server-external-events'
-authorize = extensions.extension_authorizer('compute',
-                                            'v3:' + ALIAS)
+authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class ServerExternalEventsController(wsgi.Controller):

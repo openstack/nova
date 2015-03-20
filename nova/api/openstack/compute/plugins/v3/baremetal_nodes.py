@@ -29,7 +29,7 @@ ironic_exc = importutils.try_import('ironicclient.exc')
 
 CONF = cfg.CONF
 ALIAS = "os-baremetal-nodes"
-authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
+authorize = extensions.os_compute_authorizer(ALIAS)
 
 node_fields = ['id', 'cpus', 'local_gb', 'memory_mb', 'pm_address',
                'pm_user', 'service_host', 'terminal_port', 'instance_uuid']

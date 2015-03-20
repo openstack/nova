@@ -474,7 +474,7 @@ class FlavorManagerPolicyEnforcementV21(test.NoDBTestCase):
         self.controller = flavormanage_v21.FlavorManageController()
 
     def test_create_policy_failed(self):
-        rule_name = "compute_extension:v3:os-flavor-manage"
+        rule_name = "os_compute_api:os-flavor-manage"
         self.policy.set_rules({rule_name: "project:non_fake"})
         req = fakes.HTTPRequest.blank('')
         exc = self.assertRaises(
@@ -493,7 +493,7 @@ class FlavorManagerPolicyEnforcementV21(test.NoDBTestCase):
             exc.format_message())
 
     def test_delete_policy_failed(self):
-        rule_name = "compute_extension:v3:os-flavor-manage"
+        rule_name = "os_compute_api:os-flavor-manage"
         self.policy.set_rules({rule_name: "project:non_fake"})
         req = fakes.HTTPRequest.blank('')
         exc = self.assertRaises(

@@ -304,7 +304,7 @@ class CreateBackupPolicyEnforcementv21(test.NoDBTestCase):
         self.req = fakes.HTTPRequest.blank('')
 
     def test_create_backup_policy_failed(self):
-        rule_name = "compute_extension:v3:os-create-backup"
+        rule_name = "os_compute_api:os-create-backup"
         self.policy.set_rules({rule_name: "project:non_fake"})
         metadata = {'123': 'asdf'}
         body = {

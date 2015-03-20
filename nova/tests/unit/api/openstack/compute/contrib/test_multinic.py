@@ -181,7 +181,7 @@ class MultinicPolicyEnforcementV21(test.NoDBTestCase):
         self.req = fakes.HTTPRequest.blank('')
 
     def test_add_fixed_ip_policy_failed(self):
-        rule_name = "compute_extension:v3:os-multinic"
+        rule_name = "os_compute_api:os-multinic"
         self.policy.set_rules({rule_name: "project:non_fake"})
         exc = self.assertRaises(
             exception.PolicyNotAuthorized,
@@ -192,7 +192,7 @@ class MultinicPolicyEnforcementV21(test.NoDBTestCase):
             exc.format_message())
 
     def test_remove_fixed_ip_policy_failed(self):
-        rule_name = "compute_extension:v3:os-multinic"
+        rule_name = "os_compute_api:os-multinic"
         self.policy.set_rules({rule_name: "project:non_fake"})
         exc = self.assertRaises(
             exception.PolicyNotAuthorized,

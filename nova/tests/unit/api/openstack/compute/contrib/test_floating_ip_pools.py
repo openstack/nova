@@ -68,7 +68,7 @@ class FloatingIPPoolsPolicyEnforcementV21(test.NoDBTestCase):
         self.req = fakes.HTTPRequest.blank('')
 
     def test_change_password_policy_failed(self):
-        rule_name = "compute_extension:v3:os-floating-ip-pools"
+        rule_name = "os_compute_api:os-floating-ip-pools"
         rule = {rule_name: "project:non_fake"}
         self.policy.set_rules(rule)
         exc = self.assertRaises(

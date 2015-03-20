@@ -384,7 +384,7 @@ class FlavorAccessPolicyEnforcementV21(test.NoDBTestCase):
         self.req = fakes.HTTPRequest.blank('')
 
     def test_add_tenant_access_policy_failed(self):
-        rule_name = "compute_extension:v3:os-flavor-access:add_tenant_access"
+        rule_name = "os_compute_api:os-flavor-access:add_tenant_access"
         self.policy.set_rules({rule_name: "project:non_fake"})
         exc = self.assertRaises(
             exception.PolicyNotAuthorized,
@@ -395,7 +395,7 @@ class FlavorAccessPolicyEnforcementV21(test.NoDBTestCase):
             exc.format_message())
 
     def test_remove_tenant_access_policy_failed(self):
-        rule_name = ("compute_extension:v3:os-flavor-access:"
+        rule_name = ("os_compute_api:os-flavor-access:"
                      "remove_tenant_access")
         self.policy.set_rules({rule_name: "project:non_fake"})
         exc = self.assertRaises(
@@ -408,22 +408,22 @@ class FlavorAccessPolicyEnforcementV21(test.NoDBTestCase):
             exc.format_message())
 
     def test_extend_create_policy_failed(self):
-        rule_name = "compute_extension:v3:os-flavor-access"
+        rule_name = "os_compute_api:os-flavor-access"
         self.policy.set_rules({rule_name: "project:non_fake"})
         self.act_controller.create(self.req, None, None)
 
     def test_extend_show_policy_failed(self):
-        rule_name = "compute_extension:v3:os-flavor-access"
+        rule_name = "os_compute_api:os-flavor-access"
         self.policy.set_rules({rule_name: "project:non_fake"})
         self.act_controller.show(self.req, None, None)
 
     def test_extend_detail_policy_failed(self):
-        rule_name = "compute_extension:v3:os-flavor-access"
+        rule_name = "os_compute_api:os-flavor-access"
         self.policy.set_rules({rule_name: "project:non_fake"})
         self.act_controller.detail(self.req, None)
 
     def test_index_policy_failed(self):
-        rule_name = "compute_extension:v3:os-flavor-access"
+        rule_name = "os_compute_api:os-flavor-access"
         self.policy.set_rules({rule_name: "project:non_fake"})
         exc = self.assertRaises(
             exception.PolicyNotAuthorized,

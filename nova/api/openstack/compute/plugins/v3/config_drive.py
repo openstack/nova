@@ -22,7 +22,7 @@ from nova.api.openstack import wsgi
 
 ALIAS = "os-config-drive"
 ATTRIBUTE_NAME = "config_drive"
-authorize = extensions.soft_extension_authorizer('compute', 'v3:' + ALIAS)
+authorize = extensions.os_compute_soft_authorizer(ALIAS)
 
 
 class ConfigDriveController(wsgi.Controller):

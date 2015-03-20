@@ -221,7 +221,7 @@ class InstanceUsageAuditPolicyEnforcementV21(test.NoDBTestCase):
         self.req = fakes.HTTPRequest.blank('')
 
     def test_index_policy_failed(self):
-        rule_name = "compute_extension:v3:os-instance-usage-audit-log"
+        rule_name = "os_compute_api:os-instance-usage-audit-log"
         self.policy.set_rules({rule_name: "project_id:non_fake"})
         exc = self.assertRaises(
             exception.PolicyNotAuthorized,
@@ -231,7 +231,7 @@ class InstanceUsageAuditPolicyEnforcementV21(test.NoDBTestCase):
             exc.format_message())
 
     def test_show_policy_failed(self):
-        rule_name = "compute_extension:v3:os-instance-usage-audit-log"
+        rule_name = "os_compute_api:os-instance-usage-audit-log"
         self.policy.set_rules({rule_name: "project_id:non_fake"})
         exc = self.assertRaises(
             exception.PolicyNotAuthorized,

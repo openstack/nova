@@ -18,7 +18,7 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 
 ALIAS = 'os-flavor-rxtx'
-authorize = extensions.soft_extension_authorizer('compute', 'v3:' + ALIAS)
+authorize = extensions.os_compute_soft_authorizer(ALIAS)
 
 
 class FlavorRxtxController(wsgi.Controller):

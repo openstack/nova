@@ -25,7 +25,7 @@ from nova.i18n import _
 ALIAS = 'os-disk-config'
 API_DISK_CONFIG = "OS-DCF:diskConfig"
 INTERNAL_DISK_CONFIG = "auto_disk_config"
-authorize = extensions.soft_extension_authorizer('compute', 'v3:' + ALIAS)
+authorize = extensions.os_compute_soft_authorizer(ALIAS)
 
 
 def disk_config_to_api(value):

@@ -155,7 +155,7 @@ class DeferredDeletePolicyEnforcementV21(test.NoDBTestCase):
         self.req = fakes.HTTPRequest.blank('')
 
     def test_restore_policy_failed(self):
-        rule_name = "compute_extension:v3:os-deferred-delete"
+        rule_name = "os_compute_api:os-deferred-delete"
         self.policy.set_rules({rule_name: "project:non_fake"})
         exc = self.assertRaises(
             exception.PolicyNotAuthorized,
@@ -166,7 +166,7 @@ class DeferredDeletePolicyEnforcementV21(test.NoDBTestCase):
             exc.format_message())
 
     def test_force_delete_policy_failed(self):
-        rule_name = "compute_extension:v3:os-deferred-delete"
+        rule_name = "os_compute_api:os-deferred-delete"
         self.policy.set_rules({rule_name: "project:non_fake"})
         exc = self.assertRaises(
             exception.PolicyNotAuthorized,

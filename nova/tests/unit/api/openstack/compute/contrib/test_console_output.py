@@ -157,7 +157,7 @@ class ConsoleOutpuPolicyEnforcementV21(test.NoDBTestCase):
         self.controller = console_output_v21.ConsoleOutputController()
 
     def test_get_console_output_policy_failed(self):
-        rule_name = "compute_extension:v3:os-console-output"
+        rule_name = "os_compute_api:os-console-output"
         self.policy.set_rules({rule_name: "project:non_fake"})
         req = fakes.HTTPRequest.blank('')
         body = {'os-getConsoleOutput': {}}

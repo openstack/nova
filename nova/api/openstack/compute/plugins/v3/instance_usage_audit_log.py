@@ -30,7 +30,7 @@ CONF.import_opt('compute_topic', 'nova.compute.rpcapi')
 
 
 ALIAS = 'os-instance-usage-audit-log'
-authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
+authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class InstanceUsageAuditLogController(wsgi.Controller):

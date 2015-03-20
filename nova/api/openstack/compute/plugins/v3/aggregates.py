@@ -28,7 +28,7 @@ from nova import exception
 from nova.i18n import _
 
 ALIAS = "os-aggregates"
-authorize = extensions.extension_authorizer('compute', "v3:" + ALIAS)
+authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 def _get_context(req):

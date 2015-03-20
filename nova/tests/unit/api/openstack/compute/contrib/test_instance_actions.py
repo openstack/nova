@@ -82,7 +82,7 @@ class InstanceActionsPolicyTestV21(test.NoDBTestCase):
 
     def _set_policy_rules(self):
         rules = {'compute:get': common_policy.parse_rule(''),
-                 'compute_extension:v3:os-instance-actions':
+                 'os_compute_api:os-instance-actions':
                      common_policy.parse_rule('project_id:%(project_id)s')}
         policy.set_rules(rules)
 
@@ -154,9 +154,9 @@ class InstanceActionsTestV21(test.NoDBTestCase):
 
     def _set_policy_rules(self):
         rules = {'compute:get': common_policy.parse_rule(''),
-                 'compute_extension:v3:os-instance-actions':
+                 'os_compute_api:os-instance-actions':
                      common_policy.parse_rule(''),
-                 'compute_extension:v3:os-instance-actions:events':
+                 'os_compute_api:os-instance-actions:events':
                      common_policy.parse_rule('is_admin:True')}
         policy.set_rules(rules)
 

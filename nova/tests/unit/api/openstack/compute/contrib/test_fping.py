@@ -134,15 +134,15 @@ class FpingPolicyEnforcementV21(test.NoDBTestCase):
             rule.popitem()[0], exc.format_message())
 
     def test_list_policy_failed(self):
-        rule = {"compute_extension:v3:os-fping": "project:non_fake"}
+        rule = {"os_compute_api:os-fping": "project:non_fake"}
         self.common_policy_check(rule, self.controller.index, self.req)
 
         self.req.GET.update({"all_tenants": "True"})
-        rule = {"compute_extension:v3:os-fping:all_tenants":
+        rule = {"os_compute_api:os-fping:all_tenants":
                 "project:non_fake"}
         self.common_policy_check(rule, self.controller.index, self.req)
 
     def test_show_policy_failed(self):
-        rule = {"compute_extension:v3:os-fping": "project:non_fake"}
+        rule = {"os_compute_api:os-fping": "project:non_fake"}
         self.common_policy_check(
             rule, self.controller.show, self.req, FAKE_UUID)

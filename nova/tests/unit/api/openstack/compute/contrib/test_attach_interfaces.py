@@ -472,7 +472,7 @@ class AttachInterfacesPolicyEnforcementv21(test.NoDBTestCase):
         self.controller = \
             attach_interfaces_v21.InterfaceAttachmentController()
         self.req = fakes.HTTPRequest.blank('')
-        self.rule_name = "compute_extension:v3:os-attach-interfaces"
+        self.rule_name = "os_compute_api:os-attach-interfaces"
         self.policy.set_rules({self.rule_name: "project:non_fake"})
 
     def test_index_attach_interfaces_policy_failed(self):

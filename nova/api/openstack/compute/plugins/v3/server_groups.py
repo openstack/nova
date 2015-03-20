@@ -34,7 +34,7 @@ LOG = logging.getLogger(__name__)
 ALIAS = "os-server-groups"
 
 
-authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
+authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 def _authorize_context(req):

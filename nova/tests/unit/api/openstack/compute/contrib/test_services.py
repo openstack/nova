@@ -677,7 +677,7 @@ class ServicesPolicyEnforcementV21(test.NoDBTestCase):
         self.req = fakes.HTTPRequest.blank('')
 
     def test_update_policy_failed(self):
-        rule_name = "compute_extension:v3:os-services"
+        rule_name = "os_compute_api:os-services"
         self.policy.set_rules({rule_name: "project_id:non_fake"})
         exc = self.assertRaises(
             exception.PolicyNotAuthorized,
@@ -689,7 +689,7 @@ class ServicesPolicyEnforcementV21(test.NoDBTestCase):
             exc.format_message())
 
     def test_delete_policy_failed(self):
-        rule_name = "compute_extension:v3:os-services"
+        rule_name = "os_compute_api:os-services"
         self.policy.set_rules({rule_name: "project_id:non_fake"})
         exc = self.assertRaises(
             exception.PolicyNotAuthorized,
@@ -699,7 +699,7 @@ class ServicesPolicyEnforcementV21(test.NoDBTestCase):
             exc.format_message())
 
     def test_index_policy_failed(self):
-        rule_name = "compute_extension:v3:os-services"
+        rule_name = "os_compute_api:os-services"
         self.policy.set_rules({rule_name: "project_id:non_fake"})
         exc = self.assertRaises(
             exception.PolicyNotAuthorized,

@@ -21,7 +21,7 @@ from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova.i18n import _
 
 ALIAS = "os-console-auth-tokens"
-authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
+authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class ConsoleAuthTokensController(wsgi.Controller):
