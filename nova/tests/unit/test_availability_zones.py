@@ -188,7 +188,7 @@ class AvailabilityZoneTestCases(test.TestCase):
         # to default False, it returns two lists, zones with at least one
         # enabled services, and zones with no enabled services,
         # when get_only_available is set to True, only return a list of zones
-        # with at least one enabled servies.
+        # with at least one enabled services.
         # Use the following test data:
         #
         # zone         host        enabled
