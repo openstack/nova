@@ -89,17 +89,12 @@ DcInfo = collections.namedtuple('DcInfo',
 class VirtualMachineInstanceConfigInfo(object):
     """Parameters needed to create and configure a new instance."""
 
-    def __init__(self, instance, instance_name, image_info,
-                 datastore, dc_info, image_cache):
+    def __init__(self, instance, image_info, datastore, dc_info, image_cache):
 
         # Some methods called during spawn take the instance parameter purely
         # for logging purposes.
         # TODO(vui) Clean them up, so we no longer need to keep this variable
         self.instance = instance
-
-        # Get the instance name. In some cases this may differ from the 'uuid',
-        # for example when the spawn of a rescue instance takes place.
-        self.instance_name = instance_name or instance.uuid
 
         self.ii = image_info
         self.root_gb = instance.root_gb
@@ -244,8 +239,8 @@ class VMwareVMOps(object):
             datastore.ref,
             str(uploaded_iso_path))
 
-    def build_virtual_machine(self, instance, instance_name, image_info,
-                              dc_info, datastore, network_info, extra_specs):
+    def build_virtual_machine(self, instance, image_info, dc_info, datastore,
+                              network_info, extra_specs):
         vif_infos = vmwarevif.get_vif_info(self._session,
                                            self._cluster,
                                            utils.is_neutron(),
@@ -261,7 +256,6 @@ class VMwareVMOps(object):
         client_factory = self._session.vim.client.factory
         config_spec = vm_util.get_vm_create_spec(client_factory,
                                                  instance,
-                                                 instance_name,
                                                  datastore.name,
                                                  vif_infos,
                                                  extra_specs,
@@ -442,7 +436,7 @@ class VMwareVMOps(object):
                             tmp_image_ds_loc.parent,
                             vi.cache_image_folder)
 
-    def _get_vm_config_info(self, instance, image_info, instance_name=None,
+    def _get_vm_config_info(self, instance, image_info,
                             storage_policy=None):
         """Captures all relevant information from the spawn parameters."""
 
@@ -461,7 +455,6 @@ class VMwareVMOps(object):
         dc_info = self.get_datacenter_ref_and_name(datastore.ref)
 
         return VirtualMachineInstanceConfigInfo(instance,
-                                                instance_name,
                                                 image_info,
                                                 datastore,
                                                 dc_info,
@@ -556,20 +549,19 @@ class VMwareVMOps(object):
 
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info, block_device_info=None,
-              instance_name=None, power_on=True):
+              power_on=True):
 
         client_factory = self._session.vim.client.factory
         image_info = images.VMwareImage.from_image(instance.image_ref,
                                                    image_meta)
         extra_specs = self._get_extra_specs(instance.flavor)
 
-        vi = self._get_vm_config_info(instance, image_info, instance_name,
+        vi = self._get_vm_config_info(instance, image_info,
                                       extra_specs.storage_policy)
 
         # Creates the virtual machine. The virtual machine reference returned
         # is unique within Virtual Center.
         vm_ref = self.build_virtual_machine(instance,
-                                            vi.instance_name,
                                             image_info,
                                             vi.dc_info,
                                             vi.datastore,
@@ -577,8 +569,8 @@ class VMwareVMOps(object):
                                             extra_specs)
 
         # Cache the vm_ref. This saves a remote call to the VC. This uses the
-        # instance_name. This covers all use cases including rescue and resize.
-        vm_util.vm_ref_cache_update(vi.instance_name, vm_ref)
+        # instance uuid.
+        vm_util.vm_ref_cache_update(instance.uuid, vm_ref)
 
         # Set the machine.id parameter of the instance to inject
         # the NIC configuration inside the VM
@@ -876,19 +868,10 @@ class VMwareVMOps(object):
             self._session._wait_for_task(reset_task)
             LOG.debug("Did hard reboot of VM", instance=instance)
 
-    def _destroy_instance(self, instance, destroy_disks=True,
-                          instance_name=None):
+    def _destroy_instance(self, instance, destroy_disks=True):
         # Destroy a VM instance
-        # Get the instance name. In some cases this may differ from the 'uuid',
-        # for example when the spawn of a rescue instance takes place.
-        if instance_name is None:
-            instance_name = instance.uuid
         try:
-            vm_ref = vm_util.get_vm_ref_from_name(self._session, instance_name)
-            if vm_ref is None:
-                LOG.warning(_LW('Instance does not exist on backend'),
-                            instance=instance)
-                return
+            vm_ref = vm_util.get_vm_ref(self._session, instance)
             lst_properties = ["config.files.vmPathName", "runtime.powerState",
                               "datastore"]
             props = self._session._call_method(vim_util,
@@ -941,11 +924,14 @@ class VMwareVMOps(object):
                     LOG.warning(_LW("In vmwareapi:vmops:_destroy_instance, "
                                     "exception while deleting the VM contents "
                                     "from the disk"), exc_info=True)
+        except exception.InstanceNotFound:
+            LOG.warning(_LW('Instance does not exist on backend'),
+                        instance=instance)
         except Exception:
             LOG.exception(_LE('Destroy instance failed'),
                           instance=instance)
         finally:
-            vm_util.vm_ref_cache_delete(instance_name)
+            vm_util.vm_ref_cache_delete(instance.uuid)
 
     def destroy(self, instance, destroy_disks=True):
         """Destroy a VM instance.
@@ -1034,7 +1020,6 @@ class VMwareVMOps(object):
         image_info = images.VMwareImage.from_image(instance.image_ref,
                                                    image_meta)
         vi = VirtualMachineInstanceConfigInfo(instance,
-                                              None,
                                               image_info,
                                               datastore,
                                               dc_info,
@@ -1636,8 +1621,8 @@ class VMwareVMOps(object):
     def _use_disk_image_as_full_clone(self, vm_ref, vi):
         """Uses cached image disk by copying it into the VM directory."""
 
-        instance_folder = vi.instance_name
-        root_disk_name = "%s.vmdk" % vi.instance_name
+        instance_folder = vi.instance.uuid
+        root_disk_name = "%s.vmdk" % vi.instance.uuid
         root_disk_ds_loc = vi.datastore.build_path(instance_folder,
                                                    root_disk_name)
 
@@ -1737,8 +1722,8 @@ class VMwareVMOps(object):
 
         # Optionally create and attach blank disk
         if vi.root_gb > 0:
-            instance_folder = vi.instance_name
-            root_disk_name = "%s.vmdk" % vi.instance_name
+            instance_folder = vi.instance.uuid
+            root_disk_name = "%s.vmdk" % vi.instance.uuid
             root_disk_ds_loc = vi.datastore.build_path(instance_folder,
                                                        root_disk_name)
 

@@ -854,9 +854,9 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
 
             from_image.assert_called_once_with(self._instance.image_ref, {})
             get_vm_config_info.assert_called_once_with(self._instance,
-                image_info, None, extra_specs.storage_policy)
+                image_info, extra_specs.storage_policy)
             build_virtual_machine.assert_called_once_with(self._instance,
-                vi.instance_name, image_info, vi.dc_info, vi.datastore, [],
+                image_info, vi.dc_info, vi.datastore, [],
                 extra_specs)
             enlist_image.assert_called_once_with(image_info.image_id,
                                                  vi.datastore, vi.dc_info.ref)
@@ -921,9 +921,9 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
 
             from_image.assert_called_once_with(instance.image_ref, {})
             get_vm_config_info.assert_called_once_with(instance, image_info,
-                None, extra_specs.storage_policy)
+                extra_specs.storage_policy)
             build_virtual_machine.assert_called_once_with(instance,
-                vi.instance_name, image_info, vi.dc_info, vi.datastore, [],
+                image_info, vi.dc_info, vi.datastore, [],
                 extra_specs)
             volumeops.attach_root_volume.assert_called_once_with(
                 connection_info1, instance, vi.datastore.ref,
@@ -979,10 +979,10 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                           block_device_info=bdi)
 
         from_image.assert_called_once_with(instance.image_ref, {})
-        get_vm_config_info.assert_called_once_with(instance, image_info, None,
+        get_vm_config_info.assert_called_once_with(instance, image_info,
                                                    extra_specs.storage_policy)
         build_virtual_machine.assert_called_once_with(instance,
-            vi.instance_name, image_info, vi.dc_info, vi.datastore, [],
+            image_info, vi.dc_info, vi.datastore, [],
             extra_specs)
 
     def test_get_ds_browser(self):
@@ -1018,7 +1018,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         mock_imagecache = mock.Mock()
         mock_imagecache.get_image_cache_folder.return_value = cache_root_folder
         vi = vmops.VirtualMachineInstanceConfigInfo(
-                self._instance, "fake_uuid", image_info,
+                self._instance, image_info,
                 self._ds, self._dc_info, mock_imagecache)
 
         sized_cached_image_ds_loc = cache_root_folder.join(
@@ -1068,7 +1068,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         mock_imagecache = mock.Mock()
         mock_imagecache.get_image_cache_folder.return_value = cache_root_folder
         vi = vmops.VirtualMachineInstanceConfigInfo(
-                self._instance, "fake_uuid", image_info,
+                self._instance, image_info,
                 self._ds, self._dc_info, mock_imagecache)
 
         self._vmops._volumeops = mock.Mock()
@@ -1112,7 +1112,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         mock_imagecache = mock.Mock()
         mock_imagecache.get_image_cache_folder.return_value = cache_root_folder
         vi = vmops.VirtualMachineInstanceConfigInfo(
-                self._instance, "fake_uuid", image_info,
+                self._instance, image_info,
                 self._ds, self._dc_info, mock_imagecache)
 
         self._vmops._volumeops = mock.Mock()
@@ -1253,7 +1253,6 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             mock_get_create_spec.assert_called_once_with(
                     self._session.vim.client.factory,
                     self._instance,
-                    'fake_uuid',
                     'fake_ds',
                     [],
                     extra_specs,
@@ -1340,8 +1339,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     def _test_get_spawn_vm_config_info(self,
                                        mock_get_datacenter_ref_and_name,
                                        mock_get_datastore,
-                                       image_size_bytes=0,
-                                       instance_name=None):
+                                       image_size_bytes=0):
         image_info = images.VMwareImage(
                 image_id=self._image_id,
                 file_size=image_size_bytes,
@@ -1350,16 +1348,12 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         mock_get_datastore.return_value = self._ds
         mock_get_datacenter_ref_and_name.return_value = self._dc_info
 
-        vi = self._vmops._get_vm_config_info(
-                self._instance, image_info, instance_name=instance_name)
+        vi = self._vmops._get_vm_config_info(self._instance, image_info)
         self.assertEqual(image_info, vi.ii)
         self.assertEqual(self._ds, vi.datastore)
         self.assertEqual(self._instance.root_gb, vi.root_gb)
         self.assertEqual(self._instance, vi.instance)
-        if instance_name is not None:
-            self.assertEqual(instance_name, vi.instance_name)
-        else:
-            self.assertEqual(self._instance.uuid, vi.instance_name)
+        self.assertEqual(self._instance.uuid, vi.instance.uuid)
 
         cache_image_path = '[%s] vmware_base/%s/%s.vmdk' % (
             self._ds.name, self._image_id, self._image_id)
@@ -1378,12 +1372,6 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         self.assertRaises(exception.InstanceUnacceptable,
                           self._test_get_spawn_vm_config_info,
                           image_size_bytes=image_size)
-
-    def test_get_spawn_vm_config_info_with_instance_name(self):
-        image_size = (self._instance.root_gb) * units.Gi / 2
-        self._test_get_spawn_vm_config_info(
-                image_size_bytes=image_size,
-                instance_name="foo_instance_name")
 
     def test_spawn(self):
         self._test_spawn()
@@ -1427,7 +1415,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 file_size=7,
                 linked_clone=False)
         vi = vmops.VirtualMachineInstanceConfigInfo(
-                self._instance, 'fake_uuid', image_info,
+                self._instance, image_info,
                 self._ds, self._dc_info, mock.Mock())
         return vi
 
@@ -1502,7 +1490,6 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         extra_specs = vm_util.ExtraSpecs()
 
         vm_ref = self._vmops.build_virtual_machine(self._instance,
-                                                   'fake-instance-name',
                                                    image, self._dc_info,
                                                    self._ds,
                                                    self.network_info,
@@ -1511,10 +1498,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         vm = vmwareapi_fake._get_object(vm_ref)
 
         # Test basic VM parameters
-        self.assertEqual('fake-instance-name', vm.name)
-        # NOTE(mdbooth): The instanceUuid behaviour below is apparently
-        # deliberate.
-        self.assertEqual('fake-instance-name',
+        self.assertEqual(self._instance.uuid, vm.name)
+        self.assertEqual(self._instance.uuid,
                          vm.get('summary.config.instanceUuid'))
         self.assertEqual(self._instance_values['vcpus'],
                          vm.get('summary.config.numCpu'))
@@ -1640,7 +1625,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         mock_imagecache = mock.Mock()
         mock_imagecache.get_image_cache_folder.return_value = cache_root_folder
         vi = vmops.VirtualMachineInstanceConfigInfo(
-                self._instance, "fake_uuid", image_info,
+                self._instance, image_info,
                 self._ds, self._dc_info, mock_imagecache)
         return vi
 

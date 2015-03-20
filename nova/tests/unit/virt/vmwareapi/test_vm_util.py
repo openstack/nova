@@ -466,7 +466,6 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         fake_factory = fake.FakeFactory()
         result = vm_util.get_vm_create_spec(fake_factory,
                                             self._instance,
-                                            self._instance.uuid,
                                             'fake-datastore', [],
                                             extra_specs)
 
@@ -508,7 +507,6 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         fake_factory = fake.FakeFactory()
         result = vm_util.get_vm_create_spec(fake_factory,
                                             self._instance,
-                                            self._instance.uuid,
                                             'fake-datastore', [],
                                             extra_specs)
         expected = fake_factory.create('ns0:VirtualMachineConfigSpec')
@@ -555,7 +553,6 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         fake_factory = fake.FakeFactory()
         result = vm_util.get_vm_create_spec(fake_factory,
                                             self._instance,
-                                            self._instance.uuid,
                                             'fake-datastore', [],
                                             extra_specs)
         expected = fake_factory.create('ns0:VirtualMachineConfigSpec')
@@ -604,7 +601,6 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         fake_factory = fake.FakeFactory()
         result = vm_util.get_vm_create_spec(fake_factory,
                                             self._instance,
-                                            self._instance.uuid,
                                             'fake-datastore', [],
                                             extra_specs)
         expected = fake_factory.create('ns0:VirtualMachineConfigSpec')
@@ -655,7 +651,6 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         fake_factory = fake.FakeFactory()
         result = vm_util.get_vm_create_spec(fake_factory,
                                             self._instance,
-                                            self._instance.uuid,
                                             'fake-datastore', [],
                                             extra_specs)
         expected = fake_factory.create('ns0:VirtualMachineConfigSpec')
@@ -756,7 +751,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
 
         config_spec = vm_util.get_vm_create_spec(
             session.vim.client.factory,
-            self._instance, self._instance.uuid, 'fake-datastore', [],
+            self._instance, 'fake-datastore', [],
             vm_util.ExtraSpecs(),
             os_type='invalid_os_type')
 
@@ -1096,7 +1091,6 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         extra_specs = vm_util.ExtraSpecs(hw_version='vmx-08')
         result = vm_util.get_vm_create_spec(fake.FakeFactory(),
                                             self._instance,
-                                            self._instance.uuid,
                                             'fake-datastore', [],
                                             extra_specs=extra_specs)
         self.assertEqual('vmx-08', result.version)
@@ -1106,7 +1100,6 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         extra_specs = vm_util.ExtraSpecs()
         create_spec = vm_util.get_vm_create_spec(fake.FakeFactory(),
                                             self._instance,
-                                            self._instance.uuid,
                                             datastore.name, [],
                                             extra_specs,
                                             profile_spec='fake_profile_spec')
