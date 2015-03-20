@@ -880,57 +880,6 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid',
                 return_value=objects.InstancePCIRequests(requests=[]))
-    def test_claim_and_audit(self, mock_get):
-        claim_mem = 3
-        claim_mem_total = 3 + FAKE_VIRT_MEMORY_OVERHEAD
-        claim_disk = 2
-        claim_topology = self._claim_topology(claim_mem_total / 2)
-
-        instance_topology = self._instance_topology(claim_mem_total / 2)
-        instance = self._fake_instance(memory_mb=claim_mem, root_gb=claim_disk,
-                ephemeral_gb=0, numa_topology=instance_topology)
-
-        self.tracker.instance_claim(self.context, instance, self.limits)
-
-        self.assertEqual(FAKE_VIRT_MEMORY_MB, self.compute["memory_mb"])
-        self.assertEqual(claim_mem_total, self.compute["memory_mb_used"])
-        self.assertEqual(FAKE_VIRT_MEMORY_MB - claim_mem_total,
-                         self.compute["free_ram_mb"])
-        self.assertEqualNUMAHostTopology(
-                claim_topology, objects.NUMATopology.obj_from_db_obj(
-                    self.compute['numa_topology']))
-
-        self.assertEqual(FAKE_VIRT_LOCAL_GB, self.compute["local_gb"])
-        self.assertEqual(claim_disk, self.compute["local_gb_used"])
-        self.assertEqual(FAKE_VIRT_LOCAL_GB - claim_disk,
-                         self.compute["free_disk_gb"])
-
-        # 1st pretend that the compute operation finished and claimed the
-        # desired resources from the virt layer
-        driver = self.tracker.driver
-        driver.memory_mb_used = claim_mem
-        driver.local_gb_used = claim_disk
-
-        self.tracker.update_available_resource(self.context)
-
-        # confirm tracker is adding in host_ip
-        self.assertIsNotNone(self.compute.get('host_ip'))
-
-        # confirm that resource usage is derived from instance usages,
-        # not virt layer:
-        self.assertEqual(claim_mem_total, self.compute['memory_mb_used'])
-        self.assertEqual(FAKE_VIRT_MEMORY_MB - claim_mem_total,
-                         self.compute['free_ram_mb'])
-        self.assertEqualNUMAHostTopology(
-                claim_topology, objects.NUMATopology.obj_from_db_obj(
-                    self.compute['numa_topology']))
-
-        self.assertEqual(claim_disk, self.compute['local_gb_used'])
-        self.assertEqual(FAKE_VIRT_LOCAL_GB - claim_disk,
-                         self.compute['free_disk_gb'])
-
-    @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid',
-                return_value=objects.InstancePCIRequests(requests=[]))
     def test_claim_and_abort(self, mock_get):
         claim_mem = 3
         claim_mem_total = 3 + FAKE_VIRT_MEMORY_OVERHEAD
