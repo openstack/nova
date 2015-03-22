@@ -95,6 +95,7 @@ class ConductorManager(manager.Manager):
         self.compute_task_mgr = ComputeTaskManager()
         self.cells_rpcapi = cells_rpcapi.CellsAPI()
         self.additional_endpoints.append(self.compute_task_mgr)
+        self.additional_endpoints.append(_ConductorManagerV3Proxy(self))
 
     @property
     def network_api(self):
@@ -904,3 +905,27 @@ class ComputeTaskManager(base.Base):
                     on_shared_storage=on_shared_storage,
                     preserve_ephemeral=preserve_ephemeral,
                     host=host)
+
+
+class _ConductorManagerV3Proxy(object):
+
+    target = messaging.Target(version='3.0')
+
+    def __init__(self, manager):
+        self.manager = manager
+
+    def provider_fw_rule_get_all(self, context):
+        return self.manager.provider_fw_rule_get_all(context)
+
+    def object_class_action_versions(self, context, objname, objmethod,
+                                     object_versions, args, kwargs):
+        return self.manager.object_class_action_versions(
+                context, objname, objmethod, object_versions, args, kwargs)
+
+    def object_action(self, context, objinst, objmethod, args, kwargs):
+        return self.manager.object_action(context, objinst, objmethod, args,
+                                          kwargs)
+
+    def object_backport_versions(self, context, objinst, object_versions):
+        return self.manager.object_backport_versions(context, objinst,
+                                                     object_versions)

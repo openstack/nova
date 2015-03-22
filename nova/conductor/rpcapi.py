@@ -189,6 +189,9 @@ class ConductorAPI(object):
     * 2.3 - Add object_class_action_versions()
     * Remove compute_node_create()
     * Remove object_backport()
+
+    * 3.0  - Drop backwards compatibility
+
     """
 
     VERSION_ALIASES = {
@@ -201,7 +204,7 @@ class ConductorAPI(object):
 
     def __init__(self):
         super(ConductorAPI, self).__init__()
-        target = messaging.Target(topic=CONF.conductor.topic, version='2.0')
+        target = messaging.Target(topic=CONF.conductor.topic, version='3.0')
         version_cap = self.VERSION_ALIASES.get(CONF.upgrade_levels.conductor,
                                                CONF.upgrade_levels.conductor)
         serializer = objects_base.NovaObjectSerializer()
@@ -218,24 +221,16 @@ class ConductorAPI(object):
     # operations, which will use the new class action handler.
     def object_class_action(self, context, objname, objmethod, objver,
                             args, kwargs):
-        if self.client.can_send_version('2.3'):
-            # NOTE(danms): If we're new enough, collect the object
-            # version manifest and redirect the call to the newer
-            # class action handler
-            versions = ovo_base.obj_tree_get_versions(objname)
-            return self.object_class_action_versions(context,
-                                                     objname,
-                                                     objmethod,
-                                                     versions,
-                                                     args, kwargs)
-        cctxt = self.client.prepare()
-        return cctxt.call(context, 'object_class_action',
-                          objname=objname, objmethod=objmethod,
-                          objver=objver, args=args, kwargs=kwargs)
+        versions = ovo_base.obj_tree_get_versions(objname)
+        return self.object_class_action_versions(context,
+                                                 objname,
+                                                 objmethod,
+                                                 versions,
+                                                 args, kwargs)
 
     def object_class_action_versions(self, context, objname, objmethod,
                                      object_versions, args, kwargs):
-        cctxt = self.client.prepare(version='2.3')
+        cctxt = self.client.prepare()
         return cctxt.call(context, 'object_class_action_versions',
                           objname=objname, objmethod=objmethod,
                           object_versions=object_versions,
@@ -247,7 +242,7 @@ class ConductorAPI(object):
                           objmethod=objmethod, args=args, kwargs=kwargs)
 
     def object_backport_versions(self, context, objinst, object_versions):
-        cctxt = self.client.prepare(version='2.2')
+        cctxt = self.client.prepare()
         return cctxt.call(context, 'object_backport_versions', objinst=objinst,
                           object_versions=object_versions)
 

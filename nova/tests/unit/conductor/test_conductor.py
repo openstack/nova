@@ -2066,3 +2066,24 @@ class ConductorLocalComputeTaskAPITestCase(ConductorTaskAPITestCase):
         super(ConductorLocalComputeTaskAPITestCase, self).setUp()
         self.conductor = conductor_api.LocalComputeTaskAPI()
         self.conductor_manager = self.conductor._manager._target
+
+
+class ConductorV3ManagerProxyTestCase(test.NoDBTestCase):
+    def test_v3_manager_proxy(self):
+        manager = conductor_manager.ConductorManager()
+        proxy = conductor_manager._ConductorManagerV3Proxy(manager)
+        ctxt = context.get_admin_context()
+
+        methods = [
+            # (method, number_of_args)
+            ('provider_fw_rule_get_all', 0),
+            ('object_class_action_versions', 5),
+            ('object_action', 4),
+            ('object_backport_versions', 2),
+        ]
+
+        for method, num_args in methods:
+            args = range(num_args)
+            with mock.patch.object(manager, method) as mock_method:
+                getattr(proxy, method)(ctxt, *args)
+                mock_method.assert_called_once_with(ctxt, *args)
