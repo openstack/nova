@@ -136,25 +136,6 @@ class _BaseTestCase(object):
             self.assertRaises(KeyError,
                               self._do_update, 'any-uuid', foobar=1)
 
-    def test_migration_get_in_progress_by_host_and_node(self):
-        self.mox.StubOutWithMock(db,
-                                 'migration_get_in_progress_by_host_and_node')
-        db.migration_get_in_progress_by_host_and_node(
-            self.context, 'fake-host', 'fake-node').AndReturn('fake-result')
-        self.mox.ReplayAll()
-        result = self.conductor.migration_get_in_progress_by_host_and_node(
-            self.context, 'fake-host', 'fake-node')
-        self.assertEqual(result, 'fake-result')
-
-    def test_aggregate_metadata_get_by_host(self):
-        self.mox.StubOutWithMock(db, 'aggregate_metadata_get_by_host')
-        db.aggregate_metadata_get_by_host(self.context, 'host',
-                                          'key').AndReturn('result')
-        self.mox.ReplayAll()
-        result = self.conductor.aggregate_metadata_get_by_host(self.context,
-                                                               'host', 'key')
-        self.assertEqual(result, 'result')
-
     def test_provider_fw_rule_get_all(self):
         fake_rules = ['a', 'b', 'c']
         self.mox.StubOutWithMock(db, 'provider_fw_rule_get_all')
@@ -162,17 +143,6 @@ class _BaseTestCase(object):
         self.mox.ReplayAll()
         result = self.conductor.provider_fw_rule_get_all(self.context)
         self.assertEqual(result, fake_rules)
-
-    def test_block_device_mapping_get_all_by_instance(self):
-        fake_inst = {'uuid': 'fake-uuid'}
-        self.mox.StubOutWithMock(db,
-                                 'block_device_mapping_get_all_by_instance')
-        db.block_device_mapping_get_all_by_instance(
-            self.context, fake_inst['uuid']).AndReturn('fake-result')
-        self.mox.ReplayAll()
-        result = self.conductor.block_device_mapping_get_all_by_instance(
-            self.context, fake_inst, legacy=False)
-        self.assertEqual(result, 'fake-result')
 
     def test_vol_usage_update(self):
         self.mox.StubOutWithMock(db, 'vol_usage_update')
@@ -213,24 +183,6 @@ class _BaseTestCase(object):
         result = self.conductor.compute_node_create(self.context,
                                                     'fake-values')
         self.assertEqual(result, 'fake-result')
-
-    def test_compute_node_update(self):
-        node = {'id': 'fake-id'}
-        self.mox.StubOutWithMock(db, 'compute_node_update')
-        db.compute_node_update(self.context, node['id'], {'fake': 'values'}).\
-                               AndReturn('fake-result')
-        self.mox.ReplayAll()
-        result = self.conductor.compute_node_update(self.context, node,
-                                                    {'fake': 'values'})
-        self.assertEqual(result, 'fake-result')
-
-    def test_compute_node_delete(self):
-        node = {'id': 'fake-id'}
-        self.mox.StubOutWithMock(db, 'compute_node_delete')
-        db.compute_node_delete(self.context, node['id']).AndReturn(None)
-        self.mox.ReplayAll()
-        result = self.conductor.compute_node_delete(self.context, node)
-        self.assertIsNone(result)
 
     def test_task_log_get(self):
         self.mox.StubOutWithMock(db, 'task_log_get')
@@ -425,7 +377,7 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
                            dict(topic='compute', host='host', binary=None),
                            db_result_listified=True)
 
-    def test_service_get_by_args(self):
+    def test_service_get_by_host_and_binary(self):
         self._test_stubbed('service_get_by_host_and_binary',
                            ('host', 'binary'),
                            dict(host='host', binary='binary', topic=None))
@@ -436,7 +388,7 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
                            dict(topic='compute', host='host', binary=None),
                            db_exception=exc.ComputeHostNotFound(host='host'))
 
-    def test_service_get_by_args_not_found(self):
+    def test_service_get_by_host_and_binary_not_found(self):
         self._test_stubbed('service_get_by_host_and_binary',
                            ('host', 'binary'),
                            dict(host='host', binary='binary', topic=None),
@@ -767,6 +719,54 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
         result = self.conductor.get_ec2_ids(self.context, inst)
         self.assertEqual(result, expected)
 
+    def test_migration_get_in_progress_by_host_and_node(self):
+        self.mox.StubOutWithMock(db,
+                                 'migration_get_in_progress_by_host_and_node')
+        db.migration_get_in_progress_by_host_and_node(
+            self.context, 'fake-host', 'fake-node').AndReturn('fake-result')
+        self.mox.ReplayAll()
+        result = self.conductor.migration_get_in_progress_by_host_and_node(
+            self.context, 'fake-host', 'fake-node')
+        self.assertEqual(result, 'fake-result')
+
+    def test_aggregate_metadata_get_by_host(self):
+        self.mox.StubOutWithMock(db, 'aggregate_metadata_get_by_host')
+        db.aggregate_metadata_get_by_host(self.context, 'host',
+                                          'key').AndReturn('result')
+        self.mox.ReplayAll()
+        result = self.conductor.aggregate_metadata_get_by_host(self.context,
+                                                               'host', 'key')
+        self.assertEqual(result, 'result')
+
+    def test_block_device_mapping_get_all_by_instance(self):
+        fake_inst = {'uuid': 'fake-uuid'}
+        self.mox.StubOutWithMock(db,
+                                 'block_device_mapping_get_all_by_instance')
+        db.block_device_mapping_get_all_by_instance(
+            self.context, fake_inst['uuid']).AndReturn('fake-result')
+        self.mox.ReplayAll()
+        result = self.conductor.block_device_mapping_get_all_by_instance(
+            self.context, fake_inst, legacy=False)
+        self.assertEqual(result, 'fake-result')
+
+    def test_compute_node_update(self):
+        node = {'id': 'fake-id'}
+        self.mox.StubOutWithMock(db, 'compute_node_update')
+        db.compute_node_update(self.context, node['id'], {'fake': 'values'}).\
+                               AndReturn('fake-result')
+        self.mox.ReplayAll()
+        result = self.conductor.compute_node_update(self.context, node,
+                                                    {'fake': 'values'})
+        self.assertEqual(result, 'fake-result')
+
+    def test_compute_node_delete(self):
+        node = {'id': 'fake-id'}
+        self.mox.StubOutWithMock(db, 'compute_node_delete')
+        db.compute_node_delete(self.context, node['id']).AndReturn(None)
+        self.mox.ReplayAll()
+        result = self.conductor.compute_node_delete(self.context, node)
+        self.assertIsNone(result)
+
 
 class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):
     """Conductor RPC API Tests."""
@@ -776,42 +776,6 @@ class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):
             'conductor', manager='nova.conductor.manager.ConductorManager')
         self.conductor_manager = self.conductor_service.manager
         self.conductor = conductor_rpcapi.ConductorAPI()
-
-    def test_block_device_mapping_update_or_create(self):
-        fake_bdm = {'id': 'fake-id'}
-        self.mox.StubOutWithMock(db, 'block_device_mapping_create')
-        self.mox.StubOutWithMock(db, 'block_device_mapping_update')
-        self.mox.StubOutWithMock(db, 'block_device_mapping_update_or_create')
-        self.mox.StubOutWithMock(block_device_obj.BlockDeviceMapping,
-                                 '_from_db_object')
-        db.block_device_mapping_create(self.context, fake_bdm)
-        block_device_obj.BlockDeviceMapping._from_db_object(
-                self.context, mox.IgnoreArg(), mox.IgnoreArg())
-        db.block_device_mapping_update(self.context, fake_bdm['id'], fake_bdm)
-        block_device_obj.BlockDeviceMapping._from_db_object(
-                self.context, mox.IgnoreArg(), mox.IgnoreArg())
-        db.block_device_mapping_update_or_create(self.context, fake_bdm)
-        block_device_obj.BlockDeviceMapping._from_db_object(
-                self.context, mox.IgnoreArg(), mox.IgnoreArg())
-        self.mox.ReplayAll()
-        self.conductor.block_device_mapping_update_or_create(self.context,
-                                                             fake_bdm,
-                                                             create=True)
-        self.conductor.block_device_mapping_update_or_create(self.context,
-                                                             fake_bdm,
-                                                             create=False)
-        self.conductor.block_device_mapping_update_or_create(self.context,
-                                                             fake_bdm)
-
-    def test_security_groups_trigger_handler(self):
-        self.mox.StubOutWithMock(self.conductor_manager.security_group_api,
-                                 'trigger_handler')
-        self.conductor_manager.security_group_api.trigger_handler('event',
-                                                                  self.context,
-                                                                  'arg')
-        self.mox.ReplayAll()
-        self.conductor.security_groups_trigger_handler(self.context,
-                                                       'event', ['arg'])
 
 
 class ConductorAPITestCase(_BaseTestCase, test.TestCase):
@@ -830,49 +794,6 @@ class ConductorAPITestCase(_BaseTestCase, test.TestCase):
         return self.conductor.instance_update(self.context, instance_uuid,
                                               **updates)
 
-    def test_block_device_mapping_update_or_create(self):
-        self.mox.StubOutWithMock(db, 'block_device_mapping_create')
-        self.mox.StubOutWithMock(db, 'block_device_mapping_update')
-        self.mox.StubOutWithMock(db, 'block_device_mapping_update_or_create')
-        self.mox.StubOutWithMock(block_device_obj.BlockDeviceMapping,
-                                 '_from_db_object')
-        db.block_device_mapping_create(self.context, 'fake-bdm')
-        block_device_obj.BlockDeviceMapping._from_db_object(
-                self.context, mox.IgnoreArg(), mox.IgnoreArg())
-        db.block_device_mapping_update(self.context,
-                                       'fake-id', {'id': 'fake-id'})
-        block_device_obj.BlockDeviceMapping._from_db_object(
-                self.context, mox.IgnoreArg(), mox.IgnoreArg())
-        db.block_device_mapping_update_or_create(self.context, 'fake-bdm')
-        block_device_obj.BlockDeviceMapping._from_db_object(
-                self.context, mox.IgnoreArg(), mox.IgnoreArg())
-
-        self.mox.ReplayAll()
-        self.conductor.block_device_mapping_create(self.context, 'fake-bdm')
-        self.conductor.block_device_mapping_update(self.context, 'fake-id', {})
-        self.conductor.block_device_mapping_update_or_create(self.context,
-                                                             'fake-bdm')
-
-    def test_instance_get_all_by_host_and_node(self):
-        self.mox.StubOutWithMock(db, 'instance_get_all_by_host_and_node')
-        db.instance_get_all_by_host_and_node(self.context.elevated(), 'host',
-                                             'node').AndReturn('fake-result')
-        self.mox.ReplayAll()
-        result = self.conductor.instance_get_all_by_host_and_node(
-            self.context, 'host', 'node')
-
-        self.assertEqual('fake-result', result)
-
-    def test_instance_get_all_by_host(self):
-        self.mox.StubOutWithMock(db, 'instance_get_all_by_host')
-        self.mox.StubOutWithMock(db, 'instance_get_all_by_host_and_node')
-        db.instance_get_all_by_host(self.context.elevated(), 'host',
-                                    None).AndReturn('fake-result')
-        self.mox.ReplayAll()
-        result = self.conductor.instance_get_all_by_host(self.context,
-                                                         'host', None)
-        self.assertEqual(result, 'fake-result')
-
     def test_wait_until_ready(self):
         timeouts = []
         calls = dict(count=0)
@@ -889,16 +810,6 @@ class ConductorAPITestCase(_BaseTestCase, test.TestCase):
 
         self.assertEqual(timeouts.count(10), 10)
         self.assertIn(None, timeouts)
-
-    def test_security_groups_trigger_handler(self):
-        self.mox.StubOutWithMock(self.conductor_manager.security_group_api,
-                                 'trigger_handler')
-        self.conductor_manager.security_group_api.trigger_handler('event',
-                                                                  self.context,
-                                                                  'arg')
-        self.mox.ReplayAll()
-        self.conductor.security_groups_trigger_handler(self.context,
-                                                       'event', 'arg')
 
 
 class ConductorLocalAPITestCase(ConductorAPITestCase):

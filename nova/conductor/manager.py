@@ -106,11 +106,6 @@ class ConductorManager(manager.Manager):
             self._compute_api = compute_api.API()
         return self._compute_api
 
-    def ping(self, context, arg):
-        # NOTE(russellb) This method can be removed in 2.0 of this API.  It is
-        # now a part of the base rpc API.
-        return jsonutils.to_primitive({'service': 'conductor', 'arg': arg})
-
     @messaging.expected_exceptions(KeyError, ValueError,
                                    exception.InvalidUUID,
                                    exception.InstanceNotFound,
@@ -138,6 +133,7 @@ class ConductorManager(manager.Manager):
         notifications.send_update(context, old_ref, inst_obj, service)
         return jsonutils.to_primitive(instance_ref)
 
+    # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
     @messaging.expected_exceptions(exception.InstanceNotFound)
     def instance_get_by_uuid(self, context, instance_uuid,
                              columns_to_join):
@@ -145,6 +141,7 @@ class ConductorManager(manager.Manager):
             self.db.instance_get_by_uuid(context, instance_uuid,
                 columns_to_join))
 
+    # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
     def instance_get_all_by_host(self, context, host, node,
                                  columns_to_join):
         if node is not None:
@@ -155,12 +152,14 @@ class ConductorManager(manager.Manager):
                                                       columns_to_join)
         return jsonutils.to_primitive(result)
 
+    # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
     def migration_get_in_progress_by_host_and_node(self, context,
                                                    host, node):
         migrations = self.db.migration_get_in_progress_by_host_and_node(
             context, host, node)
         return jsonutils.to_primitive(migrations)
 
+    # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
     @messaging.expected_exceptions(exception.AggregateHostExists)
     def aggregate_host_add(self, context, aggregate, host):
         host_ref = self.db.aggregate_host_add(context.elevated(),
@@ -168,11 +167,13 @@ class ConductorManager(manager.Manager):
 
         return jsonutils.to_primitive(host_ref)
 
+    # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
     @messaging.expected_exceptions(exception.AggregateHostNotFound)
     def aggregate_host_delete(self, context, aggregate, host):
         self.db.aggregate_host_delete(context.elevated(),
                 aggregate['id'], host)
 
+    # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
     def aggregate_metadata_get_by_host(self, context, host,
                                        key='availability_zone'):
         result = self.db.aggregate_metadata_get_by_host(context, host, key)
@@ -216,6 +217,7 @@ class ConductorManager(manager.Manager):
         self.cells_rpcapi.bdm_update_or_create_at_top(context, bdm_obj,
                                                       create=create)
 
+    # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
     def block_device_mapping_get_all_by_instance(self, context, instance,
                                                  legacy):
         bdms = self.db.block_device_mapping_get_all_by_instance(
@@ -224,6 +226,7 @@ class ConductorManager(manager.Manager):
             bdms = block_device.legacy_mapping(bdms)
         return jsonutils.to_primitive(bdms)
 
+    # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
     def instance_get_all_by_filters(self, context, filters, sort_key,
                                     sort_dir, columns_to_join,
                                     use_slave):
@@ -232,23 +235,19 @@ class ConductorManager(manager.Manager):
             columns_to_join=columns_to_join, use_slave=use_slave)
         return jsonutils.to_primitive(result)
 
-    def instance_get_active_by_window(self, context, begin, end,
-                                      project_id, host):
-        # Unused, but cannot remove until major RPC version bump
-        result = self.db.instance_get_active_by_window(context, begin, end,
-                                                       project_id, host)
-        return jsonutils.to_primitive(result)
-
+    # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
     def instance_get_active_by_window_joined(self, context, begin, end,
                                              project_id, host):
         result = self.db.instance_get_active_by_window_joined(
             context, begin, end, project_id, host)
         return jsonutils.to_primitive(result)
 
+    # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
     def instance_destroy(self, context, instance):
         result = self.db.instance_destroy(context, instance['uuid'])
         return jsonutils.to_primitive(result)
 
+    # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
     def instance_fault_create(self, context, values):
         result = self.db.instance_fault_create(context, values)
         return jsonutils.to_primitive(result)
@@ -300,11 +299,13 @@ class ConductorManager(manager.Manager):
 
         return jsonutils.to_primitive(result)
 
+    # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
     @messaging.expected_exceptions(exception.InstanceActionNotFound)
     def action_event_start(self, context, values):
         evt = self.db.action_event_start(context, values)
         return jsonutils.to_primitive(evt)
 
+    # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
     @messaging.expected_exceptions(exception.InstanceActionNotFound,
                                    exception.InstanceActionEventNotFound)
     def action_event_finish(self, context, values):
@@ -325,10 +326,12 @@ class ConductorManager(manager.Manager):
         result = self.db.compute_node_create(context, values)
         return jsonutils.to_primitive(result)
 
+    # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
     def compute_node_update(self, context, node, values):
         result = self.db.compute_node_update(context, node['id'], values)
         return jsonutils.to_primitive(result)
 
+    # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
     def compute_node_delete(self, context, node):
         result = self.db.compute_node_delete(context, node['id'])
         return jsonutils.to_primitive(result)
@@ -372,23 +375,28 @@ class ConductorManager(manager.Manager):
                                           ignore_missing_network_data,
                                           system_metadata, extra_usage_info)
 
+    # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
     def security_groups_trigger_handler(self, context, event, args):
         self.security_group_api.trigger_handler(event, context, *args)
 
     def security_groups_trigger_members_refresh(self, context, group_ids):
         self.security_group_api.trigger_members_refresh(context, group_ids)
 
+    # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
     def network_migrate_instance_start(self, context, instance, migration):
         self.network_api.migrate_instance_start(context, instance, migration)
 
+    # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
     def network_migrate_instance_finish(self, context, instance, migration):
         self.network_api.migrate_instance_finish(context, instance, migration)
 
+    # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
     def quota_commit(self, context, reservations, project_id=None,
                      user_id=None):
         quota.QUOTAS.commit(context, reservations, project_id=project_id,
                             user_id=user_id)
 
+    # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
     def quota_rollback(self, context, reservations, project_id=None,
                        user_id=None):
         quota.QUOTAS.rollback(context, reservations, project_id=project_id,
@@ -411,6 +419,7 @@ class ConductorManager(manager.Manager):
 
         return ec2_ids
 
+    # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
     def compute_unrescue(self, context, instance):
         self.compute_api.unrescue(context, instance)
 
