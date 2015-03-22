@@ -1325,6 +1325,13 @@ class FakeVim(object):
         task_mdo = create_task(method, "success")
         return task_mdo.obj
 
+    def _rename(self, method, *args, **kwargs):
+        vm_ref = args[0]
+        vm_mdo = _get_vm_mdo(vm_ref)
+        vm_mdo.set('name', kwargs['newName'])
+        task_mdo = create_task(method, "success")
+        return task_mdo.obj
+
     def _create_copy_disk(self, method, vmdk_file_path):
         """Creates/copies a vmdk file object in the datastore."""
         # We need to add/create both .vmdk and .-flat.vmdk files
@@ -1588,6 +1595,9 @@ class FakeVim(object):
                                                 *args, **kwargs)
         elif attr_name == "ReconfigVM_Task":
             return lambda *args, **kwargs: self._reconfig_vm(attr_name,
+                                                *args, **kwargs)
+        elif attr_name == "Rename_Task":
+            return lambda *args, **kwargs: self._rename(attr_name,
                                                 *args, **kwargs)
         elif attr_name == "CreateVirtualDisk_Task":
             return lambda *args, **kwargs: self._create_copy_disk(attr_name,

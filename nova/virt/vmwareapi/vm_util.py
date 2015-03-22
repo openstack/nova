@@ -1608,3 +1608,17 @@ def folder_ref_cache_update(path, folder_ref):
 
 def folder_ref_cache_get(path):
     return _FOLDER_PATH_REF_MAPPING.get(path)
+
+
+def _get_vm_name(display_name, id):
+    if display_name:
+        return '%s (%s)' % (display_name[:41], id[:36])
+    else:
+        return id[:36]
+
+
+def rename_vm(session, vm_ref, instance):
+    vm_name = _get_vm_name(instance.display_name, instance.uuid)
+    rename_task = session._call_method(session.vim, "Rename_Task", vm_ref,
+                                       newName=vm_name)
+    session._wait_for_task(rename_task)

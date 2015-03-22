@@ -785,6 +785,11 @@ class VMwareVMOps(object):
                     instance, vm_ref, vi.dc_info, vi.datastore,
                     injected_files, admin_password, network_info)
 
+        # Rename the VM. This is done after the spec is created to ensure
+        # that all of the files for the instance are under the directory
+        # 'uuid' of the instance
+        vm_util.rename_vm(self._session, vm_ref, instance)
+
         vm_util.power_on_instance(self._session, instance, vm_ref=vm_ref)
 
     def _is_bdm_valid(self, block_device_mapping):
@@ -1674,17 +1679,19 @@ class VMwareVMOps(object):
 
         while retrieve_result:
             for vm in retrieve_result.objects:
-                vm_name = None
+                vm_uuid = None
                 conn_state = None
                 for prop in vm.propSet:
-                    if prop.name == "name":
-                        vm_name = prop.val
-                    elif prop.name == "runtime.connectionState":
+                    if prop.name == "runtime.connectionState":
                         conn_state = prop.val
+                    elif prop.name == 'config.extraConfig["nvp.vm-uuid"]':
+                        vm_uuid = prop.val.value
+                # Ignore VM's that do not have nvp.vm-uuid defined
+                if not vm_uuid:
+                    continue
                 # Ignoring the orphaned or inaccessible VMs
-                if (conn_state not in ["orphaned", "inaccessible"] and
-                    uuidutils.is_uuid_like(vm_name)):
-                    lst_vm_names.append(vm_name)
+                if conn_state not in ["orphaned", "inaccessible"]:
+                    lst_vm_names.append(vm_uuid)
             retrieve_result = self._session._call_method(vutil,
                                                          'continue_retrieval',
                                                          retrieve_result)
@@ -1911,7 +1918,8 @@ class VMwareVMOps(object):
 
     def list_instances(self):
         """Lists the VM instances that are registered with vCenter cluster."""
-        properties = ['name', 'runtime.connectionState']
+        properties = ['runtime.connectionState',
+                      'config.extraConfig["nvp.vm-uuid"]']
         LOG.debug("Getting list of instances from cluster %s",
                   self._cluster)
         vms = []
