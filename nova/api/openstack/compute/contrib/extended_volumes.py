@@ -16,7 +16,6 @@
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova import compute
 from nova import objects
 
 authorize = extensions.soft_extension_authorizer('compute', 'extended_volumes')
@@ -25,7 +24,6 @@ authorize = extensions.soft_extension_authorizer('compute', 'extended_volumes')
 class ExtendedVolumesController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
         super(ExtendedVolumesController, self).__init__(*args, **kwargs)
-        self.compute_api = compute.API()
 
     def _extend_server(self, context, server, instance):
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
