@@ -24,12 +24,17 @@ authorize = extensions.os_compute_soft_authorizer(ALIAS)
 
 
 class ExtendedServerAttributesController(wsgi.Controller):
+    def __init__(self, *args, **kwargs):
+        super(ExtendedServerAttributesController, self).__init__(*args,
+                                                                 **kwargs)
+        self.api_version_2_3 = api_version_request.APIVersionRequest('2.3')
+
     def _extend_server(self, context, server, instance, requested_version):
         key = "OS-EXT-SRV-ATTR:hypervisor_hostname"
         server[key] = instance.node
 
         properties = ['host', 'name']
-        if requested_version >= api_version_request.APIVersionRequest("2.3"):
+        if requested_version >= self.api_version_2_3:
             properties += ['reservation_id', 'launch_index',
                            'hostname', 'kernel_id', 'ramdisk_id',
                            'root_device_name', 'user_data']
