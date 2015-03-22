@@ -41,7 +41,7 @@ LOG = logging.getLogger(__name__)
 
 ALL_SUPPORTED_NETWORK_DEVICES = ['VirtualE1000', 'VirtualE1000e',
                                  'VirtualPCNet32', 'VirtualSriovEthernetCard',
-                                 'VirtualVmxnet']
+                                 'VirtualVmxnet', 'VirtualVmxnet3']
 
 # A cache for VM references. The key will be the VM name
 # and the value is the VM reference. The VM name is unique. This
