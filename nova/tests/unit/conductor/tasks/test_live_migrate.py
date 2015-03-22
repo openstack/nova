@@ -12,6 +12,7 @@
 
 import mock
 from mox3 import mox
+import oslo_messaging as messaging
 
 from nova.compute import power_state
 from nova.compute import rpcapi as compute_rpcapi
@@ -445,3 +446,10 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
 
         self.mox.ReplayAll()
         self.assertRaises(exception.NoValidHost, self.task._find_destination)
+
+    def test_call_livem_checks_on_host(self):
+        with mock.patch.object(self.task.compute_rpcapi,
+            'check_can_live_migrate_destination',
+            side_effect=messaging.MessagingTimeout):
+            self.assertRaises(exception.MigrationPreCheckError,
+                self.task._call_livem_checks_on_host, {})
