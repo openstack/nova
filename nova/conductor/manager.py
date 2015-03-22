@@ -510,7 +510,7 @@ class ComputeTaskManager(base.Base):
             self._live_migrate(context, instance, scheduler_hint,
                                block_migration, disk_over_commit)
         elif not live and not rebuild and flavor:
-            instance_uuid = instance['uuid']
+            instance_uuid = instance.uuid
             with compute_utils.EventReporter(context, 'cold_migrate',
                                              instance_uuid):
                 self._cold_migrate(context, instance, flavor,
@@ -534,7 +534,7 @@ class ComputeTaskManager(base.Base):
         try:
             scheduler_utils.setup_instance_group(context, request_spec,
                                                  filter_properties)
-            scheduler_utils.populate_retry(filter_properties, instance['uuid'])
+            scheduler_utils.populate_retry(filter_properties, instance.uuid)
             hosts = self.scheduler_client.select_destinations(
                     context, request_spec, filter_properties)
             host_state = hosts[0]
@@ -549,7 +549,7 @@ class ComputeTaskManager(base.Base):
             quotas.rollback()
 
             # if the flavor IDs match, it's migrate; otherwise resize
-            if flavor['id'] == instance['instance_type_id']:
+            if flavor['id'] == instance.instance_type_id:
                 msg = _("No valid host found for cold migrate")
             else:
                 msg = _("No valid host found for resize")
@@ -600,7 +600,7 @@ class ComputeTaskManager(base.Base):
         def _set_vm_state(context, instance, ex, vm_state=None,
                           task_state=None):
             request_spec = {'instance_properties': {
-                'uuid': instance['uuid'], },
+                'uuid': instance.uuid, },
             }
             scheduler_utils.set_vm_state_and_notify(context,
                 instance.uuid,
@@ -631,10 +631,10 @@ class ComputeTaskManager(base.Base):
         except Exception as ex:
             LOG.error(_LE('Migration of instance %(instance_id)s to host'
                           ' %(dest)s unexpectedly failed.'),
-                      {'instance_id': instance['uuid'], 'dest': destination},
+                      {'instance_id': instance.uuid, 'dest': destination},
                       exc_info=True)
             _set_vm_state(context, instance, ex, vm_states.ERROR,
-                          instance['task_state'])
+                          instance.task_state)
             raise exception.MigrationError(reason=six.text_type(ex))
 
     def build_instances(self, context, instances, image, filter_properties,
