@@ -6087,23 +6087,24 @@ class ComputeTestCase(BaseTestCase):
 
         self.compute.host = 'host'
 
-        instance1 = {}
-        instance1['deleted'] = True
-        instance1['deleted_at'] = "sometimeago"
+        instance = self._create_fake_instance_obj()
+        instance.deleted = True
+        now = timeutils.utcnow()
+        instance.deleted_at = now
 
         self.mox.StubOutWithMock(self.compute, '_get_instances_on_driver')
         self.compute._get_instances_on_driver(
             admin_context, {'deleted': True,
                             'soft_deleted': False,
-                            'host': self.compute.host}).AndReturn([instance1])
+                            'host': self.compute.host}).AndReturn([instance])
 
         self.mox.StubOutWithMock(timeutils, 'is_older_than')
-        timeutils.is_older_than('sometimeago',
+        timeutils.is_older_than(now,
                     CONF.running_deleted_instance_timeout).AndReturn(True)
 
         self.mox.ReplayAll()
         val = self.compute._running_deleted_instances(admin_context)
-        self.assertEqual(val, [instance1])
+        self.assertEqual(val, [instance])
 
     def _heal_instance_info_cache(self, _get_instance_nw_info_raise=False):
         # Update on every call for the test

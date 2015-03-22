@@ -6429,8 +6429,8 @@ class ComputeManager(manager.Manager):
         return [i for i in instances if self._deleted_old_enough(i, timeout)]
 
     def _deleted_old_enough(self, instance, timeout):
-        deleted_at = instance['deleted_at']
-        if isinstance(instance, obj_base.NovaObject) and deleted_at:
+        deleted_at = instance.deleted_at
+        if deleted_at:
             deleted_at = deleted_at.replace(tzinfo=None)
         return (not deleted_at or timeutils.is_older_than(deleted_at, timeout))
 
