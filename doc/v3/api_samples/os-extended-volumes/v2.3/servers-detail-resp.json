@@ -50,11 +50,11 @@
             "os-extended-volumes:volumes_attached": [
                 {
                     "id": "volume_id1",
-                    "delete_on_termination": True
+                    "delete_on_termination": "True"
                 },
                 {
                     "id": "volume_id2",
-                    "delete_on_termination": False
+                    "delete_on_termination": "False"
                 }
             ],
             "progress": 0,
