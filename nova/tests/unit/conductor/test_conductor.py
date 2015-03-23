@@ -890,7 +890,7 @@ class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):
                                                        'event', ['arg'])
 
     @mock.patch.object(db, 'service_update')
-    @mock.patch('oslo.messaging.RPCClient.prepare')
+    @mock.patch('oslo_messaging.RPCClient.prepare')
     def test_service_update_time_big(self, mock_prepare, mock_update):
         CONF.set_override('report_interval', 10)
         services = {'id': 1}
@@ -898,7 +898,7 @@ class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):
         mock_prepare.assert_called_once_with(timeout=9)
 
     @mock.patch.object(db, 'service_update')
-    @mock.patch('oslo.messaging.RPCClient.prepare')
+    @mock.patch('oslo_messaging.RPCClient.prepare')
     def test_service_update_time_small(self, mock_prepare, mock_update):
         CONF.set_override('report_interval', 3)
         services = {'id': 1}
@@ -906,7 +906,7 @@ class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):
         mock_prepare.assert_called_once_with(timeout=3)
 
     @mock.patch.object(db, 'service_update')
-    @mock.patch('oslo.messaging.RPCClient.prepare')
+    @mock.patch('oslo_messaging.RPCClient.prepare')
     def test_service_update_no_time(self, mock_prepare, mock_update):
         CONF.set_override('report_interval', None)
         services = {'id': 1}
