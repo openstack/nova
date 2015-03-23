@@ -143,7 +143,11 @@ def populate_retry(filter_properties, instance_uuid):
     force_hosts = filter_properties.get('force_hosts', [])
     force_nodes = filter_properties.get('force_nodes', [])
 
-    if max_attempts == 1 or force_hosts or force_nodes:
+    # In the case of multiple force hosts/nodes, scheduler should not
+    # disable retry filter but traverse all force hosts/nodes one by
+    # one till scheduler gets a valid target host.
+    if (max_attempts == 1 or len(force_hosts) == 1
+                           or len(force_nodes) == 1):
         # re-scheduling is disabled.
         return
 
