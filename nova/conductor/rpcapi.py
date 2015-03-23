@@ -137,6 +137,7 @@ class ConductorAPI(object):
            - Remove aggregate_host_add() and aggregate_host_delete()
            - Remove network_migrate_instance_start() and
              network_migrate_instance_finish()
+           - Remove vol_get_usage_by_time
 
     ... Icehouse supports message version 2.0.  So, any changes to
     existing methods in 2.x after that point should be done such
@@ -215,12 +216,6 @@ class ConductorAPI(object):
         cctxt = self.client.prepare()
         return cctxt.call(context, 'block_device_mapping_get_all_by_instance',
                           instance=instance_p, legacy=legacy)
-
-    def vol_get_usage_by_time(self, context, start_time):
-        start_time_p = jsonutils.to_primitive(start_time)
-        cctxt = self.client.prepare()
-        return cctxt.call(context, 'vol_get_usage_by_time',
-                          start_time=start_time_p)
 
     def vol_usage_update(self, context, vol_id, rd_req, rd_bytes, wr_req,
                          wr_bytes, instance, last_refreshed=None,
