@@ -5193,7 +5193,7 @@ class ComputeManager(manager.Manager):
                                    block_migration, migrate_data)
 
     def _live_migration_cleanup_flags(self, block_migration, migrate_data):
-        """Determine whether disks or intance path need to be cleaned up after
+        """Determine whether disks or instance path need to be cleaned up after
         live migration (at source on success, at destination on rollback)
 
         Block migration needs empty image at destination host before migration
