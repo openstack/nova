@@ -258,7 +258,13 @@ class TestCase(testtools.TestCase):
         # memory around unnecessarily for the duration of the test
         # suite
         for key in [k for k in self.__dict__.keys() if k[0] != '_']:
-            del self.__dict__[key]
+            # NOTE(gmann): Skip attribute 'id' because if tests are being
+            # generated using testscenarios then, 'id' attribute is being
+            # added during cloning the tests. And later that 'id' attribute
+            # is being used by test suite to generate the results for each
+            # newly generated tests by testscenarios.
+            if key != 'id':
+                del self.__dict__[key]
 
     def flags(self, **kw):
         """Override flag variables for a test."""
