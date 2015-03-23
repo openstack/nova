@@ -21,5 +21,6 @@ testrepository>=0.0.18
 testtools>=0.9.36,!=1.2.0
 tempest-lib>=0.4.0
 
-# compute driver specific dependencies
+# vmwareapi driver specific dependencies
+suds>=0.4
 oslo.vmware>=0.11.1,<0.12.0                     # Apache-2.0
