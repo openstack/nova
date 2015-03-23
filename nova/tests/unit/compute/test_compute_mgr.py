@@ -2424,7 +2424,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                                                        'fake-node']]}}
 
         def fake_network_info():
-            return network_model.NetworkInfo()
+            return network_model.NetworkInfo([{'address': '1.2.3.4'}])
 
         self.network_info = network_model.NetworkInfoAsyncWrapper(
                 fake_network_info)
@@ -2992,7 +2992,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                     side_effect=[self.instance, self.instance]),
                 mock.patch.object(self.compute,
                     '_build_networks_for_instance',
-                    return_value=self.network_info),
+                    return_value=network_model.NetworkInfo()),
                 mock.patch.object(self.compute,
                     '_notify_about_instance_usage'),
                 mock.patch.object(self.compute,
@@ -3037,7 +3037,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
 
             _shutdown_instance.assert_called_once_with(self.context,
                     self.instance, self.block_device_mapping,
-                    self.requested_networks, try_deallocate_networks=False)
+                    self.requested_networks, try_deallocate_networks=True)
 
     @mock.patch('nova.compute.manager.ComputeManager._get_power_state')
     def test_spawn_waits_for_network_and_saves_info_cache(self, gps):
@@ -3198,7 +3198,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(self.compute, '_shutdown_instance')
         self.compute._build_networks_for_instance(self.context, self.instance,
                 self.requested_networks, self.security_groups).AndReturn(
-                        network_model.NetworkInfo())
+                        network_model.NetworkInfo([{'address': '1.2.3.4'}]))
         self.compute._shutdown_instance(self.context, self.instance,
                 self.block_device_mapping, self.requested_networks,
                 try_deallocate_networks=False)
