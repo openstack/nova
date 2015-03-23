@@ -248,7 +248,8 @@ class ResourceTracker(object):
                 image_meta = utils.get_image_from_system_metadata(
                         instance['system_metadata'])
 
-            if instance_type['id'] == itype['id']:
+            if (instance_type is not None and
+                instance_type['id'] == itype['id']):
                 numa_topology = hardware.numa_get_constraints(
                     itype, image_meta)
                 usage = self._get_usage_dict(
