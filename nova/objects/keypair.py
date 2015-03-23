@@ -29,11 +29,12 @@ class KeyPair(base.NovaPersistentObject, base.NovaObject,
     # Version 1.0: Initial version
     # Version 1.1: String attributes updated to support unicode
     # Version 1.2: Added keypair type
-    VERSION = '1.2'
+    # Version 1.3: Name field is non-null
+    VERSION = '1.3'
 
     fields = {
         'id': fields.IntegerField(),
-        'name': fields.StringField(nullable=True),
+        'name': fields.StringField(nullable=False),
         'user_id': fields.StringField(nullable=True),
         'fingerprint': fields.StringField(nullable=True),
         'public_key': fields.StringField(nullable=True),
@@ -81,7 +82,8 @@ class KeyPairList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     #              KeyPair <= version 1.1
     # Version 1.1: KeyPair <= version 1.2
-    VERSION = '1.1'
+    # Version 1.2: KeyPair <= version 1.3
+    VERSION = '1.2'
 
     fields = {
         'objects': fields.ListOfObjectsField('KeyPair'),
@@ -90,6 +92,7 @@ class KeyPairList(base.ObjectListBase, base.NovaObject):
         '1.0': '1.1',
         # NOTE(danms): KeyPair was at 1.1 before we added this
         '1.1': '1.2',
+        '1.2': '1.3',
         }
 
     @base.remotable_classmethod

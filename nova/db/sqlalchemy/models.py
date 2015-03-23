@@ -759,7 +759,7 @@ class KeyPair(BASE, NovaBase):
     )
     id = Column(Integer, primary_key=True, nullable=False)
 
-    name = Column(String(255))
+    name = Column(String(255), nullable=False)
 
     user_id = Column(String(255))
 
