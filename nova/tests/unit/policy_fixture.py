@@ -79,6 +79,7 @@ class PolicyFixture(RealPolicyFixture):
                                         'policy.json')
         with open(self.policy_file, 'w') as f:
             f.write(fake_policy.policy_data)
+        CONF.set_override('policy_dirs', [])
 
 
 class RoleBasedPolicyFixture(RealPolicyFixture):
