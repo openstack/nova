@@ -28,6 +28,7 @@ from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import importutils
 from oslo_utils import timeutils
+import testtools
 
 from nova.api.metadata import password
 from nova.api.openstack.compute.contrib import fping
@@ -137,6 +138,14 @@ class ApiSamplesTrap(ApiSampleTestBaseV2):
         # in the tree but that don't (yet) have tests. This list should
         # NOT be allowed to grow, and should shrink to zero (and be
         # removed) soon.
+
+        # TODO(gmann): skip this tests as merging of sample tests for v2
+        # and v2.1 are in progress. After merging all tests, this tests
+        # need to implement in different way.
+        raise testtools.TestCase.skipException('Merging of v2 and v2.1 '
+                                               'sample tests is in progress. '
+                                               'This test will be enabled '
+                                               'after all tests gets merged.')
         do_not_approve_additions = []
         do_not_approve_additions.append('os-create-server-ext')
         do_not_approve_additions.append('os-baremetal-ext-status')
@@ -591,49 +600,6 @@ class UserDataJsonTest(ApiSampleTestBaseV2):
         self._verify_response('userdata-post-resp', subs, response, 202)
 
 
-class FlavorsExtraDataJsonTest(ApiSampleTestBaseV2):
-    ADMIN_API = True
-    extension_name = ('nova.api.openstack.compute.contrib.flavorextradata.'
-                      'Flavorextradata')
-
-    def _get_flags(self):
-        f = super(FlavorsExtraDataJsonTest, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        # Flavorextradata extension also needs Flavormanage to be loaded.
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.flavormanage.Flavormanage')
-        return f
-
-    def test_flavors_extra_data_get(self):
-        flavor_id = 1
-        response = self._do_get('flavors/%s' % flavor_id)
-        subs = {
-            'flavor_id': flavor_id,
-            'flavor_name': 'm1.tiny'
-        }
-        subs.update(self._get_regexes())
-        self._verify_response('flavors-extra-data-get-resp',
-                              subs, response, 200)
-
-    def test_flavors_extra_data_list(self):
-        response = self._do_get('flavors/detail')
-        subs = self._get_regexes()
-        self._verify_response('flavors-extra-data-list-resp',
-                              subs, response, 200)
-
-    def test_flavors_extra_data_create(self):
-        subs = {
-            'flavor_id': 666,
-            'flavor_name': 'flavortest'
-        }
-        response = self._do_post('flavors',
-                                 'flavors-extra-data-post-req',
-                                 subs)
-        subs.update(self._get_regexes())
-        self._verify_response('flavors-extra-data-post-resp',
-                              subs, response, 200)
-
-
 class FlavorRxtxJsonTest(ApiSampleTestBaseV2):
     ADMIN_API = True
     extension_name = ('nova.api.openstack.compute.contrib.flavor_rxtx.'
@@ -672,46 +638,6 @@ class FlavorRxtxJsonTest(ApiSampleTestBaseV2):
                                  subs)
         subs.update(self._get_regexes())
         self._verify_response('flavor-rxtx-post-resp', subs, response, 200)
-
-
-class FlavorSwapJsonTest(ApiSampleTestBaseV2):
-    ADMIN_API = True
-    extension_name = ('nova.api.openstack.compute.contrib.flavor_swap.'
-                      'Flavor_swap')
-
-    def _get_flags(self):
-        f = super(FlavorSwapJsonTest, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        # FlavorSwap extension also needs Flavormanage to be loaded.
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.flavormanage.Flavormanage')
-        return f
-
-    def test_flavor_swap_get(self):
-        flavor_id = 1
-        response = self._do_get('flavors/%s' % flavor_id)
-        subs = {
-            'flavor_id': flavor_id,
-            'flavor_name': 'm1.tiny'
-        }
-        subs.update(self._get_regexes())
-        self._verify_response('flavor-swap-get-resp', subs, response, 200)
-
-    def test_flavor_swap_list(self):
-        response = self._do_get('flavors/detail')
-        subs = self._get_regexes()
-        self._verify_response('flavor-swap-list-resp', subs, response, 200)
-
-    def test_flavor_swap_create(self):
-        subs = {
-            'flavor_id': 100,
-            'flavor_name': 'flavortest'
-        }
-        response = self._do_post('flavors',
-                                 'flavor-swap-post-req',
-                                 subs)
-        subs.update(self._get_regexes())
-        self._verify_response('flavor-swap-post-resp', subs, response, 200)
 
 
 class SecurityGroupsSampleJsonTest(ServersSampleBase):
@@ -2561,25 +2487,6 @@ class NetworksAssociateJsonTests(ApiSampleTestBaseV2):
                                  {"host": "testHost"})
         self.assertEqual(response.status_code, 202)
         self.assertEqual(response.content, "")
-
-
-class FlavorDisabledSampleJsonTests(ApiSampleTestBaseV2):
-    extension_name = ("nova.api.openstack.compute.contrib.flavor_disabled."
-                      "Flavor_disabled")
-
-    def test_show_flavor(self):
-        # Get api sample to show flavor_disabled attr. of a flavor.
-        flavor_id = 1
-        response = self._do_get('flavors/%s' % flavor_id)
-        subs = self._get_regexes()
-        subs['flavor_id'] = flavor_id
-        self._verify_response('flavor-show-get-resp', subs, response, 200)
-
-    def test_detail_flavor(self):
-        # Get api sample to show details of a flavor.
-        response = self._do_get('flavors/detail')
-        subs = self._get_regexes()
-        self._verify_response('flavor-detail-get-resp', subs, response, 200)
 
 
 class QuotaClassesSampleJsonTests(ApiSampleTestBaseV2):
