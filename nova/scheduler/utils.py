@@ -217,7 +217,7 @@ def parse_options(opts, sep='=', converter=str, name=""):
     """Parse a list of options, each in the format of <key><sep><value>. Also
     use the converter to convert the value into desired type.
 
-    :params opts: list of options, e.g. from oslo.config.cfg.ListOpt
+    :params opts: list of options, e.g. from oslo_config.cfg.ListOpt
     :params sep: the separator
     :params converter: callable object to convert the value, should raise
                        ValueError for conversion failure
