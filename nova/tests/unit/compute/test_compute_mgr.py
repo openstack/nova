@@ -3529,7 +3529,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             self.assertEqual([mock.call(), mock.call()],
                              migration_obj_as_admin.mock_calls)
 
-    def test_revert_resize_instance_destroy_disks(self):
+    def _test_revert_resize_instance_destroy_disks(self, is_shared=False):
 
         # This test asserts that _is_instance_storage_shared() is called from
         # revert_resize() and the return value is passed to driver.destroy().
@@ -3561,20 +3561,27 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
 
             self.migration.source_compute = self.instance['host']
 
-            # inform compute that this instance uses shared storage
-            _is_instance_storage_shared.return_value = True
+            # Inform compute that instance uses non-shared or shared storage
+            _is_instance_storage_shared.return_value = is_shared
 
             self.compute.revert_resize(context=self.context,
                                        migration=self.migration,
                                        instance=self.instance,
                                        reservations=None)
 
-            _is_instance_storage_shared.assert_called_once_with(self.context,
-                                                                self.instance)
+            _is_instance_storage_shared.assert_called_once_with(
+                self.context, self.instance,
+                host=self.migration.source_compute)
 
-            # since shared storage is used, we should not be instructed to
-            # destroy disks here
+            # If instance storage is shared, driver destroy method
+            # should not destroy disks otherwise it should destroy disks.
             destroy.assert_called_once_with(self.context, self.instance,
-                                            mock.ANY, mock.ANY, False)
+                                            mock.ANY, mock.ANY, not is_shared)
 
         do_test()
+
+    def test_revert_resize_instance_destroy_disks_shared_storage(self):
+        self._test_revert_resize_instance_destroy_disks(is_shared=True)
+
+    def test_revert_resize_instance_destroy_disks_non_shared_storage(self):
+        self._test_revert_resize_instance_destroy_disks(is_shared=False)
