@@ -65,9 +65,8 @@ class AvailabilityZoneController(wsgi.Controller):
             availability_zones.get_availability_zones(ctxt)
 
         # Available services
-        enabled_services = objects.ServiceList.get_all(context, disabled=False)
-        enabled_services = availability_zones.set_availability_zones(context,
-                enabled_services)
+        enabled_services = objects.ServiceList.get_all(context, disabled=False,
+                                                       set_zones=True)
         zone_hosts = {}
         host_services = {}
         for service in enabled_services:
