@@ -325,7 +325,7 @@ class CellsConductorAPIRPCRedirect(test.NoDBTestCase):
 
         self.compute_api = compute_cells_api.ComputeCellsAPI()
         self.cells_rpcapi = mock.MagicMock()
-        self.compute_api._compute_task_api.cells_rpcapi = self.cells_rpcapi
+        self.compute_api.compute_task_api.cells_rpcapi = self.cells_rpcapi
 
         self.context = context.RequestContext('fake', 'fake')
 
