@@ -64,7 +64,7 @@ class HypervisorsController(wsgi.Controller):
                 'disabled_reason': service.disabled_reason,
                 }
 
-        if servers is not None:
+        if servers:
             hyp_dict['servers'] = [dict(name=serv['name'], uuid=serv['uuid'])
                                    for serv in servers]
 

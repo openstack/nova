@@ -179,10 +179,6 @@ class HypervisorsTestV21(test.NoDBTestCase):
         dict(id=2, hypervisor_hostname="hyper2",
              state='up', status='enabled')]
 
-    NO_SERVER_HYPER_DICTS = copy.deepcopy(INDEX_HYPER_DICTS)
-    NO_SERVER_HYPER_DICTS[0].update({'servers': []})
-    NO_SERVER_HYPER_DICTS[1].update({'servers': []})
-
     def _get_request(self, use_admin_context):
         return fakes.HTTPRequest.blank('', use_admin_context=use_admin_context)
 
@@ -385,7 +381,7 @@ class HypervisorsTestV21(test.NoDBTestCase):
                        fake_instance_get_all_by_host_return_empty)
         req = self._get_request(True)
         result = self.controller.servers(req, '1')
-        self.assertEqual(result, dict(hypervisors=self.NO_SERVER_HYPER_DICTS))
+        self.assertEqual(result, dict(hypervisors=self.INDEX_HYPER_DICTS))
 
     def test_statistics(self):
         req = self._get_request(True)
@@ -428,15 +424,6 @@ class HypervisorsTestV2(HypervisorsTestV21):
     del INDEX_HYPER_DICTS[1]['state']
     del INDEX_HYPER_DICTS[0]['status']
     del INDEX_HYPER_DICTS[1]['status']
-
-    NO_SERVER_HYPER_DICTS = copy.deepcopy(
-                                HypervisorsTestV21.NO_SERVER_HYPER_DICTS)
-    del NO_SERVER_HYPER_DICTS[0]['state']
-    del NO_SERVER_HYPER_DICTS[1]['state']
-    del NO_SERVER_HYPER_DICTS[0]['status']
-    del NO_SERVER_HYPER_DICTS[1]['status']
-    del NO_SERVER_HYPER_DICTS[0]['servers']
-    del NO_SERVER_HYPER_DICTS[1]['servers']
 
     def _set_up_controller(self):
         self.context = context.get_admin_context()
