@@ -2402,6 +2402,14 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.assertFalse(mock_delete.called)
         self.assertFalse(mock_sync.called)
 
+    def test_refresh_instance_security_rules_takes_non_object(self):
+        inst = fake_instance.fake_db_instance()
+        with mock.patch.object(self.compute.driver,
+                               'refresh_instance_security_rules') as mock_r:
+            self.compute.refresh_instance_security_rules(self.context, inst)
+            self.assertIsInstance(mock_r.call_args_list[0][0][0],
+                                  objects.Instance)
+
 
 class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     def setUp(self):

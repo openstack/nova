@@ -1288,6 +1288,7 @@ class ComputeManager(manager.Manager):
         """
         return self.driver.refresh_security_group_members(security_group_id)
 
+    @object_compat
     @wrap_exception()
     def refresh_instance_security_rules(self, context, instance):
         """Tell the virtualization driver to refresh security rules for
