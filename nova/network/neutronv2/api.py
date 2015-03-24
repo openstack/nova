@@ -1500,10 +1500,9 @@ class API(base_api.NetworkAPI):
                           cached value.
         :param admin_client - a neutron client for the admin context.
         :param preexisting_port_ids - List of port_ids that nova didn't
-                                      allocate and therefore shouldn't be
-                                      deleted when an instance is deallocated.
-                                      If value is None or empty the value will
-                                      be populated from existing cached value.
+        allocate and there shouldn't be deleted when an instance is
+        de-allocated. Supplied list will be added to the cached list of
+        preexisting port IDs for this instance.
         """
 
         search_opts = {'tenant_id': instance.project_id,
@@ -1521,8 +1520,10 @@ class API(base_api.NetworkAPI):
                 context, instance, networks, port_ids)
         nw_info = network_model.NetworkInfo()
 
-        if not preexisting_port_ids:
-            preexisting_port_ids = self._get_preexisting_port_ids(instance)
+        if preexisting_port_ids is None:
+            preexisting_port_ids = []
+        preexisting_port_ids = set(
+            preexisting_port_ids + self._get_preexisting_port_ids(instance))
 
         current_neutron_port_map = {}
         for current_neutron_port in current_neutron_ports:
