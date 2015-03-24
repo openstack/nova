@@ -517,8 +517,17 @@ class Controller(wsgi.Controller):
         if self.ext_mgr.is_loaded('os-security-groups'):
             security_groups = server_dict.get('security_groups')
             if security_groups is not None:
-                sg_names = [sg['name'] for sg in security_groups
-                            if sg.get('name')]
+                try:
+                    sg_names = [sg['name'] for sg in security_groups
+                                if sg.get('name')]
+                except AttributeError:
+                    msg = _("Invalid input for field/attribute %(path)s."
+                           " Value: %(value)s. %(message)s") % {
+                               'path': 'security_groups',
+                               'value': security_groups,
+                               'message': ''
+                           }
+                    raise exc.HTTPBadRequest(explanation=msg)
         if not sg_names:
             sg_names.append('default')
 
