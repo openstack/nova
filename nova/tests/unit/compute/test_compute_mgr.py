@@ -62,6 +62,7 @@ CONF.import_opt('compute_manager', 'nova.service')
 class ComputeManagerUnitTestCase(test.NoDBTestCase):
     def setUp(self):
         super(ComputeManagerUnitTestCase, self).setUp()
+        self.flags(use_local=True, group='conductor')
         self.compute = importutils.import_object(CONF.compute_manager)
         self.context = context.RequestContext('fake', 'fake')
         fake_server_actions.stub_out_action_events(self.stubs)
