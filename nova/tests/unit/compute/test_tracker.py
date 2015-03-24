@@ -395,7 +395,7 @@ class TestUpdateAvailableResources(BaseTestCase):
             'local_gb': 6,
             'free_ram_mb': 512,
             'memory_mb_used': 0,
-            'pci_stats': '[]',
+            'pci_device_pools': [],
             'vcpus_used': 0,
             'hypervisor_type': 'fake',
             'local_gb_used': 0,
@@ -431,7 +431,7 @@ class TestUpdateAvailableResources(BaseTestCase):
             'local_gb': 6,
             'free_ram_mb': 0,  # 512MB avail - 512MB reserved
             'memory_mb_used': 512,  # 0MB used + 512MB reserved
-            'pci_stats': '[]',
+            'pci_device_pools': [],
             'vcpus_used': 0,
             'hypervisor_type': 'fake',
             'local_gb_used': 1,  # 0GB used + 1 GB reserved
@@ -466,7 +466,7 @@ class TestUpdateAvailableResources(BaseTestCase):
             'local_gb': 6,
             'free_ram_mb': 384,  # 512 - 128 used
             'memory_mb_used': 128,
-            'pci_stats': '[]',
+            'pci_device_pools': [],
             # NOTE(jaypipes): Due to the design of the ERT, which now is used
             #                 track VCPUs, the actual used VCPUs isn't
             #                 "written" to the resources dictionary that is
@@ -532,7 +532,7 @@ class TestUpdateAvailableResources(BaseTestCase):
             'local_gb': 6,
             'free_ram_mb': 448,  # 512 - 64 orphaned usage
             'memory_mb_used': 64,
-            'pci_stats': '[]',
+            'pci_device_pools': [],
             'vcpus_used': 0,
             'hypervisor_type': 'fake',
             'local_gb_used': 0,
@@ -586,7 +586,7 @@ class TestUpdateAvailableResources(BaseTestCase):
             'local_gb': 6,
             'free_ram_mb': 384,  # 512 total - 128 for possible revert of orig
             'memory_mb_used': 128,  # 128 possible revert amount
-            'pci_stats': '[]',
+            'pci_device_pools': [],
             'vcpus_used': 0,
             'hypervisor_type': 'fake',
             'local_gb_used': 1,
@@ -635,7 +635,7 @@ class TestUpdateAvailableResources(BaseTestCase):
             'local_gb': 6,
             'free_ram_mb': 256,  # 512 total - 256 for possible confirm of new
             'memory_mb_used': 256,  # 256 possible confirmed amount
-            'pci_stats': '[]',
+            'pci_device_pools': [],
             'vcpus_used': 0,  # See NOTE(jaypipes) above about why this is 0
             'hypervisor_type': 'fake',
             'local_gb_used': 5,
@@ -688,7 +688,7 @@ class TestUpdateAvailableResources(BaseTestCase):
             # 512 total - 128 existing - 256 new flav - 128 old flav
             'free_ram_mb': 0,
             'memory_mb_used': 512,  # 128 exist + 256 new flav + 128 old flav
-            'pci_stats': '[]',
+            'pci_device_pools': [],
             # See NOTE(jaypipes) above for reason why this isn't accurate until
             # _sync_compute_node() is called.
             'vcpus_used': 0,
@@ -743,7 +743,7 @@ class TestSyncComputeNode(BaseTestCase):
             'local_gb': 6,
             'free_ram_mb': 512,
             'memory_mb_used': 0,
-            'pci_stats': '[]',
+            'pci_device_pools': [],
             'vcpus_used': 0,
             'hypervisor_type': 'fake',
             'local_gb_used': 0,
@@ -813,7 +813,7 @@ class TestSyncComputeNode(BaseTestCase):
             'local_gb': 6,
             'free_ram_mb': 512,
             'memory_mb_used': 0,
-            'pci_stats': '[]',
+            'pci_device_pools': [],
             'vcpus_used': 0,
             'hypervisor_type': 'fake',
             'local_gb_used': 0,
@@ -862,7 +862,7 @@ class TestSyncComputeNode(BaseTestCase):
             'local_gb': 6,
             'free_ram_mb': 384,
             'memory_mb_used': 128,
-            'pci_stats': '[]',
+            'pci_device_pools': [],
             'vcpus_used': 2,
             'hypervisor_type': 'fake',
             'local_gb_used': 4,
@@ -960,7 +960,7 @@ class TestInstanceClaim(BaseTestCase):
             "free_ram_mb": expected['memory_mb'] - self.instance.memory_mb,
             'running_vms': 1,
             # 'vcpus_used': 0,  # vcpus are not claimed
-            'pci_stats': '[]',
+            'pci_device_pools': [],
         })
         with mock.patch.object(self.rt, '_update') as update_mock:
             self.rt.instance_claim(self.ctx, self.instance, None)

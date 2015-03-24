@@ -387,9 +387,9 @@ class ResourceTracker(object):
         # from deleted instances.
         if self.pci_tracker:
             self.pci_tracker.clean_usage(instances, migrations, orphans)
-            resources['pci_stats'] = jsonutils.dumps(self.pci_tracker.stats)
+            resources['pci_device_pools'] = self.pci_tracker.stats
         else:
-            resources['pci_stats'] = jsonutils.dumps([])
+            resources['pci_device_pools'] = []
 
         self._report_final_resource_view(resources)
 
@@ -532,7 +532,7 @@ class ResourceTracker(object):
         else:
             tcpu = 0
             ucpu = 0
-        pci_stats = resources.get('pci_stats')
+        pci_device_pools = resources.get('pci_device_pools')
         LOG.info(_LI("Final resource view: "
                      "name=%(node)s "
                      "phys_ram=%(phys_ram)sMB "
@@ -549,7 +549,7 @@ class ResourceTracker(object):
                   'used_disk': resources['local_gb_used'],
                   'total_vcpus': tcpu,
                   'used_vcpus': ucpu,
-                  'pci_stats': pci_stats})
+                  'pci_stats': pci_device_pools})
 
     def _resource_change(self, resources):
         """Check to see if any resouces have changed."""
@@ -668,10 +668,9 @@ class ResourceTracker(object):
                 self.pci_tracker.update_pci_for_migration(context, instance)
             self._update_usage(context, resources, usage)
             if self.pci_tracker:
-                resources['pci_stats'] = jsonutils.dumps(
-                        self.pci_tracker.stats)
+                resources['pci_device_pools'] = self.pci_tracker.stats
             else:
-                resources['pci_stats'] = jsonutils.dumps([])
+                resources['pci_device_pools'] = []
             self.tracked_migrations[uuid] = (migration, itype)
 
     def _update_usage_from_migrations(self, context, resources, migrations):
@@ -740,9 +739,9 @@ class ResourceTracker(object):
 
         resources['current_workload'] = self.stats.calculate_workload()
         if self.pci_tracker:
-            resources['pci_stats'] = jsonutils.dumps(self.pci_tracker.stats)
+            resources['pci_device_pools'] = self.pci_tracker.stats
         else:
-            resources['pci_stats'] = jsonutils.dumps([])
+            resources['pci_device_pools'] = []
 
     def _update_usage_from_instances(self, context, resources, instances):
         """Calculate resource usage based on instance utilization.  This is

@@ -721,7 +721,7 @@ class TrackerTestCase(BaseTrackerTestCase):
         self.assertFalse(self.tracker.disabled)
         self.assertEqual(0, self.tracker.compute_node['current_workload'])
         self.assertEqual(driver.pci_stats,
-            jsonutils.loads(self.tracker.compute_node['pci_stats']))
+            self.tracker.compute_node['pci_device_pools'])
 
 
 class SchedulerClientTrackerTestCase(BaseTrackerTestCase):
@@ -778,8 +778,12 @@ class TrackerPciStatsTestCase(BaseTrackerTestCase):
         self._assert(FAKE_VIRT_LOCAL_GB, 'free_disk_gb')
         self.assertFalse(self.tracker.disabled)
         self.assertEqual(0, self.tracker.compute_node['current_workload'])
-        self.assertEqual(driver.pci_stats,
-            jsonutils.loads(self.tracker.compute_node['pci_stats']))
+
+        # NOTE(danms): PciDeviceStats only supports iteration, so we have to
+        # listify it before we can examine the contents by index.
+        pools = list(self.tracker.compute_node['pci_device_pools'])
+        self.assertEqual(driver.pci_stats[0]['product_id'],
+                         pools[0]['product_id'])
 
     def _driver(self):
         return FakeVirtDriver(pci_support=True)

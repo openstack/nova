@@ -53,7 +53,21 @@ class SchedulerReportClient(object):
                                            id=compute_node_id)
         compute_node.obj_reset_changes()
         for k, v in updates.items():
-            setattr(compute_node, k, v)
+            if k == 'pci_device_pools':
+                # NOTE(danms): Since the updates are actually the result of
+                # a obj_to_primitive() on some real objects, we need to convert
+                # back to a real object (not from_dict() or _from_db_object(),
+                # which expect a db-formatted object) but just an attr-based
+                # reconstruction. When we start getting a ComputeNode from
+                # scheduler this "bandage" can go away.
+                if v:
+                    devpools = [objects.PciDevicePool.from_dict(x) for x in v]
+                else:
+                    devpools = []
+                compute_node.pci_device_pools = objects.PciDevicePoolList(
+                    objects=devpools)
+            else:
+                setattr(compute_node, k, v)
         compute_node.save()
 
         LOG.info(_LI('Compute_service record updated for '
