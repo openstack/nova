@@ -2048,8 +2048,17 @@ class API(base.Base):
         :returns: A dict containing image metadata
         """
         props_copy = dict(extra_properties, backup_type=backup_type)
-        image_meta = self._create_image(context, instance, name,
-                                       'backup', extra_properties=props_copy)
+
+        if self.is_volume_backed_instance(context, instance):
+            # TODO(flwang): The log level will be changed to INFO after
+            # string freeze (Liberty).
+            LOG.debug("It's not supported to backup volume backed instance.",
+                      context=context, instance=instance)
+            raise exception.InvalidRequest()
+        else:
+            image_meta = self._create_image(context, instance,
+                                            name, 'backup',
+                                            extra_properties=props_copy)
 
         # NOTE(comstud): Any changes to this method should also be made
         # to the backup_instance() method in nova/cells/messaging.py

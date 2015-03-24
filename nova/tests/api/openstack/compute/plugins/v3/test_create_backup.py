@@ -15,6 +15,7 @@
 
 from nova.api.openstack import common
 from nova.api.openstack.compute.plugins.v3 import create_backup
+from nova import exception
 from nova.openstack.common import uuidutils
 from nova import test
 from nova.tests.api.openstack.compute.plugins.v3 import \
@@ -258,4 +259,25 @@ class CreateBackupTests(admin_only_action_common.CommonMixin,
             },
         }
         res = self._make_request(self._make_url(), body)
+        self.assertEqual(400, res.status_int)
+
+    def test_backup_volume_backed_instance(self):
+        body = {
+            'createBackup': {
+                'name': 'BackupMe',
+                'backup_type': 'daily',
+                'rotation': 3
+            },
+        }
+
+        common.check_img_metadata_properties_quota(self.context, {})
+        instance = self._stub_instance_get()
+        instance.image_ref = None
+
+        self.compute_api.backup(self.context, instance, 'BackupMe', 'daily', 3,
+                extra_properties={}).AndRaise(exception.InvalidRequest())
+
+        self.mox.ReplayAll()
+
+        res = self._make_request(self._make_url(instance['uuid']), body)
         self.assertEqual(400, res.status_int)
