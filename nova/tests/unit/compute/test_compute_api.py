@@ -1742,6 +1742,13 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(self.compute_api.compute_rpcapi,
                                  'backup_instance')
 
+        if not is_snapshot:
+            self.mox.StubOutWithMock(self.compute_api,
+                                     'is_volume_backed_instance')
+
+            self.compute_api.is_volume_backed_instance(self.context,
+                instance).AndReturn(False)
+
         image_type = is_snapshot and 'snapshot' or 'backup'
 
         expected_sys_meta = dict(fake_sys_meta)
@@ -1884,6 +1891,19 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_backup_with_base_image_ref(self):
         self._test_snapshot_and_backup(is_snapshot=False,
                                        with_base_ref=True)
+
+    def test_backup_volume_backed_instance(self):
+        instance = self._create_instance_obj()
+
+        with mock.patch.object(self.compute_api,
+                               'is_volume_backed_instance',
+                               return_value=True) as mock_is_volume_backed:
+            self.assertRaises(exception.InvalidRequest,
+                              self.compute_api.backup, self.context,
+                              instance, 'fake-name', 'weekly',
+                              3, extra_properties={})
+            mock_is_volume_backed.assert_called_once_with(self.context,
+                                                          instance)
 
     def _test_snapshot_volume_backed(self, quiesce_required, quiesce_fails,
                                      vm_state=vm_states.ACTIVE):
