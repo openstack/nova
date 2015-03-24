@@ -34,8 +34,6 @@ from nova.api.metadata import password
 from nova.api.openstack.compute.contrib import fping
 from nova.api.openstack.compute import extensions
 # Import extensions to pull in osapi_compute_extension CONF option used below.
-from nova.cells import rpcapi as cells_rpcapi
-from nova.cells import state
 from nova.cloudpipe import pipelib
 from nova.compute import api as compute_api
 from nova.compute import cells_api as cells_api
@@ -2558,103 +2556,6 @@ class BaremetalNodesJsonTest(ApiSampleTestBaseV2):
                                 '058d27fa-241b-445a-a386-08c04f96db43')
         subs = self._get_regexes()
         self._verify_response('baremetal-node-get-resp', subs, response, 200)
-
-
-class CellsSampleJsonTest(ApiSampleTestBaseV2):
-    extension_name = "nova.api.openstack.compute.contrib.cells.Cells"
-
-    def setUp(self):
-        # db_check_interval < 0 makes cells manager always hit the DB
-        self.flags(enable=True, db_check_interval=-1, group='cells')
-        super(CellsSampleJsonTest, self).setUp()
-        self._stub_cells()
-
-    def _stub_cells(self, num_cells=5):
-        self.cells = []
-        self.cells_next_id = 1
-
-        def _fake_cell_get_all(context):
-            return self.cells
-
-        def _fake_cell_get(inst, context, cell_name):
-            for cell in self.cells:
-                if cell['name'] == cell_name:
-                    return cell
-            raise exception.CellNotFound(cell_name=cell_name)
-
-        for x in xrange(num_cells):
-            cell = models.Cell()
-            our_id = self.cells_next_id
-            self.cells_next_id += 1
-            cell.update({'id': our_id,
-                         'name': 'cell%s' % our_id,
-                         'transport_url': 'rabbit://username%s@/' % our_id,
-                         'is_parent': our_id % 2 == 0})
-            self.cells.append(cell)
-
-        self.stubs.Set(db, 'cell_get_all', _fake_cell_get_all)
-        self.stubs.Set(cells_rpcapi.CellsAPI, 'cell_get', _fake_cell_get)
-
-    def test_cells_empty_list(self):
-        # Override this
-        self._stub_cells(num_cells=0)
-        response = self._do_get('os-cells')
-        subs = self._get_regexes()
-        self._verify_response('cells-list-empty-resp', subs, response, 200)
-
-    def test_cells_list(self):
-        response = self._do_get('os-cells')
-        subs = self._get_regexes()
-        self._verify_response('cells-list-resp', subs, response, 200)
-
-    def test_cells_get(self):
-        response = self._do_get('os-cells/cell3')
-        subs = self._get_regexes()
-        self._verify_response('cells-get-resp', subs, response, 200)
-
-
-class CellsCapacitySampleJsonTest(ApiSampleTestBaseV2):
-    extends_name = ("nova.api.openstack.compute.contrib.cells.Cells")
-    extension_name = ("nova.api.openstack.compute.contrib."
-                         "cell_capacities.Cell_capacities")
-
-    def setUp(self):
-        self.flags(enable=True, db_check_interval=-1, group='cells')
-        super(CellsCapacitySampleJsonTest, self).setUp()
-        # (navneetk/kaushikc) : Mock cell capacity to avoid the capacity
-        # being calculated from the compute nodes in the environment
-        self._mock_cell_capacity()
-
-    def test_get_cell_capacity(self):
-        state_manager = state.CellStateManager()
-        my_state = state_manager.get_my_state()
-        response = self._do_get('os-cells/%s/capacities' %
-                my_state.name)
-        subs = self._get_regexes()
-        return self._verify_response('cells-capacities-resp',
-                                        subs, response, 200)
-
-    def test_get_all_cells_capacity(self):
-        response = self._do_get('os-cells/capacities')
-        subs = self._get_regexes()
-        return self._verify_response('cells-capacities-resp',
-                                        subs, response, 200)
-
-    def _mock_cell_capacity(self):
-        self.mox.StubOutWithMock(self.cells.manager.state_manager,
-                                 'get_our_capacities')
-        response = {"ram_free":
-                        {"units_by_mb": {"8192": 0, "512": 13,
-                                         "4096": 1, "2048": 3, "16384": 0},
-                         "total_mb": 7680},
-                    "disk_free":
-                        {"units_by_mb": {"81920": 11, "20480": 46,
-                                         "40960": 23, "163840": 5, "0": 0},
-                         "total_mb": 1052672}
-        }
-        self.cells.manager.state_manager.get_our_capacities(). \
-            AndReturn(response)
-        self.mox.ReplayAll()
 
 
 class BlockDeviceMappingV2BootJsonTest(ServersSampleBase):
