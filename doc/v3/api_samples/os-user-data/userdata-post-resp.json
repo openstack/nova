@@ -4,11 +4,11 @@
         "id": "976a62bb-0d4a-4e17-9044-1864e888a557",
         "links": [
             {
-                "href": "http://openstack.example.com/v3/servers/976a62bb-0d4a-4e17-9044-1864e888a557",
+                "href": "http://openstack.example.com/v2/openstack/servers/976a62bb-0d4a-4e17-9044-1864e888a557",
                 "rel": "self"
             },
             {
-                "href": "http://openstack.example.com/servers/976a62bb-0d4a-4e17-9044-1864e888a557",
+                "href": "http://openstack.example.com/openstack/servers/976a62bb-0d4a-4e17-9044-1864e888a557",
                 "rel": "bookmark"
             }
         ]

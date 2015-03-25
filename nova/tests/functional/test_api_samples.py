@@ -13,7 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import base64
 import datetime
 import inspect
 import os
@@ -256,23 +255,6 @@ class ServersActionsJsonTest(ServersSampleBase):
         uuid = self._post_server()
         self._test_server_action(uuid, "changePassword",
                                  {"password": "foo"})
-
-
-class UserDataJsonTest(ApiSampleTestBaseV2):
-    extension_name = "nova.api.openstack.compute.contrib.user_data.User_data"
-
-    def test_user_data_post(self):
-        user_data_contents = '#!/bin/bash\n/bin/su\necho "I am in you!"\n'
-        user_data = base64.b64encode(user_data_contents)
-        subs = {
-            'image_id': fake.get_valid_image_id(),
-            'host': self._get_host(),
-            'user_data': user_data
-            }
-        response = self._do_post('servers', 'userdata-post-req', subs)
-
-        subs.update(self._get_regexes())
-        self._verify_response('userdata-post-resp', subs, response, 202)
 
 
 class SecurityGroupsSampleJsonTest(ServersSampleBase):
