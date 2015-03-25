@@ -13,11 +13,28 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_config import cfg
+
 from nova.tests.functional.v3 import api_sample_base
+
+CONF = cfg.CONF
+CONF.import_opt('osapi_compute_extension',
+                'nova.api.openstack.compute.extensions')
 
 
 class CertificatesSamplesJsonTest(api_sample_base.ApiSampleTestBaseV3):
     extension_name = "os-certificates"
+    # TODO(gmann): Overriding '_api_version' till all functional tests
+    # are merged between v2 and v2.1. After that base class variable
+    # itself can be changed to 'v2'
+    _api_version = 'v2'
+
+    def _get_flags(self):
+        f = super(CertificatesSamplesJsonTest, self)._get_flags()
+        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.certificates.Certificates')
+        return f
 
     def test_create_certificates(self):
         response = self._do_post('os-certificates',
