@@ -391,8 +391,14 @@ class ProcessLauncher(object):
                 if not _is_sighup_and_daemon(self.sigcaught):
                     break
 
+                cfg.CONF.reload_config_files()
+                for service in set(
+                        [wrap.service for wrap in self.children.values()]):
+                    service.reset()
+
                 for pid in self.children:
                     os.kill(pid, signal.SIGHUP)
+
                 self.running = True
                 self.sigcaught = None
         except eventlet.greenlet.GreenletExit:
