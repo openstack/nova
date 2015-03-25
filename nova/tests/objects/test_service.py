@@ -17,6 +17,7 @@ import mock
 from nova import db
 from nova import exception
 from nova.objects import aggregate
+from nova.objects import compute_node
 from nova.objects import service
 from nova.openstack.common import timeutils
 from nova.tests.objects import test_compute_node
@@ -202,6 +203,20 @@ class _TestServiceObject(object):
         service_obj.id = 123
         self.assertRaises(exception.OrphanedObjectError,
                           getattr, service_obj, 'compute_node')
+
+    def test_obj_make_compatible_with_icehouse_computes(self):
+        service_obj = service.Service(context=self.context, **fake_service)
+        compute_node_obj = compute_node.ComputeNode(host=fake_service['host'])
+        service_obj.compute_node = compute_node_obj
+        service_primitive = service_obj.obj_to_primitive()
+
+        # Icehouse versions :
+        #   Service : 1.2
+        #   ComputeNode : 1.3
+        service_obj.obj_make_compatible(
+            service_primitive['nova_object.data'], '1.2')
+        self.assertEqual('1.3', service_primitive['nova_object.data'][
+            'compute_node']['nova_object.version'])
 
 
 class TestServiceObject(test_objects._LocalTest,
