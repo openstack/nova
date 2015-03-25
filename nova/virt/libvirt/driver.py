@@ -1816,10 +1816,15 @@ class LibvirtDriver(driver.ComputeDriver):
         libvirt_utils.create_cow_image(src_back_path, disk_delta,
                                        src_disk_size)
 
-        require_quiesce = image_meta.properties.get(
-            'os_require_quiesce', False)
-        if require_quiesce:
-            self.quiesce(context, instance, image_meta)
+        quiesced = False
+        try:
+            self._set_quiesced(context, instance, image_meta, True)
+            quiesced = True
+        except exception.NovaException as err:
+            if image_meta.properties.get('os_require_quiesce', False):
+                raise
+            LOG.info(_LI('Skipping quiescing instance: %(reason)s.'),
+                     {'reason': err}, instance=instance)
 
         try:
             # NOTE (rmk): blockRebase cannot be executed on persistent
@@ -1840,8 +1845,8 @@ class LibvirtDriver(driver.ComputeDriver):
             libvirt_utils.chown(disk_delta, os.getuid())
         finally:
             self._host.write_instance_config(xml)
-            if require_quiesce:
-                self.unquiesce(context, instance, image_meta)
+            if quiesced:
+                self._set_quiesced(context, instance, image_meta, False)
 
         # Convert the delta (CoW) image with a backing file to a flat
         # image with no backing file.

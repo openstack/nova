@@ -2263,8 +2263,8 @@ class API(base.Base):
             except (exception.InstanceQuiesceNotSupported,
                     exception.QemuGuestAgentNotEnabled,
                     exception.NovaException, NotImplementedError) as err:
-                if strutils.bool_from_string(properties.get(
-                        'os_require_quiesce')):
+                if strutils.bool_from_string(instance.system_metadata.get(
+                        'image_os_require_quiesce')):
                     raise
                 else:
                     LOG.info(_LI('Skipping quiescing instance: '
