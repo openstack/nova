@@ -277,6 +277,7 @@ class VMwareVMOps(object):
             value = flavor.extra_specs.get('quota:' + key)
             if value:
                 setattr(extra_specs.cpu_limits, key, type(value))
+        extra_specs.cpu_limits.validate()
         hw_version = flavor.extra_specs.get('vmware:hw_version')
         extra_specs.hw_version = hw_version
         if CONF.vmware.pbm_enabled:
