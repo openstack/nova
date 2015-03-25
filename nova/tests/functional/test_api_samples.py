@@ -30,11 +30,9 @@ from nova.api.metadata import password
 from nova.api.openstack.compute import extensions
 from nova.cells import utils as cells_utils
 # Import extensions to pull in osapi_compute_extension CONF option used below.
-from nova.cloudpipe import pipelib
 from nova.compute import api as compute_api
 from nova.compute import cells_api as cells_api
 from nova.console import manager as console_manager  # noqa - only for cfg
-from nova.network import api as network_api
 from nova.network.neutronv2 import api as neutron_api  # noqa - only for cfg
 from nova import objects
 from nova.servicegroup import api as service_group_api
@@ -54,7 +52,6 @@ CONF.import_opt('enable_network_quota',
                 'nova.api.openstack.compute.contrib.os_tenant_networks')
 CONF.import_opt('osapi_compute_extension',
                 'nova.api.openstack.compute.extensions')
-CONF.import_opt('vpn_image_id', 'nova.cloudpipe.pipelib')
 CONF.import_opt('osapi_compute_link_prefix', 'nova.api.openstack.common')
 CONF.import_opt('osapi_glance_link_prefix', 'nova.api.openstack.common')
 CONF.import_opt('enable', 'nova.cells.opts', group='cells')
@@ -462,75 +459,6 @@ class VirtualInterfacesJsonTest(ServersSampleBase):
         subs['mac_addr'] = '(?:[a-f0-9]{2}:){5}[a-f0-9]{2}'
 
         self._verify_response('vifs-list-resp', subs, response, 200)
-
-
-class CloudPipeSampleJsonTest(ApiSampleTestBaseV2):
-    ADMIN_API = True
-    extension_name = "nova.api.openstack.compute.contrib.cloudpipe.Cloudpipe"
-
-    def setUp(self):
-        super(CloudPipeSampleJsonTest, self).setUp()
-
-        def get_user_data(self, project_id):
-            """Stub method to generate user data for cloudpipe tests."""
-            return "VVNFUiBEQVRB\n"
-
-        def network_api_get(self, context, network_uuid):
-            """Stub to get a valid network and its information."""
-            return {'vpn_public_address': '127.0.0.1',
-                    'vpn_public_port': 22}
-
-        self.stubs.Set(pipelib.CloudPipe, 'get_encoded_zip', get_user_data)
-        self.stubs.Set(network_api.API, "get",
-                       network_api_get)
-
-    def generalize_subs(self, subs, vanilla_regexes):
-        subs['project_id'] = 'cloudpipe-[0-9a-f-]+'
-        return subs
-
-    def test_cloud_pipe_create(self):
-        # Get api samples of cloud pipe extension creation.
-        self.flags(vpn_image_id=fake.get_valid_image_id())
-        project = {'project_id': 'cloudpipe-' + str(uuid_lib.uuid4())}
-        response = self._do_post('os-cloudpipe', 'cloud-pipe-create-req',
-                                 project)
-        subs = self._get_regexes()
-        subs.update(project)
-        subs['image_id'] = CONF.vpn_image_id
-        self._verify_response('cloud-pipe-create-resp', subs, response, 200)
-        return project
-
-    def test_cloud_pipe_list(self):
-        # Get api samples of cloud pipe extension get request.
-        project = self.test_cloud_pipe_create()
-        response = self._do_get('os-cloudpipe')
-        subs = self._get_regexes()
-        subs.update(project)
-        subs['image_id'] = CONF.vpn_image_id
-        self._verify_response('cloud-pipe-get-resp', subs, response, 200)
-
-
-class CloudPipeUpdateJsonTest(ApiSampleTestBaseV2):
-    ADMIN_API = True
-    extension_name = ("nova.api.openstack.compute.contrib"
-                      ".cloudpipe_update.Cloudpipe_update")
-
-    def _get_flags(self):
-        f = super(CloudPipeUpdateJsonTest, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        # Cloudpipe_update also needs cloudpipe to be loaded
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.cloudpipe.Cloudpipe')
-        return f
-
-    def test_cloud_pipe_update(self):
-        subs = {'vpn_ip': '192.168.1.1',
-                'vpn_port': 2000}
-        response = self._do_put('os-cloudpipe/configure-project',
-                                'cloud-pipe-update-req',
-                                subs)
-        self.assertEqual(response.status_code, 202)
-        self.assertEqual(response.content, "")
 
 
 class UsedLimitsSamplesJsonTest(ApiSampleTestBaseV2):
