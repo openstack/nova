@@ -28,6 +28,7 @@ from oslo_messaging import conffixture as messaging_conffixture
 
 from nova.db import migration
 from nova.db.sqlalchemy import api as session
+from nova.objects import base as obj_base
 from nova import rpc
 from nova import service
 from nova.tests.functional.api import client
@@ -379,3 +380,25 @@ class PoisonFunctions(fixtures.Fixture):
         self.useFixture(fixtures.MonkeyPatch(
             'nova.virt.libvirt.host.Host._init_events',
             evloop))
+
+
+class IndirectionAPIFixture(fixtures.Fixture):
+    """Patch and restore the global NovaObject indirection api."""
+
+    def __init__(self, indirection_api):
+        """Constructor
+
+        :param indirection_api: the indirection API to be used for tests.
+
+        """
+        super(IndirectionAPIFixture, self).__init__()
+        self.indirection_api = indirection_api
+
+    def cleanup(self):
+        obj_base.NovaObject.indirection_api = self.orig_indirection_api
+
+    def setUp(self):
+        super(IndirectionAPIFixture, self).setUp()
+        self.orig_indirection_api = obj_base.NovaObject.indirection_api
+        obj_base.NovaObject.indirection_api = self.indirection_api
+        self.addCleanup(self.cleanup)

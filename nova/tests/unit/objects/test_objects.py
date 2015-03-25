@@ -35,6 +35,7 @@ from nova.objects import base
 from nova.objects import fields
 from nova import rpc
 from nova import test
+from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit import fake_notifier
 from nova import utils
 
@@ -345,7 +346,7 @@ class _LocalTest(_BaseTestCase):
     def setUp(self):
         super(_LocalTest, self).setUp()
         # Just in case
-        base.NovaObject.indirection_api = None
+        self.useFixture(nova_fixtures.IndirectionAPIFixture(None))
 
     def assertRemotes(self):
         self.assertEqual(self.remote_object_calls, [])
@@ -392,7 +393,8 @@ class _RemoteTest(_BaseTestCase):
                        fake_object_action)
 
         # Things are remoted by default in this session
-        base.NovaObject.indirection_api = conductor_rpcapi.ConductorAPI()
+        self.useFixture(nova_fixtures.IndirectionAPIFixture(
+                            conductor_rpcapi.ConductorAPI()))
 
         # To make sure local and remote contexts match
         self.stubs.Set(rpc.RequestContextSerializer,
