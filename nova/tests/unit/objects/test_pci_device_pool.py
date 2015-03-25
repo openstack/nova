@@ -56,6 +56,11 @@ class _TestPciDevicePoolObject(object):
         pool_dict = pool_obj.to_dict()
         self.assertEqual({'product_id': 'pid'}, pool_dict)
 
+    def test_pci_pool_to_dict_with_tags_unset(self):
+        pool_obj = objects.PciDevicePool(product_id='pid')
+        pool_dict = pool_obj.to_dict()
+        self.assertEqual({'product_id': 'pid'}, pool_dict)
+
 
 class TestPciDevicePoolObject(test_objects._LocalTest,
                               _TestPciDevicePoolObject):
