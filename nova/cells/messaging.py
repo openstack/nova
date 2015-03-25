@@ -1774,10 +1774,10 @@ class MessageRunner(object):
                        clean_shutdown=True):
         """Resize an instance in its cell."""
         extra_kwargs = dict(flavor=flavor,
-                            extra_instance_updates=extra_instance_updates)
+                            extra_instance_updates=extra_instance_updates,
+                            clean_shutdown=clean_shutdown)
         self._instance_action(ctxt, instance, 'resize_instance',
-                              extra_kwargs=extra_kwargs,
-                              clean_shutdown=clean_shutdown)
+                              extra_kwargs=extra_kwargs)
 
     def live_migrate_instance(self, ctxt, instance, block_migration,
                               disk_over_commit, host_name):
