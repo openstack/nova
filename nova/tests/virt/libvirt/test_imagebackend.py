@@ -120,6 +120,14 @@ class _ImageTestCase(object):
 
         self.assertEqual(fake_processutils.fake_execute_get_log(), [])
 
+    @mock.patch('nova.virt.disk.api.get_disk_size')
+    def test_get_disk_size(self, get_disk_size):
+        get_disk_size.return_value = 2361393152
+
+        image = self.image_class(self.INSTANCE, self.NAME)
+        self.assertEqual(2361393152, image.get_disk_size(image.path))
+        get_disk_size.assert_called_once_with(image.path)
+
 
 class RawTestCase(_ImageTestCase, test.NoDBTestCase):
 
@@ -374,6 +382,8 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
         fn = self.prepare_mocks()
         fn(max_size=self.SIZE, target=self.TEMPLATE_PATH)
         self.mox.StubOutWithMock(os.path, 'exists')
+        self.mox.StubOutWithMock(imagebackend.Image,
+                                 'verify_base_size')
         if self.OLD_STYLE_INSTANCE_PATH:
             os.path.exists(self.OLD_STYLE_INSTANCE_PATH).AndReturn(False)
         os.path.exists(self.DISK_INFO_PATH).AndReturn(False)
@@ -381,6 +391,7 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
         os.path.exists(self.TEMPLATE_PATH).AndReturn(False)
         os.path.exists(self.PATH).AndReturn(False)
         os.path.exists(self.PATH).AndReturn(False)
+        imagebackend.Image.verify_base_size(self.TEMPLATE_PATH, self.SIZE)
         imagebackend.libvirt_utils.create_cow_image(self.TEMPLATE_PATH,
                                                     self.PATH)
         imagebackend.disk.extend(self.PATH, self.SIZE, use_cow=True)
@@ -415,6 +426,8 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
         self.mox.StubOutWithMock(os.path, 'exists')
         self.mox.StubOutWithMock(imagebackend.libvirt_utils,
                                  'get_disk_backing_file')
+        self.mox.StubOutWithMock(imagebackend.Image,
+                                 'verify_base_size')
         if self.OLD_STYLE_INSTANCE_PATH:
             os.path.exists(self.OLD_STYLE_INSTANCE_PATH).AndReturn(False)
         os.path.exists(self.DISK_INFO_PATH).AndReturn(False)
@@ -425,6 +438,7 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
         imagebackend.libvirt_utils.get_disk_backing_file(self.PATH)\
             .AndReturn(self.QCOW2_BASE)
         os.path.exists(self.QCOW2_BASE).AndReturn(False)
+        imagebackend.Image.verify_base_size(self.TEMPLATE_PATH, self.SIZE)
         imagebackend.libvirt_utils.copy_image(self.TEMPLATE_PATH,
                                               self.QCOW2_BASE)
         imagebackend.disk.extend(self.QCOW2_BASE, self.SIZE, use_cow=True)
@@ -443,6 +457,8 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
         self.mox.StubOutWithMock(os.path, 'exists')
         self.mox.StubOutWithMock(imagebackend.libvirt_utils,
                                  'get_disk_backing_file')
+        self.mox.StubOutWithMock(imagebackend.Image,
+                                 'verify_base_size')
         if self.OLD_STYLE_INSTANCE_PATH:
             os.path.exists(self.OLD_STYLE_INSTANCE_PATH).AndReturn(False)
         os.path.exists(self.DISK_INFO_PATH).AndReturn(False)
@@ -453,6 +469,7 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
 
         imagebackend.libvirt_utils.get_disk_backing_file(self.PATH)\
             .AndReturn(None)
+        imagebackend.Image.verify_base_size(self.TEMPLATE_PATH, self.SIZE)
         os.path.exists(self.PATH).AndReturn(True)
         self.mox.ReplayAll()
 
@@ -1177,6 +1194,8 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
         image.get_disk_size(rbd_name).AndReturn(self.SIZE)
         self.mox.StubOutWithMock(image.driver, 'resize')
         image.driver.resize(rbd_name, full_size)
+        self.mox.StubOutWithMock(image, 'verify_base_size')
+        image.verify_base_size(self.TEMPLATE_PATH, full_size)
 
         self.mox.ReplayAll()
 
@@ -1243,6 +1262,25 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
                                                 user, conf)
 
         self.assertEqual(image.path, rbd_path)
+
+    def test_get_disk_size(self):
+        image = self.image_class(self.INSTANCE, self.NAME)
+        with mock.patch.object(image.driver, 'size') as size_mock:
+            size_mock.return_value = 2361393152
+
+            self.assertEqual(2361393152, image.get_disk_size(image.path))
+            size_mock.assert_called_once_with(image.rbd_name)
+
+    def test_create_image_too_small(self):
+        image = self.image_class(self.INSTANCE, self.NAME)
+        with mock.patch.object(image, 'driver') as driver_mock:
+            driver_mock.exists.return_value = True
+            driver_mock.size.return_value = 2
+
+            self.assertRaises(exception.FlavorDiskTooSmall,
+                              image.create_image, mock.MagicMock(),
+                              self.TEMPLATE_PATH, 1)
+            driver_mock.size.assert_called_once_with(image.rbd_name)
 
 
 class BackendTestCase(test.NoDBTestCase):

@@ -5929,9 +5929,10 @@ class LibvirtConnTestCase(test.TestCase):
         with contextlib.nested(
             mock.patch.object(conn, '_fetch_instance_kernel_ramdisk'),
             mock.patch.object(libvirt_driver.libvirt_utils, 'fetch_image'),
-            mock.patch.object(conn, '_create_ephemeral')
+            mock.patch.object(conn, '_create_ephemeral'),
+            mock.patch.object(imagebackend.Image, 'verify_base_size')
         ) as (fetch_kernel_ramdisk_mock, fetch_image_mock,
-                create_ephemeral_mock):
+                create_ephemeral_mock, verify_base_size_mock):
             conn._create_images_and_backing(self.context, self.test_instance,
                                             "/fake/instance/dir",
                                             disk_info_json)
@@ -5945,6 +5946,12 @@ class LibvirtConnTestCase(test.TestCase):
             self.assertEqual(
                     os.path.join(base_dir, 'fake_image_backing_file'),
                     m_kwargs['target'])
+            verify_base_size_mock.assert_has_calls([
+                mock.call(os.path.join(base_dir, 'fake_image_backing_file'),
+                          25165824),
+                mock.call(os.path.join(base_dir, 'ephemeral_1_default'),
+                          1073741824)
+            ])
 
     def test_create_images_and_backing_disk_info_none(self):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -6845,7 +6852,8 @@ class LibvirtConnTestCase(test.TestCase):
         with contextlib.nested(
             mock.patch.object(utils, 'execute'),
             mock.patch.object(conn, 'get_info'),
-            mock.patch.object(conn, '_create_domain_and_network')):
+            mock.patch.object(conn, '_create_domain_and_network'),
+            mock.patch.object(imagebackend.Image, 'verify_base_size')):
             self.assertRaises(exception.InvalidBDMFormat, conn._create_image,
                               context, instance, disk_info['mapping'],
                               block_device_info=block_device_info)
