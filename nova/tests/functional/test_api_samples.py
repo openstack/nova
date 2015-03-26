@@ -3362,61 +3362,6 @@ class VolumesSampleJsonTest(ServersSampleBase):
         self.assertEqual(response.content, '')
 
 
-class MigrationsSamplesJsonTest(ApiSampleTestBaseV2):
-    ADMIN_API = True
-    extension_name = ("nova.api.openstack.compute.contrib.migrations."
-                      "Migrations")
-
-    def _stub_migrations(self, context, filters):
-        fake_migrations = [
-            {
-                'id': 1234,
-                'source_node': 'node1',
-                'dest_node': 'node2',
-                'source_compute': 'compute1',
-                'dest_compute': 'compute2',
-                'dest_host': '1.2.3.4',
-                'status': 'Done',
-                'instance_uuid': 'instance_id_123',
-                'old_instance_type_id': 1,
-                'new_instance_type_id': 2,
-                'created_at': datetime.datetime(2012, 10, 29, 13, 42, 2),
-                'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 2),
-                'deleted_at': None,
-                'deleted': False
-            },
-            {
-                'id': 5678,
-                'source_node': 'node10',
-                'dest_node': 'node20',
-                'source_compute': 'compute10',
-                'dest_compute': 'compute20',
-                'dest_host': '5.6.7.8',
-                'status': 'Done',
-                'instance_uuid': 'instance_id_456',
-                'old_instance_type_id': 5,
-                'new_instance_type_id': 6,
-                'created_at': datetime.datetime(2013, 10, 22, 13, 42, 2),
-                'updated_at': datetime.datetime(2013, 10, 22, 13, 42, 2),
-                'deleted_at': None,
-                'deleted': False
-            }
-        ]
-        return fake_migrations
-
-    def setUp(self):
-        super(MigrationsSamplesJsonTest, self).setUp()
-        self.stubs.Set(compute_api.API, 'get_migrations',
-                       self._stub_migrations)
-
-    def test_get_migrations(self):
-        response = self._do_get('os-migrations')
-        subs = self._get_regexes()
-
-        self.assertEqual(response.status_code, 200)
-        self._verify_response('migrations-get', subs, response, 200)
-
-
 class PreserveEphemeralOnRebuildJsonTest(ServersSampleBase):
     extension_name = ('nova.api.openstack.compute.contrib.'
                       'preserve_ephemeral_rebuild.'

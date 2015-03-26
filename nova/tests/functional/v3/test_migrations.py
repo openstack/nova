@@ -15,13 +15,30 @@
 
 import datetime
 
+from oslo_config import cfg
+
 from nova.compute import api as compute_api
 from nova.tests.functional.v3 import api_sample_base
+
+CONF = cfg.CONF
+CONF.import_opt('osapi_compute_extension',
+                'nova.api.openstack.compute.extensions')
 
 
 class MigrationsSamplesJsonTest(api_sample_base.ApiSampleTestBaseV3):
     ADMIN_API = True
     extension_name = "os-migrations"
+    # TODO(gmann): Overriding '_api_version' till all functional tests
+    # are merged between v2 and v2.1. After that base class variable
+    # itself can be changed to 'v2'
+    _api_version = 'v2'
+
+    def _get_flags(self):
+        f = super(MigrationsSamplesJsonTest, self)._get_flags()
+        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.migrations.Migrations')
+        return f
 
     def _stub_migrations(self, context, filters):
         fake_migrations = [
