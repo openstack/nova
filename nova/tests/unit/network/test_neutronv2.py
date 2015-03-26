@@ -1269,6 +1269,7 @@ class TestNeutronv2(TestNeutronv2Base):
                                                         **self.instance)
         api = neutronapi.API()
         port_data = number == 1 and self.port_data1 or self.port_data2
+        ports = {port['id'] for port in port_data}
         ret_data = copy.deepcopy(port_data)
         if requested_networks:
             if isinstance(requested_networks, objects.NetworkRequestList):
@@ -1291,8 +1292,8 @@ class TestNeutronv2(TestNeutronv2Base):
         if requested_networks:
             for net, fip, port, request_id in requested_networks:
                 self.moxed_client.update_port(port)
-        for port in reversed(port_data):
-            self.moxed_client.delete_port(port['id'])
+        for port in ports:
+            self.moxed_client.delete_port(port)
 
         self.mox.StubOutWithMock(api.db, 'instance_info_cache_update')
         api.db.instance_info_cache_update(self.context,
@@ -1482,7 +1483,8 @@ class TestNeutronv2(TestNeutronv2Base):
         try:
             api.validate_networks(self.context, requested_networks, 1)
         except exception.NetworkNotFound as ex:
-            self.assertIn("my_netid2, my_netid3", six.text_type(ex))
+            self.assertIn("my_netid2", six.text_type(ex))
+            self.assertIn("my_netid3", six.text_type(ex))
 
     def test_validate_networks_duplicate_disable(self):
         """Verify that the correct exception is thrown when duplicate
