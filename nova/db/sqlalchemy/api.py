@@ -5679,6 +5679,15 @@ def _action_get_by_request_id(context, instance_uuid, request_id,
     return result
 
 
+def _action_get_last_created_by_instance_uuid(context, instance_uuid,
+                                              session=None):
+    result = (model_query(context, models.InstanceAction, session=session).
+                     filter_by(instance_uuid=instance_uuid).
+                     order_by(desc("created_at"), desc("id")).
+                     first())
+    return result
+
+
 def action_event_start(context, values):
     """Start an event on an instance action."""
     convert_objects_related_datetimes(values, 'start_time')
@@ -5686,6 +5695,15 @@ def action_event_start(context, values):
     with session.begin():
         action = _action_get_by_request_id(context, values['instance_uuid'],
                                            values['request_id'], session)
+        # When nova-compute restarts, the context is generated again in
+        # init_host workflow, the request_id was different with the request_id
+        # recorded in InstanceAction, so we can't get the original record
+        # according to request_id. Try to get the last created action so that
+        # init_instance can continue to finish the recovery action, like:
+        # powering_off, unpausing, and so on.
+        if not action and not context.project_id:
+            action = _action_get_last_created_by_instance_uuid(
+                context, values['instance_uuid'], session)
 
         if not action:
             raise exception.InstanceActionNotFound(
@@ -5707,6 +5725,15 @@ def action_event_finish(context, values):
     with session.begin():
         action = _action_get_by_request_id(context, values['instance_uuid'],
                                            values['request_id'], session)
+        # When nova-compute restarts, the context is generated again in
+        # init_host workflow, the request_id was different with the request_id
+        # recorded in InstanceAction, so we can't get the original record
+        # according to request_id. Try to get the last created action so that
+        # init_instance can continue to finish the recovery action, like:
+        # powering_off, unpausing, and so on.
+        if not action and not context.project_id:
+            action = _action_get_last_created_by_instance_uuid(
+                context, values['instance_uuid'], session)
 
         if not action:
             raise exception.InstanceActionNotFound(
