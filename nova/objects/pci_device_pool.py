@@ -53,7 +53,7 @@ class PciDevicePool(base.NovaObject):
     # create a reversible method
     def to_dict(self):
         pci_pool = base.obj_to_primitive(self)
-        tags = pci_pool.pop('tags', None)
+        tags = pci_pool.pop('tags', {})
         for k, v in six.iteritems(tags):
             pci_pool[k] = v
         return pci_pool
