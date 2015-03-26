@@ -2133,3 +2133,34 @@ class CellsBroadcastMethodsTestCase(test.TestCase):
         for response in responses:
             self.assertIn(response.value_or_raise(), [migrations_from_cell1,
                                                       migrations_from_cell2])
+
+
+class CellsPublicInterfacesTestCase(test.TestCase):
+    """Test case for the public interfaces into cells messaging."""
+    def setUp(self):
+        super(CellsPublicInterfacesTestCase, self).setUp()
+        fakes.init(self)
+        self.ctxt = context.RequestContext('fake', 'fake')
+        self.our_name = 'api-cell'
+        self.msg_runner = fakes.get_message_runner(self.our_name)
+        self.state_manager = self.msg_runner.state_manager
+
+    @mock.patch.object(messaging, '_TargetedMessage')
+    def test_resize_instance(self, mock_message):
+        instance = objects.Instance(cell_name='api-cell!child-cell')
+        flavor = 'fake'
+        extra_instance_updates = {'fake': 'fake'}
+        clean_shutdown = True
+        self.msg_runner.resize_instance(self.ctxt, instance, flavor,
+                                        extra_instance_updates,
+                                        clean_shutdown=clean_shutdown)
+        extra_kwargs = dict(flavor=flavor,
+                            extra_instance_updates=extra_instance_updates,
+                            clean_shutdown=clean_shutdown)
+        method_kwargs = {'instance': instance}
+        method_kwargs.update(extra_kwargs)
+        mock_message.assert_called_once_with(self.msg_runner, self.ctxt,
+                                             'resize_instance',
+                                             method_kwargs, 'down',
+                                             instance.cell_name,
+                                             need_response=False)
