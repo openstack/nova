@@ -14,7 +14,6 @@
 #    under the License.
 
 import base64
-import copy
 import datetime
 import inspect
 import os
@@ -62,7 +61,6 @@ from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_network
 from nova.tests.unit import fake_network_cache_model
-from nova.tests.unit import fake_server_actions
 from nova.tests.unit import fake_utils
 from nova.tests.unit.image import fake
 from nova.tests.unit.objects import test_network
@@ -2564,72 +2562,6 @@ class EvacuateFindHostSampleJsonTest(ServersSampleBase):
                 orig_sys_metadata=mock.ANY, bdms=mock.ANY, recreate=mock.ANY,
                 on_shared_storage=False, preserve_ephemeral=mock.ANY,
                 host=None)
-
-
-class InstanceActionsSampleJsonTest(ApiSampleTestBaseV2):
-    ADMIN_API = True
-    extension_name = ('nova.api.openstack.compute.contrib.instance_actions.'
-                      'Instance_actions')
-
-    def setUp(self):
-        super(InstanceActionsSampleJsonTest, self).setUp()
-        self.actions = fake_server_actions.FAKE_ACTIONS
-        self.events = fake_server_actions.FAKE_EVENTS
-        self.instance = test_utils.get_test_instance(obj=True)
-
-        def fake_server_action_get_by_request_id(context, uuid, request_id):
-            return copy.deepcopy(self.actions[uuid][request_id])
-
-        def fake_server_actions_get(context, uuid):
-            return [copy.deepcopy(value) for value in
-                    self.actions[uuid].itervalues()]
-
-        def fake_server_action_events_get(context, action_id):
-            return copy.deepcopy(self.events[action_id])
-
-        def fake_instance_get_by_uuid(context, instance_id):
-            return self.instance
-
-        def fake_get(self, context, instance_uuid, expected_attrs=None,
-                     want_objects=True):
-            return fake_instance.fake_instance_obj(
-                None, **{'uuid': instance_uuid})
-
-        self.stubs.Set(db, 'action_get_by_request_id',
-                       fake_server_action_get_by_request_id)
-        self.stubs.Set(db, 'actions_get', fake_server_actions_get)
-        self.stubs.Set(db, 'action_events_get',
-                       fake_server_action_events_get)
-        self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
-        self.stubs.Set(compute_api.API, 'get', fake_get)
-
-    def test_instance_action_get(self):
-        fake_uuid = fake_server_actions.FAKE_UUID
-        fake_request_id = fake_server_actions.FAKE_REQUEST_ID1
-        fake_action = self.actions[fake_uuid][fake_request_id]
-
-        response = self._do_get('servers/%s/os-instance-actions/%s' %
-                                (fake_uuid, fake_request_id))
-        subs = self._get_regexes()
-        subs['action'] = '(reboot)|(resize)'
-        subs['instance_uuid'] = fake_uuid
-        subs['integer_id'] = '[0-9]+'
-        subs['request_id'] = fake_action['request_id']
-        subs['start_time'] = fake_action['start_time']
-        subs['result'] = '(Success)|(Error)'
-        subs['event'] = '(schedule)|(compute_create)'
-        self._verify_response('instance-action-get-resp', subs, response, 200)
-
-    def test_instance_actions_list(self):
-        fake_uuid = fake_server_actions.FAKE_UUID
-        response = self._do_get('servers/%s/os-instance-actions' % (fake_uuid))
-        subs = self._get_regexes()
-        subs['action'] = '(reboot)|(resize)'
-        subs['integer_id'] = '[0-9]+'
-        subs['request_id'] = ('req-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}'
-                              '-[0-9a-f]{4}-[0-9a-f]{12}')
-        self._verify_response('instance-actions-list-resp', subs,
-                              response, 200)
 
 
 class ImageSizeSampleJsonTests(ApiSampleTestBaseV2):
