@@ -2110,7 +2110,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 image_ds_loc.rel_path,
                 cookies='Fake-CookieJar')
 
-    @mock.patch.object(images, 'fetch_image_stream_optimized')
+    @mock.patch.object(images, 'fetch_image_stream_optimized',
+                       return_value=123)
     def test_fetch_image_as_vapp(self, mock_fetch_image):
         vi = self._make_vm_config_info()
         image_ds_loc = mock.Mock()
@@ -2124,6 +2125,23 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 self._ds.name,
                 vi.dc_info.vmFolder,
                 self._vmops._root_resource_pool)
+        self.assertEqual(vi.ii.file_size, 123)
+
+    @mock.patch.object(images, 'fetch_image_ova', return_value=123)
+    def test_fetch_image_as_ova(self, mock_fetch_image):
+        vi = self._make_vm_config_info()
+        image_ds_loc = mock.Mock()
+        image_ds_loc.parent.basename = 'fake-name'
+        self._vmops._fetch_image_as_ova(self._context, vi, image_ds_loc)
+        mock_fetch_image.assert_called_once_with(
+                self._context,
+                vi.instance,
+                self._session,
+                'fake-name',
+                self._ds.name,
+                vi.dc_info.vmFolder,
+                self._vmops._root_resource_pool)
+        self.assertEqual(vi.ii.file_size, 123)
 
     @mock.patch.object(uuidutils, 'generate_uuid', return_value='tmp-uuid')
     def test_prepare_iso_image(self, mock_generate_uuid):
