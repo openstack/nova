@@ -30,7 +30,7 @@ from six.moves import range
 
 import nova.conf
 from nova import exception
-from nova.i18n import _, _LE, _LW
+from nova.i18n import _, _LE, _LI, _LW
 from nova import utils
 from nova.virt import driver
 from nova.virt.hyperv import constants
@@ -77,6 +77,11 @@ class VolumeOps(object):
             connection_info=connection_info)
         volume_driver.attach_volume(connection_info, instance_name,
                                     disk_bus=disk_bus)
+
+        qos_specs = connection_info['data'].get('qos_specs') or {}
+        if qos_specs:
+            volume_driver.set_disk_qos_specs(connection_info,
+                                             qos_specs)
 
     def detach_volume(self, connection_info, instance_name):
         volume_driver = self._get_volume_driver(
@@ -146,6 +151,26 @@ class VolumeOps(object):
             connection_info=connection_info)
         return volume_driver.get_mounted_disk_path_from_volume(
             connection_info)
+
+    @staticmethod
+    def bytes_per_sec_to_iops(no_bytes):
+        # Hyper-v uses normalized IOPS (8 KB increments)
+        # as IOPS allocation units.
+        return (
+            (no_bytes + constants.IOPS_BASE_SIZE - 1) //
+            constants.IOPS_BASE_SIZE)
+
+    @staticmethod
+    def validate_qos_specs(qos_specs, supported_qos_specs):
+        unsupported_specs = set(qos_specs.keys()).difference(
+            supported_qos_specs)
+        if unsupported_specs:
+            msg = (_LW('Got unsupported QoS specs: '
+                       '%(unsupported_specs)s. '
+                       'Supported qos specs: %(supported_qos_specs)s') %
+                   {'unsupported_specs': unsupported_specs,
+                    'supported_qos_specs': supported_qos_specs})
+            LOG.warning(msg)
 
 
 class ISCSIVolumeDriver(object):
@@ -325,6 +350,10 @@ class ISCSIVolumeDriver(object):
     def initialize_volume_connection(self, connection_info):
         self.login_storage_target(connection_info)
 
+    def set_disk_qos_specs(self, connection_info, disk_qos_specs):
+        LOG.info(_LI("The iSCSI Hyper-V volume driver does not support QoS. "
+                     "Ignoring QoS specs."))
+
 
 def export_path_synchronized(f):
     def wrapper(inst, connection_info, *args, **kwargs):
@@ -439,3 +468,16 @@ class SMBFSVolumeDriver(object):
         def unmount_synchronized():
             self._smbutils.unmount_smb_share(export_path)
         unmount_synchronized()
+
+    def set_disk_qos_specs(self, connection_info, qos_specs):
+        supported_qos_specs = ['total_iops_sec', 'total_bytes_sec']
+        VolumeOps.validate_qos_specs(qos_specs, supported_qos_specs)
+
+        total_bytes_sec = int(qos_specs.get('total_bytes_sec') or 0)
+        total_iops_sec = int(qos_specs.get('total_iops_sec') or
+                             VolumeOps.bytes_per_sec_to_iops(
+                                total_bytes_sec))
+
+        if total_iops_sec:
+            disk_path = self._get_disk_path(connection_info)
+            self._vmutils.set_disk_qos_specs(disk_path, total_iops_sec)
