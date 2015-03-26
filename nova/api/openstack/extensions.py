@@ -385,21 +385,14 @@ def check_compute_policy(context, action, target, scope='compute'):
 
 # NOTE(alex_xu): The functions os_compute_authorizer and
 # os_compute_soft_authorizer are used to policy enforcement for Openstack
-# Compute API, now Nova V2.1 REST API will invoke it. Currently this function
-# still uses the old policy rule name style as below:
-#   core api: 'compute:v3:[extension]:[action]'
-#   extension api: 'compute_extension:v3:[extension]:[action]'
+# Compute API, now Nova V2.1 REST API will invoke it.
 #
-# After the policy cleanup is finished, the policy rule name will be renamed
-# to 'os_compute_api:[extension]:[action]'. And the parameter 'core' will be
-# deleted, because there isn't distinguish between core or extension API in
-# the future.
 
-def os_compute_authorizer(extension_name, core=False):
+def os_compute_authorizer(extension_name):
     return core_authorizer('os_compute_api', extension_name)
 
 
-def os_compute_soft_authorizer(extension_name, core=False):
+def os_compute_soft_authorizer(extension_name):
     return soft_core_authorizer('os_compute_api', extension_name)
 
 

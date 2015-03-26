@@ -54,7 +54,7 @@ CONF.import_opt('extensions_blacklist', 'nova.api.openstack', group='osapi_v3')
 CONF.import_opt('extensions_whitelist', 'nova.api.openstack', group='osapi_v3')
 
 LOG = logging.getLogger(__name__)
-authorize = extensions.os_compute_authorizer(ALIAS, True)
+authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class ServersController(wsgi.Controller):
