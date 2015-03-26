@@ -141,11 +141,6 @@ class CreateImportSharedTestMixIn(object):
         msg = "Keypair name contains unsafe characters"
         self.assertInvalidKeypair(msg, '* BAD CHARACTERS!  *')
 
-    def test_invalid_keypair_type(self):
-        self.keypair_type = 'fakey_type'
-        msg = 'Specified Keypair type "fakey_type" is invalid'
-        self.assertInvalidKeypair(msg, 'test')
-
     def test_already_exists(self):
         def db_key_pair_create_duplicate(context, keypair):
             raise exception.KeyPairExists(key_name=keypair.get('name', ''))

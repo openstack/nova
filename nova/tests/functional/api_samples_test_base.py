@@ -260,6 +260,9 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
         xmltime_re = ('\d{4}-[0,1]\d-[0-3]\d '
                       '\d{2}:\d{2}:\d{2}'
                       '(\.\d{6})?(\+00:00)?')
+
+        # NOTE(claudiub): the x509 keypairs are different from the
+        # ssh keypairs. For example, the x509 fingerprint has 40 bytes.
         return {
             'isotime': isotime_re,
             'strtime': strtime_re,
@@ -273,12 +276,14 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             'uuid': '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}'
                     '-[0-9a-f]{4}-[0-9a-f]{12}',
             'reservation_id': 'r-[0-9a-zA-Z]{8}',
-            'private_key': '-----BEGIN RSA PRIVATE KEY-----'
+            'private_key': '(-----BEGIN RSA PRIVATE KEY-----|)'
                            '[a-zA-Z0-9\n/+=]*'
-                           '-----END RSA PRIVATE KEY-----',
-            'public_key': 'ssh-rsa[ a-zA-Z0-9/+=]*'
-                          'Generated-by-Nova',
-            'fingerprint': '([0-9a-f]{2}:){15}[0-9a-f]{2}',
+                           '(-----END RSA PRIVATE KEY-----|)',
+            'public_key': '(ssh-rsa|-----BEGIN CERTIFICATE-----)'
+                          '[ a-zA-Z0-9\n/+=]*'
+                          '(Generated-by-Nova|-----END CERTIFICATE-----)',
+            'fingerprint': '(([0-9a-f]{2}:){19}|([0-9a-f]{2}:){15})'
+                           '[0-9a-f]{2}',
             'keypair_type': 'ssh|x509',
             'host': self._get_host(),
             'host_name': '[0-9a-z]{32}',

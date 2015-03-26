@@ -110,7 +110,7 @@ YZhQPOYoNPEOYru116HdHzjGDVifgWf/nDL8Un5tjJFDSf7jSLtA
 
 
 def get_x509_cert_and_fingerprint():
-    fingerprint = "A1:6F:6D:EA:A6:36:D0:3A:C6:EB:B6:EE:07:94:3E:2A:90:98:2B:C9"
+    fingerprint = "a1:6f:6d:ea:a6:36:d0:3a:c6:eb:b6:ee:07:94:3e:2a:90:98:2b:c9"
     certif = (
         "-----BEGIN CERTIFICATE-----\n"
         "MIIDIjCCAgqgAwIBAgIJAIE8EtWfZhhFMA0GCSqGSIb3DQEBCwUAMCQxIjAgBgNV\n"
@@ -132,3 +132,12 @@ def get_x509_cert_and_fingerprint():
         "ZBcstxwcB4GIwnp1DrPW9L2gw5eLe1Sl6wdz443TW8K/KPV9rWQ=\n"
         "-----END CERTIFICATE-----\n")
     return certif, fingerprint
+
+
+def get_ssh_public_key():
+    public_key = ("ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAgQDx8nkQv/zgGg"
+                  "B4rMYmIf+6A4l6Rr+o/6lHBQdW5aYd44bd8JttDCE/F/pNRr0l"
+                  "RE+PiqSPO8nDPHw0010JeMH9gYgnnFlyY3/OcJ02RhIPyyxYpv"
+                  "9FhY+2YiUkpwFOcLImyrxEsYXpD/0d3ac30bNH6Sw9JD9UZHYc"
+                  "pSxsIbECHw== Generated-by-Nova")
+    return public_key

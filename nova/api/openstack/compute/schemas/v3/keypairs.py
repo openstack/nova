@@ -39,7 +39,10 @@ create_v22 = {
             'type': 'object',
             'properties': {
                 'name': parameter_types.name,
-                'type': {'type': 'string'},
+                'type': {
+                    'type': 'string',
+                    'enum': ['ssh', 'x509']
+                },
                 'public_key': {'type': 'string'},
             },
             'required': ['name'],

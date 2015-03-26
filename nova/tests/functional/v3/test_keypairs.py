@@ -17,6 +17,7 @@ import uuid
 
 from nova.objects import keypair as keypair_obj
 from nova.tests.functional.v3 import api_sample_base
+from nova.tests.unit import fake_crypto
 
 
 class KeyPairsSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
@@ -29,11 +30,10 @@ class KeyPairsSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
         subs['keypair_name'] = 'keypair-[0-9a-f-]+'
         return subs
 
-    def test_keypairs_post(self, public_key=None):
-        return self._check_keypairs_post(public_key,
-                                         api_version=self.request_api_version)
+    def test_keypairs_post(self):
+        return self._check_keypairs_post()
 
-    def _check_keypairs_post(self, public_key, **kwargs):
+    def _check_keypairs_post(self, **kwargs):
         """Get api sample of key pairs post request."""
         key_name = 'keypair-' + str(uuid.uuid4())
         subs = dict(keypair_name=key_name, **kwargs)
@@ -50,18 +50,15 @@ class KeyPairsSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
         return key_name
 
     def test_keypairs_import_key_post(self):
-        self._check_keypairs_import_key_post()
+        public_key = fake_crypto.get_ssh_public_key()
+        self._check_keypairs_import_key_post(public_key)
 
-    def _check_keypairs_import_key_post(self, **kwargs):
+    def _check_keypairs_import_key_post(self, public_key, **kwargs):
         # Get api sample of key pairs post to import user's key.
         key_name = 'keypair-' + str(uuid.uuid4())
         subs = {
             'keypair_name': key_name,
-            'public_key': "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAgQDx8nkQv/zgGg"
-                          "B4rMYmIf+6A4l6Rr+o/6lHBQdW5aYd44bd8JttDCE/F/pNRr0l"
-                          "RE+PiqSPO8nDPHw0010JeMH9gYgnnFlyY3/OcJ02RhIPyyxYpv"
-                          "9FhY+2YiUkpwFOcLImyrxEsYXpD/0d3ac30bNH6Sw9JD9UZHYc"
-                          "pSxsIbECHw== Generated-by-Nova"
+            'public_key': public_key
         }
         subs.update(**kwargs)
         response = self._do_post('os-keypairs', 'keypairs-import-post-req',
@@ -103,10 +100,53 @@ class KeyPairsV22SampleJsonTest(KeyPairsSampleJsonTest):
     expected_post_status_code = 201
     expected_delete_status_code = 204
 
-    def test_keypairs_post(self, public_key=None):
+    def test_keypairs_post(self):
+        # NOTE(claudiub): overrides the method with the same name in
+        # KeypairsSampleJsonTest, as it is used by other tests.
         return self._check_keypairs_post(
-            public_key, keypair_type=keypair_obj.KEYPAIR_TYPE_SSH)
+            keypair_type=keypair_obj.KEYPAIR_TYPE_SSH)
+
+    def test_keypairs_post_x509(self):
+        return self._check_keypairs_post(
+            keypair_type=keypair_obj.KEYPAIR_TYPE_X509)
+
+    def test_keypairs_post_invalid(self):
+        key_name = 'keypair-' + str(uuid.uuid4())
+        subs = dict(keypair_name=key_name, keypair_type='fakey_type')
+        response = self._do_post('os-keypairs', 'keypairs-post-req', subs,
+                                 api_version=self.request_api_version)
+
+        self.assertEqual(400, response.status_code)
 
     def test_keypairs_import_key_post(self):
+        # NOTE(claudiub): overrides the method with the same name in
+        # KeypairsSampleJsonTest, since the API sample expects a keypair_type.
+        public_key = fake_crypto.get_ssh_public_key()
         self._check_keypairs_import_key_post(
-            keypair_type=keypair_obj.KEYPAIR_TYPE_SSH)
+            public_key, keypair_type=keypair_obj.KEYPAIR_TYPE_SSH)
+
+    def test_keypairs_import_key_post_x509(self):
+        public_key = fake_crypto.get_x509_cert_and_fingerprint()[0]
+        public_key = public_key.replace('\n', '\\n')
+        self._check_keypairs_import_key_post(
+            public_key, keypair_type=keypair_obj.KEYPAIR_TYPE_X509)
+
+    def _check_keypairs_import_key_post_invalid(self, keypair_type):
+        key_name = 'keypair-' + str(uuid.uuid4())
+        subs = {
+            'keypair_name': key_name,
+            'keypair_type': keypair_type,
+            'public_key': fake_crypto.get_ssh_public_key()
+        }
+        response = self._do_post('os-keypairs', 'keypairs-import-post-req',
+                                 subs, api_version=self.request_api_version)
+
+        self.assertEqual(400, response.status_code)
+
+    def test_keypairs_import_key_post_invalid_type(self):
+        self._check_keypairs_import_key_post_invalid(
+            keypair_type='fakey_type')
+
+    def test_keypairs_import_key_post_invalid_combination(self):
+        self._check_keypairs_import_key_post_invalid(
+            keypair_type=keypair_obj.KEYPAIR_TYPE_X509)

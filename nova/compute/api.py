@@ -3741,11 +3741,6 @@ class KeypairAPI(base.Base):
         notify.info(context, 'keypair.%s' % event_suffix, payload)
 
     def _validate_new_key_pair(self, context, user_id, key_name, key_type):
-        if key_type not in [keypair_obj.KEYPAIR_TYPE_SSH,
-                            keypair_obj.KEYPAIR_TYPE_X509]:
-            raise exception.InvalidKeypair(
-                reason=_('Specified Keypair type "%s" is invalid') % key_type)
-
         safe_chars = "_- " + string.digits + string.ascii_letters
         clean_value = "".join(x for x in key_name if x in safe_chars)
         if clean_value != key_name:
