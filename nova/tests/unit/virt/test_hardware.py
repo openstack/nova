@@ -22,6 +22,7 @@ from nova import context
 from nova import exception
 from nova import objects
 from nova.objects import base as base_obj
+from nova.objects import instance as instance_obj
 from nova.pci import stats
 from nova import test
 from nova.virt import hardware as hw
@@ -1524,9 +1525,11 @@ class HelperMethodsTestCase(test.NoDBTestCase):
             instance_uuid='fake-uuid',
             cells=[
                 objects.InstanceNUMACell(
-                    id=0, cpuset=set([0, 1]), memory=256, pagesize=2048),
+                    id=0, cpuset=set([0, 1]), memory=256, pagesize=2048,
+                    cpu_pinning={1: 3, 0: 4}),
                 objects.InstanceNUMACell(
-                    id=1, cpuset=set([2]), memory=256, pagesize=2048),
+                    id=1, cpuset=set([2]), memory=256, pagesize=2048,
+                    cpu_pinning={2: 5}),
         ])
         self.context = context.RequestContext('fake-user',
                                               'fake-project')
@@ -1650,6 +1653,18 @@ class HelperMethodsTestCase(test.NoDBTestCase):
                                                   never_serialize_result=True)
         self.assertIsInstance(res, objects.NUMATopology)
         self._check_usage(res)
+
+    def test_dict_numa_topology_to_obj(self):
+        fake_uuid = str(uuid.uuid4())
+        instance = objects.Instance(context=self.context, id=1, uuid=fake_uuid,
+                                    numa_topology=self.instancetopo)
+        instance_dict = instance_obj.compat_instance(instance)
+        instance_numa_topo = hw.instance_topology_from_instance(instance_dict)
+        for expected_cell, actual_cell in zip(self.instancetopo.cells,
+                                              instance_numa_topo.cells):
+            for k in expected_cell.fields:
+                self.assertEqual(getattr(expected_cell, k),
+                                 getattr(actual_cell, k))
 
 
 class VirtMemoryPagesTestCase(test.NoDBTestCase):
