@@ -1151,7 +1151,8 @@ def instance_topology_from_instance(instance):
                     id=cell['id'],
                     cpuset=set(cell['cpuset']),
                     memory=cell['memory'],
-                    pagesize=cell.get('pagesize'))
+                    pagesize=cell.get('pagesize'),
+                    cpu_pinning=cell.get('cpu_pinning_raw'))
                          for cell in dict_cells]
                 instance_numa_topology = objects.InstanceNUMATopology(
                     cells=cells)
