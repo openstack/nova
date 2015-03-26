@@ -287,6 +287,7 @@ class DbQuotaDriver(object):
             context, project_id)
         project_usages = None
         if usages:
+            LOG.debug('Getting all quota usages for project: %s', project_id)
             project_usages = db.quota_usage_get_all_by_project(context,
                                                                project_id)
         return self._process_quotas(context, resources, project_id,
@@ -394,12 +395,18 @@ class DbQuotaDriver(object):
             raise exception.QuotaResourceUnknown(unknown=sorted(unknown))
 
         if user_id:
+            LOG.debug('Getting quotas for user %(user_id)s and project '
+                      '%(project_id)s. Resources: %(keys)s',
+                      {'user_id': user_id, 'project_id': project_id,
+                       'keys': keys})
             # Grab and return the quotas (without usages)
             quotas = self.get_user_quotas(context, sub_resources,
                                           project_id, user_id,
                                           context.quota_class, usages=False,
                                           project_quotas=project_quotas)
         else:
+            LOG.debug('Getting quotas for project %(project_id)s. Resources: '
+                      '%(keys)s', {'project_id': project_id, 'keys': keys})
             # Grab and return the quotas (without usages)
             quotas = self.get_project_quotas(context, sub_resources,
                                              project_id,
@@ -529,22 +536,41 @@ class DbQuotaDriver(object):
         # If project_id is None, then we use the project_id in context
         if project_id is None:
             project_id = context.project_id
+            LOG.debug('Reserving resources using context.project_id: %s',
+                      project_id)
         # If user_id is None, then we use the project_id in context
         if user_id is None:
             user_id = context.user_id
+            LOG.debug('Reserving resources using context.user_id: %s',
+                      user_id)
+
+        LOG.debug('Attempting to reserve resources for project %(project_id)s '
+                  'and user %(user_id)s. Deltas: %(deltas)s',
+                  {'project_id': project_id, 'user_id': user_id,
+                   'deltas': deltas})
 
         # Get the applicable quotas.
         # NOTE(Vek): We're not worried about races at this point.
         #            Yes, the admin may be in the process of reducing
         #            quotas, but that's a pretty rare thing.
         project_quotas = db.quota_get_all_by_project(context, project_id)
+        LOG.debug('Quota limits for project %(project_id)s: '
+                  '%(project_quotas)s', {'project_id': project_id,
+                                         'project_quotas': project_quotas})
+
         quotas = self._get_quotas(context, resources, deltas.keys(),
                                   has_sync=True, project_id=project_id,
                                   project_quotas=project_quotas)
+        LOG.debug('Quotas for project %(project_id)s after resource sync: '
+                  '%(quotas)s', {'project_id': project_id, 'quotas': quotas})
         user_quotas = self._get_quotas(context, resources, deltas.keys(),
                                        has_sync=True, project_id=project_id,
                                        user_id=user_id,
                                        project_quotas=project_quotas)
+        LOG.debug('Quotas for project %(project_id)s and user %(user_id)s '
+                  'after resource sync: %(quotas)s',
+                  {'project_id': project_id, 'user_id': user_id,
+                   'quotas': quotas})
 
         # NOTE(Vek): Most of the work here has to be done in the DB
         #            API, because we have to do it in a transaction,
