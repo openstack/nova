@@ -37,11 +37,9 @@ CONF.import_opt('compute_topic', 'nova.compute.rpcapi')
 
 
 FAKE_COMPUTE_NODES = [dict(id=1, host='host1'), dict(id=2, host='host2')]
-FAKE_SERVICES = [dict(id=1, host='host1',
-                      compute_node=[FAKE_COMPUTE_NODES[0]]),
-                 dict(id=2, host='host2',
-                      compute_node=[FAKE_COMPUTE_NODES[1]]),
-                 dict(id=3, host='host3', compute_node=[])]
+FAKE_SERVICES = [dict(id=1, host='host1'),
+                 dict(id=2, host='host2'),
+                 dict(id=3, host='host3')]
 FAKE_TASK_LOGS = [dict(id=1, host='host1'),
                   dict(id=2, host='host2')]
 
