@@ -247,7 +247,7 @@ class CreateserverextTest(test.TestCase):
         response = request.get_response(fakes.wsgi_app(
             init_only=('servers', 'os-create-server-ext')))
         self.assertEqual(response.status_int, 202)
-        self.assertEqual(self.security_group, security_groups)
+        self.assertJsonEqual(self.security_group, security_groups)
 
     def test_get_server_by_id_verify_security_groups_json(self):
         self.stubs.Set(db, 'instance_get', fakes.fake_instance_get())

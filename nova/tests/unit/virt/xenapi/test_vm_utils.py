@@ -2264,7 +2264,7 @@ class ChildVHDsTestCase(test.NoDBTestCase):
 
         result = vm_utils._child_vhds("session", "sr_ref", ["my-uuid"])
 
-        self.assertEqual(['uuid-child', 'uuid-child-snap'], result)
+        self.assertJsonEqual(['uuid-child', 'uuid-child-snap'], result)
 
     @mock.patch.object(vm_utils, '_get_all_vdis_in_sr')
     def test_child_vhds_only_snapshots(self, mock_get_all):

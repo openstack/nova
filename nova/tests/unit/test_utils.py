@@ -926,7 +926,7 @@ class ResourceFilterTestCase(test.NoDBTestCase):
     def _assert_filtering(self, res_list, filts, expected_tags):
         actual_tags = utils.filter_and_format_resource_metadata('instance',
                 res_list, filts, 'metadata')
-        self.assertEqual(expected_tags, actual_tags)
+        self.assertJsonEqual(expected_tags, actual_tags)
 
     def test_filter_and_format_resource_metadata(self):
         # Create some tags

@@ -1017,15 +1017,15 @@ class CloudTestCase(test.TestCase):
                        fake_change_instance_metadata)
 
         utc = iso8601.iso8601.Utc()
-
+        flavor = flavors.get_flavor(1)
         # Create some test images
         sys_meta = flavors.save_flavor_info(
-            {}, flavors.get_flavor(1))
+            {}, flavor)
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
         inst1_kwargs = {
                 'reservation_id': 'a',
                 'image_ref': image_uuid,
-                'instance_type_id': 1,
+                'instance_type_id': flavor.id,
                 'host': 'host1',
                 'vm_state': 'active',
                 'launched_at': timeutils.utcnow(),
@@ -1038,7 +1038,7 @@ class CloudTestCase(test.TestCase):
         inst2_kwargs = {
                 'reservation_id': 'b',
                 'image_ref': image_uuid,
-                'instance_type_id': 1,
+                'instance_type_id': flavor.id,
                 'host': 'host2',
                 'vm_state': 'active',
                 'launched_at': timeutils.utcnow(),
@@ -1084,7 +1084,7 @@ class CloudTestCase(test.TestCase):
                               'instanceId': 'i-00000001',
                               'instanceState': {'code': 16,
                                                 'name': 'running'},
-                              'instanceType': u'm1.medium',
+                              'instanceType': flavor.name,
                               'ipAddress': '1.2.3.4',
                               'keyName': 'None (None, host1)',
                               'launchTime':
@@ -1115,7 +1115,7 @@ class CloudTestCase(test.TestCase):
                                'instanceId': 'i-00000002',
                                'instanceState': {'code': 16,
                                                  'name': 'running'},
-                               'instanceType': u'm1.medium',
+                               'instanceType': flavor.name,
                                'ipAddress': '1.2.3.4',
                                'keyName': u'None (None, host2)',
                                'launchTime':
@@ -1139,33 +1139,36 @@ class CloudTestCase(test.TestCase):
 
         # No filter
         result = self.cloud.describe_instances(self.context)
-        self.assertEqual(result, {'reservationSet': [inst1_ret, inst2_ret]})
+        self.assertJsonEqual(result, {'reservationSet':
+                                      [inst1_ret, inst2_ret]})
 
         # Key search
         # Both should have tags with key 'foo' and value 'bar'
         filters = {'filter': [{'name': 'tag:foo',
                                'value': ['bar']}]}
         result = self.cloud.describe_instances(self.context, **filters)
-        self.assertEqual(result, {'reservationSet': [inst1_ret, inst2_ret]})
+        self.assertJsonEqual(result, {'reservationSet':
+                                      [inst1_ret, inst2_ret]})
 
         # Both should have tags with key 'foo'
         filters = {'filter': [{'name': 'tag-key',
                                'value': ['foo']}]}
         result = self.cloud.describe_instances(self.context, **filters)
-        self.assertEqual(result, {'reservationSet': [inst1_ret, inst2_ret]})
+        self.assertJsonEqual(result, {'reservationSet':
+                                          [inst1_ret, inst2_ret]})
 
         # Value search
         # Only inst2 should have tags with key 'baz' and value 'quux'
         filters = {'filter': [{'name': 'tag:baz',
                                'value': ['quux']}]}
         result = self.cloud.describe_instances(self.context, **filters)
-        self.assertEqual(result, {'reservationSet': [inst2_ret]})
+        self.assertJsonEqual(result, {'reservationSet': [inst2_ret]})
 
         # Only inst2 should have tags with value 'quux'
         filters = {'filter': [{'name': 'tag-value',
                                'value': ['quux']}]}
         result = self.cloud.describe_instances(self.context, **filters)
-        self.assertEqual(result, {'reservationSet': [inst2_ret]})
+        self.assertJsonEqual(result, {'reservationSet': [inst2_ret]})
 
         # Multiple values
         # Both should have tags with key 'baz' and values in the set
@@ -1173,7 +1176,8 @@ class CloudTestCase(test.TestCase):
         filters = {'filter': [{'name': 'tag:baz',
                                'value': ['quux', 'wibble']}]}
         result = self.cloud.describe_instances(self.context, **filters)
-        self.assertEqual(result, {'reservationSet': [inst1_ret, inst2_ret]})
+        self.assertJsonEqual(result, {'reservationSet':
+                                      [inst1_ret, inst2_ret]})
 
         # Both should have tags with key 'baz' or tags with value 'bar'
         filters = {'filter': [{'name': 'tag-key',
@@ -1181,7 +1185,8 @@ class CloudTestCase(test.TestCase):
                               {'name': 'tag-value',
                                'value': ['bar']}]}
         result = self.cloud.describe_instances(self.context, **filters)
-        self.assertEqual(result, {'reservationSet': [inst1_ret, inst2_ret]})
+        self.assertJsonEqual(result, {'reservationSet':
+                                      [inst1_ret, inst2_ret]})
 
         # Confirm deletion of tags
         # Check for format 'tag:'
@@ -1189,17 +1194,17 @@ class CloudTestCase(test.TestCase):
         filters = {'filter': [{'name': 'tag:foo',
                               'value': ['bar']}]}
         result = self.cloud.describe_instances(self.context, **filters)
-        self.assertEqual(result, {'reservationSet': [inst2_ret]})
+        self.assertJsonEqual(result, {'reservationSet': [inst2_ret]})
 
         # Check for format 'tag-'
         filters = {'filter': [{'name': 'tag-key',
                               'value': ['foo']}]}
         result = self.cloud.describe_instances(self.context, **filters)
-        self.assertEqual(result, {'reservationSet': [inst2_ret]})
+        self.assertJsonEqual(result, {'reservationSet': [inst2_ret]})
         filters = {'filter': [{'name': 'tag-value',
                               'value': ['bar']}]}
         result = self.cloud.describe_instances(self.context, **filters)
-        self.assertEqual(result, {'reservationSet': [inst2_ret]})
+        self.assertJsonEqual(result, {'reservationSet': [inst2_ret]})
 
         # destroy the test instances
         db.instance_destroy(self.context, inst1['uuid'])
