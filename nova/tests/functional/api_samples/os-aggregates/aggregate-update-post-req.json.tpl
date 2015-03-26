@@ -1,7 +1,0 @@
-{
-    "aggregate":
-    {
-        "name": "newname",
-        "availability_zone": "nova2"
-    }
-}
