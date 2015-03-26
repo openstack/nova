@@ -101,7 +101,10 @@ def send_api_fault(url, status, exception):
     payload = {'url': url, 'exception': six.text_type(exception),
                'status': status}
 
-    rpc.get_notifier('api').error(None, 'api.fault', payload)
+    rpc.get_notifier('api').error(common_context.get_current() or
+                                  nova.context.get_admin_context(),
+                                  'api.fault',
+                                  payload)
 
 
 def send_update(context, old_instance, new_instance, service="compute",
