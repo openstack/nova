@@ -757,9 +757,16 @@ class IronicDriver(virt_driver.ComputeDriver):
         def _wait_for_provision_state():
             node = _validate_instance_and_node(ironicclient, instance)
             if node.provision_state in (ironic_states.NOSTATE,
+                                        ironic_states.CLEANING,
+                                        ironic_states.CLEANFAIL,
                                         ironic_states.AVAILABLE):
-                LOG.debug("Ironic node %(node)s is now unprovisioned",
-                          dict(node=node.uuid), instance=instance)
+                # From a user standpoint, the node is unprovisioned. If a node
+                # gets into CLEANFAIL state, it must be fixed in Ironic, but we
+                # can consider the instance unprovisioned.
+                LOG.debug("Ironic node %(node)s is in state %(state)s, "
+                          "instance is now unprovisioned.",
+                          dict(node=node.uuid, state=node.provision_state),
+                          instance=instance)
                 raise loopingcall.LoopingCallDone()
 
             if data['tries'] >= CONF.ironic.api_max_retries:
