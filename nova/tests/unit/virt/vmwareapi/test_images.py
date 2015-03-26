@@ -29,6 +29,7 @@ from nova import test
 import nova.tests.unit.image.fake
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import images
+from nova.virt.vmwareapi import vm_util
 
 
 class VMwareImagesTestCase(test.NoDBTestCase):
@@ -119,12 +120,14 @@ class VMwareImagesTestCase(test.NoDBTestCase):
              mock.patch.object(images.IMAGE_API, 'download'),
              mock.patch.object(images, 'start_transfer'),
              mock.patch.object(images, '_build_shadow_vm_config_spec'),
-             mock.patch.object(session, '_call_method')
+             mock.patch.object(session, '_call_method'),
+             mock.patch.object(vm_util, 'get_vmdk_info')
         ) as (mock_image_api_get,
               mock_image_api_download,
               mock_start_transfer,
               mock_build_shadow_vm_config_spec,
-              mock_call_method):
+              mock_call_method,
+              mock_get_vmdk_info):
             image_data = {'id': 'fake-id',
                           'disk_format': 'vmdk',
                           'size': 512}
@@ -170,7 +173,8 @@ class VMwareImagesTestCase(test.NoDBTestCase):
                                                   fileobj=mock_read_handle)
             mock_start_transfer.assert_called_once_with(context,
                     mock_read_handle, 512, write_file_handle=mock_write_handle)
-
+            mock_get_vmdk_info.assert_called_once_with(
+                    session, mock.sentinel.vm_ref, 'fake-vm')
             mock_call_method.assert_called_once_with(
                     session.vim, "UnregisterVM", mock.sentinel.vm_ref)
 
@@ -187,12 +191,14 @@ class VMwareImagesTestCase(test.NoDBTestCase):
              mock.patch.object(images.IMAGE_API, 'download'),
              mock.patch.object(images, 'start_transfer'),
              mock.patch.object(images, '_build_shadow_vm_config_spec'),
-             mock.patch.object(session, '_call_method')
+             mock.patch.object(session, '_call_method'),
+             mock.patch.object(vm_util, 'get_vmdk_info')
         ) as (mock_image_api_get,
               mock_image_api_download,
               mock_start_transfer,
               mock_build_shadow_vm_config_spec,
-              mock_call_method):
+              mock_call_method,
+              mock_get_vmdk_info):
             image_data = {'id': 'fake-id',
                           'disk_format': 'vmdk',
                           'size': 512}
@@ -220,6 +226,8 @@ class VMwareImagesTestCase(test.NoDBTestCase):
 
             mock_call_method.assert_called_once_with(
                     session.vim, "UnregisterVM", mock.sentinel.vm_ref)
+            mock_get_vmdk_info.assert_called_once_with(
+                    session, mock.sentinel.vm_ref, 'fake-vm')
 
     def test_from_image_with_image_ref(self):
         raw_disk_size_in_gb = 83
