@@ -1,8 +1,0 @@
-{
-    "domain_entry": {
-        "availability_zone": null,
-        "domain": "domain1.example.org",
-        "project": "project1",
-        "scope": "public"
-    }
-}
