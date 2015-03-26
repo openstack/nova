@@ -1912,7 +1912,9 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     @mock.patch.object(ds_util, 'file_move')
     @mock.patch.object(vm_util, 'copy_virtual_disk')
     @mock.patch.object(vmops.VMwareVMOps, '_delete_datastore_file')
+    @mock.patch.object(vmops.VMwareVMOps, '_update_image_size')
     def test_cache_sparse_image(self,
+                                mock_update_image_size,
                                 mock_delete_datastore_file,
                                 mock_copy_virtual_disk,
                                 mock_file_move):
@@ -1931,6 +1933,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 self._session, self._dc_info.ref,
                 sparse_disk_path,
                 DsPathMatcher(target_disk_path))
+        mock_update_image_size.assert_called_once_with(vi)
 
     def test_get_storage_policy_none(self):
         flavor = objects.Flavor(name='m1.small',

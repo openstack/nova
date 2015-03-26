@@ -1403,6 +1403,7 @@ class FakeVim(object):
             for file in matched_files:
                 matched = DataObject()
                 matched.path = file
+                matched.fileSize = 1024
                 result.file.append(matched)
             task_mdo = create_task(method, "success", result=result)
         else:
