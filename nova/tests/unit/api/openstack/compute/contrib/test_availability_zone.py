@@ -14,9 +14,8 @@
 
 import datetime
 
-from oslo_config import cfg
-from oslo_serialization import jsonutils
 
+import iso8601
 from nova.api.openstack.compute.contrib import availability_zone as az_v2
 from nova.api.openstack.compute import plugins
 from nova.api.openstack.compute.plugins.v3 import availability_zone as az_v21
@@ -36,6 +35,7 @@ from nova.tests.unit import fake_instance
 from nova.tests.unit.image import fake
 from nova.tests.unit import matchers
 from nova.tests.unit.objects import test_service
+from oslo_config import cfg
 
 FAKE_UUID = fakes.FAKE_UUID
 
@@ -137,88 +137,32 @@ class AvailabilityZoneApiTestV21(test.NoDBTestCase):
         self.assertIsNone(zones[1]['hosts'])
 
     def test_availability_zone_detail(self):
-        def _formatZone(zone_dict):
-            result = []
-
-            # Zone tree view item
-            result.append({'zoneName': zone_dict['zoneName'],
-                           'zoneState': u'available'
-                               if zone_dict['zoneState']['available'] else
-                                   u'not available'})
-
-            if zone_dict['hosts'] is not None:
-                for (host, services) in zone_dict['hosts'].items():
-                    # Host tree view item
-                    result.append({'zoneName': u'|- %s' % host,
-                                   'zoneState': u''})
-                    for (svc, state) in services.items():
-                        # Service tree view item
-                        result.append({'zoneName': u'| |- %s' % svc,
-                                       'zoneState': u'%s %s %s' % (
-                                           'enabled' if state['active'] else
-                                               'disabled',
-                                           ':-)' if state['available'] else
-                                               'XXX',
-                                           jsonutils.to_primitive(
-                                               state['updated_at']))})
-            return result
-
-        def _assertZone(zone, name, status):
-            self.assertEqual(zone['zoneName'], name)
-            self.assertEqual(zone['zoneState'], status)
-
         resp_dict = self.controller.detail(self.req)
 
         self.assertIn('availabilityZoneInfo', resp_dict)
         zones = resp_dict['availabilityZoneInfo']
         self.assertEqual(len(zones), 3)
-
-        ''' availabilityZoneInfo field content in response body:
-        [{'zoneName': 'zone-1',
-          'zoneState': {'available': True},
-          'hosts': {'fake_host-1': {
+        timestamp = iso8601.parse_date("2012-12-26T14:45:25Z")
+        nova_network_timestamp = iso8601.parse_date("2012-12-26T14:45:24Z")
+        expected = [{'zoneName': 'zone-1',
+                    'zoneState': {'available': True},
+                    'hosts': {'fake_host-1': {
                         'nova-compute': {'active': True, 'available': True,
-                          'updated_at': datetime(2012, 12, 26, 14, 45, 25)}}}},
-         {'zoneName': 'internal',
-          'zoneState': {'available': True},
-          'hosts': {'fake_host-1': {
+                                         'updated_at': timestamp}}}},
+                   {'zoneName': 'internal',
+                    'zoneState': {'available': True},
+                    'hosts': {'fake_host-1': {
                         'nova-sched': {'active': True, 'available': True,
-                          'updated_at': datetime(2012, 12, 26, 14, 45, 25)}},
-                    'fake_host-2': {
-                        'nova-network': {'active': True, 'available': False,
-                          'updated_at': datetime(2012, 12, 26, 14, 45, 24)}}}},
-         {'zoneName': 'zone-2',
-          'zoneState': {'available': False},
-          'hosts': None}]
-        '''
-
-        l0 = [u'zone-1', u'available']
-        l1 = [u'|- fake_host-1', u'']
-        l2 = [u'| |- nova-compute', u'enabled :-) 2012-12-26T14:45:25.000000']
-        l3 = [u'internal', u'available']
-        l4 = [u'|- fake_host-1', u'']
-        l5 = [u'| |- nova-sched', u'enabled :-) 2012-12-26T14:45:25.000000']
-        l6 = [u'|- fake_host-2', u'']
-        l7 = [u'| |- nova-network', u'enabled XXX 2012-12-26T14:45:24.000000']
-        l8 = [u'zone-2', u'not available']
-
-        z0 = _formatZone(zones[0])
-        z1 = _formatZone(zones[1])
-        z2 = _formatZone(zones[2])
-
-        self.assertEqual(len(z0), 3)
-        self.assertEqual(len(z1), 5)
-        self.assertEqual(len(z2), 1)
-
-        _assertZone(z0[0], l0[0], l0[1])
-        _assertZone(z0[1], l1[0], l1[1])
-        _assertZone(z0[2], l2[0], l2[1])
-        _assertZone(z1[0], l3[0], l3[1])
-        _assertZone(z1[1], l4[0], l4[1])
-        _assertZone(z1[2], l5[0], l5[1])
-        _assertZone(z1[3], l6[0], l6[1])
-        _assertZone(z1[4], l7[0], l7[1])
-        _assertZone(z2[0], l8[0], l8[1])
+                                       'updated_at': timestamp}},
+                              'fake_host-2': {
+                                  'nova-network': {
+                                      'active': True,
+                                      'available': False,
+                                      'updated_at': nova_network_timestamp}}}},
+                   {'zoneName': 'zone-2',
+                    'zoneState': {'available': False},
+                    'hosts': None}]
+        self.assertEqual(expected, zones)
 
     def test_availability_zone_detail_no_services(self):
         expected_response = {'availabilityZoneInfo':
@@ -401,7 +345,6 @@ class ServersControllerCreateTestV21(test.TestCase):
 
 
 class ServersControllerCreateTestV2(ServersControllerCreateTestV21):
-
     def _set_up_controller(self):
         ext_mgr = extensions.ExtensionManager()
         ext_mgr.extensions = {'os-availability-zone': 'fake'}
