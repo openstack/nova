@@ -21,7 +21,7 @@ Setting up a devstack environemnt
 Starting the nova-serialproxy service
 -------------------------------------
 
-. code-block:: bash
+.. code-block:: bash
 
   # screen -S stack -X screen -t n-sproxy
   # screen -S stack -p n-sproxy -X stuff 'sudo nova-serialproxy\r'
