@@ -66,7 +66,7 @@ def validate_num_values(vals, default=None, cast_to=int, based_on=min):
                      "of which the minimum value will be used."),
                  {'num_values': num_values})
 
-    return cast_to(based_on(vals))
+    return based_on([cast_to(val) for val in vals])
 
 
 def instance_uuids_overlap(host_state, uuids):
