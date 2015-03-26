@@ -186,6 +186,28 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             else:
                 self.assertFalse(db_node.destroy.called)
 
+    def test_delete_instance_without_info_cache(self):
+        instance = fake_instance.fake_instance_obj(
+                self.context,
+                uuid='fake',
+                vm_state=vm_states.ERROR,
+                host=self.compute.host,
+                expected_attrs=['system_metadata'])
+        quotas = mock.create_autospec(objects.Quotas, spec_set=True)
+
+        with contextlib.nested(
+            mock.patch.object(self.compute, '_notify_about_instance_usage'),
+            mock.patch.object(self.compute, '_shutdown_instance'),
+            mock.patch.object(instance, 'obj_load_attr'),
+            mock.patch.object(instance, 'save'),
+            mock.patch.object(instance, 'destroy')
+        ) as (
+            compute_notify_about_instance_usage, comupte_shutdown_instance,
+            instance_obj_load_attr, instance_save, instance_destroy
+        ):
+            instance.info_cache = None
+            self.compute._delete_instance(self.context, instance, [], quotas)
+
     @mock.patch.object(network_api.API, 'allocate_for_instance')
     @mock.patch.object(objects.Instance, 'save')
     @mock.patch.object(time, 'sleep')
