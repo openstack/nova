@@ -218,5 +218,8 @@ class HyperVDriver(driver.ComputeDriver):
     def get_host_ip_addr(self):
         return self._hostops.get_host_ip_addr()
 
+    def get_host_uptime(self, host):
+        return self._hostops.get_host_uptime()
+
     def get_rdp_console(self, context, instance):
         return self._rdpconsoleops.get_rdp_console(instance)

@@ -16,8 +16,10 @@
 """
 Management class for host operations.
 """
+import datetime
 import os
 import platform
+import time
 
 from oslo.config import cfg
 
@@ -178,3 +180,23 @@ class HostOps(object):
             host_ip = self._hostutils.get_local_ips()[0]
         LOG.debug(_("Host IP address is: %s"), host_ip)
         return host_ip
+
+    def get_host_uptime(self):
+        """Returns the host uptime."""
+
+        tick_count64 = self._hostutils.get_host_tick_count64()
+
+        # format the string to match libvirt driver uptime
+        # Libvirt uptime returns a combination of the following
+        # - curent host time
+        # - time since host is up
+        # - number of logged in users
+        # - cpu load
+        # Since the Windows function GetTickCount64 returns only
+        # the time since the host is up, returning 0s for cpu load
+        # and number of logged in users.
+        # This is done to ensure the format of the returned
+        # value is same as in libvirt
+        return "%s up %s,  0 users,  load average: 0, 0, 0" % (
+                   str(time.strftime("%H:%M:%S")),
+                   str(datetime.timedelta(milliseconds=long(tick_count64))))
