@@ -114,7 +114,7 @@ class DomainEntry(DNSEntry):
     @classmethod
     def _soa(cls):
         date = time.strftime('%Y%m%d%H%M%S')
-        soa = '%s %s %s %s %s %s %s' % (
+        soa = '%s %s %s %d %d %d %d' % (
                  CONF.ldap_dns_servers[0],
                  CONF.ldap_dns_soa_hostmaster,
                  date,

@@ -725,20 +725,20 @@ ldap_dns_opts = [
     cfg.StrOpt('ldap_dns_base_dn',
                 default='ou=hosts,dc=example,dc=org',
                 help='Base DN for DNS entries in LDAP'),
-    cfg.StrOpt('ldap_dns_soa_refresh',
-                default='1800',
+    cfg.IntOpt('ldap_dns_soa_refresh',
+                default=1800,
                 help='Refresh interval (in seconds) for LDAP DNS driver '
                      'Statement of Authority'),
-    cfg.StrOpt('ldap_dns_soa_retry',
-                default='3600',
+    cfg.IntOpt('ldap_dns_soa_retry',
+                default=3600,
                 help='Retry interval (in seconds) for LDAP DNS driver '
                      'Statement of Authority'),
-    cfg.StrOpt('ldap_dns_soa_expiry',
-                default='86400',
+    cfg.IntOpt('ldap_dns_soa_expiry',
+                default=86400,
                 help='Expiry interval (in seconds) for LDAP DNS driver '
                      'Statement of Authority'),
-    cfg.StrOpt('ldap_dns_soa_minimum',
-                default='7200',
+    cfg.IntOpt('ldap_dns_soa_minimum',
+                default=7200,
                 help='Minimum interval (in seconds) for LDAP DNS driver '
                      'Statement of Authority'),
 ]
