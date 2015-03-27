@@ -1,0 +1,121 @@
+====================================
+General Compute API v2.0 information
+====================================
+
+The OpenStack Compute API is defined as a ReSTful HTTP service. The API
+takes advantage of all aspects of the HTTP protocol (methods, URIs,
+media types, response codes, etc.) and providers are free to use
+existing features of the protocol such as caching, persistent
+connections, and content compression among others. For example,
+providers who employ a caching layer may respond with a 203 when a
+request is served from the cache instead of a 200. Additionally,
+providers may offer support for conditional **GET** requests using
+ETags, or they may send a redirect in response to a **GET** request.
+Clients should be written to account for these differences.
+
+Providers can return information identifying requests in HTTP response
+headers, for example, to facilitate communication between the provider
+and client users.
+
+OpenStack Compute is a compute service that provides server capacity in
+the cloud. Compute Servers come in different flavors of memory, cores,
+disk space, and CPU, and can be provisioned in minutes. Interactions
+with Compute Servers can happen programmatically with the OpenStack
+Compute API.
+
+We welcome feedback, comments, and bug reports at
+`bugs.launchpad.net/nova <http://bugs.launchpad.net/nova>`__.
+
+Intended audience
+-----------------
+
+This guide assists software developers who want to develop applications
+using the OpenStack Compute API. To use this information, you should
+have access to an account from an OpenStack Compute provider, and you
+should also be familiar with the following concepts:
+
+-  OpenStack Compute service
+
+-  ReSTful web services
+
+-  HTTP/1.1
+
+-  JSON data serialization formats
+
+Concepts
+--------
+
+To use the OpenStack Compute API effectively, you should understand
+several key concepts:
+
+-  **Server**
+
+   A virtual machine (VM) instance in the compute system. Flavor and
+   image are requisite elements when creating a server.
+
+-  **Flavor**
+
+   An available hardware configuration for a server. Each flavor has a
+   unique combination of disk space, memory capacity and priority for
+   CPU time.
+
+-  **Image**
+
+   A collection of files used to create or rebuild a server. Operators
+   provide a number of pre-built OS images by default. You may also
+   create custom images from cloud servers you have launched. These
+   custom images are useful for backup purposes or for producing “gold”
+   server images if you plan to deploy a particular server configuration
+   frequently.
+
+-  **Reboot**
+
+   Use this function to perform either a soft or hard reboot of a
+   server. With a soft reboot, the operating system is signaled to
+   restart, which allows for a graceful shutdown of all processes. A
+   hard reboot is the equivalent of power cycling the server. The
+   virtualization platform should ensure that the reboot action has
+   completed successfully even in cases in which the underlying
+   domain/VM is paused or halted/stopped.
+
+-  **Rebuild**
+
+   Use this function to remove all data on the server and replaces it
+   with the specified image. Server ID and IP addresses remain the same.
+
+-  **Resize**
+
+   Use this function to convert an existing server to a different
+   flavor, in essence, scaling the server up or down. The original
+   server is saved for a period of time to allow rollback if there is a
+   problem. All resizes should be tested and explicitly confirmed, at
+   which time the original server is removed. All resizes are
+   automatically confirmed after 24 hours if you do not confirm or
+   revert them.
+
+-  **Pause**
+
+   You can pause a server by making a pause request. This request stores
+   the state of the VM in RAM. A paused instance continues to run in a
+   frozen state.
+
+-  **Suspend**
+
+   Administrative users might want to suspend an instance if it is
+   infrequently used or to perform system maintenance. When you suspend
+   an instance, its VM state is stored on disk, all memory is written to
+   disk, and the virtual machine is stopped. Suspending an instance is
+   similar to placing a device in hibernation; memory and vCPUs become
+   available to create other instances.
+
+Reference
+---------
+
+For a reference listing for the Compute API v2, see the `*Compute API v2
+reference
+(CURRENT)* <http://developer.openstack.org/api-ref-compute-v2.html>`__.
+
+For information about Compute API v 2 extensions, see the `*Compute API v2
+extensions
+(CURRENT)* <http://developer.openstack.org/api-ref-compute-v2-ext.html>`__.
+

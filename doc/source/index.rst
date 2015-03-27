@@ -50,6 +50,15 @@ Developer Docs
    man/index
    support-matrix
 
+Compute API v2
+==============
+
+.. toctree::
+   :glob:
+   :maxdepth: 1
+
+   v2/*
+
 API Extensions
 ==============
 
