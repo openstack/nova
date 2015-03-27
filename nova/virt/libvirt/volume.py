@@ -1005,7 +1005,7 @@ class LibvirtSMBFSVolumeDriver(LibvirtBaseVolumeDriver):
 
     def _parse_mount_options(self, connection_info):
         mount_options = " ".join(
-            [connection_info['data'].get('options', ''),
+            [connection_info['data'].get('options') or '',
              CONF.libvirt.smbfs_mount_options])
 
         if not self.username_regex.findall(mount_options):

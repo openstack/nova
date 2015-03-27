@@ -1585,7 +1585,8 @@ Setting up iSCSI targets: unused
         export_mnt_base = os.path.join(mnt_base,
                                        utils.get_hash_str(export_string))
         connection_info = {'data': {'export': export_string,
-                                    'name': self.name}}
+                                    'name': self.name,
+                                    'options': None}}
         libvirt_driver.connect_volume(connection_info, self.disk_info)
         libvirt_driver.disconnect_volume(connection_info, "vde")
 
