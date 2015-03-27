@@ -3396,6 +3396,8 @@ def _is_quota_refresh_needed(quota_usage, max_age):
     if quota_usage.in_use < 0:
         # Negative in_use count indicates a desync, so try to
         # heal from that...
+        LOG.debug('in_use has dropped below 0; forcing refresh for '
+                  'QuotaUsage: %s', dict(quota_usage))
         refresh = True
     elif quota_usage.until_refresh is not None:
         quota_usage.until_refresh -= 1
@@ -3428,6 +3430,9 @@ def _refresh_quota_usages(quota_usage, until_refresh, in_use):
              'res': quota_usage.resource,
              'tracked_use': quota_usage.in_use,
              'in_use': in_use})
+    else:
+        LOG.debug('QuotaUsage has not changed, refresh is unnecessary for: %s',
+                  dict(quota_usage))
 
     # Update the usage
     quota_usage.in_use = in_use
@@ -3456,9 +3461,20 @@ def _calculate_overquota(project_quotas, user_quotas, deltas,
         if user_quotas[res] >= 0 and delta >= 0:
             # over if the project usage + delta is more than project quota
             if project_quotas[res] < delta + project_usages[res]['total']:
+                LOG.debug('Request is over project quota for resource '
+                          '"%(res)s". Project limit: %(limit)s, delta: '
+                          '%(delta)s, current total project usage: %(total)s',
+                          {'res': res, 'limit': project_quotas[res],
+                           'delta': delta,
+                           'total': project_usages[res]['total']})
                 overs.append(res)
             # over if the user usage + delta is more than user quota
             elif user_quotas[res] < delta + user_usages[res]['total']:
+                LOG.debug('Request is over user quota for resource '
+                          '"%(res)s". User limit: %(limit)s, delta: '
+                          '%(delta)s, current total user usage: %(total)s',
+                          {'res': res, 'limit': user_quotas[res],
+                           'delta': delta, 'total': user_usages[res]['total']})
                 overs.append(res)
     return overs
 
@@ -3531,6 +3547,9 @@ def quota_reserve(context, resources, project_quotas, user_quotas, deltas,
         #            problems.
         for key, value in user_usages.items():
             if key not in project_usages:
+                LOG.debug('Copying QuotaUsage for resource "%(key)s" from '
+                          'user_usages into project_usages: %(value)s',
+                          {'key': key, 'value': dict(value)})
                 project_usages[key] = value
 
         overs = _calculate_overquota(project_quotas, user_quotas, deltas,
@@ -3583,6 +3602,14 @@ def quota_reserve(context, resources, project_quotas, user_quotas, deltas,
         if project_quotas == user_quotas:
             usages = project_usages
         else:
+            # NOTE(mriedem): user_usages is a dict of resource keys to
+            # QuotaUsage sqlalchemy dict-like objects and doen't log well
+            # so convert the user_usages values to something useful for
+            # logging. Remove this if we ever change how
+            # _get_project_user_quota_usages returns the user_usages values.
+            user_usages = {k: dict(in_use=v['in_use'], reserved=v['reserved'],
+                                   total=v['total'])
+                      for k, v in user_usages.items()}
             usages = user_usages
         usages = {k: dict(in_use=v['in_use'], reserved=v['reserved'])
                   for k, v in usages.items()}
