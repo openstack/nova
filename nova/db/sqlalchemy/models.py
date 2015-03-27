@@ -100,6 +100,7 @@ class Service(BASE, NovaBase):
     report_count = Column(Integer, nullable=False, default=0)
     disabled = Column(Boolean, default=False)
     disabled_reason = Column(String(255))
+    last_seen_up = Column(DateTime, nullable=True)
 
 
 class ComputeNode(BASE, NovaBase):

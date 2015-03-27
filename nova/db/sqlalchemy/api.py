@@ -540,6 +540,12 @@ def service_update(context, service_id, values):
     session = get_session()
     with session.begin():
         service_ref = _service_get(context, service_id, session=session)
+        # Only servicegroup.drivers.db.DbDriver._report_state() updates
+        # 'report_count', so if that value changes then store the timestamp
+        # as the last time we got a state report.
+        if 'report_count' in values:
+            if values['report_count'] > service_ref.report_count:
+                service_ref.last_seen_up = timeutils.utcnow()
         service_ref.update(values)
 
     return service_ref

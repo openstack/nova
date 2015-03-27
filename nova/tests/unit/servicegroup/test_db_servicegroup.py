@@ -40,6 +40,7 @@ class DBServiceGroupTestCase(test.NoDBTestCase):
 
         # Up (equal)
         now_mock.return_value = fts_func(fake_now)
+        service_ref['last_seen_up'] = fts_func(fake_now - self.down_time)
         service_ref['updated_at'] = fts_func(fake_now - self.down_time)
         service_ref['created_at'] = fts_func(fake_now - self.down_time)
 
@@ -47,14 +48,22 @@ class DBServiceGroupTestCase(test.NoDBTestCase):
         self.assertTrue(result)
 
         # Up
+        service_ref['last_seen_up'] = fts_func(fake_now - self.down_time + 1)
         service_ref['updated_at'] = fts_func(fake_now - self.down_time + 1)
         service_ref['created_at'] = fts_func(fake_now - self.down_time + 1)
         result = self.servicegroup_api.service_is_up(service_ref)
         self.assertTrue(result)
 
         # Down
+        service_ref['last_seen_up'] = fts_func(fake_now - self.down_time - 3)
         service_ref['updated_at'] = fts_func(fake_now - self.down_time - 3)
         service_ref['created_at'] = fts_func(fake_now - self.down_time - 3)
+        result = self.servicegroup_api.service_is_up(service_ref)
+        self.assertFalse(result)
+
+        # "last_seen_up" says down, "updated_at" says up.
+        # This can happen if we do a service disable/enable while it's down.
+        service_ref['updated_at'] = fts_func(fake_now - self.down_time + 1)
         result = self.servicegroup_api.service_is_up(service_ref)
         self.assertFalse(result)
 

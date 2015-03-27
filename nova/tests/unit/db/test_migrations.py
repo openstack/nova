@@ -693,6 +693,18 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
         self.assertIsNone(fake_migration.migration_type)
         self.assertFalse(fake_migration.hidden)
 
+    def _check_294(self, engine, data):
+        self.assertColumnExists(engine, 'services', 'last_seen_up')
+        self.assertColumnExists(engine, 'shadow_services', 'last_seen_up')
+
+        services = oslodbutils.get_table(engine, 'services')
+        shadow_services = oslodbutils.get_table(
+                engine, 'shadow_services')
+        self.assertIsInstance(services.c.last_seen_up.type,
+                              sqlalchemy.types.DateTime)
+        self.assertIsInstance(shadow_services.c.last_seen_up.type,
+                              sqlalchemy.types.DateTime)
+
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
                                test_base.DbTestCase,
