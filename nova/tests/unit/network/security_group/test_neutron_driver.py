@@ -267,8 +267,9 @@ class TestNeutronDriver(test.NoDBTestCase):
 
         self.moxed_client.list_ports(device_id=['server_1']).AndReturn(
             port_list)
-        self.moxed_client.list_security_groups(id=['1', '2']).AndReturn(
-            security_groups_list)
+        self.moxed_client.\
+            list_security_groups(id=mox.SameElementsAs(['1', '2'])).AndReturn(
+                security_groups_list)
         self.mox.ReplayAll()
 
         sg_api = neutron_driver.SecurityGroupAPI()
