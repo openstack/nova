@@ -23,11 +23,24 @@ from nova.tests.functional.v3 import api_sample_base
 CONF = cfg.CONF
 CONF.import_opt('enable_network_quota',
                 'nova.api.openstack.compute.contrib.os_tenant_networks')
+CONF.import_opt('osapi_compute_extension',
+                'nova.api.openstack.compute.extensions')
 
 
 class TenantNetworksJsonTests(api_sample_base.ApiSampleTestBaseV3):
     ADMIN_API = True
     extension_name = "os-tenant-networks"
+    # TODO(gmann): Overriding '_api_version' till all functional tests
+    # are merged between v2 and v2.1. After that base class variable
+    # itself can be changed to 'v2'
+    _api_version = 'v2'
+
+    def _get_flags(self):
+        f = super(TenantNetworksJsonTests, self)._get_flags()
+        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
+        f['osapi_compute_extension'].append('nova.api.openstack.compute.'
+                      'contrib.os_tenant_networks.Os_tenant_networks')
+        return f
 
     def setUp(self):
         super(TenantNetworksJsonTests, self).setUp()

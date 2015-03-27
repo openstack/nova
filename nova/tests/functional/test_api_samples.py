@@ -49,7 +49,6 @@ from nova import exception
 from nova.network import api as network_api
 from nova.network.neutronv2 import api as neutron_api  # noqa - only for cfg
 from nova import objects
-import nova.quota
 from nova.servicegroup import api as service_group_api
 from nova import test
 from nova.tests.functional import api_samples_test_base
@@ -2065,44 +2064,6 @@ class DiskConfigJsonTest(ServersSampleBase):
         response = self._do_get('images/detail')
         subs = self._get_regexes()
         self._verify_response('image-list-resp', subs, response, 200)
-
-
-class OsNetworksJsonTests(ApiSampleTestBaseV2):
-    ADMIN_API = True
-    extension_name = ("nova.api.openstack.compute.contrib.os_tenant_networks"
-                      ".Os_tenant_networks")
-
-    def setUp(self):
-        super(OsNetworksJsonTests, self).setUp()
-        CONF.set_override("enable_network_quota", True)
-
-        def fake(*args, **kwargs):
-            pass
-
-        self.stubs.Set(nova.quota.QUOTAS, "reserve", fake)
-        self.stubs.Set(nova.quota.QUOTAS, "commit", fake)
-        self.stubs.Set(nova.quota.QUOTAS, "rollback", fake)
-        self.stubs.Set(nova.quota.QuotaEngine, "reserve", fake)
-        self.stubs.Set(nova.quota.QuotaEngine, "commit", fake)
-        self.stubs.Set(nova.quota.QuotaEngine, "rollback", fake)
-
-    def test_list_networks(self):
-        response = self._do_get('os-tenant-networks')
-        subs = self._get_regexes()
-        self._verify_response('networks-list-res', subs, response, 200)
-
-    def test_create_network(self):
-        response = self._do_post('os-tenant-networks', "networks-post-req", {})
-        subs = self._get_regexes()
-        self._verify_response('networks-post-res', subs, response, 200)
-
-    def test_delete_network(self):
-        response = self._do_post('os-tenant-networks', "networks-post-req", {})
-        net = jsonutils.loads(response.content)
-        response = self._do_delete('os-tenant-networks/%s' %
-                                                net["network"]["id"])
-        self.assertEqual(response.status_code, 202)
-        self.assertEqual(response.content, "")
 
 
 class NetworksJsonTests(ApiSampleTestBaseV2):
