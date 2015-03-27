@@ -241,6 +241,14 @@ def _sanitize_default(name, value):
     return value
 
 
+def _get_choice_text(choice):
+    if choice is None:
+        return '<None>'
+    elif choice == '':
+        return "''"
+    return six.text_type(choice)
+
+
 def _print_opt(opt):
     opt_name, opt_default, opt_help = opt.dest, opt.default, opt.help
     if not opt_help:
@@ -268,6 +276,11 @@ def _print_opt(opt):
             print('#%s=<None>' % opt_name)
         elif opt_type == STROPT:
             assert(isinstance(opt_default, six.string_types))
+            if (getattr(opt, 'type', None) and
+                    getattr(opt.type, 'choices', None)):
+                choices_text = ', '.join([_get_choice_text(choice)
+                                          for choice in opt.type.choices])
+                print('# Allowed values: %s' % choices_text)
             print('#%s=%s' % (opt_name, _sanitize_default(opt_name,
                                                           opt_default)))
         elif opt_type == BOOLOPT:
