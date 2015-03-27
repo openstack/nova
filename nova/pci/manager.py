@@ -251,9 +251,9 @@ class PciDevTracker(object):
 
         The caller should hold the COMPUTE_RESOURCE_SEMAPHORE lock
         """
-        existed = [inst['uuid'] for inst in instances]
-        existed += [mig['instance_uuid'] for mig in migrations]
-        existed += [inst['uuid'] for inst in orphans]
+        existed = set(inst['uuid'] for inst in instances)
+        existed |= set(mig['instance_uuid'] for mig in migrations)
+        existed |= set(inst['uuid'] for inst in orphans)
 
         for uuid in self.claims.keys():
             if uuid not in existed:
