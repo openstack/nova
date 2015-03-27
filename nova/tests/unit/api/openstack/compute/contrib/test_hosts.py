@@ -131,16 +131,6 @@ class FakeRequestWithNovaZone(object):
     GET = {"zone": "nova"}
 
 
-class FakeRequestWithNovaService(object):
-    environ = {"nova.context": context_maker.get_admin_context()}
-    GET = {"service": "compute"}
-
-
-class FakeRequestWithInvalidNovaService(object):
-    environ = {"nova.context": context_maker.get_admin_context()}
-    GET = {"service": "invalid"}
-
-
 class HostTestCaseV21(test.TestCase):
     """Test Case for hosts."""
     validation_ex = exception.ValidationError
@@ -392,26 +382,11 @@ class HostTestCaseV21(test.TestCase):
         hosts = result['hosts']
         self.assertEqual(fake_hosts.HOST_LIST_NOVA_ZONE, hosts)
 
-    def test_list_hosts_with_service(self):
-        result = self.controller.index(FakeRequestWithNovaService())
-        self.assertEqual(fake_hosts.HOST_LIST_NOVA_ZONE, result['hosts'])
-
-    def test_list_hosts_with_invalid_service(self):
-        result = self.controller.index(FakeRequestWithInvalidNovaService())
-        self.assertEqual([], result['hosts'])
-
 
 class HostTestCaseV20(HostTestCaseV21):
     validation_ex = webob.exc.HTTPBadRequest
     policy_ex = webob.exc.HTTPForbidden
     Controller = os_hosts_v2.HostController
-
-    # Note: V2 api don't support list with services
-    def test_list_hosts_with_service(self):
-        pass
-
-    def test_list_hosts_with_invalid_service(self):
-        pass
 
     def test_list_hosts_with_non_admin(self):
         self.assertRaises(exception.AdminRequired,
