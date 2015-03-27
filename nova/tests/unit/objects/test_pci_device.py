@@ -15,6 +15,8 @@
 
 import copy
 
+from oslo_utils import timeutils
+
 from nova import context
 from nova import db
 from nova.objects import instance
@@ -212,6 +214,37 @@ class _TestPciDeviceObject(object):
         self.dev_dict['numa_node'] = '1'
         self.pci_device = pci_device.PciDevice.create(self.dev_dict)
         self.assertEqual(1, self.pci_device.numa_node)
+
+    def test_pci_device_equivalent(self):
+        pci_device1 = pci_device.PciDevice.create(dev_dict)
+        pci_device2 = pci_device.PciDevice.create(dev_dict)
+        self.assertEqual(pci_device1, pci_device2)
+
+    def test_pci_device_equivalent_with_ignore_field(self):
+        pci_device1 = pci_device.PciDevice.create(dev_dict)
+        pci_device2 = pci_device.PciDevice.create(dev_dict)
+        pci_device2.updated_at = timeutils.utcnow()
+        self.assertEqual(pci_device1, pci_device2)
+
+    def test_pci_device_not_equivalent1(self):
+        pci_device1 = pci_device.PciDevice.create(dev_dict)
+        dev_dict2 = copy.copy(dev_dict)
+        dev_dict2['address'] = 'b'
+        pci_device2 = pci_device.PciDevice.create(dev_dict2)
+        self.assertNotEqual(pci_device1, pci_device2)
+
+    def test_pci_device_not_equivalent2(self):
+        pci_device1 = pci_device.PciDevice.create(dev_dict)
+        pci_device2 = pci_device.PciDevice.create(dev_dict)
+        delattr(pci_device2, 'address')
+        self.assertNotEqual(pci_device1, pci_device2)
+
+    def test_pci_device_not_equivalent_with_none(self):
+        pci_device1 = pci_device.PciDevice.create(dev_dict)
+        pci_device2 = pci_device.PciDevice.create(dev_dict)
+        pci_device1.instance_uuid = 'aaa'
+        pci_device2.instance_uuid = None
+        self.assertNotEqual(pci_device1, pci_device2)
 
 
 class TestPciDeviceObject(test_objects._LocalTest,

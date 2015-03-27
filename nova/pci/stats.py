@@ -248,3 +248,9 @@ class PciDeviceStats(object):
     def clear(self):
         """Clear all the stats maintained."""
         self.pools = []
+
+    def __eq__(self, other):
+        return cmp(self.pools, other.pools) == 0
+
+    def __ne__(self, other):
+        return not (self == other)
