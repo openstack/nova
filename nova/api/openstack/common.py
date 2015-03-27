@@ -401,15 +401,11 @@ def raise_http_conflict_for_instance_invalid_state(exc, action, server_id):
     """
     attr = exc.kwargs.get('attr')
     state = exc.kwargs.get('state')
-    not_launched = exc.kwargs.get('not_launched')
-    if attr and state:
+    if attr is not None and state is not None:
         msg = _("Cannot '%(action)s' instance %(server_id)s while it is in "
                 "%(attr)s %(state)s") % {'action': action, 'attr': attr,
                                          'state': state,
                                          'server_id': server_id}
-    elif not_launched:
-        msg = _("Cannot '%(action)' instance %(server_id)s which has never "
-                "been active") % {'action': action, 'server_id': server_id}
     else:
         # At least give some meaningful message
         msg = _("Instance %(server_id)s is in an invalid state for "
