@@ -6170,19 +6170,21 @@ class LibvirtDriver(driver.ComputeDriver):
                     instance.ephemeral_gb)
 
         # Checks if the migration needs a disk resize down.
-        if (flavor['root_gb'] < instance.root_gb or
-            flavor['ephemeral_gb'] < eph_size):
+        root_down = flavor['root_gb'] < instance.root_gb
+        ephemeral_down = flavor['ephemeral_gb'] < eph_size
+        disk_info_text = self.get_instance_disk_info(
+            instance, block_device_info=block_device_info)
+        booted_from_volume = self._is_booted_from_volume(instance,
+                                                         disk_info_text)
+        if (root_down and not booted_from_volume) or ephemeral_down:
             reason = _("Unable to resize disk down.")
             raise exception.InstanceFaultRollback(
                 exception.ResizeError(reason=reason))
 
-        disk_info_text = self.get_instance_disk_info(instance,
-                block_device_info=block_device_info)
         disk_info = jsonutils.loads(disk_info_text)
 
         # NOTE(dgenin): Migration is not implemented for LVM backed instances.
-        if (CONF.libvirt.images_type == 'lvm' and
-                not self._is_booted_from_volume(instance, disk_info_text)):
+        if CONF.libvirt.images_type == 'lvm' and not booted_from_volume:
             reason = _("Migration is not supported for LVM backed instances")
             raise exception.InstanceFaultRollback(
                 exception.MigrationPreCheckError(reason=reason))
