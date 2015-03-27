@@ -2256,28 +2256,6 @@ class NetworksAssociateJsonTests(ApiSampleTestBaseV2):
         self.assertEqual(response.content, "")
 
 
-class QuotaClassesSampleJsonTests(ApiSampleTestBaseV2):
-    ADMIN_API = True
-    extension_name = ("nova.api.openstack.compute.contrib.quota_classes."
-                      "Quota_classes")
-    set_id = 'test_class'
-
-    def test_show_quota_classes(self):
-        # Get api sample to show quota classes.
-        response = self._do_get('os-quota-class-sets/%s' % self.set_id)
-        subs = {'set_id': self.set_id}
-        self._verify_response('quota-classes-show-get-resp', subs,
-                              response, 200)
-
-    def test_update_quota_classes(self):
-        # Get api sample to update quota classes.
-        response = self._do_put('os-quota-class-sets/%s' % self.set_id,
-                                'quota-classes-update-post-req',
-                                {})
-        self._verify_response('quota-classes-update-post-resp',
-                              {}, response, 200)
-
-
 class FakeNode(object):
     def __init__(self, uuid='058d27fa-241b-445a-a386-08c04f96db43'):
         self.uuid = uuid
@@ -3582,14 +3560,6 @@ class ServerGroupQuotas_QuotasSampleJsonTests(QuotasSampleJsonTests):
     extension_name = ("nova.api.openstack.compute.contrib."
                "server_group_quotas.Server_group_quotas")
     extends_name = "nova.api.openstack.compute.contrib.quotas.Quotas"
-
-
-class ServerGroupQuotasQuota_ClassesSampleJsonTests(
-           QuotaClassesSampleJsonTests):
-    extension_name = ("nova.api.openstack.compute.contrib."
-              "server_group_quotas.Server_group_quotas")
-    extends_name = ("nova.api.openstack.compute.contrib.quota_classes."
-                    "Quota_classes")
 
 
 class ServerSortKeysJsonTests(ServersSampleBase):
