@@ -457,7 +457,7 @@ class VMOps(object):
             if resize:
                 self._resize_up_vdis(instance, vdis)
 
-            self._attach_disks(instance, vm_ref, name_label, vdis,
+            self._attach_disks(instance, image_meta, vm_ref, name_label, vdis,
                                disk_image_type, network_info, rescue,
                                admin_password, injected_files)
             if not first_boot:
@@ -502,7 +502,7 @@ class VMOps(object):
                                   kernel_file, ramdisk_file):
             vm_ref = self._create_vm_record(context, instance, name_label,
                                             disk_image_type, kernel_file,
-                                            ramdisk_file, image_meta)
+                                            ramdisk_file, image_meta, rescue)
 
             def undo_create_vm():
                 self._destroy(instance, vm_ref, network_info=network_info)
@@ -643,7 +643,7 @@ class VMOps(object):
             raise exception.InsufficientFreeMemory(uuid=instance['uuid'])
 
     def _create_vm_record(self, context, instance, name_label, disk_image_type,
-                          kernel_file, ramdisk_file, image_meta):
+                          kernel_file, ramdisk_file, image_meta, rescue=False):
         """Create the VM record in Xen, making sure that we do not create
         a duplicate name-label.  Also do a rough sanity check on memory
         to try to short-circuit a potential failure later.  (The memory
@@ -651,6 +651,15 @@ class VMOps(object):
         that are in progress.)
         """
         mode = vm_utils.determine_vm_mode(instance, disk_image_type)
+        # NOTE(tpownall): If rescue mode then we should try to pull the vm_mode
+        # value from the image properties to ensure the vm is built properly.
+        if rescue:
+            rescue_vm_mode = image_meta['properties'].get('vm_mode', None)
+            if rescue_vm_mode is None:
+                LOG.debug("Failed to pull vm_mode from rescue_image_ref.")
+            else:
+                mode = vm_mode.canonicalize(rescue_vm_mode)
+
         if instance.vm_mode != mode:
             # Update database with normalized (or determined) value
             instance.vm_mode = mode
@@ -665,7 +674,7 @@ class VMOps(object):
                                     use_pv_kernel, device_id)
         return vm_ref
 
-    def _attach_disks(self, instance, vm_ref, name_label, vdis,
+    def _attach_disks(self, instance, image_meta, vm_ref, name_label, vdis,
                       disk_image_type, network_info, rescue=False,
                       admin_password=None, files=None):
         flavor = instance.get_flavor()
@@ -684,7 +693,20 @@ class VMOps(object):
         else:
             root_vdi = vdis['root']
 
-            if instance['auto_disk_config']:
+            auto_disk_config = instance['auto_disk_config']
+            # NOTE(tpownall): If rescue mode we need to ensure that we're
+            # pulling the auto_disk_config value from the image properties so
+            # that we can pull it from the rescue_image_ref.
+            if rescue:
+                rescue_auto_disk_config = image_meta['properties'].get(
+                                                'auto_disk_config', None)
+                if rescue_auto_disk_config is None:
+                    LOG.debug("Failed to pull auto_disk_config value from"
+                              "image.")
+                else:
+                    auto_disk_config = rescue_auto_disk_config
+
+            if auto_disk_config:
                 LOG.debug("Auto configuring disk, attempting to "
                           "resize root disk...", instance=instance)
                 vm_utils.try_auto_configure_disk(self._session,
