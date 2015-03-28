@@ -57,9 +57,6 @@ class AggregateNumInstancesFilter(NumInstancesFilter):
     """
 
     def _get_max_instances_per_host(self, host_state, filter_properties):
-        # TODO(uni): DB query in filter is a performance hit, especially for
-        # system with lots of hosts. Will need a general solutnumn here to fix
-        # all filters with aggregate DB call things.
         aggregate_vals = utils.aggregate_values_from_key(
             host_state,
             'max_instances_per_host')
