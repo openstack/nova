@@ -9848,8 +9848,12 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertEqual(migrations[0].id, migration['id'])
 
 
-class ComputeAPIIpFilterTestCase(BaseTestCase):
+class ComputeAPIIpFilterTestCase(test.NoDBTestCase):
     '''Verifies the IP filtering in the compute API.'''
+
+    def setUp(self):
+        super(ComputeAPIIpFilterTestCase, self).setUp()
+        self.compute_api = compute.API()
 
     def _get_ip_filtering_instances(self):
         '''Utility function to get instances for the IP filtering tests.'''
