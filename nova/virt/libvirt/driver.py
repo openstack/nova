@@ -39,7 +39,6 @@ import sys
 import tempfile
 import time
 import uuid
-from xml.dom import minidom
 
 import eventlet
 from eventlet import greenthread
@@ -2468,11 +2467,11 @@ class LibvirtDriver(driver.ComputeDriver):
         def get_vnc_port_for_instance(instance_name):
             virt_dom = self._host.get_domain(instance)
             xml = virt_dom.XMLDesc(0)
-            dom = minidom.parseString(xml)
+            xml_dom = etree.fromstring(xml)
 
-            for graphic in dom.getElementsByTagName('graphics'):
-                if graphic.getAttribute('type') == 'vnc':
-                    return graphic.getAttribute('port')
+            graphic = xml_dom.find("./devices/graphics[@type='vnc']")
+            if graphic is not None:
+                return graphic.get('port')
             # NOTE(rmk): We had VNC consoles enabled but the instance in
             # question is not actually listening for connections.
             raise exception.ConsoleTypeUnavailable(console_type='vnc')
@@ -2486,13 +2485,11 @@ class LibvirtDriver(driver.ComputeDriver):
         def get_spice_ports_for_instance(instance_name):
             virt_dom = self._host.get_domain(instance)
             xml = virt_dom.XMLDesc(0)
-            # TODO(sleepsonthefloor): use etree instead of minidom
-            dom = minidom.parseString(xml)
+            xml_dom = etree.fromstring(xml)
 
-            for graphic in dom.getElementsByTagName('graphics'):
-                if graphic.getAttribute('type') == 'spice':
-                    return (graphic.getAttribute('port'),
-                            graphic.getAttribute('tlsPort'))
+            graphic = xml_dom.find("./devices/graphics[@type='spice']")
+            if graphic is not None:
+                return (graphic.get('port'), graphic.get('tlsPort'))
             # NOTE(rmk): We had Spice consoles enabled but the instance in
             # question is not actually listening for connections.
             raise exception.ConsoleTypeUnavailable(console_type='spice')
