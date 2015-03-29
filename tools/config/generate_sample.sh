@@ -107,10 +107,10 @@ export EVENTLET_NO_GREENDNS=yes
 
 OS_VARS=$(set | sed -n '/^OS_/s/=[^=]*$//gp' | xargs)
 [ "$OS_VARS" ] && eval "unset \$OS_VARS"
-DEFAULT_MODULEPATH=nova.openstack.common.config.generator
-MODULEPATH=${MODULEPATH:-$DEFAULT_MODULEPATH}
+DEFAULT_CONFIG_GENERATOR=nova.openstack.common.config.generator
+CONFIG_GENERATOR=${CONFIG_GENERATOR:-$DEFAULT_CONFIG_GENERATOR}
 OUTPUTFILE=$OUTPUTDIR/$PACKAGENAME.conf.sample
-python -m $MODULEPATH $MODULES $LIBRARIES $FILES > $OUTPUTFILE
+python -m $CONFIG_GENERATOR $MODULES $LIBRARIES $FILES > $OUTPUTFILE
 
 # Hook to allow projects to append custom config file snippets
 CONCAT_FILES=$(ls $BASEDIR/tools/config/*.conf.sample 2>/dev/null)
