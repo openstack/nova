@@ -481,9 +481,7 @@ class FloatingIpTestV21(test.TestCase):
     def test_floating_ip_release(self):
         self.controller.delete(self.fake_req, 1)
 
-    def test_floating_ip_associate(self):
-        fixed_address = '192.168.1.100'
-
+    def _test_floating_ip_associate(self, fixed_address):
         def fake_associate_floating_ip(*args, **kwargs):
             self.assertEqual(fixed_address, kwargs['fixed_address'])
 
@@ -494,6 +492,24 @@ class FloatingIpTestV21(test.TestCase):
         rsp = self.manager._add_floating_ip(self.fake_req, TEST_INST,
                                             body=body)
         self.assertEqual(202, rsp.status_int)
+
+    def test_floating_ip_associate(self):
+        self._test_floating_ip_associate(fixed_address='192.168.1.100')
+
+    @mock.patch.object(network.model.NetworkInfo, 'fixed_ips')
+    def test_associate_floating_ip_v4v6_fixed_ip(self, fixed_ips_mock):
+        fixed_address = '192.168.1.100'
+        fixed_ips_mock.return_value = [{'address': 'fc00:2001:db8::100'},
+                                       {'address': fixed_address}]
+        self._test_floating_ip_associate(fixed_address=fixed_address)
+
+    @mock.patch.object(network.model.NetworkInfo, 'fixed_ips',
+                       return_value=[{'address': 'fc00:2001:db8::100'}])
+    def test_associate_floating_ip_v6_fixed_ip(self, fixed_ips_mock):
+        body = dict(addFloatingIp=dict(address=self.floating_ip))
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.manager._add_floating_ip, self.fake_req,
+                          TEST_INST, body=body)
 
     def test_floating_ip_associate_invalid_instance(self):
 
