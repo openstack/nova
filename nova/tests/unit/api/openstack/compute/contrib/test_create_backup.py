@@ -272,6 +272,28 @@ class CreateBackupTestsV21(admin_only_action_common.CommonMixin,
                           self.controller._create_backup,
                           self.req, fakes.FAKE_UUID, body=body)
 
+    def test_backup_volume_backed_instance(self):
+        body = {
+            'createBackup': {
+                'name': 'BackupMe',
+                'backup_type': 'daily',
+                'rotation': 3
+            },
+        }
+
+        common.check_img_metadata_properties_quota(self.context, {})
+        instance = self._stub_instance_get()
+        instance.image_ref = None
+
+        self.compute_api.backup(self.context, instance, 'BackupMe', 'daily', 3,
+                extra_properties={}).AndRaise(exception.InvalidRequest())
+
+        self.mox.ReplayAll()
+
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller._create_backup,
+                          self.req, instance['uuid'], body=body)
+
 
 class CreateBackupTestsV2(CreateBackupTestsV21):
     create_backup = create_backup_v2

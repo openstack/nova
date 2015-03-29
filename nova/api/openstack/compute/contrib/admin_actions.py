@@ -289,6 +289,8 @@ class AdminActionsController(wsgi.Controller):
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'createBackup', id)
+        except exception.InvalidRequest as e:
+            raise exc.HTTPBadRequest(explanation=e.format_message())
 
         resp = webob.Response(status_int=202)
 
