@@ -195,7 +195,7 @@ class TestNeutronSecurityGroupsV21(
 
     def test_associate_non_running_instance(self):
         # Neutron does not care if the instance is running or not. When the
-        # instances is detected by nuetron it will push down the security
+        # instances is detected by neutron it will push down the security
         # group policy to it.
         pass
 
