@@ -7,10 +7,10 @@ scheme. In the URI scheme, the first element of the path contains the
 target version identifier (e.g. https://servers.api.openstack.org/
 v2.0/...). The MIME type versioning scheme uses HTTP content negotiation
 where the ``Accept`` or ``Content-Type`` headers contains a MIME type
-that identifies the version (application/vnd.openstack.compute.v2+xml).
-A version MIME type is always linked to a base MIME type
-(application/xml or application/json). If conflicting versions are
-specified using both an HTTP header and a URI, the URI takes precedence.
+that identifies the version (application/vnd.openstack.compute.v2+json).
+A version MIME type is always linked to a base MIME type, such as
+application/json. If conflicting versions are specified using both an HTTP
+header and a URI, the URI takes precedence.
 
 **Example: Request with MIME type versioning**
 
@@ -18,7 +18,7 @@ specified using both an HTTP header and a URI, the URI takes precedence.
 
     GET /214412/images HTTP/1.1
     Host: servers.api.openstack.org
-    Accept: application/vnd.openstack.compute.v2+xml
+    Accept: application/vnd.openstack.compute.v2+json
     X-Auth-Token: eaaafd18-0fed-4b3a-81b4-663c99ec1cbb
 
 
@@ -28,7 +28,7 @@ specified using both an HTTP header and a URI, the URI takes precedence.
 
     GET /v2/214412/images HTTP/1.1
     Host: servers.api.openstack.org
-    Accept: application/xml
+    Accept: application/json
     X-Auth-Token: eaaafd18-0fed-4b3a-81b4-663c99ec1cbb
 
 
@@ -61,10 +61,6 @@ links and MIME types to available versions.
              ],
              "media-types":[
                 {
-                   "base":"application/xml",
-                   "type":"application/vnd.openstack.compute.v1.0+xml"
-                },
-                {
                    "base":"application/json",
                    "type":"application/vnd.openstack.compute.v1.0+json"
                 }
@@ -80,10 +76,6 @@ links and MIME types to available versions.
                 }
              ],
              "media-types":[
-                {
-                   "base":"application/xml",
-                   "type":"application/vnd.openstack.compute.v2+xml"
-                },
                 {
                    "base":"application/json",
                    "type":"application/vnd.openstack.compute.v2+json"
