@@ -775,15 +775,12 @@ class ServiceCommands(object):
 
         """
         # Getting compute node info and related instances info
-        service_ref = objects.Service.get_by_compute_host(context, host)
-        instance_refs = db.instance_get_all_by_host(context,
-                                                    service_ref.host)
+        compute_ref = (
+            objects.ComputeNode.get_first_node_by_host_for_old_compat(context,
+                                                                      host))
+        instance_refs = db.instance_get_all_by_host(context, host)
 
         # Getting total available/used resource
-        # NOTE(sbauza): We're lazily loading the compute_node field here but
-        # we will change that later to get the ComputeNode object by using
-        # the Service host field
-        compute_ref = service_ref.compute_node
         resource = {'vcpus': compute_ref.vcpus,
                     'memory_mb': compute_ref.memory_mb,
                     'local_gb': compute_ref.local_gb,
