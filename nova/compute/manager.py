@@ -478,6 +478,12 @@ class InstanceEvents(object):
         :param event_name: the name of the event we're expecting
         :returns: an event object that should be wait()'d on
         """
+        if self._events is None:
+            # NOTE(danms): We really should have a more specific error
+            # here, but this is what we use for our default error case
+            raise exception.NovaException('In shutdown, no new events '
+                                          'can be scheduled')
+
         @utils.synchronized(self._lock_name(instance))
         def _create_or_get_event():
             if instance.uuid not in self._events:
@@ -505,6 +511,10 @@ class InstanceEvents(object):
 
         @utils.synchronized(self._lock_name(instance))
         def _pop_event():
+            if not self._events:
+                LOG.debug('Unexpected attempt to pop events during shutdown',
+                          instance=instance)
+                return no_events_sentinel
             events = self._events.get(instance.uuid)
             if not events:
                 return no_events_sentinel
@@ -545,7 +555,11 @@ class InstanceEvents(object):
         return _clear_events()
 
     def cancel_all_events(self):
-        for instance_uuid, events in self._events.items():
+        our_events = self._events
+        # NOTE(danms): Block new events
+        self._events = None
+
+        for instance_uuid, events in our_events.items():
             for event_name, eventlet_event in events.items():
                 LOG.debug('Canceling in-flight event %(event)s for '
                           'instance %(instance_uuid)s',
@@ -612,9 +626,16 @@ class ComputeVirtAPI(virtapi.VirtAPI):
                 name, tag = event_name
                 event_name = objects.InstanceExternalEvent.make_key(
                     name, tag)
-            events[event_name] = (
-                self._compute.instance_events.prepare_for_instance_event(
-                    instance, event_name))
+            try:
+                events[event_name] = (
+                    self._compute.instance_events.prepare_for_instance_event(
+                        instance, event_name))
+            except exception.NovaException:
+                error_callback(event_name, instance)
+                # NOTE(danms): Don't wait for any of the events. They
+                # should all be canceled and fired immediately below,
+                # but don't stick around if not.
+                deadline = 0
         yield
         with eventlet.timeout.Timeout(deadline):
             for event_name, event in events.items():
