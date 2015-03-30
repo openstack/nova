@@ -13,16 +13,37 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_config import cfg
 from oslo_utils import timeutils
 
 from nova import db
 from nova.tests.functional.v3 import api_sample_base
 from nova.tests.unit.api.openstack.compute.contrib import test_services
 
+CONF = cfg.CONF
+CONF.import_opt('osapi_compute_extension',
+                'nova.api.openstack.compute.extensions')
+
 
 class ServicesJsonTest(api_sample_base.ApiSampleTestBaseV3):
     ADMIN_API = True
     extension_name = "os-services"
+    # TODO(gmann): Overriding '_api_version' till all functional tests
+    # are merged between v2 and v2.1. After that base class variable
+    # itself can be changed to 'v2'
+    _api_version = 'v2'
+
+    def _get_flags(self):
+        f = super(ServicesJsonTest, self)._get_flags()
+        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.services.Services')
+        f['osapi_compute_extension'].append('nova.api.openstack.compute.'
+                      'contrib.extended_services_delete.'
+                      'Extended_services_delete')
+        f['osapi_compute_extension'].append('nova.api.openstack.compute.'
+                      'contrib.extended_services.Extended_services')
+        return f
 
     def setUp(self):
         super(ServicesJsonTest, self).setUp()
