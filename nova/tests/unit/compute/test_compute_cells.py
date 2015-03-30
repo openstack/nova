@@ -121,12 +121,6 @@ class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
         self.stubs.Set(self.compute_api, '_validate_cell',
                 _fake_validate_cell)
 
-        # NOTE(belliott) Don't update the instance state
-        # for the tests at the API layer.  Let it happen after
-        # the stub cast to cells so that expected_task_states
-        # match.
-        self.stubs.Set(self.compute_api, 'update', _nop_update)
-
         deploy_stubs(self.stubs, self.compute_api)
 
     def tearDown(self):

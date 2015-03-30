@@ -3304,18 +3304,15 @@ class ServersAllExtensionsTestCase(test.TestCase):
     def test_update_missing_server(self):
         # Test update with malformed body.
 
-        def fake_update(*args, **kwargs):
-            raise test.TestingException("Should not reach the compute API.")
-
-        self.stubs.Set(compute_api.API, 'update', fake_update)
-
         req = fakes.HTTPRequestV3.blank('/servers/1')
         req.method = 'PUT'
         req.content_type = 'application/json'
         body = {'foo': {'a': 'b'}}
 
         req.body = jsonutils.dumps(body)
-        res = req.get_response(self.app)
+        with mock.patch('nova.objects.Instance.save') as mock_save:
+            res = req.get_response(self.app)
+            self.assertFalse(mock_save.called)
         self.assertEqual(400, res.status_int)
 
 

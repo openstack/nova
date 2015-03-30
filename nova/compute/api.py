@@ -1480,31 +1480,6 @@ class API(base.Base):
                        shutdown_terminate=shutdown_terminate,
                        check_server_group_quota=check_server_group_quota)
 
-    @wrap_check_policy
-    def update(self, context, instance, **kwargs):
-        """Updates the instance in the datastore.
-
-        :param context: The security context
-        :param instance: The instance to update
-        :param kwargs: All additional keyword args are treated
-                       as data fields of the instance to be
-                       updated
-
-        :returns: A reference to the updated instance
-        """
-        refs = self._update(context, instance, **kwargs)
-        return refs[1]
-
-    def _update(self, context, instance, **kwargs):
-        # Update the instance record and send a state update notification
-        # if task or vm state changed
-        old_ref, instance_ref = self.db.instance_update_and_get_original(
-                                  context, instance.uuid, kwargs)
-        notifications.send_update(context, old_ref,
-                                  instance_ref, service="api")
-
-        return dict(old_ref.iteritems()), dict(instance_ref.iteritems())
-
     def _check_auto_disk_config(self, instance=None, image=None,
                                 **extra_instance_updates):
         auto_disk_config = extra_instance_updates.get("auto_disk_config")
