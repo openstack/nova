@@ -18,9 +18,7 @@ from oslo_log import log as logging
 from oslo_utils import timeutils
 import six
 
-from nova import context
 from nova.i18n import _, _LE
-from nova import objects
 from nova.servicegroup import api
 from nova.servicegroup.drivers import base
 
@@ -77,18 +75,6 @@ class DbDriver(base.Driver):
                       'Elapsed time is %(el)s',
                       {'lhb': str(last_heartbeat), 'el': str(elapsed)})
         return is_up
-
-    def get_all(self, group_id):
-        """Returns ALL members of the given group
-        """
-        LOG.debug('DB_Driver: get_all members of the %s group', group_id)
-        rs = []
-        ctxt = context.get_admin_context()
-        services = objects.ServiceList.get_by_topic(ctxt, group_id)
-        for service in services:
-            if self.is_up(service):
-                rs.append(service.host)
-        return rs
 
     def _report_state(self, service):
         """Update the state of this service in the datastore."""
