@@ -296,11 +296,14 @@ class RbdTestCase(test.NoDBTestCase):
         rbd.list.return_value = ['12345_test', '111_test']
 
         client = mock_client.return_value
-        self.driver.cleanup_volumes(instance)
-        rbd.remove.assert_called_once_with(client.ioctx, '12345_test')
+        with mock.patch('eventlet.greenthread.sleep'):
+            self.driver.cleanup_volumes(instance)
+        rbd.remove.assert_any_call(client.ioctx, '12345_test')
+        # NOTE(danms): 10 retries + 1 final attempt to propagate = 11
+        self.assertEqual(11, len(rbd.remove.call_args_list))
 
     def test_cleanup_volumes_fail_not_found(self):
-        self._test_cleanup_exception('ImageNotFound')
+        self._test_cleanup_exception('ImageBusy')
 
     def test_cleanup_volumes_fail_snapshots(self):
         self._test_cleanup_exception('ImageHasSnapshots')
