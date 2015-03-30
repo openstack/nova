@@ -49,6 +49,7 @@ from nova.i18n import _LW
 from nova import rpc
 from nova import utils
 from nova.virt import event as virtevent
+from nova.virt.libvirt import compat
 from nova.virt.libvirt import config as vconfig
 
 libvirt = None
@@ -853,3 +854,6 @@ class Host(object):
         secret = self.find_secret(usage_type, usage_id)
         if secret is not None:
             secret.undefine()
+
+    def get_domain_info(self, virt_dom):
+        return compat.get_domain_info(libvirt, self, virt_dom)
