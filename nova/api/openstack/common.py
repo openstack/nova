@@ -25,6 +25,7 @@ import six.moves.urllib.parse as urlparse
 import webob
 from webob import exc
 
+from nova.api.validation import parameter_types
 from nova.compute import task_states
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
@@ -54,10 +55,8 @@ QUOTAS = quota.QUOTAS
 
 CONF.import_opt('enable', 'nova.cells.opts', group='cells')
 
-# NOTE(cyeoh): A common regexp for acceptable names (user supplied)
-# that we want all new extensions to conform to unless there is a very
-# good reason not to.
-VALID_NAME_REGEX = re.compile("^(?! )[\w. _-]+(?<! )$", re.UNICODE)
+VALID_NAME_REGEX = re.compile(parameter_types.valid_name_regex, re.UNICODE)
+
 
 XML_NS_V11 = 'http://docs.openstack.org/compute/api/v1.1'
 
