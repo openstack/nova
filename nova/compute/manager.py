@@ -544,6 +544,20 @@ class InstanceEvents(object):
             return self._events.pop(instance.uuid, {})
         return _clear_events()
 
+    def cancel_all_events(self):
+        for instance_uuid, events in self._events.items():
+            for event_name, eventlet_event in events.items():
+                LOG.debug('Canceling in-flight event %(event)s for '
+                          'instance %(instance_uuid)s',
+                          {'event': event_name,
+                           'instance_uuid': instance_uuid})
+                name, tag = event_name.split('-', 1)
+                event = objects.InstanceExternalEvent(
+                    instance_uuid=instance_uuid,
+                    name=name, status='failed',
+                    tag=tag, data={})
+                eventlet_event.send(event)
+
 
 class ComputeVirtAPI(virtapi.VirtAPI):
     def __init__(self, compute):
@@ -1240,6 +1254,7 @@ class ComputeManager(manager.Manager):
             self._update_scheduler_instance_info(context, instances)
 
     def cleanup_host(self):
+        self.instance_events.cancel_all_events()
         self.driver.cleanup_host(host=self.host)
 
     def pre_start_hook(self):
