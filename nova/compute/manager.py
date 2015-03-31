@@ -5357,6 +5357,8 @@ class ComputeManager(manager.Manager):
                                           "live_migration._post.start",
                                           network_info=network_info)
         # Releasing security group ingress rule.
+        LOG.debug('Calling driver.unfilter_instance from _post_live_migration',
+                  instance=instance)
         self.driver.unfilter_instance(instance,
                                       network_info)
 
@@ -5386,6 +5388,8 @@ class ComputeManager(manager.Manager):
                 block_migration, migrate_data)
 
         if do_cleanup:
+            LOG.debug('Calling driver.cleanup from _post_live_migration',
+                      instance=instance)
             self.driver.cleanup(ctxt, instance, network_info,
                                 destroy_disks=destroy_disks,
                                 migrate_data=migrate_data,
