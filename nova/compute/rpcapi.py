@@ -25,6 +25,7 @@ from nova import objects
 from nova.objects import base as objects_base
 from nova.openstack.common import jsonutils
 from nova import rpc
+from nova import utils
 
 rpcapi_opts = [
     cfg.StrOpt('compute_topic',
@@ -884,9 +885,14 @@ class ComputeAPI(object):
         if not self.client.can_send_version(version):
             version = '3.23'
             if requested_networks is not None:
-                requested_networks = [(network_id, address, port_id)
-                    for (network_id, address, port_id, _) in
-                        requested_networks.as_tuples()]
+                if utils.is_neutron():
+                    requested_networks = [(network_id, address, port_id)
+                        for (network_id, address, port_id, _) in
+                            requested_networks.as_tuples()]
+                else:
+                    requested_networks = [(network_id, address)
+                        for (network_id, address) in
+                            requested_networks.as_tuples()]
 
         cctxt = self.client.prepare(server=host, version=version)
         cctxt.cast(ctxt, 'build_and_run_instance', instance=instance,
