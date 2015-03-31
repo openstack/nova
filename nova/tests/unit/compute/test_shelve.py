@@ -259,13 +259,16 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         self.assertEqual(self.compute.host, instance.host)
         self.assertFalse(instance.auto_disk_config)
 
-    def test_unshelve_volume_backed(self):
+    @mock.patch('nova.utils.get_image_from_system_metadata')
+    def test_unshelve_volume_backed(self, mock_image_meta):
         instance = self._create_fake_instance_obj()
         node = test_compute.NODENAME
         limits = {}
         filter_properties = {'limits': limits}
         instance.task_state = task_states.UNSHELVING
         instance.save()
+        image_meta = {'properties': {'base_image_ref': 'fake_id'}}
+        mock_image_meta.return_value = image_meta
 
         self.mox.StubOutWithMock(self.compute, '_notify_about_instance_usage')
         self.mox.StubOutWithMock(self.compute, '_prep_block_device')
@@ -302,7 +305,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         self.rt.instance_claim(self.context, instance, limits).AndReturn(
                 claims.Claim(self.context, instance, self.rt,
                              _fake_resources()))
-        self.compute.driver.spawn(self.context, instance, None,
+        self.compute.driver.spawn(self.context, instance, image_meta,
                 injected_files=[], admin_password=None,
                 network_info=[],
                 block_device_info='fake_bdm')
