@@ -460,7 +460,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         else:
             # Migrate the flavor from system_metadata to extra,
             # if needed
-            if db_inst.get('extra', {}).get('flavor') is not None:
+            instance_extra = db_inst.get('extra') or {}
+            if instance_extra.get('flavor') is not None:
                 self._flavor_from_db(db_inst['extra']['flavor'])
             elif 'instance_type_id' in self.system_metadata:
                 self._migrate_flavor(self)
