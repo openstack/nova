@@ -6024,7 +6024,16 @@ class ComputeManager(manager.Manager):
                      instance=db_instance)
             return
 
+        orig_db_power_state = db_power_state
         if vm_power_state != db_power_state:
+            LOG.info(_LI('During _sync_instance_power_state the DB '
+                         'power_state (%(db_power_state)s) does not match '
+                         'the vm_power_state from the hypervisor '
+                         '(%(vm_power_state)s). Updating power_state in the '
+                         'DB to match the hypervisor.'),
+                     {'db_power_state': db_power_state,
+                      'vm_power_state': vm_power_state},
+                     instance=db_instance)
             # power_state is always updated from hypervisor to db
             db_instance.power_state = vm_power_state
             db_instance.save()
@@ -6046,11 +6055,11 @@ class ComputeManager(manager.Manager):
                 LOG.warning(_LW("Instance shutdown by itself. Calling the "
                                 "stop API. Current vm_state: %(vm_state)s, "
                                 "current task_state: %(task_state)s, "
-                                "current DB power_state: %(db_power_state)s, "
+                                "original DB power_state: %(db_power_state)s, "
                                 "current VM power_state: %(vm_power_state)s"),
                             {'vm_state': vm_state,
                              'task_state': db_instance.task_state,
-                             'db_power_state': db_power_state,
+                             'db_power_state': orig_db_power_state,
                              'vm_power_state': vm_power_state},
                             instance=db_instance)
                 try:
@@ -6101,11 +6110,11 @@ class ComputeManager(manager.Manager):
                 LOG.warning(_LW("Instance is not stopped. Calling "
                                 "the stop API. Current vm_state: %(vm_state)s,"
                                 " current task_state: %(task_state)s, "
-                                "current DB power_state: %(db_power_state)s, "
+                                "original DB power_state: %(db_power_state)s, "
                                 "current VM power_state: %(vm_power_state)s"),
                             {'vm_state': vm_state,
                              'task_state': db_instance.task_state,
-                             'db_power_state': db_power_state,
+                             'db_power_state': orig_db_power_state,
                              'vm_power_state': vm_power_state},
                             instance=db_instance)
                 try:
