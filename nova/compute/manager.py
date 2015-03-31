@@ -4525,13 +4525,18 @@ class ComputeManager(manager.Manager):
         if image:
             shelved_image_ref = instance.image_ref
             instance.image_ref = image['id']
+            image_meta = image
+        else:
+            image_meta = utils.get_image_from_system_metadata(
+                instance.system_metadata)
 
         self.network_api.setup_instance_network_on_host(context, instance,
                                                         self.host)
         network_info = self._get_instance_nw_info(context, instance)
         try:
             with rt.instance_claim(context, instance, limits):
-                self.driver.spawn(context, instance, image, injected_files=[],
+                self.driver.spawn(context, instance, image_meta,
+                                  injected_files=[],
                                   admin_password=None,
                                   network_info=network_info,
                                   block_device_info=block_device_info)
