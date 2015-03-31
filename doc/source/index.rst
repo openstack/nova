@@ -62,9 +62,13 @@ Compute API v2
 API Extensions
 ==============
 
-Go to the `API Complete Reference`_ for information about Compute API extensions.
+Go to the `API Complete Reference v2.1 (CURRENT)`_ for information about the Compute API.
+We still support the older `API Complete Reference v2 (SUPPORTED)`_ and its extensions
+`API Complete Reference v2 extensions (SUPPORTED)`_
 
-.. _`API Complete Reference`: http://developer.openstack.org/api-ref-compute-v2-ext.html
+.. _`API Complete Reference v2.1 (CURRENT)`: http://developer.openstack.org/api-ref-compute-v2.1.html
+.. _`API Complete Reference v2 (SUPPORTED)`: http://developer.openstack.org/api-ref-compute-v2.html
+.. _`API Complete Reference v2 extensions (SUPPORTED)`: http://developer.openstack.org/api-ref-compute-v2-ext.html
 
 Indices and tables
 ==================
