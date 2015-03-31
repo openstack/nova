@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
 from oslo_serialization import jsonutils
 import webob
 
@@ -150,14 +151,20 @@ class ExtendedVolumesEnforcementV21(test.NoDBTestCase):
         self.controller = extended_volumes_v21.ExtendedVolumesController()
         self.req = fakes.HTTPRequest.blank('')
 
-    def test_extend_show_policy_failed(self):
-        rule_name = 'compute_extension:v3:os-extended-volumes'
+    @mock.patch.object(extended_volumes_v21.ExtendedVolumesController,
+                       '_extend_server')
+    def test_extend_show_policy_failed(self, mock_extend):
+        rule_name = 'os_compute_api:os-extended-volumes'
         self.policy.set_rules({rule_name: "project:non_fake"})
         # Pass ResponseObj as None, the code shouldn't touch the None.
         self.controller.show(self.req, None, fakes.FAKE_UUID)
+        self.assertFalse(mock_extend.called)
 
-    def test_extend_detail_policy_failed(self):
-        rule_name = 'compute_extension:v3:os-extended-volumes'
+    @mock.patch.object(extended_volumes_v21.ExtendedVolumesController,
+                   '_extend_server')
+    def test_extend_detail_policy_failed(self, mock_extend):
+        rule_name = 'os_compute_api:os-extended-volumes'
         self.policy.set_rules({rule_name: "project:non_fake"})
         # Pass ResponseObj as None, the code shouldn't touch the None.
         self.controller.detail(self.req, None)
+        self.assertFalse(mock_extend.called)

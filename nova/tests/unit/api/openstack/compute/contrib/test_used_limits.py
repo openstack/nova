@@ -32,7 +32,7 @@ class FakeRequest(object):
 
 
 class UsedLimitsTestCaseV21(test.NoDBTestCase):
-    used_limit_extension = "compute_extension:v3:os-used-limits:used_limits"
+    used_limit_extension = "os_compute_api:os-used-limits"
     include_server_group_quotas = True
 
     def setUp(self):

@@ -105,7 +105,7 @@ def fake_instance_get_active_by_window_joined(context, begin, end,
 @mock.patch.object(db, 'instance_get_active_by_window_joined',
                    fake_instance_get_active_by_window_joined)
 class SimpleTenantUsageTestV21(test.TestCase):
-    policy_rule_prefix = "compute_extension:v3:os-simple-tenant-usage"
+    policy_rule_prefix = "os_compute_api:os-simple-tenant-usage"
     controller = simple_tenant_usage_v21.SimpleTenantUsageController()
 
     def setUp(self):
