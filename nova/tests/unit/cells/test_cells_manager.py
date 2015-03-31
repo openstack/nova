@@ -60,11 +60,12 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
 
     def _get_fake_response(self, raw_response=None, exc=False):
         if exc:
-            return messaging.Response('fake', test.TestingException(),
+            return messaging.Response(self.ctxt, 'fake',
+                                      test.TestingException(),
                                       True)
         if raw_response is None:
             raw_response = 'fake-response'
-        return messaging.Response('fake', raw_response, False)
+        return messaging.Response(self.ctxt, 'fake', raw_response, False)
 
     def test_get_cell_info_for_neighbors(self):
         self.mox.StubOutWithMock(self.cells_manager.state_manager,
@@ -286,7 +287,8 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
                 expected_service = copy.deepcopy(service)
                 cells_utils.add_cell_to_service(expected_service, cell_name)
                 expected_response.append(expected_service)
-            response = messaging.Response(cell_name, services, False)
+            response = messaging.Response(self.ctxt, cell_name, services,
+                                          False)
             responses.append(response)
 
         self.mox.StubOutWithMock(self.msg_runner,
@@ -302,7 +304,8 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(self.msg_runner,
                                  'service_get_by_compute_host')
         fake_cell = 'fake-cell'
-        fake_response = messaging.Response(fake_cell, FAKE_SERVICES[0],
+        fake_response = messaging.Response(self.ctxt, fake_cell,
+                                           FAKE_SERVICES[0],
                                            False)
         expected_response = copy.deepcopy(FAKE_SERVICES[0])
         cells_utils.add_cell_to_service(expected_response, fake_cell)
@@ -321,7 +324,8 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
         fake_cell_and_host = cells_utils.cell_with_item(fake_cell, fake_host)
         host_uptime = (" 08:32:11 up 93 days, 18:25, 12 users,  load average:"
                        " 0.20, 0.12, 0.14")
-        fake_response = messaging.Response(fake_cell, host_uptime, False)
+        fake_response = messaging.Response(self.ctxt, fake_cell, host_uptime,
+                                           False)
 
         self.mox.StubOutWithMock(self.msg_runner,
                                  'get_host_uptime')
@@ -336,7 +340,7 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
     def test_service_update(self):
         fake_cell = 'fake-cell'
         fake_response = messaging.Response(
-            fake_cell, FAKE_SERVICES[0], False)
+            self.ctxt, fake_cell, FAKE_SERVICES[0], False)
         expected_response = copy.deepcopy(FAKE_SERVICES[0])
         cells_utils.add_cell_to_service(expected_response, fake_cell)
         cell_and_host = cells_utils.cell_with_item('fake-cell', 'fake-host')
@@ -394,7 +398,8 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
                 cells_utils.add_cell_to_task_log(expected_task_log,
                                                  cell_name)
                 expected_response.append(expected_task_log)
-            response = messaging.Response(cell_name, task_logs, False)
+            response = messaging.Response(self.ctxt, cell_name, task_logs,
+                                          False)
             responses.append(response)
         return expected_response, responses
 
@@ -456,7 +461,8 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
                 cells_utils.add_cell_to_compute_node(expected_compute_node,
                                                      cell_name)
                 expected_response.append(expected_compute_node)
-            response = messaging.Response(cell_name, compute_nodes, False)
+            response = messaging.Response(self.ctxt, cell_name, compute_nodes,
+                                          False)
             responses.append(response)
         self.mox.StubOutWithMock(self.msg_runner,
                                  'compute_node_get_all')
@@ -471,9 +477,9 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
         raw_resp1 = {'key1': 1, 'key2': 2}
         raw_resp2 = {'key2': 1, 'key3': 2}
         raw_resp3 = {'key3': 1, 'key4': 2}
-        responses = [messaging.Response('cell1', raw_resp1, False),
-                     messaging.Response('cell2', raw_resp2, False),
-                     messaging.Response('cell2', raw_resp3, False)]
+        responses = [messaging.Response(self.ctxt, 'cell1', raw_resp1, False),
+                     messaging.Response(self.ctxt, 'cell2', raw_resp2, False),
+                     messaging.Response(self.ctxt, 'cell2', raw_resp3, False)]
         expected_resp = {'key1': 1, 'key2': 3, 'key3': 3, 'key4': 2}
 
         self.mox.StubOutWithMock(self.msg_runner,
@@ -485,7 +491,7 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
 
     def test_compute_node_get(self):
         fake_cell = 'fake-cell'
-        fake_response = messaging.Response(fake_cell,
+        fake_response = messaging.Response(self.ctxt, fake_cell,
                                            FAKE_COMPUTE_NODES[0],
                                            False)
         expected_response = copy.deepcopy(FAKE_COMPUTE_NODES[0])
@@ -504,7 +510,8 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
         fake_uuid = fake_server_actions.FAKE_UUID
         fake_req_id = fake_server_actions.FAKE_REQUEST_ID1
         fake_act = fake_server_actions.FAKE_ACTIONS[fake_uuid][fake_req_id]
-        fake_response = messaging.Response('fake-cell', [fake_act], False)
+        fake_response = messaging.Response(self.ctxt, 'fake-cell', [fake_act],
+                                           False)
         expected_response = [fake_act]
         self.mox.StubOutWithMock(self.msg_runner, 'actions_get')
         self.msg_runner.actions_get(self.ctxt, 'fake-cell',
@@ -518,7 +525,8 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
         fake_uuid = fake_server_actions.FAKE_UUID
         fake_req_id = fake_server_actions.FAKE_REQUEST_ID1
         fake_act = fake_server_actions.FAKE_ACTIONS[fake_uuid][fake_req_id]
-        fake_response = messaging.Response('fake-cell', fake_act, False)
+        fake_response = messaging.Response(self.ctxt, 'fake-cell', fake_act,
+                                           False)
         expected_response = fake_act
         self.mox.StubOutWithMock(self.msg_runner, 'action_get_by_request_id')
         self.msg_runner.action_get_by_request_id(self.ctxt, 'fake-cell',
@@ -533,7 +541,8 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
     def test_action_events_get(self):
         fake_action_id = fake_server_actions.FAKE_ACTION_ID1
         fake_events = fake_server_actions.FAKE_EVENTS[fake_action_id]
-        fake_response = messaging.Response('fake-cell', fake_events, False)
+        fake_response = messaging.Response(self.ctxt, 'fake-cell', fake_events,
+                                           False)
         expected_response = fake_events
         self.mox.StubOutWithMock(self.msg_runner, 'action_events_get')
         self.msg_runner.action_events_get(self.ctxt, 'fake-cell',

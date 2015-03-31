@@ -203,7 +203,7 @@ class _BaseMessage(object):
             resp_value = sys.exc_info()
             failure = True
             LOG.exception(_LE("Error processing message locally"))
-        return Response(self.routing_path, resp_value, failure)
+        return Response(self.ctxt, self.routing_path, resp_value, failure)
 
     def _setup_response_queue(self):
         """Shortcut to creating a response queue in the MessageRunner."""
@@ -257,7 +257,7 @@ class _BaseMessage(object):
         if self.source_is_us():
             responses = []
             for json_response in json_responses:
-                responses.append(Response.from_json(json_response))
+                responses.append(Response.from_json(self.ctxt, json_response))
             return responses
         direction = self.direction == 'up' and 'down' or 'up'
         response_kwargs = {'orig_message': self.to_json(),
@@ -289,7 +289,7 @@ class _BaseMessage(object):
         """Take an exception as returned from sys.exc_info(), encode
         it in a Response, and send it.
         """
-        response = Response(self.routing_path, exc_info, True)
+        response = Response(self.ctxt, self.routing_path, exc_info, True)
         return self._send_response(response)
 
     def _to_dict(self):
@@ -445,7 +445,7 @@ class _TargetedMessage(_BaseMessage):
         if wait_for_response:
             # Targeted messages only have 1 response.
             remote_response = self._wait_for_json_responses()[0]
-            return Response.from_json(remote_response)
+            return Response.from_json(self.ctxt, remote_response)
 
 
 class _BroadcastMessage(_BaseMessage):
@@ -1841,13 +1841,15 @@ class Response(object):
     """Holds a response from a cell.  If there was a failure, 'failure'
     will be True and 'response' will contain an encoded Exception.
     """
-    def __init__(self, cell_name, value, failure):
+    def __init__(self, ctxt, cell_name, value, failure):
         self.failure = failure
         self.cell_name = cell_name
         self.value = value
+        self.ctxt = ctxt
+        self.serializer = objects_base.NovaObjectSerializer()
 
     def to_json(self):
-        resp_value = self.value
+        resp_value = self.serializer.serialize_entity(self.ctxt, self.value)
         if self.failure:
             resp_value = serialize_remote_exception(resp_value,
                                                     log_failure=False)
@@ -1857,13 +1859,16 @@ class Response(object):
         return jsonutils.dumps(_dict)
 
     @classmethod
-    def from_json(cls, json_message):
+    def from_json(cls, ctxt, json_message):
         _dict = jsonutils.loads(json_message)
         if _dict['failure']:
             resp_value = deserialize_remote_exception(_dict['value'],
                                                       rpc.get_allowed_exmods())
             _dict['value'] = resp_value
-        return cls(**_dict)
+        response = cls(ctxt, **_dict)
+        response.value = response.serializer.deserialize_entity(
+            response.ctxt, response.value)
+        return response
 
     def value_or_raise(self):
         if self.failure:

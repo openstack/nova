@@ -18,6 +18,7 @@ Tests For Cells Messaging module
 """
 
 import contextlib
+import uuid
 
 import mock
 from mox3 import mox
@@ -83,6 +84,19 @@ class CellsMessageClassesTestCase(test.TestCase):
             self.assertEqual(expected_output,
                     messaging._response_cell_name_from_path(test_input,
                             neighbor_only=True))
+
+    def test_response_to_json_and_from_json(self):
+        fake_uuid = str(uuid.uuid4())
+        response = messaging.Response(self.ctxt, 'child-cell!api-cell',
+                                      objects.Instance(id=1, uuid=fake_uuid),
+                                      False)
+        json_response = response.to_json()
+        deserialized_response = messaging.Response.from_json(self.ctxt,
+                                                             json_response)
+        obj = deserialized_response.value
+        self.assertIsInstance(obj, objects.Instance)
+        self.assertEqual(1, obj.id)
+        self.assertEqual(fake_uuid, obj.uuid)
 
     def test_targeted_message(self):
         self.flags(max_hop_count=99, group='cells')
