@@ -304,6 +304,50 @@ class HostTestCase(test.NoDBTestCase):
         self.assertEqual(self.connect_calls, 1)
         self.assertEqual(self.register_calls, 1)
 
+    @mock.patch.object(fakelibvirt.virConnect, "getLibVersion")
+    @mock.patch.object(fakelibvirt.virConnect, "getVersion")
+    @mock.patch.object(fakelibvirt.virConnect, "getType")
+    def test_has_min_version(self, fake_hv_type, fake_hv_ver, fake_lv_ver):
+        fake_lv_ver.return_value = 1002003
+        fake_hv_ver.return_value = 4005006
+        fake_hv_type.return_value = 'xyz'
+
+        lv_ver = (1, 2, 3)
+        hv_ver = (4, 5, 6)
+        hv_type = 'xyz'
+        self.assertTrue(self.host.has_min_version(lv_ver, hv_ver, hv_type))
+
+        self.assertFalse(self.host.has_min_version(lv_ver, hv_ver, 'abc'))
+        self.assertFalse(self.host.has_min_version(lv_ver, (4, 5, 7), hv_type))
+        self.assertFalse(self.host.has_min_version((1, 3, 3), hv_ver, hv_type))
+
+        self.assertTrue(self.host.has_min_version(lv_ver, hv_ver, None))
+        self.assertTrue(self.host.has_min_version(lv_ver, None, hv_type))
+        self.assertTrue(self.host.has_min_version(None, hv_ver, hv_type))
+
+    @mock.patch.object(fakelibvirt.virConnect, "getLibVersion")
+    @mock.patch.object(fakelibvirt.virConnect, "getVersion")
+    @mock.patch.object(fakelibvirt.virConnect, "getType")
+    def test_has_version(self, fake_hv_type, fake_hv_ver, fake_lv_ver):
+        fake_lv_ver.return_value = 1002003
+        fake_hv_ver.return_value = 4005006
+        fake_hv_type.return_value = 'xyz'
+
+        lv_ver = (1, 2, 3)
+        hv_ver = (4, 5, 6)
+        hv_type = 'xyz'
+        self.assertTrue(self.host.has_version(lv_ver, hv_ver, hv_type))
+
+        for lv_ver_ in [(1, 2, 2), (1, 2, 4)]:
+            self.assertFalse(self.host.has_version(lv_ver_, hv_ver, hv_type))
+        for hv_ver_ in [(4, 4, 6), (4, 6, 6)]:
+            self.assertFalse(self.host.has_version(lv_ver, hv_ver_, hv_type))
+        self.assertFalse(self.host.has_version(lv_ver, hv_ver, 'abc'))
+
+        self.assertTrue(self.host.has_min_version(lv_ver, hv_ver, None))
+        self.assertTrue(self.host.has_min_version(lv_ver, None, hv_type))
+        self.assertTrue(self.host.has_min_version(None, hv_ver, hv_type))
+
     @mock.patch.object(fakelibvirt.virConnect, "lookupByID")
     def test_get_domain_by_id(self, fake_lookup):
         dom = fakelibvirt.virDomain(self.host.get_connection(),

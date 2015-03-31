@@ -363,6 +363,8 @@ MIN_LIBVIRT_NUMA_VERSION = (1, 2, 7)
 # cannot make guaranteed decisions, as the huge page size
 # used by the guest may not match what was requested
 MIN_LIBVIRT_HUGEPAGE_VERSION = (1, 2, 8)
+# missing libvirt cpu pinning support
+BAD_LIBVIRT_CPU_POLICY_VERSIONS = [(1, 2, 9, 2), (1, 2, 10)]
 # fsFreeze/fsThaw requirement
 MIN_LIBVIRT_FSFREEZE_VERSION = (1, 2, 5)
 
@@ -519,7 +521,7 @@ class LibvirtDriver(driver.ComputeDriver):
         self._set_host_enabled(enabled, reason)
 
     def _version_to_string(self, version):
-        return "%i.%i.%i" % version
+        return '.'.join([str(x) for x in version])
 
     def init_host(self, host):
         self._host.initialize()
@@ -3396,6 +3398,14 @@ class LibvirtDriver(driver.ComputeDriver):
                 guest_cpu_numa.cells.append(guest_cell)
             return guest_cpu_numa
 
+    def _has_cpu_policy_support(self):
+        for ver in BAD_LIBVIRT_CPU_POLICY_VERSIONS:
+            if self._host.has_version(ver):
+                ver_ = self._version_to_string(version)
+                raise exception.CPUPinningNotSupported(reason=_(
+                    'Invalid libvirt version %(version)s') % {'version': ver_})
+        return True
+
     def _get_guest_numa_config(self, instance_numa_topology, flavor, pci_devs,
                                allowed_cpus=None):
         """Returns the config objects for the guest NUMA specs.
@@ -3499,7 +3509,9 @@ class LibvirtDriver(driver.ComputeDriver):
                                 # If there is pinning information in the cell
                                 # we pin to individual CPUs, otherwise we float
                                 # over the whole host NUMA node
-                                if object_numa_cell.cpu_pinning:
+
+                                if (object_numa_cell.cpu_pinning and
+                                        self._has_cpu_policy_support()):
                                     pcpu = object_numa_cell.cpu_pinning[cpu]
                                     pin_cpuset.cpuset = set([pcpu])
                                 else:
