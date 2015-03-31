@@ -57,6 +57,7 @@ from __future__ import print_function
 import argparse
 import os
 import sys
+import urllib
 
 import decorator
 import netaddr
@@ -1212,7 +1213,7 @@ class CellCommands(object):
             is_parent = True
         values = {'name': name,
                   'is_parent': is_parent,
-                  'transport_url': str(transport_url),
+                  'transport_url': urllib.unquote(str(transport_url)),
                   'weight_offset': float(woffset),
                   'weight_scale': float(wscale)}
         ctxt = context.get_admin_context()

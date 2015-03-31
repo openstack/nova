@@ -554,6 +554,29 @@ class CellCommandsTestCase(test.TestCase):
 
     @mock.patch.object(context, 'get_admin_context')
     @mock.patch.object(db, 'cell_create')
+    def test_create_broker_hosts_with_url_decoding_fix(self,
+                                                       mock_db_cell_create,
+                                                       mock_ctxt):
+        """Test the create function when broker_hosts is
+        passed
+        """
+        cell_tp_url = "fake://the=user:the=password@127.0.0.1:5432/"
+        ctxt = mock.sentinel
+        mock_ctxt.return_value = mock.sentinel
+        self.commands.create("test",
+                             broker_hosts='127.0.0.1:5432',
+                             woffset=0, wscale=0,
+                             username="the=user",
+                             password="the=password")
+        exp_values = {'name': "test",
+                      'is_parent': False,
+                      'transport_url': cell_tp_url,
+                      'weight_offset': 0.0,
+                      'weight_scale': 0.0}
+        mock_db_cell_create.assert_called_once_with(ctxt, exp_values)
+
+    @mock.patch.object(context, 'get_admin_context')
+    @mock.patch.object(db, 'cell_create')
     def test_create_hostname(self, mock_db_cell_create, mock_ctxt):
         """Test the create function when hostname and port is
         passed
