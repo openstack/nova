@@ -5651,7 +5651,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                          dom, finish_event)
         except Exception as ex:
             LOG.warn(_LW("Error monitoring migration: %(ex)s"),
-                     {"ex": ex}, instance=instance)
+                     {"ex": ex}, instance=instance, exc_info=True)
             raise
         finally:
             LOG.debug("Live migration monitoring is all done",
