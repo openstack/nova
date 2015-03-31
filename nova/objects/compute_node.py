@@ -41,11 +41,12 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject,
     # Version 1.10: Added get_first_node_by_host_for_old_compat()
     # Version 1.11: PciDevicePoolList version 1.1
     # Version 1.12: HVSpec version 1.1
-    VERSION = '1.12'
+    # Version 1.13: Changed service_id field to be nullable
+    VERSION = '1.13'
 
     fields = {
         'id': fields.IntegerField(read_only=True),
-        'service_id': fields.IntegerField(),
+        'service_id': fields.IntegerField(nullable=True),
         'host': fields.StringField(nullable=True),
         'vcpus': fields.IntegerField(),
         'memory_mb': fields.IntegerField(),
@@ -83,6 +84,19 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject,
     def obj_make_compatible(self, primitive, target_version):
         super(ComputeNode, self).obj_make_compatible(primitive, target_version)
         target_version = utils.convert_version_to_tuple(target_version)
+        if target_version < (1, 13) and primitive.get('service_id') is None:
+            # service_id is non-nullable in versions before 1.13
+            try:
+                service = objects.Service.get_by_compute_host(
+                    self._context, primitive['host'])
+                primitive['service_id'] = service.id
+            except (exception.ComputeHostNotFound, KeyError):
+                # NOTE(hanlind): In case anything goes wrong like service not
+                # found or host not being set, catch and set a fake value just
+                # to allow for older versions that demand a value to work.
+                # Setting to -1 will, if value is later used result in a
+                # ServiceNotFound, so should be safe.
+                primitive['service_id'] = -1
         if target_version < (1, 7) and 'host' in primitive:
             del primitive['host']
         if target_version < (1, 5) and 'numa_topology' in primitive:
@@ -313,7 +327,8 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
     # Version 1.10 ComputeNode version 1.10
     # Version 1.11 ComputeNode version 1.11
     # Version 1.12 ComputeNode version 1.12
-    VERSION = '1.12'
+    # Version 1.13 ComputeNode version 1.13
+    VERSION = '1.13'
     fields = {
         'objects': fields.ListOfObjectsField('ComputeNode'),
         }
@@ -323,7 +338,7 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
                     ('1.3', '1.4'), ('1.4', '1.5'), ('1.5', '1.5'),
                     ('1.6', '1.6'), ('1.7', '1.7'), ('1.8', '1.8'),
                     ('1.9', '1.9'), ('1.10', '1.10'), ('1.11', '1.11'),
-                    ('1.12', '1.12')],
+                    ('1.12', '1.12'), ('1.13', '1.13')],
         }
 
     @base.remotable_classmethod

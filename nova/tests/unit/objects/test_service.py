@@ -248,7 +248,8 @@ class _TestServiceObject(object):
     def test_obj_make_compatible_for_compute_node(self, get_all_by_host):
         service_obj = objects.Service(context=self.context)
         fake_service_dict = fake_service.copy()
-        fake_compute_obj = objects.ComputeNode(host=fake_service['host'])
+        fake_compute_obj = objects.ComputeNode(host=fake_service['host'],
+                                               service_id=fake_service['id'])
         get_all_by_host.return_value = [fake_compute_obj]
 
         service_obj.obj_make_compatible(fake_service_dict, '1.9')
@@ -265,7 +266,8 @@ class _TestServiceObject(object):
         service_obj.binary = 'nova-compute'
         fake_service_dict = fake_service.copy()
         fake_service_dict['binary'] = 'nova-compute'
-        fake_compute_obj = objects.ComputeNode(host=fake_service['host'])
+        fake_compute_obj = objects.ComputeNode(host=fake_service['host'],
+                                               service_id=fake_service['id'])
         get_all_by_host.return_value = [fake_compute_obj]
 
         # Juno versions :

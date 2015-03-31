@@ -60,7 +60,7 @@ fake_compute_node = {
     'deleted_at': None,
     'deleted': False,
     'id': 123,
-    'service_id': 456,
+    'service_id': None,
     'host': 'fake',
     'vcpus': 4,
     'memory_mb': 4096,
@@ -156,7 +156,9 @@ class _TestComputeNodeObject(object):
     @mock.patch.object(db, 'compute_node_get')
     def test_get_by_id_with_host_field_not_in_db(self, mock_cn_get,
                                                  mock_obj_svc_get):
-        fake_compute_node_with_no_host = fake_compute_node.copy()
+        fake_compute_node_with_svc_id = fake_compute_node.copy()
+        fake_compute_node_with_svc_id['service_id'] = 123
+        fake_compute_node_with_no_host = fake_compute_node_with_svc_id.copy()
         host = fake_compute_node_with_no_host.pop('host')
         fake_service = service.Service(id=123)
         fake_service.host = host
@@ -165,7 +167,7 @@ class _TestComputeNodeObject(object):
         mock_obj_svc_get.return_value = fake_service
 
         compute = compute_node.ComputeNode.get_by_id(self.context, 123)
-        self.compare_obj(compute, fake_compute_node,
+        self.compare_obj(compute, fake_compute_node_with_svc_id,
                          subs=self.subs(),
                          comparators=self.comparators())
 
@@ -457,6 +459,20 @@ class _TestComputeNodeObject(object):
         compute.pci_device_pools = fake_pci_device_pools.fake_pool_list
         primitive = compute.obj_to_primitive(target_version='1.8')
         self.assertNotIn('pci_device_pools', primitive)
+
+    @mock.patch('nova.objects.Service.get_by_compute_host')
+    def test_compat_service_id(self, mock_get):
+        mock_get.return_value = objects.Service(id=1)
+        compute = objects.ComputeNode(host='fake-host', service_id=None)
+        primitive = compute.obj_to_primitive(target_version='1.12')
+        self.assertEqual(1, primitive['nova_object.data']['service_id'])
+
+    @mock.patch('nova.objects.Service.get_by_compute_host')
+    def test_compat_service_id_compute_host_not_found(self, mock_get):
+        mock_get.side_effect = exception.ComputeHostNotFound(host='fake-host')
+        compute = objects.ComputeNode(host='fake-host', service_id=None)
+        primitive = compute.obj_to_primitive(target_version='1.12')
+        self.assertEqual(-1, primitive['nova_object.data']['service_id'])
 
     def test_update_from_virt_driver(self):
         # copy in case the update has a side effect
