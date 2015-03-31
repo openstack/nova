@@ -1362,8 +1362,32 @@ class BackendTestCase(test.NoDBTestCase):
     def test_image_raw(self):
         self._test_image('raw', imagebackend.Raw, imagebackend.Raw)
 
+    def test_image_raw_preallocate_images(self):
+        flags = ('space', 'Space', 'SPACE')
+        for f in flags:
+            self.flags(preallocate_images=f)
+            raw = imagebackend.Raw(self.INSTANCE, 'fake_disk', '/tmp/xyz')
+            self.assertTrue(raw.preallocate)
+
+    def test_image_raw_preallocate_images_bad_conf(self):
+        self.flags(preallocate_images='space1')
+        raw = imagebackend.Raw(self.INSTANCE, 'fake_disk', '/tmp/xyz')
+        self.assertFalse(raw.preallocate)
+
     def test_image_qcow2(self):
         self._test_image('qcow2', imagebackend.Qcow2, imagebackend.Qcow2)
+
+    def test_image_qcow2_preallocate_images(self):
+        flags = ('space', 'Space', 'SPACE')
+        for f in flags:
+            self.flags(preallocate_images=f)
+            qcow = imagebackend.Qcow2(self.INSTANCE, 'fake_disk', '/tmp/xyz')
+            self.assertTrue(qcow.preallocate)
+
+    def test_image_qcow2_preallocate_images_bad_conf(self):
+        self.flags(preallocate_images='space1')
+        qcow = imagebackend.Qcow2(self.INSTANCE, 'fake_disk', '/tmp/xyz')
+        self.assertFalse(qcow.preallocate)
 
     def test_image_lvm(self):
         self.flags(images_volume_group='FakeVG', group='libvirt')
