@@ -56,6 +56,10 @@ SUPPORTED_FLAT_VARIANTS = ["thin", "preallocated", "thick", "eagerZeroedThick"]
 EXTENSION_KEY = 'org.openstack.compute'
 EXTENSION_TYPE_INSTANCE = 'instance'
 
+# The max number of devices that can be connnected to one adapter
+# One adapter has 16 slots but one reserved for controller
+SCSI_MAX_CONNECT_NUMBER = 15
+
 # This list was extracted from the installation iso image for ESX 5.5 Update 1.
 # It is contained in s.v00, which is gzipped. The list was obtained by
 # searching for the string 'otherGuest' in the uncompressed contents of that

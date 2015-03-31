@@ -370,6 +370,7 @@ class VirtualLsiLogicController(DataObject):
     def __init__(self, key=0, scsiCtlrUnitNumber=0):
         self.key = key
         self.scsiCtlrUnitNumber = scsiCtlrUnitNumber
+        self.device = []
 
 
 class VirtualLsiLogicSASController(DataObject):

@@ -554,6 +554,31 @@ def get_vmdk_info(session, vm_ref, uuid=None):
                     capacity_in_bytes, vmdk_device)
 
 
+scsi_controller_classes = {
+    'ParaVirtualSCSIController': constants.ADAPTER_TYPE_PARAVIRTUAL,
+    'VirtualLsiLogicController': constants.DEFAULT_ADAPTER_TYPE,
+    'VirtualLsiLogicSASController': constants.ADAPTER_TYPE_LSILOGICSAS,
+    'VirtualBusLogicController': constants.ADAPTER_TYPE_PARAVIRTUAL,
+}
+
+
+def get_scsi_adapter_type(hardware_devices):
+    """Selects a proper iscsi adapter type from the existing
+       hardware devices
+    """
+    if hardware_devices.__class__.__name__ == "ArrayOfVirtualDevice":
+        hardware_devices = hardware_devices.VirtualDevice
+
+    for device in hardware_devices:
+        if device.__class__.__name__ in scsi_controller_classes:
+            # find the controllers which still have available slots
+            if len(device.device) < constants.SCSI_MAX_CONNECT_NUMBER:
+                # return the first match one
+                return scsi_controller_classes[device.__class__.__name__]
+    raise exception.StorageError(
+        reason=_("Unable to find iSCSI Target"))
+
+
 def _find_controller_slot(controller_keys, taken, max_unit_number):
     for controller_key in controller_keys:
         for unit_number in range(max_unit_number):
