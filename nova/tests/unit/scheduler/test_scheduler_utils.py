@@ -99,7 +99,7 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
                                   service=service)
         compute_utils.add_instance_fault_from_exc(
                 self.context,
-                new_ref, exc_info, mox.IsA(tuple))
+                inst_obj, exc_info, mox.IsA(tuple))
 
         payload = dict(request_spec=request_spec,
                        instance_properties=request_spec.get(

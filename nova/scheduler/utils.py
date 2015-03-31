@@ -104,7 +104,7 @@ def set_vm_state_and_notify(context, instance_uuid, service, method, updates,
         expected_attrs=['system_metadata'])
     notifications.send_update(context, old_ref, inst_obj, service=service)
     compute_utils.add_instance_fault_from_exc(context,
-            new_ref, ex, sys.exc_info())
+            inst_obj, ex, sys.exc_info())
 
     payload = dict(request_spec=request_spec,
                     instance_properties=properties,
