@@ -499,19 +499,6 @@ class UnsupportedDriverTestCase(BaseTestCase):
             self.assertEqual(0, claim.memory_mb)
 
 
-class MissingServiceTestCase(BaseTestCase):
-    def setUp(self):
-        super(MissingServiceTestCase, self).setUp()
-        self.context = context.get_admin_context()
-        self.tracker = self._tracker()
-
-    def test_missing_service(self):
-        self.tracker.compute_node = None
-        self.tracker._get_service = mock.Mock(return_value=None)
-        self.tracker.update_available_resource(self.context)
-        self.assertTrue(self.tracker.disabled)
-
-
 class MissingComputeNodeTestCase(BaseTestCase):
     def setUp(self):
         super(MissingComputeNodeTestCase, self).setUp()

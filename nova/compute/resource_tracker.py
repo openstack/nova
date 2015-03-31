@@ -303,14 +303,6 @@ class ResourceTracker(object):
             self._copy_resources(resources)
             return
 
-        # TODO(pmurray): this lookup should be removed when the service_id
-        # field in the compute node goes away. At the moment it is deprecated
-        # but still a required field, so it has to be assigned below.
-        service = self._get_service(context)
-        if not service:
-            # no service record, disable resource
-            return
-
         # now try to get the compute node record from the
         # database. If we get one we use resources to initialize
         self.compute_node = self._get_compute_node(context)
@@ -322,9 +314,6 @@ class ResourceTracker(object):
         # so we need to create a new compute node. This needs
         # to be initialised with resource values.
         self.compute_node = objects.ComputeNode(context)
-        # TODO(pmurray) service_id is deprecated but is still a required field.
-        # This should be removed when the field is changed.
-        self.compute_node.service_id = service.id
         self.compute_node.host = self.host
         self._copy_resources(resources)
         self.compute_node.create()
@@ -488,12 +477,6 @@ class ResourceTracker(object):
     def _write_ext_resources(self, resources):
         resources.stats = copy.deepcopy(self.stats)
         self.ext_resources_handler.write_resources(resources)
-
-    def _get_service(self, context):
-        try:
-            return objects.Service.get_by_compute_host(context, self.host)
-        except exception.NotFound:
-            LOG.warning(_LW("No service record for host %s"), self.host)
 
     def _report_hypervisor_resource_view(self, resources):
         """Log the hypervisor's view of free resources.
