@@ -755,8 +755,7 @@ class LibvirtDriver(driver.ComputeDriver):
         retry = True
         while retry:
             try:
-                self.firewall_driver.unfilter_instance(instance,
-                                                    network_info=network_info)
+                self.unfilter_instance(instance, network_info)
             except libvirt.libvirtError as e:
                 try:
                     state = self.get_info(instance).state
@@ -973,7 +972,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if instance.host != CONF.host:
             self._undefine_domain(instance)
             self.unplug_vifs(instance, network_info)
-            self.firewall_driver.unfilter_instance(instance, network_info)
+            self.unfilter_instance(instance, network_info)
 
     def _get_volume_driver(self, connection_info):
         driver_type = connection_info.get('driver_volume_type')
