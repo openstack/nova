@@ -64,16 +64,22 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
 
         orig_prepare = rpcapi.client.prepare
         expected_version = kwargs.pop('version', rpcapi.client.target.version)
+        nova_network = kwargs.pop('nova_network', False)
 
         expected_kwargs = kwargs.copy()
         if ('requested_networks' in expected_kwargs and
                expected_version == '3.23'):
             expected_kwargs['requested_networks'] = []
             for requested_network in kwargs['requested_networks']:
-                expected_kwargs['requested_networks'].append(
-                    (requested_network.network_id,
-                     str(requested_network.address),
-                     requested_network.port_id))
+                if not nova_network:
+                    expected_kwargs['requested_networks'].append(
+                        (requested_network.network_id,
+                         str(requested_network.address),
+                         requested_network.port_id))
+                else:
+                    expected_kwargs['requested_networks'].append(
+                        (requested_network.network_id,
+                         str(requested_network.address)))
         if 'host_param' in expected_kwargs:
             expected_kwargs['host'] = expected_kwargs.pop('host_param')
         else:
@@ -569,6 +575,20 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                 security_groups=None,
                 block_device_mapping=None, node='node', limits={},
                 version='3.23')
+
+    @mock.patch('nova.utils.is_neutron', return_value=False)
+    def test_build_and_run_instance_icehouse_compat_nova_net(self, is_neutron):
+        self.flags(compute='icehouse', group='upgrade_levels')
+        self._test_compute_api('build_and_run_instance', 'cast',
+                instance=self.fake_instance_obj, host='host', image='image',
+                request_spec={'request': 'spec'}, filter_properties=[],
+                admin_password='passwd', injected_files=None,
+                requested_networks= objects_network_request.NetworkRequestList(
+                    objects=[objects_network_request.NetworkRequest(
+                        network_id='fake_network_id', address='10.0.0.1')]),
+                security_groups=None,
+                block_device_mapping=None, node='node', limits={},
+                version='3.23', nova_network=True)
 
     def test_quiesce_instance(self):
         self._test_compute_api('quiesce_instance', 'call',
