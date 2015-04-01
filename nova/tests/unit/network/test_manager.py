@@ -2030,7 +2030,8 @@ class CommonNetworkTestCase(test.TestCase):
         ctx = context.RequestContext('igonre', 'igonre')
         requested_networks = objects.NetworkRequestList(
             objects=[objects.NetworkRequest.from_tuple(t)
-                     for t in [('123', '1.2.3.4'), ('123', '4.3.2.1')]])
+                     for t in [('123', '1.2.3.4'), ('123', '4.3.2.1'),
+                               ('123', None)]])
         manager.deallocate_for_instance(
             ctx,
             instance=fake_instance.fake_instance_obj(ctx),
