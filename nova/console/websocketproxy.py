@@ -30,14 +30,8 @@ from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import context
 from nova import exception
 from nova.i18n import _
-from oslo_config import cfg
 
 LOG = logging.getLogger(__name__)
-
-CONF = cfg.CONF
-CONF.import_opt('novncproxy_base_url', 'nova.vnc')
-CONF.import_opt('html5proxy_base_url', 'nova.spice', group='spice')
-CONF.import_opt('base_url', 'nova.console.serial', group='serial_console')
 
 
 class NovaProxyRequestHandlerBase(object):
@@ -47,27 +41,21 @@ class NovaProxyRequestHandlerBase(object):
         # deployments due to DNS configuration and break VNC access completely
         return str(self.client_address[0])
 
-    def verify_origin_proto(self, console_type, origin_proto):
-        if console_type == 'novnc':
-            expected_protos = \
-                [urlparse.urlparse(CONF.novncproxy_base_url).scheme]
-        elif console_type == 'spice-html5':
-            expected_protos = \
-                [urlparse.urlparse(CONF.spice.html5proxy_base_url).scheme]
-        elif console_type == 'serial':
-            expected_protos = \
-                [urlparse.urlparse(CONF.serial_console.base_url).scheme]
-            # NOTE: For serial consoles the expected protocol could be ws or
-            # wss which correspond to http and https respectively in terms of
-            # security.
-            if 'ws' in expected_protos:
-                expected_protos.append('http')
-            if 'wss' in expected_protos:
-                expected_protos.append('https')
-        else:
-            detail = _("Invalid Console Type for WebSocketProxy: '%s'") % \
-                        console_type
+    def verify_origin_proto(self, connection_info, origin_proto):
+        access_url = connection_info.get('access_url')
+        if not access_url:
+            detail = _("No access_url in connection_info. "
+                        "Cannot validate protocol")
             raise exception.ValidationError(detail=detail)
+        expected_protos = [urlparse.urlparse(access_url).scheme]
+        # NOTE: For serial consoles the expected protocol could be ws or
+        # wss which correspond to http and https respectively in terms of
+        # security.
+        if 'ws' in expected_protos:
+            expected_protos.append('http')
+        if 'wss' in expected_protos:
+            expected_protos.append('https')
+
         return origin_proto in expected_protos
 
     def new_websocket_client(self):
@@ -125,8 +113,7 @@ class NovaProxyRequestHandlerBase(object):
             if expected_origin_hostname != origin_hostname:
                 detail = _("Origin header does not match this host.")
                 raise exception.ValidationError(detail=detail)
-            if not self.verify_origin_proto(connect_info['console_type'],
-                                              origin.scheme):
+            if not self.verify_origin_proto(connect_info, origin_scheme):
                 detail = _("Origin header protocol does not match this host.")
                 raise exception.ValidationError(detail=detail)
 
