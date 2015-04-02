@@ -7284,6 +7284,18 @@ class ComputeAPITestCase(BaseTestCase):
 
         self.fake_show = fake_show
 
+        # Mock out build_instances and rebuild_instance since nothing in these
+        # tests should need those to actually run. We do this to avoid
+        # possible races with other tests that actually test those methods
+        # and mock things out within them, like conductor tests.
+        self.build_instances_mock = mock.Mock(autospec=True)
+        self.compute_api.compute_task_api.build_instances = \
+            self.build_instances_mock
+
+        self.rebuild_instance_mock = mock.Mock(autospec=True)
+        self.compute_api.compute_task_api.rebuild_instance = \
+            self.rebuild_instance_mock
+
     def _run_instance(self, params=None):
         instance = self._create_fake_instance_obj(params, services=True)
         instance_uuid = instance['uuid']
