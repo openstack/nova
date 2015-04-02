@@ -910,17 +910,8 @@ class API(base_api.NetworkAPI):
             # Add pci_request_id into the requested network
             request_net.pci_request_id = pci_request_id
 
-    def validate_networks(self, context, requested_networks, num_instances):
-        """Validate that the tenant can use the requested networks.
-
-        Return the number of instances than can be successfully allocated
-        with the requested network configuration.
-        """
-        LOG.debug('validate_networks() for %s', requested_networks)
-
-        neutron = get_client(context)
+    def _ports_needed_per_instance(self, context, neutron, requested_networks):
         ports_needed_per_instance = 0
-
         if requested_networks is None or len(requested_networks) == 0:
             nets = self._get_available_networks(context, context.project_id,
                                                 neutron=neutron)
@@ -933,7 +924,6 @@ class API(base_api.NetworkAPI):
                 raise exception.NetworkAmbiguous(msg)
             else:
                 ports_needed_per_instance = 1
-
         else:
             instance_on_net_ids = []
             net_ids_requested = []
@@ -1016,6 +1006,19 @@ class API(base_api.NetworkAPI):
                         for _id in lostid_set:
                             id_str = id_str and id_str + ', ' + _id or _id
                         raise exception.NetworkNotFound(network_id=id_str)
+        return ports_needed_per_instance
+
+    def validate_networks(self, context, requested_networks, num_instances):
+        """Validate that the tenant can use the requested networks.
+
+        Return the number of instances than can be successfully allocated
+        with the requested network configuration.
+        """
+        LOG.debug('validate_networks() for %s', requested_networks)
+
+        neutron = get_client(context)
+        ports_needed_per_instance = self._ports_needed_per_instance(
+            context, neutron, requested_networks)
 
         # Note(PhilD): Ideally Nova would create all required ports as part of
         # network validation, but port creation requires some details
