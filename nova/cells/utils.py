@@ -92,9 +92,6 @@ def add_cell_to_service(service, cell_name):
     API cell to query the 'id' or 'host' by cell@id/host.
     """
     _add_cell_to_service(service, cell_name)
-    compute_node = service.get('compute_node')
-    if compute_node:
-        add_cell_to_compute_node(compute_node[0], cell_name)
 
 
 def add_cell_to_task_log(task_log, cell_name):
