@@ -1040,9 +1040,8 @@ class ComputeManager(manager.Manager):
                       {'task_state': instance.task_state,
                        'power_state': current_power_state},
                       instance=instance)
-            self.compute_rpcapi.reboot_instance(context, instance,
-                                                block_device_info=None,
-                                                reboot_type=reboot_type)
+            self.reboot_instance(context, instance, block_device_info=None,
+                                 reboot_type=reboot_type)
             return
 
         elif (current_power_state == power_state.RUNNING and
