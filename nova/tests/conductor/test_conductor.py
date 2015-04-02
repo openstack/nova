@@ -37,6 +37,7 @@ from nova import context
 from nova import db
 from nova.db.sqlalchemy import models
 from nova import exception as exc
+from nova.image import api as image_api
 from nova import notifications
 from nova import objects
 from nova.objects import base as obj_base
@@ -1504,6 +1505,29 @@ class _BaseTaskTestCase(object):
             _get_image.assert_has_calls([mock.call(self.context,
                                       system_metadata['shelved_image_id'])])
             self.assertEqual(vm_states.SHELVED_OFFLOADED, instance.vm_state)
+
+    @mock.patch.object(conductor_manager.ComputeTaskManager,
+                       '_schedule_instances',
+                       side_effect=messaging.MessagingTimeout())
+    @mock.patch.object(image_api.API, 'get', return_value='fake_image')
+    def test_unshelve_instance_schedule_and_rebuild_messaging_exception(
+            self, mock_get_image, mock_schedule_instances):
+        instance = self._create_fake_instance_obj()
+        instance.vm_state = vm_states.SHELVED_OFFLOADED
+        instance.task_state = task_states.UNSHELVING
+        instance.save()
+        system_metadata = instance.system_metadata
+
+        system_metadata['shelved_at'] = timeutils.utcnow()
+        system_metadata['shelved_image_id'] = 'fake_image_id'
+        system_metadata['shelved_host'] = 'fake-mini'
+        self.assertRaises(messaging.MessagingTimeout,
+                          self.conductor_manager.unshelve_instance,
+                          self.context, instance)
+        mock_get_image.assert_has_calls([mock.call(self.context,
+                                        system_metadata['shelved_image_id'])])
+        self.assertEqual(vm_states.SHELVED_OFFLOADED, instance.vm_state)
+        self.assertIsNone(instance.task_state)
 
     def test_unshelve_instance_schedule_and_rebuild_volume_backed(self):
         db_instance = jsonutils.to_primitive(self._create_fake_instance())

@@ -31,7 +31,7 @@ from nova.compute import vm_states
 from nova.conductor.tasks import live_migrate
 from nova.db import base
 from nova import exception
-from nova.i18n import _
+from nova.i18n import _, _LE
 from nova import image
 from nova import manager
 from nova import network
@@ -713,6 +713,12 @@ class ComputeTaskManager(base.Base):
                 LOG.warning(_("No valid host found for unshelve instance"),
                             instance=instance)
                 return
+            except Exception:
+                with excutils.save_and_reraise_exception():
+                    instance.task_state = None
+                    instance.save()
+                    LOG.error(_LE("Unshelve attempted but an error "
+                                  "has occurred"), instance=instance)
         else:
             LOG.error(_('Unshelve attempted but vm_state not SHELVED or '
                         'SHELVED_OFFLOADED'), instance=instance)
