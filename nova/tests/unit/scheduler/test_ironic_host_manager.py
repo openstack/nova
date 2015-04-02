@@ -242,6 +242,7 @@ class IronicHostManagerTestFilters(test.NoDBTestCase):
                                                 cls in ['FakeFilterClass1',
                                                         'FakeFilterClass2']])
         self.flags(scheduler_default_filters=['FakeFilterClass1'])
+        self.flags(baremetal_scheduler_default_filters=['FakeFilterClass2'])
         self.host_manager = ironic_host_manager.IronicHostManager()
         self.fake_hosts = [ironic_host_manager.IronicNodeState(
                 'fake_host%s' % x, 'fake-node') for x in range(1, 5)]
@@ -269,6 +270,30 @@ class IronicHostManagerTestFilters(test.NoDBTestCase):
         default_filters = self.host_manager.default_filters
         self.assertEqual(1, len(default_filters))
         self.assertIsInstance(default_filters[0], FakeFilterClass1)
+
+    @mock.patch.object(host_manager.HostManager, '_init_instance_info')
+    @mock.patch.object(host_manager.HostManager, '_init_aggregates')
+    def test_host_manager_default_filters_uses_baremetal(self, mock_init_agg,
+                                                         mock_init_inst):
+        self.flags(scheduler_use_baremetal_filters=True)
+        host_manager = ironic_host_manager.IronicHostManager()
+
+        # ensure the defaults come from baremetal_scheduler_default_filters
+        # and not scheduler_default_filters
+        default_filters = host_manager.default_filters
+        self.assertEqual(1, len(default_filters))
+        self.assertIsInstance(default_filters[0], FakeFilterClass2)
+
+    def test_load_filters(self):
+        # without scheduler_use_baremetal_filters
+        filters = self.host_manager._load_filters()
+        self.assertEqual(['FakeFilterClass1'], filters)
+
+    def test_load_filters_baremetal(self):
+        # with scheduler_use_baremetal_filters
+        self.flags(scheduler_use_baremetal_filters=True)
+        filters = self.host_manager._load_filters()
+        self.assertEqual(['FakeFilterClass2'], filters)
 
     def _mock_get_filtered_hosts(self, info):
         info['got_objs'] = []

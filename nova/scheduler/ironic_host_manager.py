@@ -98,11 +98,10 @@ class IronicNodeState(host_manager.HostState):
 class IronicHostManager(host_manager.HostManager):
     """Ironic HostManager class."""
 
-    def __init__(self):
-        super(IronicHostManager, self).__init__()
+    def _load_filters(self):
         if CONF.scheduler_use_baremetal_filters:
-            baremetal_default = CONF.baremetal_scheduler_default_filters
-            CONF.scheduler_default_filters = baremetal_default
+            return CONF.baremetal_scheduler_default_filters
+        return super(IronicHostManager, self)._load_filters()
 
     def host_state_cls(self, host, node, **kwargs):
         """Factory function/property to create a new HostState."""

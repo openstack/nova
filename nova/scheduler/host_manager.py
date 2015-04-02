@@ -310,8 +310,7 @@ class HostManager(object):
                 CONF.scheduler_available_filters)
         self.filter_cls_map = {cls.__name__: cls for cls in filter_classes}
         self.filter_obj_map = {}
-        self.default_filters = self._choose_host_filters(
-                CONF.scheduler_default_filters)
+        self.default_filters = self._choose_host_filters(self._load_filters())
         self.weight_handler = weights.HostWeightHandler()
         weigher_classes = self.weight_handler.get_matching_classes(
                 CONF.scheduler_weight_classes)
@@ -327,6 +326,9 @@ class HostManager(object):
         self._instance_info = {}
         if self.tracks_instance_changes:
             self._init_instance_info()
+
+    def _load_filters(self):
+        return CONF.scheduler_default_filters
 
     def _init_aggregates(self):
         elevated = context_module.get_admin_context()
