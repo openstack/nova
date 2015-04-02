@@ -87,6 +87,9 @@ class IronicDriverTestCase(test.NoDBTestCase):
         super(IronicDriverTestCase, self).setUp()
         self.flags(**IRONIC_FLAGS)
 
+        # set client log config to exercise the code that manipulates it
+        CONF.set_override('client_log_level', 'DEBUG', group='ironic')
+
         self.driver = ironic_driver.IronicDriver(None)
         self.driver.virtapi = fake.FakeVirtAPI()
         self.ctx = nova_context.get_admin_context()

@@ -22,6 +22,7 @@ bare metal resources.
 """
 import base64
 import gzip
+import logging as py_logging
 import shutil
 import tempfile
 import time
@@ -75,9 +76,11 @@ opts = [
     cfg.StrOpt('admin_url',
                help='Keystone public API endpoint.'),
     cfg.StrOpt('client_log_level',
+               deprecated_for_removal=True,
                help='Log level override for ironicclient. Set this in '
                     'order to override the global "default_log_levels", '
-                    '"verbose", and "debug" settings.'),
+                    '"verbose", and "debug" settings. '
+                    'DEPRECATED: use standard logging configuration.'),
     cfg.StrOpt('admin_tenant_name',
                help='Ironic keystone tenant name.'),
     cfg.IntOpt('api_max_retries',
@@ -178,12 +181,10 @@ class IronicDriver(virt_driver.ComputeDriver):
         self.node_cache = {}
         self.node_cache_time = 0
 
-        # TODO(mrda): Bug ID 1365230 Logging configurability needs
-        # to be addressed
         ironicclient_log_level = CONF.ironic.client_log_level
         if ironicclient_log_level:
-            level = logging.getLevelName(ironicclient_log_level)
-            logger = logging.getLogger('ironicclient')
+            level = py_logging.getLevelName(ironicclient_log_level)
+            logger = py_logging.getLogger('ironicclient')
             logger.setLevel(level)
 
         self.ironicclient = client_wrapper.IronicClientWrapper()
