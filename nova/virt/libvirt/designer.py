@@ -126,7 +126,7 @@ def set_vif_host_backend_hw_veb(conf, net_type, devname, vlan,
     else:
         conf.source_dev = devname
         conf.model = None
-    conf.vlan = vlan
+        conf.vlan = vlan
     if tapname:
         conf.target_dev = tapname
 
