@@ -1,3 +1,3 @@
 {
-    "reserve": "%(reserve)s"
+    "reserve": null
 }

@@ -80,10 +80,8 @@ class FixedIpTest(test_servers.ServersSampleBase):
 
     def test_fixed_ip_reserve(self):
         # Reserve a Fixed IP.
-        project = {'reserve': None}
         response = self._do_post('os-fixed-ips/192.168.1.1/action',
-                                 'fixedip-post-req',
-                                 project)
+                                 'fixedip-post-req', {})
         self.assertEqual(response.status_code, 202)
         self.assertEqual(response.content, "")
 

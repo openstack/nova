@@ -62,6 +62,11 @@ boolean = {
 }
 
 
+none = {
+    'enum': ['None', None, {}]
+}
+
+
 positive_integer = {
     'type': ['integer', 'string'],
     'pattern': '^[0-9]*$', 'minimum': 1

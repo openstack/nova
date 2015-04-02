@@ -15,8 +15,10 @@
 import webob
 import webob.exc
 
+from nova.api.openstack.compute.schemas.v3 import fixed_ips
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+from nova.api import validation
 from nova import exception
 from nova.i18n import _
 from nova import objects
@@ -60,6 +62,7 @@ class FixedIPController(wsgi.Controller):
 
     @wsgi.response(202)
     @extensions.expected_errors((400, 404))
+    @validation.schema(fixed_ips.reserve)
     @wsgi.action('reserve')
     def reserve(self, req, id, body):
         context = req.environ['nova.context']
@@ -69,6 +72,7 @@ class FixedIPController(wsgi.Controller):
 
     @wsgi.response(202)
     @extensions.expected_errors((400, 404))
+    @validation.schema(fixed_ips.unreserve)
     @wsgi.action('unreserve')
     def unreserve(self, req, id, body):
         context = req.environ['nova.context']

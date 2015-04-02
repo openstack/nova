@@ -621,6 +621,47 @@ class NameTestCase(APIValidationTestCase):
             pass
 
 
+class NoneTypeTestCase(APIValidationTestCase):
+
+    def setUp(self):
+        super(NoneTypeTestCase, self).setUp()
+        schema = {
+            'type': 'object',
+            'properties': {
+                'foo': parameter_types.none
+            }
+        }
+
+        @validation.schema(request_body_schema=schema)
+        def post(req, body):
+            return 'Validation succeeded.'
+
+        self.post = post
+
+    def test_validate_none(self):
+        self.assertEqual('Validation succeeded.',
+                         self.post(body={'foo': 'None'},
+                                   req=FakeRequest()))
+        self.assertEqual('Validation succeeded.',
+                         self.post(body={'foo': None},
+                                   req=FakeRequest()))
+        self.assertEqual('Validation succeeded.',
+                         self.post(body={'foo': {}},
+                                   req=FakeRequest()))
+
+    def test_validate_none_fails(self):
+        detail = ("Invalid input for field/attribute foo. Value: ."
+                  " '' is not one of ['None', None, {}]")
+        self.check_validation_error(self.post, body={'foo': ''},
+                                    expected_detail=detail)
+
+        detail = ("Invalid input for field/attribute foo. Value: "
+                  "{'key': 'val'}. {'key': 'val'} is not one of "
+                  "['None', None, {}]")
+        self.check_validation_error(self.post, body={'foo': {'key': 'val'}},
+                                    expected_detail=detail)
+
+
 class TcpUdpPortTestCase(APIValidationTestCase):
 
     def setUp(self):
