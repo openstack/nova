@@ -179,7 +179,8 @@ class VMwareVMOps(object):
 
     def _extend_virtual_disk(self, instance, requested_size, name, dc_ref):
         service_content = self._session.vim.service_content
-        LOG.debug("Extending root virtual disk to %s", requested_size)
+        LOG.debug("Extending root virtual disk to %s", requested_size,
+                  instance=instance)
         vmdk_extend_task = self._session._call_method(
                 self._session.vim,
                 "ExtendVirtualDisk_Task",
@@ -200,7 +201,7 @@ class VMwareVMOps(object):
                     ds_path = ds_obj.DatastorePath.parse(file)
                     self._delete_datastore_file(ds_path, dc_ref)
 
-        LOG.debug("Extended root virtual disk")
+        LOG.debug("Extended root virtual disk", instance=instance)
 
     def _delete_datastore_file(self, datastore_path, dc_ref):
         try:
@@ -490,7 +491,7 @@ class VMwareVMOps(object):
 
     def _fetch_image_if_missing(self, context, vi):
         image_prepare, image_fetch, image_cache = self._get_image_callbacks(vi)
-        LOG.debug("Processing image %s", vi.ii.image_id)
+        LOG.debug("Processing image %s", vi.ii.image_id, instance=vi.instance)
 
         with lockutils.lock(str(vi.cache_image_path),
                             lock_file_prefix='nova-vmware-fetch_image'):
@@ -499,13 +500,15 @@ class VMwareVMOps(object):
             if not ds_util.file_exists(self._session, ds_browser,
                                        vi.cache_image_folder,
                                        vi.cache_image_path.basename):
-                LOG.debug("Preparing fetch location")
+                LOG.debug("Preparing fetch location", instance=vi.instance)
                 tmp_dir_loc, tmp_image_ds_loc = image_prepare(vi)
-                LOG.debug("Fetch image to %s", tmp_image_ds_loc)
+                LOG.debug("Fetch image to %s", tmp_image_ds_loc,
+                          instance=vi.instance)
                 image_fetch(context, vi, tmp_image_ds_loc)
-                LOG.debug("Caching image")
+                LOG.debug("Caching image", instance=vi.instance)
                 image_cache(vi, tmp_image_ds_loc)
-                LOG.debug("Cleaning up location %s", str(tmp_dir_loc))
+                LOG.debug("Cleaning up location %s", str(tmp_dir_loc),
+                          instance=vi.instance)
                 self._delete_datastore_file(str(tmp_dir_loc), vi.dc_info.ref)
 
     def _create_and_attach_ephemeral_disk(self, instance, vm_ref, dc_info,
@@ -791,7 +794,8 @@ class VMwareVMOps(object):
             vmdk = vm_util.get_vmdk_info(self._session, vm_ref,
                                               instance.uuid)
             if not vmdk.path:
-                LOG.debug("No root disk defined. Unable to snapshot.")
+                LOG.debug("No root disk defined. Unable to snapshot.",
+                          instance=instance)
                 raise error_util.NoRootDiskDefined()
 
             lst_properties = ["datastore", "summary.config.guestId"]
@@ -1673,7 +1677,8 @@ class VMwareVMOps(object):
 
             if not self._sized_image_exists(sized_disk_ds_loc,
                                             vi.datastore.ref):
-                LOG.debug("Copying root disk of size %sGb", vi.root_gb)
+                LOG.debug("Copying root disk of size %sGb", vi.root_gb,
+                          instance=vi.instance)
                 try:
                     vm_util.copy_virtual_disk(
                             self._session,
