@@ -18,6 +18,7 @@ import mock
 from oslo_utils import units
 from oslo_utils import uuidutils
 from oslo_vmware import exceptions as vexc
+from oslo_vmware.objects import datastore as ds_obj
 
 from nova.compute import power_state
 from nova import context
@@ -62,7 +63,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         self._virtapi = mock.Mock()
         self._image_id = nova.tests.unit.image.fake.get_valid_image_id()
         fake_ds_ref = vmwareapi_fake.ManagedObjectReference('fake-ds')
-        self._ds = ds_util.Datastore(
+        self._ds = ds_obj.Datastore(
                 ref=fake_ds_ref, name='fake_ds',
                 capacity=10 * units.Gi,
                 freespace=10 * units.Gi)
@@ -160,7 +161,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 ref=dc_ref,
                 name='fake-name',
                 vmFolder='fake-folder')
-        path = ds_util.DatastorePath(ds_name, base_name)
+        path = ds_obj.DatastorePath(ds_name, base_name)
         return ds_name, ds_ref, ops, path, dc_ref
 
     @mock.patch.object(ds_util, 'mkdir')
@@ -366,7 +367,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         _volumeops = mock.Mock()
         self._vmops._volumeops = _volumeops
 
-        ds = ds_util.Datastore('fake-ref', 'ds1')
+        ds = ds_obj.Datastore('fake-ref', 'ds1')
         mock_get_ds_by_ref.return_value = ds
         mock_find_rescue.return_value = 'fake-rescue-device'
         mock_get_boot_spec.return_value = 'fake-boot-spec'
@@ -521,7 +522,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                       fake_get_extra_specs,
                                       power_on):
         """Tests the finish_revert_migration method on vmops."""
-        datastore = ds_util.Datastore(ref='fake-ref', name='fake')
+        datastore = ds_obj.Datastore(ref='fake-ref', name='fake')
         device = vmwareapi_fake.DataObject()
         backing = vmwareapi_fake.DataObject()
         backing.datastore = datastore.ref
@@ -570,7 +571,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             fake_get_browser.assert_called_once_with('fake-ref')
             fake_original_exists.assert_called_once_with(
                  self._session, 'fake-browser',
-                 ds_util.DatastorePath(datastore.name, 'uuid'),
+                 ds_obj.DatastorePath(datastore.name, 'uuid'),
                  'original.vmdk')
 
             mock_detach_disk.assert_called_once_with('fake-ref',
@@ -621,7 +622,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     @mock.patch.object(ds_util, 'disk_copy')
     def test_resize_disk(self, fake_disk_copy, fake_disk_move,
                          fake_extend):
-        datastore = ds_util.Datastore(ref='fake-ref', name='fake')
+        datastore = ds_obj.Datastore(ref='fake-ref', name='fake')
         device = vmwareapi_fake.DataObject()
         backing = vmwareapi_fake.DataObject()
         backing.datastore = datastore.ref
@@ -674,7 +675,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                fake_original_exists,
                                fake_disk_delete):
         """Tests the confirm_migration method on vmops."""
-        datastore = ds_util.Datastore(ref='fake-ref', name='fake')
+        datastore = ds_obj.Datastore(ref='fake-ref', name='fake')
         device = vmwareapi_fake.DataObject()
         backing = vmwareapi_fake.DataObject()
         backing.datastore = datastore.ref
@@ -702,7 +703,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             fake_get_browser.assert_called_once_with('fake-ref')
             fake_original_exists.assert_called_once_with(
                 self._session, 'fake-browser',
-                ds_util.DatastorePath(datastore.name, 'uuid'),
+                ds_obj.DatastorePath(datastore.name, 'uuid'),
                 'original.vmdk')
             fake_disk_delete.assert_called_once_with(
                 self._session, dc_info.ref, '[fake] uuid/original.vmdk')
@@ -1403,8 +1404,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         self._vmops._volumeops = mock.Mock()
         mock_attach_disk_to_vm = self._vmops._volumeops.attach_disk_to_vm
 
-        path = str(ds_util.DatastorePath(vi.datastore.name, 'fake_uuid',
-                                         'fake-filename'))
+        path = str(ds_obj.DatastorePath(vi.datastore.name, 'fake_uuid',
+                                        'fake-filename'))
         self._vmops._create_and_attach_ephemeral_disk(self._instance,
                                                       'fake-vm-ref',
                                                       vi.dc_info, 1,
@@ -1809,7 +1810,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
 
         sparse_disk_path = "[%s] vmware_temp/tmp-uuid/%s/tmp-sparse.vmdk" % (
                 self._ds.name, self._image_id)
-        tmp_image_ds_loc = ds_util.DatastorePath.parse(sparse_disk_path)
+        tmp_image_ds_loc = ds_obj.DatastorePath.parse(sparse_disk_path)
 
         self._vmops._cache_sparse_image(vi, tmp_image_ds_loc)
 
