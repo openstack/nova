@@ -164,8 +164,9 @@ class PathUtils(object):
         instance_path = self.get_instance_dir(instance_name)
         return os.path.join(instance_path, 'root.' + format_ext.lower())
 
-    def get_configdrive_path(self, instance_name, format_ext):
-        instance_path = self.get_instance_dir(instance_name)
+    def get_configdrive_path(self, instance_name, format_ext,
+                             remote_server=None):
+        instance_path = self.get_instance_dir(instance_name, remote_server)
         return os.path.join(instance_path, 'configdrive.' + format_ext.lower())
 
     def get_ephemeral_vhd_path(self, instance_name, format_ext):
@@ -185,3 +186,12 @@ class PathUtils(object):
                                              remote_server)
         console_log_path = os.path.join(instance_dir, 'console.log')
         return console_log_path, console_log_path + '.1'
+
+    def copy_configdrive(self, instance_name, dest_host):
+        local_configdrive_path = self.get_configdrive_path(
+                        instance_name, constants.IDE_DVD_FORMAT)
+        remote_configdrive_path = self.get_configdrive_path(
+                instance_name, constants.IDE_DVD_FORMAT,
+                remote_server=dest_host)
+        self.copyfile(local_configdrive_path,
+                                 remote_configdrive_path)
