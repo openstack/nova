@@ -1145,6 +1145,18 @@ class _TestInstanceObject(object):
         inst._maybe_migrate_flavor(db_inst, ['flavor', 'system_metadata'])
         self.assertIn('instance_type_id', inst.system_metadata)
 
+    def test_migrate_flavor_instance_no_extra(self):
+        flavor = flavors.get_default_flavor()
+        db_inst = {'extra': None}
+        inst = objects.Instance(
+                system_metadata=flavors.save_flavor_info({}, flavor))
+        result = inst._maybe_migrate_flavor(db_inst,
+                                            ['flavor', 'system_metadata'])
+        self.assertTrue(result, 'Flavor not migrated')
+        self.assertNotIn('instance_type_id', inst.system_metadata)
+        self.assertTrue(inst.obj_attr_is_set('flavor'))
+        self.assertEqual(flavor.flavorid, inst.flavor.flavorid)
+
 
 class TestInstanceObject(test_objects._LocalTest,
                          _TestInstanceObject):
