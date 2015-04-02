@@ -356,6 +356,7 @@ class TestDriverBlockDevice(test.NoDBTestCase):
                 self.volume_api.check_attach(self.context, fake_volume,
                                     instance=instance).AndRaise(
                                             test.TestingException)
+                driver_bdm._bdm_obj.save().AndReturn(None)
                 return instance, expected_conn_info
 
         self.virt_driver.get_volume_connector(instance).AndReturn(connector)
@@ -383,9 +384,11 @@ class TestDriverBlockDevice(test.NoDBTestCase):
                 self.volume_api.terminate_connection(
                         elevated_context, fake_volume['id'],
                         connector).AndReturn(None)
+                driver_bdm._bdm_obj.save().AndReturn(None)
                 return instance, expected_conn_info
 
         if volume_attach:
+            driver_bdm._bdm_obj.save().AndReturn(None)
             if not fail_volume_attach:
                 self.volume_api.attach(elevated_context, fake_volume['id'],
                                        'fake_uuid', bdm_dict['device_name'],
@@ -395,7 +398,7 @@ class TestDriverBlockDevice(test.NoDBTestCase):
                                        'fake_uuid', bdm_dict['device_name'],
                                         mode=access_mode).AndRaise(
                                             test.TestingException)
-        driver_bdm._bdm_obj.save().MultipleTimes().AndReturn(None)
+        driver_bdm._bdm_obj.save().AndReturn(None)
         return instance, expected_conn_info
 
     def test_volume_attach(self):
