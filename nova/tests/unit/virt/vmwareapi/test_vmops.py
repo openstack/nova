@@ -1399,13 +1399,23 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         self._test_spawn(block_device_info=block_device_info,
                          config_drive=True)
 
+    def _spawn_with_block_device_info_ephemerals(self, ephemerals):
+        block_device_info = {'ephemerals': ephemerals}
+        self._test_spawn(block_device_info=block_device_info)
+
     def test_spawn_with_block_device_info_ephemerals(self):
         ephemerals = [{'device_type': 'disk',
                        'disk_bus': 'virtio',
                        'device_name': '/dev/vdb',
                        'size': 1}]
-        block_device_info = {'ephemerals': ephemerals}
-        self._test_spawn(block_device_info=block_device_info)
+        self._spawn_with_block_device_info_ephemerals(ephemerals)
+
+    def test_spawn_with_block_device_info_ephemerals_no_disk_bus(self):
+        ephemerals = [{'device_type': 'disk',
+                       'disk_bus': None,
+                       'device_name': '/dev/vdb',
+                       'size': 1}]
+        self._spawn_with_block_device_info_ephemerals(ephemerals)
 
     def _get_fake_vi(self):
         image_info = images.VMwareImage(
