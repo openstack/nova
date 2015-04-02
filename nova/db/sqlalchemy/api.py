@@ -23,10 +23,10 @@ import datetime
 import functools
 import sys
 import threading
-import time
 import uuid
 
 from oslo_config import cfg
+from oslo_db import api as oslo_db_api
 from oslo_db import exception as db_exc
 from oslo_db import options as oslo_db_options
 from oslo_db.sqlalchemy import session as db_session
@@ -35,7 +35,6 @@ from oslo_log import log as logging
 from oslo_utils import excutils
 from oslo_utils import timeutils
 from oslo_utils import uuidutils
-import retrying
 import six
 from sqlalchemy import and_
 from sqlalchemy import Boolean
@@ -260,24 +259,6 @@ def require_aggregate_exists(f):
         aggregate_get(context, aggregate_id)
         return f(context, aggregate_id, *args, **kwargs)
     return wrapper
-
-
-def _retry_on_deadlock(f):
-    """Decorator to retry a DB API call if Deadlock was received."""
-    @functools.wraps(f)
-    def wrapped(*args, **kwargs):
-        while True:
-            try:
-                return f(*args, **kwargs)
-            except db_exc.DBDeadlock:
-                LOG.warning(_LW("Deadlock detected when running "
-                                "'%(func_name)s': Retrying..."),
-                            dict(func_name=f.__name__))
-                # Retry!
-                time.sleep(0.5)
-                continue
-    functools.update_wrapper(wrapped, f)
-    return wrapped
 
 
 def model_query(context, model,
@@ -548,7 +529,7 @@ def service_create(context, values):
     return service_ref
 
 
-@_retry_on_deadlock
+@oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
 def service_update(context, service_id, values):
     session = get_session()
     with session.begin():
@@ -641,7 +622,7 @@ def compute_node_create(context, values):
 
 
 @require_admin_context
-@_retry_on_deadlock
+@oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
 def compute_node_update(context, compute_id, values):
     """Updates the ComputeNode record with the most recent data."""
 
@@ -772,9 +753,8 @@ def floating_ip_get_pools(context):
 
 
 @require_context
-@_retry_on_deadlock
-@retrying.retry(stop_max_attempt_number=5, retry_on_exception=
-                lambda e: isinstance(e, exception.FloatingIpAllocateFailed))
+@oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True,
+                           retry_on_request=True)
 def floating_ip_allocate_address(context, project_id, pool,
                                  auto_assigned=False):
     nova.context.authorize_project_context(context, project_id)
@@ -803,7 +783,7 @@ def floating_ip_allocate_address(context, project_id, pool,
         if not rows_update:
             LOG.debug('The row was updated in a concurrent transaction, '
                       'we will fetch another one')
-            raise exception.FloatingIpAllocateFailed()
+            raise db_exc.RetryRequest(exception.FloatingIpAllocateFailed())
 
     return floating_ip_ref['address']
 
@@ -899,7 +879,7 @@ def _floating_ip_count_by_project(context, project_id, session=None):
 
 
 @require_context
-@_retry_on_deadlock
+@oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
 def floating_ip_fixed_ip_associate(context, floating_address,
                                    fixed_address, host):
     session = get_session()
@@ -920,7 +900,7 @@ def floating_ip_fixed_ip_associate(context, floating_address,
 
 
 @require_context
-@_retry_on_deadlock
+@oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
 def floating_ip_deallocate(context, address):
     session = get_session()
     with session.begin():
@@ -1122,9 +1102,8 @@ def dnsdomain_get_all(context):
 
 
 @require_admin_context
-@_retry_on_deadlock
-@retrying.retry(stop_max_attempt_number=5, retry_on_exception=
-                lambda exc: isinstance(exc, exception.FixedIpAssociateFailed))
+@oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True,
+                           retry_on_request=True)
 def fixed_ip_associate(context, address, instance_uuid, network_id=None,
                        reserved=False):
     """Keyword arguments:
@@ -1167,15 +1146,15 @@ def fixed_ip_associate(context, address, instance_uuid, network_id=None,
         if not rows_updated:
             LOG.debug('The row was updated in a concurrent transaction, '
                       'we will fetch another row')
-            raise exception.FixedIpAssociateFailed(net=network_id)
+            raise db_exc.RetryRequest(
+                exception.FixedIpAssociateFailed(net=network_id))
 
     return fixed_ip_ref
 
 
 @require_admin_context
-@_retry_on_deadlock
-@retrying.retry(stop_max_attempt_number=5, retry_on_exception=
-                lambda exc: isinstance(exc, exception.FixedIpAssociateFailed))
+@oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True,
+                           retry_on_request=True)
 def fixed_ip_associate_pool(context, network_id, instance_uuid=None,
                             host=None):
     if instance_uuid and not uuidutils.is_uuid_like(instance_uuid):
@@ -1217,7 +1196,8 @@ def fixed_ip_associate_pool(context, network_id, instance_uuid=None,
         if not rows_updated:
             LOG.debug('The row was updated in a concurrent transaction, '
                       'we will fetch another row')
-            raise exception.FixedIpAssociateFailed(net=network_id)
+            raise db_exc.RetryRequest(
+                exception.FixedIpAssociateFailed(net=network_id))
 
     return fixed_ip_ref
 
@@ -1702,7 +1682,7 @@ def _instance_data_get_for_user(context, project_id, user_id, session=None):
 
 
 @require_context
-@_retry_on_deadlock
+@oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
 def instance_destroy(context, instance_uuid, constraint=None):
     session = get_session()
     with session.begin():
@@ -2506,7 +2486,7 @@ def _instance_metadata_update_in_place(context, instance, metadata_type, model,
         instance[metadata_type].append(newitem)
 
 
-@_retry_on_deadlock
+@oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
 def _instance_update(context, instance_uuid, values, copy_old_instance=False,
                      columns_to_join=None):
     session = get_session()
@@ -3016,9 +2996,8 @@ def network_get_all_by_host(context, host):
 
 
 @require_admin_context
-@_retry_on_deadlock
-@retrying.retry(stop_max_attempt_number=5, retry_on_exception=
-                lambda e: isinstance(e, exception.NetworkSetHostFailed))
+@oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True,
+                           retry_on_request=True)
 def network_set_host(context, network_id, host_id):
     network_ref = _network_get_query(context).\
         filter_by(id=network_id).\
@@ -3038,7 +3017,8 @@ def network_set_host(context, network_id, host_id):
     if not rows_updated:
         LOG.debug('The row was updated in a concurrent transaction, '
                   'we will fetch another row')
-        raise exception.NetworkSetHostFailed(network_id=network_id)
+        raise db_exc.RetryRequest(
+            exception.NetworkSetHostFailed(network_id=network_id))
 
 
 @require_context
@@ -3480,7 +3460,7 @@ def _calculate_overquota(project_quotas, user_quotas, deltas,
 
 
 @require_context
-@_retry_on_deadlock
+@oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
 def quota_reserve(context, resources, project_quotas, user_quotas, deltas,
                   expire, until_refresh, max_age, project_id=None,
                   user_id=None):
@@ -3641,7 +3621,7 @@ def _quota_reservations_query(session, context, reservations):
 
 
 @require_context
-@_retry_on_deadlock
+@oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
 def reservation_commit(context, reservations, project_id=None, user_id=None):
     session = get_session()
     with session.begin():
@@ -3658,7 +3638,7 @@ def reservation_commit(context, reservations, project_id=None, user_id=None):
 
 
 @require_context
-@_retry_on_deadlock
+@oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
 def reservation_rollback(context, reservations, project_id=None, user_id=None):
     session = get_session()
     with session.begin():
@@ -3722,7 +3702,7 @@ def quota_destroy_all_by_project(context, project_id):
 
 
 @require_admin_context
-@_retry_on_deadlock
+@oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
 def reservation_expire(context):
     session = get_session()
     with session.begin():
@@ -4957,7 +4937,7 @@ def instance_metadata_get(context, instance_uuid):
 
 
 @require_context
-@_retry_on_deadlock
+@oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
 def instance_metadata_delete(context, instance_uuid, key):
     _instance_metadata_get_query(context, instance_uuid).\
         filter_by(key=key).\
@@ -4965,7 +4945,7 @@ def instance_metadata_delete(context, instance_uuid, key):
 
 
 @require_context
-@_retry_on_deadlock
+@oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
 def instance_metadata_update(context, instance_uuid, metadata, delete):
     all_keys = metadata.keys()
     session = get_session()
@@ -5124,7 +5104,7 @@ def bw_usage_get_by_uuids(context, uuids, start_period, use_slave=False):
 
 
 @require_context
-@_retry_on_deadlock
+@oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
 def bw_usage_update(context, uuid, mac, start_period, bw_in, bw_out,
                     last_ctr_in, last_ctr_out, last_refreshed=None):
 
