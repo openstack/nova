@@ -25,6 +25,9 @@ class HvTypeTest(test.NoDBTestCase):
     def test_valid_constant(self):
         self.assertTrue(hv_type.is_valid(hv_type.QEMU))
 
+    def test_valid_docker(self):
+        self.assertTrue(hv_type.is_valid("docker"))
+
     def test_valid_bogus(self):
         self.assertFalse(hv_type.is_valid("acmehypervisor"))
 

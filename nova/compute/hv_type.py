@@ -29,6 +29,7 @@ from nova import exception
 # even if not currently supported by OpenStack.
 BAREMETAL = "baremetal"
 BHYVE = "bhyve"
+DOCKER = "docker"
 FAKE = "fake"
 HYPERV = "hyperv"
 IRONIC = "ironic"
@@ -49,6 +50,7 @@ ZVM = "zvm"
 ALL = (
     BAREMETAL,
     BHYVE,
+    DOCKER,
     FAKE,
     HYPERV,
     IRONIC,
