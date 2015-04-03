@@ -1702,6 +1702,11 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
 def _exec_ebtables(*cmd, **kwargs):
     check_exit_code = kwargs.pop('check_exit_code', True)
 
+    # List of error strings to re-try.
+    retry_strings = (
+        'Multiple ebtables programs',
+    )
+
     # We always try at least once
     attempts = CONF.ebtables_exec_attempts
     if attempts <= 0:
@@ -1714,19 +1719,28 @@ def _exec_ebtables(*cmd, **kwargs):
         # NOTE(cfb): ebtables reports all errors with a return code of 255.
         #            As such we can't know if we hit a locking error, or some
         #            other error (like a rule doesn't exist) so we have to
-        #            retry on all errors.
+        #            to parse stderr.
         try:
             _execute(*cmd, check_exit_code=[0], **kwargs)
-        except processutils.ProcessExecutionError:
-            if count > attempts and check_exit_code:
-                LOG.warning(_LW('%s failed. Not Retrying.'), ' '.join(cmd))
-                raise
+        except processutils.ProcessExecutionError as exc:
+            # See if we can retry the error.
+            if any(error in exc.stderr for error in retry_strings):
+                if count > attempts and check_exit_code:
+                    LOG.warning(_LW('%s failed. Not Retrying.'), ' '.join(cmd))
+                    raise
+                else:
+                    # We need to sleep a bit before retrying
+                    LOG.warning(_LW("%(cmd)s failed. Sleeping %(time)s "
+                                    "seconds before retry."),
+                                {'cmd': ' '.join(cmd), 'time': sleep})
+                    time.sleep(sleep)
             else:
-                # We need to sleep a bit before retrying
-                LOG.warning(_LW("%(cmd)s failed. Sleeping %(time)s seconds "
-                                "before retry."),
-                            {'cmd': ' '.join(cmd), 'time': sleep})
-                time.sleep(sleep)
+                # Not eligible for retry
+                if check_exit_code:
+                    LOG.warning(_LW('%s failed. Not Retrying.'), ' '.join(cmd))
+                    raise
+                else:
+                    return
         else:
             # Success
             return

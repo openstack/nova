@@ -1274,6 +1274,17 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         self.assertEqual(1, len(executes))
         self.mox.UnsetStubs()
 
+    def _ebtables_race_stderr(self):
+        return (u"Unable to update the kernel. Two possible causes:\n"
+                "1. Multiple ebtables programs were executing simultaneously."
+                " The ebtables\n userspace tool doesn't by default support "
+                "multiple ebtables programs running\n concurrently. The "
+                "ebtables option --concurrent or a tool like flock can be\n "
+                "used to support concurrent scripts that update the ebtables "
+                "kernel tables.\n2. The kernel doesn't support a certain "
+                "ebtables extension, consider\n recompiling your kernel or "
+                "insmod the extension.\n.\n")
+
     def test_exec_ebtables_fail_all(self):
         executes = []
 
@@ -1282,7 +1293,8 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
 
         def fake_execute(*args, **kwargs):
             executes.append(args)
-            raise processutils.ProcessExecutionError('error')
+            raise processutils.ProcessExecutionError('error',
+                    stderr=self._ebtables_race_stderr())
 
         self.stubs.Set(time, 'sleep', fake_sleep)
         self.stubs.Set(self.driver, '_execute', fake_execute)
@@ -1290,6 +1302,24 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
                           self.driver._exec_ebtables, 'fake')
         max_calls = CONF.ebtables_exec_attempts
         self.assertEqual(max_calls, len(executes))
+        self.mox.UnsetStubs()
+
+    def test_exec_ebtables_fail_no_retry(self):
+        executes = []
+
+        def fake_sleep(interval):
+            pass
+
+        def fake_execute(*args, **kwargs):
+            executes.append(args)
+            raise processutils.ProcessExecutionError('error',
+                    stderr="Sorry, rule does not exist")
+
+        self.stubs.Set(time, 'sleep', fake_sleep)
+        self.stubs.Set(self.driver, '_execute', fake_execute)
+        self.assertRaises(processutils.ProcessExecutionError,
+                          self.driver._exec_ebtables, 'fake')
+        self.assertEqual(1, len(executes))
         self.mox.UnsetStubs()
 
     def test_exec_ebtables_fail_once(self):
@@ -1301,7 +1331,8 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         def fake_execute(*args, **kwargs):
             executes.append(args)
             if len(executes) == 1:
-                raise processutils.ProcessExecutionError('error')
+                raise processutils.ProcessExecutionError('error',
+                        stderr=self._ebtables_race_stderr())
             else:
                 return "", ""
 
