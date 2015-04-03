@@ -2021,7 +2021,9 @@ class ComputeManager(manager.Manager):
         if not self.send_instance_updates:
             return
         context = context.elevated()
-        instances = objects.InstanceList.get_by_host(context, self.host)
+        instances = objects.InstanceList.get_by_host(context, self.host,
+                                                     expected_attrs=[],
+                                                     use_slave=True)
         uuids = [instance.uuid for instance in instances]
         self.scheduler_client.sync_instance_info(context, self.host, uuids)
 
