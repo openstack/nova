@@ -45,8 +45,10 @@ class _NoLegacy(Exception):
 def update_db(method):
     @functools.wraps(method)
     def wrapped(obj, context, *args, **kwargs):
-        ret_val = method(obj, context, *args, **kwargs)
-        obj.save()
+        try:
+            ret_val = method(obj, context, *args, **kwargs)
+        finally:
+            obj.save()
         return ret_val
     return wrapped
 
