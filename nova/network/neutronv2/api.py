@@ -276,7 +276,8 @@ class API(base_api.NetworkAPI):
         :param fixed_ip: Optional fixed IP to use from the given network.
         :param security_group_ids: Optional list of security group IDs to
             apply to the port.
-        :param available_macs: Optional set of available MAC addresses to use.
+        :param available_macs: Optional set of available MAC addresses,
+            from which one will be used at random.
         :param dhcp_opts: Optional DHCP options.
         :returns: ID of the created port.
         :raises PortLimitExceeded: If neutron fails with an OverQuota error.
