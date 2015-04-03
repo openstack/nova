@@ -123,7 +123,7 @@ class NovaProxyRequestHandlerBaseTestCase(test.TestCase):
         check_token.return_value = False
 
         self.wh.path = "ws://127.0.0.1/?token=XXX"
-        self.wh.headers.getheader = self._fake_getheader
+        self.wh.headers.getheader = self._fake_getheader_bad_token
 
         self.assertRaises(Exception, self.wh.new_websocket_client)  # noqa
         check_token.assert_called_with(mock.ANY, token="XXX")
