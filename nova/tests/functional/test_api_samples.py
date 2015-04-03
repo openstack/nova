@@ -197,8 +197,19 @@ class ServersSampleBase(ApiSampleTestBaseV2):
             self.__class__._use_common_server_api_samples = orig_value
 
 
-class ServersSampleJsonTest(ServersSampleBase):
-    sample_dir = 'servers'
+class ServersSampleHideAddressesJsonTest(ServersSampleBase):
+    sample_dir = None
+    extension_name = '.'.join(('nova.api.openstack.compute.contrib',
+                               'hide_server_addresses',
+                               'Hide_server_addresses'))
+
+    def setUp(self):
+        # We override osapi_hide_server_address_states in order
+        # to have an example of in the json samples of the
+        # addresses being hidden
+        CONF.set_override("osapi_hide_server_address_states",
+                          [vm_states.ACTIVE])
+        super(ServersSampleHideAddressesJsonTest, self).setUp()
 
     def test_servers_post(self):
         return self._post_server()
@@ -229,25 +240,6 @@ class ServersSampleJsonTest(ServersSampleBase):
         subs['hypervisor_hostname'] = r'[\w\.\-]+'
         subs['mac_addr'] = '(?:[a-f0-9]{2}:){5}[a-f0-9]{2}'
         self._verify_response('servers-details-resp', subs, response, 200)
-
-
-class ServersSampleAllExtensionJsonTest(ServersSampleJsonTest):
-    all_extensions = True
-
-
-class ServersSampleHideAddressesJsonTest(ServersSampleJsonTest):
-    sample_dir = None
-    extension_name = '.'.join(('nova.api.openstack.compute.contrib',
-                               'hide_server_addresses',
-                               'Hide_server_addresses'))
-
-    def setUp(self):
-        # We override osapi_hide_server_address_states in order
-        # to have an example of in the json samples of the
-        # addresses being hidden
-        CONF.set_override("osapi_hide_server_address_states",
-                          [vm_states.ACTIVE])
-        super(ServersSampleHideAddressesJsonTest, self).setUp()
 
 
 class ServersSampleMultiStatusJsonTest(ServersSampleBase):
@@ -467,78 +459,6 @@ class ServersActionsJsonTest(ServersSampleBase):
         uuid = self._post_server()
         self._test_server_action(uuid, "changePassword",
                                  {"password": "foo"})
-
-    def test_server_reboot_hard(self):
-        uuid = self._post_server()
-        self._test_server_action(uuid, "reboot",
-                                 {"type": "HARD"})
-
-    def test_server_reboot_soft(self):
-        uuid = self._post_server()
-        self._test_server_action(uuid, "reboot",
-                                 {"type": "SOFT"})
-
-    def test_server_rebuild(self):
-        uuid = self._post_server()
-        image = self.api.get_images()[0]['id']
-        subs = {'host': self._get_host(),
-                'uuid': image,
-                'name': 'foobar',
-                'pass': 'seekr3t',
-                'ip': '1.2.3.4',
-                'ip6': 'fe80::100',
-                'hostid': '[a-f0-9]+',
-                }
-        self._test_server_action(uuid, 'rebuild', subs,
-                                 'server-action-rebuild-resp')
-
-    def test_server_resize(self):
-        self.flags(allow_resize_to_same_host=True)
-        uuid = self._post_server()
-        self._test_server_action(uuid, "resize",
-                                 {"id": 2,
-                                  "host": self._get_host()})
-        return uuid
-
-    def test_server_revert_resize(self):
-        uuid = self.test_server_resize()
-        self._test_server_action(uuid, "revertResize")
-
-    def test_server_confirm_resize(self):
-        uuid = self.test_server_resize()
-        self._test_server_action(uuid, "confirmResize", code=204)
-
-    def test_server_create_image(self):
-        uuid = self._post_server()
-        self._test_server_action(uuid, 'createImage',
-                                 {'name': 'foo-image',
-                                  'meta_var': 'myvar',
-                                  'meta_val': 'foobar'})
-
-
-class ServersActionsAllJsonTest(ServersActionsJsonTest):
-    all_extensions = True
-
-
-class ServerStartStopJsonTest(ServersSampleBase):
-    extension_name = "nova.api.openstack.compute.contrib" + \
-        ".server_start_stop.Server_start_stop"
-
-    def _test_server_action(self, uuid, action):
-        response = self._do_post('servers/%s/action' % uuid,
-                                 'server_start_stop',
-                                 {'action': action})
-        self.assertEqual(response.status_code, 202)
-        self.assertEqual(response.content, "")
-
-    def test_server_start(self):
-        uuid = self._post_server()
-        self._test_server_action(uuid, 'os-stop')
-        self._test_server_action(uuid, 'os-start')
-
-    def test_server_stop(self):
-        uuid = self._post_server()
-        self._test_server_action(uuid, 'os-stop')
 
 
 class UserDataJsonTest(ApiSampleTestBaseV2):
@@ -3149,15 +3069,3 @@ class ServerGroupQuotas_QuotasSampleJsonTests(QuotasSampleJsonTests):
     extension_name = ("nova.api.openstack.compute.contrib."
                "server_group_quotas.Server_group_quotas")
     extends_name = "nova.api.openstack.compute.contrib.quotas.Quotas"
-
-
-class ServerSortKeysJsonTests(ServersSampleBase):
-    extension_name = ("nova.api.openstack.compute.contrib.server_sort_keys"
-                      ".Server_sort_keys")
-
-    def test_servers_list(self):
-        self._post_server()
-        response = self._do_get('servers?sort_key=display_name&sort_dir=asc')
-        subs = self._get_regexes()
-        self._verify_response('server-sort-keys-list-resp', subs, response,
-                              200)

@@ -29,6 +29,8 @@ class ServersSampleHideAddressesJsonTest(test_servers.ServersSampleJsonTest):
     # test_servers.ServersSampleJsonTest does and so it won't default
     # to the extension name
     sample_dir = extension_name
+    extra_extensions_to_load = []
+    _api_version = 'v3'
 
     def setUp(self):
         # We override osapi_hide_server_address_states in order

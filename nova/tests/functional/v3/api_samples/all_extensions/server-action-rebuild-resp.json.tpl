@@ -1,7 +1,8 @@
 {
     "server": {
-        "accessIPv4": "",
-        "accessIPv6": "",
+        "OS-DCF:diskConfig": "AUTO",
+        "accessIPv4": "%(access_ip_v4)s",
+        "accessIPv6": "%(access_ip_v6)s",
         "addresses": {
             "private": [
                 {
@@ -10,6 +11,7 @@
                 }
             ]
         },
+        "adminPass": "%(password)s",
         "created": "%(isotime)s",
         "flavor": {
             "id": "1",
@@ -21,7 +23,7 @@
             ]
         },
         "hostId": "%(hostid)s",
-        "id": "%(id)s",
+        "id": "%(uuid)s",
         "image": {
             "id": "%(uuid)s",
             "links": [
@@ -33,18 +35,18 @@
         },
         "links": [
             {
-                "href": "%(host)s/v2/openstack/servers/%(id)s",
+                "href": "%(host)s/v2/openstack/servers/%(uuid)s",
                 "rel": "self"
             },
             {
-                "href": "%(host)s/openstack/servers/%(id)s",
+                "href": "%(host)s/openstack/servers/%(uuid)s",
                 "rel": "bookmark"
             }
         ],
         "metadata": {
-            "My Server Name": "Apache1"
+            "meta var": "meta val"
         },
-        "name": "new-server-test",
+        "name": "%(name)s",
         "progress": 0,
         "status": "ACTIVE",
         "tenant_id": "openstack",

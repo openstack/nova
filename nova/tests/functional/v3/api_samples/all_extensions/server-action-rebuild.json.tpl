@@ -1,10 +1,10 @@
 {
     "rebuild" : {
-        "imageRef" : "http://openstack.example.com/v2/32278/images/70a599e0-31e7-49b7-b260-868f441e862b",
-        "name" : "foobar",
-        "adminPass" : "seekr3t",
-        "accessIPv4" : "1.2.3.4",
-        "accessIPv6" : "fe80::100",
+        "imageRef" : "%(host)s/v2/32278/images/%(uuid)s",
+        "name" : "%(name)s",
+        "adminPass" : "%(pass)s",
+        "accessIPv4" : "%(access_ip_v4)s",
+        "accessIPv6" : "%(access_ip_v6)s",
         "metadata" : {
             "meta var" : "meta val"
         },

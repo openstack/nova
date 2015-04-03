@@ -1,3 +1,0 @@
-{
-  "%(action)s" : null
-}

@@ -44,9 +44,9 @@ class ApiSampleTestBaseV3(testscenarios.WithScenarios,
             raise testtools.TestCase.skipException('tests are not merged yet')
         self.flags(use_ipv6=False,
                    osapi_compute_link_prefix=self._get_host(),
-                   osapi_glance_link_prefix=self._get_glance_host(),
-                   osapi_compute_extension=[])
+                   osapi_glance_link_prefix=self._get_glance_host())
         if not self.all_extensions:
+            self.flags(osapi_compute_extension=[])
             # Set the whitelist to ensure only the extensions we are
             # interested in are loaded so the api samples don't include
             # data from extensions we are not interested in
