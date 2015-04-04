@@ -69,6 +69,10 @@ class HostManagerTestCase(test.NoDBTestCase):
         self.fake_hosts += [host_manager.HostState('fake_multihost',
                 'fake-node%s' % x) for x in xrange(1, 5)]
 
+    def test_load_filters(self):
+        filters = self.host_manager._load_filters()
+        self.assertEqual(filters, ['FakeFilterClass1'])
+
     @mock.patch.object(nova.objects.InstanceList, 'get_by_filters')
     @mock.patch.object(nova.objects.ComputeNodeList, 'get_all')
     @mock.patch('nova.utils.spawn_n')
