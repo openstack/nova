@@ -79,9 +79,6 @@ class AggregateRamFilter(BaseRamFilter):
     """
 
     def _get_ram_allocation_ratio(self, host_state, filter_properties):
-        # TODO(uni): DB query in filter is a performance hit, especially for
-        # system with lots of hosts. Will need a general solution here to fix
-        # all filters with aggregate DB call things.
         aggregate_vals = utils.aggregate_values_from_key(
             host_state,
             'ram_allocation_ratio')
