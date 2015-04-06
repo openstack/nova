@@ -368,42 +368,6 @@ class FlavorsSampleJsonTest(ApiSampleTestBaseV2):
         self._verify_response('flavors-list-resp', subs, response, 200)
 
 
-class HostsSampleJsonTest(ApiSampleTestBaseV2):
-    ADMIN_API = True
-    extension_name = "nova.api.openstack.compute.contrib.hosts.Hosts"
-
-    def test_host_startup(self):
-        response = self._do_get('os-hosts/%s/startup' % self.compute.host)
-        subs = self._get_regexes()
-        self._verify_response('host-get-startup', subs, response, 200)
-
-    def test_host_reboot(self):
-        response = self._do_get('os-hosts/%s/reboot' % self.compute.host)
-        subs = self._get_regexes()
-        self._verify_response('host-get-reboot', subs, response, 200)
-
-    def test_host_shutdown(self):
-        response = self._do_get('os-hosts/%s/shutdown' % self.compute.host)
-        subs = self._get_regexes()
-        self._verify_response('host-get-shutdown', subs, response, 200)
-
-    def test_host_maintenance(self):
-        response = self._do_put('os-hosts/%s' % self.compute.host,
-                                'host-put-maintenance-req', {})
-        subs = self._get_regexes()
-        self._verify_response('host-put-maintenance-resp', subs, response, 200)
-
-    def test_host_get(self):
-        response = self._do_get('os-hosts/%s' % self.compute.host)
-        subs = self._get_regexes()
-        self._verify_response('host-get-resp', subs, response, 200)
-
-    def test_hosts_list(self):
-        response = self._do_get('os-hosts')
-        subs = self._get_regexes()
-        self._verify_response('hosts-list-resp', subs, response, 200)
-
-
 class FlavorsSampleAllExtensionJsonTest(FlavorsSampleJsonTest):
     all_extensions = True
 
