@@ -127,6 +127,7 @@ class NUMAServersTest(ServersTestBase):
                                  cpu_threads=2, kB_mem=15740000)
         fake_connection = fakelibvirt.Connection('qemu:///system',
                                                  version=1002007,
+                                                 hv_version=2001000,
                                                  host_info=host_info)
 
         # Create a flavor

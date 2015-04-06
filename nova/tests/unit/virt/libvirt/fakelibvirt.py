@@ -743,7 +743,8 @@ class DomainSnapshot(object):
 
 
 class Connection(object):
-    def __init__(self, uri=None, readonly=False, version=9011, host_info=None):
+    def __init__(self, uri=None, readonly=False, version=9011,
+                 hv_version=1001000, host_info=None):
         if not uri or uri == '':
             if allow_default_uri_connection:
                 uri = 'qemu:///session'
@@ -775,7 +776,7 @@ class Connection(object):
         self._nodedevs = {}
         self._event_callbacks = {}
         self.fakeLibVersion = version
-        self.fakeVersion = version
+        self.fakeVersion = hv_version
         self.host_info = host_info or HostInfo()
 
     def _add_filter(self, nwfilter):
