@@ -802,8 +802,9 @@ class API(base_api.NetworkAPI):
     @base_api.refresh_cache
     def add_fixed_ip_to_instance(self, context, instance, network_id):
         """Add a fixed ip to the instance from specified network."""
+        neutron = get_client(context)
         search_opts = {'network_id': network_id}
-        data = get_client(context).list_subnets(**search_opts)
+        data = neutron.list_subnets(**search_opts)
         ipam_subnets = data.get('subnets', [])
         if not ipam_subnets:
             raise exception.NetworkNotFoundForInstance(
@@ -813,7 +814,7 @@ class API(base_api.NetworkAPI):
         search_opts = {'device_id': instance.uuid,
                        'device_owner': zone,
                        'network_id': network_id}
-        data = get_client(context).list_ports(**search_opts)
+        data = neutron.list_ports(**search_opts)
         ports = data['ports']
         for p in ports:
             for subnet in ipam_subnets:
@@ -821,8 +822,7 @@ class API(base_api.NetworkAPI):
                 fixed_ips.append({'subnet_id': subnet['id']})
                 port_req_body = {'port': {'fixed_ips': fixed_ips}}
                 try:
-                    get_client(context).update_port(p['id'],
-                                                              port_req_body)
+                    neutron.update_port(p['id'], port_req_body)
                     return self._get_instance_nw_info(context, instance)
                 except Exception as ex:
                     msg = ("Unable to update port %(portid)s on subnet "
@@ -837,11 +837,12 @@ class API(base_api.NetworkAPI):
     @base_api.refresh_cache
     def remove_fixed_ip_from_instance(self, context, instance, address):
         """Remove a fixed ip from the instance."""
+        neutron = get_client(context)
         zone = 'compute:%s' % instance.availability_zone
         search_opts = {'device_id': instance.uuid,
                        'device_owner': zone,
                        'fixed_ips': 'ip_address=%s' % address}
-        data = get_client(context).list_ports(**search_opts)
+        data = neutron.list_ports(**search_opts)
         ports = data['ports']
         for p in ports:
             fixed_ips = p['fixed_ips']
@@ -851,8 +852,7 @@ class API(base_api.NetworkAPI):
                     new_fixed_ips.append(fixed_ip)
             port_req_body = {'port': {'fixed_ips': new_fixed_ips}}
             try:
-                get_client(context).update_port(p['id'],
-                                                          port_req_body)
+                neutron.update_port(p['id'], port_req_body)
             except Exception as ex:
                 msg = ("Unable to update port %(portid)s with"
                        " failure: %(exception)s")
