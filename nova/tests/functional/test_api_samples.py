@@ -2205,27 +2205,6 @@ class MultinicSampleJsonTest(ServersSampleBase):
         self.assertEqual(response.status_code, 202)
 
 
-class InstanceUsageAuditLogJsonTest(ApiSampleTestBaseV2):
-    ADMIN_API = True
-    extension_name = ("nova.api.openstack.compute.contrib."
-                      "instance_usage_audit_log.Instance_usage_audit_log")
-
-    def test_show_instance_usage_audit_log(self):
-        response = self._do_get('os-instance_usage_audit_log/%s' %
-                                urllib.quote('2012-07-05 10:00:00'))
-        subs = self._get_regexes()
-        subs['hostid'] = '[a-f0-9]+'
-        self._verify_response('inst-usage-audit-log-show-get-resp',
-                              subs, response, 200)
-
-    def test_index_instance_usage_audit_log(self):
-        response = self._do_get('os-instance_usage_audit_log')
-        subs = self._get_regexes()
-        subs['hostid'] = '[a-f0-9]+'
-        self._verify_response('inst-usage-audit-log-index-get-resp',
-                              subs, response, 200)
-
-
 class FlavorExtraSpecsSampleJsonTests(ApiSampleTestBaseV2):
     ADMIN_API = True
     extension_name = ("nova.api.openstack.compute.contrib.flavorextraspecs."
