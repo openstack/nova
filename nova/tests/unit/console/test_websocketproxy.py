@@ -41,7 +41,7 @@ class NovaProxyRequestHandlerBaseTestCase(test.NoDBTestCase):
                           'https://example.net:6080/vnc_auto.html',
                           'spice')
         CONF.set_override('base_url',
-                          'https://example.net:6080/vnc_auto.html',
+                          'ws://example.net:6080',
                           'serial_console')
 
     def _fake_getheader(self, header):
@@ -142,6 +142,23 @@ class NovaProxyRequestHandlerBaseTestCase(test.NoDBTestCase):
         self.wh.socket.return_value = '<socket>'
         self.wh.path = "http://127.0.0.1/"
         self.wh.headers.getheader = self._fake_getheader
+
+        self.wh.new_websocket_client()
+
+        check_token.assert_called_with(mock.ANY, token="123-456-789")
+        self.wh.socket.assert_called_with('node1', 10000, connect=True)
+        self.wh.do_proxy.assert_called_with('<socket>')
+
+    @mock.patch('nova.consoleauth.rpcapi.ConsoleAuthAPI.check_token')
+    def test_new_websocket_client_serial(self, check_token):
+        check_token.return_value = {
+            'host': 'node1',
+            'port': '10000',
+            'console_type': 'serial'
+        }
+        self.wh.socket.return_value = '<socket>'
+        self.wh.path = "http://127.0.0.1/"
+        self.wh.headers.getheader = self._fake_getheader_http
 
         self.wh.new_websocket_client()
 
@@ -332,16 +349,16 @@ class NovaProxyRequestHandlerBaseTestCase(test.NoDBTestCase):
                           self.wh.new_websocket_client)
 
     @mock.patch('nova.consoleauth.rpcapi.ConsoleAuthAPI.check_token')
-    def test_new_websocket_client_novnc_bad_origin_proto_serial(self,
-                                                                check_token):
+    def test_new_websocket_client_novnc_https_origin_proto_serial(self,
+                                                                  check_token):
         check_token.return_value = {
             'host': 'node1',
             'port': '10000',
             'console_type': 'serial'
         }
 
-        self.wh.path = "http://127.0.0.1/"
-        self.wh.headers.getheader = self._fake_getheader_http
+        self.wh.path = "https://127.0.0.1/"
+        self.wh.headers.getheader = self._fake_getheader
 
         self.assertRaises(exception.ValidationError,
                           self.wh.new_websocket_client)

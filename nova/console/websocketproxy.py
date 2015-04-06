@@ -49,19 +49,26 @@ class NovaProxyRequestHandlerBase(object):
 
     def verify_origin_proto(self, console_type, origin_proto):
         if console_type == 'novnc':
-            expected_proto = \
-                urlparse.urlparse(CONF.novncproxy_base_url).scheme
+            expected_protos = \
+                [urlparse.urlparse(CONF.novncproxy_base_url).scheme]
         elif console_type == 'spice-html5':
-            expected_proto = \
-                urlparse.urlparse(CONF.spice.html5proxy_base_url).scheme
+            expected_protos = \
+                [urlparse.urlparse(CONF.spice.html5proxy_base_url).scheme]
         elif console_type == 'serial':
-            expected_proto = \
-                urlparse.urlparse(CONF.serial_console.base_url).scheme
+            expected_protos = \
+                [urlparse.urlparse(CONF.serial_console.base_url).scheme]
+            # NOTE: For serial consoles the expected protocol could be ws or
+            # wss which correspond to http and https respectively in terms of
+            # security.
+            if 'ws' in expected_protos:
+                expected_protos.append('http')
+            if 'wss' in expected_protos:
+                expected_protos.append('https')
         else:
             detail = _("Invalid Console Type for WebSocketProxy: '%s'") % \
                         console_type
             raise exception.ValidationError(detail=detail)
-        return origin_proto == expected_proto
+        return origin_proto in expected_protos
 
     def new_websocket_client(self):
         """Called after a new WebSocket connection has been established."""
