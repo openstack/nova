@@ -1121,22 +1121,6 @@ class FixedIpJsonTest(ApiSampleTestBaseV2):
         self._verify_response('fixedips-get-resp', project, response, 200)
 
 
-class CertificatesSamplesJsonTest(ApiSampleTestBaseV2):
-    extension_name = ("nova.api.openstack.compute.contrib.certificates."
-                      "Certificates")
-
-    def test_create_certificates(self):
-        response = self._do_post('os-certificates',
-                                 'certificate-create-req', {})
-        subs = self._get_regexes()
-        self._verify_response('certificate-create-resp', subs, response, 200)
-
-    def test_get_root_certificate(self):
-        response = self._do_get('os-certificates/root')
-        subs = self._get_regexes()
-        self._verify_response('certificate-get-root-resp', subs, response, 200)
-
-
 class UsedLimitsSamplesJsonTest(ApiSampleTestBaseV2):
     extension_name = ("nova.api.openstack.compute.contrib.used_limits."
                       "Used_limits")
