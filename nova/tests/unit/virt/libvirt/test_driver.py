@@ -20,6 +20,7 @@ import datetime
 import errno
 import glob
 import os
+import platform
 import random
 import re
 import shutil
@@ -823,12 +824,16 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertRaises(exception.PciDeviceDetachFailed,
                           drvr._detach_pci_devices, FakeDomain(), pci_devices)
 
+    @mock.patch.object(platform, 'machine', mock.Mock(return_value='s390x'))
+    @mock.patch('sys.platform', 'linux2')
     def test_get_connector(self):
         initiator = 'fake.initiator.iqn'
         ip = 'fakeip'
         host = 'fakehost'
         wwpns = ['100010604b019419']
         wwnns = ['200010604b019419']
+        platform = 's390x'
+        os_type = 'linux2'
         self.flags(my_ip=ip)
         self.flags(host=host)
 
@@ -838,7 +843,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             'initiator': initiator,
             'host': host,
             'wwpns': wwpns,
-            'wwnns': wwnns
+            'wwnns': wwnns,
+            'os_type': os_type,
+            'platform': platform
         }
         volume = {
             'id': 'fake'
