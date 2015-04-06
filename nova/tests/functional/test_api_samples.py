@@ -669,33 +669,6 @@ class SecurityGroupsSampleJsonTest(ServersSampleBase):
         self.assertEqual(response.content, '')
 
 
-class SecurityGroupDefaultRulesSampleJsonTest(ServersSampleBase):
-    ADMIN_API = True
-    extension_name = ('nova.api.openstack.compute.contrib'
-                      '.security_group_default_rules'
-                      '.Security_group_default_rules')
-
-    def test_security_group_default_rules_create(self):
-        response = self._do_post('os-security-group-default-rules',
-                                 'security-group-default-rules-create-req',
-                                 {})
-        self._verify_response('security-group-default-rules-create-resp',
-                              {}, response, 200)
-
-    def test_security_group_default_rules_list(self):
-        self.test_security_group_default_rules_create()
-        response = self._do_get('os-security-group-default-rules')
-        self._verify_response('security-group-default-rules-list-resp',
-                              {}, response, 200)
-
-    def test_security_group_default_rules_show(self):
-        self.test_security_group_default_rules_create()
-        rule_id = '1'
-        response = self._do_get('os-security-group-default-rules/%s' % rule_id)
-        self._verify_response('security-group-default-rules-show-resp',
-                              {}, response, 200)
-
-
 class SchedulerHintsJsonTest(ApiSampleTestBaseV2):
     extension_name = ("nova.api.openstack.compute.contrib.scheduler_hints."
                      "Scheduler_hints")
