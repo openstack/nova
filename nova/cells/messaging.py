@@ -773,12 +773,7 @@ class _TargetedMessageMethods(_BaseMessageMethods):
 
     def compute_node_get(self, message, compute_id):
         """Get compute node by ID."""
-        compute_node = objects.ComputeNode.get_by_id(message.ctxt, compute_id)
-        # NOTE(sbauza): Cells Manager is calling
-        # cells_utils.add_cell_to_compute_node with this result so we need
-        # to convert it back to a dict so as to prevent the coercion to an
-        # integer for the ID field (which then becomes a string)
-        return objects_base.obj_to_primitive(compute_node)
+        return objects.ComputeNode.get_by_id(message.ctxt, compute_id)
 
     def actions_get(self, message, instance_uuid):
         actions = self.db.actions_get(message.ctxt, instance_uuid)
@@ -1162,15 +1157,9 @@ class _BroadcastMessageMethods(_BaseMessageMethods):
     def compute_node_get_all(self, message, hypervisor_match):
         """Return compute nodes in this cell."""
         if hypervisor_match is not None:
-            nodes = objects.ComputeNodeList.get_by_hypervisor(message.ctxt,
-                                                              hypervisor_match)
-        else:
-            nodes = objects.ComputeNodeList.get_all(message.ctxt)
-        # NOTE(sbauza): Cells Manager is calling
-        # cells_utils.add_cell_to_compute_node with this result so we need
-        # to convert it back to a dict so as to prevent the coercion to an
-        # integer for the ID field (which then becomes a string)
-        return objects_base.obj_to_primitive(nodes)
+            return objects.ComputeNodeList.get_by_hypervisor(message.ctxt,
+                                                             hypervisor_match)
+        return objects.ComputeNodeList.get_all(message.ctxt)
 
     def compute_node_stats(self, message):
         """Return compute node stats from this cell."""

@@ -456,22 +456,31 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
             cell_name = 'path!to!cell%i' % i
             compute_nodes = []
             for compute_node in FAKE_COMPUTE_NODES:
-                compute_nodes.append(copy.deepcopy(compute_node))
-                expected_compute_node = copy.deepcopy(compute_node)
-                cells_utils.add_cell_to_compute_node(expected_compute_node,
-                                                     cell_name)
-                expected_response.append(expected_compute_node)
+                fake_compute = objects.ComputeNode(**compute_node)
+                fake_compute._cached_service = None
+                compute_nodes.append(fake_compute)
+                expected_compute_node = cells_utils.ComputeNodeProxy(
+                    fake_compute, cell_name)
+                expected_response.append(
+                    (cell_name, expected_compute_node, fake_compute))
             response = messaging.Response(self.ctxt, cell_name, compute_nodes,
                                           False)
             responses.append(response)
         self.mox.StubOutWithMock(self.msg_runner,
                                  'compute_node_get_all')
+        self.mox.StubOutWithMock(cells_utils, 'add_cell_to_compute_node')
         self.msg_runner.compute_node_get_all(self.ctxt,
                 hypervisor_match='fake-match').AndReturn(responses)
+        # Calls are done by cells, so we need to sort the list by the cell name
+        expected_response.sort(key=lambda k: k[0])
+        for cell_name, compute_proxy, compute_node in expected_response:
+            cells_utils.add_cell_to_compute_node(
+                compute_node, cell_name).AndReturn(compute_proxy)
         self.mox.ReplayAll()
         response = self.cells_manager.compute_node_get_all(self.ctxt,
                 hypervisor_match='fake-match')
-        self.assertEqual(expected_response, response)
+        self.assertEqual([proxy for cell, proxy, compute in expected_response],
+                         response)
 
     def test_compute_node_stats(self):
         raw_resp1 = {'key1': 1, 'key2': 2}
@@ -491,16 +500,22 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
 
     def test_compute_node_get(self):
         fake_cell = 'fake-cell'
+        fake_compute = objects.ComputeNode(**FAKE_COMPUTE_NODES[0])
+        fake_compute._cached_service = None
         fake_response = messaging.Response(self.ctxt, fake_cell,
-                                           FAKE_COMPUTE_NODES[0],
+                                           fake_compute,
                                            False)
-        expected_response = copy.deepcopy(FAKE_COMPUTE_NODES[0])
-        cells_utils.add_cell_to_compute_node(expected_response, fake_cell)
+
+        expected_response = cells_utils.ComputeNodeProxy(fake_compute,
+                                                         fake_cell)
         cell_and_id = cells_utils.cell_with_item(fake_cell, 'fake-id')
         self.mox.StubOutWithMock(self.msg_runner,
                                  'compute_node_get')
+        self.mox.StubOutWithMock(cells_utils, 'add_cell_to_compute_node')
         self.msg_runner.compute_node_get(self.ctxt,
                 'fake-cell', 'fake-id').AndReturn(fake_response)
+        cells_utils.add_cell_to_compute_node(
+            fake_compute, fake_cell).AndReturn(expected_response)
         self.mox.ReplayAll()
         response = self.cells_manager.compute_node_get(self.ctxt,
                 compute_id=cell_and_id)
