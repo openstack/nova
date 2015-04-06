@@ -13,11 +13,22 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_config import cfg
+
 from nova.tests.functional.v3 import test_servers
+
+CONF = cfg.CONF
+CONF.import_opt('osapi_compute_extension',
+                'nova.api.openstack.compute.extensions')
 
 
 class AdminPasswordJsonTest(test_servers.ServersSampleBase):
     extension_name = 'os-admin-password'
+    # TODO(gmann): Overriding '_api_version' till all functional tests
+    # are merged between v2 and v2.1. After that base class variable
+    # itself can be changed to 'v2'
+    _api_version = 'v2'
+    extra_extensions_to_load = ["os-access-ips"]
 
     def test_server_password(self):
         uuid = self._post_server()

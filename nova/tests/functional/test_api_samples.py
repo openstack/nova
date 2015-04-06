@@ -233,29 +233,6 @@ class LimitsSampleJsonTest(ApiSampleTestBaseV2):
         self._verify_response('limit-get-resp', subs, response, 200)
 
 
-class ServersActionsJsonTest(ServersSampleBase):
-    sample_dir = 'servers'
-
-    def _test_server_action(self, uuid, action,
-                            subs=None, resp_tpl=None, code=202):
-        subs = subs or {}
-        subs.update({'action': action})
-        response = self._do_post('servers/%s/action' % uuid,
-                                 'server-action-%s' % action.lower(),
-                                 subs)
-        if resp_tpl:
-            subs.update(self._get_regexes())
-            self._verify_response(resp_tpl, subs, response, code)
-        else:
-            self.assertEqual(response.status_code, code)
-            self.assertEqual(response.content, "")
-
-    def test_server_password(self):
-        uuid = self._post_server()
-        self._test_server_action(uuid, "changePassword",
-                                 {"password": "foo"})
-
-
 class SecurityGroupsSampleJsonTest(ServersSampleBase):
     extension_name = "nova.api.openstack.compute.contrib" + \
                      ".security_groups.Security_groups"
