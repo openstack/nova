@@ -101,14 +101,17 @@ decorator_re = re.compile(r"@.*")
 # TODO(dims): When other oslo libraries switch over non-namespace'd
 # imports, we need to add them to the regexp below.
 oslo_namespace_imports = re.compile(r"from[\s]*oslo[.]"
-                                    r"(concurrency|config|db|i18n|messaging|"
-                                    r"middleware|serialization|utils|vmware)")
+                                    r"(concurrency|config|context|db|i18n|"
+                                    r"log|messaging|middleware|rootwrap|"
+                                    r"serialization|utils|vmware)")
 oslo_namespace_imports_2 = re.compile(r"from[\s]*oslo[\s]*import[\s]*"
-                                    r"(concurrency|config|db|i18n|messaging|"
-                                    r"middleware|serialization|utils|vmware)")
+                                    r"(concurrency|config|context|db|i18n|"
+                                    r"log|messaging|middleware|rootwrap|"
+                                    r"serialization|utils|vmware)")
 oslo_namespace_imports_3 = re.compile(r"import[\s]*oslo\."
-                                    r"(concurrency|config|db|i18n|messaging|"
-                                    r"middleware|serialization|utils|vmware)")
+                                    r"(concurrency|config|context|db|i18n|"
+                                    r"log|messaging|middleware|rootwrap|"
+                                    r"serialization|utils|vmware)")
 
 
 class BaseASTChecker(ast.NodeVisitor):
