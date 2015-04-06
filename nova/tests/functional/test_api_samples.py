@@ -1500,46 +1500,6 @@ class HypervisorsCellsSampleJsonTests(ApiSampleTestBaseV2):
         self._verify_response('hypervisors-uptime-resp', subs, response, 200)
 
 
-class AssistedVolumeSnapshotsJsonTest(ApiSampleTestBaseV2):
-    """Assisted volume snapshots."""
-    extension_name = ("nova.api.openstack.compute.contrib."
-                      "assisted_volume_snapshots.Assisted_volume_snapshots")
-
-    def _create_assisted_snapshot(self, subs):
-        self.stubs.Set(compute_api.API, 'volume_snapshot_create',
-                       fakes.stub_compute_volume_snapshot_create)
-
-        response = self._do_post("os-assisted-volume-snapshots",
-                                 "snapshot-create-assisted-req",
-                                 subs)
-        return response
-
-    def test_snapshots_create_assisted(self):
-        subs = {
-            'snapshot_name': 'snap-001',
-            'description': 'Daily backup',
-            'volume_id': '521752a6-acf6-4b2d-bc7a-119f9148cd8c',
-            'snapshot_id': '421752a6-acf6-4b2d-bc7a-119f9148cd8c',
-            'type': 'qcow2',
-            'new_file': 'new_file_name'
-        }
-        subs.update(self._get_regexes())
-        response = self._create_assisted_snapshot(subs)
-        self._verify_response("snapshot-create-assisted-resp",
-                              subs, response, 200)
-
-    def test_snapshots_delete_assisted(self):
-        self.stubs.Set(compute_api.API, 'volume_snapshot_delete',
-                       fakes.stub_compute_volume_snapshot_delete)
-        snapshot_id = '100'
-        response = self._do_delete(
-                'os-assisted-volume-snapshots/%s?delete_info='
-                '{"volume_id":"521752a6-acf6-4b2d-bc7a-119f9148cd8c"}'
-                % snapshot_id)
-        self.assertEqual(response.status_code, 204)
-        self.assertEqual(response.content, '')
-
-
 class PreserveEphemeralOnRebuildJsonTest(ServersSampleBase):
     extension_name = ('nova.api.openstack.compute.contrib.'
                       'preserve_ephemeral_rebuild.'
