@@ -799,37 +799,6 @@ class AvailabilityZoneJsonTest(ServersSampleBase):
                               response, 202)
 
 
-class AdminActionsSamplesJsonTest(ServersSampleBase):
-    extension_name = ("nova.api.openstack.compute.contrib.admin_actions."
-                      "Admin_actions")
-
-    def setUp(self):
-        """setUp Method for AdminActions api samples extension
-
-        This method creates the server that will be used in each tests
-        """
-        super(AdminActionsSamplesJsonTest, self).setUp()
-        self.uuid = self._post_server()
-
-    def test_post_reset_network(self):
-        # Get api samples to reset server network request.
-        response = self._do_post('servers/%s/action' % self.uuid,
-                                 'admin-actions-reset-network', {})
-        self.assertEqual(response.status_code, 202)
-
-    def test_post_inject_network_info(self):
-        # Get api samples to inject network info request.
-        response = self._do_post('servers/%s/action' % self.uuid,
-                                 'admin-actions-inject-network-info', {})
-        self.assertEqual(response.status_code, 202)
-
-    def test_post_reset_state(self):
-        # get api samples to server reset state request.
-        response = self._do_post('servers/%s/action' % self.uuid,
-                                 'admin-actions-reset-server-state', {})
-        self.assertEqual(response.status_code, 202)
-
-
 class ConsoleAuthTokensSampleJsonTests(ServersSampleBase):
     ADMIN_API = True
     extends_name = ("nova.api.openstack.compute.contrib.consoles.Consoles")
