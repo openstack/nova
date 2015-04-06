@@ -574,16 +574,16 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 return FakeVirtDomain()
 
         # Creating mocks
-        volume_driver = ('iscsi=nova.tests.unit.virt.libvirt.test_driver'
-                         '.FakeVolumeDriver')
-        self.flags(volume_drivers=[volume_driver],
-                   group='libvirt')
+        volume_driver = ['iscsi=nova.tests.unit.virt.libvirt.test_driver'
+                         '.FakeVolumeDriver']
         fake = FakeLibvirtDriver()
         # Customizing above fake if necessary
         for key, val in kwargs.items():
             fake.__setattr__(key, val)
 
         self.stubs.Set(libvirt_driver.LibvirtDriver, '_conn', fake)
+        self.stubs.Set(libvirt_driver.LibvirtDriver, '_get_volume_drivers',
+            lambda x: volume_driver)
         self.stubs.Set(host.Host, 'get_connection', lambda x: fake)
 
     def fake_lookup(self, instance_name):

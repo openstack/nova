@@ -161,31 +161,6 @@ libvirt_opts = [
                help='Snapshot image format (valid options are : '
                     'raw, qcow2, vmdk, vdi). '
                     'Defaults to same as source image'),
-    cfg.ListOpt('volume_drivers',
-                default=[
-                  'iscsi=nova.virt.libvirt.volume.LibvirtISCSIVolumeDriver',
-                  'iser=nova.virt.libvirt.volume.LibvirtISERVolumeDriver',
-                  'local=nova.virt.libvirt.volume.LibvirtVolumeDriver',
-                  'fake=nova.virt.libvirt.volume.LibvirtFakeVolumeDriver',
-                  'rbd=nova.virt.libvirt.volume.LibvirtNetVolumeDriver',
-                  'sheepdog=nova.virt.libvirt.volume.LibvirtNetVolumeDriver',
-                  'nfs=nova.virt.libvirt.volume.LibvirtNFSVolumeDriver',
-                  'smbfs=nova.virt.libvirt.volume.LibvirtSMBFSVolumeDriver',
-                  'aoe=nova.virt.libvirt.volume.LibvirtAOEVolumeDriver',
-                  'glusterfs='
-                      'nova.virt.libvirt.volume.LibvirtGlusterfsVolumeDriver',
-                  'fibre_channel=nova.virt.libvirt.volume.'
-                      'LibvirtFibreChannelVolumeDriver',
-                  'scality='
-                      'nova.virt.libvirt.volume.LibvirtScalityVolumeDriver',
-                  'gpfs='
-                      'nova.virt.libvirt.volume.LibvirtGPFSVolumeDriver',
-                  'quobyte='
-                      'nova.virt.libvirt.volume.LibvirtQuobyteVolumeDriver',
-                  ],
-                help='DEPRECATED. Libvirt handlers for remote volumes. '
-                     'This option is deprecated and will be removed in the '
-                     'Kilo release.'),
     cfg.StrOpt('disk_prefix',
                help='Override the default disk prefix for the devices attached'
                     ' to a server, which is dependent on virt_type. '
@@ -293,6 +268,23 @@ CONSOLE = "console=tty0 console=ttyS0"
 
 GuestNumaConfig = collections.namedtuple(
     'GuestNumaConfig', ['cpuset', 'cputune', 'numaconfig', 'numatune'])
+
+libvirt_volume_drivers = [
+    'iscsi=nova.virt.libvirt.volume.LibvirtISCSIVolumeDriver',
+    'iser=nova.virt.libvirt.volume.LibvirtISERVolumeDriver',
+    'local=nova.virt.libvirt.volume.LibvirtVolumeDriver',
+    'fake=nova.virt.libvirt.volume.LibvirtFakeVolumeDriver',
+    'rbd=nova.virt.libvirt.volume.LibvirtNetVolumeDriver',
+    'sheepdog=nova.virt.libvirt.volume.LibvirtNetVolumeDriver',
+    'nfs=nova.virt.libvirt.volume.LibvirtNFSVolumeDriver',
+    'smbfs=nova.virt.libvirt.volume.LibvirtSMBFSVolumeDriver',
+    'aoe=nova.virt.libvirt.volume.LibvirtAOEVolumeDriver',
+    'glusterfs=nova.virt.libvirt.volume.LibvirtGlusterfsVolumeDriver',
+    'fibre_channel=nova.virt.libvirt.volume.LibvirtFibreChannelVolumeDriver',
+    'scality=nova.virt.libvirt.volume.LibvirtScalityVolumeDriver',
+    'gpfs=nova.virt.libvirt.volume.LibvirtGPFSVolumeDriver',
+    'quobyte=nova.virt.libvirt.volume.LibvirtQuobyteVolumeDriver',
+]
 
 
 def patch_tpool_proxy():
@@ -416,7 +408,7 @@ class LibvirtDriver(driver.ComputeDriver):
         self.vif_driver = libvirt_vif.LibvirtGenericVIFDriver()
 
         self.volume_drivers = driver.driver_dict_from_config(
-            CONF.libvirt.volume_drivers, self)
+            self._get_volume_drivers(), self)
 
         self._disk_cachemode = None
         self.image_cache_manager = imagecache.ImageCacheManager()
@@ -471,6 +463,9 @@ class LibvirtDriver(driver.ComputeDriver):
                   {'actual': CONF.libvirt.sysinfo_serial,
                    'expect': ', '.join("'%s'" % k for k in
                                        sysinfo_serial_funcs.keys())})
+
+    def _get_volume_drivers(self):
+        return libvirt_volume_drivers
 
     @property
     def disk_cachemode(self):
