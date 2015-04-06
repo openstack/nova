@@ -1664,6 +1664,26 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                                                             events[1])
         do_test()
 
+    def test_cancel_all_events(self):
+        inst = objects.Instance(uuid='uuid')
+        fake_eventlet_event = mock.MagicMock()
+        self.compute.instance_events._events = {
+            inst.uuid: {
+                'foo-bar': fake_eventlet_event,
+            }
+        }
+        self.compute.instance_events.cancel_all_events()
+        self.assertTrue(fake_eventlet_event.send.called)
+        event = fake_eventlet_event.send.call_args_list[0][0][0]
+        self.assertEqual('foo', event.name)
+        self.assertEqual('bar', event.tag)
+        self.assertEqual('failed', event.status)
+
+    def test_cleanup_cancels_all_events(self):
+        with mock.patch.object(self.compute, 'instance_events') as mock_ev:
+            self.compute.cleanup_host()
+            mock_ev.cancel_all_events.assert_called_once_with()
+
     def test_retry_reboot_pending_soft(self):
         instance = objects.Instance(self.context)
         instance.uuid = 'foo'
