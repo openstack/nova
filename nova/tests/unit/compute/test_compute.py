@@ -447,7 +447,7 @@ class ComputeVolumeTestCase(BaseTestCase):
         instance = self._create_fake_instance_obj()
 
         with contextlib.nested(
-            mock.patch.object(self.compute, '_detach_volume'),
+            mock.patch.object(self.compute, '_driver_detach_volume'),
             mock.patch.object(self.compute.volume_api, 'detach'),
             mock.patch.object(objects.BlockDeviceMapping,
                               'get_by_volume_id'),
@@ -2553,6 +2553,59 @@ class ComputeTestCase(BaseTestCase):
                                       new_pass="new_password",
                                       orig_sys_metadata=sys_metadata,
                                       bdms=[], recreate=False,
+                                      on_shared_storage=False)
+        self.assertTrue(called['rebuild'])
+        self.compute.terminate_instance(self.context, instance, [], [])
+
+    @mock.patch('nova.compute.manager.ComputeManager._detach_volume')
+    def test_rebuild_driver_with_volumes(self, mock_detach):
+        bdms = block_device_obj.block_device_make_list(self.context,
+                [fake_block_device.FakeDbBlockDeviceDict({
+                'id': 3,
+                    'volume_id': u'4cbc9e62-6ba0-45dd-b647-934942ead7d6',
+                    'instance_uuid': 'fake-instance',
+                    'device_name': '/dev/vda',
+                    'connection_info': '{"driver_volume_type": "rbd"}',
+                    'source_type': 'image',
+                    'destination_type': 'volume',
+                    'image_id': 'fake-image-id-1',
+                    'boot_index': 0
+        })])
+
+        # Make sure virt drivers can override default rebuild
+        called = {'rebuild': False}
+
+        def fake(**kwargs):
+            instance = kwargs['instance']
+            instance.task_state = task_states.REBUILD_BLOCK_DEVICE_MAPPING
+            instance.save(expected_task_state=[task_states.REBUILDING])
+            instance.task_state = task_states.REBUILD_SPAWNING
+            instance.save(
+                expected_task_state=[task_states.REBUILD_BLOCK_DEVICE_MAPPING])
+            called['rebuild'] = True
+            func = kwargs['detach_block_devices']
+            # Have the fake driver call the function to detach block devices
+            func(self.context, bdms)
+            # Verify volumes to be detached without destroying
+            mock_detach.assert_called_once_with(self.context,
+                                                bdms[0].volume_id,
+                                                instance, destroy_bdm=False)
+
+        self.stubs.Set(self.compute.driver, 'rebuild', fake)
+        instance = self._create_fake_instance_obj()
+        image_ref = instance['image_ref']
+        sys_metadata = db.instance_system_metadata_get(self.context,
+                        instance['uuid'])
+        self.compute.build_and_run_instance(self.context, instance, {}, {}, {},
+                                            block_device_mapping=[])
+        db.instance_update(self.context, instance['uuid'],
+                           {"task_state": task_states.REBUILDING})
+        self.compute.rebuild_instance(self.context, instance,
+                                      image_ref, image_ref,
+                                      injected_files=[],
+                                      new_pass="new_password",
+                                      orig_sys_metadata=sys_metadata,
+                                      bdms=bdms, recreate=False,
                                       on_shared_storage=False)
         self.assertTrue(called['rebuild'])
         self.compute.terminate_instance(self.context, instance, [], [])
@@ -11498,7 +11551,8 @@ class EvacuateHostTestCase(BaseTestCase):
                   'source_type': 'volume',
                   'device_name': '/dev/vdc',
                   'delete_on_termination': False,
-                  'volume_id': 'fake_volume_id'}
+                  'volume_id': 'fake_volume_id',
+                  'connection_info': '{}'}
 
         db.block_device_mapping_create(self.context, values)
 
@@ -11512,6 +11566,11 @@ class EvacuateHostTestCase(BaseTestCase):
         def fake_detach(self, context, volume):
             result["detached"] = volume["id"] == 'fake_volume_id'
         self.stubs.Set(cinder.API, "detach", fake_detach)
+
+        self.mox.StubOutWithMock(self.compute, '_driver_detach_volume')
+        self.compute._driver_detach_volume(mox.IsA(self.context),
+                                           mox.IsA(instance_obj.Instance),
+                                           mox.IsA(objects.BlockDeviceMapping))
 
         def fake_terminate_connection(self, context, volume, connector):
             return {}
@@ -11533,9 +11592,12 @@ class EvacuateHostTestCase(BaseTestCase):
         self._rebuild()
 
         # cleanup
-        for bdms in db.block_device_mapping_get_all_by_instance(
-                self.context, self.inst.uuid):
-            db.block_device_mapping_destroy(self.context, bdms['id'])
+        bdms = db.block_device_mapping_get_all_by_instance(self.context,
+                                                           self.inst.uuid)
+        if not bdms:
+            self.fail('BDM entry for the attached volume is missing')
+        for bdm in bdms:
+            db.block_device_mapping_destroy(self.context, bdm['id'])
 
     def test_rebuild_on_host_with_shared_storage(self):
         """Confirm evacuate scenario on shared storage."""
