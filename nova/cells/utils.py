@@ -80,6 +80,22 @@ class _CellProxy(object):
         else:
             return obj
 
+    # dict-ish syntax sugar
+    def iteritems(self):
+        """For backwards-compatibility with dict-based objects.
+
+        NOTE(sbauza): May be removed in the future.
+        """
+        for name in self._obj.obj_fields:
+            if (self._obj.obj_attr_is_set(name) or
+                    name in self._obj.obj_extra_fields):
+                if name == 'id':
+                    yield name, self.id
+                elif name == 'host':
+                    yield name, self.host
+                else:
+                    yield name, getattr(self._obj, name)
+
     def __getattr__(self, key):
         return getattr(self._obj, key)
 
@@ -89,7 +105,13 @@ class ComputeNodeProxy(_CellProxy):
 
 
 class ServiceProxy(_CellProxy):
-    pass
+    def __getattr__(self, key):
+        if key == 'compute_node':
+            # NOTE(sbauza): As the Service object is still having a nested
+            # ComputeNode object that consumers of this Proxy don't use, we can
+            # safely remove it from what's returned
+            raise AttributeError
+        return getattr(self._obj, key)
 
 
 def get_instances_to_sync(context, updated_since=None, project_id=None,
@@ -135,11 +157,6 @@ def split_cell_and_item(cell_and_item):
         return result
 
 
-def _add_cell_to_service(service, cell_name):
-    service['id'] = cell_with_item(cell_name, service['id'])
-    service['host'] = cell_with_item(cell_name, service['host'])
-
-
 def add_cell_to_compute_node(compute_node, cell_name):
     """Fix compute_node attributes that should be unique.  Allows
     API cell to query the 'id' by cell@id.
@@ -152,10 +169,6 @@ def add_cell_to_compute_node(compute_node, cell_name):
     except exception.ServiceNotFound:
         service = None
     if isinstance(service, objects.Service):
-        # TODO(sbauza): Cells messaging service is still using the DB API for
-        # returning service_get() and service_get_all(). Until we fix that and
-        # converge all messsaging calls by using NovaObjects, we can't modify
-        # _add_cell_to_service to return a ServiceProxy
         compute_proxy.service = ServiceProxy(service, cell_name)
     return compute_proxy
 
@@ -164,7 +177,10 @@ def add_cell_to_service(service, cell_name):
     """Fix service attributes that should be unique.  Allows
     API cell to query the 'id' or 'host' by cell@id/host.
     """
-    _add_cell_to_service(service, cell_name)
+    # NOTE(sbauza): As service is a Service object, we need to wrap it
+    # for adding the cell_path information
+    service_proxy = ServiceProxy(service, cell_name)
+    return service_proxy
 
 
 def add_cell_to_task_log(task_log, cell_name):

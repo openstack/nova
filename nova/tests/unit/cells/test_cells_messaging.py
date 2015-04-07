@@ -897,40 +897,28 @@ class CellsTargetedMethodsTestCase(test.TestCase):
 
     def test_service_update(self):
         binary = 'nova-compute'
-        fake_service = dict(id=42, host='fake_host', binary='nova-compute',
-                            topic='compute')
-        fake_compute = dict(
-            id=7116, service_id=42, host='fake_host', vcpus=0, memory_mb=0,
-            local_gb=0, vcpus_used=0, memory_mb_used=0, local_gb_used=0,
-            hypervisor_type=0, hypervisor_version=0, hypervisor_hostname=0,
-            free_ram_mb=0, free_disk_gb=0, current_workload=0, running_vms=0,
-            cpu_info='HAL', disk_available_least=0)
         params_to_update = {'disabled': True, 'report_count': 13}
 
-        ctxt = context.RequestContext('fake_user', 'fake_project',
-                                      is_admin=True)
-        # We use the real DB for this test, as it's too hard to reach the
-        # host_api to mock out its DB methods
-        db.service_create(ctxt, fake_service)
-        db.compute_node_create(ctxt, fake_compute)
-
+        fake_service = objects.Service(id=42, host='fake_host',
+                                       binary='nova-compute',
+                                       topic='compute')
+        fake_service.compute_node = objects.ComputeNode(id=1, host='fake_host')
+        self.mox.StubOutWithMock(objects.Service, 'get_by_args')
+        self.mox.StubOutWithMock(objects.Service, 'save')
+        objects.Service.get_by_args(
+            self.ctxt, 'fake_host', 'nova-compute').AndReturn(fake_service)
+        fake_service.save()
         self.mox.ReplayAll()
 
         response = self.src_msg_runner.service_update(
-                ctxt, self.tgt_cell_name,
+                self.ctxt, self.tgt_cell_name,
                 'fake_host', binary, params_to_update)
         result = response.value_or_raise()
-        result.pop('created_at', None)
-        result.pop('updated_at', None)
-        result.pop('disabled_reason', None)
-        expected_result = dict(
-            deleted=0, deleted_at=None,
-            binary=fake_service['binary'],
-            disabled=True,    # We just updated this..
-            report_count=13,  # ..and this
-            host='fake_host', id=42,
-            topic='compute')
-        self.assertEqual(expected_result, result)
+        self.assertIsInstance(result, objects.Service)
+        # NOTE(sbauza): As NovaObjects can't be comparated directly, we need to
+        # check the fields by primitiving them first
+        self.assertEqual(jsonutils.to_primitive(fake_service),
+                         jsonutils.to_primitive(result))
 
     def test_service_delete(self):
         fake_service = dict(id=42, host='fake_host', binary='nova-compute',
@@ -1771,16 +1759,15 @@ class CellsBroadcastMethodsTestCase(test.TestCase):
 
         ctxt = self.ctxt.elevated()
 
-        self.mox.StubOutWithMock(self.src_db_inst, 'service_get_all')
-        self.mox.StubOutWithMock(self.mid_db_inst, 'service_get_all')
-        self.mox.StubOutWithMock(self.tgt_db_inst, 'service_get_all')
+        self.mox.StubOutWithMock(objects.ServiceList, 'get_all')
 
-        self.src_db_inst.service_get_all(ctxt,
-                disabled=None).AndReturn([1, 2])
-        self.mid_db_inst.service_get_all(ctxt,
-                disabled=None).AndReturn([3])
-        self.tgt_db_inst.service_get_all(ctxt,
-                disabled=None).AndReturn([4, 5])
+        # Calls are made from grandchild-cell to api-cell
+        objects.ServiceList.get_all(
+            mox.IgnoreArg(), disabled=None).AndReturn([4, 5])
+        objects.ServiceList.get_all(
+            mox.IgnoreArg(), disabled=None).AndReturn([3])
+        objects.ServiceList.get_all(
+            mox.IgnoreArg(), disabled=None).AndReturn([1, 2])
 
         self.mox.ReplayAll()
 
@@ -1801,16 +1788,15 @@ class CellsBroadcastMethodsTestCase(test.TestCase):
 
         ctxt = self.ctxt.elevated()
 
-        self.mox.StubOutWithMock(self.src_db_inst, 'service_get_all')
-        self.mox.StubOutWithMock(self.mid_db_inst, 'service_get_all')
-        self.mox.StubOutWithMock(self.tgt_db_inst, 'service_get_all')
+        self.mox.StubOutWithMock(objects.ServiceList, 'get_all')
 
-        self.src_db_inst.service_get_all(ctxt,
-                disabled=disabled).AndReturn([1, 2])
-        self.mid_db_inst.service_get_all(ctxt,
-                disabled=disabled).AndReturn([3])
-        self.tgt_db_inst.service_get_all(ctxt,
-                disabled=disabled).AndReturn([4, 5])
+        # Calls are made from grandchild-cell to api-cell
+        objects.ServiceList.get_all(
+            mox.IgnoreArg(), disabled=disabled).AndReturn([4, 5])
+        objects.ServiceList.get_all(
+            mox.IgnoreArg(), disabled=disabled).AndReturn([3])
+        objects.ServiceList.get_all(
+            mox.IgnoreArg(), disabled=disabled).AndReturn([1, 2])
 
         self.mox.ReplayAll()
 

@@ -283,36 +283,49 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
             cell_name = 'path!to!cell%i' % i
             services = []
             for service in FAKE_SERVICES:
-                services.append(copy.deepcopy(service))
-                expected_service = copy.deepcopy(service)
-                cells_utils.add_cell_to_service(expected_service, cell_name)
-                expected_response.append(expected_service)
+                fake_service = objects.Service(**service)
+                services.append(fake_service)
+                expected_service = cells_utils.ServiceProxy(fake_service,
+                                                            cell_name)
+                expected_response.append(
+                    (cell_name, expected_service, fake_service))
             response = messaging.Response(self.ctxt, cell_name, services,
                                           False)
             responses.append(response)
 
         self.mox.StubOutWithMock(self.msg_runner,
                                  'service_get_all')
+        self.mox.StubOutWithMock(cells_utils, 'add_cell_to_service')
         self.msg_runner.service_get_all(self.ctxt,
                                         'fake-filters').AndReturn(responses)
+        # Calls are done by cells, so we need to sort the list by the cell name
+        expected_response.sort(key=lambda k: k[0])
+        for cell_name, service_proxy, service in expected_response:
+            cells_utils.add_cell_to_service(
+                service, cell_name).AndReturn(service_proxy)
         self.mox.ReplayAll()
         response = self.cells_manager.service_get_all(self.ctxt,
                                                       filters='fake-filters')
-        self.assertEqual(expected_response, response)
+        self.assertEqual([proxy for cell, proxy, service in expected_response],
+                         response)
 
     def test_service_get_by_compute_host(self):
+        fake_cell = 'fake-cell'
+        fake_service = objects.Service(**FAKE_SERVICES[0])
+        fake_response = messaging.Response(self.ctxt, fake_cell,
+                                           fake_service,
+                                           False)
+        expected_response = cells_utils.ServiceProxy(fake_service, fake_cell)
+        cell_and_host = cells_utils.cell_with_item('fake-cell', 'fake-host')
+
         self.mox.StubOutWithMock(self.msg_runner,
                                  'service_get_by_compute_host')
-        fake_cell = 'fake-cell'
-        fake_response = messaging.Response(self.ctxt, fake_cell,
-                                           FAKE_SERVICES[0],
-                                           False)
-        expected_response = copy.deepcopy(FAKE_SERVICES[0])
-        cells_utils.add_cell_to_service(expected_response, fake_cell)
-
-        cell_and_host = cells_utils.cell_with_item('fake-cell', 'fake-host')
+        self.mox.StubOutWithMock(cells_utils, 'add_cell_to_service')
         self.msg_runner.service_get_by_compute_host(self.ctxt,
                 fake_cell, 'fake-host').AndReturn(fake_response)
+        cells_utils.add_cell_to_service(fake_service, fake_cell).AndReturn(
+            expected_response)
+
         self.mox.ReplayAll()
         response = self.cells_manager.service_get_by_compute_host(self.ctxt,
                 host_name=cell_and_host)
@@ -339,17 +352,20 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
 
     def test_service_update(self):
         fake_cell = 'fake-cell'
+        fake_service = objects.Service(**FAKE_SERVICES[0])
         fake_response = messaging.Response(
-            self.ctxt, fake_cell, FAKE_SERVICES[0], False)
-        expected_response = copy.deepcopy(FAKE_SERVICES[0])
-        cells_utils.add_cell_to_service(expected_response, fake_cell)
+            self.ctxt, fake_cell, fake_service, False)
+        expected_response = cells_utils.ServiceProxy(fake_service, fake_cell)
         cell_and_host = cells_utils.cell_with_item('fake-cell', 'fake-host')
         params_to_update = {'disabled': True}
 
         self.mox.StubOutWithMock(self.msg_runner, 'service_update')
+        self.mox.StubOutWithMock(cells_utils, 'add_cell_to_service')
         self.msg_runner.service_update(self.ctxt,
                 fake_cell, 'fake-host', 'nova-api',
                 params_to_update).AndReturn(fake_response)
+        cells_utils.add_cell_to_service(fake_service, fake_cell).AndReturn(
+            expected_response)
         self.mox.ReplayAll()
 
         response = self.cells_manager.service_update(

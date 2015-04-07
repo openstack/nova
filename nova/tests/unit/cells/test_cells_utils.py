@@ -137,6 +137,35 @@ class CellsUtilsTestCase(test.NoDBTestCase):
         self.assertEqual(cells_utils.cell_with_item(cell_path, 'fake-svc'),
                          proxy.service.host)
 
+    @mock.patch.object(objects.Service, 'obj_load_attr')
+    def test_add_cell_to_service_no_compute_node(self, mock_get_by_id):
+        fake_service = objects.Service(id=1, host='fake')
+        mock_get_by_id.side_effect = exception.ServiceNotFound(service_id=1)
+        cell_path = 'fake_path'
+
+        proxy = cells_utils.add_cell_to_service(fake_service, cell_path)
+
+        self.assertIsInstance(proxy, cells_utils.ServiceProxy)
+        self.assertEqual(cells_utils.cell_with_item(cell_path, 1), proxy.id)
+        self.assertEqual(cells_utils.cell_with_item(cell_path, 'fake'),
+                         proxy.host)
+        self.assertRaises(AttributeError,
+                          getattr, proxy, 'compute_node')
+
+    def test_add_cell_to_service_with_compute_node(self):
+        fake_service = objects.Service(id=1, host='fake')
+        fake_service.compute_node = objects.ComputeNode(id=1, host='fake')
+        cell_path = 'fake_path'
+
+        proxy = cells_utils.add_cell_to_service(fake_service, cell_path)
+
+        self.assertIsInstance(proxy, cells_utils.ServiceProxy)
+        self.assertEqual(cells_utils.cell_with_item(cell_path, 1), proxy.id)
+        self.assertEqual(cells_utils.cell_with_item(cell_path, 'fake'),
+                         proxy.host)
+        self.assertRaises(AttributeError,
+                          getattr, proxy, 'compute_node')
+
     def test_proxy_object_serializer_to_primitive(self):
         obj = objects.ComputeNode(id=1, host='fake')
         obj_proxy = cells_utils.ComputeNodeProxy(obj, 'fake_path')

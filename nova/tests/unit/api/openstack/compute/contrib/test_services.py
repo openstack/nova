@@ -25,10 +25,12 @@ from nova.api.openstack.compute.contrib import services as services_v2
 from nova.api.openstack.compute.plugins.v3 import services as services_v21
 from nova.api.openstack import extensions
 from nova import availability_zones
+from nova.cells import utils as cells_utils
 from nova.compute import cells_api
 from nova import context
 from nova import db
 from nova import exception
+from nova import objects
 from nova.servicegroup.drivers import db as db_driver
 from nova import test
 from nova.tests.unit.api.openstack import fakes
@@ -605,8 +607,9 @@ class ServicesCellsTestV21(test.TestCase):
         services_list = []
         for service in fake_services_list:
             service = service.copy()
-            service['id'] = 'cell1@%d' % service['id']
-            services_list.append(service)
+            service_obj = objects.Service(**service)
+            service_proxy = cells_utils.ServiceProxy(service_obj, 'cell1')
+            services_list.append(service_proxy)
 
         self.stubs.Set(host_api.cells_rpcapi, "service_get_all",
                        fake_service_get_all(services_list))
@@ -626,7 +629,7 @@ class ServicesCellsTestV21(test.TestCase):
         response = {'services': [
                     {'id': 'cell1@1',
                      'binary': 'nova-scheduler',
-                     'host': 'host1',
+                     'host': 'cell1@host1',
                      'zone': 'internal',
                      'status': 'disabled',
                      'state': 'up',
@@ -634,7 +637,7 @@ class ServicesCellsTestV21(test.TestCase):
                                                      tzinfo=utc)},
                     {'id': 'cell1@2',
                      'binary': 'nova-compute',
-                     'host': 'host1',
+                     'host': 'cell1@host1',
                      'zone': 'nova',
                      'status': 'disabled',
                      'state': 'up',
@@ -642,7 +645,7 @@ class ServicesCellsTestV21(test.TestCase):
                                                      tzinfo=utc)},
                     {'id': 'cell1@3',
                      'binary': 'nova-scheduler',
-                     'host': 'host2',
+                     'host': 'cell1@host2',
                      'zone': 'internal',
                      'status': 'enabled',
                      'state': 'down',
@@ -650,14 +653,14 @@ class ServicesCellsTestV21(test.TestCase):
                                                      tzinfo=utc)},
                     {'id': 'cell1@4',
                      'binary': 'nova-compute',
-                     'host': 'host2',
+                     'host': 'cell1@host2',
                      'zone': 'nova',
                      'status': 'disabled',
                      'state': 'down',
                      'updated_at': datetime.datetime(2012, 9, 18, 8, 3, 38,
                                                      tzinfo=utc)}]}
         self._process_out(res_dict)
-        self.assertEqual(res_dict, response)
+        self.assertEqual(response, res_dict)
 
 
 class ServicesCellsTestV20(ServicesCellsTestV21):

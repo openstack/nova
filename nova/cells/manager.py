@@ -272,7 +272,8 @@ class CellsManager(manager.Manager):
         for response in responses:
             services = response.value_or_raise()
             for service in services:
-                cells_utils.add_cell_to_service(service, response.cell_name)
+                service = cells_utils.add_cell_to_service(
+                    service, response.cell_name)
                 ret_services.append(service)
         return ret_services
 
@@ -284,7 +285,7 @@ class CellsManager(manager.Manager):
                                                                cell_name,
                                                                host_name)
         service = response.value_or_raise()
-        cells_utils.add_cell_to_service(service, response.cell_name)
+        service = cells_utils.add_cell_to_service(service, response.cell_name)
         return service
 
     def get_host_uptime(self, ctxt, host_name):
@@ -312,7 +313,7 @@ class CellsManager(manager.Manager):
         response = self.msg_runner.service_update(
             ctxt, cell_name, host_name, binary, params_to_update)
         service = response.value_or_raise()
-        cells_utils.add_cell_to_service(service, response.cell_name)
+        service = cells_utils.add_cell_to_service(service, response.cell_name)
         return service
 
     def service_delete(self, ctxt, cell_service_id):

@@ -15,8 +15,10 @@
 #    under the License.
 
 import contextlib
+import copy
 
 import mock
+from oslo_serialization import jsonutils
 
 from nova.cells import utils as cells_utils
 from nova import compute
@@ -25,7 +27,6 @@ from nova import exception
 from nova import objects
 from nova import test
 from nova.tests.unit import fake_notifier
-from nova.tests.unit.objects import test_compute_node
 from nova.tests.unit.objects import test_objects
 from nova.tests.unit.objects import test_service
 
@@ -350,11 +351,13 @@ class ComputeHostAPICellsTestCase(ComputeHostAPITestCase):
                                           call=True).AndReturn('fake-result')
 
     def test_service_get_all_no_zones(self):
-        services = [dict(test_service.fake_service,
-                         id='cell1@1', topic='compute', host='host1'),
-                    dict(test_service.fake_service,
-                         id='cell1@2', topic='compute', host='host2')]
-        exp_services = [s.copy() for s in services]
+        services = [
+            cells_utils.ServiceProxy(
+                objects.Service(id=1, topic='compute', host='host1'),
+                'cell1'),
+            cells_utils.ServiceProxy(
+                objects.Service(id=2, topic='compute', host='host2'),
+                'cell1')]
 
         fake_filters = {'host': 'host1'}
         self.mox.StubOutWithMock(self.host_api.cells_rpcapi,
@@ -364,19 +367,22 @@ class ComputeHostAPICellsTestCase(ComputeHostAPITestCase):
         self.mox.ReplayAll()
         result = self.host_api.service_get_all(self.ctxt,
                                                filters=fake_filters)
-        self._compare_objs(result, exp_services)
+        self.assertEqual(services, result)
 
     def _test_service_get_all(self, fake_filters, **kwargs):
-        services = [dict(test_service.fake_service,
-                         id='cell1@1', key1='val1', key2='val2',
-                         topic='compute', host='host1'),
-                    dict(test_service.fake_service,
-                         id='cell1@2', key1='val2', key3='val3',
-                         topic='compute', host='host2')]
+        services = [
+            cells_utils.ServiceProxy(
+                objects.Service(**dict(test_service.fake_service, id=1,
+                                topic='compute', host='host1')),
+                'cell1'),
+            cells_utils.ServiceProxy(
+                objects.Service(**dict(test_service.fake_service, id=2,
+                                topic='compute', host='host2')),
+                'cell1')]
         exp_services = []
         for service in services:
-            exp_service = {}
-            exp_service.update(availability_zone='nova', **service)
+            exp_service = copy.copy(service)
+            exp_service.update({'availability_zone': 'nova'})
             exp_services.append(exp_service)
 
         self.mox.StubOutWithMock(self.host_api.cells_rpcapi,
@@ -388,7 +394,8 @@ class ComputeHostAPICellsTestCase(ComputeHostAPITestCase):
                                                filters=fake_filters,
                                                **kwargs)
         self.mox.VerifyAll()
-        self._compare_objs(result, exp_services)
+        self.assertEqual(jsonutils.to_primitive(exp_services),
+                         jsonutils.to_primitive(result))
 
     def test_service_get_all(self):
         fake_filters = {'availability_zone': 'nova'}
@@ -402,57 +409,34 @@ class ComputeHostAPICellsTestCase(ComputeHostAPITestCase):
         self.mox.StubOutWithMock(self.host_api.cells_rpcapi,
                                  'service_get_by_compute_host')
 
-        # Cells return services with full cell_path prepended to IDs
-        fake_service = dict(test_service.fake_service, id='cell1@1')
-        exp_service = fake_service.copy()
+        obj = objects.Service(id=1, host='fake')
+        fake_service = cells_utils.ServiceProxy(obj, 'cell1')
 
         self.host_api.cells_rpcapi.service_get_by_compute_host(self.ctxt,
                 'fake-host').AndReturn(fake_service)
         self.mox.ReplayAll()
         result = self.host_api.service_get_by_compute_host(self.ctxt,
                                                            'fake-host')
-        self._compare_obj(result, exp_service)
-
-    def test_service_get_by_compute_host_with_compute_node(self):
-        self.mox.StubOutWithMock(self.host_api.cells_rpcapi,
-                                 'service_get_by_compute_host')
-
-        # Cells return services and compute_nodes with full cell_path prepended
-        # to IDs
-        fake_compute_node = dict(test_compute_node.fake_compute_node,
-                                 id='region!child@1')
-
-        fake_service = dict(test_service.fake_service, id='cell1@1',
-                            compute_node=[fake_compute_node])
-
-        self.host_api.cells_rpcapi.service_get_by_compute_host(self.ctxt,
-                'fake-host').AndReturn(fake_service)
-        self.mox.ReplayAll()
-        result = self.host_api.service_get_by_compute_host(self.ctxt,
-                                                           'fake-host')
-
-        self.assertIsNone(fake_service.get('compute_node'))
-        self.assertRaises(AttributeError, getattr, result, 'compute_node')
+        self.assertEqual(fake_service, result)
 
     def test_service_update(self):
         host_name = 'fake-host'
         binary = 'nova-compute'
         params_to_update = dict(disabled=True)
-        service_id = 'cell1@42'   # Cells prepend full cell path to ID
 
-        update_result = dict(test_service.fake_service, id=service_id)
-        expected_result = update_result.copy()
+        obj = objects.Service(id=42, host='fake')
+        fake_service = cells_utils.ServiceProxy(obj, 'cell1')
 
         self.mox.StubOutWithMock(self.host_api.cells_rpcapi, 'service_update')
         self.host_api.cells_rpcapi.service_update(
             self.ctxt, host_name,
-            binary, params_to_update).AndReturn(update_result)
+            binary, params_to_update).AndReturn(fake_service)
 
         self.mox.ReplayAll()
 
         result = self.host_api.service_update(
             self.ctxt, host_name, binary, params_to_update)
-        self._compare_obj(result, expected_result)
+        self.assertEqual(fake_service, result)
 
     def test_service_delete(self):
         cell_service_id = cells_utils.cell_with_item('cell1', 1)
