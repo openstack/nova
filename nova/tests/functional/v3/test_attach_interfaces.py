@@ -13,15 +13,34 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_config import cfg
+
 from nova.compute import api as compute_api
 from nova import exception
 from nova.network import api as network_api
 from nova.tests.functional.v3 import test_servers
 from nova.tests.unit import fake_network_cache_model
 
+CONF = cfg.CONF
+CONF.import_opt('osapi_compute_extension',
+                'nova.api.openstack.compute.extensions')
+
 
 class AttachInterfacesSampleJsonTest(test_servers.ServersSampleBase):
     extension_name = 'os-attach-interfaces'
+    # TODO(gmann): Overriding '_api_version' till all functional tests
+    # are merged between v2 and v2.1. After that base class variable
+    # itself can be changed to 'v2'
+    _api_version = 'v2'
+    extra_extensions_to_load = ["os-access-ips"]
+
+    def _get_flags(self):
+        f = super(AttachInterfacesSampleJsonTest, self)._get_flags()
+        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.'
+            'attach_interfaces.Attach_interfaces')
+        return f
 
     def setUp(self):
         super(AttachInterfacesSampleJsonTest, self).setUp()
