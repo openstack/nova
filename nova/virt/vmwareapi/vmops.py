@@ -1143,7 +1143,7 @@ class VMwareVMOps(object):
         ds_ref = vmdk.device.backing.datastore
         datastore = ds_util.get_datastore_by_ref(self._session, ds_ref)
         dc_info = self.get_datacenter_ref_and_name(ds_ref)
-        folder = ds_util.DatastorePath.parse(vmdk.path).dirname
+        folder = ds_obj.DatastorePath.parse(vmdk.path).dirname
         self._create_ephemeral(block_device_info, instance, vm_ref,
                                dc_info, datastore, folder, vmdk.adapter_type)
 
