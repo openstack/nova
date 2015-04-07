@@ -14,15 +14,34 @@
 
 import re
 
+from oslo_config import cfg
 from oslo_serialization import jsonutils
 
 from nova.tests.functional.v3 import test_servers
+
+CONF = cfg.CONF
+CONF.import_opt('osapi_compute_extension',
+                'nova.api.openstack.compute.extensions')
 
 
 class ConsoleAuthTokensSampleJsonTests(test_servers.ServersSampleBase):
     ADMIN_API = True
     extension_name = "os-console-auth-tokens"
-    extra_extensions_to_load = ["os-remote-consoles"]
+    extra_extensions_to_load = ["os-remote-consoles", "os-access-ips"]
+    # TODO(gmann): Overriding '_api_version' till all functional tests
+    # are merged between v2 and v2.1. After that base class variable
+    # itself can be changed to 'v2'
+    _api_version = 'v2'
+
+    def _get_flags(self):
+        f = super(ConsoleAuthTokensSampleJsonTests, self)._get_flags()
+        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.consoles.Consoles')
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.console_auth_tokens.'
+            'Console_auth_tokens')
+        return f
 
     def _get_console_url(self, data):
         return jsonutils.loads(data)["console"]["url"]
