@@ -14,9 +14,14 @@
 #    under the License.
 
 import mock
+from oslo_config import cfg
 
 from nova.api.openstack import extensions as api_extensions
 from nova.tests.functional.v3 import api_sample_base
+
+CONF = cfg.CONF
+CONF.import_opt('osapi_compute_extension',
+                'nova.api.openstack.compute.extensions')
 
 
 def fake_soft_extension_authorizer(extension_name, core=False):
@@ -27,13 +32,20 @@ def fake_soft_extension_authorizer(extension_name, core=False):
 
 class ExtensionInfoAllSamplesJsonTest(api_sample_base.ApiSampleTestBaseV3):
     all_extensions = True
+    # TODO(park): Overriding '_api_version' till all functional tests
+    # are merged between v2 and v2.1. After that base class variable
+    # itself can be changed to 'v2'
+    _api_version = 'v2'
 
     @mock.patch.object(api_extensions, 'os_compute_soft_authorizer')
     def test_list_extensions(self, soft_auth):
         soft_auth.side_effect = fake_soft_extension_authorizer
         response = self._do_get('extensions')
         subs = self._get_regexes()
-        self._verify_response('extensions-list-resp', subs, response, 200)
+        template = 'extensions-list-resp'
+        if self._test == 'v2':
+            template = 'extensions-list-resp-v2'
+        self._verify_response(template, subs, response, 200)
 
 
 class ExtensionInfoSamplesJsonTest(api_sample_base.ApiSampleTestBaseV3):
