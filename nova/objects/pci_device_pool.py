@@ -21,18 +21,26 @@ import six
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
+from nova import utils
 
 
 class PciDevicePool(base.NovaObject):
     # Version 1.0: Initial version
-    VERSION = '1.0'
+    # Version 1.1: Added numa_node field
+    VERSION = '1.1'
 
     fields = {
         'product_id': fields.StringField(),
         'vendor_id': fields.StringField(),
+        'numa_node': fields.IntegerField(nullable=True),
         'tags': fields.DictOfNullableStringsField(),
         'count': fields.IntegerField(),
         }
+
+    def obj_make_compatible(self, primitive, target_version):
+        target_version = utils.convert_version_to_tuple(target_version)
+        if target_version < (1, 1) and 'numa_node' in primitive:
+            del primitive['numa_node']
 
     # NOTE(pmurray): before this object existed the pci device pool data was
     # stored as a dict. For backward compatibility we need to be able to read
@@ -43,6 +51,7 @@ class PciDevicePool(base.NovaObject):
         pool = cls()
         pool.vendor_id = pool_dict.pop("vendor_id")
         pool.product_id = pool_dict.pop("product_id")
+        pool.numa_node = pool_dict.pop("numa_node", None)
         pool.count = pool_dict.pop("count")
         pool.tags = {}
         pool.tags.update(pool_dict)
@@ -62,12 +71,14 @@ class PciDevicePool(base.NovaObject):
 class PciDevicePoolList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     #              PciDevicePool <= 1.0
-    VERSION = '1.0'
+    # Version 1.1: PciDevicePool version 1.1
+    VERSION = '1.1'
     fields = {
              'objects': fields.ListOfObjectsField('PciDevicePool'),
              }
     child_versions = {
             '1.0': '1.0',
+            '1.1': '1.1',
             }
 
 
