@@ -108,6 +108,12 @@ class TestEnum(TestField):
         field2 = fields.EnumField(valid_values=['foo', 'bar1'])
         self.assertNotEqual(str(field1), str(field2))
 
+    def test_without_valid_values(self):
+        self.assertRaises(ValueError, fields.EnumField, 1)
+
+    def test_with_empty_values(self):
+        self.assertRaises(ValueError, fields.EnumField, [])
+
 
 class TestInteger(TestField):
     def setUp(self):
