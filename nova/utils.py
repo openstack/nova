@@ -39,6 +39,7 @@ import netaddr
 from oslo_concurrency import lockutils
 from oslo_concurrency import processutils
 from oslo_config import cfg
+from oslo_context import context as common_context
 from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_utils import encodeutils
@@ -949,8 +950,22 @@ def spawn_n(func, *args, **kwargs):
 
     This utility exists so that it can be stubbed for testing without
     interfering with the service spawns.
+
+    It will also grab the context from the threadlocal store and add it to
+    the store on the new thread.  This allows for continuity in logging the
+    context when using this method to spawn a new thread.
     """
-    eventlet.spawn_n(func, *args, **kwargs)
+    _context = common_context.get_current()
+
+    @functools.wraps(func)
+    def context_wrapper(*args, **kwargs):
+        # NOTE: If update_store is not called after spawn_n it won't be
+        # available for the logger to pull from threadlocal storage.
+        if _context is not None:
+            _context.update_store()
+        func(*args, **kwargs)
+
+    eventlet.spawn_n(context_wrapper, *args, **kwargs)
 
 
 def is_none_string(val):
