@@ -31,6 +31,7 @@ from nova.tests.unit.objects import test_pci_device
 pci_stats = [{"count": 3,
               "vendor_id": "8086",
               "product_id": "1520",
+              "numa_node": 1,
               "extra_info": {"phys_function": '[["0x0000", "0x04", '
                                               '"0x00", "0x1"]]'}}]
 fake_compute_node = objects.ComputeNode(

@@ -37,7 +37,8 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject,
     # Version 1.8: Added get_by_host_and_nodename()
     # Version 1.9: Added pci_device_pools
     # Version 1.10: Added get_first_node_by_host_for_old_compat()
-    VERSION = '1.10'
+    # Version 1.11: PciDevicePoolList version 1.1
+    VERSION = '1.11'
 
     fields = {
         'id': fields.IntegerField(read_only=True),
@@ -72,7 +73,7 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject,
         }
 
     obj_relationships = {
-        'pci_device_pools': [('1.9', '1.0')],
+        'pci_device_pools': [('1.9', '1.0'), ('1.11', '1.1')],
         'supported_hv_specs': [('1.6', '1.0')],
     }
 
@@ -283,7 +284,8 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
     # Version 1.8 ComputeNode version 1.8 + add get_all_by_host()
     # Version 1.9 ComputeNode version 1.9
     # Version 1.10 ComputeNode version 1.10
-    VERSION = '1.10'
+    # Version 1.11 ComputeNode version 1.11
+    VERSION = '1.11'
     fields = {
         'objects': fields.ListOfObjectsField('ComputeNode'),
         }
@@ -300,6 +302,7 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
         '1.8': '1.8',
         '1.9': '1.9',
         '1.10': '1.10',
+        '1.11': '1.11',
         }
 
     @base.remotable_classmethod

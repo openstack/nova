@@ -33,6 +33,7 @@ class _TestPciDevicePoolObject(object):
         pool_obj = objects.PciDevicePool.from_dict(fake_pci.fake_pool_dict)
         self.assertEqual(pool_obj.product_id, 'fake-product')
         self.assertEqual(pool_obj.vendor_id, 'fake-vendor')
+        self.assertEqual(pool_obj.numa_node, 1)
         self.assertEqual(pool_obj.tags, {'t1': 'v1', 't2': 'v2'})
         self.assertEqual(pool_obj.count, 2)
 
@@ -60,6 +61,13 @@ class _TestPciDevicePoolObject(object):
         pool_obj = objects.PciDevicePool(product_id='pid')
         pool_dict = pool_obj.to_dict()
         self.assertEqual({'product_id': 'pid'}, pool_dict)
+
+    def test_obj_make_compatible(self):
+        pool_obj = objects.PciDevicePool(product_id='pid', numa_node=1)
+        primitive = pool_obj.obj_to_primitive()
+        self.assertIn('numa_node', primitive['nova_object.data'])
+        pool_obj.obj_make_compatible(primitive['nova_object.data'], '1.0')
+        self.assertNotIn('numa_node', primitive['nova_object.data'])
 
 
 class TestPciDevicePoolObject(test_objects._LocalTest,
