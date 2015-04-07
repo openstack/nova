@@ -47,7 +47,6 @@ class NUMATopologyFilter(filters.BaseHostFilter):
             if not instance_topology:
                 return False
             host_state.limits['numa_topology'] = limits
-            host_state.instance_numa_topology = instance_topology
             return True
         elif requested_topology:
             return False
