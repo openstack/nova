@@ -1,6 +1,8 @@
 {
     "servers": [
         {
+            "accessIPv4": "1.2.3.4",
+            "accessIPv6": "80fe::",
             "addresses": {
                 "private": [
                     {
@@ -16,7 +18,7 @@
                 "id": "1",
                 "links": [
                     {
-                        "href": "http://openstack.example.com/flavors/1",
+                        "href": "http://openstack.example.com/openstack/flavors/1",
                         "rel": "bookmark"
                     }
                 ]
@@ -27,7 +29,7 @@
                 "id": "70a599e0-31e7-49b7-b260-868f441e862b",
                 "links": [
                     {
-                        "href": "http://openstack.example.com/images/70a599e0-31e7-49b7-b260-868f441e862b",
+                        "href": "http://openstack.example.com/openstack/images/70a599e0-31e7-49b7-b260-868f441e862b",
                         "rel": "bookmark"
                     }
                 ]
@@ -35,11 +37,11 @@
             "key_name": null,
             "links": [
                 {
-                    "href": "http://openstack.example.com/v3/servers/55f43fa2-dc7c-4c0b-b21a-76f9abe516f9",
+                    "href": "http://openstack.example.com/v2/openstack/servers/55f43fa2-dc7c-4c0b-b21a-76f9abe516f9",
                     "rel": "self"
                 },
                 {
-                    "href": "http://openstack.example.com/servers/55f43fa2-dc7c-4c0b-b21a-76f9abe516f9",
+                    "href": "http://openstack.example.com/openstack/servers/55f43fa2-dc7c-4c0b-b21a-76f9abe516f9",
                     "rel": "bookmark"
                 }
             ],
