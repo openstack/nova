@@ -8805,12 +8805,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             self.assertEqual([set([0, 1])], got_topo.cells[0].siblings)
             self.assertEqual([], got_topo.cells[1].siblings)
 
-    @mock.patch.object(host.Host, 'has_min_version')
+    @mock.patch.object(host.Host, 'has_min_version', return_value=True)
     def test_get_host_numa_topology(self, mock_version):
-        def fake_version(ver):
-            return True
-
-        mock_version.side_effect = fake_version
         self._test_get_host_numa_topology(mempages=True)
 
     @mock.patch.object(fakelibvirt.Connection, 'getLibVersion')
@@ -8844,15 +8840,11 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 libvirt_driver.MIN_LIBVIRT_NUMA_VERSION) - 1
         self.assertIsNone(drvr._get_host_numa_topology())
 
-    @mock.patch.object(host.Host, 'has_min_version')
+    @mock.patch.object(host.Host, 'has_min_version', return_value=True)
     def test_get_host_numa_topology_xen(self, mock_version):
         self.flags(virt_type='xen', group='libvirt')
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
-        def fake_version(ver):
-            return True
-
-        mock_version.side_effect = fake_version
         self.assertIsNone(drvr._get_host_numa_topology())
 
     def test_diagnostic_vcpus_exception(self):
