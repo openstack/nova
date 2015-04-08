@@ -310,12 +310,12 @@ class FakeLibvirtTests(test.NoDBTestCase):
                    <model>%s</model>
                    <vendor>%s</vendor>
                    <topology sockets="%d" cores="%d" threads="%d"/>
-                 </cpu>''' % (libvirt.node_arch,
-                              libvirt.node_cpu_model,
-                              libvirt.node_cpu_vendor,
-                              libvirt.node_sockets,
-                              libvirt.node_cores,
-                              libvirt.node_threads)
+                 </cpu>''' % (conn.host_info.arch,
+                              conn.host_info.cpu_model,
+                              conn.host_info.cpu_vendor,
+                              conn.host_info.cpu_sockets,
+                              conn.host_info.cpu_cores,
+                              conn.host_info.cpu_threads)
         self.assertEqual(conn.compareCPU(xml, 0),
                          libvirt.VIR_CPU_COMPARE_IDENTICAL)
 
@@ -327,12 +327,12 @@ class FakeLibvirtTests(test.NoDBTestCase):
                    <model>%s</model>
                    <vendor>%s</vendor>
                    <topology sockets="%d" cores="%d" threads="%d"/>
-                 </cpu>''' % (libvirt.node_arch,
-                              libvirt.node_cpu_model,
+                 </cpu>''' % (conn.host_info.arch,
+                              conn.host_info.cpu_model,
                               "AnotherVendor",
-                              libvirt.node_sockets,
-                              libvirt.node_cores,
-                              libvirt.node_threads)
+                              conn.host_info.cpu_sockets,
+                              conn.host_info.cpu_cores,
+                              conn.host_info.cpu_threads)
         self.assertEqual(conn.compareCPU(xml, 0),
                          libvirt.VIR_CPU_COMPARE_INCOMPATIBLE)
 
@@ -345,11 +345,11 @@ class FakeLibvirtTests(test.NoDBTestCase):
                    <vendor>%s</vendor>
                    <topology sockets="%d" cores="%d" threads="%d"/>
                  </cpu>''' % ('not-a-valid-arch',
-                              libvirt.node_cpu_model,
-                              libvirt.node_cpu_vendor,
-                              libvirt.node_sockets,
-                              libvirt.node_cores,
-                              libvirt.node_threads)
+                              conn.host_info.cpu_model,
+                              conn.host_info.cpu_vendor,
+                              conn.host_info.cpu_sockets,
+                              conn.host_info.cpu_cores,
+                              conn.host_info.cpu_threads)
         self.assertEqual(conn.compareCPU(xml, 0),
                          libvirt.VIR_CPU_COMPARE_INCOMPATIBLE)
 
@@ -361,12 +361,12 @@ class FakeLibvirtTests(test.NoDBTestCase):
                    <model>%s</model>
                    <vendor>%s</vendor>
                    <topology sockets="%d" cores="%d" threads="%d"/>
-                 </cpu>''' % (libvirt.node_arch,
+                 </cpu>''' % (conn.host_info.arch,
                               "AnotherModel",
-                              libvirt.node_cpu_vendor,
-                              libvirt.node_sockets,
-                              libvirt.node_cores,
-                              libvirt.node_threads)
+                              conn.host_info.cpu_vendor,
+                              conn.host_info.cpu_sockets,
+                              conn.host_info.cpu_cores,
+                              conn.host_info.cpu_threads)
         self.assertEqual(conn.compareCPU(xml, 0),
                          libvirt.VIR_CPU_COMPARE_INCOMPATIBLE)
 
@@ -377,10 +377,10 @@ class FakeLibvirtTests(test.NoDBTestCase):
                    <arch>%s</arch>
                    <vendor>%s</vendor>
                    <topology sockets="%d" cores="%d" threads="%d"/>
-                 </cpu>''' % (libvirt.node_arch,
-                              libvirt.node_cpu_vendor,
-                              libvirt.node_sockets,
-                              libvirt.node_cores,
-                              libvirt.node_threads)
+                 </cpu>''' % (conn.host_info.arch,
+                              conn.host_info.cpu_vendor,
+                              conn.host_info.cpu_sockets,
+                              conn.host_info.cpu_cores,
+                              conn.host_info.cpu_threads)
         self.assertEqual(conn.compareCPU(xml, 0),
                          libvirt.VIR_CPU_COMPARE_IDENTICAL)
