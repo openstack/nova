@@ -161,7 +161,7 @@ def get_injected_network_template(network_info, use_ipv6=None, template=None,
     if not nets:
         return
 
-    tmpl_path, tmpl_file = os.path.split(CONF.injected_network_template)
+    tmpl_path, tmpl_file = os.path.split(template)
     env = jinja2.Environment(loader=jinja2.FileSystemLoader(tmpl_path),
                              trim_blocks=True)
     template = env.get_template(tmpl_file)
