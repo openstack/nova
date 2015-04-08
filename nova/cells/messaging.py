@@ -731,9 +731,7 @@ class _TargetedMessageMethods(_BaseMessageMethods):
 
     def service_get_by_compute_host(self, message, host_name):
         """Return the service entry for a compute host."""
-        service = objects.Service.get_by_compute_host(message.ctxt,
-                                                      host_name)
-        return jsonutils.to_primitive(service)
+        return objects.Service.get_by_compute_host(message.ctxt, host_name)
 
     def service_update(self, message, host_name, binary, params_to_update):
         """Used to enable/disable a service. For compute services, setting to
@@ -744,9 +742,8 @@ class _TargetedMessageMethods(_BaseMessageMethods):
         :param binary: The name of the executable that the service runs as
         :param params_to_update: eg. {'disabled': True}
         """
-        return jsonutils.to_primitive(
-            self.host_api._service_update(message.ctxt, host_name, binary,
-                                          params_to_update))
+        return self.host_api._service_update(message.ctxt, host_name, binary,
+                                             params_to_update)
 
     def service_delete(self, message, service_id):
         """Deletes the specified service."""
@@ -1143,12 +1140,11 @@ class _BroadcastMessageMethods(_BaseMessageMethods):
         if filters is None:
             filters = {}
         disabled = filters.pop('disabled', None)
-        services = self.db.service_get_all(message.ctxt, disabled=disabled)
+        services = objects.ServiceList.get_all(message.ctxt, disabled=disabled)
         ret_services = []
         for service in services:
-            service = jsonutils.to_primitive(service)
             for key, val in filters.iteritems():
-                if service[key] != val:
+                if getattr(service, key) != val:
                     break
             else:
                 ret_services.append(service)
