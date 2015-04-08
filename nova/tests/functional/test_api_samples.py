@@ -991,33 +991,6 @@ class ConsoleAuthTokensSampleJsonTests(ServersSampleBase):
                               response, 200)
 
 
-class DeferredDeleteSampleJsonTests(ServersSampleBase):
-    extension_name = ("nova.api.openstack.compute.contrib"
-                                     ".deferred_delete.Deferred_delete")
-
-    def setUp(self):
-        super(DeferredDeleteSampleJsonTests, self).setUp()
-        self.flags(reclaim_instance_interval=1)
-
-    def test_restore(self):
-        uuid = self._post_server()
-        self._do_delete('servers/%s' % uuid)
-
-        response = self._do_post('servers/%s/action' % uuid,
-                                 'restore-post-req', {})
-        self.assertEqual(response.status_code, 202)
-        self.assertEqual(response.content, '')
-
-    def test_force_delete(self):
-        uuid = self._post_server()
-        self._do_delete('servers/%s' % uuid)
-
-        response = self._do_post('servers/%s/action' % uuid,
-                                 'force-delete-post-req', {})
-        self.assertEqual(response.status_code, 202)
-        self.assertEqual(response.content, '')
-
-
 class QuotasSampleJsonTests(ApiSampleTestBaseV2):
     ADMIN_API = True
     extension_name = "nova.api.openstack.compute.contrib.quotas.Quotas"
