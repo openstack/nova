@@ -937,6 +937,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                 swap=33550336,
                                 extra_specs={})
         instance_ref = objects.Instance(**test_instance)
+        instance_ref.flavor = flavor
         image_meta = {}
 
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
@@ -946,7 +947,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         cfg = drvr._get_guest_config(instance_ref,
                                      _fake_network_info(self.stubs, 1),
                                      {}, disk_info,
-                                     context=ctxt, flavor=flavor)
+                                     context=ctxt)
 
         self.assertEqual(cfg.uuid, instance_ref["uuid"])
         self.assertEqual(2, len(cfg.features))
@@ -959,24 +960,26 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual(cfg.os_type, vm_mode.HVM)
         self.assertEqual(cfg.os_boot_dev, ["hd"])
         self.assertIsNone(cfg.os_root)
-        self.assertEqual(len(cfg.devices), 9)
+        self.assertEqual(len(cfg.devices), 10)
         self.assertIsInstance(cfg.devices[0],
                               vconfig.LibvirtConfigGuestDisk)
         self.assertIsInstance(cfg.devices[1],
                               vconfig.LibvirtConfigGuestDisk)
         self.assertIsInstance(cfg.devices[2],
-                              vconfig.LibvirtConfigGuestInterface)
+                              vconfig.LibvirtConfigGuestDisk)
         self.assertIsInstance(cfg.devices[3],
-                              vconfig.LibvirtConfigGuestSerial)
+                              vconfig.LibvirtConfigGuestInterface)
         self.assertIsInstance(cfg.devices[4],
                               vconfig.LibvirtConfigGuestSerial)
         self.assertIsInstance(cfg.devices[5],
-                              vconfig.LibvirtConfigGuestInput)
+                              vconfig.LibvirtConfigGuestSerial)
         self.assertIsInstance(cfg.devices[6],
-                              vconfig.LibvirtConfigGuestGraphics)
+                              vconfig.LibvirtConfigGuestInput)
         self.assertIsInstance(cfg.devices[7],
-                              vconfig.LibvirtConfigGuestVideo)
+                              vconfig.LibvirtConfigGuestGraphics)
         self.assertIsInstance(cfg.devices[8],
+                              vconfig.LibvirtConfigGuestVideo)
+        self.assertIsInstance(cfg.devices[9],
                               vconfig.LibvirtConfigMemoryBalloon)
         self.assertEqual(len(cfg.metadata), 1)
         self.assertIsInstance(cfg.metadata[0],
@@ -1022,11 +1025,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.flags(virt_type='lxc', group='libvirt')
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         instance_ref = objects.Instance(**self.test_instance)
-        flavor = instance_ref.get_flavor()
-
         cfg = drvr._get_guest_config(instance_ref,
                                     _fake_network_info(self.stubs, 1),
-                                    None, {'mapping': {}}, flavor=flavor)
+                                    None, {'mapping': {}})
         self.assertEqual(instance_ref["uuid"], cfg.uuid)
         self.assertEqual(2 * units.Mi, cfg.memory)
         self.assertEqual(1, cfg.vcpus)
@@ -1048,11 +1049,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.flags(gid_maps=['0:1000:100'], group='libvirt')
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         instance_ref = objects.Instance(**self.test_instance)
-        flavor = instance_ref.get_flavor()
-
         cfg = drvr._get_guest_config(instance_ref,
                                      _fake_network_info(self.stubs, 1),
-                                     None, {'mapping': {}}, flavor=flavor)
+                                     None, {'mapping': {}})
         self.assertEqual(instance_ref["uuid"], cfg.uuid)
         self.assertEqual(2 * units.Mi, cfg.memory)
         self.assertEqual(1, cfg.vcpus)
@@ -10954,7 +10953,6 @@ Active:          8381604 kB
         self.flags(images_type='ploop', group='libvirt')
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         instance_ref = objects.Instance(**self.test_instance)
-        flavor = instance_ref.get_flavor()
 
         image_meta = {}
 
@@ -10964,7 +10962,7 @@ Active:          8381604 kB
 
         cfg = drvr._get_guest_config(instance_ref,
                                     _fake_network_info(self.stubs, 1),
-                                    None, disk_info, flavor=flavor)
+                                    None, disk_info)
         self.assertEqual("parallels", cfg.virt_type)
         self.assertEqual(instance_ref["uuid"], cfg.uuid)
         self.assertEqual(2 * units.Mi, cfg.memory)
@@ -10992,11 +10990,10 @@ Active:          8381604 kB
         ct_instance = self.test_instance.copy()
         ct_instance["vm_mode"] = vm_mode.EXE
         instance_ref = objects.Instance(**ct_instance)
-        flavor = instance_ref.get_flavor()
 
         cfg = drvr._get_guest_config(instance_ref,
                                     _fake_network_info(self.stubs, 1),
-                                    None, {'mapping': {}}, flavor=flavor)
+                                    None, {'mapping': {}})
         self.assertEqual("parallels", cfg.virt_type)
         self.assertEqual(instance_ref["uuid"], cfg.uuid)
         self.assertEqual(2 * units.Mi, cfg.memory)

@@ -2346,8 +2346,7 @@ class LibvirtDriver(driver.ComputeDriver):
         xml = self._get_guest_xml(context, instance, network_info,
                                   disk_info, image_meta,
                                   block_device_info=block_device_info,
-                                  write_to_disk=True,
-                                  flavor=instance.flavor)
+                                  write_to_disk=True)
         self._create_domain_and_network(context, xml, instance, network_info,
                                         disk_info,
                                         block_device_info=block_device_info)
@@ -3272,7 +3271,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return dev
 
-    def _get_guest_config_meta(self, context, instance, flavor):
+    def _get_guest_config_meta(self, context, instance):
         """Get metadata config for guest."""
 
         meta = vconfig.LibvirtConfigGuestMetaNovaInstance()
@@ -3293,6 +3292,7 @@ class LibvirtDriver(driver.ComputeDriver):
             meta.owner = ometa
 
         fmeta = vconfig.LibvirtConfigGuestMetaNovaFlavor()
+        flavor = instance.flavor
         fmeta.name = flavor.name
         fmeta.memory = flavor.memory_mb
         fmeta.vcpus = flavor.vcpus
@@ -3946,15 +3946,14 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _get_guest_config(self, instance, network_info, image_meta,
                           disk_info, rescue=None, block_device_info=None,
-                          context=None, flavor=None):
+                          context=None):
         """Get config data for parameters.
 
         :param rescue: optional dictionary that should contain the key
             'ramdisk_id' if a ramdisk is needed for the rescue image and
             'kernel_id' if a kernel is needed for the rescue image.
         """
-        ctxt = context or nova_context.get_admin_context()
-        flavor = self._get_flavor(ctxt, instance, flavor)
+        flavor = instance.flavor
         inst_path = libvirt_utils.get_instance_path(instance)
         disk_mapping = disk_info['mapping']
         img_meta_prop = image_meta.get('properties', {}) if image_meta else {}
@@ -3981,8 +3980,7 @@ class LibvirtDriver(driver.ComputeDriver):
             instance.numa_topology, guest_numa_config.numatune)
 
         guest.metadata.append(self._get_guest_config_meta(context,
-                                                          instance,
-                                                          flavor))
+                                                          instance))
         guest.idmaps = self._get_guest_idmaps()
 
         self._update_guest_cputune(guest, flavor, virt_type)
@@ -4141,8 +4139,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _get_guest_xml(self, context, instance, network_info, disk_info,
                        image_meta, rescue=None,
-                       block_device_info=None, write_to_disk=False,
-                       flavor=None):
+                       block_device_info=None, write_to_disk=False):
         # NOTE(danms): Stringifying a NetworkInfo will take a lock. Do
         # this ahead of time so that we don't acquire it while also
         # holding the logging lock.
@@ -4160,7 +4157,7 @@ class LibvirtDriver(driver.ComputeDriver):
         LOG.debug(strutils.mask_password(msg), instance=instance)
         conf = self._get_guest_config(instance, network_info, image_meta,
                                       disk_info, rescue, block_device_info,
-                                      context, flavor=flavor)
+                                      context)
         xml = conf.to_xml()
 
         if write_to_disk:
