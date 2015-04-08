@@ -1338,6 +1338,19 @@ def create_ovs_vif_port(bridge, dev, iface_id, mac, instance_id):
     _set_device_mtu(dev)
 
 
+def create_ovs_vif_port_colo(bridge, dev, iface_id, mac, instance_id):
+    # this should be later updated with dynamic information
+    tag = 'tag=' + str('1101') 
+    _ovs_vsctl(['--', '--if-exists', 'del-port', dev, '--',
+                'add-port', bridge, dev, tag)
+    #            '--', 'set', 'Interface', dev,
+    #            'external-ids:iface-id=%s' % iface_id,
+    #            'external-ids:iface-status=active',
+    #            'external-ids:attached-mac=%s' % mac,
+    #            'external-ids:vm-uuid=%s' % instance_id])
+    _set_device_mtu(dev)
+
+
 def delete_ovs_vif_port(bridge, dev):
     _ovs_vsctl(['--', '--if-exists', 'del-port', bridge, dev])
     delete_net_dev(dev)

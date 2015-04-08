@@ -138,15 +138,27 @@ class LibvirtGenericVIFDriver(object):
     def get_bridge_name(self, vif):
         return vif['network']['bridge']
 
+    def get_ext_bridge_name(self, vif):
+        # needs to be updated
+        return "br-enp4s0d1"
+        #return vif['network']['bridge']
+
     def get_ovs_interfaceid(self, vif):
         return vif.get('ovs_interfaceid') or vif['id']
 
     def get_br_name(self, iface_id):
         return ("qbr" + iface_id)[:network_model.NIC_NAME_LEN]
 
+    def get_colo_br_name(self, iface_id):
+        return ("cqbr" + iface_id)[:network_model.NIC_NAME_LEN]
+
     def get_veth_pair_names(self, iface_id):
         return (("qvb%s" % iface_id)[:network_model.NIC_NAME_LEN],
                 ("qvo%s" % iface_id)[:network_model.NIC_NAME_LEN])
+
+    def get_colo_veth_pair_names(self, iface_id):
+        return (("cqvb%s" % iface_id)[:network_model.NIC_NAME_LEN],
+                ("cqvo%s" % iface_id)[:network_model.NIC_NAME_LEN])
 
     def get_firewall_required(self, vif):
         if vif.is_neutron_filtering_enabled():
@@ -413,6 +425,54 @@ class LibvirtGenericVIFDriver(object):
                                           v2_name, iface_id, vif['address'],
                                           instance['uuid'])
 
+        # if instance is FT, then extra steps are needed
+        system_metadata = utils.instance_sys_meta(instance)
+        ft_role = system_metadata.get('ft_role', None)
+        if ft_role == 'primary' or ft_rote == 'secondary':
+            plug_ovs_hybrid_colo(instance, vif)
+
+    def plug_ovs_hybrid_colo(self, instance, vif):
+        """Plug using hybrid stragegy
+        
+        Create the extra veth and bridge devices needed for enabling 
+        COLO fault tolerance support
+        """"
+        iface_id = self.get_ovs_interfaceid(vif)
+        colo_v1_name, colo_v2_name = self.get_colo_veth_pair_names(vif['id'])
+
+        system_metadata = utils.instance_sys_meta(instance)
+        is_secondary = system_metadata.get('ft_role', None) == 'secondary'
+        if is_secondary:
+            colo_br_name = self.get_colo_br_name(vif['id'])
+
+            if not linux_net.device_exists(colo_br_name):
+            utils.execute('brctl', 'addbr', colo_br_name, run_as_root=True)
+            utils.execute('brctl', 'setfd', colo_br_name, 0, run_as_root=True)
+            utils.execute('brctl', 'stp', colo_br_name, 'off',
+                          run_as_root=True)
+            utils.execute('tee',
+                          ('/sys/class/net/%s/bridge/multicast_snooping' %
+                           colo_br_name),
+                          process_input='0',
+                          run_as_root=True,
+                          check_exit_code=[0, 1])
+
+            utils.execute('ip', 'link', 'set', colo_br_name, 'up',
+                          run_as_root=True)
+
+        if not linux_net.device_exists(colo_v2_name):
+            linux_net._create_veth_pair(colo_v1_name, colo_v2_name)
+            if is_secondary:
+                utils.execute('brctl', 'addif', colo_br_name, 
+                              colo_v1_name, run_as_root=True)
+
+            linux_net.create_ovs_vif_port_colo(self.get_ext_bridge_name(vif),
+                                          colo_v2_name, iface_id,
+                                          vif['address'],instance['uuid'])
+
+
+
+
     def plug_ovs(self, instance, vif):
         if self.get_firewall_required(vif) or vif.is_hybrid_plug_enabled():
             self.plug_ovs_hybrid(instance, vif)
@@ -570,6 +630,45 @@ class LibvirtGenericVIFDriver(object):
 
             linux_net.delete_ovs_vif_port(self.get_bridge_name(vif),
                                           v2_name)
+
+            # if instance is FT, then extra steps are needed
+            system_metadata = utils.instance_sys_meta(instance)
+            ft_role = system_metadata.get('ft_role', None)
+            if ft_role == 'primary' or ft_rote == 'secondary':
+                unplug_ovs_hybrid_colo(instance, vif)
+
+        except processutils.ProcessExecutionError:
+            LOG.exception(_LE("Failed while unplugging vif"),
+                          instance=instance)
+
+    def unplug_ovs_hybrid_colo(self, instance, vif):
+        """UnPlug using hybrid strategy
+
+        Extra unpluging actions needed for COLO integration.
+        Unkook extra port from OVS, unkook extra port from bridge,
+        delete extra bridge, and delete both extra veth devices.
+        Extra actions for the secondary VM with regards to the primary.
+        """
+        try:
+            colo_v1_name, colo_v2_name = self.get_colo_veth_pair_names(
+                                                  vif['id'])
+
+            system_metadata = utils.instance_sys_meta(instance)
+            is_secondary = system_metadata.get('ft_role', None) == 'secondary'
+            if is_secondary:
+                colo_br_name = self.get_colo_br_name(vif['id'])
+
+                if linux_net.device_exists(colo_br_name):
+                    utils.execute('brctl', 'delif', colo_br_name, colo_v1_name,
+                                  run_as_root=True)
+                    utils.execute('ip', 'link', 'set', colo_br_name, 'down',
+                                  run_as_root=True)
+                    utils.execute('brctl', 'delbr', colo_br_name,
+                                  run_as_root=True)
+
+            linux_net.delete_ovs_vif_port(self.get_ext_bridge_name(vif),
+                                          colo_v2_name)
+
         except processutils.ProcessExecutionError:
             LOG.exception(_LE("Failed while unplugging vif"),
                           instance=instance)
@@ -687,4 +786,52 @@ class LibvirtGenericVIFDriver(object):
         if not func:
             raise exception.NovaException(
                 _("Unexpected vif_type=%s") % vif_type)
+        func(instance, vif)
+
+
+    def cleanup_colo_plug_ovs(self, instance, vif):
+        if self.get_firewall_required(vif) or vif.is_hybrid_plug_enabled():
+            self.unplug_ovs_hybrid_colo(instance, vif)
+        else:
+            pass
+
+    def cleanup_colo_plug_ivs(self, instance, vif):
+        pass
+
+    def cleanup_colo_plug_mlnx_direct(self, instance, vif):
+        pass
+
+    def cleanup_colo_plug_802qbg(self, instance, vif):
+        pass
+
+    def cleanup_colo_plug_802qbh(self, instance, vif):
+        pass
+
+    def cleanup_colo_plug_hw_veb(self, instance, vif):
+        pass
+
+    def cleanup_colo_plug_midonet(self, instance, vif):
+        pass
+
+    def cleanup_colo_plug_iovisor(self, instance, vif):
+        pass
+
+    def cleanup_colo_plug(self, instance, vif):
+        vif_type = vif['type']
+
+        LOG.debug('vif_type=%(vif_type)s instance=%(instance)s '
+                  'vif=%(vif)s',
+                  {'vif_type': vif_type, 'instance': instance,
+                   'vif': vif})
+
+        if vif_type is None:
+            raise exception.NovaException(
+                _("vif_type parameter must be present "
+                  "for this vif_driver implementation"))
+        vif_slug = self._normalize_vif_type(vif_type)
+        func = getattr(self, 'cleanup_colo_plug_%s' % vif_slug, None)
+        if not func:
+            raise exception.NovaException(
+                _("Unexpected vif_type=%s") % vif_type)
+
         func(instance, vif)
