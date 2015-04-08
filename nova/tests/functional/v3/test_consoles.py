@@ -18,6 +18,8 @@ from nova.tests.functional.v3 import test_servers
 
 class ConsolesSamplesJsonTest(test_servers.ServersSampleBase):
     sample_dir = "consoles"
+    extra_extensions_to_load = ["os-access-ips"]
+    _api_version = 'v2'
 
     def setUp(self):
         super(ConsolesSamplesJsonTest, self).setUp()

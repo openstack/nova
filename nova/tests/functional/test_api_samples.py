@@ -603,19 +603,6 @@ class SchedulerHintsJsonTest(ApiSampleTestBaseV2):
         self._verify_response('scheduler-hints-post-resp', subs, response, 202)
 
 
-class ConsoleOutputSampleJsonTest(ServersSampleBase):
-    extension_name = "nova.api.openstack.compute.contrib" + \
-                                     ".console_output.Console_output"
-
-    def test_get_console_output(self):
-        uuid = self._post_server()
-        response = self._do_post('servers/%s/action' % uuid,
-                                 'console-output-post-req',
-                                {'action': 'os-getConsoleOutput'})
-        subs = self._get_regexes()
-        self._verify_response('console-output-post-resp', subs, response, 200)
-
-
 class ExtendedServerAttributesJsonTest(ServersSampleBase):
     extension_name = "nova.api.openstack.compute.contrib" + \
                      ".extended_server_attributes" + \
