@@ -254,18 +254,25 @@ class String(FieldType):
 
 
 class Enum(String):
-    def __init__(self, valid_values=None, **kwargs):
+    def __init__(self, valid_values, **kwargs):
+        try:
+            length = len(valid_values)
+        except TypeError:
+            raise ValueError('valid_values is not a sequence'
+                             ' of permitted values')
+        if length == 0:
+            raise ValueError('valid_values may not be empty')
         self._valid_values = valid_values
         super(Enum, self).__init__(**kwargs)
 
     def coerce(self, obj, attr, value):
-        if self._valid_values and value not in self._valid_values:
+        if value not in self._valid_values:
             msg = _("Field value %s is invalid") % value
             raise ValueError(msg)
         return super(Enum, self).coerce(obj, attr, value)
 
     def stringify(self, value):
-        if self._valid_values and value not in self._valid_values:
+        if value not in self._valid_values:
             msg = _("Field value %s is invalid") % value
             raise ValueError(msg)
         return super(Enum, self).stringify(value)
@@ -592,7 +599,7 @@ class StringField(AutoTypedField):
 
 
 class EnumField(AutoTypedField):
-    def __init__(self, valid_values=None, **kwargs):
+    def __init__(self, valid_values, **kwargs):
         self.AUTO_TYPE = Enum(valid_values=valid_values)
         super(EnumField, self).__init__(**kwargs)
 
@@ -674,7 +681,7 @@ class ListOfStringsField(AutoTypedField):
 
 
 class ListOfEnumField(AutoTypedField):
-    def __init__(self, valid_values=None, **kwargs):
+    def __init__(self, valid_values, **kwargs):
         self.AUTO_TYPE = List(Enum(valid_values=valid_values))
         super(ListOfEnumField, self).__init__(**kwargs)
 
