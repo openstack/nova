@@ -5332,6 +5332,8 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertIsInstance(ret, dict)
         self.assertIn('is_shared_block_storage', ret)
         self.assertIn('is_shared_instance_path', ret)
+        self.assertEqual(ret['is_shared_instance_path'],
+                         ret['is_shared_storage'])
 
     def test_check_can_live_migrate_source_shared_block_storage(self):
         instance, dest_check_data, conn = self._mock_can_live_migrate_source(
