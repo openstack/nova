@@ -1279,7 +1279,8 @@ iface eth0 inet6 static
 
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         image_meta = {'id': IMAGE_VHD,
-                      'disk_format': 'vhd'}
+                      'disk_format': 'vhd',
+                      'properties': {'vm_mode': 'xen'}}
         conn.rescue(self.context, instance, [], image_meta, '')
 
         vm = xenapi_fake.get_record('VM', vm_ref)
@@ -1304,8 +1305,8 @@ iface eth0 inet6 static
         instance = self._create_instance(obj=True)
         session = get_session()
         image_meta = {'id': IMAGE_VHD,
-                      'disk_format': 'vhd'}
-
+                      'disk_format': 'vhd',
+                      'properties': {'vm_mode': 'xen'}}
         vm_ref = vm_utils.lookup(session, instance['name'])
         vdi_ref, vdi_rec = vm_utils.get_vdi_for_vm_safely(session, vm_ref)
 
@@ -2316,9 +2317,11 @@ class XenAPIAutoDiskConfigTestCase(stubs.XenAPITestBase):
 
         vdi_uuid = session.call_xenapi('VDI.get_record', vdi_ref)['uuid']
         vdis = {'root': {'uuid': vdi_uuid, 'ref': vdi_ref}}
-
-        self.conn._vmops._attach_disks(instance, vm_ref, instance['name'],
-                                       vdis, disk_image_type, "fake_nw_inf")
+        image_meta = {'id': 'null',
+                      'disk_format': 'vhd',
+                      'properties': {'vm_mode': 'xen'}}
+        self.conn._vmops._attach_disks(instance, image_meta, vm_ref,
+                instance['name'], vdis, disk_image_type, "fake_nw_inf")
 
         self.assertEqual(marker["partition_called"], called)
 
@@ -2433,10 +2436,12 @@ class XenAPIGenerateLocal(stubs.XenAPITestBase):
         if disk_image_type == vm_utils.ImageType.DISK_ISO:
             vdi_key = 'iso'
         vdis = {vdi_key: {'uuid': vdi_uuid, 'ref': vdi_ref}}
-
         self.called = False
-        self.conn._vmops._attach_disks(instance, vm_ref, instance['name'],
-                                       vdis, disk_image_type, "fake_nw_inf")
+        image_meta = {'id': 'null',
+                      'disk_format': 'vhd',
+                      'properties': {'vm_mode': 'xen'}}
+        self.conn._vmops._attach_disks(instance, image_meta, vm_ref,
+                    instance['name'], vdis, disk_image_type, "fake_nw_inf")
         self.assertTrue(self.called)
 
     def test_generate_swap(self):

@@ -331,12 +331,13 @@ class SpawnTestCase(VMOpsTestBase):
         self.vmops._ensure_enough_free_mem(instance)
         self.vmops._create_vm_record(context, instance, name_label,
                 di_type, kernel_file,
-                ramdisk_file, image_meta).AndReturn(vm_ref)
+                ramdisk_file, image_meta, rescue).AndReturn(vm_ref)
         step += 1
         self.vmops._update_instance_progress(context, instance, step, steps)
 
-        self.vmops._attach_disks(instance, vm_ref, name_label, vdis, di_type,
-                          network_info, rescue, admin_password, injected_files)
+        self.vmops._attach_disks(instance, image_meta, vm_ref, name_label,
+                            vdis, di_type, network_info, rescue,
+                            admin_password, injected_files)
         if attach_pci_dev:
             fake_dev = {
                 'created_at': None,
@@ -477,14 +478,15 @@ class SpawnTestCase(VMOpsTestBase):
                 instance, name_label).AndReturn((kernel_file, ramdisk_file))
 
         vm_ref = "fake_vm_ref"
+        rescue = False
         self.vmops._create_vm_record(context, instance, name_label,
                 di_type, kernel_file,
-                ramdisk_file, image_meta).AndReturn(vm_ref)
+                ramdisk_file, image_meta, rescue).AndReturn(vm_ref)
 
         if resize_instance:
             self.vmops._resize_up_vdis(instance, vdis)
-        self.vmops._attach_disks(instance, vm_ref, name_label, vdis, di_type,
-                                 network_info, False, None, None)
+        self.vmops._attach_disks(instance, image_meta, vm_ref, name_label,
+                            vdis, di_type, network_info, False, None, None)
         self.vmops._attach_mapped_block_devices(instance, block_device_info)
         pci_manager.get_instance_pci_devs(instance).AndReturn([])
 
@@ -953,13 +955,14 @@ class CreateVMRecordTestCase(VMOpsTestBase):
         device_id = "0002"
         image_properties = {"xenapi_device_id": device_id}
         image_meta = {"properties": image_properties}
+        rescue = False
         session = "session"
         self.vmops._session = session
         mock_get_vm_device_id.return_value = device_id
         mock_determine_vm_mode.return_value = "vm_mode"
 
         self.vmops._create_vm_record(context, instance, name_label,
-            disk_image_type, kernel_file, ramdisk_file, image_meta)
+            disk_image_type, kernel_file, ramdisk_file, image_meta, rescue)
 
         mock_get_vm_device_id.assert_called_with(session, image_properties)
         mock_create_vm.assert_called_with(session, instance, name_label,
