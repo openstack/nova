@@ -1684,6 +1684,24 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             self.compute.cleanup_host()
             mock_ev.cancel_all_events.assert_called_once_with()
 
+    def test_cleanup_blocks_new_events(self):
+        instance = objects.Instance(uuid='uuid')
+        self.compute.instance_events.cancel_all_events()
+        callback = mock.MagicMock()
+        body = mock.MagicMock()
+        with self.compute.virtapi.wait_for_instance_event(
+                instance, ['foo-bar'], error_callback=callback):
+            body()
+        self.assertTrue(body.called)
+        callback.assert_called_once_with('foo-bar', instance)
+
+    def test_pop_events_fails_gracefully(self):
+        inst = objects.Instance(uuid='uuid')
+        event = mock.MagicMock()
+        self.compute.instance_events._events = None
+        self.assertIsNone(
+            self.compute.instance_events.pop_instance_event(inst, event))
+
     def test_retry_reboot_pending_soft(self):
         instance = objects.Instance(self.context)
         instance.uuid = 'foo'
