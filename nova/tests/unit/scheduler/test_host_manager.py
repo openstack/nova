@@ -824,7 +824,7 @@ class HostStateTestCase(test.NoDBTestCase):
 
         host = host_manager.HostState("fakehost", "fakenode")
         host.update_from_compute_node(compute)
-        self.assertIsNone(host.pci_stats)
+        self.assertEqual([], host.pci_stats.pools)
         self.assertEqual(hyper_ver_int, host.hypervisor_version)
 
     def test_stat_consumption_from_compute_node_rescue_unshelving(self):
@@ -860,7 +860,7 @@ class HostStateTestCase(test.NoDBTestCase):
         self.assertEqual(42, host.num_io_ops)
         self.assertEqual(10, len(host.stats))
 
-        self.assertIsNone(host.pci_stats)
+        self.assertEqual([], host.pci_stats.pools)
         self.assertEqual(hyper_ver_int, host.hypervisor_version)
 
     @mock.patch('nova.virt.hardware.get_host_numa_usage_from_instance')

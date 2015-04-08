@@ -213,11 +213,8 @@ class HostState(object):
         self.updated = compute.updated_at
         self.numa_topology = compute.numa_topology
         self.instance_numa_topology = None
-        if compute.pci_device_pools is not None:
-            self.pci_stats = pci_stats.PciDeviceStats(
-                compute.pci_device_pools)
-        else:
-            self.pci_stats = None
+        self.pci_stats = pci_stats.PciDeviceStats(
+            compute.pci_device_pools)
 
         # All virt drivers report host_ip
         self.host_ip = compute.host_ip
