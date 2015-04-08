@@ -55,6 +55,10 @@ class FakeNotifier(object):
         # this permit to raise an exception if something have not
         # been serialized correctly
         jsonutils.to_primitive(payload)
+        # NOTE(melwitt): Try to serialize the context, as the rpc would.
+        #                An exception will be raised if something is wrong
+        #                with the context.
+        self._serializer.serialize_context(ctxt)
         msg = FakeMessage(self.publisher_id, priority, event_type,
                           payload, ctxt)
         NOTIFICATIONS.append(msg)
