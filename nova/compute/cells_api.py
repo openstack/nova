@@ -587,7 +587,10 @@ class HostAPI(compute_api.HostAPI):
         """Get a compute node from a particular cell by its integer ID.
         compute_id should be in the format of 'path!to!cell@ID'.
         """
-        return self.cells_rpcapi.compute_node_get(context, compute_id)
+        try:
+            return self.cells_rpcapi.compute_node_get(context, compute_id)
+        except exception.CellRoutingInconsistency:
+            raise exception.ComputeHostNotFound(host=compute_id)
 
     def compute_node_get_all(self, context):
         return self.cells_rpcapi.compute_node_get_all(context)

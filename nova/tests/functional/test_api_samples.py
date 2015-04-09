@@ -32,6 +32,7 @@ import testtools
 from nova.api.metadata import password
 from nova.api.openstack.compute.contrib import fping
 from nova.api.openstack.compute import extensions
+from nova.cells import utils as cells_utils
 # Import extensions to pull in osapi_compute_extension CONF option used below.
 from nova.cloudpipe import pipelib
 from nova.compute import api as compute_api
@@ -2513,15 +2514,16 @@ class HypervisorsCellsSampleJsonTests(ApiSampleTestBaseV2):
         def fake_compute_node_get(self, context, hyp):
             return fake_hypervisor
 
-        @classmethod
-        def fake_service_get_by_host_and_binary(cls, context, host, binary):
-            return objects.Service(host='fake-mini', disabled=False,
-                                   disabled_reason=None)
+        def fake_service_get_by_compute_host(self, context, host):
+            return cells_utils.ServiceProxy(
+                objects.Service(id=1, host='fake-mini', disabled=False,
+                                disabled_reason=None),
+                'cell1')
 
         self.stubs.Set(cells_api.HostAPI, 'compute_node_get',
                        fake_compute_node_get)
-        self.stubs.Set(objects.Service, 'get_by_host_and_binary',
-                       fake_service_get_by_host_and_binary)
+        self.stubs.Set(cells_api.HostAPI, 'service_get_by_compute_host',
+                       fake_service_get_by_compute_host)
 
         self.stubs.Set(cells_api.HostAPI,
                        'get_host_uptime', fake_get_host_uptime)
