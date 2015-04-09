@@ -598,34 +598,6 @@ class SchedulerHintsJsonTest(ApiSampleTestBaseV2):
         self._verify_response('scheduler-hints-post-resp', subs, response, 202)
 
 
-class ExtendedServerAttributesJsonTest(ServersSampleBase):
-    extension_name = "nova.api.openstack.compute.contrib" + \
-                     ".extended_server_attributes" + \
-                     ".Extended_server_attributes"
-
-    def test_show(self):
-        uuid = self._post_server()
-
-        response = self._do_get('servers/%s' % uuid)
-        subs = self._get_regexes()
-        subs['hostid'] = '[a-f0-9]+'
-        subs['id'] = uuid
-        subs['instance_name'] = 'instance-\d{8}'
-        subs['hypervisor_hostname'] = r'[\w\.\-]+'
-        self._verify_response('server-get-resp', subs, response, 200)
-
-    def test_detail(self):
-        uuid = self._post_server()
-
-        response = self._do_get('servers/detail')
-        subs = self._get_regexes()
-        subs['hostid'] = '[a-f0-9]+'
-        subs['id'] = uuid
-        subs['instance_name'] = 'instance-\d{8}'
-        subs['hypervisor_hostname'] = r'[\w\.\-]+'
-        self._verify_response('servers-detail-resp', subs, response, 200)
-
-
 class KeyPairsSampleJsonTest(ApiSampleTestBaseV2):
     extension_name = "nova.api.openstack.compute.contrib.keypairs.Keypairs"
 
