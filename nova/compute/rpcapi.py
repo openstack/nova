@@ -291,6 +291,7 @@ class ComputeAPI(object):
     VERSION_ALIASES = {
         'icehouse': '3.23',
         'juno': '3.35',
+        'kilo': '3.40',
     }
 
     def __init__(self):
