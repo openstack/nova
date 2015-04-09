@@ -175,11 +175,13 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
         havana_placeholders = range(217, 227)
         icehouse_placeholders = range(235, 244)
         juno_placeholders = range(255, 265)
+        kilo_placeholders = range(281, 291)
 
         return (special +
                 havana_placeholders +
                 icehouse_placeholders +
-                juno_placeholders)
+                juno_placeholders +
+                kilo_placeholders)
 
     def migrate_up(self, version, with_data=False):
         if with_data:
