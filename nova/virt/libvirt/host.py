@@ -27,6 +27,7 @@ the raw libvirt API. These APIs are then used by all
 the other libvirt related classes
 """
 
+import operator
 import os
 import socket
 import threading
@@ -546,18 +547,19 @@ class Host(object):
         libvirt.virEventRegisterDefaultImpl()
         self._init_events()
 
-    def has_min_version(self, lv_ver=None, hv_ver=None, hv_type=None):
+    def _version_check(self, lv_ver=None, hv_ver=None, hv_type=None,
+                       op=operator.lt):
         conn = self.get_connection()
         try:
             if lv_ver is not None:
                 libvirt_version = conn.getLibVersion()
-
-                if libvirt_version < utils.convert_version_to_int(lv_ver):
+                if op(libvirt_version, utils.convert_version_to_int(lv_ver)):
                     return False
 
             if hv_ver is not None:
                 hypervisor_version = conn.getVersion()
-                if hypervisor_version < utils.convert_version_to_int(hv_ver):
+                if op(hypervisor_version,
+                      utils.convert_version_to_int(hv_ver)):
                     return False
 
             if hv_type is not None:
@@ -568,6 +570,14 @@ class Host(object):
             return True
         except Exception:
             return False
+
+    def has_min_version(self, lv_ver=None, hv_ver=None, hv_type=None):
+        return self._version_check(
+            lv_ver=lv_ver, hv_ver=hv_ver, hv_type=hv_type, op=operator.lt)
+
+    def has_version(self, lv_ver=None, hv_ver=None, hv_type=None):
+        return self._version_check(
+            lv_ver=lv_ver, hv_ver=hv_ver, hv_type=hv_type, op=operator.ne)
 
     def get_domain(self, instance):
         """Retrieve libvirt domain object for an instance.
