@@ -1,3 +1,0 @@
-{
-    "adminPass": "%(password)s"
-}

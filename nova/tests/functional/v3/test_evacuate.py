@@ -14,16 +14,33 @@
 #    under the License.
 
 import mock
+from oslo_config import cfg
 
 from nova.compute import api as compute_api
 from nova.compute import manager as compute_manager
 from nova.servicegroup import api as service_group_api
 from nova.tests.functional.v3 import test_servers
 
+CONF = cfg.CONF
+CONF.import_opt('osapi_compute_extension',
+                'nova.api.openstack.compute.extensions')
+
 
 class EvacuateJsonTest(test_servers.ServersSampleBase):
     ADMIN_API = True
     extension_name = "os-evacuate"
+    extra_extensions_to_load = ["os-access-ips"]
+    _api_version = 'v2'
+
+    def _get_flags(self):
+        f = super(EvacuateJsonTest, self)._get_flags()
+        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.evacuate.Evacuate')
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.extended_evacuate_find_host.'
+            'Extended_evacuate_find_host')
+        return f
 
     def _test_evacuate(self, req_subs, server_req, server_resp,
                        expected_resp_code):
