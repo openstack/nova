@@ -294,6 +294,7 @@ class VMOps(object):
     def create_instance(self, instance, network_info, block_device_info,
                         root_vhd_path, eph_vhd_path, vm_gen):
         instance_name = instance.name
+        instance_path = os.path.join(CONF.instances_path, instance_name)
 
         self._vmutils.create_vm(instance_name,
                                 instance.memory_mb,
@@ -301,6 +302,7 @@ class VMOps(object):
                                 CONF.hyperv.limit_cpu_features,
                                 CONF.hyperv.dynamic_memory_ratio,
                                 vm_gen,
+                                instance_path,
                                 [instance.uuid])
 
         self._vmutils.create_scsi_controller(instance_name)

@@ -370,6 +370,7 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
                                   mox.IsA(int), mox.IsA(bool),
                                   CONF.hyperv.dynamic_memory_ratio,
                                   mox.IsA(int),
+                                  mox.IsA(str),
                                   mox.IsA(list))
 
         if not boot_from_volume:

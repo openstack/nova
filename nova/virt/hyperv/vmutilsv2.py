@@ -92,7 +92,7 @@ class VMUtilsV2(vmutils.VMUtils):
                     VirtualSystemType=self._VIRTUAL_SYSTEM_TYPE_REALIZED)]
 
     def _create_vm_obj(self, vs_man_svc, vm_name, vm_gen, notes,
-                       dynamic_memory_ratio):
+                       dynamic_memory_ratio, instance_path):
         vs_data = self._conn.Msvm_VirtualSystemSettingData.new()
         vs_data.ElementName = vm_name
         vs_data.Notes = notes
@@ -106,6 +106,14 @@ class VMUtilsV2(vmutils.VMUtils):
         if vm_gen == constants.VM_GEN_2:
             vs_data.VirtualSystemSubType = self._VIRTUAL_SYSTEM_SUBTYPE_GEN2
             vs_data.SecureBootEnabled = False
+
+        # Created VMs must have their *DataRoot paths in the same location as
+        # the instances' path.
+        vs_data.ConfigurationDataRoot = instance_path
+        vs_data.LogDataRoot = instance_path
+        vs_data.SnapshotDataRoot = instance_path
+        vs_data.SuspendDataRoot = instance_path
+        vs_data.SwapFileDataRoot = instance_path
 
         (job_path,
          vm_path,
