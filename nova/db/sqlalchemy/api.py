@@ -6152,3 +6152,75 @@ def pci_device_update(context, node_id, address, values):
         device.update(values)
         session.add(device)
     return device
+
+
+####################
+
+
+@require_context
+def ft_relation_create(context, values):
+    try:
+        relation_ref = models.FaultToleranceRelation()
+        relation_ref.update(values)
+        relation_ref.save()
+
+        return relation_ref
+    except db_exc.DBDuplicateEntry:
+        raise exception.KeyPairExists()
+
+
+@require_context
+def ft_relation_destroy(context, primary_instance_uuid,
+                        secondary_instance_uuid):
+    result = (model_query(context, models.FaultToleranceRelation).
+              filter_by(primary_instance_uuid=primary_instance_uuid).
+              filter_by(secondary_instance_uuid=secondary_instance_uuid).
+              soft_delete())
+
+    if not result:
+        raise exception.FaultToleranceRelationNotFound(
+                primary_instance_uuid=primary_instance_uuid,
+                secondary_instance_uuid=secondary_instance_uuid)
+
+
+@require_context
+def ft_relation_get_by_uuids(context, primary_instance_uuid,
+                             secondary_instance_uuid):
+    model = models.FaultToleranceRelation
+    relation = (model_query(context,
+                            model.primary_instance_uuid,
+                            model.secondary_instance_uuid,
+                            base_model=model).
+                filter_by(secondary_instance_uuid=secondary_instance_uuid).
+                filter_by(primary_instance_uuid=primary_instance_uuid).first())
+
+    if not relation:
+        raise exception.FaultToleranceRelationNotFound(
+                primary_instance_uuid=primary_instance_uuid,
+                secondary_instance_uuid=secondary_instance_uuid)
+
+    return relation
+
+
+@require_context
+def ft_relation_get_by_primary_instance_uuid(context, instance_uuid):
+    relations = (model_query(context, models.FaultToleranceRelation).
+                 filter_by(primary_instance_uuid=instance_uuid).all())
+
+    if not relations:
+        raise exception.FaultToleranceRelationByPrimaryNotFound(
+                instance_uuid=instance_uuid)
+
+    return relations
+
+
+@require_context
+def ft_relation_get_by_secondary_instance_uuid(context, instance_uuid):
+    relation = (model_query(context, models.FaultToleranceRelation).
+                filter_by(secondary_instance_uuid=instance_uuid).first())
+
+    if not relation:
+        raise exception.FaultToleranceRelationBySecondaryNotFound(
+                instance_uuid=instance_uuid)
+
+    return relation

@@ -32,6 +32,7 @@ def register_all():
     __import__('nova.objects.dns_domain')
     __import__('nova.objects.ec2')
     __import__('nova.objects.external_event')
+    __import__('nova.objects.fault_tolerance_relation')
     __import__('nova.objects.fixed_ip')
     __import__('nova.objects.flavor')
     __import__('nova.objects.floating_ip')

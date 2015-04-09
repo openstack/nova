@@ -1759,3 +1759,19 @@ class InvalidHypervisorVirtType(Invalid):
 
 class InvalidVirtualMachineMode(Invalid):
     msg_fmt = _("Virtual machine mode '%(vmmode)s' is not recognised")
+
+
+class FaultToleranceRelationNotFound(NovaException):
+    msg_fmt = _("No fault tolerance relation found for primary instance UUID "
+                "'%(primary_instance_uuid)s' and secondary instance UUID "
+                "'%(secondary_instance_uuid)s'.")
+
+
+class FaultToleranceRelationByPrimaryNotFound(NovaException):
+    msg_fmt = _("No fault tolerance relation found for instance with UUID "
+                "'%(instance_uuid)s' as primary.")
+
+
+class FaultToleranceRelationBySecondaryNotFound(NovaException):
+    msg_fmt = _("No fault tolerance relation found for instance with UUID "
+                "'%(instance_uuid)s' as secondary.")
