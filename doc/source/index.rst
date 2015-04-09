@@ -33,7 +33,8 @@ any specific prior release.
 .. _`docs.openstack.org`: https://docs.openstack.org
 
 Compute API References
-=======================
+======================
+
 
 * `v2.1 (CURRENT)`_
 * `v2 (SUPPORTED)`_ and `v2 extensions (SUPPORTED)`_ (Will be deprecated in
