@@ -2265,6 +2265,20 @@ class CommonNetworkTestCase(test.TestCase):
                 'fd00::/48', None, None, None, None, None]
         self.assertTrue(manager.create_networks(*args))
 
+    def test_create_networks_with_uuid(self):
+        cidr = '192.168.0.0/24'
+        uuid = FAKEUUID
+        manager = fake_network.FakeNetworkManager()
+        self.stubs.Set(manager, '_create_fixed_ips',
+                                self.fake_create_fixed_ips)
+        args = [self.context.elevated(), 'foo', cidr, None, 1, 256,
+                'fd00::/48', None, None, None, None, None]
+        kwargs = {'uuid': uuid}
+        nets = manager.create_networks(*args, **kwargs)
+        self.assertEqual(1, len(nets))
+        net = nets[0]
+        self.assertEqual(uuid, net['uuid'])
+
     @mock.patch('nova.db.network_get_all')
     def test_create_networks_cidr_already_used(self, get_all):
         manager = fake_network.FakeNetworkManager()
