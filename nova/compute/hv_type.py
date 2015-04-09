@@ -31,6 +31,7 @@ BAREMETAL = "baremetal"
 BHYVE = "bhyve"
 FAKE = "fake"
 HYPERV = "hyperv"
+IRONIC = "ironic"
 KQEMU = "kqemu"
 KVM = "kvm"
 LXC = "lxc"
@@ -50,6 +51,7 @@ ALL = (
     BHYVE,
     FAKE,
     HYPERV,
+    IRONIC,
     KQEMU,
     KVM,
     LXC,
