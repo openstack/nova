@@ -47,7 +47,7 @@ CONF.import_opt('enable', 'nova.cells.opts', group='cells')
 class ConsoleAuthManager(manager.Manager):
     """Manages token based authentication."""
 
-    target = messaging.Target(version='2.0')
+    target = messaging.Target(version='2.1')
 
     def __init__(self, scheduler_driver=None, *args, **kwargs):
         super(ConsoleAuthManager, self).__init__(service_name='consoleauth',
@@ -65,7 +65,8 @@ class ConsoleAuthManager(manager.Manager):
         return tokens
 
     def authorize_console(self, context, token, console_type, host, port,
-                          internal_access_path, instance_uuid):
+                          internal_access_path, instance_uuid,
+                          access_url=None):
 
         token_dict = {'token': token,
                       'instance_uuid': instance_uuid,
@@ -73,6 +74,7 @@ class ConsoleAuthManager(manager.Manager):
                       'host': host,
                       'port': port,
                       'internal_access_path': internal_access_path,
+                      'access_url': access_url,
                       'last_activity_at': time.time()}
         data = jsonutils.dumps(token_dict)
 

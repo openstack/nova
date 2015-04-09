@@ -20,6 +20,7 @@ import contextlib
 
 import mock
 from oslo_config import cfg
+import six
 
 from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import context
@@ -29,6 +30,8 @@ CONF = cfg.CONF
 
 
 class ConsoleAuthRpcAPITestCase(test.NoDBTestCase):
+    DROPPED_ARG = object()
+
     def _test_consoleauth_api(self, method, **kwargs):
         do_cast = kwargs.pop('_do_cast', False)
 
@@ -40,6 +43,10 @@ class ConsoleAuthRpcAPITestCase(test.NoDBTestCase):
 
         orig_prepare = rpcapi.client.prepare
 
+        version = kwargs.pop('version', None)
+        rpc_kwargs = {k: v for k, v in six.iteritems(kwargs)
+                      if v is not self.DROPPED_ARG}
+
         with contextlib.nested(
             mock.patch.object(rpcapi.client, 'cast' if do_cast else 'call'),
             mock.patch.object(rpcapi.client, 'prepare'),
@@ -49,19 +56,35 @@ class ConsoleAuthRpcAPITestCase(test.NoDBTestCase):
         ):
             prepare_mock.return_value = rpcapi.client
             rpc_mock.return_value = None if do_cast else 'foo'
-            csv_mock.side_effect = (
-                lambda v: orig_prepare().can_send_version())
+
+            def fake_csv(v):
+                if version:
+                    return orig_prepare(
+                        version_cap=version).can_send_version(version=v)
+                else:
+                    return orig_prepare().can_send_version()
+            csv_mock.side_effect = fake_csv
 
             retval = getattr(rpcapi, method)(ctxt, **kwargs)
             self.assertEqual(retval, rpc_mock.return_value)
 
-            prepare_mock.assert_called_once_with()
-            rpc_mock.assert_called_once_with(ctxt, method, **kwargs)
+            if version:
+                prepare_mock.assert_called_once_with(version=version)
+            else:
+                prepare_mock.assert_called_once_with()
+            rpc_mock.assert_called_once_with(ctxt, method, **rpc_kwargs)
 
     def test_authorize_console(self):
         self._test_consoleauth_api('authorize_console', token='token',
                 console_type='ctype', host='h', port='p',
-                internal_access_path='iap', instance_uuid="instance")
+                internal_access_path='iap', instance_uuid="instance",
+                access_url=self.DROPPED_ARG, version='2.0')
+
+    def test_authorize_console_access_url(self):
+        self._test_consoleauth_api('authorize_console', token='token',
+                console_type='ctype', host='h', port='p',
+                internal_access_path='iap', instance_uuid="instance",
+                access_url="fake_access_url", version='2.1')
 
     def test_check_token(self):
         self._test_consoleauth_api('check_token', token='t')

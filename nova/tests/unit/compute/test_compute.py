@@ -8979,7 +8979,8 @@ class ComputeAPITestCase(BaseTestCase):
                                  'authorize_console')
         self.compute_api.consoleauth_rpcapi.authorize_console(
             self.context, 'fake_token', fake_console_type, 'fake_console_host',
-            'fake_console_port', 'fake_access_path', 'fake_uuid')
+            'fake_console_port', 'fake_access_path', 'fake_uuid',
+            access_url='fake_console_url')
 
         self.mox.ReplayAll()
 
@@ -9018,7 +9019,8 @@ class ComputeAPITestCase(BaseTestCase):
                                  'authorize_console')
         self.compute_api.consoleauth_rpcapi.authorize_console(
             self.context, 'fake_token', fake_console_type, 'fake_console_host',
-            'fake_console_port', 'fake_access_path', 'fake_uuid')
+            'fake_console_port', 'fake_access_path', 'fake_uuid',
+            access_url='fake_console_url')
 
         self.mox.ReplayAll()
 
@@ -9057,7 +9059,8 @@ class ComputeAPITestCase(BaseTestCase):
                                  'authorize_console')
         self.compute_api.consoleauth_rpcapi.authorize_console(
             self.context, 'fake_token', fake_console_type, 'fake_console_host',
-            'fake_console_port', 'fake_access_path', 'fake_uuid')
+            'fake_console_port', 'fake_access_path', 'fake_uuid',
+            access_url='fake_console_url')
 
         self.mox.ReplayAll()
 
@@ -9097,7 +9100,8 @@ class ComputeAPITestCase(BaseTestCase):
             self.compute_api.consoleauth_rpcapi.authorize_console(
                     self.context, 'fake_token', fake_console_type,
                     'fake_serial_host', 'fake_tcp_port',
-                    'fake_access_path', 'fake_uuid')
+                    'fake_access_path', 'fake_uuid',
+                    access_url='fake_access_url')
 
             console = self.compute_api.get_serial_console(self.context,
                                                           fake_instance,

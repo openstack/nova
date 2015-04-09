@@ -2858,7 +2858,8 @@ class API(base.Base):
         self.consoleauth_rpcapi.authorize_console(context,
                 connect_info['token'], console_type,
                 connect_info['host'], connect_info['port'],
-                connect_info['internal_access_path'], instance.uuid)
+                connect_info['internal_access_path'], instance.uuid,
+                access_url=connect_info['access_url'])
 
         return {'url': connect_info['access_url']}
 
@@ -2878,7 +2879,8 @@ class API(base.Base):
         self.consoleauth_rpcapi.authorize_console(context,
                 connect_info['token'], console_type,
                 connect_info['host'], connect_info['port'],
-                connect_info['internal_access_path'], instance.uuid)
+                connect_info['internal_access_path'], instance.uuid,
+                access_url=connect_info['access_url'])
 
         return {'url': connect_info['access_url']}
 
@@ -2898,7 +2900,8 @@ class API(base.Base):
         self.consoleauth_rpcapi.authorize_console(context,
                 connect_info['token'], console_type,
                 connect_info['host'], connect_info['port'],
-                connect_info['internal_access_path'], instance.uuid)
+                connect_info['internal_access_path'], instance.uuid,
+                access_url=connect_info['access_url'])
 
         return {'url': connect_info['access_url']}
 
@@ -2919,7 +2922,8 @@ class API(base.Base):
         self.consoleauth_rpcapi.authorize_console(context,
                 connect_info['token'], console_type,
                 connect_info['host'], connect_info['port'],
-                connect_info['internal_access_path'], instance.uuid)
+                connect_info['internal_access_path'], instance.uuid,
+                access_url=connect_info['access_url'])
         return {'url': connect_info['access_url']}
 
     @check_instance_host
