@@ -4,11 +4,11 @@
             "id": "%(id)s",
             "links": [
                 {
-                    "href": "%(host)s/v3/servers/%(id)s",
+                    "href": "%(host)s/v2/openstack/servers/%(id)s",
                     "rel": "self"
                 },
                 {
-                    "href": "%(host)s/servers/%(id)s",
+                    "href": "%(host)s/openstack/servers/%(id)s",
                     "rel": "bookmark"
                 }
             ],

@@ -21,6 +21,8 @@ from nova.tests.functional.v3 import test_servers
 CONF = cfg.CONF
 CONF.import_opt('osapi_hide_server_address_states',
                 'nova.api.openstack.compute.plugins.v3.hide_server_addresses')
+CONF.import_opt('osapi_compute_extension',
+                'nova.api.openstack.compute.extensions')
 
 
 class ServersSampleHideAddressesJsonTest(test_servers.ServersSampleJsonTest):
@@ -29,8 +31,13 @@ class ServersSampleHideAddressesJsonTest(test_servers.ServersSampleJsonTest):
     # test_servers.ServersSampleJsonTest does and so it won't default
     # to the extension name
     sample_dir = extension_name
-    extra_extensions_to_load = []
-    _api_version = 'v3'
+
+    def _get_flags(self):
+        f = super(ServersSampleHideAddressesJsonTest, self)._get_flags()
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.hide_server_addresses.'
+            'Hide_server_addresses')
+        return f
 
     def setUp(self):
         # We override osapi_hide_server_address_states in order
