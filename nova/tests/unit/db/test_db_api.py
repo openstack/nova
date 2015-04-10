@@ -7474,6 +7474,18 @@ class BwUsageTestCase(test.TestCase, ModelsObjectComparatorMixin):
             self._assertEqualObjects(expected_bw_usages[usage['uuid']], usage,
                                      ignored_keys=self._ignored_keys)
 
+    def _test_bw_usage_update(self, **expected_bw_usage):
+        bw_usage = db.bw_usage_update(self.ctxt, **expected_bw_usage)
+        self._assertEqualObjects(expected_bw_usage, bw_usage,
+                                 ignored_keys=self._ignored_keys)
+
+        uuid = expected_bw_usage['uuid']
+        mac = expected_bw_usage['mac']
+        start_period = expected_bw_usage['start_period']
+        bw_usage = db.bw_usage_get(self.ctxt, uuid, start_period, mac)
+        self._assertEqualObjects(expected_bw_usage, bw_usage,
+                                 ignored_keys=self._ignored_keys)
+
     def test_bw_usage_get(self):
         now = timeutils.utcnow()
         start_period = now - datetime.timedelta(seconds=10)
@@ -7491,15 +7503,44 @@ class BwUsageTestCase(test.TestCase, ModelsObjectComparatorMixin):
         bw_usage = db.bw_usage_get(self.ctxt, 'fake_uuid1', start_period_str,
                                    'fake_mac1')
         self.assertIsNone(bw_usage)
+        self._test_bw_usage_update(**expected_bw_usage)
 
-        db.bw_usage_update(self.ctxt, 'fake_uuid1',
-                'fake_mac1', start_period_str,
-                100, 200, 12345, 67890)
+    def test_bw_usage_update_new(self):
+        now = timeutils.utcnow()
+        start_period = now - datetime.timedelta(seconds=10)
 
-        bw_usage = db.bw_usage_get(self.ctxt, 'fake_uuid1', start_period_str,
-                                   'fake_mac1')
-        self._assertEqualObjects(expected_bw_usage, bw_usage,
-                                 ignored_keys=self._ignored_keys)
+        expected_bw_usage = {'uuid': 'fake_uuid1',
+                             'mac': 'fake_mac1',
+                             'start_period': start_period,
+                             'bw_in': 100,
+                             'bw_out': 200,
+                             'last_ctr_in': 12345,
+                             'last_ctr_out': 67890,
+                             'last_refreshed': now}
+
+        self._test_bw_usage_update(**expected_bw_usage)
+
+    def test_bw_usage_update_existing(self):
+        now = timeutils.utcnow()
+        start_period = now - datetime.timedelta(seconds=10)
+
+        expected_bw_usage = {'uuid': 'fake_uuid1',
+                             'mac': 'fake_mac1',
+                             'start_period': start_period,
+                             'bw_in': 100,
+                             'bw_out': 200,
+                             'last_ctr_in': 12345,
+                             'last_ctr_out': 67890,
+                             'last_refreshed': now}
+
+        self._test_bw_usage_update(**expected_bw_usage)
+
+        expected_bw_usage['bw_in'] = 300
+        expected_bw_usage['bw_out'] = 400
+        expected_bw_usage['last_ctr_in'] = 23456
+        expected_bw_usage['last_ctr_out'] = 78901
+
+        self._test_bw_usage_update(**expected_bw_usage)
 
 
 class Ec2TestCase(test.TestCase):
