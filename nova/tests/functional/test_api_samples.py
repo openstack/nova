@@ -875,19 +875,6 @@ class AdminActionsSamplesJsonTest(ServersSampleBase):
         super(AdminActionsSamplesJsonTest, self).setUp()
         self.uuid = self._post_server()
 
-    def test_post_pause(self):
-        # Get api samples to pause server request.
-        response = self._do_post('servers/%s/action' % self.uuid,
-                                 'admin-actions-pause', {})
-        self.assertEqual(response.status_code, 202)
-
-    def test_post_unpause(self):
-        # Get api samples to unpause server request.
-        self.test_post_pause()
-        response = self._do_post('servers/%s/action' % self.uuid,
-                                 'admin-actions-unpause', {})
-        self.assertEqual(response.status_code, 202)
-
     @mock.patch('nova.conductor.manager.ComputeTaskManager._cold_migrate')
     def test_post_migrate(self, mock_cold_migrate):
         # Get api samples to migrate server request.
@@ -905,19 +892,6 @@ class AdminActionsSamplesJsonTest(ServersSampleBase):
         # Get api samples to inject network info request.
         response = self._do_post('servers/%s/action' % self.uuid,
                                  'admin-actions-inject-network-info', {})
-        self.assertEqual(response.status_code, 202)
-
-    def test_post_lock_server(self):
-        # Get api samples to lock server request.
-        response = self._do_post('servers/%s/action' % self.uuid,
-                                 'admin-actions-lock-server', {})
-        self.assertEqual(response.status_code, 202)
-
-    def test_post_unlock_server(self):
-        # Get api samples to unlock server request.
-        self.test_post_lock_server()
-        response = self._do_post('servers/%s/action' % self.uuid,
-                                 'admin-actions-unlock-server', {})
         self.assertEqual(response.status_code, 202)
 
     def test_post_live_migrate_server(self):
