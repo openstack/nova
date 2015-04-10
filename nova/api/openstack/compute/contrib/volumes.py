@@ -152,7 +152,10 @@ class VolumeController(wsgi.Controller):
         snapshot_id = vol.get('snapshot_id')
 
         if snapshot_id is not None:
-            snapshot = self.volume_api.get_snapshot(context, snapshot_id)
+            try:
+                snapshot = self.volume_api.get_snapshot(context, snapshot_id)
+            except exception.SnapshotNotFound as e:
+                raise exc.HTTPNotFound(explanation=e.format_message())
         else:
             snapshot = None
 
