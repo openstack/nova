@@ -690,6 +690,7 @@ class ComputeManager(manager.Manager):
 
         super(ComputeManager, self).__init__(service_name="compute",
                                              *args, **kwargs)
+        self.additional_endpoints.append(_ComputeV4Proxy(self))
 
         # NOTE(russellb) Load the driver last.  It may call back into the
         # compute manager via the virtapi, so we want it to be fully
@@ -6545,3 +6546,302 @@ class ComputeManager(manager.Manager):
         image_meta = compute_utils.get_image_metadata(
             context, self.image_api, image_ref, instance)
         self.driver.unquiesce(context, instance, image_meta)
+
+
+# TODO(danms): This goes away immediately in Lemming and is just
+# present in Kilo so that we can receive v3.x and v4.0 messages
+class _ComputeV4Proxy(object):
+
+    target = messaging.Target(version='4.0')
+
+    def __init__(self, manager):
+        self.manager = manager
+
+    def add_aggregate_host(self, ctxt, aggregate, host, slave_info=None):
+        return self.manager.add_aggregate_host(ctxt, aggregate, host,
+                                               slave_info=slave_info)
+
+    def add_fixed_ip_to_instance(self, ctxt, network_id, instance):
+        return self.manager.add_fixed_ip_to_instance(ctxt,
+                                                     network_id,
+                                                     instance)
+
+    def attach_interface(self, ctxt, instance, network_id, port_id,
+                         requested_ip):
+        return self.manager.attach_interface(ctxt, instance, network_id,
+                                             port_id, requested_ip)
+
+    def attach_volume(self, ctxt, instance, bdm):
+        # NOTE(danms): In 3.x, attach_volume had mountpoint and volume_id
+        # parameters, which are gone from 4.x. Provide None for each to
+        # the 3.x manager above and remove in Lemming.
+        return self.manager.attach_volume(ctxt, None, None,
+                                          instance=instance,
+                                          bdm=bdm)
+
+    def change_instance_metadata(self, ctxt, instance, diff):
+        return self.manager.change_instance_metadata(ctxt, instance, diff)
+
+    def check_can_live_migrate_destination(self, ctxt, instance, destination,
+                                           block_migration, disk_over_commit):
+        return self.manager.check_can_live_migrate_destination(
+            ctxt, instance, destination, block_migration, disk_over_commit)
+
+    def check_can_live_migrate_source(self, ctxt, instance, dest_check_data):
+        return self.manager.check_can_live_migrate_source(ctxt, instance,
+                                                          dest_check_data)
+
+    def check_instance_shared_storage(self, ctxt, instance, data):
+        return self.manager.check_instance_shared_storage(ctxt, instance, data)
+
+    def confirm_resize(self, ctxt, instance, reservations, migration):
+        return self.manager.confirm_resize(ctxt, instance,
+                                           reservations, migration)
+
+    def detach_interface(self, ctxt, instance, port_id):
+        return self.manager.detach_interface(ctxt, instance, port_id)
+
+    def detach_volume(self, ctxt, volume_id, instance):
+        # NOTE(danms): Pass instance by kwarg to help the object_compat
+        # decorator, as real RPC dispatch does.
+        return self.manager.detach_volume(ctxt, volume_id, instance=instance)
+
+    def finish_resize(self, ctxt, disk_info, image, instance,
+                      reservations, migration):
+        return self.manager.finish_resize(ctxt, disk_info, image, instance,
+                                          reservations, migration)
+
+    def finish_revert_resize(self, ctxt, instance,
+                             reservations, migration):
+        return self.manager.finish_revert_resize(ctxt, instance,
+                                                 reservations, migration)
+
+    def get_console_output(self, ctxt, instance, tail_length):
+        return self.manager.get_console_output(ctxt, instance, tail_length)
+
+    def get_console_pool_info(self, ctxt, console_type):
+        return self.manager.get_console_pool_info(ctxt, console_type)
+
+    def get_console_topic(self, ctxt):
+        return self.manager.get_console_topic(ctxt)
+
+    def get_diagnostics(self, ctxt, instance):
+        return self.manager.get_diagnostics(ctxt, instance)
+
+    def get_instance_diagnostics(self, ctxt, instance):
+        return self.manager.get_instance_diagnostics(ctxt, instance)
+
+    def get_vnc_console(self, ctxt, console_type, instance):
+        return self.manager.get_vnc_console(ctxt, console_type, instance)
+
+    def get_spice_console(self, ctxt, console_type, instance):
+        return self.manager.get_spice_console(ctxt, console_type, instance)
+
+    def get_rdp_console(self, ctxt, console_type, instance):
+        return self.manager.get_rdp_console(ctxt, console_type, instance)
+
+    def get_serial_console(self, ctxt, console_type, instance):
+        return self.manager.get_serial_console(ctxt, console_type, instance)
+
+    def validate_console_port(self, ctxt, instance, port, console_type):
+        return self.manager.validate_console_port(ctxt, instance, port,
+                                                  console_type)
+
+    def host_maintenance_mode(self, ctxt, host, mode):
+        return self.manager.host_maintenance_mode(ctxt, host, mode)
+
+    def host_power_action(self, ctxt, action):
+        return self.manager.host_power_action(ctxt, action)
+
+    def inject_network_info(self, ctxt, instance):
+        return self.manager.inject_network_info(ctxt, instance)
+
+    def live_migration(self, ctxt, instance, dest, block_migration,
+                       migrate_data=None):
+        return self.manager.live_migration(ctxt, instance, dest,
+                                           block_migration,
+                                           migrate_data=migrate_data)
+
+    def pause_instance(self, ctxt, instance):
+        return self.manager.pause_instance(ctxt, instance)
+
+    def post_live_migration_at_destination(self, ctxt, instance,
+                                           block_migration):
+        return self.manager.post_live_migration_at_destination(
+            ctxt, instance, block_migration)
+
+    def pre_live_migration(self, ctxt, instance, block_migration, disk,
+                           migrate_data=None):
+        return self.manager.pre_live_migration(ctxt, instance, block_migration,
+                                               disk, migrate_data=None)
+
+    def prep_resize(self, ctxt, image, instance, instance_type,
+                    reservations=None, request_spec=None,
+                    filter_properties=None, node=None, clean_shutdown=True):
+        return self.manager.prep_resize(ctxt, image, instance, instance_type,
+                                        reservations=reservations,
+                                        request_spec=request_spec,
+                                        filter_properties=filter_properties,
+                                        node=node,
+                                        clean_shutdown=clean_shutdown)
+
+    def reboot_instance(self, ctxt, instance, block_device_info, reboot_type):
+        return self.manager.reboot_instance(ctxt, instance, block_device_info,
+                                            reboot_type)
+
+    def rebuild_instance(self, ctxt, instance, orig_image_ref, image_ref,
+                         injected_files, new_pass, orig_sys_metadata,
+                         bdms, recreate, on_shared_storage,
+                         preserve_ephemeral=False):
+        return self.manager.rebuild_instance(
+            ctxt, instance, orig_image_ref, image_ref,
+            injected_files, new_pass, orig_sys_metadata,
+            bdms, recreate, on_shared_storage,
+            preserve_ephemeral=preserve_ephemeral)
+
+    def refresh_provider_fw_rules(self, ctxt):
+        return self.manager.refresh_provider_fw_rules(ctxt)
+
+    def remove_aggregate_host(self, ctxt, host, slave_info, aggregate):
+        return self.manager.remove_aggregate_host(ctxt,
+                                                  host, slave_info,
+                                                  aggregate)
+
+    def remove_fixed_ip_from_instance(self, ctxt, address, instance):
+        return self.manager.remove_fixed_ip_from_instance(ctxt, address,
+                                                          instance)
+
+    def remove_volume_connection(self, ctxt, instance, volume_id):
+        return self.manager.remove_volume_connection(ctxt, instance, volume_id)
+
+    def rescue_instance(self, ctxt, instance, rescue_password,
+                        rescue_image_ref, clean_shutdown):
+        return self.manager.rescue_instance(ctxt, instance, rescue_password,
+                                            rescue_image_ref=rescue_image_ref,
+                                            clean_shutdown=clean_shutdown)
+
+    def reset_network(self, ctxt, instance):
+        return self.manager.reset_network(ctxt, instance)
+
+    def resize_instance(self, ctxt, instance, image,
+                        reservations, migration, instance_type,
+                        clean_shutdown=True):
+        return self.manager.resize_instance(ctxt, instance, image,
+                                            reservations, migration,
+                                            instance_type,
+                                            clean_shutdown=clean_shutdown)
+
+    def resume_instance(self, ctxt, instance):
+        return self.manager.resume_instance(ctxt, instance)
+
+    def revert_resize(self, ctxt, instance, migration, reservations=None):
+        return self.manager.revert_resize(ctxt, instance, migration,
+                                          reservations=reservations)
+
+    def rollback_live_migration_at_destination(self, ctxt, instance,
+                                               destroy_disks,
+                                               migrate_data):
+        return self.manager.rollback_live_migration_at_destination(
+            ctxt, instance, destroy_disks=destroy_disks,
+            migrate_data=migrate_data)
+
+    def set_admin_password(self, ctxt, instance, new_pass):
+        return self.manager.set_admin_password(ctxt, instance, new_pass)
+
+    def set_host_enabled(self, ctxt, enabled):
+        return self.manager.set_host_enabled(ctxt, enabled)
+
+    def swap_volume(self, ctxt, instance, old_volume_id, new_volume_id):
+        return self.manager.swap_volume(ctxt, instance, old_volume_id,
+                                        new_volume_id)
+
+    def get_host_uptime(self, ctxt):
+        return self.manager.get_host_uptime(ctxt)
+
+    def reserve_block_device_name(self, ctxt, instance, device, volume_id,
+                                  disk_bus=None, device_type=None):
+        return self.manager.reserve_block_device_name(ctxt, instance, device,
+                                                      volume_id,
+                                                      disk_bus=disk_bus,
+                                                      device_type=device_type,
+                                                      return_bdm_object=True)
+
+    def backup_instance(self, ctxt, image_id, instance, backup_type,
+                        rotation):
+        return self.manager.backup_instance(ctxt, image_id, instance,
+                                            backup_type, rotation)
+
+    def snapshot_instance(self, ctxt, image_id, instance):
+        return self.manager.snapshot_instance(ctxt, image_id, instance)
+
+    def start_instance(self, ctxt, instance):
+        return self.manager.start_instance(ctxt, instance)
+
+    def stop_instance(self, ctxt, instance, clean_shutdown):
+        return self.manager.stop_instance(ctxt, instance, clean_shutdown)
+
+    def suspend_instance(self, ctxt, instance):
+        return self.manager.suspend_instance(ctxt, instance)
+
+    def terminate_instance(self, ctxt, instance, bdms, reservations=None):
+        return self.manager.terminate_instance(ctxt, instance, bdms,
+                                               reservations=reservations)
+
+    def unpause_instance(self, ctxt, instance):
+        return self.manager.unpause_instance(ctxt, instance)
+
+    def unrescue_instance(self, ctxt, instance):
+        return self.manager.unrescue_instance(ctxt, instance)
+
+    def soft_delete_instance(self, ctxt, instance, reservations):
+        return self.manager.soft_delete_instance(ctxt, instance, reservations)
+
+    def restore_instance(self, ctxt, instance):
+        return self.manager.restore_instance(ctxt, instance)
+
+    def shelve_instance(self, ctxt, instance, image_id=None,
+                        clean_shutdown=True):
+        return self.manager.shelve_instance(ctxt, instance, image_id=image_id,
+                                            clean_shutdown=clean_shutdown)
+
+    def shelve_offload_instance(self, ctxt, instance, clean_shutdown):
+        return self.manager.shelve_offload_instance(ctxt, instance,
+                                                    clean_shutdown)
+
+    def unshelve_instance(self, ctxt, instance, image=None,
+                          filter_properties=None, node=None):
+        return self.manager.unshelve_instance(
+            ctxt, instance, image=image,
+            filter_properties=filter_properties,
+            node=node)
+
+    def volume_snapshot_create(self, ctxt, instance, volume_id, create_info):
+        return self.manager.volume_snapshot_create(ctxt, instance, volume_id,
+                                                   create_info)
+
+    def volume_snapshot_delete(self, ctxt, instance, volume_id, snapshot_id,
+                               delete_info):
+        return self.manager.volume_snapshot_delete(ctxt, instance, volume_id,
+                                                   snapshot_id, delete_info)
+
+    def external_instance_event(self, ctxt, instances, events):
+        return self.manager.external_instance_event(ctxt, instances, events)
+
+    def build_and_run_instance(self, ctxt, instance, image, request_spec,
+                               filter_properties, admin_password=None,
+                               injected_files=None, requested_networks=None,
+                               security_groups=None, block_device_mapping=None,
+                               node=None, limits=None):
+        return self.manager.build_and_run_instance(
+            ctxt, instance, image, request_spec, filter_properties,
+            admin_password=admin_password, injected_files=injected_files,
+            requested_networks=requested_networks,
+            security_groups=security_groups,
+            block_device_mapping=block_device_mapping,
+            node=node, limits=limits)
+
+    def quiesce_instance(self, ctxt, instance):
+        return self.manager.quiesce_instance(ctxt, instance)
+
+    def unquiesce_instance(self, ctxt, instance, mapping=None):
+        return self.manager.unquiesce_instance(ctxt, instance, mapping=mapping)
