@@ -1414,7 +1414,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         caps.host = vconfig.LibvirtConfigCapsHost()
         caps.host.cpu = vconfig.LibvirtConfigCPU()
         caps.host.cpu.arch = "x86_64"
-        caps.host.topology = self._fake_caps_numa_topology()
+        caps.host.topology = self._fake_caps_numa_topology(kb_mem=4194304)
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
@@ -8746,46 +8746,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                  cells_per_host=4,
                                  sockets_per_cell=1,
                                  cores_per_socket=1,
-                                 threads_per_core=2):
-        topology = vconfig.LibvirtConfigCapsNUMATopology()
+                                 threads_per_core=2,
+                                 kb_mem=1048576):
 
-        for cellid in range(cells_per_host):
-            cell = vconfig.LibvirtConfigCapsNUMACell()
-            cell.id = cellid
-            cell.memory = 1024 * units.Ki
-
-            cell.cpus = []
-            for socket in range(sockets_per_cell):
-                for core in range(cores_per_socket):
-                    for thread in range(threads_per_core):
-                        cpu = vconfig.LibvirtConfigCapsNUMACPU()
-                        # CPU ID is globally unique
-                        cpu.id = (
-                            (cellid * sockets_per_cell *
-                             cores_per_socket * threads_per_core) +
-                            (socket * cores_per_socket *
-                             threads_per_core) +
-                            (core * threads_per_core) +
-                            thread)
-                        # Socket ID is globally unique
-                        cpu.socket_id = (
-                            (cellid * sockets_per_cell) +
-                            socket)
-                        # Core ID is unique within a socket
-                        cpu.core_id = core
-                        # Siblings is list of cpu.id for all threads
-                        # in a core
-                        first_thread = (
-                            (cellid * sockets_per_cell *
-                             cores_per_socket * threads_per_core) +
-                            (socket * cores_per_socket *
-                             threads_per_core) +
-                            (core * threads_per_core))
-                        cpu.siblings = set(
-                            range(first_thread,
-                                  first_thread + threads_per_core))
-                        cell.cpus.append(cpu)
-
+        # Generate mempages list per cell
+        cell_mempages = list()
+        for cellid in xrange(cells_per_host):
             mempages_0 = vconfig.LibvirtConfigCapsNUMAPages()
             mempages_0.size = 4
             mempages_0.total = 1024 * cellid
@@ -8794,8 +8760,14 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             mempages_1.size = 2048
             mempages_1.total = 0 + cellid
 
-            cell.mempages = [mempages_0, mempages_1]
-            topology.cells.append(cell)
+            cell_mempages.append([mempages_0, mempages_1])
+
+        topology = fakelibvirt.HostInfo._gen_numa_topology(cells_per_host,
+                                         sockets_per_cell,
+                                         cores_per_socket,
+                                         threads_per_core,
+                                         kb_mem=kb_mem,
+                                         numa_mempages_list=cell_mempages)
 
         return topology
 
@@ -8807,16 +8779,16 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         expected_topo_dict = {'cells': [
                                 {'cpus': '0,1', 'cpu_usage': 0,
-                                  'mem': {'total': 1024, 'used': 0},
+                                  'mem': {'total': 256, 'used': 0},
                                   'id': 0},
                                 {'cpus': '3', 'cpu_usage': 0,
-                                  'mem': {'total': 1024, 'used': 0},
+                                  'mem': {'total': 256, 'used': 0},
                                   'id': 1},
                                 {'cpus': '', 'cpu_usage': 0,
-                                  'mem': {'total': 1024, 'used': 0},
+                                  'mem': {'total': 256, 'used': 0},
                                   'id': 2},
                                 {'cpus': '', 'cpu_usage': 0,
-                                  'mem': {'total': 1024, 'used': 0},
+                                  'mem': {'total': 256, 'used': 0},
                                   'id': 3}]}
         with contextlib.nested(
                 mock.patch.object(host.Host, "get_capabilities",
