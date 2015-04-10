@@ -13,15 +13,30 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_config import cfg
 
+from nova.api.openstack.compute.contrib import fping as fping_v2
 from nova.api.openstack.compute.plugins.v3 import fping
 from nova.tests.functional.v3 import test_servers
 from nova.tests.unit.api.openstack.compute.contrib import test_fping
 from nova import utils
 
+CONF = cfg.CONF
+CONF.import_opt('osapi_compute_extension',
+                'nova.api.openstack.compute.extensions')
+
 
 class FpingSampleJsonTests(test_servers.ServersSampleBase):
     extension_name = "os-fping"
+    extra_extensions_to_load = ["os-access-ips"]
+    _api_version = 'v2'
+
+    def _get_flags(self):
+        f = super(FpingSampleJsonTests, self)._get_flags()
+        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.fping.Fping')
+        return f
 
     def setUp(self):
         super(FpingSampleJsonTests, self).setUp()
@@ -30,6 +45,8 @@ class FpingSampleJsonTests(test_servers.ServersSampleBase):
             pass
         self.stubs.Set(utils, "execute", test_fping.execute)
         self.stubs.Set(fping.FpingController, "check_fping",
+                       fake_check_fping)
+        self.stubs.Set(fping_v2.FpingController, "check_fping",
                        fake_check_fping)
 
     def test_get_fping(self):
