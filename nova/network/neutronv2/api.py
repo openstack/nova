@@ -465,6 +465,64 @@ class API(base_api.NetworkAPI):
 
         return ports, net_ids, ordered_networks, available_macs
 
+    def _process_security_groups(self, instance, neutron, security_groups):
+        """Processes and validates requested security groups for allocation.
+
+        Iterates over the list of requested security groups, validating the
+        request and filtering out the list of security group IDs to use for
+        port allocation.
+
+        :param instance: allocate networks on this instance
+        :type instance: nova.objects.Instance
+        :param neutron: neutron client session
+        :type neutron: neutronclient.v2_0.client.Client
+        :param security_groups: list of requested security group name or IDs
+            to use when allocating new ports for the instance
+        :return: list of security group IDs to use when allocating new ports
+        :raises nova.exception.NoUniqueMatch: If multiple security groups
+            are requested with the same name.
+        :raises nova.exception.SecurityGroupNotFound: If a requested security
+            group is not in the tenant-filtered list of available security
+            groups in Neutron.
+        """
+        security_group_ids = []
+        # TODO(arosen) Should optimize more to do direct query for security
+        # group if len(security_groups) == 1
+        if len(security_groups):
+            search_opts = {'tenant_id': instance.project_id}
+            user_security_groups = neutron.list_security_groups(
+                **search_opts).get('security_groups')
+
+            for security_group in security_groups:
+                name_match = None
+                uuid_match = None
+                for user_security_group in user_security_groups:
+                    if user_security_group['name'] == security_group:
+                        # If there was a name match in a previous iteration
+                        # of the loop, we have a conflict.
+                        if name_match:
+                            raise exception.NoUniqueMatch(
+                                _("Multiple security groups found matching"
+                                  " '%s'. Use an ID to be more specific.") %
+                                   security_group)
+
+                        name_match = user_security_group['id']
+
+                    if user_security_group['id'] == security_group:
+                        uuid_match = user_security_group['id']
+
+                # If a user names the security group the same as
+                # another's security groups uuid, the name takes priority.
+                if name_match:
+                    security_group_ids.append(name_match)
+                elif uuid_match:
+                    security_group_ids.append(uuid_match)
+                else:
+                    raise exception.SecurityGroupNotFound(
+                        security_group_id=security_group)
+
+        return security_group_ids
+
     def allocate_for_instance(self, context, instance, **kwargs):
         """Allocate network resources for the instance.
 
@@ -548,39 +606,8 @@ class API(base_api.NetworkAPI):
         self._check_external_network_attach(context, nets)
 
         security_groups = kwargs.get('security_groups', [])
-        security_group_ids = []
-
-        # TODO(arosen) Should optimize more to do direct query for security
-        # group if len(security_groups) == 1
-        if len(security_groups):
-            search_opts = {'tenant_id': instance.project_id}
-            user_security_groups = neutron.list_security_groups(
-                **search_opts).get('security_groups')
-
-        for security_group in security_groups:
-            name_match = None
-            uuid_match = None
-            for user_security_group in user_security_groups:
-                if user_security_group['name'] == security_group:
-                    if name_match:
-                        raise exception.NoUniqueMatch(
-                            _("Multiple security groups found matching"
-                              " '%s'. Use an ID to be more specific.") %
-                               security_group)
-
-                    name_match = user_security_group['id']
-                if user_security_group['id'] == security_group:
-                    uuid_match = user_security_group['id']
-
-            # If a user names the security group the same as
-            # another's security groups uuid, the name takes priority.
-            if not name_match and not uuid_match:
-                raise exception.SecurityGroupNotFound(
-                    security_group_id=security_group)
-            elif name_match:
-                security_group_ids.append(name_match)
-            elif uuid_match:
-                security_group_ids.append(uuid_match)
+        security_group_ids = self._process_security_groups(
+                                    instance, neutron, security_groups)
 
         preexisting_port_ids = []
         created_port_ids = []
