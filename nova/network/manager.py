@@ -1311,6 +1311,9 @@ class NetworkManager(manager.Manager):
         subnets = itertools.izip_longest(subnets_v4, subnets_v6)
         for index, (subnet_v4, subnet_v6) in enumerate(subnets):
             net = objects.Network(context=context)
+            uuid = kwargs.get('uuid')
+            if uuid:
+                net.uuid = uuid
             net.bridge = bridge
             net.bridge_interface = bridge_interface
             net.multi_host = multi_host
