@@ -115,7 +115,8 @@ class HostTestCase(test.NoDBTestCase):
         self.assertEqual(0, len(log_mock.method_calls),
                          'LOG should not be used in _connect_auth_cb.')
 
-    def test_event_dispatch(self):
+    @mock.patch.object(greenthread, 'spawn_after')
+    def test_event_dispatch(self, mock_spawn_after):
         # Validate that the libvirt self-pipe for forwarding
         # events between threads is working sanely
         def handler(event):
@@ -151,19 +152,25 @@ class HostTestCase(test.NoDBTestCase):
         hostimpl._queue_event(event4)
         hostimpl._dispatch_events()
 
-        want_events = [event1, event2, event3, event4]
+        want_events = [event1, event2, event3]
         self.assertEqual(want_events, got_events)
+
+        # STOPPED is delayed so it's handled separately
+        mock_spawn_after.assert_called_once_with(
+            hostimpl._lifecycle_delay, hostimpl._event_emit, event4)
 
     def test_event_lifecycle(self):
         got_events = []
 
         # Validate that libvirt events are correctly translated
         # to Nova events
-        def handler(event):
-            got_events.append(event)
+        def spawn_after(seconds, func, *args, **kwargs):
+            got_events.append(args[0])
+            return mock.Mock(spec=greenthread.GreenThread)
 
+        greenthread.spawn_after = mock.Mock(side_effect=spawn_after)
         hostimpl = host.Host("qemu:///system",
-                             lifecycle_event_handler=handler)
+                             lifecycle_event_handler=lambda e: None)
         conn = hostimpl.get_connection()
 
         hostimpl._init_events_pipe()
@@ -191,30 +198,18 @@ class HostTestCase(test.NoDBTestCase):
         self.assertEqual(got_events[0].transition,
                          event.EVENT_LIFECYCLE_STOPPED)
 
-    def test_event_emit_delayed_call_now(self):
-        got_events = []
-
-        def handler(event):
-            got_events.append(event)
-
-        hostimpl = host.Host("qemu:///system",
-                             lifecycle_event_handler=handler)
+    def test_event_emit_delayed_call_delayed(self):
         ev = event.LifecycleEvent(
             "cef19ce0-0ca2-11df-855d-b19fbce37686",
             event.EVENT_LIFECYCLE_STOPPED)
-        hostimpl._event_emit_delayed(ev)
-        self.assertEqual(1, len(got_events))
-        self.assertEqual(ev, got_events[0])
-
-    @mock.patch.object(greenthread, 'spawn_after')
-    def test_event_emit_delayed_call_delayed(self, spawn_after_mock):
-        hostimpl = host.Host("xen:///",
-                             lifecycle_event_handler=lambda e: None)
-        ev = event.LifecycleEvent(
-            "cef19ce0-0ca2-11df-855d-b19fbce37686",
-            event.EVENT_LIFECYCLE_STOPPED)
-        hostimpl._event_emit_delayed(ev)
-        spawn_after_mock.assert_called_once_with(15, hostimpl._event_emit, ev)
+        for uri in ("qemu:///system", "xen:///"):
+            spawn_after_mock = mock.Mock()
+            greenthread.spawn_after = spawn_after_mock
+            hostimpl = host.Host(uri,
+                                 lifecycle_event_handler=lambda e: None)
+            hostimpl._event_emit_delayed(ev)
+            spawn_after_mock.assert_called_once_with(
+                15, hostimpl._event_emit, ev)
 
     @mock.patch.object(greenthread, 'spawn_after')
     def test_event_emit_delayed_call_delayed_pending(self, spawn_after_mock):
