@@ -437,14 +437,11 @@ class LibvirtDriver(driver.ComputeDriver):
         self._volume_api = volume.API()
         self._image_api = image.API()
         self._events_delayed = {}
-        # Note(toabctl): During a reboot of a Xen domain, STOPPED and
+        # Note(toabctl): During a reboot of a domain, STOPPED and
         #                STARTED events are sent. To prevent shutting
         #                down the domain during a reboot, delay the
         #                STOPPED lifecycle event some seconds.
-        if CONF.libvirt.virt_type == "xen":
-            self._lifecycle_delay = 15
-        else:
-            self._lifecycle_delay = 0
+        self._lifecycle_delay = 15
 
         sysinfo_serial_funcs = {
             'none': lambda: None,
@@ -656,7 +653,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
             if event.transition == virtevent.EVENT_LIFECYCLE_STOPPED:
                 # Delay STOPPED event, as they may be followed by a STARTED
-                # event in case the instance is rebooting, when runned with Xen
+                # event in case the instance is rebooting
                 id_ = greenthread.spawn_after(self._lifecycle_delay,
                                               self.emit_event, event)
                 self._events_delayed[event.uuid] = id_
