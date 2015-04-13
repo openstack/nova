@@ -6673,7 +6673,7 @@ class _ComputeV4Proxy(object):
     def pre_live_migration(self, ctxt, instance, block_migration, disk,
                            migrate_data=None):
         return self.manager.pre_live_migration(ctxt, instance, block_migration,
-                                               disk, migrate_data=None)
+                                               disk, migrate_data=migrate_data)
 
     def prep_resize(self, ctxt, image, instance, instance_type,
                     reservations=None, request_spec=None,
