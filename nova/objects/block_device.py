@@ -49,7 +49,8 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject,
     # Version 1.6: Instance version 1.18
     # Version 1.7: Add update_or_create method
     # Version 1.8: Instance version 1.19
-    VERSION = '1.8'
+    # Version 1.9: Instance version 1.20
+    VERSION = '1.9'
 
     fields = {
         'id': fields.IntegerField(),
@@ -74,7 +75,7 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject,
     obj_relationships = {
         'instance': [('1.0', '1.13'), ('1.2', '1.14'), ('1.3', '1.15'),
                      ('1.4', '1.16'), ('1.5', '1.17'), ('1.6', '1.18'),
-                     ('1.8', '1.19')],
+                     ('1.8', '1.19'), ('1.9', '1.20')],
     }
 
     @staticmethod
@@ -240,7 +241,8 @@ class BlockDeviceMappingList(base.ObjectListBase, base.NovaObject):
     # Version 1.7: BlockDeviceMapping <= version 1.6
     # Version 1.8: BlockDeviceMapping <= version 1.7
     # Version 1.9: BlockDeviceMapping <= version 1.8
-    VERSION = '1.9'
+    # Version 1.10: BlockDeviceMapping <= version 1.9
+    VERSION = '1.10'
 
     fields = {
         'objects': fields.ListOfObjectsField('BlockDeviceMapping'),
@@ -256,6 +258,7 @@ class BlockDeviceMappingList(base.ObjectListBase, base.NovaObject):
         '1.7': '1.6',
         '1.8': '1.7',
         '1.9': '1.8',
+        '1.10': '1.9',
     }
 
     @base.remotable_classmethod

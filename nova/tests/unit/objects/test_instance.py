@@ -76,7 +76,7 @@ class _TestInstanceObject(object):
         primitive = inst.obj_to_primitive()
         expected = {'nova_object.name': 'Instance',
                     'nova_object.namespace': 'nova',
-                    'nova_object.version': '1.19',
+                    'nova_object.version': inst.VERSION,
                     'nova_object.data':
                         {'uuid': 'fake-uuid',
                          'launched_at': '1955-11-05T00:00:00Z'},
@@ -92,7 +92,7 @@ class _TestInstanceObject(object):
         primitive = inst.obj_to_primitive()
         expected = {'nova_object.name': 'Instance',
                     'nova_object.namespace': 'nova',
-                    'nova_object.version': '1.19',
+                    'nova_object.version': inst.VERSION,
                     'nova_object.data':
                         {'uuid': 'fake-uuid',
                          'access_ip_v4': '1.2.3.4',
@@ -130,6 +130,7 @@ class _TestInstanceObject(object):
         exp_cols.remove('numa_topology')
         exp_cols.remove('pci_requests')
         exp_cols.remove('vcpu_model')
+        exp_cols.remove('ec2_ids')
         exp_cols = filter(lambda x: 'flavor' not in x, exp_cols)
         exp_cols.extend(['extra', 'extra.numa_topology', 'extra.pci_requests',
                          'extra.flavor', 'extra.vcpu_model'])
@@ -704,6 +705,22 @@ class _TestInstanceObject(object):
         self.assertEqual(fake_faults[0], dict(inst.fault.items()))
         self.assertRemotes()
 
+    @mock.patch('nova.objects.EC2Ids.get_by_instance')
+    @mock.patch('nova.db.instance_get_by_uuid')
+    def test_with_ec2_ids(self, mock_get, mock_ec2):
+        fake_inst = dict(self.fake_instance)
+        fake_uuid = fake_inst['uuid']
+        mock_get.return_value = fake_inst
+        fake_ec2_ids = objects.EC2Ids(instance_id='fake-inst',
+                                      ami_id='fake-ami')
+        mock_ec2.return_value = fake_ec2_ids
+        inst = instance.Instance.get_by_uuid(self.context, fake_uuid,
+                                             expected_attrs=['ec2_ids'])
+        mock_ec2.assert_called_once_with(self.context, mock.ANY)
+
+        self.assertEqual(fake_ec2_ids.instance_id, inst.ec2_ids.instance_id)
+        self.assertRemotes()
+
     def test_iteritems_with_extra_attrs(self):
         self.stubs.Set(instance.Instance, 'name', 'foo')
         inst = instance.Instance(uuid='fake-uuid')
@@ -1003,6 +1020,18 @@ class _TestInstanceObject(object):
             inst.fault
             mock_load.assert_called_once_with()
 
+    def test_load_ec2_ids_calls_handler(self):
+        inst = instance.Instance(context=self.context,
+                                 uuid='fake-uuid')
+        with mock.patch.object(inst, '_load_ec2_ids') as mock_load:
+            def fake_load():
+                inst.ec2_ids = objects.EC2Ids(instance_id='fake-inst',
+                                              ami_id='fake-ami')
+
+            mock_load.side_effect = fake_load
+            inst.ec2_ids
+            mock_load.assert_called_once_with()
+
     @mock.patch.object(objects.Instance, 'get_by_uuid')
     def test_load_generic(self, mock_get):
         inst2 = instance.Instance(metadata={'foo': 'bar'})
@@ -1025,6 +1054,16 @@ class _TestInstanceObject(object):
         mock_get.assert_called_once_with(self.context, ['fake'])
         self.assertEqual(fake_fault['id'], fault.id)
         self.assertNotIn('metadata', inst.obj_what_changed())
+
+    @mock.patch('nova.objects.EC2Ids.get_by_instance')
+    def test_load_ec2_ids(self, mock_get):
+        fake_ec2_ids = objects.EC2Ids(instance_id='fake-inst',
+                                      ami_id='fake-ami')
+        mock_get.return_value = fake_ec2_ids
+        inst = instance.Instance(context=self.context, uuid='fake')
+        ec2_ids = inst.ec2_ids
+        mock_get.assert_called_once_with(self.context, inst)
+        self.assertEqual(fake_ec2_ids, ec2_ids)
 
     def test_get_with_extras(self):
         pci_requests = objects.InstancePCIRequests(requests=[

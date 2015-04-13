@@ -84,7 +84,7 @@ def fake_db_instance(**updates):
             db_instance[name] = None
         elif field.default != fields.UnspecifiedDefault:
             db_instance[name] = field.default
-        elif name in ['flavor']:
+        elif name in ['flavor', 'ec2_ids']:
             pass
         else:
             raise Exception('fake_db_instance needs help with %s' % name)

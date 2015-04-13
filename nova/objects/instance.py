@@ -43,7 +43,7 @@ _INSTANCE_OPTIONAL_JOINED_FIELDS = ['metadata', 'system_metadata',
                                     'pci_devices', 'tags']
 # These are fields that are optional but don't translate to db columns
 _INSTANCE_OPTIONAL_NON_COLUMN_FIELDS = ['fault', 'flavor', 'old_flavor',
-                                        'new_flavor']
+                                        'new_flavor', 'ec2_ids']
 # These are fields that are optional and in instance_extra
 _INSTANCE_EXTRA_FIELDS = ['numa_topology', 'pci_requests',
                           'flavor', 'vcpu_model']
@@ -153,7 +153,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
     # Version 1.17: Added tags
     # Version 1.18: Added flavor, old_flavor, new_flavor
     # Version 1.19: Added vcpu_model
-    VERSION = '1.19'
+    # Version 1.20: Added ec2_ids
+    VERSION = '1.20'
 
     fields = {
         'id': fields.IntegerField(),
@@ -248,6 +249,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         'old_flavor': fields.ObjectField('Flavor', nullable=True),
         'new_flavor': fields.ObjectField('Flavor', nullable=True),
         'vcpu_model': fields.ObjectField('VirtCPUModel', nullable=True),
+        'ec2_ids': fields.ObjectField('EC2Ids'),
         }
 
     obj_extra_fields = ['name']
@@ -264,6 +266,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         'old_flavor': [('1.18', '1.1')],
         'new_flavor': [('1.18', '1.1')],
         'vcpu_model': [('1.19', '1.0')],
+        'ec2_ids': [('1.20', '1.0')],
     }
 
     def __init__(self, *args, **kwargs):
@@ -504,6 +507,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                 db_inst.get('extra').get('pci_requests'))
         if 'vcpu_model' in expected_attrs:
             instance._load_vcpu_model(db_inst.get('extra').get('vcpu_model'))
+        if 'ec2_ids' in expected_attrs:
+            instance._load_ec2_ids()
         if 'info_cache' in expected_attrs:
             if db_inst['info_cache'] is None:
                 instance.info_cache = None
@@ -710,6 +715,10 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
             db.instance_extra_update_by_uuid(
                 context, self.uuid,
                 {'vcpu_model': update})
+
+    def _save_ec2_ids(self, context):
+        # NOTE(hanlind): Read-only so no need to save this.
+        pass
 
     def _maybe_upgrade_flavor(self):
         # NOTE(danms): We may have regressed to flavors stored in sysmeta,
@@ -957,6 +966,9 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
             self.vcpu_model = objects.VirtCPUModel.obj_from_primitive(
                 db_vcpu_model)
 
+    def _load_ec2_ids(self):
+        self.ec2_ids = objects.EC2Ids.get_by_instance(self._context, self)
+
     def obj_load_attr(self, attrname):
         if attrname not in INSTANCE_OPTIONAL_ATTRS:
             raise exception.ObjectActionError(
@@ -993,6 +1005,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
             self._load_pci_requests()
         elif attrname == 'vcpu_model':
             self._load_vcpu_model()
+        elif attrname == 'ec2_ids':
+            self._load_ec2_ids()
         elif 'flavor' in attrname:
             self._load_flavor()
         else:
@@ -1092,7 +1106,8 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
     # Version 1.14: Instance <= version 1.18
     # Version 1.15: Instance <= version 1.19
     # Version 1.16: Added get_all() method
-    VERSION = '1.16'
+    # Version 1.17: Instance <= version 1.20
+    VERSION = '1.17'
 
     fields = {
         'objects': fields.ListOfObjectsField('Instance'),
@@ -1115,6 +1130,7 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
         '1.14': '1.18',
         '1.15': '1.19',
         '1.16': '1.19',
+        '1.17': '1.20',
         }
 
     @base.remotable_classmethod

@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova.api.ec2 import ec2utils
 from nova import db
 from nova import exception
 from nova.objects import base
@@ -176,3 +177,44 @@ class S3ImageMapping(base.NovaPersistentObject, base.NovaObject,
         db_s3imap = db.s3_image_get(context, s3_id)
         if db_s3imap:
             return cls._from_db_object(context, cls(context), db_s3imap)
+
+
+class EC2Ids(base.NovaObject):
+    # Version 1.0: Initial version
+    VERSION = '1.0'
+
+    fields = {
+        'instance_id': fields.StringField(read_only=True),
+        'ami_id': fields.StringField(nullable=True, read_only=True),
+        'kernel_id': fields.StringField(nullable=True, read_only=True),
+        'ramdisk_id': fields.StringField(nullable=True, read_only=True),
+    }
+
+    @staticmethod
+    def _from_dict(ec2ids, dict_ec2ids):
+        for field in ec2ids.fields:
+            setattr(ec2ids, field, dict_ec2ids[field])
+        return ec2ids
+
+    @staticmethod
+    def _get_ec2_ids(context, instance):
+        ec2_ids = {}
+
+        ec2_ids['instance_id'] = ec2utils.id_to_ec2_inst_id(instance.uuid)
+        ec2_ids['ami_id'] = ec2utils.glance_id_to_ec2_id(context,
+                                                         instance.image_ref)
+        for image_type in ['kernel', 'ramdisk']:
+            image_id = getattr(instance, '%s_id' % image_type)
+            ec2_id = None
+            if image_id is not None:
+                ec2_image_type = ec2utils.image_type(image_type)
+                ec2_id = ec2utils.glance_id_to_ec2_id(context, image_id,
+                                                      ec2_image_type)
+            ec2_ids['%s_id' % image_type] = ec2_id
+
+        return ec2_ids
+
+    @base.remotable_classmethod
+    def get_by_instance(cls, context, instance):
+        ec2_ids = cls._get_ec2_ids(context, instance)
+        return cls._from_dict(cls(context), ec2_ids)
