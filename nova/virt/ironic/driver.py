@@ -811,6 +811,12 @@ class IronicDriver(virt_driver.ComputeDriver):
             #             without raising any exceptions.
             return
 
+        if node.maintenance:
+            reason = (_("Instance %(instance)s can not be destroyed because "
+                        "node %(node)s is in maintenance mode.") %
+                      {'instance': instance.uuid, 'node': node.uuid})
+            raise exception.InstanceTerminationFailure(reason=reason)
+
         if node.provision_state in (ironic_states.ACTIVE,
                                     ironic_states.DEPLOYFAIL,
                                     ironic_states.ERROR,

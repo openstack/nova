@@ -996,6 +996,20 @@ class IronicDriverTestCase(test.NoDBTestCase):
                                                network_info)
 
     @mock.patch.object(FAKE_CLIENT, 'node')
+    def test_destroy_node_in_maintenance(self, mock_node):
+        node_uuid = uuidutils.generate_uuid()
+        node = ironic_utils.get_test_node(driver='fake', uuid=node_uuid,
+                                          maintenance=True,
+                                          provision_state=ironic_states.ERROR)
+        instance = fake_instance.fake_instance_obj(self.ctx, node=node_uuid)
+
+        mock_node.get_by_instance_uuid.return_value = node
+        self.assertRaises(exception.InstanceTerminationFailure,
+                          self.driver.destroy, self.ctx, instance, None, None)
+        self.assertFalse(mock_node.set_provision_state.called)
+        mock_node.get_by_instance_uuid.assert_called_with(instance.uuid)
+
+    @mock.patch.object(FAKE_CLIENT, 'node')
     @mock.patch.object(ironic_driver.IronicDriver, '_cleanup_deploy')
     def test_destroy_cleaning(self, mock_cleanup_deploy, mock_node):
         node_uuid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
