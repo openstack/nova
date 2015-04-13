@@ -41,7 +41,8 @@ class Service(base.NovaPersistentObject, base.NovaObject,
     # Version 1.9: ComputeNode version 1.10
     # Version 1.10: Changes behaviour of loading compute_node
     # Version 1.11: Added get_by_host_and_binary
-    VERSION = '1.11'
+    # Version 1.12: ComputeNode version 1.11
+    VERSION = '1.12'
 
     fields = {
         'id': fields.IntegerField(read_only=True),
@@ -57,7 +58,8 @@ class Service(base.NovaPersistentObject, base.NovaObject,
 
     obj_relationships = {
         'compute_node': [('1.1', '1.4'), ('1.3', '1.5'), ('1.5', '1.6'),
-                         ('1.7', '1.8'), ('1.8', '1.9'), ('1.9', '1.10')],
+                         ('1.7', '1.8'), ('1.8', '1.9'), ('1.9', '1.10'),
+                         ('1.12', '1.11')],
     }
 
     def obj_make_compatible(self, primitive, target_version):
@@ -189,7 +191,8 @@ class ServiceList(base.ObjectListBase, base.NovaObject):
     # Version 1.7: Service version 1.9
     # Version 1.8: Service version 1.10
     # Version 1.9: Added get_by_binary() and Service version 1.11
-    VERSION = '1.9'
+    # Version 1.10: Service version 1.12
+    VERSION = '1.10'
 
     fields = {
         'objects': fields.ListOfObjectsField('Service'),
@@ -206,6 +209,7 @@ class ServiceList(base.ObjectListBase, base.NovaObject):
         '1.7': '1.9',
         '1.8': '1.10',
         '1.9': '1.11',
+        '1.10': '1.12',
         }
 
     @base.remotable_classmethod
