@@ -71,6 +71,8 @@ def fake_inst_obj(context):
         reservation_id='r-xxxxxxxx',
         user_data=ENCODE_USER_DATA_STRING,
         image_ref=7,
+        kernel_id=None,
+        ramdisk_id=None,
         vcpus=1,
         fixed_ips=[],
         root_device_name='/dev/sda1',
@@ -274,7 +276,8 @@ class MetadataTestCase(test.TestCase):
         self.assertEqual(
             md.lookup("/ec2/2009-04-04/meta-data/kernel-id"), data)
 
-        inst.kernel_id = None
+    def test_image_type_no_kernel_raises(self):
+        inst = self.instance.obj_clone()
         md = fake_InstanceMetadata(self.stubs, inst)
         self.assertRaises(base.InvalidMetadataPath,
             md.lookup, "/2009-04-04/meta-data/kernel-id")
