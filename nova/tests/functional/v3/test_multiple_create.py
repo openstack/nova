@@ -13,12 +13,27 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_config import cfg
+
 from nova.tests.functional.v3 import test_servers
 from nova.tests.unit.image import fake
+
+CONF = cfg.CONF
+CONF.import_opt('osapi_compute_extension',
+                'nova.api.openstack.compute.extensions')
 
 
 class MultipleCreateJsonTest(test_servers.ServersSampleBase):
     extension_name = "os-multiple-create"
+    _api_version = 'v2'
+
+    def _get_flags(self):
+        f = super(MultipleCreateJsonTest, self)._get_flags()
+        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.multiple_create.'
+            'Multiple_create')
+        return f
 
     def test_multiple_create(self):
         subs = {
