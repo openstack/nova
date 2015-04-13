@@ -4710,7 +4710,7 @@ class LibvirtDriver(driver.ComputeDriver):
             if error_code == libvirt.VIR_ERR_NO_SUPPORT:
                 self._list_devices_supported = False
                 LOG.warn(_LW("URI %(uri)s does not support "
-                             "listDevices: " "%(error)s"),
+                             "listDevices: %(error)s"),
                              {'uri': self.uri(), 'error': ex})
                 return jsonutils.dumps([])
             else:
