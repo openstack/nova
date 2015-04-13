@@ -45,6 +45,8 @@ EXP_VERSIONS = {
     "v2.0": {
         "id": "v2.0",
         "status": "SUPPORTED",
+        "version": "",
+        "min_version": "",
         "updated": "2011-01-21T11:33:21Z",
         "links": [
             {
@@ -63,6 +65,8 @@ EXP_VERSIONS = {
     "v2.1": {
         "id": "v2.1",
         "status": "CURRENT",
+        "version": "2.3",
+        "min_version": "2.1",
         "updated": "2013-07-23T11:33:21Z",
         "links": [
             {
@@ -98,6 +102,8 @@ class VersionsTestV20(test.NoDBTestCase):
             {
                 "id": "v2.0",
                 "status": "SUPPORTED",
+                "version": "",
+                "min_version": "",
                 "updated": "2011-01-21T11:33:21Z",
                 "links": [
                     {
@@ -108,6 +114,8 @@ class VersionsTestV20(test.NoDBTestCase):
             {
                 "id": "v2.1",
                 "status": "CURRENT",
+                "version": "2.3",
+                "min_version": "2.1",
                 "updated": "2013-07-23T11:33:21Z",
                 "links": [
                     {
@@ -139,6 +147,8 @@ class VersionsTestV20(test.NoDBTestCase):
             "version": {
                 "id": "v2.0",
                 "status": "SUPPORTED",
+                "version": "",
+                "min_version": "",
                 "updated": "2011-01-21T11:33:21Z",
                 "links": [
                     {
@@ -291,6 +301,8 @@ class VersionsViewBuilderTests(test.NoDBTestCase):
             "v3.2.1": {
                 "id": "3.2.1",
                 "status": "CURRENT",
+                "version": "2.3",
+                "min_version": "2.1",
                 "updated": "2011-07-18T11:30:00Z",
             }
         }
@@ -300,6 +312,8 @@ class VersionsViewBuilderTests(test.NoDBTestCase):
                 {
                     "id": "3.2.1",
                     "status": "CURRENT",
+                    "version": "2.3",
+                    "min_version": "2.1",
                     "updated": "2011-07-18T11:30:00Z",
                     "links": [
                         {

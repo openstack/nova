@@ -55,6 +55,8 @@ class ViewBuilder(common.ViewBuilder):
             version_objs.append({
                 "id": version['id'],
                 "status": version['status'],
+                "version": version['version'],
+                "min_version": version['min_version'],
                 "updated": version['updated'],
                 "links": self._build_links(version),
             })
