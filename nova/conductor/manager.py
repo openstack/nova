@@ -390,6 +390,7 @@ class ConductorManager(manager.Manager):
         quota.QUOTAS.rollback(context, reservations, project_id=project_id,
                               user_id=user_id)
 
+    # NOTE(hanlind): This method can be removed in version 3.0 of the RPC API
     def get_ec2_ids(self, context, instance):
         ec2_ids = {}
 

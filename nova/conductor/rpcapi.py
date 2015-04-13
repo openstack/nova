@@ -159,6 +159,8 @@ class ConductorAPI(object):
     * 2.1  - Make notify_usage_exists() take an instance object
     * Remove bw_usage_update()
     * Remove notify_usage_exists()
+    * Remove get_ec2_ids()
+
     """
 
     VERSION_ALIASES = {
@@ -314,12 +316,6 @@ class ConductorAPI(object):
         cctxt = self.client.prepare()
         return cctxt.call(context, 'security_groups_trigger_members_refresh',
                           group_ids=group_ids)
-
-    def get_ec2_ids(self, context, instance):
-        instance_p = jsonutils.to_primitive(instance)
-        cctxt = self.client.prepare()
-        return cctxt.call(context, 'get_ec2_ids',
-                          instance=instance_p)
 
     def object_class_action(self, context, objname, objmethod, objver,
                             args, kwargs):

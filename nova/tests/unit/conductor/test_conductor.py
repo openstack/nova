@@ -283,39 +283,6 @@ class _BaseTestCase(object):
         self.conductor.security_groups_trigger_members_refresh(self.context,
                                                                [1, 2, 3])
 
-    def test_get_ec2_ids(self):
-        expected = {
-            'instance-id': 'ec2-inst-id',
-            'ami-id': 'ec2-ami-id',
-            'kernel-id': 'ami-kernel-ec2-kernelid',
-            'ramdisk-id': 'ami-ramdisk-ec2-ramdiskid',
-            }
-        inst = {
-            'uuid': 'fake-uuid',
-            'kernel_id': 'ec2-kernelid',
-            'ramdisk_id': 'ec2-ramdiskid',
-            'image_ref': 'fake-image',
-            }
-        self.mox.StubOutWithMock(ec2utils, 'id_to_ec2_inst_id')
-        self.mox.StubOutWithMock(ec2utils, 'glance_id_to_ec2_id')
-        self.mox.StubOutWithMock(ec2utils, 'image_type')
-
-        ec2utils.id_to_ec2_inst_id(inst['uuid']).AndReturn(
-            expected['instance-id'])
-        ec2utils.glance_id_to_ec2_id(self.context,
-                                     inst['image_ref']).AndReturn(
-            expected['ami-id'])
-        for image_type in ['kernel', 'ramdisk']:
-            image_id = inst['%s_id' % image_type]
-            ec2utils.image_type(image_type).AndReturn('ami-' + image_type)
-            ec2utils.glance_id_to_ec2_id(self.context, image_id,
-                                         'ami-' + image_type).AndReturn(
-                'ami-%s-ec2-%sid' % (image_type, image_type))
-
-        self.mox.ReplayAll()
-        result = self.conductor.get_ec2_ids(self.context, inst)
-        self.assertEqual(result, expected)
-
 
 class ConductorTestCase(_BaseTestCase, test.TestCase):
     """Conductor Manager Tests."""
@@ -771,6 +738,39 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
                                             MatchInstance(),
                                             'exists', system_metadata={},
                                             extra_usage_info=info)
+
+    def test_get_ec2_ids(self):
+        expected = {
+            'instance-id': 'ec2-inst-id',
+            'ami-id': 'ec2-ami-id',
+            'kernel-id': 'ami-kernel-ec2-kernelid',
+            'ramdisk-id': 'ami-ramdisk-ec2-ramdiskid',
+            }
+        inst = {
+            'uuid': 'fake-uuid',
+            'kernel_id': 'ec2-kernelid',
+            'ramdisk_id': 'ec2-ramdiskid',
+            'image_ref': 'fake-image',
+            }
+        self.mox.StubOutWithMock(ec2utils, 'id_to_ec2_inst_id')
+        self.mox.StubOutWithMock(ec2utils, 'glance_id_to_ec2_id')
+        self.mox.StubOutWithMock(ec2utils, 'image_type')
+
+        ec2utils.id_to_ec2_inst_id(inst['uuid']).AndReturn(
+            expected['instance-id'])
+        ec2utils.glance_id_to_ec2_id(self.context,
+                                     inst['image_ref']).AndReturn(
+            expected['ami-id'])
+        for image_type in ['kernel', 'ramdisk']:
+            image_id = inst['%s_id' % image_type]
+            ec2utils.image_type(image_type).AndReturn('ami-' + image_type)
+            ec2utils.glance_id_to_ec2_id(self.context, image_id,
+                                         'ami-' + image_type).AndReturn(
+                'ami-%s-ec2-%sid' % (image_type, image_type))
+
+        self.mox.ReplayAll()
+        result = self.conductor.get_ec2_ids(self.context, inst)
+        self.assertEqual(result, expected)
 
 
 class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):
