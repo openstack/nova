@@ -26,7 +26,6 @@ import webob.dec
 import webob.exc
 
 from nova.api.metadata import base
-from nova import conductor
 from nova import exception
 from nova.i18n import _
 from nova.i18n import _LE
@@ -72,7 +71,6 @@ class MetadataRequestHandler(wsgi.Application):
 
     def __init__(self):
         self._cache = memorycache.get_client()
-        self.conductor_api = conductor.API()
 
     def get_metadata_by_remote_address(self, address):
         if not address:
@@ -85,7 +83,7 @@ class MetadataRequestHandler(wsgi.Application):
             return data
 
         try:
-            data = base.get_metadata_by_address(self.conductor_api, address)
+            data = base.get_metadata_by_address(address)
         except exception.NotFound:
             return None
 
@@ -102,8 +100,7 @@ class MetadataRequestHandler(wsgi.Application):
             return data
 
         try:
-            data = base.get_metadata_by_instance_id(self.conductor_api,
-                                                    instance_id, address)
+            data = base.get_metadata_by_instance_id(instance_id, address)
         except exception.NotFound:
             return None
 
