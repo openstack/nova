@@ -37,7 +37,6 @@ from nova.cells import utils as cells_utils
 from nova.cloudpipe import pipelib
 from nova.compute import api as compute_api
 from nova.compute import cells_api as cells_api
-from nova.conductor import manager as conductor_manager
 from nova.console import manager as console_manager  # noqa - only for cfg
 from nova import db
 from nova.network import api as network_api
@@ -812,13 +811,6 @@ class AdminActionsSamplesJsonTest(ServersSampleBase):
         super(AdminActionsSamplesJsonTest, self).setUp()
         self.uuid = self._post_server()
 
-    @mock.patch('nova.conductor.manager.ComputeTaskManager._cold_migrate')
-    def test_post_migrate(self, mock_cold_migrate):
-        # Get api samples to migrate server request.
-        response = self._do_post('servers/%s/action' % self.uuid,
-                                 'admin-actions-migrate', {})
-        self.assertEqual(response.status_code, 202)
-
     def test_post_reset_network(self):
         # Get api samples to reset server network request.
         response = self._do_post('servers/%s/action' % self.uuid,
@@ -829,36 +821,6 @@ class AdminActionsSamplesJsonTest(ServersSampleBase):
         # Get api samples to inject network info request.
         response = self._do_post('servers/%s/action' % self.uuid,
                                  'admin-actions-inject-network-info', {})
-        self.assertEqual(response.status_code, 202)
-
-    def test_post_live_migrate_server(self):
-        # Get api samples to server live migrate request.
-        def fake_live_migrate(_self, context, instance, scheduler_hint,
-                              block_migration, disk_over_commit):
-            self.assertEqual(self.uuid, instance["uuid"])
-            host = scheduler_hint["host"]
-            self.assertEqual(self.compute.host, host)
-
-        self.stubs.Set(conductor_manager.ComputeTaskManager,
-                       '_live_migrate',
-                       fake_live_migrate)
-
-        def fake_get_compute(context, host):
-            service = dict(host=host,
-                           binary='nova-compute',
-                           topic='compute',
-                           report_count=1,
-                           updated_at='foo',
-                           hypervisor_type='bar',
-                           hypervisor_version=
-                                utils.convert_version_to_int('1.0'),
-                           disabled=False)
-            return {'compute_node': [service]}
-        self.stubs.Set(db, "service_get_by_compute_host", fake_get_compute)
-
-        response = self._do_post('servers/%s/action' % self.uuid,
-                                 'admin-actions-live-migrate',
-                                 {'hostname': self.compute.host})
         self.assertEqual(response.status_code, 202)
 
     def test_post_reset_state(self):
