@@ -1177,7 +1177,7 @@ def get_all_res_pool_mors(session):
         _cancel_retrieve_if_necessary(session, results)
         return results.objects
     except Exception as excep:
-        LOG.warning(_LW("Failed to get resource pool references " "%s"), excep)
+        LOG.warning(_LW("Failed to get resource pool references %s"), excep)
 
 
 def get_dynamic_property_mor(session, mor_ref, attribute):
