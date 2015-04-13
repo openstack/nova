@@ -2701,6 +2701,7 @@ def key_pair_get_all_by_user(context, user_id):
                    all()
 
 
+@require_context
 def key_pair_count_by_user(context, user_id):
     nova.context.authorize_user_context(context, user_id)
     return model_query(context, models.KeyPair, read_deleted="no").\
