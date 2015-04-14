@@ -438,8 +438,8 @@ class LibvirtGenericVIFDriver(object):
         # if instance is FT, then extra steps are needed
         system_metadata = utils.instance_sys_meta(instance)
         ft_role = system_metadata.get('ft_role', None)
-        if ft_role == 'primary' or ft_rote == 'secondary':
-            plug_ovs_hybrid_colo(instance, vif)
+        if ft_role == 'primary' or ft_role == 'secondary':
+            self.plug_ovs_hybrid_colo(instance, vif)
 
     def plug_ovs_hybrid_colo(self, instance, vif):
         """Plug using hybrid stragegy
@@ -456,19 +456,19 @@ class LibvirtGenericVIFDriver(object):
             colo_br_name = self.get_colo_br_name(vif['id'])
 
             if not linux_net.device_exists(colo_br_name):
-            utils.execute('brctl', 'addbr', colo_br_name, run_as_root=True)
-            utils.execute('brctl', 'setfd', colo_br_name, 0, run_as_root=True)
-            utils.execute('brctl', 'stp', colo_br_name, 'off',
-                          run_as_root=True)
-            utils.execute('tee',
-                          ('/sys/class/net/%s/bridge/multicast_snooping' %
-                           colo_br_name),
-                          process_input='0',
-                          run_as_root=True,
-                          check_exit_code=[0, 1])
+                utils.execute('brctl', 'addbr', colo_br_name, run_as_root=True)
+                utils.execute('brctl', 'setfd', colo_br_name, 0, run_as_root=True)
+                utils.execute('brctl', 'stp', colo_br_name, 'off',
+                              run_as_root=True)
+                utils.execute('tee',
+                              ('/sys/class/net/%s/bridge/multicast_snooping' %
+                               colo_br_name),
+                              process_input='0',
+                              run_as_root=True,
+                              check_exit_code=[0, 1])
 
-            utils.execute('ip', 'link', 'set', colo_br_name, 'up',
-                          run_as_root=True)
+                utils.execute('ip', 'link', 'set', colo_br_name, 'up',
+                              run_as_root=True)
 
         if not linux_net.device_exists(colo_v2_name):
             linux_net._create_veth_pair(colo_v1_name, colo_v2_name)
@@ -644,7 +644,7 @@ class LibvirtGenericVIFDriver(object):
             # if instance is FT, then extra steps are needed
             system_metadata = utils.instance_sys_meta(instance)
             ft_role = system_metadata.get('ft_role', None)
-            if ft_role == 'primary' or ft_rote == 'secondary':
+            if ft_role == 'primary' or ft_role == 'secondary':
                 unplug_ovs_hybrid_colo(instance, vif)
 
         except processutils.ProcessExecutionError:
