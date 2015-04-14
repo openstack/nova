@@ -40,8 +40,19 @@ libvirt_vif_opts = [
                 help='Use virtio for bridge interfaces with KVM/QEMU'),
 ]
 
+neutron_opts = [
+    # TODO(Luis Tomas) temporary hack until Neutron can pass over the
+    # name of the bridge mappings it is configured with
+    cfg.StrOpt('ovs_bridge_mappings',
+               default='br-enp4s0d1',
+               help='Name of bridge mappings used by Open vSwitch',
+               deprecated_group='DEFAULT')
+]
+
 CONF = cfg.CONF
 CONF.register_opts(libvirt_vif_opts, 'libvirt')
+# neutron_opts options in the DEFAULT group were deprecated in Juno
+CONF.register_opts(neutron_opts, 'neutron')
 CONF.import_opt('use_ipv6', 'nova.netconf')
 
 DEV_PREFIX_ETH = 'eth'
@@ -138,10 +149,9 @@ class LibvirtGenericVIFDriver(object):
     def get_bridge_name(self, vif):
         return vif['network']['bridge']
 
-    def get_ext_bridge_name(self, vif):
+    def get_ext_bridge_name(self):
         # needs to be updated
-        return "br-enp4s0d1"
-        #return vif['network']['bridge']
+        return CONF.neutron.ovs_bridge_mappings
 
     def get_ovs_interfaceid(self, vif):
         return vif.get('ovs_interfaceid') or vif['id']
@@ -466,7 +476,7 @@ class LibvirtGenericVIFDriver(object):
                 utils.execute('brctl', 'addif', colo_br_name,
                               colo_v1_name, run_as_root=True)
 
-            linux_net.create_ovs_vif_port_colo(self.get_ext_bridge_name(vif),
+            linux_net.create_ovs_vif_port_colo(self.get_ext_bridge_name(),
                                           colo_v2_name, iface_id,
                                           vif['address'],instance['uuid'])
 
@@ -666,7 +676,7 @@ class LibvirtGenericVIFDriver(object):
                     utils.execute('brctl', 'delbr', colo_br_name,
                                   run_as_root=True)
 
-            linux_net.delete_ovs_vif_port(self.get_ext_bridge_name(vif),
+            linux_net.delete_ovs_vif_port(self.get_ext_bridge_name(),
                                           colo_v2_name)
 
         except processutils.ProcessExecutionError:
@@ -817,6 +827,12 @@ class LibvirtGenericVIFDriver(object):
         pass
 
     def cleanup_colo_plug(self, instance, vif):
+        """ Cleans up the extra plugs needed for COLO integration
+
+        This function is call when a failover is triggered and (only) the
+        extra veth and bridge devices need to be unplugged
+        """
+
         vif_type = vif['type']
 
         LOG.debug('vif_type=%(vif_type)s instance=%(instance)s '
