@@ -41,3 +41,4 @@ oslo.i18n>=1.5.0  # Apache-2.0
 rfc3986>=0.2.0  # Apache-2.0
 oslo.middleware>=1.0.0                  # Apache-2.0
 psutil>=1.1.1,<2.0.0
+oslo.versionedobjects>=0.1.1
