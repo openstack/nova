@@ -433,10 +433,10 @@ class LibvirtGenericVIFDriver(object):
 
     def plug_ovs_hybrid_colo(self, instance, vif):
         """Plug using hybrid stragegy
-        
-        Create the extra veth and bridge devices needed for enabling 
+
+        Create the extra veth and bridge devices needed for enabling
         COLO fault tolerance support
-        """"
+        """
         iface_id = self.get_ovs_interfaceid(vif)
         colo_v1_name, colo_v2_name = self.get_colo_veth_pair_names(vif['id'])
 
@@ -463,7 +463,7 @@ class LibvirtGenericVIFDriver(object):
         if not linux_net.device_exists(colo_v2_name):
             linux_net._create_veth_pair(colo_v1_name, colo_v2_name)
             if is_secondary:
-                utils.execute('brctl', 'addif', colo_br_name, 
+                utils.execute('brctl', 'addif', colo_br_name,
                               colo_v1_name, run_as_root=True)
 
             linux_net.create_ovs_vif_port_colo(self.get_ext_bridge_name(vif),
