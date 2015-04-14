@@ -5758,6 +5758,8 @@ class LibvirtDriver(driver.ComputeDriver):
         is_shared_instance_path = True
         is_block_migration = True
         if migrate_data:
+            LOG.debug('migrate_data in pre_live_migration: %s', migrate_data,
+                      instance=instance)
             is_shared_block_storage = migrate_data.get(
                     'is_shared_block_storage', True)
             is_shared_instance_path = migrate_data.get(
@@ -5782,10 +5784,15 @@ class LibvirtDriver(driver.ComputeDriver):
 
             if os.path.exists(instance_dir):
                 raise exception.DestinationDiskExists(path=instance_dir)
+
+            LOG.debug('Creating instance directory: %s', instance_dir,
+                      instance=instance)
             os.mkdir(instance_dir)
 
             if not is_shared_block_storage:
                 # Ensure images and backing files are present.
+                LOG.debug('Checking to make sure images and backing files are '
+                          'present before live migration.', instance=instance)
                 self._create_images_and_backing(
                     context, instance, instance_dir, disk_info,
                     fallback_from_host=instance.host)
@@ -5797,6 +5804,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
             # Touch the console.log file, required by libvirt.
             console_file = self._get_console_log_path(instance)
+            LOG.debug('Touch instance console log: %s', console_file,
+                      instance=instance)
             libvirt_utils.file_open(console_file, 'a').close()
 
             # if image has kernel and ramdisk, just download
@@ -5806,6 +5815,11 @@ class LibvirtDriver(driver.ComputeDriver):
         # Establishing connection to volume server.
         block_device_mapping = driver.block_device_info_get_mapping(
             block_device_info)
+
+        if len(block_device_mapping):
+            LOG.debug('Connecting volumes before live migration.',
+                      instance=instance)
+
         for vol in block_device_mapping:
             connection_info = vol['connection_info']
             disk_info = blockinfo.get_info_from_bdm(
@@ -5828,6 +5842,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # ensure_filtering_rules_for_instance, to ensure bridge is set up
         # Retry operation is necessary because continuously request comes,
         # concurrent request occurs to iptables, then it complains.
+        LOG.debug('Plugging VIFs before live migration.', instance=instance)
         max_retry = CONF.live_migration_retry_count
         for cnt in range(max_retry):
             try:
