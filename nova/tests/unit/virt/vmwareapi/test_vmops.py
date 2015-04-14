@@ -764,6 +764,19 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             fake_disk_delete.assert_called_once_with(
                 self._session, dc_info.ref, '[fake] uuid/original.vmdk')
 
+    def test_migrate_disk_and_power_off(self):
+        self._test_migrate_disk_and_power_off(
+            flavor_root_gb=self._instance.root_gb + 1)
+
+    def test_migrate_disk_and_power_off_zero_disk_flavor(self):
+        self._instance.root_gb = 0
+        self._test_migrate_disk_and_power_off(flavor_root_gb=0)
+
+    def test_migrate_disk_and_power_off_disk_shrink(self):
+        self.assertRaises(exception.InstanceFaultRollback,
+                          self._test_migrate_disk_and_power_off,
+                          flavor_root_gb=self._instance.root_gb - 1)
+
     @mock.patch.object(vmops.VMwareVMOps, "_remove_ephemerals")
     @mock.patch.object(vm_util, 'get_vmdk_info')
     @mock.patch.object(vmops.VMwareVMOps, "_resize_disk")
@@ -771,17 +784,18 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     @mock.patch.object(vm_util, 'power_off_instance')
     @mock.patch.object(vmops.VMwareVMOps, "_update_instance_progress")
     @mock.patch.object(vm_util, 'get_vm_ref', return_value='fake-ref')
-    def test_migrate_disk_and_power_off(self, fake_get_vm_ref, fake_progress,
-                                        fake_power_off, fake_resize_vm,
-                                        fake_resize_disk, fake_get_vmdk_info,
-                                        fake_remove_ephemerals):
+    def _test_migrate_disk_and_power_off(self, fake_get_vm_ref, fake_progress,
+                                         fake_power_off, fake_resize_vm,
+                                         fake_resize_disk, fake_get_vmdk_info,
+                                         fake_remove_ephemerals,
+                                         flavor_root_gb):
         vmdk = vm_util.VmdkInfo('[fake] uuid/root.vmdk',
                                 'fake-adapter',
                                 'fake-disk',
                                 self._instance.root_gb * units.Gi,
                                 'fake-device')
         fake_get_vmdk_info.return_value = vmdk
-        flavor = {'root_gb': self._instance.root_gb + 1}
+        flavor = {'root_gb': flavor_root_gb}
         self._vmops.migrate_disk_and_power_off(self._context,
                                                self._instance,
                                                None,

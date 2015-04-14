@@ -1192,7 +1192,8 @@ class VMwareVMOps(object):
 
         # Checks if the migration needs a disk resize down.
         if (flavor['root_gb'] < instance.root_gb or
-            flavor['root_gb'] < vmdk.capacity_in_bytes / units.Gi):
+            (flavor['root_gb'] != 0 and
+             flavor['root_gb'] < vmdk.capacity_in_bytes / units.Gi)):
             reason = _("Unable to shrink disk.")
             raise exception.InstanceFaultRollback(
                 exception.ResizeError(reason=reason))
