@@ -1083,6 +1083,53 @@ class ServersControllerTest(ControllerTest):
         self.assertEqual(len(servers), 1)
         self.assertEqual(servers[0]['id'], server_uuid)
 
+    @mock.patch.object(compute_api.API, 'get_all')
+    def test_get_servers_deleted_filter_str_to_bool(self, mock_get_all):
+        server_uuid = str(uuid.uuid4())
+
+        db_list = [fakes.stub_instance(100, uuid=server_uuid,
+                                       vm_state='deleted')]
+        mock_get_all.return_value = instance_obj._make_instance_list(
+            context, objects.InstanceList(), db_list, FIELDS)
+
+        req = fakes.HTTPRequest.blank('/fake/servers?deleted=true',
+                                      use_admin_context=True)
+
+        servers = self.controller.detail(req)['servers']
+        self.assertEqual(1, len(servers))
+        self.assertEqual(server_uuid, servers[0]['id'])
+
+        # Assert that 'deleted' filter value is converted to boolean
+        # while calling get_all() method.
+        expected_search_opts = {'deleted': True, 'project_id': 'fake'}
+        mock_get_all.assert_called_once_with(
+            mock.ANY, search_opts=expected_search_opts, limit=mock.ANY,
+            marker=mock.ANY, want_objects=mock.ANY,
+            sort_keys=mock.ANY, sort_dirs=mock.ANY)
+
+    @mock.patch.object(compute_api.API, 'get_all')
+    def test_get_servers_deleted_filter_invalid_str(self, mock_get_all):
+        server_uuid = str(uuid.uuid4())
+
+        db_list = [fakes.stub_instance(100, uuid=server_uuid)]
+        mock_get_all.return_value = instance_obj._make_instance_list(
+            context, objects.InstanceList(), db_list, FIELDS)
+
+        req = fakes.HTTPRequest.blank('/fake/servers?deleted=abc',
+                                      use_admin_context=True)
+
+        servers = self.controller.detail(req)['servers']
+        self.assertEqual(1, len(servers))
+        self.assertEqual(server_uuid, servers[0]['id'])
+
+        # Assert that invalid 'deleted' filter value is converted to boolean
+        # False while calling get_all() method.
+        expected_search_opts = {'deleted': False, 'project_id': 'fake'}
+        mock_get_all.assert_called_once_with(
+            mock.ANY, search_opts=expected_search_opts, limit=mock.ANY,
+            marker=mock.ANY, want_objects=mock.ANY,
+            sort_keys=mock.ANY, sort_dirs=mock.ANY)
+
     def test_get_servers_allows_name(self):
         server_uuid = str(uuid.uuid4())
 
