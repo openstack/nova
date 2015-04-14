@@ -878,7 +878,7 @@ class TestInitComputeNode(BaseTestCase):
         expected_resources = copy.deepcopy(resources)
         # NOTE(pmurray): This will go away when the ComputeNode object is used
         expected_resources['stats'] = '{}'
-        # NOTE(pmurray): no intial values are calculated before the initial
+        # NOTE(pmurray): no initial values are calculated before the initial
         # creation. vcpus is derived from ERT resources, so this means its
         # value will be 0
         expected_resources['vcpus'] = 0
