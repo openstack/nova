@@ -245,6 +245,7 @@
     "os_compute_api:os-extended-status:discoverable": "",
     "os_compute_api:os-extended-availability-zone": "",
     "os_compute_api:os-extended-availability-zone:discoverable": "",
+    "os_compute_api:extensions": "",
     "os_compute_api:extension_info:discoverable": "",
     "os_compute_api:os-extended-volumes": "",
     "os_compute_api:os-extended-volumes:discoverable": "",

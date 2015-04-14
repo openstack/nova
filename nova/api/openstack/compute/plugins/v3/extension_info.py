@@ -22,6 +22,7 @@ from nova.api.openstack import wsgi
 
 ALIAS = 'extensions'
 LOG = logging.getLogger(__name__)
+authorize = extensions.os_compute_authorizer(ALIAS)
 
 # NOTE(cyeoh): The following mappings are currently incomplete
 # Having a v2.1 extension loaded can imply that several v2 extensions
@@ -171,6 +172,7 @@ class ExtensionInfoController(wsgi.Controller):
     @extensions.expected_errors(())
     def index(self, req):
         context = req.environ['nova.context']
+        authorize(context)
 
         sorted_ext_list = sorted(
             self._get_extensions(context).iteritems())
@@ -184,6 +186,7 @@ class ExtensionInfoController(wsgi.Controller):
     @extensions.expected_errors(404)
     def show(self, req, id):
         context = req.environ['nova.context']
+        authorize(context)
         try:
             # NOTE(dprince): the extensions alias is used as the 'id' for show
             ext = self._get_extensions(context)[id]
