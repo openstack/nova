@@ -12,34 +12,31 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.tests.functional.v3 import api_sample_base
+from nova.tests.functional.v3 import test_servers
 from nova.tests.unit.image import fake
 
 
-class PersonalitySampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
+class PersonalitySampleJsonTest(test_servers.ServersSampleBase):
     extension_name = 'os-personality'
-
-    def _servers_post(self, subs):
-        response = self._do_post('servers', 'server-post-req', subs)
-        subs.update(self._get_regexes())
-        return self._verify_response('server-post-resp', subs, response, 202)
+    extra_extensions_to_load = ["os-access-ips"]
+    _api_version = 'v2'
 
     def test_servers_post(self):
-        subs = {
-            'image_id': fake.get_valid_image_id(),
-            'host': self._get_host()
-        }
-        self._servers_post(subs)
+        self._post_server(use_common_server_api_samples=False)
 
     def test_servers_rebuild(self):
         subs = {
             'image_id': fake.get_valid_image_id(),
-            'host': self._get_host()
+            'host': self._get_host(),
+            'glance_host': self._get_glance_host(),
+            'access_ip_v4': '1.2.3.4',
+            'access_ip_v6': '80fe::'
         }
-        uuid = self._servers_post(subs)
+        uuid = self._post_server(use_common_server_api_samples=False)
         response = self._do_post('servers/%s/action' % uuid,
                                  'server-action-rebuild-req', subs)
         subs['hostid'] = '[a-f0-9]+'
         subs['id'] = uuid
+        subs.update(self._get_regexes())
         self._verify_response('server-action-rebuild-resp',
                               subs, response, 202)
