@@ -7470,18 +7470,33 @@ class NWFilterFakes:
 
     def filterDefineXMLMock(self, xml):
         class FakeNWFilterInternal:
-            def __init__(self, parent, name, xml):
+            def __init__(self, parent, name, u, xml):
                 self.name = name
+                self.uuid = u
                 self.parent = parent
                 self.xml = xml
 
+            def XMLDesc(self, flags):
+                return self.xml
+
             def undefine(self):
                 del self.parent.filters[self.name]
-                pass
+
         tree = etree.fromstring(xml)
         name = tree.get('name')
+        u = tree.find('uuid')
+        if u is None:
+            u = uuid.uuid4().hex
+        else:
+            u = u.text
         if name not in self.filters:
-            self.filters[name] = FakeNWFilterInternal(self, name, xml)
+            self.filters[name] = FakeNWFilterInternal(self, name, u, xml)
+        else:
+            if self.filters[name].uuid != u:
+                raise libvirt.libvirtError(
+                    "Mismatching name '%s' with uuid '%s' vs '%s'"
+                    % (name, self.filters[name].uuid, u))
+            self.filters[name].xml = xml
         return True
 
 
@@ -8021,6 +8036,26 @@ class NWFilterTestCase(test.TestCase):
         self.assertEqual(original_filter_count - len(fakefilter.filters), 1)
 
         db.instance_destroy(admin_ctxt, instance_ref['uuid'])
+
+    def test_redefining_nwfilters(self):
+        fakefilter = NWFilterFakes()
+        self.fw._conn.nwfilterDefineXML = fakefilter.filterDefineXMLMock
+        self.fw._conn.nwfilterLookupByName = fakefilter.nwfilterLookupByName
+
+        instance_ref = self._create_instance()
+        inst_id = instance_ref['id']
+        inst_uuid = instance_ref['uuid']
+
+        self.security_group = self.setup_and_return_security_group()
+
+        db.instance_add_security_group(self.context, inst_uuid,
+                                       self.security_group['id'])
+
+        instance = db.instance_get(self.context, inst_id)
+
+        network_info = _fake_network_info(self.stubs, 1)
+        self.fw.setup_basic_filtering(instance, network_info)
+        self.fw.setup_basic_filtering(instance, network_info)
 
     def test_nwfilter_parameters(self):
         admin_ctxt = context.get_admin_context()
