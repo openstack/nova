@@ -1,7 +1,7 @@
 {
     "server": {
         "accessIPv4": "1.2.3.4",
-        "accessIPv6": "fe80::100",
+        "accessIPv6": "80fe::",
         "addresses": {
             "private": [
                 {
@@ -43,7 +43,7 @@
             }
         ],
         "metadata": {
-            "meta var": "meta val"
+            "meta_var": "meta_val"
         },
         "name": "foobar",
         "progress": 0,

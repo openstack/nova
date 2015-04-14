@@ -12,15 +12,31 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_config import cfg
+
 from nova.compute import api as compute_api
 from nova.tests.functional.v3 import test_servers
 from nova.tests.unit.image import fake
 
+CONF = cfg.CONF
+CONF.import_opt('osapi_compute_extension',
+                'nova.api.openstack.compute.extensions')
+
 
 class PreserveEphemeralOnRebuildJsonTest(test_servers.ServersSampleBase):
     extension_name = 'os-preserve-ephemeral-rebuild'
+    extra_extensions_to_load = ["os-access-ips"]
+    _api_version = 'v2'
 
-    def _test_server_rebuild_preserve_ephemeral(self, value):
+    def _get_flags(self):
+        f = super(PreserveEphemeralOnRebuildJsonTest, self)._get_flags()
+        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.preserve_ephemeral_rebuild.'
+            'Preserve_ephemeral_rebuild')
+        return f
+
+    def _test_server_rebuild_preserve_ephemeral(self, value, resp_tpl=None):
         uuid = self._post_server()
         image = fake.get_valid_image_id()
         subs = {'host': self._get_host(),
@@ -31,20 +47,32 @@ class PreserveEphemeralOnRebuildJsonTest(test_servers.ServersSampleBase):
                 'preserve_ephemeral': str(value).lower(),
                 'action': 'rebuild',
                 'glance_host': self._get_glance_host(),
+                'access_ip_v4': '1.2.3.4',
+                'access_ip_v6': '80fe::'
                 }
+        old_rebuild = compute_api.API.rebuild
 
         def fake_rebuild(self_, context, instance, image_href, admin_password,
                          files_to_inject=None, **kwargs):
             self.assertEqual(kwargs['preserve_ephemeral'], value)
+            if resp_tpl:
+                return old_rebuild(self_, context, instance, image_href,
+                                   admin_password, files_to_inject=None,
+                                   **kwargs)
         self.stubs.Set(compute_api.API, 'rebuild', fake_rebuild)
 
         response = self._do_post('servers/%s/action' % uuid,
                                  'server-action-rebuild-preserve-ephemeral',
                                  subs)
-        self.assertEqual(response.status_code, 202)
+        if resp_tpl:
+            subs.update(self._get_regexes())
+            self._verify_response(resp_tpl, subs, response, 202)
+        else:
+            self.assertEqual(response.status_code, 202)
 
     def test_server_rebuild_preserve_ephemeral_true(self):
         self._test_server_rebuild_preserve_ephemeral(True)
 
     def test_server_rebuild_preserve_ephemeral_false(self):
-        self._test_server_rebuild_preserve_ephemeral(False)
+        self._test_server_rebuild_preserve_ephemeral(False,
+                resp_tpl='server-action-rebuild-preserve-ephemeral-resp')
