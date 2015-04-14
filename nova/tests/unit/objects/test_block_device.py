@@ -136,7 +136,8 @@ class _TestBlockDeviceMappingObject(object):
         get_by_vol_id.assert_called_once_with(self.context, 'fake-volume-id',
                                               ['instance'])
 
-    def _test_create_mocked(self, cell_type=None, update_or_create=False):
+    def _test_create_mocked(self, cell_type=None, update_or_create=False,
+            device_name=None):
         if cell_type:
             self.flags(enable=True, cell_type=cell_type, group='cells')
         else:
@@ -144,6 +145,8 @@ class _TestBlockDeviceMappingObject(object):
         values = {'source_type': 'volume', 'volume_id': 'fake-vol-id',
                   'destination_type': 'volume',
                   'instance_uuid': 'fake-instance'}
+        if device_name:
+            values['device_name'] = device_name
         fake_bdm = fake_block_device.FakeDbBlockDeviceDict(values)
 
         with contextlib.nested(
@@ -172,7 +175,7 @@ class _TestBlockDeviceMappingObject(object):
                 else:
                     bdm_create_mock.assert_called_once_with(
                             self.context, values, legacy=False)
-                if cell_type == 'compute':
+                if cell_type == 'compute' and 'device_name' in values:
                     self.assertEqual(1, cells_update_mock.call_count)
                     self.assertTrue(len(cells_update_mock.call_args[0]) > 1)
                     self.assertEqual(cells_update_mock.call_args[0][0],
@@ -201,6 +204,9 @@ class _TestBlockDeviceMappingObject(object):
 
     def test_update_or_create_computecell(self):
         self._test_create_mocked(cell_type='compute', update_or_create=True)
+
+    def test_device_name_compute_cell(self):
+        self._test_create_mocked(cell_type='compute', device_name='/dev/xvdb')
 
     def test_create(self):
         values = {'source_type': 'volume', 'volume_id': 'fake-vol-id',
