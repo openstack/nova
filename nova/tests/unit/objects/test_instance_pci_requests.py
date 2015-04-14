@@ -190,6 +190,23 @@ class _TestInstancePCIRequests(object):
         self.assertEqual(2, len(req.requests))
         self.assertEqual('alias_1', req.requests[0].alias_name)
 
+    def test_from_request_spec_instance_props(self):
+        requests = objects.InstancePCIRequests(
+            requests=[objects.InstancePCIRequest(count=1,
+                                                 request_id=FAKE_UUID,
+                                                 spec=[{'vendor_id': '8086',
+                                                        'device_id': '1502'}])
+                      ],
+            instance_uuid=FAKE_UUID)
+        result = jsonutils.to_primitive(requests)
+        result = objects.InstancePCIRequests.from_request_spec_instance_props(
+                                                                        result)
+        self.assertEqual(1, len(result.requests))
+        self.assertEqual(1, result.requests[0].count)
+        self.assertEqual(FAKE_UUID, result.requests[0].request_id)
+        self.assertEqual([{'vendor_id': '8086', 'device_id': '1502'}],
+                          result.requests[0].spec)
+
 
 class TestInstancePCIRequests(test_objects._LocalTest,
                               _TestInstancePCIRequests):
