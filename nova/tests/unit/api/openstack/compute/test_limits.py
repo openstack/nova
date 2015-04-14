@@ -31,6 +31,7 @@ from nova.api.openstack.compute.plugins.v3 import limits as limits_v21
 from nova.api.openstack.compute import views
 from nova.api.openstack import wsgi
 import nova.context
+from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import matchers
@@ -897,3 +898,21 @@ class LimitsViewBuilderTest(test.NoDBTestCase):
         rate_limits = []
         output = self.view_builder.build(rate_limits, abs_limits)
         self.assertThat(output, matchers.DictMatches(expected_limits))
+
+
+class LimitsPolicyEnforcementV21(test.NoDBTestCase):
+
+    def setUp(self):
+        super(LimitsPolicyEnforcementV21, self).setUp()
+        self.controller = limits_v21.LimitsController()
+
+    def test_limits_index_policy_failed(self):
+        rule_name = "os_compute_api:limits"
+        self.policy.set_rules({rule_name: "project:non_fake"})
+        req = fakes.HTTPRequest.blank('')
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.controller.index, req=req)
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+            exc.format_message())
