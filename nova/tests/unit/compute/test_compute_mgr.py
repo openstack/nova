@@ -1332,7 +1332,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         @mock.patch.object(self.compute.network_api,
                            'allocate_port_for_instance',
                            side_effect=e)
-        def do_test(meth, add_fault):
+        @mock.patch.object(self.compute, '_instance_update',
+                           side_effect=lambda *a, **k: {})
+        def do_test(update, meth, add_fault):
             self.assertRaises(exception.InterfaceAttachFailed,
                               self.compute.attach_interface,
                               self.context, f_instance, 'net_id', 'port_id',
