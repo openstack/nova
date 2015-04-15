@@ -5574,9 +5574,6 @@ class ComputeTestCase(BaseTestCase):
 
         self.mox.StubOutWithMock(self.compute.network_api,
                                  'setup_networks_on_host')
-        self.compute.network_api.setup_networks_on_host(c, instance,
-                                                        instance['host'],
-                                                        teardown=True)
         self.mox.StubOutWithMock(self.compute.instance_events,
                                  'clear_events_for_instance')
         self.compute.instance_events.clear_events_for_instance(
@@ -5636,9 +5633,6 @@ class ComputeTestCase(BaseTestCase):
 
         self.mox.StubOutWithMock(self.compute.network_api,
                                  'setup_networks_on_host')
-        self.compute.network_api.setup_networks_on_host(c, instance,
-                                                        self.compute.host,
-                                                        teardown=True)
         self.mox.StubOutWithMock(self.compute.instance_events,
                                  'clear_events_for_instance')
         self.compute.instance_events.clear_events_for_instance(
@@ -5705,8 +5699,6 @@ class ComputeTestCase(BaseTestCase):
                 mock.call(c, instance, False, dest)])
             post_live_migration_at_source.assert_has_calls(
                 [mock.call(c, instance, [])])
-            setup_networks_on_host.assert_has_calls([
-                mock.call(c, instance, self.compute.host, teardown=True)])
             clear_events.assert_called_once_with(instance)
             update_available_resource.assert_has_calls([mock.call(c)])
 
@@ -5791,6 +5783,8 @@ class ComputeTestCase(BaseTestCase):
                                       self.instance).AndReturn(10001)
 
     def _finish_post_live_migration_at_destination(self):
+        self.compute.network_api.setup_networks_on_host(self.admin_ctxt,
+                mox.IgnoreArg(), mox.IgnoreArg(), teardown=True)
         self.compute.network_api.setup_networks_on_host(self.admin_ctxt,
                 mox.IgnoreArg(), self.compute.host)
 
