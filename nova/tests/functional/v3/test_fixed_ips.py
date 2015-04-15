@@ -12,15 +12,32 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_config import cfg
+
 from nova import db
 from nova import exception
 from nova.tests.functional.v3 import test_servers
 from nova.tests.unit.objects import test_network
 from nova.tests.unit import utils as test_utils
 
+CONF = cfg.CONF
+CONF.import_opt('osapi_compute_extension',
+                'nova.api.openstack.compute.extensions')
+
 
 class FixedIpTest(test_servers.ServersSampleBase):
     extension_name = "os-fixed-ips"
+    # TODO(park): Overriding '_api_version' till all functional tests
+    # are merged between v2 and v2.1. After that base class variable
+    # itself can be changed to 'v2'
+    _api_version = 'v2'
+
+    def _get_flags(self):
+        f = super(FixedIpTest, self)._get_flags()
+        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.fixed_ips.Fixed_ips')
+        return f
 
     def setUp(self):
         super(FixedIpTest, self).setUp()
