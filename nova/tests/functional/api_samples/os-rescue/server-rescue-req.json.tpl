@@ -1,5 +1,0 @@
-{
-    "rescue": {
-        "adminPass": "%(password)s"
-    }
-}
