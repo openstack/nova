@@ -34,10 +34,6 @@ SHUTDOWN = 0x04  # the VM is powered off
 CRASHED = 0x06
 SUSPENDED = 0x07
 
-# TODO(maoy): BUILDING state is only used in bare metal case and should
-# eventually be removed/cleaned up. NOSTATE is probably enough.
-BUILDING = 0x09
-
 # TODO(justinsb): Power state really needs to be a proper class,
 # so that we're not locked into the libvirt status codes and can put mapping
 # logic here rather than spread throughout the code
@@ -48,5 +44,4 @@ STATE_MAP = {
     SHUTDOWN: 'shutdown',
     CRASHED: 'crashed',
     SUSPENDED: 'suspended',
-    BUILDING: 'building',
 }
