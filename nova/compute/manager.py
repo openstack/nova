@@ -953,7 +953,7 @@ class ComputeManager(manager.Manager):
         except exception.VirtualInterfacePlugException:
             # we don't want an exception to block the init_host
             LOG.exception(_("Vifs plug failed"), instance=instance)
-            self._set_instance_error_state(context, instance)
+            self._set_instance_error_state(context, instance.uuid)
             return
 
         if instance.task_state == task_states.RESIZE_MIGRATING:

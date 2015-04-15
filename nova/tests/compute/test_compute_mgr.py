@@ -294,7 +294,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             mock.patch.object(self.compute, '_set_instance_error_state')
         ) as (get_admin_context, get_nw_info, plug_vifs, set_error_state):
             self.compute._init_instance(self.context, instance)
-            set_error_state.assert_called_once_with(self.context, instance)
+            set_error_state.assert_called_once_with(self.context,
+                                                    instance.uuid)
 
     def test_init_instance_failed_resume_sets_error(self):
         instance = fake_instance.fake_instance_obj(
