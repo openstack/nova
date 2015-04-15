@@ -1192,6 +1192,7 @@ class ComputeManager(manager.Manager):
                 self.driver.filter_defer_apply_off()
 
     def cleanup_host(self):
+        self.driver.register_event_listener(None)
         self.driver.cleanup_host(host=self.host)
 
     def pre_start_hook(self):

@@ -317,6 +317,10 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             mock_driver.init_host.assert_called_once_with(host='fake-mini')
 
             self.compute.cleanup_host()
+            # register_event_listener is called on startup (init_host) and
+            # in cleanup_host
+            mock_driver.register_event_listener.assert_has_calls([
+                mock.call(self.compute.handle_events), mock.call(None)])
             mock_driver.cleanup_host.assert_called_once_with(host='fake-mini')
 
     def test_init_host_with_deleted_migration(self):
