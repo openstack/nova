@@ -281,7 +281,7 @@ class Image(object):
             raise exception.FlavorDiskTooSmall()
 
     def get_disk_size(self, name):
-        disk.get_disk_size(name)
+        return disk.get_disk_size(name)
 
     def snapshot_extract(self, target, out_format):
         raise NotImplementedError()
@@ -478,8 +478,7 @@ class Qcow2(Image):
         # Download the unmodified base image unless we already have a copy.
         if not os.path.exists(base):
             prepare_template(target=base, max_size=size, *args, **kwargs)
-        else:
-            self.verify_base_size(base, size)
+        self.verify_base_size(base, size)
 
         legacy_backing_size = None
         legacy_base = base
@@ -726,13 +725,12 @@ class Rbd(Image):
 
         if not self.check_image_exists():
             prepare_template(target=base, max_size=size, *args, **kwargs)
-        else:
-            self.verify_base_size(base, size)
 
         # prepare_template() may have cloned the image into a new rbd
         # image already instead of downloading it locally
         if not self.check_image_exists():
             self.driver.import_image(base, self.rbd_name)
+        self.verify_base_size(base, size)
 
         if size and size > self.get_disk_size(self.rbd_name):
             self.driver.resize(self.rbd_name, size)
