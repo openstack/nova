@@ -705,10 +705,11 @@ class ResourceTracker(object):
         # do some defensive filtering against bad migrations records in the
         # database:
         for migration in migrations:
-            instance = migration.instance
-
-            if not instance:
+            try:
+                instance = migration.instance
+            except exception.InstanceNotFound as e:
                 # migration referencing deleted instance
+                LOG.debug('Migration instance not found: %s', e)
                 continue
 
             uuid = instance.uuid
