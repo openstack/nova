@@ -352,7 +352,6 @@ def set_stub_network_methods(stubs):
     cm = compute_manager.ComputeManager
     if not _real_functions:
         _real_functions = {
-                '_get_instance_nw_info': cm._get_instance_nw_info,
                 '_allocate_network': cm._allocate_network,
                 '_deallocate_network': cm._deallocate_network}
 
@@ -362,7 +361,6 @@ def set_stub_network_methods(stubs):
     def fake_async_networkinfo(*args, **kwargs):
         return network_model.NetworkInfoAsyncWrapper(fake_networkinfo)
 
-    stubs.Set(cm, '_get_instance_nw_info', fake_networkinfo)
     stubs.Set(cm, '_allocate_network', fake_async_networkinfo)
     stubs.Set(cm, '_deallocate_network', lambda *args, **kwargs: None)
 

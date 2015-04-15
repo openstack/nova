@@ -546,7 +546,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(self.compute, 'init_virt_events')
         self.mox.StubOutWithMock(self.compute, '_get_instances_on_driver')
         self.mox.StubOutWithMock(self.compute, '_init_instance')
-        self.mox.StubOutWithMock(self.compute, '_get_instance_nw_info')
+        self.mox.StubOutWithMock(self.compute.network_api,
+                                 'get_instance_nw_info')
 
         self.compute.driver.init_host(host=our_host)
         context.get_admin_context().AndReturn(self.context)
@@ -559,9 +560,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         # simulate failed instance
         self.compute._get_instances_on_driver(
             self.context, {'deleted': False}).AndReturn([deleted_instance])
-        self.compute._get_instance_nw_info(self.context, deleted_instance
-            ).AndRaise(exception.InstanceNotFound(
-                instance_id=deleted_instance['uuid']))
+        self.compute.network_api.get_instance_nw_info(
+            self.context, deleted_instance).AndRaise(
+            exception.InstanceNotFound(instance_id=deleted_instance['uuid']))
         # ensure driver.destroy is called so that driver may
         # clean up any dangling files
         self.compute.driver.destroy(self.context, deleted_instance,
@@ -1870,7 +1871,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         with contextlib.nested(
             mock.patch.object(self.context, 'elevated',
                               return_value=self.context),
-            mock.patch.object(self.compute, '_get_instance_nw_info',
+            mock.patch.object(self.compute.network_api, 'get_instance_nw_info',
                               return_value=fake_nw_info),
             mock.patch.object(self.compute, '_get_rescue_image',
                               return_value=rescue_image_meta),
@@ -1938,7 +1939,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         with contextlib.nested(
             mock.patch.object(self.context, 'elevated',
                               return_value=self.context),
-            mock.patch.object(self.compute, '_get_instance_nw_info',
+            mock.patch.object(self.compute.network_api, 'get_instance_nw_info',
                               return_value=fake_nw_info),
             mock.patch.object(self.compute, '_notify_about_instance_usage'),
             mock.patch.object(self.compute.driver, 'unrescue'),
@@ -2111,14 +2112,14 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             mock.patch.object(self.compute, '_get_instances_on_driver',
                                return_value=[instance_1,
                                              instance_2]),
-            mock.patch.object(self.compute, '_get_instance_nw_info',
+            mock.patch.object(self.compute.network_api, 'get_instance_nw_info',
                                return_value=None),
             mock.patch.object(self.compute, '_get_instance_block_device_info',
                                return_value={}),
             mock.patch.object(self.compute, '_is_instance_storage_shared',
                                return_value=False),
             mock.patch.object(self.compute.driver, 'destroy')
-        ) as (_get_instances_on_driver, _get_instance_nw_info,
+        ) as (_get_instances_on_driver, get_instance_nw_info,
               _get_instance_block_device_info, _is_instance_storage_shared,
               destroy):
             self.compute._destroy_evacuated_instances(self.context)
@@ -3463,7 +3464,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 system_metadata={},
                 expected_attrs=['system_metadata'])
 
-        self.mox.StubOutWithMock(self.compute, '_get_instance_nw_info')
+        self.mox.StubOutWithMock(self.compute.network_api,
+                                 'get_instance_nw_info')
         self.mox.StubOutWithMock(self.compute, '_allocate_network')
         self.compute._allocate_network(self.context, instance,
                 self.requested_networks, None, self.security_groups, None)
@@ -3477,7 +3479,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 system_metadata=dict(network_allocated='False'),
                 expected_attrs=['system_metadata'])
 
-        self.mox.StubOutWithMock(self.compute, '_get_instance_nw_info')
+        self.mox.StubOutWithMock(self.compute.network_api,
+                                 'get_instance_nw_info')
         self.mox.StubOutWithMock(self.compute, '_allocate_network')
         self.compute._allocate_network(self.context, instance,
                 self.requested_networks, None, self.security_groups, None)
@@ -3494,14 +3497,16 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         def fake_network_info():
             return network_model.NetworkInfo([{'address': '123.123.123.123'}])
 
-        self.mox.StubOutWithMock(self.compute, '_get_instance_nw_info')
+        self.mox.StubOutWithMock(self.compute.network_api,
+                                 'get_instance_nw_info')
         self.mox.StubOutWithMock(self.compute, '_allocate_network')
         self.mox.StubOutWithMock(self.compute.network_api,
                                  'setup_instance_network_on_host')
         self.compute.network_api.setup_instance_network_on_host(
             self.context, instance, instance.host)
-        self.compute._get_instance_nw_info(self.context, instance).AndReturn(
-                    network_model.NetworkInfoAsyncWrapper(fake_network_info))
+        self.compute.network_api.get_instance_nw_info(
+            self.context, instance).AndReturn(
+            network_model.NetworkInfoAsyncWrapper(fake_network_info))
         self.mox.ReplayAll()
 
         self.compute._build_networks_for_instance(self.context, instance,
@@ -3657,7 +3662,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             mock.patch.object(self.migration, 'save'),
             mock.patch.object(self.migration, 'obj_as_admin',
                               return_value=mock.MagicMock()),
-            mock.patch.object(self.compute, '_get_instance_nw_info',
+            mock.patch.object(self.compute.network_api, 'get_instance_nw_info',
                               return_value=None),
             mock.patch.object(self.instance, 'save'),
             mock.patch.object(self.compute, '_notify_about_instance_usage'),
@@ -3692,7 +3697,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         # revert_resize() and the return value is passed to driver.destroy().
         # Otherwise we could regress this.
 
-        @mock.patch.object(self.compute, '_get_instance_nw_info')
+        @mock.patch.object(self.compute.network_api, 'get_instance_nw_info')
         @mock.patch.object(self.compute, '_is_instance_storage_shared')
         @mock.patch.object(self.compute, 'finish_revert_resize')
         @mock.patch.object(self.compute, '_instance_update')
@@ -3714,7 +3719,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                     _instance_update,
                     finish_revert_resize,
                     _is_instance_storage_shared,
-                    _get_instance_nw_info):
+                    get_instance_nw_info):
 
             self.migration.source_compute = self.instance['host']
 
