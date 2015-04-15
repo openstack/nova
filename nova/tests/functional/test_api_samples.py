@@ -1979,54 +1979,6 @@ class MultinicSampleJsonTest(ServersSampleBase):
         self.assertEqual(response.status_code, 202)
 
 
-class FlavorExtraSpecsSampleJsonTests(ApiSampleTestBaseV2):
-    ADMIN_API = True
-    extension_name = ("nova.api.openstack.compute.contrib.flavorextraspecs."
-                      "Flavorextraspecs")
-
-    def _flavor_extra_specs_create(self):
-        subs = {'value1': 'value1',
-                'value2': 'value2'
-        }
-        response = self._do_post('flavors/1/os-extra_specs',
-                                 'flavor-extra-specs-create-req', subs)
-        self._verify_response('flavor-extra-specs-create-resp',
-                              subs, response, 200)
-
-    def test_flavor_extra_specs_get(self):
-        subs = {'value1': 'value1'}
-        self._flavor_extra_specs_create()
-        response = self._do_get('flavors/1/os-extra_specs/key1')
-        self._verify_response('flavor-extra-specs-get-resp',
-                              subs, response, 200)
-
-    def test_flavor_extra_specs_list(self):
-        subs = {'value1': 'value1',
-                'value2': 'value2'
-        }
-        self._flavor_extra_specs_create()
-        response = self._do_get('flavors/1/os-extra_specs')
-        self._verify_response('flavor-extra-specs-list-resp',
-                              subs, response, 200)
-
-    def test_flavor_extra_specs_create(self):
-        self._flavor_extra_specs_create()
-
-    def test_flavor_extra_specs_update(self):
-        subs = {'value1': 'new_value1'}
-        self._flavor_extra_specs_create()
-        response = self._do_put('flavors/1/os-extra_specs/key1',
-                                'flavor-extra-specs-update-req', subs)
-        self._verify_response('flavor-extra-specs-update-resp',
-                              subs, response, 200)
-
-    def test_flavor_extra_specs_delete(self):
-        self._flavor_extra_specs_create()
-        response = self._do_delete('flavors/1/os-extra_specs/key1')
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.content, '')
-
-
 class FpingSampleJsonTests(ServersSampleBase):
     extension_name = ("nova.api.openstack.compute.contrib.fping.Fping")
 
