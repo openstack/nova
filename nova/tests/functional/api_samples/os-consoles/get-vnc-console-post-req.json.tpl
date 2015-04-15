@@ -1,5 +1,0 @@
-{
-    "os-getVNCConsole": {
-        "type": "novnc"
-    }
-}
