@@ -4281,7 +4281,8 @@ class LibvirtDriver(driver.ComputeDriver):
         self._cleanup_shared_storage_test_file(filename)
 
     def check_can_live_migrate_source(self, context, instance,
-                                      dest_check_data):
+                                      dest_check_data,
+                                      block_device_info=None):
         """Check if it is possible to execute live migration.
 
         This checks if the live migration can succeed, based on the
@@ -4290,6 +4291,7 @@ class LibvirtDriver(driver.ComputeDriver):
         :param context: security context
         :param instance: nova.db.sqlalchemy.models.Instance
         :param dest_check_data: result of check_can_live_migrate_destination
+        :param block_device_info: result of _get_instance_block_device_info
         :returns: a dict containing migration info
         """
         # Checking shared storage connectivity
@@ -4310,7 +4312,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 raise exception.InvalidLocalStorage(reason=reason, path=source)
             self._assert_dest_node_has_enough_disk(context, instance,
                                     dest_check_data['disk_available_mb'],
-                                    dest_check_data['disk_over_commit'])
+                                    dest_check_data['disk_over_commit'],
+                                    block_device_info)
 
         elif not shared and (not is_volume_backed or has_local_disks):
             reason = _("Live migration can not be used "
@@ -4328,7 +4331,8 @@ class LibvirtDriver(driver.ComputeDriver):
         return dest_check_data
 
     def _assert_dest_node_has_enough_disk(self, context, instance,
-                                             available_mb, disk_over_commit):
+                                             available_mb, disk_over_commit,
+                                             block_device_info=None):
         """Checks if destination has enough disk for block migration."""
         # Libvirt supports qcow2 disk format,which is usually compressed
         # on compute nodes.
@@ -4344,7 +4348,8 @@ class LibvirtDriver(driver.ComputeDriver):
         if available_mb:
             available = available_mb * units.Mi
 
-        ret = self.get_instance_disk_info(instance['name'])
+        ret = self.get_instance_disk_info(instance['name'],
+                                          block_device_info=block_device_info)
         disk_infos = jsonutils.loads(ret)
 
         necessary = 0
