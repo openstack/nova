@@ -9,6 +9,8 @@
                 }
             ],
             "status": "SUPPORTED",
+            "version": "",
+            "min_version": "",
             "updated": "2011-01-21T11:33:21Z"
         },
         {
@@ -20,6 +22,8 @@
                 }
             ],
             "status": "CURRENT",
+            "version": "2.3",
+            "min_version": "2.1",
             "updated": "2013-07-23T11:33:21Z"
         }
     ]
