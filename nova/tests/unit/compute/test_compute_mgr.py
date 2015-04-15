@@ -1437,6 +1437,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                        'instance_fault_create',
                        lambda x, y:
                            test_instance_fault.fake_faults['fake-uuid'][0])
+        self.stubs.Set(self.compute, '_instance_update',
+                       lambda c, u, **k: {})
 
         # Good path
         self.compute.swap_volume(self.context, old_volume_id, new_volume_id,
