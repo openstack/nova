@@ -253,7 +253,9 @@ class TestObjMakeList(test.NoDBTestCase):
 
     def test_obj_make_list(self):
         class MyList(base.ObjectListBase, base.NovaObject):
-            pass
+            fields = {
+                'objects': fields.ListOfObjectsField('MyObj'),
+            }
 
         db_objs = [{'foo': 1, 'bar': 'baz', 'missing': 'banana'},
                    {'foo': 2, 'bar': 'bat', 'missing': 'apple'},
@@ -970,112 +972,6 @@ class TestRemoteObject(_RemoteTest, _TestObject):
         MyObj2.VERSION = '1.1.456'
         obj = MyObj2.query(self.context)
         self.assertEqual('bar', obj.bar)
-
-
-class TestObjectListBase(test.NoDBTestCase):
-    def test_list_like_operations(self):
-        class MyElement(base.NovaObject):
-            fields = {'foo': fields.IntegerField()}
-
-            def __init__(self, foo):
-                super(MyElement, self).__init__()
-                self.foo = foo
-
-        class Foo(base.ObjectListBase, base.NovaObject):
-            fields = {'objects': fields.ListOfObjectsField('MyElement')}
-
-        objlist = Foo(context='foo',
-                      objects=[MyElement(1), MyElement(2), MyElement(3)])
-        self.assertEqual(list(objlist), objlist.objects)
-        self.assertEqual(len(objlist), 3)
-        self.assertIn(objlist.objects[0], objlist)
-        self.assertEqual(list(objlist[:1]), [objlist.objects[0]])
-        self.assertEqual(objlist[:1]._context, 'foo')
-        self.assertEqual(objlist[2], objlist.objects[2])
-        self.assertEqual(objlist.count(objlist.objects[0]), 1)
-        self.assertEqual(objlist.index(objlist.objects[1]), 1)
-        objlist.sort(key=lambda x: x.foo, reverse=True)
-        self.assertEqual([3, 2, 1],
-                         [x.foo for x in objlist])
-
-    def test_serialization(self):
-        class Foo(base.ObjectListBase, base.NovaObject):
-            fields = {'objects': fields.ListOfObjectsField('Bar')}
-
-        class Bar(base.NovaObject):
-            fields = {'foo': fields.Field(fields.String())}
-
-        obj = Foo(objects=[])
-        for i in 'abc':
-            bar = Bar(foo=i)
-            obj.objects.append(bar)
-
-        obj2 = base.NovaObject.obj_from_primitive(obj.obj_to_primitive())
-        self.assertFalse(obj is obj2)
-        self.assertEqual([x.foo for x in obj],
-                         [y.foo for y in obj2])
-
-    def _test_object_list_version_mappings(self, list_obj_class):
-        # Figure out what sort of object this list is for
-        list_field = list_obj_class.fields['objects']
-        item_obj_field = list_field._type._element_type
-        item_obj_name = item_obj_field._type._obj_name
-
-        # Look through all object classes of this type and make sure that
-        # the versions we find are covered by the parent list class
-        for item_class in base.NovaObject._obj_classes[item_obj_name]:
-            self.assertIn(
-                item_class.VERSION,
-                list_obj_class.child_versions.values(),
-                'Version mapping is incomplete for %s' % (
-                    list_obj_class.__name__))
-
-    def test_object_version_mappings(self):
-        # Find all object list classes and make sure that they at least handle
-        # all the current object versions
-        for obj_classes in base.NovaObject._obj_classes.values():
-            for obj_class in obj_classes:
-                if issubclass(obj_class, base.ObjectListBase):
-                    self._test_object_list_version_mappings(obj_class)
-
-    def test_list_changes(self):
-        class Foo(base.ObjectListBase, base.NovaObject):
-            fields = {'objects': fields.ListOfObjectsField('Bar')}
-
-        class Bar(base.NovaObject):
-            fields = {'foo': fields.StringField()}
-
-        obj = Foo(objects=[])
-        self.assertEqual(set(['objects']), obj.obj_what_changed())
-        obj.objects.append(Bar(foo='test'))
-        self.assertEqual(set(['objects']), obj.obj_what_changed())
-        obj.obj_reset_changes()
-        # This should still look dirty because the child is dirty
-        self.assertEqual(set(['objects']), obj.obj_what_changed())
-        obj.objects[0].obj_reset_changes()
-        # This should now look clean because the child is clean
-        self.assertEqual(set(), obj.obj_what_changed())
-
-    def test_initialize_objects(self):
-        class Foo(base.ObjectListBase, base.NovaObject):
-            fields = {'objects': fields.ListOfObjectsField('Bar')}
-
-        class Bar(base.NovaObject):
-            fields = {'foo': fields.StringField()}
-
-        obj = Foo()
-        self.assertEqual([], obj.objects)
-        self.assertEqual(set(), obj.obj_what_changed())
-
-    def test_obj_repr(self):
-        class Foo(base.ObjectListBase, base.NovaObject):
-            fields = {'objects': fields.ListOfObjectsField('Bar')}
-
-        class Bar(base.NovaObject):
-            fields = {'uuid': fields.StringField()}
-
-        obj = Foo(objects=[Bar(uuid='fake-uuid')])
-        self.assertEqual('Foo(objects=[Bar(fake-uuid)])', repr(obj))
 
 
 class TestObjectSerializer(_BaseTestCase):
