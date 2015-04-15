@@ -1766,35 +1766,6 @@ class ExtendedVIFNetSampleJsonTests(ServersSampleBase):
         self._verify_response('vifs-list-resp', subs, response, 200)
 
 
-class FlavorManageSampleJsonTests(ApiSampleTestBaseV2):
-    ADMIN_API = True
-    extension_name = ("nova.api.openstack.compute.contrib.flavormanage."
-                      "Flavormanage")
-
-    def _create_flavor(self):
-        """Create a flavor."""
-        subs = {
-            'flavor_id': 10,
-            'flavor_name': "test_flavor"
-        }
-        response = self._do_post("flavors",
-                                 "flavor-create-post-req",
-                                 subs)
-        subs.update(self._get_regexes())
-        self._verify_response("flavor-create-post-resp", subs, response, 200)
-
-    def test_create_flavor(self):
-        # Get api sample to create a flavor.
-        self._create_flavor()
-
-    def test_delete_flavor(self):
-        # Get api sample to delete a flavor.
-        self._create_flavor()
-        response = self._do_delete("flavors/10")
-        self.assertEqual(response.status_code, 202)
-        self.assertEqual(response.content, '')
-
-
 class ServerPasswordSampleJsonTests(ServersSampleBase):
     extension_name = ("nova.api.openstack.compute.contrib.server_password."
                       "Server_password")
