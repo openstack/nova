@@ -84,7 +84,7 @@ class NetworkAPI(object):
         * 1.13 - Convert allocate_for_instance()
                  to use NetworkRequestList objects
 
-        ... Juno supports message version 1.13.  So, any changes to
+        ... Juno and Kilo supports message version 1.13.  So, any changes to
         existing methods in 1.x after that point should be done such that they
         can handle the version_cap being set to 1.13.
 
@@ -110,6 +110,7 @@ class NetworkAPI(object):
         'havana': '1.10',
         'icehouse': '1.12',
         'juno': '1.13',
+        'kilo': '1.13',
     }
 
     def __init__(self, topic=None):

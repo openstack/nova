@@ -159,6 +159,11 @@ class ConductorAPI(object):
     * 2.1  - Make notify_usage_exists() take an instance object
     * Remove bw_usage_update()
     * Remove notify_usage_exists()
+
+    ... Kilo supports message version 2.1.  So, any changes to
+    existing methods in 2.x after that point should be done such
+    that they can handle the version_cap being set to 2.1.
+
     """
 
     VERSION_ALIASES = {
@@ -166,6 +171,7 @@ class ConductorAPI(object):
         'havana': '1.58',
         'icehouse': '2.0',
         'juno': '2.0',
+        'kilo': '2.1',
     }
 
     def __init__(self):
