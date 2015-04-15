@@ -1311,6 +1311,9 @@ class VMwareVMOps(object):
                                            block_device_info):
         vmdk = vm_util.get_vmdk_info(self._session, vm_ref,
                                      uuid=instance.uuid)
+        if not vmdk.device:
+            LOG.debug("No root disk attached!", instance=instance)
+            return
         ds_ref = vmdk.device.backing.datastore
         datastore = ds_obj.get_datastore_by_ref(self._session, ds_ref)
         dc_info = self.get_datacenter_ref_and_name(ds_ref)
@@ -1374,6 +1377,8 @@ class VMwareVMOps(object):
         vm_ref = vm_util.get_vm_ref(self._session, instance)
         vmdk = vm_util.get_vmdk_info(self._session, vm_ref,
                                      uuid=instance.uuid)
+        if not vmdk.device:
+            return
         ds_ref = vmdk.device.backing.datastore
         dc_info = self.get_datacenter_ref_and_name(ds_ref)
         folder = ds_obj.DatastorePath.parse(vmdk.path).dirname
@@ -1386,6 +1391,31 @@ class VMwareVMOps(object):
                                original_disk.basename):
             ds_util.disk_delete(self._session, dc_info.ref,
                                 str(original_disk))
+
+    def _revert_migration_update_disks(self, vm_ref, instance, vmdk,
+                                       block_device_info):
+        ds_ref = vmdk.device.backing.datastore
+        dc_info = self.get_datacenter_ref_and_name(ds_ref)
+        folder = ds_obj.DatastorePath.parse(vmdk.path).dirname
+        datastore = ds_obj.DatastorePath.parse(vmdk.path).datastore
+        original_disk = ds_obj.DatastorePath(datastore, folder,
+                                             'original.vmdk')
+        ds_browser = self._get_ds_browser(ds_ref)
+        if ds_util.file_exists(self._session, ds_browser,
+                               original_disk.parent,
+                               original_disk.basename):
+            self._volumeops.detach_disk_from_vm(vm_ref, instance,
+                                                vmdk.device)
+            ds_util.disk_delete(self._session, dc_info.ref, vmdk.path)
+            ds_util.disk_move(self._session, dc_info.ref,
+                              str(original_disk), vmdk.path)
+            self._volumeops.attach_disk_to_vm(vm_ref, instance,
+                                              vmdk.adapter_type,
+                                              vmdk.disk_type, vmdk.path)
+        # Reconfigure ephemerals
+        self._remove_ephemerals_and_swap(vm_ref)
+        self._resize_create_ephemerals_and_swap(vm_ref, instance,
+                                                block_device_info)
 
     def finish_revert_migration(self, context, instance, network_info,
                                 block_device_info, power_on=True):
@@ -1405,30 +1435,12 @@ class VMwareVMOps(object):
                                                     metadata=metadata)
         vm_util.reconfigure_vm(self._session, vm_ref, vm_resize_spec)
 
-        # Reconfigure the disks if necessary
         vmdk = vm_util.get_vmdk_info(self._session, vm_ref,
                                      uuid=instance.uuid)
-        ds_ref = vmdk.device.backing.datastore
-        dc_info = self.get_datacenter_ref_and_name(ds_ref)
-        folder = ds_obj.DatastorePath.parse(vmdk.path).dirname
-        datastore = ds_obj.DatastorePath.parse(vmdk.path).datastore
-        original_disk = ds_obj.DatastorePath(datastore, folder,
-                                             'original.vmdk')
-        ds_browser = self._get_ds_browser(ds_ref)
-        if ds_util.file_exists(self._session, ds_browser,
-                               original_disk.parent,
-                               original_disk.basename):
-            self._volumeops.detach_disk_from_vm(vm_ref, instance, vmdk.device)
-            ds_util.disk_delete(self._session, dc_info.ref, vmdk.path)
-            ds_util.disk_move(self._session, dc_info.ref,
-                              str(original_disk), vmdk.path)
-            self._volumeops.attach_disk_to_vm(vm_ref, instance,
-                                              vmdk.adapter_type,
-                                              vmdk.disk_type, vmdk.path)
-        # Reconfigure ephemerals
-        self._remove_ephemerals_and_swap(vm_ref)
-        self._resize_create_ephemerals_and_swap(vm_ref, instance,
+        if vmdk.device:
+            self._revert_migration_update_disks(vm_ref, instance, vmdk,
                                                 block_device_info)
+
         if power_on:
             vm_util.power_on_instance(self._session, instance)
 
