@@ -13,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_config import cfg
+
 import datetime
 
 from nova.compute import api as compute_api
@@ -27,15 +29,30 @@ from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_instance
 from nova.volume import cinder
 
+CONF = cfg.CONF
+CONF.import_opt('osapi_compute_extension',
+                'nova.api.openstack.compute.extensions')
+
 
 class SnapshotsSampleJsonTests(api_sample_base.ApiSampleTestBaseV3):
     extension_name = "os-volumes"
+    # TODO(park): Overriding '_api_version' till all functional tests
+    # are merged between v2 and v2.1. After that base class variable
+    # itself can be changed to 'v2'
+    _api_version = 'v2'
 
     create_subs = {
             'snapshot_name': 'snap-001',
             'description': 'Daily backup',
             'volume_id': '521752a6-acf6-4b2d-bc7a-119f9148cd8c'
     }
+
+    def _get_flags(self):
+        f = super(SnapshotsSampleJsonTests, self)._get_flags()
+        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.volumes.Volumes')
+        return f
 
     def setUp(self):
         super(SnapshotsSampleJsonTests, self).setUp()
@@ -88,6 +105,17 @@ class SnapshotsSampleJsonTests(api_sample_base.ApiSampleTestBaseV3):
 
 class VolumesSampleJsonTest(test_servers.ServersSampleBase):
     extension_name = "os-volumes"
+    # TODO(park): Overriding '_api_version' till all functional tests
+    # are merged between v2 and v2.1. After that base class variable
+    # itself can be changed to 'v2'
+    _api_version = 'v2'
+
+    def _get_flags(self):
+        f = super(VolumesSampleJsonTest, self)._get_flags()
+        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.volumes.Volumes')
+        return f
 
     def _get_volume_id(self):
         return 'a26887c6-c47b-4654-abb5-dfadf7d3f803'
@@ -225,7 +253,22 @@ class VolumeAttachmentsSampleBase(test_servers.ServersSampleBase):
 
 
 class VolumeAttachmentsSampleJsonTest(VolumeAttachmentsSampleBase):
+    extra_extensions_to_load = ["os-access-ips"]
     extension_name = "os-volumes"
+    # TODO(park): Overriding '_api_version' till all functional tests
+    # are merged between v2 and v2.1. After that base class variable
+    # itself can be changed to 'v2'
+    _api_version = 'v2'
+
+    def _get_flags(self):
+        f = super(VolumeAttachmentsSampleJsonTest, self)._get_flags()
+        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.volumes.Volumes')
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.'
+            'volume_attachment_update.Volume_attachment_update')
+        return f
 
     def test_attach_volume_to_server(self):
         self.stubs.Set(cinder.API, 'get', fakes.stub_volume_get)
