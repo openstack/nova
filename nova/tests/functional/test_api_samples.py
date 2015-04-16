@@ -318,24 +318,6 @@ class ServersMetadataJsonTest(ServersSampleBase):
         self.assertEqual(response.content, '')
 
 
-class ServersIpsJsonTest(ServersSampleBase):
-    sample_dir = 'servers'
-
-    def test_get(self):
-        # Test getting a server's IP information.
-        uuid = self._post_server()
-        response = self._do_get('servers/%s/ips' % uuid)
-        subs = self._get_regexes()
-        self._verify_response('server-ips-resp', subs, response, 200)
-
-    def test_get_by_network(self):
-        # Test getting a server's IP information by network id.
-        uuid = self._post_server()
-        response = self._do_get('servers/%s/ips/private' % uuid)
-        subs = self._get_regexes()
-        self._verify_response('server-ips-network-resp', subs, response, 200)
-
-
 class ExtensionsSampleJsonTest(ApiSampleTestBaseV2):
     all_extensions = True
 
