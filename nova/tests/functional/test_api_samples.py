@@ -18,7 +18,6 @@ import inspect
 import os
 import uuid as uuid_lib
 
-import mock
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
@@ -27,14 +26,10 @@ import testtools
 
 from nova.api.metadata import password
 from nova.api.openstack.compute import extensions
-from nova.cells import utils as cells_utils
 # Import extensions to pull in osapi_compute_extension CONF option used below.
 from nova.compute import api as compute_api
-from nova.compute import cells_api as cells_api
 from nova.console import manager as console_manager  # noqa - only for cfg
 from nova.network.neutronv2 import api as neutron_api  # noqa - only for cfg
-from nova import objects
-from nova.servicegroup import api as service_group_api
 from nova import test
 from nova.tests.functional import api_samples_test_base
 from nova.tests.functional import integrated_helpers
@@ -812,128 +807,6 @@ class ConfigDriveSampleJsonTest(ServersSampleBase):
         subs['cdrive'] = '.*'
         self._verify_response('servers-config-drive-details-resp',
                               subs, response, 200)
-
-
-@mock.patch.object(service_group_api.API, "service_is_up", lambda _: True)
-class HypervisorsSampleJsonTests(ApiSampleTestBaseV2):
-    ADMIN_API = True
-    extension_name = ("nova.api.openstack.compute.contrib.hypervisors."
-                      "Hypervisors")
-
-    def test_hypervisors_list(self):
-        response = self._do_get('os-hypervisors')
-        self._verify_response('hypervisors-list-resp', {}, response, 200)
-
-    def test_hypervisors_search(self):
-        response = self._do_get('os-hypervisors/fake/search')
-        self._verify_response('hypervisors-search-resp', {}, response, 200)
-
-    def test_hypervisors_servers(self):
-        response = self._do_get('os-hypervisors/fake/servers')
-        self._verify_response('hypervisors-servers-resp', {}, response, 200)
-
-    def test_hypervisors_show(self):
-        hypervisor_id = 1
-        subs = {
-            'hypervisor_id': hypervisor_id
-        }
-        response = self._do_get('os-hypervisors/%s' % hypervisor_id)
-        subs.update(self._get_regexes())
-        self._verify_response('hypervisors-show-resp', subs, response, 200)
-
-    def test_hypervisors_statistics(self):
-        response = self._do_get('os-hypervisors/statistics')
-        self._verify_response('hypervisors-statistics-resp', {}, response, 200)
-
-    def test_hypervisors_uptime(self):
-        def fake_get_host_uptime(self, context, hyp):
-            return (" 08:32:11 up 93 days, 18:25, 12 users,  load average:"
-                    " 0.20, 0.12, 0.14")
-
-        self.stubs.Set(compute_api.HostAPI,
-                       'get_host_uptime', fake_get_host_uptime)
-        hypervisor_id = 1
-        response = self._do_get('os-hypervisors/%s/uptime' % hypervisor_id)
-        subs = {
-            'hypervisor_id': hypervisor_id,
-        }
-        self._verify_response('hypervisors-uptime-resp', subs, response, 200)
-
-
-class ExtendedHypervisorsJsonTest(ApiSampleTestBaseV2):
-    ADMIN_API = True
-    extends_name = ("nova.api.openstack.compute.contrib."
-                    "hypervisors.Hypervisors")
-    extension_name = ("nova.api.openstack.compute.contrib."
-                      "extended_hypervisors.Extended_hypervisors")
-
-    def test_hypervisors_show_with_ip(self):
-        hypervisor_id = 1
-        subs = {
-            'hypervisor_id': hypervisor_id
-        }
-        response = self._do_get('os-hypervisors/%s' % hypervisor_id)
-        subs.update(self._get_regexes())
-        self._verify_response('hypervisors-show-with-ip-resp',
-                              subs, response, 200)
-
-
-class HypervisorStatusJsonTest(ApiSampleTestBaseV2):
-    ADMIN_API = True
-    extends_name = ("nova.api.openstack.compute.contrib."
-                    "hypervisors.Hypervisors")
-    extension_name = ("nova.api.openstack.compute.contrib."
-                      "hypervisor_status.Hypervisor_status")
-
-    def test_hypervisors_show_with_status(self):
-        hypervisor_id = 1
-        subs = {
-            'hypervisor_id': hypervisor_id
-        }
-        response = self._do_get('os-hypervisors/%s' % hypervisor_id)
-        subs.update(self._get_regexes())
-        self._verify_response('hypervisors-show-with-status-resp',
-                              subs, response, 200)
-
-
-@mock.patch("nova.servicegroup.API.service_is_up", return_value=True)
-class HypervisorsCellsSampleJsonTests(ApiSampleTestBaseV2):
-    ADMIN_API = True
-    extension_name = ("nova.api.openstack.compute.contrib.hypervisors."
-                      "Hypervisors")
-
-    def setUp(self):
-        self.flags(enable=True, cell_type='api', group='cells')
-        super(HypervisorsCellsSampleJsonTests, self).setUp()
-
-    def test_hypervisor_uptime(self, mocks):
-        fake_hypervisor = objects.ComputeNode(id=1, host='fake-mini',
-                                              hypervisor_hostname='fake-mini')
-
-        def fake_get_host_uptime(self, context, hyp):
-            return (" 08:32:11 up 93 days, 18:25, 12 users,  load average:"
-                    " 0.20, 0.12, 0.14")
-
-        def fake_compute_node_get(self, context, hyp):
-            return fake_hypervisor
-
-        def fake_service_get_by_compute_host(self, context, host):
-            return cells_utils.ServiceProxy(
-                objects.Service(id=1, host='fake-mini', disabled=False,
-                                disabled_reason=None),
-                'cell1')
-
-        self.stubs.Set(cells_api.HostAPI, 'compute_node_get',
-                       fake_compute_node_get)
-        self.stubs.Set(cells_api.HostAPI, 'service_get_by_compute_host',
-                       fake_service_get_by_compute_host)
-
-        self.stubs.Set(cells_api.HostAPI,
-                       'get_host_uptime', fake_get_host_uptime)
-        hypervisor_id = fake_hypervisor['id']
-        response = self._do_get('os-hypervisors/%s/uptime' % hypervisor_id)
-        subs = {'hypervisor_id': hypervisor_id}
-        self._verify_response('hypervisors-uptime-resp', subs, response, 200)
 
 
 class PreserveEphemeralOnRebuildJsonTest(ServersSampleBase):
