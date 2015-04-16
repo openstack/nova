@@ -3008,7 +3008,7 @@ class ComputeManager(manager.Manager):
             def detach_block_devices(context, bdms):
                 for bdm in bdms:
                     if bdm.is_volume:
-                        self.volume_api.detach(context, bdm.volume_id)
+                        self.detach_volume(context, bdm.volume_id, instance)
 
             files = self._decode_files(injected_files)
 

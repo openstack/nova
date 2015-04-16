@@ -11435,7 +11435,8 @@ class EvacuateHostTestCase(BaseTestCase):
                   'source_type': 'volume',
                   'device_name': '/dev/vdc',
                   'delete_on_termination': False,
-                  'volume_id': 'fake_volume_id'}
+                  'volume_id': 'fake_volume_id',
+                  'connection_info': '{}'}
 
         db.block_device_mapping_create(self.context, values)
 
@@ -11449,6 +11450,11 @@ class EvacuateHostTestCase(BaseTestCase):
         def fake_detach(self, context, volume):
             result["detached"] = volume["id"] == 'fake_volume_id'
         self.stubs.Set(cinder.API, "detach", fake_detach)
+
+        self.mox.StubOutWithMock(self.compute, '_detach_volume')
+        self.compute._detach_volume(mox.IsA(self.context),
+                                    mox.IsA(instance_obj.Instance),
+                                    mox.IsA(objects.BlockDeviceMapping))
 
         def fake_terminate_connection(self, context, volume, connector):
             return {}
