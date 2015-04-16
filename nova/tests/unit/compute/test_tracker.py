@@ -14,6 +14,7 @@ import contextlib
 import copy
 
 import mock
+from oslo_serialization import jsonutils
 from oslo_utils import units
 
 from nova.compute import claims
@@ -1258,21 +1259,28 @@ class TestResizeClaim(BaseTestCase):
 
         # Register the instance with dst_rt
         expected = copy.deepcopy(dst_rt.compute_node)
+        del expected['stats']
         dst_rt.instance_claim(self.ctx, dst_instance)
         self.adjust_expected(expected, new_itype)
-        expected['stats'] = ("{'num_task_resize_migrating': 1, "
-                             "'io_workload': 1, "
-                             "'num_instances': 1, "
-                             "'num_proj_fake-project': 1, "
-                             "'num_vm_active': 1, "
-                             "'num_os_type_fake-os': 1}".replace("'", '"'))
+        expected_stats = {'num_task_resize_migrating': 1,
+                             'io_workload': 1,
+                             'num_instances': 1,
+                             'num_proj_fake-project': 1,
+                             'num_vm_active': 1,
+                             'num_os_type_fake-os': 1}
         expected['current_workload'] = 1
         expected['running_vms'] = 1
+        actual_stats = dst_rt.compute_node.pop('stats')
+        actual_stats = jsonutils.loads(actual_stats)
+        self.assertEqual(expected_stats, actual_stats)
         self.assertEqual(expected, dst_rt.compute_node)
 
         # Provide the migration via a mock, then audit dst_rt to check that
         # the instance + migration resources are not double-counted
         self.audit(dst_rt, [dst_instance], [dst_migr], dst_instance)
+        actual_stats = dst_rt.compute_node.pop('stats')
+        actual_stats = jsonutils.loads(actual_stats)
+        self.assertEqual(expected_stats, actual_stats)
         self.assertEqual(expected, dst_rt.compute_node)
 
         # Audit src_rt with src_migr
