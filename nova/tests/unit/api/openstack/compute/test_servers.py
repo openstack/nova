@@ -2677,7 +2677,7 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPConflict,
                                           self._test_create_extra, params)
 
-    def test_create_instance_with_neturonv2_not_found_network(self):
+    def test_create_instance_with_neutronv2_not_found_network(self):
         self.flags(network_api_class='nova.network.neutronv2.api.API')
         network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
         requested_networks = [{'uuid': network}]
