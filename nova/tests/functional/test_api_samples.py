@@ -1175,21 +1175,6 @@ class AdminActionsSamplesJsonTest(ServersSampleBase):
                                  'admin-actions-unlock-server', {})
         self.assertEqual(response.status_code, 202)
 
-    def test_post_backup_server(self):
-        # Get api samples to backup server request.
-        def image_details(self, context, **kwargs):
-            """This stub is specifically used on the backup action."""
-            # NOTE(maurosr): I've added this simple stub cause backup action
-            # was trapped in infinite loop during fetch image phase since the
-            # fake Image Service always returns the same set of images
-            return []
-
-        self.stubs.Set(fake._FakeImageService, 'detail', image_details)
-
-        response = self._do_post('servers/%s/action' % self.uuid,
-                                 'admin-actions-backup-server', {})
-        self.assertEqual(response.status_code, 202)
-
     def test_post_live_migrate_server(self):
         # Get api samples to server live migrate request.
         def fake_live_migrate(_self, context, instance, scheduler_hint,
