@@ -13,11 +13,27 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_config import cfg
+
 from nova.tests.functional.v3 import test_servers
+
+CONF = cfg.CONF
+CONF.import_opt('osapi_compute_extension',
+                'nova.api.openstack.compute.extensions')
 
 
 class ServerDiagnosticsSamplesJsonTest(test_servers.ServersSampleBase):
     extension_name = "os-server-diagnostics"
+    extra_extensions_to_load = ["os-access-ips"]
+    _api_version = 'v2'
+
+    def _get_flags(self):
+        f = super(ServerDiagnosticsSamplesJsonTest, self)._get_flags()
+        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.server_diagnostics.'
+            'Server_diagnostics')
+        return f
 
     def test_server_diagnostics_get(self):
         uuid = self._post_server()

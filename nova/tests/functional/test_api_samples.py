@@ -1078,18 +1078,6 @@ class SimpleTenantUsageSampleJsonTest(ServersSampleBase):
                               response, 200)
 
 
-class ServerDiagnosticsSamplesJsonTest(ServersSampleBase):
-    extension_name = ("nova.api.openstack.compute.contrib.server_diagnostics."
-                      "Server_diagnostics")
-
-    def test_server_diagnostics_get(self):
-        uuid = self._post_server()
-        response = self._do_get('servers/%s/diagnostics' % uuid)
-        subs = self._get_regexes()
-        self._verify_response('server-diagnostics-get-resp', subs,
-                              response, 200)
-
-
 class AvailabilityZoneJsonTest(ServersSampleBase):
     extension_name = ("nova.api.openstack.compute.contrib.availability_zone."
                       "Availability_zone")
@@ -2430,26 +2418,6 @@ class PreserveEphemeralOnRebuildJsonTest(ServersSampleBase):
         response = self._do_post('servers/%s/action' % instance_uuid,
                                  'server-action-rebuild', subs)
         self.assertEqual(response.status_code, 202)
-
-
-class ServerExternalEventsJsonTest(ServersSampleBase):
-    ADMIN_API = True
-    extension_name = ('nova.api.openstack.compute.contrib.'
-                      'server_external_events.Server_external_events')
-
-    def test_create_event(self):
-        instance_uuid = self._post_server()
-        subs = {
-            'uuid': instance_uuid,
-            'name': 'network-changed',
-            'status': 'completed',
-            'tag': 'foo',
-            }
-        response = self._do_post('os-server-external-events',
-                                 'event-create-req',
-                                 subs)
-        subs.update(self._get_regexes())
-        self._verify_response('event-create-resp', subs, response, 200)
 
 
 class ServerGroupsSampleJsonTest(ServersSampleBase):
