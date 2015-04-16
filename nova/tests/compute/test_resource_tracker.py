@@ -456,7 +456,7 @@ class MissingComputeNodeTestCase(BaseTestCase):
 
     def _fake_create_compute_node(self, context, values):
         self.created = True
-        return self._create_compute_node()
+        return self._create_compute_node(values)
 
     def _fake_service_get_by_compute_host(self, ctx, host):
         # return a service with no joined compute
@@ -636,20 +636,6 @@ class SchedulerClientTrackerTestCase(BaseTrackerTestCase):
         super(SchedulerClientTrackerTestCase, self).setUp()
         self.tracker.scheduler_client.update_resource_stats = mock.Mock(
                 side_effect=self._fake_compute_node_update)
-
-    def test_create_resource(self):
-        self.tracker._write_ext_resources = mock.Mock()
-        self.tracker.conductor_api.compute_node_create = mock.Mock(
-            return_value=dict(id=1))
-        values = {'stats': {}, 'foo': 'bar', 'baz_count': 0}
-        self.tracker._create(self.context, values)
-
-        expected = {'stats': '{}', 'foo': 'bar', 'baz_count': 0,
-                    'id': 1}
-        self.tracker.scheduler_client.update_resource_stats.\
-            assert_called_once_with(self.context,
-                                    ("fakehost", "fakenode"),
-                                    expected)
 
     def test_update_resource(self):
         self.tracker._write_ext_resources = mock.Mock()
