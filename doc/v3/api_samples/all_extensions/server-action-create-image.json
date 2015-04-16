@@ -2,7 +2,7 @@
     "createImage" : {
         "name" : "foo-image",
         "metadata": {
-            "myvar": "foobar"
+            "meta_var": "meta_val"
         }
     }
 }
