@@ -180,6 +180,16 @@ class _TestInstancePCIRequests(object):
         self.assertFalse(backported.requests[0].obj_attr_is_set('request_id'))
         self.assertFalse(backported.requests[1].obj_attr_is_set('request_id'))
 
+    def test_obj_from_db(self):
+        req = objects.InstancePCIRequests.obj_from_db(None, FAKE_UUID, None)
+        self.assertEqual(FAKE_UUID, req.instance_uuid)
+        self.assertEqual(0, len(req.requests))
+        db_req = jsonutils.dumps(fake_pci_requests)
+        req = objects.InstancePCIRequests.obj_from_db(None, FAKE_UUID, db_req)
+        self.assertEqual(FAKE_UUID, req.instance_uuid)
+        self.assertEqual(2, len(req.requests))
+        self.assertEqual('alias_1', req.requests[0].alias_name)
+
 
 class TestInstancePCIRequests(test_objects._LocalTest,
                               _TestInstancePCIRequests):
