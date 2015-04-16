@@ -763,7 +763,7 @@ class Host(object):
                     error_code = ex.get_error_code()
                     if error_code == libvirt.VIR_ERR_NO_SUPPORT:
                         LOG.warn(_LW("URI %(uri)s does not support full set"
-                                     " of host capabilities: " "%(error)s"),
+                                     " of host capabilities: %(error)s"),
                                      {'uri': self._uri, 'error': ex})
                     else:
                         raise
