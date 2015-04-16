@@ -644,7 +644,7 @@ class LibvirtGenericVIFDriver(object):
             # if instance is FT, then extra steps are needed
             system_metadata = utils.instance_sys_meta(instance)
             ft_role = system_metadata.get('ft_role', None)
-            if ft_role == 'primary' or ft_rote == 'secondary':
+            if ft_role == 'primary' or ft_role == 'secondary':
                 unplug_ovs_hybrid_colo(instance, vif)
 
         except processutils.ProcessExecutionError:
