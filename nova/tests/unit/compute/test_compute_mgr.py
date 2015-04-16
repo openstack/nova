@@ -1932,10 +1932,12 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
     @mock.patch('nova.compute.manager.ComputeManager._get_power_state',
                 return_value=power_state.NOSTATE)
+    @mock.patch('nova.compute.manager.ComputeManager._instance_update')
     @mock.patch.object(objects.Instance, 'save')
     @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
     def test_set_admin_password_bad_state(self, add_fault_mock,
                                           instance_save_mock,
+                                          update_mock,
                                           power_state_mock):
         # Test setting password while instance is rebuilding.
         instance = fake_instance.fake_instance_obj(self.context)
