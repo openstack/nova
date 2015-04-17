@@ -33,19 +33,3 @@ def upgrade(migrate_engine):
         table=compute_nodes,
         name="uniq_compute_nodes0host0hypervisor_hostname0deleted")
     ukey.create()
-
-
-def downgrade(migrate_engine):
-    meta = MetaData()
-    meta.bind = migrate_engine
-    compute_nodes = Table('compute_nodes', meta, autoload=True)
-
-    ukey = UniqueConstraint(
-        'host', 'hypervisor_hostname', 'deleted',
-        table=compute_nodes,
-        name="uniq_compute_nodes0host0hypervisor_hostname0deleted")
-    ukey.drop()
-
-    ukey = UniqueConstraint('host', 'hypervisor_hostname', table=compute_nodes,
-                            name="uniq_compute_nodes0host0hypervisor_hostname")
-    ukey.create()

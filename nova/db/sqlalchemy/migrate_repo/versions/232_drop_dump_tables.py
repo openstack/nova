@@ -26,7 +26,3 @@ def upgrade(migrate_engine):
     for table_name in table_names:
         table = Table('dump_' + table_name, meta)
         table.drop(checkfirst=True)
-
-
-def downgrade(migrate_engine):
-    pass

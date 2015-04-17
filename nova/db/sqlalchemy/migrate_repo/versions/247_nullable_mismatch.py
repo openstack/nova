@@ -28,16 +28,3 @@ def upgrade(migrate_engine):
     pci_devices.c.product_id.alter(nullable=False)
     pci_devices.c.vendor_id.alter(nullable=False)
     pci_devices.c.dev_type.alter(nullable=False)
-
-
-def downgrade(migrate_engine):
-    meta = MetaData(bind=migrate_engine)
-
-    quota_usages = Table('quota_usages', meta, autoload=True)
-    quota_usages.c.resource.alter(nullable=True)
-
-    pci_devices = Table('pci_devices', meta, autoload=True)
-    pci_devices.c.deleted.alter(nullable=False)
-    pci_devices.c.product_id.alter(nullable=True)
-    pci_devices.c.vendor_id.alter(nullable=True)
-    pci_devices.c.dev_type.alter(nullable=True)

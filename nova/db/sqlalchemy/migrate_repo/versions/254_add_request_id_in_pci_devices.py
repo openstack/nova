@@ -33,17 +33,3 @@ def upgrade(engine):
 
     if not hasattr(shadow_pci_devices.c, 'request_id'):
         shadow_pci_devices.create_column(request_id.copy())
-
-
-def downgrade(engine):
-    """Function drops request_id field."""
-    meta = MetaData(bind=engine)
-
-    pci_devices = Table('pci_devices', meta, autoload=True)
-    shadow_pci_devices = Table('shadow_pci_devices', meta, autoload=True)
-
-    if hasattr(pci_devices.c, 'request_id'):
-        pci_devices.c.request_id.drop()
-
-    if hasattr(shadow_pci_devices.c, 'request_id'):
-        shadow_pci_devices.c.request_id.drop()

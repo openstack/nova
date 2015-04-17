@@ -25,10 +25,3 @@ def upgrade(migrate_engine):
                     mysql_engine='InnoDB',
                     mysql_charset='utf8')
     tags.create()
-
-
-def downgrade(migrate_engine):
-    meta = sa.MetaData()
-    meta.bind = migrate_engine
-    table = sa.Table('tags', meta, autoload=True)
-    table.drop()

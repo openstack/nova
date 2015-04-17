@@ -35,8 +35,3 @@ def upgrade(migrate_engine):
         for index in table.indexes:
             if index.name == index_name:
                 index.drop()
-
-
-def downgrade(migrate_engine):
-    # Unnecessary to re-add duplicated index when downgrading
-    pass

@@ -30,13 +30,3 @@ def upgrade(migrate_engine):
         new_column = Column(NEW_COLUMN_NAME, Text, nullable=True)
         if not hasattr(table.c, NEW_COLUMN_NAME):
             table.create_column(new_column)
-
-
-def downgrade(migrate_engine):
-    meta = MetaData()
-    meta.bind = migrate_engine
-
-    for prefix in ('', 'shadow_'):
-        table = Table(prefix + BASE_TABLE_NAME, meta, autoload=True)
-        if hasattr(table.c, NEW_COLUMN_NAME):
-            getattr(table.c, NEW_COLUMN_NAME).drop()

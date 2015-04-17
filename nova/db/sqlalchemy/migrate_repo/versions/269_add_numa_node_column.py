@@ -30,16 +30,3 @@ def upgrade(migrate_engine):
         pci_devices.create_column(numa_node)
     if not hasattr(shadow_pci_devices.c, 'numa_node'):
         shadow_pci_devices.create_column(numa_node.copy())
-
-
-def downgrade(migrate_engine):
-    meta = MetaData(bind=migrate_engine)
-
-    # Remove the numa_node column
-    pci_devices = Table('pci_devices', meta, autoload=True)
-    shadow_pci_devices = Table('shadow_pci_devices', meta, autoload=True)
-
-    if hasattr(pci_devices.c, 'numa_node'):
-        pci_devices.drop_column('numa_node')
-    if hasattr(shadow_pci_devices.c, 'numa_node'):
-        shadow_pci_devices.drop_column('numa_node')
