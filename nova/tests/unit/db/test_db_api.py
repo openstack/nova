@@ -7314,7 +7314,9 @@ class BwUsageTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def test_bw_usage_get_by_uuids(self):
         now = timeutils.utcnow()
         start_period = now - datetime.timedelta(seconds=10)
+        start_period_str = timeutils.strtime(start_period)
         uuid3_refreshed = now - datetime.timedelta(seconds=5)
+        uuid3_refreshed_str = timeutils.strtime(uuid3_refreshed)
 
         expected_bw_usages = {
             'fake_uuid1': {'uuid': 'fake_uuid1',
@@ -7344,29 +7346,29 @@ class BwUsageTestCase(test.TestCase, ModelsObjectComparatorMixin):
         }
 
         bw_usages = db.bw_usage_get_by_uuids(self.ctxt,
-                ['fake_uuid1', 'fake_uuid2'], start_period)
+                ['fake_uuid1', 'fake_uuid2'], start_period_str)
         # No matches
         self.assertEqual(len(bw_usages), 0)
 
         # Add 3 entries
         db.bw_usage_update(self.ctxt, 'fake_uuid1',
-                'fake_mac1', start_period,
+                'fake_mac1', start_period_str,
                 100, 200, 12345, 67890)
         db.bw_usage_update(self.ctxt, 'fake_uuid2',
-                'fake_mac2', start_period,
+                'fake_mac2', start_period_str,
                 100, 200, 42, 42)
         # Test explicit refreshed time
         db.bw_usage_update(self.ctxt, 'fake_uuid3',
-                'fake_mac3', start_period,
+                'fake_mac3', start_period_str,
                 400, 500, 32345, 87890,
-                last_refreshed=uuid3_refreshed)
+                last_refreshed=uuid3_refreshed_str)
         # Update 2nd entry
         db.bw_usage_update(self.ctxt, 'fake_uuid2',
-                'fake_mac2', start_period,
+                'fake_mac2', start_period_str,
                 200, 300, 22345, 77890)
 
         bw_usages = db.bw_usage_get_by_uuids(self.ctxt,
-                ['fake_uuid1', 'fake_uuid2', 'fake_uuid3'], start_period)
+                ['fake_uuid1', 'fake_uuid2', 'fake_uuid3'], start_period_str)
         self.assertEqual(len(bw_usages), 3)
         for usage in bw_usages:
             self._assertEqualObjects(expected_bw_usages[usage['uuid']], usage,
@@ -7375,6 +7377,7 @@ class BwUsageTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def test_bw_usage_get(self):
         now = timeutils.utcnow()
         start_period = now - datetime.timedelta(seconds=10)
+        start_period_str = timeutils.strtime(start_period)
 
         expected_bw_usage = {'uuid': 'fake_uuid1',
                              'mac': 'fake_mac1',
@@ -7385,17 +7388,17 @@ class BwUsageTestCase(test.TestCase, ModelsObjectComparatorMixin):
                              'last_ctr_out': 67890,
                              'last_refreshed': now}
 
-        bw_usage = db.bw_usage_get(self.ctxt, 'fake_uuid1', start_period,
+        bw_usage = db.bw_usage_get(self.ctxt, 'fake_uuid1', start_period_str,
                                    'fake_mac1')
         self.assertIsNone(bw_usage)
 
         db.bw_usage_update(self.ctxt, 'fake_uuid1',
-                'fake_mac1', start_period,
+                'fake_mac1', start_period_str,
                 100, 200, 12345, 67890)
 
-        bw_usage = db.bw_usage_get(self.ctxt, 'fake_uuid1', start_period,
+        bw_usage = db.bw_usage_get(self.ctxt, 'fake_uuid1', start_period_str,
                                    'fake_mac1')
-        self._assertEqualObjects(bw_usage, expected_bw_usage,
+        self._assertEqualObjects(expected_bw_usage, bw_usage,
                                  ignored_keys=self._ignored_keys)
 
 
