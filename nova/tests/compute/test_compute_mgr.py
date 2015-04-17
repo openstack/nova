@@ -264,13 +264,13 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(self.compute.driver,
                                  'resume_state_on_host_boot')
         self.mox.StubOutWithMock(self.compute,
-                                 '_get_instance_volume_block_device_info')
+                                 '_get_instance_block_device_info')
         self.mox.StubOutWithMock(self.compute,
                                  '_set_instance_error_state')
         self.compute._get_power_state(mox.IgnoreArg(),
                 instance).AndReturn(power_state.SHUTDOWN)
         self.compute.driver.plug_vifs(instance, mox.IgnoreArg())
-        self.compute._get_instance_volume_block_device_info(mox.IgnoreArg(),
+        self.compute._get_instance_block_device_info(mox.IgnoreArg(),
                 instance).AndReturn('fake-bdm')
         self.compute.driver.resume_state_on_host_boot(mox.IgnoreArg(),
                 instance, mox.IgnoreArg(),
@@ -301,7 +301,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(self.compute.driver,
                                  'finish_revert_migration')
         self.mox.StubOutWithMock(self.compute,
-                                 '_get_instance_volume_block_device_info')
+                                 '_get_instance_block_device_info')
         self.mox.StubOutWithMock(self.compute.driver, 'get_info')
         self.mox.StubOutWithMock(self.compute, '_instance_update')
 
@@ -309,7 +309,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             network_model.NetworkInfo())
         self.compute.driver.plug_vifs(instance, [])
         utils.instance_sys_meta(instance).AndReturn(sys_meta)
-        self.compute._get_instance_volume_block_device_info(
+        self.compute._get_instance_block_device_info(
             self.context, instance).AndReturn([])
         self.compute.driver.finish_revert_migration(self.context, instance,
                                                     [], [], power_on)

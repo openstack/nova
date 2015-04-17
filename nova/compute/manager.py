@@ -557,8 +557,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                 try:
                     network_info = self._get_instance_nw_info(context,
                                                               instance)
-                    bdi = self._get_instance_volume_block_device_info(context,
-                                                                      instance)
+                    bdi = self._get_instance_block_device_info(context,
+                                                               instance)
                     destroy_disks = not (self._is_instance_storage_shared(
                                                             context, instance))
                 except exception.InstanceNotFound:
@@ -681,8 +681,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                 sys_meta = utils.instance_sys_meta(instance)
                 power_on = sys_meta.get('old_vm_state') != vm_states.STOPPED
 
-                block_dev_info = self._get_instance_volume_block_device_info(
-                            context, instance)
+                block_dev_info = self._get_instance_block_device_info(
+                                         context, instance)
 
                 self.driver.finish_revert_migration(context,
                     instance, net_info, block_dev_info, power_on)
@@ -712,7 +712,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                      instance=instance)
 
             block_device_info = \
-                self._get_instance_volume_block_device_info(
+                self._get_instance_block_device_info(
                     context, instance)
 
             try:
@@ -1509,8 +1509,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             if str(bdm['volume_id']) == str(volume_id):
                 return bdm
 
-    def _get_instance_volume_block_device_info(self, context, instance,
-                                               refresh_conn_info=False):
+    def _get_instance_block_device_info(self, context, instance,
+                                        refresh_conn_info=False):
         """Transform volumes to the driver block_device format."""
 
         # TODO(ndipanov): This method will allways hit the database
@@ -1520,6 +1520,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         #                 it will be changed in the future.
         bdms = self._get_instance_volume_bdms(context, instance,
                                               legacy=False)
+        swap = driver_block_device.convert_swap(bdms)
+        ephemerals = driver_block_device.convert_ephemerals(bdms)
         block_device_mapping = (
             driver_block_device.convert_volumes(bdms) +
             driver_block_device.convert_snapshots(bdms) +
@@ -1537,9 +1539,17 @@ class ComputeManager(manager.SchedulerDependentManager):
                 self.driver, self.conductor_api)
 
         if self.use_legacy_block_device_info:
+            swap = driver_block_device.legacy_block_devices(swap)
+            ephemerals = driver_block_device.legacy_block_devices(ephemerals)
             block_device_mapping = driver_block_device.legacy_block_devices(
                 block_device_mapping)
-        return {'block_device_mapping': block_device_mapping}
+
+        # Get swap out of the list
+        swap = driver_block_device.get_swap(swap)
+
+        return {'swap': swap,
+                'ephemerals': ephemerals,
+	        'block_device_mapping': block_device_mapping}
 
     @wrap_exception()
     @reverts_task_state
@@ -1665,7 +1675,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         # NOTE(vish) get bdms before destroying the instance
         vol_bdms = self._get_volume_bdms(bdms)
-        block_device_info = self._get_instance_volume_block_device_info(
+        block_device_info = self._get_instance_block_device_info(
             context, instance)
 
         # NOTE(melwitt): attempt driver destroy before releasing ip, may
@@ -1835,7 +1845,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     def _power_on(self, context, instance):
         network_info = self._get_instance_nw_info(context, instance)
-        block_device_info = self._get_instance_volume_block_device_info(
+        block_device_info = self._get_instance_block_device_info(
                                 context, instance)
         self.driver.power_on(context, instance,
                              network_info,
@@ -2053,7 +2063,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
             if not recreate:
                 block_device_info = \
-                        self._get_instance_volume_block_device_info(
+                        self._get_instance_block_device_info(
                                 context, instance)
                 self.driver.destroy(instance,
                                     network_info,
@@ -2140,7 +2150,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         context = context.elevated()
         LOG.audit(_("Rebooting instance"), context=context, instance=instance)
 
-        block_device_info = self._get_instance_volume_block_device_info(
+        block_device_info = self._get_instance_block_device_info(
                                 context, instance)
 
         network_info = self._get_instance_nw_info(context, instance)
@@ -2777,7 +2787,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                               migration_p)
 
             network_info = self._get_instance_nw_info(context, instance)
-            block_device_info = self._get_instance_volume_block_device_info(
+            block_device_info = self._get_instance_block_device_info(
                                 context, instance)
 
             self.driver.destroy(instance, network_info,
@@ -2840,8 +2850,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             self.network_api.setup_networks_on_host(context, instance,
                                             migration['source_compute'])
 
-            block_device_info = self._get_instance_volume_block_device_info(
-                    context, instance, refresh_conn_info=True)
+            block_device_info = self._get_instance_block_device_info(
+                context, instance, refresh_conn_info=True)
 
             power_on = old_vm_state != vm_states.STOPPED
             self.driver.finish_revert_migration(context, instance,
@@ -3037,7 +3047,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             self._notify_about_instance_usage(
                 context, instance, "resize.start", network_info=network_info)
 
-            block_device_info = self._get_instance_volume_block_device_info(
+            block_device_info = self._get_instance_block_device_info(
                                 context, instance)
 
             disk_info = self.driver.migrate_disk_and_power_off(
@@ -3123,7 +3133,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             context, instance, "finish_resize.start",
             network_info=network_info)
 
-        block_device_info = self._get_instance_volume_block_device_info(
+        block_device_info = self._get_instance_block_device_info(
                             context, instance, refresh_conn_info=True)
 
         # NOTE(mriedem): If the original vm_state was STOPPED, we don't
@@ -3329,7 +3339,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         LOG.audit(_('Resuming'), context=context, instance=instance)
 
         network_info = self._get_instance_nw_info(context, instance)
-        block_device_info = self._get_instance_volume_block_device_info(
+        block_device_info = self._get_instance_block_device_info(
                             context, instance)
 
         self.driver.resume(context, instance, network_info,
@@ -3415,7 +3425,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         current_power_state = self._get_power_state(context, instance)
 
         network_info = self._get_instance_nw_info(context, instance)
-        block_device_info = self._get_instance_volume_block_device_info(
+        block_device_info = self._get_instance_block_device_info(
                 context, instance)
         self.driver.destroy(instance, network_info,
                 block_device_info)
@@ -4024,7 +4034,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         required for live migration without shared storage.
 
         """
-        block_device_info = self._get_instance_volume_block_device_info(
+        block_device_info = self._get_instance_block_device_info(
                             context, instance, refresh_conn_info=True)
 
         network_info = self._get_instance_nw_info(context, instance)
@@ -4118,7 +4128,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                  instance=instance_ref)
 
         # Cleanup source host post live-migration
-        block_device_info = self._get_instance_volume_block_device_info(
+        block_device_info = self._get_instance_block_device_info(
                             ctxt, instance_ref)
         self.driver.post_live_migration(ctxt, instance_ref, block_device_info)
 
@@ -4232,7 +4242,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._notify_about_instance_usage(
                      context, instance, "live_migration.post.dest.start",
                      network_info=network_info)
-        block_device_info = self._get_instance_volume_block_device_info(
+        block_device_info = self._get_instance_block_device_info(
                             context, instance)
 
         self.driver.post_live_migration_at_destination(context, instance,
@@ -4330,7 +4340,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         # NOTE(vish): The mapping is passed in so the driver can disconnect
         #             from remote volumes if necessary
-        block_device_info = self._get_instance_volume_block_device_info(
+        block_device_info = self._get_instance_block_device_info(
                             context, instance)
         self.driver.destroy(instance, network_info, block_device_info,
                             destroy_disks)
