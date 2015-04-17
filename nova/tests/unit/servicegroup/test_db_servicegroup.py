@@ -15,6 +15,7 @@
 import datetime
 import mock
 
+from nova import objects
 from nova import servicegroup
 from nova import test
 
@@ -57,22 +58,11 @@ class DBServiceGroupTestCase(test.NoDBTestCase):
         result = self.servicegroup_api.service_is_up(service_ref)
         self.assertFalse(result)
 
-    @mock.patch('nova.conductor.api.LocalAPI.service_get_all_by_topic')
+    @mock.patch.object(objects.ServiceList, 'get_by_topic')
     def test_get_all(self, ga_mock):
-        service_refs = [
-            {
-                'host': 'fake-host1',
-                'topic': 'compute'
-            },
-            {
-                'host': 'fake-host2',
-                'topic': 'compute'
-            },
-            {
-                'host': 'fake-host3',
-                'topic': 'compute'
-            },
-        ]
+        hosts = ['fake-host1', 'fake-host2', 'fake-host3']
+        service_refs = objects.ServiceList(objects=[
+            objects.Service(host=host, topic='compute') for host in hosts])
         ga_mock.return_value = service_refs
         with mock.patch.object(self.servicegroup_api._driver,
                 'is_up', side_effect=[
@@ -91,17 +81,13 @@ class DBServiceGroupTestCase(test.NoDBTestCase):
         fn = self.servicegroup_api._driver._report_state
         service.tg.add_timer.assert_called_once_with(1, fn, 5, service)
 
-    @mock.patch('nova.conductor.api.LocalAPI.service_update')
+    @mock.patch.object(objects.Service, 'save')
     def test_report_state(self, upd_mock):
-        service_ref = {
-            'host': 'fake-host',
-            'topic': 'compute',
-            'report_count': 10
-        }
+        service_ref = objects.Service(host='fake-host', topic='compute',
+                                      report_count=10)
         service = mock.MagicMock(model_disconnected=False,
                                  service_ref=service_ref)
         fn = self.servicegroup_api._driver._report_state
         fn(service)
-        upd_mock.assert_called_once_with(mock.ANY,
-                                         service_ref,
-                                         dict(report_count=11))
+        upd_mock.assert_called_once_with()
+        self.assertEqual(11, service_ref.report_count)
