@@ -6786,6 +6786,48 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual(info[1]['backing_file'], "file")
         self.assertEqual(info[1]['over_committed_disk_size'], 18146236825)
 
+    def test_get_instance_disk_info_no_bdinfo_passed(self):
+        # NOTE(ndipanov): _get_disk_overcomitted_size_total calls this method
+        # without access to Nova's block device information. We want to make
+        # sure that we guess volumes mostly correctly in that case as well
+        instance = objects.Instance(**self.test_instance)
+        dummyxml = ("<domain type='kvm'><name>instance-0000000a</name>"
+                    "<devices>"
+                    "<disk type='file'><driver name='qemu' type='raw'/>"
+                    "<source file='/test/disk'/>"
+                    "<target dev='vda' bus='virtio'/></disk>"
+                    "<disk type='block'><driver name='qemu' type='raw'/>"
+                    "<source file='/fake/path/to/volume1'/>"
+                    "<target dev='vdb' bus='virtio'/></disk>"
+                    "</devices></domain>")
+
+        # Preparing mocks
+        vdmock = self.mox.CreateMock(fakelibvirt.virDomain)
+        self.mox.StubOutWithMock(vdmock, "XMLDesc")
+        vdmock.XMLDesc(0).AndReturn(dummyxml)
+
+        def fake_lookup(instance_name):
+            if instance_name == instance.name:
+                return vdmock
+        self.create_fake_libvirt_mock(lookupByName=fake_lookup)
+
+        fake_libvirt_utils.disk_sizes['/test/disk'] = 10 * units.Gi
+
+        self.mox.StubOutWithMock(os.path, "getsize")
+        os.path.getsize('/test/disk').AndReturn((10737418240))
+
+        self.mox.ReplayAll()
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        info = drvr.get_instance_disk_info(instance)
+
+        info = jsonutils.loads(info)
+        self.assertEqual(1, len(info))
+        self.assertEqual(info[0]['type'], 'raw')
+        self.assertEqual(info[0]['path'], '/test/disk')
+        self.assertEqual(info[0]['disk_size'], 10737418240)
+        self.assertEqual(info[0]['backing_file'], "")
+        self.assertEqual(info[0]['over_committed_disk_size'], 0)
+
     def test_spawn_with_network_info(self):
         # Preparing mocks
         def fake_none(*args, **kwargs):

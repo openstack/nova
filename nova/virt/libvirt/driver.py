@@ -6058,8 +6058,13 @@ class LibvirtDriver(driver.ComputeDriver):
             # raise a localized error if image is unavailable
             if disk_type == 'file':
                 dk_size = int(os.path.getsize(path))
-            elif disk_type == 'block':
+            elif disk_type == 'block' and block_device_info:
                 dk_size = lvm.get_volume_size(path)
+            else:
+                LOG.debug('skipping disk %(path)s (%(target)s) - unable to '
+                          'determine if volume',
+                          {'path': path, 'target': target})
+                continue
 
             disk_type = driver_nodes[cnt].get('type')
             if disk_type == "qcow2":
