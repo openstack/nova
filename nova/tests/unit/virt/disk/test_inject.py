@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from collections import OrderedDict
 import os
 
 import fixtures
@@ -147,12 +148,13 @@ class VirtDiskTest(test.NoDBTestCase):
     def test_inject_metadata(self):
         vfs = vfsguestfs.VFSGuestFS("/some/file", "qcow2")
         vfs.setup()
-
-        diskapi._inject_metadata_into_fs({"foo": "bar", "eek": "wizz"}, vfs)
+        metadata = {"foo": "bar", "eek": "wizz"}
+        metadata = OrderedDict(sorted(metadata.items()))
+        diskapi._inject_metadata_into_fs(metadata, vfs)
 
         self.assertIn("/meta.js", vfs.handle.files)
-        self.assertEqual({'content': '{"foo": "bar", ' +
-                                     '"eek": "wizz"}',
+        self.assertEqual({'content': '{"eek": "wizz", ' +
+                                     '"foo": "bar"}',
                           'gid': 100,
                           'isdir': False,
                           'mode': 0o700,
