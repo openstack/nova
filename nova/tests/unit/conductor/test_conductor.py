@@ -20,7 +20,6 @@ import uuid
 
 import mock
 from mox3 import mox
-from oslo_config import cfg
 import oslo_messaging as messaging
 from oslo_utils import timeutils
 import six
@@ -60,10 +59,6 @@ from nova.tests.unit import fake_notifier
 from nova.tests.unit import fake_server_actions
 from nova.tests.unit import fake_utils
 from nova import utils
-
-
-CONF = cfg.CONF
-CONF.import_opt('report_interval', 'nova.service')
 
 
 FAKE_IMAGE_REF = 'fake-image-ref'
@@ -808,77 +803,6 @@ class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):
         self.conductor.block_device_mapping_update_or_create(self.context,
                                                              fake_bdm)
 
-    def _test_stubbed(self, name, dbargs, condargs,
-                      db_result_listified=False, db_exception=None):
-        self.mox.StubOutWithMock(db, name)
-        if db_exception:
-            getattr(db, name)(self.context, *dbargs).AndRaise(db_exception)
-        else:
-            getattr(db, name)(self.context, *dbargs).AndReturn(condargs)
-            if name == 'service_get_by_compute_host':
-                self.mox.StubOutWithMock(
-                    objects.ComputeNodeList, 'get_all_by_host')
-                objects.ComputeNodeList.get_all_by_host(
-                    self.context, mox.IgnoreArg()
-                ).AndReturn(['fake-compute'])
-        self.mox.ReplayAll()
-        if db_exception:
-            self.assertRaises(db_exception.__class__,
-                              self.conductor.service_get_all_by,
-                              self.context, **condargs)
-        else:
-            result = self.conductor.service_get_all_by(self.context,
-                                                       **condargs)
-            if db_result_listified:
-                if name == 'service_get_by_compute_host':
-                    condargs['compute_node'] = ['fake-compute']
-                self.assertEqual([condargs], result)
-            else:
-                self.assertEqual(condargs, result)
-
-    def test_service_get_all(self):
-        self._test_stubbed('service_get_all', (),
-                dict(topic=None, host=None, binary=None))
-
-    def test_service_get_by_host_and_topic(self):
-        self._test_stubbed('service_get_by_host_and_topic',
-                           ('host', 'topic'),
-                           dict(topic='topic', host='host', binary=None))
-
-    def test_service_get_all_by_topic(self):
-        self._test_stubbed('service_get_all_by_topic',
-                           ('topic',),
-                           dict(topic='topic', host=None, binary=None))
-
-    def test_service_get_all_by_host(self):
-        self._test_stubbed('service_get_all_by_host',
-                           ('host',),
-                           dict(host='host', topic=None, binary=None))
-
-    def test_service_get_by_compute_host(self):
-        self._test_stubbed('service_get_by_compute_host',
-                           ('host',),
-                           dict(topic='compute', host='host', binary=None),
-                           db_result_listified=True)
-
-    def test_service_get_by_args(self):
-        self._test_stubbed('service_get_by_host_and_binary',
-                           ('host', 'binary'),
-                           dict(host='host', binary='binary', topic=None))
-
-    def test_service_get_by_compute_host_not_found(self):
-        self._test_stubbed('service_get_by_compute_host',
-                           ('host',),
-                           dict(topic='compute', host='host', binary=None),
-                           db_exception=exc.ComputeHostNotFound(host='host'))
-
-    def test_service_get_by_args_not_found(self):
-        self._test_stubbed('service_get_by_host_and_binary',
-                           ('host', 'binary'),
-                           dict(host='host', binary='binary', topic=None),
-                           db_exception=exc.HostBinaryNotFound(binary='binary',
-                                                               host='host'))
-
     def test_security_groups_trigger_handler(self):
         self.mox.StubOutWithMock(self.conductor_manager.security_group_api,
                                  'trigger_handler')
@@ -888,30 +812,6 @@ class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):
         self.mox.ReplayAll()
         self.conductor.security_groups_trigger_handler(self.context,
                                                        'event', ['arg'])
-
-    @mock.patch.object(db, 'service_update')
-    @mock.patch('oslo_messaging.RPCClient.prepare')
-    def test_service_update_time_big(self, mock_prepare, mock_update):
-        CONF.set_override('report_interval', 10)
-        services = {'id': 1}
-        self.conductor.service_update(self.context, services, {})
-        mock_prepare.assert_called_once_with(timeout=9)
-
-    @mock.patch.object(db, 'service_update')
-    @mock.patch('oslo_messaging.RPCClient.prepare')
-    def test_service_update_time_small(self, mock_prepare, mock_update):
-        CONF.set_override('report_interval', 3)
-        services = {'id': 1}
-        self.conductor.service_update(self.context, services, {})
-        mock_prepare.assert_called_once_with(timeout=3)
-
-    @mock.patch.object(db, 'service_update')
-    @mock.patch('oslo_messaging.RPCClient.prepare')
-    def test_service_update_no_time(self, mock_prepare, mock_update):
-        CONF.set_override('report_interval', None)
-        services = {'id': 1}
-        self.conductor.service_update(self.context, services, {})
-        mock_prepare.assert_called_once_with()
 
 
 class ConductorAPITestCase(_BaseTestCase, test.TestCase):
@@ -953,89 +853,15 @@ class ConductorAPITestCase(_BaseTestCase, test.TestCase):
         self.conductor.block_device_mapping_update_or_create(self.context,
                                                              'fake-bdm')
 
-    def _test_stubbed(self, name, *args, **kwargs):
-
-        if args and isinstance(args[0], FakeContext):
-            ctxt = args[0]
-            args = args[1:]
-        else:
-            ctxt = self.context
-        db_exception = kwargs.get('db_exception')
-        self.mox.StubOutWithMock(db, name)
-        if db_exception:
-            getattr(db, name)(ctxt, *args).AndRaise(db_exception)
-        else:
-            getattr(db, name)(ctxt, *args).AndReturn(dict(host='fake'))
-            if name == 'service_get_by_compute_host':
-                self.mox.StubOutWithMock(
-                    objects.ComputeNodeList, 'get_all_by_host')
-                objects.ComputeNodeList.get_all_by_host(
-                    self.context, mox.IgnoreArg()
-                ).AndReturn(['fake-compute'])
-        if name == 'service_destroy':
-            # TODO(russellb) This is a hack ... SetUp() starts the conductor()
-            # service.  There is a cleanup step that runs after this test which
-            # also deletes the associated service record. This involves a call
-            # to db.service_destroy(), which we have stubbed out.
-            db.service_destroy(mox.IgnoreArg(), mox.IgnoreArg())
-        self.mox.ReplayAll()
-        if db_exception:
-            self.assertRaises(db_exception.__class__,
-                              getattr(self.conductor, name),
-                              self.context, *args)
-        else:
-            result = getattr(self.conductor, name)(self.context, *args)
-            expected = dict(host='fake')
-            if name == 'service_get_by_compute_host':
-                expected = dict(host='fake', compute_node=['fake-compute'])
-            self.assertEqual(
-                result, expected
-                if kwargs.get('returns', True) else None)
-
-    def test_service_get_all(self):
-        self._test_stubbed('service_get_all')
-
-    def test_service_get_by_host_and_topic(self):
-        self._test_stubbed('service_get_by_host_and_topic', 'host', 'topic')
-
-    def test_service_get_all_by_topic(self):
-        self._test_stubbed('service_get_all_by_topic', 'topic')
-
-    def test_service_get_all_by_host(self):
-        self._test_stubbed('service_get_all_by_host', 'host')
-
-    def test_service_get_by_compute_host(self):
-        self._test_stubbed('service_get_by_compute_host', 'host')
-
-    def test_service_get_by_args(self):
-        self._test_stubbed('service_get_by_host_and_binary', 'host', 'binary')
-
-    def test_service_get_by_compute_host_not_found(self):
-        self._test_stubbed('service_get_by_compute_host', 'host',
-                           db_exception=exc.ComputeHostNotFound(host='host'))
-
-    def test_service_get_by_args_not_found(self):
-        self._test_stubbed('service_get_by_host_and_binary', 'host', 'binary',
-                           db_exception=exc.HostBinaryNotFound(binary='binary',
-                                                               host='host'))
-
-    def test_service_create(self):
-        self._test_stubbed('service_create', {})
-
-    def test_service_destroy(self):
-        self._test_stubbed('service_destroy', '', returns=False)
-
-    def test_service_update(self):
-        ctxt = self.context
-        self.mox.StubOutWithMock(db, 'service_update')
-        db.service_update(ctxt, '', {}).AndReturn('fake-result')
-        self.mox.ReplayAll()
-        result = self.conductor.service_update(self.context, {'id': ''}, {})
-        self.assertEqual(result, 'fake-result')
-
     def test_instance_get_all_by_host_and_node(self):
-        self._test_stubbed('instance_get_all_by_host_and_node',
-                           self.context.elevated(), 'host', 'node')
+        self.mox.StubOutWithMock(db, 'instance_get_all_by_host_and_node')
+        db.instance_get_all_by_host_and_node(self.context.elevated(), 'host',
+                                             'node').AndReturn('fake-result')
+        self.mox.ReplayAll()
+        result = self.conductor.instance_get_all_by_host_and_node(
+            self.context, 'host', 'node')
+
+        self.assertEqual('fake-result', result)
 
     def test_instance_get_all_by_host(self):
         self.mox.StubOutWithMock(db, 'instance_get_all_by_host')

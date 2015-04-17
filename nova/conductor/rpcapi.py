@@ -160,6 +160,10 @@ class ConductorAPI(object):
     * Remove bw_usage_update()
     * Remove notify_usage_exists()
     * Remove get_ec2_ids()
+    * Remove service_get_all_by()
+    * Remove service_create()
+    * Remove service_destroy()
+    * Remove service_update()
 
     """
 
@@ -231,25 +235,12 @@ class ConductorAPI(object):
                           instance=instance_p, last_refreshed=last_refreshed,
                           update_totals=update_totals)
 
-    def service_get_all_by(self, context, topic=None, host=None, binary=None):
-        cctxt = self.client.prepare()
-        return cctxt.call(context, 'service_get_all_by',
-                          topic=topic, host=host, binary=binary)
-
     def instance_get_all_by_host(self, context, host, node=None,
                                  columns_to_join=None):
         cctxt = self.client.prepare()
         return cctxt.call(context, 'instance_get_all_by_host',
                           host=host, node=node,
                           columns_to_join=columns_to_join)
-
-    def service_create(self, context, values):
-        cctxt = self.client.prepare()
-        return cctxt.call(context, 'service_create', values=values)
-
-    def service_destroy(self, context, service_id):
-        cctxt = self.client.prepare()
-        return cctxt.call(context, 'service_destroy', service_id=service_id)
 
     def compute_node_create(self, context, values):
         cctxt = self.client.prepare()
@@ -265,25 +256,6 @@ class ConductorAPI(object):
         node_p = jsonutils.to_primitive(node)
         cctxt = self.client.prepare()
         return cctxt.call(context, 'compute_node_delete', node=node_p)
-
-    def service_update(self, context, service, values):
-        service_p = jsonutils.to_primitive(service)
-
-        # (NOTE:jichenjc)If we're calling this periodically, it makes no
-        # sense for the RPC timeout to be more than the service
-        # report interval. Select 5 here is only find a reaonable long
-        # interval as threshold.
-        timeout = CONF.report_interval
-        if timeout and timeout > 5:
-            timeout -= 1
-
-        if timeout:
-            cctxt = self.client.prepare(timeout=timeout)
-        else:
-            cctxt = self.client.prepare()
-
-        return cctxt.call(context, 'service_update',
-                          service=service_p, values=values)
 
     def task_log_get(self, context, task_name, begin, end, host, state=None):
         cctxt = self.client.prepare()

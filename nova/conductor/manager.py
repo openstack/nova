@@ -270,6 +270,7 @@ class ConductorManager(manager.Manager):
         self.notifier.info(context, 'volume.usage',
                            compute_utils.usage_volume_info(vol_usage))
 
+    # NOTE(hanlind): This method can be removed in version 3.0 of the RPC API
     @messaging.expected_exceptions(exception.ComputeHostNotFound,
                                    exception.HostBinaryNotFound)
     def service_get_all_by(self, context, topic, host, binary):
@@ -310,10 +311,12 @@ class ConductorManager(manager.Manager):
         evt = self.db.action_event_finish(context, values)
         return jsonutils.to_primitive(evt)
 
+    # NOTE(hanlind): This method can be removed in version 3.0 of the RPC API
     def service_create(self, context, values):
         svc = self.db.service_create(context, values)
         return jsonutils.to_primitive(svc)
 
+    # NOTE(hanlind): This method can be removed in version 3.0 of the RPC API
     @messaging.expected_exceptions(exception.ServiceNotFound)
     def service_destroy(self, context, service_id):
         self.db.service_destroy(context, service_id)
@@ -330,6 +333,7 @@ class ConductorManager(manager.Manager):
         result = self.db.compute_node_delete(context, node['id'])
         return jsonutils.to_primitive(result)
 
+    # NOTE(hanlind): This method can be removed in version 3.0 of the RPC API
     @messaging.expected_exceptions(exception.ServiceNotFound)
     def service_update(self, context, service, values):
         svc = self.db.service_update(context, service['id'], values)
