@@ -3793,6 +3793,7 @@ class LibvirtDriver(driver.ComputeDriver):
             for cell in inst_topology.cells:
                 if cell.pagesize:
                     wantsmempages = True
+                    break
 
         if not wantsmempages:
             return
