@@ -63,7 +63,7 @@ class ExtendedService(service.Service):
         return 'service'
 
 
-class ServiceManagerTestCase(test.TestCase):
+class ServiceManagerTestCase(test.NoDBTestCase):
     """Test cases for Services."""
 
     def test_message_gets_to_manager(self):
@@ -71,26 +71,23 @@ class ServiceManagerTestCase(test.TestCase):
                                'test',
                                'test',
                                'nova.tests.unit.test_service.FakeManager')
-        serv.start()
-        self.assertEqual(serv.test_method(), 'manager')
+        self.assertEqual('manager', serv.test_method())
 
     def test_override_manager_method(self):
         serv = ExtendedService('test',
                                'test',
                                'test',
                                'nova.tests.unit.test_service.FakeManager')
-        serv.start()
-        self.assertEqual(serv.test_method(), 'service')
+        self.assertEqual('service', serv.test_method())
 
     def test_service_with_min_down_time(self):
-        CONF.set_override('service_down_time', 10)
-        CONF.set_override('report_interval', 10)
-        serv = service.Service('test',
-                               'test',
-                               'test',
-                               'nova.tests.unit.test_service.FakeManager')
-        serv.start()
-        self.assertEqual(CONF.service_down_time, 25)
+        # TODO(hanlind): This really tests code in the servicegroup api.
+        self.flags(service_down_time=10, report_interval=10)
+        service.Service('test',
+                        'test',
+                        'test',
+                        'nova.tests.unit.test_service.FakeManager')
+        self.assertEqual(25, CONF.service_down_time)
 
 
 class ServiceTestCase(test.NoDBTestCase):
@@ -338,14 +335,24 @@ class TestWSGIService(test.TestCase):
                          CONF.wsgi_default_pool_size)
 
 
-class TestLauncher(test.TestCase):
+class TestLauncher(test.NoDBTestCase):
 
-    def setUp(self):
-        super(TestLauncher, self).setUp()
-        self.stubs.Set(wsgi.Loader, "load_app", mox.MockAnything())
-        self.service = service.WSGIService("test_service")
+    @mock.patch.object(_service, 'launch')
+    def test_launch_app(self, mock_launch):
+        service._launcher = None
+        service.serve(mock.sentinel.service)
+        mock_launch.assert_called_once_with(mock.sentinel.service,
+                                            workers=None)
 
-    def test_launch_app(self):
-        service.serve(self.service)
-        self.assertNotEqual(0, self.service.port)
-        service._launcher.stop()
+    @mock.patch.object(_service, 'launch')
+    def test_launch_app_with_workers(self, mock_launch):
+        service._launcher = None
+        service.serve(mock.sentinel.service, workers=mock.sentinel.workers)
+        mock_launch.assert_called_once_with(mock.sentinel.service,
+                                            workers=mock.sentinel.workers)
+
+    @mock.patch.object(_service, 'launch')
+    def test_launch_app_more_than_once_raises(self, mock_launch):
+        service._launcher = None
+        service.serve(mock.sentinel.service)
+        self.assertRaises(RuntimeError, service.serve, mock.sentinel.service)
