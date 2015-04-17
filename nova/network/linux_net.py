@@ -485,7 +485,7 @@ class IptablesManager(object):
 
     def _modify_rules(self, current_lines, table, table_name):
         unwrapped_chains = table.unwrapped_chains
-        chains = table.chains
+        chains = sorted(table.chains)
         remove_chains = table.remove_chains
         rules = table.rules
         remove_rules = table.remove_rules

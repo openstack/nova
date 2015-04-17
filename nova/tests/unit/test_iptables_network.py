@@ -32,8 +32,8 @@ class IptablesManagerTestCase(test.NoDBTestCase):
                      ':iptables-bottom-rule - [0:0]',
                      ':%s-FORWARD - [0:0]' % (binary_name),
                      ':%s-INPUT - [0:0]' % (binary_name),
-                     ':%s-local - [0:0]' % (binary_name),
                      ':%s-OUTPUT - [0:0]' % (binary_name),
+                     ':%s-local - [0:0]' % (binary_name),
                      ':nova-filter-top - [0:0]',
                      '[0:0] -A FORWARD -j nova-filter-top',
                      '[0:0] -A OUTPUT -j nova-filter-top',
@@ -66,10 +66,10 @@ class IptablesManagerTestCase(test.NoDBTestCase):
                   ':OUTPUT ACCEPT [63491:4191863]',
                   ':POSTROUTING ACCEPT [63112:4108641]',
                   ':%s-OUTPUT - [0:0]' % (binary_name),
-                  ':%s-snat - [0:0]' % (binary_name),
+                  ':%s-POSTROUTING - [0:0]' % (binary_name),
                   ':%s-PREROUTING - [0:0]' % (binary_name),
                   ':%s-float-snat - [0:0]' % (binary_name),
-                  ':%s-POSTROUTING - [0:0]' % (binary_name),
+                  ':%s-snat - [0:0]' % (binary_name),
                   ':nova-postrouting-bottom - [0:0]',
                   '[0:0] -A PREROUTING -j %s-PREROUTING' % (binary_name),
                   '[0:0] -A OUTPUT -j %s-OUTPUT' % (binary_name),
@@ -150,7 +150,7 @@ class IptablesManagerTestCase(test.NoDBTestCase):
         num_removed = table.remove_rules_regex(regex % '10.10.10.11')
         self.assertEqual(num_removed, 4)
         new_lines = self.manager._modify_rules(current_lines, table, 'nat')
-        self.assertEqual(new_lines, current_lines)
+        self.assertEqual(current_lines, new_lines)
 
     def test_nat_rules(self):
         current_lines = self.sample_nat
