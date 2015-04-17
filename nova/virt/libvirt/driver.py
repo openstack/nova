@@ -4050,24 +4050,8 @@ class LibvirtDriver(driver.ComputeDriver):
             consolepty.type = "pty"
             guest.add_device(consolepty)
 
-        # We want a tablet if VNC is enabled, or SPICE is enabled and
-        # the SPICE agent is disabled. If the SPICE agent is enabled
-        # it provides a paravirt mouse which drastically reduces
-        # overhead (by eliminating USB polling).
-        #
-        # NB: this implies that if both SPICE + VNC are enabled
-        # at the same time, we'll get the tablet whether the
-        # SPICE agent is used or not.
-        need_usb_tablet = False
-        if CONF.vnc_enabled:
-            need_usb_tablet = CONF.libvirt.use_usb_tablet
-        elif CONF.spice.enabled and not CONF.spice.agent_enabled:
-            need_usb_tablet = CONF.libvirt.use_usb_tablet
-
-        if need_usb_tablet and guest.os_type == vm_mode.HVM:
-            tablet = vconfig.LibvirtConfigGuestInput()
-            tablet.type = "tablet"
-            tablet.bus = "usb"
+        tablet = self._get_guest_usb_tablet(guest.os_type)
+        if tablet:
             guest.add_device(tablet)
 
         if (CONF.spice.enabled and CONF.spice.agent_enabled and
@@ -4149,6 +4133,28 @@ class LibvirtDriver(driver.ComputeDriver):
             guest.add_device(balloon)
 
         return guest
+
+    def _get_guest_usb_tablet(self, os_type):
+        # We want a tablet if VNC is enabled, or SPICE is enabled and
+        # the SPICE agent is disabled. If the SPICE agent is enabled
+        # it provides a paravirt mouse which drastically reduces
+        # overhead (by eliminating USB polling).
+        #
+        # NB: this implies that if both SPICE + VNC are enabled
+        # at the same time, we'll get the tablet whether the
+        # SPICE agent is used or not.
+        need_usb_tablet = False
+        if CONF.vnc_enabled:
+            need_usb_tablet = CONF.libvirt.use_usb_tablet
+        elif CONF.spice.enabled and not CONF.spice.agent_enabled:
+            need_usb_tablet = CONF.libvirt.use_usb_tablet
+
+        tablet = None
+        if need_usb_tablet and os_type == vm_mode.HVM:
+            tablet = vconfig.LibvirtConfigGuestInput()
+            tablet.type = "tablet"
+            tablet.bus = "usb"
+        return tablet
 
     def _get_guest_xml(self, context, instance, network_info, disk_info,
                        image_meta, rescue=None,
