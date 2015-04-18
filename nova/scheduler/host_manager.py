@@ -256,28 +256,33 @@ class HostState(object):
         # Track number of instances on host
         self.num_instances += 1
 
-        instance_numa_topology = hardware.instance_topology_from_instance(
-            instance)
-        instance_cells = None
-        if instance_numa_topology:
-            instance_cells = instance_numa_topology.cells
-
         pci_requests = instance.get('pci_requests')
         # NOTE(danms): Instance here is still a dict, which is converted from
-        # an object. Thus, it has a .pci_requests field, which gets converted
-        # to a primitive early on, and is thus a dict here. Convert this when
+        # an object. The pci_requests are a dict as well. Convert this when
         # we get an object all the way to this path.
         if pci_requests and pci_requests['requests'] and self.pci_stats:
+            pci_requests = objects.InstancePCIRequests \
+                .from_request_spec_instance_props(pci_requests)
             pci_requests = pci_requests.requests
-            self.pci_stats.apply_requests(pci_requests, instance_cells)
+        else:
+            pci_requests = None
 
         # Calculate the numa usage
         host_numa_topology, _fmt = hardware.host_topology_and_format_from_host(
                                 self)
+        instance_numa_topology = hardware.instance_topology_from_instance(
+            instance)
+
         instance['numa_topology'] = hardware.numa_fit_instance_to_host(
             host_numa_topology, instance_numa_topology,
             limits=self.limits.get('numa_topology'),
             pci_requests=pci_requests, pci_stats=self.pci_stats)
+        if pci_requests:
+            instance_cells = None
+            if instance['numa_topology']:
+                instance_cells = instance['numa_topology'].cells
+            self.pci_stats.apply_requests(pci_requests, instance_cells)
+
         self.numa_topology = hardware.get_host_numa_usage_from_instance(
                 self, instance)
 

@@ -29,8 +29,10 @@ from nova.compute import vm_states
 from nova import exception
 from nova import objects
 from nova.objects import base as obj_base
+from nova.pci import stats as pci_stats
 from nova.scheduler import filters
 from nova.scheduler import host_manager
+from nova.scheduler import utils as sched_utils
 from nova import test
 from nova.tests.unit import fake_instance
 from nova.tests.unit import matchers
@@ -880,7 +882,8 @@ class HostStateTestCase(test.NoDBTestCase):
                         project_id='12345', vm_state=vm_states.BUILDING,
                         task_state=task_states.SCHEDULING, os_type='Linux',
                         uuid='fake-uuid',
-                        numa_topology=fake_numa_topology)
+                        numa_topology=fake_numa_topology,
+                        pci_requests={'requests': []})
         host = host_manager.HostState("fakehost", "fakenode")
 
         host.consume_from_instance(instance)
@@ -907,6 +910,50 @@ class HostStateTestCase(test.NoDBTestCase):
         self.assertEqual(2, numa_usage_mock.call_count)
         self.assertEqual(((host, instance),), numa_usage_mock.call_args)
         self.assertEqual('fake-consumed-twice', host.numa_topology)
+
+    def test_stat_consumption_from_instance_pci(self):
+
+        inst_topology = objects.InstanceNUMATopology(
+                            cells = [objects.InstanceNUMACell(
+                                                      cpuset=set([0]),
+                                                      memory=512, id=0)])
+
+        fake_requests = [{'request_id': 'fake_request1', 'count': 1,
+                          'spec': [{'vendor_id': '8086'}]}]
+        fake_requests_obj = objects.InstancePCIRequests(
+                                requests=[objects.InstancePCIRequest(**r)
+                                          for r in fake_requests],
+                                instance_uuid='fake-uuid')
+        instance = objects.Instance(root_gb=0, ephemeral_gb=0, memory_mb=512,
+                        vcpus=1,
+                        project_id='12345', vm_state=vm_states.BUILDING,
+                        task_state=task_states.SCHEDULING, os_type='Linux',
+                        uuid='fake-uuid',
+                        numa_topology=inst_topology,
+                        pci_requests=fake_requests_obj,
+                        id = 1243)
+        req_spec = sched_utils.build_request_spec(None,
+                                                  None,
+                                                  [instance],
+                                                  objects.Flavor(
+                                                             root_gb=0,
+                                                             ephemeral_gb=0,
+                                                             memory_mb=1024,
+                                                             vcpus=1))
+        host = host_manager.HostState("fakehost", "fakenode")
+        host.pci_stats = pci_stats.PciDeviceStats(
+                                      [objects.PciDevicePool(vendor_id='8086',
+                                                             product_id='15ed',
+                                                             numa_node=1,
+                                                             count=1)])
+        host.numa_topology = fakes.NUMA_TOPOLOGY
+        host.consume_from_instance(req_spec['instance_properties'])
+        self.assertIsInstance(req_spec['instance_properties']['numa_topology'],
+                              objects.InstanceNUMATopology)
+
+        self.assertEqual(512, host.numa_topology.cells[1].memory_usage)
+        self.assertEqual(1, host.numa_topology.cells[1].cpu_usage)
+        self.assertEqual(0, len(host.pci_stats.pools))
 
     def test_resources_consumption_from_compute_node(self):
         metrics = [
