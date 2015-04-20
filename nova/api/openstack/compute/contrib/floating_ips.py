@@ -183,7 +183,7 @@ class FloatingIPController(object):
         try:
             self.network_api.disassociate_and_release_floating_ip(
                 context, instance, floating_ip)
-        except exception.Forbidden:
+        except exception.NotAuthorized:
             raise webob.exc.HTTPForbidden()
         except exception.CannotDisassociateAutoAssignedFloatingIP:
             msg = _('Cannot disassociate auto assigned floating ip')
