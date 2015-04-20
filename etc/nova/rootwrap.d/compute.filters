@@ -181,9 +181,6 @@ mkfs.ext4: CommandFilter, mkfs.ext4, root
 mkfs.ntfs: CommandFilter, mkfs.ntfs, root
 
 # nova/virt/libvirt/connection.py:
-read_initiator: ReadFileFilter, /etc/iscsi/initiatorname.iscsi
-
-# nova/virt/libvirt/connection.py:
 lvremove: CommandFilter, lvremove, root
 
 # nova/virt/libvirt/utils.py:
@@ -203,13 +200,12 @@ tgtadm: CommandFilter, tgtadm, root
 read_passwd: RegExpFilter, cat, root, cat, (/var|/usr)?/tmp/openstack-vfs-localfs[^/]+/etc/passwd
 read_shadow: RegExpFilter, cat, root, cat, (/var|/usr)?/tmp/openstack-vfs-localfs[^/]+/etc/shadow
 
-# nova/virt/libvirt/volume.py: 'multipath' '-R'
+# os-brick needed commands
+read_initiator: ReadFileFilter, /etc/iscsi/initiatorname.iscsi
 multipath: CommandFilter, multipath, root
-
-# nova/virt/libvirt/utils.py:
+# multipathd show status
+multipathd: CommandFilter, multipathd, root
 systool: CommandFilter, systool, root
-
-# nova/storage/linuxscsi.py: sginfo -r
 sginfo: CommandFilter, sginfo, root
 
 # nova/storage/linuxscsi.py: sg_scan device

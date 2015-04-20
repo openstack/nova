@@ -33,6 +33,7 @@ import fixtures
 from lxml import etree
 import mock
 from mox3 import mox
+from os_brick.initiator import connector
 from oslo_concurrency import lockutils
 from oslo_concurrency import processutils
 from oslo_config import cfg
@@ -105,6 +106,7 @@ CONF.import_opt('host', 'nova.netconf')
 CONF.import_opt('my_ip', 'nova.netconf')
 CONF.import_opt('image_cache_subdirectory_name', 'nova.virt.imagecache')
 CONF.import_opt('instances_path', 'nova.compute.manager')
+CONF.import_opt('iscsi_use_multipath', 'nova.virt.libvirt.volume', 'libvirt')
 
 _fake_network_info = fake_network.fake_get_instance_nw_info
 
@@ -864,7 +866,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertRaises(exception.PciDeviceDetachFailed,
                           drvr._detach_pci_devices, guest, pci_devices)
 
-    def test_get_connector(self):
+    @mock.patch.object(connector, 'get_connector_properties')
+    def test_get_connector(self, fake_get_connector):
         initiator = 'fake.initiator.iqn'
         ip = 'fakeip'
         host = 'fakehost'
@@ -873,7 +876,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.flags(my_ip=ip)
         self.flags(host=host)
 
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         expected = {
             'ip': ip,
             'initiator': initiator,
@@ -884,16 +886,26 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         volume = {
             'id': 'fake'
         }
+
+        # TODO(walter-boring) add the fake in os-brick
+        fake_get_connector.return_value = expected
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         result = drvr.get_volume_connector(volume)
         self.assertThat(expected, matchers.DictMatches(result))
 
-    def test_get_connector_storage_ip(self):
+    @mock.patch.object(connector, 'get_connector_properties')
+    def test_get_connector_storage_ip(self, fake_get_connector):
         ip = '100.100.100.100'
         storage_ip = '101.101.101.101'
         self.flags(my_block_storage_ip=storage_ip, my_ip=ip)
         volume = {
             'id': 'fake'
         }
+        expected = {
+            'ip': storage_ip
+        }
+        # TODO(walter-boring) add the fake in os-brick
+        fake_get_connector.return_value = expected
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         result = drvr.get_volume_connector(volume)
         self.assertEqual(storage_ip, result['ip'])
