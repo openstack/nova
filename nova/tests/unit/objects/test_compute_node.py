@@ -359,18 +359,6 @@ class _TestComputeNodeObject(object):
         compute.id = 123
         compute.destroy()
 
-    def test_service(self):
-        self.mox.StubOutWithMock(service.Service, 'get_by_id')
-        service.Service.get_by_id(self.context, 456).AndReturn('my-service')
-        self.mox.ReplayAll()
-        compute = compute_node.ComputeNode()
-        compute._context = self.context
-        compute.id = 123
-        compute.service_id = 456
-        self.assertEqual('my-service', compute.service)
-        # Make sure it doesn't call Service.get_by_id() again
-        self.assertEqual('my-service', compute.service)
-
     def test_get_all(self):
         self.mox.StubOutWithMock(db, 'compute_node_get_all')
         db.compute_node_get_all(self.context).AndReturn([fake_compute_node])
@@ -394,11 +382,10 @@ class _TestComputeNodeObject(object):
                          comparators=self.comparators())
 
     @mock.patch('nova.db.compute_nodes_get_by_service_id')
-    def test_get_by_service(self, cn_get_by_svc_id):
+    def test__get_by_service(self, cn_get_by_svc_id):
         cn_get_by_svc_id.return_value = [fake_compute_node]
-        fake_service = service.Service(id=123)
-        computes = compute_node.ComputeNodeList.get_by_service(self.context,
-                                                               fake_service)
+        computes = compute_node.ComputeNodeList._get_by_service(self.context,
+                                                                123)
         self.assertEqual(1, len(computes))
         self.compare_obj(computes[0], fake_compute_node,
                          subs=self.subs(),

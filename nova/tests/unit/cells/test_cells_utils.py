@@ -105,10 +105,8 @@ class CellsUtilsTestCase(test.NoDBTestCase):
         self.assertEqual(cell, result_cell)
         self.assertEqual(item, result_item)
 
-    @mock.patch.object(objects.Service, 'get_by_id')
-    def test_add_cell_to_compute_node_no_service(self, mock_get_by_id):
-        fake_compute = objects.ComputeNode(id=1, host='fake', service_id=1)
-        mock_get_by_id.side_effect = exception.ServiceNotFound(service_id=1)
+    def test_add_cell_to_compute_node(self):
+        fake_compute = objects.ComputeNode(id=1, host='fake')
         cell_path = 'fake_path'
 
         proxy = cells_utils.add_cell_to_compute_node(fake_compute, cell_path)
@@ -117,25 +115,6 @@ class CellsUtilsTestCase(test.NoDBTestCase):
         self.assertEqual(cells_utils.cell_with_item(cell_path, 1), proxy.id)
         self.assertEqual(cells_utils.cell_with_item(cell_path, 'fake'),
                          proxy.host)
-        self.assertRaises(exception.ServiceNotFound, getattr, proxy, 'service')
-
-    @mock.patch.object(objects.Service, 'get_by_id')
-    def test_add_cell_to_compute_node_with_service(self, mock_get_by_id):
-        fake_compute = objects.ComputeNode(id=1, host='fake', service_id=1)
-        mock_get_by_id.return_value = objects.Service(id=1, host='fake-svc')
-        cell_path = 'fake_path'
-
-        proxy = cells_utils.add_cell_to_compute_node(fake_compute, cell_path)
-
-        self.assertIsInstance(proxy, cells_utils.ComputeNodeProxy)
-        self.assertEqual(cells_utils.cell_with_item(cell_path, 1), proxy.id)
-        self.assertEqual(cells_utils.cell_with_item(cell_path, 'fake'),
-                         proxy.host)
-        self.assertIsInstance(proxy.service, cells_utils.ServiceProxy)
-        self.assertEqual(cells_utils.cell_with_item(cell_path, 1),
-                         proxy.service.id)
-        self.assertEqual(cells_utils.cell_with_item(cell_path, 'fake-svc'),
-                         proxy.service.host)
 
     @mock.patch.object(objects.Service, 'obj_load_attr')
     def test_add_cell_to_service_no_compute_node(self, mock_get_by_id):
