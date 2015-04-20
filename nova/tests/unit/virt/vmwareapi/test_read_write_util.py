@@ -19,6 +19,7 @@ import requests
 
 from nova import test
 from nova.virt.vmwareapi import read_write_util
+import urllib
 
 CONF = cfg.CONF
 
@@ -36,8 +37,9 @@ class ReadWriteUtilTestCase(test.NoDBTestCase):
                                            'fake_ds',
                                            dict(),
                                            folder)
+        param_list = {"dcPath": 'fake_dc', "dsName": 'fake_ds'}
         base_url = 'https://[%s]:%s/folder/%s' % (ipv6_host, port, folder)
-        base_url += '?dsName=fake_ds&dcPath=fake_dc'
+        base_url += '?' + urllib.urlencode(param_list)
         headers = {'User-Agent': 'OpenStack-ESX-Adapter'}
         mock_request.assert_called_once_with('get',
                                              base_url,
