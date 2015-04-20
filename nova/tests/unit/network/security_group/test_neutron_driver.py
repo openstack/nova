@@ -201,7 +201,8 @@ class TestNeutronDriver(test.NoDBTestCase):
 
         self.moxed_client.list_ports(device_id=[server_id]).AndReturn(
             port_list)
-        self.moxed_client.list_security_groups(id=[sg2_id, sg1_id]).AndReturn(
+        self.moxed_client.list_security_groups(
+            id=mox.SameElementsAs([sg2_id, sg1_id])).AndReturn(
             security_groups_list)
         self.mox.ReplayAll()
 
@@ -236,7 +237,8 @@ class TestNeutronDriver(test.NoDBTestCase):
                        device_id=device_ids[x:x + max_query]).\
                        AndReturn({'ports': ports[x:x + max_query]})
 
-        self.moxed_client.list_security_groups(id=[sg2_id, sg1_id]).AndReturn(
+        self.moxed_client.list_security_groups(
+            id=mox.SameElementsAs([sg2_id, sg1_id])).AndReturn(
             security_groups_list)
         self.mox.ReplayAll()
 
