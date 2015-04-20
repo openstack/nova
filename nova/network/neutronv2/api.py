@@ -443,6 +443,13 @@ class API(base_api.NetworkAPI):
 
                     if hypervisor_macs is not None:
                         if port['mac_address'] not in hypervisor_macs:
+                            LOG.debug("Port %(port)s mac address %(mac)s is "
+                                      "not in the set of hypervisor macs: "
+                                      "%(hyper_macs)s",
+                                      {'port': request.port_id,
+                                       'mac': port['mac_address'],
+                                       'hyper_macs': hypervisor_macs},
+                                      instance=instance)
                             raise exception.PortNotUsable(
                                 port_id=request.port_id,
                                 instance=instance.uuid)
