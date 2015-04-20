@@ -553,7 +553,6 @@ def _compute_node_get(context, compute_id, session=None):
     return result
 
 
-@require_admin_context
 def compute_nodes_get_by_service_id(context, service_id):
     result = model_query(context, models.ComputeNode, read_deleted='no').\
         filter_by(service_id=service_id).\
@@ -565,7 +564,6 @@ def compute_nodes_get_by_service_id(context, service_id):
     return result
 
 
-@require_admin_context
 def compute_node_get_by_host_and_nodename(context, host, nodename):
     result = model_query(context, models.ComputeNode, read_deleted='no').\
         filter_by(host=host, hypervisor_hostname=nodename).\
@@ -577,7 +575,6 @@ def compute_node_get_by_host_and_nodename(context, host, nodename):
     return result
 
 
-@require_admin_context
 def compute_node_get_all_by_host(context, host, use_slave=False):
     result = model_query(context, models.ComputeNode, read_deleted='no',
                          use_slave=use_slave).\
