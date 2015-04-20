@@ -1521,7 +1521,8 @@ class OrphanedObjectError(NovaException):
 
 
 class IncompatibleObjectVersion(NovaException):
-    msg_fmt = _('Version %(objver)s of %(objname)s is not supported')
+    msg_fmt = _('Version %(objver)s of %(objname)s is not supported. The '
+                'maximum supported version is: %(supported)s')
 
 
 class ReadOnlyFieldError(NovaException):
