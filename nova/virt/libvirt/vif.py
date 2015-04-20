@@ -645,7 +645,7 @@ class LibvirtGenericVIFDriver(object):
             system_metadata = utils.instance_sys_meta(instance)
             ft_role = system_metadata.get('ft_role', None)
             if ft_role == 'primary' or ft_role == 'secondary':
-                unplug_ovs_hybrid_colo(instance, vif)
+                self.unplug_ovs_hybrid_colo(instance, vif)
 
         except processutils.ProcessExecutionError:
             LOG.exception(_LE("Failed while unplugging vif"),
