@@ -19,10 +19,21 @@ from nova.tests.functional.v3 import test_servers
 
 CONF = cfg.CONF
 CONF.import_opt('shelved_offload_time', 'nova.compute.manager')
+CONF.import_opt('osapi_compute_extension',
+                'nova.api.openstack.compute.extensions')
 
 
 class ShelveJsonTest(test_servers.ServersSampleBase):
     extension_name = "os-shelve"
+    extra_extensions_to_load = ["os-access-ips"]
+    _api_version = 'v2'
+
+    def _get_flags(self):
+        f = super(ShelveJsonTest, self)._get_flags()
+        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.shelve.Shelve')
+        return f
 
     def setUp(self):
         super(ShelveJsonTest, self).setUp()
