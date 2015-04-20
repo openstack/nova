@@ -69,6 +69,12 @@ CONF.import_opt('host', 'nova.netconf')
 CONF.import_opt('my_ip', 'nova.netconf')
 
 
+# This list is for libvirt hypervisor drivers that need special handling.
+# This is *not* the complete list of supported hypervisor drivers.
+HV_DRIVER_QEMU = "QEMU"
+HV_DRIVER_XEN = "Xen"
+
+
 class DomainJobInfo(object):
     """Information about libvirt background jobs
 
@@ -549,6 +555,10 @@ class Host(object):
 
     def _version_check(self, lv_ver=None, hv_ver=None, hv_type=None,
                        op=operator.lt):
+        """Check libvirt version, hypervisor version, and hypervisor type
+
+        :param hv_type: hypervisor driver from the top of this file.
+        """
         conn = self.get_connection()
         try:
             if lv_ver is not None:

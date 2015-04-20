@@ -335,7 +335,6 @@ MIN_LIBVIRT_VERSION = (0, 9, 11)
 # delete it & corresponding code using it
 MIN_LIBVIRT_DEVICE_CALLBACK_VERSION = (1, 1, 1)
 # Live snapshot requirements
-REQ_HYPERVISOR_LIVESNAPSHOT = "QEMU"
 MIN_LIBVIRT_LIVESNAPSHOT_VERSION = (1, 0, 0)
 MIN_QEMU_LIVESNAPSHOT_VERSION = (1, 3, 0)
 # block size tuning requirements
@@ -348,7 +347,6 @@ MIN_LIBVIRT_BLOCKCOMMIT_RELATIVE_VERSION = (1, 2, 7)
 # libvirt discard feature
 MIN_LIBVIRT_DISCARD_VERSION = (1, 0, 6)
 MIN_QEMU_DISCARD_VERSION = (1, 6, 0)
-REQ_HYPERVISOR_DISCARD = "QEMU"
 # While earlier versions could support NUMA reporting and
 # NUMA placement, not until 1.2.7 was there the ability
 # to pin guest nodes to host nodes, so mandate that. Without
@@ -367,7 +365,6 @@ BAD_LIBVIRT_CPU_POLICY_VERSIONS = [(1, 2, 9, 2), (1, 2, 10)]
 # NUMA nodes, along with the ability to specify hugepage
 # sizes per guest NUMA node
 MIN_QEMU_NUMA_HUGEPAGE_VERSION = (2, 1, 0)
-REQ_HYPERVISOR_NUMA_HUGEPAGE = "QEMU"
 # fsFreeze/fsThaw requirement
 MIN_LIBVIRT_FSFREEZE_VERSION = (1, 2, 5)
 
@@ -1326,7 +1323,7 @@ class LibvirtDriver(driver.ComputeDriver):
         #               future.
         if (self._host.has_min_version(MIN_LIBVIRT_LIVESNAPSHOT_VERSION,
                                        MIN_QEMU_LIVESNAPSHOT_VERSION,
-                                       REQ_HYPERVISOR_LIVESNAPSHOT)
+                                       host.HV_DRIVER_QEMU)
              and source_format not in ('lvm', 'rbd')
              and not CONF.ephemeral_storage_encryption.enabled
              and not CONF.workarounds.disable_libvirt_livesnapshot):
@@ -3091,7 +3088,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if CONF.libvirt.hw_disk_discard:
             if not self._host.has_min_version(MIN_LIBVIRT_DISCARD_VERSION,
                                               MIN_QEMU_DISCARD_VERSION,
-                                              REQ_HYPERVISOR_DISCARD):
+                                              host.HV_DRIVER_QEMU):
                 msg = (_('Volume sets discard option, but libvirt %(libvirt)s'
                          ' or later is required, qemu %(qemu)s'
                          ' or later is required.') %
@@ -4703,7 +4700,7 @@ class LibvirtDriver(driver.ComputeDriver):
         return ((caps.host.cpu.arch in supported_archs) and
                 self._host.has_min_version(MIN_LIBVIRT_NUMA_VERSION,
                                            MIN_QEMU_NUMA_HUGEPAGE_VERSION,
-                                           REQ_HYPERVISOR_NUMA_HUGEPAGE))
+                                           host.HV_DRIVER_QEMU))
 
     def _has_hugepage_support(self):
         # This means that the host can support multiple values for the size
@@ -4713,7 +4710,7 @@ class LibvirtDriver(driver.ComputeDriver):
         return ((caps.host.cpu.arch in supported_archs) and
                 self._host.has_min_version(MIN_LIBVIRT_HUGEPAGE_VERSION,
                                            MIN_QEMU_NUMA_HUGEPAGE_VERSION,
-                                           REQ_HYPERVISOR_NUMA_HUGEPAGE))
+                                           host.HV_DRIVER_QEMU))
 
     def _get_host_numa_topology(self):
         if not self._has_numa_support():
