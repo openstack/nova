@@ -169,3 +169,66 @@ class KeyPairsV22SampleJsonTest(KeyPairsSampleJsonTest):
     def test_keypairs_import_key_post_invalid_combination(self):
         self._check_keypairs_import_key_post_invalid(
             keypair_type=keypair_obj.KEYPAIR_TYPE_X509)
+
+
+class KeyPairsV210SampleJsonTest(KeyPairsSampleJsonTest):
+    ADMIN_API = True
+    request_api_version = '2.10'
+    expected_post_status_code = 201
+    expected_delete_status_code = 204
+    scenarios = [('v2_10', {})]
+    _api_version = 'v2'
+
+    def test_keypair_create_for_user(self):
+        subs = {
+            'keypair_type': keypair_obj.KEYPAIR_TYPE_SSH,
+            'public_key': fake_crypto.get_ssh_public_key(),
+            'user_id': "fake"
+        }
+        self._check_keypairs_post(**subs)
+
+    def test_keypairs_post(self):
+        return self._check_keypairs_post(
+            keypair_type=keypair_obj.KEYPAIR_TYPE_SSH,
+            user_id="admin")
+
+    def test_keypairs_import_key_post(self):
+        # NOTE(claudiub): overrides the method with the same name in
+        # KeypairsSampleJsonTest, since the API sample expects a keypair_type.
+        public_key = fake_crypto.get_ssh_public_key()
+        self._check_keypairs_import_key_post(
+            public_key, keypair_type=keypair_obj.KEYPAIR_TYPE_SSH,
+            user_id="fake")
+
+    def test_keypairs_delete_for_user(self):
+        # Delete a keypair on behalf of a user
+        subs = {
+            'keypair_type': keypair_obj.KEYPAIR_TYPE_SSH,
+            'public_key': fake_crypto.get_ssh_public_key(),
+            'user_id': "fake"
+        }
+        key_name = self._check_keypairs_post(**subs)
+        response = self._do_delete('os-keypairs/%s?user_id=fake' % key_name,
+                                   api_version=self.request_api_version)
+        self.assertEqual(self.expected_delete_status_code,
+                         response.status_code)
+
+
+class KeyPairsV210SampleJsonTestNotAdmin(KeyPairsV210SampleJsonTest):
+    ADMIN_API = False
+
+    def test_keypairs_post(self):
+        return self._check_keypairs_post(
+            keypair_type=keypair_obj.KEYPAIR_TYPE_SSH,
+            user_id="fake")
+
+    def test_keypairs_post_for_other_user(self):
+        key_name = 'keypair-' + str(uuid.uuid4())
+        subs = dict(keypair_name=key_name,
+                    keypair_type=keypair_obj.KEYPAIR_TYPE_SSH,
+                    user_id='fake1')
+        response = self._do_post('os-keypairs', 'keypairs-post-req', subs,
+                                 api_version=self.request_api_version,
+                                 )
+
+        self.assertEqual(403, response.status_code)

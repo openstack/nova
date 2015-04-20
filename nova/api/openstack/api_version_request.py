@@ -48,6 +48,8 @@ REST_API_VERSION_HISTORY = """REST API Version History:
     * 2.7 - Check flavor type before add tenant access.
     * 2.8 - Add new protocol for VM console (mks)
     * 2.9 - Exposes lock information in server details.
+    * 2.10 - Allow admins to query, create and delete keypairs owned by any
+             user.
 """
 
 # The minimum and maximum versions of the API supported
@@ -56,7 +58,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
 # Note(cyeoh): This only applies for the v2.1 API once microversions
 # support is fully merged. It does not affect the V2 API.
 _MIN_API_VERSION = "2.1"
-_MAX_API_VERSION = "2.9"
+_MAX_API_VERSION = "2.10"
 DEFAULT_API_VERSION = _MIN_API_VERSION
 
 

@@ -107,3 +107,13 @@ user documentation.
   Add a new ``locked`` attribute to the detailed view of
   servers. ``locked`` will be ``true`` if anyone is currently holding
   a lock on the server, ``false`` otherwise.
+
+2.10
+---
+
+  Added user_id parameter to os-keypairs plugin, as well as a new property
+  in the request body, for the create operation.
+
+  Administrators will be able to list, get details and delete keypairs owned by
+  users other than themselves and to create new keypairs on behalf of their
+  users.
