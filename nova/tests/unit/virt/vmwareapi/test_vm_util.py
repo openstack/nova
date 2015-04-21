@@ -804,7 +804,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         result = vm_util.convert_vif_model(network_model.VIF_MODEL_E1000E)
         self.assertEqual(expected, result)
         types = ["VirtualE1000", "VirtualE1000e", "VirtualPCNet32",
-                 "VirtualVmxnet"]
+                 "VirtualVmxnet", "VirtualVmxnet3"]
         for type in types:
             self.assertEqual(type,
                              vm_util.convert_vif_model(type))
