@@ -6852,13 +6852,15 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                      spice='10.0.0.2')
         target_xml = etree.tostring(etree.fromstring(target_xml))
 
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
         # Preparing mocks
         vdmock = self.mox.CreateMock(fakelibvirt.virDomain)
         self.mox.StubOutWithMock(vdmock, "migrateToURI2")
         _bandwidth = CONF.libvirt.live_migration_bandwidth
         vdmock.XMLDesc(flags=fakelibvirt.VIR_DOMAIN_XML_MIGRATABLE).AndReturn(
                 initial_xml)
-        vdmock.migrateToURI2(CONF.libvirt.live_migration_uri % 'dest',
+        vdmock.migrateToURI2(drvr._live_migration_uri('dest'),
                              None,
                              target_xml,
                              mox.IgnoreArg(),
@@ -6877,7 +6879,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             target_connect_addr=None,
             bdms=[])
         self.mox.ReplayAll()
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.assertRaises(fakelibvirt.libvirtError,
                           drvr._live_migration_operation,
                           self.context, instance_ref, 'dest',
@@ -7024,6 +7025,39 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             xml_doc = etree.fromstring(target_xml, parser)
             self.assertEqual(etree.tostring(xml_doc), etree.tostring(config))
 
+    def test_live_migration_uri(self):
+        hypervisor_uri_map = (
+            ('xen', 'xenmigr://%s/system'),
+            ('kvm', 'qemu+tcp://%s/system'),
+            ('qemu', 'qemu+tcp://%s/system'),
+            # anything else will return None
+            ('lxc', None),
+            ('parallels', None),
+            ('', None),
+        )
+        dest = 'destination'
+        for hyperv, uri in hypervisor_uri_map:
+            self.flags(virt_type=hyperv, group='libvirt')
+            drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+            if uri is not None:
+                uri = uri % dest
+                self.assertEqual(uri, drvr._live_migration_uri(dest))
+            else:
+                self.assertRaises(exception.LiveMigrationURINotAvailable,
+                                  drvr._live_migration_uri,
+                                  dest)
+
+    def test_live_migration_uri_forced(self):
+        dest = 'destination'
+        for hyperv in ('kvm', 'xen'):
+            self.flags(virt_type=hyperv, group='libvirt')
+
+            forced_uri = 'foo://%s/bar'
+            self.flags(live_migration_uri=forced_uri, group='libvirt')
+
+            drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+            self.assertEqual(forced_uri % dest, drvr._live_migration_uri(dest))
+
     def test_update_volume_xml_no_serial(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
@@ -7150,7 +7184,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         mock_xml.assert_called_once_with(
                 flags=fakelibvirt.VIR_DOMAIN_XML_MIGRATABLE)
         mock_migrate.assert_called_once_with(
-                CONF.libvirt.live_migration_uri % 'dest',
+                drvr._live_migration_uri('dest'),
                 None, target_xml, mock.ANY, None, bandwidth)
 
     @mock.patch.object(fakelibvirt, 'VIR_DOMAIN_XML_MIGRATABLE', None,
@@ -7180,11 +7214,13 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                               'vm_state': vm_states.ACTIVE})
         instance_ref = objects.Instance(**instance_dict)
 
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
         # Preparing mocks
         vdmock = self.mox.CreateMock(fakelibvirt.virDomain)
         self.mox.StubOutWithMock(vdmock, "migrateToURI")
         _bandwidth = CONF.libvirt.live_migration_bandwidth
-        vdmock.migrateToURI(CONF.libvirt.live_migration_uri % 'dest',
+        vdmock.migrateToURI(drvr._live_migration_uri('dest'),
                             mox.IgnoreArg(),
                             None,
                             _bandwidth).AndRaise(
@@ -7198,7 +7234,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             target_connect_addr=None,
             bdms=[])
         self.mox.ReplayAll()
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.assertRaises(fakelibvirt.libvirtError,
                           drvr._live_migration_operation,
                           self.context, instance_ref, 'dest',
@@ -7212,11 +7247,13 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                               'vm_state': vm_states.ACTIVE})
         instance_ref = objects.Instance(**instance_dict)
 
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
         # Preparing mocks
         vdmock = self.mox.CreateMock(fakelibvirt.virDomain)
         self.mox.StubOutWithMock(vdmock, "migrateToURI")
         _bandwidth = CONF.libvirt.live_migration_bandwidth
-        vdmock.migrateToURI(CONF.libvirt.live_migration_uri % 'dest',
+        vdmock.migrateToURI(drvr._live_migration_uri('dest'),
                             mox.IgnoreArg(),
                             None,
                             _bandwidth).AndRaise(
@@ -7228,7 +7265,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             target_connect_addr=None,
             bdms=[])
         self.mox.ReplayAll()
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.assertRaises(fakelibvirt.libvirtError,
                           drvr._live_migration_operation,
                           self.context, instance_ref, 'dest',
@@ -7267,7 +7303,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                           self.context, instance, 'dest',
                           False, migrate_data, dom, disk_paths)
         mock_migrateToURI3.assert_called_once_with(
-                CONF.libvirt.live_migration_uri % 'dest', params, None)
+                drvr._live_migration_uri('dest'), params, None)
 
     @mock.patch.object(fakelibvirt, 'VIR_DOMAIN_XML_MIGRATABLE', None,
                        create=True)
@@ -7307,12 +7343,14 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                               'vm_state': vm_states.ACTIVE})
         instance_ref = objects.Instance(**instance_dict)
 
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
         # Preparing mocks
         vdmock = self.mox.CreateMock(fakelibvirt.virDomain)
         self.mox.StubOutWithMock(vdmock, "migrateToURI2")
         _bandwidth = CONF.libvirt.live_migration_bandwidth
         if getattr(fakelibvirt, 'VIR_DOMAIN_XML_MIGRATABLE', None) is None:
-            vdmock.migrateToURI(CONF.libvirt.live_migration_uri % 'dest',
+            vdmock.migrateToURI(drvr._live_migration_uri('dest'),
                                 mox.IgnoreArg(),
                                 None,
                                 _bandwidth).AndRaise(
@@ -7320,7 +7358,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         else:
             vdmock.XMLDesc(flags=fakelibvirt.VIR_DOMAIN_XML_MIGRATABLE
             ).AndReturn(FakeVirtDomain().XMLDesc(flags=0))
-            vdmock.migrateToURI2(CONF.libvirt.live_migration_uri % 'dest',
+            vdmock.migrateToURI2(drvr._live_migration_uri('dest'),
                                  None,
                                  mox.IgnoreArg(),
                                  mox.IgnoreArg(),
@@ -7336,7 +7374,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             target_connect_addr=None,
             bdms=[])
         self.mox.ReplayAll()
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.assertRaises(fakelibvirt.libvirtError,
                           drvr._live_migration_operation,
                           self.context, instance_ref, 'dest',
@@ -7352,6 +7389,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         # Preparing data
         instance_ref = objects.Instance(**self.test_instance)
 
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
         # Preparing mocks
         vdmock = self.mox.CreateMock(fakelibvirt.virDomain)
         self.mox.StubOutWithMock(vdmock, 'migrateToURI2')
@@ -7364,13 +7403,13 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             fakelibvirt.VIR_ERR_CONFIG_UNSUPPORTED,)
         # This is the first error we hit but since the error code is
         # VIR_ERR_CONFIG_UNSUPPORTED we'll try migrateToURI.
-        vdmock.migrateToURI2(CONF.libvirt.live_migration_uri % 'dest', None,
+        vdmock.migrateToURI2(drvr._live_migration_uri('dest'), None,
                              mox.IgnoreArg(), mox.IgnoreArg(), None,
                              _bandwidth).AndRaise(unsupported_config_error)
         # This is the second and final error that will actually kill the run,
         # we use TestingException to make sure it's not the same libvirtError
         # above.
-        vdmock.migrateToURI(CONF.libvirt.live_migration_uri % 'dest',
+        vdmock.migrateToURI(drvr._live_migration_uri('dest'),
                             mox.IgnoreArg(), None,
                             _bandwidth).AndRaise(test.TestingException('oops'))
 

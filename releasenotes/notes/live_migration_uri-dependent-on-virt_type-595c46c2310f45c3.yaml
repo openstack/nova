@@ -1,0 +1,7 @@
+---
+upgrade:
+  - The libvirt driver has changed the default value of the
+    'live_migration_uri' flag, that now is dependent on the 'virt_type'. The
+    old default 'qemu+tcp://%s/system' now is adjusted for each of the
+    configured hypervisors. For Xen this will be 'xenmigr://%s/system', for
+    kvm/qemu this will be 'qemu+tcp://%s/system'.

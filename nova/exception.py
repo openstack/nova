@@ -1852,6 +1852,11 @@ class LiveMigrationWithOldNovaNotSafe(NovaException):
                 "Upgrade Nova on %(server)s and try again.")
 
 
+class LiveMigrationURINotAvailable(NovaException):
+    msg_fmt = _('No live migration URI configured and no default available '
+                'for "%(virt_type)s" hypervisor virtualization type.')
+
+
 class UnshelveException(NovaException):
     msg_fmt = _("Error during unshelve instance %(instance_id)s: %(reason)s")
 
