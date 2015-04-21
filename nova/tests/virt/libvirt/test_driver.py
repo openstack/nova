@@ -9052,6 +9052,48 @@ Active:          8381604 kB
         self.assertEqual(got_events[0].transition,
                          virtevent.EVENT_LIFECYCLE_STOPPED)
 
+    @mock.patch.object(libvirt_driver.LibvirtDriver, 'emit_event')
+    def test_event_emit_delayed_call_now(self, emit_event_mock):
+        self.flags(virt_type="kvm", group="libvirt")
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        conn._event_emit_delayed(None)
+        emit_event_mock.assert_called_once_with(None)
+
+    @mock.patch.object(greenthread, 'spawn_after')
+    def test_event_emit_delayed_call_delayed(self, spawn_after_mock):
+        CONF.set_override("virt_type", "xen", group="libvirt")
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        event = virtevent.LifecycleEvent(
+            "cef19ce0-0ca2-11df-855d-b19fbce37686",
+            virtevent.EVENT_LIFECYCLE_STOPPED)
+        conn._event_emit_delayed(event)
+        spawn_after_mock.assert_called_once_with(15, conn.emit_event, event)
+
+    @mock.patch.object(greenthread, 'spawn_after')
+    def test_event_emit_delayed_call_delayed_pending(self, spawn_after_mock):
+        self.flags(virt_type="xen", group="libvirt")
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        uuid = "cef19ce0-0ca2-11df-855d-b19fbce37686"
+        gt_mock = mock.Mock()
+        conn._events_delayed[uuid] = gt_mock
+        event = virtevent.LifecycleEvent(
+            uuid, virtevent.EVENT_LIFECYCLE_STOPPED)
+        conn._event_emit_delayed(event)
+        gt_mock.cancel.assert_called_once_with()
+        self.assertTrue(spawn_after_mock.called)
+
+    def test_event_delayed_cleanup(self):
+        self.flags(virt_type="xen", group="libvirt")
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        uuid = "cef19ce0-0ca2-11df-855d-b19fbce37686"
+        event = virtevent.LifecycleEvent(
+            uuid, virtevent.EVENT_LIFECYCLE_STARTED)
+        gt_mock = mock.Mock()
+        conn._events_delayed[uuid] = gt_mock
+        conn._event_emit_delayed(event)
+        gt_mock.cancel.assert_called_once_with()
+        self.assertNotIn(uuid, conn._events_delayed.keys())
+
     def test_set_cache_mode(self):
         self.flags(disk_cachemodes=['file=directsync'], group='libvirt')
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)

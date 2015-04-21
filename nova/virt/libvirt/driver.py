@@ -436,6 +436,15 @@ class LibvirtDriver(driver.ComputeDriver):
 
         self._volume_api = volume.API()
         self._image_api = image.API()
+        self._events_delayed = {}
+        # Note(toabctl): During a reboot of a Xen domain, STOPPED and
+        #                STARTED events are sent. To prevent shutting
+        #                down the domain during a reboot, delay the
+        #                STOPPED lifecycle event some seconds.
+        if CONF.libvirt.virt_type == "xen":
+            self._lifecycle_delay = 15
+        else:
+            self._lifecycle_delay = 0
 
         sysinfo_serial_funcs = {
             'none': lambda: None,
@@ -606,7 +615,8 @@ class LibvirtDriver(driver.ComputeDriver):
             try:
                 event = self._event_queue.get(block=False)
                 if isinstance(event, virtevent.LifecycleEvent):
-                    self.emit_event(event)
+                    # call possibly with delay
+                    self._event_emit_delayed(event)
                 elif 'conn' in event and 'reason' in event:
                     last_close_event = event
             except native_Queue.Empty:
@@ -625,6 +635,38 @@ class LibvirtDriver(driver.ComputeDriver):
                 # Disable compute service to avoid
                 # new instances of being scheduled on this host.
                 self._set_host_enabled(False, disable_reason=_error)
+
+    def _event_emit_delayed(self, event):
+        """Emit events - possibly delayed."""
+        def event_cleanup(gt, *args, **kwargs):
+            """Callback function for greenthread. Called
+            to cleanup the _events_delayed dictionary when a event
+            was called.
+            """
+            event = args[0]
+            self._events_delayed.pop(event.uuid, None)
+
+        if self._lifecycle_delay > 0:
+            # Cleanup possible delayed stop events.
+            if event.uuid in self._events_delayed.keys():
+                self._events_delayed[event.uuid].cancel()
+                self._events_delayed.pop(event.uuid, None)
+                LOG.debug("Removed pending event for %s due to "
+                          "lifecycle event", event.uuid)
+
+            if event.transition == virtevent.EVENT_LIFECYCLE_STOPPED:
+                # Delay STOPPED event, as they may be followed by a STARTED
+                # event in case the instance is rebooting, when runned with Xen
+                id_ = greenthread.spawn_after(self._lifecycle_delay,
+                                              self.emit_event, event)
+                self._events_delayed[event.uuid] = id_
+                # add callback to cleanup self._events_delayed dict after
+                # event was called
+                id_.link(event_cleanup, event)
+            else:
+                self.emit_event(event)
+        else:
+            self.emit_event(event)
 
     def _init_events_pipe(self):
         """Create a self-pipe for the native thread to synchronize on.
