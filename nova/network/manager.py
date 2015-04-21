@@ -550,7 +550,7 @@ class NetworkManager(manager.Manager):
                 if isinstance(requested_networks, objects.NetworkRequestList):
                     requested_networks = requested_networks.as_tuples()
 
-                fixed_ips = [ip for (net_id, ip) in requested_networks]
+                fixed_ips = [ip for (net_id, ip) in requested_networks if ip]
             else:
                 fixed_ip_list = objects.FixedIPList.get_by_instance_uuid(
                     read_deleted_context, instance_uuid)
