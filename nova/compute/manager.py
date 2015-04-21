@@ -6656,9 +6656,9 @@ class _ComputeV4Proxy(object):
     def inject_network_info(self, ctxt, instance):
         return self.manager.inject_network_info(ctxt, instance)
 
-    def live_migration(self, ctxt, instance, dest, block_migration,
+    def live_migration(self, ctxt, dest, instance, block_migration,
                        migrate_data=None):
-        return self.manager.live_migration(ctxt, instance, dest,
+        return self.manager.live_migration(ctxt, dest, instance,
                                            block_migration,
                                            migrate_data=migrate_data)
 
