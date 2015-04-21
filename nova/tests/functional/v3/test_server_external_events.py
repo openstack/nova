@@ -12,12 +12,28 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_config import cfg
+
 from nova.tests.functional.v3 import test_servers
+
+CONF = cfg.CONF
+CONF.import_opt('osapi_compute_extension',
+                'nova.api.openstack.compute.extensions')
 
 
 class ServerExternalEventsSamplesJsonTest(test_servers.ServersSampleBase):
     ADMIN_API = True
     extension_name = "os-server-external-events"
+    extra_extensions_to_load = ["os-access-ips"]
+    _api_version = 'v2'
+
+    def _get_flags(self):
+        f = super(ServerExternalEventsSamplesJsonTest, self)._get_flags()
+        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.server_external_events.'
+            'Server_external_events')
+        return f
 
     def setUp(self):
         """setUp Method for AdminActions api samples extension
