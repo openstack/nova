@@ -16,7 +16,6 @@ from nova.api.openstack.compute.views import flavors as flavors_view
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.compute import flavors
-from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
 
@@ -35,11 +34,6 @@ class FlavorManageController(wsgi.Controller):
     def _delete(self, req, id):
         context = req.environ['nova.context']
         authorize(context)
-
-        # NOTE(alex_xu): back-compatible with db layer hard-code admin
-        # permission checks.
-        nova_context.require_admin_context(context)
-
         try:
             flavor = flavors.get_flavor_by_flavor_id(
                     id, ctxt=context, read_deleted="no")
@@ -54,11 +48,6 @@ class FlavorManageController(wsgi.Controller):
     def _create(self, req, body):
         context = req.environ['nova.context']
         authorize(context)
-
-        # NOTE(alex_xu): back-compatible with db layer hard-code admin
-        # permission checks.
-        nova_context.require_admin_context(context)
-
         if not self.is_valid_body(body, 'flavor'):
             msg = _("Invalid request body")
             raise webob.exc.HTTPBadRequest(explanation=msg)
