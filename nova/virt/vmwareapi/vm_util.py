@@ -62,6 +62,19 @@ class CpuLimits(object):
         self.cpu_shares_level = cpu_shares_level
         self.cpu_shares_share = cpu_shares_share
 
+    def validate(self):
+        if self.cpu_shares_level in ('high', 'normal', 'low'):
+            if self.cpu_shares_share:
+                reason = _("Share level '%s' cannot have share "
+                           "configured") % self.cpu_shares_level
+                raise exception.InvalidInput(reason=reason)
+            return
+        if self.cpu_shares_level == 'custom':
+            return
+        if self.cpu_shares_level:
+            reason = _("Share '%s' is not supported") % self.cpu_shares_level
+            raise exception.InvalidInput(reason=reason)
+
 
 class ExtraSpecs(object):
 

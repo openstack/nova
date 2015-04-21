@@ -1222,6 +1222,15 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
                           devices,
                           self._instance)
 
+    def test_validate_cpu_limits(self):
+        cpu_limits = vm_util.CpuLimits(cpu_shares_level='high',
+                                       cpu_shares_share=1948)
+        self.assertRaises(exception.InvalidInput,
+                          cpu_limits.validate)
+        cpu_limits = vm_util.CpuLimits(cpu_shares_level='fira')
+        self.assertRaises(exception.InvalidInput,
+                          cpu_limits.validate)
+
 
 @mock.patch.object(driver.VMwareAPISession, 'vim', stubs.fake_vim_prop)
 class VMwareVMUtilGetHostRefTestCase(test.NoDBTestCase):
