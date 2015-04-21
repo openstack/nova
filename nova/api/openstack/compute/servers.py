@@ -383,7 +383,7 @@ class Controller(wsgi.Controller):
             raise exc.HTTPBadRequest(explanation=expl)
         return user_data
 
-    def _extract_bdm(self, server_dict):
+    def _extract_bdm(self, server_dict, image_uuid_specified):
         legacy_bdm = True
         block_device_mapping = None
         block_device_mapping_v2 = None
@@ -424,7 +424,8 @@ class Controller(wsgi.Controller):
 
             try:
                 block_device_mapping_v2 = [
-                    block_device.BlockDeviceDict.from_api(bdm_dict)
+                    block_device.BlockDeviceDict.from_api(bdm_dict,
+                        image_uuid_specified)
                     for bdm_dict in block_device_mapping_v2]
             except exception.InvalidBDMFormat as e:
                 raise exc.HTTPBadRequest(explanation=e.format_message())
@@ -552,7 +553,9 @@ class Controller(wsgi.Controller):
         user_data = self._extract(server_dict, 'os-user-data', 'user_data')
         self._validate_user_data(user_data)
 
-        legacy_bdm, block_device_mapping = self._extract_bdm(server_dict)
+        image_uuid_specified = bool(image_uuid)
+        legacy_bdm, block_device_mapping = self._extract_bdm(server_dict,
+            image_uuid_specified)
 
         ret_resv_id = False
         # min_count and max_count are optional.  If they exist, they may come

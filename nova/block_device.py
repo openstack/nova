@@ -171,7 +171,7 @@ class BlockDeviceDict(dict):
         return cls(new_bdm, non_computable_fields)
 
     @classmethod
-    def from_api(cls, api_dict):
+    def from_api(cls, api_dict, image_uuid_specified):
         """Transform the API format of data to the internally used one.
 
         Only validate if the source_type field makes sense.
@@ -194,8 +194,13 @@ class BlockDeviceDict(dict):
                         details=_("Missing device UUID."))
                 api_dict[source_type + '_id'] = device_uuid
             if source_type == 'image' and destination_type == 'local':
-                raise exception.InvalidBDMFormat(
-                    details=_("Mapping image to local is not supported."))
+                boot_index = api_dict.get('boot_index', -1)
+
+                # if this bdm is generated from --image ,then
+                # source_type = image and destination_type = local is allowed
+                if not (image_uuid_specified and boot_index == 0):
+                    raise exception.InvalidBDMFormat(
+                        details=_("Mapping image to local is not supported."))
 
         api_dict.pop('uuid', None)
         return cls(api_dict)
