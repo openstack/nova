@@ -6581,7 +6581,8 @@ class _ComputeV4Proxy(object):
                                           bdm=bdm)
 
     def change_instance_metadata(self, ctxt, instance, diff):
-        return self.manager.change_instance_metadata(ctxt, instance, diff)
+        return self.manager.change_instance_metadata(
+            ctxt, diff=diff, instance=instance)
 
     def check_can_live_migrate_destination(self, ctxt, instance,
                                            block_migration, disk_over_commit):
