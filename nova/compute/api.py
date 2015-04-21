@@ -735,8 +735,8 @@ class API(base.Base):
             # mappings - we need to get rid of the inserted image
             # NOTE (gibi): another case is when a server is booted with an
             # image to bdm mapping where the image only contains a bdm to a
-            # snapshot. In this case the outher image to bdm mapping
-            # contains an unnecessasry device with boot_index == 0.
+            # snapshot. In this case the other image to bdm mapping
+            # contains an unnecessary device with boot_index == 0.
             # Also in this case the image_ref is None as we are booting from
             # an image to volume bdm.
             def not_image_and_root_bdm(bdm):
