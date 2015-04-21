@@ -1276,6 +1276,7 @@ class ComputeManager(manager.Manager):
             self._update_scheduler_instance_info(context, instances)
 
     def cleanup_host(self):
+        self.driver.register_event_listener(None)
         self.instance_events.cancel_all_events()
         self.driver.cleanup_host(host=self.host)
 
