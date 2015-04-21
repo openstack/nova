@@ -958,9 +958,9 @@ class DbCommands(object):
             print(_('There were no records found where '
                     'instance_uuid was NULL.'))
 
-    @args('--max-number', metavar='<number>',
+    @args('--max-number', metavar='<number>', dest='max_number',
           help='Maximum number of instances to consider')
-    def migrate_flavor_data(self, max_number):
+    def migrate_flavor_data(self, max_number=None):
         if max_number is not None:
             max_number = int(max_number)
             if max_number < 0:
