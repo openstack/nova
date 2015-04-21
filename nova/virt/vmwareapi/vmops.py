@@ -33,6 +33,7 @@ from oslo_utils import units
 from oslo_utils import uuidutils
 from oslo_vmware import exceptions as vexc
 from oslo_vmware.objects import datastore as ds_obj
+from oslo_vmware import vim_util as vutil
 
 from nova.api.metadata import base as instance_metadata
 from nova import compute
@@ -1527,7 +1528,6 @@ class VMwareVMOps(object):
         lst_vm_names = []
 
         while retrieve_result:
-            token = vm_util._get_token(retrieve_result)
             for vm in retrieve_result.objects:
                 vm_name = None
                 conn_state = None
@@ -1540,12 +1540,9 @@ class VMwareVMOps(object):
                 if (conn_state not in ["orphaned", "inaccessible"] and
                     uuidutils.is_uuid_like(vm_name)):
                     lst_vm_names.append(vm_name)
-            if token:
-                retrieve_result = self._session._call_method(vim_util,
-                                                 "continue_to_get_objects",
-                                                 token)
-            else:
-                break
+            retrieve_result = self._session._call_method(vutil,
+                                                         'continue_retrieval',
+                                                         retrieve_result)
         return lst_vm_names
 
     def instance_exists(self, instance):
@@ -1753,7 +1750,6 @@ class VMwareVMOps(object):
         """Updates the datastore/datacenter cache."""
 
         while dcs:
-            token = vm_util._get_token(dcs)
             for dco in dcs.objects:
                 dc_ref = dco.obj
                 ds_refs = []
@@ -1771,13 +1767,8 @@ class VMwareVMOps(object):
                 for ds_ref in ds_refs:
                     self._datastore_dc_mapping[ds_ref] = DcInfo(ref=dc_ref,
                             name=name, vmFolder=vmFolder)
-
-            if token:
-                dcs = self._session._call_method(vim_util,
-                                                 "continue_to_get_objects",
-                                                 token)
-            else:
-                break
+            dcs = self._session._call_method(vutil, 'continue_retrieval',
+                                             dcs)
 
     def get_datacenter_ref_and_name(self, ds_ref):
         """Get the datacenter name and the reference."""

@@ -29,6 +29,7 @@ from oslo_utils import units
 from oslo_vmware import exceptions as vexc
 from oslo_vmware.objects import datastore as ds_obj
 from oslo_vmware import pbm
+from oslo_vmware import vim_util as vutil
 
 from nova import exception
 from nova.i18n import _, _LE, _LI, _LW
@@ -876,24 +877,9 @@ def _get_allocated_vnc_ports(session):
             option_value = dynamic_prop.val
             vnc_port = option_value.value
             vnc_ports.add(int(vnc_port))
-        token = _get_token(result)
-        if token:
-            result = session._call_method(vim_util,
-                                          "continue_to_get_objects",
-                                          token)
-        else:
-            break
+        result = session._call_method(vutil, 'continue_retrieval',
+                                      result)
     return vnc_ports
-
-
-# NOTE(mdbooth): this convenience function is temporarily duplicated in
-# ds_util. The correct fix is to handle paginated results as they are returned
-# from the relevant vim_util function. However, vim_util is currently
-# effectively deprecated as we migrate to oslo.vmware. This duplication will be
-# removed when we fix it properly in oslo.vmware.
-def _get_token(results):
-    """Get the token from the property results."""
-    return getattr(results, 'token', None)
 
 
 def _get_reference_for_value(results, value):
@@ -917,29 +903,13 @@ def _get_object_for_optionvalue(results, value):
 
 def _get_object_from_results(session, results, value, func):
     while results:
-        token = _get_token(results)
         object = func(results, value)
         if object:
-            if token:
-                session._call_method(vim_util,
-                                     "cancel_retrieve",
-                                     token)
+            session._call_method(vutil, 'cancel_retrieval',
+                                 results)
             return object
-
-        if token:
-            results = session._call_method(vim_util,
-                                           "continue_to_get_objects",
-                                           token)
-        else:
-            return None
-
-
-def _cancel_retrieve_if_necessary(session, results):
-    token = _get_token(results)
-    if token:
-        results = session._call_method(vim_util,
-                                       "cancel_retrieve",
-                                       token)
+        results = session._call_method(vutil, 'continue_retrieval',
+                                       results)
 
 
 def _get_vm_ref_from_name(session, vm_name):
@@ -1089,7 +1059,8 @@ def get_host_ref(session, cluster=None):
     if cluster is None:
         results = session._call_method(vim_util, "get_objects",
                                        "HostSystem")
-        _cancel_retrieve_if_necessary(session, results)
+        session._call_method(vutil, 'cancel_retrieval',
+                             results)
         host_mor = results.objects[0].obj
     else:
         host_ret = session._call_method(vim_util, "get_dynamic_property",
@@ -1161,7 +1132,8 @@ def get_all_cluster_mors(session):
     try:
         results = session._call_method(vim_util, "get_objects",
                                         "ClusterComputeResource", ["name"])
-        _cancel_retrieve_if_necessary(session, results)
+        session._call_method(vutil, 'cancel_retrieval',
+                             results)
         return results.objects
 
     except Exception as excep:
@@ -1173,8 +1145,8 @@ def get_all_res_pool_mors(session):
     try:
         results = session._call_method(vim_util, "get_objects",
                                              "ResourcePool")
-
-        _cancel_retrieve_if_necessary(session, results)
+        session._call_method(vutil, 'cancel_retrieval',
+                             results)
         return results.objects
     except Exception as excep:
         LOG.warning(_LW("Failed to get resource pool references " "%s"), excep)
@@ -1404,13 +1376,8 @@ def get_values_from_object_properties(session, props):
         for elem in props.objects:
             propdict = propset_dict(elem.propSet)
             dictionary.update(propdict)
-        token = _get_token(props)
-        if not token:
-            break
-
-        props = session._call_method(vim_util,
-                                     "continue_to_get_objects",
-                                     token)
+        props = session._call_method(vutil, 'continue_retrieval',
+                                     props)
     return dictionary
 
 

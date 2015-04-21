@@ -19,6 +19,7 @@ from oslo_utils import units
 from oslo_utils import uuidutils
 from oslo_vmware import exceptions as vexc
 from oslo_vmware.objects import datastore as ds_obj
+from oslo_vmware import vim_util as vutil
 
 from nova.compute import power_state
 from nova import context
@@ -177,8 +178,9 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         ops._create_folder_if_missing(ds_name, ds_ref, 'folder')
         mock_mkdir.assert_called_with(ops._session, path, dc)
 
-    def test_get_valid_vms_from_retrieve_result(self):
-        ops = vmops.VMwareVMOps(mock.Mock(), mock.Mock(), mock.Mock())
+    @mock.patch.object(vutil, 'continue_retrieval', return_value=None)
+    def test_get_valid_vms_from_retrieve_result(self, _mock_cont):
+        ops = vmops.VMwareVMOps(self._session, mock.Mock(), mock.Mock())
         fake_objects = vmwareapi_fake.FakeRetrieveResult()
         fake_objects.add_object(vmwareapi_fake.VirtualMachine(
             name=uuidutils.generate_uuid()))
@@ -189,8 +191,10 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         vms = ops._get_valid_vms_from_retrieve_result(fake_objects)
         self.assertEqual(3, len(vms))
 
-    def test_get_valid_vms_from_retrieve_result_with_invalid(self):
-        ops = vmops.VMwareVMOps(mock.Mock(), mock.Mock(), mock.Mock())
+    @mock.patch.object(vutil, 'continue_retrieval', return_value=None)
+    def test_get_valid_vms_from_retrieve_result_with_invalid(self,
+                                                             _mock_cont):
+        ops = vmops.VMwareVMOps(self._session, mock.Mock(), mock.Mock())
         fake_objects = vmwareapi_fake.FakeRetrieveResult()
         fake_objects.add_object(vmwareapi_fake.VirtualMachine(
             name=uuidutils.generate_uuid()))
@@ -258,8 +262,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         self.assertEqual(50, self._instance.progress)
 
     @mock.patch.object(vm_util, 'get_vm_ref', return_value='fake_ref')
-    @mock.patch.object(driver.VMwareAPISession, '_call_method')
-    def test_get_info(self, mock_call, mock_get_vm_ref):
+    def test_get_info(self, mock_get_vm_ref):
         props = ['summary.config.numCpu', 'summary.config.memorySizeMB',
                  'runtime.powerState']
         prop_cpu = vmwareapi_fake.Prop(props[0], 4)
@@ -269,22 +272,25 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         obj_content = vmwareapi_fake.ObjectContent(None, prop_list=prop_list)
         result = vmwareapi_fake.FakeRetrieveResult()
         result.add_object(obj_content)
-        mock_call.return_value = result
-        info = self._vmops.get_info(self._instance)
-        mock_call.assert_called_once_with(vim_util,
-            'get_object_properties', None, 'fake_ref', 'VirtualMachine',
-            props)
-        mock_get_vm_ref.assert_called_once_with(self._session,
-            self._instance)
-        expected = hardware.InstanceInfo(state=power_state.RUNNING,
-                                         max_mem_kb=128 * 1024,
-                                         mem_kb=128 * 1024,
-                                         num_cpu=4)
-        self.assertEqual(expected, info)
+
+        def mock_call_method(module, method, *args, **kwargs):
+            if method == 'continue_retrieval':
+                return
+            return result
+
+        with mock.patch.object(self._session, '_call_method',
+                               mock_call_method):
+            info = self._vmops.get_info(self._instance)
+            mock_get_vm_ref.assert_called_once_with(self._session,
+                self._instance)
+            expected = hardware.InstanceInfo(state=power_state.RUNNING,
+                                             max_mem_kb=128 * 1024,
+                                             mem_kb=128 * 1024,
+                                             num_cpu=4)
+            self.assertEqual(expected, info)
 
     @mock.patch.object(vm_util, 'get_vm_ref', return_value='fake_ref')
-    @mock.patch.object(driver.VMwareAPISession, '_call_method')
-    def test_get_info_when_ds_unavailable(self, mock_call, mock_get_vm_ref):
+    def test_get_info_when_ds_unavailable(self, mock_get_vm_ref):
         props = ['summary.config.numCpu', 'summary.config.memorySizeMB',
                  'runtime.powerState']
         prop_state = vmwareapi_fake.Prop(props[2], 'poweredOff')
@@ -293,15 +299,19 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         obj_content = vmwareapi_fake.ObjectContent(None, prop_list=prop_list)
         result = vmwareapi_fake.FakeRetrieveResult()
         result.add_object(obj_content)
-        mock_call.return_value = result
-        info = self._vmops.get_info(self._instance)
-        mock_call.assert_called_once_with(vim_util,
-            'get_object_properties', None, 'fake_ref', 'VirtualMachine',
-            props)
-        mock_get_vm_ref.assert_called_once_with(self._session,
-            self._instance)
-        self.assertEqual(hardware.InstanceInfo(state=power_state.SHUTDOWN),
-                         info)
+
+        def mock_call_method(module, method, *args, **kwargs):
+            if method == 'continue_retrieval':
+                return
+            return result
+
+        with mock.patch.object(self._session, '_call_method',
+                               mock_call_method):
+            info = self._vmops.get_info(self._instance)
+            mock_get_vm_ref.assert_called_once_with(self._session,
+                self._instance)
+            self.assertEqual(hardware.InstanceInfo(state=power_state.SHUTDOWN),
+                             info)
 
     def _test_get_datacenter_ref_and_name(self, ds_ref_exists=False):
         instance_ds_ref = mock.Mock()
@@ -312,21 +322,27 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             ds_ref.value = "ds-1"
         else:
             ds_ref = None
+        self._continue_retrieval = True
+        self._fake_object1 = vmwareapi_fake.FakeRetrieveResult()
+        self._fake_object2 = vmwareapi_fake.FakeRetrieveResult()
 
         def fake_call_method(module, method, *args, **kwargs):
-            fake_object1 = vmwareapi_fake.FakeRetrieveResult()
-            fake_object1.add_object(vmwareapi_fake.Datacenter(
+            self._fake_object1.add_object(vmwareapi_fake.Datacenter(
                 ds_ref=ds_ref))
             if not ds_ref:
                 # Token is set for the fake_object1, so it will continue to
                 # fetch the next object.
-                setattr(fake_object1, 'token', 'token-0')
-                if method == "continue_to_get_objects":
-                    fake_object2 = vmwareapi_fake.FakeRetrieveResult()
-                    fake_object2.add_object(vmwareapi_fake.Datacenter())
-                    return fake_object2
-
-            return fake_object1
+                setattr(self._fake_object1, 'token', 'token-0')
+                if self._continue_retrieval:
+                    if self._continue_retrieval:
+                        self._continue_retrieval = False
+                        self._fake_object2.add_object(
+                            vmwareapi_fake.Datacenter())
+                        return self._fake_object2
+                    return
+            if method == "continue_retrieval":
+                return
+            return self._fake_object1
 
         with mock.patch.object(self._session, '_call_method',
                                side_effect=fake_call_method) as fake_call:
@@ -334,14 +350,17 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
 
             if ds_ref:
                 self.assertEqual(1, len(_vcvmops._datastore_dc_mapping))
-                fake_call.assert_called_once_with(vim_util, "get_objects",
-                    "Datacenter", ["name", "datastore", "vmFolder"])
+                calls = [mock.call(vim_util, "get_objects", "Datacenter",
+                                   ["name", "datastore", "vmFolder"]),
+                         mock.call(vutil, 'continue_retrieval',
+                                   self._fake_object1)]
+                fake_call.assert_has_calls(calls)
                 self.assertEqual("ha-datacenter", dc_info.name)
             else:
                 calls = [mock.call(vim_util, "get_objects", "Datacenter",
                                    ["name", "datastore", "vmFolder"]),
-                         mock.call(vim_util, "continue_to_get_objects",
-                                   "token-0")]
+                         mock.call(vutil, 'continue_retrieval',
+                                   self._fake_object2)]
                 fake_call.assert_has_calls(calls)
                 self.assertIsNone(dc_info)
 
