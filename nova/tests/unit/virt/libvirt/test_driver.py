@@ -9774,21 +9774,22 @@ Active:          8381604 kB
         drvr._set_cache_mode(fake_conf)
         self.assertEqual(fake_conf.driver_cache, 'fake')
 
-    def _test_shared_storage_detection(self, is_same):
+    @mock.patch('os.unlink')
+    @mock.patch.object(os.path, 'exists')
+    def _test_shared_storage_detection(self, is_same,
+                                       mock_exists, mock_unlink):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        self.mox.StubOutWithMock(drvr, 'get_host_ip_addr')
-        self.mox.StubOutWithMock(utils, 'execute')
-        self.mox.StubOutWithMock(os.path, 'exists')
-        self.mox.StubOutWithMock(os, 'unlink')
-        drvr.get_host_ip_addr().AndReturn('bar')
-        utils.execute('ssh', 'foo', 'touch', mox.IgnoreArg())
-        os.path.exists(mox.IgnoreArg()).AndReturn(is_same)
+        drvr.get_host_ip_addr = mock.MagicMock(return_value='bar')
+        mock_exists.return_value = is_same
+        with mock.patch('nova.utils.ssh_execute') as mock_ssh_method:
+            result = drvr._is_storage_shared_with('foo', '/path')
+        mock_ssh_method.assert_any_call('foo', 'touch', mock.ANY)
         if is_same:
-            os.unlink(mox.IgnoreArg())
+            mock_unlink.assert_called_once_with(mock.ANY)
         else:
-            utils.execute('ssh', 'foo', 'rm', mox.IgnoreArg())
-        self.mox.ReplayAll()
-        return drvr._is_storage_shared_with('foo', '/path')
+            self.assertEqual(2, mock_ssh_method.call_count)
+            mock_ssh_method.assert_called_with('foo', 'rm', mock.ANY)
+        return result
 
     def test_shared_storage_detection_same_host(self):
         self.assertTrue(self._test_shared_storage_detection(True))

@@ -6186,7 +6186,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 utils.execute('rm', '-rf', inst_base)
                 utils.execute('mv', inst_base_resize, inst_base)
                 if not shared_storage:
-                    utils.execute('ssh', dest, 'rm', '-rf', inst_base)
+                    utils.ssh_execute(dest, 'rm', '-rf', inst_base)
         except Exception:
             pass
 
@@ -6201,12 +6201,12 @@ class LibvirtDriver(driver.ComputeDriver):
             tmp_path = os.path.join(inst_base, tmp_file)
 
             try:
-                utils.execute('ssh', dest, 'touch', tmp_path)
+                utils.ssh_execute(dest, 'touch', tmp_path)
                 if os.path.exists(tmp_path):
                     shared_storage = True
                     os.unlink(tmp_path)
                 else:
-                    utils.execute('ssh', dest, 'rm', tmp_path)
+                    utils.ssh_execute(dest, 'rm', tmp_path)
             except Exception:
                 pass
         return shared_storage
@@ -6260,7 +6260,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # failures here earlier
         if not shared_storage:
             try:
-                utils.execute('ssh', dest, 'mkdir', '-p', inst_base)
+                utils.ssh_execute(dest, 'mkdir', '-p', inst_base)
             except processutils.ProcessExecutionError as e:
                 reason = _("not able to execute ssh command: %s") % e
                 raise exception.InstanceFaultRollback(

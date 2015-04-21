@@ -206,6 +206,14 @@ def execute(*cmd, **kwargs):
     return processutils.execute(*cmd, **kwargs)
 
 
+def ssh_execute(dest, *cmd, **kwargs):
+    """Convenience wrapper to execute ssh command."""
+    ssh_cmd = ['ssh', '-o', 'BatchMode=yes']
+    ssh_cmd.append(dest)
+    ssh_cmd.extend(cmd)
+    return execute(*ssh_cmd, **kwargs)
+
+
 def trycmd(*args, **kwargs):
     """Convenience wrapper around oslo's trycmd() method."""
     if 'run_as_root' in kwargs and 'root_helper' not in kwargs:

@@ -218,6 +218,13 @@ class GenericUtilsTestCase(test.NoDBTestCase):
         cmd = utils._get_root_helper()
         self.assertEqual('sudo', cmd)
 
+    def test_ssh_execute(self):
+        expected_args = ('ssh', '-o', 'BatchMode=yes',
+                         'remotehost', 'ls', '-l')
+        with mock.patch('nova.utils.execute') as mock_method:
+            utils.ssh_execute('remotehost', 'ls', '-l')
+        mock_method.assert_called_once_with(*expected_args)
+
 
 class VPNPingTestCase(test.NoDBTestCase):
     """Unit tests for utils.vpn_ping()."""
