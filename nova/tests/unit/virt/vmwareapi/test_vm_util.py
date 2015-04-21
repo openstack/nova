@@ -398,6 +398,11 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         remote_display_vnc_port.key = 'RemoteDisplay.vnc.port'
         expected.extraConfig.append(remote_display_vnc_port)
 
+        remote_display_vnc_keymap = fake_factory.create('ns0:OptionValue')
+        remote_display_vnc_keymap.value = 'en-us'
+        remote_display_vnc_keymap.key = 'RemoteDisplay.vnc.keyMap'
+        expected.extraConfig.append(remote_display_vnc_keymap)
+
         self.assertEqual(expected, result)
 
     def _create_fake_vms(self):

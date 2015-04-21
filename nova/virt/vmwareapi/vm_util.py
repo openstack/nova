@@ -857,7 +857,12 @@ def get_vnc_config_spec(client_factory, port):
     opt_port = client_factory.create('ns0:OptionValue')
     opt_port.key = "RemoteDisplay.vnc.port"
     opt_port.value = port
-    extras = [opt_enabled, opt_port]
+    opt_keymap = client_factory.create('ns0:OptionValue')
+    opt_keymap.key = "RemoteDisplay.vnc.keyMap"
+    opt_keymap.value = CONF.vnc_keymap
+
+    extras = [opt_enabled, opt_port, opt_keymap]
+
     virtual_machine_config_spec.extraConfig = extras
     return virtual_machine_config_spec
 
