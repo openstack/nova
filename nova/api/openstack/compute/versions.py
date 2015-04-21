@@ -15,6 +15,7 @@
 
 from oslo_config import cfg
 
+from nova.api.openstack import api_version_request
 from nova.api.openstack.compute.views import versions as views_versions
 from nova.api.openstack import wsgi
 
@@ -36,6 +37,8 @@ VERSIONS = {
     "v2.0": {
         "id": "v2.0",
         "status": "SUPPORTED",
+        "version": "",
+        "min_version": "",
         "updated": "2011-01-21T11:33:21Z",
         "links": [
             {
@@ -54,6 +57,8 @@ VERSIONS = {
     "v2.1": {
         "id": "v2.1",
         "status": "CURRENT",
+        "version": api_version_request._MAX_API_VERSION,
+        "min_version": api_version_request._MIN_API_VERSION,
         "updated": "2013-07-23T11:33:21Z",
         "links": [
             {
