@@ -15,9 +15,15 @@
 
 import uuid
 
+from oslo_config import cfg
+
 from nova.objects import keypair as keypair_obj
 from nova.tests.functional.v3 import api_sample_base
 from nova.tests.unit import fake_crypto
+
+CONF = cfg.CONF
+CONF.import_opt('osapi_compute_extension',
+                'nova.api.openstack.compute.extensions')
 
 
 class KeyPairsSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
@@ -25,6 +31,14 @@ class KeyPairsSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
     sample_dir = "keypairs"
     expected_delete_status_code = 202
     expected_post_status_code = 200
+    _api_version = 'v2'
+
+    def _get_flags(self):
+        f = super(KeyPairsSampleJsonTest, self)._get_flags()
+        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.keypairs.Keypairs')
+        return f
 
     def generalize_subs(self, subs, vanilla_regexes):
         subs['keypair_name'] = 'keypair-[0-9a-f-]+'
@@ -99,6 +113,11 @@ class KeyPairsV22SampleJsonTest(KeyPairsSampleJsonTest):
     request_api_version = '2.2'
     expected_post_status_code = 201
     expected_delete_status_code = 204
+    # NOTE(gmann): microversion tests do not need to run for v2 API
+    # so defining scenarios only for v2.2 which will run the original tests
+    # by appending '(v2_2)' in test_id.
+    scenarios = [('v2_2', {})]
+    _api_version = 'v2'
 
     def test_keypairs_post(self):
         # NOTE(claudiub): overrides the method with the same name in

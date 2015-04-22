@@ -16,7 +16,6 @@
 
 import inspect
 import os
-import uuid as uuid_lib
 
 from oslo_config import cfg
 from oslo_log import log as logging
@@ -205,60 +204,6 @@ class LimitsSampleJsonTest(ApiSampleTestBaseV2):
         response = self._do_get('limits')
         subs = self._get_regexes()
         self._verify_response('limit-get-resp', subs, response, 200)
-
-
-class KeyPairsSampleJsonTest(ApiSampleTestBaseV2):
-    extension_name = "nova.api.openstack.compute.contrib.keypairs.Keypairs"
-
-    def generalize_subs(self, subs, vanilla_regexes):
-        subs['keypair_name'] = 'keypair-[0-9a-f-]+'
-        return subs
-
-    def test_keypairs_post(self, public_key=None):
-        """Get api sample of key pairs post request."""
-        key_name = 'keypair-' + str(uuid_lib.uuid4())
-        response = self._do_post('os-keypairs', 'keypairs-post-req',
-                                 {'keypair_name': key_name})
-        subs = self._get_regexes()
-        subs['keypair_name'] = '(%s)' % key_name
-        self._verify_response('keypairs-post-resp', subs, response, 200)
-        # NOTE(maurosr): return the key_name is necessary cause the
-        # verification returns the label of the last compared information in
-        # the response, not necessarily the key name.
-        return key_name
-
-    def test_keypairs_import_key_post(self):
-        # Get api sample of key pairs post to import user's key.
-        key_name = 'keypair-' + str(uuid_lib.uuid4())
-        subs = {
-            'keypair_name': key_name,
-            'public_key': "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAgQDx8nkQv/zgGg"
-                          "B4rMYmIf+6A4l6Rr+o/6lHBQdW5aYd44bd8JttDCE/F/pNRr0l"
-                          "RE+PiqSPO8nDPHw0010JeMH9gYgnnFlyY3/OcJ02RhIPyyxYpv"
-                          "9FhY+2YiUkpwFOcLImyrxEsYXpD/0d3ac30bNH6Sw9JD9UZHYc"
-                          "pSxsIbECHw== Generated-by-Nova"
-        }
-        response = self._do_post('os-keypairs', 'keypairs-import-post-req',
-                                 subs)
-        subs = self._get_regexes()
-        subs['keypair_name'] = '(%s)' % key_name
-        self._verify_response('keypairs-import-post-resp', subs, response, 200)
-
-    def test_keypairs_list(self):
-        # Get api sample of key pairs list request.
-        key_name = self.test_keypairs_post()
-        response = self._do_get('os-keypairs')
-        subs = self._get_regexes()
-        subs['keypair_name'] = '(%s)' % key_name
-        self._verify_response('keypairs-list-resp', subs, response, 200)
-
-    def test_keypairs_get(self):
-        # Get api sample of key pairs get request.
-        key_name = self.test_keypairs_post()
-        response = self._do_get('os-keypairs/%s' % key_name)
-        subs = self._get_regexes()
-        subs['keypair_name'] = '(%s)' % key_name
-        self._verify_response('keypairs-get-resp', subs, response, 200)
 
 
 class VirtualInterfacesJsonTest(ServersSampleBase):
