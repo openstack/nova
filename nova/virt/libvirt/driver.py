@@ -231,7 +231,6 @@ CONF = cfg.CONF
 CONF.register_opts(libvirt_opts, 'libvirt')
 CONF.import_opt('host', 'nova.netconf')
 CONF.import_opt('my_ip', 'nova.netconf')
-CONF.import_opt('default_ephemeral_format', 'nova.virt.driver')
 CONF.import_opt('use_cow_images', 'nova.virt.driver')
 CONF.import_opt('enabled', 'nova.compute.api',
                 group='ephemeral_storage_encryption')
