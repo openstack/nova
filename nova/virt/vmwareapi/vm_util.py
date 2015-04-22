@@ -40,6 +40,16 @@ from nova.virt.vmwareapi import vim_util
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
+vmware_utils_opts = [
+    cfg.IntOpt('console_delay_seconds',
+               help='Set this value if affected by an increased network '
+                    'latency causing repeated characters when typing in '
+                    'a remote console.')
+    ]
+
+CONF = cfg.CONF
+CONF.register_opts(vmware_utils_opts, 'vmware')
+
 ALL_SUPPORTED_NETWORK_DEVICES = ['VirtualE1000', 'VirtualE1000e',
                                  'VirtualPCNet32', 'VirtualSriovEthernetCard',
                                  'VirtualVmxnet', 'VirtualVmxnet3']
@@ -239,6 +249,13 @@ def get_vm_create_spec(client_factory, instance, data_store_name,
                                                        vif_info['iface_id'],
                                                        port_index))
             port_index += 1
+
+    if (CONF.vmware.console_delay_seconds and
+        CONF.vmware.console_delay_seconds > 0):
+        opt = client_factory.create('ns0:OptionValue')
+        opt.key = 'keyboard.typematicMinDelay'
+        opt.value = CONF.vmware.console_delay_seconds * 1000000
+        extra_config.append(opt)
 
     config_spec.extraConfig = extra_config
 
