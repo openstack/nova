@@ -28,13 +28,3 @@ def upgrade(migrate_engine):
             api._SHADOW_TABLE_PREFIX + 'instance_actions_events')
     shadow_actions_events.create_column(host.copy())
     shadow_actions_events.create_column(details.copy())
-
-
-def downgrade(migrate_engine):
-    actions_events = utils.get_table(migrate_engine, 'instance_actions_events')
-    actions_events.drop_column('host')
-    actions_events.drop_column('details')
-    shadow_actions_events = utils.get_table(migrate_engine,
-            api._SHADOW_TABLE_PREFIX + 'instance_actions_events')
-    shadow_actions_events.drop_column('host')
-    shadow_actions_events.drop_column('details')

@@ -58,14 +58,3 @@ def upgrade(migrate_engine):
             instance_fkey = ForeignKeyConstraint(
                 columns=fkey_columns, refcolumns=fkey_refcolumns)
             instance_fkey.create()
-
-
-def downgrade(migrate_engine):
-    meta = MetaData()
-    meta.bind = migrate_engine
-
-    for prefix in ('', 'shadow_'):
-        table_name = prefix + 'instance_extra'
-        if migrate_engine.has_table(table_name):
-            instance_extra = Table(table_name, meta, autoload=True)
-            instance_extra.drop()

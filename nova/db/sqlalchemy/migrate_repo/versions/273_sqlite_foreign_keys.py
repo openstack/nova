@@ -106,10 +106,3 @@ def upgrade(migrate_engine):
 
             uc = UniqueConstraint(*column_names, table=table, name=name)
             uc.create()
-
-
-def downgrade(migrate_engine):
-    # sqlalchemy-migrate doesn't handle dropping foreign keys. Since this
-    # migration only applies to SQLite, which isn't a supported production
-    # deploy, the amount of work outweighs the need for a downgrade.
-    pass

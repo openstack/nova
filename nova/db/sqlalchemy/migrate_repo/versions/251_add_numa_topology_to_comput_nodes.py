@@ -28,14 +28,3 @@ def upgrade(migrate_engine):
     shadow_numa_topology = Column('numa_topology', Text, nullable=True)
     compute_nodes.create_column(numa_topology)
     shadow_compute_nodes.create_column(shadow_numa_topology)
-
-
-def downgrade(migrate_engine):
-    meta = MetaData()
-    meta.bind = migrate_engine
-
-    compute_nodes = Table('compute_nodes', meta, autoload=True)
-    shadow_compute_nodes = Table('shadow_compute_nodes', meta, autoload=True)
-
-    compute_nodes.drop_column('numa_topology')
-    shadow_compute_nodes.drop_column('numa_topology')

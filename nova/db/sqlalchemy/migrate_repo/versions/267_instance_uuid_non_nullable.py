@@ -13,7 +13,6 @@
 #    under the License.
 
 from migrate import UniqueConstraint
-from oslo_db.sqlalchemy import utils
 from oslo_log import log as logging
 from sqlalchemy import MetaData
 from sqlalchemy.sql import null
@@ -112,14 +111,3 @@ def upgrade(migrate_engine):
     # any ForeignKeys on the instances.uuid column due to some index rename
     # issues in older versions of MySQL. That is beyond the scope of this
     # migration.
-
-
-def downgrade(migrate_engine):
-    # drop the unique constraint on instances.uuid
-    UniqueConstraint('uuid',
-                     table=utils.get_table(migrate_engine, 'instances'),
-                     name=UC_NAME).drop()
-    # We can't bring the deleted records back but we can make uuid nullable.
-    for table_name in ('instances', 'shadow_instances'):
-        table = utils.get_table(migrate_engine, table_name)
-        table.columns.uuid.alter(nullable=True)

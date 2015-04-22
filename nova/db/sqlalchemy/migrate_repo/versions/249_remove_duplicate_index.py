@@ -29,8 +29,3 @@ def upgrade(migrate_engine):
     for index in bdm.indexes:
         if index.name == INDEX_NAME:
             index.drop()
-
-
-def downgrade(migrate_engine):
-    # Unnecessary to re-add duplicate index when downgrading
-    pass

@@ -1551,7 +1551,3 @@ def upgrade(migrate_engine):
     _populate_instance_types(instance_types)
 
     _create_dump_tables(migrate_engine)
-
-
-def downgrade(migrate_engine):
-    raise NotImplementedError('Downgrade from Havana is unsupported.')

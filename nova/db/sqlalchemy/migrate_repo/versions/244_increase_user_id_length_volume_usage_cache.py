@@ -22,10 +22,3 @@ def upgrade(migrate_engine):
     # Match the maximum length of user_id in Keystone here instead of
     # assuming explicitly a single UUID length.
     col_resource.alter(type=String(64))
-
-
-def downgrade(migrate_engine):
-    meta = MetaData(bind=migrate_engine)
-    table = Table('volume_usage_cache', meta, autoload=True)
-    col_resource = getattr(table.c, 'user_id')
-    col_resource.alter(type=String(36))

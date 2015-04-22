@@ -39,19 +39,3 @@ def upgrade(migrate_engine):
 
     key_pairs.create_column(keypair_type)
     shadow_key_pairs.create_column(keypair_type.copy())
-
-
-def downgrade(migrate_engine):
-    """Function removes key_pairs type field."""
-    meta = MetaData(bind=migrate_engine)
-    key_pairs = Table('key_pairs', meta, autoload=True)
-    shadow_key_pairs = Table('shadow_key_pairs', meta, autoload=True)
-    enum = Enum(metadata=meta, name='keypair_types')
-
-    if hasattr(key_pairs.c, 'type'):
-        key_pairs.c.type.drop()
-
-    if hasattr(shadow_key_pairs.c, 'type'):
-        shadow_key_pairs.c.type.drop()
-
-    enum.drop()

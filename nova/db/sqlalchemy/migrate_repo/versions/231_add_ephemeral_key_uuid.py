@@ -32,13 +32,3 @@ def upgrade(migrate_engine):
                            values(ephemeral_key_uuid=None))
     migrate_engine.execute(shadow_instances.update().
                            values(ephemeral_key_uuid=None))
-
-
-def downgrade(migrate_engine):
-    """Function removes ephemeral storage encryption key uuid field."""
-    meta = MetaData(bind=migrate_engine)
-    instances = Table('instances', meta, autoload=True)
-    shadow_instances = Table('shadow_instances', meta, autoload=True)
-
-    instances.c.ephemeral_key_uuid.drop()
-    shadow_instances.c.ephemeral_key_uuid.drop()

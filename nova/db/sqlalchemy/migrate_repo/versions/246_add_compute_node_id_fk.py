@@ -28,14 +28,3 @@ def upgrade(migrate_engine):
     fkey = ForeignKeyConstraint(columns=[pci_devices.c.compute_node_id],
                                 refcolumns=[compute_nodes.c.id])
     fkey.create()
-
-
-def downgrade(migrate_engine):
-    meta = MetaData(bind=migrate_engine)
-
-    pci_devices = Table('pci_devices', meta, autoload=True)
-    compute_nodes = Table('compute_nodes', meta, autoload=True)
-
-    fkey = ForeignKeyConstraint(columns=[pci_devices.c.compute_node_id],
-                                refcolumns=[compute_nodes.c.id])
-    fkey.drop()
