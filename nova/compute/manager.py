@@ -301,6 +301,11 @@ def reverts_task_state(function):
                     self._instance_update(context,
                                           instance_uuid,
                                           task_state=None)
+                except exception.InstanceNotFound:
+                    # We might delete an instance that failed to build shortly
+                    # after it errored out this is an expected case and we
+                    # should not trace on it.
+                    pass
                 except Exception as e:
                     msg = _LW("Failed to revert task state for instance. "
                               "Error: %s")
