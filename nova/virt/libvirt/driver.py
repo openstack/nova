@@ -3409,7 +3409,8 @@ class LibvirtDriver(driver.ComputeDriver):
                     setattr(guest.cputune, name,
                             int(flavor.extra_specs[key]))
 
-    def _get_cpu_numa_config_from_instance(self, instance_numa_topology):
+    def _get_cpu_numa_config_from_instance(self, instance_numa_topology,
+                                           wants_hugepages):
         if instance_numa_topology:
             guest_cpu_numa = vconfig.LibvirtConfigGuestCPUNUMA()
             for instance_cell in instance_numa_topology.cells:
@@ -3417,6 +3418,20 @@ class LibvirtDriver(driver.ComputeDriver):
                 guest_cell.id = instance_cell.id
                 guest_cell.cpus = instance_cell.cpuset
                 guest_cell.memory = instance_cell.memory * units.Ki
+
+                # The vhost-user network backend requires file backed
+                # guest memory (ie huge pages) to be marked as shared
+                # access, not private, so an external process can read
+                # and write the pages.
+                #
+                # You can't change the shared vs private flag for an
+                # already running guest, and since we can't predict what
+                # types of NIC may be hotplugged, we have no choice but
+                # to unconditionally turn on the shared flag. This has
+                # no real negative functional effect on the guest, so
+                # is a reasonable approach to take
+                if wants_hugepages:
+                    guest_cell.memAccess = "shared"
                 guest_cpu_numa.cells.append(guest_cell)
             return guest_cpu_numa
 
@@ -3427,6 +3442,28 @@ class LibvirtDriver(driver.ComputeDriver):
                 raise exception.CPUPinningNotSupported(reason=_(
                     'Invalid libvirt version %(version)s') % {'version': ver_})
         return True
+
+    def _wants_hugepages(self, host_topology, instance_topology):
+        """Determine if the guest / host topology implies the
+           use of huge pages for guest RAM backing
+        """
+
+        if host_topology is None or instance_topology is None:
+            return False
+
+        avail_pagesize = [page.size_kb
+                          for page in host_topology.cells[0].mempages]
+        avail_pagesize.sort()
+        # Remove smallest page size as that's not classed as a largepage
+        avail_pagesize = avail_pagesize[1:]
+
+        # See if we have page size set
+        for cell in instance_topology.cells:
+            if (cell.pagesize is not None and
+                cell.pagesize in avail_pagesize):
+                return True
+
+        return False
 
     def _get_guest_numa_config(self, instance_numa_topology, flavor, pci_devs,
                                allowed_cpus=None):
@@ -3468,9 +3505,11 @@ class LibvirtDriver(driver.ComputeDriver):
             raise exception.NUMATopologyUnsupported()
 
         topology = self._get_host_numa_topology()
+
         # We have instance NUMA so translate it to the config class
         guest_cpu_numa_config = self._get_cpu_numa_config_from_instance(
-                instance_numa_topology)
+                instance_numa_topology,
+                self._wants_hugepages(topology, instance_numa_topology))
 
         if not guest_cpu_numa_config:
             # No NUMA topology defined for instance - let the host kernel deal
