@@ -156,7 +156,9 @@ libvirt_opts = [
                      '0 => not partitioned, >0 => partition number'),
     cfg.BoolOpt('use_usb_tablet',
                 default=True,
-                help='Sync virtual and real mouse cursors in Windows VMs'),
+                deprecated_for_removal=True,
+                help='(Deprecated, please see pointer_model) Sync virtual and '
+                     'real mouse cursors in Windows VMs'),
     cfg.StrOpt('live_migration_inbound_addr',
                help='Live migration target ip or hostname '
                     '(if this option is set to None, which is the default, '
@@ -4608,9 +4610,9 @@ class LibvirtDriver(driver.ComputeDriver):
             consolepty.type = "pty"
             guest.add_device(consolepty)
 
-        tablet = self._get_guest_usb_tablet(guest.os_type)
-        if tablet:
-            guest.add_device(tablet)
+        pointer = self._get_guest_pointer_model(guest.os_type)
+        if pointer:
+            guest.add_device(pointer)
 
         if (CONF.spice.enabled and CONF.spice.agent_enabled and
                 virt_type not in ('lxc', 'uml', 'xen')):
@@ -4691,26 +4693,50 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return guest
 
-    def _get_guest_usb_tablet(self, os_type):
-        # We want a tablet if VNC is enabled, or SPICE is enabled and
-        # the SPICE agent is disabled. If the SPICE agent is enabled
-        # it provides a paravirt mouse which drastically reduces
-        # overhead (by eliminating USB polling).
-        #
-        # NB: this implies that if both SPICE + VNC are enabled
-        # at the same time, we'll get the tablet whether the
-        # SPICE agent is used or not.
-        need_usb_tablet = False
-        if CONF.vnc.enabled:
-            need_usb_tablet = CONF.libvirt.use_usb_tablet
-        elif CONF.spice.enabled and not CONF.spice.agent_enabled:
-            need_usb_tablet = CONF.libvirt.use_usb_tablet
+    def _get_guest_pointer_model(self, os_type):
+        pointer_model = CONF.pointer_model
+        if pointer_model is None and CONF.libvirt.use_usb_tablet:
+            # TODO(sahid): We set pointer_model to keep compatibility
+            # until the next release O*. It means operators can continue
+            # to use the depecrated option "use_usb_tablet" or set a
+            # specific device to use
+            pointer_model = "usbtablet"
+            LOG.warning(_LW('The option "use_usb_tablet" has been '
+                            'deprecated for Newton in favor of the more '
+                            'generic "pointer_model". Please update '
+                            'nova.conf to address this change.'))
 
+        if pointer_model == "usbtablet":
+            # We want a tablet if VNC is enabled, or SPICE is enabled and
+            # the SPICE agent is disabled. If the SPICE agent is enabled
+            # it provides a paravirt mouse which drastically reduces
+            # overhead (by eliminating USB polling).
+            if CONF.vnc.enabled or (
+                    CONF.spice.enabled and not CONF.spice.agent_enabled):
+                return self._get_guest_usb_tablet(os_type)
+            else:
+                # For backward compatibility We don't want to break
+                # process of booting an instance if host is configured
+                # to use USB tablet without VNC or SPICE and SPICE
+                # agent disable.
+                LOG.warning(_LW('USB tablet requested for guests by host '
+                                'configuration. In order to accept this '
+                                'request VNC should be enabled or SPICE '
+                                'and SPICE agent disabled on host.'))
+
+    def _get_guest_usb_tablet(self, os_type):
         tablet = None
-        if need_usb_tablet and os_type == vm_mode.HVM:
+        if os_type == vm_mode.HVM:
             tablet = vconfig.LibvirtConfigGuestInput()
             tablet.type = "tablet"
             tablet.bus = "usb"
+        else:
+            # For backward compatibility We don't want to break
+            # process of booting an instance if virtual machine mode
+            # is not configured as HVM.
+            LOG.warning(_LW('USB tablet requested for guests by host '
+                            'configuration. In order to accept this request '
+                            'the machine mode should be configured as HVM.'))
         return tablet
 
     def _get_guest_xml(self, context, instance, network_info, disk_info,

@@ -1,0 +1,8 @@
+---
+features:
+  - The pointer_model configuration option was added to specify
+    different pointer models for input devices. This replaces
+    the now deprecated use_usb_tablet option.
+deprecations:
+  - Nova option 'use_usb_tablet' will be deprecated in favor of
+    the global 'pointer_model'.

@@ -324,6 +324,31 @@ remove_unused_original_minimum_age_seconds = cfg.IntOpt(
     help='Unused unresized base images younger than this will not '
     'be removed')
 
+pointer_model = cfg.StrOpt(
+    'pointer_model',
+    default=None, choices=[None, 'usbtablet'],
+    help="""Generic property to specify the pointer type.
+
+Input devices allow interaction with a graphical framebuffer. For
+example to provide a graphic tablet for absolute cursor movement.
+
+Possible values:
+
+* None: Uses relative movement. Mouse connected by PS2
+* usbtablet: Uses absolute movement. Tablet connect by USB
+
+Services which consume this:
+
+* nova-compute
+
+Interdependencies to other options:
+
+* usbtablet must be configured with VNC enabled or SPICE enabled and SPICE
+  agent disabled. When used with libvirt the instance mode should be
+  configured as HVM.
+ """)
+
+
 ALL_OPTS = [vcpu_pin_set,
             compute_driver,
             default_ephemeral_format,
@@ -341,7 +366,8 @@ ALL_OPTS = [vcpu_pin_set,
             image_cache_manager_interval,
             image_cache_subdirectory_name,
             remove_unused_base_images,
-            remove_unused_original_minimum_age_seconds]
+            remove_unused_original_minimum_age_seconds,
+            pointer_model]
 
 
 def register_opts(conf):
