@@ -684,7 +684,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
         self._test_spawn()
         # assert configdrive was generated
         mock_configdrive.assert_called_once_with(mock.ANY, mock.ANY, mock.ANY,
-                                                 extra_md={})
+                                                 extra_md={}, files=[])
 
     @mock.patch.object(configdrive, 'required_by')
     @mock.patch.object(loopingcall, 'FixedIntervalLoopingCall')
