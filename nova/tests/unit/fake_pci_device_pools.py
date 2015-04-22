@@ -21,6 +21,7 @@ from nova.objects import pci_device_pool
 fake_pool_dict = {
         'product_id': 'fake-product',
         'vendor_id': 'fake-vendor',
+        'numa_node': 1,
         't1': 'v1',
         't2': 'v2',
         'count': 2,
@@ -29,6 +30,7 @@ fake_pool_dict = {
 fake_pool = pci_device_pool.PciDevicePool(count=5,
                                           product_id='foo',
                                           vendor_id='bar',
+                                          numa_node=0,
                                           tags={'t1': 'v1', 't2': 'v2'})
 fake_pool_primitive = fake_pool.obj_to_primitive()
 
