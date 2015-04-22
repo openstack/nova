@@ -970,7 +970,7 @@ class DbCommands(object):
         flavor_cache = {}
         match, done = db.migrate_flavor_data(admin_context, max_number,
                                              flavor_cache)
-        print(_('%(total)i instances matched query, %(done)i completed'),
+        print(_('%(total)i instances matched query, %(done)i completed') %
               {'total': match, 'done': done})
 
 
