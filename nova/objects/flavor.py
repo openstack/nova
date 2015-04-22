@@ -201,7 +201,7 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
         :param:to_delete: A list of keys to remove
         """
 
-        to_add = to_add if to_add is not None else []
+        to_add = to_add if to_add is not None else {}
         to_delete = to_delete if to_delete is not None else []
 
         if to_add:
