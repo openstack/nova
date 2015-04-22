@@ -3520,6 +3520,32 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         self.migration.status = 'migrating'
         fake_server_actions.stub_out_action_events(self.stubs)
 
+    @mock.patch.object(objects.Migration, 'save')
+    @mock.patch.object(objects.Migration, 'obj_as_admin')
+    def test_errors_out_migration_decorator(self, mock_save,
+                                            mock_obj_as_admin):
+        # Tests that errors_out_migration decorator in compute manager
+        # sets migration status to 'error' when an exception is raised
+        # from decorated method
+        instance = fake_instance.fake_instance_obj(self.context)
+
+        migration = objects.Migration()
+        migration.instance_uuid = instance.uuid
+        migration.status = 'migrating'
+        migration.id = 0
+
+        @manager.errors_out_migration
+        def fake_function(self, context, instance, migration):
+            raise test.TestingException()
+
+        mock_obj_as_admin.return_value = mock.MagicMock()
+
+        self.assertRaises(test.TestingException, fake_function,
+                          self, self.context, instance, migration)
+        self.assertEqual('error', migration.status)
+        mock_save.assert_called_once_with()
+        mock_obj_as_admin.assert_called_once_with()
+
     def test_finish_resize_failure(self):
         with contextlib.nested(
             mock.patch.object(self.compute, '_finish_resize',

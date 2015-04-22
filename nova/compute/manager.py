@@ -269,7 +269,10 @@ def errors_out_migration(function):
             return function(self, context, *args, **kwargs)
         except Exception:
             with excutils.save_and_reraise_exception():
-                migration = kwargs['migration']
+                wrapped_func = utils.get_wrapped_function(function)
+                keyed_args = safe_utils.getcallargs(wrapped_func, context,
+                                                    *args, **kwargs)
+                migration = keyed_args['migration']
                 status = migration.status
                 if status not in ['migrating', 'post-migrating']:
                     return
