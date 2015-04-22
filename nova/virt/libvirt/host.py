@@ -40,6 +40,7 @@ from eventlet import tpool
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import excutils
+from oslo_utils import importutils
 
 from nova import context as nova_context
 from nova import exception
@@ -189,7 +190,7 @@ class Host(object):
 
         global libvirt
         if libvirt is None:
-            libvirt = __import__('libvirt')
+            libvirt = importutils.import_module('libvirt')
 
         self._uri = uri
         self._read_only = read_only
