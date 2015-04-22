@@ -153,3 +153,9 @@ class InstancePCIRequests(base.NovaObject,
         blob = self.to_json()
         db.instance_extra_update_by_uuid(self._context, self.instance_uuid,
                                          {'pci_requests': blob})
+
+    @classmethod
+    def from_request_spec_instance_props(cls, pci_requests):
+        objs = [InstancePCIRequest(**request)
+            for request in pci_requests['requests']]
+        return cls(requests=objs, instance_uuid=pci_requests['instance_uuid'])
