@@ -703,7 +703,8 @@ class IronicDriver(virt_driver.ComputeDriver):
                 extra_md['admin_pass'] = admin_password
 
             configdrive_value = self._generate_configdrive(
-                instance, node, network_info, extra_md=extra_md)
+                instance, node, network_info, extra_md=extra_md,
+                files=injected_files)
 
             LOG.info(_LI("Config drive for instance %(instance)s on "
                          "baremetal node %(node)s created."),
