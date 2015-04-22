@@ -7634,6 +7634,31 @@ class FlavorMigrationTestCase(test.TestCase):
         self.assertEqual(3, match)
         self.assertEqual(0, done)
 
+    def test_migrate_flavor_gets_missing_extra_rows(self):
+        ctxt = context.get_admin_context()
+        flavor = flavors.get_default_flavor()
+        sysmeta = flavors.save_flavor_info({}, flavor)
+        values1 = {'uuid': str(stdlib_uuid.uuid4()),
+                  'system_metadata': sysmeta,
+                  'extra': {'flavor': None},
+        }
+        db.instance_create(ctxt, values1)
+        values2 = {'uuid': str(stdlib_uuid.uuid4()),
+                  'system_metadata': sysmeta,
+        }
+        inst2 = db.instance_create(ctxt, values2)
+        sqlalchemy_api.model_query(ctxt, models.InstanceExtra).\
+            filter_by(instance_uuid=inst2.uuid).delete()
+
+        self.assertIsNone(db.instance_extra_get_by_instance_uuid(
+            ctxt, inst2.uuid))
+        match, done = db.migrate_flavor_data(ctxt, None, {})
+        self.assertEqual(2, match)
+        self.assertEqual(2, done)
+        extra = db.instance_extra_get_by_instance_uuid(ctxt, inst2.uuid)
+        self.assertIsNotNone(extra)
+        self.assertIsNotNone(extra.flavor)
+
 
 class ArchiveTestCase(test.TestCase):
 
