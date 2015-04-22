@@ -773,6 +773,7 @@ class _TestInstanceObject(object):
         inst.create()
         self.assertIsNotNone(inst.numa_topology)
         self.assertIsNotNone(inst.pci_requests)
+        self.assertEqual(1, len(inst.pci_requests.requests))
         self.assertIsNotNone(inst.vcpu_model)
         got_numa_topo = objects.InstanceNUMATopology.get_by_instance_uuid(
             self.context, inst.uuid)
