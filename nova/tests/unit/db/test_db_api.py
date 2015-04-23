@@ -27,6 +27,7 @@ import iso8601
 import mock
 import netaddr
 from oslo_config import cfg
+from oslo_db import api as oslo_db_api
 from oslo_db import exception as db_exc
 from oslo_db.sqlalchemy import test_base
 from oslo_db.sqlalchemy import utils as sqlalchemyutils
@@ -175,7 +176,8 @@ class DecoratorTestCase(test.TestCase):
         self._test_decorator_wraps_helper(sqlalchemy_api.require_admin_context)
 
     def test_require_deadlock_retry_wraps_functions_properly(self):
-        self._test_decorator_wraps_helper(sqlalchemy_api._retry_on_deadlock)
+        self._test_decorator_wraps_helper(
+            oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True))
 
 
 def _get_fake_aggr_values():
@@ -4128,7 +4130,8 @@ class FixedIPTestCase(BaseInstanceTypeTestCase):
             self.assertRaises(exception.FixedIpAssociateFailed,
                               db.fixed_ip_associate, self.ctxt, address,
                               instance_uuid, network_id=network['id'])
-            self.assertEqual(5, mock_first.call_count)
+            # 5 reties + initial attempt
+            self.assertEqual(6, mock_first.call_count)
 
     def test_fixed_ip_associate_ip_not_in_network_with_no_retries(self):
         instance_uuid = self._create_instance()
@@ -4206,7 +4209,8 @@ class FixedIPTestCase(BaseInstanceTypeTestCase):
             self.assertRaises(exception.FixedIpAssociateFailed,
                               db.fixed_ip_associate_pool, self.ctxt,
                               network['id'], instance_uuid)
-            self.assertEqual(5, mock_first.call_count)
+            # 5 retries + initial attempt
+            self.assertEqual(6, mock_first.call_count)
 
     def test_fixed_ip_create_same_address(self):
         address = '192.168.1.5'
@@ -4566,7 +4570,8 @@ class FloatingIpTestCase(test.TestCase, ModelsObjectComparatorMixin):
             self.assertRaises(exception.FloatingIpAllocateFailed,
                               db.floating_ip_allocate_address, self.ctxt,
                               project_id, pool)
-            self.assertEqual(5, mock_first.call_count)
+            # 5 retries + initial attempt
+            self.assertEqual(6, mock_first.call_count)
 
     def test_floating_ip_allocate_address_no_more_ips_with_no_retries(self):
         with mock.patch('sqlalchemy.orm.query.Query.first',
@@ -5880,7 +5885,8 @@ class NetworkTestCase(test.TestCase, ModelsObjectComparatorMixin):
             self.assertRaises(exception.NetworkSetHostFailed,
                               db.network_set_host, self.ctxt, network.id,
                               'example.com')
-            self.assertEqual(5, mock_update.call_count)
+            # 5 retries + initial attempt
+            self.assertEqual(6, mock_update.call_count)
 
     def test_network_get_all_by_host(self):
         self.assertEqual([],
@@ -8438,7 +8444,8 @@ class PciDeviceDBApiTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
 class RetryOnDeadlockTestCase(test.TestCase):
     def test_without_deadlock(self):
-        @sqlalchemy_api._retry_on_deadlock
+        @oslo_db_api.wrap_db_retry(max_retries=5,
+                                   retry_on_deadlock=True)
         def call_api(*args, **kwargs):
             return True
         self.assertTrue(call_api())
@@ -8446,7 +8453,8 @@ class RetryOnDeadlockTestCase(test.TestCase):
     def test_raise_deadlock(self):
         self.attempts = 2
 
-        @sqlalchemy_api._retry_on_deadlock
+        @oslo_db_api.wrap_db_retry(max_retries=5,
+                                   retry_on_deadlock=True)
         def call_api(*args, **kwargs):
             while self.attempts:
                 self.attempts = self.attempts - 1
