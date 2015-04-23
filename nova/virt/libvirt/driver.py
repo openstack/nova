@@ -2042,9 +2042,6 @@ class LibvirtDriver(driver.ComputeDriver):
         If Libvirt reset is unavailable this method actually destroys and
         re-creates the domain to ensure the reboot happens, as the guest
         OS cannot ignore this action.
-
-        If xml is set, it uses the passed in xml in place of the xml from the
-        existing domain.
         """
 
         self._destroy(instance)
