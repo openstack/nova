@@ -109,7 +109,8 @@ class HypervisorsController(wsgi.Controller):
         except (ValueError, exception.ComputeHostNotFound):
             msg = _("Hypervisor with ID '%s' could not be found.") % id
             raise webob.exc.HTTPNotFound(explanation=msg)
-        service = self.host_api.service_get_by_compute_host(context, hyp.host)
+        service = self.host_api.service_get_by_compute_host(
+            context.elevated(), hyp.host)
         return dict(hypervisor=self._view_hypervisor(hyp, service, True))
 
     @extensions.expected_errors((404, 501))
