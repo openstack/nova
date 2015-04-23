@@ -3673,6 +3673,56 @@ class ServersPolicyEnforcementV21(test.NoDBTestCase):
             rule, rule_name, self.controller._action_create_image,
             self.req, FAKE_UUID, body=body)
 
+    @mock.patch.object(compute_api.API, 'is_volume_backed_instance',
+                       return_value=True)
+    @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
+    @mock.patch.object(servers.ServersController, '_get_server')
+    def test_create_vol_backed_img_snapshotting_policy_blocks_project(self,
+                                                         mock_is_vol_back,
+                                                         mock_get_uuidi,
+                                                         mock_get_server):
+        """Don't permit a snapshot of a volume backed instance if configured
+        not to based on project
+        """
+        rule_name = "os_compute_api:servers:create_image:allow_volume_backed"
+        rules = {
+                rule_name: "project:non_fake",
+                "os_compute_api:servers:create_image": "",
+        }
+        body = {
+            'createImage': {
+                'name': 'Snapshot 1',
+            },
+        }
+        self._common_policy_check(
+            rules, rule_name, self.controller._action_create_image,
+            self.req, FAKE_UUID, body=body)
+
+    @mock.patch.object(compute_api.API, 'is_volume_backed_instance',
+                       return_value=True)
+    @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
+    @mock.patch.object(servers.ServersController, '_get_server')
+    def test_create_vol_backed_img_snapshotting_policy_blocks_role(self,
+                                                         mock_is_vol_back,
+                                                         mock_get_uuidi,
+                                                         mock_get_server):
+        """Don't permit a snapshot of a volume backed instance if configured
+        not to based on role
+        """
+        rule_name = "os_compute_api:servers:create_image:allow_volume_backed"
+        rules = {
+                rule_name: "role:non_fake",
+                "os_compute_api:servers:create_image": "",
+        }
+        body = {
+            'createImage': {
+                'name': 'Snapshot 1',
+            },
+        }
+        self._common_policy_check(
+            rules, rule_name, self.controller._action_create_image,
+            self.req, FAKE_UUID, body=body)
+
     def _create_policy_check(self, rules, rule_name):
         flavor_ref = 'http://localhost/123/flavors/3'
         body = {

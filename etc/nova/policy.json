@@ -17,6 +17,7 @@
 
     "compute:shelve": "",
     "compute:shelve_offload": "",
+    "compute:snapshot_volume_backed": "",
     "compute:unshelve": "",
     "compute:resize": "",
     "compute:confirm_resize": "",
@@ -184,6 +185,7 @@
     "network:delete_dns_domain": "",
     "network:attach_external_network": "rule:admin_api",
 
+    "os_compute_api:servers:create_image:allow_volume_backed": "",
     "os_compute_api:servers:start": "rule:admin_or_owner",
     "os_compute_api:servers:stop": "rule:admin_or_owner",
     "os_compute_api:os-access-ips:discoverable": "",
