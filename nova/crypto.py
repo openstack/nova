@@ -365,9 +365,9 @@ def generate_x509_cert(user_id, project_id, bits=2048):
     return (private_key, signed_csr)
 
 
-def generate_winrm_x509_cert(user_id, project_id, bits=2048):
+def generate_winrm_x509_cert(user_id, bits=2048):
     """Generate a cert for passwordless auth for user in project."""
-    subject = '/CN=%s-%s' % (project_id, user_id)
+    subject = '/CN=%s' % user_id
     upn = '%s@localhost' % user_id
 
     with utils.tempdir() as tmpdir:

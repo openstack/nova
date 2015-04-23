@@ -14,6 +14,7 @@
 #    under the License.
 """Tests for keypair API."""
 
+from oslo_concurrency import processutils
 from oslo_config import cfg
 import six
 
@@ -178,6 +179,16 @@ class CreateKeypairTestCase(KeypairAPITestCase, CreateImportSharedTestMixIn):
     def test_success_x509(self):
         self.keypair_type = keypair_obj.KEYPAIR_TYPE_X509
         self._check_success()
+
+    def test_x509_subject_too_long(self):
+        # X509 keypairs will fail if the Subject they're created with
+        # is longer than 64 characters. The previous unit tests could not
+        # detect the issue because the ctxt.user_id was too short.
+        # This unit tests is added to prove this issue.
+        self.keypair_type = keypair_obj.KEYPAIR_TYPE_X509
+        self.ctxt.user_id = 'a' * 65
+        self.assertRaises(processutils.ProcessExecutionError,
+                          self._check_success)
 
 
 class ImportKeypairTestCase(KeypairAPITestCase, CreateImportSharedTestMixIn):
