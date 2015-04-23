@@ -178,6 +178,12 @@ class Controller(wsgi.Controller):
             if 'changes-since' not in search_opts:
                 # No 'changes-since', so we only want non-deleted servers
                 search_opts['deleted'] = False
+        else:
+            # Convert deleted filter value to a valid boolean.
+            # Return non-deleted servers if an invalid value
+            # is passed with deleted filter.
+            search_opts['deleted'] = strutils.bool_from_string(
+                search_opts['deleted'], default=False)
 
         if search_opts.get("vm_state") == ['deleted']:
             if context.is_admin:
