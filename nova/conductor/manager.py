@@ -28,6 +28,7 @@ from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import task_states
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
+from nova.conductor.tasks import fault_tolerance
 from nova.conductor.tasks import live_migrate
 from nova.db import base
 from nova import exception
@@ -634,6 +635,38 @@ class ComputeTaskManager(base.Base):
             # instance specific information
             bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                     context, instance.uuid)
+
+            # TODO(ORBIT): Might want to find a nicer solution than
+            #              scheduler hints for this.
+            scheduler_hints = filter_properties.get('scheduler_hints') or {}
+            if 'ft' in scheduler_hints:
+                system_metadata = instance.system_metadata
+
+                if 'ft_secondary_hosts' in host and host['ft_secondary_hosts']:
+                    ft = fault_tolerance.FaultToleranceTasks()
+
+                    for ft_secondary_host in host['ft_secondary_hosts']:
+                        ft.deploy_secondary_instance(
+                            context, instance.uuid,
+                            host=ft_secondary_host['host'],
+                            node=ft_secondary_host['nodename'],
+                            limits=ft_secondary_host['limits'],
+                            image=image['id'],
+                            request_spec=request_spec,
+                            filter_properties=filter_properties,
+                            admin_password=admin_password,
+                            injected_files=injected_files,
+                            requested_networks=requested_networks,
+                            security_groups=security_groups,
+                            block_device_mapping=block_device_mapping,
+                            legacy_bdm=legacy_bdm)
+
+                    system_metadata['ft_role'] = 'primary'
+                else:
+                    system_metadata['ft_role'] = 'secondary'
+
+                instance.system_metadata = system_metadata
+                instance.save()
 
             self.compute_rpcapi.build_and_run_instance(context,
                     instance=instance, host=host['host'], image=image,

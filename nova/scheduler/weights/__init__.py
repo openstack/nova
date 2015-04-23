@@ -50,3 +50,65 @@ class HostWeightHandler(weights.BaseWeightHandler):
 def all_weighers():
     """Return a list of weight plugin classes found in this directory."""
     return HostWeightHandler().get_all_classes()
+
+
+class FaultToleranceHost(object):
+    def __init__(self, obj):
+        self.obj = obj
+
+    def __getattr__(self, name):
+        return getattr(self.obj, name)
+
+    def to_dict(self):
+        return dict(host=self.obj.host)
+
+    def __repr__(self):
+        return "FaultToleranceHost [host: %s]" % self.obj.host
+
+
+class FaultToleranceWeighedHosts(object):
+    def __init__(self, obj, weight):
+        self.obj = []
+        for host in obj:
+            self.obj.append(FaultToleranceHost(host))
+        self.weight = weight
+
+    def __iter__(self):
+        return iter(self.obj)
+
+    def __getitem__(self, key):
+        return self.obj[key]
+
+    def __len__(self):
+        return len(self.obj)
+
+    def to_dict(self):
+        x = dict(weight=self.weight)
+        x['hosts'] = self.obj.to_dict()
+        return x
+
+    def __repr__(self):
+        return "<FTWeighedHosts '%s' - Weight: %s>" % (self.obj, self.weight)
+
+
+class FaultToleranceBaseHostWeigher(weights.BaseWeigher):
+    pass
+
+
+class FaultToleranceHostWeightHandler(weights.BaseWeightHandler):
+    """A new weight handler for sets of hosts rather than single hosts.
+
+    Weighers used by this class should extend FaultToleranceBaseHostWeigher.
+
+    Note that the hostsets are passed together in an object to achieve
+    compability with the normal weighing functionality.
+    """
+    object_class = FaultToleranceWeighedHosts
+
+    def __init__(self):
+        (super(FaultToleranceHostWeightHandler, self).
+            __init__(FaultToleranceBaseHostWeigher))
+
+
+def ft_all_weighers():
+    return FaultToleranceHostWeightHandler().get_all_classes()
