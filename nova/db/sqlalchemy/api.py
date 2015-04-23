@@ -3009,7 +3009,6 @@ def network_get_all_by_host(context, host):
                        all()
 
 
-@require_admin_context
 @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True,
                            retry_on_request=True)
 def network_set_host(context, network_id, host_id):
