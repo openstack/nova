@@ -19,6 +19,7 @@ Cells Utility Methods
 import random
 import sys
 
+from oslo_config import cfg
 import six
 
 from nova import objects
@@ -34,6 +35,10 @@ PATH_CELL_SEP = '!'
 BLOCK_SYNC_FLAG = '!!'
 # Separator used between cell name and item
 _CELL_ITEM_SEP = '@'
+
+CONF = cfg.CONF
+CONF.import_opt('instance_update_sync_database_limit', 'nova.cells.opts',
+        group='cells')
 
 
 class ProxyObjectSerializer(obj_base.NovaObjectSerializer):
@@ -131,6 +136,19 @@ def get_instances_to_sync(context, updated_since=None, project_id=None,
     cells services aren't self-healing the same instances in nearly
     lockstep.
     """
+    def _get_paginated_instances(context, filters, shuffle, limit, marker):
+        instances = objects.InstanceList.get_by_filters(
+                context, filters, sort_key='deleted', sort_dir='asc',
+                limit=limit, marker=marker)
+        if len(instances) > 0:
+            marker = instances[-1]['uuid']
+            # NOTE(melwitt/alaski): Need a list that supports assignment for
+            # shuffle.  And pop() on the returned result.
+            instances = list(instances)
+            if shuffle:
+                random.shuffle(instances)
+        return instances, marker
+
     filters = {}
     if updated_since is not None:
         filters['changes-since'] = updated_since
@@ -139,13 +157,17 @@ def get_instances_to_sync(context, updated_since=None, project_id=None,
     if not deleted:
         filters['deleted'] = False
     # Active instances first.
-    instances = objects.InstanceList.get_by_filters(
-            context, filters, sort_key='deleted', sort_dir='asc')
-    if shuffle:
-        # NOTE(melwitt): Need a list that supports assignment for shuffle.
-        instances = [instance for instance in instances]
-        random.shuffle(instances)
-    for instance in instances:
+    limit = CONF.cells.instance_update_sync_database_limit
+    marker = None
+
+    instances = []
+    while True:
+        if not instances:
+            instances, marker = _get_paginated_instances(context, filters,
+                    shuffle, limit, marker)
+        if not instances:
+            break
+        instance = instances.pop(0)
         if uuids_only:
             yield instance.uuid
         else:
