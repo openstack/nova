@@ -442,7 +442,7 @@ class FlavorManageTestV2(FlavorManageTestV21):
                                   environ['nova.context'])
 
     def _get_http_request(self, url=''):
-        return fakes.HTTPRequest.blank(url, use_admin_context=True)
+        return fakes.HTTPRequest.blank(url, use_admin_context=False)
 
 
 class PrivateFlavorManageTestV2(PrivateFlavorManageTestV21):
@@ -464,7 +464,7 @@ class PrivateFlavorManageTestV2(PrivateFlavorManageTestV21):
                                   environ['nova.context'])
 
     def _get_http_request(self, url=''):
-        return fakes.HTTPRequest.blank(url, use_admin_context=True)
+        return fakes.HTTPRequest.blank(url, use_admin_context=False)
 
 
 class FlavorManagerPolicyEnforcementV21(test.NoDBTestCase):
