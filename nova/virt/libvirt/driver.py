@@ -355,14 +355,20 @@ MIN_QEMU_DISCARD_VERSION = (1, 6, 0)
 # this the scheduler cannot make guaranteed decisions, as the
 # guest placement may not match what was requested
 MIN_LIBVIRT_NUMA_VERSION = (1, 2, 7)
+# Versions of libvirt with known NUMA topology issues
+# See bug #1449028
+BAD_LIBVIRT_NUMA_VERSIONS = [(1, 2, 9, 2)]
 # While earlier versions could support hugepage backed
 # guests, not until 1.2.8 was there the ability to request
 # a particular huge page size. Without this the scheduler
 # cannot make guaranteed decisions, as the huge page size
 # used by the guest may not match what was requested
 MIN_LIBVIRT_HUGEPAGE_VERSION = (1, 2, 8)
-# missing libvirt cpu pinning support
-BAD_LIBVIRT_CPU_POLICY_VERSIONS = [(1, 2, 9, 2), (1, 2, 10)]
+# Versions of libvirt with broken cpu pinning support. This excludes
+# versions of libvirt with broken NUMA support since pinning needs
+# NUMA
+# See bug #1438226
+BAD_LIBVIRT_CPU_POLICY_VERSIONS = [(1, 2, 10)]
 # qemu 2.1 introduces support for pinning memory on host
 # NUMA nodes, along with the ability to specify hugepage
 # sizes per guest NUMA node
@@ -4725,6 +4731,11 @@ class LibvirtDriver(driver.ComputeDriver):
         # and the nodeset field in LibvirtConfigGuestMemoryBackingPage
         supported_archs = [arch.I686, arch.X86_64]
         caps = self._host.get_capabilities()
+
+        for ver in BAD_LIBVIRT_NUMA_VERSIONS:
+            if self._host.has_version(ver):
+                return False
+
         return ((caps.host.cpu.arch in supported_archs) and
                 self._host.has_min_version(MIN_LIBVIRT_NUMA_VERSION,
                                            MIN_QEMU_NUMA_HUGEPAGE_VERSION,
