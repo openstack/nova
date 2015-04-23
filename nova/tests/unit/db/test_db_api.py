@@ -7604,7 +7604,7 @@ class FlavorMigrationTestCase(test.TestCase):
         self.assertEqual(0, match)
         self.assertEqual(0, done)
 
-    def test_migrate_flavor_honors_states(self):
+    def _test_migrate_flavor_states(self, force=False):
         ctxt = context.get_admin_context()
         flavor = flavors.get_default_flavor()
         sysmeta = flavors.save_flavor_info({}, flavor)
@@ -7632,13 +7632,28 @@ class FlavorMigrationTestCase(test.TestCase):
         }
         db.instance_create(ctxt, values)
 
-        match, done = db.migrate_flavor_data(ctxt, None, {})
-        self.assertEqual(4, match)
-        self.assertEqual(1, done)
+        match, done = db.migrate_flavor_data(ctxt, None, {}, force)
 
-        match, done = db.migrate_flavor_data(ctxt, None, {})
-        self.assertEqual(3, match)
-        self.assertEqual(0, done)
+        if not force:
+            self.assertEqual(4, match)
+            self.assertEqual(1, done)
+
+            match, done = db.migrate_flavor_data(ctxt, None, {}, force)
+            self.assertEqual(3, match)
+            self.assertEqual(0, done)
+        else:
+            self.assertEqual(4, match)
+            self.assertEqual(4, done)
+
+            match, done = db.migrate_flavor_data(ctxt, None, {}, force)
+            self.assertEqual(0, match)
+            self.assertEqual(0, done)
+
+    def test_migrate_flavor_honors_states(self):
+        self._test_migrate_flavor_states(force=False)
+
+    def test_migrate_flavor_force_states(self):
+        self._test_migrate_flavor_states(force=True)
 
     def test_migrate_flavor_gets_missing_extra_rows(self):
         ctxt = context.get_admin_context()
