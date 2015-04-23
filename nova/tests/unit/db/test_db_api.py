@@ -7665,6 +7665,49 @@ class FlavorMigrationTestCase(test.TestCase):
         self.assertIsNotNone(extra)
         self.assertIsNotNone(extra.flavor)
 
+    def test_migrate_flavor_with_deleted_things(self):
+        ctxt = context.get_admin_context()
+        flavor = flavors.get_default_flavor()
+        sysmeta = flavors.save_flavor_info({}, flavor)
+
+        # Instance with some deleted metadata bits. We create
+        # with a flavor, then change one of the keys so that
+        # we end up with a soft-deleted row for that value.
+        values = {'uuid': str(stdlib_uuid.uuid4()),
+                  'system_metadata': sysmeta,
+        }
+        inst1 = db.instance_create(ctxt, values)
+        _sysmeta = dict(sysmeta, instance_type_id=123)
+        db.instance_system_metadata_update(ctxt, inst1.uuid,
+                                           _sysmeta, True)
+
+        # Deleted instance. Without a full flavor in sysmeta,
+        # if this is hit in the migration, we'll explode trying
+        # to construct the full flavor.
+        values = {'uuid': str(stdlib_uuid.uuid4()),
+                  'system_metadata': sysmeta,
+        }
+        inst2 = db.instance_create(ctxt, values)
+        inst2.soft_delete(session=None)
+
+        # Instance that has only deleted flavor metadata. This
+        # looks like an instance that previously had flavor stuff
+        # in sysmeta, but has since been converted. Since extra.flavor
+        # is not a legitimate structure, we'll explode if the migration
+        # code tries to hit this.
+        values = {'uuid': str(stdlib_uuid.uuid4()),
+                  'system_metadata': {'instance_type_id': '123'},
+                  'extra': {'flavor': 'foobar'},
+        }
+        inst3 = db.instance_create(ctxt, values)
+        db.instance_system_metadata_update(ctxt, inst3.uuid,
+                                           {'foo': 'bar'},
+                                           True)
+
+        match, done = db.migrate_flavor_data(ctxt, None, {})
+        self.assertEqual(1, match)
+        self.assertEqual(1, done)
+
 
 class ArchiveTestCase(test.TestCase):
 
