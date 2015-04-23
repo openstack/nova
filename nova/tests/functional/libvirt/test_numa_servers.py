@@ -68,6 +68,9 @@ class NUMAServersTest(ServersTestBase):
         self.useFixture(fixtures.MonkeyPatch(
            'nova.virt.libvirt.host.libvirt',
            fakelibvirt))
+        self.useFixture(fixtures.MonkeyPatch(
+           'nova.virt.libvirt.guest.libvirt',
+           fakelibvirt))
         self.useFixture(fakelibvirt.FakeLibvirtFixture())
 
     def _setup_compute_service(self):
