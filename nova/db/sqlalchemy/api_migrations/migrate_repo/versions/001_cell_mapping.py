@@ -40,10 +40,3 @@ def upgrade(migrate_engine):
     )
 
     cell_mappings.create(checkfirst=True)
-
-
-def downgrade(migrate_engine):
-    meta = MetaData(migrate_engine)
-
-    cell_mappings = Table('cell_mappings', meta)
-    cell_mappings.drop(checkfirst=True)
