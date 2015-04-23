@@ -4476,7 +4476,25 @@ class LibvirtDriver(driver.ComputeDriver):
             return self._vcpu_total
 
         available_ids = hardware.get_vcpu_pin_set()
-        if sorted(available_ids)[-1] >= total_pcpus:
+        # We get the list of online CPUs on the host and see if the requested
+        # set falls under these. If not, we retain the old behavior.
+        online_pcpus = None
+        try:
+            online_pcpus = self._host.get_online_cpus()
+        except libvirt.libvirtError as ex:
+            error_code = ex.get_error_code()
+            LOG.warn(_LW("Couldn't retrieve the online CPUs due to a Libvirt "
+                         "error: %(error)s with error code: %(error_code)s"),
+                     {'error': ex, 'error_code': error_code})
+        if online_pcpus:
+            if not (available_ids <= online_pcpus):
+                msg = (_("Invalid vcpu_pin_set config, one or more of the "
+                         "specified cpuset is not online. Online cpuset(s): "
+                         "%(online)s, requested cpuset(s): %(req)s"),
+                       {'online': sorted(online_pcpus),
+                        'req': sorted(available_ids)})
+                raise exception.Invalid(msg)
+        elif sorted(available_ids)[-1] >= total_pcpus:
             raise exception.Invalid(_("Invalid vcpu_pin_set config, "
                                       "out of hypervisor cpu range."))
         self._vcpu_total = len(available_ids)

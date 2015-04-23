@@ -4327,6 +4327,48 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual(devices, ['/path/to/dev/1', '/path/to/dev/3'])
         mock_list.assert_called_with()
 
+    @mock.patch('nova.virt.libvirt.host.Host.get_online_cpus')
+    def test_get_host_vcpus(self, get_online_cpus):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.flags(vcpu_pin_set="4-5")
+        get_online_cpus.return_value = set([4, 5, 6])
+        expected_vcpus = 2
+        vcpus = drvr._get_vcpu_total()
+        self.assertEqual(expected_vcpus, vcpus)
+
+    @mock.patch('nova.virt.libvirt.host.Host.get_online_cpus')
+    def test_get_host_vcpus_out_of_range(self, get_online_cpus):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.flags(vcpu_pin_set="4-6")
+        get_online_cpus.return_value = set([4, 5])
+        self.assertRaises(exception.Invalid, drvr._get_vcpu_total)
+
+    @mock.patch('nova.virt.libvirt.host.Host.get_online_cpus')
+    def test_get_host_vcpus_libvirt_error(self, get_online_cpus):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        not_supported_exc = fakelibvirt.make_libvirtError(
+            fakelibvirt.libvirtError,
+            'this function is not supported by the connection driver:'
+            ' virNodeNumOfDevices',
+            error_code=fakelibvirt.VIR_ERR_NO_SUPPORT)
+        self.flags(vcpu_pin_set="4-6")
+        get_online_cpus.side_effect = not_supported_exc
+        self.assertRaises(exception.Invalid, drvr._get_vcpu_total)
+
+    @mock.patch('nova.virt.libvirt.host.Host.get_online_cpus')
+    def test_get_host_vcpus_libvirt_error_success(self, get_online_cpus):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        not_supported_exc = fakelibvirt.make_libvirtError(
+            fakelibvirt.libvirtError,
+            'this function is not supported by the connection driver:'
+            ' virNodeNumOfDevices',
+            error_code=fakelibvirt.VIR_ERR_NO_SUPPORT)
+        self.flags(vcpu_pin_set="1")
+        get_online_cpus.side_effect = not_supported_exc
+        expected_vcpus = 1
+        vcpus = drvr._get_vcpu_total()
+        self.assertEqual(expected_vcpus, vcpus)
+
     @mock.patch.object(host.Host, "has_min_version", return_value=True)
     def test_quiesce(self, mock_has_min_version):
         self.create_fake_libvirt_mock(lookupByName=self.fake_lookup)
