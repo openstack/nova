@@ -692,7 +692,6 @@ def compute_node_statistics(context):
 ###################
 
 
-@require_admin_context
 def certificate_create(context, values):
     certificate_ref = models.Certificate()
     for (key, value) in values.iteritems():
@@ -701,21 +700,18 @@ def certificate_create(context, values):
     return certificate_ref
 
 
-@require_admin_context
 def certificate_get_all_by_project(context, project_id):
     return model_query(context, models.Certificate, read_deleted="no").\
                    filter_by(project_id=project_id).\
                    all()
 
 
-@require_admin_context
 def certificate_get_all_by_user(context, user_id):
     return model_query(context, models.Certificate, read_deleted="no").\
                    filter_by(user_id=user_id).\
                    all()
 
 
-@require_admin_context
 def certificate_get_all_by_user_and_project(context, user_id, project_id):
     return model_query(context, models.Certificate, read_deleted="no").\
                    filter_by(user_id=user_id).\
