@@ -3828,7 +3828,13 @@ class ComputeManager(manager.Manager):
             raise exception.MigrationError(reason=msg)
 
         same_host = instance.host == self.host
-        if same_host and not CONF.allow_resize_to_same_host:
+        # if the flavor IDs match, it's migrate; otherwise resize
+        if same_host and instance_type['id'] == instance['instance_type_id']:
+            # check driver whether support migrate to same host
+            if not self.driver.capabilities['supports_migrate_to_same_host']:
+                raise exception.UnableToMigrateToSelf(
+                    instance_id=instance.uuid, host=self.host)
+        elif same_host and not CONF.allow_resize_to_same_host:
             self._set_instance_error_state(context, instance)
             msg = _('destination same as source!')
             raise exception.MigrationError(reason=msg)

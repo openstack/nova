@@ -381,11 +381,11 @@ MIN_LIBVIRT_PARALLELS_VERSION = (1, 2, 12)
 
 
 class LibvirtDriver(driver.ComputeDriver):
-
     capabilities = {
         "has_imagecache": True,
         "supports_recreate": True,
-        }
+        "supports_migrate_to_same_host": False
+    }
 
     def __init__(self, virtapi, read_only=False):
         super(LibvirtDriver, self).__init__(virtapi)

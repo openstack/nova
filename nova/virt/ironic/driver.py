@@ -162,7 +162,8 @@ class IronicDriver(virt_driver.ComputeDriver):
     """Hypervisor driver for Ironic - bare metal provisioning."""
 
     capabilities = {"has_imagecache": False,
-                    "supports_recreate": False}
+                    "supports_recreate": False,
+                    "supports_migrate_to_same_host": False}
 
     def __init__(self, virtapi, read_only=False):
         super(IronicDriver, self).__init__(virtapi)

@@ -306,6 +306,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
     def test_driver_capabilities(self):
         self.assertTrue(self.conn.capabilities['has_imagecache'])
         self.assertFalse(self.conn.capabilities['supports_recreate'])
+        self.assertTrue(
+            self.conn.capabilities['supports_migrate_to_same_host'])
 
     def test_configuration_linked_clone(self):
         self.flags(use_linked_clone=None, group='vmware')
