@@ -981,7 +981,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         with contextlib.nested(
             mock.patch.object(self.compute, '_get_power_state',
                                return_value=return_power_state),
-            mock.patch.object(self.compute.compute_rpcapi, 'reboot_instance'),
+            mock.patch.object(self.compute, 'reboot_instance'),
             mock.patch.object(compute_utils, 'get_nw_info_for_instance')
           ) as (
             _get_power_state,
