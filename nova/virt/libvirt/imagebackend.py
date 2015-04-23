@@ -246,9 +246,8 @@ class Image(object):
             can_fallocate = not err
             self.__class__.can_fallocate = can_fallocate
             if not can_fallocate:
-                LOG.error(_LE('Unable to preallocate_images=%(imgs)s at path: '
-                              '%(path)s'), {'imgs': CONF.preallocate_images,
-                                            'path': self.path})
+                LOG.error(_LE('Unable to preallocate image at path: '
+                              '%(path)s'), {'path': self.path})
         return can_fallocate
 
     def verify_base_size(self, base, size, base_size=0):
