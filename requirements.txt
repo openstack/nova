@@ -8,7 +8,7 @@ boto>=2.32.1
 decorator>=3.4.0
 eventlet>=0.16.1,!=0.17.0
 Jinja2>=2.6  # BSD License (3 clause)
-keystonemiddleware>=1.5.0
+keystonemiddleware>=1.5.0,<1.6.0
 lxml>=2.3
 Routes>=1.12.3,!=2.0
 WebOb>=1.2.3
@@ -22,9 +22,9 @@ pyasn1
 Babel>=1.3
 iso8601>=0.1.9
 jsonschema>=2.0.0,<3.0.0
-python-cinderclient>=1.1.0
-python-neutronclient>=2.3.11,<3
-python-glanceclient>=0.15.0
+python-cinderclient>=1.1.0,<1.2.0
+python-neutronclient>=2.3.11,<2.5.0
+python-glanceclient>=0.15.0,<0.18.0
 six>=1.9.0
 stevedore>=1.3.0,<1.4.0  # Apache-2.0
 websockify>=0.6.0,<0.7
