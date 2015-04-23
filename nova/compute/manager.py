@@ -180,6 +180,14 @@ interval_opts = [
                     'that its view of instances is in sync with nova. If the '
                     'CONF option `scheduler_tracks_instance_changes` is '
                     'False, changing this option will have no effect.'),
+    cfg.IntOpt('update_resources_interval',
+               default=0,
+               help='Interval in seconds for updating compute resources. A '
+                    'number less than 0 means to disable the task completely. '
+                    'Leaving this at the default of 0 will cause this to run '
+                    'at the default periodic interval. Setting it to any '
+                    'positive value will cause it to run at approximately '
+                    'that number of seconds.'),
 ]
 
 timeout_opts = [
@@ -6237,7 +6245,7 @@ class ComputeManager(manager.Manager):
                                     "instance: %s"),
                                 e, instance=instance)
 
-    @periodic_task.periodic_task
+    @periodic_task.periodic_task(spacing=CONF.update_resources_interval)
     def update_available_resource(self, context):
         """See driver.get_available_resource()
 
@@ -6247,22 +6255,42 @@ class ComputeManager(manager.Manager):
         :param context: security context
         """
         new_resource_tracker_dict = {}
-        nodenames = set(self.driver.get_available_nodes())
-        for nodename in nodenames:
-            rt = self._get_resource_tracker(nodename)
-            rt.update_available_resource(context)
-            new_resource_tracker_dict[nodename] = rt
 
         # Delete orphan compute node not reported by driver but still in db
         compute_nodes_in_db = self._get_compute_nodes_in_db(context,
                                                             use_slave=True)
+        nodenames = set(self.driver.get_available_nodes())
+        for nodename in nodenames:
+            rt = self._get_resource_tracker(nodename)
+            try:
+                rt.update_available_resource(context)
+            except exception.ComputeHostNotFound:
+                # NOTE(comstud): We can get to this case if a node was
+                # marked 'deleted' in the DB and then re-added with a
+                # different auto-increment id. The cached resource
+                # tracker tried to update a deleted record and failed.
+                # Don't add this resource tracker to the new dict, so
+                # that this will resolve itself on the next run.
+                LOG.info(_LI("Compute node '%s' not found in "
+                             "update_available_resource."), nodename)
+                continue
+            except Exception as e:
+                LOG.error(_LE("Error updating resources for node "
+                              "%(node)%s: %(e)s"),
+                          {'node': nodename, 'e': e})
+            new_resource_tracker_dict[nodename] = rt
 
+        # NOTE(comstud): Replace the RT cache before looping through
+        # compute nodes to delete below, as we can end up doing greenthread
+        # switches there. Best to have everyone using the newest cache
+        # ASAP.
+        self._resource_tracker_dict = new_resource_tracker_dict
+
+        # Delete orphan compute node not reported by driver but still in db
         for cn in compute_nodes_in_db:
             if cn.hypervisor_hostname not in nodenames:
                 LOG.info(_LI("Deleting orphan compute node %s") % cn.id)
                 cn.destroy()
-
-        self._resource_tracker_dict = new_resource_tracker_dict
 
     def _get_compute_nodes_in_db(self, context, use_slave=False):
         try:

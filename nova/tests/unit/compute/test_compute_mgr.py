@@ -52,6 +52,7 @@ from nova.tests.unit.objects import test_instance_info_cache
 from nova import utils
 from nova.virt import driver as virt_driver
 from nova.virt import event as virtevent
+from nova.virt import fake as fake_driver
 from nova.virt import hardware
 
 
@@ -121,6 +122,66 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                           '_notify_about_instance_usage',
                           '_shutdown_instance', 'delete'],
                          methods_called)
+
+    @mock.patch.object(manager.ComputeManager, '_get_resource_tracker')
+    @mock.patch.object(fake_driver.FakeDriver, 'get_available_nodes')
+    @mock.patch.object(manager.ComputeManager, '_get_compute_nodes_in_db')
+    def test_update_available_resource(self, get_db_nodes, get_avail_nodes,
+                                       get_rt):
+        info = {'cn_id': 1}
+
+        def _make_compute_node(hyp_hostname):
+            cn = mock.Mock(spec_set=['hypervisor_hostname', 'id',
+                                     'destroy'])
+            cn.id = info['cn_id']
+            info['cn_id'] += 1
+            cn.hypervisor_hostname = hyp_hostname
+            return cn
+
+        def _make_rt(node):
+            n = mock.Mock(spec_set=['update_available_resource',
+                                    'nodename'])
+            n.nodename = node
+            return n
+
+        ctxt = mock.Mock()
+        db_nodes = [_make_compute_node('node1'),
+                    _make_compute_node('node2'),
+                    _make_compute_node('node3'),
+                    _make_compute_node('node4')]
+        avail_nodes = set(['node2', 'node3', 'node4', 'node5'])
+        avail_nodes_l = list(avail_nodes)
+        rts = [_make_rt(node) for node in avail_nodes_l]
+        # Make the 2nd and 3rd ones raise
+        exc = exception.ComputeHostNotFound(host='fake')
+        rts[1].update_available_resource.side_effect = exc
+        exc = test.TestingException()
+        rts[2].update_available_resource.side_effect = exc
+        rts_iter = iter(rts)
+
+        def _get_rt_side_effect(*args, **kwargs):
+            return rts_iter.next()
+
+        expected_rt_dict = {avail_nodes_l[0]: rts[0],
+                            avail_nodes_l[2]: rts[2],
+                            avail_nodes_l[3]: rts[3]}
+        get_db_nodes.return_value = db_nodes
+        get_avail_nodes.return_value = avail_nodes
+        get_rt.side_effect = _get_rt_side_effect
+        self.compute.update_available_resource(ctxt)
+        get_db_nodes.assert_called_once_with(ctxt, use_slave=True)
+        self.assertEqual([mock.call(node) for node in avail_nodes],
+                         get_rt.call_args_list)
+        for rt in rts:
+            rt.update_available_resource.assert_called_once_with(ctxt)
+        self.assertEqual(expected_rt_dict,
+                         self.compute._resource_tracker_dict)
+        # First node in set should have been removed from DB
+        for db_node in db_nodes:
+            if db_node.hypervisor_hostname == 'node1':
+                db_node.destroy.assert_called_once_with()
+            else:
+                self.assertFalse(db_node.destroy.called)
 
     def test_allocate_network_succeeds_after_retries(self):
         self.flags(network_allocate_retries=8)
