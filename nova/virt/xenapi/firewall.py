@@ -15,14 +15,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_log import log as logging
 from oslo_serialization import jsonutils
 
-from nova import context
 from nova.virt import firewall
-from nova.virt import netutils
-
-LOG = logging.getLogger(__name__)
 
 
 class Dom0IptablesFirewallDriver(firewall.IptablesFirewallDriver):
@@ -41,9 +36,9 @@ class Dom0IptablesFirewallDriver(firewall.IptablesFirewallDriver):
         json_ret = jsonutils.loads(ret)
         return (json_ret['out'], json_ret['err'])
 
-    def __init__(self, virtapi, xenapi_session=None, **kwargs):
+    def __init__(self, xenapi_session=None, **kwargs):
         from nova.network import linux_net
-        super(Dom0IptablesFirewallDriver, self).__init__(virtapi, **kwargs)
+        super(Dom0IptablesFirewallDriver, self).__init__(**kwargs)
         self._session = xenapi_session
         # Create IpTablesManager with executor through plugin
         self.iptables = linux_net.IptablesManager(self._plugin_execute)
@@ -59,56 +54,3 @@ class Dom0IptablesFirewallDriver(firewall.IptablesFirewallDriver):
             #  No multiport needed for XS!
             return ['--dport', '%s:%s' % (rule.from_port,
                                            rule.to_port)]
-
-    def _provider_rules(self):
-        """Generate a list of rules from provider for IP4 & IP6.
-
-        Note: We could not use the common code from virt.firewall because
-        XS doesn't accept the '-m multiport' option.
-        """
-
-        ctxt = context.get_admin_context()
-        ipv4_rules = []
-        ipv6_rules = []
-        rules = self._virtapi.provider_fw_rule_get_all(ctxt)
-        for rule in rules:
-            LOG.debug('Adding provider rule: %s', rule.cidr)
-            version = netutils.get_ip_version(rule.cidr)
-            if version == 4:
-                fw_rules = ipv4_rules
-            else:
-                fw_rules = ipv6_rules
-
-            protocol = rule.protocol
-            if version == 6 and protocol == 'icmp':
-                protocol = 'icmpv6'
-
-            args = ['-p', protocol, '-s', rule.cidr]
-
-            if protocol in ['udp', 'tcp']:
-                if rule.from_port == rule.to_port:
-                    args += ['--dport', '%s' % (rule.from_port,)]
-                else:
-                    args += ['--dport', '%s:%s' % (rule.from_port,
-                                                    rule.to_port)]
-            elif protocol == 'icmp':
-                icmp_type = rule.from_port
-                icmp_code = rule.to_port
-
-                if icmp_type == -1:
-                    icmp_type_arg = None
-                else:
-                    icmp_type_arg = '%s' % icmp_type
-                    if not icmp_code == -1:
-                        icmp_type_arg += '/%s' % icmp_code
-
-                if icmp_type_arg:
-                    if version == 4:
-                        args += ['-m', 'icmp', '--icmp-type',
-                                 icmp_type_arg]
-                    elif version == 6:
-                        args += ['-m', 'icmp6', '--icmpv6-type',
-                                 icmp_type_arg]
-            args += ['-j DROP']
-            fw_rules += [' '.join(args)]
-        return ipv4_rules, ipv6_rules

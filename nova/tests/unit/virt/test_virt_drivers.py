@@ -643,11 +643,6 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
         self.connection.refresh_instance_security_rules(instance_ref)
 
     @catch_notimplementederror
-    def test_refresh_provider_fw_rules(self):
-        instance_ref, network_info = self._get_running_instance()
-        self.connection.refresh_provider_fw_rules()
-
-    @catch_notimplementederror
     def test_ensure_filtering_for_instance(self):
         instance = test_utils.get_test_instance(obj=True)
         network_info = test_utils.get_test_network_info()

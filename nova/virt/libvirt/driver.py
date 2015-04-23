@@ -502,7 +502,6 @@ class LibvirtDriver(driver.ComputeDriver):
         self._caps = None
         self.firewall_driver = firewall.load_driver(
             DEFAULT_FIREWALL_DRIVER,
-            self.virtapi,
             host=self._host)
 
         self.vif_driver = libvirt_vif.LibvirtGenericVIFDriver()
@@ -5250,9 +5249,6 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def refresh_instance_security_rules(self, instance):
         self.firewall_driver.refresh_instance_security_rules(instance)
-
-    def refresh_provider_fw_rules(self):
-        self.firewall_driver.refresh_provider_fw_rules()
 
     def get_available_resource(self, nodename):
         """Retrieve resource information.

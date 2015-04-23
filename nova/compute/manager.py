@@ -602,9 +602,6 @@ class ComputeVirtAPI(virtapi.VirtAPI):
         super(ComputeVirtAPI, self).__init__()
         self._compute = compute
 
-    def provider_fw_rule_get_all(self, context):
-        return self._compute.conductor_api.provider_fw_rule_get_all(context)
-
     def _default_error_callback(self, event_name, instance):
         raise exception.NovaException(_('Instance event failed'))
 
@@ -1391,11 +1388,6 @@ class ComputeManager(manager.Manager):
                           'security groups.', instance=instance)
 
         return _sync_refresh()
-
-    @wrap_exception()
-    def refresh_provider_fw_rules(self, context):
-        """This call passes straight through to the virtualization driver."""
-        return self.driver.refresh_provider_fw_rules()
 
     def _await_block_device_map_created(self, context, vol_id):
         # TODO(yamahata): creating volume simultaneously

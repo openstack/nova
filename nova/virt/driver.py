@@ -1016,23 +1016,6 @@ class ComputeDriver(object):
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
-    def refresh_provider_fw_rules(self):
-        """This triggers a firewall update based on database changes.
-
-        When this is called, rules have either been added or removed from the
-        datastore.  You can retrieve rules with
-        :py:meth:`nova.db.provider_fw_rule_get_all`.
-
-        Provider rules take precedence over security group rules.  If an IP
-        would be allowed by a security group ingress rule, but blocked by
-        a provider rule, then packets from the IP are dropped.  This includes
-        intra-project traffic in the case of the allow_project_net_traffic
-        flag for the libvirt-derived classes.
-
-        """
-        # TODO(Vek): Need to pass context in for access to auth_token
-        raise NotImplementedError()
-
     def refresh_instance_security_rules(self, instance):
         """Refresh security group rules
 

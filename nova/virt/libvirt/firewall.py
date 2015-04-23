@@ -45,15 +45,13 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
     spoofing, IP spoofing, and ARP spoofing.
     """
 
-    def __init__(self, virtapi, host, **kwargs):
+    def __init__(self, host, **kwargs):
         """Create an NWFilter firewall driver
 
-        :param virtapi: nova.virt.virtapi.VirtAPI instance
         :param host: nova.virt.libvirt.host.Host instance
         :param kwargs: currently unused
         """
 
-        super(NWFilterFirewall, self).__init__(virtapi)
         global libvirt
         if libvirt is None:
             try:
@@ -324,10 +322,9 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
 
 
 class IptablesFirewallDriver(base_firewall.IptablesFirewallDriver):
-    def __init__(self, virtapi, execute=None, **kwargs):
+    def __init__(self, execute=None, **kwargs):
         """Create an IP tables firewall driver instance
 
-        :param virtapi: nova.virt.virtapi.VirtAPI instance
         :param execute: unused, pass None
         :param kwargs: extra arguments
 
@@ -336,17 +333,12 @@ class IptablesFirewallDriver(base_firewall.IptablesFirewallDriver):
         class.
         """
 
-        super(IptablesFirewallDriver, self).__init__(virtapi, **kwargs)
-        self.nwfilter = NWFilterFirewall(virtapi, kwargs['host'])
+        super(IptablesFirewallDriver, self).__init__(**kwargs)
+        self.nwfilter = NWFilterFirewall(kwargs['host'])
 
     def setup_basic_filtering(self, instance, network_info):
-        """Set up provider rules and basic NWFilter."""
+        """Set up basic NWFilter."""
         self.nwfilter.setup_basic_filtering(instance, network_info)
-        if not self.basically_filtered:
-            LOG.debug('iptables firewall: Setup Basic Filtering',
-                      instance=instance)
-            self.refresh_provider_fw_rules()
-            self.basically_filtered = True
 
     def apply_instance_filter(self, instance, network_info):
         """No-op. Everything is done in prepare_instance_filter."""

@@ -324,6 +324,7 @@ class ComputeAPI(object):
         * 4.8  - Send migrate_data in object format for live_migration,
                  rollback_live_migration_at_destination, and
                  pre_live_migration.
+        * ...  - Remove refresh_provider_fw_rules()
     '''
 
     VERSION_ALIASES = {
@@ -726,11 +727,6 @@ class ComputeAPI(object):
                    orig_sys_metadata=orig_sys_metadata, bdms=bdms,
                    recreate=recreate, on_shared_storage=on_shared_storage,
                    **extra)
-
-    def refresh_provider_fw_rules(self, ctxt, host):
-        version = '4.0'
-        cctxt = self.client.prepare(server=host, version=version)
-        cctxt.cast(ctxt, 'refresh_provider_fw_rules')
 
     def remove_aggregate_host(self, ctxt, aggregate, host_param, host,
                               slave_info=None):

@@ -2862,63 +2862,6 @@ class XenAPIDom0IptablesFirewallTestCase(stubs.XenAPITestBase):
                         "Rules were not updated properly. "
                         "The rule for UDP acceptance is missing")
 
-    def test_provider_firewall_rules(self):
-        # setup basic instance data
-        instance_ref = self._create_instance_ref()
-        # FRAGILE: as in libvirt tests
-        # peeks at how the firewall names chains
-        chain_name = 'inst-%s' % instance_ref['id']
-
-        network_info = fake_network.fake_get_instance_nw_info(self, 1, 1)
-        self.fw.prepare_instance_filter(instance_ref, network_info)
-        self.assertIn('provider', self.fw.iptables.ipv4['filter'].chains)
-        rules = [rule for rule in self.fw.iptables.ipv4['filter'].rules
-                      if rule.chain == 'provider']
-        self.assertEqual(0, len(rules))
-
-        admin_ctxt = context.get_admin_context()
-        # add a rule and send the update message, check for 1 rule
-        db.provider_fw_rule_create(admin_ctxt,
-                                   {'protocol': 'tcp',
-                                    'cidr': '10.99.99.99/32',
-                                    'from_port': 1,
-                                    'to_port': 65535})
-        self.fw.refresh_provider_fw_rules()
-        rules = [rule for rule in self.fw.iptables.ipv4['filter'].rules
-                      if rule.chain == 'provider']
-        self.assertEqual(1, len(rules))
-
-        # Add another, refresh, and make sure number of rules goes to two
-        provider_fw1 = db.provider_fw_rule_create(admin_ctxt,
-                                                  {'protocol': 'udp',
-                                                   'cidr': '10.99.99.99/32',
-                                                   'from_port': 1,
-                                                   'to_port': 65535})
-        self.fw.refresh_provider_fw_rules()
-        rules = [rule for rule in self.fw.iptables.ipv4['filter'].rules
-                      if rule.chain == 'provider']
-        self.assertEqual(2, len(rules))
-
-        # create the instance filter and make sure it has a jump rule
-        self.fw.prepare_instance_filter(instance_ref, network_info)
-        self.fw.apply_instance_filter(instance_ref, network_info)
-        inst_rules = [rule for rule in self.fw.iptables.ipv4['filter'].rules
-                           if rule.chain == chain_name]
-        jump_rules = [rule for rule in inst_rules if '-j' in rule.rule]
-        provjump_rules = []
-        # IptablesTable doesn't make rules unique internally
-        for rule in jump_rules:
-            if 'provider' in rule.rule and rule not in provjump_rules:
-                provjump_rules.append(rule)
-        self.assertEqual(1, len(provjump_rules))
-
-        # remove a rule from the db, cast to compute to refresh rule
-        db.provider_fw_rule_destroy(admin_ctxt, provider_fw1['id'])
-        self.fw.refresh_provider_fw_rules()
-        rules = [rule for rule in self.fw.iptables.ipv4['filter'].rules
-                      if rule.chain == 'provider']
-        self.assertEqual(1, len(rules))
-
 
 class XenAPISRSelectionTestCase(stubs.XenAPITestBaseNoDB):
     """Unit tests for testing we find the right SR."""

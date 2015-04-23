@@ -33,7 +33,6 @@ from nova.tests.unit.virt.libvirt import fakelibvirt
 from nova.virt.libvirt import firewall
 from nova.virt.libvirt import host
 from nova.virt import netutils
-from nova.virt import virtapi
 
 _fake_network_info = fake_network.fake_get_instance_nw_info
 _fake_stub_out_get_nw_info = fake_network.stub_out_nw_api_get_instance_nw_info
@@ -81,11 +80,6 @@ class NWFilterFakes(object):
         return True
 
 
-class FakeVirtAPI(virtapi.VirtAPI):
-    def provider_fw_rule_get_all(self, context):
-        return []
-
-
 class IptablesFirewallTestCase(test.NoDBTestCase):
     def setUp(self):
         super(IptablesFirewallTestCase, self).setUp()
@@ -93,7 +87,6 @@ class IptablesFirewallTestCase(test.NoDBTestCase):
         self.useFixture(fakelibvirt.FakeLibvirtFixture())
 
         self.fw = firewall.IptablesFirewallDriver(
-            FakeVirtAPI(),
             host=host.Host("qemu:///system"))
 
     in_rules = [
@@ -431,77 +424,6 @@ class IptablesFirewallTestCase(test.NoDBTestCase):
         # should undefine just the instance filter
         self.assertEqual(original_filter_count - len(fakefilter.filters), 1)
 
-    @mock.patch.object(FakeVirtAPI, "provider_fw_rule_get_all")
-    @mock.patch.object(objects.SecurityGroupRuleList, "get_by_instance")
-    def test_provider_firewall_rules(self, mock_secrule, mock_fwrules):
-        mock_secrule.return_value = objects.SecurityGroupRuleList()
-
-        # setup basic instance data
-        instance_ref = self._create_instance_ref()
-        instance_ref.security_groups = objects.SecurityGroupList()
-
-        # FRAGILE: peeks at how the firewall names chains
-        chain_name = 'inst-%s' % instance_ref['id']
-
-        # create a firewall via setup_basic_filtering like libvirt_conn.spawn
-        # should have a chain with 0 rules
-        network_info = _fake_network_info(self, 1)
-        self.fw.setup_basic_filtering(instance_ref, network_info)
-        self.assertIn('provider', self.fw.iptables.ipv4['filter'].chains)
-        rules = [rule for rule in self.fw.iptables.ipv4['filter'].rules
-                      if rule.chain == 'provider']
-        self.assertEqual(0, len(rules))
-
-        # add a rule angd send the update message, check for 1 rule
-        sec_grp_rule_obj = objects.SecurityGroupRule(protocol='tcp',
-                                                     cidr='10.99.99.99/32',
-                                                     from_port=1,
-                                                     to_port=65535)
-        mock_fwrules.return_value = [sec_grp_rule_obj]
-        self.fw.refresh_provider_fw_rules()
-        rules = [rule for rule in self.fw.iptables.ipv4['filter'].rules
-                      if rule.chain == 'provider']
-        self.assertEqual(1, len(rules))
-
-        # Add another, refresh, and make sure number of rules goes to two
-        sec_grp_rule_obj1 = objects.SecurityGroupRule(protocol='tcp',
-                                                     cidr='10.99.99.99/32',
-                                                     from_port=1,
-                                                     to_port=65535)
-        sec_grp_rule_obj2 = objects.SecurityGroupRule(protocol='udp',
-                                                     cidr='10.99.99.99/32',
-                                                     from_port=1,
-                                                     to_port=65535)
-        mock_fwrules.return_value = [sec_grp_rule_obj1, sec_grp_rule_obj2]
-        self.fw.refresh_provider_fw_rules()
-        rules = [rule for rule in self.fw.iptables.ipv4['filter'].rules
-                      if rule.chain == 'provider']
-        self.assertEqual(2, len(rules))
-
-        # create the instance filter and make sure it has a jump rule
-        self.fw.prepare_instance_filter(instance_ref, network_info)
-        self.fw.apply_instance_filter(instance_ref, network_info)
-        inst_rules = [rule for rule in self.fw.iptables.ipv4['filter'].rules
-                           if rule.chain == chain_name]
-        jump_rules = [rule for rule in inst_rules if '-j' in rule.rule]
-        provjump_rules = []
-        # IptablesTable doesn't make rules unique internally
-        for rule in jump_rules:
-            if 'provider' in rule.rule and rule not in provjump_rules:
-                provjump_rules.append(rule)
-        self.assertEqual(1, len(provjump_rules))
-
-        # remove a rule from the db, cast to compute to refresh rule
-        sec_grp_rule_obj = objects.SecurityGroupRule(protocol='udp',
-                                                     cidr='10.99.99.99/32',
-                                                     from_port=1,
-                                                     to_port=65535)
-        mock_fwrules.return_value = [sec_grp_rule_obj]
-        self.fw.refresh_provider_fw_rules()
-        rules = [rule for rule in self.fw.iptables.ipv4['filter'].rules
-                      if rule.chain == 'provider']
-        self.assertEqual(1, len(rules))
-
 
 @mock.patch.object(firewall, 'libvirt', fakelibvirt)
 class NWFilterTestCase(test.NoDBTestCase):
@@ -510,9 +432,7 @@ class NWFilterTestCase(test.NoDBTestCase):
 
         self.useFixture(fakelibvirt.FakeLibvirtFixture())
 
-        self.fw = firewall.NWFilterFirewall(
-            FakeVirtAPI(),
-            host=host.Host("qemu:///system"))
+        self.fw = firewall.NWFilterFirewall(host=host.Host("qemu:///system"))
 
     def _create_security_group(self, instance_ref):
         secgroup = objects.SecurityGroup(id=1,

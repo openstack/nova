@@ -383,10 +383,6 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                 version='4.0',
                 _return_value=objects_block_dev.BlockDeviceMapping())
 
-    def refresh_provider_fw_rules(self):
-        self._test_compute_api('refresh_provider_fw_rules', 'cast',
-                host='host')
-
     def test_refresh_instance_security_rules(self):
         expected_args = {'instance': self.fake_instance_obj}
         self._test_compute_api('refresh_instance_security_rules', 'cast',

@@ -42,9 +42,6 @@ class VirtAPIBaseTest(test.NoDBTestCase, test.APICoverage):
                           getattr(self.virtapi, method), self.context,
                           *args, **kwargs)
 
-    def test_provider_fw_rule_get_all(self):
-        self.assertExpected('provider_fw_rule_get_all')
-
     def test_wait_for_instance_event(self):
         self.assertExpected('wait_for_instance_event',
                             'instance', ['event'])
