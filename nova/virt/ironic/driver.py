@@ -231,11 +231,19 @@ class IronicDriver(virt_driver.ComputeDriver):
         return (node_obj.instance_uuid is not None or
                 node_obj.provision_state in used_provision_states)
 
-    def _node_resource(self, node):
-        """Helper method to create resource dict from node stats."""
-        vcpus = int(node.properties.get('cpus', 0))
-        memory_mb = int(node.properties.get('memory_mb', 0))
-        local_gb = int(node.properties.get('local_gb', 0))
+    def _parse_node_properties(self, node):
+        """Helper method to parse the node's properties."""
+        properties = {}
+
+        for prop in ('cpus', 'memory_mb', 'local_gb'):
+            try:
+                properties[prop] = int(node.properties.get(prop, 0))
+            except (TypeError, ValueError):
+                LOG.warning(_LW('Node %(uuid)s has a malformed "%(prop)s". '
+                                'It should be an integer.'),
+                            {'uuid': node.uuid, 'prop': prop})
+                properties[prop] = 0
+
         raw_cpu_arch = node.properties.get('cpu_arch', None)
         try:
             cpu_arch = arch.canonicalize(raw_cpu_arch)
@@ -243,6 +251,21 @@ class IronicDriver(virt_driver.ComputeDriver):
             cpu_arch = None
         if not cpu_arch:
             LOG.warning(_LW("cpu_arch not defined for node '%s'"), node.uuid)
+
+        properties['cpu_arch'] = cpu_arch
+        properties['raw_cpu_arch'] = raw_cpu_arch
+        properties['capabilities'] = node.properties.get('capabilities')
+        return properties
+
+    def _node_resource(self, node):
+        """Helper method to create resource dict from node stats."""
+        properties = self._parse_node_properties(node)
+
+        vcpus = properties['cpus']
+        memory_mb = properties['memory_mb']
+        local_gb = properties['local_gb']
+        raw_cpu_arch = properties['raw_cpu_arch']
+        cpu_arch = properties['cpu_arch']
 
         nodes_extra_specs = {}
 
@@ -263,7 +286,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         # to be of the form "k1:v1,k2:v2,etc.." which we add directly as
         # key/value pairs into the node_extra_specs to be used by the
         # ComputeCapabilitiesFilter
-        capabilities = node.properties.get('capabilities')
+        capabilities = properties['capabilities']
         if capabilities:
             for capability in str(capabilities).split(','):
                 parts = capability.split(':')
@@ -563,14 +586,15 @@ class IronicDriver(virt_driver.ComputeDriver):
             return hardware.InstanceInfo(
                 state=map_power_state(ironic_states.NOSTATE))
 
-        memory_kib = int(node.properties.get('memory_mb', 0)) * 1024
+        properties = self._parse_node_properties(node)
+        memory_kib = properties['memory_mb'] * 1024
         if memory_kib == 0:
             LOG.warning(_LW("Warning, memory usage is 0 for "
                             "%(instance)s on baremetal node %(node)s."),
                         {'instance': instance.uuid,
                          'node': instance.node})
 
-        num_cpu = node.properties.get('cpus', 0)
+        num_cpu = properties['cpus']
         if num_cpu == 0:
             LOG.warning(_LW("Warning, number of cpus is 0 for "
                             "%(instance)s on baremetal node %(node)s."),
