@@ -10404,6 +10404,7 @@ Active:          8381604 kB
                                       getCapabilities=fake_getCapabilities,
                                       getVersion=lambda: 1005001,
                                       listDefinedDomains=lambda: [],
+                                      numOfDomains=lambda: 0,
                                       baselineCPU=fake_baselineCPU)
         instance_ref = self.test_instance
         instance_ref['image_ref'] = 123456  # we send an int to test sha1 call

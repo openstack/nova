@@ -6017,21 +6017,19 @@ class LibvirtDriver(driver.ComputeDriver):
         :param block_migration: if true, post operation of block_migration.
         """
         # Define migrated instance, otherwise, suspend/destroy does not work.
-        dom_list = self._conn.listDefinedDomains()
-        if instance.name not in dom_list:
-            image_meta = utils.get_image_from_system_metadata(
-                instance.system_metadata)
-            # In case of block migration, destination does not have
-            # libvirt.xml
-            disk_info = blockinfo.get_disk_info(
-                CONF.libvirt.virt_type, instance,
-                image_meta, block_device_info)
-            xml = self._get_guest_xml(context, instance,
-                                      network_info, disk_info,
-                                      image_meta,
-                                      block_device_info=block_device_info,
-                                      write_to_disk=True)
-            self._conn.defineXML(xml)
+        image_meta = utils.get_image_from_system_metadata(
+            instance.system_metadata)
+        # In case of block migration, destination does not have
+        # libvirt.xml
+        disk_info = blockinfo.get_disk_info(
+            CONF.libvirt.virt_type, instance,
+            image_meta, block_device_info)
+        xml = self._get_guest_xml(context, instance,
+                                  network_info, disk_info,
+                                  image_meta,
+                                  block_device_info=block_device_info,
+                                  write_to_disk=True)
+        self._conn.defineXML(xml)
 
     def _get_instance_disk_info(self, instance_name, xml,
                                 block_device_info=None):
