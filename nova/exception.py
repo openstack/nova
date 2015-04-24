@@ -131,6 +131,7 @@ class NovaException(Exception):
                     # at least get the core message out if something happened
                     message = self.msg_fmt
 
+        self.message = message
         super(NovaException, self).__init__(message)
 
     def format_message(self):
