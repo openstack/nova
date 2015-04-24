@@ -4678,7 +4678,7 @@ class LibvirtDriver(driver.ComputeDriver):
             return jsonutils.dumps([])
 
         try:
-            dev_names = self._conn.listDevices('pci', 0) or []
+            dev_names = self._host.list_pci_devices() or []
         except libvirt.libvirtError as ex:
             error_code = ex.get_error_code()
             if error_code == libvirt.VIR_ERR_NO_SUPPORT:

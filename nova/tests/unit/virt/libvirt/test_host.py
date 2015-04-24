@@ -836,6 +836,11 @@ Active:          8381604 kB
         self.host.device_lookup_by_name("foo")
         mock_nodeDeviceLookupByName.assert_called_once_with("foo")
 
+    @mock.patch.object(fakelibvirt.virConnect, "listDevices")
+    def test_list_pci_devices(self, mock_listDevices):
+        self.host.list_pci_devices(8)
+        mock_listDevices.assert_called_once_with('pci', 8)
+
 
 class DomainJobInfoTestCase(test.NoDBTestCase):
 

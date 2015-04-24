@@ -951,3 +951,10 @@ class Host(object):
         :returns: a virNodeDevice instance
         """
         return self.get_connection().nodeDeviceLookupByName(name)
+
+    def list_pci_devices(self, flags=0):
+        """Lookup pci devices.
+
+        :returns: a list of virNodeDevice instance
+        """
+        return self.get_connection().listDevices("pci", flags)
