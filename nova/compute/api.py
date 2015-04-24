@@ -3833,7 +3833,7 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
     def __init__(self, skip_policy_check=False, **kwargs):
         super(SecurityGroupAPI, self).__init__(**kwargs)
         self.skip_policy_check = skip_policy_check
-        self.security_group_rpcapi = compute_rpcapi.SecurityGroupAPI()
+        self.compute_rpcapi = compute_rpcapi.ComputeAPI()
 
     def validate_property(self, value, property, allowed):
         """Validate given security group property.
@@ -4030,7 +4030,7 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
                                             security_group['id'])
         # NOTE(comstud): No instance_uuid argument to this compute manager
         # call
-        self.security_group_rpcapi.refresh_security_group_rules(context,
+        self.compute_rpcapi.refresh_security_group_rules(context,
                 security_group['id'], host=instance.host)
 
     @wrap_check_security_groups_policy
@@ -4053,7 +4053,7 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
                                                security_group['id'])
         # NOTE(comstud): No instance_uuid argument to this compute manager
         # call
-        self.security_group_rpcapi.refresh_security_group_rules(context,
+        self.compute_rpcapi.refresh_security_group_rules(context,
                 security_group['id'], host=instance.host)
 
     def get_rule(self, context, id):
@@ -4158,7 +4158,7 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
 
         for instance in security_group['instances']:
             if instance.host is not None:
-                self.security_group_rpcapi.refresh_instance_security_rules(
+                self.compute_rpcapi.refresh_instance_security_rules(
                         context, instance.host, instance)
 
     def trigger_members_refresh(self, context, group_ids):
@@ -4194,7 +4194,7 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
         # ..then we send a request to refresh the rules for each instance.
         for instance in instances.values():
             if instance.host:
-                self.security_group_rpcapi.refresh_instance_security_rules(
+                self.compute_rpcapi.refresh_instance_security_rules(
                         context, instance.host, instance)
 
     def get_instance_security_groups(self, context, instance_uuid,
