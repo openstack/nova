@@ -815,6 +815,16 @@ Active:          8381604 kB
             self.assertEqual(8657, self.host.get_memory_mb_used())
             mock_list.assert_called_with(only_guests=False)
 
+    def test_get_cpu_stats(self):
+        stats = self.host.get_cpu_stats()
+        self.assertEqual(
+            {'kernel': 5664160000000L,
+             'idle': 1592705190000000L,
+             'frequency': 800,
+             'user': 26728850000000L,
+             'iowait': 6121490000000L},
+            stats)
+
 
 class DomainJobInfoTestCase(test.NoDBTestCase):
 

@@ -6134,12 +6134,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def get_host_cpu_stats(self):
         """Return the current CPU state of the host."""
-        # Extract node's CPU statistics.
-        stats = self._conn.getCPUStats(libvirt.VIR_NODE_CPU_STATS_ALL_CPUS, 0)
-        # getInfo() returns various information about the host node
-        # No. 3 is the expected CPU frequency.
-        stats["frequency"] = self._conn.getInfo()[3]
-        return stats
+        return self._host.get_cpu_stats()
 
     def get_host_uptime(self):
         """Returns the result of calling "uptime"."""

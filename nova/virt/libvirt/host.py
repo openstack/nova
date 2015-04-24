@@ -925,3 +925,12 @@ class Host(object):
             avail = (int(m[idx1 + 1]) + int(m[idx2 + 1]) + int(m[idx3 + 1]))
             # Convert it to MB
             return self.get_memory_mb_total() - avail / units.Ki
+
+    def get_cpu_stats(self):
+        """Returns the current CPU state of the host with frequency."""
+        stats = self.get_connection().getCPUStats(
+            libvirt.VIR_NODE_CPU_STATS_ALL_CPUS, 0)
+        # getInfo() returns various information about the host node
+        # No. 3 is the expected CPU frequency.
+        stats["frequency"] = self._get_hardware_info()[3]
+        return stats
