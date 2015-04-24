@@ -274,7 +274,7 @@ class VolumeUnattached(Invalid):
 class VolumeNotCreated(NovaException):
     msg_fmt = _("Volume %(volume_id)s did not finish being created"
                 " even after we waited %(seconds)s seconds or %(attempts)s"
-                " attempts.")
+                " attempts. And its status is %(volume_status)s.")
 
 
 class InvalidKeypair(Invalid):

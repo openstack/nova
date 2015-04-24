@@ -1380,15 +1380,18 @@ class ComputeManager(manager.Manager):
             volume = self.volume_api.get(context, vol_id)
             volume_status = volume['status']
             if volume_status not in ['creating', 'downloading']:
-                if volume_status != 'available':
-                    LOG.warning(_LW("Volume id: %s finished being created but "
-                                    "was not set as 'available'"), vol_id)
-                return attempt
+                if volume_status == 'available':
+                    return attempt
+                LOG.warning(_LW("Volume id: %(vol_id)s finished being "
+                                "created but its status is %(vol_status)s."),
+                            {'vol_id': vol_id,
+                             'vol_status': volume_status})
+                break
             greenthread.sleep(CONF.block_device_allocate_retries_interval)
-        # NOTE(harlowja): Should only happen if we ran out of attempts
         raise exception.VolumeNotCreated(volume_id=vol_id,
                                          seconds=int(time.time() - start),
-                                         attempts=attempts)
+                                         attempts=attempt,
+                                         volume_status=volume_status)
 
     def _decode_files(self, injected_files):
         """Base64 decode the list of files to inject."""
