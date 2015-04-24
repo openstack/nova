@@ -1784,10 +1784,11 @@ class ComputeManager(manager.Manager):
                         dhcp_options=dhcp_options)
                 LOG.debug('Instance network_info: |%s|', nwinfo,
                           instance=instance)
-                sys_meta = instance.system_metadata
-                sys_meta['network_allocated'] = 'True'
-                self._instance_update(context, instance.uuid,
-                        system_metadata=sys_meta)
+                instance.system_metadata['network_allocated'] = 'True'
+                # NOTE(JoshNang) do not save the instance here, as it can cause
+                # races. The caller shares a reference to instance and waits
+                # for this async greenthread to finish before calling
+                # instance.save().
                 return nwinfo
             except Exception:
                 exc_info = sys.exc_info()
@@ -2043,6 +2044,9 @@ class ComputeManager(manager.Manager):
 
         network_info.wait(do_raise=True)
         instance.info_cache.network_info = network_info
+        # NOTE(JoshNang) This also saves the changes to the instance from
+        # _allocate_network_async, as they aren't saved in that function
+        # to prevent races.
         instance.save(expected_task_state=task_states.SPAWNING)
         return instance
 
@@ -2318,6 +2322,9 @@ class ComputeManager(manager.Manager):
                     instance.vm_state = vm_states.BUILDING
                     instance.task_state = task_states.SPAWNING
                     instance.numa_topology = inst_claim.claimed_numa_topology
+                    # NOTE(JoshNang) This also saves the changes to the
+                    # instance from _allocate_network_async, as they aren't
+                    # saved in that function to prevent races.
                     instance.save(expected_task_state=
                             task_states.BLOCK_DEVICE_MAPPING)
                     block_device_info = resources['block_device_info']
