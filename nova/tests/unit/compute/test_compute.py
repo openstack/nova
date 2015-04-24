@@ -452,6 +452,17 @@ class ComputeVolumeTestCase(BaseTestCase):
                           self.compute._await_block_device_map_created,
                           self.context, '1')
 
+    def test_await_block_device_created_failed(self):
+        c = self.compute
+
+        fake_result = {'status': 'error', 'id': 'blah'}
+        with mock.patch.object(c.volume_api, 'get',
+                               return_value=fake_result) as fake_get:
+            self.assertRaises(exception.VolumeNotCreated,
+                c._await_block_device_map_created,
+                self.context, '1')
+            fake_get.assert_called_once_with(self.context, '1')
+
     def test_await_block_device_created_slow(self):
         c = self.compute
         self.flags(block_device_allocate_retries=4)
