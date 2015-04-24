@@ -557,6 +557,14 @@ class LibvirtDriver(driver.ComputeDriver):
                   'libvirt version %s') %
                 self._version_to_string(MIN_LIBVIRT_PARALLELS_VERSION))
 
+    # TODO(sahid): This method is targetted for removal when the tests
+    # have been updated to avoid its use
+    #
+    # All libvirt API calls on the libvirt.Connect object should be
+    # encapsulated by methods on the nova.virt.libvirt.host.Host
+    # object, rather than directly invoking the libvirt APIs. The goal
+    # is to avoid a direct dependency on the libvirt API from the
+    # driver.py file.
     def _get_connection(self):
         return self._host.get_connection()
 
