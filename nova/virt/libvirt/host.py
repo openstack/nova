@@ -30,6 +30,7 @@ the other libvirt related classes
 import operator
 import os
 import socket
+import sys
 import threading
 
 import eventlet
@@ -41,6 +42,7 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import excutils
 from oslo_utils import importutils
+from oslo_utils import units
 
 from nova import context as nova_context
 from nova import exception
@@ -865,3 +867,61 @@ class Host(object):
 
     def get_domain_info(self, virt_dom):
         return compat.get_domain_info(libvirt, self, virt_dom)
+
+    def _get_hardware_info(self):
+        """Returns hardware information about the Node.
+
+        Note that the memory size is reported in MiB instead of KiB.
+        """
+        return self.get_connection().getInfo()
+
+    def get_cpu_count(self):
+        """Returns the total numbers of cpu in the host."""
+        return self._get_hardware_info()[2]
+
+    def get_memory_mb_total(self):
+        """Get the total memory size(MB) of physical computer.
+
+        :returns: the total amount of memory(MB).
+        """
+        return self._get_hardware_info()[1]
+
+    def get_memory_mb_used(self):
+        """Get the used memory size(MB) of physical computer.
+
+        :returns: the total usage of memory(MB).
+        """
+        if sys.platform.upper() not in ['LINUX2', 'LINUX3']:
+            return 0
+
+        with open('/proc/meminfo') as fp:
+            m = fp.read().split()
+        idx1 = m.index('MemFree:')
+        idx2 = m.index('Buffers:')
+        idx3 = m.index('Cached:')
+        if CONF.libvirt.virt_type == 'xen':
+            used = 0
+            for dom in self.list_instance_domains(only_guests=False):
+                try:
+                    dom_mem = int(self.get_domain_info(dom)[2])
+                except libvirt.libvirtError as e:
+                    LOG.warn(_LW("couldn't obtain the memory from domain:"
+                                 " %(uuid)s, exception: %(ex)s") %
+                             {"uuid": dom.UUIDString(), "ex": e})
+                    continue
+                # skip dom0
+                if dom.ID() != 0:
+                    used += dom_mem
+                else:
+                    # the mem reported by dom0 is be greater of what
+                    # it is being used
+                    used += (dom_mem -
+                             (int(m[idx1 + 1]) +
+                              int(m[idx2 + 1]) +
+                              int(m[idx3 + 1])))
+            # Convert it to MB
+            return used / units.Ki
+        else:
+            avail = (int(m[idx1 + 1]) + int(m[idx2 + 1]) + int(m[idx3 + 1]))
+            # Convert it to MB
+            return self.get_memory_mb_total() - avail / units.Ki

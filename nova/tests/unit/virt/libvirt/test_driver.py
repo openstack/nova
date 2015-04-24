@@ -9687,79 +9687,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual(0, drvr._get_vcpu_used())
         mock_list.assert_called_with()
 
-    def test_get_memory_used_normal(self):
-        m = mock.mock_open(read_data="""
-MemTotal:       16194180 kB
-MemFree:          233092 kB
-MemAvailable:    8892356 kB
-Buffers:          567708 kB
-Cached:          8362404 kB
-SwapCached:            0 kB
-Active:          8381604 kB
-""")
-        with contextlib.nested(
-                mock.patch("__builtin__.open", m, create=True),
-                mock.patch.object(libvirt_driver.LibvirtDriver,
-                                  "_conn"),
-                mock.patch('sys.platform', 'linux2'),
-                ) as (mock_file, mock_conn, mock_platform):
-            mock_conn.getInfo.return_value = [
-                arch.X86_64, 15814L, 8, 1208, 1, 1, 4, 2]
-
-            drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-
-            self.assertEqual(6866, drvr._get_memory_mb_used())
-
-    def test_get_memory_used_xen(self):
-        self.flags(virt_type='xen', group='libvirt')
-
-        class DiagFakeDomain(object):
-            def __init__(self, id, memmb):
-                self.id = id
-                self.memmb = memmb
-
-            def info(self):
-                return [0, 0, self.memmb * 1024]
-
-            def ID(self):
-                return self.id
-
-            def name(self):
-                return "instance000001"
-
-            def UUIDString(self):
-                return str(uuid.uuid4())
-
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-
-        m = mock.mock_open(read_data="""
-MemTotal:       16194180 kB
-MemFree:          233092 kB
-MemAvailable:    8892356 kB
-Buffers:          567708 kB
-Cached:          8362404 kB
-SwapCached:            0 kB
-Active:          8381604 kB
-""")
-
-        with contextlib.nested(
-                mock.patch("__builtin__.open", m, create=True),
-                mock.patch.object(host.Host,
-                                  "list_instance_domains"),
-                mock.patch.object(libvirt_driver.LibvirtDriver,
-                                  "_conn"),
-                mock.patch('sys.platform', 'linux2'),
-                ) as (mock_file, mock_list, mock_conn, mock_platform):
-            mock_list.return_value = [
-                DiagFakeDomain(0, 15814),
-                DiagFakeDomain(1, 750),
-                DiagFakeDomain(2, 1042)]
-            mock_conn.getInfo.return_value = [
-                arch.X86_64, 15814L, 8, 1208, 1, 1, 4, 2]
-
-            self.assertEqual(8657, drvr._get_memory_mb_used())
-            mock_list.assert_called_with(only_guests=False)
-
     def test_get_instance_capabilities(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
 
@@ -11110,6 +11037,15 @@ class HostStateTestCase(test.NoDBTestCase):
 
             self._host = host.Host("qemu:///system")
 
+            def _get_memory_mb_total():
+                return 497
+
+            def _get_memory_mb_used():
+                return 88
+
+            self._host.get_memory_mb_total = _get_memory_mb_total
+            self._host.get_memory_mb_used = _get_memory_mb_used
+
         def _get_vcpu_total(self):
             return 1
 
@@ -11124,12 +11060,6 @@ class HostStateTestCase(test.NoDBTestCase):
 
         def _get_local_gb_info(self):
             return {'total': 100, 'used': 20, 'free': 80}
-
-        def _get_memory_mb_total(self):
-            return 497
-
-        def _get_memory_mb_used(self):
-            return 88
 
         def get_host_uptime(self):
             return ('10:01:16 up  1:36,  6 users,  '
