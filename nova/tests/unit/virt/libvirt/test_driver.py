@@ -8741,12 +8741,11 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     def test_get_pcidev_info(self):
 
-        def fake_nodeDeviceLookupByName(name):
+        def fake_nodeDeviceLookupByName(self, name):
             return FakeNodeDevice(_fake_NodeDevXml[name])
 
-        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
-        libvirt_driver.LibvirtDriver._conn.nodeDeviceLookupByName =\
-                                             fake_nodeDeviceLookupByName
+        self.mox.StubOutWithMock(host.Host, 'device_lookup_by_name')
+        host.Host.device_lookup_by_name = fake_nodeDeviceLookupByName
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         actualvf = drvr._get_pcidev_info("pci_0000_04_00_3")
@@ -8826,11 +8825,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         libvirt_driver.LibvirtDriver._conn.listDevices = fakelistDevices
 
-        def fake_nodeDeviceLookupByName(name):
+        def fake_nodeDeviceLookupByName(self, name):
             return FakeNodeDevice(_fake_NodeDevXml[name])
 
-        libvirt_driver.LibvirtDriver._conn.nodeDeviceLookupByName =\
-                                             fake_nodeDeviceLookupByName
+        self.mox.StubOutWithMock(host.Host, 'device_lookup_by_name')
+        host.Host.device_lookup_by_name = fake_nodeDeviceLookupByName
+
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         actjson = drvr._get_pci_passthrough_devices()
 

@@ -943,3 +943,11 @@ class Host(object):
         :returns: a virDomain instance
         """
         return self.get_connection().defineXML(xml)
+
+    def device_lookup_by_name(self, name):
+        """Lookup a node device by its name.
+
+
+        :returns: a virNodeDevice instance
+        """
+        return self.get_connection().nodeDeviceLookupByName(name)

@@ -2853,7 +2853,7 @@ class LibvirtDriver(driver.ComputeDriver):
             for dev in pci_devices:
                 libvirt_dev_addr = dev['hypervisor_name']
                 libvirt_dev = \
-                        self._conn.nodeDeviceLookupByName(libvirt_dev_addr)
+                        self._host.device_lookup_by_name(libvirt_dev_addr)
                 # Note(yjiang5) Spelling for 'dettach' is correct, see
                 # http://libvirt.org/html/libvirt-libvirt.html.
                 libvirt_dev.dettach()
@@ -2864,7 +2864,7 @@ class LibvirtDriver(driver.ComputeDriver):
             for dev in pci_devices:
                 libvirt_dev_addr = dev['hypervisor_name']
                 libvirt_dev = \
-                        self._conn.nodeDeviceLookupByName(libvirt_dev_addr)
+                        self._host.device_lookup_by_name(libvirt_dev_addr)
                 libvirt_dev.reset()
 
         except libvirt.libvirtError as exc:
@@ -4632,7 +4632,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                 'phys_function': phys_address}
             return {'dev_type': 'type-PCI'}
 
-        virtdev = self._conn.nodeDeviceLookupByName(devname)
+        virtdev = self._host.device_lookup_by_name(devname)
         xmlstr = virtdev.XMLDesc(0)
         cfgdev = vconfig.LibvirtConfigNodeDevice()
         cfgdev.parse_str(xmlstr)

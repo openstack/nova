@@ -831,6 +831,11 @@ Active:          8381604 kB
         self.host.write_instance_config(xml)
         mock_defineXML.assert_called_once_with(xml)
 
+    @mock.patch.object(fakelibvirt.virConnect, "nodeDeviceLookupByName")
+    def test_device_lookup_by_name(self, mock_nodeDeviceLookupByName):
+        self.host.device_lookup_by_name("foo")
+        mock_nodeDeviceLookupByName.assert_called_once_with("foo")
+
 
 class DomainJobInfoTestCase(test.NoDBTestCase):
 
