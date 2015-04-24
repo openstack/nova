@@ -5151,7 +5151,7 @@ class LibvirtDriver(driver.ComputeDriver):
         m = _("CPU doesn't have compatibility.\n\n%(ret)s\n\nRefer to %(u)s")
         # unknown character exists in xml, then libvirt complains
         try:
-            ret = self._conn.compareCPU(cpu.to_xml(), 0)
+            ret = self._host.compare_cpu(cpu.to_xml())
         except libvirt.libvirtError as e:
             LOG.error(m, {'ret': e, 'u': u})
             raise exception.MigrationPreCheckError(

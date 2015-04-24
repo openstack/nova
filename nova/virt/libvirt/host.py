@@ -958,3 +958,7 @@ class Host(object):
         :returns: a list of virNodeDevice instance
         """
         return self.get_connection().listDevices("pci", flags)
+
+    def compare_cpu(self, xmlDesc, flags=0):
+        """Compares the given CPU description with the host CPU."""
+        return self.get_connection().compareCPU(xmlDesc, flags)

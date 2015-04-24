@@ -841,6 +841,11 @@ Active:          8381604 kB
         self.host.list_pci_devices(8)
         mock_listDevices.assert_called_once_with('pci', 8)
 
+    @mock.patch.object(fakelibvirt.virConnect, "compareCPU")
+    def test_compare_cpu(self, mock_compareCPU):
+        self.host.compare_cpu("cpuxml")
+        mock_compareCPU.assert_called_once_with("cpuxml", 0)
+
 
 class DomainJobInfoTestCase(test.NoDBTestCase):
 
