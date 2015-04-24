@@ -579,23 +579,29 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
 
     def test_refresh_security_group_rules(self):
         self._test_compute_api('refresh_security_group_rules', 'cast',
-                rpcapi_class=compute_rpcapi.SecurityGroupAPI,
-                security_group_id='id', host='host')
+                security_group_id='id', host='host', version='4.0')
 
         self.flags(compute='kilo', group='upgrade_levels')
         self._test_compute_api('refresh_security_group_rules', 'cast',
-                rpcapi_class=compute_rpcapi.SecurityGroupAPI,
-                security_group_id='id', host='host')
+                security_group_id='id', host='host', version='3.0')
 
     def test_refresh_security_group_members(self):
         self._test_compute_api('refresh_security_group_members', 'cast',
-                rpcapi_class=compute_rpcapi.SecurityGroupAPI,
-                security_group_id='id', host='host')
+                security_group_id='id', host='host', version='4.0')
 
         self.flags(compute='kilo', group='upgrade_levels')
         self._test_compute_api('refresh_security_group_members', 'cast',
-                rpcapi_class=compute_rpcapi.SecurityGroupAPI,
-                security_group_id='id', host='host')
+                security_group_id='id', host='host', version='3.0')
+
+    def test_refresh_instance_security_rules(self):
+        self._test_compute_api('refresh_instance_security_rules', 'cast',
+                host='fake_host', instance=self.fake_instance_obj,
+                version='4.0', assert_dict=True)
+
+        self.flags(compute='kilo', group='upgrade_levels')
+        self._test_compute_api('refresh_instance_security_rules', 'cast',
+                host='fake_host', instance=self.fake_instance_obj,
+                version='3.0', assert_dict=True)
 
     def test_remove_aggregate_host(self):
         self._test_compute_api('remove_aggregate_host', 'cast',

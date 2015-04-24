@@ -9640,7 +9640,7 @@ class ComputeAPITestCase(BaseTestCase):
                    rule_get)
         self.stubs.Set(self.compute_api.db, 'security_group_get', group_get)
 
-        rpcapi = self.security_group_api.security_group_rpcapi
+        rpcapi = compute_rpcapi.ComputeAPI
         self.mox.StubOutWithMock(rpcapi, 'refresh_instance_security_rules')
         rpcapi.refresh_instance_security_rules(self.context,
                                                instance['host'],
@@ -9666,7 +9666,7 @@ class ComputeAPITestCase(BaseTestCase):
                    rule_get)
         self.stubs.Set(self.compute_api.db, 'security_group_get', group_get)
 
-        rpcapi = self.security_group_api.security_group_rpcapi
+        rpcapi = compute_rpcapi.ComputeAPI
         self.mox.StubOutWithMock(rpcapi, 'refresh_instance_security_rules')
         rpcapi.refresh_instance_security_rules(self.context,
                                                instance['host'],
@@ -9690,7 +9690,7 @@ class ComputeAPITestCase(BaseTestCase):
                    rule_get)
         self.stubs.Set(self.compute_api.db, 'security_group_get', group_get)
 
-        rpcapi = self.security_group_api.security_group_rpcapi
+        rpcapi = compute_rpcapi.ComputeAPI
         self.mox.StubOutWithMock(rpcapi, 'refresh_instance_security_rules')
 
         self.mox.ReplayAll()
@@ -9706,7 +9706,7 @@ class ComputeAPITestCase(BaseTestCase):
 
         self.stubs.Set(self.compute_api.db, 'security_group_get', group_get)
 
-        rpcapi = self.security_group_api.security_group_rpcapi
+        rpcapi = compute_rpcapi.ComputeAPI
         self.mox.StubOutWithMock(rpcapi, 'refresh_instance_security_rules')
         rpcapi.refresh_instance_security_rules(self.context,
                                                instance['host'],
@@ -9724,7 +9724,7 @@ class ComputeAPITestCase(BaseTestCase):
 
         self.stubs.Set(self.compute_api.db, 'security_group_get', group_get)
 
-        rpcapi = self.security_group_api.security_group_rpcapi
+        rpcapi = compute_rpcapi.ComputeAPI
         self.mox.StubOutWithMock(rpcapi, 'refresh_instance_security_rules')
         rpcapi.refresh_instance_security_rules(self.context,
                                                instance['host'],
@@ -9740,7 +9740,7 @@ class ComputeAPITestCase(BaseTestCase):
 
         self.stubs.Set(self.compute_api.db, 'security_group_get', group_get)
 
-        rpcapi = self.security_group_api.security_group_rpcapi
+        rpcapi = compute_rpcapi.ComputeAPI
         self.mox.StubOutWithMock(rpcapi, 'refresh_instance_security_rules')
         self.mox.ReplayAll()
 
