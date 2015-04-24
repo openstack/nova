@@ -6300,7 +6300,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                      'disk_size': 1 * 1024 ** 3,
                      'virt_disk_size': 20 * 1024 ** 3,
                      'backing_file': None}
-        disk_info_json = jsonutils.dumps([disk_info])
 
         libvirt_driver.libvirt_utils.create_image(
             disk_info['type'], mox.IgnoreArg(), disk_info['virt_disk_size'])
@@ -6310,7 +6309,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         self.stubs.Set(os.path, 'exists', lambda *args: False)
         drvr._create_images_and_backing(self.context, self.test_instance,
-                                        "/fake/instance/dir", disk_info_json)
+                                        "/fake/instance/dir", [disk_info])
 
     def test_create_images_and_backing_qcow2(self):
         self._do_test_create_images_and_backing('qcow2')
@@ -6320,12 +6319,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     def test_create_images_and_backing_images_not_exist_no_fallback(self):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        disk_info_json = jsonutils.dumps(
-            [{u'backing_file': u'fake_image_backing_file',
-              u'disk_size': 10747904,
-              u'path': u'disk_path',
-              u'type': u'qcow2',
-              u'virt_disk_size': 25165824}])
+        disk_info = [
+            {u'backing_file': u'fake_image_backing_file',
+             u'disk_size': 10747904,
+             u'path': u'disk_path',
+             u'type': u'qcow2',
+             u'virt_disk_size': 25165824}]
 
         self.test_instance.update({'user_id': 'fake-user',
                                    'os_type': None,
@@ -6338,17 +6337,16 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             self.assertRaises(exception.ImageNotFound,
                               conn._create_images_and_backing,
                               self.context, instance,
-                              "/fake/instance/dir",
-                              disk_info_json)
+                              "/fake/instance/dir", disk_info)
 
     def test_create_images_and_backing_images_not_exist_fallback(self):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        disk_info_json = jsonutils.dumps(
-            [{u'backing_file': u'fake_image_backing_file',
-              u'disk_size': 10747904,
-              u'path': u'disk_path',
-              u'type': u'qcow2',
-              u'virt_disk_size': 25165824}])
+        disk_info = [
+            {u'backing_file': u'fake_image_backing_file',
+             u'disk_size': 10747904,
+             u'path': u'disk_path',
+             u'type': u'qcow2',
+             u'virt_disk_size': 25165824}]
 
         base_dir = os.path.join(CONF.instances_path,
                                 CONF.image_cache_subdirectory_name)
@@ -6366,8 +6364,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                   image_id="fake_id")),
         ) as (copy_image_mock, fetch_image_mock):
             conn._create_images_and_backing(self.context, instance,
-                                            "/fake/instance/dir",
-                                            disk_info_json,
+                                            "/fake/instance/dir", disk_info,
                                             fallback_from_host="fake_host")
             backfile_path = os.path.join(base_dir, 'fake_image_backing_file')
             kernel_path = os.path.join(CONF.instances_path,
@@ -6403,18 +6400,18 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     def test_create_images_and_backing_ephemeral_gets_created(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        disk_info_json = jsonutils.dumps(
-            [{u'backing_file': u'fake_image_backing_file',
-              u'disk_size': 10747904,
-              u'path': u'disk_path',
-              u'type': u'qcow2',
-              u'virt_disk_size': 25165824},
-             {u'backing_file': u'ephemeral_1_default',
-              u'disk_size': 393216,
-              u'over_committed_disk_size': 1073348608,
-              u'path': u'disk_eph_path',
-              u'type': u'qcow2',
-              u'virt_disk_size': 1073741824}])
+        disk_info = [
+            {u'backing_file': u'fake_image_backing_file',
+             u'disk_size': 10747904,
+             u'path': u'disk_path',
+             u'type': u'qcow2',
+             u'virt_disk_size': 25165824},
+            {u'backing_file': u'ephemeral_1_default',
+             u'disk_size': 393216,
+             u'over_committed_disk_size': 1073348608,
+             u'path': u'disk_eph_path',
+             u'type': u'qcow2',
+             u'virt_disk_size': 1073741824}]
 
         base_dir = os.path.join(CONF.instances_path,
                                 CONF.image_cache_subdirectory_name)
@@ -6428,7 +6425,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 create_ephemeral_mock, verify_base_size_mock):
             drvr._create_images_and_backing(self.context, instance,
                                             "/fake/instance/dir",
-                                            disk_info_json)
+                                            disk_info)
             self.assertEqual(len(create_ephemeral_mock.call_args_list), 1)
             m_args, m_kwargs = create_ephemeral_mock.call_args_list[0]
             self.assertEqual(
@@ -8072,10 +8069,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                          hardware.InstanceInfo(state=power_state.RUNNING)]
         mock_get_info.side_effect = return_values
 
-        disk_info_json = '[{"virt_disk_size": 2}]'
+        disk_info = [{"virt_disk_size": 2}]
 
         mock_get_guest_xml.return_value = dummyxml
-        mock_get_instance_disk_info.return_value = disk_info_json
+        mock_get_instance_disk_info.return_value = disk_info
 
         drvr._hard_reboot(self.context, instance, network_info,
                           block_device_info)
@@ -8557,7 +8554,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                         'over_committed_disk_size': '0'}]}
 
         def get_info(instance_name, xml, **kwargs):
-            return jsonutils.dumps(fake_disks.get(instance_name))
+            return fake_disks.get(instance_name)
 
         with mock.patch.object(drvr,
                                "_get_instance_disk_info") as mock_info:
@@ -8610,7 +8607,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             if name == 'instance0000001':
                 raise OSError(errno.EACCES, 'Permission denied')
             if name == 'instance0000002':
-                return jsonutils.dumps(fake_disks.get(name))
+                return fake_disks.get(name)
         get_disk_info = mock.Mock()
         get_disk_info.side_effect = side_effect
         drvr._get_instance_disk_info = get_disk_info
