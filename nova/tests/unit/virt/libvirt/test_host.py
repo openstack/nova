@@ -825,6 +825,12 @@ Active:          8381604 kB
              'iowait': 6121490000000L},
             stats)
 
+    @mock.patch.object(fakelibvirt.virConnect, "defineXML")
+    def test_write_instance_config(self, mock_defineXML):
+        xml = "<x><name>foo</name></x>"
+        self.host.write_instance_config(xml)
+        mock_defineXML.assert_called_once_with(xml)
+
 
 class DomainJobInfoTestCase(test.NoDBTestCase):
 

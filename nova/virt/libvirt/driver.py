@@ -1110,7 +1110,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     time.sleep(0.5)
                 domain.blockResize(disk_path, resize_to * units.Gi / units.Ki)
         finally:
-            self._conn.defineXML(xml)
+            self._host.write_instance_config(xml)
 
     def swap_volume(self, old_connection_info,
                     new_connection_info, instance, mountpoint, resize_to):
@@ -1544,7 +1544,7 @@ class LibvirtDriver(driver.ComputeDriver):
             domain.blockJobAbort(disk_path, 0)
             libvirt_utils.chown(disk_delta, os.getuid())
         finally:
-            self._conn.defineXML(xml)
+            self._host.write_instance_config(xml)
             if require_quiesce:
                 self.unquiesce(context, instance, image_meta)
 
@@ -4310,7 +4310,7 @@ class LibvirtDriver(driver.ComputeDriver):
         try:
             if xml:
                 err = _LE('Error defining a domain with XML: %s') % xml
-                domain = self._conn.defineXML(xml)
+                domain = self._host.write_instance_config(xml)
 
             if power_on:
                 err = _LE('Error launching a defined domain with XML: %s') \
@@ -5989,7 +5989,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                   image_meta,
                                   block_device_info=block_device_info,
                                   write_to_disk=True)
-        self._conn.defineXML(xml)
+        self._host.write_instance_config(xml)
 
     def _get_instance_disk_info(self, instance_name, xml,
                                 block_device_info=None):

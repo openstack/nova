@@ -934,3 +934,12 @@ class Host(object):
         # No. 3 is the expected CPU frequency.
         stats["frequency"] = self._get_hardware_info()[3]
         return stats
+
+    def write_instance_config(self, xml):
+        """Defines a domain, but does not start it.
+
+        :param xml: XML domain definition of the guest.
+
+        :returns: a virDomain instance
+        """
+        return self.get_connection().defineXML(xml)
