@@ -122,13 +122,12 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                           '_shutdown_instance', 'delete'],
                          methods_called)
 
-    def test_allocate_network_succeeds_after_retries(self):
+    @mock.patch.object(network_api.API, 'allocate_for_instance')
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch.object(time, 'sleep')
+    def test_allocate_network_succeeds_after_retries(
+            self, mock_sleep, mock_save, mock_allocate_for_instance):
         self.flags(network_allocate_retries=8)
-
-        nwapi = self.compute.network_api
-        self.mox.StubOutWithMock(nwapi, 'allocate_for_instance')
-        self.mox.StubOutWithMock(self.compute, '_instance_update')
-        self.mox.StubOutWithMock(time, 'sleep')
 
         instance = fake_instance.fake_instance_obj(
                        self.context, expected_attrs=['system_metadata'])
@@ -140,26 +139,10 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         final_result = 'meow'
         dhcp_options = None
 
+        mock_allocate_for_instance.side_effect = [
+            test.TestingException()] * 7 + [final_result]
+
         expected_sleep_times = [1, 2, 4, 8, 16, 30, 30, 30]
-
-        for sleep_time in expected_sleep_times:
-            nwapi.allocate_for_instance(
-                    self.context, instance, vpn=is_vpn,
-                    requested_networks=req_networks, macs=macs,
-                    security_groups=sec_groups,
-                    dhcp_options=dhcp_options).AndRaise(
-                            test.TestingException())
-            time.sleep(sleep_time)
-
-        nwapi.allocate_for_instance(
-                self.context, instance, vpn=is_vpn,
-                requested_networks=req_networks, macs=macs,
-                security_groups=sec_groups,
-                dhcp_options=dhcp_options).AndReturn(final_result)
-        self.compute._instance_update(self.context, instance['uuid'],
-                system_metadata={'network_allocated': 'True'})
-
-        self.mox.ReplayAll()
 
         res = self.compute._allocate_network_async(self.context, instance,
                                                    req_networks,
@@ -167,7 +150,13 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                                                    sec_groups,
                                                    is_vpn,
                                                    dhcp_options)
+
+        mock_sleep.has_calls(expected_sleep_times)
         self.assertEqual(final_result, res)
+        # Ensure save is not called in while allocating networks, the instance
+        # is saved after the allocation.
+        self.assertFalse(mock_save.called)
+        self.assertEqual('True', instance.system_metadata['network_allocated'])
 
     def test_allocate_network_maintains_context(self):
         # override tracker with a version that doesn't need the database:
