@@ -1015,18 +1015,18 @@ class NetworkManager(manager.Manager):
                     #             there may be a race condition that is causing
                     #             them per
                     #             https://code.launchpad.net/bugs/968457,
-                    #             so we log an error to help track down
+                    #             so we log a message to help track down
                     #             the possible race.
                     if not vif_id:
-                        LOG.error(_LE("Unable to release %s because vif "
-                                      "doesn't exist"), address)
+                        LOG.info(_LI("Unable to release %s because vif "
+                                     "doesn't exist"), address)
                         return
 
                     vif = objects.VirtualInterface.get_by_id(context, vif_id)
 
                     if not vif:
-                        LOG.error(_LE("Unable to release %s because vif "
-                                      "object doesn't exist"), address)
+                        LOG.info(_LI("Unable to release %s because vif "
+                                     "object doesn't exist"), address)
                         return
 
                     # NOTE(cfb): Call teardown before release_dhcp to ensure
