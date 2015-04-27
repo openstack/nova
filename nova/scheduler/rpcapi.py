@@ -91,6 +91,9 @@ class SchedulerAPI(object):
         * 4.2 - Added update_instance_info(), delete_instance_info(), and
                 sync_instance_info()  methods
 
+        ... Kilo support message version 4.2. So, any changes to existing
+        methods in 4.x after that point should be done such that they can
+        handle the version_cap being set to 4.2.
 
     '''
 
@@ -99,7 +102,7 @@ class SchedulerAPI(object):
         'havana': '2.9',
         'icehouse': '3.0',
         'juno': '3.0',
-        'kilo': '4.0',
+        'kilo': '4.2',
     }
 
     def __init__(self):
