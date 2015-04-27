@@ -24,6 +24,11 @@ def getcallargs(function, *args, **kwargs):
     """This is a simplified inspect.getcallargs (2.7+).
 
     It should be replaced when python >= 2.7 is standard.
+
+    This method can only properly grab arguments which are passed in as
+    keyword arguments, or given names by the method being called.  This means
+    that an *arg in a method signature and any arguments captured by it will
+    be left out of the results.
     """
     keyed_args = {}
     argnames, varargs, keywords, defaults = inspect.getargspec(function)
@@ -33,7 +38,7 @@ def getcallargs(function, *args, **kwargs):
     # NOTE(alaski) the implicit 'self' or 'cls' argument shows up in
     # argnames but not in args or kwargs.  Uses 'in' rather than '==' because
     # some tests use 'self2'.
-    if 'self' in argnames[0] or 'cls' == argnames[0]:
+    if len(argnames) > 0 and ('self' in argnames[0] or 'cls' == argnames[0]):
         # The function may not actually be a method or have im_self.
         # Typically seen when it's stubbed with mox.
         if inspect.ismethod(function) and hasattr(function, 'im_self'):

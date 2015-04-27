@@ -96,3 +96,15 @@ class GetCallArgsTestCase(test.NoDBTestCase):
         self.assertEqual(3, callargs['red'])
         self.assertIn('blue', callargs)
         self.assertIsNone(callargs['blue'])
+
+    def test_no_named_args(self):
+        def _fake(*args, **kwargs):
+            pass
+
+        # This is not captured by getcallargs
+        args = (3,)
+        kwargs = {'instance': {'uuid': 1}}
+        callargs = safe_utils.getcallargs(_fake, *args, **kwargs)
+        self.assertEqual(1, len(callargs))
+        self.assertIn('instance', callargs)
+        self.assertEqual({'uuid': 1}, callargs['instance'])
