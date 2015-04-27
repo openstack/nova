@@ -2344,7 +2344,6 @@ def _instance_get_all_query(context, project_only=False,
     return query
 
 
-@require_admin_context
 def instance_get_all_by_host(context, host,
                              columns_to_join=None,
                              use_slave=False):
@@ -2370,7 +2369,6 @@ def _instance_get_all_uuids_by_host(context, host, session=None):
     return uuids
 
 
-@require_admin_context
 def instance_get_all_by_host_and_node(context, host, node,
                                       columns_to_join=None):
     if columns_to_join is None:
