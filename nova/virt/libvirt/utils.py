@@ -200,10 +200,6 @@ def create_cow_image(backing_file, path, size=None):
     # versions which had a different default 'cluster_size'.
     if base_details and base_details.cluster_size is not None:
         cow_opts += ['cluster_size=%s' % base_details.cluster_size]
-    # For now don't inherit this due the following discussion...
-    # See: http://www.gossamer-threads.com/lists/openstack/dev/10592
-    # if 'preallocation' in base_details:
-    #     cow_opts += ['preallocation=%s' % base_details['preallocation']]
     if base_details and base_details.encrypted:
         cow_opts += ['encryption=%s' % base_details.encrypted]
     if size is not None:
