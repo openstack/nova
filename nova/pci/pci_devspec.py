@@ -15,7 +15,6 @@ import ast
 import re
 
 from nova import exception
-from nova.openstack.common import jsonutils
 from nova.pci import pci_utils
 
 MAX_VENDOR_ID = 0xFFFF
@@ -128,16 +127,15 @@ class PciAddress(object):
 
 class PciDeviceSpec(object):
     def __init__(self, dev_spec):
-        self.dev_spec = dev_spec
+        self.tags = dev_spec
         self._init_dev_details()
         self.dev_count = 0
 
     def _init_dev_details(self):
-        details = jsonutils.loads(self.dev_spec)
-        self.vendor_id = details.pop("vendor_id", ANY)
-        self.product_id = details.pop("product_id", ANY)
-        self.address = details.pop("address", None)
-        self.dev_name = details.pop("devname", None)
+        self.vendor_id = self.tags.pop("vendor_id", ANY)
+        self.product_id = self.tags.pop("product_id", ANY)
+        self.address = self.tags.pop("address", None)
+        self.dev_name = self.tags.pop("devname", None)
 
         self.vendor_id = self.vendor_id.strip()
         get_pci_dev_info(self, 'vendor_id', MAX_VENDOR_ID, '%04x')
@@ -156,7 +154,6 @@ class PciDeviceSpec(object):
                 self.address = "*:*:*.*"
 
         self.address = PciAddress(self.address, pf)
-        self.tags = details
 
     def match(self, dev_dict):
         conditions = [
