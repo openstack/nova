@@ -200,8 +200,6 @@ def create_cow_image(backing_file, path, size=None):
     # versions which had a different default 'cluster_size'.
     if base_details and base_details.cluster_size is not None:
         cow_opts += ['cluster_size=%s' % base_details.cluster_size]
-    if base_details and base_details.encrypted:
-        cow_opts += ['encryption=%s' % base_details.encrypted]
     if size is not None:
         cow_opts += ['size=%s' % size]
     if cow_opts:
