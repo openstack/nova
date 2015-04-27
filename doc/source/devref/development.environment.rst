@@ -115,12 +115,10 @@ Check the version of OpenSSL you have installed::
 
     openssl version
 
-If you have installed OpenSSL 1.0.0a, which can happen when installing a
-MacPorts package for OpenSSL, you will see an error when running
-``nova.tests.auth_unittest.AuthTestCase.test_209_can_generate_x509``.
-
 The stock version of OpenSSL that ships with Mac OS X 10.6 (OpenSSL 0.9.8l)
-or Mac OS X 10.7 (OpenSSL 0.9.8r) works fine with nova.
+or Mac OS X 10.7 (OpenSSL 0.9.8r) or Mac OS X  10.10.3 (OpenSSL 0.9.8zc) works
+fine with nova. OpenSSL versions from brew like OpenSSL 1.0.1k work fine
+as well.
 
 
 Getting the code
