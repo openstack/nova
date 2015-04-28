@@ -194,7 +194,7 @@ class AggregateList(base.ObjectListBase, base.NovaObject):
     @base.remotable_classmethod
     def get_by_metadata_key(cls, context, key, hosts=None):
         db_aggregates = db.aggregate_get_by_metadata_key(context, key=key)
-        if hosts:
+        if hosts is not None:
             db_aggregates = cls._filter_db_aggregates(db_aggregates, hosts)
         return base.obj_make_list(context, cls(context), objects.Aggregate,
                                   db_aggregates)
