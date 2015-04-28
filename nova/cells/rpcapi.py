@@ -108,6 +108,10 @@ class CellsAPI(object):
         * 1.33 - Add clean_shutdown to resize_instance()
         * 1.34 - build_instances uses BlockDeviceMapping objects, drops
                  legacy_bdm argument
+
+        ... Kilo supports message version 1.34.  So, any changes to
+        existing methods in 1.x after that point should be done such that they
+        can handle the version_cap being set to 1.34.
     '''
 
     VERSION_ALIASES = {
@@ -115,6 +119,7 @@ class CellsAPI(object):
         'havana': '1.24',
         'icehouse': '1.27',
         'juno': '1.29',
+        'kilo': '1.34',
     }
 
     def __init__(self):
