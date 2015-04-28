@@ -205,14 +205,11 @@ class Host(object):
         self._event_queue = None
 
         self._events_delayed = {}
-        # Note(toabctl): During a reboot of a Xen domain, STOPPED and
+        # Note(toabctl): During a reboot of a domain, STOPPED and
         #                STARTED events are sent. To prevent shutting
         #                down the domain during a reboot, delay the
         #                STOPPED lifecycle event some seconds.
-        if uri.find("xen://") != -1:
-            self._lifecycle_delay = 15
-        else:
-            self._lifecycle_delay = 0
+        self._lifecycle_delay = 15
 
     def _native_thread(self):
         """Receives async events coming in from libvirtd.
@@ -395,7 +392,7 @@ class Host(object):
 
             if event.transition == virtevent.EVENT_LIFECYCLE_STOPPED:
                 # Delay STOPPED event, as they may be followed by a STARTED
-                # event in case the instance is rebooting, when runned with Xen
+                # event in case the instance is rebooting
                 id_ = greenthread.spawn_after(self._lifecycle_delay,
                                               self._event_emit, event)
                 self._events_delayed[event.uuid] = id_
