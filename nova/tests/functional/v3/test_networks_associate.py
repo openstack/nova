@@ -24,8 +24,13 @@ CONF.import_opt('osapi_compute_extension',
 
 
 class NetworksAssociateJsonTests(api_sample_base.ApiSampleTestBaseV3):
+    ADMIN_API = True
     extension_name = "os-networks-associate"
     extra_extensions_to_load = ["os-networks"]
+    # TODO(gmann): Overriding '_api_version' till all functional tests
+    # are merged between v2 and v2.1. After that base class variable
+    # itself can be changed to 'v2'
+    _api_version = 'v2'
 
     _sentinel = object()
 
@@ -35,6 +40,9 @@ class NetworksAssociateJsonTests(api_sample_base.ApiSampleTestBaseV3):
         # Networks_associate requires Networks to be update
         f['osapi_compute_extension'].append(
             'nova.api.openstack.compute.contrib.os_networks.Os_networks')
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.networks_associate.'
+            'Networks_associate')
         return f
 
     def setUp(self):
