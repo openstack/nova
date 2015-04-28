@@ -39,9 +39,11 @@ CONF.register_opts(rpcapi_opts)
 
 rpcapi_cap_opt = cfg.StrOpt('compute',
         help='Set a version cap for messages sent to compute services. If you '
-             'plan to do a live upgrade from havana to icehouse, you should '
-             'set this option to "icehouse-compat" before beginning the live '
-             'upgrade procedure.')
+             'plan to do a live upgrade from an old version to a newer '
+             'version, you should set this option to the old version before '
+             'beginning the live upgrade procedure. Only upgrading to the '
+             'next version is supported, so you cannot skip a release for '
+             'the live upgrade procedure.')
 CONF.register_opt(rpcapi_cap_opt, 'upgrade_levels')
 
 LOG = logging.getLogger(__name__)
