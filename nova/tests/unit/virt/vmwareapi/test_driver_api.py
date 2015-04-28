@@ -220,7 +220,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self._set_exception_vars()
         self.node_name = self.conn._resources.keys()[0]
         self.node_name2 = self.conn._resources.keys()[1]
-        if cluster_name2 in self.node_name2:
+        if self.conn._resources[self.node_name2]['name'] == cluster_name2:
             self.ds = 'ds1'
         else:
             self.ds = 'ds2'
@@ -2310,3 +2310,32 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.conn._update_pbm_location()
         self.assertEqual('fira', self.conn._session._pbm_wsdl_loc)
         self.assertIsNone(self.conn._session._pbm)
+
+    def test_nodename(self):
+        test_mor = "domain-26"
+        self.assertEqual("%s.%s" % (test_mor,
+                                    vmwareapi_fake._FAKE_VCENTER_UUID),
+                         self.conn._create_nodename(test_mor),
+                         "VC driver failed to create the proper node name")
+
+    def test_normalize_nodename_old(self):
+        test_mor = "domain-26"
+        sample_cluster_names = ["Cluster1",
+                                "Cluster:2",
+                                "Cluster:3)",
+                                "(Cluster:4",
+                                "(Cluster:5)",
+                                "Test Cluster"]
+
+        for cluster_name in sample_cluster_names:
+            old_format = "%s(%s)" % (test_mor, cluster_name)
+            self.assertEqual(self.conn._create_nodename(test_mor),
+                             self.conn._normalize_nodename(old_format),
+                             'VC driver failed to normalize cluster name %s' %
+                                 cluster_name)
+
+    def test_normalize_nodename_new(self):
+        # Assert that _normalize_nodename doesn't touch the new format
+        test_mor = "domain-26"
+        nodename = "%s.%s" % (test_mor, vmwareapi_fake._FAKE_VCENTER_UUID)
+        self.assertEqual(nodename, self.conn._normalize_nodename(nodename))

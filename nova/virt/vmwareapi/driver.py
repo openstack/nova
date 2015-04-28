@@ -37,6 +37,7 @@ from nova.virt import driver
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import host
+from nova.virt.vmwareapi import vim_util as nova_vim_util
 from nova.virt.vmwareapi import vm_util
 from nova.virt.vmwareapi import vmops
 from nova.virt.vmwareapi import volumeops
@@ -113,6 +114,13 @@ class VMwareVCDriver(driver.ComputeDriver):
         "supports_migrate_to_same_host": True
     }
 
+    # Legacy nodename is of the form: <mo id>(<cluster name>)
+    # e.g. domain-26(TestCluster)
+    # We assume <mo id> consists of alphanumeric, _ and -.
+    # We assume cluster name is everything between the first ( and the last ).
+    # We pull out <mo id> for re-use.
+    LEGACY_NODENAME = re.compile('([\w-]+)\(.+\)')
+
     # The vCenter driver includes API that acts on ESX hosts or groups
     # of ESX hosts in clusters or non-cluster logical-groupings.
     #
@@ -171,6 +179,7 @@ class VMwareVCDriver(driver.ComputeDriver):
             LOG.warning(_LW("The following clusters could not be found in the "
                             "vCenter %s"), list(missing_clusters))
 
+        self._vcenter_uuid = self._get_vcenter_uuid()
         # The _resources is used to maintain the vmops, volumeops and vcstate
         # objects per cluster
         self._resources = {}
@@ -330,14 +339,16 @@ class VMwareVCDriver(driver.ComputeDriver):
         The VMwareVMOps, VMwareVolumeOps and VCState object is for each
         cluster/rp. The dictionary is of the form
         {
-            domain-1000 : {'vmops': vmops_obj,
-                          'volumeops': volumeops_obj,
-                          'vcstate': vcstate_obj,
-                          'name': MyCluster},
-            resgroup-1000 : {'vmops': vmops_obj,
-                              'volumeops': volumeops_obj,
-                              'vcstate': vcstate_obj,
-                              'name': MyRP},
+            'domain-1000.497c514c-ef5e-4e7f-8d93-ec921993b93a' : {
+                'vmops': vmops_obj,
+                'volumeops': volumeops_obj,
+                'vcstate': vcstate_obj,
+                'name': MyCluster},
+            'resgroup-1000.497c514c-ef5e-4e7f-8d93-ec921993b93a' : {
+                'vmops': vmops_obj,
+                'volumeops': volumeops_obj,
+                'vcstate': vcstate_obj,
+                'name': MyRP},
         }
         """
         added_nodes = set(self.dict_mors.keys()) - set(self._resource_keys)
@@ -349,7 +360,7 @@ class VMwareVCDriver(driver.ComputeDriver):
                                        self.dict_mors[node]['cluster_mor'],
                                        datastore_regex=self._datastore_regex)
             name = self.dict_mors.get(node)['name']
-            nodename = self._create_nodename(node, name)
+            nodename = self._create_nodename(node)
             _vc_state = host.VCState(self._session, nodename,
                                      self.dict_mors.get(node)['cluster_mor'],
                                      self._datastore_regex)
@@ -363,22 +374,52 @@ class VMwareVCDriver(driver.ComputeDriver):
         deleted_nodes = (set(self._resource_keys) -
                             set(self.dict_mors.keys()))
         for node in deleted_nodes:
-            name = self.dict_mors.get(node)['name']
-            nodename = self._create_nodename(node, name)
+            nodename = self._create_nodename(node)
             del self._resources[nodename]
             self._resource_keys.discard(node)
 
-    def _create_nodename(self, mo_id, display_name):
-        """Creates the name that is stored in hypervisor_hostname column.
+    def _get_vcenter_uuid(self):
+        """Retrieves the vCenter UUID."""
 
-        The name will be of the form similar to
-        domain-1000(MyCluster)
-        resgroup-1000(MyResourcePool)
+        about = self._session._call_method(nova_vim_util, 'get_about_info')
+        return about.instanceUuid
+
+    def _create_nodename(self, mo_id):
+        """Return a nodename which uniquely describes a cluster.
+
+        The name will be of the form:
+          <mo id>.<vcenter uuid>
+        e.g.
+          domain-26.9d51f082-58a4-4449-beed-6fd205a5726b
         """
-        return mo_id + '(' + display_name + ')'
+
+        return '%s.%s' % (mo_id, self._vcenter_uuid)
+
+    def _normalize_nodename(self, nodename):
+        """Change I2f3b5d224cc653d0465598de0788116e71d1ca0d altered the format
+        of nodename to <mo id>.<vCenter UUID>. This function matches legacy
+        nodenames and translates them to the new format.
+
+        Note that the legacy format did not contain the vCenter UUID, which we
+        are adding here. We can safely assume that we are adding the correct
+        vCenter UUID because instance.host has caused it to be scheduled to
+        this compute, which can only be configured with a single vCenter.
+        """
+
+        match = self.LEGACY_NODENAME.match(nodename)
+
+        # Return it unmodified if it's not in the legacy format
+        if match is None:
+            return nodename
+
+        mo_id = match.group(1)
+        return self._create_nodename(mo_id)
 
     def _get_resource_for_node(self, nodename):
         """Gets the resource information for the specific node."""
+
+        nodename = self._normalize_nodename(nodename)
+
         resource = self._resources.get(nodename)
         if not resource:
             msg = _("The resource %s does not exist") % nodename
@@ -386,26 +427,17 @@ class VMwareVCDriver(driver.ComputeDriver):
         return resource
 
     def _get_vmops_for_compute_node(self, nodename):
-        """Retrieve vmops object from mo_id stored in the node name.
-
-        Node name is of the form domain-1000(MyCluster)
-        """
+        """Retrieve vmops object for this node."""
         resource = self._get_resource_for_node(nodename)
         return resource['vmops']
 
     def _get_volumeops_for_compute_node(self, nodename):
-        """Retrieve vmops object from mo_id stored in the node name.
-
-        Node name is of the form domain-1000(MyCluster)
-        """
+        """Retrieve vmops object for this node."""
         resource = self._get_resource_for_node(nodename)
         return resource['volumeops']
 
     def _get_vc_state_for_compute_node(self, nodename):
-        """Retrieve VCState object from mo_id stored in the node name.
-
-        Node name is of the form domain-1000(MyCluster)
-        """
+        """Retrieve VCState object for this node."""
         resource = self._get_resource_for_node(nodename)
         return resource['vcstate']
 
@@ -467,8 +499,7 @@ class VMwareVCDriver(driver.ComputeDriver):
         node_list = []
         self._update_resources()
         for node in self.dict_mors.keys():
-            nodename = self._create_nodename(node,
-                                          self.dict_mors.get(node)['name'])
+            nodename = self._create_nodename(node)
             node_list.append(nodename)
         LOG.debug("The available nodes are: %s", node_list)
         return node_list
