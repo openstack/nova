@@ -6745,6 +6745,17 @@ class _ComputeV4Proxy(object):
             bdms, recreate, on_shared_storage,
             preserve_ephemeral=preserve_ephemeral)
 
+    def refresh_security_group_rules(self, ctxt, security_group_id):
+        return self.manager.refresh_security_group_rules(ctxt,
+                                                         security_group_id)
+
+    def refresh_security_group_members(self, ctxt, security_group_id):
+        return self.manager.refresh_security_group_members(ctxt,
+                                                           security_group_id)
+
+    def refresh_instance_security_rules(self, ctxt, instance):
+        return self.manager.refresh_instance_security_rules(ctxt, instance)
+
     def refresh_provider_fw_rules(self, ctxt):
         return self.manager.refresh_provider_fw_rules(ctxt)
 

@@ -1054,43 +1054,21 @@ class ComputeAPI(object):
         cctxt.cast(ctxt, 'unquiesce_instance', instance=instance,
                    mapping=mapping)
 
-
-class SecurityGroupAPI(object):
-    '''Client side of the security group rpc API.
-
-    API version history:
-
-        1.0 - Initial version.
-        1.41 - Adds refresh_instance_security_rules()
-
-        2.0 - Remove 1.x backwards compat
-
-        3.0 - Identical to 2.x, but has to be bumped at the same time as the
-              compute API since it's all together on the server side.
-    '''
-
-    def __init__(self):
-        super(SecurityGroupAPI, self).__init__()
-        target = messaging.Target(topic=CONF.compute_topic, version='3.0')
-        version_cap = ComputeAPI.VERSION_ALIASES.get(
-                CONF.upgrade_levels.compute, CONF.upgrade_levels.compute)
-        self.client = rpc.get_client(target, version_cap)
-
     def refresh_security_group_rules(self, ctxt, security_group_id, host):
-        version = '3.0'
+        version = self._compat_ver('4.0', '3.0')
         cctxt = self.client.prepare(server=host, version=version)
         cctxt.cast(ctxt, 'refresh_security_group_rules',
                    security_group_id=security_group_id)
 
     def refresh_security_group_members(self, ctxt, security_group_id,
             host):
-        version = '3.0'
+        version = self._compat_ver('4.0', '3.0')
         cctxt = self.client.prepare(server=host, version=version)
         cctxt.cast(ctxt, 'refresh_security_group_members',
                    security_group_id=security_group_id)
 
     def refresh_instance_security_rules(self, ctxt, host, instance):
-        version = '3.0'
+        version = self._compat_ver('4.0', '3.0')
         instance_p = jsonutils.to_primitive(instance)
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
