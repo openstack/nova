@@ -6041,7 +6041,7 @@ def migrate_flavor_data(context, max_count, flavor_cache):
     from nova import objects
 
     query = _instance_get_all_query(context, joins=['extra', 'extra.flavor']).\
-                join(models.Instance.extra).\
+                outerjoin(models.Instance.extra).\
                 filter(models.InstanceExtra.flavor.is_(None))
     if max_count is not None:
         instances = query.limit(max_count)
@@ -6069,6 +6069,11 @@ def migrate_flavor_data(context, max_count, flavor_cache):
 
         _augment_flavors_to_migrate(instance, flavor_cache)
         if instance.obj_what_changed():
+            if db_instance.get('extra') is None:
+                _instance_extra_create(context,
+                                       {'instance_uuid': db_instance['uuid']})
+                LOG.debug(
+                    'Created instance_extra for %s' % db_instance['uuid'])
             instance.save(expected_task_state=[None])
             count_hit += 1
 
