@@ -20,6 +20,18 @@ This section describes the Compute API version 2 and is intended for software
 developers interested in developing applications using the OpenStack Compute
 Application Programming Interface (API).
 
-..toctree::
+.. toctree::
     :maxdepth: 3
-    :glob:
+
+    2.0_general_info
+    2.0_server_concepts
+    authentication
+    extensions
+    faults
+    limits
+    links_and_references
+    paginated_collections
+    polling_changes-since_parameter
+    request_and_response_formats
+    versions
+
