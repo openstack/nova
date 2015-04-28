@@ -938,15 +938,15 @@ def obj_make_list(context, list_obj, item_cls, db_list, **extra_args):
 def serialize_args(fn):
     """Decorator that will do the arguments serialization before remoting."""
     def wrapper(obj, *args, **kwargs):
-        for kw in kwargs:
-            value_arg = kwargs.get(kw)
-            if kw == 'exc_val' and value_arg:
-                kwargs[kw] = str(value_arg)
-            elif kw == 'exc_tb' and (
-                    not isinstance(value_arg, six.string_types) and value_arg):
-                kwargs[kw] = ''.join(traceback.format_tb(value_arg))
-            elif isinstance(value_arg, datetime.datetime):
-                kwargs[kw] = timeutils.isotime(value_arg)
+        args = [timeutils.strtime(at=arg) if isinstance(arg, datetime.datetime)
+                else arg for arg in args]
+        for k, v in kwargs.iteritems():
+            if k == 'exc_val' and v:
+                kwargs[k] = str(v)
+            elif k == 'exc_tb' and v and not isinstance(v, six.string_types):
+                kwargs[k] = ''.join(traceback.format_tb(v))
+            elif isinstance(v, datetime.datetime):
+                kwargs[k] = timeutils.strtime(at=v)
         if hasattr(fn, '__call__'):
             return fn(obj, *args, **kwargs)
         # NOTE(danms): We wrap a descriptor, so use that protocol

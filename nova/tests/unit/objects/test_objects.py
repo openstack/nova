@@ -1193,6 +1193,28 @@ class TestObjectSerializer(_BaseTestCase):
         self.assertIsInstance(thing2['foo'], base.NovaObject)
 
 
+class TestArgsSerializer(test.NoDBTestCase):
+    def setUp(self):
+        super(TestArgsSerializer, self).setUp()
+        self.now = timeutils.utcnow()
+        self.str_now = timeutils.strtime(at=self.now)
+
+    @base.serialize_args
+    def _test_serialize_args(self, *args, **kwargs):
+        expected_args = ('untouched', self.str_now, self.str_now)
+        for index, val in enumerate(args):
+            self.assertEqual(expected_args[index], val)
+
+        expected_kwargs = {'a': 'untouched', 'b': self.str_now,
+                           'c': self.str_now}
+        for key, val in kwargs.iteritems():
+            self.assertEqual(expected_kwargs[key], val)
+
+    def test_serialize_args(self):
+        self._test_serialize_args('untouched', self.now, self.now,
+                                  a='untouched', b=self.now, c=self.now)
+
+
 # NOTE(danms): The hashes in this list should only be changed if
 # they come with a corresponding version bump in the affected
 # objects
