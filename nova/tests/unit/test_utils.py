@@ -23,15 +23,20 @@ import StringIO
 import struct
 import tempfile
 
+import eventlet
 import mock
 from mox3 import mox
 import netaddr
 from oslo_concurrency import processutils
 from oslo_config import cfg
+from oslo_context import context as common_context
+from oslo_context import fixture as context_fixture
 from oslo_utils import encodeutils
 from oslo_utils import timeutils
 
+
 import nova
+from nova import context
 from nova import exception
 from nova import test
 from nova import utils
@@ -1020,3 +1025,61 @@ class SafeTruncateTestCase(test.NoDBTestCase):
         truncated_msg = utils.safe_truncate(msg, 255)
         byte_message = encodeutils.safe_encode(truncated_msg)
         self.assertEqual(254, len(byte_message))
+
+
+class SpawnNTestCase(test.NoDBTestCase):
+    def setUp(self):
+        super(SpawnNTestCase, self).setUp()
+        self.useFixture(context_fixture.ClearRequestContext())
+
+    def test_spawn_n_no_context(self):
+        self.assertIsNone(common_context.get_current())
+
+        def _fake_spawn(func, *args, **kwargs):
+            # call the method to ensure no error is raised
+            func(*args, **kwargs)
+            self.assertEqual('test', args[0])
+
+        def fake(arg):
+            pass
+
+        with mock.patch.object(eventlet, 'spawn_n', _fake_spawn):
+            utils.spawn_n(fake, 'test')
+        self.assertIsNone(common_context.get_current())
+
+    def test_spawn_n_context(self):
+        self.assertIsNone(common_context.get_current())
+        ctxt = context.RequestContext('user', 'project')
+
+        def _fake_spawn(func, *args, **kwargs):
+            # call the method to ensure no error is raised
+            func(*args, **kwargs)
+            self.assertEqual(ctxt, args[0])
+            self.assertEqual('test', kwargs['kwarg1'])
+
+        def fake(context, kwarg1=None):
+            pass
+
+        with mock.patch.object(eventlet, 'spawn_n', _fake_spawn):
+            utils.spawn_n(fake, ctxt, kwarg1='test')
+        self.assertEqual(ctxt, common_context.get_current())
+
+    def test_spawn_n_context_different_from_passed(self):
+        self.assertIsNone(common_context.get_current())
+        ctxt = context.RequestContext('user', 'project')
+        ctxt_passed = context.RequestContext('user', 'project',
+                overwrite=False)
+        self.assertEqual(ctxt, common_context.get_current())
+
+        def _fake_spawn(func, *args, **kwargs):
+            # call the method to ensure no error is raised
+            func(*args, **kwargs)
+            self.assertEqual(ctxt_passed, args[0])
+            self.assertEqual('test', kwargs['kwarg1'])
+
+        def fake(context, kwarg1=None):
+            pass
+
+        with mock.patch.object(eventlet, 'spawn_n', _fake_spawn):
+            utils.spawn_n(fake, ctxt_passed, kwarg1='test')
+        self.assertEqual(ctxt, common_context.get_current())
