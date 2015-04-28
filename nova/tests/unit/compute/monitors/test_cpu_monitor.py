@@ -15,37 +15,26 @@
 
 """Tests for Compute Driver CPU resource monitor."""
 
-import fixtures
-
-from nova.compute import manager
 from nova.compute.monitors import virt
 from nova import test
-
-
-class FakeLibvirt(object):
-    def getCPUStats(self, cpuNum, flag):
-        if cpuNum < 2:
-            return {'kernel': 5664160000000L,
-                    'idle': 1592705190000000L,
-                    'user': 26728850000000L,
-                    'iowait': 6121490000000L}
-        else:
-            raise Exception("invalid argument: Invalid cpu number")
-
-    def getInfo(self):
-        return [0, 0, 0, 800, 0, 0, 0, 0]
 
 
 class ComputeDriverCPUMonitorTestCase(test.NoDBTestCase):
     def setUp(self):
         super(ComputeDriverCPUMonitorTestCase, self).setUp()
 
-        self.flags(compute_driver='nova.virt.libvirt.LibvirtDriver')
-        self.useFixture(fixtures.MonkeyPatch(
-            'nova.virt.libvirt.driver.LibvirtDriver._conn',
-            FakeLibvirt()))
-        cm = manager.ComputeManager()
-        self.monitor = virt.ComputeDriverCPUMonitor(cm)
+        class FakeDriver(object):
+            def get_host_cpu_stats(self):
+                return {'kernel': 5664160000000L,
+                        'idle': 1592705190000000L,
+                        'frequency': 800,
+                        'user': 26728850000000L,
+                        'iowait': 6121490000000L}
+
+        class FakeComputeManager(object):
+            driver = FakeDriver()
+
+        self.monitor = virt.ComputeDriverCPUMonitor(FakeComputeManager())
 
     def test_get_metric_names(self):
         names = self.monitor.get_metric_names()
