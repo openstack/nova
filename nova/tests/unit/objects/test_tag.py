@@ -55,6 +55,12 @@ class _TestTagObject(object):
         tag_delete.assert_called_once_with(self.context,
                                            RESOURCE_ID, TAG_NAME1)
 
+    @mock.patch('nova.db.instance_tag_exists')
+    def test_exists(self, instance_tag_exists):
+        tag.Tag.exists(self.context, RESOURCE_ID, TAG_NAME1)
+        instance_tag_exists.assert_called_once_with(
+            self.context, RESOURCE_ID, TAG_NAME1)
+
 
 class TestMigrationObject(test_objects._LocalTest,
                           _TestTagObject):

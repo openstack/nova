@@ -1948,3 +1948,8 @@ def instance_tag_delete(context, instance_uuid, tag):
 def instance_tag_delete_all(context, instance_uuid):
     """Delete all tags from the instance."""
     return IMPL.instance_tag_delete_all(context, instance_uuid)
+
+
+def instance_tag_exists(context, instance_uuid, tag):
+    """Check if specified tag exist on the instance."""
+    return IMPL.instance_tag_exists(context, instance_uuid, tag)

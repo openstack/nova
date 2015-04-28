@@ -6552,3 +6552,13 @@ def instance_tag_delete_all(context, instance_uuid):
     with session.begin(subtransactions=True):
         _check_instance_exists(context, session, instance_uuid)
         session.query(models.Tag).filter_by(resource_id=instance_uuid).delete()
+
+
+def instance_tag_exists(context, instance_uuid, tag):
+    session = get_session()
+
+    with session.begin(subtransactions=True):
+        _check_instance_exists(context, session, instance_uuid)
+        q = session.query(models.Tag).filter_by(
+            resource_id=instance_uuid, tag=tag)
+        return session.query(q.exists()).scalar()
