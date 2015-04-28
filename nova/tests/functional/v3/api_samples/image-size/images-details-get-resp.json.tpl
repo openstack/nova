@@ -5,11 +5,11 @@
             "id": "70a599e0-31e7-49b7-b260-868f441e862b",
             "links": [
                 {
-                    "href": "%(host)s/v3/images/70a599e0-31e7-49b7-b260-868f441e862b",
+                    "href": "%(host)s/v2/openstack/images/70a599e0-31e7-49b7-b260-868f441e862b",
                     "rel": "self"
                 },
                 {
-                    "href": "%(host)s/images/70a599e0-31e7-49b7-b260-868f441e862b",
+                    "href": "%(host)s/openstack/images/70a599e0-31e7-49b7-b260-868f441e862b",
                     "rel": "bookmark"
                 },
                 {
@@ -37,11 +37,11 @@
             "id": "155d900f-4e14-4e4c-a73d-069cbf4541e6",
             "links": [
                 {
-                    "href": "%(host)s/v3/images/155d900f-4e14-4e4c-a73d-069cbf4541e6",
+                    "href": "%(host)s/v2/openstack/images/155d900f-4e14-4e4c-a73d-069cbf4541e6",
                     "rel": "self"
                 },
                 {
-                    "href": "%(host)s/images/155d900f-4e14-4e4c-a73d-069cbf4541e6",
+                    "href": "%(host)s/openstack/images/155d900f-4e14-4e4c-a73d-069cbf4541e6",
                     "rel": "bookmark"
                 },
                 {
@@ -68,11 +68,11 @@
             "id": "a2459075-d96c-40d5-893e-577ff92e721c",
             "links": [
                 {
-                    "href": "%(host)s/v3/images/a2459075-d96c-40d5-893e-577ff92e721c",
+                    "href": "%(host)s/v2/openstack/images/a2459075-d96c-40d5-893e-577ff92e721c",
                     "rel": "self"
                 },
                 {
-                    "href": "%(host)s/images/a2459075-d96c-40d5-893e-577ff92e721c",
+                    "href": "%(host)s/openstack/images/a2459075-d96c-40d5-893e-577ff92e721c",
                     "rel": "bookmark"
                 },
                 {
@@ -98,11 +98,11 @@
             "id": "a440c04b-79fa-479c-bed1-0b816eaec379",
             "links": [
                 {
-                    "href": "%(host)s/v3/images/a440c04b-79fa-479c-bed1-0b816eaec379",
+                    "href": "%(host)s/v2/openstack/images/a440c04b-79fa-479c-bed1-0b816eaec379",
                     "rel": "self"
                 },
                 {
-                    "href": "%(host)s/images/a440c04b-79fa-479c-bed1-0b816eaec379",
+                    "href": "%(host)s/openstack/images/a440c04b-79fa-479c-bed1-0b816eaec379",
                     "rel": "bookmark"
                 },
                 {
@@ -130,11 +130,11 @@
             "id": "c905cedb-7281-47e4-8a62-f26bc5fc4c77",
             "links": [
                 {
-                    "href": "%(host)s/v3/images/c905cedb-7281-47e4-8a62-f26bc5fc4c77",
+                    "href": "%(host)s/v2/openstack/images/c905cedb-7281-47e4-8a62-f26bc5fc4c77",
                     "rel": "self"
                 },
                 {
-                    "href": "%(host)s/images/c905cedb-7281-47e4-8a62-f26bc5fc4c77",
+                    "href": "%(host)s/openstack/images/c905cedb-7281-47e4-8a62-f26bc5fc4c77",
                     "rel": "bookmark"
                 },
                 {
@@ -160,11 +160,11 @@
             "id": "cedef40a-ed67-4d10-800e-17455edce175",
             "links": [
                 {
-                    "href": "%(host)s/v3/images/cedef40a-ed67-4d10-800e-17455edce175",
+                    "href": "%(host)s/v2/openstack/images/cedef40a-ed67-4d10-800e-17455edce175",
                     "rel": "self"
                 },
                 {
-                    "href": "%(host)s/images/cedef40a-ed67-4d10-800e-17455edce175",
+                    "href": "%(host)s/openstack/images/cedef40a-ed67-4d10-800e-17455edce175",
                     "rel": "bookmark"
                 },
                 {
@@ -190,11 +190,11 @@
             "id": "76fa36fc-c930-4bf3-8c8a-ea2a2420deb6",
             "links": [
                 {
-                    "href": "%(host)s/v3/images/76fa36fc-c930-4bf3-8c8a-ea2a2420deb6",
+                    "href": "%(host)s/v2/openstack/images/76fa36fc-c930-4bf3-8c8a-ea2a2420deb6",
                     "rel": "self"
                 },
                 {
-                    "href": "%(host)s/images/76fa36fc-c930-4bf3-8c8a-ea2a2420deb6",
+                    "href": "%(host)s/openstack/images/76fa36fc-c930-4bf3-8c8a-ea2a2420deb6",
                     "rel": "bookmark"
                 },
                 {

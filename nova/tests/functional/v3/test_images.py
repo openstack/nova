@@ -13,14 +13,23 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_config import cfg
 
 from nova.tests.functional.v3 import api_sample_base
 from nova.tests.unit.image import fake
+
+CONF = cfg.CONF
+CONF.import_opt('osapi_compute_extension',
+                'nova.api.openstack.compute.extensions')
 
 
 class ImagesSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
     extension_name = 'images'
     extra_extensions_to_load = ["image-metadata"]
+    # TODO(gmann): Overriding '_api_version' till all functional tests
+    # are merged between v2 and v2.1. After that base class variable
+    # itself can be changed to 'v2'
+    _api_version = 'v2'
 
     def test_images_list(self):
         # Get api sample of images get list request.
@@ -62,9 +71,8 @@ class ImagesSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
     def test_image_metadata_put(self):
         # Get api sample of image metadata put request.
         image_id = fake.get_valid_image_id()
-        response = self._do_put('%s/images/%s/metadata' %
-                                (self.api.project_id, image_id),
-                                'image-metadata-put-req', {})
+        response = self._do_put('images/%s/metadata' %
+                                (image_id), 'image-metadata-put-req', {})
         subs = self._get_regexes()
         self._verify_response('image-metadata-put-resp', subs, response, 200)
 
