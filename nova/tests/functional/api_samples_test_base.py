@@ -185,6 +185,19 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
                 if isinstance(result, six.string_types):
                     result = result.strip()
             if expected != result:
+                # NOTE(tdurakov):this attempt to parse string as JSON
+                # is needed for correct comparison of hypervisor.cpu_info,
+                # which is stringified JSON object
+                #
+                # TODO(tdurakov): remove this check as soon as
+                # hypervisor.cpu_info become common JSON object in REST API.
+                try:
+                    expected = self._objectify(expected)
+                    result = self._objectify(result)
+                    return self._compare_result(subs, expected, result,
+                                                result_str)
+                except ValueError:
+                    pass
                 raise NoMatch(
                         'Values do not match:\n'
                         'Template: %(expected)s\n%(result_str)s: '
