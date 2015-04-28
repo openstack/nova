@@ -917,12 +917,6 @@ def _get_allocated_vnc_ports(session):
     return vnc_ports
 
 
-def _get_reference_for_value(results, value):
-    for object in results.objects:
-        if object.obj.value == value:
-            return object
-
-
 def _get_object_for_value(results, value):
     for object in results.objects:
         if object.propSet[0].val == value:
