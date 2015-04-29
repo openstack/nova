@@ -5400,21 +5400,6 @@ def aggregate_metadata_get_by_host(context, host, key=None):
     return dict(metadata)
 
 
-def aggregate_metadata_get_by_metadata_key(context, aggregate_id, key):
-    query = model_query(context, models.Aggregate)
-    query = query.join("_metadata")
-    query = query.filter(models.Aggregate.id == aggregate_id)
-    query = query.options(contains_eager("_metadata"))
-    query = query.filter(models.AggregateMetadata.key == key)
-    rows = query.all()
-
-    metadata = collections.defaultdict(set)
-    for agg in rows:
-        for kv in agg._metadata:
-            metadata[kv['key']].add(kv['value'])
-    return dict(metadata)
-
-
 def aggregate_get_by_metadata_key(context, key):
     """Return rows that match metadata key.
 
