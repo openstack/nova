@@ -522,6 +522,13 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 mock.call(self.compute.handle_events), mock.call(None)])
             mock_driver.cleanup_host.assert_called_once_with(host='fake-mini')
 
+    def test_init_virt_events_disabled(self):
+        self.flags(handle_virt_lifecycle_events=False, group='workarounds')
+        with mock.patch.object(self.compute.driver,
+                               'register_event_listener') as mock_register:
+            self.compute.init_virt_events()
+        self.assertFalse(mock_register.called)
+
     def test_init_host_with_deleted_migration(self):
         our_host = self.compute.host
         not_our_host = 'not-' + our_host
