@@ -54,10 +54,9 @@ Compute API v2
 ==============
 
 .. toctree::
-   :glob:
    :maxdepth: 1
 
-   v2/*
+   v2/index
 
 API Extensions
 ==============
