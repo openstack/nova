@@ -1027,7 +1027,7 @@ class TestCreate(test.NoDBTestCase):
         # Now verify that if we supply image data to the call,
         # that the client is also called with the data kwarg
         client.reset_mock()
-        image_meta = service.create(ctx, image_mock, data=mock.sentinel.data)
+        service.create(ctx, image_mock, data=mock.sentinel.data)
 
         client.call.assert_called_once_with(ctx, 1, 'create',
                                             image_id=mock.sentinel.image_id,
@@ -1088,8 +1088,8 @@ class TestUpdate(test.NoDBTestCase):
         # Now verify that if we supply image data to the call,
         # that the client is also called with the data kwarg
         client.reset_mock()
-        image_meta = service.update(ctx, mock.sentinel.image_id,
-                                    image_mock, data=mock.sentinel.data)
+        service.update(ctx, mock.sentinel.image_id,
+                       image_mock, data=mock.sentinel.data)
 
         client.call.assert_called_once_with(ctx, 1, 'update',
                                             mock.sentinel.image_id,

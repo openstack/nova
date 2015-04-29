@@ -909,7 +909,6 @@ class IronicDriverTestCase(test.NoDBTestCase):
                                              mock_required_by):
         mock_required_by.return_value = False
         node_uuid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
-        fake_net_info = utils.get_test_network_info()
         node = ironic_utils.get_test_node(driver='fake', uuid=node_uuid)
         flavor = ironic_utils.get_test_flavor()
         instance = fake_instance.fake_instance_obj(self.ctx, node=node_uuid)

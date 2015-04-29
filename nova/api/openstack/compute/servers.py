@@ -391,7 +391,6 @@ class Controller(wsgi.Controller):
 
     def _extract_bdm(self, server_dict, image_uuid_specified):
         legacy_bdm = True
-        block_device_mapping = None
         block_device_mapping_v2 = None
         if not self.ext_mgr.is_loaded('os-volumes'):
             return legacy_bdm, None

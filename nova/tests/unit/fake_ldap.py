@@ -265,7 +265,7 @@ class FakeLDAP(object):
                 values = [v]
             else:
                 values.remove(v)
-            values = store.hset(key, k, _to_json(values))
+            store.hset(key, k, _to_json(values))
 
     def modrdn_s(self, dn, newrdn):
         oldobj = self.search_s(dn, SCOPE_BASE)

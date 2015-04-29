@@ -4814,7 +4814,6 @@ class LibvirtDriver(driver.ComputeDriver):
             instance = instance_bdms['instance']
 
             for bdm in instance_bdms['instance_bdms']:
-                vol_stats = []
                 mountpoint = bdm['device_name']
                 if mountpoint.startswith('/dev/'):
                     mountpoint = mountpoint[5:]

@@ -542,7 +542,6 @@ def get_vmdk_info(session, vm_ref, uuid=None):
     vmdk_controller_key = None
     disk_type = None
     capacity_in_bytes = 0
-    vmdk_device = None
 
     # Determine if we need to get the details of the root disk
     root_disk = None
