@@ -30,6 +30,7 @@ import nova.image.glance
 CONF = cfg.CONF
 CONF.import_opt('null_kernel', 'nova.compute.api')
 LOG = logging.getLogger(__name__)
+AUTO_DISK_CONFIG_ENABLED_IMAGE_UUID = '70a599e0-31e7-49b7-b260-868f441e862b'
 
 
 class _FakeImageService(object):
@@ -129,7 +130,7 @@ class _FakeImageService(object):
                                 'architecture': arch.X86_64,
                                 'auto_disk_config': 'False'}}
 
-        image7 = {'id': '70a599e0-31e7-49b7-b260-868f441e862b',
+        image7 = {'id': AUTO_DISK_CONFIG_ENABLED_IMAGE_UUID,
                  'name': 'fakeimage7',
                  'created_at': timestamp,
                  'updated_at': timestamp,
@@ -245,7 +246,7 @@ def FakeImageService_reset():
 
 
 def get_valid_image_id():
-    return _fakeImageService.images.keys()[0]
+    return AUTO_DISK_CONFIG_ENABLED_IMAGE_UUID
 
 
 def stub_out_image_service(stubs):
