@@ -113,7 +113,8 @@ class HypervisorsController(object):
         except (ValueError, exception.ComputeHostNotFound):
             msg = _("Hypervisor with ID '%s' could not be found.") % id
             raise webob.exc.HTTPNotFound(explanation=msg)
-        service = self.host_api.service_get_by_compute_host(context, hyp.host)
+        service = self.host_api.service_get_by_compute_host(
+            context.elevated(), hyp.host)
         return dict(hypervisor=self._view_hypervisor(hyp, service, True))
 
     def uptime(self, req, id):

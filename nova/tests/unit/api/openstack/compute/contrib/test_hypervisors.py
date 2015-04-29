@@ -13,8 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import contextlib
 import copy
-
 import mock
 import netaddr
 from webob import exc
@@ -195,7 +195,7 @@ class HypervisorsTestV21(test.NoDBTestCase):
     def setUp(self):
         super(HypervisorsTestV21, self).setUp()
         self._set_up_controller()
-
+        self.rule_hyp_show = "os_compute_api:os-hypervisors"
         self.stubs.Set(self.controller.host_api, 'compute_node_get_all',
                        fake_compute_node_get_all)
         self.stubs.Set(self.controller.host_api, 'service_get_by_compute_host',
@@ -270,6 +270,25 @@ class HypervisorsTestV21(test.NoDBTestCase):
         result = self.controller.show(req, self.TEST_HYPERS_OBJ[0].id)
 
         self.assertEqual(result, dict(hypervisor=self.DETAIL_HYPERS_DICTS[0]))
+
+    def test_show_non_admin_elevated(self):
+        non_adm = "is_admin:False"
+        self.policy.set_rules({self.rule_hyp_show: non_adm})
+        req = self._get_request(False)
+        ctxt = req.environ['nova.context']
+        elevated_context = ctxt.elevated()
+        with contextlib.nested(
+            mock.patch.object(ctxt, 'elevated',
+                              return_value=elevated_context),
+            mock.patch.object(self.controller.host_api,
+                              'service_get_by_compute_host')
+        ) as (
+            elevated_mock,
+            mock_service
+        ):
+            self.controller.show(req, self.TEST_HYPERS_OBJ[0].id)
+            mock_service.assert_called_once_with(elevated_context,
+                                                 self.TEST_HYPERS_OBJ[0].host)
 
     def test_show_non_admin(self):
         req = self._get_request(False)
@@ -434,6 +453,10 @@ class HypervisorsTestV2(HypervisorsTestV21):
     del INDEX_HYPER_DICTS[1]['state']
     del INDEX_HYPER_DICTS[0]['status']
     del INDEX_HYPER_DICTS[1]['status']
+
+    def setUp(self):
+        super(HypervisorsTestV2, self).setUp()
+        self.rule_hyp_show = "compute_extension:hypervisors"
 
     def _set_up_controller(self):
         self.context = context.get_admin_context()
