@@ -98,7 +98,6 @@ def cinderclient(context):
 
     url = None
     endpoint_override = None
-    version = None
 
     auth = context.get_auth_plugin()
     service_type, service_name, interface = CONF.cinder.catalog_info.split(':')

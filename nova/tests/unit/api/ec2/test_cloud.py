@@ -584,16 +584,16 @@ class CloudTestCase(test.TestCase):
             'user_id': self.context.user_id,
             'name': 'test'
         }
-        sec = db.security_group_create(self.context,
-                                       {'project_id': 'someuser',
-                                        'user_id': 'someuser',
-                                        'description': '',
-                                        'name': 'somegroup1'})
-        sec = db.security_group_create(self.context,
-                                       {'project_id': 'someuser',
-                                        'user_id': 'someuser',
-                                        'description': '',
-                                        'name': 'othergroup2'})
+        db.security_group_create(self.context,
+                                 {'project_id': 'someuser',
+                                 'user_id': 'someuser',
+                                 'description': '',
+                                 'name': 'somegroup1'})
+        db.security_group_create(self.context,
+                                 {'project_id': 'someuser',
+                                  'user_id': 'someuser',
+                                  'description': '',
+                                  'name': 'othergroup2'})
         sec = db.security_group_create(self.context, kwargs)
         authz = self.cloud.authorize_security_group_ingress
         kwargs = {'ip_permissions': [{'to_port': 81, 'from_port': 81,
@@ -766,7 +766,7 @@ class CloudTestCase(test.TestCase):
             expected_rules[0]['toPort'] = 65535
         self.assertTrue(expected_rules == actual_rules)
         describe = self.cloud.describe_security_groups
-        groups = describe(self.context, group_name=['test'])
+        describe(self.context, group_name=['test'])
 
         db.security_group_destroy(self.context, sec['id'])
 

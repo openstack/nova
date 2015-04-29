@@ -959,7 +959,6 @@ class API(base_api.NetworkAPI):
         Return vnic type and the attached physical network name.
         """
         phynet_name = None
-        vnic_type = None
         port = neutron.show_port(port_id,
             fields=['binding:vnic_type', 'network_id']).get('port')
         vnic_type = port.get('binding:vnic_type',

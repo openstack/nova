@@ -2718,16 +2718,14 @@ class InstanceMetadataTestCase(test.TestCase):
                     'project_id': 'p1', 'metadata': {'key': 'value'}})
 
         # This should add new key/value pair
-        metadata = db.instance_metadata_update(
-                    self.ctxt, instance['uuid'],
-                    {'new_key': 'new_value'}, False)
+        db.instance_metadata_update(self.ctxt, instance['uuid'],
+                                    {'new_key': 'new_value'}, False)
         metadata = db.instance_metadata_get(self.ctxt, instance['uuid'])
         self.assertEqual(metadata, {'key': 'value', 'new_key': 'new_value'})
 
         # This should leave only one key/value pair
-        metadata = db.instance_metadata_update(
-                    self.ctxt, instance['uuid'],
-                    {'new_key': 'new_value'}, True)
+        db.instance_metadata_update(self.ctxt, instance['uuid'],
+                                    {'new_key': 'new_value'}, True)
         metadata = db.instance_metadata_get(self.ctxt, instance['uuid'])
         self.assertEqual(metadata, {'new_key': 'new_value'})
 

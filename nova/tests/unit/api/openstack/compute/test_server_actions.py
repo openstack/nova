@@ -655,7 +655,7 @@ class ServerActionsControllerTestV21(test.TestCase):
 
         self.stubs.Set(compute_api.API, 'resize', resize_mock)
 
-        body = self.controller._action_resize(self.req, FAKE_UUID, body=body)
+        self.controller._action_resize(self.req, FAKE_UUID, body=body)
 
         self.assertEqual(self.resize_called, True)
 
@@ -810,8 +810,7 @@ class ServerActionsControllerTestV21(test.TestCase):
 
         self.stubs.Set(compute_api.API, 'confirm_resize', cr_mock)
 
-        body = self.controller._action_confirm_resize(self.req, FAKE_UUID,
-                                                      body=body)
+        self.controller._action_confirm_resize(self.req, FAKE_UUID, body=body)
 
         self.assertEqual(self.confirm_resize_called, True)
 

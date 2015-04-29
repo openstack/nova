@@ -168,7 +168,6 @@ class InterfaceAttachmentController(wsgi.Controller):
         authorize(context)
 
         instance = common.get_instance(self.compute_api, context, server_id)
-        results = []
         search_opts = {'device_id': instance.uuid}
 
         try:

@@ -426,7 +426,7 @@ class CinderCloudTestCase(test.TestCase):
     def test_create_snapshot(self):
         # Makes sure create_snapshot works.
         availability_zone = 'zone1:host1'
-        result = self.cloud.describe_snapshots(self.context)
+        self.cloud.describe_snapshots(self.context)
         vol1 = self.cloud.create_volume(self.context,
                                           size=1,
                                           availability_zone=availability_zone)
