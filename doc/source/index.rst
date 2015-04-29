@@ -31,6 +31,7 @@ Developer Docs
    devref/index
    man/index
    support-matrix
+   devref/project_scope
 
 Compute API v2
 ==============
