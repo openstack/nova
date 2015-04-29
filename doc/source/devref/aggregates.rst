@@ -63,7 +63,7 @@ Usage
   * aggregate-delete         <id>                                     Delete the aggregate by its id.
   * aggregate-details        <id>                                     Show details of the specified aggregate.
   * aggregate-add-host       <id> <host>                              Add the host to the specified aggregate.
-  * aggregate-remove-host    <id> <host>                              Remove the specified host from the specfied aggregate.
+  * aggregate-remove-host    <id> <host>                              Remove the specified host from the specified aggregate.
   * aggregate-set-metadata   <id> <key=value> [<key=value> ...]       Update the metadata associated with the aggregate.
   * aggregate-update         <id> <name> [<availability_zone>]        Update the aggregate's name and optionally availability zone.
 

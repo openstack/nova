@@ -54,7 +54,7 @@ Future of policy enforcement
 
 The generic rule for all the improvement is keep V2 API back-compatible.
 Because V2 API may be deprecated after V2.1 parity with V2. This can reduce
-the risk we taked. The improvement just for EC2 and V2.1 API. There isn't
+the risk we take. The improvement just for EC2 and V2.1 API. There isn't
 any user for V2.1, as it isn't ready yet. We have to do change for EC2 API.
 EC2 API won't be removed like v2 API. If we keep back-compatible for EC2 API
 also, the old compute api layer checks won't be removed forever. EC2 API is
@@ -104,7 +104,7 @@ Use different prefix in policy rule name for EC2/V2/V2.1 API
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Currently all the APIs(Nova v2/v2.1 API, EC2 API) use same set of policy
-rules. Espcially there isn't obvious mapping between those policy rules
+rules. Especially there isn't obvious mapping between those policy rules
 and EC2 API. User can know clearly which policy should be configured for
 specific API.
 
