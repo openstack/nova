@@ -182,7 +182,7 @@ operation of Nova libvirt guests boot a tiny instance
 
 .. code-block:: bash
 
-  # . openrc admin admin
+  # . openrc admin
   # nova boot --image cirros-0.3.2-x86_64-uec --flavor m1.tiny cirros1
 
 The host will be reporting NUMA topology, but there should only
@@ -192,11 +192,46 @@ be a single NUMA cell this point.
 
   # mysql -u root -p nova
   MariaDB [nova]> select numa_topology from compute_nodes;
-  +------------------------------------------------------------------------------------------------------+
-  | numa_topology                                                                                        |
-  +------------------------------------------------------------------------------------------------------+
-  | {"cells": [{"mem": {"total": 7794, "used": 0}, "cpu_usage": 0, "cpus": "0,1,2,3,4,5,6,7", "id": 0}]} |
-  +------------------------------------------------------------------------------------------------------+
+  +----------------------------------------------------------------------------+
+  | numa_topology                                                              |
+  +----------------------------------------------------------------------------+
+  | {
+  |     "nova_object.name": "NUMATopology",
+  |     "nova_object.data": {
+  |         "cells": [{
+  |                 "nova_object.name": "NUMACell",
+  |                 "nova_object.data": {
+  |                     "cpu_usage": 0,
+  |                     "memory_usage": 0,
+  |                     "cpuset": [0, 1, 2, 3, 4, 5, 6, 7],
+  |                     "pinned_cpus": [],
+  |                     "siblings": [],
+  |                     "memory": 7793,
+  |                     "mempages": [
+  |                         {
+  |                             "nova_object.name": "NUMAPagesTopology",
+  |                             "nova_object.data": {
+  |                                 "total": 987430,
+  |                                 "used": 0,
+  |                                 "size_kb": 4
+  |                             },
+  |                         },
+  |                         {
+  |                             "nova_object.name": "NUMAPagesTopology",
+  |                             "nova_object.data": {
+  |                                 "total": 0,
+  |                                 "used": 0,
+  |                                 "size_kb": 2048
+  |                             },
+  |                         }
+  |                     ],
+  |                     "id": 0
+  |                 },
+  |             },
+  |         ]
+  |     },
+  | }
+  +----------------------------------------------------------------------------+
 
 
 Meanwhile, the guest instance should not have any NUMA configuration
@@ -276,7 +311,7 @@ Set the following parameters:
 .. code-block:: bash
 
   [DEFAULT]
-  scheduler_default_filters=RetryFilter, AvailabilityZoneFilter, RamFilter, ComputeFilter, ComputeCapabilitiesFilter, ImagePropertiesFilter, ServerGroupAntiAffinityFilter,ServerGroupAffinityFilter, NUMATopologyFilter
+  scheduler_default_filters=RetryFilter, AvailabilityZoneFilter, RamFilter, ComputeFilter, ComputeCapabilitiesFilter, ImagePropertiesFilter, ServerGroupAntiAffinityFilter, ServerGroupAffinityFilter, NUMATopologyFilter
 
   [libvirt]
   virt_type = kvm
@@ -297,12 +332,106 @@ new NUMA topology setup for the guest
 
   # mysql -u root -p nova
   MariaDB [nova]> select numa_topology from compute_nodes;
-  +--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-  | numa_topology                                                                                                                                                                                                                                          |
-  +--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-  | {"cells": [{"mem": {"total": 3857, "used": 0}, "cpu_usage": 0, "cpus": "0,1,2,3", "id": 0}, {"mem": {"total": 1969, "used": 0}, "cpu_usage": 0, "cpus": "4,5", "id": 1}, {"mem": {"total": 1967, "used": 0}, "cpu_usage": 0, "cpus": "6,7", "id": 2}]} |
-  +--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-
+  +----------------------------------------------------------------------------+
+  | numa_topology                                                              |
+  +----------------------------------------------------------------------------+
+  | {
+  |     "nova_object.name": "NUMATopology",
+  |     "nova_object.data": {
+  |         "cells": [{
+  |                 "nova_object.name": "NUMACell",
+  |                 "nova_object.data": {
+  |                     "cpu_usage": 0,
+  |                     "memory_usage": 0,
+  |                     "cpuset": [0, 1, 2, 3],
+  |                     "pinned_cpus": [],
+  |                     "siblings": [],
+  |                     "memory": 3857,
+  |                     "mempages": [
+  |                         {
+  |                             "nova_object.name": "NUMAPagesTopology",
+  |                             "nova_object.data": {
+  |                                 "total": 987430,
+  |                                 "used": 0,
+  |                                 "size_kb": 4
+  |                             },
+  |                         },
+  |                         {
+  |                             "nova_object.name": "NUMAPagesTopology",
+  |                             "nova_object.data": {
+  |                                 "total": 0,
+  |                                 "used": 0,
+  |                                 "size_kb": 2048
+  |                             },
+  |                         }
+  |                     ],
+  |                     "id": 0
+  |                 },
+  |             },
+  |             {
+  |                 "nova_object.name": "NUMACell",
+  |                 "nova_object.data": {
+  |                     "cpu_usage": 0,
+  |                     "memory_usage": 0,
+  |                     "cpuset": [4, 5],
+  |                     "pinned_cpus": [],
+  |                     "siblings": [],
+  |                     "memory": 1969,
+  |                     "mempages": [
+  |                         {
+  |                             "nova_object.name": "NUMAPagesTopology",
+  |                             "nova_object.data": {
+  |                                 "total": 504216,
+  |                                 "used": 0,
+  |                                 "size_kb": 4
+  |                             },
+  |                         },
+  |                         {
+  |                             "nova_object.name": "NUMAPagesTopology",
+  |                             "nova_object.data": {
+  |                                 "total": 0,
+  |                                 "used": 0,
+  |                                 "size_kb": 2048
+  |                             },
+  |                         }
+  |                     ],
+  |                     "id": 1
+  |                 },
+  |             },
+  |             {
+  |                 "nova_object.name": "NUMACell",
+  |                 "nova_object.data": {
+  |                     "cpu_usage": 0,
+  |                     "memory_usage": 0,
+  |                     "cpuset": [6, 7],
+  |                     "pinned_cpus": [],
+  |                     "siblings": [],
+  |                     "memory": 1967,
+  |                     "mempages": [
+  |                         {
+  |                             "nova_object.name": "NUMAPagesTopology",
+  |                             "nova_object.data": {
+  |                                 "total": 503575,
+  |                                 "used": 0,
+  |                                 "size_kb": 4
+  |                             },
+  |                         },
+  |                         {
+  |                             "nova_object.name": "NUMAPagesTopology",
+  |                             "nova_object.data": {
+  |                                 "total": 0,
+  |                                 "used": 0,
+  |                                 "size_kb": 2048
+  |                             },
+  |                         }
+  |                     ],
+  |                     "id": 2
+  |                 },
+  |             }
+  |         ]
+  |     },
+  | }
+  +----------------------------------------------------------------------------+
 
 This indeed shows that there are now 3 NUMA nodes for the "host"
 machine, the first with 4 GB of RAM and 4 CPUs, and others with
@@ -380,15 +509,13 @@ Looking at the resulting guest XML from libvirt
   <cpu>
     <topology sockets='4' cores='1' threads='1'/>
     <numa>
-      <cell id='0' cpus='0-1' memory='524288'/>
-      <cell id='1' cpus='2-3' memory='524288'/>
+      <cell id='0' cpus='0-3' memory='1048576'/>
     </numa>
   </cpu>
   ...
   <numatune>
-    <memory mode='strict' nodeset='0-1'/>
+    <memory mode='strict' nodeset='0'/>
     <memnode cellid='0' mode='strict' nodeset='0'/>
-    <memnode cellid='1' node='strict' nodeset='1'/>
   </numatune>
 
 The XML shows:
@@ -396,11 +523,11 @@ The XML shows:
 * Each guest CPU has been pinned to the physical CPUs
   associated with a particular NUMA node
 * The emulator threads have been pinned to the union
-  of all physical CPUs in the host NUMA nodes that
+  of all physical CPUs in the host NUMA node that
   the guest is placed on
 * The guest has been given a virtual NUMA topology
-  splitting RAM and CPUs symmetrically
-* Each guest NUMA node has been strictly pinned to
+  with a single node holding all RAM and CPUs
+* The guest NUMA node has been strictly pinned to
   a host NUMA node.
 
 As a further sanity test, check what Nova recorded for the
@@ -410,8 +537,140 @@ information
 .. code-block:: bash
 
   MariaDB [nova]> select numa_topology from instance_extra;
-  +---------------------------------------------------------------------------------------------------------------+
-  | numa_topology                                                                                                 |
-  +---------------------------------------------------------------------------------------------------------------+
-  | {"cells": [{"mem": {"total": 512}, "cpus": "0,1", "id": 0}, {"mem": {"total": 512}, "cpus": "2,3", "id": 1}]} |
-  +---------------------------------------------------------------------------------------------------------------+
+  +----------------------------------------------------------------------------+
+  | numa_topology                                                              |
+  +----------------------------------------------------------------------------+
+  | {
+  |     "nova_object.name": "InstanceNUMATopology",
+  |     "nova_object.data": {
+  |         "instance_uuid": "4c2302fe-3f0f-46f1-9f3e-244011f6e03a",
+  |         "cells": [
+  |             {
+  |                 "nova_object.name": "InstanceNUMACell",
+  |                 "nova_object.data": {
+  |                     "cpu_topology": null,
+  |                     "pagesize": null,
+  |                     "cpuset": [
+  |                         0,
+  |                         1,
+  |                         2,
+  |                         3
+  |                     ],
+  |                     "memory": 1024,
+  |                     "cpu_pinning_raw": null,
+  |                     "id": 0
+  |                 },
+  |             }
+  |         ]
+  |     },
+  | }
+  +----------------------------------------------------------------------------+
+
+-------------------------------------------------
+Testing instance boot with 2 NUMA cells requested
+-------------------------------------------------
+
+Now getting more advanced we tell Nova that the guest will have two
+NUMA nodes. To define the topology we will change the previously
+defined flavor
+
+.. code-block:: bash
+
+  # nova flavor-key m1.numa set hw:numa_nodes=2
+  # nova flavor-show m1.numa
+
+Now boot the guest using this changed flavor
+
+.. code-block:: bash
+
+  # nova boot --image cirros-0.3.2-x86_64-uec --flavor m1.numa cirros2
+
+Looking at the resulting guest XML from libvirt
+
+.. code-block:: bash
+
+  # virsh -c qemu:///system dumpxml instanceXXXXXX
+  ...
+  <vcpu placement='static'>4</vcpu>
+  <cputune>
+    <vcpupin vcpu='0' cpuset='0-3'/>
+    <vcpupin vcpu='1' cpuset='0-3'/>
+    <vcpupin vcpu='2' cpuset='4-5'/>
+    <vcpupin vcpu='3' cpuset='4-5'/>
+    <emulatorpin cpuset='0-5'/>
+  </cputune>
+  ...
+  <cpu>
+    <topology sockets='4' cores='1' threads='1'/>
+    <numa>
+      <cell id='0' cpus='0-1' memory='524288'/>
+      <cell id='1' cpus='2-3' memory='524288'/>
+    </numa>
+  </cpu>
+  ...
+  <numatune>
+    <memory mode='strict' nodeset='0-1'/>
+    <memnode cellid='0' mode='strict' nodeset='0'/>
+    <memnode cellid='1' mode='strict' nodeset='1'/>
+  </numatune>
+
+The XML shows:
+
+* Each guest CPU has been pinned to the physical CPUs
+  associated with particular NUMA nodes
+* The emulator threads have been pinned to the union
+  of all physical CPUs in the host NUMA nodes that
+  the guest is placed on
+* The guest has been given a virtual NUMA topology
+  with two nodes, each holding half the RAM and CPUs
+* The guest NUMA nodes have been strictly pinned to
+  different host NUMA node.
+
+As a further sanity test, check what Nova recorded for the
+instance in the database. This should match the <numatune>
+information
+
+.. code-block:: bash
+
+  MariaDB [nova]> select numa_topology from instance_extra;
+  +----------------------------------------------------------------------------+
+  | numa_topology                                                              |
+  +----------------------------------------------------------------------------+
+  | {
+  |     "nova_object.name": "InstanceNUMATopology",
+  |     "nova_object.data": {
+  |         "instance_uuid": "a14fcd68-567e-4d71-aaa4-a12f23f16d14",
+  |         "cells": [
+  |             {
+  |                 "nova_object.name": "InstanceNUMACell",
+  |                 "nova_object.data": {
+  |                     "cpu_topology": null,
+  |                     "pagesize": null,
+  |                     "cpuset": [
+  |                         0,
+  |                         1
+  |                     ],
+  |                     "memory": 512,
+  |                     "cpu_pinning_raw": null,
+  |                     "id": 0
+  |                 },
+  |             },
+  |             {
+  |                 "nova_object.name": "InstanceNUMACell",
+  |                 "nova_object.data": {
+  |                     "cpu_topology": null,
+  |                     "pagesize": null,
+  |                     "cpuset": [
+  |                         2,
+  |                         3
+  |                     ],
+  |                     "memory": 512,
+  |                     "cpu_pinning_raw": null,
+  |                     "id": 1
+  |                 },
+  |             }
+  |         ]
+  |     },
+  | }
+  |
+  +----------------------------------------------------------------------------+
