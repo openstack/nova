@@ -520,7 +520,6 @@ class ImageCacheManager(imagecache.ImageCacheManager):
             # Give other threads a chance to run
             time.sleep(0)
 
-        instances = []
         if img_id in self.used_images:
             local, remote, instances = self.used_images[img_id]
 

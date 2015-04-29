@@ -541,8 +541,6 @@ class SessionBase(object):
 
     def SR_introduce(self, _1, sr_uuid, label, desc, type, content_type,
                      shared, sm_config):
-        ref = None
-        rec = None
         for ref, rec in _db_content['SR'].iteritems():
             if rec.get('uuid') == sr_uuid:
                 # make forgotten = 0 and return ref

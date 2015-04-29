@@ -1937,7 +1937,7 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
                          utils.metadata_to_dict(inst['system_metadata']))
 
     def test_instance_get_all_with_meta(self):
-        inst = self.create_instance_with_args()
+        self.create_instance_with_args()
         for inst in db.instance_get_all(self.ctxt):
             meta = utils.metadata_to_dict(inst['metadata'])
             self.assertEqual(meta, self.sample_data['metadata'])
@@ -2023,7 +2023,7 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         mock_undefer.assert_called_once_with('extra.pci_requests')
 
     def test_instance_get_all_by_filters_with_meta(self):
-        inst = self.create_instance_with_args()
+        self.create_instance_with_args()
         for inst in db.instance_get_all_by_filters(self.ctxt, {}):
             meta = utils.metadata_to_dict(inst['metadata'])
             self.assertEqual(meta, self.sample_data['metadata'])
@@ -2031,7 +2031,7 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
             self.assertEqual(sys_meta, self.sample_data['system_metadata'])
 
     def test_instance_get_all_by_filters_without_meta(self):
-        inst = self.create_instance_with_args()
+        self.create_instance_with_args()
         result = db.instance_get_all_by_filters(self.ctxt, {},
                                                 columns_to_join=[])
         for inst in result:

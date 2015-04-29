@@ -77,7 +77,7 @@ def init_leases(network_id):
 
 
 def add_action_parsers(subparsers):
-    parser = subparsers.add_parser('init')
+    subparsers.add_parser('init')
 
     # NOTE(cfb): dnsmasq always passes mac, and ip. hostname
     #            is passed if known. We don't care about
