@@ -405,46 +405,6 @@ class UserDataJsonTest(ApiSampleTestBaseV2):
         self._verify_response('userdata-post-resp', subs, response, 202)
 
 
-class FlavorRxtxJsonTest(ApiSampleTestBaseV2):
-    ADMIN_API = True
-    extension_name = ('nova.api.openstack.compute.contrib.flavor_rxtx.'
-                      'Flavor_rxtx')
-
-    def _get_flags(self):
-        f = super(FlavorRxtxJsonTest, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        # FlavorRxtx extension also needs Flavormanage to be loaded.
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.flavormanage.Flavormanage')
-        return f
-
-    def test_flavor_rxtx_get(self):
-        flavor_id = 1
-        response = self._do_get('flavors/%s' % flavor_id)
-        subs = {
-            'flavor_id': flavor_id,
-            'flavor_name': 'm1.tiny'
-        }
-        subs.update(self._get_regexes())
-        self._verify_response('flavor-rxtx-get-resp', subs, response, 200)
-
-    def test_flavors_rxtx_list(self):
-        response = self._do_get('flavors/detail')
-        subs = self._get_regexes()
-        self._verify_response('flavor-rxtx-list-resp', subs, response, 200)
-
-    def test_flavors_rxtx_create(self):
-        subs = {
-            'flavor_id': 100,
-            'flavor_name': 'flavortest'
-        }
-        response = self._do_post('flavors',
-                                 'flavor-rxtx-post-req',
-                                 subs)
-        subs.update(self._get_regexes())
-        self._verify_response('flavor-rxtx-post-resp', subs, response, 200)
-
-
 class SecurityGroupsSampleJsonTest(ServersSampleBase):
     extension_name = "nova.api.openstack.compute.contrib" + \
                      ".security_groups.Security_groups"

@@ -6,11 +6,11 @@
         "id": "1",
         "links": [
             {
-                "href": "http://openstack.example.com/v3/flavors/1",
+                "href": "http://openstack.example.com/v2/openstack/flavors/1",
                 "rel": "self"
             },
             {
-                "href": "http://openstack.example.com/flavors/1",
+                "href": "http://openstack.example.com/openstack/flavors/1",
                 "rel": "bookmark"
             }
         ],

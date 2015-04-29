@@ -13,11 +13,45 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_config import cfg
+
 from nova.tests.functional.v3 import api_sample_base
+
+CONF = cfg.CONF
+CONF.import_opt('osapi_compute_extension',
+                'nova.api.openstack.compute.extensions')
 
 
 class FlavorRxtxJsonTest(api_sample_base.ApiSampleTestBaseV3):
+    ADMIN_API = True
     extension_name = 'os-flavor-rxtx'
+    # TODO(park): Overriding '_api_version' till all functional tests
+    # are merged between v2 and v2.1. After that base class variable
+    # itself can be changed to 'v2'
+    _api_version = 'v2'
+
+    def _get_flags(self):
+        f = super(FlavorRxtxJsonTest, self)._get_flags()
+        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.flavor_rxtx.'
+            'Flavor_rxtx')
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.flavormanage.'
+            'Flavormanage')
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.flavor_disabled.'
+            'Flavor_disabled')
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.flavor_access.'
+            'Flavor_access')
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.flavorextradata.'
+            'Flavorextradata')
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.flavor_swap.'
+            'Flavor_swap')
+        return f
 
     def test_flavor_rxtx_get(self):
         flavor_id = 1
