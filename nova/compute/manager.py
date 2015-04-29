@@ -1229,6 +1229,8 @@ class ComputeManager(manager.Manager):
             vm_power_state = power_state.PAUSED
         elif event.get_transition() == virtevent.EVENT_LIFECYCLE_RESUMED:
             vm_power_state = power_state.RUNNING
+        elif event.get_transition() == virtevent.EVENT_LIFECYCLE_SUSPENDED:
+            vm_power_state = power_state.SUSPENDED
         else:
             LOG.warning(_LW("Unexpected power state %d"),
                         event.get_transition())
