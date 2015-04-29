@@ -1011,19 +1011,6 @@ class AdminActionsSamplesJsonTest(ServersSampleBase):
                                  'admin-actions-unpause', {})
         self.assertEqual(response.status_code, 202)
 
-    def test_post_suspend(self):
-        # Get api samples to suspend server request.
-        response = self._do_post('servers/%s/action' % self.uuid,
-                                 'admin-actions-suspend', {})
-        self.assertEqual(response.status_code, 202)
-
-    def test_post_resume(self):
-        # Get api samples to server resume request.
-        self.test_post_suspend()
-        response = self._do_post('servers/%s/action' % self.uuid,
-                                 'admin-actions-resume', {})
-        self.assertEqual(response.status_code, 202)
-
     @mock.patch('nova.conductor.manager.ComputeTaskManager._cold_migrate')
     def test_post_migrate(self, mock_cold_migrate):
         # Get api samples to migrate server request.
