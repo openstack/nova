@@ -655,35 +655,6 @@ class ExtendedRescueWithImageJsonTest(ServersSampleBase):
         self._verify_response('server-get-resp-rescue', subs, response, 200)
 
 
-class ShelveJsonTest(ServersSampleBase):
-    extension_name = "nova.api.openstack.compute.contrib.shelve.Shelve"
-
-    def setUp(self):
-        super(ShelveJsonTest, self).setUp()
-        # Don't offload instance, so we can test the offload call.
-        CONF.set_override('shelved_offload_time', -1)
-
-    def _test_server_action(self, uuid, template, action):
-        response = self._do_post('servers/%s/action' % uuid,
-                                 template, {'action': action})
-        self.assertEqual(response.status_code, 202)
-        self.assertEqual(response.content, "")
-
-    def test_shelve(self):
-        uuid = self._post_server()
-        self._test_server_action(uuid, 'os-shelve', 'shelve')
-
-    def test_shelve_offload(self):
-        uuid = self._post_server()
-        self._test_server_action(uuid, 'os-shelve', 'shelve')
-        self._test_server_action(uuid, 'os-shelve-offload', 'shelveOffload')
-
-    def test_unshelve(self):
-        uuid = self._post_server()
-        self._test_server_action(uuid, 'os-shelve', 'shelve')
-        self._test_server_action(uuid, 'os-unshelve', 'unshelve')
-
-
 class VirtualInterfacesJsonTest(ServersSampleBase):
     extension_name = ("nova.api.openstack.compute.contrib"
                      ".virtual_interfaces.Virtual_interfaces")
