@@ -177,6 +177,12 @@ class LibvirtGenericVIFDriver(object):
             return True
         return False
 
+    def get_colo_nic_name(self, vif):
+        return vif['network'].get('colo_nic_name', None)
+
+    def get_colo_failover(self, vif):
+        return vif['network'].get('colo_failover', None)
+
     def get_config_bridge(self, instance, vif, image_meta,
                           inst_type, virt_type):
         """Get VIF configurations for bridge type."""
@@ -192,6 +198,9 @@ class LibvirtGenericVIFDriver(object):
         if self.get_firewall_required(vif):
             conf.filtername = name
         designer.set_vif_bandwidth_config(conf, inst_type)
+
+        designer.set_vif_colo_config(conf, self.get_colo_nic_name(vif),
+                                     self.get_colo_failover(vif))
 
         return conf
 
@@ -209,10 +218,24 @@ class LibvirtGenericVIFDriver(object):
 
         return conf
 
+    def set_config_ovs_hybrid_colo(self, instance, vif):
+        system_metadata = utils.instance_sys_meta(instance)
+        ft_role = system_metadata.get('ft_role', None)
+        if ft_role == 'primary' or ft_role == 'secondary':
+            colo_nic_name, _ = self.get_colo_veth_pair_names(vif['id'])
+            vif['network']['colo_nic_name'] = colo_nic_name
+
+            if ft_role == 'secondary':
+                vif['network']['colo_failover'] = vif['network']['bridge']
+                vif['network']['bridge'] = self.get_colo_br_name(vif['id'])
+
     def get_config_ovs_hybrid(self, instance, vif, image_meta,
                               inst_type, virt_type):
         newvif = copy.deepcopy(vif)
         newvif['network']['bridge'] = self.get_br_name(vif['id'])
+
+        self.set_config_ovs_hybrid_colo(instance, newvif)
+
         return self.get_config_bridge(instance, newvif, image_meta,
                                       inst_type, virt_type)
 

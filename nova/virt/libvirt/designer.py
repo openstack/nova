@@ -156,3 +156,9 @@ def set_vif_bandwidth_config(conf, inst_type):
         if len(scope) > 1 and scope[0] == 'quota':
             if scope[1] in bandwidth_items:
                 setattr(conf, scope[1], value)
+
+
+def set_vif_colo_config(conf, colo_nic_name, colo_failover=None):
+    conf.colo_nic_name = colo_nic_name
+    if colo_failover:
+        conf.colo_failover = colo_failover
