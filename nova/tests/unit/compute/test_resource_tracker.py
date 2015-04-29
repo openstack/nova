@@ -485,7 +485,7 @@ class UnsupportedDriverTestCase(BaseTestCase):
     def test_disabled_instance_context_claim(self):
         # instance context manager variation:
         instance = self._fake_instance()
-        claim = self.tracker.instance_claim(self.context, instance)
+        self.tracker.instance_claim(self.context, instance)
         with self.tracker.instance_claim(self.context, instance) as claim:
             self.assertEqual(0, claim.memory_mb)
 

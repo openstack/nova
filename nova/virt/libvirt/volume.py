@@ -398,7 +398,6 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
         # multipath installed, discovering other targets if available
         # multipath should be configured on the nova-compute node,
         # in order to fit storage vendor
-        out = None
         if self.use_multipath:
             out = self._run_iscsiadm_discover(iscsi_properties)
 

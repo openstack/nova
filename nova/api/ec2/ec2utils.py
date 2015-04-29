@@ -257,7 +257,6 @@ def is_ec2_timestamp_expired(request, expires=None):
     """Checks the timestamp or expiry time included in an EC2 request
     and returns true if the request is expired
     """
-    query_time = None
     timestamp = request.get('Timestamp')
     expiry_time = request.get('Expires')
 
