@@ -3732,7 +3732,7 @@ class KeypairAPI(base.Base):
         self._notify(context, 'create.start', key_name)
 
         private_key, public_key, fingerprint = self._generate_key_pair(
-            context, user_id, key_type)
+            user_id, key_type)
 
         keypair = objects.KeyPair(context)
         keypair.user_id = user_id
@@ -3752,11 +3752,11 @@ class KeypairAPI(base.Base):
         elif key_type == keypair_obj.KEYPAIR_TYPE_X509:
             return crypto.generate_x509_fingerprint(public_key)
 
-    def _generate_key_pair(self, context, user_id, key_type):
+    def _generate_key_pair(self, user_id, key_type):
         if key_type == keypair_obj.KEYPAIR_TYPE_SSH:
             return crypto.generate_key_pair()
         elif key_type == keypair_obj.KEYPAIR_TYPE_X509:
-            return crypto.generate_winrm_x509_cert(user_id, context.project_id)
+            return crypto.generate_winrm_x509_cert(user_id)
 
     @wrap_exception()
     def delete_key_pair(self, context, user_id, key_name):
