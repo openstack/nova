@@ -902,15 +902,13 @@ def floating_ip_fixed_ip_associate(context, floating_address,
 @require_context
 @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
 def floating_ip_deallocate(context, address):
-    session = get_session()
-    with session.begin():
-        return model_query(context, models.FloatingIp, session=session).\
-            filter_by(address=address).\
-            filter(models.FloatingIp.project_id != null()).\
-            update({'project_id': None,
-                    'host': None,
-                    'auto_assigned': False},
-                   synchronize_session=False)
+    return model_query(context, models.FloatingIp).\
+        filter_by(address=address).\
+        filter(models.FloatingIp.project_id != null()).\
+        update({'project_id': None,
+                'host': None,
+                'auto_assigned': False},
+               synchronize_session=False)
 
 
 @require_context
