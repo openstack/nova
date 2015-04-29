@@ -1,13 +1,15 @@
 {
     "servers": [
         {
+            "accessIPv4": "1.2.3.4",
+            "accessIPv6": "80fe::",
             "addresses": {},
             "created": "%(isotime)s",
             "flavor": {
                 "id": "1",
                 "links": [
                     {
-                        "href": "%(host)s/flavors/1",
+                        "href": "%(host)s/openstack/flavors/1",
                         "rel": "bookmark"
                     }
                 ]
@@ -18,7 +20,7 @@
                 "id": "%(uuid)s",
                 "links": [
                     {
-                        "href": "%(host)s/images/%(uuid)s",
+                        "href": "%(host)s/openstack/images/%(uuid)s",
                         "rel": "bookmark"
                     }
                 ]
@@ -26,11 +28,11 @@
             "key_name": null,
             "links": [
                 {
-                    "href": "%(host)s/v3/servers/%(uuid)s",
+                    "href": "%(host)s/v2/openstack/servers/%(uuid)s",
                     "rel": "self"
                 },
                 {
-                    "href": "%(host)s/servers/%(id)s",
+                    "href": "%(host)s/openstack/servers/%(id)s",
                     "rel": "bookmark"
                 }
             ],
