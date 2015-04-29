@@ -37,6 +37,7 @@ from oslo_utils import uuidutils
 import six
 from sqlalchemy import Column
 from sqlalchemy.dialects import sqlite
+from sqlalchemy.exc import OperationalError
 from sqlalchemy import inspect
 from sqlalchemy import Integer
 from sqlalchemy import MetaData
@@ -7801,7 +7802,7 @@ class ArchiveTestCase(test.TestCase):
             ins_stmt = main_table.insert().values(uuid=uuidstr)
             try:
                 self.conn.execute(ins_stmt)
-            except db_exc.DBError:
+            except (db_exc.DBError, OperationalError):
                 # This table has constraints that require a table-specific
                 # insert, so skip it.
                 return 2
