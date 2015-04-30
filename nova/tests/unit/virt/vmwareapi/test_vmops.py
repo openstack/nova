@@ -956,7 +956,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             from_image.assert_called_once_with(self._instance.image_ref,
                                                self._image_meta)
             get_vm_config_info.assert_called_once_with(self._instance,
-                image_info, extra_specs.storage_policy)
+                image_info, extra_specs)
             build_virtual_machine.assert_called_once_with(self._instance,
                 image_info, vi.dc_info, vi.datastore, [],
                 extra_specs, self._get_metadata())
@@ -1014,7 +1014,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             from_image.assert_called_once_with(self._instance.image_ref,
                                                self._image_meta)
             get_vm_config_info.assert_called_once_with(self._instance,
-                image_info, extra_specs.storage_policy)
+                image_info, extra_specs)
             build_virtual_machine.assert_called_once_with(self._instance,
                 image_info, vi.dc_info, vi.datastore, [],
                 extra_specs, self._get_metadata(is_image_used=False))
@@ -1064,7 +1064,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         from_image.assert_called_once_with(self._instance.image_ref,
                                            self._image_meta)
         get_vm_config_info.assert_called_once_with(
-            self._instance, image_info, extra_specs.storage_policy)
+            self._instance, image_info, extra_specs)
         build_virtual_machine.assert_called_once_with(self._instance,
             image_info, vi.dc_info, vi.datastore, [],
             extra_specs, self._get_metadata(is_image_used=False))
@@ -1287,6 +1287,9 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                    extra_specs=None,
                    config_drive=False):
 
+        if extra_specs is None:
+            extra_specs = vm_util.ExtraSpecs()
+
         image_size = (self._instance.root_gb) * units.Gi / 2
         image = {
             'id': self._image_id,
@@ -1298,7 +1301,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             image_id=self._image_id,
             file_size=image_size)
         vi = self._vmops._get_vm_config_info(
-            self._instance, image_info)
+            self._instance, image_info, extra_specs)
 
         self._vmops._volumeops = mock.Mock()
         network_info = mock.Mock()
@@ -1430,13 +1433,16 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
 
         mock_get_datastore.return_value = self._ds
         mock_get_datacenter_ref_and_name.return_value = self._dc_info
+        extra_specs = vm_util.ExtraSpecs()
 
-        vi = self._vmops._get_vm_config_info(self._instance, image_info)
+        vi = self._vmops._get_vm_config_info(self._instance, image_info,
+                                             extra_specs)
         self.assertEqual(image_info, vi.ii)
         self.assertEqual(self._ds, vi.datastore)
         self.assertEqual(self._instance.root_gb, vi.root_gb)
         self.assertEqual(self._instance, vi.instance)
         self.assertEqual(self._instance.uuid, vi.instance.uuid)
+        self.assertEqual(extra_specs, vi._extra_specs)
 
         cache_image_path = '[%s] vmware_base/%s/%s.vmdk' % (
             self._ds.name, self._image_id, self._image_id)
