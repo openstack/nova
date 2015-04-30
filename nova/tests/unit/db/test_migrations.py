@@ -669,6 +669,11 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
         key_pairs = oslodbutils.get_table(engine, 'key_pairs')
         self.assertFalse(key_pairs.c.name.nullable)
 
+    def _check_291(self, engine, data):
+        # NOTE(danms): This is a dummy migration that just does a consistency
+        # check
+        pass
+
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
                                test_base.DbTestCase,
