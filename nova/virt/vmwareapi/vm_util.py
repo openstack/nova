@@ -96,7 +96,7 @@ class ExtraSpecs(object):
 
     def __init__(self, cpu_limits=None, hw_version=None,
                  storage_policy=None, cores_per_socket=None,
-                 memory_limits=None):
+                 memory_limits=None, disk_io_limits=None):
         """ExtraSpecs object holds extra_specs for the instance."""
         if cpu_limits is None:
             cpu_limits = Limits()
@@ -104,6 +104,9 @@ class ExtraSpecs(object):
         if memory_limits is None:
             memory_limits = Limits()
         self.memory_limits = memory_limits
+        if disk_io_limits is None:
+            disk_io_limits = Limits()
+        self.disk_io_limits = disk_io_limits
         self.hw_version = hw_version
         self.storage_policy = storage_policy
         self.cores_per_socket = cores_per_socket
@@ -473,7 +476,8 @@ def get_vmdk_attach_config_spec(client_factory,
                                 linked_clone=False,
                                 controller_key=None,
                                 unit_number=None,
-                                device_name=None):
+                                device_name=None,
+                                disk_io_limits=None):
     """Builds the vmdk attach config spec."""
     config_spec = client_factory.create('ns0:VirtualMachineConfigSpec')
 
@@ -481,7 +485,7 @@ def get_vmdk_attach_config_spec(client_factory,
     virtual_device_config_spec = create_virtual_disk_spec(client_factory,
                                 controller_key, disk_type, file_path,
                                 disk_size, linked_clone,
-                                unit_number, device_name)
+                                unit_number, device_name, disk_io_limits)
 
     device_config_spec.append(virtual_device_config_spec)
 
@@ -766,7 +770,8 @@ def create_virtual_disk_spec(client_factory, controller_key,
                              disk_size=None,
                              linked_clone=False,
                              unit_number=None,
-                             device_name=None):
+                             device_name=None,
+                             disk_io_limits=None):
     """Builds spec for the creation of a new/ attaching of an already existing
     Virtual Disk to the VM.
     """
@@ -816,6 +821,11 @@ def create_virtual_disk_spec(client_factory, controller_key,
     virtual_disk.controllerKey = controller_key
     virtual_disk.unitNumber = unit_number or 0
     virtual_disk.capacityInKB = disk_size or 0
+
+    if disk_io_limits and disk_io_limits.has_limits():
+        virtual_disk.storageIOAllocation = _get_allocation_info(
+            client_factory, disk_io_limits,
+            'ns0:StorageIOAllocationInfo')
 
     virtual_device_config.device = virtual_disk
 
