@@ -616,6 +616,54 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         instance.power_state = power_state.RUNNING
         self._test_init_instance_cleans_reboot_state(instance)
 
+    def test_init_instance_retries_power_off(self):
+        instance = instance_obj.Instance(self.context)
+        instance.uuid = 'foo'
+        instance.id = 1
+        instance.vm_state = vm_states.ACTIVE
+        instance.task_state = task_states.POWERING_OFF
+        with mock.patch.object(self.compute, 'stop_instance'):
+            self.compute._init_instance(self.context, instance)
+            call = mock.call(self.context, instance)
+            self.compute.stop_instance.assert_has_calls([call])
+
+    def test_init_instance_retries_power_on(self):
+        instance = instance_obj.Instance(self.context)
+        instance.uuid = 'foo'
+        instance.id = 1
+        instance.vm_state = vm_states.ACTIVE
+        instance.task_state = task_states.POWERING_ON
+        with mock.patch.object(self.compute, 'start_instance'):
+            self.compute._init_instance(self.context, instance)
+            call = mock.call(self.context, instance)
+            self.compute.start_instance.assert_has_calls([call])
+
+    def test_init_instance_retries_power_on_silent_exception(self):
+        instance = instance_obj.Instance(self.context)
+        instance.uuid = 'foo'
+        instance.id = 1
+        instance.vm_state = vm_states.ACTIVE
+        instance.task_state = task_states.POWERING_ON
+        with mock.patch.object(self.compute, 'start_instance',
+                              return_value=Exception):
+            init_return = self.compute._init_instance(self.context, instance)
+            call = mock.call(self.context, instance)
+            self.compute.start_instance.assert_has_calls([call])
+            self.assertIsNone(init_return)
+
+    def test_init_instance_retries_power_off_silent_exception(self):
+        instance = instance_obj.Instance(self.context)
+        instance.uuid = 'foo'
+        instance.id = 1
+        instance.vm_state = vm_states.ACTIVE
+        instance.task_state = task_states.POWERING_OFF
+        with mock.patch.object(self.compute, 'stop_instance',
+                              return_value=Exception):
+            init_return = self.compute._init_instance(self.context, instance)
+            call = mock.call(self.context, instance)
+            self.compute.stop_instance.assert_has_calls([call])
+            self.assertIsNone(init_return)
+
     def test_get_instances_on_driver(self):
         fake_context = context.get_admin_context()
 
