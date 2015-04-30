@@ -44,6 +44,15 @@ from nova import utils
 
 FAKE_UUID = 'a47ae74e-ab08-547f-9eee-ffd23fc46c16'
 
+fake_info_cache = {
+    'created_at': None,
+    'updated_at': None,
+    'deleted_at': None,
+    'deleted': False,
+    'instance_uuid': 'fake-uuid',
+    'network_info': '[]',
+    }
+
 
 class NetworkPolicyTestCase(test.TestCase):
     def setUp(self):
@@ -215,6 +224,7 @@ class ApiTestCase(test.TestCase):
         def fake_instance_info_cache_update(context, instance_uuid, cache):
             self.assertEqual(instance_uuid,
                              expected_updated_instances.pop())
+            return fake_info_cache
 
         self.stubs.Set(self.network_api.db, 'instance_info_cache_update',
                        fake_instance_info_cache_update)
@@ -447,8 +457,9 @@ class ApiTestCase(test.TestCase):
             mock.patch.object(self.network_api.network_rpcapi,
                               'get_instance_nw_info'),
             mock.patch.object(network_model.NetworkInfo, 'hydrate'),
+            mock.patch.object(objects.InstanceInfoCache, 'save'),
         ) as (
-            method_mock, nwinfo_mock, hydrate_mock
+            method_mock, nwinfo_mock, hydrate_mock, save_mock
         ):
             nw_info = network_model.NetworkInfo([])
             method_mock.return_value = nw_info
@@ -539,7 +550,7 @@ class ApiTestCase(test.TestCase):
 
 
 @mock.patch('nova.network.api.API')
-@mock.patch('nova.db.instance_info_cache_update')
+@mock.patch('nova.db.instance_info_cache_update', return_value=fake_info_cache)
 class TestUpdateInstanceCache(test.NoDBTestCase):
     def setUp(self):
         super(TestUpdateInstanceCache, self).setUp()

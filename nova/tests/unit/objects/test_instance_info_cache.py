@@ -12,6 +12,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import datetime
+
+import mock
+from oslo_utils import timeutils
+
 from nova.cells import opts as cells_opts
 from nova.cells import rpcapi as cells_rpcapi
 from nova import db
@@ -72,9 +77,11 @@ class _TestInstanceInfoCacheObject(object):
         self.mox.StubOutWithMock(cells_api,
                                  'instance_info_cache_update_at_top')
         nwinfo = network_model.NetworkInfo.hydrate([{'address': 'foo'}])
+        new_info_cache = fake_info_cache.copy()
+        new_info_cache['network_info'] = nwinfo.json()
         db.instance_info_cache_update(
                 self.context, 'fake-uuid',
-                {'network_info': nwinfo.json()}).AndReturn('foo')
+                {'network_info': nwinfo.json()}).AndReturn(new_info_cache)
         if update_cells:
             cells_opts.get_cell_type().AndReturn(cell_type)
             if cell_type == 'compute':
@@ -95,6 +102,25 @@ class _TestInstanceInfoCacheObject(object):
 
     def test_save_without_update_cells(self):
         self._save_helper(None, False)
+
+    @mock.patch.object(db, 'instance_info_cache_update')
+    def test_save_updates_self(self, mock_update):
+        fake_updated_at = datetime.datetime(2015, 1, 1)
+        nwinfo = network_model.NetworkInfo.hydrate([{'address': 'foo'}])
+        nwinfo_json = nwinfo.json()
+        new_info_cache = fake_info_cache.copy()
+        new_info_cache['id'] = 1
+        new_info_cache['updated_at'] = fake_updated_at
+        new_info_cache['network_info'] = nwinfo_json
+        mock_update.return_value = new_info_cache
+        obj = instance_info_cache.InstanceInfoCache(context=self.context)
+        obj.instance_uuid = 'fake-uuid'
+        obj.network_info = nwinfo_json
+        obj.save()
+        mock_update.assert_called_once_with(self.context, 'fake-uuid',
+                                            {'network_info': nwinfo_json})
+        self.assertEqual(timeutils.normalize_time(fake_updated_at),
+                         timeutils.normalize_time(obj.updated_at))
 
     def test_refresh(self):
         obj = instance_info_cache.InstanceInfoCache.new(self.context,

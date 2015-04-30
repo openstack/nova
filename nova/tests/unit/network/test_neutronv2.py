@@ -50,6 +50,15 @@ CONF = cfg.CONF
 #       exception class instead.
 NEUTRON_CLIENT_EXCEPTION = Exception
 
+fake_info_cache = {
+    'created_at': None,
+    'updated_at': None,
+    'deleted_at': None,
+    'deleted': False,
+    'instance_uuid': 'fake-uuid',
+    'network_info': '[]',
+    }
+
 
 class MyComparator(mox.Comparator):
     def __init__(self, lhs):
@@ -570,7 +579,8 @@ class TestNeutronv2Base(test.TestCase):
         self.mox.StubOutWithMock(api.db, 'instance_info_cache_update')
         api.db.instance_info_cache_update(mox.IgnoreArg(),
                                           self.instance['uuid'],
-                                          mox.IgnoreArg())
+                                          mox.IgnoreArg()).AndReturn(
+                                              fake_info_cache)
         port_data = number == 1 and self.port_data1 or self.port_data2
         nets = number == 1 and self.nets1 or self.nets2
         net_info_cache = []
@@ -726,7 +736,7 @@ class TestNeutronv2(TestNeutronv2Base):
         self.mox.StubOutWithMock(api.db, 'instance_info_cache_update')
         api.db.instance_info_cache_update(
             mox.IgnoreArg(),
-            self.instance['uuid'], mox.IgnoreArg())
+            self.instance['uuid'], mox.IgnoreArg()).AndReturn(fake_info_cache)
         neutronapi.get_client(mox.IgnoreArg(),
                              admin=True).MultipleTimes().AndReturn(
             self.moxed_client)
@@ -802,7 +812,7 @@ class TestNeutronv2(TestNeutronv2Base):
         self.mox.StubOutWithMock(api.db, 'instance_info_cache_update')
         api.db.instance_info_cache_update(
             mox.IgnoreArg(),
-            self.instance['uuid'], mox.IgnoreArg())
+            self.instance['uuid'], mox.IgnoreArg()).AndReturn(fake_info_cache)
         self.moxed_client.list_ports(
             tenant_id=self.instance['project_id'],
             device_id=self.instance['uuid']).AndReturn(
@@ -1298,7 +1308,8 @@ class TestNeutronv2(TestNeutronv2Base):
         self.mox.StubOutWithMock(api.db, 'instance_info_cache_update')
         api.db.instance_info_cache_update(self.context,
                                           self.instance.uuid,
-                                          {'network_info': '[]'})
+                                          {'network_info': '[]'}).AndReturn(
+                                              fake_info_cache)
         self.mox.ReplayAll()
 
         api = neutronapi.API()
@@ -2209,7 +2220,8 @@ class TestNeutronv2(TestNeutronv2Base):
                 AndReturn(nw_info)
             api.db.instance_info_cache_update(mox.IgnoreArg(),
                                               instance['uuid'],
-                                              mox.IgnoreArg())
+                                              mox.IgnoreArg()).AndReturn(
+                                                  fake_info_cache)
 
     def test_associate_floating_ip(self):
         api = neutronapi.API()

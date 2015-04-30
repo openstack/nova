@@ -301,7 +301,15 @@ def fake_get_instance_nw_info(stubs, num_networks=1, ips_per_vif=2,
         return ips
 
     def update_cache_fake(*args, **kwargs):
-        pass
+        fake_info_cache = {
+            'created_at': None,
+            'updated_at': None,
+            'deleted_at': None,
+            'deleted': False,
+            'instance_uuid': 'fake-uuid',
+            'network_info': '[]',
+            }
+        return fake_info_cache
 
     stubs.Set(db, 'fixed_ip_get_by_instance', fixed_ips_fake)
     stubs.Set(db, 'instance_info_cache_update', update_cache_fake)
