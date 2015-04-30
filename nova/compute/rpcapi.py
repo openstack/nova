@@ -398,13 +398,13 @@ class ComputeAPI(object):
                           instance=instance,
                           dest_check_data=dest_check_data)
 
-    def check_instance_shared_storage(self, ctxt, instance, data):
+    def check_instance_shared_storage(self, ctxt, instance, data, host=None):
         if self.client.can_send_version('3.29'):
             version = '3.29'
         else:
             version = '3.0'
             instance = jsonutils.to_primitive(instance)
-        cctxt = self.client.prepare(server=_compute_host(None, instance),
+        cctxt = self.client.prepare(server=_compute_host(host, instance),
                 version=version)
         return cctxt.call(ctxt, 'check_instance_shared_storage',
                           instance=instance,

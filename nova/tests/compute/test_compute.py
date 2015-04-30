@@ -4241,6 +4241,8 @@ class ComputeTestCase(BaseTestCase):
             self.context, objects.Instance(), instance,
             expected_attrs=instance_obj.INSTANCE_DEFAULT_FIELDS)
         for operation in actions:
+            if 'revert_resize' in operation:
+                migration.source_compute = 'fake-mini'
             if operation[0] in want_objects:
                 self._test_state_revert(inst_obj, *operation)
             else:
@@ -6597,7 +6599,7 @@ class ComputeTestCase(BaseTestCase):
                 evacuated_instance).AndReturn({'filename': 'tmpfilename'})
         self.compute.compute_rpcapi.check_instance_shared_storage(fake_context,
                 evacuated_instance,
-                {'filename': 'tmpfilename'}).AndReturn(False)
+                {'filename': 'tmpfilename'}, host=None).AndReturn(False)
         self.compute.driver.check_instance_shared_storage_cleanup(fake_context,
                 {'filename': 'tmpfilename'})
         self.compute.driver.destroy(fake_context, evacuated_instance,
