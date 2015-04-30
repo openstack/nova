@@ -11711,10 +11711,13 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         def fake_plug_vifs(instance, network_info):
             pass
 
-        def fake_create_domain(xml, instance=None, launch_flags=0,
-                               power_on=True):
+        def fake_create_domain(context, xml, instance, network_info,
+                               disk_info, block_device_info=None,
+                               power_on=None,
+                               vifs_already_plugged=None):
             self.fake_create_domain_called = True
             self.assertEqual(powered_on, power_on)
+            self.assertTrue(vifs_already_plugged)
             return mock.MagicMock()
 
         def fake_enable_hairpin(instance):
@@ -11736,7 +11739,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         self.stubs.Set(utils, 'execute', fake_execute)
         fw = base_firewall.NoopFirewallDriver()
         self.stubs.Set(self.drvr, 'firewall_driver', fw)
-        self.stubs.Set(self.drvr, '_create_domain',
+        self.stubs.Set(self.drvr, '_create_domain_and_network',
                        fake_create_domain)
         self.stubs.Set(self.drvr, '_enable_hairpin',
                        fake_enable_hairpin)
