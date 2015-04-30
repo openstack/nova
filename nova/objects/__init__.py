@@ -65,3 +65,4 @@ def register_all():
     __import__('nova.objects.vcpu_model')
     __import__('nova.objects.virt_cpu_topology')
     __import__('nova.objects.virtual_interface')
+    __import__('nova.objects.volume_usage')
