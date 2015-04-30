@@ -11665,9 +11665,12 @@ class LibvirtDriverTestCase(test.TestCase):
         def fake_plug_vifs(instance, network_info):
             pass
 
-        def fake_create_domain(xml, instance=None, launch_flags=0,
-                               power_on=True):
+        def fake_create_domain(context, xml, instance, network_info,
+                               block_device_info,
+                               power_on,
+                               vifs_already_plugged=None):
             self.fake_create_domain_called = True
+            self.assertTrue(vifs_already_plugged)
             self.assertEqual(powered_on, power_on)
             return mock.MagicMock()
 
@@ -11690,7 +11693,7 @@ class LibvirtDriverTestCase(test.TestCase):
         self.stubs.Set(utils, 'execute', fake_execute)
         fw = base_firewall.NoopFirewallDriver()
         self.stubs.Set(self.libvirtconnection, 'firewall_driver', fw)
-        self.stubs.Set(self.libvirtconnection, '_create_domain',
+        self.stubs.Set(self.libvirtconnection, '_create_domain_and_network',
                        fake_create_domain)
         self.stubs.Set(self.libvirtconnection, '_enable_hairpin',
                        fake_enable_hairpin)
@@ -11737,7 +11740,7 @@ class LibvirtDriverTestCase(test.TestCase):
         self.stubs.Set(self.libvirtconnection, '_get_guest_xml',
                        lambda *a, **k: None)
         self.stubs.Set(self.libvirtconnection, '_create_domain_and_network',
-                       lambda *a: None)
+                       lambda *a, **k: None)
         self.stubs.Set(loopingcall, 'FixedIntervalLoopingCall',
                        lambda *a, **k: FakeLoopingCall())
 
