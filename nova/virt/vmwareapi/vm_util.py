@@ -95,11 +95,15 @@ class Limits(object):
 class ExtraSpecs(object):
 
     def __init__(self, cpu_limits=None, hw_version=None,
-                 storage_policy=None, cores_per_socket=None):
+                 storage_policy=None, cores_per_socket=None,
+                 memory_limits=None):
         """ExtraSpecs object holds extra_specs for the instance."""
         if cpu_limits is None:
             cpu_limits = Limits()
         self.cpu_limits = cpu_limits
+        if memory_limits is None:
+            memory_limits = Limits()
+        self.memory_limits = memory_limits
         self.hw_version = hw_version
         self.storage_policy = storage_policy
         self.cores_per_socket = cores_per_socket
@@ -231,6 +235,12 @@ def get_vm_create_spec(client_factory, instance, data_store_name,
     if extra_specs.cpu_limits.has_limits():
         config_spec.cpuAllocation = _get_allocation_info(
             client_factory, extra_specs.cpu_limits,
+            'ns0:ResourceAllocationInfo')
+
+    # Configure memory information
+    if extra_specs.memory_limits.has_limits():
+        config_spec.memoryAllocation = _get_allocation_info(
+            client_factory, extra_specs.memory_limits,
             'ns0:ResourceAllocationInfo')
 
     vif_spec_list = []

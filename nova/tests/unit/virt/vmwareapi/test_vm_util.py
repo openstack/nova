@@ -1364,6 +1364,53 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         expected.extraConfig.append(extra_config)
         self.assertEqual(expected, result)
 
+    def test_get_vm_create_spec_with_memory_allocations(self):
+        memory_limits = vm_util.Limits(limit=7,
+                                       reservation=6)
+        extra_specs = vm_util.ExtraSpecs(memory_limits=memory_limits)
+        fake_factory = fake.FakeFactory()
+        result = vm_util.get_vm_create_spec(fake_factory,
+                                            self._instance,
+                                            'fake-datastore', [],
+                                            extra_specs)
+        expected = fake_factory.create('ns0:VirtualMachineConfigSpec')
+        expected.deviceChange = []
+        expected.guestId = 'otherGuest'
+        expected.instanceUuid = self._instance.uuid
+        expected.memoryMB = self._instance.memory_mb
+        expected.name = self._instance.uuid
+        expected.numCPUs = self._instance.vcpus
+        expected.version = None
+
+        expected.files = fake_factory.create('ns0:VirtualMachineFileInfo')
+        expected.files.vmPathName = '[fake-datastore]'
+
+        expected.tools = fake_factory.create('ns0:ToolsConfigInfo')
+        expected.tools.afterPowerOn = True
+        expected.tools.afterResume = True
+        expected.tools.beforeGuestReboot = True
+        expected.tools.beforeGuestShutdown = True
+        expected.tools.beforeGuestStandby = True
+
+        expected.managedBy = fake_factory.create('ns0:ManagedByInfo')
+        expected.managedBy.extensionKey = 'org.openstack.compute'
+        expected.managedBy.type = 'instance'
+
+        memory_allocation = fake_factory.create('ns0:ResourceAllocationInfo')
+        memory_allocation.limit = 7
+        memory_allocation.reservation = 6
+        memory_allocation.shares = fake_factory.create('ns0:SharesInfo')
+        memory_allocation.shares.level = 'normal'
+        memory_allocation.shares.shares = 0
+        expected.memoryAllocation = memory_allocation
+
+        expected.extraConfig = []
+        extra_config = fake_factory.create('ns0:OptionValue')
+        extra_config.key = 'nvp.vm-uuid'
+        extra_config.value = self._instance.uuid
+        expected.extraConfig.append(extra_config)
+        self.assertEqual(expected, result)
+
 
 @mock.patch.object(driver.VMwareAPISession, 'vim', stubs.fake_vim_prop)
 class VMwareVMUtilGetHostRefTestCase(test.NoDBTestCase):

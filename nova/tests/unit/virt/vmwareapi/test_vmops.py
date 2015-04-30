@@ -1650,6 +1650,33 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         extra_specs = vm_util.ExtraSpecs(cpu_limits=cpu_limits)
         self._test_spawn(extra_specs=extra_specs)
 
+    def test_spawn_memory_limit(self):
+        memory_limits = vm_util.Limits(limit=7)
+        extra_specs = vm_util.ExtraSpecs(memory_limits=memory_limits)
+        self._test_spawn(extra_specs=extra_specs)
+
+    def test_spawn_memory_reservation(self):
+        memory_limits = vm_util.Limits(reservation=7)
+        extra_specs = vm_util.ExtraSpecs(memory_limits=memory_limits)
+        self._test_spawn(extra_specs=extra_specs)
+
+    def test_spawn_memory_allocations(self):
+        memory_limits = vm_util.Limits(limit=7,
+                                       reservation=6)
+        extra_specs = vm_util.ExtraSpecs(memory_limits=memory_limits)
+        self._test_spawn(extra_specs=extra_specs)
+
+    def test_spawn_memory_shares_level(self):
+        memory_limits = vm_util.Limits(shares_level='high')
+        extra_specs = vm_util.ExtraSpecs(memory_limits=memory_limits)
+        self._test_spawn(extra_specs=extra_specs)
+
+    def test_spawn_memory_shares_custom(self):
+        memory_limits = vm_util.Limits(shares_level='custom',
+                                       shares_share=1948)
+        extra_specs = vm_util.ExtraSpecs(memory_limits=memory_limits)
+        self._test_spawn(extra_specs=extra_specs)
+
     def _validate_extra_specs(self, expected, actual):
         self.assertEqual(expected.cpu_limits.limit,
                          actual.cpu_limits.limit)
