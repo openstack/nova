@@ -269,6 +269,8 @@ class ConductorManager(manager.Manager):
                                              update_totals)
 
         # We have just updated the database, so send the notification now
+        vol_usage = objects.VolumeUsage._from_db_object(
+            context, objects.VolumeUsage(), vol_usage)
         self.notifier.info(context, 'volume.usage',
                            compute_utils.usage_volume_info(vol_usage))
 

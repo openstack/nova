@@ -361,8 +361,8 @@ def usage_volume_info(vol_usage):
     def null_safe_str(s):
         return str(s) if s else ''
 
-    tot_refreshed = vol_usage['tot_last_refreshed']
-    curr_refreshed = vol_usage['curr_last_refreshed']
+    tot_refreshed = vol_usage.tot_last_refreshed
+    curr_refreshed = vol_usage.curr_last_refreshed
     if tot_refreshed and curr_refreshed:
         last_refreshed_time = max(tot_refreshed, curr_refreshed)
     elif tot_refreshed:
@@ -372,18 +372,18 @@ def usage_volume_info(vol_usage):
         last_refreshed_time = curr_refreshed
 
     usage_info = dict(
-          volume_id=vol_usage['volume_id'],
-          tenant_id=vol_usage['project_id'],
-          user_id=vol_usage['user_id'],
-          availability_zone=vol_usage['availability_zone'],
-          instance_id=vol_usage['instance_uuid'],
+          volume_id=vol_usage.volume_id,
+          tenant_id=vol_usage.project_id,
+          user_id=vol_usage.user_id,
+          availability_zone=vol_usage.availability_zone,
+          instance_id=vol_usage.instance_uuid,
           last_refreshed=null_safe_str(last_refreshed_time),
-          reads=vol_usage['tot_reads'] + vol_usage['curr_reads'],
-          read_bytes=vol_usage['tot_read_bytes'] +
-                vol_usage['curr_read_bytes'],
-          writes=vol_usage['tot_writes'] + vol_usage['curr_writes'],
-          write_bytes=vol_usage['tot_write_bytes'] +
-                vol_usage['curr_write_bytes'])
+          reads=vol_usage.tot_reads + vol_usage.curr_reads,
+          read_bytes=vol_usage.tot_read_bytes +
+                vol_usage.curr_read_bytes,
+          writes=vol_usage.tot_writes + vol_usage.curr_writes,
+          write_bytes=vol_usage.tot_write_bytes +
+                vol_usage.curr_write_bytes)
 
     return usage_info
 
