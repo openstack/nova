@@ -542,8 +542,9 @@ class _TestInstanceObject(object):
         nwinfo2 = network_model.NetworkInfo.hydrate([{'address': 'bar'}])
         nwinfo1_json = nwinfo1.json()
         nwinfo2_json = nwinfo2.json()
+        fake_info_cache = test_instance_info_cache.fake_info_cache
         fake_inst['info_cache'] = dict(
-            test_instance_info_cache.fake_info_cache,
+            fake_info_cache,
             network_info=nwinfo1_json,
             instance_uuid=fake_uuid)
         self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
@@ -555,7 +556,7 @@ class _TestInstanceObject(object):
                                 use_slave=False
                                 ).AndReturn(fake_inst)
         db.instance_info_cache_update(self.context, fake_uuid,
-                                      {'network_info': nwinfo2_json})
+                {'network_info': nwinfo2_json}).AndReturn(fake_info_cache)
         self.mox.ReplayAll()
         inst = instance.Instance.get_by_uuid(self.context, fake_uuid)
         self.assertEqual(inst.info_cache.network_info, nwinfo1)

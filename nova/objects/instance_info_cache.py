@@ -93,6 +93,7 @@ class InstanceInfoCache(base.NovaPersistentObject, base.NovaObject,
             rv = db.instance_info_cache_update(self._context,
                                                self.instance_uuid,
                                                {'network_info': nw_info_json})
+            self._from_db_object(self._context, self, rv)
             if update_cells and rv:
                 self._info_cache_cells_update(self._context, rv)
         self.obj_reset_changes()
