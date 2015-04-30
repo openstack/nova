@@ -192,9 +192,9 @@ class BareMetalNodeController(wsgi.Controller):
                         'interfaces': [],
                         'host': 'IRONIC MANAGED',
                         'task_state': inode.provision_state,
-                        'cpus': inode.properties['cpus'],
-                        'memory_mb': inode.properties['memory_mb'],
-                        'disk_gb': inode.properties['local_gb']}
+                        'cpus': inode.properties.get('cpus', 0),
+                        'memory_mb': inode.properties.get('memory_mb', 0),
+                        'disk_gb': inode.properties.get('local_gb', 0)}
                 nodes.append(node)
         else:
             # use nova baremetal
@@ -227,9 +227,9 @@ class BareMetalNodeController(wsgi.Controller):
                     'interfaces': [],
                     'host': 'IRONIC MANAGED',
                     'task_state': inode.provision_state,
-                    'cpus': inode.properties['cpus'],
-                    'memory_mb': inode.properties['memory_mb'],
-                    'disk_gb': inode.properties['local_gb'],
+                    'cpus': inode.properties.get('cpus', 0),
+                    'memory_mb': inode.properties.get('memory_mb', 0),
+                    'disk_gb': inode.properties.get('local_gb', 0),
                     'instance_uuid': inode.instance_uuid}
             for port in iports:
                 node['interfaces'].append({'address': port.address})
