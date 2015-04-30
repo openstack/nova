@@ -9881,7 +9881,18 @@ Active:          8381604 kB
 
         self.assertEqual(mock_domain, domain)
         mock_domain.createWithFlags.assert_has_calls([mock.call(0)])
-        self.assertEqual(2, mock_safe_decode.call_count)
+        # There is a global in oslo.log which calls encodeutils.safe_decode
+        # which could be getting called from any number of places, so we need
+        # to just assert that safe_decode was called at least twice in
+        # _create_domain with the errors='ignore' kwarg.
+        safe_decode_ignore_errors_calls = 0
+        for call in mock_safe_decode.call_args_list:
+            # call is a tuple where 0 is positional args and 1 is a kwargs dict
+            if call[1].get('errors') == 'ignore':
+                safe_decode_ignore_errors_calls += 1
+
+        self.assertTrue(safe_decode_ignore_errors_calls >= 2,
+                        'safe_decode should have been called at least twice')
 
     @mock.patch('nova.virt.disk.api.clean_lxc_namespace')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.get_info')
