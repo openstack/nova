@@ -1283,7 +1283,6 @@ def fixed_ip_get(context, id, get_network=False):
     return result
 
 
-@require_admin_context
 def fixed_ip_get_all(context):
     result = model_query(context, models.FixedIp, read_deleted="yes").all()
     if not result:
@@ -1368,7 +1367,6 @@ def fixed_ip_get_by_instance(context, instance_uuid):
     return result
 
 
-@require_admin_context
 def fixed_ip_get_by_host(context, host):
     session = get_session()
     with session.begin():
