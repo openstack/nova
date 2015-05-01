@@ -145,38 +145,6 @@ class _BaseTestCase(object):
         result = self.conductor.provider_fw_rule_get_all(self.context)
         self.assertEqual(result, fake_rules)
 
-    def test_vol_usage_update(self):
-        self.mox.StubOutWithMock(db, 'vol_usage_update')
-        self.mox.StubOutWithMock(compute_utils, 'usage_volume_info')
-
-        fake_inst = {'uuid': 'fake-uuid',
-                     'project_id': 'fake-project',
-                     'user_id': 'fake-user',
-                     'availability_zone': 'fake-az',
-                     }
-
-        db.vol_usage_update(self.context, 'fake-vol', 22, 33, 44, 55,
-                            fake_inst['uuid'],
-                            fake_inst['project_id'],
-                            fake_inst['user_id'],
-                            fake_inst['availability_zone'],
-                            False).AndReturn(test_volume_usage.fake_vol_usage)
-        compute_utils.usage_volume_info(
-            mox.IsA(objects.VolumeUsage)).AndReturn('fake-info')
-
-        self.mox.ReplayAll()
-
-        self.conductor.vol_usage_update(self.context, 'fake-vol',
-                                        22, 33, 44, 55, fake_inst, None, False)
-
-        self.assertEqual(1, len(fake_notifier.NOTIFICATIONS))
-        msg = fake_notifier.NOTIFICATIONS[0]
-        self.assertEqual('conductor.%s' % self.conductor_manager.host,
-                         msg.publisher_id)
-        self.assertEqual('volume.usage', msg.event_type)
-        self.assertEqual('INFO', msg.priority)
-        self.assertEqual('fake-info', msg.payload)
-
     def test_compute_node_create(self):
         self.mox.StubOutWithMock(db, 'compute_node_create')
         db.compute_node_create(self.context, 'fake-values').AndReturn(
@@ -778,6 +746,38 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
         self.mox.ReplayAll()
         self.conductor.security_groups_trigger_members_refresh(self.context,
                                                                [1, 2, 3])
+
+    def test_vol_usage_update(self):
+        self.mox.StubOutWithMock(db, 'vol_usage_update')
+        self.mox.StubOutWithMock(compute_utils, 'usage_volume_info')
+
+        fake_inst = {'uuid': 'fake-uuid',
+                     'project_id': 'fake-project',
+                     'user_id': 'fake-user',
+                     'availability_zone': 'fake-az',
+                     }
+
+        db.vol_usage_update(self.context, 'fake-vol', 22, 33, 44, 55,
+                            fake_inst['uuid'],
+                            fake_inst['project_id'],
+                            fake_inst['user_id'],
+                            fake_inst['availability_zone'],
+                            False).AndReturn(test_volume_usage.fake_vol_usage)
+        compute_utils.usage_volume_info(
+            mox.IsA(objects.VolumeUsage)).AndReturn('fake-info')
+
+        self.mox.ReplayAll()
+
+        self.conductor.vol_usage_update(self.context, 'fake-vol',
+                                        22, 33, 44, 55, fake_inst, None, False)
+
+        self.assertEqual(1, len(fake_notifier.NOTIFICATIONS))
+        msg = fake_notifier.NOTIFICATIONS[0]
+        self.assertEqual('conductor.%s' % self.conductor_manager.host,
+                         msg.publisher_id)
+        self.assertEqual('volume.usage', msg.event_type)
+        self.assertEqual('INFO', msg.priority)
+        self.assertEqual('fake-info', msg.payload)
 
 
 class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):

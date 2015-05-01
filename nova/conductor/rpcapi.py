@@ -181,6 +181,7 @@ class ConductorAPI(object):
     * Remove task_log_begin_task()
     * Remove task_log_end_task()
     * Remove security_groups_trigger_members_refresh()
+    * Remove vol_usage_update()
 
     """
 
@@ -214,18 +215,6 @@ class ConductorAPI(object):
     def provider_fw_rule_get_all(self, context):
         cctxt = self.client.prepare()
         return cctxt.call(context, 'provider_fw_rule_get_all')
-
-    def vol_usage_update(self, context, vol_id, rd_req, rd_bytes, wr_req,
-                         wr_bytes, instance, last_refreshed=None,
-                         update_totals=False):
-        instance_p = jsonutils.to_primitive(instance)
-        cctxt = self.client.prepare()
-        return cctxt.call(context, 'vol_usage_update',
-                          vol_id=vol_id, rd_req=rd_req,
-                          rd_bytes=rd_bytes, wr_req=wr_req,
-                          wr_bytes=wr_bytes,
-                          instance=instance_p, last_refreshed=last_refreshed,
-                          update_totals=update_totals)
 
     def compute_node_create(self, context, values):
         cctxt = self.client.prepare()
