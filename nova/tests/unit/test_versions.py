@@ -27,7 +27,8 @@ class VersionTestCase(test.NoDBTestCase):
     def test_version_string_with_package_is_good(self):
         """Ensure uninstalled code get version string."""
 
-        self.stubs.Set(version.version_info, 'version', '5.5.5.5')
+        self.stubs.Set(version.version_info, 'version_string',
+                lambda: '5.5.5.5')
         self.stubs.Set(version, 'NOVA_PACKAGE', 'g9ec3421')
         self.assertEqual("5.5.5.5-g9ec3421",
                          version.version_string_with_package())
