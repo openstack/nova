@@ -14,6 +14,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_config import cfg
+
 from nova import exception
 from nova.network import model
 from nova import test
@@ -566,7 +568,7 @@ class NetworkInfoTests(test.NoDBTestCase):
 
         nwinfo = model.NetworkInfo(vifs)
         return netutils.get_injected_network_template(
-                nwinfo, use_ipv6=use_ipv6, libvirt_virt_type=libvirt_virt_type)
+            nwinfo, use_ipv6=use_ipv6, libvirt_virt_type=libvirt_virt_type)
 
     def test_injection_dynamic(self):
         expected = None
@@ -638,6 +640,33 @@ iface eth0 inet static
     gateway 10.10.0.1
 """
         template = self._setup_injected_network_scenario(dns=False)
+        self.assertEqual(expected, template)
+
+    def test_injection_static_overriden_template(self):
+        cfg.CONF.set_override(
+            'injected_network_template',
+            'nova/tests/unit/network/interfaces-override.template')
+        expected = """\
+# Injected by Nova on instance boot
+#
+# This file describes the network interfaces available on your system
+# and how to activate them. For more information, see interfaces(5).
+
+# The loopback network interface
+auto lo
+iface lo inet loopback
+
+auto eth0
+iface eth0 inet static
+    address 10.10.0.2
+    netmask 255.255.255.0
+    broadcast 10.10.0.255
+    gateway 10.10.0.1
+    dns-nameservers 1.2.3.4 2.3.4.5
+    post-up ip route add 0.0.0.0/24 via 192.168.1.1 dev eth0
+    pre-down ip route del 0.0.0.0/24 via 192.168.1.1 dev eth0
+"""
+        template = self._setup_injected_network_scenario()
         self.assertEqual(expected, template)
 
     def test_injection_static_ipv6(self):
