@@ -5598,11 +5598,11 @@ class LibvirtDriver(driver.ComputeDriver):
                     # transfer stats in the progress too, but it
                     # might make memory info more obscure as large
                     # disk sizes might dwarf memory size
-                    progress = 0
+                    remaining = 100
                     if info.memory_total != 0:
-                        progress = round(info.memory_remaining *
+                        remaining = round(info.memory_remaining *
                                           100 / info.memory_total)
-                    instance.progress = 100 - progress
+                    instance.progress = 100 - remaining
                     instance.save()
 
                     lg = LOG.debug
@@ -5610,14 +5610,14 @@ class LibvirtDriver(driver.ComputeDriver):
                         lg = LOG.info
 
                     lg(_LI("Migration running for %(secs)d secs, "
-                           "memory %(progress)d%% remaining; "
-                           "(bytes processed=%(processed)d, "
-                           "remaining=%(remaining)d, "
-                           "total=%(total)d)"),
-                       {"secs": n / 2, "progress": progress,
-                        "processed": info.memory_processed,
-                        "remaining": info.memory_remaining,
-                        "total": info.memory_total}, instance=instance)
+                           "memory %(remaining)d%% remaining; "
+                           "(bytes processed=%(processed_memory)d, "
+                           "remaining=%(remaining_memory)d, "
+                           "total=%(total_memory)d)"),
+                       {"secs": n / 2, "remaining": remaining,
+                        "processed_memory": info.memory_processed,
+                        "remaining_memory": info.memory_remaining,
+                        "total_memory": info.memory_total}, instance=instance)
 
                 # Migration is still running
                 #
