@@ -234,7 +234,8 @@ class VMUtilsTestCase(test.NoDBTestCase):
 
         self._vmutils.create_vm(self._FAKE_VM_NAME, self._FAKE_MEMORY_MB,
                                 self._FAKE_VCPUS_NUM, False,
-                                self._FAKE_DYNAMIC_MEMORY_RATIO)
+                                self._FAKE_DYNAMIC_MEMORY_RATIO,
+                                mock.sentinel.instance_path)
 
         self.assertTrue(getattr(mock_svc, self._DEFINE_SYSTEM).called)
         mock_set_mem.assert_called_with(mock_vm, mock_s, self._FAKE_MEMORY_MB,
@@ -635,17 +636,21 @@ class VMUtilsTestCase(test.NoDBTestCase):
                                                             fake_job_path,
                                                             fake_ret_val)
 
-        response = self._vmutils._create_vm_obj(vs_man_svc=mock_vs_man_svc,
-                                                vm_name='fake vm',
-                                                notes='fake notes',
-                                                dynamic_memory_ratio=1.0)
+        response = self._vmutils._create_vm_obj(
+            vs_man_svc=mock_vs_man_svc,
+            vm_name='fake vm',
+            notes='fake notes', dynamic_memory_ratio=1.0,
+            instance_path=mock.sentinel.instance_path)
 
         _conn.new.assert_called_once_with()
         self.assertEqual(mock_vs_gs_data.ElementName, 'fake vm')
         mock_vs_man_svc.DefineVirtualSystem.assert_called_once_with(
             [], None, mock_vs_gs_data.GetText_(1))
         mock_check_ret_val.assert_called_once_with(fake_ret_val, fake_job_path)
-
+        self.assertEqual(mock.sentinel.instance_path,
+                         mock_vs_gs_data.ExternalDataRoot)
+        self.assertEqual(mock.sentinel.instance_path,
+                         mock_vs_gs_data.SnapshotDataRoot)
         mock_get_wmi_obj.assert_called_with(fake_vm_path)
         mock_get_vm_setting_data.assert_called_once_with(mock_get_wmi_obj())
         mock_modify_virtual_system.assert_called_once_with(

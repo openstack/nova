@@ -291,12 +291,14 @@ class VMOps(object):
     def create_instance(self, instance, network_info, block_device_info,
                         root_vhd_path, eph_vhd_path):
         instance_name = instance['name']
+        instance_path = os.path.join(CONF.instances_path, instance_name)
 
         self._vmutils.create_vm(instance_name,
                                 instance['memory_mb'],
                                 instance['vcpus'],
                                 CONF.hyperv.limit_cpu_features,
                                 CONF.hyperv.dynamic_memory_ratio,
+                                instance_path,
                                 [instance['uuid']])
 
         ctrl_disk_addr = 0
