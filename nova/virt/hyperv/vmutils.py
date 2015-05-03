@@ -244,7 +244,8 @@ class VMUtils(object):
         vs_man_svc = self._conn.Msvm_VirtualSystemManagementService()[0]
 
         LOG.debug('Creating VM %s', vm_name)
-        vm = self._create_vm_obj(vs_man_svc, vm_name, notes)
+        vm = self._create_vm_obj(vs_man_svc, vm_name, notes,
+                                 dynamic_memory_ratio)
 
         vmsetting = self._get_vm_setting_data(vm)
 
@@ -254,7 +255,7 @@ class VMUtils(object):
         LOG.debug('Set vCPUs for vm %s', vm_name)
         self._set_vm_vcpus(vm, vmsetting, vcpus_num, limit_cpu_features)
 
-    def _create_vm_obj(self, vs_man_svc, vm_name, notes):
+    def _create_vm_obj(self, vs_man_svc, vm_name, notes, dynamic_memory_ratio):
         vs_gs_data = self._conn.Msvm_VirtualSystemGlobalSettingData.new()
         vs_gs_data.ElementName = vm_name
         # Don't start automatically on host boot
