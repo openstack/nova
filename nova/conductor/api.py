@@ -67,9 +67,6 @@ class LocalAPI(object):
         # nothing to wait for in the local case.
         pass
 
-    def provider_fw_rule_get_all(self, context):
-        return self._manager.provider_fw_rule_get_all(context)
-
     def object_backport(self, context, objinst, target_version):
         # NOTE(hanlind): This shouldn't be called anymore but leaving it for
         # now just in case. Collect the object version manifest and redirect
