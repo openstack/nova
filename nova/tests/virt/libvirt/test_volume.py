@@ -226,7 +226,30 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
         readonly = tree.find('./readonly')
         self.assertIsNotNone(readonly)
 
-    def iscsi_connection(self, volume, location, iqn):
+    def iscsi_connection(self, volume, location, iqn, auth=False):
+        dev_name = 'ip-%s-iscsi-%s-lun-1' % (location, iqn)
+        dev_path = '/dev/disk/by-path/%s' % (dev_name)
+        ret = {
+                'driver_volume_type': 'iscsi',
+                'data': {
+                    'volume_id': volume['id'],
+                    'target_portal': location,
+                    'target_iqn': iqn,
+                    'target_lun': 1,
+                    'host_device': dev_path,
+                    'qos_specs': {
+                        'total_bytes_sec': '102400',
+                        'read_iops_sec': '200',
+                        }
+                }
+        }
+        if auth:
+            ret['data']['auth_method'] = 'CHAP'
+            ret['data']['auth_username'] = 'foo'
+            ret['data']['auth_password'] = 'bar'
+        return ret
+
+    def iscsi_connection_discovery_chap_enable(self, volume, location, iqn):
         dev_name = 'ip-%s-iscsi-%s-lun-1' % (location, iqn)
         dev_path = '/dev/disk/by-path/%s' % (dev_name)
         return {
@@ -236,7 +259,10 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
                     'target_portal': location,
                     'target_iqn': iqn,
                     'target_lun': 1,
-                    'host_device': dev_path,
+                    'device_path': dev_path,
+                    'discovery_auth_method': 'CHAP',
+                    'discovery_auth_username': "testuser",
+                    'discovery_auth_password': '123456',
                     'qos_specs': {
                         'total_bytes_sec': '102400',
                         'read_iops_sec': '200',
@@ -597,6 +623,68 @@ Setting up iSCSI targets: unused
         self.assertEqual(tree.find('./auth/secret').get('type'), secret_type)
         self.assertEqual(tree.find('./auth/secret').get('uuid'), flags_uuid)
         libvirt_driver.disconnect_volume(connection_info, "vde")
+
+    def test_libvirt_iscsi_net_driver(self):
+        libvirt_driver = volume.LibvirtNetVolumeDriver(self.fake_conn)
+        connection_info = self.iscsi_connection(self.vol, self.location,
+                                                self.iqn, auth=True)
+        secret_type = 'iscsi'
+        connection_info['data']['auth_enabled'] = True
+        connection_info['data']['secret_type'] = secret_type
+        connection_info['data']['secret_uuid'] = self.uuid
+
+        flags_user = connection_info['data']['auth_username']
+        conf = libvirt_driver.get_config(connection_info, self.disk_info)
+        tree = conf.format_dom()
+        self.assertEqual(tree.find('./auth').get('username'), flags_user)
+        self.assertEqual(tree.find('./auth/secret').get('type'), secret_type)
+        self.assertEqual(tree.find('./auth/secret').get('uuid'), self.uuid)
+        libvirt_driver.disconnect_volume(connection_info, 'vde')
+
+    def test_libvirt_iscsi_driver_discovery_chap_enable(self):
+        # NOTE(vish) exists is to make driver assume connecting worked
+        self.stubs.Set(os.path, 'exists', lambda x: True)
+        libvirt_driver = volume.LibvirtISCSIVolumeDriver(self.fake_conn)
+        libvirt_driver.use_multipath = True
+        connection_info = self.iscsi_connection_discovery_chap_enable(
+                                                self.vol, self.location,
+                                                self.iqn)
+        mpdev_filepath = '/dev/mapper/foo'
+        libvirt_driver._get_multipath_device_name = lambda x: mpdev_filepath
+        libvirt_driver.connect_volume(connection_info, self.disk_info)
+        libvirt_driver.disconnect_volume(connection_info, "vde")
+        expected_commands = [('iscsiadm', '-m', 'discoverydb',
+                              '-t', 'sendtargets',
+                              '-p', self.location, '--op', 'update',
+                              '-n', 'discovery.sendtargets.auth.authmethod',
+                              '-v', 'CHAP',
+                              '-n', 'discovery.sendtargets.auth.username',
+                              '-v', 'testuser',
+                              '-n', 'discovery.sendtargets.auth.password',
+                              '-v', '123456'),
+                             ('iscsiadm', '-m', 'discoverydb',
+                              '-t', 'sendtargets',
+                              '-p', self.location, '--discover'),
+                             ('iscsiadm', '-m', 'node', '--rescan'),
+                             ('iscsiadm', '-m', 'session', '--rescan'),
+                             ('multipath', '-r'),
+                             ('iscsiadm', '-m', 'node', '--rescan'),
+                             ('iscsiadm', '-m', 'session', '--rescan'),
+                             ('multipath', '-r'),
+                             ('iscsiadm', '-m', 'discoverydb',
+                              '-t', 'sendtargets',
+                              '-p', self.location, '--op', 'update',
+                              '-n', 'discovery.sendtargets.auth.authmethod',
+                              '-v', 'CHAP',
+                              '-n', 'discovery.sendtargets.auth.username',
+                              '-v', 'testuser',
+                              '-n', 'discovery.sendtargets.auth.password',
+                              '-v', '123456'),
+                             ('iscsiadm', '-m', 'discoverydb',
+                              '-t', 'sendtargets',
+                              '-p', self.location, '--discover'),
+                             ('multipath', '-r')]
+        self.assertEqual(self.executes, expected_commands)
 
     def test_libvirt_kvm_volume(self):
         self.stubs.Set(os.path, 'exists', lambda x: True)
