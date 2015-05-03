@@ -14,12 +14,78 @@ import mock
 from oslo.config import cfg
 import requests
 
+from nova.openstack.common import jsonutils
 from nova.openstack.common import timeutils
 from nova.scheduler.filters import trusted_filter
 from nova import test
 from nova.tests.scheduler import fakes
 
 CONF = cfg.CONF
+
+
+class AttestationServiceTestCase(test.NoDBTestCase):
+
+    def setUp(self):
+        super(AttestationServiceTestCase, self).setUp()
+        self.api_url = '/OpenAttestationWebServices/V1.0'
+        self.host = 'localhost'
+        self.port = '8443'
+        self.statuses = (requests.codes.OK, requests.codes.CREATED,
+                         requests.codes.ACCEPTED, requests.codes.NO_CONTENT)
+
+    @mock.patch.object(requests, 'request')
+    def test_do_request_possible_statuses(self, request_mock):
+        """This test case checks if '_do_request()' method returns
+        appropriate status_code (200) and result (text converted to json),
+        while status_code returned by request is in one of fourth eligible
+        statuses
+        """
+
+        for status_code in self.statuses:
+            request_mock.return_value.status_code = status_code
+            request_mock.return_value.text = '{"test": "test"}'
+
+            attestation_service = trusted_filter.AttestationService()
+            status, result = attestation_service._do_request(
+                'POST', 'PollHosts', {}, {})
+
+            self.assertEqual(requests.codes.OK, status)
+            self.assertEqual(jsonutils.loads(request_mock.return_value.text),
+                             result)
+
+    @mock.patch.object(requests, 'request')
+    def test_do_request_other_status(self, request_mock):
+        """This test case checks if '_do_request()' method returns
+        appropriate status (this returned by request method) and result
+        (None), while status_code returned by request is not in one of fourth
+        eligible statuses
+        """
+
+        request_mock.return_value.status_code = requests.codes.NOT_FOUND
+        request_mock.return_value.text = '{"test": "test"}'
+
+        attestation_service = trusted_filter.AttestationService()
+        status, result = attestation_service._do_request(
+            'POST', 'PollHosts', {}, {})
+
+        self.assertEqual(requests.codes.NOT_FOUND, status)
+        self.assertIsNone(result)
+
+    @mock.patch.object(requests, 'request')
+    def test_do_request_unconvertible_text(self, request_mock):
+        for status_code in self.statuses:
+            # this unconvertible_texts leads to TypeError and ValueError
+            # in jsonutils.loads(res.text) in _do_request() method
+            for unconvertible_text in ({"test": "test"}, '{}{}'):
+                request_mock.return_value.status_code = status_code
+                request_mock.return_value.text = unconvertible_text
+
+                attestation_service = trusted_filter.AttestationService()
+                status, result = attestation_service._do_request(
+                    'POST', 'PollHosts', {}, {})
+
+                self.assertEqual(requests.codes.OK, status)
+                self.assertEqual(unconvertible_text, result)
 
 
 @mock.patch.object(trusted_filter.AttestationService, '_request')
