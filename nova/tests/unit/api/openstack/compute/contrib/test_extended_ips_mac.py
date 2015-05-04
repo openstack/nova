@@ -14,6 +14,7 @@
 #    under the License.
 
 from oslo_serialization import jsonutils
+import six
 import webob
 
 from nova.api.openstack.compute.contrib import extended_ips_mac
@@ -132,7 +133,7 @@ class ExtendedIpsMacTestV21(test.TestCase):
         return jsonutils.loads(body).get('servers')
 
     def _get_ips(self, server):
-        for network in server['addresses'].itervalues():
+        for network in six.itervalues(server['addresses']):
             for ip in network:
                 yield ip
 

@@ -16,6 +16,7 @@
 import copy
 
 from oslo_config import cfg
+import six
 
 from nova.compute import api as compute_api
 from nova import db
@@ -55,7 +56,7 @@ class ServerActionsSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
 
         def fake_server_actions_get(context, uuid):
             return [copy.deepcopy(value) for value in
-                    self.actions[uuid].itervalues()]
+                    six.itervalues(self.actions[uuid])]
 
         def fake_instance_action_events_get(context, action_id):
             return copy.deepcopy(self.events[action_id])

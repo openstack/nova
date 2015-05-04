@@ -26,6 +26,7 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import timeutils
+import six
 
 from nova.compute import task_states
 from nova.compute import vm_states
@@ -512,7 +513,7 @@ class HostManager(object):
                 # NOTE(deva): Skip filters when forcing host or node
                 if name_to_cls_map:
                     return name_to_cls_map.values()
-            hosts = name_to_cls_map.itervalues()
+            hosts = six.itervalues(name_to_cls_map)
 
         return self.filter_handler.get_filtered_objects(filters,
                 hosts, filter_properties, index)
@@ -569,7 +570,7 @@ class HostManager(object):
                          "from scheduler"), {'host': host, 'node': node})
             del self.host_state_map[state_key]
 
-        return self.host_state_map.itervalues()
+        return six.itervalues(self.host_state_map)
 
     def _add_instance_info(self, context, compute, host_state):
         """Adds the host instance info to the host_state object.

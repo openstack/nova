@@ -16,6 +16,7 @@
 import copy
 import uuid
 
+import six
 from webob import exc
 
 from nova.api.openstack.compute.contrib import instance_actions \
@@ -163,7 +164,7 @@ class InstanceActionsTestV21(test.NoDBTestCase):
     def test_list_actions(self):
         def fake_get_actions(context, uuid):
             actions = []
-            for act in self.fake_actions[uuid].itervalues():
+            for act in six.itervalues(self.fake_actions[uuid]):
                 action = models.InstanceAction()
                 action.update(act)
                 actions.append(action)

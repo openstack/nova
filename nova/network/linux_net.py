@@ -426,11 +426,11 @@ class IptablesManager(object):
         self.apply()
 
     def dirty(self):
-        for table in self.ipv4.itervalues():
+        for table in six.itervalues(self.ipv4):
             if table.dirty:
                 return True
         if CONF.use_ipv6:
-            for table in self.ipv6.itervalues():
+            for table in six.itervalues(self.ipv6):
                 if table.dirty:
                     return True
         return False
