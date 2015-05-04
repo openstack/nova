@@ -29,7 +29,7 @@ class VHDUtilsBaseTestCase(test.NoDBTestCase):
     _FAKE_FORMAT = 3
     _FAKE_TYPE = 3
     _FAKE_MAX_INTERNAL_SIZE = units.Gi
-    _FAKE_DYNAMIC_BLK_SIZE = 2097152L
+    _FAKE_DYNAMIC_BLK_SIZE = 2097152
     _FAKE_BAD_TYPE = 5
 
     _FAKE_JOB_PATH = 'fake_job_path'

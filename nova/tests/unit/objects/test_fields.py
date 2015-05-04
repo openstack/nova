@@ -17,6 +17,7 @@ import datetime
 import iso8601
 import netaddr
 from oslo_utils import timeutils
+import six
 
 from nova.network import model as network_model
 from nova.objects import base as obj_base
@@ -74,8 +75,9 @@ class TestString(TestField):
     def setUp(self):
         super(TestString, self).setUp()
         self.field = fields.StringField()
-        self.coerce_good_values = [('foo', 'foo'), (1, '1'), (1L, '1'),
-                                   (True, 'True')]
+        self.coerce_good_values = [('foo', 'foo'), (1, '1'), (True, 'True')]
+        if six.PY2:
+            self.coerce_good_values.append((long(1), '1'))
         self.coerce_bad_values = [None]
         self.to_primitive_values = self.coerce_good_values[0:1]
         self.from_primitive_values = self.coerce_good_values[0:1]
@@ -88,9 +90,10 @@ class TestEnum(TestField):
     def setUp(self):
         super(TestEnum, self).setUp()
         self.field = fields.EnumField(
-            valid_values=['foo', 'bar', 1, 1L, True])
-        self.coerce_good_values = [('foo', 'foo'), (1, '1'), (1L, '1'),
-                                   (True, 'True')]
+            valid_values=['foo', 'bar', 1, 1, True])
+        self.coerce_good_values = [('foo', 'foo'), (1, '1'), (True, 'True')]
+        if six.PY2:
+            self.coerce_good_values.append((long(1), '1'))
         self.coerce_bad_values = ['boo', 2, False]
         self.to_primitive_values = self.coerce_good_values[0:1]
         self.from_primitive_values = self.coerce_good_values[0:1]

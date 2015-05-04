@@ -25,11 +25,11 @@ class ComputeDriverCPUMonitorTestCase(test.NoDBTestCase):
 
         class FakeDriver(object):
             def get_host_cpu_stats(self):
-                return {'kernel': 5664160000000L,
-                        'idle': 1592705190000000L,
+                return {'kernel': 5664160000000,
+                        'idle': 1592705190000000,
                         'frequency': 800,
-                        'user': 26728850000000L,
-                        'iowait': 6121490000000L}
+                        'user': 26728850000000,
+                        'iowait': 6121490000000}
 
         class FakeComputeManager(object):
             driver = FakeDriver()
@@ -59,10 +59,10 @@ class ComputeDriverCPUMonitorTestCase(test.NoDBTestCase):
             metrics[metric['name']] = metric['value']
 
         self.assertEqual(metrics["cpu.frequency"], 800)
-        self.assertEqual(metrics["cpu.user.time"], 26728850000000L)
-        self.assertEqual(metrics["cpu.kernel.time"], 5664160000000L)
-        self.assertEqual(metrics["cpu.idle.time"], 1592705190000000L)
-        self.assertEqual(metrics["cpu.iowait.time"], 6121490000000L)
+        self.assertEqual(metrics["cpu.user.time"], 26728850000000)
+        self.assertEqual(metrics["cpu.kernel.time"], 5664160000000)
+        self.assertEqual(metrics["cpu.idle.time"], 1592705190000000)
+        self.assertEqual(metrics["cpu.iowait.time"], 6121490000000)
         self.assertTrue(metrics["cpu.user.percent"] <= 1
                         and metrics["cpu.user.percent"] >= 0)
         self.assertTrue(metrics["cpu.kernel.percent"] <= 1

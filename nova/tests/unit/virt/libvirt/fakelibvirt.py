@@ -567,7 +567,7 @@ class Domain(object):
                 long(self._def['memory']),
                 long(self._def['memory']),
                 self._def['vcpu'],
-                123456789L]
+                123456789]
 
     def migrateToURI(self, desturi, flags, dname, bandwidth):
         raise make_libvirtError(
@@ -713,7 +713,7 @@ class Domain(object):
     def vcpus(self):
         vcpus = ([], [])
         for i in range(0, self._def['vcpu']):
-            vcpus[0].append((i, 1, 120405L, i))
+            vcpus[0].append((i, 1, 120405, i))
             vcpus[1].append((True, True, True, True))
         return vcpus
 
@@ -1171,10 +1171,10 @@ class Connection(object):
 
     def getCPUStats(self, cpuNum, flag):
         if cpuNum < 2:
-            return {'kernel': 5664160000000L,
-                    'idle': 1592705190000000L,
-                    'user': 26728850000000L,
-                    'iowait': 6121490000000L}
+            return {'kernel': 5664160000000,
+                    'idle': 1592705190000000,
+                    'user': 26728850000000,
+                    'iowait': 6121490000000}
         else:
             raise make_libvirtError(
                     libvirtError,
