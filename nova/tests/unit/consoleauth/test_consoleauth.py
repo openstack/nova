@@ -60,7 +60,7 @@ class ConsoleauthTestCase(test.TestCase):
                        fake_validate_console_port)
 
     def test_multiple_tokens_for_instance(self):
-        tokens = [u"token" + str(i) for i in xrange(10)]
+        tokens = [u"token" + str(i) for i in range(10)]
 
         self._stub_validate_console_port(True)
 
@@ -73,7 +73,7 @@ class ConsoleauthTestCase(test.TestCase):
             self.assertTrue(self.manager_api.check_token(self.context, token))
 
     def test_delete_tokens_for_instance(self):
-        tokens = [u"token" + str(i) for i in xrange(10)]
+        tokens = [u"token" + str(i) for i in range(10)]
         for token in tokens:
             self.manager_api.authorize_console(self.context, token, 'novnc',
                                           '127.0.0.1', '8080', 'host',

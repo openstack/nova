@@ -27,6 +27,7 @@ from oslo_config import cfg
 from oslo_serialization import jsonutils
 from oslo_utils import timeutils
 import six
+from six.moves import range
 
 from nova.compute import flavors
 from nova import context
@@ -596,7 +597,7 @@ class TestNeutronv2Base(test.TestCase):
         nets = number == 1 and self.nets1 or self.nets2
         self.moxed_client.list_networks(
             id=net_ids).AndReturn({'networks': nets})
-        for i in xrange(1, number + 1):
+        for i in range(1, number + 1):
             float_data = number == 1 and self.float_data1 or self.float_data2
             for ip in port_data[i - 1]['fixed_ips']:
                 float_data = [x for x in float_data
@@ -619,7 +620,7 @@ class TestNeutronv2Base(test.TestCase):
             net_info_cache)
         instance = self._fake_instance_object_with_info_cache(self.instance)
         nw_inf = api.get_instance_nw_info(self.context, instance)
-        for i in xrange(0, number):
+        for i in range(0, number):
             self._verify_nw_info(nw_inf, i)
 
     def _allocate_for_instance(self, net_idx=1, **kwargs):

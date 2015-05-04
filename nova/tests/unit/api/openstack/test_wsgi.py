@@ -56,7 +56,7 @@ class RequestTest(test.NoDBTestCase):
     def test_cache_and_retrieve_instances(self):
         request = wsgi.Request.blank('/foo')
         instances = []
-        for x in xrange(3):
+        for x in range(3):
             instances.append({'uuid': 'uuid%s' % x})
         # Store 2
         request.cache_db_instances(instances[:2])
@@ -77,7 +77,7 @@ class RequestTest(test.NoDBTestCase):
     def test_cache_and_retrieve_compute_nodes(self):
         request = wsgi.Request.blank('/foo')
         compute_nodes = []
-        for x in xrange(3):
+        for x in range(3):
             compute_nodes.append({'id': 'id%s' % x})
         # Store 2
         request.cache_db_compute_nodes(compute_nodes[:2])

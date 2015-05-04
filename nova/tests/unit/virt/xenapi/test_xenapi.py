@@ -377,7 +377,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
 
     def test_list_instance_uuids(self):
         uuids = []
-        for x in xrange(1, 4):
+        for x in range(1, 4):
             instance = self._create_instance()
             uuids.append(instance['uuid'])
         instance_uuids = self.conn.list_instance_uuids()
@@ -1625,7 +1625,7 @@ class XenAPIDiffieHellmanTestCase(test.NoDBTestCase):
         self._test_encryption('\n\nMessage with leading newlines.')
 
     def test_encrypt_really_long_message(self):
-        self._test_encryption(''.join(['abcd' for i in xrange(1024)]))
+        self._test_encryption(''.join(['abcd' for i in range(1024)]))
 
 
 # FIXME(sirp): convert this to use XenAPITestBaseNoDB

@@ -18,6 +18,7 @@ import datetime
 
 from oslo_config import cfg
 from oslo_utils import timeutils
+from six.moves import range
 
 from nova import compute
 from nova.compute import flavors
@@ -174,39 +175,39 @@ class QuotaIntegrationTestCase(test.TestCase):
 
     def test_max_injected_files(self):
         files = []
-        for i in xrange(CONF.quota_injected_files):
+        for i in range(CONF.quota_injected_files):
             files.append(('/my/path%d' % i, 'config = test\n'))
         self._create_with_injected_files(files)  # no QuotaError
 
     def test_too_many_injected_files(self):
         files = []
-        for i in xrange(CONF.quota_injected_files + 1):
+        for i in range(CONF.quota_injected_files + 1):
             files.append(('/my/path%d' % i, 'my\ncontent%d\n' % i))
         self.assertRaises(exception.QuotaError,
                           self._create_with_injected_files, files)
 
     def test_max_injected_file_content_bytes(self):
         max = CONF.quota_injected_file_content_bytes
-        content = ''.join(['a' for i in xrange(max)])
+        content = ''.join(['a' for i in range(max)])
         files = [('/test/path', content)]
         self._create_with_injected_files(files)  # no QuotaError
 
     def test_too_many_injected_file_content_bytes(self):
         max = CONF.quota_injected_file_content_bytes
-        content = ''.join(['a' for i in xrange(max + 1)])
+        content = ''.join(['a' for i in range(max + 1)])
         files = [('/test/path', content)]
         self.assertRaises(exception.QuotaError,
                           self._create_with_injected_files, files)
 
     def test_max_injected_file_path_bytes(self):
         max = CONF.quota_injected_file_path_length
-        path = ''.join(['a' for i in xrange(max)])
+        path = ''.join(['a' for i in range(max)])
         files = [(path, 'config = quotatest')]
         self._create_with_injected_files(files)  # no QuotaError
 
     def test_too_many_injected_file_path_bytes(self):
         max = CONF.quota_injected_file_path_length
-        path = ''.join(['a' for i in xrange(max + 1)])
+        path = ''.join(['a' for i in range(max + 1)])
         files = [(path, 'config = quotatest')]
         self.assertRaises(exception.QuotaError,
                           self._create_with_injected_files, files)

@@ -79,7 +79,7 @@ class CellsSchedulerTestCase(test.TestCase):
         self.my_cell_state = self.state_manager.get_my_state()
         self.ctxt = context.RequestContext('fake', 'fake')
         instance_uuids = []
-        for x in xrange(3):
+        for x in range(3):
             instance_uuids.append(uuidutils.generate_uuid())
         self.instance_uuids = instance_uuids
         self.instances = [objects.Instance(uuid=uuid, id=id)

@@ -27,6 +27,7 @@ from mox3 import mox
 from oslo_config import cfg
 from oslo_serialization import jsonutils
 from oslo_utils import timeutils
+from six.moves import range
 import six.moves.urllib.parse as urlparse
 import testtools
 import webob
@@ -580,7 +581,7 @@ class ServersControllerTest(ControllerTest):
 
         servers = res_dict['servers']
         self.assertEqual([s['id'] for s in servers],
-                [fakes.get_fake_uuid(i) for i in xrange(len(servers))])
+                [fakes.get_fake_uuid(i) for i in range(len(servers))])
 
         servers_links = res_dict['servers_links']
         self.assertEqual(servers_links[0]['rel'], 'next')
@@ -612,7 +613,7 @@ class ServersControllerTest(ControllerTest):
 
         servers = res['servers']
         self.assertEqual([s['id'] for s in servers],
-                [fakes.get_fake_uuid(i) for i in xrange(len(servers))])
+                [fakes.get_fake_uuid(i) for i in range(len(servers))])
 
         servers_links = res['servers_links']
         self.assertEqual(servers_links[0]['rel'], 'next')
@@ -636,7 +637,7 @@ class ServersControllerTest(ControllerTest):
 
         servers = res['servers']
         self.assertEqual([s['id'] for s in servers],
-                [fakes.get_fake_uuid(i) for i in xrange(len(servers))])
+                [fakes.get_fake_uuid(i) for i in range(len(servers))])
 
         servers_links = res['servers_links']
         self.assertEqual(servers_links[0]['rel'], 'next')
@@ -1283,7 +1284,7 @@ class ServersControllerTest(ControllerTest):
         def return_servers_with_host(context, *args, **kwargs):
             return [fakes.stub_instance(i + 1, 'fake', 'fake', host=i % 2,
                                         uuid=fakes.get_fake_uuid(i))
-                    for i in xrange(5)]
+                    for i in range(5)]
 
         self.stubs.Set(db, 'instance_get_all_by_filters_sort',
                        return_servers_with_host)

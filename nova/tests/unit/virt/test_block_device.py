@@ -685,9 +685,9 @@ class TestDriverBlockDevice(test.NoDBTestCase):
 
         # Test that the ephemerals work as expected
         test_ephemerals = [self.driver_classes['ephemeral'](
-            self.ephemeral_bdm) for _ in xrange(2)]
+            self.ephemeral_bdm) for _ in range(2)]
         expected = [self.ephemeral_legacy_driver_bdm.copy()
-                             for _ in xrange(2)]
+                             for _ in range(2)]
         expected[0]['virtual_name'] = 'ephemeral0'
         expected[0]['num'] = 0
         expected[1]['virtual_name'] = 'ephemeral1'

@@ -17,6 +17,7 @@ import datetime
 
 import mock
 from oslo_utils import timeutils
+from six.moves import range
 import webob
 
 from nova.api.openstack.compute.contrib import simple_tenant_usage as \
@@ -99,7 +100,7 @@ def fake_instance_get_active_by_window_joined(context, begin, end,
                                          x,
                                          project_id if project_id else
                                          "faketenant_%s" % (x / SERVERS))
-                                         for x in xrange(TENANTS * SERVERS)]
+                                         for x in range(TENANTS * SERVERS)]
 
 
 @mock.patch.object(db, 'instance_get_active_by_window_joined',
@@ -126,7 +127,7 @@ class SimpleTenantUsageTestV21(test.TestCase):
         req.environ['nova.context'] = self.admin_context
         res_dict = self.controller.index(req)
         usages = res_dict['tenant_usages']
-        for i in xrange(TENANTS):
+        for i in range(TENANTS):
             self.assertEqual(int(usages[i]['total_hours']),
                              SERVERS * HOURS)
             self.assertEqual(int(usages[i]['total_local_gb_usage']),
@@ -178,20 +179,20 @@ class SimpleTenantUsageTestV21(test.TestCase):
 
     def test_verify_detailed_index(self):
         usages = self._get_tenant_usages('1')
-        for i in xrange(TENANTS):
+        for i in range(TENANTS):
             servers = usages[i]['server_usages']
-            for j in xrange(SERVERS):
+            for j in range(SERVERS):
                 self.assertEqual(int(servers[j]['hours']), HOURS)
 
     def test_verify_simple_index(self):
         usages = self._get_tenant_usages(detailed='0')
-        for i in xrange(TENANTS):
+        for i in range(TENANTS):
             self.assertIsNone(usages[i].get('server_usages'))
 
     def test_verify_simple_index_empty_param(self):
         # NOTE(lzyeval): 'detailed=&start=..&end=..'
         usages = self._get_tenant_usages()
-        for i in xrange(TENANTS):
+        for i in range(TENANTS):
             self.assertIsNone(usages[i].get('server_usages'))
 
     def _test_verify_show(self, start, stop):
@@ -206,8 +207,8 @@ class SimpleTenantUsageTestV21(test.TestCase):
         servers = usage['server_usages']
         self.assertEqual(len(usage['server_usages']), TENANTS * SERVERS)
         uuids = ['00000000-0000-0000-0000-00000000000000%02d' %
-                    x for x in xrange(SERVERS)]
-        for j in xrange(SERVERS):
+                    x for x in range(SERVERS)]
+        for j in range(SERVERS):
             delta = STOP - START
             uptime = delta.days * 24 * 3600 + delta.seconds
             self.assertEqual(int(servers[j]['uptime']), uptime)

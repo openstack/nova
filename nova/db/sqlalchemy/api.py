@@ -36,6 +36,7 @@ from oslo_utils import excutils
 from oslo_utils import timeutils
 from oslo_utils import uuidutils
 import six
+from six.moves import range
 from sqlalchemy import and_
 from sqlalchemy import Boolean
 from sqlalchemy.exc import NoSuchTableError
@@ -4826,7 +4827,7 @@ def flavor_extra_specs_delete(context, flavor_id, key):
 @require_context
 def flavor_extra_specs_update_or_create(context, flavor_id, specs,
                                                max_retries=10):
-    for attempt in xrange(max_retries):
+    for attempt in range(max_retries):
         try:
             session = get_session()
             with session.begin():
@@ -5522,7 +5523,7 @@ def aggregate_metadata_delete(context, aggregate_id, key):
 def aggregate_metadata_add(context, aggregate_id, metadata, set_delete=False,
                            max_retries=10):
     all_keys = metadata.keys()
-    for attempt in xrange(max_retries):
+    for attempt in range(max_retries):
         try:
             session = get_session()
             with session.begin():

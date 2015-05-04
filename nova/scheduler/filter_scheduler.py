@@ -23,6 +23,7 @@ import random
 
 from oslo_config import cfg
 from oslo_log import log as logging
+from six.moves import range
 
 from nova import exception
 from nova.i18n import _
@@ -140,7 +141,7 @@ class FilterScheduler(driver.Scheduler):
 
         selected_hosts = []
         num_instances = request_spec.get('num_instances', 1)
-        for num in xrange(num_instances):
+        for num in range(num_instances):
             # Filter local hosts based on requirements ...
             hosts = self.host_manager.get_filtered_hosts(hosts,
                     filter_properties, index=num)

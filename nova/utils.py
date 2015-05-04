@@ -47,6 +47,7 @@ from oslo_utils import excutils
 from oslo_utils import importutils
 from oslo_utils import timeutils
 import six
+from six.moves import range
 
 from nova import exception
 from nova.i18n import _, _LE, _LW
@@ -249,7 +250,7 @@ def novadir():
 
 def generate_uid(topic, size=8):
     characters = '01234567890abcdefghijklmnopqrstuvwxyz'
-    choices = [random.choice(characters) for _x in xrange(size)]
+    choices = [random.choice(characters) for _x in range(size)]
     return '%s-%s' % (topic, ''.join(choices))
 
 
@@ -384,7 +385,7 @@ def generate_password(length=None, symbolgroups=DEFAULT_PASSWORD_SYMBOLS):
 
     # then fill with random characters from all symbol groups
     symbols = ''.join(symbolgroups)
-    password.extend([r.choice(symbols) for _i in xrange(length)])
+    password.extend([r.choice(symbols) for _i in range(length)])
 
     # finally shuffle to ensure first x characters aren't from a
     # predictable group

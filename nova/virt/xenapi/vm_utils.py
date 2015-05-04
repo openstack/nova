@@ -37,6 +37,7 @@ from oslo_utils import strutils
 from oslo_utils import timeutils
 from oslo_utils import units
 import six
+from six.moves import range
 import six.moves.urllib.parse as urlparse
 
 from nova.api.metadata import base as instance_metadata
@@ -382,7 +383,7 @@ def _should_retry_unplug_vbd(err):
 def unplug_vbd(session, vbd_ref, this_vm_ref):
     # make sure that perform at least once
     max_attempts = max(0, CONF.xenserver.num_vbd_unplug_retries) + 1
-    for num_attempt in xrange(1, max_attempts + 1):
+    for num_attempt in range(1, max_attempts + 1):
         try:
             if num_attempt > 1:
                 greenthread.sleep(1)
@@ -1366,7 +1367,7 @@ def _make_uuid_stack():
     # which does not have the `uuid` module. To work around this,
     # we generate the uuids here (under Python 2.6+) and
     # pass them as arguments
-    return [str(uuid.uuid4()) for i in xrange(MAX_VDI_CHAIN_SIZE)]
+    return [str(uuid.uuid4()) for i in range(MAX_VDI_CHAIN_SIZE)]
 
 
 def _image_uses_bittorrent(context, instance):
@@ -2099,7 +2100,7 @@ def _wait_for_vhd_coalesce(session, instance, sr_ref, vdi_ref,
     # Its possible that other coalesce operation happen, so we need
     # to consider the full chain, rather than just the most recent parent.
     good_parent_uuids = vdi_uuid_list[1:]
-    for i in xrange(max_attempts):
+    for i in range(max_attempts):
         # NOTE(sirp): This rescan is necessary to ensure the VM's `sm_config`
         # matches the underlying VHDs.
         # This can also kick XenServer into performing a pending coalesce.
@@ -2146,7 +2147,7 @@ def _remap_vbd_dev(dev):
 
 def _wait_for_device(dev):
     """Wait for device node to appear."""
-    for i in xrange(0, CONF.xenserver.block_device_creation_timeout):
+    for i in range(0, CONF.xenserver.block_device_creation_timeout):
         dev_path = utils.make_dev_path(dev)
         if os.path.exists(dev_path):
             return

@@ -21,6 +21,7 @@ import datetime
 import mock
 from oslo_config import cfg
 from oslo_utils import timeutils
+from six.moves import range
 
 from nova.cells import messaging
 from nova.cells import utils as cells_utils
@@ -279,7 +280,7 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
         expected_response = []
         # 3 cells... so 3 responses.  Each response is a list of services.
         # Manager should turn these into a single list of responses.
-        for i in xrange(3):
+        for i in range(3):
             cell_name = 'path!to!cell%i' % i
             services = []
             for service in FAKE_SERVICES:
@@ -405,7 +406,7 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
         # 3 cells... so 3 responses.  Each response is a list of task log
         # entries. Manager should turn these into a single list of
         # task log entries.
-        for i in xrange(num):
+        for i in range(num):
             cell_name = 'path!to!cell%i' % i
             task_logs = []
             for task_log in FAKE_TASK_LOGS:
@@ -468,7 +469,7 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
         expected_response = []
         # 3 cells... so 3 responses.  Each response is a list of computes.
         # Manager should turn these into a single list of responses.
-        for i in xrange(3):
+        for i in range(3):
             cell_name = 'path!to!cell%i' % i
             compute_nodes = []
             for compute_node in FAKE_COMPUTE_NODES:

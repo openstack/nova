@@ -15,6 +15,8 @@
 
 import mock
 
+from six.moves import range
+
 from nova import exception
 from nova import test
 from nova.virt.hyperv import constants
@@ -270,7 +272,7 @@ class VMUtilsTestCase(test.NoDBTestCase):
     def test_get_free_controller_slot_exception(self):
         fake_drive = mock.MagicMock()
         type(fake_drive).AddressOnParent = mock.PropertyMock(
-            side_effect=xrange(constants.SCSI_CONTROLLER_SLOTS_NUMBER))
+            side_effect=range(constants.SCSI_CONTROLLER_SLOTS_NUMBER))
 
         with mock.patch.object(self._vmutils,
                 'get_attached_disks') as fake_get_attached_disks:

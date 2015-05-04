@@ -24,6 +24,7 @@ from oslo_log import log as logging
 import oslo_messaging
 from oslo_utils import importutils
 from oslo_utils import timeutils
+from six.moves import range
 
 from nova.cells import messaging
 from nova.cells import state as cells_state
@@ -169,7 +170,7 @@ class CellsManager(manager.Manager):
 
         rd_context = ctxt.elevated(read_deleted='yes')
 
-        for i in xrange(CONF.cells.instance_update_num_instances):
+        for i in range(CONF.cells.instance_update_num_instances):
             while True:
                 # Yield to other greenthreads
                 time.sleep(0)

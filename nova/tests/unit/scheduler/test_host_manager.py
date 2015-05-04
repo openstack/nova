@@ -67,9 +67,9 @@ class HostManagerTestCase(test.NoDBTestCase):
         self.flags(scheduler_default_filters=['FakeFilterClass1'])
         self.host_manager = host_manager.HostManager()
         self.fake_hosts = [host_manager.HostState('fake_host%s' % x,
-                'fake-node') for x in xrange(1, 5)]
+                'fake-node') for x in range(1, 5)]
         self.fake_hosts += [host_manager.HostState('fake_multihost',
-                'fake-node%s' % x) for x in xrange(1, 5)]
+                'fake-node%s' % x) for x in range(1, 5)]
 
     def test_load_filters(self):
         filters = self.host_manager._load_filters()
@@ -388,7 +388,7 @@ class HostManagerTestCase(test.NoDBTestCase):
 
         self.assertEqual(len(host_states_map), 4)
         # Check that .service is set properly
-        for i in xrange(4):
+        for i in range(4):
             compute_node = fakes.COMPUTE_NODES[i]
             host = compute_node['host']
             node = compute_node['hypervisor_hostname']

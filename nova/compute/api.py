@@ -35,6 +35,7 @@ from oslo_utils import timeutils
 from oslo_utils import units
 from oslo_utils import uuidutils
 import six
+from six.moves import range
 
 from nova import availability_zones
 from nova import block_device
@@ -910,7 +911,7 @@ class API(base.Base):
         LOG.debug("Going to run %s instances..." % num_instances)
         instances = []
         try:
-            for i in xrange(num_instances):
+            for i in range(num_instances):
                 instance = objects.Instance(context=context)
                 instance.update(base_options)
                 instance = self.create_db_entry_for_new_instance(

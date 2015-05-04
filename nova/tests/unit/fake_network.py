@@ -15,6 +15,7 @@
 
 from oslo_config import cfg
 from oslo_serialization import jsonutils
+from six.moves import range
 
 from nova.compute import api as compute_api
 from nova.compute import manager as compute_manager
@@ -221,12 +222,12 @@ def fake_vif(x):
 
 
 def floating_ip_ids():
-    for i in xrange(1, 100):
+    for i in range(1, 100):
         yield i
 
 
 def fixed_ip_ids():
-    for i in xrange(1, 100):
+    for i in range(1, 100):
         yield i
 
 
@@ -237,7 +238,7 @@ fixed_ip_id = fixed_ip_ids()
 def next_fixed_ip(network_id, num_floating_ips=0):
     next_id = next(fixed_ip_id)
     f_ips = [FakeModel(**next_floating_ip(next_id))
-             for i in xrange(num_floating_ips)]
+             for i in range(num_floating_ips)]
     return {'id': next_id,
             'network_id': network_id,
             'address': '192.168.%d.%03d' % (network_id, (next_id + 99)),
@@ -295,8 +296,8 @@ def fake_get_instance_nw_info(stubs, num_networks=1, ips_per_vif=2,
     def fixed_ips_fake(*args, **kwargs):
         global fixed_ips
         ips = [next_fixed_ip(i, floating_ips_per_fixed_ip)
-               for i in xrange(1, num_networks + 1)
-               for j in xrange(ips_per_vif)]
+               for i in range(1, num_networks + 1)
+               for j in range(ips_per_vif)]
         fixed_ips = ips
         return ips
 

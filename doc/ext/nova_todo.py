@@ -25,7 +25,7 @@ def process_todo_nodes(app, doctree, fromdocname):
     # remove the item that was added in the constructor, since I'm tired of
     # reading through docutils for the proper way to construct an empty list
     lists = []
-    for i in xrange(5):
+    for i in range(5):
         lists.append(nodes.bullet_list("", nodes.Text('', '')))
         lists[i].remove(lists[i][0])
         lists[i]['classes'].append('todo_list')

@@ -19,6 +19,7 @@ import mock
 from oslo_config import cfg
 from oslo_utils import timeutils
 import requests
+from six.moves import range
 import webob
 import webob.dec
 import webob.exc
@@ -53,7 +54,7 @@ class LockoutTestCase(test.NoDBTestCase):
 
     def _send_bad_attempts(self, access_key, num_attempts=1):
         """Fail x."""
-        for i in xrange(num_attempts):
+        for i in range(num_attempts):
             req = webob.Request.blank('/?AWSAccessKeyId=%s&die=1' % access_key)
             self.assertEqual(req.get_response(self.lockout).status_int, 403)
 

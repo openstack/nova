@@ -31,6 +31,7 @@ from oslo_serialization import jsonutils
 from oslo_utils import netutils
 from oslo_utils import timeutils
 import six
+from six.moves import range
 import six.moves.urllib.parse as urlparse
 
 from nova import exception
@@ -212,7 +213,7 @@ class GlanceClientWrapper(object):
                 glanceclient.exc.CommunicationError)
         num_attempts = 1 + CONF.glance.num_retries
 
-        for attempt in xrange(1, num_attempts + 1):
+        for attempt in range(1, num_attempts + 1):
             client = self.client or self._create_onetime_client(context,
                                                                 version)
             try:
