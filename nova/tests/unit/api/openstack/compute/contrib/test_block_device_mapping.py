@@ -313,7 +313,7 @@ class BlockDeviceMappingTestV21(test.TestCase):
 
         def _validate_bdm(*args, **kwargs):
             self.validation_fail_test_validate_called = True
-            ex, kargs = ex_iter.next()
+            ex, kargs = next(ex_iter)
             raise ex(**kargs)
 
         def _instance_destroy(*args, **kwargs):

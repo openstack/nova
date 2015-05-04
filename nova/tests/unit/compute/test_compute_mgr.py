@@ -163,7 +163,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         rts_iter = iter(rts)
 
         def _get_rt_side_effect(*args, **kwargs):
-            return rts_iter.next()
+            return next(rts_iter)
 
         expected_rt_dict = {avail_nodes_l[0]: rts[0],
                             avail_nodes_l[2]: rts[2],

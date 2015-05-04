@@ -60,8 +60,8 @@ def _get_first_network(network, version):
     # of a list since we don't want to evaluate the whole list as we can
     # have a lot of subnets
     try:
-        return (i for i in network['subnets']
-                if i['version'] == version).next()
+        return next(i for i in network['subnets']
+                    if i['version'] == version)
     except StopIteration:
         pass
 

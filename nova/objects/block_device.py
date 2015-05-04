@@ -270,7 +270,7 @@ class BlockDeviceMappingList(base.ObjectListBase, base.NovaObject):
 
     def root_bdm(self):
         try:
-            return (bdm_obj for bdm_obj in self if bdm_obj.is_root).next()
+            return next(bdm_obj for bdm_obj in self if bdm_obj.is_root)
         except StopIteration:
             return
 

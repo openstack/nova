@@ -300,8 +300,8 @@ class TestCase(testtools.TestCase):
                 observed_values_iter = iter(sort(observed.values()))
 
                 for i in range(len(expected)):
-                    inner(expected_values_iter.next(),
-                        observed_values_iter.next())
+                    inner(next(expected_values_iter),
+                          next(observed_values_iter))
             elif (isinstance(expected, (list, tuple, set)) and
                       isinstance(observed, (list, tuple, set))):
                 self.assertEqual(len(expected), len(observed))
@@ -310,8 +310,8 @@ class TestCase(testtools.TestCase):
                 observed_values_iter = iter(sort(observed))
 
                 for i in range(len(expected)):
-                    inner(expected_values_iter.next(),
-                        observed_values_iter.next())
+                    inner(next(expected_values_iter),
+                          next(observed_values_iter))
             else:
                 self.assertEqual(expected, observed)
 

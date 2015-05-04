@@ -433,7 +433,7 @@ def new_format_is_ephemeral(bdm):
 
 def get_root_bdm(bdms):
     try:
-        return (bdm for bdm in bdms if bdm.get('boot_index', -1) == 0).next()
+        return next(bdm for bdm in bdms if bdm.get('boot_index', -1) == 0)
     except StopIteration:
         return None
 

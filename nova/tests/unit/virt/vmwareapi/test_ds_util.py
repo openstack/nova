@@ -268,13 +268,13 @@ class DsUtilTestCase(test.NoDBTestCase):
                     args[1] == fake_ds_list):
                 # Start a new iterator over given datastores
                 datastores_i[0] = iter(datastores)
-                return datastores_i[0].next()
+                return next(datastores_i[0])
 
             # Continue returning results from the current iterator.
             if (module == ds_util.vutil and
                     method == 'continue_retrieval'):
                 try:
-                    return datastores_i[0].next()
+                    return next(datastores_i[0])
                 except StopIteration:
                     return None
 
