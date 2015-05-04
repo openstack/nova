@@ -222,103 +222,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.assertFalse(mock_save.called)
         self.assertEqual('True', instance.system_metadata['network_allocated'])
 
-    def test_allocate_network_maintains_context(self):
-        # override tracker with a version that doesn't need the database:
-        class FakeResourceTracker(object):
-            @staticmethod
-            def instance_claim(context, instance, limits):
-                return mock.MagicMock()
-
-        self.mox.StubOutWithMock(self.compute, '_get_resource_tracker')
-        self.mox.StubOutWithMock(self.compute, '_reschedule_or_error')
-        self.mox.StubOutWithMock(self.compute, '_allocate_network')
-        self.mox.StubOutWithMock(objects.BlockDeviceMappingList,
-                                 'get_by_instance_uuid')
-
-        instance = fake_instance.fake_instance_obj(self.context)
-
-        objects.BlockDeviceMappingList.get_by_instance_uuid(
-                mox.IgnoreArg(), instance.uuid).AndReturn([])
-
-        node = 'fake_node'
-        self.compute._get_resource_tracker(node).AndReturn(
-            FakeResourceTracker())
-
-        self.admin_context = False
-
-        def fake_allocate(context, *args, **kwargs):
-            if context.is_admin:
-                self.admin_context = True
-            raise test.TestingException()
-
-        # NOTE(vish): The nice mox parameter matchers here don't work well
-        #             because they raise an exception that gets wrapped by
-        #             the retry exception handling, so use a side effect
-        #             to keep track of whether allocate was called with admin
-        #             context.
-        self.compute._allocate_network(mox.IgnoreArg(), instance,
-                mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg(),
-                mox.IgnoreArg()).WithSideEffects(fake_allocate)
-
-        self.compute._reschedule_or_error(mox.IgnoreArg(), instance,
-                mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg(),
-                mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg(),
-                mox.IgnoreArg(), mox.IgnoreArg(),
-                mox.IgnoreArg())
-
-        self.mox.ReplayAll()
-
-        self.assertRaises(test.TestingException,
-                          self.compute._build_instance,
-                          self.context, {}, {},
-                          None, None, None, True,
-                          node, instance,
-                          {}, False)
-        self.assertFalse(self.admin_context,
-                         "_allocate_network called with admin context")
-
-    def test_reschedule_maintains_context(self):
-        # override tracker with a version that causes a reschedule
-        class FakeResourceTracker(object):
-            def instance_claim(self, context, instance, limits):
-                raise test.TestingException()
-
-        self.mox.StubOutWithMock(self.compute, '_get_resource_tracker')
-        self.mox.StubOutWithMock(self.compute, '_reschedule_or_error')
-        self.mox.StubOutWithMock(objects.BlockDeviceMappingList,
-                                 'get_by_instance_uuid')
-        instance = fake_instance.fake_instance_obj(self.context)
-
-        objects.BlockDeviceMappingList.get_by_instance_uuid(
-                mox.IgnoreArg(), instance.uuid).AndReturn([])
-
-        node = 'fake_node'
-        self.compute._get_resource_tracker(node).AndReturn(
-            FakeResourceTracker())
-
-        self.admin_context = False
-
-        def fake_retry_or_error(context, *args, **kwargs):
-            if context.is_admin:
-                self.admin_context = True
-
-        # NOTE(vish): we could use a mos parameter matcher here but it leads
-        #             to a very cryptic error message, so use the same method
-        #             as the allocate_network_maintains_context test.
-        self.compute._reschedule_or_error(mox.IgnoreArg(), instance,
-                mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg(),
-                mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg(),
-                mox.IgnoreArg(), mox.IgnoreArg(),
-                mox.IgnoreArg()).WithSideEffects(fake_retry_or_error)
-
-        self.mox.ReplayAll()
-
-        self.assertRaises(test.TestingException,
-                          self.compute._build_instance, self.context, {}, {},
-                          None, None, None, True, node, instance, {}, False)
-        self.assertFalse(self.admin_context,
-                         "_reschedule_or_error called with admin context")
-
     def test_allocate_network_fails(self):
         self.flags(network_allocate_retries=0)
 
@@ -1073,7 +976,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         instance.host = self.compute.host
         with mock.patch.object(self.compute, 'stop_instance'):
             self.compute._init_instance(self.context, instance)
-            call = mock.call(self.context, instance)
+            call = mock.call(self.context, instance, True)
             self.compute.stop_instance.assert_has_calls([call])
 
     def test_init_instance_retries_power_on(self):
@@ -1112,7 +1015,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         with mock.patch.object(self.compute, 'stop_instance',
                               return_value=Exception):
             init_return = self.compute._init_instance(self.context, instance)
-            call = mock.call(self.context, instance)
+            call = mock.call(self.context, instance, True)
             self.compute.stop_instance.assert_has_calls([call])
             self.assertIsNone(init_return)
 
@@ -2262,41 +2165,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             calls = [mock.call(self.context, bdm.volume_id) for bdm in bdms]
             self.assertEqual(calls, volume_delete.call_args_list)
 
-    def test_start_building(self):
-        instance = fake_instance.fake_instance_obj(self.context)
-        with mock.patch.object(self.compute, '_instance_update') as update:
-            self.compute._start_building(self.context, instance)
-            update.assert_called_once_with(
-                self.context, instance.uuid, vm_state=vm_states.BUILDING,
-                task_state=None, expected_task_state=(task_states.SCHEDULING,
-                                                      None))
-
-    def _test_prebuild_instance_build_abort_exception(self, exc):
-        instance = fake_instance.fake_instance_obj(self.context)
-        with contextlib.nested(
-            mock.patch.object(self.compute, '_check_instance_exists'),
-            mock.patch.object(self.compute, '_start_building',
-                              side_effect=exc)
-        ) as (
-            check, start
-        ):
-            # run the code
-            self.assertRaises(exception.BuildAbortException,
-                              self.compute._prebuild_instance,
-                              self.context, instance)
-        # assert the calls
-        check.assert_called_once_with(self.context, instance)
-        start.assert_called_once_with(self.context, instance)
-
-    def test_prebuild_instance_instance_not_found(self):
-        self._test_prebuild_instance_build_abort_exception(
-            exception.InstanceNotFound(instance_id='fake'))
-
-    def test_prebuild_instance_unexpected_deleting_task_state_err(self):
-        self._test_prebuild_instance_build_abort_exception(
-            exception.UnexpectedDeletingTaskStateError(expected='foo',
-                                                       actual='bar'))
-
     def test_stop_instance_task_state_none_power_state_shutdown(self):
         # Tests that stop_instance doesn't puke when the instance power_state
         # is shutdown and the task_state is None.
@@ -2311,7 +2179,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         @mock.patch.object(instance, 'save')
         def do_test(save_mock, power_off_mock, notify_mock, get_state_mock):
             # run the code
-            self.compute.stop_instance(self.context, instance)
+            self.compute.stop_instance(self.context, instance, True)
             # assert the calls
             self.assertEqual(2, get_state_mock.call_count)
             notify_mock.assert_has_calls([
@@ -2646,8 +2514,10 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 filter_properties=self.filter_properties,
                 injected_files=self.injected_files,
                 admin_password=self.admin_pass,
-                requested_networks=[('fake_network_id', '10.0.0.1',
-                                     'fake_port_id')],
+                requested_networks=[objects.NetworkRequest(
+                    network_id='fake_network_id',
+                    address='10.0.0.1',
+                    port_id='fake_port_id')],
                 security_groups=self.security_groups,
                 block_device_mapping=self.block_device_mapping, node=self.node,
                 limits=self.limits)
@@ -3674,8 +3544,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             self.assertRaises(
                 exception.ResizeError, self.compute.resize_instance,
                 context=self.context, instance=self.instance, image=self.image,
-                reservations=[], migration=self.migration, instance_type='type'
-            )
+                reservations=[], migration=self.migration,
+                instance_type='type', clean_shutdown=True)
             self.assertEqual("error", self.migration.status)
             self.assertEqual([mock.call(), mock.call()],
                              migration_save.mock_calls)

@@ -3000,7 +3000,8 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
         values = {'name': 'test_aggr',
                   'metadata': {'availability_zone': 'test_zone',
                   pool_states.POOL_FLAG: 'XenAPI'}}
-        self.aggr = db.aggregate_create(self.context, values)
+        self.aggr = objects.Aggregate(context=self.context, id=1,
+                                      **values)
         self.fake_metadata = {pool_states.POOL_FLAG: 'XenAPI',
                               'master_compute': 'host',
                               'availability_zone': 'fake_zone',
@@ -3244,18 +3245,17 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
                        fake_driver_add_to_aggregate)
         metadata = {pool_states.POOL_FLAG: "XenAPI",
                     pool_states.KEY: pool_states.ACTIVE}
-        db.aggregate_metadata_add(self.context, self.aggr['id'], metadata)
-        db.aggregate_host_add(self.context, self.aggr['id'], 'fake_host')
+        self.aggr.metadata = metadata
+        self.aggr.hosts = ['fake_host']
 
         self.assertRaises(exception.AggregateError,
                           self.compute.add_aggregate_host,
                           self.context, host="fake_host",
-                          aggregate=jsonutils.to_primitive(self.aggr),
+                          aggregate=self.aggr,
                           slave_info=None)
-        excepted = db.aggregate_get(self.context, self.aggr['id'])
-        self.assertEqual(excepted['metadetails'][pool_states.KEY],
+        self.assertEqual(self.aggr.metadata[pool_states.KEY],
                 pool_states.ERROR)
-        self.assertEqual(excepted['hosts'], [])
+        self.assertEqual(self.aggr.hosts, ['fake_host'])
 
 
 class MockComputeAPI(object):

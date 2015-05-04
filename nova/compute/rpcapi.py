@@ -22,11 +22,10 @@ import oslo_messaging as messaging
 from oslo_serialization import jsonutils
 
 from nova import exception
-from nova.i18n import _, _LW
+from nova.i18n import _
 from nova import objects
 from nova.objects import base as objects_base
 from nova import rpc
-from nova import utils
 
 rpcapi_opts = [
     cfg.StrOpt('compute_topic',
@@ -336,14 +335,14 @@ class ComputeAPI(object):
                            parameter for the remote method.
         :param host: This is the host to send the message to.
         '''
-        version = self._compat_ver('4.0', '3.0')
+        version = '4.0'
         cctxt = self.client.prepare(server=host, version=version)
         cctxt.cast(ctxt, 'add_aggregate_host',
                    aggregate=aggregate, host=host_param,
                    slave_info=slave_info)
 
     def add_fixed_ip_to_instance(self, ctxt, instance, network_id):
-        version = self._compat_ver('4.0', '3.12')
+        version = '4.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'add_fixed_ip_to_instance',
@@ -351,7 +350,7 @@ class ComputeAPI(object):
 
     def attach_interface(self, ctxt, instance, network_id, port_id,
                          requested_ip):
-        version = self._compat_ver('4.0', '3.17')
+        version = '4.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         return cctxt.call(ctxt, 'attach_interface',
@@ -360,57 +359,21 @@ class ComputeAPI(object):
 
     def attach_volume(self, ctxt, instance, volume_id, mountpoint, bdm=None):
         kw = {'instance': instance, 'bdm': bdm}
-        if self.client.can_send_version('4.0'):
-            version = '4.0'
-        else:
-            version = '3.16'
-            kw['mountpoint'] = mountpoint
-            kw['volume_id'] = volume_id
+        version = '4.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'attach_volume', **kw)
 
     def change_instance_metadata(self, ctxt, instance, diff):
-        version = self._compat_ver('4.0', '3.7')
+        version = '4.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'change_instance_metadata',
                    instance=instance, diff=diff)
 
-    def _warn_buggy_live_migrations(self, data=None):
-        # NOTE(danms): We know that libvirt live migration with shared block
-        # storage was buggy (potential loss of data) before version 3.32.
-        # Since we need to support live migration with older clients, we need
-        # to warn the operator of this possibility. The logic below tries to
-        # decide if a warning should be emitted, assuming the positive if
-        # not sure. This can be removed when we bump to RPC API version 4.0.
-        if data:
-            if data.get('is_shared_block_storage') is not False:
-                # Shared block storage, or unknown
-                should_warn = True
-            else:
-                # Specifically not shared block storage
-                should_warn = False
-        else:
-            # Unknown, so warn to be safe
-            should_warn = True
-
-        if should_warn:
-            LOG.warning(_LW('Live migration with clients before RPC version '
-                            '3.32 is known to be buggy with shared block '
-                            'storage. See '
-                            'https://bugs.launchpad.net/nova/+bug/1250751 for '
-                            'more information!'))
-
     def check_can_live_migrate_destination(self, ctxt, instance, destination,
                                            block_migration, disk_over_commit):
-        if self.client.can_send_version('4.0'):
-            version = '4.0'
-        elif self.client.can_send_version('3.32'):
-            version = '3.32'
-        else:
-            version = '3.0'
-            self._warn_buggy_live_migrations()
+        version = '4.0'
         cctxt = self.client.prepare(server=destination, version=version)
         return cctxt.call(ctxt, 'check_can_live_migrate_destination',
                           instance=instance,
@@ -418,13 +381,7 @@ class ComputeAPI(object):
                           disk_over_commit=disk_over_commit)
 
     def check_can_live_migrate_source(self, ctxt, instance, dest_check_data):
-        if self.client.can_send_version('4.0'):
-            version = '4.0'
-        elif self.client.can_send_version('3.32'):
-            version = '3.32'
-        else:
-            version = '3.0'
-            self._warn_buggy_live_migrations()
+        version = '4.0'
         source = _compute_host(None, instance)
         cctxt = self.client.prepare(server=source, version=version)
         return cctxt.call(ctxt, 'check_can_live_migrate_source',
@@ -432,13 +389,7 @@ class ComputeAPI(object):
                           dest_check_data=dest_check_data)
 
     def check_instance_shared_storage(self, ctxt, instance, data, host=None):
-        if self.client.can_send_version('4.0'):
-            version = '4.0'
-        elif self.client.can_send_version('3.29'):
-            version = '3.29'
-        else:
-            version = '3.0'
-            instance = jsonutils.to_primitive(instance)
+        version = '4.0'
         cctxt = self.client.prepare(server=_compute_host(host, instance),
                 version=version)
         return cctxt.call(ctxt, 'check_instance_shared_storage',
@@ -447,7 +398,7 @@ class ComputeAPI(object):
 
     def confirm_resize(self, ctxt, instance, migration, host,
             reservations=None, cast=True):
-        version = self._compat_ver('4.0', '3.0')
+        version = '4.0'
         cctxt = self.client.prepare(server=_compute_host(host, instance),
                 version=version)
         rpc_method = cctxt.cast if cast else cctxt.call
@@ -456,20 +407,14 @@ class ComputeAPI(object):
                           reservations=reservations)
 
     def detach_interface(self, ctxt, instance, port_id):
-        version = self._compat_ver('4.0', '3.17')
+        version = '4.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'detach_interface',
                    instance=instance, port_id=port_id)
 
     def detach_volume(self, ctxt, instance, volume_id):
-        if self.client.can_send_version('4.0'):
-            version = '4.0'
-        elif self.client.can_send_version('3.25'):
-            version = '3.25'
-        else:
-            version = '3.0'
-            instance = jsonutils.to_primitive(instance)
+        version = '4.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'detach_volume',
@@ -477,7 +422,7 @@ class ComputeAPI(object):
 
     def finish_resize(self, ctxt, instance, migration, image, disk_info,
             host, reservations=None):
-        version = self._compat_ver('4.0', '3.0')
+        version = '4.0'
         cctxt = self.client.prepare(server=host, version=version)
         cctxt.cast(ctxt, 'finish_resize',
                    instance=instance, migration=migration,
@@ -485,80 +430,75 @@ class ComputeAPI(object):
 
     def finish_revert_resize(self, ctxt, instance, migration, host,
                              reservations=None):
-        version = self._compat_ver('4.0', '3.0')
+        version = '4.0'
         cctxt = self.client.prepare(server=host, version=version)
         cctxt.cast(ctxt, 'finish_revert_resize',
                    instance=instance, migration=migration,
                    reservations=reservations)
 
     def get_console_output(self, ctxt, instance, tail_length):
-        if self.client.can_send_version('4.0'):
-            version = '4.0'
-        elif self.client.can_send_version('3.28'):
-            version = '3.28'
-        else:
-            version = '3.0'
-            instance = jsonutils.to_primitive(instance)
+        version = '4.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         return cctxt.call(ctxt, 'get_console_output',
                           instance=instance, tail_length=tail_length)
 
     def get_console_pool_info(self, ctxt, console_type, host):
-        version = self._compat_ver('4.0', '3.0')
+        version = '4.0'
         cctxt = self.client.prepare(server=host, version=version)
         return cctxt.call(ctxt, 'get_console_pool_info',
                           console_type=console_type)
 
     def get_console_topic(self, ctxt, host):
-        version = self._compat_ver('4.0', '3.0')
+        version = '4.0'
         cctxt = self.client.prepare(server=host, version=version)
         return cctxt.call(ctxt, 'get_console_topic')
 
     def get_diagnostics(self, ctxt, instance):
-        version = self._compat_ver('4.0', '3.18')
+        version = '4.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         return cctxt.call(ctxt, 'get_diagnostics', instance=instance)
 
     def get_instance_diagnostics(self, ctxt, instance):
+        # TODO(danms): This needs to be fixed for objects
         instance_p = jsonutils.to_primitive(instance)
         kwargs = {'instance': instance_p}
-        version = self._compat_ver('4.0', '3.31')
+        version = '4.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         return cctxt.call(ctxt, 'get_instance_diagnostics', **kwargs)
 
     def get_vnc_console(self, ctxt, instance, console_type):
-        version = self._compat_ver('4.0', '3.2')
+        version = '4.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         return cctxt.call(ctxt, 'get_vnc_console',
                           instance=instance, console_type=console_type)
 
     def get_spice_console(self, ctxt, instance, console_type):
-        version = self._compat_ver('4.0', '3.1')
+        version = '4.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         return cctxt.call(ctxt, 'get_spice_console',
                           instance=instance, console_type=console_type)
 
     def get_rdp_console(self, ctxt, instance, console_type):
-        version = self._compat_ver('4.0', '3.10')
+        version = '4.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         return cctxt.call(ctxt, 'get_rdp_console',
                           instance=instance, console_type=console_type)
 
     def get_serial_console(self, ctxt, instance, console_type):
-        version = self._compat_ver('4.0', '3.34')
+        version = '4.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                                     version=version)
         return cctxt.call(ctxt, 'get_serial_console',
                           instance=instance, console_type=console_type)
 
     def validate_console_port(self, ctxt, instance, port, console_type):
-        version = self._compat_ver('4.0', '3.3')
+        version = '4.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         return cctxt.call(ctxt, 'validate_console_port',
@@ -574,52 +514,46 @@ class ComputeAPI(object):
         :param mode:
         :param host: This is the host to send the message to.
         '''
-        version = self._compat_ver('4.0', '3.0')
+        version = '4.0'
         cctxt = self.client.prepare(server=host, version=version)
         return cctxt.call(ctxt, 'host_maintenance_mode',
                           host=host_param, mode=mode)
 
     def host_power_action(self, ctxt, action, host):
-        version = self._compat_ver('4.0', '3.0')
+        version = '4.0'
         cctxt = self.client.prepare(server=host, version=version)
         return cctxt.call(ctxt, 'host_power_action', action=action)
 
     def inject_network_info(self, ctxt, instance):
-        version = self._compat_ver('4.0', '3.0')
+        version = '4.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'inject_network_info', instance=instance)
 
     def live_migration(self, ctxt, instance, dest, block_migration, host,
                        migrate_data=None):
-        if self.client.can_send_version('4.0'):
-            version = '4.0'
-        elif self.client.can_send_version('3.26'):
-            version = '3.26'
-        else:
-            version = '3.0'
-            instance = jsonutils.to_primitive(instance)
+        version = '4.0'
         cctxt = self.client.prepare(server=host, version=version)
         cctxt.cast(ctxt, 'live_migration', instance=instance,
                    dest=dest, block_migration=block_migration,
                    migrate_data=migrate_data)
 
     def pause_instance(self, ctxt, instance):
-        version = self._compat_ver('4.0', '3.0')
+        version = '4.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'pause_instance', instance=instance)
 
     def post_live_migration_at_destination(self, ctxt, instance,
             block_migration, host):
-        version = self._compat_ver('4.0', '3.14')
+        version = '4.0'
         cctxt = self.client.prepare(server=host, version=version)
         cctxt.cast(ctxt, 'post_live_migration_at_destination',
             instance=instance, block_migration=block_migration)
 
     def pre_live_migration(self, ctxt, instance, block_migration, disk,
             host, migrate_data=None):
-        version = self._compat_ver('4.0', '3.19')
+        version = '4.0'
         cctxt = self.client.prepare(server=host, version=version)
         return cctxt.call(ctxt, 'pre_live_migration',
                           instance=instance,
@@ -630,6 +564,7 @@ class ComputeAPI(object):
                     reservations=None, request_spec=None,
                     filter_properties=None, node=None,
                     clean_shutdown=True):
+        # TODO(danms): This needs to be fixed for objects!
         instance_type_p = jsonutils.to_primitive(instance_type)
         image_p = jsonutils.to_primitive(image)
         msg_args = {'instance': instance,
@@ -640,19 +575,13 @@ class ComputeAPI(object):
                     'filter_properties': filter_properties,
                     'node': node,
                     'clean_shutdown': clean_shutdown}
-        if self.client.can_send_version('4.0'):
-            version = '4.0'
-        elif self.client.can_send_version('3.38'):
-            version = '3.38'
-        else:
-            del msg_args['clean_shutdown']
-            version = '3.0'
+        version = '4.0'
         cctxt = self.client.prepare(server=host, version=version)
         cctxt.cast(ctxt, 'prep_resize', **msg_args)
 
     def reboot_instance(self, ctxt, instance, block_device_info,
                         reboot_type):
-        version = self._compat_ver('4.0', '3.0')
+        version = '4.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'reboot_instance',
@@ -667,7 +596,7 @@ class ComputeAPI(object):
         # NOTE(danms): kwargs is only here for cells compatibility, don't
         # actually send it to compute
         extra = {'preserve_ephemeral': preserve_ephemeral}
-        version = self._compat_ver('4.0', '3.21')
+        version = '4.0'
         cctxt = self.client.prepare(server=_compute_host(host, instance),
                 version=version)
         cctxt.cast(ctxt, 'rebuild_instance',
@@ -679,7 +608,7 @@ class ComputeAPI(object):
                    **extra)
 
     def refresh_provider_fw_rules(self, ctxt, host):
-        version = self._compat_ver('4.0', '3.0')
+        version = '4.0'
         cctxt = self.client.prepare(server=host, version=version)
         cctxt.cast(ctxt, 'refresh_provider_fw_rules')
 
@@ -693,85 +622,66 @@ class ComputeAPI(object):
                            parameter for the remote method.
         :param host: This is the host to send the message to.
         '''
-        version = self._compat_ver('4.0', '3.0')
+        version = '4.0'
         cctxt = self.client.prepare(server=host, version=version)
         cctxt.cast(ctxt, 'remove_aggregate_host',
                    aggregate=aggregate, host=host_param,
                    slave_info=slave_info)
 
     def remove_fixed_ip_from_instance(self, ctxt, instance, address):
-        version = self._compat_ver('4.0', '3.13')
+        version = '4.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'remove_fixed_ip_from_instance',
                    instance=instance, address=address)
 
     def remove_volume_connection(self, ctxt, instance, volume_id, host):
-        if self.client.can_send_version('4.0'):
-            version = '4.0'
-        elif self.client.can_send_version('3.30'):
-            version = '3.30'
-        else:
-            version = '3.0'
-            instance = jsonutils.to_primitive(instance)
+        version = '4.0'
         cctxt = self.client.prepare(server=host, version=version)
         return cctxt.call(ctxt, 'remove_volume_connection',
                           instance=instance, volume_id=volume_id)
 
     def rescue_instance(self, ctxt, instance, rescue_password,
                         rescue_image_ref=None, clean_shutdown=True):
-        msg_args = {'rescue_password': rescue_password}
-        if self.client.can_send_version('4.0'):
-            version = '4.0'
-            msg_args['clean_shutdown'] = clean_shutdown
-            msg_args['rescue_image_ref'] = rescue_image_ref
-        elif self.client.can_send_version('3.37'):
-            version = '3.37'
-            msg_args['clean_shutdown'] = clean_shutdown
-            msg_args['rescue_image_ref'] = rescue_image_ref
-        elif self.client.can_send_version('3.24'):
-            version = '3.24'
-            msg_args['rescue_image_ref'] = rescue_image_ref
-        else:
-            version = '3.9'
-        msg_args['instance'] = instance
+        version = '4.0'
+        msg_args = {'rescue_password': rescue_password,
+                    'clean_shutdown': clean_shutdown,
+                    'rescue_image_ref': rescue_image_ref,
+                    'instance': instance,
+        }
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'rescue_instance', **msg_args)
 
     def reset_network(self, ctxt, instance):
-        version = self._compat_ver('4.0', '3.0')
+        version = '4.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'reset_network', instance=instance)
 
     def resize_instance(self, ctxt, instance, migration, image, instance_type,
                         reservations=None, clean_shutdown=True):
+        # TODO(danms): This needs to be fixed for objects!
         instance_type_p = jsonutils.to_primitive(instance_type)
         msg_args = {'instance': instance, 'migration': migration,
                     'image': image, 'reservations': reservations,
-                    'instance_type': instance_type_p}
-        if self.client.can_send_version('4.0'):
-            version = '4.0'
-            msg_args['clean_shutdown'] = clean_shutdown
-        elif self.client.can_send_version('3.37'):
-            version = '3.37'
-            msg_args['clean_shutdown'] = clean_shutdown
-        else:
-            version = '3.0'
+                    'instance_type': instance_type_p,
+                    'clean_shutdown': clean_shutdown,
+        }
+        version = '4.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'resize_instance', **msg_args)
 
     def resume_instance(self, ctxt, instance):
-        version = self._compat_ver('4.0', '3.0')
+        version = '4.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'resume_instance', instance=instance)
 
     def revert_resize(self, ctxt, instance, migration, host,
                       reservations=None):
-        version = self._compat_ver('4.0', '3.0')
+        version = '4.0'
         cctxt = self.client.prepare(server=_compute_host(host, instance),
                 version=version)
         cctxt.cast(ctxt, 'revert_resize',
@@ -781,38 +691,28 @@ class ComputeAPI(object):
     def rollback_live_migration_at_destination(self, ctxt, instance, host,
                                                destroy_disks=True,
                                                migrate_data=None):
-        if self.client.can_send_version('4.0'):
-            version = '4.0'
-            extra = {'destroy_disks': destroy_disks,
-                     'migrate_data': migrate_data,
-                 }
-        elif self.client.can_send_version('3.32'):
-            version = '3.32'
-            extra = {'destroy_disks': destroy_disks,
-                     'migrate_data': migrate_data,
-                 }
-        else:
-            version = '3.0'
-            extra = {}
-            self._warn_buggy_live_migrations(migrate_data)
+        version = '4.0'
+        extra = {'destroy_disks': destroy_disks,
+                 'migrate_data': migrate_data,
+        }
         cctxt = self.client.prepare(server=host, version=version)
         cctxt.cast(ctxt, 'rollback_live_migration_at_destination',
                    instance=instance, **extra)
 
     def set_admin_password(self, ctxt, instance, new_pass):
-        version = self._compat_ver('4.0', '3.8')
+        version = '4.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         return cctxt.call(ctxt, 'set_admin_password',
                           instance=instance, new_pass=new_pass)
 
     def set_host_enabled(self, ctxt, enabled, host):
-        version = self._compat_ver('4.0', '3.0')
+        version = '4.0'
         cctxt = self.client.prepare(server=host, version=version)
         return cctxt.call(ctxt, 'set_host_enabled', enabled=enabled)
 
     def swap_volume(self, ctxt, instance, old_volume_id, new_volume_id):
-        version = self._compat_ver('4.0', '3.0')
+        version = '4.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'swap_volume',
@@ -820,7 +720,7 @@ class ComputeAPI(object):
                    new_volume_id=new_volume_id)
 
     def get_host_uptime(self, ctxt, host):
-        version = self._compat_ver('4.0', '3.0')
+        version = '4.0'
         cctxt = self.client.prepare(server=host, version=version)
         return cctxt.call(ctxt, 'get_host_uptime')
 
@@ -828,15 +728,8 @@ class ComputeAPI(object):
                                   disk_bus=None, device_type=None):
         kw = {'instance': instance, 'device': device,
               'volume_id': volume_id, 'disk_bus': disk_bus,
-              'device_type': device_type, 'return_bdm_object': True}
-        if self.client.can_send_version('4.0'):
-            version = '4.0'
-            del kw['return_bdm_object']
-        elif self.client.can_send_version('3.35'):
-            version = '3.35'
-        else:
-            del kw['return_bdm_object']
-            version = '3.16'
+              'device_type': device_type}
+        version = '4.0'
 
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
@@ -848,7 +741,7 @@ class ComputeAPI(object):
 
     def backup_instance(self, ctxt, instance, image_id, backup_type,
                         rotation):
-        version = self._compat_ver('4.0', '3.0')
+        version = '4.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'backup_instance',
@@ -858,7 +751,7 @@ class ComputeAPI(object):
                    rotation=rotation)
 
     def snapshot_instance(self, ctxt, instance, image_id):
-        version = self._compat_ver('4.0', '3.0')
+        version = '4.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'snapshot_instance',
@@ -866,34 +759,28 @@ class ComputeAPI(object):
                    image_id=image_id)
 
     def start_instance(self, ctxt, instance):
-        version = self._compat_ver('4.0', '3.0')
+        version = '4.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'start_instance', instance=instance)
 
     def stop_instance(self, ctxt, instance, do_cast=True, clean_shutdown=True):
-        msg_args = {'instance': instance}
-        if self.client.can_send_version('4.0'):
-            version = '4.0'
-            msg_args['clean_shutdown'] = clean_shutdown
-        elif self.client.can_send_version('3.37'):
-            version = '3.37'
-            msg_args['clean_shutdown'] = clean_shutdown
-        else:
-            version = '3.0'
+        msg_args = {'instance': instance,
+                    'clean_shutdown': clean_shutdown}
+        version = '4.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         rpc_method = cctxt.cast if do_cast else cctxt.call
         return rpc_method(ctxt, 'stop_instance', **msg_args)
 
     def suspend_instance(self, ctxt, instance):
-        version = self._compat_ver('4.0', '3.0')
+        version = '4.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'suspend_instance', instance=instance)
 
     def terminate_instance(self, ctxt, instance, bdms, reservations=None):
-        version = self._compat_ver('4.0', '3.22')
+        version = '4.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'terminate_instance',
@@ -901,63 +788,50 @@ class ComputeAPI(object):
                    reservations=reservations)
 
     def unpause_instance(self, ctxt, instance):
-        version = self._compat_ver('4.0', '3.0')
+        version = '4.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'unpause_instance', instance=instance)
 
     def unrescue_instance(self, ctxt, instance):
-        version = self._compat_ver('4.0', '3.11')
+        version = '4.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'unrescue_instance', instance=instance)
 
     def soft_delete_instance(self, ctxt, instance, reservations=None):
-        version = self._compat_ver('4.0', '3.0')
+        version = '4.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'soft_delete_instance',
                    instance=instance, reservations=reservations)
 
     def restore_instance(self, ctxt, instance):
-        version = self._compat_ver('4.0', '3.20')
+        version = '4.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'restore_instance', instance=instance)
 
     def shelve_instance(self, ctxt, instance, image_id=None,
                         clean_shutdown=True):
-        msg_args = {'instance': instance, 'image_id': image_id}
-        if self.client.can_send_version('4.0'):
-            version = '4.0'
-            msg_args['clean_shutdown'] = clean_shutdown
-        elif self.client.can_send_version('3.37'):
-            version = '3.37'
-            msg_args['clean_shutdown'] = clean_shutdown
-        else:
-            version = '3.0'
+        msg_args = {'instance': instance, 'image_id': image_id,
+                    'clean_shutdown': clean_shutdown}
+        version = '4.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'shelve_instance', **msg_args)
 
     def shelve_offload_instance(self, ctxt, instance,
                                 clean_shutdown=True):
-        msg_args = {'instance': instance}
-        if self.client.can_send_version('4.0'):
-            version = '4.0'
-            msg_args['clean_shutdown'] = clean_shutdown
-        elif self.client.can_send_version('3.37'):
-            version = '3.37'
-            msg_args['clean_shutdown'] = clean_shutdown
-        else:
-            version = '3.0'
+        msg_args = {'instance': instance, 'clean_shutdown': clean_shutdown}
+        version = '4.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'shelve_offload_instance', **msg_args)
 
     def unshelve_instance(self, ctxt, instance, host, image=None,
                           filter_properties=None, node=None):
-        version = self._compat_ver('4.0', '3.15')
+        version = '4.0'
         msg_kwargs = {
             'instance': instance,
             'image': image,
@@ -969,7 +843,7 @@ class ComputeAPI(object):
 
     def volume_snapshot_create(self, ctxt, instance, volume_id,
                                create_info):
-        version = self._compat_ver('4.0', '3.6')
+        version = '4.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'volume_snapshot_create', instance=instance,
@@ -977,7 +851,7 @@ class ComputeAPI(object):
 
     def volume_snapshot_delete(self, ctxt, instance, volume_id, snapshot_id,
                                delete_info):
-        version = self._compat_ver('4.0', '3.6')
+        version = '4.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'volume_snapshot_delete', instance=instance,
@@ -987,7 +861,7 @@ class ComputeAPI(object):
     def external_instance_event(self, ctxt, instances, events):
         cctxt = self.client.prepare(
             server=_compute_host(None, instances[0]),
-            version=self._compat_ver('4.0', '3.23'))
+            version='4.0')
         cctxt.cast(ctxt, 'external_instance_event', instances=instances,
                    events=events)
 
@@ -997,43 +871,6 @@ class ComputeAPI(object):
             block_device_mapping=None, node=None, limits=None):
 
         version = '4.0'
-        if not self.client.can_send_version(version):
-            version = '3.40'
-        if not self.client.can_send_version(version):
-            version = '3.36'
-            if 'numa_topology' in limits and limits['numa_topology']:
-                topology_limits = limits['numa_topology']
-                if node is not None:
-                    cnode = objects.ComputeNode.get_by_host_and_nodename(
-                        ctxt, host, node)
-                else:
-                    cnode = (
-                        objects.ComputeNode.
-                        get_first_node_by_host_for_old_compat(
-                            ctxt, host))
-                host_topology = objects.NUMATopology.obj_from_db_obj(
-                    cnode.numa_topology)
-                limits['numa_topology'] = jsonutils.dumps(
-                    topology_limits.to_dict_legacy(host_topology))
-        if not self.client.can_send_version(version):
-            version = '3.33'
-            if 'instance_type' in filter_properties:
-                flavor = filter_properties['instance_type']
-                flavor_p = objects_base.obj_to_primitive(flavor)
-                filter_properties = dict(filter_properties,
-                                         instance_type=flavor_p)
-        if not self.client.can_send_version(version):
-            version = '3.23'
-            if requested_networks is not None:
-                if utils.is_neutron():
-                    requested_networks = [(network_id, address, port_id)
-                        for (network_id, address, port_id, _) in
-                            requested_networks.as_tuples()]
-                else:
-                    requested_networks = [(network_id, address)
-                        for (network_id, address) in
-                            requested_networks.as_tuples()]
-
         cctxt = self.client.prepare(server=host, version=version)
         cctxt.cast(ctxt, 'build_and_run_instance', instance=instance,
                 image=image, request_spec=request_spec,
@@ -1046,33 +883,34 @@ class ComputeAPI(object):
                 limits=limits)
 
     def quiesce_instance(self, ctxt, instance):
-        version = self._compat_ver('4.0', '3.39')
+        version = '4.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         return cctxt.call(ctxt, 'quiesce_instance', instance=instance)
 
     def unquiesce_instance(self, ctxt, instance, mapping=None):
-        version = self._compat_ver('4.0', '3.39')
+        version = '4.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'unquiesce_instance', instance=instance,
                    mapping=mapping)
 
     def refresh_security_group_rules(self, ctxt, security_group_id, host):
-        version = self._compat_ver('4.0', '3.0')
+        version = '4.0'
         cctxt = self.client.prepare(server=host, version=version)
         cctxt.cast(ctxt, 'refresh_security_group_rules',
                    security_group_id=security_group_id)
 
     def refresh_security_group_members(self, ctxt, security_group_id,
             host):
-        version = self._compat_ver('4.0', '3.0')
+        version = '4.0'
         cctxt = self.client.prepare(server=host, version=version)
         cctxt.cast(ctxt, 'refresh_security_group_members',
                    security_group_id=security_group_id)
 
     def refresh_instance_security_rules(self, ctxt, host, instance):
-        version = self._compat_ver('4.0', '3.0')
+        version = '4.0'
+        # TODO(danms): This needs to be fixed for objects!
         instance_p = jsonutils.to_primitive(instance)
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)

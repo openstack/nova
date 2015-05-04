@@ -152,7 +152,7 @@ class FakeSchedulerAPI(object):
         pass
 
     def prep_resize(self, ctxt, instance, instance_type, image, request_spec,
-            filter_properties, reservations):
+                    filter_properties, reservations, clean_shutown):
         pass
 
 
@@ -246,9 +246,7 @@ class BaseTestCase(test.TestCase):
         fake_image.stub_out_image_service(self.stubs)
         self.stubs.Set(fake_image._FakeImageService, 'show', fake_show)
 
-        fake_rpcapi = FakeSchedulerAPI()
         fake_taskapi = FakeComputeTaskAPI()
-        self.stubs.Set(self.compute, 'scheduler_rpcapi', fake_rpcapi)
         self.stubs.Set(self.compute, 'compute_task_api', fake_taskapi)
 
         fake_network.set_stub_network_methods(self.stubs)
@@ -410,8 +408,7 @@ class ComputeVolumeTestCase(BaseTestCase):
         with (mock.patch.object(cinder.API, 'get_volume_encryption_metadata',
                                 return_value={})):
             instance = self._create_fake_instance_obj()
-            self.compute.attach_volume(self.context, self.volume_id,
-                                       '/dev/vdb', instance, bdm=fake_bdm)
+            self.compute.attach_volume(self.context, instance, bdm=fake_bdm)
             self.assertEqual(self.cinfo.get('serial'), self.volume_id)
 
     def test_attach_volume_raises(self):
@@ -431,8 +428,7 @@ class ComputeVolumeTestCase(BaseTestCase):
             mock_attach.side_effect = fake_attach
             self.assertRaises(
                     test.TestingException, self.compute.attach_volume,
-                    self.context, 'fake', '/dev/vdb',
-                    instance, bdm=fake_bdm)
+                    self.context, instance, fake_bdm)
             self.assertTrue(mock_unreserve.called)
             self.assertTrue(mock_destroy.called)
 
@@ -456,20 +452,6 @@ class ComputeVolumeTestCase(BaseTestCase):
                                                          instance,
                                                          fake_bdm)
             self.assertTrue(mock_destroy.called)
-
-    def test_attach_volume_no_bdm(self):
-        fake_bdm = objects.BlockDeviceMapping(**self.fake_volume)
-        instance = self._create_fake_instance_obj()
-
-        with contextlib.nested(
-            mock.patch.object(objects.BlockDeviceMapping,
-                'get_by_volume_id', return_value=fake_bdm),
-            mock.patch.object(self.compute, '_attach_volume')
-        ) as (mock_get_by_id, mock_attach):
-            self.compute.attach_volume(self.context, 'fake', '/dev/vdb',
-                    instance, bdm=None)
-            mock_get_by_id.assert_called_once_with(self.context, 'fake')
-            self.assertTrue(mock_attach.called)
 
     def test_await_block_device_created_too_slow(self):
         self.flags(block_device_allocate_retries=2)
@@ -747,23 +729,29 @@ class ComputeVolumeTestCase(BaseTestCase):
     def test_detach_volume_usage(self):
         # Test that detach volume update the volume usage cache table correctly
         instance = self._create_fake_instance_obj()
-        bdm = fake_block_device.FakeDbBlockDeviceDict(
-                {'id': 1, 'device_name': '/dev/vdb',
-                 'connection_info': '{}', 'instance_uuid': instance['uuid'],
-                 'source_type': 'volume', 'destination_type': 'volume',
-                 'volume_id': 1})
+        bdm = objects.BlockDeviceMapping(context=self.context,
+                                         id=1, device_name='/dev/vdb',
+                                         connection_info='{}',
+                                         instance_uuid=instance['uuid'],
+                                         source_type='volume',
+                                         destination_type='volume',
+                                         no_device=False,
+                                         disk_bus='foo',
+                                         device_type='disk',
+                                         volume_id=1)
         host_volume_bdms = {'id': 1, 'device_name': '/dev/vdb',
                'connection_info': '{}', 'instance_uuid': instance['uuid'],
                'volume_id': 1}
 
-        self.mox.StubOutWithMock(db, 'block_device_mapping_get_by_volume_id')
+        self.mox.StubOutWithMock(objects.BlockDeviceMapping,
+                                 'get_by_volume_id')
         self.mox.StubOutWithMock(self.compute.driver, 'block_stats')
         self.mox.StubOutWithMock(self.compute, '_get_host_volume_bdms')
         self.mox.StubOutWithMock(self.compute.driver, 'get_all_volume_usage')
 
         # The following methods will be called
-        db.block_device_mapping_get_by_volume_id(self.context, 1, []).\
-            AndReturn(bdm)
+        objects.BlockDeviceMapping.get_by_volume_id(self.context, 1).AndReturn(
+            bdm.obj_clone())
         self.compute.driver.block_stats(instance, 'vdb').\
             AndReturn([1L, 30L, 1L, 20L, None])
         self.compute._get_host_volume_bdms(self.context,
@@ -777,8 +765,6 @@ class ComputeVolumeTestCase(BaseTestCase):
                           'wr_req': 1,
                           'wr_bytes': 5,
                           'instance': instance}])
-        db.block_device_mapping_get_by_volume_id(self.context, 1, []).\
-            AndReturn(bdm)
 
         self.mox.ReplayAll()
 
@@ -787,7 +773,7 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.stubs.Set(cinder.API, 'get_volume_encryption_metadata',
                        fake_get_volume_encryption_metadata)
 
-        self.compute.attach_volume(self.context, 1, '/dev/vdb', instance)
+        self.compute.attach_volume(self.context, instance, bdm)
 
         # Poll volume usage & then detach the volume. This will update the
         # total fields in the volume usage cache.
@@ -1981,7 +1967,8 @@ class ComputeTestCase(BaseTestCase):
         inst_obj = objects.Instance.get_by_uuid(self.context,
                                                 inst_uuid,
                                                 expected_attrs=extra)
-        self.compute.stop_instance(self.context, instance=inst_obj)
+        self.compute.stop_instance(self.context, instance=inst_obj,
+                                   clean_shutdown=True)
         self.compute.terminate_instance(self.context, instance, [], [])
 
     def test_start(self):
@@ -1996,7 +1983,8 @@ class ComputeTestCase(BaseTestCase):
         inst_obj = objects.Instance.get_by_uuid(self.context,
                                                 inst_uuid,
                                                 expected_attrs=extra)
-        self.compute.stop_instance(self.context, instance=inst_obj)
+        self.compute.stop_instance(self.context, instance=inst_obj,
+                                   clean_shutdown=True)
         inst_obj.task_state = task_states.POWERING_ON
         inst_obj.save()
         self.compute.start_instance(self.context, instance=inst_obj)
@@ -2014,7 +2002,8 @@ class ComputeTestCase(BaseTestCase):
         inst_obj = objects.Instance.get_by_uuid(self.context,
                                                 inst_uuid,
                                                 expected_attrs=extra)
-        self.compute.stop_instance(self.context, instance=inst_obj)
+        self.compute.stop_instance(self.context, instance=inst_obj,
+                                   clean_shutdown=True)
         inst_obj.task_state = task_states.POWERING_ON
         inst_obj.save()
         self.compute.start_instance(self.context, instance=inst_obj)
@@ -2044,7 +2033,7 @@ class ComputeTestCase(BaseTestCase):
 
         instance.task_state = task_states.RESCUING
         instance.save()
-        self.compute.rescue_instance(self.context, instance, None)
+        self.compute.rescue_instance(self.context, instance, None, None, True)
         self.assertTrue(called['rescued'])
         instance.task_state = task_states.UNRESCUING
         instance.save()
@@ -2067,7 +2056,7 @@ class ComputeTestCase(BaseTestCase):
         fake_notifier.NOTIFICATIONS = []
         instance.task_state = task_states.RESCUING
         instance.save()
-        self.compute.rescue_instance(self.context, instance, None)
+        self.compute.rescue_instance(self.context, instance, None, True, True)
 
         expected_notifications = ['compute.instance.rescue.start',
                                   'compute.instance.exists',
@@ -2155,7 +2144,8 @@ class ComputeTestCase(BaseTestCase):
                 exception.InstanceNotRescuable, expected_message):
                 self.compute.rescue_instance(
                     self.context, instance=inst_obj,
-                    rescue_password='password')
+                    rescue_password='password', rescue_image_ref=None,
+                    clean_shutdown=True)
 
         self.assertEqual('some_random_state', inst_obj.vm_state)
 
@@ -2176,7 +2166,8 @@ class ComputeTestCase(BaseTestCase):
         mock_get_image_metadata.return_value = rescue_image_meta
 
         self.compute.rescue_instance(mock_context, instance=instance,
-            rescue_password="password", rescue_image_ref=image_ref)
+                    rescue_password="password", rescue_image_ref=image_ref,
+                    clean_shutdown=True)
 
         mock_get_image_metadata.assert_called_with(ctxt,
                                                    self.compute.image_api,
@@ -2204,7 +2195,9 @@ class ComputeTestCase(BaseTestCase):
         mock_get_image_metadata.return_value = rescue_image_meta
 
         self.compute.rescue_instance(mock_context, instance=instance,
-                                     rescue_password="password")
+                                     rescue_password="password",
+                                     rescue_image_ref=None,
+                                     clean_shutdown=True)
 
         mock_get_image_metadata.assert_called_with(ctxt,
                                                    self.compute.image_api,
@@ -2259,7 +2252,8 @@ class ComputeTestCase(BaseTestCase):
                                                 expected_attrs=extra)
         inst_obj.task_state = task_states.POWERING_OFF
         inst_obj.save()
-        self.compute.stop_instance(self.context, instance=inst_obj)
+        self.compute.stop_instance(self.context, instance=inst_obj,
+                                   clean_shutdown=True)
         self.assertTrue(called['power_off'])
         self.compute.terminate_instance(self.context, inst_obj, [], [])
 
@@ -3865,30 +3859,6 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual('servergroup.create', msg.event_type)
         return instance_group
 
-    def _run_instance_reschedules_on_policy_violation(self, group,
-                                                             hint):
-        instance = self._create_fake_instance_obj()
-        filter_properties = {'scheduler_hints': {'group': hint}}
-        self.assertRaises(exception.RescheduledException,
-                          self.compute._build_instance,
-                          self.context, {}, filter_properties,
-                          [], None, None, True, None, instance,
-                          None, False)
-
-    def test_run_instance_reschedules_on_anti_affinity_violation_by_name(self):
-        group = self._create_server_group(['anti-affinity'], self.compute.host)
-        self._run_instance_reschedules_on_policy_violation(group, group.name)
-
-    def test_run_instance_reschedules_on_anti_affinity_violation_by_uuid(self):
-        group = self._create_server_group(['anti-affinity'], self.compute.host)
-        self._run_instance_reschedules_on_policy_violation(group, group.uuid)
-
-    def test_run_instance_reschedules_on_affinity_violation_by_uuid(self):
-        # Put the fake instance already in the group on a different host
-        hostname = self.compute.host + '.1'
-        group = self._create_server_group(['affinity'], hostname)
-        self._run_instance_reschedules_on_policy_violation(group, group.uuid)
-
     def test_instance_set_to_error_on_uncaught_exception(self):
         # Test that instance is set to error state when exception is raised.
         instance = self._create_fake_instance_obj()
@@ -4187,7 +4157,8 @@ class ComputeTestCase(BaseTestCase):
             ("reboot_instance", task_states.REBOOTING,
                                 {'block_device_info': [],
                                  'reboot_type': 'SOFT'}),
-            ("stop_instance", task_states.POWERING_OFF),
+            ("stop_instance", task_states.POWERING_OFF,
+                              {'clean_shutdown': True}),
             ("start_instance", task_states.POWERING_ON),
             ("terminate_instance", task_states.DELETING,
                                      {'bdms': [],
@@ -4208,7 +4179,9 @@ class ComputeTestCase(BaseTestCase):
             ("set_admin_password", task_states.UPDATING_PASSWORD,
                                    {'new_pass': None}),
             ("rescue_instance", task_states.RESCUING,
-                                {'rescue_password': None}),
+                                {'rescue_password': None,
+                                 'rescue_image_ref': None,
+                                 'clean_shutdown': True}),
             ("unrescue_instance", task_states.UNRESCUING),
             ("revert_resize", task_states.RESIZE_REVERTING,
                               {'migration': migration,
@@ -4219,12 +4192,14 @@ class ComputeTestCase(BaseTestCase):
                              'reservations': [],
                              'request_spec': {},
                              'filter_properties': {},
-                             'node': None}),
+                             'node': None,
+                             'clean_shutdown': True}),
             ("resize_instance", task_states.RESIZE_PREP,
                                 {'migration': migration,
                                  'image': {},
                                  'reservations': [],
-                                 'instance_type': {}}),
+                                 'instance_type': {},
+                                 'clean_shutdown': True}),
             ("pause_instance", task_states.PAUSING),
             ("unpause_instance", task_states.UNPAUSING),
             ("suspend_instance", task_states.SUSPENDING),
@@ -4343,7 +4318,8 @@ class ComputeTestCase(BaseTestCase):
         self.compute.prep_resize(self.context, instance=instance,
                                  instance_type=instance_type,
                                  image={}, reservations=[], request_spec={},
-                                 filter_properties={}, node=None)
+                                 filter_properties={}, node=None,
+                                 clean_shutdown=True)
         instance.task_state = task_states.RESIZE_MIGRATED
         instance.save()
 
@@ -4527,8 +4503,7 @@ class ComputeTestCase(BaseTestCase):
                        fake_attach_volume)
 
         # attach volume to instance
-        self.compute.attach_volume(self.context, volume['id'],
-                                   '/dev/vdc', instance, bdm=bdm)
+        self.compute.attach_volume(self.context, instance, bdm)
 
         # assert volume attached correctly
         self.assertEqual(volume['device_name'], '/dev/vdc')
@@ -4547,7 +4522,8 @@ class ComputeTestCase(BaseTestCase):
         self.compute.prep_resize(self.context, instance=instance,
                                  instance_type=instance_type,
                                  image={}, reservations=[], request_spec={},
-                                 filter_properties={}, node=None)
+                                 filter_properties={}, node=None,
+                                 clean_shutdown=True)
 
         # fake out detach for prep_resize (and later terminate)
         def fake_terminate_connection(self, context, volume, connector):
@@ -4562,7 +4538,8 @@ class ComputeTestCase(BaseTestCase):
                 instance.uuid, 'pre-migrating')
         self.compute.resize_instance(self.context, instance=instance,
                 migration=migration, image={}, reservations=[],
-                instance_type=jsonutils.to_primitive(instance_type))
+                instance_type=jsonutils.to_primitive(instance_type),
+                clean_shutdown=True)
 
         # assert bdm is unchanged
         disk_info = db.block_device_mapping_get_all_by_instance(
@@ -4642,7 +4619,7 @@ class ComputeTestCase(BaseTestCase):
                                  instance_type=instance_type,
                                  image={}, reservations=reservations,
                                  request_spec={}, filter_properties={},
-                                 node=None)
+                                 node=None, clean_shutdown=True)
 
         migration = objects.Migration.get_by_instance_and_status(
                 self.context.elevated(),
@@ -4768,7 +4745,8 @@ class ComputeTestCase(BaseTestCase):
 
         self.compute.prep_resize(self.context, instance=instance,
                 instance_type=new_type, image={}, reservations=[],
-                request_spec={}, filter_properties={}, node=None)
+                request_spec={}, filter_properties={}, node=None,
+                clean_shutdown=True)
 
         self._stub_out_resize_network_methods()
 
@@ -4777,7 +4755,7 @@ class ComputeTestCase(BaseTestCase):
                 instance.uuid, 'pre-migrating')
         self.compute.resize_instance(self.context, instance=instance,
                 migration=migration, image={}, instance_type=new_type,
-                reservations=[])
+                reservations=[], clean_shutdown=True)
         timeutils.set_time_override(cur_time)
         fake_notifier.NOTIFICATIONS = []
 
@@ -4827,7 +4805,8 @@ class ComputeTestCase(BaseTestCase):
         instance_type = flavors.get_default_flavor()
         self.compute.prep_resize(self.context, instance=instance,
                 instance_type=instance_type, image={}, reservations=[],
-                request_spec={}, filter_properties={}, node=None)
+                request_spec={}, filter_properties={}, node=None,
+                clean_shutdown=True)
         db.migration_get_by_instance_and_status(self.context.elevated(),
                                                 instance.uuid,
                                                 'pre-migrating')
@@ -4879,7 +4858,8 @@ class ComputeTestCase(BaseTestCase):
                           self.context, instance=instance,
                           instance_type=instance_type, image={},
                           reservations=reservations, request_spec={},
-                          filter_properties={}, node=None)
+                          filter_properties={}, node=None,
+                          clean_shutdown=True)
         self.compute.terminate_instance(self.context, instance, [], [])
 
     def test_prep_resize_instance_migration_error_on_none_host(self):
@@ -4900,7 +4880,8 @@ class ComputeTestCase(BaseTestCase):
                           self.context, instance=instance,
                           instance_type=instance_type, image={},
                           reservations=reservations, request_spec={},
-                          filter_properties={}, node=None)
+                          filter_properties={}, node=None,
+                          clean_shutdown=True)
         self.compute.terminate_instance(self.context, instance, [], [])
 
     def test_resize_instance_driver_error(self):
@@ -4924,7 +4905,8 @@ class ComputeTestCase(BaseTestCase):
         self.compute.prep_resize(self.context, instance=instance,
                                  instance_type=instance_type, image={},
                                  reservations=reservations, request_spec={},
-                                 filter_properties={}, node=None)
+                                 filter_properties={}, node=None,
+                                 clean_shutdown=True)
         instance.task_state = task_states.RESIZE_PREP
         instance.save()
         migration = objects.Migration.get_by_instance_and_status(
@@ -4936,7 +4918,8 @@ class ComputeTestCase(BaseTestCase):
                           self.context, instance=instance,
                           migration=migration, image={},
                           reservations=reservations,
-                          instance_type=jsonutils.to_primitive(instance_type))
+                          instance_type=jsonutils.to_primitive(instance_type),
+                          clean_shutdown=True)
         # NOTE(comstud): error path doesn't use objects, so our object
         # is not updated.  Refresh and compare against the DB.
         instance.refresh()
@@ -4962,7 +4945,8 @@ class ComputeTestCase(BaseTestCase):
         self.compute.prep_resize(self.context, instance=instance,
                                  instance_type=instance_type, image={},
                                  reservations=reservations, request_spec={},
-                                 filter_properties={}, node=None)
+                                 filter_properties={}, node=None,
+                                 clean_shutdown=True)
         instance.task_state = task_states.RESIZE_PREP
         instance.save()
 
@@ -4974,7 +4958,8 @@ class ComputeTestCase(BaseTestCase):
                           self.context, instance=instance,
                           migration=migration, image={},
                           reservations=reservations,
-                          instance_type=jsonutils.to_primitive(instance_type))
+                          instance_type=jsonutils.to_primitive(instance_type),
+                          clean_shutdown=True)
         # NOTE(comstud): error path doesn't use objects, so our object
         # is not updated.  Refresh and compare against the DB.
         instance.refresh()
@@ -4993,7 +4978,8 @@ class ComputeTestCase(BaseTestCase):
         instance.save()
         self.compute.prep_resize(self.context, instance=instance,
                 instance_type=instance_type, image={}, reservations=[],
-                request_spec={}, filter_properties={}, node=None)
+                request_spec={}, filter_properties={}, node=None,
+                clean_shutdown=True)
 
         # verify 'old_vm_state' was set on system_metadata
         instance.refresh()
@@ -5088,7 +5074,7 @@ class ComputeTestCase(BaseTestCase):
                 instance=instance,
                 instance_type=new_instance_type_p,
                 image={}, reservations=reservations, request_spec={},
-                filter_properties={}, node=None)
+                filter_properties={}, node=None, clean_shutdown=True)
 
         migration = objects.Migration.get_by_instance_and_status(
                 self.context.elevated(),
@@ -5103,7 +5089,8 @@ class ComputeTestCase(BaseTestCase):
                                      migration=migration,
                                      image={},
                                      reservations=[],
-                                     instance_type=new_instance_type_p)
+                                     instance_type=new_instance_type_p,
+                                     clean_shutdown=True)
         self.compute.finish_resize(self.context,
                     migration=migration, reservations=[],
                     disk_info={}, image={}, instance=instance)
@@ -5192,7 +5179,8 @@ class ComputeTestCase(BaseTestCase):
                 instance=instance,
                 instance_type=new_instance_type_p,
                 image={}, reservations=reservations, request_spec={},
-                filter_properties={}, node=None)
+                filter_properties={}, node=None,
+                clean_shutdown=True)
 
         migration = objects.Migration.get_by_instance_and_status(
                 self.context.elevated(),
@@ -5207,7 +5195,8 @@ class ComputeTestCase(BaseTestCase):
                                      migration=migration,
                                      image={},
                                      reservations=[],
-                                     instance_type=new_instance_type_p)
+                                     instance_type=new_instance_type_p,
+                                     clean_shutdown=True)
         self.compute.finish_resize(self.context,
                     migration=migration, reservations=[],
                     disk_info={}, image={}, instance=instance)
@@ -5315,7 +5304,7 @@ class ComputeTestCase(BaseTestCase):
                 self.context, instance=instance,
                 instance_type=instance_type, image={},
                 reservations=reservations, request_spec={},
-                filter_properties={}, node=None)
+                filter_properties={}, node=None, clean_shutdown=True)
         self.compute.terminate_instance(self.context, instance, [], [])
 
     def test_resize_instance_handles_migration_error(self):
@@ -5339,7 +5328,7 @@ class ComputeTestCase(BaseTestCase):
                                  instance_type=instance_type,
                                  image={}, reservations=reservations,
                                  request_spec={}, filter_properties={},
-                                 node=None)
+                                 node=None, clean_shutdown=True)
         migration = objects.Migration.get_by_instance_and_status(
                 self.context.elevated(),
                 instance.uuid, 'pre-migrating')
@@ -5349,7 +5338,8 @@ class ComputeTestCase(BaseTestCase):
                           self.context, instance=instance,
                           migration=migration, image={},
                           reservations=reservations,
-                          instance_type=jsonutils.to_primitive(instance_type))
+                          instance_type=jsonutils.to_primitive(instance_type),
+                          clean_shutdown=True)
         # NOTE(comstud): error path doesn't use objects, so our object
         # is not updated.  Refresh and compare against the DB.
         instance.refresh()
@@ -5791,7 +5781,9 @@ class ComputeTestCase(BaseTestCase):
         # start test
         self.mox.ReplayAll()
         ret = self.compute.rollback_live_migration_at_destination(c,
-                                          instance=instance)
+                                                    instance=instance,
+                                                    destroy_disks=True,
+                                                    migrate_data=None)
         self.assertIsNone(ret)
         self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
         msg = fake_notifier.NOTIFICATIONS[0]
@@ -9430,8 +9422,8 @@ class ComputeAPITestCase(BaseTestCase):
                        fake_terminate_connection)
 
         # Kill the instance and check that it was detached
-        bdms = db.block_device_mapping_get_all_by_instance(admin,
-                instance['uuid'])
+        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+            admin, instance['uuid'])
         self.compute.terminate_instance(admin, instance, bdms, [])
 
         self.assertTrue(result["detached"])
@@ -10760,14 +10752,10 @@ class ComputeReschedulingTestCase(BaseTestCase):
 
         instance = self._create_fake_instance_obj()
 
-        admin_password = None
-        injected_files = None
-        requested_networks = None
-        is_first_time = False
-
-        scheduler_method = self.compute.scheduler_rpcapi.run_instance
-        method_args = (request_spec, admin_password, injected_files,
-                       requested_networks, is_first_time, filter_properties)
+        scheduler_method = self.compute.compute_task_api.resize_instance
+        method_args = (instance, None,
+                       dict(filter_properties=filter_properties),
+                       {}, None)
         return self.compute._reschedule(self.context, request_spec,
                 filter_properties, instance, scheduler_method,
                 method_args, self.expected_task_state, exc_info=exc_info)
@@ -10804,271 +10792,8 @@ class ComputeReschedulingTestCase(BaseTestCase):
         self.assertEqual(exc_str, filter_properties['retry']['exc'])
 
 
-class ComputeReschedulingResizeTestCase(ComputeReschedulingTestCase):
-    """Test re-scheduling logic for prep_resize requests."""
-
-    def setUp(self):
-        super(ComputeReschedulingResizeTestCase, self).setUp()
-        self.expected_task_state = task_states.RESIZE_PREP
-
-    def _reschedule(self, request_spec=None, filter_properties=None,
-                    exc_info=None):
-        if not filter_properties:
-            filter_properties = {}
-
-        instance_uuid = str(uuid.uuid4())
-        instance = self._create_fake_instance_obj(
-            params={'uuid': instance_uuid})
-        instance_type = {}
-        reservations = None
-
-        scheduler_method = self.compute.compute_task_api.resize_instance
-        scheduler_hint = dict(filter_properties=filter_properties)
-        method_args = (instance, None, scheduler_hint, instance_type,
-                       reservations)
-
-        return self.compute._reschedule(self.context, request_spec,
-                filter_properties, instance, scheduler_method,
-                method_args, self.expected_task_state, exc_info=exc_info)
-
-
 class InnerTestingException(Exception):
     pass
-
-
-class ComputeRescheduleOrErrorTestCase(BaseTestCase):
-    """Test logic and exception handling around rescheduling or re-raising
-    original exceptions when builds fail.
-    """
-
-    def setUp(self):
-        super(ComputeRescheduleOrErrorTestCase, self).setUp()
-        self.instance = self._create_fake_instance_obj()
-
-    def test_reschedule_or_error_called(self):
-        """Basic sanity check to make sure _reschedule_or_error is called
-        when a build fails.
-        """
-        self.mox.StubOutWithMock(objects.BlockDeviceMappingList,
-                                 'get_by_instance_uuid')
-        self.mox.StubOutWithMock(self.compute, '_spawn')
-        self.mox.StubOutWithMock(self.compute, '_reschedule_or_error')
-
-        bdms = block_device_obj.block_device_make_list(self.context, [])
-
-        objects.BlockDeviceMappingList.get_by_instance_uuid(
-                mox.IgnoreArg(), self.instance.uuid).AndReturn(bdms)
-        self.compute._spawn(mox.IgnoreArg(), self.instance, mox.IgnoreArg(),
-                [], mox.IgnoreArg(), [], None, set_access_ip=False).AndRaise(
-                        test.TestingException("BuildError"))
-        self.compute._reschedule_or_error(mox.IgnoreArg(), self.instance,
-                mox.IgnoreArg(), None, None, None,
-                False, None, {}, bdms, False).AndReturn(True)
-
-        self.mox.ReplayAll()
-        self.compute._run_instance(self.context, None, {}, None, None, None,
-                False, None, self.instance, False)
-
-    def test_shutdown_instance_fail(self):
-        """Test shutdown instance failing before re-scheduling logic can even
-        run.
-        """
-        instance_uuid = self.instance['uuid']
-        self.mox.StubOutWithMock(self.compute, '_shutdown_instance')
-
-        try:
-            raise test.TestingException("Original")
-        except Exception:
-            exc_info = sys.exc_info()
-
-            compute_utils.add_instance_fault_from_exc(self.context,
-                    self.instance, exc_info[0], exc_info=exc_info)
-            self.compute._shutdown_instance(mox.IgnoreArg(), self.instance,
-                    mox.IgnoreArg(),
-                    mox.IgnoreArg()).AndRaise(InnerTestingException("Error"))
-            self.compute._log_original_error(exc_info, instance_uuid)
-
-            self.mox.ReplayAll()
-
-            # should raise the deallocation exception, not the original build
-            # error:
-            self.assertRaises(InnerTestingException,
-                    self.compute._reschedule_or_error, self.context,
-                    self.instance, exc_info, None, None, None, False, None, {})
-
-    def test_shutdown_instance_fail_instance_info_cache_not_found(self):
-        # Covers the case that _shutdown_instance fails with an
-        # InstanceInfoCacheNotFound exception when getting instance network
-        # information prior to calling driver.destroy.
-        elevated_context = self.context.elevated()
-        error = exception.InstanceInfoCacheNotFound(
-                                        instance_uuid=self.instance['uuid'])
-        with contextlib.nested(
-            mock.patch.object(self.context, 'elevated',
-                              return_value=elevated_context),
-            mock.patch.object(self.compute.network_api, 'get_instance_nw_info',
-                              side_effect=error),
-            mock.patch.object(self.compute,
-                              '_get_instance_block_device_info'),
-            mock.patch.object(self.compute.driver, 'destroy'),
-            mock.patch.object(self.compute, '_try_deallocate_network')
-        ) as (
-            elevated_mock,
-            _get_instance_nw_info_mock,
-            _get_instance_block_device_info_mock,
-            destroy_mock,
-            _try_deallocate_network_mock
-        ):
-            inst_obj = self.instance
-            self.compute._shutdown_instance(self.context, inst_obj,
-                                            bdms=[], notify=False)
-            # By asserting that _try_deallocate_network_mock was called
-            # exactly once, we know that _get_instance_nw_info raising
-            # InstanceInfoCacheNotFound did not make _shutdown_instance error
-            # out and driver.destroy was still called.
-            _try_deallocate_network_mock.assert_called_once_with(
-                elevated_context, inst_obj, None)
-
-    def test_reschedule_fail(self):
-        # Test handling of exception from _reschedule.
-        try:
-            raise test.TestingException("Original")
-        except Exception:
-            exc_info = sys.exc_info()
-
-        instance_uuid = self.instance['uuid']
-        method_args = (None, None, None, None, False, {})
-        self.mox.StubOutWithMock(self.compute, '_shutdown_instance')
-        self.mox.StubOutWithMock(self.compute, '_cleanup_volumes')
-        self.mox.StubOutWithMock(self.compute, '_reschedule')
-
-        self.compute._shutdown_instance(mox.IgnoreArg(), self.instance,
-                                        mox.IgnoreArg(),
-                                        mox.IgnoreArg())
-        self.compute._cleanup_volumes(mox.IgnoreArg(), instance_uuid,
-                                      mox.IgnoreArg())
-        self.compute._reschedule(self.context, None, self.instance,
-                {}, self.compute.scheduler_rpcapi.run_instance,
-                method_args, task_states.SCHEDULING, exc_info).AndRaise(
-                        InnerTestingException("Inner"))
-
-        self.mox.ReplayAll()
-
-        self.assertFalse(self.compute._reschedule_or_error(self.context,
-            self.instance, exc_info, None, None, None, False, None, {}))
-
-    def test_reschedule_false(self):
-        # Test not-rescheduling, but no nested exception.
-        instance_uuid = self.instance['uuid']
-        method_args = (None, None, None, None, False, {})
-        self.mox.StubOutWithMock(self.compute, '_shutdown_instance')
-        self.mox.StubOutWithMock(self.compute, '_cleanup_volumes')
-        self.mox.StubOutWithMock(self.compute, '_reschedule')
-
-        try:
-            raise test.TestingException("Original")
-        except test.TestingException:
-            exc_info = sys.exc_info()
-            compute_utils.add_instance_fault_from_exc(self.context,
-                    self.instance, exc_info[0], exc_info=exc_info)
-
-            self.compute._shutdown_instance(mox.IgnoreArg(), self.instance,
-                                            mox.IgnoreArg(),
-                                            mox.IgnoreArg())
-            self.compute._cleanup_volumes(mox.IgnoreArg(), instance_uuid,
-                                          mox.IgnoreArg())
-            self.compute._reschedule(self.context, None, {}, self.instance,
-                    self.compute.scheduler_rpcapi.run_instance, method_args,
-                    task_states.SCHEDULING, exc_info).AndReturn(False)
-
-            self.mox.ReplayAll()
-
-            # re-scheduling is False, the original build error should be
-            # raised here:
-            self.assertFalse(self.compute._reschedule_or_error(self.context,
-                self.instance, exc_info, None, None, None, False, None, {}))
-
-    def test_reschedule_true(self):
-        # Test behavior when re-scheduling happens.
-        instance_uuid = self.instance['uuid']
-        method_args = (None, None, None, None, False, {})
-        self.mox.StubOutWithMock(self.compute, '_shutdown_instance')
-        self.mox.StubOutWithMock(self.compute, '_cleanup_volumes')
-        self.mox.StubOutWithMock(self.compute, '_reschedule')
-
-        try:
-            raise test.TestingException("Original")
-        except Exception:
-            exc_info = sys.exc_info()
-
-            compute_utils.add_instance_fault_from_exc(self.context,
-                    self.instance, exc_info[0], exc_info=exc_info)
-            self.compute._shutdown_instance(mox.IgnoreArg(), self.instance,
-                                            mox.IgnoreArg(),
-                                            mox.IgnoreArg())
-            self.compute._cleanup_volumes(mox.IgnoreArg(), instance_uuid,
-                                          mox.IgnoreArg())
-            self.compute._reschedule(self.context, None, {}, self.instance,
-                    self.compute.scheduler_rpcapi.run_instance,
-                    method_args, task_states.SCHEDULING, exc_info).AndReturn(
-                            True)
-            self.compute._log_original_error(exc_info, instance_uuid)
-
-            self.mox.ReplayAll()
-
-            # re-scheduling is True, original error is logged, but nothing
-            # is raised:
-            self.compute._reschedule_or_error(self.context, self.instance,
-                    exc_info, None, None, None, False, None, {})
-
-    def test_no_reschedule_on_delete_during_spawn(self):
-        # instance should not be rescheduled if instance is deleted
-        # during the build
-        self.mox.StubOutWithMock(self.compute, '_spawn')
-        self.mox.StubOutWithMock(self.compute, '_reschedule_or_error')
-
-        exc = exception.UnexpectedDeletingTaskStateError(
-                expected=task_states.SPAWNING, actual=task_states.DELETING)
-        self.compute._spawn(mox.IgnoreArg(), self.instance, mox.IgnoreArg(),
-                mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg(),
-                mox.IgnoreArg(), set_access_ip=False).AndRaise(exc)
-
-        self.mox.ReplayAll()
-        # test succeeds if mocked method '_reschedule_or_error' is not
-        # called.
-        self.compute._run_instance(self.context, None, {}, None, None, None,
-                False, None, self.instance, False)
-
-    def test_no_reschedule_on_unexpected_task_state(self):
-        # instance shouldn't be rescheduled if unexpected task state arises.
-        # the exception should get reraised.
-        self.mox.StubOutWithMock(self.compute, '_spawn')
-        self.mox.StubOutWithMock(self.compute, '_reschedule_or_error')
-
-        exc = exception.UnexpectedTaskStateError(expected=task_states.SPAWNING,
-                actual=task_states.SCHEDULING)
-        self.compute._spawn(mox.IgnoreArg(), self.instance, mox.IgnoreArg(),
-                mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg(),
-                mox.IgnoreArg(), set_access_ip=False).AndRaise(exc)
-
-        self.mox.ReplayAll()
-        self.assertRaises(exception.UnexpectedTaskStateError,
-                self.compute._run_instance, self.context, None, {}, None, None,
-                None, False, None, self.instance, False)
-
-    def test_no_reschedule_on_block_device_fail(self):
-        self.mox.StubOutWithMock(self.compute, '_prep_block_device')
-        self.mox.StubOutWithMock(self.compute, '_reschedule_or_error')
-
-        exc = exception.InvalidBDM()
-
-        self.compute._prep_block_device(mox.IgnoreArg(), self.instance,
-                                        mox.IgnoreArg()).AndRaise(exc)
-
-        self.mox.ReplayAll()
-        self.assertRaises(exception.InvalidBDM, self.compute._run_instance,
-                          self.context, None, {}, None, None, None, False,
-                          None, self.instance, False)
 
 
 class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
@@ -11105,7 +10830,8 @@ class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
                                  instance=inst_obj,
                                  instance_type=self.instance_type,
                                  reservations=[], request_spec={},
-                                 filter_properties={}, node=None)
+                                 filter_properties={}, node=None,
+                                 clean_shutdown=True)
 
     def test_reschedule_fails_with_exception(self):
         """Original exception should be raised if the _reschedule method
@@ -11242,8 +10968,8 @@ class EvacuateHostTestCase(BaseTestCase):
             orig_image_ref = None
             image_ref = None
             injected_files = None
-            bdms = db.block_device_mapping_get_all_by_instance(self.context,
-                self.inst.uuid)
+            bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+                self.context, self.inst.uuid)
             self.compute.rebuild_instance(
                 mock_context, self.inst, orig_image_ref,
                 image_ref, injected_files, 'newpass', {}, bdms, recreate=True,
@@ -11482,31 +11208,6 @@ class ComputeInjectedFilesTestCase(BaseTestCase):
                 self.context, self.instance, {}, {}, {},
                           block_device_mapping=[],
                           injected_files=injected_files)
-
-    def test_reschedule(self):
-        # test that rescheduling is done with original encoded files
-        expected = [
-            ('/a/b/c', base64.b64encode('foobarbaz')),
-            ('/d/e/f', base64.b64encode('seespotrun')),
-        ]
-
-        def _roe(context, instance, exc_info, requested_networks,
-                 admin_password, injected_files, is_first_time, request_spec,
-                 filter_properties, bdms=None, legacy_bdm_in_spec=False):
-            self.assertEqual(expected, injected_files)
-            return True
-
-        def spawn_explode(context, instance, image_meta, injected_files,
-                admin_password, nw_info, block_device_info):
-            # force reschedule logic to execute
-            raise test.TestingException("spawn error")
-
-        self.stubs.Set(self.compute.driver, 'spawn', spawn_explode)
-        self.stubs.Set(self.compute, '_reschedule_or_error', _roe)
-
-        self.compute.build_and_run_instance(self.context, self.instance,
-                                            {}, {}, {},
-                                            block_device_mapping=[])
 
 
 class CheckConfigDriveTestCase(test.NoDBTestCase):
