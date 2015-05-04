@@ -74,7 +74,10 @@ opts = [
                help='Ironic keystone admin password.'),
     cfg.StrOpt('admin_auth_token',
                secret=True,
-               help='Ironic keystone auth token.'),
+               deprecated_for_removal=True,
+               help='Ironic keystone auth token.'
+                    'DEPRECATED: use admin_username, admin_password, and '
+                    'admin_tenant_name instead'),
     cfg.StrOpt('admin_url',
                help='Keystone public API endpoint.'),
     cfg.StrOpt('client_log_level',
