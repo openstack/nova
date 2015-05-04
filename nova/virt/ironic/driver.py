@@ -977,7 +977,7 @@ class IronicDriver(virt_driver.ComputeDriver):
             # not needed if no vif are defined
             for vif, pif in zip(network_info, ports):
                 # attach what neutron needs directly to the port
-                port_id = unicode(vif['id'])
+                port_id = six.text_type(vif['id'])
                 patch = [{'op': 'add',
                           'path': '/extra/vif_port_id',
                           'value': port_id}]

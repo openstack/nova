@@ -17,6 +17,7 @@ import io
 import os
 
 import mock
+import six
 
 from nova import test
 from nova import utils
@@ -120,7 +121,7 @@ class FakeMount(object):
 
 class TestDiskImage(test.NoDBTestCase):
     def mock_proc_mounts(self, mock_open):
-        response = io.StringIO(unicode(PROC_MOUNTS_CONTENTS))
+        response = io.StringIO(six.text_type(PROC_MOUNTS_CONTENTS))
         mock_open.return_value = response
 
     @mock.patch('__builtin__.open')

@@ -26,6 +26,7 @@ import time
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import timeutils
+import six
 
 from nova.api.ec2 import ec2utils
 from nova.api.ec2 import inst_state
@@ -726,7 +727,7 @@ class CloudController(object):
         return source_project_id
 
     def create_security_group(self, context, group_name, group_description):
-        if isinstance(group_name, unicode):
+        if isinstance(group_name, six.text_type):
             group_name = utils.utf8(group_name)
         if CONF.ec2_strict_validation:
             # EC2 specification gives constraints for name and description:

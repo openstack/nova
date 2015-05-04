@@ -17,6 +17,7 @@ import datetime
 
 import mock
 from oslo_serialization import jsonutils
+import six
 import webob
 
 from nova.api.openstack.compute.contrib import flavor_access as \
@@ -114,7 +115,7 @@ class FlavorManageTestV21(test.NoDBTestCase):
                 "vcpus": 2,
                 "disk": 1,
                 "OS-FLV-EXT-DATA:ephemeral": 1,
-                "id": unicode('1234'),
+                "id": six.text_type('1234'),
                 "swap": 512,
                 "rxtx_factor": 1,
                 "os-flavor-access:is_public": True,
@@ -156,7 +157,7 @@ class FlavorManageTestV21(test.NoDBTestCase):
                 "vcpus": 2,
                 "disk": 1,
                 "OS-FLV-EXT-DATA:ephemeral": 1,
-                "id": unicode('1234'),
+                "id": six.text_type('1234'),
                 "swap": 512,
                 "rxtx_factor": 1,
                 "os-flavor-access:is_public": True,

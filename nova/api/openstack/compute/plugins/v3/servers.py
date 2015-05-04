@@ -908,7 +908,7 @@ class ServersController(wsgi.Controller):
         if not image_href and create_kwargs.get('block_device_mapping'):
             return ''
         elif image_href:
-            return self._image_uuid_from_href(unicode(image_href))
+            return self._image_uuid_from_href(six.text_type(image_href))
         else:
             msg = _("Missing imageRef attribute")
             raise exc.HTTPBadRequest(explanation=msg)

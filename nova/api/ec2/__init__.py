@@ -572,7 +572,7 @@ def ec2_error_ex(ex, req, code=None, message=None, unexpected=False):
     log_fun(log_msg, log_msg_args, context=context)
 
     if ex.args and not message and (not unexpected or status < 500):
-        message = unicode(ex.args[0])
+        message = six.text_type(ex.args[0])
     if unexpected:
         # Log filtered environment for unexpected errors.
         env = req.environ.copy()

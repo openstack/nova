@@ -20,6 +20,7 @@ import mock
 from oslo_config import cfg
 from oslo_serialization import jsonutils
 from oslo_utils import uuidutils
+import six
 
 from nova.api.metadata import base as instance_metadata
 from nova.compute import power_state as nova_states
@@ -1116,7 +1117,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
                                                    node=node_uuid)
         network_info = utils.get_test_network_info()
 
-        port_id = unicode(network_info[0]['id'])
+        port_id = six.text_type(network_info[0]['id'])
         expected_patch = [{'op': 'add',
                            'path': '/extra/vif_port_id',
                            'value': port_id}]

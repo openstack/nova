@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import six
 import six.moves.urllib.parse as urlparse
 import webob
 
@@ -607,7 +608,7 @@ class DisabledFlavorsWithRealDBTestV21(test.TestCase):
 
         del inst_type['id']
         inst_type['name'] += '.disabled'
-        inst_type['flavorid'] = unicode(max(
+        inst_type['flavorid'] = six.text_type(max(
                 [int(flavor['flavorid']) for flavor in inst_types]) + 1)
         inst_type['disabled'] = True
 

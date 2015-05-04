@@ -368,7 +368,7 @@ class FloatingIP(object):
         """Performs db and driver calls to associate floating ip & fixed ip."""
         interface = CONF.public_interface or interface
 
-        @utils.synchronized(unicode(floating_address))
+        @utils.synchronized(six.text_type(floating_address))
         def do_associate():
             # associate floating ip
             floating = objects.FloatingIP.associate(context, floating_address,
@@ -464,7 +464,7 @@ class FloatingIP(object):
         """Performs db and driver calls to disassociate floating ip."""
         interface = CONF.public_interface or interface
 
-        @utils.synchronized(unicode(address))
+        @utils.synchronized(six.text_type(address))
         def do_disassociate():
             # NOTE(vish): Note that we are disassociating in the db before we
             #             actually remove the ip address on the host. We are

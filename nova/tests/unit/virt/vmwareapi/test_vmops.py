@@ -20,6 +20,7 @@ from oslo_utils import uuidutils
 from oslo_vmware import exceptions as vexc
 from oslo_vmware.objects import datastore as ds_obj
 from oslo_vmware import vim_util as vutil
+import six
 
 from nova.compute import power_state
 from nova import context
@@ -1315,9 +1316,9 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             self._verify_spawn_method_calls(_call_method, extras)
 
             dc_ref = 'fake_dc_ref'
-            source_file = unicode('[fake_ds] vmware_base/%s/%s.vmdk' %
+            source_file = six.text_type('[fake_ds] vmware_base/%s/%s.vmdk' %
                           (self._image_id, self._image_id))
-            dest_file = unicode('[fake_ds] vmware_base/%s/%s.%d.vmdk' %
+            dest_file = six.text_type('[fake_ds] vmware_base/%s/%s.%d.vmdk' %
                           (self._image_id, self._image_id,
                           self._instance['root_gb']))
             # TODO(dims): add more tests for copy_virtual_disk after
