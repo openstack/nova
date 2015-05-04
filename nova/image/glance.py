@@ -588,14 +588,14 @@ def _reraise_translated_image_exception(image_id):
     """Transform the exception for the image but keep its traceback intact."""
     exc_type, exc_value, exc_trace = sys.exc_info()
     new_exc = _translate_image_exception(image_id, exc_value)
-    raise new_exc, None, exc_trace
+    six.reraise(new_exc, None, exc_trace)
 
 
 def _reraise_translated_exception():
     """Transform the exception but keep its traceback intact."""
     exc_type, exc_value, exc_trace = sys.exc_info()
     new_exc = _translate_plain_exception(exc_value)
-    raise new_exc, None, exc_trace
+    six.reraise(new_exc, None, exc_trace)
 
 
 def _translate_image_exception(image_id, exc_value):

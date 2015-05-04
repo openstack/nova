@@ -1849,7 +1849,7 @@ class Response(object):
     def value_or_raise(self):
         if self.failure:
             if isinstance(self.value, (tuple, list)):
-                raise self.value[0], self.value[1], self.value[2]
+                six.reraise(*self.value)
             else:
                 raise self.value
         return self.value

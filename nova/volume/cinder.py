@@ -221,13 +221,13 @@ def translate_volume_exception(method):
                                         cinder_exception.BadRequest)):
                 exc_value = exception.InvalidInput(
                     reason=six.text_type(exc_value))
-            raise exc_value, None, exc_trace
+            six.reraise(exc_value, None, exc_trace)
         except (cinder_exception.ConnectionError,
                 keystone_exception.ConnectionError):
             exc_type, exc_value, exc_trace = sys.exc_info()
             exc_value = exception.CinderConnectionFailed(
                 reason=six.text_type(exc_value))
-            raise exc_value, None, exc_trace
+            six.reraise(exc_value, None, exc_trace)
         return res
     return wrapper
 
@@ -245,13 +245,13 @@ def translate_snapshot_exception(method):
             if isinstance(exc_value, (keystone_exception.NotFound,
                                       cinder_exception.NotFound)):
                 exc_value = exception.SnapshotNotFound(snapshot_id=snapshot_id)
-            raise exc_value, None, exc_trace
+            six.reraise(exc_value, None, exc_trace)
         except (cinder_exception.ConnectionError,
                 keystone_exception.ConnectionError):
             exc_type, exc_value, exc_trace = sys.exc_info()
             reason = six.text_type(exc_value)
             exc_value = exception.CinderConnectionFailed(reason=reason)
-            raise exc_value, None, exc_trace
+            six.reraise(exc_value, None, exc_trace)
         return res
     return wrapper
 

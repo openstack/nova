@@ -451,7 +451,7 @@ class ApiEc2TestCase(test.TestCase):
                 self.assertEqual(e.status, 400, 'Expected status to be 400')
                 self.assertIn(message, e.error_message)
             else:
-                raise self.failureException, 'EC2ResponseError not raised'
+                raise self.failureException('EC2ResponseError not raised')
 
         # Invalid CIDR address
         _assert('Invalid CIDR', 'tcp', 80, 81, '0.0.0.0/0444')

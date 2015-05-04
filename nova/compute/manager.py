@@ -1539,7 +1539,7 @@ class ComputeManager(manager.Manager):
                     LOG.exception(_LE('Instance failed network setup '
                                       'after %(attempts)d attempt(s)'),
                                   log_info)
-                    raise exc_info[0], exc_info[1], exc_info[2]
+                    six.reraise(*exc_info)
                 LOG.warning(_LW('Instance failed network setup '
                                 '(attempt %(attempt)d of %(attempts)d)'),
                             log_info, instance=instance)
@@ -3639,7 +3639,7 @@ class ComputeManager(manager.Manager):
                     'resize.error', fault=exc_info[1])
         else:
             # not re-scheduling
-            raise exc_info[0], exc_info[1], exc_info[2]
+            six.reraise(*exc_info)
 
     @wrap_exception()
     @reverts_task_state
