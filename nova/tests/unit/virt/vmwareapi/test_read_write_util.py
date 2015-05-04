@@ -15,7 +15,6 @@
 
 import mock
 from oslo_config import cfg
-import requests
 
 from nova import test
 from nova.virt.vmwareapi import read_write_util
@@ -25,23 +24,21 @@ CONF = cfg.CONF
 
 class ReadWriteUtilTestCase(test.NoDBTestCase):
 
-    @mock.patch.object(requests.api, 'request')
-    def test_ipv6_host_read(self, mock_request):
+    def test_ipv6_host_read(self):
         ipv6_host = 'fd8c:215d:178e:c51e:200:c9ff:fed1:584c'
         port = 7443
         folder = 'tmp/fake.txt'
-        read_write_util.VMwareHTTPReadFile(ipv6_host,
-                                           port,
-                                           'fake_dc',
-                                           'fake_ds',
-                                           dict(),
-                                           folder)
-        base_url = 'https://[%s]:%s/folder/%s' % (ipv6_host, port, folder)
-        base_url += '?dsName=fake_ds&dcPath=fake_dc'
-        headers = {'User-Agent': 'OpenStack-ESX-Adapter'}
-        mock_request.assert_called_once_with('get',
-                                             base_url,
-                                             headers=headers,
-                                             allow_redirects=True,
-                                             stream=True,
-                                             verify=False)
+        # NOTE(sdague): the VMwareHTTPReadFile makes implicit http
+        # call via requests during construction, block that from
+        # happening here in the test.
+        with mock.patch.object(read_write_util.VMwareHTTPReadFile,
+                               '_create_read_connection'):
+            reader = read_write_util.VMwareHTTPReadFile(ipv6_host,
+                                                        port,
+                                                        'fake_dc',
+                                                        'fake_ds',
+                                                        dict(),
+                                                        folder)
+            base_url = 'https://[%s]:%s/folder/%s' % (ipv6_host, port, folder)
+            base_url += '?dsName=fake_ds&dcPath=fake_dc'
+            self.assertEqual(base_url, reader._base_url)
