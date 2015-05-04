@@ -147,6 +147,7 @@ class VMwareDSUtilDatastoreSelectionTestCase(test.NoDBTestCase):
         data = [
             ['VMFS', 'spam-good', True, 20 * units.Gi, 10 * units.Gi],
             ['NFS', 'eggs-good', True, 40 * units.Gi, 15 * units.Gi],
+            ['NFS41', 'nfs41-is-good', True, 35 * units.Gi, 12 * units.Gi],
             ['BAD', 'some-name-bad', True, 30 * units.Gi, 20 * units.Gi],
             ['VMFS', 'some-name-good', True, 50 * units.Gi, 5 * units.Gi],
             ['VMFS', 'some-other-good', True, 10 * units.Gi, 10 * units.Gi],
