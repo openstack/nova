@@ -10911,6 +10911,37 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             instance, network_info=network_info)
         block_device_info_get_mapping.assert_called_once_with(bdm_info)
 
+    @mock.patch('nova.virt.driver.block_device_info_get_mapping')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
+                '_get_serial_ports_from_instance')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._undefine_domain')
+    def test_cleanup_serial_console_domain_gone(
+            self, undefine, get_ports, block_device_info_get_mapping):
+        self.flags(enabled="True", group='serial_console')
+        instance = {'name': 'i1'}
+        network_info = {}
+        bdm_info = {}
+        firewall_driver = mock.MagicMock()
+
+        block_device_info_get_mapping.return_value = ()
+
+        # Ensure _get_serial_ports_from_instance raises same exception
+        # that would have occurred if domain was gone.
+        get_ports.side_effect = exception.InstanceNotFound("domain undefined")
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
+        drvr.firewall_driver = firewall_driver
+        drvr.cleanup(
+            'ctx', instance, network_info,
+            block_device_info=bdm_info,
+            destroy_disks=False, destroy_vifs=False)
+
+        get_ports.assert_called_once_with(instance)
+        undefine.assert_called_once_with(instance)
+        firewall_driver.unfilter_instance.assert_called_once_with(
+            instance, network_info=network_info)
+        block_device_info_get_mapping.assert_called_once_with(bdm_info)
+
     def test_swap_volume(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
 
