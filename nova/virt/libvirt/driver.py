@@ -364,6 +364,11 @@ MIN_LIBVIRT_NUMA_VERSION = (1, 2, 7)
 MIN_LIBVIRT_HUGEPAGE_VERSION = (1, 2, 8)
 # missing libvirt cpu pinning support
 BAD_LIBVIRT_CPU_POLICY_VERSIONS = [(1, 2, 9, 2), (1, 2, 10)]
+# qemu 2.1 introduces support for pinning memory on host
+# NUMA nodes, along with the ability to specify hugepage
+# sizes per guest NUMA node
+MIN_QEMU_NUMA_HUGEPAGE_VERSION = (2, 1, 0)
+REQ_HYPERVISOR_NUMA_HUGEPAGE = "QEMU"
 # fsFreeze/fsThaw requirement
 MIN_LIBVIRT_FSFREEZE_VERSION = (1, 2, 5)
 
@@ -4738,22 +4743,24 @@ class LibvirtDriver(driver.ComputeDriver):
         return jsonutils.dumps(pci_info)
 
     def _has_numa_support(self):
-        if not self._host.has_min_version(MIN_LIBVIRT_NUMA_VERSION):
-            return False
-
-        if CONF.libvirt.virt_type not in ['qemu', 'kvm']:
-            return False
-
-        return True
+        # This means that the host can support LibvirtConfigGuestNUMATune
+        # and the nodeset field in LibvirtConfigGuestMemoryBackingPage
+        supported_archs = [arch.I686, arch.X86_64]
+        caps = self._host.get_capabilities()
+        return ((caps.host.cpu.arch in supported_archs) and
+                self._host.has_min_version(MIN_LIBVIRT_NUMA_VERSION,
+                                           MIN_QEMU_NUMA_HUGEPAGE_VERSION,
+                                           REQ_HYPERVISOR_NUMA_HUGEPAGE))
 
     def _has_hugepage_support(self):
-        if not self._host.has_min_version(MIN_LIBVIRT_HUGEPAGE_VERSION):
-            return False
-
-        if CONF.libvirt.virt_type not in ['qemu', 'kvm']:
-            return False
-
-        return True
+        # This means that the host can support multiple values for the size
+        # field in LibvirtConfigGuestMemoryBackingPage
+        supported_archs = [arch.I686, arch.X86_64]
+        caps = self._host.get_capabilities()
+        return ((caps.host.cpu.arch in supported_archs) and
+                self._host.has_min_version(MIN_LIBVIRT_HUGEPAGE_VERSION,
+                                           MIN_QEMU_NUMA_HUGEPAGE_VERSION,
+                                           REQ_HYPERVISOR_NUMA_HUGEPAGE))
 
     def _get_host_numa_topology(self):
         if not self._has_numa_support():
