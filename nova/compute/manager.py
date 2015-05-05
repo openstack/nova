@@ -6828,8 +6828,8 @@ class _ComputeV4Proxy(object):
         return self.manager.set_host_enabled(ctxt, enabled)
 
     def swap_volume(self, ctxt, instance, old_volume_id, new_volume_id):
-        return self.manager.swap_volume(ctxt, instance, old_volume_id,
-                                        new_volume_id)
+        return self.manager.swap_volume(ctxt, old_volume_id, new_volume_id,
+                                        instance)
 
     def get_host_uptime(self, ctxt):
         return self.manager.get_host_uptime(ctxt)
