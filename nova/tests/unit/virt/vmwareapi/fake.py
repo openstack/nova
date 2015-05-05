@@ -20,6 +20,7 @@ A fake VMware VI API implementation.
 """
 
 import collections
+import sys
 
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
@@ -267,6 +268,8 @@ class DataObject(object):
     """Data object base class."""
 
     def __init__(self, obj_name=None):
+        if obj_name is None:
+            obj_name = 'ns0:' + self.__class__.__name__
         self.obj_name = obj_name
 
     def __repr__(self):
@@ -1097,7 +1100,32 @@ class FakeFactory(object):
 
     def create(self, obj_name):
         """Creates a namespace object."""
-        return DataObject(obj_name)
+        klass = obj_name[4:]  # skip 'ns0:'
+        module = sys.modules[__name__]
+        fake_klass = getattr(module, klass, None)
+        if fake_klass is None:
+            return DataObject(obj_name)
+        else:
+            return fake_klass()
+
+
+class SharesInfo(DataObject):
+    def __init__(self):
+        super(SharesInfo, self).__init__()
+        self.level = None
+        self.shares = None
+
+
+class VirtualEthernetCardResourceAllocation(DataObject):
+    def __init__(self):
+        super(VirtualEthernetCardResourceAllocation, self).__init__()
+        self.share = SharesInfo()
+
+
+class VirtualE1000(DataObject):
+    def __init__(self):
+        super(VirtualE1000, self).__init__()
+        self.resourceAllocation = VirtualEthernetCardResourceAllocation()
 
 
 class FakeService(DataObject):
