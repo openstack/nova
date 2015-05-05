@@ -2255,7 +2255,7 @@ class ComputeManager(manager.Manager):
                     requested_networks)
                 compute_utils.add_instance_fault_from_exc(context,
                         instance, e, sys.exc_info())
-                self._set_instance_error_state(context, instance)
+                self._set_instance_obj_error_state(context, instance)
                 return build_results.FAILED
             LOG.debug(e.format_message(), instance=instance)
             retry['exc'] = traceback.format_exception(*sys.exc_info())
@@ -2295,7 +2295,7 @@ class ComputeManager(manager.Manager):
                     block_device_mapping, raise_exc=False)
             compute_utils.add_instance_fault_from_exc(context, instance,
                     e, sys.exc_info())
-            self._set_instance_error_state(context, instance)
+            self._set_instance_obj_error_state(context, instance)
             return build_results.FAILED
         except Exception as e:
             # Should not reach here.
@@ -2307,7 +2307,7 @@ class ComputeManager(manager.Manager):
                     block_device_mapping, raise_exc=False)
             compute_utils.add_instance_fault_from_exc(context, instance,
                     e, sys.exc_info())
-            self._set_instance_error_state(context, instance)
+            self._set_instance_obj_error_state(context, instance)
             return build_results.FAILED
 
     def _build_and_run_instance(self, context, instance, image, injected_files,
