@@ -4398,7 +4398,7 @@ class ComputeManager(manager.Manager):
                     context, instance.uuid))
 
             device_name = compute_utils.get_device_name_for_instance(
-                    context, instance, bdms, device)
+                    instance, bdms, device)
 
             # NOTE(vish): create bdm here to avoid race condition
             bdm = objects.BlockDeviceMapping(
