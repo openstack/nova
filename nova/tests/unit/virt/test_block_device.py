@@ -662,9 +662,12 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         self.assertEqual([], converted)
 
         converted = driver_block_device.convert_all_volumes(
-            self.volume_bdm, self.ephemeral_bdm, self.image_bdm)
+            self.volume_bdm, self.ephemeral_bdm, self.image_bdm,
+            self.blank_bdm, self.snapshot_bdm)
         self.assertEqual(converted, [self.volume_driver_bdm,
-                                     self.image_driver_bdm])
+                                     self.image_driver_bdm,
+                                     self.blank_driver_bdm,
+                                     self.snapshot_driver_bdm])
 
     def test_convert_volume(self):
         self.assertIsNone(driver_block_device.convert_volume(self.swap_bdm))
