@@ -7176,6 +7176,8 @@ class ComputeTestCase(BaseTestCase):
         bdms.sort(key=operator.attrgetter('device_name'))
         vol_bdm = bdms[1]
         self.assertEqual(vol_bdm.source_type, 'volume')
+        self.assertIsNone(vol_bdm.boot_index)
+        self.assertIsNone(vol_bdm.guest_format)
         self.assertEqual(vol_bdm.destination_type, 'volume')
         self.assertEqual(vol_bdm.device_name, '/dev/vdb')
         self.assertEqual(vol_bdm.volume_id, 'fake-volume-id')

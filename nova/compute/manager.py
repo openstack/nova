@@ -1648,6 +1648,16 @@ class ComputeManager(manager.Manager):
             compute_utils.default_device_names_for_instance(
                 instance, root_device_name, *block_device_lists)
 
+    def _get_device_name_for_instance(self, instance, bdms, block_device_obj):
+        # NOTE(ndipanov): Copy obj to avoid changing the original
+        block_device_obj = block_device_obj.obj_clone()
+        try:
+            return self.driver.get_device_name_for_instance(
+                instance, bdms, block_device_obj)
+        except NotImplementedError:
+            return compute_utils.get_device_name_for_instance(
+                instance, bdms, block_device_obj.get("device_name"))
+
     def _default_block_device_names(self, context, instance,
                                     image_meta, block_devices):
         """Verify that all the devices have the device_name set. If not,
@@ -4378,20 +4388,22 @@ class ComputeManager(manager.Manager):
                 objects.BlockDeviceMappingList.get_by_instance_uuid(
                     context, instance.uuid))
 
-            device_name = compute_utils.get_device_name_for_instance(
-                    instance, bdms, device)
-
-            # NOTE(vish): create bdm here to avoid race condition
-            bdm = objects.BlockDeviceMapping(
+            # NOTE(ndipanov): We need to explicitly set all the fields on the
+            #                 object so that obj_load_attr does not fail
+            new_bdm = objects.BlockDeviceMapping(
                     context=context,
                     source_type='volume', destination_type='volume',
-                    instance_uuid=instance.uuid,
+                    instance_uuid=instance.uuid, boot_index=None,
                     volume_id=volume_id or 'reserved',
-                    device_name=device_name,
+                    device_name=device, guest_format=None,
                     disk_bus=disk_bus, device_type=device_type)
-            bdm.create()
 
-            return bdm
+            new_bdm.device_name = self._get_device_name_for_instance(
+                    instance, bdms, new_bdm)
+
+            # NOTE(vish): create bdm here to avoid race condition
+            new_bdm.create()
+            return new_bdm
 
         return do_reserve()
 
