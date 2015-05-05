@@ -227,7 +227,7 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
 
     @update_db
     def attach(self, context, instance, volume_api, virt_driver,
-               do_check_attach=True, do_driver_attach=False):
+               do_check_attach=True, do_driver_attach=False, **kwargs):
         volume = volume_api.get(context, self.volume_id)
         if do_check_attach:
             volume_api.check_attach(context, volume, instance=instance)
