@@ -16,7 +16,10 @@
 Global cells config options
 """
 
+import itertools
+
 from oslo_config import cfg
+from oslo_utils import importutils
 
 
 cells_opts = [
@@ -66,3 +69,35 @@ def get_cell_type():
     if not CONF.cells.enable:
         return
     return CONF.cells.cell_type
+
+
+def list_opts():
+    return [
+        ('cells',
+         itertools.chain(
+             cells_opts,
+             importutils.import_module(
+                 "nova.cells.manager").cell_manager_opts,
+             importutils.import_module(
+                 "nova.cells.messaging").cell_messaging_opts,
+             importutils.import_module(
+                 "nova.cells.rpc_driver").cell_rpc_driver_opts,
+             importutils.import_module(
+                 "nova.cells.scheduler").cell_scheduler_opts,
+             importutils.import_module(
+                 "nova.cells.state").cell_state_manager_opts,
+             importutils.import_module(
+                 "nova.cells.weights.mute_child").mute_weigher_opts,
+             importutils.import_module(
+                 "nova.cells.weights.ram_by_instance_type").ram_weigher_opts,
+             importutils.import_module(
+                 "nova.cells.weights.weight_offset").weigher_opts
+         )),
+        ('upgrade_levels',
+         itertools.chain(
+             [importutils.import_module(
+                 "nova.cells.rpc_driver").rpcapi_cap_opt],
+             [importutils.import_module(
+                 "nova.cells.rpcapi").rpcapi_cap_opt],
+         )),
+    ]
