@@ -3742,3 +3742,19 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
 
     def test_revert_resize_instance_destroy_disks_non_shared_storage(self):
         self._test_revert_resize_instance_destroy_disks(is_shared=False)
+
+    def test_consoles_enabled(self):
+        self.flags(vnc_enabled=False)
+        self.flags(enabled=False, group='spice')
+        self.flags(enabled=False, group='rdp')
+        self.flags(enabled=False, group='serial_console')
+        self.assertFalse(self.compute._consoles_enabled())
+
+        self.flags(vnc_enabled=True)
+        self.assertTrue(self.compute._consoles_enabled())
+        self.flags(vnc_enabled=False)
+
+        for console in ['spice', 'rdp', 'serial_console']:
+            self.flags(enabled=True, group=console)
+            self.assertTrue(self.compute._consoles_enabled())
+            self.flags(enabled=False, group=console)

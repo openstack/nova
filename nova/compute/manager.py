@@ -914,13 +914,7 @@ class ComputeManager(manager.Manager):
         self._notify_about_instance_usage(context, instance, "delete.end",
                 system_metadata=system_meta)
 
-        if CONF.vnc_enabled or CONF.spice.enabled:
-            if CONF.cells.enable:
-                self.cells_rpcapi.consoleauth_delete_tokens(context,
-                        instance.uuid)
-            else:
-                self.consoleauth_rpcapi.delete_tokens_for_instance(context,
-                        instance.uuid)
+        self._clean_instance_console_tokens(context, instance)
         self._delete_scheduler_instance_info(context, instance.uuid)
 
     def _init_instance(self, context, instance):
@@ -5414,13 +5408,22 @@ class ComputeManager(manager.Manager):
                      "This error can be safely ignored."),
                  instance=instance)
 
-        if CONF.vnc_enabled or CONF.spice.enabled or CONF.rdp.enabled:
+        self._clean_instance_console_tokens(ctxt, instance)
+
+    def _consoles_enabled(self):
+        """Returns whether a console is enable."""
+        return (CONF.vnc_enabled or CONF.spice.enabled or
+                CONF.rdp.enabled or CONF.serial_console.enabled)
+
+    def _clean_instance_console_tokens(self, ctxt, instance):
+        """Clean console tokens stored for an instance."""
+        if self._consoles_enabled():
             if CONF.cells.enable:
-                self.cells_rpcapi.consoleauth_delete_tokens(ctxt,
-                        instance.uuid)
+                self.cells_rpcapi.consoleauth_delete_tokens(
+                    ctxt, instance.uuid)
             else:
-                self.consoleauth_rpcapi.delete_tokens_for_instance(ctxt,
-                        instance.uuid)
+                self.consoleauth_rpcapi.delete_tokens_for_instance(
+                    ctxt, instance.uuid)
 
     @object_compat
     @wrap_exception()
