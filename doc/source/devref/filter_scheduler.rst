@@ -38,12 +38,14 @@ There are some standard filter classes to use (:mod:`nova.scheduler.filters`):
   host compute service satisfy any extra specifications associated with the
   instance type.  It passes hosts that can create the specified instance type.
 
-  The extra specifications can have a scope at the beginning of the key string
-  of a key/value pair. The scope format is ``scope:key`` and can be nested,
-  i.e. ``key_string := scope:key_string``. Example like ``capabilities:cpu_info:
-  features`` is valid scope format. A key string without any ``:`` is non-scope
-  format. Each filter defines it's valid scope, and not all filters accept
-  non-scope format.
+  If an extra specs key contains a colon (:), anything before the colon is
+  treated as a namespace and anything after the colon is treated as the key to
+  be matched. If a namespace is present and is not ``capabilities``, the filter
+  ignores the namespace. Example like ``capabilities:cpu_info:features`` is
+  a valid scope format. For backward compatibility, also treats the extra
+  specs key as the key to be matched if no namespace is present; this action
+  is highly discouraged because it conflicts with
+  AggregateInstanceExtraSpecsFilter filter when you enable both filters
 
   The extra specifications can have an operator at the beginning of the value
   string of a key/value pair. If there is no operator specified, then a
