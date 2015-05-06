@@ -17,6 +17,7 @@ import re
 import uuid
 from xml.dom import minidom
 
+from eventlet import greenthread
 from lxml import etree
 import mock
 from mox3 import mox
@@ -515,6 +516,7 @@ class IptablesFirewallTestCase(test.NoDBTestCase):
         self.assertEqual(1, len(rules))
 
 
+@mock.patch.object(firewall, 'libvirt', fakelibvirt)
 class NWFilterTestCase(test.NoDBTestCase):
     def setUp(self):
         super(NWFilterTestCase, self).setUp()
@@ -635,6 +637,66 @@ class NWFilterTestCase(test.NoDBTestCase):
         original_filter_count = len(fakefilter.filters)
         self.fw.unfilter_instance(instance_ref, network_info)
         self.assertEqual(original_filter_count - len(fakefilter.filters), 1)
+
+    @mock.patch.object(fakelibvirt.virConnect, "nwfilterLookupByName")
+    @mock.patch.object(greenthread, 'sleep')
+    def test_unfilter_instance_retry_and_error(self, mock_sleep, mock_lookup):
+        # Tests that we try to undefine the network filter when it's in use
+        # until we hit a timeout. We try two times and sleep once in between.
+        self.flags(live_migration_retry_count=2)
+        in_use = fakelibvirt.libvirtError('nwfilter is in use')
+        in_use.err = (fakelibvirt.VIR_ERR_OPERATION_INVALID,)
+        mock_undefine = mock.Mock(side_effect=in_use)
+        fakefilter = mock.MagicMock(undefine=mock_undefine)
+        mock_lookup.return_value = fakefilter
+
+        instance_ref = self._create_instance()
+        network_info = _fake_network_info(self.stubs, 1)
+
+        self.assertRaises(fakelibvirt.libvirtError, self.fw.unfilter_instance,
+                          instance_ref, network_info)
+        self.assertEqual(2, mock_lookup.call_count)
+        self.assertEqual(2, mock_undefine.call_count)
+        mock_sleep.assert_called_once_with(1)
+
+    @mock.patch.object(fakelibvirt.virConnect, "nwfilterLookupByName")
+    @mock.patch.object(greenthread, 'sleep')
+    def test_unfilter_instance_retry_not_found(self, mock_sleep, mock_lookup):
+        # Tests that we exit if the nw filter is not found.
+        in_use = fakelibvirt.libvirtError('nwfilter is in use')
+        in_use.err = (fakelibvirt.VIR_ERR_OPERATION_INVALID,)
+        not_found = fakelibvirt.libvirtError('no nwfilter with matching name')
+        not_found.err = (fakelibvirt.VIR_ERR_NO_NWFILTER,)
+        mock_undefine = mock.Mock(side_effect=(in_use, not_found))
+        fakefilter = mock.MagicMock(undefine=mock_undefine)
+        mock_lookup.return_value = fakefilter
+
+        instance_ref = self._create_instance()
+        network_info = _fake_network_info(self.stubs, 1)
+
+        self.fw.unfilter_instance(instance_ref, network_info)
+        self.assertEqual(2, mock_lookup.call_count)
+        self.assertEqual(2, mock_undefine.call_count)
+        mock_sleep.assert_called_once_with(1)
+
+    @mock.patch.object(fakelibvirt.virConnect, "nwfilterLookupByName")
+    @mock.patch.object(greenthread, 'sleep')
+    def test_unfilter_instance_retry_and_pass(self, mock_sleep, mock_lookup):
+        # Tests that we retry on in-use error but pass if undefine() works
+        # while looping.
+        in_use = fakelibvirt.libvirtError('nwfilter is in use')
+        in_use.err = (fakelibvirt.VIR_ERR_OPERATION_INVALID,)
+        mock_undefine = mock.Mock(side_effect=(in_use, None))
+        fakefilter = mock.MagicMock(undefine=mock_undefine)
+        mock_lookup.return_value = fakefilter
+
+        instance_ref = self._create_instance()
+        network_info = _fake_network_info(self.stubs, 1)
+
+        self.fw.unfilter_instance(instance_ref, network_info)
+        self.assertEqual(2, mock_lookup.call_count)
+        self.assertEqual(2, mock_undefine.call_count)
+        mock_sleep.assert_called_once_with(1)
 
     def test_redefining_nwfilters(self):
         fakefilter = NWFilterFakes()
