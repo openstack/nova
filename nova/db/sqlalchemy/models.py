@@ -397,47 +397,6 @@ class InstanceTypes(BASE, NovaBase):
     is_public = Column(Boolean, default=True)
 
 
-class Volume(BASE, NovaBase):
-    """Represents a block storage device that can be attached to a VM."""
-    __tablename__ = 'volumes'
-    __table_args__ = (
-        Index('volumes_instance_uuid_idx', 'instance_uuid'),
-    )
-    id = Column(String(36), primary_key=True, nullable=False)
-    deleted = Column(String(36), default="")
-
-    @property
-    def name(self):
-        return CONF.volume_name_template % self.id
-
-    ec2_id = Column(String(255))
-    user_id = Column(String(255))
-    project_id = Column(String(255))
-
-    snapshot_id = Column(String(36))
-
-    host = Column(String(255))
-    size = Column(Integer)
-    availability_zone = Column(String(255))
-    instance_uuid = Column(String(36))
-    mountpoint = Column(String(255))
-    attach_time = Column(DateTime)
-    status = Column(String(255))  # TODO(vish): enum?
-    attach_status = Column(String(255))  # TODO(vish): enum
-
-    scheduled_at = Column(DateTime)
-    launched_at = Column(DateTime)
-    terminated_at = Column(DateTime)
-
-    display_name = Column(String(255))
-    display_description = Column(String(255))
-
-    provider_location = Column(String(256))
-    provider_auth = Column(String(256))
-
-    volume_type_id = Column(Integer)
-
-
 class Quota(BASE, NovaBase):
     """Represents a single quota override for a project.
 
@@ -637,25 +596,6 @@ class BlockDeviceMapping(BASE, NovaBase):
     no_device = Column(Boolean)
 
     connection_info = Column(MediumText())
-
-
-class IscsiTarget(BASE, NovaBase):
-    """Represents an iscsi target for a given host."""
-    __tablename__ = 'iscsi_targets'
-    __table_args__ = (
-        Index('iscsi_targets_volume_id_fkey', 'volume_id'),
-        Index('iscsi_targets_host_volume_id_deleted_idx', 'host', 'volume_id',
-              'deleted')
-    )
-    id = Column(Integer, primary_key=True, nullable=False)
-    target_num = Column(Integer)
-    host = Column(String(255))
-    volume_id = Column(String(36), ForeignKey('volumes.id'))
-    volume = orm.relationship(Volume,
-                          backref=orm.backref('iscsi_target', uselist=False),
-                          foreign_keys=volume_id,
-                          primaryjoin='and_(IscsiTarget.volume_id==Volume.id,'
-                                           'IscsiTarget.deleted==0)')
 
 
 class SecurityGroupInstanceAssociation(BASE, NovaBase):
