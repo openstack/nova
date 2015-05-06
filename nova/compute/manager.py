@@ -5036,7 +5036,6 @@ class ComputeManager(manager.Manager):
 
     @object_compat
     @wrap_exception()
-    @reverts_task_state
     @wrap_instance_fault
     def attach_interface(self, context, instance, network_id, port_id,
                          requested_ip):
@@ -5073,7 +5072,6 @@ class ComputeManager(manager.Manager):
 
     @object_compat
     @wrap_exception()
-    @reverts_task_state
     @wrap_instance_fault
     def detach_interface(self, context, instance, port_id):
         """Detach an network adapter from an instance."""
