@@ -6805,6 +6805,27 @@ class LibvirtDriver(driver.ComputeDriver):
                                        block_device_info,
                                        image_meta)
 
+    def get_device_name_for_instance(self, instance, bdms, block_device_obj):
+        image_meta = utils.get_image_from_system_metadata(
+            instance.system_metadata)
+        block_device_info = driver.get_block_device_info(instance, bdms)
+        instance_info = blockinfo.get_disk_info(
+                CONF.libvirt.virt_type, instance,
+                image_meta, block_device_info=block_device_info)
+
+        suggested_dev_name = block_device_obj.device_name
+        if suggested_dev_name is not None:
+            LOG.warn(_LW('Ignoring supplied device name: %(suggested_dev)s'),
+                     {'suggested_dev': suggested_dev_name}, instance=instance)
+
+        # NOTE(ndipanov): get_info_from_bdm will generate the new device name
+        #                 only when it's actually not set on the bd object
+        block_device_obj.device_name = None
+        disk_info = blockinfo.get_info_from_bdm(
+                CONF.libvirt.virt_type, image_meta, block_device_obj,
+                mapping=instance_info['mapping'])
+        return block_device.prepend_dev(disk_info['dev'])
+
     def is_supported_fs_format(self, fs_type):
         return fs_type in [disk.FS_FORMAT_EXT2, disk.FS_FORMAT_EXT3,
                            disk.FS_FORMAT_EXT4, disk.FS_FORMAT_XFS]

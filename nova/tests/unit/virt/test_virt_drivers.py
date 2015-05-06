@@ -897,3 +897,6 @@ class LibvirtConnTestCase(_VirtDriverTestCase, test.TestCase):
         self.assertEqual(unplug_vifs_mock.call_count, 1)
         unplug_vifs_mock.assert_called_once_with(instance_ref,
                                             network_info, True)
+
+    def test_get_device_name_for_instance(self):
+        self.skipTest("Tested by the nova.tests.unit.virt.libvirt suite")
