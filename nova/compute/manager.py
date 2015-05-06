@@ -2278,6 +2278,9 @@ class ComputeManager(manager.Manager):
                     keystone_exception.EndpointNotFound) as exc:
                 LOG.warning(_LW('Ignoring EndpointNotFound: %s'), exc,
                             instance=instance)
+            except cinder_exception.ClientException as exc:
+                LOG.warning(_LW('Ignoring Unknown cinder exception: %s'), exc,
+                            instance=instance)
 
         if notify:
             self._notify_about_instance_usage(context, instance,

@@ -927,9 +927,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         'nova.compute.manager.ComputeManager._get_instance_block_device_info')
     @mock.patch('nova.virt.driver.ComputeDriver.destroy')
     @mock.patch('nova.virt.driver.ComputeDriver.get_volume_connector')
-    def test_shutdown_instance_endpoint_not_found(self, mock_connector,
+    def _test_shutdown_instance_exception(self, exc, mock_connector,
             mock_destroy, mock_blk_device_info, mock_nw_info, mock_elevated):
-        mock_connector.side_effect = cinder_exception.EndpointNotFound
+        mock_connector.side_effect = exc
         mock_elevated.return_value = self.context
         instance = fake_instance.fake_instance_obj(
                 self.context,
@@ -940,6 +940,14 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
         self.compute._shutdown_instance(self.context, instance, bdms,
                 notify=False, try_deallocate_networks=False)
+
+    def test_shutdown_instance_endpoint_not_found(self):
+        exc = cinder_exception.EndpointNotFound
+        self._test_shutdown_instance_exception(exc)
+
+    def test_shutdown_instance_client_exception(self):
+        exc = cinder_exception.ClientException
+        self._test_shutdown_instance_exception(exc)
 
     def _test_init_instance_retries_reboot(self, instance, reboot_type,
                                            return_power_state):
