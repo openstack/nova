@@ -6302,7 +6302,7 @@ class ComputeManager(manager.Manager):
                 continue
             except Exception as e:
                 LOG.error(_LE("Error updating resources for node "
-                              "%(node)%s: %(e)s"),
+                              "%(node)s: %(e)s"),
                           {'node': nodename, 'e': e})
             new_resource_tracker_dict[nodename] = rt
 
