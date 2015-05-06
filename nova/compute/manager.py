@@ -721,16 +721,6 @@ class ComputeManager(manager.Manager):
         self._update_resource_tracker(context, instance_ref)
         return instance_ref
 
-    def _set_instance_error_state(self, context, instance):
-        instance_uuid = instance.uuid
-        try:
-            self._instance_update(context, instance_uuid,
-                                  vm_state=vm_states.ERROR)
-        except exception.InstanceNotFound:
-            LOG.debug('Instance has been destroyed from under us while '
-                      'trying to set it to ERROR',
-                      instance_uuid=instance_uuid)
-
     def _set_instance_obj_error_state(self, context, instance):
         try:
             instance.vm_state = vm_states.ERROR
@@ -1021,7 +1011,7 @@ class ComputeManager(manager.Manager):
                 # we don't want that an exception blocks the init_host
                 msg = _LE('Failed to complete a deletion')
                 LOG.exception(msg, instance=instance)
-                self._set_instance_error_state(context, instance)
+                self._set_instance_obj_error_state(context, instance)
             return
 
         try_reboot, reboot_type = self._retry_reboot(context, instance)
@@ -1103,7 +1093,7 @@ class ComputeManager(manager.Manager):
         except exception.VirtualInterfacePlugException:
             # we don't want an exception to block the init_host
             LOG.exception(_LE("Vifs plug failed"), instance=instance)
-            self._set_instance_error_state(context, instance)
+            self._set_instance_obj_error_state(context, instance)
             return
 
         if instance.task_state == task_states.RESIZE_MIGRATING:
@@ -1164,7 +1154,7 @@ class ComputeManager(manager.Manager):
                 #             instance to error and attempt to continue.
                 LOG.warning(_LW('Failed to resume instance'),
                             instance=instance)
-                self._set_instance_error_state(context, instance)
+                self._set_instance_obj_error_state(context, instance)
 
         elif drv_state == power_state.RUNNING:
             # VMwareAPI drivers will raise an exception
@@ -1499,7 +1489,7 @@ class ComputeManager(manager.Manager):
 
         for instance in building_insts:
             if timeutils.is_older_than(instance.created_at, timeout):
-                self._set_instance_error_state(context, instance)
+                self._set_instance_obj_error_state(context, instance)
                 LOG.warning(_LW("Instance build timed out. Set to error "
                                 "state."), instance=instance)
 
@@ -2239,7 +2229,7 @@ class ComputeManager(manager.Manager):
             with excutils.save_and_reraise_exception():
                 LOG.error(_LE('Failed to deallocate network for instance.'),
                           instance=instance)
-                self._set_instance_error_state(context, instance)
+                self._set_instance_obj_error_state(context, instance)
 
     def _get_power_off_values(self, context, instance, clean_shutdown):
         """Get the timing configuration for powering down this instance."""
@@ -2441,7 +2431,7 @@ class ComputeManager(manager.Manager):
                 with excutils.save_and_reraise_exception():
                     LOG.exception(_LE('Setting instance vm_state to ERROR'),
                                   instance=instance)
-                    self._set_instance_error_state(context, instance)
+                    self._set_instance_obj_error_state(context, instance)
 
         do_terminate_instance(instance, bdms)
 
@@ -3545,7 +3535,7 @@ class ComputeManager(manager.Manager):
             filter_properties = {}
 
         if not instance.host:
-            self._set_instance_error_state(context, instance)
+            self._set_instance_obj_error_state(context, instance)
             msg = _('Instance has no source host')
             raise exception.MigrationError(reason=msg)
 
@@ -3557,7 +3547,7 @@ class ComputeManager(manager.Manager):
                 raise exception.UnableToMigrateToSelf(
                     instance_id=instance.uuid, host=self.host)
         elif same_host and not CONF.allow_resize_to_same_host:
-            self._set_instance_error_state(context, instance)
+            self._set_instance_obj_error_state(context, instance)
             msg = _('destination same as source!')
             raise exception.MigrationError(reason=msg)
 
@@ -3862,7 +3852,7 @@ class ComputeManager(manager.Manager):
                     LOG.exception(_LE("Failed to rollback quota for failed "
                                       "finish_resize"),
                                   instance=instance)
-                self._set_instance_error_state(context, instance)
+                self._set_instance_obj_error_state(context, instance)
 
     @wrap_exception()
     @wrap_instance_fault
@@ -6114,7 +6104,7 @@ class ComputeManager(manager.Manager):
             with excutils.save_and_reraise_exception():
                 if quotas:
                     quotas.rollback()
-                self._set_instance_error_state(context, instance)
+                self._set_instance_obj_error_state(context, instance)
 
     @wrap_exception()
     def add_aggregate_host(self, context, aggregate, host, slave_info):

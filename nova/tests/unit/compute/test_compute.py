@@ -6440,24 +6440,15 @@ class ComputeTestCase(BaseTestCase):
         new_instance.update(filters)
         instances.append(fake_instance.fake_db_instance(**new_instance))
 
-        # need something to return from conductor_api.instance_update
-        # that is defined outside the for loop and can be used in the mock
-        # context
-        fake_instance_ref = {'host': CONF.host, 'node': 'fake'}
-
         # creating mocks
         with contextlib.nested(
             mock.patch.object(self.compute.db.sqlalchemy.api,
                               'instance_get_all_by_filters',
                               return_value=instances),
-            mock.patch.object(self.compute.conductor_api, 'instance_update',
-                              return_value=fake_instance_ref),
-            mock.patch.object(self.compute.driver, 'node_is_available',
-                              return_value=False)
+            mock.patch.object(objects.Instance, 'save'),
         ) as (
             instance_get_all_by_filters,
-            conductor_instance_update,
-            node_is_available
+            conductor_instance_update
         ):
             # run the code
             self.compute._check_instance_build_time(ctxt)
@@ -6472,14 +6463,9 @@ class ComputeTestCase(BaseTestCase):
                                             limit=None)
             self.assertThat(conductor_instance_update.mock_calls,
                             testtools_matchers.HasLength(len(old_instances)))
-            self.assertThat(node_is_available.mock_calls,
-                            testtools_matchers.HasLength(len(old_instances)))
             for inst in old_instances:
                 conductor_instance_update.assert_has_calls([
-                    mock.call(ctxt, inst['uuid'],
-                              vm_state=vm_states.ERROR)])
-                node_is_available.assert_has_calls([
-                    mock.call(fake_instance_ref['node'])])
+                    mock.call()])
 
     def test_get_resource_tracker_fail(self):
         self.assertRaises(exception.NovaException,
