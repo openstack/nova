@@ -25,6 +25,7 @@ import functools
 import hashlib
 import hmac
 import inspect
+import logging as std_logging
 import os
 import pyclbr
 import random
@@ -34,6 +35,7 @@ import socket
 import struct
 import sys
 import tempfile
+import time
 from xml.sax import saxutils
 
 import eventlet
@@ -47,13 +49,14 @@ import oslo_messaging as messaging
 from oslo_utils import encodeutils
 from oslo_utils import excutils
 from oslo_utils import importutils
+from oslo_utils import strutils
 from oslo_utils import timeutils
 from oslo_utils import units
 import six
 from six.moves import range
 
 from nova import exception
-from nova.i18n import _, _LE, _LW
+from nova.i18n import _, _LE, _LI, _LW
 
 notify_decorator = 'nova.notifications.notify_decorator'
 
@@ -76,6 +79,11 @@ utils_opts = [
                default='month',
                help='Time period to generate instance usages for.  '
                     'Time period must be hour, day, month or year'),
+    cfg.BoolOpt('use_rootwrap_daemon', default=False,
+                help="Start and use a daemon that can run the commands that "
+                     "need to be run with root privileges. This option is "
+                     "usually enabled on nodes that run nova compute "
+                     "processes"),
     cfg.StrOpt('rootwrap_config',
                default="/etc/nova/rootwrap.conf",
                help='Path to the rootwrap configuration file to use for '
@@ -247,10 +255,138 @@ def get_root_helper():
     return cmd
 
 
+def _get_rootwrap_helper():
+    if CONF.use_rootwrap_daemon:
+        return RootwrapDaemonHelper(CONF.rootwrap_config)
+    else:
+        return RootwrapProcessHelper()
+
+
+class RootwrapProcessHelper(object):
+    def trycmd(self, *cmd, **kwargs):
+        kwargs['root_helper'] = get_root_helper()
+        return processutils.trycmd(*cmd, **kwargs)
+
+    def execute(self, *cmd, **kwargs):
+        kwargs['root_helper'] = get_root_helper()
+        return processutils.execute(*cmd, **kwargs)
+
+
+class RootwrapDaemonHelper(RootwrapProcessHelper):
+    _clients = {}
+
+    @synchronized('daemon-client-lock')
+    def _get_client(cls, rootwrap_config):
+        try:
+            return cls._clients[rootwrap_config]
+        except KeyError:
+            from oslo_rootwrap import client
+            new_client = client.Client([
+                "sudo", "nova-rootwrap-daemon", rootwrap_config])
+            cls._clients[rootwrap_config] = new_client
+            return new_client
+
+    def __init__(self, rootwrap_config):
+        self.client = self._get_client(rootwrap_config)
+
+    def trycmd(self, *args, **kwargs):
+        discard_warnings = kwargs.pop('discard_warnings', False)
+        try:
+            out, err = self.execute(*args, **kwargs)
+            failed = False
+        except processutils.ProcessExecutionError as exn:
+            out, err = '', six.text_type(exn)
+            failed = True
+        if not failed and discard_warnings and err:
+            # Handle commands that output to stderr but otherwise succeed
+            err = ''
+        return out, err
+
+    def execute(self, *cmd, **kwargs):
+        # NOTE(dims): This method is to provide compatibility with the
+        # processutils.execute interface. So that calling daemon or direct
+        # rootwrap to honor the same set of flags in kwargs and to ensure
+        # that we don't regress any current behavior.
+        cmd = [str(c) for c in cmd]
+        loglevel = kwargs.pop('loglevel', std_logging.DEBUG)
+        log_errors = kwargs.pop('log_errors', None)
+        process_input = kwargs.pop('process_input', None)
+        delay_on_retry = kwargs.pop('delay_on_retry', True)
+        attempts = kwargs.pop('attempts', 1)
+        check_exit_code = kwargs.pop('check_exit_code', [0])
+        ignore_exit_code = False
+        if isinstance(check_exit_code, bool):
+            ignore_exit_code = not check_exit_code
+            check_exit_code = [0]
+        elif isinstance(check_exit_code, int):
+            check_exit_code = [check_exit_code]
+
+        sanitized_cmd = strutils.mask_password(' '.join(cmd))
+        LOG.info(_LI('Executing RootwrapDaemonHelper.execute '
+                     'cmd=[%(cmd)r] kwargs=[%(kwargs)r]'),
+                 {'cmd': sanitized_cmd, 'kwargs': kwargs})
+
+        while attempts > 0:
+            attempts -= 1
+            try:
+                start_time = time.time()
+                LOG.log(loglevel, _('Running cmd (subprocess): %s'),
+                        sanitized_cmd)
+
+                (returncode, out, err) = self.client.execute(
+                    cmd, process_input)
+
+                end_time = time.time() - start_time
+                LOG.log(loglevel,
+                        'CMD "%(sanitized_cmd)s" returned: %(return_code)s '
+                        'in %(end_time)0.3fs',
+                        {'sanitized_cmd': sanitized_cmd,
+                         'return_code': returncode,
+                         'end_time': end_time})
+
+                if not ignore_exit_code and returncode not in check_exit_code:
+                    out = strutils.mask_password(out)
+                    err = strutils.mask_password(err)
+                    raise processutils.ProcessExecutionError(
+                        exit_code=returncode,
+                        stdout=out,
+                        stderr=err,
+                        cmd=sanitized_cmd)
+                return (out, err)
+
+            except processutils.ProcessExecutionError as err:
+                # if we want to always log the errors or if this is
+                # the final attempt that failed and we want to log that.
+                if log_errors == processutils.LOG_ALL_ERRORS or (
+                                log_errors == processutils.LOG_FINAL_ERROR and
+                            not attempts):
+                    format = _('%(desc)r\ncommand: %(cmd)r\n'
+                               'exit code: %(code)r\nstdout: %(stdout)r\n'
+                               'stderr: %(stderr)r')
+                    LOG.log(loglevel, format, {"desc": err.description,
+                                               "cmd": err.cmd,
+                                               "code": err.exit_code,
+                                               "stdout": err.stdout,
+                                               "stderr": err.stderr})
+                if not attempts:
+                    LOG.log(loglevel, _('%r failed. Not Retrying.'),
+                            sanitized_cmd)
+                    raise
+                else:
+                    LOG.log(loglevel, _('%r failed. Retrying.'),
+                            sanitized_cmd)
+                    if delay_on_retry:
+                        time.sleep(random.randint(20, 200) / 100.0)
+
+
 def execute(*cmd, **kwargs):
     """Convenience wrapper around oslo's execute() method."""
-    if 'run_as_root' in kwargs and 'root_helper' not in kwargs:
-        kwargs['root_helper'] = get_root_helper()
+    if 'run_as_root' in kwargs and kwargs.get('run_as_root'):
+        if CONF.use_rootwrap_daemon:
+            return RootwrapDaemonHelper(CONF.rootwrap_config).execute(
+                *cmd, **kwargs)
+        else:
+            return RootwrapProcessHelper().execute(*cmd, **kwargs)
     return processutils.execute(*cmd, **kwargs)
 
 
@@ -264,8 +400,12 @@ def ssh_execute(dest, *cmd, **kwargs):
 
 def trycmd(*args, **kwargs):
     """Convenience wrapper around oslo's trycmd() method."""
-    if 'run_as_root' in kwargs and 'root_helper' not in kwargs:
-        kwargs['root_helper'] = get_root_helper()
+    if kwargs.get('run_as_root', False):
+        if CONF.use_rootwrap_daemon:
+            return RootwrapDaemonHelper(CONF.rootwrap_config).trycmd(
+                *args, **kwargs)
+        else:
+            return RootwrapProcessHelper().trycmd(*args, **kwargs)
     return processutils.trycmd(*args, **kwargs)
 
 
