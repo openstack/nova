@@ -35,7 +35,6 @@ import operator
 import os
 import random
 import shutil
-import sys
 import tempfile
 import time
 import uuid
@@ -4472,7 +4471,7 @@ class LibvirtDriver(driver.ComputeDriver):
             return self._vcpu_total
 
         try:
-            total_pcpus = self._conn.getInfo()[2]
+            total_pcpus = self._host.get_cpu_count()
         except libvirt.libvirtError:
             LOG.warn(_LW("Cannot get the number of cpu, because this "
                          "function is not implemented for this platform. "))
@@ -4506,15 +4505,6 @@ class LibvirtDriver(driver.ComputeDriver):
                                       "out of hypervisor cpu range."))
         self._vcpu_total = len(available_ids)
         return self._vcpu_total
-
-    def _get_memory_mb_total(self):
-        """Get the total memory size(MB) of physical computer.
-
-        :returns: the total amount of memory(MB).
-
-        """
-
-        return self._conn.getInfo()[1]
 
     @staticmethod
     def _get_local_gb_info():
@@ -4563,48 +4553,6 @@ class LibvirtDriver(driver.ComputeDriver):
             # NOTE(gtt116): give other tasks a chance.
             greenthread.sleep(0)
         return total
-
-    def _get_memory_mb_used(self):
-        """Get the used memory size(MB) of physical computer.
-
-        :returns: the total usage of memory(MB).
-
-        """
-
-        if sys.platform.upper() not in ['LINUX2', 'LINUX3']:
-            return 0
-
-        with open('/proc/meminfo') as fp:
-            m = fp.read().split()
-        idx1 = m.index('MemFree:')
-        idx2 = m.index('Buffers:')
-        idx3 = m.index('Cached:')
-        if CONF.libvirt.virt_type == 'xen':
-            used = 0
-            for dom in self._host.list_instance_domains(only_guests=False):
-                try:
-                    dom_mem = int(self._host.get_domain_info(dom)[2])
-                except libvirt.libvirtError as e:
-                    LOG.warn(_LW("couldn't obtain the memory from domain:"
-                                 " %(uuid)s, exception: %(ex)s") %
-                             {"uuid": dom.UUIDString(), "ex": e})
-                    continue
-                # skip dom0
-                if dom.ID() != 0:
-                    used += dom_mem
-                else:
-                    # the mem reported by dom0 is be greater of what
-                    # it is being used
-                    used += (dom_mem -
-                             (int(m[idx1 + 1]) +
-                              int(m[idx2 + 1]) +
-                              int(m[idx3 + 1])))
-            # Convert it to MB
-            return used / units.Ki
-        else:
-            avail = (int(m[idx1 + 1]) + int(m[idx2 + 1]) + int(m[idx3 + 1]))
-            # Convert it to MB
-            return self._get_memory_mb_total() - avail / units.Ki
 
     def _get_instance_capabilities(self):
         """Get hypervisor instance capabilities
@@ -4912,10 +4860,10 @@ class LibvirtDriver(driver.ComputeDriver):
             self._get_instance_capabilities())
 
         data["vcpus"] = self._get_vcpu_total()
-        data["memory_mb"] = self._get_memory_mb_total()
+        data["memory_mb"] = self._host.get_memory_mb_total()
         data["local_gb"] = disk_info_dict['total']
         data["vcpus_used"] = self._get_vcpu_used()
-        data["memory_mb_used"] = self._get_memory_mb_used()
+        data["memory_mb_used"] = self._host.get_memory_mb_used()
         data["local_gb_used"] = disk_info_dict['used']
         data["hypervisor_type"] = self._host.get_driver_type()
         data["hypervisor_version"] = self._host.get_version()

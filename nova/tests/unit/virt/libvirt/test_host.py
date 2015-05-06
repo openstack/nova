@@ -14,18 +14,21 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import contextlib
 import uuid
 
 import eventlet
 from eventlet import greenthread
 import mock
 
+from nova.compute import arch
 from nova import exception
 from nova import objects
 from nova import test
 from nova.tests.unit.virt.libvirt import fakelibvirt
 from nova.virt import event
 from nova.virt.libvirt import config as vconfig
+from nova.virt.libvirt import driver as libvirt_driver
 from nova.virt.libvirt import host
 
 host.libvirt = fakelibvirt
@@ -732,6 +735,85 @@ class HostTestCase(test.NoDBTestCase):
 
         mock_find_secret.return_value = None
         self.host.delete_secret("rbd", "rbdvol")
+
+    def test_get_cpu_count(self):
+        with mock.patch.object(host.Host, "get_connection") as mock_conn:
+            mock_conn().getInfo.return_value = ['zero', 'one', 'two']
+            self.assertEqual('two', self.host.get_cpu_count())
+
+    def test_get_memory_total(self):
+        with mock.patch.object(host.Host, "get_connection") as mock_conn:
+            mock_conn().getInfo.return_value = ['zero', 'one', 'two']
+            self.assertEqual('one', self.host.get_memory_mb_total())
+
+    def test_get_memory_used(self):
+        m = mock.mock_open(read_data="""
+MemTotal:       16194180 kB
+MemFree:          233092 kB
+MemAvailable:    8892356 kB
+Buffers:          567708 kB
+Cached:          8362404 kB
+SwapCached:            0 kB
+Active:          8381604 kB
+""")
+        with contextlib.nested(
+                mock.patch("__builtin__.open", m, create=True),
+                mock.patch.object(host.Host,
+                                  "get_connection"),
+                mock.patch('sys.platform', 'linux2'),
+                ) as (mock_file, mock_conn, mock_platform):
+            mock_conn().getInfo.return_value = [
+                arch.X86_64, 15814L, 8, 1208, 1, 1, 4, 2]
+
+            self.assertEqual(6866, self.host.get_memory_mb_used())
+
+    def test_get_memory_used_xen(self):
+        self.flags(virt_type='xen', group='libvirt')
+
+        class DiagFakeDomain(object):
+            def __init__(self, id, memmb):
+                self.id = id
+                self.memmb = memmb
+
+            def info(self):
+                return [0, 0, self.memmb * 1024]
+
+            def ID(self):
+                return self.id
+
+            def name(self):
+                return "instance000001"
+
+            def UUIDString(self):
+                return str(uuid.uuid4())
+
+        m = mock.mock_open(read_data="""
+MemTotal:       16194180 kB
+MemFree:          233092 kB
+MemAvailable:    8892356 kB
+Buffers:          567708 kB
+Cached:          8362404 kB
+SwapCached:            0 kB
+Active:          8381604 kB
+""")
+
+        with contextlib.nested(
+                mock.patch("__builtin__.open", m, create=True),
+                mock.patch.object(host.Host,
+                                  "list_instance_domains"),
+                mock.patch.object(libvirt_driver.LibvirtDriver,
+                                  "_conn"),
+                mock.patch('sys.platform', 'linux2'),
+                ) as (mock_file, mock_list, mock_conn, mock_platform):
+            mock_list.return_value = [
+                DiagFakeDomain(0, 15814),
+                DiagFakeDomain(1, 750),
+                DiagFakeDomain(2, 1042)]
+            mock_conn.getInfo.return_value = [
+                arch.X86_64, 15814L, 8, 1208, 1, 1, 4, 2]
+
+            self.assertEqual(8657, self.host.get_memory_mb_used())
+            mock_list.assert_called_with(only_guests=False)
 
 
 class DomainJobInfoTestCase(test.NoDBTestCase):
