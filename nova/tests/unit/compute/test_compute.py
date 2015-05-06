@@ -401,12 +401,6 @@ class ComputeVolumeTestCase(BaseTestCase):
             self.cinfo = jsonutils.loads(args[-1].get('connection_info'))
             return self.fake_volume
 
-        self.stubs.Set(self.compute.conductor_api,
-                       'block_device_mapping_update',
-                       store_cinfo)
-        self.stubs.Set(self.compute.conductor_api,
-                       'block_device_mapping_update_or_create',
-                       store_cinfo)
         self.stubs.Set(db, 'block_device_mapping_create', store_cinfo)
         self.stubs.Set(db, 'block_device_mapping_update', store_cinfo)
 
