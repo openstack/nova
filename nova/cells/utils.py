@@ -28,6 +28,10 @@ from nova.objects import base as obj_base
 # Separator used between cell names for the 'full cell name' and routing
 # path
 PATH_CELL_SEP = '!'
+# Flag prepended to a cell name to indicate data shouldn't be synced during
+# an instance save.  There are no illegal chars in a cell name so using the
+# meaningful PATH_CELL_SEP in an invalid way will need to suffice.
+BLOCK_SYNC_FLAG = '!!'
 # Separator used between cell name and item
 _CELL_ITEM_SEP = '@'
 

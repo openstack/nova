@@ -29,6 +29,7 @@ from oslo_utils import timeutils
 from oslo_utils import uuidutils
 
 from nova.cells import messaging
+from nova.cells import rpcapi as cells_rpcapi
 from nova.cells import utils as cells_utils
 from nova.compute import task_states
 from nova.compute import vm_states
@@ -42,6 +43,7 @@ from nova.objects import fields as objects_fields
 from nova import rpc
 from nova import test
 from nova.tests.unit.cells import fakes
+from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_server_actions
 
 CONF = cfg.CONF
@@ -1225,6 +1227,47 @@ class CellsTargetedMethodsTestCase(test.TestCase):
 
     def test_instance_update_from_api_admin_state_reset(self):
         self._instance_update_helper(True)
+
+    def test_instance_update_from_api_calls_skip_cells_sync(self):
+        self.flags(enable=True, cell_type='compute', group='cells')
+        instance = fake_instance.fake_instance_obj(self.ctxt)
+        instance.cell_name = self.tgt_cell_name
+        instance.task_state = 'meow'
+        instance.vm_state = 'wuff'
+        instance.user_data = 'foo'
+        message = ''
+
+        @mock.patch.object(instance, 'save', side_effect=test.TestingException)
+        @mock.patch.object(instance, 'skip_cells_sync')
+        def _ensure_skip_cells_sync_called(mock_sync, mock_save):
+            self.assertRaises(test.TestingException,
+                    self.tgt_methods_cls.instance_update_from_api,
+                    message, instance, expected_vm_state='exp_vm',
+                    expected_task_state='exp_task', admin_state_reset=False)
+            mock_sync.assert_has_calls([mock.call()])
+
+        _ensure_skip_cells_sync_called()
+        self.assertEqual(self.tgt_cell_name, instance.cell_name)
+
+    @mock.patch.object(db, 'instance_update_and_get_original')
+    def test_instance_update_from_api_skips_cell_sync(self, mock_db_update):
+        self.flags(enable=True, cell_type='compute', group='cells')
+        instance = fake_instance.fake_instance_obj(self.ctxt)
+        instance.cell_name = self.tgt_cell_name
+        instance.task_state = 'meow'
+        instance.vm_state = 'wuff'
+        instance.user_data = 'foo'
+        message = ''
+
+        inst_ref = dict(objects_base.obj_to_primitive(instance))
+        mock_db_update.return_value = (inst_ref, inst_ref)
+
+        with mock.patch.object(cells_rpcapi.CellsAPI,
+                'instance_update_at_top') as inst_upd_at_top:
+            self.tgt_methods_cls.instance_update_from_api(message, instance,
+                    expected_vm_state='exp_vm', expected_task_state='exp_task',
+                    admin_state_reset=False)
+            self.assertEqual(0, inst_upd_at_top.call_count)
 
     def _test_instance_action_method(self, method, args, kwargs,
                                      expected_args, expected_kwargs,

@@ -493,6 +493,72 @@ class _TestInstanceObject(object):
         mock_update.assert_called_once_with(
             self.context, inst.uuid, {'vcpu_model': None})
 
+    @mock.patch.object(cells_rpcapi.CellsAPI, 'instance_update_from_api')
+    @mock.patch.object(cells_rpcapi.CellsAPI, 'instance_update_at_top')
+    @mock.patch.object(db, 'instance_update_and_get_original')
+    def _test_skip_cells_sync_helper(self, mock_db_update, mock_update_at_top,
+            mock_update_from_api, cell_type):
+        self.flags(enable=True, cell_type=cell_type, group='cells')
+        inst = fake_instance.fake_instance_obj(self.context, cell_name='fake')
+        inst.vm_state = 'foo'
+        inst.task_state = 'bar'
+        inst.cell_name = 'foo!bar@baz'
+
+        old_ref = dict(base.obj_to_primitive(inst), vm_state='old',
+                task_state='old')
+        new_ref = dict(old_ref, vm_state='foo', task_state='bar')
+        newer_ref = dict(new_ref, vm_state='bar', task_state='foo')
+        mock_db_update.side_effect = [(old_ref, new_ref), (new_ref, newer_ref)]
+
+        with inst.skip_cells_sync():
+            inst.save()
+
+        mock_update_at_top.assert_has_calls([])
+        mock_update_from_api.assert_has_calls([])
+
+        inst.vm_state = 'bar'
+        inst.task_state = 'foo'
+
+        def fake_update_from_api(context, instance, expected_vm_state,
+                expected_task_state, admin_state_reset):
+            self.assertEqual('foo!bar@baz', instance.cell_name)
+
+        # This is re-mocked so that cell_name can be checked above.  Since
+        # instance objects have no equality testing assert_called_once_with
+        # doesn't work.
+        with mock.patch.object(cells_rpcapi.CellsAPI,
+                'instance_update_from_api',
+                side_effect=fake_update_from_api) as fake_update_from_api:
+            inst.save()
+
+        self.assertEqual('foo!bar@baz', inst.cell_name)
+        if cell_type == 'compute':
+            mock_update_at_top.assert_called_once_with(self.context,
+                    base.obj_to_primitive(inst))
+            self.assertFalse(fake_update_from_api.called)
+        elif cell_type == 'api':
+            self.assertFalse(mock_update_at_top.called)
+            fake_update_from_api.assert_called_once_with(self.context,
+                    mock.ANY, None, None, False)
+
+        expected_calls = [
+                mock.call(self.context, inst.uuid,
+                    {'vm_state': 'foo', 'task_state': 'bar',
+                     'cell_name': 'foo!bar@baz'}, update_cells=False,
+                    columns_to_join=['system_metadata', 'extra',
+                        'extra.flavor']),
+                mock.call(self.context, inst.uuid,
+                    {'vm_state': 'bar', 'task_state': 'foo'},
+                    update_cells=False, columns_to_join=['system_metadata',
+                        'extra', 'extra.flavor'])]
+        mock_db_update.assert_has_calls(expected_calls)
+
+    def test_skip_cells_api(self):
+        self._test_skip_cells_sync_helper(cell_type='api')
+
+    def test_skip_cells_compute(self):
+        self._test_skip_cells_sync_helper(cell_type='compute')
+
     def test_get_deleted(self):
         fake_inst = dict(self.fake_instance, id=123, deleted=123)
         fake_uuid = fake_inst['uuid']
