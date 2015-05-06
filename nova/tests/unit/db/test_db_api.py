@@ -1281,7 +1281,8 @@ class MigrationTestCase(test.TestCase):
             self.assertEqual(migration['instance_uuid'], instance['uuid'])
 
     def test_get_migrations_by_filters(self):
-        filters = {"status": "migrating", "host": "host3"}
+        filters = {"status": "migrating", "host": "host3",
+                   "migration_type": None, "hidden": False}
         migrations = db.migration_get_all_by_filters(self.ctxt, filters)
         self.assertEqual(2, len(migrations))
         for migration in migrations:

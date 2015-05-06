@@ -733,6 +733,10 @@ class Migration(BASE, NovaBase):
     instance_uuid = Column(String(36), ForeignKey('instances.uuid'))
     # TODO(_cerberus_): enum
     status = Column(String(255))
+    migration_type = Column(Enum('migration', 'resize', 'live-migration',
+                                 'evacuate'),
+                            nullable=True)
+    hidden = Column(Boolean, default=False)
 
     instance = orm.relationship("Instance", foreign_keys=instance_uuid,
                             primaryjoin='and_(Migration.instance_uuid == '

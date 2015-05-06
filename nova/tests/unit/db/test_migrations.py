@@ -680,6 +680,19 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
         self.assertTableNotExists(engine, 'shadow_iscsi_targets')
         self.assertTableNotExists(engine, 'shadow_volumes')
 
+    def _pre_upgrade_293(self, engine):
+        migrations = oslodbutils.get_table(engine, 'migrations')
+        fake_migration = {}
+        migrations.insert().execute(fake_migration)
+
+    def _check_293(self, engine, data):
+        self.assertColumnExists(engine, 'migrations', 'migration_type')
+        self.assertColumnExists(engine, 'shadow_migrations', 'migration_type')
+        migrations = oslodbutils.get_table(engine, 'migrations')
+        fake_migration = migrations.select().execute().first()
+        self.assertIsNone(fake_migration.migration_type)
+        self.assertFalse(fake_migration.hidden)
+
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
                                test_base.DbTestCase,

@@ -4436,6 +4436,12 @@ def migration_get_all_by_filters(context, filters):
         host = filters["host"]
         query = query.filter(or_(models.Migration.source_compute == host,
                                  models.Migration.dest_compute == host))
+    if "migration_type" in filters:
+        migtype = filters["migration_type"]
+        query = query.filter(models.Migration.migration_type == migtype)
+    if "hidden" in filters:
+        hidden = filters["hidden"]
+        query = query.filter(models.Migration.hidden == hidden)
     return query.all()
 
 
