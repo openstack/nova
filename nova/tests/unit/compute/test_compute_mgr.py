@@ -955,6 +955,14 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         exc = cinder_exception.ClientException
         self._test_shutdown_instance_exception(exc)
 
+    def test_shutdown_instance_volume_not_found(self):
+        exc = exception.VolumeNotFound
+        self._test_shutdown_instance_exception(exc)
+
+    def test_shutdown_instance_disk_not_found(self):
+        exc = exception.DiskNotFound
+        self._test_shutdown_instance_exception(exc)
+
     def _test_init_instance_retries_reboot(self, instance, reboot_type,
                                            return_power_state):
         instance.host = self.compute.host
