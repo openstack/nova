@@ -81,7 +81,6 @@ from nova.compute import vm_mode
 from nova import exception
 from nova.i18n import _
 from nova.objects import base as obj_base
-from nova.virt import block_device as driver_block_device
 from nova.virt import configdrive
 from nova.virt import driver
 from nova.virt.libvirt import utils as libvirt_utils
@@ -448,24 +447,8 @@ def get_root_info(virt_type, image_meta, root_bdm, disk_bus, cdrom_bus,
                                  root_bdm, {}, disk_bus)
 
 
-def default_device_names(virt_type, context, instance, root_device_name,
-                         ephemerals, swap, block_device_mapping,
+def default_device_names(virt_type, context, instance, block_device_info,
                          image_meta):
-
-    block_device_info = {
-        'root_device_name': root_device_name,
-        'swap': driver_block_device.get_swap(
-            driver_block_device.convert_swap(swap)),
-        'ephemerals': driver_block_device.convert_ephemerals(ephemerals),
-        'block_device_mapping': (
-            driver_block_device.convert_volumes(
-                block_device_mapping) +
-            driver_block_device.convert_snapshots(
-                block_device_mapping) +
-            driver_block_device.convert_blanks(
-                block_device_mapping))
-    }
-
     get_disk_info(virt_type, instance, image_meta, block_device_info)
 
     for driver_bdm in itertools.chain(block_device_info['ephemerals'],
