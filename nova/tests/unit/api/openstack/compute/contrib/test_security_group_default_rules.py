@@ -67,19 +67,19 @@ class TestSecurityGroupDefaultRulesNeutronV21(test.TestCase):
         self.assertRaises(webob.exc.HTTPNotImplemented, self.controller.create,
                           req, {'security_group_default_rule': sgr})
 
-    def test_security_group_default_rules_list_not_implemented_neturon(self):
+    def test_security_group_default_rules_list_not_implemented_neutron(self):
         req = fakes.HTTPRequest.blank(
             '/v2/fake/os-security-group-default-rules', use_admin_context=True)
         self.assertRaises(webob.exc.HTTPNotImplemented, self.controller.index,
                           req)
 
-    def test_security_group_default_rules_show_not_implemented_neturon(self):
+    def test_security_group_default_rules_show_not_implemented_neutron(self):
         req = fakes.HTTPRequest.blank(
             '/v2/fake/os-security-group-default-rules', use_admin_context=True)
         self.assertRaises(webob.exc.HTTPNotImplemented, self.controller.show,
                           req, '602ed77c-a076-4f9b-a617-f93b847b62c5')
 
-    def test_security_group_default_rules_delete_not_implemented_neturon(self):
+    def test_security_group_default_rules_delete_not_implemented_neutron(self):
         req = fakes.HTTPRequest.blank(
             '/v2/fake/os-security-group-default-rules', use_admin_context=True)
         self.assertRaises(webob.exc.HTTPNotImplemented, self.controller.delete,

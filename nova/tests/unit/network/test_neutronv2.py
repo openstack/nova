@@ -690,7 +690,7 @@ class TestNeutronv2(TestNeutronv2Base):
                                                None,
                                                None)
 
-    def test_get_instance_nw_info_ignores_neturon_ports(self):
+    def test_get_instance_nw_info_ignores_neutron_ports(self):
         # Tests that only ports in the network_cache are updated
         # and ports returned from neutron that match the same
         # instance_id/device_id are ignored.
