@@ -2867,6 +2867,36 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         self.assertEqual("none", cfg.devices[7].action)
 
+    def _test_get_guest_usb_tablet(self, vnc_enabled, spice_enabled, os_type,
+                                   agent_enabled=False):
+        self.flags(vnc_enabled=vnc_enabled)
+        self.flags(enabled=spice_enabled,
+                   agent_enabled=agent_enabled, group='spice')
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        return drvr._get_guest_usb_tablet(os_type)
+
+    def test_get_guest_usb_tablet_wipe(self):
+        self.flags(use_usb_tablet=True, group='libvirt')
+
+        tablet = self._test_get_guest_usb_tablet(True, True, vm_mode.HVM)
+        self.assertIsNotNone(tablet)
+
+        tablet = self._test_get_guest_usb_tablet(True, False, vm_mode.HVM)
+        self.assertIsNotNone(tablet)
+
+        tablet = self._test_get_guest_usb_tablet(False, True, vm_mode.HVM)
+        self.assertIsNotNone(tablet)
+
+        tablet = self._test_get_guest_usb_tablet(False, False, vm_mode.HVM)
+        self.assertIsNone(tablet)
+
+        tablet = self._test_get_guest_usb_tablet(True, True, "foo")
+        self.assertIsNone(tablet)
+
+        tablet = self._test_get_guest_usb_tablet(
+            False, True, vm_mode.HVM, True)
+        self.assertIsNone(tablet)
+
     def _test_get_guest_config_with_watchdog_action_flavor(self,
             hw_watchdog_action="hw:watchdog_action"):
         self.flags(virt_type='kvm', group='libvirt')
