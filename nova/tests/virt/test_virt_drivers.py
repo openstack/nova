@@ -387,7 +387,7 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
     @catch_notimplementederror
     def test_suspend(self):
         instance_ref, network_info = self._get_running_instance()
-        self.connection.suspend(instance_ref)
+        self.connection.suspend(self.ctxt, instance_ref)
 
     @catch_notimplementederror
     def test_resume_unsuspended_instance(self):
@@ -397,7 +397,7 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
     @catch_notimplementederror
     def test_resume_suspended_instance(self):
         instance_ref, network_info = self._get_running_instance()
-        self.connection.suspend(instance_ref)
+        self.connection.suspend(self.ctxt, instance_ref)
         self.connection.resume(self.ctxt, instance_ref, network_info)
 
     @catch_notimplementederror

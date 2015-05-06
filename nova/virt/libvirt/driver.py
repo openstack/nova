@@ -1740,7 +1740,7 @@ class LibvirtDriver(driver.ComputeDriver):
             if state == power_state.RUNNING or state == power_state.PAUSED:
                 self._detach_pci_devices(virt_dom,
                     pci_manager.get_instance_pci_devs(instance))
-                self._detach_sriov_ports(instance, virt_dom)
+                self._detach_sriov_ports(context, instance, virt_dom)
                 virt_dom.managedSave(0)
 
         snapshot_backend = self.image_backend.snapshot(instance,
@@ -2529,12 +2529,12 @@ class LibvirtDriver(driver.ComputeDriver):
         # and available before we attempt to start the instance.
         self._hard_reboot(context, instance, network_info, block_device_info)
 
-    def suspend(self, instance):
+    def suspend(self, context, instance):
         """Suspend the specified instance."""
         dom = self._lookup_by_name(instance['name'])
         self._detach_pci_devices(dom,
             pci_manager.get_instance_pci_devs(instance))
-        self._detach_sriov_ports(instance, dom)
+        self._detach_sriov_ports(context, instance, dom)
         dom.managedSave(0)
 
     def resume(self, context, instance, network_info, block_device_info=None):
@@ -3258,12 +3258,11 @@ class LibvirtDriver(driver.ComputeDriver):
                           {'port': vif, 'dom': dom.ID()})
                     dom.attachDevice(cfg.to_xml())
 
-    def _detach_sriov_ports(self, instance, dom):
+    def _detach_sriov_ports(self, context, instance, dom):
         network_info = instance.info_cache.network_info
         if network_info is None:
             return
 
-        context = nova_context.get_admin_context()
         if self._has_sriov_port(network_info):
             # for libvirt version < 1.1.1, this is race condition
             # so forbid detach if it's an older version

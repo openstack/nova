@@ -587,11 +587,14 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
                                    constants.HYPERV_VM_STATE_ENABLED)
 
     def test_suspend(self):
-        self._test_vm_state_change(self._conn.suspend, None,
+        self._test_vm_state_change(lambda i: self._conn.suspend(self._context,
+                                                                i),
+                                   None,
                                    constants.HYPERV_VM_STATE_SUSPENDED)
 
     def test_suspend_already_suspended(self):
-        self._test_vm_state_change(self._conn.suspend,
+        self._test_vm_state_change(lambda i: self._conn.suspend(self._context,
+                                                                i),
                                    constants.HYPERV_VM_STATE_SUSPENDED,
                                    constants.HYPERV_VM_STATE_SUSPENDED)
 

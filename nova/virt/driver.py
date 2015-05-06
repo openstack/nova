@@ -570,12 +570,12 @@ class ComputeDriver(object):
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
-    def suspend(self, instance):
+    def suspend(self, context, instance):
         """suspend the specified instance.
 
+        :param context: the context for the suspend
         :param instance: nova.objects.instance.Instance
         """
-        # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
     def resume(self, context, instance, network_info, block_device_info=None):
