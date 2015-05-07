@@ -76,7 +76,7 @@ class ServiceController(wsgi.Controller):
         return svcs
 
     @wsgi.response(204)
-    @extensions.expected_errors((400, 404))
+    @extensions.expected_errors(404)
     def delete(self, req, id):
         """Deletes the specified service."""
         context = req.environ['nova.context']
