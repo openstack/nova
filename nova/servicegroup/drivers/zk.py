@@ -137,10 +137,10 @@ class ZooKeeperDriver(base.Driver):
     def is_up(self, service_ref):
         group_id = service_ref['topic']
         member_id = service_ref['host']
-        all_members = self.get_all(group_id)
+        all_members = self._get_all(group_id)
         return member_id in all_members
 
-    def get_all(self, group_id):
+    def _get_all(self, group_id):
         """Return all members in a list, or a ServiceGroupUnavailable
         exception.
         """
