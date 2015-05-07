@@ -656,7 +656,8 @@ class VMOps(object):
         if rescue:
             rescue_vm_mode = image_meta['properties'].get('vm_mode', None)
             if rescue_vm_mode is None:
-                LOG.debug("Failed to pull vm_mode from rescue_image_ref.")
+                LOG.debug("vm_mode not found in rescue image properties."
+                          "Setting vm_mode to %s", mode, instance=instance)
             else:
                 mode = vm_mode.canonicalize(rescue_vm_mode)
 
@@ -701,8 +702,9 @@ class VMOps(object):
                 rescue_auto_disk_config = image_meta['properties'].get(
                                                 'auto_disk_config', None)
                 if rescue_auto_disk_config is None:
-                    LOG.debug("Failed to pull auto_disk_config value from"
-                              "image.")
+                    LOG.debug("auto_disk_config value not found in"
+                              "rescue image_properties. Setting value to %s",
+                              auto_disk_config, instance=instance)
                 else:
                     auto_disk_config = rescue_auto_disk_config
 
