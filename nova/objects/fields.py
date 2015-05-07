@@ -693,25 +693,6 @@ class ListOfStringsField(AutoTypedField):
     AUTO_TYPE = List(String())
 
 
-class ListOfEnumField(AutoTypedField):
-    def __init__(self, valid_values, **kwargs):
-        self.AUTO_TYPE = List(Enum(valid_values=valid_values))
-        super(ListOfEnumField, self).__init__(**kwargs)
-
-    def __repr__(self):
-        valid_values = self._type._element_type._type._valid_values
-        args = {
-            'nullable': self._nullable,
-            'default': self._default,
-            }
-        if valid_values:
-            args.update({'valid_values': valid_values})
-        args = OrderedDict(sorted(args.items()))
-        return '%s(%s)' % (self._type.__class__.__name__,
-                           ','.join(['%s=%s' % (k, v)
-                                     for k, v in args.items()]))
-
-
 class SetOfIntegersField(AutoTypedField):
     AUTO_TYPE = Set(Integer())
 
