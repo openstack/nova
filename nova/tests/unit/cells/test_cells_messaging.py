@@ -685,120 +685,62 @@ class CellsTargetedMethodsTestCase(test.TestCase):
         self.src_msg_runner.build_instances(self.ctxt, self.tgt_cell_name,
                 build_inst_kwargs)
 
-    def test_run_compute_api_method(self):
-
-        instance_uuid = 'fake_instance_uuid'
-        method_info = {'method': 'backup',
-                       'method_args': (instance_uuid, 2, 3),
-                       'method_kwargs': {'arg1': 'val1', 'arg2': 'val2'}}
-        self.mox.StubOutWithMock(self.tgt_compute_api, 'backup')
-        self.mox.StubOutWithMock(self.tgt_db_inst, 'instance_get_by_uuid')
-
-        self.tgt_db_inst.instance_get_by_uuid(self.ctxt,
-                instance_uuid).AndReturn('fake_instance')
-        self.tgt_compute_api.backup(self.ctxt, 'fake_instance', 2, 3,
-                arg1='val1', arg2='val2').AndReturn('fake_result')
-        self.mox.ReplayAll()
-
-        response = self.src_msg_runner.run_compute_api_method(
-                self.ctxt,
-                self.tgt_cell_name,
-                method_info,
-                True)
-        result = response.value_or_raise()
-        self.assertEqual('fake_result', result)
-
-    def _run_compute_api_method_expects_object(self, tgt_compute_api_function,
-                                               method_name,
-                                               expected_attrs=None):
-        # runs compute api methods which expects instance to be an object
-        instance_uuid = 'fake_instance_uuid'
+    def _run_compute_api_method(self, method_name):
+        instance = fake_instance.fake_instance_obj(self.ctxt)
         method_info = {'method': method_name,
-                       'method_args': (instance_uuid, 2, 3),
+                       'method_args': (instance.uuid, 2, 3),
                        'method_kwargs': {'arg1': 'val1', 'arg2': 'val2'}}
-        self.mox.StubOutWithMock(self.tgt_db_inst, 'instance_get_by_uuid')
+        expected_attrs = ['metadata', 'system_metadata', 'security_groups',
+                          'info_cache']
 
-        self.tgt_db_inst.instance_get_by_uuid(self.ctxt,
-                instance_uuid).AndReturn('fake_instance')
+        @mock.patch.object(self.tgt_compute_api, method_name,
+                return_value='fake-result')
+        @mock.patch.object(objects.Instance, 'get_by_uuid',
+                return_value=instance)
+        def run_method(mock_get_by_uuid, mock_method):
+            response = self.src_msg_runner.run_compute_api_method(
+                    self.ctxt,
+                    self.tgt_cell_name,
+                    method_info,
+                    True)
+            result = response.value_or_raise()
+            self.assertEqual('fake-result', result)
 
-        def get_instance_mock():
-            # NOTE(comstud): This block of code simulates the following
-            # mox code:
-            #
-            # self.mox.StubOutWithMock(objects, 'Instance',
-            #                          use_mock_anything=True)
-            # self.mox.StubOutWithMock(objects.Instance,
-            #                          '_from_db_object')
-            # instance_mock = self.mox.CreateMock(objects.Instance)
-            # objects.Instance().AndReturn(instance_mock)
-            #
-            # Unfortunately, the above code fails on py27 do to some
-            # issue with the Mock object do to similar issue as this:
-            # https://code.google.com/p/pymox/issues/detail?id=35
-            #
-            class FakeInstance(object):
-                @classmethod
-                def _from_db_object(cls, ctxt, obj, db_obj, **kwargs):
-                    pass
+            mock_get_by_uuid.assert_called_once_with(self.ctxt, instance.uuid,
+                    expected_attrs=expected_attrs)
+            mock_method.assert_called_once_with(self.ctxt, instance, 2, 3,
+                    arg1='val1', arg2='val2')
 
-            instance_mock = FakeInstance()
-
-            def fake_instance():
-                return instance_mock
-
-            self.stubs.Set(objects, 'Instance', fake_instance)
-            self.mox.StubOutWithMock(instance_mock, '_from_db_object')
-            return instance_mock
-
-        instance = get_instance_mock()
-        instance._from_db_object(self.ctxt,
-                                 instance,
-                                 'fake_instance',
-                                 expected_attrs=expected_attrs
-                                ).AndReturn(instance)
-        tgt_compute_api_function(self.ctxt, instance, 2, 3,
-                arg1='val1', arg2='val2').AndReturn('fake_result')
-        self.mox.ReplayAll()
-
-        response = self.src_msg_runner.run_compute_api_method(
-                self.ctxt,
-                self.tgt_cell_name,
-                method_info,
-                True)
-        result = response.value_or_raise()
-        self.assertEqual('fake_result', result)
+        run_method()
 
     def test_run_compute_api_method_expects_obj(self):
         # Run compute_api start method
-        self.mox.StubOutWithMock(self.tgt_compute_api, 'start')
-        self._run_compute_api_method_expects_object(self.tgt_compute_api.start,
-                                                    'start')
+        self._run_compute_api_method('start')
 
-    def test_run_compute_api_method_expects_obj_with_info_cache(self):
+    def test_run_compute_api_method_shelve_with_info_cache(self):
         # Run compute_api shelve method as it requires info_cache and
         # metadata to be present in instance object
-        self.mox.StubOutWithMock(self.tgt_compute_api, 'shelve')
-        self._run_compute_api_method_expects_object(
-            self.tgt_compute_api.shelve, 'shelve',
-            expected_attrs=['metadata', 'info_cache'])
+        self._run_compute_api_method('shelve')
 
     def test_run_compute_api_method_unknown_instance(self):
         # Unknown instance should send a broadcast up that instance
         # is gone.
-        instance_uuid = 'fake_instance_uuid'
-        instance = {'uuid': instance_uuid}
+        instance = fake_instance.fake_instance_obj(self.ctxt)
+        instance_uuid = instance.uuid
         method_info = {'method': 'reboot',
                        'method_args': (instance_uuid, 2, 3),
                        'method_kwargs': {'arg1': 'val1', 'arg2': 'val2'}}
 
-        self.mox.StubOutWithMock(self.tgt_db_inst, 'instance_get_by_uuid')
+        self.mox.StubOutWithMock(objects.Instance, 'get_by_uuid')
         self.mox.StubOutWithMock(self.tgt_msg_runner,
                                  'instance_destroy_at_top')
 
-        self.tgt_db_inst.instance_get_by_uuid(self.ctxt,
-                'fake_instance_uuid').AndRaise(
-                exception.InstanceNotFound(instance_id=instance_uuid))
-        self.tgt_msg_runner.instance_destroy_at_top(self.ctxt, instance)
+        objects.Instance.get_by_uuid(self.ctxt, instance.uuid,
+                expected_attrs=['metadata', 'system_metadata',
+                                'security_groups', 'info_cache']).AndRaise(
+                        exception.InstanceNotFound(instance_id=instance_uuid))
+        self.tgt_msg_runner.instance_destroy_at_top(self.ctxt,
+                {'uuid': instance.uuid})
 
         self.mox.ReplayAll()
 
