@@ -16,7 +16,7 @@
                 "id": "1",
                 "links": [
                     {
-                        "href": "http://openstack.example.com/flavors/1",
+                        "href": "http://openstack.example.com/openstack/flavors/1",
                         "rel": "bookmark"
                     }
                 ]
@@ -27,7 +27,7 @@
                 "id": "70a599e0-31e7-49b7-b260-868f441e862b",
                 "links": [
                     {
-                        "href": "http://openstack.example.com/images/70a599e0-31e7-49b7-b260-868f441e862b",
+                        "href": "http://openstack.example.com/openstack/images/70a599e0-31e7-49b7-b260-868f441e862b",
                         "rel": "bookmark"
                     }
                 ]
@@ -35,11 +35,11 @@
             "key_name": null,
             "links": [
                 {
-                    "href": "http://openstack.example.com/v3/servers/a8c1c13d-ec7e-47c7-b4ff-077f72c1ca46",
+                    "href": "http://openstack.example.com/v2/openstack/servers/a8c1c13d-ec7e-47c7-b4ff-077f72c1ca46",
                     "rel": "self"
                 },
                 {
-                    "href": "http://openstack.example.com/servers/a8c1c13d-ec7e-47c7-b4ff-077f72c1ca46",
+                    "href": "http://openstack.example.com/openstack/servers/a8c1c13d-ec7e-47c7-b4ff-077f72c1ca46",
                     "rel": "bookmark"
                 }
             ],
@@ -50,6 +50,8 @@
             "OS-EXT-SRV-ATTR:host": "bc8efe4fdb7148a4bb921a2b03d17de6",
             "OS-EXT-SRV-ATTR:hypervisor_hostname": "fake-mini",
             "OS-EXT-SRV-ATTR:instance_name": "instance-00000001",
+            "accessIPv4": "1.2.3.4",
+            "accessIPv6": "80fe::",
             "progress": 0,
             "status": "ACTIVE",
             "tenant_id": "openstack",
