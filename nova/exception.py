@@ -1875,3 +1875,11 @@ class NUMATopologyUnsupported(Invalid):
 
 class MemoryPagesUnsupported(Invalid):
     msg_fmt = _("Host does not support guests with custom memory page sizes")
+
+
+class EnumFieldInvalid(Invalid):
+    msg_fmt = _('%(typename)s in %(fieldname)s is not an instance of Enum')
+
+
+class EnumFieldUnset(Invalid):
+    msg_fmt = _('%(fieldname)s missing field type')
