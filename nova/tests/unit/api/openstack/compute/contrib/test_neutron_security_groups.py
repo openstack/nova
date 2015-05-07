@@ -398,7 +398,7 @@ class TestNeutronSecurityGroupsV21(
 
 
 class TestNeutronSecurityGroupsV2(TestNeutronSecurityGroupsV21):
-    controller_cls = security_groups.SecurityGroupController
+    secgrp_ctl_cls = security_groups.SecurityGroupController
     server_secgrp_ctl_cls = security_groups.ServerSecurityGroupController
     secgrp_act_ctl_cls = security_groups.SecurityGroupActionController
 
