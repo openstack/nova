@@ -15,10 +15,11 @@
 
 from oslo_config import cfg
 from oslo_log import log as logging
+import oslo_messaging as messaging
 from oslo_utils import timeutils
 import six
 
-from nova.i18n import _, _LE
+from nova.i18n import _, _LI, _LW
 from nova.servicegroup import api
 from nova.servicegroup.drivers import base
 
@@ -85,10 +86,14 @@ class DbDriver(base.Driver):
             # TODO(termie): make this pattern be more elegant.
             if getattr(service, 'model_disconnected', False):
                 service.model_disconnected = False
-                LOG.error(_LE('Recovered model server connection!'))
+                LOG.info(
+                    _LI('Recovered connection to nova-conductor '
+                        'for reporting service status.'))
 
-        # TODO(vish): this should probably only catch connection errors
-        except Exception:
+        # because we are communicating over conductor, a failure to
+        # connect is going to be a messaging failure, not a db error.
+        except messaging.MessagingTimeout:
             if not getattr(service, 'model_disconnected', False):
                 service.model_disconnected = True
-                LOG.exception(_LE('model server went away'))
+                LOG.warn(_LW('Lost connection to nova-conductor '
+                             'for reporting service status.'))
