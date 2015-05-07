@@ -1171,26 +1171,6 @@ class ExtendedIpsMacSampleJsonTests(ServersSampleBase):
         self._verify_response('servers-detail-resp', subs, response, 200)
 
 
-class ExtendedStatusSampleJsonTests(ServersSampleBase):
-    extension_name = ("nova.api.openstack.compute.contrib"
-                      ".extended_status.Extended_status")
-
-    def test_show(self):
-        uuid = self._post_server()
-        response = self._do_get('servers/%s' % uuid)
-        subs = self._get_regexes()
-        subs['hostid'] = '[a-f0-9]+'
-        self._verify_response('server-get-resp', subs, response, 200)
-
-    def test_detail(self):
-        uuid = self._post_server()
-        response = self._do_get('servers/detail')
-        subs = self._get_regexes()
-        subs['id'] = uuid
-        subs['hostid'] = '[a-f0-9]+'
-        self._verify_response('servers-detail-resp', subs, response, 200)
-
-
 class ExtendedVolumesSampleJsonTests(ServersSampleBase):
     extension_name = ("nova.api.openstack.compute.contrib"
                       ".extended_volumes.Extended_volumes")
