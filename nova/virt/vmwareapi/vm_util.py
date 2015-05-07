@@ -198,8 +198,8 @@ def get_vm_create_spec(client_factory, instance, data_store_name,
     # set the Hardware version
     config_spec.version = extra_specs.hw_version
 
-    # Allow nested ESX instances to host 64 bit VMs.
-    if os_type == "vmkernel5Guest":
+    # Allow nested hypervisor instances to host 64 bit VMs.
+    if os_type in ("vmkernel5Guest", "windowsHyperVGuest"):
         config_spec.nestedHVEnabled = "True"
 
     # Append the profile spec
