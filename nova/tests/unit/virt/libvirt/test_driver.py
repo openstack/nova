@@ -4767,7 +4767,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.flags(virt_type='lxc', group='libvirt')
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
 
-        self.assertEqual(drvr.uri(), 'lxc:///')
+        self.assertEqual(drvr._uri(), 'lxc:///')
 
         network_info = _fake_network_info(self.stubs, 1)
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
@@ -5094,7 +5094,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
                 drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
 
-                self.assertEqual(drvr.uri(), expected_uri)
+                self.assertEqual(drvr._uri(), expected_uri)
 
                 network_info = _fake_network_info(self.stubs, 1)
                 disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
@@ -5139,7 +5139,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         for (virt_type, (expected_uri, checks)) in type_uri_map.iteritems():
             self.flags(virt_type=virt_type, group='libvirt')
             drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-            self.assertEqual(drvr.uri(), testuri)
+            self.assertEqual(drvr._uri(), testuri)
 
     def test_ensure_filtering_rules_for_instance_timeout(self):
         # ensure_filtering_fules_for_instance() finishes with timeout.

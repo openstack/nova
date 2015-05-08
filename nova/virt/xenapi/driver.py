@@ -397,8 +397,7 @@ class XenAPIDriver(driver.ComputeDriver):
             return CONF.my_block_storage_ip
         return self.get_host_ip_addr()
 
-    @staticmethod
-    def get_host_ip_addr():
+    def get_host_ip_addr(self):
         xs_url = urlparse.urlparse(CONF.xenserver.connection_url)
         return xs_url.netloc
 
