@@ -644,10 +644,9 @@ class IronicDriver(virt_driver.ComputeDriver):
         :param instance: The instance object.
         :param image_meta: Image dict returned by nova.image.glance
             that defines the image from which to boot this instance.
-        :param injected_files: User files to inject into instance. Ignored
-            by this driver.
+        :param injected_files: User files to inject into instance.
         :param admin_password: Administrator password to set in
-            instance. Ignored by this driver.
+            instance.
         :param network_info: Instance network information.
         :param block_device_info: Instance block device
             information. Ignored by this driver.
