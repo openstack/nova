@@ -12,15 +12,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import collections
-
 import fixtures
 import mock
 
 from nova import test
 from nova.tests.unit.virt.vmwareapi import fake
-from nova.tests.unit.virt.vmwareapi import stubs
-from nova.virt.vmwareapi import driver
 from nova.virt.vmwareapi import vim_util
 
 
@@ -62,41 +58,6 @@ class VMwareVIMUtilTestCase(test.NoDBTestCase):
         res = vim_util.get_dynamic_property('fake-vim', 'fake-obj',
                                             'fake-type', 'fake-property')
         self.assertIsNone(res)
-
-    def test_get_dynamic_properties_with_token(self):
-        ObjectContent = collections.namedtuple('ObjectContent', ['propSet'])
-        DynamicProperty = collections.namedtuple('Property', ['name', 'val'])
-
-        # Add a token to our results, indicating that more are available
-        result = fake.FakeRetrieveResult(token='fake_token')
-
-        # We expect these properties to be returned
-        result.add_object(ObjectContent(propSet=[
-            DynamicProperty(name='name1', val='value1'),
-            DynamicProperty(name='name2', val='value2')
-        ]))
-
-        # These properties should be ignored
-        result.add_object(ObjectContent(propSet=[
-            DynamicProperty(name='name3', val='value3')
-        ]))
-
-        retrievePropertiesEx = mock.MagicMock(name='RetrievePropertiesEx')
-        retrievePropertiesEx.return_value = result
-
-        calls = {'RetrievePropertiesEx': retrievePropertiesEx}
-        with stubs.fake_suds_context(calls):
-            session = driver.VMwareAPISession(host_ip='localhost')
-
-            service_content = session.vim.service_content
-            props = session._call_method(vim_util, "get_dynamic_properties",
-                                         service_content.propertyCollector,
-                                        'fake_type', None)
-
-            self.assertEqual(props, {
-                'name1': 'value1',
-                'name2': 'value2'
-            })
 
     @mock.patch.object(vim_util, 'get_object_properties', return_value=None)
     def test_get_dynamic_properties_no_objects(self, mock_get_object_props):

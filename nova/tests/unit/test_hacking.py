@@ -275,9 +275,6 @@ class HackingTestCase(test.NoDBTestCase):
 
     def test_no_mutable_default_args(self):
         self.assertEqual(1, len(list(checks.no_mutable_default_args(
-            " def fake_suds_context(calls={}):"))))
-
-        self.assertEqual(1, len(list(checks.no_mutable_default_args(
             "def get_info_from_bdm(virt_type, bdm, mapping=[])"))))
 
         self.assertEqual(0, len(list(checks.no_mutable_default_args(

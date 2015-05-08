@@ -21,7 +21,6 @@ Test suite for VMwareAPI.
 
 import collections
 import contextlib
-import copy
 import datetime
 
 from eventlet import greenthread
@@ -34,9 +33,7 @@ from oslo_utils import uuidutils
 from oslo_vmware import exceptions as vexc
 from oslo_vmware.objects import datastore as ds_obj
 from oslo_vmware import pbm
-from oslo_vmware import vim
 from oslo_vmware import vim_util as oslo_vim_util
-import suds
 
 from nova import block_device
 from nova.compute import api as compute_api
@@ -84,33 +81,6 @@ class fake_service_content(object):
     def __init__(self):
         self.ServiceContent = vmwareapi_fake.DataObject()
         self.ServiceContent.fake = 'fake'
-
-
-class VMwareSudsTest(test.NoDBTestCase):
-
-    def setUp(self):
-        super(VMwareSudsTest, self).setUp()
-
-        def new_client_init(self, url, **kwargs):
-            return
-
-        mock.patch.object(suds.client.Client,
-                          '__init__', new=new_client_init).start()
-        self.vim = self._vim_create()
-        self.addCleanup(mock.patch.stopall)
-
-    def _mock_getattr(self, attr_name):
-        self.assertEqual("RetrieveServiceContent", attr_name)
-        return lambda obj, **kwargs: fake_service_content()
-
-    def _vim_create(self):
-        with mock.patch.object(vim.Vim, '__getattr__', self._mock_getattr):
-            return vim.Vim()
-
-    def test_exception_with_deepcopy(self):
-        self.assertIsNotNone(self.vim)
-        self.assertRaises(vexc.VimException,
-                          copy.deepcopy, self.vim)
 
 
 def _fake_create_session(inst):

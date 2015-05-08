@@ -21,7 +21,6 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_vmware import vim_util as vutil
 import six
-import suds
 
 from nova.i18n import _LW
 
@@ -47,7 +46,7 @@ def object_to_dict(obj, list_depth=1):
     are converted.
     """
     d = {}
-    for k, v in six.iteritems(suds.sudsobject.asdict(obj)):
+    for k, v in six.iteritems(dict(obj)):
         if hasattr(v, '__keylist__'):
             d[k] = object_to_dict(v, list_depth=list_depth)
         elif isinstance(v, list):
