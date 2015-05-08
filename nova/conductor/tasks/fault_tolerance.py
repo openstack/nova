@@ -25,6 +25,13 @@ class FaultToleranceTasks(object):
     def __init__(self):
         self.compute_api = compute.API()
 
+    # TODO(ORBIT): This might come in handy if the secondary VM need different
+    #              resources (more RAM?) than the primary VM.
+    #              Right now, we just change the role in the extra_specs.
+    def _get_secondary_flavor(self, flavor):
+        flavor['extra_specs']['ft:role'] = 'secondary'
+        return flavor
+
     def deploy_secondary_instance(self, context, primary_instance_uuid,
                                   host=None, node=None, limits=None,
                                   image=None, request_spec=None,
@@ -40,6 +47,7 @@ class FaultToleranceTasks(object):
         primary_instance = self.compute_api.get(context, primary_instance_uuid)
 
         flavor = flavors.get_flavor(request_spec['instance_type']['id'])
+        flavor = self._get_secondary_flavor(flavor)
 
         scheduler_hints = filter_properties.get('scheduler_hints') or {}
         scheduler_hints['ft_secondary_host'] = dict(

@@ -107,7 +107,7 @@ class FaultToleranceScheduler(filter_scheduler.FilterScheduler):
         instance_properties = request_spec['instance_properties']
         instance_type = request_spec.get("instance_type", None)
         instance_uuids = request_spec.get("instance_uuids", None)
-        scheduler_hints = filter_properties.get('scheduler_hints') or {}
+        extra_specs = instance_type.get('extra_specs', {})
 
         update_group_hosts = self._setup_instance_group(context,
                                                         filter_properties)
@@ -138,7 +138,7 @@ class FaultToleranceScheduler(filter_scheduler.FilterScheduler):
         else:
             num_instances = request_spec.get('num_instances', 1)
         for num in xrange(num_instances):
-            if 'ft' in scheduler_hints:
+            if 'ft:enabled' in extra_specs:
                 # Scheduling new instance with secondary instances
                 size = CONF.ft_scheduler_secondary_instances + 1
             else:
