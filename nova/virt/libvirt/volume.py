@@ -1398,7 +1398,7 @@ class LibvirtFibreChannelVolumeDriver(LibvirtBaseVolumeDriver):
         if 'multipath_id' in connection_info['data']:
             multipath_id = connection_info['data']['multipath_id']
             mdev_info = linuxscsi.find_multipath_device(multipath_id)
-            devices = mdev_info['devices']
+            devices = mdev_info['devices'] if mdev_info else []
             LOG.debug("devices to remove = %s", devices)
         else:
             # only needed when multipath-tools work improperly
