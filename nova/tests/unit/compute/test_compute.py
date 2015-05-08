@@ -254,8 +254,7 @@ class BaseTestCase(test.TestCase):
         fake_server_actions.stub_out_action_events(self.stubs)
 
         def fake_get_nw_info(cls, ctxt, instance, *args, **kwargs):
-            self.assertTrue(ctxt.is_admin)
-            return fake_network.fake_get_instance_nw_info(self.stubs, 1, 1)
+            return network_model.NetworkInfo()
 
         self.stubs.Set(network_api.API, 'get_instance_nw_info',
                        fake_get_nw_info)
@@ -2593,7 +2592,8 @@ class ComputeTestCase(BaseTestCase):
 
         self.mox.StubOutWithMock(self.compute,
                                  '_get_instance_block_device_info')
-        self.mox.StubOutWithMock(self.compute, '_get_instance_nw_info')
+        self.mox.StubOutWithMock(self.compute.network_api,
+                                 'get_instance_nw_info')
         self.mox.StubOutWithMock(self.compute, '_notify_about_instance_usage')
         self.mox.StubOutWithMock(self.compute, '_instance_update')
         self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
@@ -2649,9 +2649,8 @@ class ComputeTestCase(BaseTestCase):
 
         self.compute._get_instance_block_device_info(
             econtext, instance).AndReturn(fake_block_dev_info)
-        self.compute._get_instance_nw_info(econtext,
-                                           instance).AndReturn(
-                                                   fake_nw_model)
+        self.compute.network_api.get_instance_nw_info(
+            econtext, instance).AndReturn(fake_nw_model)
         self.compute._notify_about_instance_usage(econtext,
                                                   instance,
                                                   'reboot.start')
@@ -4414,7 +4413,8 @@ class ComputeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(network_api, 'setup_networks_on_host')
         self.mox.StubOutWithMock(network_api,
                                  'migrate_instance_finish')
-        self.mox.StubOutWithMock(self.compute, '_get_instance_nw_info')
+        self.mox.StubOutWithMock(self.compute.network_api,
+                                 'get_instance_nw_info')
         self.mox.StubOutWithMock(self.compute,
                                  '_notify_about_instance_usage')
         self.mox.StubOutWithMock(self.compute.driver, 'finish_migration')
@@ -4464,7 +4464,7 @@ class ComputeTestCase(BaseTestCase):
                                             mox.IsA(objects.Instance),
                                             mox.IsA(dict))
 
-        self.compute._get_instance_nw_info(
+        self.compute.network_api.get_instance_nw_info(
                 self.context, instance).AndReturn('fake-nwinfo1')
 
         # Third save to update task state
@@ -5421,8 +5421,8 @@ class ComputeTestCase(BaseTestCase):
         # Confirm setup_compute_volume is called when volume is mounted.
         def stupid(*args, **kwargs):
             return fake_network.fake_get_instance_nw_info(self.stubs)
-        self.stubs.Set(nova.compute.manager.ComputeManager,
-                       '_get_instance_nw_info', stupid)
+        self.stubs.Set(self.compute.network_api,
+                       'get_instance_nw_info', stupid)
 
         # creating instance testdata
         instance = self._create_fake_instance_obj({'host': 'dummy'})
@@ -6153,26 +6153,6 @@ class ComputeTestCase(BaseTestCase):
         val = self.compute._running_deleted_instances(admin_context)
         self.assertEqual(val, [instance1])
 
-    def test_get_instance_nw_info(self):
-        fake_network.unset_stub_network_methods(self.stubs)
-
-        fake_inst = fake_instance.fake_db_instance(uuid='fake-instance')
-        fake_nw_info = network_model.NetworkInfo()
-
-        self.mox.StubOutWithMock(self.compute.network_api,
-                                 'get_instance_nw_info')
-
-        self.compute.network_api.get_instance_nw_info(self.context,
-                mox.IsA(objects.Instance)).AndReturn(fake_nw_info)
-
-        self.mox.ReplayAll()
-
-        fake_inst_obj = objects.Instance._from_db_object(
-            self.context, objects.Instance(), fake_inst, [])
-        result = self.compute._get_instance_nw_info(self.context,
-                                                    fake_inst_obj)
-        self.assertEqual(fake_nw_info, result)
-
     def _heal_instance_info_cache(self, _get_instance_nw_info_raise=False):
         # Update on every call for the test
         self.flags(heal_instance_info_cache_interval=-1)
@@ -6222,7 +6202,7 @@ class ComputeTestCase(BaseTestCase):
                 fake_instance_get_all_by_host)
         self.stubs.Set(db, 'instance_get_by_uuid',
                 fake_instance_get_by_uuid)
-        self.stubs.Set(self.compute, '_get_instance_nw_info',
+        self.stubs.Set(self.compute.network_api, 'get_instance_nw_info',
                 fake_get_instance_nw_info)
 
         # Make an instance appear to be still Building
@@ -6558,8 +6538,8 @@ class ComputeTestCase(BaseTestCase):
 
         self.mox.StubOutWithMock(self.compute,
                                  '_get_instances_on_driver')
-        self.mox.StubOutWithMock(self.compute,
-                                 '_get_instance_nw_info')
+        self.mox.StubOutWithMock(self.compute.network_api,
+                                 'get_instance_nw_info')
         self.mox.StubOutWithMock(self.compute,
                                  '_get_instance_block_device_info')
         self.mox.StubOutWithMock(self.compute,
@@ -6568,9 +6548,8 @@ class ComputeTestCase(BaseTestCase):
 
         self.compute._get_instances_on_driver(
                 fake_context, {'deleted': False}).AndReturn(instances)
-        self.compute._get_instance_nw_info(fake_context,
-                                           evacuated_instance).AndReturn(
-                                                   'fake_network_info')
+        self.compute.network_api.get_instance_nw_info(
+            fake_context, evacuated_instance).AndReturn('fake_network_info')
         self.compute._get_instance_block_device_info(
                 fake_context, evacuated_instance).AndReturn('fake_bdi')
         self.compute._is_instance_storage_shared(fake_context,
@@ -6605,8 +6584,8 @@ class ComputeTestCase(BaseTestCase):
 
         self.mox.StubOutWithMock(self.compute,
                                  '_get_instances_on_driver')
-        self.mox.StubOutWithMock(self.compute,
-                                 '_get_instance_nw_info')
+        self.mox.StubOutWithMock(self.compute.network_api,
+                                 'get_instance_nw_info')
         self.mox.StubOutWithMock(self.compute,
                                  '_get_instance_block_device_info')
         self.mox.StubOutWithMock(self.compute.driver,
@@ -6619,9 +6598,8 @@ class ComputeTestCase(BaseTestCase):
 
         self.compute._get_instances_on_driver(
                 fake_context, {'deleted': False}).AndReturn(instances)
-        self.compute._get_instance_nw_info(fake_context,
-                                           evacuated_instance).AndReturn(
-                                                   'fake_network_info')
+        self.compute.network_api.get_instance_nw_info(
+            fake_context, evacuated_instance).AndReturn('fake_network_info')
         self.compute._get_instance_block_device_info(
                 fake_context, evacuated_instance).AndReturn('fake_bdi')
         self.compute.driver.check_instance_shared_storage_local(fake_context,
@@ -6661,8 +6639,8 @@ class ComputeTestCase(BaseTestCase):
 
         self.mox.StubOutWithMock(self.compute,
                                  '_get_instances_on_driver')
-        self.mox.StubOutWithMock(self.compute,
-                                 '_get_instance_nw_info')
+        self.mox.StubOutWithMock(self.compute.network_api,
+                                 'get_instance_nw_info')
         self.mox.StubOutWithMock(self.compute,
                                  '_get_instance_block_device_info')
         self.mox.StubOutWithMock(self.compute.driver,
@@ -6675,9 +6653,8 @@ class ComputeTestCase(BaseTestCase):
 
         self.compute._get_instances_on_driver(
                 fake_context, {'deleted': False}).AndReturn(instances)
-        self.compute._get_instance_nw_info(fake_context,
-                                           evacuated_instance).AndReturn(
-                                                   'fake_network_info')
+        self.compute.network_api.get_instance_nw_info(
+            fake_context, evacuated_instance).AndReturn('fake_network_info')
         self.compute._get_instance_block_device_info(
                 fake_context, evacuated_instance).AndReturn('fake_bdi')
         self.compute.driver.check_instance_shared_storage_local(fake_context,
@@ -10981,7 +10958,7 @@ class ComputeRescheduleOrErrorTestCase(BaseTestCase):
         with contextlib.nested(
             mock.patch.object(self.context, 'elevated',
                               return_value=elevated_context),
-            mock.patch.object(self.compute, '_get_instance_nw_info',
+            mock.patch.object(self.compute.network_api, 'get_instance_nw_info',
                               side_effect=error),
             mock.patch.object(self.compute,
                               '_get_instance_block_device_info'),

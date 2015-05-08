@@ -840,8 +840,8 @@ class ComputeManager(manager.Manager):
                          {'instance_host': instance.host,
                           'our_host': our_host}, instance=instance)
                 try:
-                    network_info = self._get_instance_nw_info(context,
-                                                              instance)
+                    network_info = self.network_api.get_instance_nw_info(
+                        context, instance)
                     bdi = self._get_instance_block_device_info(context,
                                                                instance)
                     destroy_disks = not (self._is_instance_storage_shared(
@@ -1374,10 +1374,6 @@ class ComputeManager(manager.Manager):
         """This call passes straight through to the virtualization driver."""
         return self.driver.refresh_provider_fw_rules()
 
-    def _get_instance_nw_info(self, context, instance):
-        """Get a list of dictionaries of network data of an instance."""
-        return self.network_api.get_instance_nw_info(context, instance)
-
     def _await_block_device_map_created(self, context, vol_id):
         # TODO(yamahata): creating volume simultaneously
         #                 reduces creation time?
@@ -1833,7 +1829,7 @@ class ComputeManager(manager.Manager):
             # network resource need setup on the new host.
             self.network_api.setup_instance_network_on_host(
                 context, instance, instance.host)
-            return self._get_instance_nw_info(context, instance)
+            return self.network_api.get_instance_nw_info(context, instance)
 
         if not self.is_neutron_security_groups:
             security_groups = []
@@ -2820,7 +2816,7 @@ class ComputeManager(manager.Manager):
         do_stop_instance()
 
     def _power_on(self, context, instance):
-        network_info = self._get_instance_nw_info(context, instance)
+        network_info = self.network_api.get_instance_nw_info(context, instance)
         block_device_info = self._get_instance_block_device_info(context,
                                                                  instance)
         self.driver.power_on(context, instance,
@@ -3142,7 +3138,7 @@ class ComputeManager(manager.Manager):
         block_device_info = self._get_instance_block_device_info(context,
                                                                  instance)
 
-        network_info = self._get_instance_nw_info(context, instance)
+        network_info = self.network_api.get_instance_nw_info(context, instance)
 
         self._notify_about_instance_usage(context, instance, "reboot.start")
 
@@ -3503,7 +3499,7 @@ class ComputeManager(manager.Manager):
         admin_password = (rescue_password if rescue_password else
                       utils.generate_password())
 
-        network_info = self._get_instance_nw_info(context, instance)
+        network_info = self.network_api.get_instance_nw_info(context, instance)
 
         rescue_image_meta = self._get_rescue_image(context, instance,
                                                    rescue_image_ref)
@@ -3549,7 +3545,7 @@ class ComputeManager(manager.Manager):
         context = context.elevated()
         LOG.info(_LI('Unrescuing'), context=context, instance=instance)
 
-        network_info = self._get_instance_nw_info(context, instance)
+        network_info = self.network_api.get_instance_nw_info(context, instance)
         self._notify_about_instance_usage(context, instance,
                 "unrescue.start", network_info=network_info)
         with self._error_out_instance_on_exception(context, instance):
@@ -3676,7 +3672,8 @@ class ComputeManager(manager.Manager):
             self.network_api.setup_networks_on_host(context, instance,
                                migration.source_compute, teardown=True)
 
-            network_info = self._get_instance_nw_info(context, instance)
+            network_info = self.network_api.get_instance_nw_info(context,
+                                                                 instance)
             self.driver.confirm_migration(migration, instance,
                                           network_info)
 
@@ -3745,7 +3742,8 @@ class ComputeManager(manager.Manager):
                                                     instance,
                                                     migration_p)
 
-            network_info = self._get_instance_nw_info(context, instance)
+            network_info = self.network_api.get_instance_nw_info(context,
+                                                                 instance)
             bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                     context, instance.uuid)
             block_device_info = self._get_instance_block_device_info(
@@ -3787,7 +3785,8 @@ class ComputeManager(manager.Manager):
 
         with self._error_out_instance_on_exception(context, instance,
                                                    quotas=quotas):
-            network_info = self._get_instance_nw_info(context, instance)
+            network_info = self.network_api.get_instance_nw_info(context,
+                                                                 instance)
 
             self._notify_about_instance_usage(
                     context, instance, "resize.revert.start")
@@ -4009,7 +4008,8 @@ class ComputeManager(manager.Manager):
                 instance_type = objects.Flavor.get_by_id(
                     context, migration['new_instance_type_id'])
 
-            network_info = self._get_instance_nw_info(context, instance)
+            network_info = self.network_api.get_instance_nw_info(context,
+                                                                 instance)
 
             migration.status = 'migrating'
             with migration.obj_as_admin():
@@ -4101,7 +4101,7 @@ class ComputeManager(manager.Manager):
                                                  instance,
                                                  migration_p)
 
-        network_info = self._get_instance_nw_info(context, instance)
+        network_info = self.network_api.get_instance_nw_info(context, instance)
 
         instance.task_state = task_states.RESIZE_FINISH
         instance.save(expected_task_state=task_states.RESIZE_MIGRATED)
@@ -4343,7 +4343,7 @@ class ComputeManager(manager.Manager):
         LOG.info(_LI('Resuming'), context=context, instance=instance)
 
         self._notify_about_instance_usage(context, instance, 'resume.start')
-        network_info = self._get_instance_nw_info(context, instance)
+        network_info = self.network_api.get_instance_nw_info(context, instance)
         block_device_info = self._get_instance_block_device_info(
                             context, instance)
 
@@ -4439,7 +4439,7 @@ class ComputeManager(manager.Manager):
 
         self.network_api.cleanup_instance_network_on_host(context, instance,
                                                           instance.host)
-        network_info = self._get_instance_nw_info(context, instance)
+        network_info = self.network_api.get_instance_nw_info(context, instance)
         block_device_info = self._get_instance_block_device_info(context,
                                                                  instance)
         self.driver.destroy(context, instance, network_info,
@@ -4519,7 +4519,7 @@ class ComputeManager(manager.Manager):
 
         self.network_api.setup_instance_network_on_host(context, instance,
                                                         self.host)
-        network_info = self._get_instance_nw_info(context, instance)
+        network_info = self.network_api.get_instance_nw_info(context, instance)
         try:
             with rt.instance_claim(context, instance, limits):
                 self.driver.spawn(context, instance, image, injected_files=[],
@@ -4560,7 +4560,7 @@ class ComputeManager(manager.Manager):
     @wrap_instance_fault
     def inject_network_info(self, context, instance):
         """Inject network info, but don't return the info."""
-        network_info = self._get_instance_nw_info(context, instance)
+        network_info = self.network_api.get_instance_nw_info(context, instance)
         self._inject_network_info(context, instance, network_info)
 
     @object_compat
@@ -5197,7 +5197,7 @@ class ComputeManager(manager.Manager):
         block_device_info = self._get_instance_block_device_info(
                             context, instance, refresh_conn_info=True)
 
-        network_info = self._get_instance_nw_info(context, instance)
+        network_info = self.network_api.get_instance_nw_info(context, instance)
         self._notify_about_instance_usage(
                      context, instance, "live_migration.pre.start",
                      network_info=network_info)
@@ -5361,7 +5361,7 @@ class ComputeManager(manager.Manager):
         # Releasing vlan.
         # (not necessary in current implementation?)
 
-        network_info = self._get_instance_nw_info(ctxt, instance)
+        network_info = self.network_api.get_instance_nw_info(ctxt, instance)
 
         self._notify_about_instance_usage(ctxt, instance,
                                           "live_migration._post.start",
@@ -5466,7 +5466,7 @@ class ComputeManager(manager.Manager):
                                                  instance,
                                                  migration)
 
-        network_info = self._get_instance_nw_info(context, instance)
+        network_info = self.network_api.get_instance_nw_info(context, instance)
         self._notify_about_instance_usage(
                      context, instance, "live_migration.post.dest.start",
                      network_info=network_info)
@@ -5555,7 +5555,7 @@ class ComputeManager(manager.Manager):
         :param context: security context
         :param instance: a nova.objects.instance.Instance object sent over rpc
         """
-        network_info = self._get_instance_nw_info(context, instance)
+        network_info = self.network_api.get_instance_nw_info(context, instance)
         self._notify_about_instance_usage(
                       context, instance, "live_migration.rollback.dest.start",
                       network_info=network_info)
@@ -5654,7 +5654,7 @@ class ComputeManager(manager.Manager):
             try:
                 # Call to network API to get instance info.. this will
                 # force an update to the instance's info_cache
-                self._get_instance_nw_info(context, instance)
+                self.network_api.get_instance_nw_info(context, instance)
                 LOG.debug('Updated the network info_cache for instance',
                           instance=instance)
             except exception.InstanceNotFound:
