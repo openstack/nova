@@ -402,3 +402,12 @@ class IndirectionAPIFixture(fixtures.Fixture):
         self.orig_indirection_api = obj_base.NovaObject.indirection_api
         obj_base.NovaObject.indirection_api = self.indirection_api
         self.addCleanup(self.cleanup)
+
+
+class SpawnIsSynchronousFixture(fixtures.Fixture):
+    """Patch and restore the spawn_n utility method to be synchronous"""
+
+    def setUp(self):
+        super(SpawnIsSynchronousFixture, self).setUp()
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.utils.spawn_n', lambda f, *a, **k: f(*a, **k)))

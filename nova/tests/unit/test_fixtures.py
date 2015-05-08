@@ -17,6 +17,7 @@
 import sys
 
 import fixtures as fx
+import mock
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import uuidutils
@@ -26,6 +27,7 @@ from nova.db.sqlalchemy import api as session
 from nova.objects import base as obj_base
 from nova.tests import fixtures
 from nova.tests.unit import conf_fixture
+from nova import utils
 
 CONF = cfg.CONF
 
@@ -292,3 +294,18 @@ class TestIndirectionAPIFixture(testtools.TestCase):
 
         # ensure the initial value is restored
         self.assertIsNone(obj_base.NovaObject.indirection_api)
+
+
+class TestSpawnIsSynchronousFixture(testtools.TestCase):
+    def test_spawn_patch(self):
+        orig_spawn = utils.spawn_n
+
+        fix = fixtures.SpawnIsSynchronousFixture()
+        self.useFixture(fix)
+        self.assertNotEqual(orig_spawn, utils.spawn_n)
+
+    def test_spawn_passes_through(self):
+        self.useFixture(fixtures.SpawnIsSynchronousFixture())
+        tester = mock.MagicMock()
+        utils.spawn_n(tester.function, 'foo', bar='bar')
+        tester.function.assert_called_once_with('foo', bar='bar')
