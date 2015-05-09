@@ -2673,7 +2673,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(self.compute, '_cleanup_allocated_networks')
         self.mox.StubOutWithMock(self.compute, '_cleanup_volumes')
         self.mox.StubOutWithMock(compute_utils, 'add_instance_fault_from_exc')
-        self.mox.StubOutWithMock(self.compute, '_set_instance_error_state')
+        self.mox.StubOutWithMock(self.compute, '_set_instance_obj_error_state')
         self.mox.StubOutWithMock(self.compute.compute_task_api,
                                  'build_instances')
         self._do_build_instance_update()
@@ -2690,7 +2690,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.block_device_mapping, raise_exc=False)
         compute_utils.add_instance_fault_from_exc(self.context,
                 self.instance, mox.IgnoreArg(), mox.IgnoreArg())
-        self.compute._set_instance_error_state(self.context, self.instance)
+        self.compute._set_instance_obj_error_state(self.context, self.instance)
         self._instance_action_events()
         self.mox.ReplayAll()
 
@@ -2711,7 +2711,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     def test_rescheduled_exception(self, mock_spawn, mock_hooks):
         mock_spawn.side_effect = lambda f, *a, **k: f(*a, **k)
         self.mox.StubOutWithMock(self.compute, '_build_and_run_instance')
-        self.mox.StubOutWithMock(self.compute, '_set_instance_error_state')
+        self.mox.StubOutWithMock(self.compute, '_set_instance_obj_error_state')
         self.mox.StubOutWithMock(self.compute.compute_task_api,
                                  'build_instances')
         self.mox.StubOutWithMock(self.compute.network_api,
@@ -2828,7 +2828,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         mock_spawn.side_effect = lambda f, *a, **k: f(*a, **k)
         self.mox.StubOutWithMock(self.compute, '_build_and_run_instance')
         self.mox.StubOutWithMock(compute_utils, 'add_instance_fault_from_exc')
-        self.mox.StubOutWithMock(self.compute, '_set_instance_error_state')
+        self.mox.StubOutWithMock(self.compute, '_set_instance_obj_error_state')
         self.mox.StubOutWithMock(self.compute, '_cleanup_allocated_networks')
         self.mox.StubOutWithMock(self.compute, '_cleanup_volumes')
         self._do_build_instance_update()
@@ -2843,7 +2843,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             self.requested_networks)
         compute_utils.add_instance_fault_from_exc(self.context, self.instance,
                 mox.IgnoreArg(), mox.IgnoreArg())
-        self.compute._set_instance_error_state(self.context,
+        self.compute._set_instance_obj_error_state(self.context,
                                                self.instance)
         self._instance_action_events()
         self.mox.ReplayAll()
@@ -2965,12 +2965,14 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             self.compute._cleanup_volumes(self.context, self.instance.uuid,
                     self.block_device_mapping, raise_exc=False)
         if set_error:
-            self.mox.StubOutWithMock(self.compute, '_set_instance_error_state')
+            self.mox.StubOutWithMock(self.compute,
+                    '_set_instance_obj_error_state')
             self.mox.StubOutWithMock(compute_utils,
                     'add_instance_fault_from_exc')
             compute_utils.add_instance_fault_from_exc(self.context,
                     self.instance, mox.IgnoreArg(), mox.IgnoreArg())
-            self.compute._set_instance_error_state(self.context, self.instance)
+            self.compute._set_instance_obj_error_state(self.context,
+                    self.instance)
         self._instance_action_events()
         self.mox.ReplayAll()
 
