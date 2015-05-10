@@ -293,13 +293,17 @@ class ComputeAPI(object):
         existing methods in 3.x after that point should be done so that they
         can handle the version_cap being set to 3.40
 
+        ... Version 4.0 is equivalent to 3.40. Kilo sends version 4.0 by
+        default, can accept 3.x calls from Juno nodes, and can be pinned to
+        3.x for Juno compatibility. All new changes should go against 4.x.
+
         * 4.0  - Remove 3.x compatibility
     '''
 
     VERSION_ALIASES = {
         'icehouse': '3.23',
         'juno': '3.35',
-        'kilo': '3.40',
+        'kilo': '4.0',
     }
 
     def __init__(self):
