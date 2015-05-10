@@ -10017,12 +10017,17 @@ Active:          8381604 kB
             self.assertEqual(fake_xml, xml)
             raise fakelibvirt.libvirtError('virDomainDefineXML() failed')
 
+        def fake_safe_decode(text, *args, **kwargs):
+            return text + 'safe decoded'
+
         self.log_error_called = False
 
         def fake_error(msg, *args):
             self.log_error_called = True
             self.assertIn(fake_xml, msg % args)
+            self.assertIn('safe decoded', msg % args)
 
+        self.stubs.Set(encodeutils, 'safe_decode', fake_safe_decode)
         self.stubs.Set(nova.virt.libvirt.driver.LOG, 'error', fake_error)
 
         self.create_fake_libvirt_mock(defineXML=fake_defineXML)
