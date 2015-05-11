@@ -18,6 +18,7 @@ Manage hosts in the current zone.
 """
 
 import collections
+import functools
 import time
 try:
     from collections import UserDict as IterableUserDict   # Python 3
@@ -109,6 +110,32 @@ class ReadOnlyDict(IterableUserDict):
 # Representation of a single metric value from a compute node.
 MetricItem = collections.namedtuple(
              'MetricItem', ['value', 'timestamp', 'source'])
+
+
+@utils.expects_func_args('self', 'instance')
+def set_update_time_on_success(function):
+    """Set updated time of HostState when consuming succeed."""
+
+    @functools.wraps(function)
+    def decorated_function(self, instance):
+        return_value = None
+        try:
+            return_value = function(self, instance)
+        except Exception as e:
+            # Ignores exception raised from consume_from_instance() so that
+            # booting instance would fail in the resource claim of compute
+            # node, other suitable node may be chosen during scheduling retry.
+            LOG.warning(_LW("Selected host: %(host)s failed to consume from "
+                            "instance. Error: %(error)s"),
+                        {'host': self.host, 'error': e},
+                        instance=instance)
+        else:
+            now = timeutils.utcnow()
+            # NOTE(sbauza): Objects are UTC tz-aware by default
+            self.updated = now.replace(tzinfo=iso8601.iso8601.Utc())
+        return return_value
+
+    return decorated_function
 
 
 class HostState(object):
@@ -245,6 +272,7 @@ class HostState(object):
         # update metrics
         self._update_metrics_from_compute_node(compute)
 
+    @set_update_time_on_success
     def consume_from_instance(self, instance):
         """Incrementally update host state from an instance."""
         disk_mb = (instance['root_gb'] + instance['ephemeral_gb']) * 1024
@@ -253,10 +281,6 @@ class HostState(object):
         self.free_ram_mb -= ram_mb
         self.free_disk_mb -= disk_mb
         self.vcpus_used += vcpus
-
-        now = timeutils.utcnow()
-        # NOTE(sbauza): Objects are UTC tz-aware by default
-        self.updated = now.replace(tzinfo=iso8601.iso8601.Utc())
 
         # Track number of instances on host
         self.num_instances += 1

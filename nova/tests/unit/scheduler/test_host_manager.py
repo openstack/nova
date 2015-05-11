@@ -886,6 +886,7 @@ class HostStateTestCase(test.NoDBTestCase):
                         pci_requests={'requests': []})
         host = host_manager.HostState("fakehost", "fakenode")
 
+        self.assertIsNone(host.updated)
         host.consume_from_instance(instance)
         numa_fit_mock.assert_called_once_with('fake-host-topology',
                                               fake_numa_topology,
@@ -894,6 +895,7 @@ class HostStateTestCase(test.NoDBTestCase):
         numa_usage_mock.assert_called_once_with(host, instance)
         self.assertEqual('fake-consumed-once', host.numa_topology)
         self.assertEqual('fake-fitted-once', instance['numa_topology'])
+        self.assertIsNotNone(host.updated)
 
         instance = dict(root_gb=0, ephemeral_gb=0, memory_mb=0, vcpus=0,
                         project_id='12345', vm_state=vm_states.PAUSED,
@@ -910,6 +912,7 @@ class HostStateTestCase(test.NoDBTestCase):
         self.assertEqual(2, numa_usage_mock.call_count)
         self.assertEqual(((host, instance),), numa_usage_mock.call_args)
         self.assertEqual('fake-consumed-twice', host.numa_topology)
+        self.assertIsNotNone(host.updated)
 
     def test_stat_consumption_from_instance_pci(self):
 
@@ -941,6 +944,7 @@ class HostStateTestCase(test.NoDBTestCase):
                                                              memory_mb=1024,
                                                              vcpus=1))
         host = host_manager.HostState("fakehost", "fakenode")
+        self.assertIsNone(host.updated)
         host.pci_stats = pci_stats.PciDeviceStats(
                                       [objects.PciDevicePool(vendor_id='8086',
                                                              product_id='15ed',
@@ -954,6 +958,39 @@ class HostStateTestCase(test.NoDBTestCase):
         self.assertEqual(512, host.numa_topology.cells[1].memory_usage)
         self.assertEqual(1, host.numa_topology.cells[1].cpu_usage)
         self.assertEqual(0, len(host.pci_stats.pools))
+        self.assertIsNotNone(host.updated)
+
+    def test_stat_consumption_from_instance_with_pci_exception(self):
+        fake_requests = [{'request_id': 'fake_request1', 'count': 3,
+                          'spec': [{'vendor_id': '8086'}]}]
+        fake_requests_obj = objects.InstancePCIRequests(
+                                requests=[objects.InstancePCIRequest(**r)
+                                          for r in fake_requests],
+                                instance_uuid='fake-uuid')
+        instance = objects.Instance(root_gb=0, ephemeral_gb=0, memory_mb=512,
+                        vcpus=1,
+                        project_id='12345', vm_state=vm_states.BUILDING,
+                        task_state=task_states.SCHEDULING, os_type='Linux',
+                        uuid='fake-uuid',
+                        pci_requests=fake_requests_obj,
+                        id=1243)
+        req_spec = sched_utils.build_request_spec(None,
+                                                  None,
+                                                  [instance],
+                                                  objects.Flavor(
+                                                             root_gb=0,
+                                                             ephemeral_gb=0,
+                                                             memory_mb=1024,
+                                                             vcpus=1))
+        host = host_manager.HostState("fakehost", "fakenode")
+        self.assertIsNone(host.updated)
+        fake_updated = mock.sentinel.fake_updated
+        host.updated = fake_updated
+        host.pci_stats = pci_stats.PciDeviceStats()
+        with mock.patch.object(host.pci_stats, 'apply_requests',
+                               side_effect=exception.PciDeviceRequestFailed):
+            host.consume_from_instance(req_spec['instance_properties'])
+        self.assertEqual(fake_updated, host.updated)
 
     def test_resources_consumption_from_compute_node(self):
         metrics = [
