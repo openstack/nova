@@ -416,7 +416,8 @@ class VirtDiskVFSLocalFSTest(test.NoDBTestCase):
         execute.assert_called_once_with('blkid', '-o',
                                         'value', '-s',
                                         'TYPE', '/dev/xyz',
-                                        run_as_root=True)
+                                        run_as_root=True,
+                                        check_exit_code=[0, 2])
 
     @mock.patch.object(tempfile, 'mkdtemp')
     @mock.patch.object(nova.virt.disk.mount.nbd, 'NbdMount')
