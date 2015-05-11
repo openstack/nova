@@ -122,7 +122,7 @@ def cinderclient(context):
         msg = _LW('Cinder V1 API is deprecated as of the Juno '
                   'release, and Nova is still configured to use it. '
                   'Enable the V2 API in Cinder and set '
-                  'cinder_catalog_info in nova.conf to use it.')
+                  'cinder.catalog_info in nova.conf to use it.')
         LOG.warn(msg)
         _V1_ERROR_RAISED = True
 
