@@ -74,7 +74,7 @@ class VFSGuestFS(vfs.VFS):
     def inspect_capabilities(self):
         """Determines whether guestfs is well configured."""
         try:
-            g = guestfs.GuestFS()
+            g = tpool.Proxy(guestfs.GuestFS())
             g.add_drive("/dev/null")  # sic
             g.launch()
         except Exception as e:
