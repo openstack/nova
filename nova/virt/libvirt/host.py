@@ -56,6 +56,7 @@ from nova import utils
 from nova.virt import event as virtevent
 from nova.virt.libvirt import compat
 from nova.virt.libvirt import config as vconfig
+from nova.virt.libvirt import guest
 
 libvirt = None
 
@@ -590,6 +591,7 @@ class Host(object):
         return self._version_check(
             lv_ver=lv_ver, hv_ver=hv_ver, hv_type=hv_type, op=operator.ne)
 
+    # TODO(sahid): needs to be private
     def get_domain(self, instance):
         """Retrieve libvirt domain object for an instance.
 
@@ -605,6 +607,16 @@ class Host(object):
         :returns: a libvirt.Domain object
         """
         return self._get_domain_by_name(instance.name)
+
+    def get_guest(self, instance):
+        """Retrieve libvirt domain object for an instance.
+
+        :param instance: an nova.objects.Instance object
+
+        :returns: a nova.virt.libvirt.Guest object
+        """
+        return guest.Guest(
+            self.get_domain(instance))
 
     def _get_domain_by_id(self, instance_id):
         """Retrieve libvirt domain object given an instance id.
