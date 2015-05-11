@@ -42,8 +42,6 @@ virt_import_re = re.compile(
     r"^\s*(?:import|from) nova\.(?:tests\.)?virt\.(\w+)")
 virt_config_re = re.compile(
     r"CONF\.import_opt\('.*?', 'nova\.virt\.(\w+)('|.)")
-author_tag_re = (re.compile("^\s*#\s*@?(a|A)uthor:"),
-                 re.compile("^\.\.\s+moduleauthor::"))
 asse_trueinst_re = re.compile(
                      r"(.)*assertTrue\(isinstance\((\w|\.|\'|\"|\[|\])+, "
                      "(\w|\.|\'|\"|\[|\])+\)\)")
