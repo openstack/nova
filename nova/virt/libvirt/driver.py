@@ -635,7 +635,7 @@ class LibvirtDriver(driver.ComputeDriver):
         rootfs_dev = instance.system_metadata.get('rootfs_device_name')
         disk.teardown_container(container_dir, rootfs_dev)
 
-    def _destroy(self, instance):
+    def _destroy(self, instance, attempt=1):
         try:
             guest = self._host.get_guest(instance)
         except exception.InstanceNotFound:
@@ -680,6 +680,34 @@ class LibvirtDriver(driver.ComputeDriver):
                             instance=instance)
                     reason = _("operation time out")
                     raise exception.InstancePowerOffFailure(reason=reason)
+                elif errcode == libvirt.VIR_ERR_SYSTEM_ERROR:
+                    if e.get_int1() == errno.EBUSY:
+                        # NOTE(danpb): When libvirt kills a process it sends it
+                        # SIGTERM first and waits 10 seconds. If it hasn't gone
+                        # it sends SIGKILL and waits another 5 seconds. If it
+                        # still hasn't gone then you get this EBUSY error.
+                        # Usually when a QEMU process fails to go away upon
+                        # SIGKILL it is because it is stuck in an
+                        # uninterruptable kernel sleep waiting on I/O from
+                        # some non-responsive server.
+                        # Given the CPU load of the gate tests though, it is
+                        # conceivable that the 15 second timeout is too short,
+                        # particularly if the VM running tempest has a high
+                        # steal time from the cloud host. ie 15 wallclock
+                        # seconds may have passed, but the VM might have only
+                        # have a few seconds of scheduled run time.
+                        LOG.warn(_LW('Error from libvirt during destroy. '
+                                     'Code=%(errcode)s Error=%(e)s; '
+                                     'attempt %(attempt)d of 3'),
+                                 {'errcode': errcode, 'e': e,
+                                  'attempt': attempt},
+                                 instance=instance)
+                        with excutils.save_and_reraise_exception() as ctxt:
+                            # Try up to 3 times before giving up.
+                            if attempt < 3:
+                                ctxt.reraise = False
+                                self._destroy(instance, attempt + 1)
+                                return
 
                 if not is_okay:
                     with excutils.save_and_reraise_exception():
