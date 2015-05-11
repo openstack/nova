@@ -83,6 +83,20 @@ class PathUtils(object):
             raise IOError(_('The file copy from %(src)s to %(dest)s failed')
                            % {'src': src, 'dest': dest})
 
+    def move_folder_files(self, src_dir, dest_dir):
+        """Moves the files of the given src_dir to dest_dir.
+        It will ignore any nested folders.
+
+        :param src_dir: Given folder from which to move files.
+        :param dest_dir: Folder to which to move files.
+        """
+
+        for fname in os.listdir(src_dir):
+            src = os.path.join(src_dir, fname)
+            # ignore subdirs.
+            if os.path.isfile(src):
+                self.rename(src, os.path.join(dest_dir, fname))
+
     def rmtree(self, path):
         shutil.rmtree(path)
 

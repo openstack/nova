@@ -56,7 +56,7 @@ class MigrationOps(object):
 
         instance_path = self._pathutils.get_instance_dir(instance_name)
         revert_path = self._pathutils.get_instance_migr_revert_dir(
-            instance_name, remove_dir=True)
+            instance_name, remove_dir=True, create_dir=True)
         dest_path = None
 
         try:
@@ -78,10 +78,10 @@ class MigrationOps(object):
                               {'disk_file': disk_file, 'dest_path': dest_path})
                     self._pathutils.copy(disk_file, dest_path)
 
-            self._pathutils.rename(instance_path, revert_path)
+            self._pathutils.move_folder_files(instance_path, revert_path)
 
             if same_host:
-                self._pathutils.rename(dest_path, instance_path)
+                self._pathutils.move_folder_files(dest_path, instance_path)
         except Exception:
             with excutils.save_and_reraise_exception():
                 self._cleanup_failed_disk_migration(instance_path, revert_path,
