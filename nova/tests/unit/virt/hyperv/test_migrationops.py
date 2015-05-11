@@ -23,6 +23,7 @@ from nova.virt.hyperv import vmutils
 class MigrationOpsTestCase(test_base.HyperVBaseTestCase):
     """Unit tests for the Hyper-V MigrationOps class."""
 
+    _FAKE_DISK = 'fake_disk'
     _FAKE_TIMEOUT = 10
     _FAKE_RETRY_INTERVAL = 5
 
@@ -31,9 +32,81 @@ class MigrationOpsTestCase(test_base.HyperVBaseTestCase):
         self.context = 'fake-context'
 
         self._migrationops = migrationops.MigrationOps()
+        self._migrationops._hostutils = mock.MagicMock()
         self._migrationops._vmops = mock.MagicMock()
         self._migrationops._vmutils = mock.MagicMock()
         self._migrationops._pathutils = mock.Mock()
+
+    def _check_migrate_disk_files(self, host):
+        instance_path = 'fake/instance/path'
+        self._migrationops._pathutils.get_instance_dir.return_value = (
+            instance_path)
+        get_revert_dir = (
+            self._migrationops._pathutils.get_instance_migr_revert_dir)
+        self._migrationops._hostutils.get_local_ips.return_value = [host]
+        self._migrationops._pathutils.exists.return_value = True
+
+        expected_get_dir = [mock.call(mock.sentinel.instance_name)]
+        expected_move_calls = [mock.call(instance_path,
+                                         get_revert_dir.return_value)]
+
+        self._migrationops._migrate_disk_files(
+            instance_name=mock.sentinel.instance_name,
+            disk_files=[self._FAKE_DISK],
+            dest=mock.sentinel.dest_path)
+
+        self._migrationops._hostutils.get_local_ips.assert_called_once_with()
+        get_revert_dir.assert_called_with(mock.sentinel.instance_name,
+                                          remove_dir=True, create_dir=True)
+        if host == mock.sentinel.dest_path:
+            fake_dest_path = '%s_tmp' % instance_path
+            self._migrationops._pathutils.exists.assert_called_once_with(
+                fake_dest_path)
+            self._migrationops._pathutils.rmtree.assert_called_once_with(
+                fake_dest_path)
+            self._migrationops._pathutils.makedirs.assert_called_once_with(
+                fake_dest_path)
+            expected_move_calls.append(mock.call(fake_dest_path,
+                                                 instance_path))
+        else:
+            fake_dest_path = instance_path
+            expected_get_dir.append(mock.call(mock.sentinel.instance_name,
+                                              mock.sentinel.dest_path,
+                                              remove_dir=True))
+        self._migrationops._pathutils.get_instance_dir.assert_has_calls(
+            expected_get_dir)
+        self._migrationops._pathutils.copy.assert_called_once_with(
+            self._FAKE_DISK, fake_dest_path)
+        self._migrationops._pathutils.move_folder_files.assert_has_calls(
+            expected_move_calls)
+
+    def test_migrate_disk_files(self):
+        self._check_migrate_disk_files(host=mock.sentinel.other_dest_path)
+
+    def test_migrate_disk_files_same_host(self):
+        self._check_migrate_disk_files(host=mock.sentinel.dest_path)
+
+    @mock.patch.object(migrationops.MigrationOps,
+                       '_cleanup_failed_disk_migration')
+    def test_migrate_disk_files_exception(self, mock_cleanup):
+        instance_path = 'fake/instance/path'
+        fake_dest_path = '%s_tmp' % instance_path
+        self._migrationops._pathutils.get_instance_dir.return_value = (
+            instance_path)
+        get_revert_dir = (
+            self._migrationops._pathutils.get_instance_migr_revert_dir)
+        self._migrationops._hostutils.get_local_ips.return_value = [
+            mock.sentinel.dest_path]
+        self._migrationops._pathutils.copy.side_effect = IOError(
+            "Expected exception.")
+
+        self.assertRaises(IOError, self._migrationops._migrate_disk_files,
+                          instance_name=mock.sentinel.instance_name,
+                          disk_files=[self._FAKE_DISK],
+                          dest=mock.sentinel.dest_path)
+        mock_cleanup.assert_called_once_with(instance_path,
+                                             get_revert_dir.return_value,
+                                             fake_dest_path)
 
     def test_check_and_attach_config_drive_unknown_path(self):
         instance = fake_instance.fake_instance_obj(self.context,
