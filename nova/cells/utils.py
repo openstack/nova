@@ -19,6 +19,8 @@ Cells Utility Methods
 import random
 import sys
 
+import six
+
 from nova import db
 from nova import exception
 from nova import objects
@@ -85,7 +87,7 @@ class _CellProxy(object):
             return obj
 
     # dict-ish syntax sugar
-    def iteritems(self):
+    def _iteritems(self):
         """For backwards-compatibility with dict-based objects.
 
         NOTE(sbauza): May be removed in the future.
@@ -99,6 +101,11 @@ class _CellProxy(object):
                     yield name, self.host
                 else:
                     yield name, getattr(self._obj, name)
+
+    if six.PY3:
+        items = _iteritems
+    else:
+        iteritems = _iteritems
 
     def __getattr__(self, key):
         return getattr(self._obj, key)
