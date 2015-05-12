@@ -140,22 +140,6 @@ def unify_instance(instance):
     return newdict
 
 
-class FakeSchedulerAPI(object):
-
-    def run_instance(self, ctxt, request_spec, admin_password,
-            injected_files, requested_networks, is_first_time,
-            filter_properties):
-        pass
-
-    def live_migration(self, ctxt, block_migration, disk_over_commit,
-            instance, dest):
-        pass
-
-    def prep_resize(self, ctxt, instance, instance_type, image, request_spec,
-                    filter_properties, reservations, clean_shutown):
-        pass
-
-
 class FakeComputeTaskAPI(object):
 
     def resize_instance(self, context, instance, extra_instance_updates,
@@ -9205,10 +9189,8 @@ class ComputeAPITestCase(BaseTestCase):
             mock_reserve_vol.assert_called_once_with(
                     self.context, 'fake-volume-id')
             a, kw = mock_attach.call_args
-            self.assertEqual(kw['volume_id'], 'fake-volume-id')
-            self.assertEqual(kw['mountpoint'], '/dev/vdb')
-            self.assertEqual(kw['bdm'].device_name, '/dev/vdb')
-            self.assertEqual(kw['bdm'].volume_id, 'fake-volume-id')
+            self.assertEqual(a[2].device_name, '/dev/vdb')
+            self.assertEqual(a[2].volume_id, 'fake-volume-id')
 
     def test_attach_volume_no_device(self):
 
@@ -9224,7 +9206,7 @@ class ComputeAPITestCase(BaseTestCase):
             called['fake_volume_get'] = True
             return {'id': volume_id}
 
-        def fake_rpc_attach_volume(self, context, **kwargs):
+        def fake_rpc_attach_volume(self, context, instance, bdm):
             called['fake_rpc_attach_volume'] = True
 
         def fake_rpc_reserve_block_device_name(self, context, instance, device,
