@@ -2078,7 +2078,7 @@ class ServersControllerCreateTest(test.TestCase):
             self.controller.create(self.req, body=self.body)
 
     def test_create_server_image_too_large(self):
-        # Get the fake image service so we can set the status to deleted
+        # Get the fake image service so we can update the size of the image
         (image_service, image_id) = glance.get_remote_image_service(
                                     context, self.image_uuid)
 

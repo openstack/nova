@@ -2032,7 +2032,7 @@ class ServersControllerCreateTest(test.TestCase):
 
     def test_create_server_image_too_large(self):
         image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        # Get the fake image service so we can set the status to deleted
+        # Get the fake image service so we can update the size of the image
         (image_service, image_id) = glance.get_remote_image_service(context,
                                                                     image_uuid)
         image = image_service.show(context, image_id)
