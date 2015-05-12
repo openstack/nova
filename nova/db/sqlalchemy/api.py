@@ -2968,7 +2968,6 @@ def network_get_by_cidr(context, cidr):
     return result
 
 
-@require_admin_context
 def network_get_all_by_host(context, host):
     session = get_session()
     fixed_host_filter = or_(models.FixedIp.host == host,
