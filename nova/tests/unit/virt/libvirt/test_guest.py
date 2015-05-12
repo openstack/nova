@@ -145,3 +145,11 @@ class GuestTestCase(test.NoDBTestCase):
         guest.poweroff()
 
         domain.destroy.assert_called_once_with()
+
+    def test_resume(self):
+        domain = mock.MagicMock()
+
+        guest = libvirt_guest.Guest(domain)
+        guest.resume()
+
+        domain.resume.assert_called_once_with()

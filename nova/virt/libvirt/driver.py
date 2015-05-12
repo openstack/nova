@@ -1441,7 +1441,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 else:
                     snapshot_backend.snapshot_extract(out_path, image_format)
             finally:
-                new_dom = None
+                guest = None
                 # NOTE(dkang): because previous managedSave is not called
                 #              for LXC, _create_domain must not be called.
                 if CONF.libvirt.virt_type != 'lxc' and not live_snapshot:
@@ -1450,14 +1450,11 @@ class LibvirtDriver(driver.ComputeDriver):
                     elif state == power_state.PAUSED:
                         guest = self._create_domain(
                             domain=virt_dom, pause=True)
-                    # TODO(sahid): Direct call from domain should
-                    # be avoid in the future
-                    new_dom = guest._domain
 
-                    if new_dom is not None:
-                        self._attach_pci_devices(new_dom,
+                    if guest is not None:
+                        self._attach_pci_devices(guest,
                             pci_manager.get_instance_pci_devs(instance))
-                        self._attach_sriov_ports(context, instance, new_dom)
+                        self._attach_sriov_ports(context, instance, guest)
                 LOG.info(_LI("Snapshot extracted, beginning image upload"),
                          instance=instance)
 
@@ -2229,13 +2226,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def unpause(self, instance):
         """Unpause paused VM instance."""
-        guest = self._host.get_guest(instance)
-
-        # TODO(sahid): We are converting all calls from a
-        # virDomain object to use nova.virt.libvirt.Guest.
-        # We should be able to remove dom at the end.
-        dom = guest._domain
-        dom.resume()
+        self._host.get_guest(instance).resume()
 
     def _clean_shutdown(self, instance, timeout, retry_interval):
         """Attempt to shutdown the instance gracefully.
@@ -2360,13 +2351,13 @@ class LibvirtDriver(driver.ComputeDriver):
 
         xml = self._get_existing_domain_xml(instance, network_info,
                                             block_device_info)
-        dom = self._create_domain_and_network(context, xml, instance,
+        guest = self._create_domain_and_network(context, xml, instance,
                            network_info, disk_info,
                            block_device_info=block_device_info,
                            vifs_already_plugged=True)
-        self._attach_pci_devices(dom,
+        self._attach_pci_devices(guest,
             pci_manager.get_instance_pci_devs(instance))
-        self._attach_sriov_ports(context, instance, dom, network_info)
+        self._attach_sriov_ports(context, instance, guest, network_info)
 
     def resume_state_on_host_boot(self, context, instance, network_info,
                                   block_device_info=None):
@@ -3055,7 +3046,10 @@ class LibvirtDriver(driver.ComputeDriver):
             else:
                 raise
 
-    def _attach_pci_devices(self, dom, pci_devs):
+    def _attach_pci_devices(self, guest, pci_devs):
+        # TODO(sahid): A method attach_device should be added to
+        # the Guest object
+        dom = guest._domain
         try:
             for dev in pci_devs:
                 dom.attachDevice(self._get_guest_pci_device(dev).to_xml())
@@ -3078,7 +3072,11 @@ class LibvirtDriver(driver.ComputeDriver):
                 return True
         return False
 
-    def _attach_sriov_ports(self, context, instance, dom, network_info=None):
+    def _attach_sriov_ports(self, context, instance, guest, network_info=None):
+        # TODO(sahid): A method attach_device should be added to
+        # the Guest object
+        dom = guest._domain
+
         if network_info is None:
             network_info = instance.info_cache.network_info
         if network_info is None:
@@ -4519,7 +4517,6 @@ class LibvirtDriver(driver.ComputeDriver):
             events = []
 
         pause = bool(events)
-        domain = None
         guest = None
         try:
             with self.virtapi.wait_for_instance_event(
@@ -4534,9 +4531,6 @@ class LibvirtDriver(driver.ComputeDriver):
                                             block_device_info, disk_info):
                     guest = self._create_domain(
                         xml, pause=pause, power_on=power_on)
-                    # TODO(sahid): Direct call from domain should
-                    # be avoid in the future
-                    domain = guest._domain
 
                 self.firewall_driver.apply_instance_filter(instance,
                                                            network_info)
@@ -4561,8 +4555,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
         # Resume only if domain has been paused
         if pause:
-            domain.resume()
-        return domain
+            guest.resume()
+        return guest
 
     def _get_all_block_devices(self):
         """Return all block devices in use on this node."""

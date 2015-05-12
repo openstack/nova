@@ -8348,10 +8348,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         network_info = _fake_network_info(self.stubs, 1)
         network_info[0]['vnic_type'] = network_model.VNIC_TYPE_DIRECT
-        domain = FakeVirtDomain()
+        guest = libvirt_guest.Guest(FakeVirtDomain())
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
-        drvr._attach_sriov_ports(self.context, instance, domain, network_info)
+        drvr._attach_sriov_ports(self.context, instance, guest, network_info)
         mock_get_image_metadata.assert_called_once_with(self.context,
             drvr._image_api, instance['image_ref'], instance)
         self.assertTrue(mock_attachDevice.called)
@@ -8369,10 +8369,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         network_info[0]['vnic_type'] = network_model.VNIC_TYPE_DIRECT
         instance.info_cache = objects.InstanceInfoCache(
             network_info=network_info)
-        domain = FakeVirtDomain()
+        guest = libvirt_guest.Guest(FakeVirtDomain())
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
-        drvr._attach_sriov_ports(self.context, instance, domain, None)
+        drvr._attach_sriov_ports(self.context, instance, guest, None)
         mock_get_image_metadata.assert_called_once_with(self.context,
             drvr._image_api, instance['image_ref'], instance)
         self.assertTrue(mock_attachDevice.called)
@@ -8414,11 +8414,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         network_info = _fake_network_info(self.stubs, 1)
         block_device_info = None
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        guest = libvirt_guest.Guest('fake_dom')
         with contextlib.nested(
             mock.patch.object(drvr, '_get_existing_domain_xml',
                               return_value=dummyxml),
             mock.patch.object(drvr, '_create_domain_and_network',
-                              return_value='fake_dom'),
+                              return_value=guest),
             mock.patch.object(drvr, '_attach_pci_devices'),
             mock.patch.object(pci_manager, 'get_instance_pci_devs',
                               return_value='fake_pci_devs'),
@@ -8441,7 +8442,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                         instance, network_info, disk_info,
                                         block_device_info=block_device_info,
                                         vifs_already_plugged=True)])
-            _attach_pci_devices.assert_has_calls([mock.call('fake_dom',
+            _attach_pci_devices.assert_has_calls([mock.call(guest,
                                                  'fake_pci_devs')])
 
     @mock.patch.object(host.Host, 'get_domain')
@@ -10765,7 +10766,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
               prepare_instance_filter, create_domain, apply_instance_filter):
             create_domain.return_value = libvirt_guest.Guest(mock_dom)
 
-            domain = drvr._create_domain_and_network(
+            guest = drvr._create_domain_and_network(
                     self.context, fake_xml, instance, network_info, None,
                     block_device_info=block_device_info)
 
@@ -10781,7 +10782,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             pause = self._get_pause_flag(drvr, network_info)
             create_domain.assert_called_once_with(
                 fake_xml, pause=pause, power_on=True)
-            self.assertEqual(mock_dom, domain)
+            self.assertEqual(mock_dom, guest._domain)
 
     def test_get_guest_storage_config(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)

@@ -111,6 +111,10 @@ class Guest(object):
         """Stops a running guest."""
         self._domain.destroy()
 
+    def resume(self):
+        """Resumes a suspended guest."""
+        self._domain.resume()
+
     def enable_hairpin(self):
         """Enables hairpin mode for this guest."""
         interfaces = self.get_interfaces()
