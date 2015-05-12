@@ -68,6 +68,14 @@ class FilterScheduler(driver.Scheduler):
 
         # Couldn't fulfill the request_spec
         if len(selected_hosts) < num_instances:
+            # NOTE(Rui Chen): If multiple creates failed, set the updated time
+            # of selected HostState to None so that these HostStates are
+            # refreshed according to database in next schedule, and release
+            # the resource consumed by instance in the process of selecting
+            # host.
+            for host in selected_hosts:
+                host.obj.updated = None
+
             # Log the details but don't put those into the reason since
             # we don't want to give away too much information about our
             # actual environment.
