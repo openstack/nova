@@ -18,6 +18,7 @@ from lxml import etree
 import mock
 from oslo_concurrency import processutils
 from oslo_config import cfg
+import six
 
 from nova import exception
 from nova.network import linux_net
@@ -199,7 +200,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                                             'pci_slot': '0000:0a:00.1',
                                             'physical_network': 'phynet1'})
 
-    vif_macvtap = network_model.VIF(id='vif-xxx-yyy-zzz',
+    vif_hw_veb_macvtap = network_model.VIF(id='vif-xxx-yyy-zzz',
                                     address='ca:fe:de:ad:be:ef',
                                     network=network_8021,
                                     type=network_model.VIF_TYPE_HW_VEB,
@@ -304,8 +305,29 @@ class LibvirtVifTestCase(test.NoDBTestCase):
           address='ca:fe:de:ad:be:ef',
           network=network_bridge,
           type=network_model.VIF_TYPE_VHOSTUSER,
-          details = {network_model.VIF_DETAILS_VHOSTUSER_MODE: 'client'}
-          )
+          details = {network_model.VIF_DETAILS_VHOSTUSER_MODE: 'client'})
+
+    vif_macvtap_vlan = network_model.VIF(id='vif-xxx-yyy-zzz',
+          address='ca:fe:de:ad:be:ef',
+          network=network_8021,
+          type=network_model.VIF_TYPE_MACVTAP,
+          details={network_model.VIF_DETAILS_VLAN: '1',
+                   network_model.VIF_DETAILS_PHYS_INTERFACE: 'eth0',
+                   network_model.VIF_DETAILS_MACVTAP_SOURCE: 'eth0.1',
+                   network_model.VIF_DETAILS_MACVTAP_MODE: 'vepa'})
+
+    vif_macvtap_flat = network_model.VIF(id='vif-xxx-yyy-zzz',
+          address='ca:fe:de:ad:be:ef',
+          network=network_8021,
+          type=network_model.VIF_TYPE_MACVTAP,
+          details={network_model.VIF_DETAILS_PHYS_INTERFACE: 'eth0',
+                   network_model.VIF_DETAILS_MACVTAP_SOURCE: 'eth0',
+                   network_model.VIF_DETAILS_MACVTAP_MODE: 'bridge'})
+
+    vif_macvtap_exception = network_model.VIF(id='vif-xxx-yyy-zzz',
+          address='ca:fe:de:ad:be:ef',
+          network=network_8021,
+          type=network_model.VIF_TYPE_MACVTAP)
 
     instance = objects.Instance(id=1, uuid='instance-uuid')
 
@@ -672,13 +694,14 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         port_state = 'up' if vlan > 0 else 'down'
         calls = {
             'get_ifname':
-                [mock.call(self.vif_macvtap['profile']['pci_slot'],
+                [mock.call(self.vif_hw_veb_macvtap['profile']['pci_slot'],
                            pf_interface=True),
-                 mock.call(self.vif_macvtap['profile']['pci_slot'])],
+                 mock.call(self.vif_hw_veb_macvtap['profile']['pci_slot'])],
             'get_vf_num':
-                [mock.call(self.vif_macvtap['profile']['pci_slot'])],
+                [mock.call(self.vif_hw_veb_macvtap['profile']['pci_slot'])],
             'execute': [mock.call('ip', 'link', 'set', 'eth1',
-                                  'vf', 1, 'mac', self.vif_macvtap['address'],
+                                  'vf', 1, 'mac',
+                                  self.vif_hw_veb_macvtap['address'],
                                   'vlan', vlan,
                                   run_as_root=True,
                                   check_exit_code=exit_code),
@@ -687,7 +710,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                                   run_as_root=True,
                                   check_exit_code=exit_code)]
         }
-        op(None, self.vif_macvtap)
+        op(None, self.vif_hw_veb_macvtap)
         mock_get_ifname.assert_has_calls(calls['get_ifname'])
         mock_get_vf_num.assert_has_calls(calls['get_vf_num'])
         mock_execute.assert_has_calls(calls['execute'])
@@ -696,7 +719,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         d = vif.LibvirtGenericVIFDriver()
         self._test_hw_veb_op(
             d.plug_hw_veb,
-            self.vif_macvtap['details'][network_model.VIF_DETAILS_VLAN])
+            self.vif_hw_veb_macvtap['details'][network_model.VIF_DETAILS_VLAN])
 
     def test_unplug_hw_veb(self):
         d = vif.LibvirtGenericVIFDriver()
@@ -1056,16 +1079,61 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                        return_value='eth1')
     def test_hw_veb_driver_macvtap(self, mock_get_ifname):
         d = vif.LibvirtGenericVIFDriver()
-        xml = self._get_instance_xml(d, self.vif_macvtap)
+        xml = self._get_instance_xml(d, self.vif_hw_veb_macvtap)
         node = self._get_node(xml)
         self.assertEqual(node.get("type"), "direct")
         self._assertTypeEquals(node, "direct", "source",
                                "dev", "eth1")
         self._assertTypeEquals(node, "direct", "source",
                                "mode", "passthrough")
-        self._assertMacEquals(node, self.vif_macvtap)
+        self._assertMacEquals(node, self.vif_hw_veb_macvtap)
         vlan = node.find("vlan")
         self.assertIsNone(vlan)
+
+    def test_driver_macvtap_vlan(self):
+        d = vif.LibvirtGenericVIFDriver()
+        xml = self._get_instance_xml(d, self.vif_macvtap_vlan)
+        node = self._get_node(xml)
+        self.assertEqual(node.get("type"), "direct")
+        self._assertTypeEquals(node, "direct", "source",
+                               "dev", "eth0.1")
+        self._assertTypeEquals(node, "direct", "source",
+                               "mode", "vepa")
+        self._assertMacEquals(node, self.vif_macvtap_vlan)
+
+    def test_driver_macvtap_flat(self):
+        d = vif.LibvirtGenericVIFDriver()
+        xml = self._get_instance_xml(d, self.vif_macvtap_flat)
+        node = self._get_node(xml)
+        self.assertEqual(node.get("type"), "direct")
+        self._assertTypeEquals(node, "direct", "source",
+                               "dev", "eth0")
+        self._assertTypeEquals(node, "direct", "source",
+                               "mode", "bridge")
+        self._assertMacEquals(node, self.vif_macvtap_flat)
+
+    def test_driver_macvtap_exception(self):
+        d = vif.LibvirtGenericVIFDriver()
+        e = self.assertRaises(exception.VifDetailsMissingMacvtapParameters,
+                          self._get_instance_xml,
+                          d,
+                          self.vif_macvtap_exception)
+        self.assertIn('macvtap_source', six.text_type(e))
+        self.assertIn('macvtap_mode', six.text_type(e))
+        self.assertIn('physical_interface', six.text_type(e))
+
+    @mock.patch.object(linux_net.LinuxBridgeInterfaceDriver, 'ensure_vlan')
+    def test_macvtap_plug_vlan(self, ensure_vlan_mock):
+        d = vif.LibvirtGenericVIFDriver()
+        d.plug_macvtap(self.instance, self.vif_macvtap_vlan)
+        ensure_vlan_mock.assert_called_once_with('1', 'eth0',
+                                                 interface='eth0.1')
+
+    @mock.patch.object(linux_net.LinuxBridgeInterfaceDriver, 'ensure_vlan')
+    def test_macvtap_plug_flat(self, ensure_vlan_mock):
+        d = vif.LibvirtGenericVIFDriver()
+        d.plug_macvtap(self.instance, self.vif_macvtap_flat)
+        self.assertFalse(ensure_vlan_mock.called)
 
     def test_generic_iovisor_driver(self):
         d = vif.LibvirtGenericVIFDriver()

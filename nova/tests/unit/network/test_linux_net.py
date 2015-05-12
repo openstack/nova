@@ -1365,6 +1365,38 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         self.assertIn(expected_exists_args, mock_exists.mock_calls)
         self.assertEqual(expected_execute_args, mock_execute.mock_calls)
 
+    @mock.patch.object(linux_net, '_execute')
+    @mock.patch.object(linux_net, 'device_exists', return_value=False)
+    @mock.patch.object(linux_net, '_set_device_mtu')
+    def test_ensure_vlan(self, mock_set_device_mtu, mock_device_exists,
+                         mock_execute):
+        interface = linux_net.LinuxBridgeInterfaceDriver.ensure_vlan(
+                        1, 'eth0', 'MAC', 'MTU', "vlan_name")
+        self.assertEqual("vlan_name", interface)
+        mock_device_exists.assert_called_once_with('vlan_name')
+
+        expected_execute_args = [
+            mock.call('ip', 'link', 'add', 'link', 'eth0', 'name', 'vlan_name',
+                      'type', 'vlan', 'id', 1, check_exit_code=[0, 2, 254],
+                      run_as_root=True),
+            mock.call('ip', 'link', 'set', 'vlan_name', 'address', 'MAC',
+                       check_exit_code=[0, 2, 254], run_as_root=True),
+            mock.call('ip', 'link', 'set', 'vlan_name', 'up',
+                      check_exit_code=[0, 2, 254], run_as_root=True)]
+        self.assertEqual(expected_execute_args, mock_execute.mock_calls)
+        mock_set_device_mtu.assert_called_once_with('vlan_name', 'MTU')
+
+    @mock.patch.object(linux_net, '_execute')
+    @mock.patch.object(linux_net, 'device_exists', return_value=True)
+    @mock.patch.object(linux_net, '_set_device_mtu')
+    def test_ensure_vlan_device_exists(self, mock_set_device_mtu,
+                                       mock_device_exists, mock_execute):
+        interface = linux_net.LinuxBridgeInterfaceDriver.ensure_vlan(1, 'eth0')
+        self.assertEqual("vlan1", interface)
+        mock_device_exists.assert_called_once_with('vlan1')
+        self.assertFalse(mock_execute.called)
+        mock_set_device_mtu.assert_called_once_with('vlan1', None)
+
     @mock.patch('os.path.exists', return_value=True)
     @mock.patch('nova.utils.execute',
                 side_effect=processutils.ProcessExecutionError())

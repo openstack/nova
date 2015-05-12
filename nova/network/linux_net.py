@@ -1549,9 +1549,11 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
 
     @staticmethod
     @utils.synchronized('lock_vlan', external=True)
-    def ensure_vlan(vlan_num, bridge_interface, mac_address=None, mtu=None):
+    def ensure_vlan(vlan_num, bridge_interface, mac_address=None, mtu=None,
+                    interface=None):
         """Create a vlan unless it already exists."""
-        interface = 'vlan%s' % vlan_num
+        if interface is None:
+            interface = 'vlan%s' % vlan_num
         if not device_exists(interface):
             LOG.debug('Starting VLAN interface %s', interface)
             _execute('ip', 'link', 'add', 'link', bridge_interface,

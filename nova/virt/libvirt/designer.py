@@ -133,13 +133,13 @@ def set_vif_host_backend_hw_veb(conf, net_type, devname, vlan,
         conf.target_dev = tapname
 
 
-def set_vif_host_backend_direct_config(conf, devname):
+def set_vif_host_backend_direct_config(conf, devname, mode="passthrough"):
     """Populate a LibvirtConfigGuestInterface instance
     with direct Interface.
     """
 
     conf.net_type = "direct"
-    conf.source_mode = "passthrough"
+    conf.source_mode = mode
     conf.source_dev = devname
     conf.model = "virtio"
 

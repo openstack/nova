@@ -296,6 +296,37 @@ class LibvirtGenericVIFDriver(object):
 
         return conf
 
+    def get_config_macvtap(self, instance, vif, image_meta,
+                           inst_type, virt_type):
+        conf = self.get_base_config(instance, vif, image_meta,
+                                    inst_type, virt_type)
+
+        vif_details = vif['details']
+        macvtap_src = vif_details.get(network_model.VIF_DETAILS_MACVTAP_SOURCE)
+        macvtap_mode = vif_details.get(network_model.VIF_DETAILS_MACVTAP_MODE)
+        phys_interface = vif_details.get(
+                                    network_model.VIF_DETAILS_PHYS_INTERFACE)
+
+        missing_params = []
+        if macvtap_src is None:
+            missing_params.append(network_model.VIF_DETAILS_MACVTAP_SOURCE)
+        if macvtap_mode is None:
+            missing_params.append(network_model.VIF_DETAILS_MACVTAP_MODE)
+        if phys_interface is None:
+            missing_params.append(network_model.VIF_DETAILS_PHYS_INTERFACE)
+
+        if len(missing_params) > 0:
+            raise exception.VifDetailsMissingMacvtapParameters(
+                                                vif_id=vif['id'],
+                                                missing_params=missing_params)
+
+        designer.set_vif_host_backend_direct_config(
+            conf, macvtap_src, macvtap_mode)
+
+        designer.set_vif_bandwidth_config(conf, inst_type)
+
+        return conf
+
     def get_config_iovisor(self, instance, vif, image_meta,
                            inst_type, virt_type):
         conf = self.get_base_config(instance, vif, image_meta,
@@ -508,6 +539,16 @@ class LibvirtGenericVIFDriver(object):
                 vif['profile']['pci_slot'],
                 mac_addr=vif['address'],
                 vlan=vif['details'][network_model.VIF_DETAILS_VLAN])
+
+    def plug_macvtap(self, instance, vif):
+        vif_details = vif['details']
+        vlan = vif_details.get(network_model.VIF_DETAILS_VLAN)
+        if vlan:
+            vlan_name = vif_details.get(
+                                    network_model.VIF_DETAILS_MACVTAP_SOURCE)
+            phys_if = vif_details.get(network_model.VIF_DETAILS_PHYS_INTERFACE)
+            linux_net.LinuxBridgeInterfaceDriver.ensure_vlan(
+                vlan, phys_if, interface=vlan_name)
 
     def plug_midonet(self, instance, vif):
         """Plug into MidoNet's network port
@@ -722,6 +763,9 @@ class LibvirtGenericVIFDriver(object):
             # the same VF will not be affected by the existing MAC.
             linux_net.set_vf_interface_vlan(vif['profile']['pci_slot'],
                                             mac_addr=vif['address'])
+
+    def unplug_macvtap(self, instance, vif):
+        pass
 
     def unplug_midonet(self, instance, vif):
         """Unplug from MidoNet network port

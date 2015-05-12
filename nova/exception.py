@@ -746,6 +746,13 @@ class VifDetailsMissingVhostuserSockPath(Invalid):
                 " for vif %(vif_id)s")
 
 
+class VifDetailsMissingMacvtapParameters(Invalid):
+    msg_fmt = _("Parameters %(missing_params)s not present in"
+                " vif_details for vif %(vif_id)s. Check your Neutron"
+                " configuration to validate that the macvtap parameters are"
+                " correct.")
+
+
 class DatastoreNotFound(NotFound):
     msg_fmt = _("Could not find the datastore reference(s) which the VM uses.")
 
