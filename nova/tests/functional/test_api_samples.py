@@ -200,69 +200,6 @@ class ServersSampleMultiStatusJsonTest(ServersSampleBase):
         self._verify_response('servers-list-resp', subs, response, 200)
 
 
-class ServersMetadataJsonTest(ServersSampleBase):
-    sample_dir = 'servers'
-
-    def _create_and_set(self, subs):
-        uuid = self._post_server()
-        response = self._do_put('servers/%s/metadata' % uuid,
-                                'server-metadata-all-req',
-                                subs)
-        self._verify_response('server-metadata-all-resp', subs, response, 200)
-        return uuid
-
-    def generalize_subs(self, subs, vanilla_regexes):
-        subs['value'] = '(Foo|Bar) Value'
-        return subs
-
-    def test_metadata_put_all(self):
-        # Test setting all metadata for a server.
-        subs = {'value': 'Foo Value'}
-        self._create_and_set(subs)
-
-    def test_metadata_post_all(self):
-        # Test updating all metadata for a server.
-        subs = {'value': 'Foo Value'}
-        uuid = self._create_and_set(subs)
-        subs['value'] = 'Bar Value'
-        response = self._do_post('servers/%s/metadata' % uuid,
-                                 'server-metadata-all-req',
-                                 subs)
-        self._verify_response('server-metadata-all-resp', subs, response, 200)
-
-    def test_metadata_get_all(self):
-        # Test getting all metadata for a server.
-        subs = {'value': 'Foo Value'}
-        uuid = self._create_and_set(subs)
-        response = self._do_get('servers/%s/metadata' % uuid)
-        self._verify_response('server-metadata-all-resp', subs, response, 200)
-
-    def test_metadata_put(self):
-        # Test putting an individual metadata item for a server.
-        subs = {'value': 'Foo Value'}
-        uuid = self._create_and_set(subs)
-        subs['value'] = 'Bar Value'
-        response = self._do_put('servers/%s/metadata/foo' % uuid,
-                                'server-metadata-req',
-                                subs)
-        self._verify_response('server-metadata-resp', subs, response, 200)
-
-    def test_metadata_get(self):
-        # Test getting an individual metadata item for a server.
-        subs = {'value': 'Foo Value'}
-        uuid = self._create_and_set(subs)
-        response = self._do_get('servers/%s/metadata/foo' % uuid)
-        self._verify_response('server-metadata-resp', subs, response, 200)
-
-    def test_metadata_delete(self):
-        # Test deleting an individual metadata item for a server.
-        subs = {'value': 'Foo Value'}
-        uuid = self._create_and_set(subs)
-        response = self._do_delete('servers/%s/metadata/foo' % uuid)
-        self.assertEqual(response.status_code, 204)
-        self.assertEqual(response.content, '')
-
-
 class ExtensionsSampleJsonTest(ApiSampleTestBaseV2):
     all_extensions = True
 
