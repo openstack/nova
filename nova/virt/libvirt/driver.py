@@ -1449,10 +1449,14 @@ class LibvirtDriver(driver.ComputeDriver):
                 #              for LXC, _create_domain must not be called.
                 if CONF.libvirt.virt_type != 'lxc' and not live_snapshot:
                     if state == power_state.RUNNING:
-                        new_dom = self._create_domain(domain=virt_dom)
+                        guest = self._create_domain(domain=virt_dom)
                     elif state == power_state.PAUSED:
-                        new_dom = self._create_domain(
+                        guest = self._create_domain(
                             domain=virt_dom, pause=True)
+                    # TODO(sahid): Direct call from domain should
+                    # be avoid in the future
+                    new_dom = guest._domain
+
                     if new_dom is not None:
                         self._attach_pci_devices(new_dom,
                             pci_manager.get_instance_pci_devs(instance))
@@ -4445,12 +4449,15 @@ class LibvirtDriver(driver.ComputeDriver):
         finally:
             self._create_domain_cleanup_lxc(instance)
 
+    # TODO(sahid): Consider renaming this to _create_guest.
     def _create_domain(self, xml=None, domain=None,
                        power_on=True, pause=False):
         """Create a domain.
 
         Either domain or xml must be passed in. If both are passed, then
         the domain definition is overwritten from the xml.
+
+        :returns guest.Guest: Guest just created
         """
         if xml:
             guest = libvirt_guest.Guest.create(xml, self._host)
@@ -4463,8 +4470,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if not utils.is_neutron():
             guest.enable_hairpin()
 
-        # TODO(sahid): This method should return the Guest object
-        return guest._domain
+        return guest
 
     def _neutron_failed_callback(self, event_name, instance):
         LOG.error(_LE('Neutron Reported failure on event '
@@ -4528,8 +4534,11 @@ class LibvirtDriver(driver.ComputeDriver):
                                                              network_info)
                 with self._lxc_disk_handler(instance, image_meta,
                                             block_device_info, disk_info):
-                    domain = self._create_domain(
+                    guest = self._create_domain(
                         xml, pause=pause, power_on=power_on)
+                    # TODO(sahid): Direct call from domain should
+                    # be avoid in the future
+                    domain = guest._domain
 
                 self.firewall_driver.apply_instance_filter(instance,
                                                            network_info)

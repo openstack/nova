@@ -9986,9 +9986,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         mock_domain = mock.MagicMock()
 
-        domain = drvr._create_domain(domain=mock_domain)
+        guest = drvr._create_domain(domain=mock_domain)
 
-        self.assertEqual(mock_domain, domain)
+        self.assertEqual(mock_domain, guest._domain)
         mock_domain.createWithFlags.assert_has_calls([mock.call(0)])
 
     @mock.patch('nova.virt.disk.api.clean_lxc_namespace')
@@ -10763,7 +10763,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             mock.patch.object(drvr.firewall_driver, 'apply_instance_filter'),
         ) as (get_volume_encryptor, plug_vifs, setup_basic_filtering,
               prepare_instance_filter, create_domain, apply_instance_filter):
-            create_domain.return_value = mock_dom
+            create_domain.return_value = libvirt_guest.Guest(mock_dom)
 
             domain = drvr._create_domain_and_network(
                     self.context, fake_xml, instance, network_info, None,
