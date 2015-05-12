@@ -675,78 +675,21 @@ class NovaPersistentObject(object):
         }
 
 
-class ObjectListBase(object):
-    """Mixin class for lists of objects.
+class ObjectListBase(ovoo_base.ObjectListBase):
+    # NOTE(danms): These are for transition to using the oslo
+    # base object and can be removed when we move to it.
+    @classmethod
+    def _obj_primitive_key(cls, field):
+        return 'nova_object.%s' % field
 
-    This mixin class can be added as a base class for an object that
-    is implementing a list of objects. It adds a single field of 'objects',
-    which is the list store, and behaves like a list itself. It supports
-    serialization of the list of objects automatically.
-    """
-    fields = {
-        'objects': obj_fields.ListOfObjectsField('NovaObject'),
-        }
-
-    # This is a dictionary of my_version:child_version mappings so that
-    # we can support backleveling our contents based on the version
-    # requested of the list object.
-    child_versions = {}
-
-    def __init__(self, *args, **kwargs):
-        super(ObjectListBase, self).__init__(*args, **kwargs)
-        if 'objects' not in kwargs:
-            self.objects = []
-            self._changed_fields.discard('objects')
-
-    def __iter__(self):
-        """List iterator interface."""
-        return iter(self.objects)
-
-    def __len__(self):
-        """List length."""
-        return len(self.objects)
-
-    def __getitem__(self, index):
-        """List index access."""
-        if isinstance(index, slice):
-            new_obj = self.__class__()
-            new_obj.objects = self.objects[index]
-            # NOTE(danms): We must be mixed in with a NovaObject!
-            new_obj.obj_reset_changes()
-            new_obj._context = self._context
-            return new_obj
-        return self.objects[index]
-
-    def __contains__(self, value):
-        """List membership test."""
-        return value in self.objects
-
-    def count(self, value):
-        """List count of value occurrences."""
-        return self.objects.count(value)
-
-    def index(self, value):
-        """List index of value."""
-        return self.objects.index(value)
-
-    def sort(self, cmp=None, key=None, reverse=False):
-        self.objects.sort(cmp=cmp, key=key, reverse=reverse)
-
-    def obj_make_compatible(self, primitive, target_version):
-        primitives = primitive['objects']
-        child_target_version = self.child_versions.get(target_version, '1.0')
-        for index, item in enumerate(self.objects):
-            self.objects[index].obj_make_compatible(
-                primitives[index]['nova_object.data'],
-                child_target_version)
-            primitives[index]['nova_object.version'] = child_target_version
-
-    def obj_what_changed(self):
-        changes = set(self._changed_fields)
-        for child in self.objects:
-            if child.obj_what_changed():
-                changes.add('objects')
-        return changes
+    @classmethod
+    def _obj_primitive_field(cls, primitive, field,
+                             default=obj_fields.UnspecifiedDefault):
+        key = cls._obj_primitive_key(field)
+        if default == obj_fields.UnspecifiedDefault:
+            return primitive[key]
+        else:
+            return primitive.get(key, default)
 
 
 class NovaObjectSerializer(messaging.NoOpSerializer):
