@@ -19,6 +19,7 @@ import datetime
 import mock
 from oslo_config import cfg
 from oslo_serialization import jsonutils
+from six.moves import urllib
 import webob
 from webob import exc
 
@@ -804,7 +805,7 @@ class AssistedSnapshotDeleteTestCaseV21(test.NoDBTestCase):
         }
         req = fakes.HTTPRequest.blank(
                 '/v2/fake/os-assisted-volume-snapshots?%s' %
-                '&'.join(['%s=%s' % (k, v) for k, v in params.iteritems()]))
+                urllib.parse.urlencode(params))
         req.method = 'DELETE'
         result = self.controller.delete(req, '5')
         self._check_status(204, result, self.controller.delete)
