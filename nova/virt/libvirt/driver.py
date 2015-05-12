@@ -647,10 +647,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if guest is not None:
             try:
                 old_domid = guest.id
-                # TODO(sahid): A method shutdown should be dressed in Guest
-                # to handle when we needto destroy a domain in libvirt.
-                virt_dom = guest._domain
-                virt_dom.destroy()
+                guest.poweroff()
 
             except libvirt.libvirtError as e:
                 is_okay = False
@@ -664,7 +661,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     # domain is not running
 
                     # TODO(sahid): At this point we should be a Guest object
-                    state = self._get_power_state(virt_dom)
+                    state = self._get_power_state(guest._domain)
                     if state == power_state.SHUTDOWN:
                         is_okay = True
                 elif errcode == libvirt.VIR_ERR_INTERNAL_ERROR:
@@ -4523,6 +4520,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         pause = bool(events)
         domain = None
+        guest = None
         try:
             with self.virtapi.wait_for_instance_event(
                     instance, events, deadline=timeout,
@@ -4546,8 +4544,8 @@ class LibvirtDriver(driver.ComputeDriver):
             # Neutron reported failure and we didn't swallow it, so
             # bail here
             with excutils.save_and_reraise_exception():
-                if domain:
-                    domain.destroy()
+                if guest:
+                    guest.poweroff()
                 self.cleanup(context, instance, network_info=network_info,
                              block_device_info=block_device_info)
         except eventlet.timeout.Timeout:
@@ -4555,8 +4553,8 @@ class LibvirtDriver(driver.ComputeDriver):
             LOG.warn(_LW('Timeout waiting for vif plugging callback for '
                          'instance %(uuid)s'), {'uuid': instance.uuid})
             if CONF.vif_plugging_is_fatal:
-                if domain:
-                    domain.destroy()
+                if guest:
+                    guest.poweroff()
                 self.cleanup(context, instance, network_info=network_info,
                              block_device_info=block_device_info)
                 raise exception.VirtualInterfaceCreateException()

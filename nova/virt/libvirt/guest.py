@@ -107,6 +107,10 @@ class Guest(object):
                               'with XML: %s') %
                           self._encoded_xml, errors='ignore')
 
+    def poweroff(self):
+        """Stops a running guest."""
+        self._domain.destroy()
+
     def enable_hairpin(self):
         """Enables hairpin mode for this guest."""
         interfaces = self.get_interfaces()

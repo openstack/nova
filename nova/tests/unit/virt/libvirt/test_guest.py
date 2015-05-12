@@ -137,3 +137,11 @@ class GuestTestCase(test.NoDBTestCase):
         dom.XMLDesc.return_value = "<bad xml>"
         guest = libvirt_guest.Guest(dom)
         self.assertEqual([], guest.get_interfaces())
+
+    def test_poweroff(self):
+        domain = mock.MagicMock()
+
+        guest = libvirt_guest.Guest(domain)
+        guest.poweroff()
+
+        domain.destroy.assert_called_once_with()
