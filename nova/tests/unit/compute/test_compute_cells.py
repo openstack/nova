@@ -30,6 +30,7 @@ from nova.compute import flavors
 from nova.compute import vm_states
 from nova import context
 from nova import db
+from nova import exception
 from nova import objects
 from nova import quota
 from nova import test
@@ -148,6 +149,45 @@ class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
         self.stubs.Set(self.compute_api.network_api, 'deallocate_for_instance',
                        lambda *a, **kw: None)
         self.compute_api.delete(self.context, inst)
+
+    def test_delete_instance_no_cell_constraint_failure_does_not_loop(self):
+        with mock.patch.object(self.compute_api.cells_rpcapi,
+                'instance_delete_everywhere'):
+            inst = self._create_fake_instance_obj()
+            inst.cell_name = None
+
+            inst.destroy = mock.MagicMock()
+            inst.destroy.side_effect = exception.ObjectActionError(action='',
+                    reason='')
+            inst.refresh = mock.MagicMock()
+
+            self.assertRaises(exception.ObjectActionError,
+                    self.compute_api.delete, self.context, inst)
+            inst.destroy.assert_called_once_with()
+
+    def test_delete_instance_no_cell_constraint_failure_corrects_itself(self):
+
+        def add_cell_name(context, instance, delete_type):
+            instance.cell_name = 'fake_cell_name'
+
+        @mock.patch.object(compute_api.API, 'delete')
+        @mock.patch.object(self.compute_api.cells_rpcapi,
+                'instance_delete_everywhere', side_effect=add_cell_name)
+        def _test(mock_delete_everywhere, mock_compute_delete):
+            inst = self._create_fake_instance_obj()
+            inst.cell_name = None
+
+            inst.destroy = mock.MagicMock()
+            inst.destroy.side_effect = exception.ObjectActionError(action='',
+                    reason='')
+            inst.refresh = mock.MagicMock()
+
+            self.compute_api.delete(self.context, inst)
+            inst.destroy.assert_called_once_with()
+
+            mock_compute_delete.assert_called_once_with(self.context, inst)
+
+        _test()
 
     def test_soft_delete_instance_no_cell(self):
         cells_rpcapi = self.compute_api.cells_rpcapi
