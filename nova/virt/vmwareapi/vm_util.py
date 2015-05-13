@@ -30,6 +30,7 @@ from oslo_vmware import exceptions as vexc
 from oslo_vmware.objects import datastore as ds_obj
 from oslo_vmware import pbm
 from oslo_vmware import vim_util as vutil
+import six
 
 from nova import exception
 from nova.i18n import _, _LE, _LI, _LW
@@ -502,7 +503,7 @@ def get_vm_extra_config_spec(client_factory, extra_opts):
     config_spec = client_factory.create('ns0:VirtualMachineConfigSpec')
     # add the key value pairs
     extra_config = []
-    for key, value in extra_opts.iteritems():
+    for key, value in six.iteritems(extra_opts):
         opt = client_factory.create('ns0:OptionValue')
         opt.key = key
         opt.value = value

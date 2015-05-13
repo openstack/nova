@@ -621,7 +621,7 @@ class VMOps(object):
             vbd_refs.append(vbd_ref)
 
         # Attach original ephemeral disks
-        for userdevice, vdi_ref in orig_vdi_refs.iteritems():
+        for userdevice, vdi_ref in six.iteritems(orig_vdi_refs):
             if userdevice >= DEVICE_EPHEMERAL:
                 vbd_ref = vm_utils.create_vbd(self._session, vm_ref, vdi_ref,
                                               userdevice, bootable=False)
@@ -747,7 +747,7 @@ class VMOps(object):
             ephemeral_vdis = vdis.get('ephemerals')
             if ephemeral_vdis:
                 # attach existing (migrated) ephemeral disks
-                for userdevice, ephemeral_vdi in ephemeral_vdis.iteritems():
+                for userdevice, ephemeral_vdi in six.iteritems(ephemeral_vdis):
                     vm_utils.create_vbd(self._session, vm_ref,
                                         ephemeral_vdi['ref'],
                                         userdevice, bootable=False)
@@ -1745,7 +1745,7 @@ class VMOps(object):
             if dom is None or dom not in counters:
                 continue
             vifs_bw = bw.setdefault(name, {})
-            for vif_num, vif_data in counters[dom].iteritems():
+            for vif_num, vif_data in six.iteritems(counters[dom]):
                 mac = vif_map[vif_num]
                 vif_data['mac_address'] = mac
                 vifs_bw[mac] = vif_data

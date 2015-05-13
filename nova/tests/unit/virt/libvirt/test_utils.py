@@ -20,6 +20,7 @@ import tempfile
 import mock
 from oslo_concurrency import processutils
 from oslo_config import cfg
+import six
 
 from nova.compute import arch
 from nova import exception
@@ -369,7 +370,7 @@ ID        TAG                 VM SIZE                DATE       VM CLOCK
         # NOTE(aloga): Xen is tested in test_pick_disk_driver_name_xen
 
         version = 1005001
-        for (virt_type, checks) in type_map.iteritems():
+        for (virt_type, checks) in six.iteritems(type_map):
             self.flags(virt_type=virt_type, group='libvirt')
             for (is_block_dev, expected_result) in checks:
                 result = libvirt_utils.pick_disk_driver_name(version,

@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import six
 import webob.exc
 
 from nova.api.openstack import common
@@ -123,7 +124,7 @@ class ImagesController(wsgi.Controller):
         filters = self._get_filters(req)
         params = req.GET.copy()
         page_params = common.get_pagination_params(req)
-        for key, val in page_params.iteritems():
+        for key, val in six.iteritems(page_params):
             params[key] = val
 
         try:
@@ -144,7 +145,7 @@ class ImagesController(wsgi.Controller):
         filters = self._get_filters(req)
         params = req.GET.copy()
         page_params = common.get_pagination_params(req)
-        for key, val in page_params.iteritems():
+        for key, val in six.iteritems(page_params):
             params[key] = val
         try:
             images = self._image_api.get_all(context, filters=filters,

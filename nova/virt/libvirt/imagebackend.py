@@ -164,7 +164,7 @@ class Image(object):
         tune_items = ['disk_read_bytes_sec', 'disk_read_iops_sec',
             'disk_write_bytes_sec', 'disk_write_iops_sec',
             'disk_total_bytes_sec', 'disk_total_iops_sec']
-        for key, value in extra_specs.iteritems():
+        for key, value in six.iteritems(extra_specs):
             scope = key.split(':')
             if len(scope) > 1 and scope[0] == 'quota':
                 if scope[1] in tune_items:
@@ -334,7 +334,7 @@ class Image(object):
                 with open(self.disk_info_path) as disk_info_file:
                     line = disk_info_file.read().rstrip()
                     dct = _dict_from_line(line)
-                    for path, driver_format in dct.iteritems():
+                    for path, driver_format in six.iteritems(dct):
                         if path == self.path:
                             return driver_format
             driver_format = self._get_driver_format()

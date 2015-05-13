@@ -19,6 +19,7 @@ import operator
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import excutils
+import six
 
 from nova import block_device
 from nova.i18n import _LE
@@ -134,7 +135,7 @@ class DriverBlockDevice(dict):
         raise NotImplementedError()
 
     def save(self):
-        for attr_name, key_name in self._update_on_save.iteritems():
+        for attr_name, key_name in six.iteritems(self._update_on_save):
             lookup_name = key_name or attr_name
             if self[lookup_name] != getattr(self._bdm_obj, attr_name):
                 setattr(self._bdm_obj, attr_name, self[lookup_name])
@@ -204,7 +205,7 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
             raise _InvalidType
 
         self.update(
-            {k: v for k, v in self._bdm_obj.iteritems()
+            {k: v for k, v in six.iteritems(self._bdm_obj)
              if k in self._new_fields | set(['delete_on_termination'])}
         )
         self['mount_device'] = self._bdm_obj.device_name

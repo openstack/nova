@@ -25,6 +25,7 @@ from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import importutils
 from oslo_utils import timeutils
+import six
 
 from nova.api.ec2 import ec2utils
 from nova.api.metadata import password
@@ -447,7 +448,7 @@ class InstanceMetadata(object):
                 path = 'openstack/%s/%s' % (version, VD_JSON_NAME)
                 yield (path, self.lookup(path))
 
-        for (cid, content) in self.content.iteritems():
+        for (cid, content) in six.iteritems(self.content):
             yield ('%s/%s/%s' % ("openstack", CONTENT_DIR, cid), content)
 
 

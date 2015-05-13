@@ -4555,7 +4555,7 @@ class LibvirtDriver(driver.ComputeDriver):
         else:
             info = libvirt_utils.get_fs_info(CONF.instances_path)
 
-        for (k, v) in info.iteritems():
+        for (k, v) in six.iteritems(info):
             info[k] = v / units.Gi
 
         return info

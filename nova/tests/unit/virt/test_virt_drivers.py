@@ -189,7 +189,7 @@ class VirtDriverLoaderTestCase(_FakeDriverBackendTestCase, test.TestCase):
         }
 
     def test_load_new_drivers(self):
-        for cls, driver in self.new_drivers.iteritems():
+        for cls, driver in six.iteritems(self.new_drivers):
             self.flags(compute_driver=cls)
             # NOTE(sdague) the try block is to make it easier to debug a
             # failure by knowing which driver broke

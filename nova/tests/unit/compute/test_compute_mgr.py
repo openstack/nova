@@ -25,6 +25,7 @@ import oslo_messaging as messaging
 from oslo_utils import importutils
 from oslo_utils import timeutils
 from oslo_utils import uuidutils
+import six
 
 import nova
 from nova.compute import build_results
@@ -80,7 +81,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         }
         event = mock.Mock()
         event.get_instance_uuid.return_value = mock.sentinel.uuid
-        for transition, pwr_state in event_map.iteritems():
+        for transition, pwr_state in six.iteritems(event_map):
             event.get_transition.return_value = transition
             self.compute.handle_lifecycle_event(event)
             mock_get.assert_called_with(mock.ANY, mock.sentinel.uuid,

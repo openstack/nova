@@ -54,7 +54,7 @@ class FlavorExtraSpecsController(object):
         except exception.InvalidInput as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())
 
-        for key, value in specs.iteritems():
+        for key, value in six.iteritems(specs):
             try:
                 utils.check_string_length(key, 'extra_specs key',
                                           min_length=1, max_length=255)

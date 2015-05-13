@@ -13,6 +13,7 @@
 import inspect
 
 import mock
+import six
 import webob
 
 from nova.api.openstack import api_version_request as api_version
@@ -1006,7 +1007,7 @@ class ResourceTest(test.NoDBTestCase):
         app = fakes.TestRouter(Controller())
         response = req.get_response(app)
 
-        for hdr, val in response.headers.iteritems():
+        for hdr, val in six.iteritems(response.headers):
             # All headers must be utf8
             self.assertIsInstance(hdr, str)
             self.assertIsInstance(val, str)
@@ -1131,7 +1132,7 @@ class ResponseObjectTest(test.NoDBTestCase):
             response = robj.serialize(request, content_type)
 
             self.assertEqual(response.headers['Content-Type'], content_type)
-            for hdr, val in response.headers.iteritems():
+            for hdr, val in six.iteritems(response.headers):
                 # All headers must be utf8
                 self.assertIsInstance(hdr, str)
                 self.assertIsInstance(val, str)

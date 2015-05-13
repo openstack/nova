@@ -57,7 +57,7 @@ class ResourceMonitorMeta(type):
         prefix = '_get_'
         prefix_len = len(prefix)
         cls.metric_map = {}
-        for name, value in cls.__dict__.iteritems():
+        for name, value in six.iteritems(cls.__dict__):
             if (len(name) > prefix_len
                and name[:prefix_len] == prefix
                and isinstance(value, types.FunctionType)):
@@ -123,7 +123,7 @@ class ResourceMonitorBase(object):
         """
         data = []
         self._update_data()
-        for name, func in self.metric_map.iteritems():
+        for name, func in six.iteritems(self.metric_map):
             ret = func(self, **kwargs)
             data.append(self._populate(name, ret[0], ret[1]))
         return data

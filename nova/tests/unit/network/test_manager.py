@@ -1939,14 +1939,14 @@ class VlanNetworkTestCase(test.TestCase):
 
 class _TestDomainObject(object):
     def __init__(self, **kwargs):
-        for k, v in kwargs.iteritems():
+        for k, v in six.iteritems(kwargs):
             self.__setattr__(k, v)
 
 
 class FakeNetwork(object):
     def __init__(self, **kwargs):
         self.vlan = None
-        for k, v in kwargs.iteritems():
+        for k, v in six.iteritems(kwargs):
             self.__setattr__(k, v)
 
     def __getitem__(self, item):

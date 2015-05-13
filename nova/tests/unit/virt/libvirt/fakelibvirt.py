@@ -17,6 +17,7 @@ import uuid
 
 import fixtures
 from lxml import etree
+import six
 
 from nova.compute import arch
 from nova.virt.libvirt import config as vconfig
@@ -804,7 +805,7 @@ class Connection(object):
 
         dom._id = -1
 
-        for (k, v) in self._running_vms.iteritems():
+        for (k, v) in six.iteritems(self._running_vms):
             if v == dom:
                 del self._running_vms[k]
                 self._emit_lifecycle(dom, VIR_DOMAIN_EVENT_STOPPED, 0)

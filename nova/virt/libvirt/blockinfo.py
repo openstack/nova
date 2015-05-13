@@ -73,6 +73,7 @@ import itertools
 import operator
 
 from oslo_config import cfg
+import six
 
 from nova import block_device
 from nova.compute import arch
@@ -637,7 +638,7 @@ def get_disk_info(virt_type, instance, image_meta,
 
 
 def get_boot_order(disk_info):
-    boot_mapping = (info for name, info in disk_info['mapping'].iteritems()
+    boot_mapping = (info for name, info in six.iteritems(disk_info['mapping'])
                     if name != 'root' and info.get('boot_index') is not None)
     boot_devs_dup = (BOOT_DEV_FOR_TYPE[dev['type']] for dev in
                      sorted(boot_mapping,

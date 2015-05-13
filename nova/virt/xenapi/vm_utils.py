@@ -597,7 +597,7 @@ def _set_vdi_info(session, vdi_ref, vdi_type, name_label, description,
     session.call_xenapi('VDI.set_name_description', vdi_ref, description)
 
     other_config = _get_vdi_other_config(vdi_type, instance=instance)
-    for key, value in other_config.iteritems():
+    for key, value in six.iteritems(other_config):
         if key not in existing_other_config:
             session.call_xenapi(
                     "VDI.add_to_other_config", vdi_ref, key, value)
@@ -1332,7 +1332,7 @@ def create_image(context, session, instance, name_label, image_id,
              {'image_id': image_id, 'cache': cache, 'downloaded': downloaded,
               'duration': duration})
 
-    for vdi_type, vdi in vdis.iteritems():
+    for vdi_type, vdi in six.iteritems(vdis):
         vdi_ref = session.call_xenapi('VDI.get_by_uuid', vdi['uuid'])
         _set_vdi_info(session, vdi_ref, vdi_type, name_label, vdi_type,
                       instance)
@@ -1352,7 +1352,7 @@ def _fetch_image(context, session, instance, name_label, image_id, image_type):
         vdis = _fetch_disk_image(context, session, instance, name_label,
                                  image_id, image_type)
 
-    for vdi_type, vdi in vdis.iteritems():
+    for vdi_type, vdi in six.iteritems(vdis):
         vdi_uuid = vdi['uuid']
         LOG.debug("Fetched VDIs of type '%(vdi_type)s' with UUID"
                   " '%(vdi_uuid)s'",

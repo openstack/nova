@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import six
+
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import quota
@@ -55,7 +57,7 @@ class UsedLimitsController(wsgi.Controller):
             quota_map['totalServerGroupsUsed'] = 'server_groups'
 
         used_limits = {}
-        for display_name, key in quota_map.iteritems():
+        for display_name, key in six.iteritems(quota_map):
             if key in quotas:
                 reserved = (quotas[key]['reserved']
                             if self._reserved(req) else 0)

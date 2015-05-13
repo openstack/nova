@@ -17,6 +17,7 @@
 
 import datetime
 
+import six
 from webob import exc
 
 from nova.api.openstack import extensions
@@ -171,7 +172,7 @@ class AggregateController(object):
             'remove_host': self._remove_host,
             'set_metadata': self._set_metadata,
         }
-        for action, data in body.iteritems():
+        for action, data in six.iteritems(body):
             if action not in _actions.keys():
                 msg = _('Aggregates does not have %s action') % action
                 raise exc.HTTPBadRequest(explanation=msg)

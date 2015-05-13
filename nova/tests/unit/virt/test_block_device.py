@@ -16,6 +16,7 @@ import contextlib
 
 import mock
 from oslo_serialization import jsonutils
+import six
 
 from nova import block_device
 from nova import context
@@ -213,7 +214,7 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         self.assertThat(test_bdm, matchers.DictMatches(
             getattr(self, "%s_driver_bdm" % name)))
 
-        for k, v in db_bdm.iteritems():
+        for k, v in six.iteritems(db_bdm):
             field_val = getattr(test_bdm._bdm_obj, k)
             if isinstance(field_val, bool):
                 v = bool(v)
@@ -229,7 +230,7 @@ class TestDriverBlockDevice(test.NoDBTestCase):
                              getattr(test_bdm._bdm_obj, passthru))
 
         # Make sure that all others raise _invalidType
-        for other_name, cls in self.driver_classes.iteritems():
+        for other_name, cls in six.iteritems(self.driver_classes):
             if other_name == name:
                 continue
             self.assertRaises(driver_block_device._InvalidType,
@@ -238,10 +239,10 @@ class TestDriverBlockDevice(test.NoDBTestCase):
 
         # Test the save method
         with mock.patch.object(test_bdm._bdm_obj, 'save') as save_mock:
-            for fld, alias in test_bdm._update_on_save.iteritems():
+            for fld, alias in six.iteritems(test_bdm._update_on_save):
                 test_bdm[alias or fld] = 'fake_changed_value'
             test_bdm.save()
-            for fld, alias in test_bdm._update_on_save.iteritems():
+            for fld, alias in six.iteritems(test_bdm._update_on_save):
                 self.assertEqual(test_bdm[alias or fld],
                                  getattr(test_bdm._bdm_obj, fld))
 

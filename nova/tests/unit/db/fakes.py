@@ -19,6 +19,8 @@
 import copy
 import datetime
 
+import six
+
 from nova import db
 from nova import exception
 
@@ -450,7 +452,7 @@ def stub_out_db_instance_api(stubs, injected=True):
         return INSTANCE_TYPES[name]
 
     def fake_flavor_get(context, id):
-        for name, inst_type in INSTANCE_TYPES.iteritems():
+        for name, inst_type in six.iteritems(INSTANCE_TYPES):
             if str(inst_type['id']) == str(id):
                 return inst_type
         return None

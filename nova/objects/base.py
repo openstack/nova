@@ -58,7 +58,7 @@ def make_class_properties(cls):
         for name, field in supercls.fields.items():
             if name not in cls.fields:
                 cls.fields[name] = field
-    for name, field in cls.fields.iteritems():
+    for name, field in six.iteritems(cls.fields):
         if not isinstance(field, obj_fields.Field):
             raise exception.ObjectFieldInvalid(
                 field=name, objname=cls.obj_name())
@@ -187,7 +187,7 @@ def remotable(fn):
         if NovaObject.indirection_api:
             updates, result = NovaObject.indirection_api.object_action(
                 self._context, self, fn.__name__, args, kwargs)
-            for key, value in updates.iteritems():
+            for key, value in six.iteritems(updates):
                 if key in self.fields:
                     field = self.fields[key]
                     # NOTE(ndipanov): Since NovaObjectSerializer will have
@@ -820,7 +820,7 @@ def serialize_args(fn):
     def wrapper(obj, *args, **kwargs):
         args = [timeutils.strtime(at=arg) if isinstance(arg, datetime.datetime)
                 else arg for arg in args]
-        for k, v in kwargs.iteritems():
+        for k, v in six.iteritems(kwargs):
             if k == 'exc_val' and v:
                 kwargs[k] = str(v)
             elif k == 'exc_tb' and v and not isinstance(v, six.string_types):

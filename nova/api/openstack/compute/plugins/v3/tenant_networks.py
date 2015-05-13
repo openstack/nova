@@ -80,7 +80,7 @@ class TenantNetworkController(wsgi.Controller):
         networks = {}
         for n in self.network_api.get_all(ctx):
             networks[n['id']] = n['label']
-        return [{'id': k, 'label': v} for k, v in networks.iteritems()]
+        return [{'id': k, 'label': v} for k, v in six.iteritems(networks)]
 
     @extensions.expected_errors(())
     def index(self, req):

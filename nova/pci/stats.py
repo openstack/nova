@@ -17,6 +17,7 @@
 import copy
 
 from oslo_log import log as logging
+import six
 
 from nova import exception
 from nova.i18n import _LE
@@ -241,7 +242,7 @@ class PciDeviceStats(object):
         # 'devices' shouldn't be part of stats
         pools = []
         for pool in self.pools:
-            tmp = {k: v for k, v in pool.iteritems() if k != 'devices'}
+            tmp = {k: v for k, v in six.iteritems(pool) if k != 'devices'}
             pools.append(tmp)
         return iter(pools)
 

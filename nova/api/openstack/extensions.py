@@ -140,7 +140,7 @@ class ExtensionManager(object):
     """
     def sorted_extensions(self):
         if self.sorted_ext_list is None:
-            self.sorted_ext_list = sorted(self.extensions.iteritems())
+            self.sorted_ext_list = sorted(six.iteritems(self.extensions))
 
         for _alias, ext in self.sorted_ext_list:
             yield ext

@@ -575,7 +575,7 @@ class CloudController(object):
     def _cidr_args_split(self, kwargs):
         cidr_args_split = []
         cidrs = kwargs['ip_ranges']
-        for key, cidr in cidrs.iteritems():
+        for key, cidr in six.iteritems(cidrs):
             mykwargs = kwargs.copy()
             del mykwargs['ip_ranges']
             mykwargs['cidr_ip'] = cidr['cidr_ip']
@@ -585,7 +585,7 @@ class CloudController(object):
     def _groups_args_split(self, kwargs):
         groups_args_split = []
         groups = kwargs['groups']
-        for key, group in groups.iteritems():
+        for key, group in six.iteritems(groups):
             mykwargs = kwargs.copy()
             del mykwargs['groups']
             if 'group_name' in group:
@@ -1232,7 +1232,7 @@ class CloudController(object):
             i['keyName'] = instance.key_name
             i['tagSet'] = []
 
-            for k, v in utils.instance_meta(instance).iteritems():
+            for k, v in six.iteritems(utils.instance_meta(instance)):
                 i['tagSet'].append({'key': k, 'value': v})
 
             client_token = self._get_client_token(context, instance_uuid)

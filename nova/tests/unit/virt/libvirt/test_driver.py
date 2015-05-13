@@ -4858,7 +4858,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                  _get_prefix(prefix, 'ubda'))]
             }
 
-        for (virt_type, checks) in type_disk_map.iteritems():
+        for (virt_type, checks) in six.iteritems(type_disk_map):
             self.flags(virt_type=virt_type, group='libvirt')
             if prefix:
                 self.flags(disk_prefix=prefix, group='libvirt')
@@ -5174,7 +5174,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         # implementation doesn't fiddle around with the CONF.
         testuri = 'something completely different'
         self.flags(connection_uri=testuri, group='libvirt')
-        for (virt_type, (expected_uri, checks)) in type_uri_map.iteritems():
+        for (virt_type, (expected_uri, checks)) in six.iteritems(type_uri_map):
             self.flags(virt_type=virt_type, group='libvirt')
             drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
             self.assertEqual(drvr._uri(), testuri)
@@ -13691,7 +13691,7 @@ class _BaseSnapshotTests(test.NoDBTestCase):
 
         if expected_properties:
             for expected_key, expected_value in \
-                    expected_properties.iteritems():
+                    six.iteritems(expected_properties):
                 self.assertEqual(expected_value, props[expected_key])
 
     def _create_image(self, extra_properties=None):

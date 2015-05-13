@@ -16,6 +16,8 @@
 from eventlet import greenthread
 import mock
 
+import six
+
 from nova import exception
 from nova import test
 from nova.tests.unit.virt.xenapi import stubs
@@ -153,7 +155,7 @@ class ParseVolumeInfoTestCase(stubs.XenAPITestBaseNoDB):
             'xvdq': -1,
         }
 
-        for (input, expected) in cases.iteritems():
+        for (input, expected) in six.iteritems(cases):
             actual = volume_utils._mountpoint_to_number(input)
             self.assertEqual(actual, expected,
                     '%s yielded %s, not %s' % (input, actual, expected))

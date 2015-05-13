@@ -15,6 +15,8 @@
 
 import mock
 
+import six
+
 from nova import exception
 from nova import objects
 from nova.pci import stats
@@ -248,7 +250,7 @@ class PciDeviceStatsWithTagsTestCase(test.NoDBTestCase):
         self.assertEqual(product_id, pool['product_id'])
         self.assertEqual(count, pool['count'])
         if tags:
-            for k, v in tags.iteritems():
+            for k, v in six.iteritems(tags):
                 self.assertEqual(v, pool[k])
 
     def _assertPools(self):

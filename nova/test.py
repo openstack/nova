@@ -269,7 +269,7 @@ class TestCase(testtools.TestCase):
     def flags(self, **kw):
         """Override flag variables for a test."""
         group = kw.pop('group', None)
-        for k, v in kw.iteritems():
+        for k, v in six.iteritems(kw):
             CONF.set_override(k, v, group)
 
     def start_service(self, name, host=None, **kwargs):

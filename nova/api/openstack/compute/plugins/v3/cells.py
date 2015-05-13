@@ -45,7 +45,7 @@ def _filter_keys(item, keys):
     """Filters all model attributes except for keys
     item is a dict
     """
-    return {k: v for k, v in item.iteritems() if k in keys}
+    return {k: v for k, v in six.iteritems(item) if k in keys}
 
 
 def _fixup_cell_info(cell_info, keys):

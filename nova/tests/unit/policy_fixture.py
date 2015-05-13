@@ -17,6 +17,7 @@ import os
 import fixtures
 from oslo_config import cfg
 from oslo_serialization import jsonutils
+import six
 
 from nova.openstack.common import policy as common_policy
 from nova import paths
@@ -103,7 +104,7 @@ class RoleBasedPolicyFixture(RealPolicyFixture):
         policy = jsonutils.load(open(CONF.policy_file))
 
         # Convert all actions to require specified role
-        for action, rule in policy.iteritems():
+        for action, rule in six.iteritems(policy):
             policy[action] = 'role:%s' % self.role
 
         self.policy_dir = self.useFixture(fixtures.TempDir())

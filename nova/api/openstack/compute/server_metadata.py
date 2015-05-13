@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import six
 from webob import exc
 
 from nova.api.openstack import common
@@ -38,7 +39,7 @@ class Controller(object):
             raise exc.HTTPNotFound(explanation=msg)
 
         meta_dict = {}
-        for key, value in meta.iteritems():
+        for key, value in six.iteritems(meta):
             meta_dict[key] = value
         return meta_dict
 

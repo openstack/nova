@@ -27,6 +27,7 @@ if sys.platform == 'win32':
 
 from oslo_config import cfg
 from oslo_log import log as logging
+import six
 from six.moves import range
 
 from nova import exception
@@ -96,7 +97,7 @@ class VMUtils(object):
 
     def __init__(self, host='.'):
         self._enabled_states_map = {v: k for k, v in
-                                    self._vm_power_states_map.iteritems()}
+                                    six.iteritems(self._vm_power_states_map)}
         if sys.platform == 'win32':
             self._init_hyperv_wmi_conn(host)
             self._conn_cimv2 = wmi.WMI(moniker='//%s/root/cimv2' % host)

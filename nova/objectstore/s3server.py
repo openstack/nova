@@ -202,7 +202,7 @@ class BaseRequestHandler(object):
         elif isinstance(value, datetime.datetime):
             parts.append(value.strftime("%Y-%m-%dT%H:%M:%S.000Z"))
         elif isinstance(value, dict):
-            for name, subvalue in value.iteritems():
+            for name, subvalue in six.iteritems(value):
                 if not isinstance(subvalue, list):
                     subvalue = [subvalue]
                 for subsubvalue in subvalue:

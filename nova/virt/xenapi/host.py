@@ -22,6 +22,7 @@ import re
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
+import six
 
 from nova.compute import arch
 from nova.compute import hv_type
@@ -389,7 +390,7 @@ def _host_find(context, session, src_aggregate, host_ref):
     # CONF.host in the XenServer host's other-config map.
     # TODO(armando-migliaccio): improve according the note above
     uuid = session.host.get_uuid(host_ref)
-    for compute_host, host_uuid in src_aggregate.metadetails.iteritems():
+    for compute_host, host_uuid in six.iteritems(src_aggregate.metadetails):
         if host_uuid == uuid:
             return compute_host
     raise exception.NoValidHost(reason='Host %(host_uuid)s could not be found '
