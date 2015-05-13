@@ -57,6 +57,7 @@ Development policies
 
    kilo.blueprints
    policies
+   project_scope
 
 Testing guides
 --------------
