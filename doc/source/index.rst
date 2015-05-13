@@ -21,6 +21,13 @@ Welcome to Nova's developer documentation!
 Nova is an OpenStack project designed to provide power massively scalable, on
 demand, self service access to compute resources.
 
+.. note:: This is documentation for developers, if you are looking for more
+          general documentation including API, install, operator and user
+          guides see `docs.openstack.org`_
+
+.. _`docs.openstack.org`: https://docs.openstack.org
+
+
 
 Developer Docs
 ==============
