@@ -1532,7 +1532,7 @@ class ComputeManager(manager.Manager):
         rt = self._get_resource_tracker(node)
         try:
             limits = filter_properties.get('limits', {})
-            with rt.instance_claim(context, instance, limits) as inst_claim:
+            with rt.instance_claim(context, instance, limits):
                 # NOTE(russellb) It's important that this validation be done
                 # *after* the resource tracker instance claim, as that is where
                 # the host is set on the instance.
@@ -1552,7 +1552,6 @@ class ComputeManager(manager.Manager):
 
                 instance.vm_state = vm_states.BUILDING
                 instance.task_state = task_states.BLOCK_DEVICE_MAPPING
-                instance.numa_topology = inst_claim.claimed_numa_topology
                 instance.save()
 
                 block_device_info = self._prep_block_device(
@@ -2296,7 +2295,7 @@ class ComputeManager(manager.Manager):
                 extra_usage_info={'image_name': image_name})
         try:
             rt = self._get_resource_tracker(node)
-            with rt.instance_claim(context, instance, limits) as inst_claim:
+            with rt.instance_claim(context, instance, limits):
                 # NOTE(russellb) It's important that this validation be done
                 # *after* the resource tracker instance claim, as that is where
                 # the host is set on the instance.
@@ -2307,7 +2306,6 @@ class ComputeManager(manager.Manager):
                         block_device_mapping) as resources:
                     instance.vm_state = vm_states.BUILDING
                     instance.task_state = task_states.SPAWNING
-                    instance.numa_topology = inst_claim.claimed_numa_topology
                     # NOTE(JoshNang) This also saves the changes to the
                     # instance from _allocate_network_async, as they aren't
                     # saved in that function to prevent races.
