@@ -647,7 +647,14 @@ class NovaObject(object):
 
 
 class NovaObjectDictCompat(ovoo_base.VersionedObjectDictCompat):
-    pass
+    def __iter__(self):
+        for name in self.obj_fields:
+            if (self.obj_attr_is_set(name) or
+                    name in self.obj_extra_fields):
+                yield name
+
+    def keys(self):
+        return list(self)
 
 
 class NovaTimestampObject(object):
