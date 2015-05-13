@@ -2045,10 +2045,6 @@ class VMOps(object):
         """recreates security group rules for every instance."""
         self.firewall_driver.refresh_security_group_rules(security_group_id)
 
-    def refresh_security_group_members(self, security_group_id):
-        """recreates security group rules for every instance."""
-        self.firewall_driver.refresh_security_group_members(security_group_id)
-
     def refresh_instance_security_rules(self, instance):
         """recreates security group rules for specified instance."""
         self.firewall_driver.refresh_instance_security_rules(instance)

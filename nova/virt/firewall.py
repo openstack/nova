@@ -94,14 +94,6 @@ class FirewallDriver(object):
         """
         raise NotImplementedError()
 
-    def refresh_security_group_members(self, security_group_id):
-        """Refresh security group members from data store
-
-        Gets called when an instance gets added to or removed from
-        the security group.
-        """
-        raise NotImplementedError()
-
     def refresh_instance_security_rules(self, instance):
         """Refresh security group rules from data store
 
@@ -421,10 +413,6 @@ class IptablesFirewallDriver(FirewallDriver):
 
     def instance_filter_exists(self, instance, network_info):
         pass
-
-    def refresh_security_group_members(self, security_group):
-        self.do_refresh_security_group_rules(security_group)
-        self.iptables.apply()
 
     def refresh_security_group_rules(self, security_group):
         self.do_refresh_security_group_rules(security_group)

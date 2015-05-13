@@ -610,14 +610,6 @@ class XenAPIDriver(driver.ComputeDriver):
         """
         return self._vmops.refresh_security_group_rules(security_group_id)
 
-    def refresh_security_group_members(self, security_group_id):
-        """Updates security group rules for all instances associated with a
-        given security group.
-
-        Invoked when instances are added/removed to a security group.
-        """
-        return self._vmops.refresh_security_group_members(security_group_id)
-
     def refresh_instance_security_rules(self, instance):
         """Updates security group rules for specified instance.
 
