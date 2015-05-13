@@ -1158,6 +1158,38 @@ class _TestInstanceObject(object):
         self.assertTrue(inst.obj_attr_is_set('flavor'))
         self.assertEqual(flavor.flavorid, inst.flavor.flavorid)
 
+    def test_without_extra_record(self):
+        flavor = flavors.get_default_flavor()
+        db_inst = fake_instance.fake_db_instance()
+        db_inst['system_metadata'] = flavors.save_flavor_info({}, flavor)
+        del db_inst['extra']
+        with mock.patch('nova.db.instance_get_by_uuid') as mock_get:
+            mock_get.return_value = db_inst
+            inst = objects.Instance.get_by_uuid(
+                self.context, uuid='foo',
+                expected_attrs=['numa_topology', 'pci_requests', 'vcpu_model',
+                                'flavor'])
+            for field in ('numa_topology', 'pci_requests', 'vcpu_model'):
+                self.assertTrue(inst.obj_attr_is_set(field))
+                self.assertIsNone(getattr(inst, field))
+            self.assertTrue(inst.obj_attr_is_set('flavor'))
+
+    def test_with_null_extra_record(self):
+        flavor = flavors.get_default_flavor()
+        db_inst = fake_instance.fake_db_instance()
+        db_inst['system_metadata'] = flavors.save_flavor_info({}, flavor)
+        db_inst['extra'] = None
+        with mock.patch('nova.db.instance_get_by_uuid') as mock_get:
+            mock_get.return_value = db_inst
+            inst = objects.Instance.get_by_uuid(
+                self.context, uuid='foo',
+                expected_attrs=['numa_topology', 'pci_requests', 'vcpu_model',
+                                'flavor'])
+            for field in ('numa_topology', 'pci_requests', 'vcpu_model'):
+                self.assertTrue(inst.obj_attr_is_set(field))
+                self.assertIsNone(getattr(inst, field))
+            self.assertTrue(inst.obj_attr_is_set('flavor'))
+
 
 class TestInstanceObject(test_objects._LocalTest,
                          _TestInstanceObject):
