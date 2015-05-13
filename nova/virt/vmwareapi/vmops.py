@@ -951,7 +951,6 @@ class VMwareVMOps(object):
         if instance.task_state == task_states.RESIZE_REVERTING:
             return
 
-        # If there is a rescue VM then we need to destroy that one too.
         LOG.debug("Destroying instance", instance=instance)
         self._destroy_instance(instance, destroy_disks=destroy_disks)
         LOG.debug("Instance destroyed", instance=instance)
