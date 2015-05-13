@@ -43,22 +43,13 @@ DevStack, or explicitly installing and cloning just what you need.
 Using DevStack
 --------------
 
-The easiest way to build a fully functional development environment is
-with DevStack. DevStack will hack your machine pretty hard, and so we
-recommend that you create a machine (such as a VM or Vagrant box)
-running a distribution supported by DevStack and run DevStack
-there. For example, there is a Vagrant script for DevStack at
-http://git.openstack.org/cgit/openstack-dev/devstack-vagrant/ .
+See `Devstack`_ Documentation. If you would like to use Vagrant, there is a `Vagrant`_ for DevStack.
 
-Include the line
+.. _`Devstack`: http://docs.openstack.org/developer/devstack/
+.. _`Vagrant`: https://github.com/openstack-dev/devstack-vagrant/blob/master/README.md
 
-.. code-block:: bash
-
-  INSTALL_TESTONLY_PACKAGES=True
-
-in the ``localrc`` file you use to control DevStack.  This will cause
-DevStack to install what you need for testing and documentation
-building as well as running the system.
+..
+    Until the vagrant markdown documents are rendered somewhere on .openstack.org, linking to github
 
 Explicit Install/Clone
 ----------------------
@@ -84,15 +75,7 @@ Install the prerequisite packages.
 
 On Ubuntu::
 
-  sudo apt-get install python-dev libssl-dev python-pip git-core libxml2-dev libxslt-dev pkg-config libffi-dev libpq-dev libmysqlclient-dev libvirt-dev graphviz libsqlite3-dev python-tox
-
-On Ubuntu Precise (12.04) you may also need to add the following packages::
-
-  sudo apt-get build-dep python-mysqldb
-  # enable cloud-archive to get the latest libvirt
-  sudo apt-get install python-software-properties
-  sudo add-apt-repository cloud-archive:icehouse
-  sudo apt-get install libvirt-dev
+  sudo apt-get install python-dev libssl-dev python-pip git-core libxml2-dev libxslt-dev pkg-config libffi-dev libpq-dev libmysqlclient-dev graphviz libsqlite3-dev python-tox
 
 On Fedora-based distributions (e.g., Fedora/RHEL/CentOS/Scientific Linux)::
 
@@ -146,41 +129,6 @@ the nova directory is current.
 That will create a Python virtual environment, install the needed
 Python prerequisites in that environment, and build all the
 documentation in that environment.
-
-The following variant will do the first two steps but not build any
-documentation.
-
-.. code-block:: bash
-
-  tox --notest -edocs
-
-The virtual environment built by ``tox`` for documentation building
-will be found in ``.tox/docs``.  You can enter that virtual
-environment in the usual way, as follows.
-
-.. code-block:: bash
-
-  source .tox/docs/bin/activate
-
-To build just the man pages, enter that virtual environment and issue
-the following command while the nova directory is current.
-
-.. code-block:: bash
-
-  python setup.py build_sphinx -b man
-
-After building the man pages, they can be found in ``doc/build/man/``.
-A sufficiently authorized user can install the man page onto the
-system by following steps like the following, which are for the
-``nova-scheduler`` man page.
-
-.. code-block:: bash
-
-  mkdir /usr/local/man/man1
-  install -g 0 -o 0 -m 0644 doc/build/man/nova-scheduler.1  /usr/local/man/man1/nova-scheduler.1
-  gzip /usr/local/man/man1/nova-scheduler.1
-  man nova-scheduler
-
 
 Running unit tests
 ==================
