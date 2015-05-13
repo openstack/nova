@@ -3111,8 +3111,7 @@ class API(base.Base):
     @wrap_check_policy
     def get_instance_metadata(self, context, instance):
         """Get all metadata associated with an instance."""
-        rv = self.db.instance_metadata_get(context, instance.uuid)
-        return dict(rv.iteritems())
+        return self.db.instance_metadata_get(context, instance.uuid)
 
     def get_all_instance_metadata(self, context, search_filts):
         return self._get_all_instance_metadata(
