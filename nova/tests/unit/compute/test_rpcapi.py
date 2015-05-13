@@ -330,10 +330,6 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
         self._test_compute_api('refresh_provider_fw_rules', 'cast',
                 host='host')
 
-    def test_refresh_security_group_rules(self):
-        self._test_compute_api('refresh_security_group_rules', 'cast',
-                security_group_id='id', host='host', version='4.0')
-
     def test_refresh_instance_security_rules(self):
         expected_args = {'instance': self.fake_instance_obj}
         self._test_compute_api('refresh_instance_security_rules', 'cast',

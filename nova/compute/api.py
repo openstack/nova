@@ -4057,10 +4057,9 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
         self.db.instance_add_security_group(context.elevated(),
                                             instance_uuid,
                                             security_group['id'])
-        # NOTE(comstud): No instance_uuid argument to this compute manager
-        # call
-        self.compute_rpcapi.refresh_security_group_rules(context,
-                security_group['id'], host=instance.host)
+        if instance.host:
+            self.compute_rpcapi.refresh_instance_security_rules(
+                    context, instance.host, instance)
 
     @wrap_check_security_groups_policy
     def remove_from_instance(self, context, instance, security_group_name):
@@ -4080,10 +4079,9 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
         self.db.instance_remove_security_group(context.elevated(),
                                                instance_uuid,
                                                security_group['id'])
-        # NOTE(comstud): No instance_uuid argument to this compute manager
-        # call
-        self.compute_rpcapi.refresh_security_group_rules(context,
-                security_group['id'], host=instance.host)
+        if instance.host:
+            self.compute_rpcapi.refresh_instance_security_rules(
+                    context, instance.host, instance)
 
     def get_rule(self, context, id):
         self.ensure_default(context)
