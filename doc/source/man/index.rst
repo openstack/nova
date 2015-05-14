@@ -23,7 +23,7 @@ In this section you will find information on Nova's command line utilities.
 Reference
 ---------
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 1
 
    nova-all
    nova-api-ec2
