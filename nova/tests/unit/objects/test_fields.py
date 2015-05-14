@@ -172,6 +172,81 @@ class TestEnum(TestField):
         self.assertRaises(ValueError, fields.EnumField, [])
 
 
+class TestArchitecture(TestField):
+    def setUp(self):
+        super(TestArchitecture, self).setUp()
+        self.field = fields.ArchitectureField()
+        self.coerce_good_values = [('x86_64', 'x86_64'),
+                                   ('amd64', 'x86_64'),
+                                   ('I686', 'i686'),
+                                   ('i386', 'i686')]
+        self.coerce_bad_values = ['x86_99']
+        self.to_primitive_values = self.coerce_good_values[0:1]
+        self.from_primitive_values = self.coerce_good_values[0:1]
+
+    def test_stringify(self):
+        self.assertEqual("'aarch64'", self.field.stringify('aarch64'))
+
+    def test_stringify_invalid(self):
+        self.assertRaises(ValueError, self.field.stringify, 'ppc42')
+
+
+class TestCPUMode(TestField):
+    def setUp(self):
+        super(TestCPUMode, self).setUp()
+        self.field = fields.CPUModeField()
+        self.coerce_good_values = [('host-model', 'host-model'),
+                                   ('host-passthrough', 'host-passthrough'),
+                                   ('custom', 'custom')]
+        self.coerce_bad_values = ['magic']
+        self.to_primitive_values = self.coerce_good_values[0:1]
+        self.from_primitive_values = self.coerce_good_values[0:1]
+
+    def test_stringify(self):
+        self.assertEqual("'custom'", self.field.stringify('custom'))
+
+    def test_stringify_invalid(self):
+        self.assertRaises(ValueError, self.field.stringify, 'magic')
+
+
+class TestCPUMatch(TestField):
+    def setUp(self):
+        super(TestCPUMatch, self).setUp()
+        self.field = fields.CPUMatchField()
+        self.coerce_good_values = [('exact', 'exact'),
+                                   ('strict', 'strict'),
+                                   ('minimum', 'minimum')]
+        self.coerce_bad_values = ['best']
+        self.to_primitive_values = self.coerce_good_values[0:1]
+        self.from_primitive_values = self.coerce_good_values[0:1]
+
+    def test_stringify(self):
+        self.assertEqual("'exact'", self.field.stringify('exact'))
+
+    def test_stringify_invalid(self):
+        self.assertRaises(ValueError, self.field.stringify, 'best')
+
+
+class TestCPUFeaturePolicy(TestField):
+    def setUp(self):
+        super(TestCPUFeaturePolicy, self).setUp()
+        self.field = fields.CPUFeaturePolicyField()
+        self.coerce_good_values = [('force', 'force'),
+                                   ('require', 'require'),
+                                   ('optional', 'optional'),
+                                   ('disable', 'disable'),
+                                   ('forbid', 'forbid')]
+        self.coerce_bad_values = ['disallow']
+        self.to_primitive_values = self.coerce_good_values[0:1]
+        self.from_primitive_values = self.coerce_good_values[0:1]
+
+    def test_stringify(self):
+        self.assertEqual("'forbid'", self.field.stringify('forbid'))
+
+    def test_stringify_invalid(self):
+        self.assertRaises(ValueError, self.field.stringify, 'disallow')
+
+
 class TestInteger(TestField):
     def setUp(self):
         super(TestInteger, self).setUp()

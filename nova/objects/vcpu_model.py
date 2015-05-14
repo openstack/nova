@@ -12,8 +12,6 @@
 
 from oslo_serialization import jsonutils
 
-from nova.compute import arch
-from nova.compute import cpumodel
 from nova import db
 from nova.objects import base
 from nova.objects import fields
@@ -24,18 +22,15 @@ class VirtCPUModel(base.NovaObject):
     VERSION = '1.0'
 
     fields = {
-        'arch': fields.EnumField(nullable=True,
-                                 valid_values=arch.ALL),
+        'arch': fields.ArchitectureField(nullable=True),
         'vendor': fields.StringField(nullable=True),
         'topology': fields.ObjectField('VirtCPUTopology',
                                        nullable=True),
         'features': fields.ListOfObjectsField("VirtCPUFeature",
                                               default=[]),
-        'mode': fields.EnumField(nullable=True,
-                                 valid_values=cpumodel.ALL_CPUMODES),
+        'mode': fields.CPUModeField(nullable=True),
         'model': fields.StringField(nullable=True),
-        'match': fields.EnumField(nullable=True,
-                                  valid_values=cpumodel.ALL_MATCHES),
+        'match': fields.CPUMatchField(nullable=True),
     }
 
     obj_relationships = {
@@ -66,8 +61,7 @@ class VirtCPUFeature(base.NovaObject):
     VERSION = VirtCPUModel.VERSION
 
     fields = {
-        'policy': fields.EnumField(nullable=True,
-                                   valid_values=cpumodel.ALL_POLICIES),
+        'policy': fields.CPUFeaturePolicyField(nullable=True),
         'name': fields.StringField(nullable=False),
     }
 

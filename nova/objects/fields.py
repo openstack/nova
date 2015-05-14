@@ -23,6 +23,10 @@ from oslo_utils import strutils
 from oslo_utils import timeutils
 import six
 
+# TODO(berrange) Temporary import for Arch class
+from nova.compute import arch
+# TODO(berrange) Temporary import for CPU* classes
+from nova.compute import cpumodel
 from nova import exception
 from nova.i18n import _
 from nova.network import model as network_model
@@ -281,6 +285,46 @@ class Enum(String):
             msg = _("Field value %s is invalid") % value
             raise ValueError(msg)
         return super(Enum, self).stringify(value)
+
+
+class Architecture(Enum):
+    # TODO(berrange): move all constants out of 'nova.compute.arch'
+    # into fields on this class
+    def __init__(self, **kwargs):
+        super(Architecture, self).__init__(
+            valid_values=arch.ALL, **kwargs)
+
+    def coerce(self, obj, attr, value):
+        try:
+            value = arch.canonicalize(value)
+        except exception.InvalidArchitectureName:
+            msg = _("Architecture name '%s' is not valid") % value
+            raise ValueError(msg)
+        return super(Architecture, self).coerce(obj, attr, value)
+
+
+class CPUMode(Enum):
+    # TODO(berrange): move all constants out of 'nova.compute.cpumodel'
+    # into fields on this class
+    def __init__(self, **kwargs):
+        super(CPUMode, self).__init__(
+            valid_values=cpumodel.ALL_CPUMODES, **kwargs)
+
+
+class CPUMatch(Enum):
+    # TODO(berrange): move all constants out of 'nova.compute.cpumodel'
+    # into fields on this class
+    def __init__(self, **kwargs):
+        super(CPUMatch, self).__init__(
+            valid_values=cpumodel.ALL_MATCHES, **kwargs)
+
+
+class CPUFeaturePolicy(Enum):
+    # TODO(berrange): move all constants out of 'nova.compute.cpumodel'
+    # into fields on this class
+    def __init__(self, **kwargs):
+        super(CPUFeaturePolicy, self).__init__(
+            valid_values=cpumodel.ALL_POLICIES, **kwargs)
 
 
 class UUID(FieldType):
@@ -660,6 +704,22 @@ class EnumField(BaseEnumField):
     def __init__(self, valid_values, **kwargs):
         self.AUTO_TYPE = Enum(valid_values=valid_values)
         super(EnumField, self).__init__(**kwargs)
+
+
+class ArchitectureField(BaseEnumField):
+    AUTO_TYPE = Architecture()
+
+
+class CPUModeField(BaseEnumField):
+    AUTO_TYPE = CPUMode()
+
+
+class CPUMatchField(BaseEnumField):
+    AUTO_TYPE = CPUMatch()
+
+
+class CPUFeaturePolicyField(BaseEnumField):
+    AUTO_TYPE = CPUFeaturePolicy()
 
 
 class UUIDField(AutoTypedField):

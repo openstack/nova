@@ -1179,8 +1179,8 @@ object_data = {
     'Tag': '1.0-521693d0515aa031dff2b8ae3f86c8e0',
     'TagList': '1.0-698b4e8bd7d818db10b71a6d3c596760',
     'TestSubclassedObject': '1.6-d0f7f126f87433003c4d2ced202d6c86',
-    'VirtCPUFeature': '1.0-2304d54127d003cd89afaafcbd186be9',
-    'VirtCPUModel': '1.0-57c0149b82c1786dac825a0f86bb049e',
+    'VirtCPUFeature': '1.0-ac0f6fa47089583a95c57131e46de052',
+    'VirtCPUModel': '1.0-aa6fd0df43edfd2f8cfa0f2151a06f20',
     'VirtCPUTopology': '1.0-fc694de72e20298f7c6bab1083fd4563',
     'VirtualInterface': '1.0-d3d14066c99b8ae4d5204059fb147279',
     'VirtualInterfaceList': '1.0-311365526cc6904e43ace844a794cb6b'
