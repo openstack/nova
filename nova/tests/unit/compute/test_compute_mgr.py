@@ -1616,11 +1616,11 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         event = eventlet_event.Event()
         self.compute.instance_events._events = {
             'foo': {
-                'test-event': event,
+                'network-vif-plugged': event,
                 }
             }
         inst_obj = objects.Instance(uuid='foo')
-        event_obj = objects.InstanceExternalEvent(name='test-event',
+        event_obj = objects.InstanceExternalEvent(name='network-vif-plugged',
                                                   tag=None)
         result = self.compute.instance_events.pop_instance_event(inst_obj,
                                                                  event_obj)
@@ -1666,11 +1666,12 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         event = eventlet_event.Event()
         self.compute.instance_events._events = {
             'foo': {
-                'test-event': event,
+                'network-vif-plugged': event,
                 }
             }
         inst_obj = objects.Instance(uuid='foo')
-        event_obj = objects.InstanceExternalEvent(name='test-event', tag=None)
+        event_obj = objects.InstanceExternalEvent(name='network-vif-plugged',
+                                                  tag=None)
         self.compute._process_instance_event(inst_obj, event_obj)
         self.assertTrue(event.ready())
         self.assertEqual(event_obj, event.wait())
@@ -1684,7 +1685,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             objects.InstanceExternalEvent(name='network-changed',
                                           tag='tag1',
                                           instance_uuid='uuid1'),
-            objects.InstanceExternalEvent(name='foo', instance_uuid='uuid2',
+            objects.InstanceExternalEvent(name='network-vif-plugged',
+                                          instance_uuid='uuid2',
                                           tag='tag2')]
 
         @mock.patch.object(self.compute.network_api, 'get_instance_nw_info')
