@@ -13,7 +13,7 @@
             "id": "1",
             "links": [
                 {
-                    "href": "http://openstack.example.com/flavors/1",
+                    "href": "http://openstack.example.com/openstack/flavors/1",
                     "rel": "bookmark"
                 }
             ]
@@ -24,18 +24,18 @@
             "id": "70a599e0-31e7-49b7-b260-868f441e862b",
             "links": [
                 {
-                    "href": "http://openstack.example.com/images/70a599e0-31e7-49b7-b260-868f441e862b",
+                    "href": "http://openstack.example.com/openstack/images/70a599e0-31e7-49b7-b260-868f441e862b",
                     "rel": "bookmark"
                 }
             ]
         },
         "links": [
             {
-                "href": "http://openstack.example.com/v3/servers/fea9595c-ce6e-4565-987e-2d301fe056ac",
+                "href": "http://openstack.example.com/v2/openstack/servers/fea9595c-ce6e-4565-987e-2d301fe056ac",
                 "rel": "self"
             },
             {
-                "href": "http://openstack.example.com/servers/fea9595c-ce6e-4565-987e-2d301fe056ac",
+                "href": "http://openstack.example.com/openstack/servers/fea9595c-ce6e-4565-987e-2d301fe056ac",
                 "rel": "bookmark"
             }
         ],
