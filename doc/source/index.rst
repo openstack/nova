@@ -78,9 +78,7 @@ Introduction
 
    development.environment
    unit_tests
-   launchpad
-   gerrit
-   jenkins
+
 
 APIs Development
 ----------------

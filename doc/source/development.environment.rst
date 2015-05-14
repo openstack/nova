@@ -15,9 +15,9 @@
       License for the specific language governing permissions and limitations
       under the License.
 
-==============================================
-Setting Up and Using a Development Environment
-==============================================
+=======================
+Development Quickstart
+=======================
 
 This page describes how to setup and use a working Python development
 environment that can be used in developing nova on Ubuntu, Fedora or
@@ -32,6 +32,14 @@ on Linux, although you can run the unit tests on Mac OS X.
 
 .. _supported hypervisors: http://wiki.openstack.org/HypervisorSupportMatrix
 
+
+.. note:: For how to contribute to Nova, see
+          HowToContribute_.
+          Nova uses the Gerrit code review system, GerritWorkflow_.
+
+.. _GerritWorkflow: http://docs.openstack.org/infra/manual/developers.html#development-workflow
+.. _HowToContribute: http://docs.openstack.org/infra/manual/developers.html
+.. _`docs.openstack.org`: https://docs.openstack.org
 
 Setup
 =====
@@ -169,14 +177,3 @@ take advantage of fake and "real" computes during tests:
 
 Fake computes can be used for testing Nova itself but also applications on top
 of it.
-
-Contributing Your Work
-======================
-
-Once your work is complete you may wish to contribute it to the project.
-Refer to HowToContribute_ for information.
-Nova uses the Gerrit code review system. For information on how to submit
-your branch to Gerrit, see GerritWorkflow_.
-
-.. _GerritWorkflow: http://docs.openstack.org/infra/manual/developers.html#development-workflow
-.. _HowToContribute: http://docs.openstack.org/infra/manual/developers.html

@@ -3,9 +3,6 @@ Unit Tests
 
 Nova contains a suite of unit tests, in the nova/tests directory.
 
-Any proposed code change will be automatically rejected by the OpenStack
-Jenkins server [#f1]_ if the change causes unit test failures.
-
 Preferred way to run the tests
 ------------------------------
 
@@ -57,7 +54,3 @@ jenkins but not locally.
 The venv can get stale. Force a refresh by adding the -r flag::
 
     tox -r -e pep8
-
-.. rubric:: Footnotes
-
-.. [#f1] See :doc:`jenkins`.
