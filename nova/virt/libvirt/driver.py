@@ -6088,7 +6088,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     'error_code': error_code,
                     'ex': ex})
             LOG.warn(msg)
-            raise exception.InstanceNotFound(instance_id=instance.name)
+            raise exception.InstanceNotFound(instance_id=instance.uuid)
 
         return self._get_instance_disk_info(instance.name, xml,
                                             block_device_info)
