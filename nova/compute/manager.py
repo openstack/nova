@@ -558,7 +558,7 @@ class InstanceEvents(object):
                           'instance %(instance_uuid)s',
                           {'event': event_name,
                            'instance_uuid': instance_uuid})
-                name, tag = event_name.split('-', 1)
+                name, tag = event_name.rsplit('-', 1)
                 event = objects.InstanceExternalEvent(
                     instance_uuid=instance_uuid,
                     name=name, status='failed',

@@ -1702,13 +1702,13 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         fake_eventlet_event = mock.MagicMock()
         self.compute.instance_events._events = {
             inst.uuid: {
-                'foo-bar': fake_eventlet_event,
+                'network-vif-plugged-bar': fake_eventlet_event,
             }
         }
         self.compute.instance_events.cancel_all_events()
         self.assertTrue(fake_eventlet_event.send.called)
         event = fake_eventlet_event.send.call_args_list[0][0][0]
-        self.assertEqual('foo', event.name)
+        self.assertEqual('network-vif-plugged', event.name)
         self.assertEqual('bar', event.tag)
         self.assertEqual('failed', event.status)
 
@@ -1723,10 +1723,11 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         callback = mock.MagicMock()
         body = mock.MagicMock()
         with self.compute.virtapi.wait_for_instance_event(
-                instance, ['foo-bar'], error_callback=callback):
+                instance, ['network-vif-plugged-bar'],
+                error_callback=callback):
             body()
         self.assertTrue(body.called)
-        callback.assert_called_once_with('foo-bar', instance)
+        callback.assert_called_once_with('network-vif-plugged-bar', instance)
 
     def test_pop_events_fails_gracefully(self):
         inst = objects.Instance(uuid='uuid')
