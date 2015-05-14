@@ -467,6 +467,13 @@ class ResourceTracker(object):
         migrations = objects.MigrationList.get_in_progress_by_host_and_node(
                 context, self.host, self.nodename)
 
+        # Only look at resize/migrate migration records
+        # NOTE(danms): RT should probably examine live migration
+        # records as well and do something smart. However, ignore
+        # those for now to avoid them being included in below calculations.
+        migrations = [migration for migration in migrations
+                      if migration.migration_type in ('resize', 'migrate')]
+
         self._update_usage_from_migrations(context, migrations)
 
         # Detect and account for orphaned instances that may exist on the

@@ -644,7 +644,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='4.1')
+    target = messaging.Target(version='4.2')
 
     # How long to wait in seconds before re-issuing a shutdown
     # signal to a instance during power off.  The overall
@@ -4830,16 +4830,26 @@ class ComputeManager(manager.Manager):
     @wrap_exception()
     @wrap_instance_fault
     def live_migration(self, context, dest, instance, block_migration,
-                       migrate_data):
+                       migration, migrate_data):
         """Executing live migration.
 
         :param context: security context
         :param instance: a nova.objects.instance.Instance object
         :param dest: destination host
         :param block_migration: if true, prepare for block migration
+        :param migration: an nova.objects.Migration object
         :param migrate_data: implementation specific params
 
         """
+
+        # NOTE(danms): Remove these guards in v5.0 of the RPC API
+        if migration:
+            # NOTE(danms): We should enhance the RT to account for migrations
+            # and use the status field to denote when the accounting has been
+            # done on source/destination. For now, this is just here for status
+            # reporting
+            migration.status = 'preparing'
+            migration.save()
 
         # Create a local copy since we'll be modifying the dictionary
         migrate_data = dict(migrate_data or {})
@@ -4861,16 +4871,30 @@ class ComputeManager(manager.Manager):
             with excutils.save_and_reraise_exception():
                 LOG.exception(_LE('Pre live migration failed at %s'),
                               dest, instance=instance)
+                if migration:
+                    migration.status = 'failed'
+                    migration.save()
                 self._rollback_live_migration(context, instance, dest,
                                               block_migration, migrate_data)
 
-        # Executing live migration
-        # live_migration might raises exceptions, but
-        # nothing must be recovered in this version.
-        self.driver.live_migration(context, instance, dest,
-                                   self._post_live_migration,
-                                   self._rollback_live_migration,
-                                   block_migration, migrate_data)
+        if migration:
+            migration.status = 'running'
+            migration.save()
+
+        migrate_data['migration'] = migration
+        try:
+            self.driver.live_migration(context, instance, dest,
+                                       self._post_live_migration,
+                                       self._rollback_live_migration,
+                                       block_migration, migrate_data)
+        except Exception:
+            # Executing live migration
+            # live_migration might raises exceptions, but
+            # nothing must be recovered in this version.
+            with excutils.save_and_reraise_exception():
+                if migration:
+                    migration.status = 'failed'
+                    migration.save()
 
     def _live_migration_cleanup_flags(self, block_migration, migrate_data):
         """Determine whether disks or instance path need to be cleaned up after
@@ -5012,6 +5036,9 @@ class ComputeManager(manager.Manager):
                  instance=instance)
 
         self._clean_instance_console_tokens(ctxt, instance)
+        if migrate_data and migrate_data.get('migration'):
+            migrate_data['migration'].status = 'completed'
+            migrate_data['migration'].save()
 
     def _consoles_enabled(self):
         """Returns whether a console is enable."""
@@ -5108,6 +5135,13 @@ class ComputeManager(manager.Manager):
         instance.task_state = None
         instance.save(expected_task_state=[task_states.MIGRATING])
 
+        # NOTE(danms): Pop out the migration object so we don't pass
+        # it over RPC unintentionally below
+        if migrate_data:
+            migration = migrate_data.pop('migration', None)
+        else:
+            migration = None
+
         # NOTE(tr3buchet): setup networks on source host (really it's re-setup)
         self.network_api.setup_networks_on_host(context, instance, self.host)
 
@@ -5131,6 +5165,9 @@ class ComputeManager(manager.Manager):
 
         self._notify_about_instance_usage(context, instance,
                                           "live_migration._rollback.end")
+        if migration:
+            migration.status = 'error'
+            migration.save()
 
     @wrap_exception()
     @wrap_instance_fault
