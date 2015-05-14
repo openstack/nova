@@ -27,6 +27,7 @@ from oslo_log import log as logging
 from nova import exception
 from nova.i18n import _, _LE
 from nova import image
+from nova import utils
 
 LOG = logging.getLogger(__name__)
 IMAGE_API = image.API()
@@ -138,7 +139,7 @@ class GlanceWriteThread(object):
                     self.stop()
                     self.done.send_exception(exc)
 
-        greenthread.spawn(_inner)
+        utils.spawn(_inner)
         return self.done
 
     def stop(self):
@@ -183,7 +184,7 @@ class IOThread(object):
                     LOG.exception(_LE('Read/Write data failed'))
                     self.done.send_exception(exc)
 
-        greenthread.spawn(_inner)
+        utils.spawn(_inner)
         return self.done
 
     def stop(self):
