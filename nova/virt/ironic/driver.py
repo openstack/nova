@@ -40,6 +40,7 @@ from nova.compute import hv_type
 from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import vm_mode
+from nova.compute import vm_states
 from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
@@ -362,6 +363,12 @@ class IronicDriver(virt_driver.ComputeDriver):
 
     def _wait_for_active(self, ironicclient, instance):
         """Wait for the node to be marked as ACTIVE in Ironic."""
+        instance.refresh()
+        if (instance.task_state == task_states.DELETING or
+            instance.vm_state in (vm_states.ERROR, vm_states.DELETED)):
+            raise exception.InstanceDeployFailure(
+                _("Instance %s provisioning was aborted") % instance.uuid)
+
         node = _validate_instance_and_node(ironicclient, instance)
         if node.provision_state == ironic_states.ACTIVE:
             # job is done
