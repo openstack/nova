@@ -17,6 +17,7 @@
 """Compute API that proxies via Cells Service."""
 
 import oslo_messaging as messaging
+from oslo_utils import excutils
 
 from nova import availability_zones
 from nova import block_device
@@ -221,9 +222,21 @@ class ComputeCellsAPI(compute_api.API):
                     context, instance.uuid))
             # NOTE(danms): If we try to delete an instance with no cell,
             # there isn't anything to salvage, so we can hard-delete here.
-            super(ComputeCellsAPI, self)._local_delete(context, instance, bdms,
-                                                       method_name,
-                                                       self._do_delete)
+            try:
+                super(ComputeCellsAPI, self)._local_delete(context, instance,
+                                                           bdms, method_name,
+                                                           self._do_delete)
+            except exception.ObjectActionError:
+                # NOTE(alaski): We very likely got here because the host
+                # constraint in instance.destroy() failed.  This likely means
+                # that an update came up from a child cell and cell_name is
+                # set now.  If so try the delete again.
+                with excutils.save_and_reraise_exception() as exc:
+                    instance.refresh()
+                    if instance.cell_name:
+                        exc.reraise = False
+                        self._handle_cell_delete(context, instance,
+                                method_name)
             return
 
         method = getattr(super(ComputeCellsAPI, self), method_name)
