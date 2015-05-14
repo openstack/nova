@@ -341,9 +341,9 @@ MIN_QEMU_LIVESNAPSHOT_VERSION = (1, 3, 0)
 MIN_LIBVIRT_BLOCKIO_VERSION = (0, 10, 2)
 # BlockJobInfo management requirement
 MIN_LIBVIRT_BLOCKJOBINFO_VERSION = (1, 1, 1)
-# Relative block commit (feature is detected,
+# Relative block commit & rebase (feature is detected,
 # this version is only used for messaging)
-MIN_LIBVIRT_BLOCKCOMMIT_RELATIVE_VERSION = (1, 2, 7)
+MIN_LIBVIRT_BLOCKJOB_RELATIVE_VERSION = (1, 2, 7)
 # libvirt discard feature
 MIN_LIBVIRT_DISCARD_VERSION = (1, 0, 6)
 MIN_QEMU_DISCARD_VERSION = (1, 6, 0)
@@ -1883,6 +1883,19 @@ class LibvirtDriver(driver.ComputeDriver):
                                             active_disk_object.backing_store)
             rebase_bw = 0
 
+            # NOTE(deepakcs): libvirt added support for _RELATIVE in v1.2.7,
+            # and when available this flag _must_ be used to ensure backing
+            # paths are maintained relative by qemu.
+            #
+            # If _RELATIVE flag not found, continue with old behaviour
+            # (relative backing path seems to work for this case)
+            try:
+                if rebase_base is not None:
+                    rebase_flags |= libvirt.VIR_DOMAIN_BLOCK_REBASE_RELATIVE
+            except AttributeError:
+                LOG.warn(_LW("Relative blockrebase support was not detected. "
+                             "Continuing with old behaviour."))
+
             LOG.debug('disk: %(disk)s, base: %(base)s, '
                       'bw: %(bw)s, flags: %(flags)s',
                       {'disk': rebase_disk,
@@ -1908,22 +1921,30 @@ class LibvirtDriver(driver.ComputeDriver):
             commit_disk = my_dev
             commit_flags = 0
 
+            # NOTE(deepakcs): libvirt added support for _RELATIVE in v1.2.7,
+            # and when available this flag _must_ be used to ensure backing
+            # paths are maintained relative by qemu.
+            #
+            # If _RELATIVE flag not found, raise exception as relative backing
+            # path may not be maintained and Cinder flow is broken if allowed
+            # to continue.
+            try:
+                commit_flags |= libvirt.VIR_DOMAIN_BLOCK_COMMIT_RELATIVE
+            except AttributeError:
+                ver = '.'.join(
+                    [str(x) for x in
+                     MIN_LIBVIRT_BLOCKJOB_RELATIVE_VERSION])
+                msg = _("Relative blockcommit support was not detected. "
+                        "Libvirt '%s' or later is required for online "
+                        "deletion of file/network storage-backed volume "
+                        "snapshots.") % ver
+                raise exception.Invalid(msg)
+
             if active_protocol is not None:
                 my_snap_base = _get_snap_dev(delete_info['merge_target_file'],
                                              active_disk_object.backing_store)
                 my_snap_top = _get_snap_dev(delete_info['file_to_merge'],
                                             active_disk_object.backing_store)
-                try:
-                    commit_flags |= libvirt.VIR_DOMAIN_BLOCK_COMMIT_RELATIVE
-                except AttributeError:
-                    ver = '.'.join(
-                        [str(x) for x in
-                         MIN_LIBVIRT_BLOCKCOMMIT_RELATIVE_VERSION])
-                    msg = _("Relative blockcommit support was not detected. "
-                            "Libvirt '%s' or later is required for online "
-                            "deletion of network storage-backed volume "
-                            "snapshots.") % ver
-                    raise exception.Invalid(msg)
 
             commit_base = my_snap_base or delete_info['merge_target_file']
             commit_top = my_snap_top or delete_info['file_to_merge']
