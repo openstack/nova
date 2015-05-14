@@ -206,6 +206,9 @@ class ResourceTracker(object):
         migration.instance_uuid = instance['uuid']
         migration.source_compute = instance['host']
         migration.source_node = instance['node']
+        migration.migration_type = (
+            migration.old_instance_type_id != migration.new_instance_type_id
+            and 'resize' or 'migration')
         migration.create()
         return migration
 
