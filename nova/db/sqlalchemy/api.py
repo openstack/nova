@@ -4295,7 +4295,6 @@ def security_group_default_rule_destroy(context,
                                         rule_id=security_group_rule_default_id)
 
 
-@require_admin_context
 def security_group_default_rule_create(context, values):
     security_group_default_rule_ref = models.SecurityGroupIngressDefaultRule()
     security_group_default_rule_ref.update(values)
