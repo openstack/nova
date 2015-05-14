@@ -3272,6 +3272,18 @@ class API(base.Base):
         instance.save(expected_task_state=[None])
         self._record_action_start(context, instance, instance_actions.EVACUATE)
 
+        # NOTE(danms): Create this as a tombstone for the source compute
+        # to find and cleanup. No need to pass it anywhere else.
+        migration = objects.Migration(context,
+                                      source_compute=instance.host,
+                                      source_node=instance.node,
+                                      instance_uuid=instance.uuid,
+                                      status='accepted',
+                                      migration_type='evacuation')
+        if host:
+            migration.dest_compute = host
+        migration.create()
+
         return self.compute_task_api.rebuild_instance(context,
                        instance=instance,
                        new_pass=admin_password,
