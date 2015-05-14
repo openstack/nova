@@ -110,7 +110,7 @@ Development policies
 .. toctree::
    :maxdepth: 1
 
-   kilo.blueprints
+   blueprints
    policies
 
 Advanced testing and guides
