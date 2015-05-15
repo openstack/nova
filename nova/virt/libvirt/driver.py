@@ -334,6 +334,8 @@ MIN_LIBVIRT_VERSION = (0, 9, 11)
 # When the above version matches/exceeds this version
 # delete it & corresponding code using it
 MIN_LIBVIRT_DEVICE_CALLBACK_VERSION = (1, 1, 1)
+# TODO(mriedem): Change MIN_LIB_VERSION to this in the 2016.1 'M' release.
+NEXT_MIN_LIBVIRT_VERSION = (0, 10, 2)
 # Live snapshot requirements
 MIN_LIBVIRT_LIVESNAPSHOT_VERSION = (1, 0, 0)
 MIN_QEMU_LIVESNAPSHOT_VERSION = (1, 3, 0)
@@ -544,6 +546,17 @@ class LibvirtDriver(driver.ComputeDriver):
                 _('Running Nova with parallels virt_type requires '
                   'libvirt version %s') %
                 self._version_to_string(MIN_LIBVIRT_PARALLELS_VERSION))
+
+        # TODO(mriedem): We plan to move to a minimum required version of
+        # libvirt 0.10.2 in the 2016.1 'M' release so if we're running with
+        # less than that now, log a warning.
+        if not self._host.has_min_version(NEXT_MIN_LIBVIRT_VERSION):
+            LOG.warning(_LW('Running Nova with a libvirt version less than '
+                            '%(version)s is deprecated. The required minimum '
+                            'version of libvirt will be raised to %(version)s '
+                            'in the 2016.1 release.'),
+                        {'version': self._version_to_string(
+                            NEXT_MIN_LIBVIRT_VERSION)})
 
     # TODO(sahid): This method is targetted for removal when the tests
     # have been updated to avoid its use

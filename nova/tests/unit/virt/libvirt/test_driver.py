@@ -639,6 +639,43 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                           drvr.init_host,
                           "dummyhost")
 
+    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
+                       return_value=utils.convert_version_to_int(
+                            libvirt_driver.NEXT_MIN_LIBVIRT_VERSION) - 1)
+    @mock.patch.object(libvirt_driver.LOG, 'warning')
+    def test_next_min_version_deprecation_warning(self, mock_warning,
+                                                  mock_get_libversion):
+        # Test that a warning is logged if the libvirt version is less than
+        # the next required minimum version.
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        drvr.init_host("dummyhost")
+        # assert that the next min version is in a warning message
+        expected_arg = {'version': '0.10.2'}
+        version_arg_found = False
+        for call in mock_warning.call_args_list:
+            if call[0][1] == expected_arg:
+                version_arg_found = True
+                break
+        self.assertTrue(version_arg_found)
+
+    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
+                       return_value=utils.convert_version_to_int(
+                            libvirt_driver.NEXT_MIN_LIBVIRT_VERSION))
+    @mock.patch.object(libvirt_driver.LOG, 'warning')
+    def test_next_min_version_ok(self, mock_warning, mock_get_libversion):
+        # Test that a warning is not logged if the libvirt version is greater
+        # than or equal to NEXT_MIN_LIBVIRT_VERSION.
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        drvr.init_host("dummyhost")
+        # assert that the next min version is in a warning message
+        expected_arg = {'version': '0.10.2'}
+        version_arg_found = False
+        for call in mock_warning.call_args_list:
+            if call[0][1] == expected_arg:
+                version_arg_found = True
+                break
+        self.assertFalse(version_arg_found)
+
     @mock.patch.object(objects.Service, 'get_by_compute_host')
     def test_set_host_enabled_with_disable(self, mock_svc):
         # Tests disabling an enabled host.
