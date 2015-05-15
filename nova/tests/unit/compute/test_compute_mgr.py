@@ -2680,8 +2680,6 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     def test_rescheduled_exception_with_non_ascii_exception(self):
         exc = exception.NovaException(u's\xe9quence')
         self.mox.StubOutWithMock(self.compute.driver, 'spawn')
-        self.mox.StubOutWithMock(conductor_rpcapi.ConductorAPI,
-                                 'instance_update')
         self.mox.StubOutWithMock(self.compute, '_build_networks_for_instance')
         self.mox.StubOutWithMock(self.compute, '_shutdown_instance')
         self.compute._build_networks_for_instance(self.context, self.instance,
@@ -2692,23 +2690,27 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 try_deallocate_networks=False)
         self._notify_about_instance_usage('create.start',
             extra_usage_info={'image_name': self.image.get('name')})
-        self._build_and_run_instance_update()
         self.compute.driver.spawn(self.context, self.instance, self.image,
                 self.injected_files, self.admin_pass,
                 network_info=self.network_info,
                 block_device_info=self.block_device_info).AndRaise(exc)
         self._notify_about_instance_usage('create.error',
                 fault=exc, stub=False)
-        conductor_rpcapi.ConductorAPI.instance_update(
-            self.context, self.instance['uuid'], mox.IgnoreArg(), 'conductor')
         self.mox.ReplayAll()
 
-        self.assertRaises(exception.RescheduledException,
-                self.compute._build_and_run_instance, self.context,
-                self.instance, self.image, self.injected_files,
-                self.admin_pass, self.requested_networks, self.security_groups,
-                self.block_device_mapping, self.node,
-                self.limits, self.filter_properties)
+        with mock.patch.object(self.instance, 'save') as mock_save:
+            self.assertRaises(exception.RescheduledException,
+                              self.compute._build_and_run_instance,
+                              self.context, self.instance, self.image,
+                              self.injected_files, self.admin_pass,
+                              self.requested_networks, self.security_groups,
+                              self.block_device_mapping, self.node,
+                              self.limits, self.filter_properties)
+            mock_save.assert_has_calls([
+                mock.call(),
+                mock.call(),
+                mock.call(expected_task_state='block_device_mapping'),
+            ])
 
     @mock.patch.object(manager.ComputeManager, '_build_and_run_instance')
     @mock.patch.object(conductor_api.ComputeTaskAPI, 'build_instances')
@@ -2948,8 +2950,6 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     def test_instance_not_found(self):
         exc = exception.InstanceNotFound(instance_id=1)
         self.mox.StubOutWithMock(self.compute.driver, 'spawn')
-        self.mox.StubOutWithMock(conductor_rpcapi.ConductorAPI,
-                                 'instance_update')
         self.mox.StubOutWithMock(self.compute, '_build_networks_for_instance')
         self.mox.StubOutWithMock(self.compute, '_shutdown_instance')
         self.compute._build_networks_for_instance(self.context, self.instance,
@@ -2960,28 +2960,30 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 try_deallocate_networks=False)
         self._notify_about_instance_usage('create.start',
             extra_usage_info={'image_name': self.image.get('name')})
-        self._build_and_run_instance_update()
         self.compute.driver.spawn(self.context, self.instance, self.image,
                 self.injected_files, self.admin_pass,
                 network_info=self.network_info,
                 block_device_info=self.block_device_info).AndRaise(exc)
         self._notify_about_instance_usage('create.end',
                 fault=exc, stub=False)
-        conductor_rpcapi.ConductorAPI.instance_update(
-            self.context, self.instance.uuid, mox.IgnoreArg(), 'conductor')
         self.mox.ReplayAll()
 
-        self.assertRaises(exception.InstanceNotFound,
-                self.compute._build_and_run_instance, self.context,
-                self.instance, self.image, self.injected_files,
-                self.admin_pass, self.requested_networks, self.security_groups,
-                self.block_device_mapping, self.node,
-                self.limits, self.filter_properties)
+        with mock.patch.object(self.instance, 'save') as mock_save:
+            self.assertRaises(exception.InstanceNotFound,
+                              self.compute._build_and_run_instance,
+                              self.context, self.instance, self.image,
+                              self.injected_files, self.admin_pass,
+                              self.requested_networks, self.security_groups,
+                              self.block_device_mapping, self.node,
+                              self.limits, self.filter_properties)
+            mock_save.assert_has_calls([
+                mock.call(),
+                mock.call(),
+                mock.call(expected_task_state='block_device_mapping'),
+                ])
 
     def test_reschedule_on_exception(self):
         self.mox.StubOutWithMock(self.compute.driver, 'spawn')
-        self.mox.StubOutWithMock(conductor_rpcapi.ConductorAPI,
-                                 'instance_update')
         self.mox.StubOutWithMock(self.compute, '_build_networks_for_instance')
         self.mox.StubOutWithMock(self.compute, '_shutdown_instance')
         self.compute._build_networks_for_instance(self.context, self.instance,
@@ -2992,24 +2994,28 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 try_deallocate_networks=False)
         self._notify_about_instance_usage('create.start',
             extra_usage_info={'image_name': self.image.get('name')})
-        self._build_and_run_instance_update()
         exc = test.TestingException()
         self.compute.driver.spawn(self.context, self.instance, self.image,
                 self.injected_files, self.admin_pass,
                 network_info=self.network_info,
                 block_device_info=self.block_device_info).AndRaise(exc)
-        conductor_rpcapi.ConductorAPI.instance_update(
-            self.context, self.instance.uuid, mox.IgnoreArg(), 'conductor')
         self._notify_about_instance_usage('create.error',
             fault=exc, stub=False)
         self.mox.ReplayAll()
 
-        self.assertRaises(exception.RescheduledException,
-                self.compute._build_and_run_instance, self.context,
-                self.instance, self.image, self.injected_files,
-                self.admin_pass, self.requested_networks, self.security_groups,
-                self.block_device_mapping, self.node,
-                self.limits, self.filter_properties)
+        with mock.patch.object(self.instance, 'save') as mock_save:
+            self.assertRaises(exception.RescheduledException,
+                              self.compute._build_and_run_instance,
+                              self.context, self.instance, self.image,
+                              self.injected_files, self.admin_pass,
+                              self.requested_networks, self.security_groups,
+                              self.block_device_mapping, self.node,
+                              self.limits, self.filter_properties)
+            mock_save.assert_has_calls([
+                mock.call(),
+                mock.call(),
+                mock.call(expected_task_state='block_device_mapping'),
+            ])
 
     def test_spawn_network_alloc_failure(self):
         # Because network allocation is asynchronous, failures may not present
@@ -3041,10 +3047,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         with contextlib.nested(
                 mock.patch.object(self.compute.driver, 'spawn',
                     side_effect=exc),
-                mock.patch.object(conductor_rpcapi.ConductorAPI,
-                    'instance_update'),
                 mock.patch.object(self.instance, 'save',
-                    side_effect=[self.instance, self.instance]),
+                    side_effect=[self.instance, self.instance, self.instance]),
                 mock.patch.object(self.compute,
                     '_build_networks_for_instance',
                     return_value=network_model.NetworkInfo()),
@@ -3054,7 +3058,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                     '_shutdown_instance'),
                 mock.patch.object(self.compute,
                     '_validate_instance_group_policy')
-        ) as (spawn, instance_update, save,
+        ) as (spawn, save,
                 _build_networks_for_instance, _notify_about_instance_usage,
                 _shutdown_instance, _validate_instance_group_policy):
 
@@ -3079,6 +3083,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
 
             save.assert_has_calls([
                 mock.call(),
+                mock.call(),
                 mock.call(
                     expected_task_state=task_states.BLOCK_DEVICE_MAPPING)])
 
@@ -3086,9 +3091,6 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.image, self.injected_files, self.admin_pass,
                 network_info=self.network_info,
                 block_device_info=self.block_device_info))
-
-            instance_update.assert_has_calls(mock.call(self.context,
-                self.instance.uuid, mock.ANY, 'conductor'))
 
             _shutdown_instance.assert_called_once_with(self.context,
                     self.instance, self.block_device_mapping,
@@ -3150,10 +3152,6 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         exc = exception.BuildAbortException(
                 instance_uuid=self.instance.uuid, reason='')
         self.mox.StubOutWithMock(self.compute, '_build_resources')
-        self.mox.StubOutWithMock(conductor_rpcapi.ConductorAPI,
-                                 'instance_update')
-        conductor_rpcapi.ConductorAPI.instance_update(
-            self.context, self.instance.uuid, mox.IgnoreArg(), 'conductor')
         self._notify_about_instance_usage('create.start',
             extra_usage_info={'image_name': self.image.get('name')})
         self.compute._build_resources(self.context, self.instance,
@@ -3162,12 +3160,15 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self._notify_about_instance_usage('create.error',
             fault=exc, stub=False)
         self.mox.ReplayAll()
-        self.assertRaises(exception.BuildAbortException,
-                self.compute._build_and_run_instance, self.context,
-                self.instance, self.image, self.injected_files,
-                self.admin_pass, self.requested_networks,
-                self.security_groups, self.block_device_mapping, self.node,
-                self.limits, self.filter_properties)
+        with mock.patch.object(self.instance, 'save') as mock_save:
+            self.assertRaises(exception.BuildAbortException,
+                              self.compute._build_and_run_instance,
+                              self.context,
+                              self.instance, self.image, self.injected_files,
+                              self.admin_pass, self.requested_networks,
+                              self.security_groups, self.block_device_mapping,
+                              self.node, self.limits, self.filter_properties)
+            mock_save.assert_called_once_with()
 
     def test_build_resources_reraises_on_failed_bdm_prep(self):
         self.mox.StubOutWithMock(self.compute, '_prep_block_device')
@@ -3494,7 +3495,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 mock.patch.object(self.compute,
                     '_build_networks_for_instance', return_value=[]),
                 mock.patch.object(self.instance, 'save',
-                    side_effect=[None, None, exc]),
+                    side_effect=[None, None, None, exc]),
                 mock.patch.object(self.compute, '_notify_about_instance_usage',
                     side_effect=fake_notify)
         ) as (mock_spawn, mock_networks, mock_save, mock_notify):
