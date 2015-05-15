@@ -36,6 +36,38 @@ class FakeFieldType(fields.FieldType):
         return value[1:-1]
 
 
+class FakeEnum(fields.Enum):
+    FROG = "frog"
+    PLATYPUS = "platypus"
+    ALLIGATOR = "alligator"
+
+    ALL = (FROG, PLATYPUS, ALLIGATOR)
+
+    def __init__(self, **kwargs):
+        super(FakeEnum, self).__init__(valid_values=FakeEnum.ALL,
+                                       **kwargs)
+
+
+class FakeEnumAlt(fields.Enum):
+    FROG = "frog"
+    PLATYPUS = "platypus"
+    AARDVARK = "aardvark"
+
+    ALL = (FROG, PLATYPUS, AARDVARK)
+
+    def __init__(self, **kwargs):
+        super(FakeEnumAlt, self).__init__(valid_values=FakeEnumAlt.ALL,
+                                          **kwargs)
+
+
+class FakeEnumField(fields.BaseEnumField):
+    AUTO_TYPE = FakeEnum()
+
+
+class FakeEnumAltField(fields.BaseEnumField):
+    AUTO_TYPE = FakeEnumAlt()
+
+
 class TestField(test.NoDBTestCase):
     def setUp(self):
         super(TestField, self).setUp()
@@ -84,6 +116,31 @@ class TestString(TestField):
 
     def test_stringify(self):
         self.assertEqual("'123'", self.field.stringify(123))
+
+
+class TestBaseEnum(TestField):
+    def setUp(self):
+        super(TestBaseEnum, self).setUp()
+        self.field = FakeEnumField()
+        self.coerce_good_values = [('frog', 'frog'),
+                                   ('platypus', 'platypus'),
+                                   ('alligator', 'alligator')]
+        self.coerce_bad_values = ['aardvark', 'wookie']
+        self.to_primitive_values = self.coerce_good_values[0:1]
+        self.from_primitive_values = self.coerce_good_values[0:1]
+
+    def test_stringify(self):
+        self.assertEqual("'platypus'", self.field.stringify('platypus'))
+
+    def test_stringify_invalid(self):
+        self.assertRaises(ValueError, self.field.stringify, 'aardvark')
+
+    def test_fingerprint(self):
+        # Notes(yjiang5): make sure changing valid_value will be detected
+        # in test_objects.test_versions
+        field1 = FakeEnumField()
+        field2 = FakeEnumAltField()
+        self.assertNotEqual(str(field1), str(field2))
 
 
 class TestEnum(TestField):
