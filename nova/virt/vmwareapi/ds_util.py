@@ -31,6 +31,7 @@ from nova.virt.vmwareapi import vm_util
 LOG = logging.getLogger(__name__)
 ALL_SUPPORTED_DS_TYPES = frozenset([constants.DATASTORE_TYPE_VMFS,
                                     constants.DATASTORE_TYPE_NFS,
+                                    constants.DATASTORE_TYPE_NFS41,
                                     constants.DATASTORE_TYPE_VSAN])
 
 
