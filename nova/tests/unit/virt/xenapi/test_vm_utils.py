@@ -2452,6 +2452,6 @@ class VMInfoTests(VMUtilsTestBase):
 
         info = vm_utils.compile_info(self.session, "dummy")
         self.assertEqual(hardware.InstanceInfo(state=power_state.RUNNING,
-                                               max_mem_kb=10L, mem_kb=9L,
+                                               max_mem_kb=10, mem_kb=9,
                                                num_cpu='5', cpu_time_ns=0),
                          info)

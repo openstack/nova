@@ -753,7 +753,7 @@ class ComputeVolumeTestCase(BaseTestCase):
         objects.BlockDeviceMapping.get_by_volume_id(self.context, 1).AndReturn(
             bdm.obj_clone())
         self.compute.driver.block_stats(instance, 'vdb').\
-            AndReturn([1L, 30L, 1L, 20L, None])
+            AndReturn([1, 30, 1, 20, None])
         self.compute._get_host_volume_bdms(self.context,
                                            use_slave=True).AndReturn(
                                                host_volume_bdms)

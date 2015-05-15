@@ -763,7 +763,7 @@ Active:          8381604 kB
                 mock.patch('sys.platform', 'linux2'),
                 ) as (mock_file, mock_conn, mock_platform):
             mock_conn().getInfo.return_value = [
-                arch.X86_64, 15814L, 8, 1208, 1, 1, 4, 2]
+                arch.X86_64, 15814, 8, 1208, 1, 1, 4, 2]
 
             self.assertEqual(6866, self.host.get_memory_mb_used())
 
@@ -810,7 +810,7 @@ Active:          8381604 kB
                 DiagFakeDomain(1, 750),
                 DiagFakeDomain(2, 1042)]
             mock_conn.getInfo.return_value = [
-                arch.X86_64, 15814L, 8, 1208, 1, 1, 4, 2]
+                arch.X86_64, 15814, 8, 1208, 1, 1, 4, 2]
 
             self.assertEqual(8657, self.host.get_memory_mb_used())
             mock_list.assert_called_with(only_guests=False)
@@ -818,11 +818,11 @@ Active:          8381604 kB
     def test_get_cpu_stats(self):
         stats = self.host.get_cpu_stats()
         self.assertEqual(
-            {'kernel': 5664160000000L,
-             'idle': 1592705190000000L,
+            {'kernel': 5664160000000,
+             'idle': 1592705190000000,
              'frequency': 800,
-             'user': 26728850000000L,
-             'iowait': 6121490000000L},
+             'user': 26728850000000,
+             'iowait': 6121490000000},
             stats)
 
     @mock.patch.object(fakelibvirt.virConnect, "defineXML")

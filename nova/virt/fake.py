@@ -377,15 +377,15 @@ class FakeDriver(driver.ComputeDriver):
         return volusage
 
     def get_host_cpu_stats(self):
-        stats = {'kernel': 5664160000000L,
-                'idle': 1592705190000000L,
-                'user': 26728850000000L,
-                'iowait': 6121490000000L}
+        stats = {'kernel': 5664160000000,
+                'idle': 1592705190000000,
+                'user': 26728850000000,
+                'iowait': 6121490000000}
         stats['frequency'] = 800
         return stats
 
     def block_stats(self, instance, disk_id):
-        return [0L, 0L, 0L, 0L, None]
+        return [0, 0, 0, 0, None]
 
     def get_console_output(self, context, instance):
         return 'FAKE CONSOLE OUTPUT\nANOTHER\nLAST LINE'
