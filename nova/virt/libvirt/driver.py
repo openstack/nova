@@ -4314,7 +4314,7 @@ class LibvirtDriver(driver.ComputeDriver):
         except libvirt.libvirtError as ex:
             error_code = ex.get_error_code()
             if error_code == libvirt.VIR_ERR_NO_DOMAIN:
-                raise exception.InstanceNotFound(instance_id=instance.name)
+                raise exception.InstanceNotFound(instance_id=instance.uuid)
 
             msg = (_('Error from libvirt while getting domain info for '
                      '%(instance_name)s: [Error Code %(error_code)s] %(ex)s') %
