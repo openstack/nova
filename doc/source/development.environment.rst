@@ -141,8 +141,9 @@ documentation in that environment.
 Running unit tests
 ==================
 
-See :doc:`unit_tests` for details.
+See `Running Python Unit Tests`_.
 
+.. _`Running Python Unit Tests`: http://docs.openstack.org/infra/manual/python.html#running-python-unit-tests
 
 Using a remote debugger
 =======================
