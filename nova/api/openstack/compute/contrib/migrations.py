@@ -32,9 +32,12 @@ def output(migrations_obj):
     primitive objects with the only necessary fields.
     """
     objects = obj_base.obj_to_primitive(migrations_obj)
+    objects = [x for x in objects if not x['hidden']]
     for obj in objects:
         del obj['deleted']
         del obj['deleted_at']
+        del obj['migration_type']
+        del obj['hidden']
     return objects
 
 
