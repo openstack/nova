@@ -19,6 +19,7 @@ import datetime
 import copy
 import iso8601
 import netaddr
+from oslo_utils import strutils
 from oslo_utils import timeutils
 import six
 
@@ -303,6 +304,12 @@ class Boolean(FieldType):
     @staticmethod
     def coerce(obj, attr, value):
         return bool(value)
+
+
+class FlexibleBoolean(Boolean):
+    @staticmethod
+    def coerce(obj, attr, value):
+        return strutils.bool_from_string(value)
 
 
 class DateTime(FieldType):
@@ -641,8 +648,19 @@ class FloatField(AutoTypedField):
     AUTO_TYPE = Float()
 
 
+# This is a strict interpretation of boolean
+# values using Python's semantics for truth/falsehood
 class BooleanField(AutoTypedField):
     AUTO_TYPE = Boolean()
+
+
+# This is a flexible interpretation of boolean
+# values using common user friendly semantics for
+# truth/falsehood. ie strings like 'yes', 'no',
+# 'on', 'off', 't', 'f' get mapped to values you
+# would expect.
+class FlexibleBooleanField(AutoTypedField):
+    AUTO_TYPE = FlexibleBoolean()
 
 
 class DateTimeField(AutoTypedField):
