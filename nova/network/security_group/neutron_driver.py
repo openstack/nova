@@ -63,7 +63,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
                 raise exc.HTTPBadRequest()
             elif e.status_code == 409:
                 self.raise_over_quota(six.text_type(e))
-            raise exc_info[0], exc_info[1], exc_info[2]
+            six.reraise(*exc_info)
         return self._convert_to_nova_security_group_format(security_group)
 
     def update_security_group(self, context, security_group,
@@ -82,7 +82,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
                 # as this error code could be related to bad input or over
                 # quota
                 raise exc.HTTPBadRequest()
-            raise exc_info[0], exc_info[1], exc_info[2]
+            six.reraise(*exc_info)
         return self._convert_to_nova_security_group_format(security_group)
 
     def _convert_to_nova_security_group_format(self, security_group):
@@ -140,7 +140,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
                 raise exception.SecurityGroupNotFound(six.text_type(e))
             else:
                 LOG.error(_LE("Neutron Error: %s"), e)
-                raise exc_info[0], exc_info[1], exc_info[2]
+                six.reraise(*exc_info)
         except TypeError as e:
             LOG.error(_LE("Neutron Error: %s"), e)
             msg = _("Invalid security group name: %(name)s.") % {"name": name}
@@ -189,7 +189,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
                 self.raise_invalid_property(six.text_type(e))
             else:
                 LOG.error(_LE("Neutron Error: %s"), e)
-                raise exc_info[0], exc_info[1], exc_info[2]
+                six.reraise(*exc_info)
 
     def add_rules(self, context, id, name, vals):
         """Add security group rule(s) to security group.
@@ -220,7 +220,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
                 self.raise_invalid_property(six.text_type(e))
             else:
                 LOG.exception(_LE("Neutron Error:"))
-                raise exc_info[0], exc_info[1], exc_info[2]
+                six.reraise(*exc_info)
         converted_rules = []
         for rule in rules:
             converted_rules.append(
@@ -288,7 +288,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
                 self.raise_not_found(six.text_type(e))
             else:
                 LOG.error(_LE("Neutron Error: %s"), e)
-                raise exc_info[0], exc_info[1], exc_info[2]
+                six.reraise(*exc_info)
         return self._convert_to_nova_security_group_rule_format(rule)
 
     def _get_ports_from_server_list(self, servers, neutron):
@@ -419,7 +419,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
                 self.raise_not_found(msg)
             else:
                 LOG.exception(_LE("Neutron Error:"))
-                raise exc_info[0], exc_info[1], exc_info[2]
+                six.reraise(*exc_info)
         params = {'device_id': instance.uuid}
         try:
             ports = neutron.list_ports(**params).get('ports')
@@ -474,7 +474,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
                 self.raise_not_found(msg)
             else:
                 LOG.exception(_LE("Neutron Error:"))
-                raise exc_info[0], exc_info[1], exc_info[2]
+                six.reraise(*exc_info)
         params = {'device_id': instance.uuid}
         try:
             ports = neutron.list_ports(**params).get('ports')
