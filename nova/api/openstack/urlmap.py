@@ -93,7 +93,7 @@ def parse_options_header(value):
         return '', {}
 
     parts = _tokenize(';' + value)
-    name = parts.next()[0]
+    name = next(parts)[0]
     extra = dict(parts)
     return name, extra
 

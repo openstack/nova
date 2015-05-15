@@ -148,7 +148,7 @@ class CellsManager(manager.Manager):
 
         def _next_instance():
             try:
-                instance = self.instances_to_heal.next()
+                instance = next(self.instances_to_heal)
             except StopIteration:
                 if info['updated_list']:
                     return
@@ -162,7 +162,7 @@ class CellsManager(manager.Manager):
                         uuids_only=True)
                 info['updated_list'] = True
                 try:
-                    instance = self.instances_to_heal.next()
+                    instance = next(self.instances_to_heal)
                 except StopIteration:
                     return
             return instance

@@ -717,12 +717,12 @@ class ServerActionsControllerTestV21(test.TestCase):
 
         def _fake_resize(obj, context, instance, flavor_id):
             self.resize_called += 1
-            raise raised.next()
+            raise next(raised)
 
         self.stubs.Set(compute_api.API, 'resize', _fake_resize)
 
         for call_no in range(len(exceptions)):
-            next_exception = expected.next()
+            next_exception = next(expected)
             actual = self.assertRaises(next_exception,
                                        self.controller._action_resize,
                                        self.req, FAKE_UUID, body=body)

@@ -198,7 +198,7 @@ class GlanceClientWrapper(object):
         """Create a client that will be used for one call."""
         if self.api_servers is None:
             self.api_servers = get_api_servers()
-        self.host, self.port, self.use_ssl = self.api_servers.next()
+        self.host, self.port, self.use_ssl = next(self.api_servers)
         return _create_glance_client(context,
                                      self.host, self.port,
                                      self.use_ssl, version)

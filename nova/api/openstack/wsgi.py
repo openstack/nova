@@ -670,7 +670,7 @@ class Resource(wsgi.Application):
                 try:
                     with ResourceExceptionHandler():
                         gen = ext(req=request, **action_args)
-                        response = gen.next()
+                        response = next(gen)
                 except Fault as ex:
                     response = ex
 

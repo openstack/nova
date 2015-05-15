@@ -217,8 +217,8 @@ class FloatingIPActionController(wsgi.Controller):
 
         if not fixed_address:
             try:
-                fixed_address = (ip['address'] for ip in fixed_ips if
-                                 netaddr.valid_ipv4(ip['address'])).next()
+                fixed_address = next(ip['address'] for ip in fixed_ips
+                                     if netaddr.valid_ipv4(ip['address']))
             except StopIteration:
                 msg = _('Unable to associate floating ip %(address)s '
                         'to any fixed IPs for instance %(id)s. '

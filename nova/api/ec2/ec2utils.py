@@ -453,7 +453,7 @@ def regex_from_ec2_regex(ec2_re):
             py_re += '.'
         elif char == '\\':
             try:
-                next_char = iter_ec2_re.next()
+                next_char = next(iter_ec2_re)
             except StopIteration:
                 next_char = ''
             if next_char == '*' or next_char == '?':
