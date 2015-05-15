@@ -4828,10 +4828,12 @@ class LibvirtDriver(driver.ComputeDriver):
                          'been detached. Instance=%(instance_name)s '
                          'Disk=%(disk)s Code=%(errcode)s Error=%(e)s'),
                      {'instance_name': instance.name, 'disk': disk_id,
-                      'errcode': errcode, 'e': e})
+                      'errcode': errcode, 'e': e},
+                     instance=instance)
         except exception.InstanceNotFound:
             LOG.info(_LI('Could not find domain in libvirt for instance %s. '
-                         'Cannot get block stats for device'), instance.name)
+                         'Cannot get block stats for device'), instance.name,
+                     instance=instance)
 
     def get_console_pool_info(self, console_type):
         # TODO(mdragon): console proxy should be implemented for libvirt,
@@ -6081,13 +6083,13 @@ class LibvirtDriver(driver.ComputeDriver):
             xml = dom.XMLDesc(0)
         except libvirt.libvirtError as ex:
             error_code = ex.get_error_code()
-            msg = (_('Error from libvirt while getting description of '
-                     '%(instance_name)s: [Error Code %(error_code)s] '
-                     '%(ex)s') %
-                   {'instance_name': instance.name,
-                    'error_code': error_code,
-                    'ex': ex})
-            LOG.warn(msg)
+            LOG.warn(_LW('Error from libvirt while getting description of '
+                         '%(instance_name)s: [Error Code %(error_code)s] '
+                         '%(ex)s'),
+                     {'instance_name': instance.name,
+                      'error_code': error_code,
+                      'ex': ex},
+                     instance=instance)
             raise exception.InstanceNotFound(instance_id=instance.uuid)
 
         return self._get_instance_disk_info(instance.name, xml,
