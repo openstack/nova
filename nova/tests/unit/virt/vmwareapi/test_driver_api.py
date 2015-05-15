@@ -2339,3 +2339,22 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         test_mor = "domain-26"
         nodename = "%s.%s" % (test_mor, vmwareapi_fake._FAKE_VCENTER_UUID)
         self.assertEqual(nodename, self.conn._normalize_nodename(nodename))
+
+    @mock.patch.object(driver.LOG, 'warning')
+    def test_min_version(self, mock_warning):
+        self.conn._check_min_version()
+        self.assertFalse(mock_warning.called)
+
+    @mock.patch.object(driver.LOG, 'warning')
+    @mock.patch.object(oslo_vim_util, 'get_vc_version',
+                       return_value='5.0.0')
+    def test_invalid_min_version(self, mock_version, mock_warning):
+        self.conn._check_min_version()
+        # assert that the min version is in a warning message
+        expected_arg = {'version': constants.MIN_VC_VERSION}
+        version_arg_found = False
+        for call in mock_warning.call_args_list:
+            if call[0][1] == expected_arg:
+                version_arg_found = True
+                break
+        self.assertTrue(version_arg_found)

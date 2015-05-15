@@ -18,6 +18,8 @@ Shared constants across the VMware driver
 
 from nova.network import model as network_model
 
+MIN_VC_VERSION = '5.1.0'
+
 DISK_FORMAT_ISO = 'iso'
 DISK_FORMAT_VMDK = 'vmdk'
 DISK_FORMATS_ALL = [DISK_FORMAT_ISO, DISK_FORMAT_VMDK]
