@@ -8,47 +8,12 @@ serial consoles through a web-socket proxy.
 This page describes how to test it from a devstack environement.
 
 ---------------------------------
-Setting up a devstack environemnt
+Setting up a devstack environment
 ---------------------------------
 
-.. code-block:: bash
-
-  # sudo apt-get install git -y || sudo yum install -y git
-  # git clone https://git.openstack.org/openstack-dev/devstack
-  # cd devstack && ./stack.sh
-
--------------------------------------
-Starting the nova-serialproxy service
--------------------------------------
-
-.. code-block:: bash
-
-  # screen -S stack -X screen -t n-sproxy
-  # screen -S stack -p n-sproxy -X stuff 'sudo nova-serialproxy\r'
-
------------------------------
-Setting up a Nova environemnt
------------------------------
-
-The entire configuration is provided in `nova.conf` through the
-category `serial_console`.
-
-.. code-block:: bash
-
-  # cat >> /etc/nova/nova.conf <<EOF
-  [serial_console]
-  enabled = True
-  EOF
-
-To get more information about available options see:
-- http://docs.openstack.org/trunk/config-reference/content/list-of-compute-config-options.html
-
-You should now restart services 'n-api' and 'n-cpu' from the 'stack'
-screen; The command `./rejoin-stack.sh` located to the root directory
-of devstack will let you to join screen. By the combination of the keys
-"Ctrl+a" you should be able to switch between services. Just kill
-them with "Ctrl+c" and restart them by using the command history
-provided by bash "Up-Arrow".
+For instructions on how to setup devstack with serial console support enabled
+see `this guide
+<http://docs.openstack.org/developer/devstack/guides/nova.html#nova-serialproxy>`_.
 
 ---------------
 Testing the API
