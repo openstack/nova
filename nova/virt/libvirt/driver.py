@@ -339,6 +339,9 @@ LIBVIRT_POWER_STATE = {
     VIR_DOMAIN_PMSUSPENDED: power_state.SUSPENDED,
 }
 
+# This is effectively the min version for i686/x86_64 + KVM/QEMU
+# TODO(berrange) find out what min version ppc64 needs as it
+# almost certainly wants something newer than this....
 MIN_LIBVIRT_VERSION = (0, 9, 11)
 # When the above version matches/exceeds this version
 # delete it & corresponding code using it
@@ -398,6 +401,10 @@ MIN_LIBVIRT_PARALLELS_VERSION = (1, 2, 12)
 
 # Ability to set the user guest password with Qemu
 MIN_LIBVIRT_SET_ADMIN_PASSWD = (1, 2, 16)
+
+# s/390 & s/390x architectures with KVM
+MIN_LIBVIRT_KVM_S390_VERSION = (1, 2, 13)
+MIN_QEMU_S390_VERSION = (2, 3, 0)
 
 
 class LibvirtDriver(driver.ComputeDriver):
@@ -576,6 +583,19 @@ class LibvirtDriver(driver.ComputeDriver):
                             'in the 13.0.0 release.'),
                         {'version': self._version_to_string(
                             NEXT_MIN_LIBVIRT_VERSION)})
+
+        if (CONF.libvirt.virt_type in ('kvm', 'qemu') and
+            arch.from_host() in (arch.S390, arch.S390X) and
+            not self._host.has_min_version(MIN_LIBVIRT_KVM_S390_VERSION,
+                                           MIN_QEMU_S390_VERSION)):
+            raise exception.NovaException(
+                _('Running Nova with qemu/kvm virt_type on s390/s390x '
+                  'requires libvirt version %(libvirt_ver)s and '
+                  'qemu version %(qemu_ver)s, or greater') %
+                {'libvirt_ver': self._version_to_string(
+                    MIN_LIBVIRT_KVM_S390_VERSION),
+                 'qemu_ver': self._version_to_string(
+                     MIN_QEMU_S390_VERSION)})
 
     # TODO(sahid): This method is targeted for removal when the tests
     # have been updated to avoid its use
