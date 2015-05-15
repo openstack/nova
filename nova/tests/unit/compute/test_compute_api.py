@@ -1329,6 +1329,10 @@ class _ComputeAPIUnitTestMixIn(object):
                     self.assertEqual(new_flavor.id,
                                      mig.new_instance_type_id)
                     self.assertEqual('finished', mig.status)
+                    if new_flavor.id != current_flavor.id:
+                        self.assertEqual('resize', mig.migration_type)
+                    else:
+                        self.assertEqual('migration', mig.migration_type)
 
                 self.stubs.Set(objects, 'Migration', _get_migration)
                 self.mox.StubOutWithMock(self.context, 'elevated')
