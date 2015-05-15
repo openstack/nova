@@ -28,6 +28,7 @@ from oslo_utils import timeutils
 import six
 
 import nova.context
+from nova import exception
 from nova.i18n import _LE
 from nova.image import glance
 from nova import network
@@ -150,6 +151,10 @@ def send_update(context, old_instance, new_instance, service="compute",
             _send_instance_update_notification(context, new_instance,
                     service=service, host=host,
                     old_display_name=old_display_name)
+        except exception.InstanceNotFound:
+            LOG.debug('Failed to send instance update notification. The '
+                      'instance could not be found and was most likely '
+                      'deleted.', instance=new_instance)
         except Exception:
             LOG.exception(_LE("Failed to send state update notification"),
                     instance=new_instance)
@@ -189,6 +194,10 @@ def send_update_with_states(context, instance, old_vm_state, new_vm_state,
                     old_vm_state=old_vm_state, old_task_state=old_task_state,
                     new_vm_state=new_vm_state, new_task_state=new_task_state,
                     service=service, host=host)
+        except exception.InstanceNotFound:
+            LOG.debug('Failed to send instance update notification. The '
+                      'instance could not be found and was most likely '
+                      'deleted.', instance=instance)
         except Exception:
             LOG.exception(_LE("Failed to send state update notification"),
                     instance=instance)
