@@ -13229,8 +13229,6 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
     def test_volume_snapshot_delete_relative_1(self):
         """Deleting newest snapshot -- blockRebase using relative flag"""
 
-        # Ensure the libvirt lib has VIR_DOMAIN_BLOCK_REBASE_RELATIVE
-        fakelibvirt.__dict__.update({'VIR_DOMAIN_BLOCK_REBASE_RELATIVE': 8})
         self.stubs.Set(libvirt_driver, 'libvirt', fakelibvirt)
 
         instance = objects.Instance(**self.inst)
@@ -13261,7 +13259,6 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
                                           snapshot_id, self.delete_info_1)
 
         self.mox.VerifyAll()
-        fakelibvirt.__dict__.pop('VIR_DOMAIN_BLOCK_REBASE_RELATIVE')
 
     def test_volume_snapshot_delete_2(self):
         """Deleting older snapshot -- blockCommit."""
@@ -13301,8 +13298,6 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
     def test_volume_snapshot_delete_relative_2(self):
         """Deleting older snapshot -- blockCommit using relative flag"""
 
-        # Ensure the libvirt lib has VIR_DOMAIN_BLOCK_COMMIT_RELATIVE
-        fakelibvirt.__dict__.update({'VIR_DOMAIN_BLOCK_COMMIT_RELATIVE': 4})
         self.stubs.Set(libvirt_driver, 'libvirt', fakelibvirt)
 
         instance = objects.Instance(**self.inst)
@@ -13333,7 +13328,6 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
                                           snapshot_id, self.delete_info_2)
 
         self.mox.VerifyAll()
-        fakelibvirt.__dict__.pop('VIR_DOMAIN_BLOCK_COMMIT_RELATIVE')
 
     def test_volume_snapshot_delete_outer_success(self):
         instance = objects.Instance(**self.inst)
@@ -13474,8 +13468,6 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
             def XMLDesc(self, *args):
                 return self.dom_netdisk_xml
 
-        # Ensure the libvirt lib has VIR_DOMAIN_BLOCK_REBASE_RELATIVE
-        fakelibvirt.__dict__.update({'VIR_DOMAIN_BLOCK_REBASE_RELATIVE': 8})
         self.stubs.Set(libvirt_driver, 'libvirt', fakelibvirt)
 
         instance = objects.Instance(**self.inst)
@@ -13506,7 +13498,6 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
                                           snapshot_id, self.delete_info_1)
 
         self.mox.VerifyAll()
-        fakelibvirt.__dict__.pop('VIR_DOMAIN_BLOCK_REBASE_RELATIVE')
 
     def test_volume_snapshot_delete_netdisk_2(self):
         """Delete older snapshot -- blockCommit for libgfapi/network disk."""
@@ -13559,8 +13550,6 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
             def XMLDesc(self, *args):
                 return self.dom_netdisk_xml
 
-        # Ensure the libvirt lib has VIR_DOMAIN_BLOCK_COMMIT_RELATIVE
-        fakelibvirt.__dict__.update({'VIR_DOMAIN_BLOCK_COMMIT_RELATIVE': 4})
         self.stubs.Set(libvirt_driver, 'libvirt', fakelibvirt)
 
         instance = objects.Instance(**self.inst)
@@ -13592,7 +13581,6 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
                                           self.delete_info_netdisk)
 
         self.mox.VerifyAll()
-        fakelibvirt.__dict__.pop('VIR_DOMAIN_BLOCK_COMMIT_RELATIVE')
 
 
 def _fake_convert_image(source, dest, out_format,
