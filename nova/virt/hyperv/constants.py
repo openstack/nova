@@ -18,6 +18,7 @@ Constants used in ops classes
 """
 
 from os_win import constants
+from oslo_utils import units
 
 from nova.compute import arch
 from nova.compute import power_state
@@ -66,3 +67,5 @@ IMAGE_PROP_VM_GEN_2 = "hyperv-gen2"
 
 VM_GEN_1 = 1
 VM_GEN_2 = 2
+
+SERIAL_CONSOLE_BUFFER_SIZE = 4 * units.Ki
