@@ -276,8 +276,31 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
             # after that we can detach and connection_info is required for
             # detach.
             self.save()
-            volume_api.attach(context, volume_id, instance.uuid,
-                              self['mount_device'], mode=mode)
+            try:
+                volume_api.attach(context, volume_id, instance.uuid,
+                                  self['mount_device'], mode=mode)
+            except Exception:
+                with excutils.save_and_reraise_exception():
+                    if do_driver_attach:
+                        try:
+                            virt_driver.detach_volume(connection_info,
+                                                      instance,
+                                                      self['mount_device'],
+                                                      encryption=encryption)
+                        except Exception:
+                            LOG.warn(_LW("Driver failed to detach volume "
+                                         "%(volume_id)s at %(mount_point)s."),
+                                     {'volume_id': volume_id,
+                                      'mount_point': self['mount_device']},
+                                     exc_info=True, context=context,
+                                     instance=instance)
+                    volume_api.terminate_connection(context, volume_id,
+                                                    connector)
+
+                    # Cinder-volume might have completed volume attach. So
+                    # we should detach the volume. If the attach did not
+                    # happen, the detach request will be ignored.
+                    volume_api.detach(context, volume_id)
 
     @update_db
     def refresh_connection_info(self, context, instance,
