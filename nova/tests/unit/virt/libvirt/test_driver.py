@@ -5365,6 +5365,21 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertIsNone(ret)
 
     @mock.patch.object(host.Host, 'compare_cpu')
+    @mock.patch.object(nova.virt.libvirt, 'config')
+    def test_compare_cpu_handles_not_supported_error_gracefully(self,
+                                                                mock_vconfig,
+                                                                mock_conn):
+        not_supported_exc = fakelibvirt.make_libvirtError(
+                fakelibvirt.libvirtError,
+                'this function is not supported by the connection driver:'
+                ' virCompareCPU',
+                error_code=fakelibvirt.VIR_ERR_NO_SUPPORT)
+        mock_conn.compareCPU.side_effect = not_supported_exc
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        ret = conn._compare_cpu(None, jsonutils.dumps(_fake_cpu_info))
+        self.assertIsNone(ret)
+
+    @mock.patch.object(host.Host, 'compare_cpu')
     @mock.patch.object(nova.virt.libvirt.LibvirtDriver,
                        '_vcpu_model_to_cpu_config')
     def test_compare_cpu_compatible_guest_cpu(self, mock_vcpu_to_cpu,

@@ -5185,9 +5185,16 @@ class LibvirtDriver(driver.ComputeDriver):
         try:
             ret = self._host.compare_cpu(cpu.to_xml())
         except libvirt.libvirtError as e:
-            LOG.error(m, {'ret': e, 'u': u})
-            raise exception.MigrationPreCheckError(
-                reason=m % {'ret': e, 'u': u})
+            error_code = e.get_error_code()
+            if error_code == libvirt.VIR_ERR_NO_SUPPORT:
+                LOG.debug("URI %(uri)s does not support cpu comparison. "
+                          "It will be proceeded though. Error: %(error)s",
+                          {'uri': self.uri(), 'error': e})
+                return
+            else:
+                LOG.error(m, {'ret': e, 'u': u})
+                raise exception.MigrationPreCheckError(
+                    reason=m % {'ret': e, 'u': u})
 
         if ret <= 0:
             LOG.error(m, {'ret': ret, 'u': u})
