@@ -224,13 +224,14 @@ class VMwareVMOps(object):
                                       root_vmdk_path, dc_info.ref)
 
     def _configure_config_drive(self, instance, vm_ref, dc_info, datastore,
-                                injected_files, admin_password):
+                                injected_files, admin_password, network_info):
         session_vim = self._session.vim
         cookies = session_vim.client.options.transport.cookiejar
 
         uploaded_iso_path = self._create_config_drive(instance,
                                                       injected_files,
                                                       admin_password,
+                                                      network_info,
                                                       datastore.name,
                                                       dc_info.name,
                                                       instance.uuid,
@@ -635,7 +636,7 @@ class VMwareVMOps(object):
         if configdrive.required_by(instance):
             self._configure_config_drive(
                     instance, vm_ref, vi.dc_info, vi.datastore,
-                    injected_files, admin_password)
+                    injected_files, admin_password, network_info)
 
         if power_on:
             vm_util.power_on_instance(self._session, instance, vm_ref=vm_ref)
@@ -655,7 +656,8 @@ class VMwareVMOps(object):
                                                     virt="vmware")
 
     def _create_config_drive(self, instance, injected_files, admin_password,
-                             data_store_name, dc_name, upload_folder, cookies):
+                             network_info, data_store_name, dc_name,
+                             upload_folder, cookies):
         if CONF.config_drive_format != 'iso9660':
             reason = (_('Invalid config_drive_format "%s"') %
                       CONF.config_drive_format)
@@ -668,7 +670,8 @@ class VMwareVMOps(object):
 
         inst_md = instance_metadata.InstanceMetadata(instance,
                                                      content=injected_files,
-                                                     extra_md=extra_md)
+                                                     extra_md=extra_md,
+                                                     network_info=network_info)
         try:
             with configdrive.ConfigDriveBuilder(instance_md=inst_md) as cdb:
                 with utils.tempdir() as tmp_path:
