@@ -41,7 +41,7 @@ fake_numa_topology = objects.NUMATopology(
                                 mempages=[], pinned_cpus=set([]),
                                 siblings=[])])
 fake_numa_topology_db_format = fake_numa_topology._to_json()
-fake_hv_spec = hv_spec.HVSpec(arch='foo', hv_type='bar', vm_mode='foobar')
+fake_hv_spec = hv_spec.HVSpec(arch='x86_64', hv_type='kvm', vm_mode='hvm')
 fake_supported_hv_specs = [fake_hv_spec]
 # for backward compatibility, each supported instance object
 # is stored as a list in the database

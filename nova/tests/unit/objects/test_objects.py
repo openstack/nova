@@ -1130,7 +1130,7 @@ object_data = {
     'FlavorList': '1.1-ab3f242e0db21db87285f2ac2ddc5c72',
     'FloatingIP': '1.6-24c614d2c3d4887254a679be65c11de5',
     'FloatingIPList': '1.7-e61a470ab21d7422f6bb703f86d99b53',
-    'HVSpec': '1.0-c4d8377cc4fe519930e60c1d8265a142',
+    'HVSpec': '1.0-1f9806b94af42dd91e6db369cd10f114',
     'Instance': '1.20-0991d6bd300ebf35ec19d7d68922e69b',
     'InstanceAction': '1.1-866fb0235d45ab51cc299b8726303d9c',
     'InstanceActionEvent': '1.1-538698f30974064543134784c5da6056',

@@ -250,6 +250,49 @@ class TestCPUFeaturePolicy(TestField):
         self.assertRaises(ValueError, self.field.stringify, 'disallow')
 
 
+class TestHVType(TestField):
+    def setUp(self):
+        super(TestHVType, self).setUp()
+        self.field = fields.HVTypeField()
+        self.coerce_good_values = [('baremetal', 'baremetal'),
+                                   ('bhyve', 'bhyve'),
+                                   ('fake', 'fake'),
+                                   ('kvm', 'kvm'),
+                                   ('xapi', 'xen'),
+                                   ('powervm', 'phyp')]
+        self.coerce_bad_values = ['acme']
+        self.to_primitive_values = self.coerce_good_values[0:1]
+        self.from_primitive_values = self.coerce_good_values[0:1]
+
+    def test_stringify(self):
+        self.assertEqual("'xen'", self.field.stringify('xen'))
+
+    def test_stringify_invalid(self):
+        self.assertRaises(ValueError, self.field.stringify, 'acme')
+
+
+class TestVMMode(TestField):
+    def setUp(self):
+        super(TestVMMode, self).setUp()
+        self.field = fields.VMModeField()
+        self.coerce_good_values = [('hvm', 'hvm'),
+                                   ('xen', 'xen'),
+                                   ('uml', 'uml'),
+                                   ('exe', 'exe'),
+                                   ('pv', 'xen'),
+                                   ('hv', 'hvm'),
+                                   ('baremetal', 'hvm')]
+        self.coerce_bad_values = ['acme']
+        self.to_primitive_values = self.coerce_good_values[0:1]
+        self.from_primitive_values = self.coerce_good_values[0:1]
+
+    def test_stringify(self):
+        self.assertEqual("'hvm'", self.field.stringify('hvm'))
+
+    def test_stringify_invalid(self):
+        self.assertRaises(ValueError, self.field.stringify, 'acme')
+
+
 class TestInteger(TestField):
     def setUp(self):
         super(TestInteger, self).setUp()

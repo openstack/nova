@@ -27,6 +27,10 @@ import six
 from nova.compute import arch
 # TODO(berrange) Temporary import for CPU* classes
 from nova.compute import cpumodel
+# TODO(berrange) Temporary import for HVType class
+from nova.compute import hv_type
+# TODO(berrange) Temporary import for VMMode class
+from nova.compute import vm_mode
 from nova import exception
 from nova.i18n import _
 from nova.network import model as network_model
@@ -325,6 +329,38 @@ class CPUFeaturePolicy(Enum):
     def __init__(self, **kwargs):
         super(CPUFeaturePolicy, self).__init__(
             valid_values=cpumodel.ALL_POLICIES, **kwargs)
+
+
+class HVType(Enum):
+    # TODO(berrange): move all constants out of 'nova.compute.hv_type'
+    # into fields on this class
+    def __init__(self):
+        super(HVType, self).__init__(
+            valid_values=hv_type.ALL)
+
+    def coerce(self, obj, attr, value):
+        try:
+            value = hv_type.canonicalize(value)
+        except exception.InvalidHypervisorVirtType:
+            msg = _("Hypervisr virt type '%s' is not valid") % value
+            raise ValueError(msg)
+        return super(HVType, self).coerce(obj, attr, value)
+
+
+class VMMode(Enum):
+    # TODO(berrange): move all constants out of 'nova.compute.vm_mode'
+    # into fields on this class
+    def __init__(self):
+        super(VMMode, self).__init__(
+            valid_values=vm_mode.ALL)
+
+    def coerce(self, obj, attr, value):
+        try:
+            value = vm_mode.canonicalize(value)
+        except exception.InvalidVirtualMachineMode:
+            msg = _("Virtual machine mode '%s' is not valid") % value
+            raise ValueError(msg)
+        return super(VMMode, self).coerce(obj, attr, value)
 
 
 class UUID(FieldType):
@@ -720,6 +756,14 @@ class CPUMatchField(BaseEnumField):
 
 class CPUFeaturePolicyField(BaseEnumField):
     AUTO_TYPE = CPUFeaturePolicy()
+
+
+class HVTypeField(BaseEnumField):
+    AUTO_TYPE = HVType()
+
+
+class VMModeField(BaseEnumField):
+    AUTO_TYPE = VMMode()
 
 
 class UUIDField(AutoTypedField):
