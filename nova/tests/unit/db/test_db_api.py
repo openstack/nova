@@ -7829,7 +7829,7 @@ class ArchiveTestCase(test.TestCase):
 
     def test_archive_deleted_rows_for_every_uuid_table(self):
         tablenames = []
-        for model_class in models.__dict__.itervalues():
+        for model_class in six.itervalues(models.__dict__):
             if hasattr(model_class, "__tablename__"):
                 tablenames.append(model_class.__tablename__)
         tablenames.sort()

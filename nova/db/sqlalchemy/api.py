@@ -5968,7 +5968,7 @@ def archive_deleted_rows(context, max_rows=None):
     """
     # The context argument is only used for the decorator.
     tablenames = []
-    for model_class in models.__dict__.itervalues():
+    for model_class in six.itervalues(models.__dict__):
         if hasattr(model_class, "__tablename__"):
             tablenames.append(model_class.__tablename__)
     rows_archived = 0

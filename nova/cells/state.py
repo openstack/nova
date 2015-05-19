@@ -27,6 +27,7 @@ from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import timeutils
 from oslo_utils import units
+import six
 
 from nova.cells import rpc_driver
 from nova import context
@@ -328,9 +329,9 @@ class CellStateManager(base.Base):
     def get_cell_info_for_neighbors(self):
         """Return cell information for all neighbor cells."""
         cell_list = [cell.get_cell_info()
-                for cell in self.child_cells.itervalues()]
+                for cell in six.itervalues(self.child_cells)]
         cell_list.extend([cell.get_cell_info()
-                for cell in self.parent_cells.itervalues()])
+                for cell in six.itervalues(self.parent_cells)])
         return cell_list
 
     @sync_before

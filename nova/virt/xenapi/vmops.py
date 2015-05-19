@@ -33,6 +33,7 @@ from oslo_utils import netutils
 from oslo_utils import strutils
 from oslo_utils import timeutils
 from oslo_utils import units
+import six
 
 from nova import block_device
 from nova import compute
@@ -359,7 +360,7 @@ class VMOps(object):
             vdis.update(create_image_vdis)
 
         # Fetch VDI refs now so we don't have to fetch the ref multiple times
-        for vdi in vdis.itervalues():
+        for vdi in six.itervalues(vdis):
             vdi['ref'] = self._session.call_xenapi('VDI.get_by_uuid',
                                                    vdi['uuid'])
         return vdis
