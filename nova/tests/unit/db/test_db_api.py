@@ -959,7 +959,7 @@ class SqlAlchemyDbApiNoDbTestCase(test.NoDBTestCase):
 
     def test_get_regexp_op_for_database_mysql(self):
         op = sqlalchemy_api._get_regexp_op_for_connection(
-                'mysql://root@localhost')
+                'mysql+pymysql://root@localhost')
         self.assertEqual('REGEXP', op)
 
     def test_get_regexp_op_for_database_postgresql(self):

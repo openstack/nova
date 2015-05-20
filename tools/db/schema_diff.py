@@ -32,7 +32,7 @@ Run like:
 
     MYSQL:
 
-    ./tools/db/schema_diff.py mysql://root@localhost \
+    ./tools/db/schema_diff.py mysql+pymysql://root@localhost \
                               master:latest my_branch:82
 
     POSTGRESQL:

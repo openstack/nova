@@ -30,7 +30,7 @@ class CellMappingTestCase(test.NoDBTestCase):
     sample_mapping = {'uuid': '',
                 'name': 'fake-cell',
                 'transport_url': 'rabbit:///',
-                'database_connection': 'mysql:///'}
+                'database_connection': 'mysql+pymysql:///'}
 
     def _create_mapping(self, **kwargs):
         args = self.sample_mapping.copy()
