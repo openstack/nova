@@ -563,7 +563,7 @@ class ServersController(wsgi.Controller):
 
         try:
             flavor_id = self._flavor_id_from_req_data(body)
-        except ValueError as error:
+        except ValueError:
             msg = _("Invalid flavorRef provided.")
             raise exc.HTTPBadRequest(explanation=msg)
 

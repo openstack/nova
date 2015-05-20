@@ -636,7 +636,7 @@ class Controller(wsgi.Controller):
         except UnicodeDecodeError as error:
             msg = "UnicodeError: %s" % error
             raise exc.HTTPBadRequest(explanation=msg)
-        except Exception as error:
+        except Exception:
             # The remaining cases can be handled in a standard fashion.
             self._handle_create_exception(*sys.exc_info())
 

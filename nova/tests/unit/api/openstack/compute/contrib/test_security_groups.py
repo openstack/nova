@@ -189,7 +189,7 @@ class TestSecurityGroupsV21(test.TestCase):
         except webob.exc.HTTPBadRequest as exc:
             self.assertEqual('description has a minimum character requirement'
                              ' of 1.', exc.explanation)
-        except exception.InvalidInput as exc:
+        except exception.InvalidInput:
             self.fail('Should have raised BadRequest exception instead of')
         self._assert_no_security_groups_reserved(req.environ['nova.context'])
 
