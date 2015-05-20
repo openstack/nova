@@ -18,7 +18,6 @@ Common Auth Middleware.
 
 from oslo_config import cfg
 from oslo_log import log as logging
-from oslo_log import versionutils
 from oslo_middleware import request_id
 from oslo_serialization import jsonutils
 import webob.dec
@@ -38,11 +37,9 @@ auth_opts = [
     cfg.StrOpt('auth_strategy',
                default='keystone',
                help='''
-The strategy to use for auth: keystone, noauth (deprecated), or
-noauth2. Both noauth and noauth2 are designed for testing only, as
-they do no actual credential checking. noauth provides administrative
-credentials regardless of the passed in user, noauth2 only does if
-'admin' is specified as the username.
+The strategy to use for auth: keystone or noauth2. noauth2 is designed for
+testing only, as it does no actual credential checking. noauth2 provides
+administrative credentials only if 'admin' is specified as the username.
 '''),
     cfg.BoolOpt('use_forwarded_for',
                 default=False,
@@ -67,12 +64,7 @@ def _load_pipeline(loader, pipeline):
 
 def pipeline_factory(loader, global_conf, **local_conf):
     """A paste pipeline replica that keys off of auth_strategy."""
-    # TODO(sdague): remove deprecated noauth in Liberty
-    if CONF.auth_strategy == 'noauth':
-        versionutils.report_deprecated_feature(
-            LOG,
-            ('The noauth middleware will be removed in Liberty.'
-             ' noauth2 should be used instead.'))
+
     pipeline = local_conf[CONF.auth_strategy]
     if not CONF.api_rate_limit:
         limit_name = CONF.auth_strategy + '_nolimit'
