@@ -90,6 +90,12 @@ class _TestBlockDeviceMappingObject(object):
         self.assertRaises(exception.ObjectActionError,
                           bdm_object.save, self.context)
 
+    @mock.patch.object(db, 'block_device_mapping_update', return_value=None)
+    def test_save_not_found(self, bdm_update):
+        bdm_object = objects.BlockDeviceMapping(context=self.context)
+        bdm_object.id = 123
+        self.assertRaises(exception.BDMNotFound, bdm_object.save)
+
     @mock.patch.object(db, 'block_device_mapping_get_by_volume_id')
     def test_get_by_volume_id(self, get_by_vol_id):
         get_by_vol_id.return_value = self.fake_bdm()

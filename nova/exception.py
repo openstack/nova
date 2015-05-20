@@ -570,6 +570,10 @@ class VolumeNotFound(NotFound):
     msg_fmt = _("Volume %(volume_id)s could not be found.")
 
 
+class BDMNotFound(NotFound):
+    msg_fmt = _("No Block Device Mapping with id %(id)s.")
+
+
 class VolumeBDMNotFound(NotFound):
     msg_fmt = _("No volume Block Device Mapping with id %(volume_id)s.")
 

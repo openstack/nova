@@ -172,6 +172,8 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject,
         updates.pop('id', None)
         updated = db.block_device_mapping_update(self._context, self.id,
                                                  updates, legacy=False)
+        if not updated:
+            raise exception.BDMNotFound(id=self.id)
         self._from_db_object(self._context, self, updated)
         cell_type = cells_opts.get_cell_type()
         if cell_type == 'compute':
