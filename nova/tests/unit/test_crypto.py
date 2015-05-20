@@ -344,18 +344,20 @@ class KeyPairTest(test.TestCase):
         fingerprint = crypto.generate_fingerprint(self.ecdsa_pub)
         self.assertEqual(self.ecdsa_fp, fingerprint)
 
-    def test_generate_key_pair(self):
+    def test_generate_key_pair_2048_bits(self):
         (private_key, public_key, fingerprint) = crypto.generate_key_pair()
         raw_pub = public_key.split(' ')[1].decode('base64')
         pkey = paramiko.rsakey.RSAKey(None, raw_pub)
         self.assertEqual(2048, pkey.get_bits())
 
-        bits = 4096
+    def test_generate_key_pair_1024_bits(self):
+        bits = 1024
         (private_key, public_key, fingerprint) = crypto.generate_key_pair(bits)
         raw_pub = public_key.split(' ')[1].decode('base64')
         pkey = paramiko.rsakey.RSAKey(None, raw_pub)
         self.assertEqual(bits, pkey.get_bits())
 
+    def test_generate_key_pair_mocked_private_key(self):
         keyin = StringIO.StringIO()
         keyin.write(self.rsa_prv)
         keyin.seek(0)
