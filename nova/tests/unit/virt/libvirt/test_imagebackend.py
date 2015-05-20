@@ -1253,9 +1253,6 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
         def fake_fetch(target, *args, **kwargs):
             return
 
-        def fake_resize(rbd_name, size):
-            return
-
         self.stubs.Set(os.path, 'exists', lambda _: True)
         self.stubs.Set(image, 'check_image_exists', lambda: True)
 

@@ -1922,11 +1922,6 @@ class ServersControllerCreateTest(test.TestCase):
             instance.update(values)
             return instance
 
-        def server_update(context, instance_uuid, params, update_cells=False):
-            inst = self.instance_cache_by_uuid[instance_uuid]
-            inst.update(params)
-            return inst
-
         def server_update_and_get_original(
                 context, instance_uuid, params, update_cells=False,
                 columns_to_join=None):

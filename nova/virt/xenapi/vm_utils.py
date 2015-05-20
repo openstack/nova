@@ -2291,9 +2291,6 @@ def _write_partition(session, virtual_size, dev):
               {'primary_first': primary_first, 'primary_last': primary_last,
                'dev_path': dev_path})
 
-    def execute(*cmd, **kwargs):
-        return utils.execute(*cmd, **kwargs)
-
     _make_partition(session, dev, "%ds" % primary_first, "%ds" % primary_last)
     LOG.debug('Writing partition table %s done.', dev_path)
 

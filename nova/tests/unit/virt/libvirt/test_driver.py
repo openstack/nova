@@ -5184,9 +5184,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         def fake_none(self, *args):
             return
 
-        def fake_raise(self):
-            raise fakelibvirt.libvirtError('ERR')
-
         class FakeTime(object):
             def __init__(self):
                 self.counter = 0
@@ -10458,9 +10455,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         mock_domain = self.mox.CreateMock(fakelibvirt.virDomain)
         self.resultXML = None
 
-        def fake_none(*args, **kwargs):
-            return
-
         def fake_getLibVersion():
             return 9011
 
@@ -10492,9 +10486,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         def fake_get_domain(instance):
             return mock_domain
-
-        def fake_defineXML(xml):
-            return
 
         def fake_baselineCPU(cpu, flag):
             return """<cpu mode='custom' match='exact'>
@@ -11535,9 +11526,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
 
         def fake_get_host_ip_addr():
             return '10.0.0.1'
-
-        def fake_execute(*args, **kwargs):
-            pass
 
         self.stubs.Set(self.drvr, 'get_instance_disk_info',
                        fake_get_instance_disk_info)
