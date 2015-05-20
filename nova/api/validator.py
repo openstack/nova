@@ -81,7 +81,7 @@ def validate_image_path(val):
 def validate_user_data(user_data):
     """Check if the user_data is encoded properly."""
     try:
-        user_data = base64.b64decode(user_data)
+        base64.b64decode(user_data)
     except TypeError:
         return False
     return True

@@ -161,7 +161,7 @@ class QuotaSetsController(wsgi.Controller):
                 force_update = strutils.bool_from_string(value)
             elif key not in NON_QUOTA_KEYS and value:
                 try:
-                    value = utils.validate_integer(value, key)
+                    utils.validate_integer(value, key)
                 except exception.InvalidInput as e:
                     raise webob.exc.HTTPBadRequest(
                         explanation=e.format_message())

@@ -406,7 +406,6 @@ class TestNeutronv2Base(test.TestCase):
             macs = set(macs)
         req_net_ids = []
         ordered_networks = []
-        port = {}
         if 'requested_networks' in kwargs:
             for request in kwargs['requested_networks']:
                 if request.port_id:
@@ -582,7 +581,6 @@ class TestNeutronv2Base(test.TestCase):
                                           mox.IgnoreArg()).AndReturn(
                                               fake_info_cache)
         port_data = number == 1 and self.port_data1 or self.port_data2
-        nets = number == 1 and self.nets1 or self.nets2
         net_info_cache = []
         for port in port_data:
             net_info_cache.append({"network": {"id": port['network_id']},
