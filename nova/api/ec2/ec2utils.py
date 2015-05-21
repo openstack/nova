@@ -20,6 +20,7 @@ import re
 from oslo_log import log as logging
 from oslo_utils import timeutils
 from oslo_utils import uuidutils
+import six
 
 from nova import context
 from nova import exception
@@ -413,7 +414,7 @@ def dict_from_dotted_str(items):
     for key, value in items:
         parts = key.split(".")
         key = str(camelcase_to_underscore(parts[0]))
-        if isinstance(value, str) or isinstance(value, unicode):
+        if isinstance(value, six.string_types):
             # NOTE(vish): Automatically convert strings back
             #             into their respective values
             value = _try_convert(value)

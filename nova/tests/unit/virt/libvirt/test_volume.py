@@ -24,6 +24,7 @@ import fixtures
 import mock
 from oslo_concurrency import processutils
 from oslo_config import cfg
+import six
 
 from nova.compute import arch
 from nova import exception
@@ -1374,7 +1375,7 @@ Setting up iSCSI targets: unused
         self.stubs.Set(linuxscsi, 'find_multipath_device', lambda x: devices)
         self.stubs.Set(linuxscsi, 'remove_device', lambda x: None)
         # Should work for string, unicode, and list
-        wwns = ['1234567890123456', unicode('1234567890123456'),
+        wwns = ['1234567890123456', six.text_type('1234567890123456'),
                 ['1234567890123456', '1234567890123457']]
         for wwn in wwns:
             connection_info = self.fibrechan_connection(self.vol,
@@ -1464,7 +1465,7 @@ Setting up iSCSI targets: unused
         self.stubs.Set(linuxscsi, 'find_multipath_device', lambda x: devices)
         self.stubs.Set(linuxscsi, 'remove_device', lambda x: None)
         # Should work for string, unicode, and list
-        wwns = ['1234567890123456', unicode('1234567890123456'),
+        wwns = ['1234567890123456', six.text_type('1234567890123456'),
                 ['1234567890123456']]
         expected_remove_calls = []
         for wwn in wwns:

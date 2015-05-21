@@ -24,6 +24,7 @@ It is used via a single directive in the .rst file
 
 import re
 
+import six
 from six.moves import configparser
 
 from docutils import nodes
@@ -111,7 +112,7 @@ class SupportMatrixTarget(object):
 class SupportMatrixDirective(rst.Directive):
 
     option_spec = {
-        'support-matrix': unicode,
+        'support-matrix': six.text_type,
     }
 
     def run(self):

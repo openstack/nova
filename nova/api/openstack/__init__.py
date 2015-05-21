@@ -21,6 +21,7 @@ WSGI middleware for OpenStack API controllers.
 from oslo_config import cfg
 from oslo_log import log as logging
 import routes
+import six
 import stevedore
 import webob.dec
 import webob.exc
@@ -90,7 +91,7 @@ class FaultWrapper(base_wsgi.Middleware):
                                   status, webob.exc.HTTPInternalServerError)()
 
     def _error(self, inner, req):
-        LOG.exception(_LE("Caught error: %s"), unicode(inner))
+        LOG.exception(_LE("Caught error: %s"), six.text_type(inner))
 
         safe = getattr(inner, 'safe', False)
         headers = getattr(inner, 'headers', None)

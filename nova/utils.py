@@ -424,7 +424,7 @@ def utf8(value):
     http://github.com/facebook/tornado/blob/master/tornado/escape.py
 
     """
-    if isinstance(value, unicode):
+    if isinstance(value, six.text_type):
         return value.encode('utf-8')
     assert isinstance(value, str)
     return value
@@ -600,7 +600,7 @@ def make_dev_path(dev, partition=None, base='/dev'):
 
 def sanitize_hostname(hostname):
     """Return a hostname which conforms to RFC-952 and RFC-1123 specs."""
-    if isinstance(hostname, unicode):
+    if isinstance(hostname, six.text_type):
         hostname = hostname.encode('latin-1', 'ignore')
 
     hostname = re.sub('[ _]', '-', hostname)
@@ -1076,7 +1076,7 @@ def get_system_metadata_from_image(image_meta, flavor=None):
     prefix_format = SM_IMAGE_PROP_PREFIX + '%s'
 
     for key, value in image_meta.get('properties', {}).iteritems():
-        new_value = safe_truncate(unicode(value), 255)
+        new_value = safe_truncate(six.text_type(value), 255)
         system_meta[prefix_format % key] = new_value
 
     for key in SM_INHERITABLE_KEYS:

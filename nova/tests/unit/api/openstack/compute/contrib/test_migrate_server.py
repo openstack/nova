@@ -14,6 +14,7 @@
 #    under the License.
 
 from oslo_utils import uuidutils
+import six
 import webob
 
 from nova.api.openstack.compute.contrib import admin_actions as \
@@ -214,7 +215,7 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
                                self.controller._migrate_live,
                                self.req, instance.uuid, body=body)
         if check_response:
-            self.assertIn(unicode(fake_exc), ex.explanation)
+            self.assertIn(six.text_type(fake_exc), ex.explanation)
 
     def test_migrate_live_compute_service_unavailable(self):
         self._test_migrate_live_failed_with_exception(

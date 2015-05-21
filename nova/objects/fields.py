@@ -255,7 +255,7 @@ class String(FieldType):
         # FIXME(danms): We should really try to avoid the need to do this
         if isinstance(value, (six.string_types, int, long, float,
                               datetime.datetime)):
-            return unicode(value)
+            return six.text_type(value)
         else:
             raise ValueError(_('A string is required in field %(attr)s, '
                                'not %(type)s') %

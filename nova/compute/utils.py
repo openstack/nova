@@ -21,6 +21,7 @@ import traceback
 import netifaces
 from oslo_config import cfg
 from oslo_log import log
+import six
 
 from nova import block_device
 from nova.compute import power_state
@@ -55,7 +56,7 @@ def exception_to_dict(fault):
     # just because there is an unexpected error retrieving the message
     except Exception:
         try:
-            message = unicode(fault)
+            message = six.text_type(fault)
         except Exception:
             message = None
     if not message:
@@ -76,7 +77,7 @@ def _get_fault_details(exc_info, error_code):
         tb = exc_info[2]
         if tb:
             details = ''.join(traceback.format_tb(tb))
-    return unicode(details)
+    return six.text_type(details)
 
 
 def add_instance_fault_from_exc(context, instance, fault, exc_info=None):
