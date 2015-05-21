@@ -25,6 +25,7 @@ import six
 from nova.api.metadata import base as instance_metadata
 from nova.compute import power_state as nova_states
 from nova.compute import task_states
+from nova.compute import vm_states
 from nova import context as nova_context
 from nova import exception
 from nova import objects
@@ -144,8 +145,9 @@ class IronicDriverTestCase(test.NoDBTestCase):
                           ironic_driver._validate_instance_and_node,
                           ironicclient, instance)
 
+    @mock.patch.object(objects.Instance, 'refresh')
     @mock.patch.object(ironic_driver, '_validate_instance_and_node')
-    def test__wait_for_active_pass(self, fake_validate):
+    def test__wait_for_active_pass(self, fake_validate, fake_refresh):
         instance = fake_instance.fake_instance_obj(self.ctx,
                 uuid=uuidutils.generate_uuid())
         node = ironic_utils.get_test_node(
@@ -153,10 +155,12 @@ class IronicDriverTestCase(test.NoDBTestCase):
 
         fake_validate.return_value = node
         self.driver._wait_for_active(FAKE_CLIENT, instance)
-        self.assertTrue(fake_validate.called)
+        fake_validate.assert_called_once_with(FAKE_CLIENT, instance)
+        fake_refresh.assert_called_once_with()
 
+    @mock.patch.object(objects.Instance, 'refresh')
     @mock.patch.object(ironic_driver, '_validate_instance_and_node')
-    def test__wait_for_active_done(self, fake_validate):
+    def test__wait_for_active_done(self, fake_validate, fake_refresh):
         instance = fake_instance.fake_instance_obj(self.ctx,
                 uuid=uuidutils.generate_uuid())
         node = ironic_utils.get_test_node(
@@ -166,10 +170,12 @@ class IronicDriverTestCase(test.NoDBTestCase):
         self.assertRaises(loopingcall.LoopingCallDone,
                 self.driver._wait_for_active,
                 FAKE_CLIENT, instance)
-        self.assertTrue(fake_validate.called)
+        fake_validate.assert_called_once_with(FAKE_CLIENT, instance)
+        fake_refresh.assert_called_once_with()
 
+    @mock.patch.object(objects.Instance, 'refresh')
     @mock.patch.object(ironic_driver, '_validate_instance_and_node')
-    def test__wait_for_active_fail(self, fake_validate):
+    def test__wait_for_active_fail(self, fake_validate, fake_refresh):
         instance = fake_instance.fake_instance_obj(self.ctx,
                 uuid=uuidutils.generate_uuid())
         node = ironic_utils.get_test_node(
@@ -179,7 +185,31 @@ class IronicDriverTestCase(test.NoDBTestCase):
         self.assertRaises(exception.InstanceDeployFailure,
                 self.driver._wait_for_active,
                 FAKE_CLIENT, instance)
-        self.assertTrue(fake_validate.called)
+        fake_validate.assert_called_once_with(FAKE_CLIENT, instance)
+        fake_refresh.assert_called_once_with()
+
+    @mock.patch.object(objects.Instance, 'refresh')
+    @mock.patch.object(ironic_driver, '_validate_instance_and_node')
+    def _wait_for_active_abort(self, instance_params, fake_validate,
+                              fake_refresh):
+        instance = fake_instance.fake_instance_obj(self.ctx,
+                uuid=uuidutils.generate_uuid(),
+                **instance_params)
+        self.assertRaises(exception.InstanceDeployFailure,
+                self.driver._wait_for_active,
+                FAKE_CLIENT, instance)
+        # Assert _validate_instance_and_node wasn't called
+        self.assertFalse(fake_validate.called)
+        fake_refresh.assert_called_once_with()
+
+    def test__wait_for_active_abort_deleting(self):
+        self._wait_for_active_abort({'task_state': task_states.DELETING})
+
+    def test__wait_for_active_abort_deleted(self):
+        self._wait_for_active_abort({'vm_state': vm_states.DELETED})
+
+    def test__wait_for_active_abort_error(self):
+        self._wait_for_active_abort({'vm_state': vm_states.ERROR})
 
     @mock.patch.object(ironic_driver, '_validate_instance_and_node')
     def test__wait_for_power_state_pass(self, fake_validate):
