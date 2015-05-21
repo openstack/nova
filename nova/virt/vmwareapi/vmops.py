@@ -1811,6 +1811,6 @@ class VMwareVMOps(object):
 
         # NOTE: VM can move hosts in some situations. Debug for admins.
         LOG.debug("VM %(uuid)s is currently on host %(host_name)s",
-                  {'uuid': instance.name, 'host_name': host_name},
+                  {'uuid': instance.uuid, 'host_name': host_name},
                   instance=instance)
         return ctype.ConsoleVNC(**vnc_console)
