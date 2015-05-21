@@ -223,7 +223,7 @@ class FakeNetworkAPI(object):
             net['broadcast'] = str(subnet_v4.broadcast)
             net['dhcp_start'] = str(subnet_v4[2])
 
-            for key in FAKE_NETWORKS[0].iterkeys():
+            for key in FAKE_NETWORKS[0]:
                 net.setdefault(key, kwargs.get(key))
             new_networks.append(net)
         self.networks += new_networks
