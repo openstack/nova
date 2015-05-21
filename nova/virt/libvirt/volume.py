@@ -600,7 +600,6 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
 
     def _disconnect_volume_multipath_iscsi(self, iscsi_properties,
                                            multipath_device):
-        self._rescan_iscsi()
         self._rescan_multipath()
         block_devices = self.connection._get_all_block_devices()
         devices = []
