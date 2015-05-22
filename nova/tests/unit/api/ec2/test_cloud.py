@@ -1927,27 +1927,35 @@ class CloudTestCase(test.TestCase):
         good_names = ('a', 'a' * 255, string.ascii_letters + ' -_')
         bad_names = ('', 'a' * 256, '*', '/')
 
-        for key_name in good_names:
-            result = self.cloud.create_key_pair(self.context,
+        with mock.patch.object(self.cloud.keypair_api,
+                '_generate_key_pair') as mock_generate_key_pair:
+            mock_generate_key_pair.return_value = (
+                "private_key", "public_key", "fingerprint")
+            for key_name in good_names:
+                result = self.cloud.create_key_pair(self.context,
                                                 key_name)
-            self.assertEqual(result['keyName'], key_name)
+                self.assertEqual(result['keyName'], key_name)
 
-        for key_name in bad_names:
-            self.assertRaises(exception.InvalidKeypair,
+            for key_name in bad_names:
+                self.assertRaises(exception.InvalidKeypair,
                               self.cloud.create_key_pair,
                               self.context,
                               key_name)
 
     def test_create_key_pair_quota_limit(self):
-        self.flags(quota_key_pairs=10)
-        for i in range(0, 10):
-            key_name = 'key_%i' % i
-            result = self.cloud.create_key_pair(self.context,
+        with mock.patch.object(self.cloud.keypair_api,
+                '_generate_key_pair') as mock_generate_key_pair:
+            mock_generate_key_pair.return_value = (
+                "private_key", "public_key", "fingerprint")
+            self.flags(quota_key_pairs=10)
+            for i in range(0, 10):
+                key_name = 'key_%i' % i
+                result = self.cloud.create_key_pair(self.context,
                                                 key_name)
-            self.assertEqual(result['keyName'], key_name)
+                self.assertEqual(result['keyName'], key_name)
 
-        # 11'th group should fail
-        self.assertRaises(exception.KeypairLimitExceeded,
+            # 11'th group should fail
+            self.assertRaises(exception.KeypairLimitExceeded,
                           self.cloud.create_key_pair,
                           self.context,
                           'foo')
