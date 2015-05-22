@@ -48,6 +48,7 @@ from oslo_utils import excutils
 from oslo_utils import strutils
 from oslo_utils import timeutils
 import six
+from six.moves import range
 
 from nova import block_device
 from nova.cells import rpcapi as cells_rpcapi
@@ -3006,7 +3007,7 @@ class ComputeManager(manager.Manager):
             excess = len(images) - rotation
             LOG.debug("Rotating out %d backups", excess,
                       instance=instance)
-            for i in xrange(excess):
+            for i in range(excess):
                 image = images.pop()
                 image_id = image['id']
                 LOG.debug("Deleting image %s", image_id,

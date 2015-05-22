@@ -25,6 +25,7 @@ import time
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import excutils
+from six.moves import range
 
 from nova import exception
 from nova.i18n import _, _LE, _LW
@@ -284,7 +285,7 @@ class ISCSIVolumeDriver(object):
         # The WMI query in get_device_number_for_target can incorrectly
         # return no data when the system is under load.  This issue can
         # be avoided by adding a retry.
-        for i in xrange(CONF.hyperv.mounted_disk_query_retry_count):
+        for i in range(CONF.hyperv.mounted_disk_query_retry_count):
             device_number = self._volutils.get_device_number_for_target(
                 target_iqn, target_lun)
             if device_number in (None, -1):

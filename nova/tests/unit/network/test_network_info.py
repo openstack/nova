@@ -134,7 +134,7 @@ class FixedIPTests(test.NoDBTestCase):
 
     def test_add_floating_ip_repeatedly_only_one_instance(self):
         fixed_ip = model.FixedIP(address='192.168.1.100')
-        for i in xrange(10):
+        for i in range(10):
             fixed_ip.add_floating_ip('192.168.1.101')
         self.assertEqual(fixed_ip['floating_ips'], ['192.168.1.101'])
 
@@ -199,7 +199,7 @@ class SubnetTests(test.NoDBTestCase):
         subnet = fake_network_cache_model.new_subnet()
         route1 = fake_network_cache_model.new_route()
         route2 = fake_network_cache_model.new_route({'cidr': '1.1.1.1/24'})
-        for i in xrange(10):
+        for i in range(10):
             subnet.add_route(route2)
         self.assertEqual(subnet['routes'], [route1, route2])
 
@@ -214,7 +214,7 @@ class SubnetTests(test.NoDBTestCase):
 
     def test_add_dns_a_lot(self):
         subnet = fake_network_cache_model.new_subnet()
-        for i in xrange(10):
+        for i in range(10):
             subnet.add_dns(fake_network_cache_model.new_ip(
                     dict(address='9.9.9.9')))
         self.assertEqual(subnet['dns'],
@@ -236,7 +236,7 @@ class SubnetTests(test.NoDBTestCase):
 
     def test_add_ip_a_lot(self):
         subnet = fake_network_cache_model.new_subnet()
-        for i in xrange(10):
+        for i in range(10):
             subnet.add_ip(fake_network_cache_model.new_fixed_ip(
                         dict(address='192.168.1.102')))
         self.assertEqual(subnet['ips'],
@@ -293,7 +293,7 @@ class NetworkTests(test.NoDBTestCase):
 
     def test_add_subnet_a_lot(self):
         network = fake_network_cache_model.new_network()
-        for i in xrange(10):
+        for i in range(10):
             network.add_subnet(fake_network_cache_model.new_subnet(
                     dict(cidr='0.0.0.0')))
         self.assertEqual(network['subnets'],

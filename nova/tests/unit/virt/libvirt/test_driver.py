@@ -43,6 +43,7 @@ from oslo_utils import timeutils
 from oslo_utils import units
 from oslo_utils import uuidutils
 import six
+from six.moves import range
 
 from nova.api.metadata import base as instance_metadata
 from nova.compute import arch
@@ -8258,7 +8259,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         return_infos = [(libvirt_driver.VIR_DOMAIN_RUNNING,) + info_tuple]
         return_shutdowns = [shutdown_count.append("shutdown")]
         retry_countdown = retry_interval
-        for x in xrange(min(seconds_to_shutdown, timeout)):
+        for x in range(min(seconds_to_shutdown, timeout)):
             return_infos.append(
                 (libvirt_driver.VIR_DOMAIN_RUNNING,) + info_tuple)
             if retry_countdown == 0:
@@ -8932,7 +8933,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         # Generate mempages list per cell
         cell_mempages = list()
-        for cellid in xrange(cells_per_host):
+        for cellid in range(cells_per_host):
             mempages_0 = vconfig.LibvirtConfigCapsNUMAPages()
             mempages_0.size = 4
             mempages_0.total = 1024 * cellid

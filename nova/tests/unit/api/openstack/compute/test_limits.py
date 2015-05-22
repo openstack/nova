@@ -23,6 +23,7 @@ import StringIO
 import mock
 from oslo_serialization import jsonutils
 import six
+from six.moves import range
 import webob
 
 from nova.api.openstack.compute import limits
@@ -502,7 +503,7 @@ class LimiterTest(BaseLimitTestSuite):
 
     def _check(self, num, verb, url, username=None):
         """Check and yield results from checks."""
-        for x in xrange(num):
+        for x in range(num):
             yield self.limiter.check_for_delay(verb, url, username)[0]
 
     def _check_sum(self, num, verb, url, username=None):

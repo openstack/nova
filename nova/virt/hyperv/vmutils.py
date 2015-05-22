@@ -27,6 +27,7 @@ if sys.platform == 'win32':
 
 from oslo_config import cfg
 from oslo_log import log as logging
+from six.moves import range
 
 from nova import exception
 from nova.i18n import _, _LW
@@ -729,7 +730,7 @@ class VMUtils(object):
         attached_disks = self.get_attached_disks(scsi_controller_path)
         used_slots = [int(disk.AddressOnParent) for disk in attached_disks]
 
-        for slot in xrange(constants.SCSI_CONTROLLER_SLOTS_NUMBER):
+        for slot in range(constants.SCSI_CONTROLLER_SLOTS_NUMBER):
             if slot not in used_slots:
                 return slot
         raise HyperVException(_("Exceeded the maximum number of slots"))

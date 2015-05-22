@@ -6130,7 +6130,7 @@ class ComputeTestCase(BaseTestCase):
 
         instance_map = {}
         instances = []
-        for x in xrange(8):
+        for x in range(8):
             inst_uuid = 'fake-uuid-%s' % x
             instance_map[inst_uuid] = fake_instance.fake_db_instance(
                 uuid=inst_uuid, host=CONF.host, created_at=None)
@@ -6408,7 +6408,7 @@ class ComputeTestCase(BaseTestCase):
         filters = {'vm_state': vm_states.BUILDING, 'host': CONF.host}
         # these are the ones that are expired
         old_instances = []
-        for x in xrange(4):
+        for x in range(4):
             instance = {'uuid': str(uuid.uuid4()), 'created_at': created_at}
             instance.update(filters)
             old_instances.append(fake_instance.fake_db_instance(**instance))
@@ -7506,7 +7506,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertEqual([], instance.security_groups.objects)
 
     def test_default_hostname_generator(self):
-        fake_uuids = [str(uuid.uuid4()) for x in xrange(4)]
+        fake_uuids = [str(uuid.uuid4()) for x in range(4)]
 
         orig_populate = self.compute_api._populate_instance_for_create
 

@@ -40,6 +40,7 @@ from oslo_utils import importutils
 from oslo_utils import timeutils
 from oslo_utils import uuidutils
 import six
+from six.moves import range
 
 from nova.cells import state as cells_state
 from nova.cells import utils as cells_utils
@@ -228,7 +229,7 @@ class _BaseMessage(object):
         responses = []
         wait_time = CONF.cells.call_timeout
         try:
-            for x in xrange(num_responses):
+            for x in range(num_responses):
                 json_responses = self.resp_queue.get(timeout=wait_time)
                 responses.extend(json_responses)
         except queue.Empty:

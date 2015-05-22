@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from six.moves import range
 from webob import exc
 
 from nova import context
@@ -42,7 +43,7 @@ def convert_password(context, password):
     """
     password = password or ''
     meta = {}
-    for i in xrange(CHUNKS):
+    for i in range(CHUNKS):
         meta['password_%d' % i] = password[:CHUNK_LENGTH]
         password = password[CHUNK_LENGTH:]
     return meta

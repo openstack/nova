@@ -824,7 +824,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
         def fake_get_all_by_filters(context, *args, **kwargs):
             was['called'] = True
             instances = []
-            for x in xrange(2):
+            for x in range(2):
                 instances.append(fake_instance.fake_db_instance(
                                                         image_ref='1',
                                                         uuid=x,

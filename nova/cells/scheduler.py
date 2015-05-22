@@ -21,6 +21,7 @@ import time
 
 from oslo_config import cfg
 from oslo_log import log as logging
+from six.moves import range
 
 from nova.cells import filters
 from nova.cells import weights
@@ -223,7 +224,7 @@ class CellsScheduler(base.Base):
             filter_properties, method, method_kwargs):
         """Pick a cell where we should create a new instance(s)."""
         try:
-            for i in xrange(max(0, CONF.cells.scheduler_retries) + 1):
+            for i in range(max(0, CONF.cells.scheduler_retries) + 1):
                 try:
                     target_cells = self._grab_target_cells(filter_properties)
                     if target_cells is None:

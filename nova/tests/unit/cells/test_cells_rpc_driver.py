@@ -75,7 +75,7 @@ class CellsRPCDriverTestCase(test.NoDBTestCase):
             def stop(self):
                 call_info['stopped'].append(self)
 
-        fake_servers = [FakeRPCServer() for x in xrange(5)]
+        fake_servers = [FakeRPCServer() for x in range(5)]
         self.driver.rpc_servers = fake_servers
         self.driver.stop_servers()
         self.assertEqual(fake_servers, call_info['stopped'])

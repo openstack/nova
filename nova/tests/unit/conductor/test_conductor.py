@@ -1013,7 +1013,7 @@ class _BaseTaskTestCase(object):
         instances = [objects.Instance(context=self.context,
                                       id=i,
                                       uuid=uuid.uuid4(),
-                                      flavor=instance_type) for i in xrange(2)]
+                                      flavor=instance_type) for i in range(2)]
         instance_type_p = obj_base.obj_to_primitive(instance_type)
         instance_properties = instance_obj.compat_instance(instances[0])
 
@@ -1095,7 +1095,7 @@ class _BaseTaskTestCase(object):
 
     def test_build_instances_scheduler_failure(self):
         instances = [fake_instance.fake_instance_obj(self.context)
-                for i in xrange(2)]
+                for i in range(2)]
         image = {'fake-data': 'should_pass_silently'}
         spec = {'fake': 'specs',
                 'instance_properties': instances[0]}
@@ -1928,7 +1928,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
 
     def test_build_instances_instance_not_found(self):
         instances = [fake_instance.fake_instance_obj(self.context)
-                for i in xrange(2)]
+                for i in range(2)]
         self.mox.StubOutWithMock(instances[0], 'refresh')
         self.mox.StubOutWithMock(instances[1], 'refresh')
         image = {'fake-data': 'should_pass_silently'}
@@ -1986,7 +1986,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
     def test_build_instances_info_cache_not_found(self, build_request_spec,
                                                   setup_instance_group):
         instances = [fake_instance.fake_instance_obj(self.context)
-                for i in xrange(2)]
+                for i in range(2)]
         image = {'fake-data': 'should_pass_silently'}
         destinations = [{'host': 'host1', 'nodename': 'node1', 'limits': []},
                 {'host': 'host2', 'nodename': 'node2', 'limits': []}]

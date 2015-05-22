@@ -54,6 +54,7 @@ from oslo_utils import strutils
 from oslo_utils import timeutils
 from oslo_utils import units
 import six
+from six.moves import range
 
 from nova.api.metadata import base as instance_metadata
 from nova import block_device
@@ -2042,7 +2043,7 @@ class LibvirtDriver(driver.ComputeDriver):
         #             call takes to return.
         self._prepare_pci_devices_for_use(
             pci_manager.get_instance_pci_devs(instance, 'all'))
-        for x in xrange(CONF.libvirt.wait_soft_reboot_seconds):
+        for x in range(CONF.libvirt.wait_soft_reboot_seconds):
             dom = self._host.get_domain(instance)
             state = self._get_power_state(dom)
             new_domid = dom.ID()
@@ -5243,7 +5244,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         # nwfilters may be defined in a separate thread in the case
         # of libvirt non-blocking mode, so we wait for completion
-        timeout_count = range(CONF.live_migration_retry_count)
+        timeout_count = list(range(CONF.live_migration_retry_count))
         while timeout_count:
             if self.firewall_driver.instance_filter_exists(instance,
                                                            network_info):

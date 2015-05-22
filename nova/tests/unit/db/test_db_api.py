@@ -35,6 +35,7 @@ from oslo_serialization import jsonutils
 from oslo_utils import timeutils
 from oslo_utils import uuidutils
 import six
+from six.moves import range
 from sqlalchemy import Column
 from sqlalchemy.dialects import sqlite
 from sqlalchemy.exc import OperationalError
@@ -6496,7 +6497,7 @@ class S3ImageTestCase(test.TestCase):
     def setUp(self):
         super(S3ImageTestCase, self).setUp()
         self.ctxt = context.get_admin_context()
-        self.values = [uuidutils.generate_uuid() for i in xrange(3)]
+        self.values = [uuidutils.generate_uuid() for i in range(3)]
         self.images = [db.s3_image_create(self.ctxt, uuid)
                                           for uuid in self.values]
 
@@ -6755,7 +6756,7 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def test_compute_node_search_by_hypervisor(self):
         nodes_created = []
         new_service = copy.copy(self.service_dict)
-        for i in xrange(3):
+        for i in range(3):
             new_service['binary'] += str(i)
             new_service['topic'] += str(i)
             service = db.service_create(self.ctxt, new_service)
@@ -6882,7 +6883,7 @@ class ProviderFwRuleTestCase(test.TestCase, ModelsObjectComparatorMixin):
                         '2001:4f8:3:ba::/64',
                         '2001:4f8:3:ba:2e0:81ff:fe22:d1f1/128']
         values = []
-        for i in xrange(len(cidr_samples)):
+        for i in range(len(cidr_samples)):
             rule = {}
             rule['protocol'] = 'foo' + str(i)
             rule['from_port'] = 9999 + i
@@ -6922,7 +6923,7 @@ class CertificateTestCase(test.TestCase, ModelsObjectComparatorMixin):
             'file_name': 'filename'
         }
         return [{k: v + str(x) for k, v in base_values.iteritems()}
-                for x in xrange(1, 4)]
+                for x in range(1, 4)]
 
     def _certificates_create(self):
         return [db.certificate_create(self.ctxt, cert)
@@ -6983,7 +6984,7 @@ class ConsoleTestCase(test.TestCase, ModelsObjectComparatorMixin):
                               'password': 'pass' + str(x),
                               'port': 7878 + x,
                               'pool_id': self.console_pools[x]['id']}
-                             for x in xrange(len(pools_data))]
+                             for x in range(len(pools_data))]
         self.consoles = [db.console_create(self.ctxt, val)
                          for val in self.console_data]
 
@@ -7086,7 +7087,7 @@ class CellTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def _create_cells(self):
         test_values = []
-        for x in xrange(1, 4):
+        for x in range(1, 4):
             modified_val = {k: self._cell_value_modify(v, x)
                         for k, v in self._get_cell_base_values().iteritems()}
             db.cell_create(self.ctxt, modified_val)
@@ -8592,7 +8593,7 @@ class TestDBInstanceTags(test.TestCase):
         uuid = self._create_instance()
         tag = 'tag'
 
-        for x in xrange(5):
+        for x in range(5):
             db.instance_tag_add(self.context, uuid, tag)
 
         tag_refs = db.instance_tag_get_by_instance_uuid(self.context, uuid)

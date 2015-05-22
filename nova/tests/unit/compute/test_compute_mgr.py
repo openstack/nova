@@ -1083,7 +1083,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
     def test_get_instances_on_driver(self):
         driver_instances = []
-        for x in xrange(10):
+        for x in range(10):
             driver_instances.append(fake_instance.fake_db_instance())
 
         self.mox.StubOutWithMock(self.compute.driver,
@@ -1128,7 +1128,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
         all_instances = []
         driver_instances = []
-        for x in xrange(10):
+        for x in range(10):
             instance = fake_instance.fake_db_instance(name='inst-%i' % x,
                                                       id=x)
             if x % 2:

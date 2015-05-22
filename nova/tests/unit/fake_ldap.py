@@ -24,6 +24,7 @@ library to work with nova.
 import fnmatch
 
 from oslo_serialization import jsonutils
+from six.moves import range
 
 
 class Store(object):
@@ -140,7 +141,7 @@ def _paren_groups(source):
     count = 0
     start = 0
     result = []
-    for pos in xrange(len(source)):
+    for pos in range(len(source)):
         if source[pos] == '(':
             if count == 0:
                 start = pos

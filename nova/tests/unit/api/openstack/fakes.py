@@ -21,6 +21,7 @@ from oslo_utils import netutils
 from oslo_utils import timeutils
 import routes
 import six
+from six.moves import range
 import webob
 import webob.dec
 import webob.request
@@ -410,7 +411,7 @@ def fake_instance_get_all_by_filters(num_servers=5, **kwargs):
         if 'sort_dirs' in kwargs:
             kwargs.pop('sort_dirs')
 
-        for i in xrange(num_servers):
+        for i in range(num_servers):
             uuid = get_fake_uuid(i)
             server = stub_instance(id=i + 1, uuid=uuid,
                     **kwargs)

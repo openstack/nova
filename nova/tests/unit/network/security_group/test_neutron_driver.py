@@ -17,6 +17,8 @@ from mox3 import mox
 from neutronclient.common import exceptions as n_exc
 from neutronclient.v2_0 import client
 
+from six.moves import range
+
 from nova import context
 from nova import exception
 from nova.network.neutronv2 import api as neutronapi
@@ -222,7 +224,7 @@ class TestNeutronDriver(test.NoDBTestCase):
         device_ids = []
         ports = []
         sg_bindings = {}
-        for i in xrange(0, num_servers):
+        for i in range(0, num_servers):
             server_id = "server-%d" % i
             port_id = "port-%d" % i
             servers.append({'id': server_id})
@@ -232,7 +234,7 @@ class TestNeutronDriver(test.NoDBTestCase):
                           'security_groups': [sg1_id, sg2_id]})
             sg_bindings[server_id] = [{'name': 'wol'}, {'name': 'eor'}]
 
-        for x in xrange(0, num_servers, max_query):
+        for x in range(0, num_servers, max_query):
             self.moxed_client.list_ports(
                        device_id=device_ids[x:x + max_query]).\
                        AndReturn({'ports': ports[x:x + max_query]})

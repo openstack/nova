@@ -18,6 +18,8 @@ Tests For Scheduler Host Filters.
 import inspect
 import sys
 
+from six.moves import range
+
 from nova import filters
 from nova import loadables
 from nova import test
@@ -72,15 +74,15 @@ class FiltersTestCase(test.NoDBTestCase):
         # call gets to processing 'obj2'.  We then return 'False' for it.
         # After that, 'obj3' gets yielded 'total_iterations' number of
         # times.
-        for x in xrange(total_iterations):
+        for x in range(total_iterations):
             base_filter._filter_one('obj1', filter_properties).AndReturn(True)
         base_filter._filter_one('obj2', filter_properties).AndReturn(False)
-        for x in xrange(total_iterations):
+        for x in range(total_iterations):
             base_filter._filter_one('obj3', filter_properties).AndReturn(True)
         self.mox.ReplayAll()
 
         objs = iter(filter_obj_list)
-        for x in xrange(total_iterations):
+        for x in range(total_iterations):
             # Pass in generators returned from previous calls.
             objs = base_filter.filter_all(objs, filter_properties)
         self.assertTrue(inspect.isgenerator(objs))
