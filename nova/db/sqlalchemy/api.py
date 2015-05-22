@@ -2158,7 +2158,7 @@ def _regex_instance_filter(query, filters):
 
     model = models.Instance
     db_regexp_op = _get_regexp_op_for_connection(CONF.database.connection)
-    for filter_name in filters.iterkeys():
+    for filter_name in filters:
         try:
             column_attr = getattr(model, filter_name)
         except AttributeError:

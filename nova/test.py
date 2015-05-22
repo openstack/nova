@@ -292,8 +292,8 @@ class TestCase(testtools.TestCase):
         def inner(expected, observed):
             if isinstance(expected, dict) and isinstance(observed, dict):
                 self.assertEqual(len(expected), len(observed))
-                expected_keys = sorted(expected.iterkeys())
-                observed_keys = sorted(expected.iterkeys())
+                expected_keys = sorted(expected)
+                observed_keys = sorted(expected)
                 self.assertEqual(expected_keys, observed_keys)
 
                 expected_values_iter = iter(sort(expected.values()))

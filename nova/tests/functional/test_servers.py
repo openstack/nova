@@ -465,7 +465,7 @@ class ServersTest(ServersTestBase):
 
         # Cleanup
         self._delete_server(created_server_id)
-        for server_id in server_map.iterkeys():
+        for server_id in server_map:
             self._delete_server(server_id)
 
     def test_create_server_with_injected_files(self):
