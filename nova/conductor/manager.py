@@ -523,7 +523,7 @@ class ComputeTaskManager(base.Base):
             instance = objects.Instance._from_db_object(
                 context, objects.Instance(), instance,
                 expected_attrs=attrs)
-        # NOTE(melwitt): Remove this in version 2.0 of the RPC API
+        # NOTE: Remove this when we drop support for v1 of the RPC API
         if flavor and not isinstance(flavor, objects.Flavor):
             # Code downstream may expect extra_specs to be populated since it
             # is receiving an object, so lookup the flavor to ensure this.
@@ -563,7 +563,7 @@ class ComputeTaskManager(base.Base):
                                           updates, ex, request_spec)
 
             # if the flavor IDs match, it's migrate; otherwise resize
-            if flavor['id'] == instance.instance_type_id:
+            if flavor.id == instance.instance_type_id:
                 msg = _("No valid host found for cold migrate")
             else:
                 msg = _("No valid host found for resize")
