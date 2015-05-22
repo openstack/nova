@@ -37,7 +37,7 @@ class InstanceExternalEvent(obj_base.NovaObject,
 
     fields = {
         'instance_uuid': fields.UUIDField(),
-        'name': fields.StringField(),
+        'name': fields.EnumField(valid_values=EVENT_NAMES),
         'status': fields.StringField(),
         'tag': fields.StringField(nullable=True),
         'data': fields.DictOfStringsField(),
