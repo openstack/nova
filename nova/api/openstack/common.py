@@ -21,6 +21,7 @@ import re
 
 from oslo_config import cfg
 from oslo_log import log as logging
+import six
 import six.moves.urllib.parse as urlparse
 import webob
 from webob import exc
@@ -150,8 +151,8 @@ def task_and_vm_state_from_status(statuses):
     vm_states = set()
     task_states = set()
     lower_statuses = [status.lower() for status in statuses]
-    for state, task_map in _STATE_MAP.iteritems():
-        for task_state, mapped_state in task_map.iteritems():
+    for state, task_map in six.iteritems(_STATE_MAP):
+        for task_state, mapped_state in six.iteritems(task_map):
             status_string = mapped_state
             if status_string.lower() in lower_statuses:
                 vm_states.add(state)
@@ -333,7 +334,7 @@ def check_img_metadata_properties_quota(context, metadata):
 
     #  check the key length.
     if isinstance(metadata, dict):
-        for key, value in metadata.iteritems():
+        for key, value in six.iteritems(metadata):
             if len(key) == 0:
                 expl = _("Image metadata key cannot be blank")
                 raise webob.exc.HTTPBadRequest(explanation=expl)
@@ -349,7 +350,7 @@ def dict_to_query_str(params):
     # TODO(throughnothing): we should just use urllib.urlencode instead of this
     # But currently we don't work with urlencoded url's
     param_str = ""
-    for key, val in params.iteritems():
+    for key, val in six.iteritems(params):
         param_str = param_str + '='.join([str(key), str(val)]) + '&'
 
     return param_str.rstrip('&')

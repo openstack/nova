@@ -15,6 +15,8 @@ Unit Tests for flavors code
 """
 import time
 
+import six
+
 from nova.compute import flavors
 from nova import context
 from nova import db
@@ -70,7 +72,7 @@ class InstanceTypeTestCase(test.TestCase):
         """return a flavorid not in the DB."""
         nonexistent_flavor = 2700
         flavor_ids = [value.id for key, value in
-                      flavors.get_all_flavors().iteritems()]
+                      six.iteritems(flavors.get_all_flavors())]
         while nonexistent_flavor in flavor_ids:
             nonexistent_flavor += 1
         else:

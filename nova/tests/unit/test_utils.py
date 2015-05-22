@@ -33,6 +33,7 @@ from oslo_context import context as common_context
 from oslo_context import fixture as context_fixture
 from oslo_utils import encodeutils
 from oslo_utils import timeutils
+import six
 
 
 import nova
@@ -825,7 +826,7 @@ class GetSystemMetadataFromImageTestCase(test.NoDBTestCase):
         sys_meta = utils.get_system_metadata_from_image(image)
 
         # Verify that we inherit all the image properties
-        for key, expected in image["properties"].iteritems():
+        for key, expected in six.iteritems(image["properties"]):
             sys_key = "%s%s" % (utils.SM_IMAGE_PROP_PREFIX, key)
             self.assertEqual(sys_meta[sys_key], expected)
 
@@ -882,7 +883,7 @@ class GetImageFromSystemMetadataTestCase(test.NoDBTestCase):
         # Verify that we inherit the rest of metadata as properties
         self.assertIn("properties", image)
 
-        for key, value in image["properties"].iteritems():
+        for key, value in six.iteritems(image["properties"]):
             sys_key = "%s%s" % (utils.SM_IMAGE_PROP_PREFIX, key)
             self.assertEqual(image["properties"][key], sys_meta[sys_key])
 

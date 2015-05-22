@@ -19,6 +19,8 @@ This module provides helper APIs for populating the config.py
 classes based on common operational needs / policies
 """
 
+import six
+
 from nova.pci import utils as pci_utils
 
 
@@ -161,7 +163,7 @@ def set_vif_bandwidth_config(conf, inst_type):
     bandwidth_items = ['vif_inbound_average', 'vif_inbound_peak',
         'vif_inbound_burst', 'vif_outbound_average', 'vif_outbound_peak',
         'vif_outbound_burst']
-    for key, value in inst_type.get('extra_specs', {}).iteritems():
+    for key, value in six.iteritems(inst_type.get('extra_specs', {})):
         scope = key.split(':')
         if len(scope) > 1 and scope[0] == 'quota':
             if scope[1] in bandwidth_items:

@@ -289,7 +289,7 @@ class ProjectCommands(object):
             quota = QUOTAS.get_user_quotas(ctxt, project_id, user_id)
         else:
             quota = QUOTAS.get_project_quotas(ctxt, project_id)
-        for key, value in quota.iteritems():
+        for key, value in six.iteritems(quota):
             if value['limit'] < 0 or value['limit'] is None:
                 value['limit'] = 'unlimited'
             print(print_format % (key, value['limit'], value['in_use'],
@@ -543,7 +543,7 @@ class NetworkCommands(object):
                dns1=None, dns2=None, project_id=None, priority=None,
                uuid=None, fixed_cidr=None):
         """Creates fixed ips for host by range."""
-        kwargs = {k: v for k, v in locals().iteritems()
+        kwargs = {k: v for k, v in six.iteritems(locals())
                   if v and k != "self"}
         if multi_host is not None:
             kwargs['multi_host'] = multi_host == 'T'
@@ -1041,7 +1041,7 @@ class AgentBuildCommands(object):
 
             buildlist.append(agent_build)
 
-        for key, buildlist in by_hypervisor.iteritems():
+        for key, buildlist in six.iteritems(by_hypervisor):
             if hypervisor and key != hypervisor:
                 continue
 

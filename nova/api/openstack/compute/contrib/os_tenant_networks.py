@@ -84,7 +84,7 @@ class NetworkController(object):
         networks = {}
         for n in self.network_api.get_all(ctx):
             networks[n['id']] = n['label']
-        return [{'id': k, 'label': v} for k, v in networks.iteritems()]
+        return [{'id': k, 'label': v} for k, v in six.iteritems(networks)]
 
     def index(self, req):
         context = req.environ['nova.context']

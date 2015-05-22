@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import six
 import webob
 
 from nova.api.openstack.compute.schemas.v3 import quota_classes
@@ -79,7 +80,7 @@ class QuotaClassSetsController(wsgi.Controller):
         authorize(context)
         quota_class = id
 
-        for key, value in body['quota_class_set'].iteritems():
+        for key, value in six.iteritems(body['quota_class_set']):
             try:
                 db.quota_class_update(context, quota_class, key, value)
             except exception.QuotaClassNotFound:

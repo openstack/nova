@@ -112,7 +112,7 @@ class ConductorManager(manager.Manager):
                                    exception.UnexpectedTaskStateError)
     def instance_update(self, context, instance_uuid,
                         updates, service):
-        for key, value in updates.iteritems():
+        for key, value in six.iteritems(updates):
             if key not in allowed_updates:
                 LOG.error(_LE("Instance update attempted for "
                               "'%(key)s' on %(instance_uuid)s"),

@@ -16,6 +16,8 @@
 Fakes For Scheduler tests.
 """
 
+import six
+
 from nova import objects
 from nova.scheduler import host_manager
 
@@ -88,5 +90,5 @@ class FakeHostState(host_manager.HostState):
             self.instances = {inst.uuid: inst for inst in instances}
         else:
             self.instances = {}
-        for (key, val) in attribute_dict.iteritems():
+        for (key, val) in six.iteritems(attribute_dict):
             setattr(self, key, val)

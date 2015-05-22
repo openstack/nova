@@ -26,7 +26,7 @@ from nova.i18n import _
 
 def ensure_string_keys(d):
     # http://bugs.python.org/issue4978
-    return {str(k): v for k, v in d.iteritems()}
+    return {str(k): v for k, v in six.iteritems(d)}
 
 # Constants for the 'vif_type' field in VIF class
 VIF_TYPE_OVS = 'ovs'

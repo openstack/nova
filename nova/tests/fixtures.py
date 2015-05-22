@@ -25,6 +25,7 @@ import warnings
 import fixtures
 from oslo_config import cfg
 from oslo_messaging import conffixture as messaging_conffixture
+import six
 
 from nova.db import migration
 from nova.db.sqlalchemy import api as session
@@ -282,7 +283,7 @@ class ConfPatcher(fixtures.Fixture):
 
     def setUp(self):
         super(ConfPatcher, self).setUp()
-        for k, v in self.args.iteritems():
+        for k, v in six.iteritems(self.args):
             self.addCleanup(CONF.clear_override, k, self.group)
             CONF.set_override(k, v, self.group)
 

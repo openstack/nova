@@ -333,7 +333,7 @@ def image_meta(system_metadata):
     system metadata.
     """
     image_meta = {}
-    for md_key, md_value in system_metadata.iteritems():
+    for md_key, md_value in six.iteritems(system_metadata):
         if md_key.startswith('image_'):
             image_meta[md_key[6:]] = md_value
 

@@ -252,7 +252,7 @@ class GlanceImageService(object):
         self._download_handlers = {}
         download_modules = image_xfers.load_transfer_modules()
 
-        for scheme, mod in download_modules.iteritems():
+        for scheme, mod in six.iteritems(download_modules):
             if scheme not in CONF.glance.allowed_direct_url_schemes:
                 continue
 

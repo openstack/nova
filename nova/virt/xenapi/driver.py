@@ -29,6 +29,7 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import units
+import six
 import six.moves.urllib.parse as urlparse
 
 from nova.i18n import _, _LE, _LW
@@ -357,7 +358,7 @@ class XenAPIDriver(driver.ComputeDriver):
         # of mac addresses with values that are the bw counters:
         # e.g. {'instance-001' : { 12:34:56:78:90:12 : {'bw_in': 0, ....}}
         all_counters = self._vmops.get_all_bw_counters()
-        for instance_name, counters in all_counters.iteritems():
+        for instance_name, counters in six.iteritems(all_counters):
             if instance_name in imap:
                 # yes these are stats for a nova-managed vm
                 # correlate the stats with the nova instance uuid:

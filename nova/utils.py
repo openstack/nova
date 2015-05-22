@@ -837,7 +837,7 @@ def metadata_to_dict(metadata):
 
 def dict_to_metadata(metadata):
     result = []
-    for key, value in metadata.iteritems():
+    for key, value in six.iteritems(metadata):
         result.append(dict(key=key, value=value))
     return result
 
@@ -1076,7 +1076,7 @@ def get_system_metadata_from_image(image_meta, flavor=None):
     system_meta = {}
     prefix_format = SM_IMAGE_PROP_PREFIX + '%s'
 
-    for key, value in image_meta.get('properties', {}).iteritems():
+    for key, value in six.iteritems(image_meta.get('properties', {})):
         new_value = safe_truncate(six.text_type(value), 255)
         system_meta[prefix_format % key] = new_value
 
@@ -1104,7 +1104,7 @@ def get_image_from_system_metadata(system_meta):
     if not isinstance(system_meta, dict):
         system_meta = metadata_to_dict(system_meta)
 
-    for key, value in system_meta.iteritems():
+    for key, value in six.iteritems(system_meta):
         if value is None:
             continue
 

@@ -15,6 +15,7 @@
 import copy
 
 from oslo_log import log as logging
+import six
 import webob.exc
 
 from nova.api.openstack import extensions
@@ -133,7 +134,7 @@ class ExtensionInfoController(wsgi.Controller):
         """Filter extensions list based on policy."""
 
         discoverable_extensions = dict()
-        for alias, ext in self.extension_info.get_extensions().iteritems():
+        for alias, ext in six.iteritems(self.extension_info.get_extensions()):
             authorize = extensions.os_compute_soft_authorizer(alias)
             if authorize(context, action='discoverable'):
                 discoverable_extensions[alias] = ext
@@ -173,7 +174,7 @@ class ExtensionInfoController(wsgi.Controller):
         context = req.environ['nova.context']
 
         sorted_ext_list = sorted(
-            self._get_extensions(context).iteritems())
+            six.iteritems(self._get_extensions(context)))
 
         extensions = []
         for _alias, ext in sorted_ext_list:

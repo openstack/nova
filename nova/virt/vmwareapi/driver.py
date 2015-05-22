@@ -29,6 +29,7 @@ from oslo_vmware import exceptions as vexc
 from oslo_vmware import pbm
 from oslo_vmware import vim
 from oslo_vmware import vim_util
+import six
 
 from nova import exception
 from nova.i18n import _, _LI, _LW
@@ -173,7 +174,8 @@ class VMwareVCDriver(driver.ComputeDriver):
 
         # Check if there are any clusters that were specified in the nova.conf
         # but are not in the vCenter, for missing clusters log a warning.
-        clusters_found = [v.get('name') for k, v in self.dict_mors.iteritems()]
+        clusters_found = [v.get('name')
+                          for k, v in six.iteritems(self.dict_mors)]
         missing_clusters = set(self._cluster_names) - set(clusters_found)
         if missing_clusters:
             LOG.warning(_LW("The following clusters could not be found in the "

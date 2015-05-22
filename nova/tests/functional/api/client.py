@@ -17,6 +17,7 @@ import urllib
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 import requests
+import six
 
 from nova.tests.unit.image import fake
 
@@ -246,7 +247,7 @@ class TestOpenStackClient(object):
 
         if search_opts is not None:
             qparams = {}
-            for opt, val in search_opts.iteritems():
+            for opt, val in six.iteritems(search_opts):
                 qparams[opt] = val
             if qparams:
                 query_string = "?%s" % urllib.urlencode(qparams)

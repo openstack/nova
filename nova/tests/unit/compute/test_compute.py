@@ -124,7 +124,7 @@ def unify_instance(instance):
     model-initiated sources that can reasonably be compared.
     """
     newdict = dict()
-    for k, v in instance.iteritems():
+    for k, v in six.iteritems(instance):
         if isinstance(v, datetime.datetime):
             # NOTE(danms): DB models and Instance objects have different
             # timezone expectations
@@ -6394,7 +6394,7 @@ class ComputeTestCase(BaseTestCase):
 
         self.compute._poll_unconfirmed_resizes(ctxt)
 
-        for instance_uuid, status in expected_migration_status.iteritems():
+        for instance_uuid, status in six.iteritems(expected_migration_status):
             self.assertEqual(status,
                              fetch_instance_migration_status(instance_uuid))
 
@@ -7400,7 +7400,7 @@ class ComputeAPITestCase(BaseTestCase):
         image_props = {'image_kernel_id': 'fake_kernel_id',
                  'image_ramdisk_id': 'fake_ramdisk_id',
                  'image_something_else': 'meow', }
-        for key, value in image_props.iteritems():
+        for key, value in six.iteritems(image_props):
             self.assertIn(key, sys_metadata)
             self.assertEqual(value, sys_metadata[key])
 

@@ -18,6 +18,7 @@ import re
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import strutils
+import six
 
 from nova import exception
 from nova.i18n import _
@@ -87,11 +88,11 @@ class BlockDeviceDict(dict):
             bdm_dict['device_name'] = prepend_dev(bdm_dict['device_name'])
         # NOTE (ndipanov): Never default db fields
         self.update({field: None for field in self._fields - do_not_default})
-        self.update(list(bdm_dict.iteritems()))
+        self.update(list(six.iteritems(bdm_dict)))
 
     def _validate(self, bdm_dict):
         """Basic data format validations."""
-        dict_fields = set(key for key, _ in bdm_dict.iteritems())
+        dict_fields = set(key for key, _ in six.iteritems(bdm_dict))
 
         # Check that there are no bogus fields
         if not (dict_fields <=
@@ -137,7 +138,7 @@ class BlockDeviceDict(dict):
         non_computable_fields = set(['boot_index', 'disk_bus',
                                      'guest_format', 'device_type'])
 
-        new_bdm = {fld: val for fld, val in legacy_bdm.iteritems()
+        new_bdm = {fld: val for fld, val in six.iteritems(legacy_bdm)
                    if fld in copy_over_fields}
 
         virt_name = legacy_bdm.get('virtual_name')

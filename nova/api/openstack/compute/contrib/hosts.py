@@ -121,7 +121,7 @@ class HostController(object):
         context = req.environ['nova.context']
         authorize(context)
         # See what the user wants to 'update'
-        params = {k.strip().lower(): v for k, v in body.iteritems()}
+        params = {k.strip().lower(): v for k, v in six.iteritems(body)}
         orig_status = status = params.pop('status', None)
         orig_maint_mode = maint_mode = params.pop('maintenance_mode', None)
         # Validate the request

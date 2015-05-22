@@ -41,7 +41,7 @@ def aggregate_metadata_get_by_host(host_state, key=None):
     for aggr in aggrlist:
         if key is not None and key not in aggr.metadata:
             continue
-        for k, v in aggr.metadata.iteritems():
+        for k, v in six.iteritems(aggr.metadata):
             values = v.split(',')
             for value in values:
                 metadata[k].add(value.strip())

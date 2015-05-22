@@ -921,7 +921,7 @@ class Controller(wsgi.Controller):
     def _validate_metadata(self, metadata):
         """Ensure that we can work with the metadata given."""
         try:
-            metadata.iteritems()
+            six.iteritems(metadata)
         except AttributeError:
             msg = _("Unable to parse metadata key/value pairs.")
             LOG.debug(msg)

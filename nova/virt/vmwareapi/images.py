@@ -27,6 +27,7 @@ from oslo_log import log as logging
 from oslo_utils import strutils
 from oslo_utils import units
 from oslo_vmware import rw_handles
+import six
 
 from nova import exception
 from nova.i18n import _, _LE, _LI
@@ -146,7 +147,7 @@ class VMwareImage(object):
             'hw_vif_model': 'vif_model'
         }
 
-        for k, v in props_map.iteritems():
+        for k, v in six.iteritems(props_map):
             if k in properties:
                 props[v] = properties[k]
 

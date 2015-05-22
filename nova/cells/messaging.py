@@ -1135,7 +1135,7 @@ class _BroadcastMessageMethods(_BaseMessageMethods):
         services = objects.ServiceList.get_all(message.ctxt, disabled=disabled)
         ret_services = []
         for service in services:
-            for key, val in filters.iteritems():
+            for key, val in six.iteritems(filters):
                 if getattr(service, key) != val:
                     break
             else:
@@ -1261,7 +1261,7 @@ class MessageRunner(object):
         self.response_queues = {}
         self.methods_by_type = {}
         self.our_name = CONF.cells.name
-        for msg_type, cls in _CELL_MESSAGE_TYPE_TO_METHODS_CLS.iteritems():
+        for msg_type, cls in six.iteritems(_CELL_MESSAGE_TYPE_TO_METHODS_CLS):
             self.methods_by_type[msg_type] = cls(self)
         self.serializer = objects_base.NovaObjectSerializer()
 

@@ -156,7 +156,7 @@ class LibvirtBaseVolumeDriver(object):
                          'read_iops_sec', 'write_iops_sec']
             specs = data['qos_specs']
             if isinstance(specs, dict):
-                for k, v in specs.iteritems():
+                for k, v in six.iteritems(specs):
                     if k in tune_opts:
                         new_key = 'disk_' + k
                         setattr(conf, new_key, v)

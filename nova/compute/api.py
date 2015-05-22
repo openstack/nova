@@ -476,7 +476,7 @@ class API(base.Base):
         # Because metadata is stored in the DB, we hard-code the size limits
         # In future, we may support more variable length strings, so we act
         #  as if this is quota-controlled for forwards compatibility
-        for k, v in metadata.iteritems():
+        for k, v in six.iteritems(metadata):
             try:
                 utils.check_string_length(v)
                 utils.check_string_length(k, min_length=1)
@@ -1987,7 +1987,7 @@ class API(base.Base):
                 'system_metadata': _remap_system_metadata_filter}
 
         # copy from search_opts, doing various remappings as necessary
-        for opt, value in search_opts.iteritems():
+        for opt, value in six.iteritems(search_opts):
             # Do remappings.
             # Values not in the filter_mapping table are copied as-is.
             # If remapping is None, option is not copied
@@ -3406,7 +3406,7 @@ class HostAPI(base.Base):
                                                set_zones=set_zones)
         ret_services = []
         for service in services:
-            for key, val in filters.iteritems():
+            for key, val in six.iteritems(filters):
                 if service[key] != val:
                     break
             else:
