@@ -494,7 +494,7 @@ class FloatingIP(object):
         """Returns a floating IP as a dict."""
         # NOTE(vish): This is no longer used but can't be removed until
         #             we major version the network_rpcapi.
-        return dict(objects.FloatingIP.get_by_id(context, id).iteritems())
+        return dict(objects.FloatingIP.get_by_id(context, id))
 
     def get_floating_pools(self, context):
         """Returns list of floating pools."""

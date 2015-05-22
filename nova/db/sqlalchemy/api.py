@@ -5629,7 +5629,7 @@ def instance_fault_get_by_instance_uuids(context, instance_uuids):
         output[instance_uuid] = []
 
     for row in rows:
-        data = dict(row.iteritems())
+        data = dict(row)
         output[row['instance_uuid']].append(data)
 
     return output

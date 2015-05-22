@@ -1581,7 +1581,7 @@ class _TestInstanceListObject(object):
                                                       use_slave=False)
         self.assertEqual(2, len(instances))
         self.assertEqual(fake_faults['fake-uuid'][0],
-                         dict(instances[0].fault.iteritems()))
+                         dict(instances[0].fault))
         self.assertIsNone(instances[1].fault)
 
     def test_fill_faults(self):

@@ -1570,7 +1570,7 @@ class NetworkManager(manager.Manager):
             if vif.network_id is not None:
                 network = self._get_network_by_id(context, vif.network_id)
                 vif.net_uuid = network.uuid
-        return [dict(vif.iteritems()) for vif in vifs]
+        return [dict(vif) for vif in vifs]
 
     def get_instance_id_by_floating_address(self, context, address):
         """Returns the instance id a floating ip's fixed ip is allocated to."""

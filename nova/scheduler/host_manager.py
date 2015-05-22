@@ -558,7 +558,7 @@ class HostManager(object):
             host_state.aggregates = [self.aggs_by_id[agg_id] for agg_id in
                                      self.host_aggregates_map[
                                          host_state.host]]
-            host_state.update_service(dict(service.iteritems()))
+            host_state.update_service(dict(service))
             self._add_instance_info(context, compute, host_state)
             seen_nodes.add(state_key)
 
