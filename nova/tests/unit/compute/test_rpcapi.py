@@ -41,15 +41,11 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                          'instance_type_id': 1}
         self.fake_instance_obj = fake_instance.fake_instance_obj(self.context,
                                                    **instance_attr)
-        self.fake_instance = jsonutils.to_primitive(self.fake_instance_obj)
-        self.fake_volume_bdm = jsonutils.to_primitive(
-                fake_block_device.FakeDbBlockDeviceDict(
+        self.fake_volume_bdm = objects_block_dev.BlockDeviceMapping(
+                **fake_block_device.FakeDbBlockDeviceDict(
                     {'source_type': 'volume', 'destination_type': 'volume',
-                     'instance_uuid': self.fake_instance['uuid'],
+                     'instance_uuid': self.fake_instance_obj.uuid,
                      'volume_id': 'fake-volume-id'}))
-
-    def test_serialized_instance_has_name(self):
-        self.assertIn('name', self.fake_instance)
 
     def _test_compute_api(self, method, rpc_method,
                           assert_dict=False, **kwargs):
@@ -60,41 +56,14 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
         self.assertEqual(rpcapi.client.target.topic, CONF.compute_topic)
 
         orig_prepare = rpcapi.client.prepare
-        # TODO(danms): Remove this special case when we drop 3.x
-        if CONF.upgrade_levels.compute == '3.40':
-            base_version = '3.0'
-        else:
-            base_version = rpcapi.client.target.version
+        base_version = rpcapi.client.target.version
         expected_version = kwargs.pop('version', base_version)
-        nova_network = kwargs.pop('nova_network', False)
 
         expected_kwargs = kwargs.copy()
-        if ('requested_networks' in expected_kwargs and
-               expected_version == '3.23'):
-            expected_kwargs['requested_networks'] = []
-            for requested_network in kwargs['requested_networks']:
-                if not nova_network:
-                    expected_kwargs['requested_networks'].append(
-                        (requested_network.network_id,
-                         str(requested_network.address),
-                         requested_network.port_id))
-                else:
-                    expected_kwargs['requested_networks'].append(
-                        (requested_network.network_id,
-                         str(requested_network.address)))
         if 'host_param' in expected_kwargs:
             expected_kwargs['host'] = expected_kwargs.pop('host_param')
         else:
             expected_kwargs.pop('host', None)
-        if 'legacy_limits' in expected_kwargs:
-            expected_kwargs['limits'] = expected_kwargs.pop('legacy_limits')
-            kwargs.pop('legacy_limits', None)
-        expected_kwargs.pop('destination', None)
-
-        if 'mountpoint' in expected_kwargs and expected_version == '4.0':
-            # TODO(danms): Remove me when we drop 3.x
-            del expected_kwargs['mountpoint']
-            del expected_kwargs['volume_id']
 
         if assert_dict:
             expected_kwargs['instance'] = jsonutils.to_primitive(
@@ -108,8 +77,6 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                 kwargs['do_cast'] = False
         if 'host' in kwargs:
             host = kwargs['host']
-        elif 'destination' in kwargs:
-            host = kwargs['destination']
         elif 'instances' in kwargs:
             host = kwargs['instances'][0]['host']
         else:
@@ -160,8 +127,8 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
 
     def test_attach_volume(self):
         self._test_compute_api('attach_volume', 'cast',
-                instance=self.fake_instance_obj, volume_id='id',
-                mountpoint='mp', bdm=self.fake_volume_bdm, version='4.0')
+                instance=self.fake_instance_obj, bdm=self.fake_volume_bdm,
+                version='4.0')
 
     def test_change_instance_metadata(self):
         self._test_compute_api('change_instance_metadata', 'cast',
@@ -355,7 +322,7 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
 
     def test_remove_volume_connection(self):
         self._test_compute_api('remove_volume_connection', 'call',
-                instance=self.fake_instance, volume_id='id', host='host',
+                instance=self.fake_instance_obj, volume_id='id', host='host',
                 version='4.0')
 
     def test_rescue_instance(self):

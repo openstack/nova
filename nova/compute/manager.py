@@ -1747,59 +1747,6 @@ class ComputeManager(manager.Manager):
         instance.launched_at = timeutils.utcnow()
         configdrive.update_instance(instance)
 
-    @object_compat
-    def _spawn(self, context, instance, image_meta, network_info,
-               block_device_info, injected_files, admin_password,
-               set_access_ip=False):
-        """Spawn an instance with error logging and update its power state."""
-        instance.vm_state = vm_states.BUILDING
-        instance.task_state = task_states.SPAWNING
-        instance.save(expected_task_state=task_states.BLOCK_DEVICE_MAPPING)
-        try:
-            self.driver.spawn(context, instance, image_meta,
-                              injected_files, admin_password,
-                              network_info,
-                              block_device_info)
-        except Exception:
-            with excutils.save_and_reraise_exception():
-                LOG.exception(_LE('Instance failed to spawn'),
-                              instance=instance)
-
-        self._update_instance_after_spawn(context, instance)
-
-        def _set_access_ip_values():
-            """Add access ip values for a given instance.
-
-            If CONF.default_access_ip_network_name is set, this method will
-            grab the corresponding network and set the access ip values
-            accordingly. Note that when there are multiple ips to choose
-            from, an arbitrary one will be chosen.
-            """
-
-            network_name = CONF.default_access_ip_network_name
-            if not network_name:
-                return
-
-            for vif in network_info:
-                if vif['network']['label'] == network_name:
-                    for ip in vif.fixed_ips():
-                        if ip['version'] == 4:
-                            instance.access_ip_v4 = ip['address']
-                        if ip['version'] == 6:
-                            instance.access_ip_v6 = ip['address']
-                    return
-
-        if set_access_ip:
-            _set_access_ip_values()
-
-        network_info.wait(do_raise=True)
-        instance.info_cache.network_info = network_info
-        # NOTE(JoshNang) This also saves the changes to the instance from
-        # _allocate_network_async, as they aren't saved in that function
-        # to prevent races.
-        instance.save(expected_task_state=task_states.SPAWNING)
-        return instance
-
     def _update_scheduler_instance_info(self, context, instance):
         """Sends an InstanceList with created or updated Instance objects to
         the Scheduler client.

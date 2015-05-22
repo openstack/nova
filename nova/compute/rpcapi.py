@@ -357,12 +357,11 @@ class ComputeAPI(object):
                           instance=instance, network_id=network_id,
                           port_id=port_id, requested_ip=requested_ip)
 
-    def attach_volume(self, ctxt, instance, volume_id, mountpoint, bdm=None):
-        kw = {'instance': instance, 'bdm': bdm}
+    def attach_volume(self, ctxt, instance, bdm):
         version = '4.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
-                version=version)
-        cctxt.cast(ctxt, 'attach_volume', **kw)
+                                    version=version)
+        cctxt.cast(ctxt, 'attach_volume', instance=instance, bdm=bdm)
 
     def change_instance_metadata(self, ctxt, instance, diff):
         version = '4.0'

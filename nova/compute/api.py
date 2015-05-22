@@ -3003,8 +3003,7 @@ class API(base.Base):
             volume = self.volume_api.get(context, volume_id)
             self.volume_api.check_attach(context, volume, instance=instance)
             self.volume_api.reserve_volume(context, volume_id)
-            self.compute_rpcapi.attach_volume(context, instance=instance,
-                    volume_id=volume_id, mountpoint=device, bdm=volume_bdm)
+            self.compute_rpcapi.attach_volume(context, instance, volume_bdm)
         except Exception:
             with excutils.save_and_reraise_exception():
                 volume_bdm.destroy()
