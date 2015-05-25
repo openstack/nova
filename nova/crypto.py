@@ -27,7 +27,6 @@ import binascii
 import os
 import re
 import string
-import StringIO
 import struct
 
 from oslo_concurrency import processutils
@@ -38,6 +37,7 @@ from oslo_utils import timeutils
 import paramiko
 from pyasn1.codec.der import encoder as der_encoder
 from pyasn1.type import univ
+import six
 
 from nova import context
 from nova import db
@@ -166,7 +166,7 @@ def generate_x509_fingerprint(pem_key):
 
 def generate_key_pair(bits=2048):
     key = paramiko.RSAKey.generate(bits)
-    keyout = StringIO.StringIO()
+    keyout = six.BytesIO()
     key.write_private_key(keyout)
     private_key = keyout.getvalue()
     public_key = '%s %s Generated-by-Nova' % (key.get_name(), key.get_base64())

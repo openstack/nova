@@ -22,13 +22,13 @@ import os
 import platform
 import re
 import time
-import urllib2
 
 from oslo_concurrency import processutils
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import strutils
 import six
+from six.moves import urllib
 import six.moves.urllib.parse as urlparse
 
 from nova.compute import arch
@@ -1468,8 +1468,8 @@ class LibvirtScalityVolumeDriver(LibvirtBaseVolumeDriver):
             # turn local path into URL
             config = 'file://%s' % config
         try:
-            urllib2.urlopen(config, timeout=5).close()
-        except urllib2.URLError as e:
+            urllib.request.urlopen(config, timeout=5).close()
+        except urllib.error.URLError as e:
             msg = _LW("Cannot access 'scality_sofs_config': %s") % e
             LOG.warn(msg)
             raise exception.NovaException(msg)

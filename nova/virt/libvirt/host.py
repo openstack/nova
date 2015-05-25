@@ -43,6 +43,7 @@ from oslo_log import log as logging
 from oslo_utils import excutils
 from oslo_utils import importutils
 from oslo_utils import units
+import six
 
 from nova import context as nova_context
 from nova import exception
@@ -62,7 +63,7 @@ LOG = logging.getLogger(__name__)
 
 native_socket = patcher.original('socket')
 native_threading = patcher.original("threading")
-native_Queue = patcher.original("Queue")
+native_Queue = patcher.original("queue" if six.PY3 else "Queue")
 
 CONF = cfg.CONF
 CONF.import_opt('host', 'nova.netconf')
