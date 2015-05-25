@@ -154,13 +154,6 @@ def cancel_retrieve(vim, token):
             token=token)
 
 
-def continue_to_get_objects(vim, token):
-    """Continues to get the list of objects of the type specified."""
-    return vim.ContinueRetrievePropertiesEx(
-            vim.service_content.propertyCollector,
-            token=token)
-
-
 def get_prop_spec(client_factory, spec_type, properties):
     """Builds the Property Spec Object."""
     prop_spec = client_factory.create('ns0:PropertySpec')
