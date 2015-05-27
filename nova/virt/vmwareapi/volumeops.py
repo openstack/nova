@@ -367,7 +367,7 @@ class VMwareVolumeOps(object):
         driver_type = connection_info['driver_volume_type']
         LOG.debug("Volume attach. Driver type: %s", driver_type,
                   instance=instance)
-        if driver_type == 'vmdk':
+        if driver_type == constants.DISK_FORMAT_VMDK:
             self._attach_volume_vmdk(connection_info, instance, adapter_type)
         elif driver_type == 'iscsi':
             self._attach_volume_iscsi(connection_info, instance, adapter_type)
@@ -542,7 +542,7 @@ class VMwareVolumeOps(object):
         driver_type = connection_info['driver_volume_type']
         LOG.debug("Volume detach. Driver type: %s", driver_type,
                   instance=instance)
-        if driver_type == 'vmdk':
+        if driver_type == constants.DISK_FORMAT_VMDK:
             self._detach_volume_vmdk(connection_info, instance)
         elif driver_type == 'iscsi':
             self._detach_volume_iscsi(connection_info, instance)
@@ -555,7 +555,7 @@ class VMwareVolumeOps(object):
         driver_type = connection_info['driver_volume_type']
         LOG.debug("Root volume attach. Driver type: %s", driver_type,
                   instance=instance)
-        if driver_type == 'vmdk':
+        if driver_type == constants.DISK_FORMAT_VMDK:
             vm_ref = vm_util.get_vm_ref(self._session, instance)
             data = connection_info['data']
             # Get the volume ref

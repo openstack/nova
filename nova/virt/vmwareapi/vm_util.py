@@ -766,10 +766,10 @@ def create_virtual_disk_spec(client_factory, controller_key,
         disk_file_backing = client_factory.create(
                             'ns0:VirtualDiskFlatVer2BackingInfo')
         disk_file_backing.diskMode = "persistent"
-        if disk_type == "thin":
+        if disk_type == constants.DISK_TYPE_THIN:
             disk_file_backing.thinProvisioned = True
         else:
-            if disk_type == "eagerZeroedThick":
+            if disk_type == constants.DISK_TYPE_EAGER_ZEROED_THICK:
                 disk_file_backing.eagerlyScrub = True
     disk_file_backing.fileName = file_path or ""
 

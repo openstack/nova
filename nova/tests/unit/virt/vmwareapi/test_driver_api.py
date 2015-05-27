@@ -618,10 +618,10 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
 
     def test_ephemeral_disk_attach_from_bdi(self):
         ephemerals = [{'device_type': 'disk',
-                       'disk_bus': 'lsiLogic',
+                       'disk_bus': constants.DEFAULT_ADAPTER_TYPE,
                        'size': 25},
                       {'device_type': 'disk',
-                       'disk_bus': 'lsiLogic',
+                       'disk_bus': constants.DEFAULT_ADAPTER_TYPE,
                        'size': 25}]
         bdi = {'ephemerals': ephemerals}
         self._create_vm(bdi=bdi, ephemeral=50)
