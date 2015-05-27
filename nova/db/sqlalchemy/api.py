@@ -2661,9 +2661,16 @@ def _instance_extra_create(context, values):
 
 
 def instance_extra_update_by_uuid(context, instance_uuid, values):
-    return model_query(context, models.InstanceExtra).\
+    rows_updated = model_query(context, models.InstanceExtra).\
         filter_by(instance_uuid=instance_uuid).\
         update(values)
+    if not rows_updated:
+        LOG.debug("Created instance_extra for %s" % instance_uuid)
+        create_values = copy.copy(values)
+        create_values["instance_uuid"] = instance_uuid
+        _instance_extra_create(context, create_values)
+        rows_updated = 1
+    return rows_updated
 
 
 def instance_extra_get_by_instance_uuid(context, instance_uuid,

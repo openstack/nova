@@ -2748,6 +2748,21 @@ class InstanceExtraTestCase(test.TestCase):
             self.ctxt, self.instance['uuid'])
         self.assertEqual('changed', inst_extra.numa_topology)
 
+    def test_instance_extra_update_by_uuid_and_create(self):
+        sqlalchemy_api.model_query(self.ctxt, models.InstanceExtra).\
+                    filter_by(instance_uuid=self.instance['uuid']).\
+                    delete()
+        inst_extra = db.instance_extra_get_by_instance_uuid(
+            self.ctxt, self.instance['uuid'])
+        self.assertIsNone(inst_extra)
+
+        db.instance_extra_update_by_uuid(self.ctxt, self.instance['uuid'],
+                                         {'numa_topology': 'changed'})
+
+        inst_extra = db.instance_extra_get_by_instance_uuid(
+            self.ctxt, self.instance['uuid'])
+        self.assertEqual('changed', inst_extra.numa_topology)
+
     def test_instance_extra_get_with_columns(self):
         extra = db.instance_extra_get_by_instance_uuid(
             self.ctxt, self.instance['uuid'],
