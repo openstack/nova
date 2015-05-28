@@ -4964,30 +4964,6 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(payload['image_ref_url'], image_ref_url)
         self.compute.terminate_instance(self.context, instance, [], [])
 
-    def test_prep_resize_instance_migration_error_on_same_host(self):
-        """Ensure prep_resize raise a migration error if destination is set on
-        the same source host and allow_resize_to_same_host is false
-        """
-        self.flags(host="foo", allow_resize_to_same_host=False)
-
-        instance = self._create_fake_instance_obj()
-
-        reservations = self._ensure_quota_reservations_rolledback(instance)
-
-        self.compute.build_and_run_instance(self.context, instance, {}, {}, {},
-                                            block_device_mapping=[])
-        instance.host = self.compute.host
-        instance.save()
-        instance_type = flavors.get_default_flavor()
-
-        self.assertRaises(exception.MigrationError, self.compute.prep_resize,
-                          self.context, instance=instance,
-                          instance_type=instance_type, image={},
-                          reservations=reservations, request_spec={},
-                          filter_properties={}, node=None,
-                          clean_shutdown=True)
-        self.compute.terminate_instance(self.context, instance, [], [])
-
     def test_prep_resize_instance_migration_error_on_none_host(self):
         """Ensure prep_resize raises a migration error if destination host is
         not defined
@@ -5410,23 +5386,6 @@ class ComputeTestCase(BaseTestCase):
     def test_get_by_flavor_id(self):
         flavor_type = flavors.get_flavor_by_flavor_id(1)
         self.assertEqual(flavor_type['name'], 'm1.tiny')
-
-    def test_resize_same_source_fails(self):
-        """Ensure instance fails to migrate when source and destination are
-        the same host.
-        """
-        instance = self._create_fake_instance_obj()
-        reservations = self._ensure_quota_reservations_rolledback(instance)
-        self.compute.build_and_run_instance(self.context, instance, {}, {}, {},
-                                            block_device_mapping=[])
-        instance.refresh()
-        instance_type = flavors.get_default_flavor()
-        self.assertRaises(exception.MigrationError, self.compute.prep_resize,
-                self.context, instance=instance,
-                instance_type=instance_type, image={},
-                reservations=reservations, request_spec={},
-                filter_properties={}, node=None, clean_shutdown=True)
-        self.compute.terminate_instance(self.context, instance, [], [])
 
     def test_resize_instance_handles_migration_error(self):
         # Ensure vm_state is ERROR when error occurs.
