@@ -17,6 +17,7 @@ from oslo_utils import uuidutils
 
 from nova import context
 from nova import objects
+from nova.objects import base
 from nova.tests.unit.objects import test_objects
 
 
@@ -45,6 +46,22 @@ class _TestRequestSpecObject(object):
         spec = objects.RequestSpec()
         spec._image_meta_from_image(None)
         self.assertIsNone(spec.image)
+
+    @mock.patch.object(base, 'obj_to_primitive')
+    def test_to_legacy_image(self, obj_to_primitive):
+        spec = objects.RequestSpec(image=objects.ImageMeta())
+        fake_dict = mock.Mock()
+        obj_to_primitive.return_value = fake_dict
+
+        self.assertEqual(fake_dict, spec._to_legacy_image())
+        obj_to_primitive.assert_called_once_with(spec.image)
+
+    @mock.patch.object(base, 'obj_to_primitive')
+    def test_to_legacy_image_with_none(self, obj_to_primitive):
+        spec = objects.RequestSpec(image=None)
+
+        self.assertEqual({}, spec._to_legacy_image())
+        self.assertFalse(obj_to_primitive.called)
 
     def test_from_instance_as_object(self):
         instance = objects.Instance()
@@ -99,6 +116,31 @@ class _TestRequestSpecObject(object):
         spec._from_flavor(flavor_dict)
         self.assertIsInstance(spec.flavor, objects.Flavor)
         self.assertEqual({'id': 1}, spec.flavor.obj_get_changes())
+
+    def test_to_legacy_instance(self):
+        spec = objects.RequestSpec()
+        spec.flavor = objects.Flavor(root_gb=10,
+                                     ephemeral_gb=0,
+                                     memory_mb=10,
+                                     vcpus=1)
+        spec.numa_topology = None
+        spec.pci_requests = None
+        spec.project_id = '1'
+        spec.availability_zone = 'nova'
+
+        instance = spec._to_legacy_instance()
+        self.assertEqual({'root_gb': 10,
+                          'ephemeral_gb': 0,
+                          'memory_mb': 10,
+                          'vcpus': 1,
+                          'numa_topology': None,
+                          'pci_requests': None,
+                          'project_id': '1',
+                          'availability_zone': 'nova'}, instance)
+
+    def test_to_legacy_instance_with_unset_values(self):
+        spec = objects.RequestSpec()
+        self.assertEqual({}, spec._to_legacy_instance())
 
     def test_from_retry(self):
         retry_dict = {'num_attempts': 1,
@@ -213,6 +255,97 @@ class _TestRequestSpecObject(object):
         spec_obj = objects.RequestSpec()
         self.assertEqual('bar', spec_obj.get_scheduler_hint('oops',
                                                             default='bar'))
+
+    @mock.patch.object(objects.RequestSpec, '_to_legacy_instance')
+    @mock.patch.object(base, 'obj_to_primitive')
+    def test_to_legacy_request_spec_dict(self, image_to_primitive,
+                                         spec_to_legacy_instance):
+        fake_image_dict = mock.Mock()
+        image_to_primitive.return_value = fake_image_dict
+        fake_instance = {'root_gb': 1.0,
+                         'ephemeral_gb': 1.0,
+                         'memory_mb': 1.0,
+                         'vcpus': 1,
+                         'numa_topology': None,
+                         'pci_requests': None,
+                         'project_id': '1',
+                         'availability_zone': 'nova',
+                         'uuid': '1'}
+        spec_to_legacy_instance.return_value = fake_instance
+
+        fake_flavor = objects.Flavor(root_gb=10,
+                                     ephemeral_gb=0,
+                                     memory_mb=512,
+                                     vcpus=1)
+        spec = objects.RequestSpec(num_instances=1,
+                                   image=objects.ImageMeta(),
+                                   # instance properties
+                                   numa_topology=None,
+                                   pci_requests=None,
+                                   project_id=1,
+                                   availability_zone='nova',
+                                   instance_uuid='1',
+                                   flavor=fake_flavor)
+        spec_dict = spec.to_legacy_request_spec_dict()
+        expected = {'num_instances': 1,
+                    'image': fake_image_dict,
+                    'instance_properties': fake_instance,
+                    'instance_type': fake_flavor}
+        self.assertEqual(expected, spec_dict)
+
+    def test_to_legacy_request_spec_dict_with_unset_values(self):
+        spec = objects.RequestSpec()
+        self.assertEqual({'num_instances': 1,
+                          'image': {},
+                          'instance_properties': {},
+                          'instance_type': {}},
+                         spec.to_legacy_request_spec_dict())
+
+    def test_to_legacy_filter_properties_dict(self):
+        fake_numa_limits = objects.NUMATopologyLimits()
+        fake_computes_obj = objects.ComputeNodeList(
+            objects=[objects.ComputeNode(host='fake1',
+                                         hypervisor_hostname='node1')])
+        spec = objects.RequestSpec(
+            ignore_hosts=['ignoredhost'],
+            force_hosts=['fakehost'],
+            force_nodes=['fakenode'],
+            retry=objects.SchedulerRetries(num_attempts=1,
+                                           hosts=fake_computes_obj),
+            limits=objects.SchedulerLimits(numa_topology=fake_numa_limits,
+                                           vcpu=1.0,
+                                           disk_gb=10.0,
+                                           memory_mb=8192.0),
+            instance_group=objects.InstanceGroup(members=['fake1'],
+                                                 policies=['affinity']),
+            scheduler_hints={'foo': ['bar']})
+        expected = {'ignore_hosts': ['ignoredhost'],
+                    'force_hosts': ['fakehost'],
+                    'force_nodes': ['fakenode'],
+                    'retry': {'num_attempts': 1,
+                              'hosts': [['fake1', 'node1']]},
+                    'limits': {'numa_topology': fake_numa_limits,
+                               'vcpu': 1.0,
+                               'disk_gb': 10.0,
+                               'memory_mb': 8192.0},
+                    'group_updated': True,
+                    'group_hosts': set(['fake1']),
+                    'group_policies': set(['affinity']),
+                    'scheduler_hints': {'foo': 'bar'}}
+        self.assertEqual(expected, spec.to_legacy_filter_properties_dict())
+
+    def test_to_legacy_filter_properties_dict_with_nullable_values(self):
+        spec = objects.RequestSpec(force_hosts=None,
+                                   force_nodes=None,
+                                   retry=None,
+                                   limits=None,
+                                   instance_group=None,
+                                   scheduler_hints=None)
+        self.assertEqual({}, spec.to_legacy_filter_properties_dict())
+
+    def test_to_legacy_filter_properties_dict_with_unset_values(self):
+        spec = objects.RequestSpec()
+        self.assertEqual({}, spec.to_legacy_filter_properties_dict())
 
 
 class TestRequestSpecObject(test_objects._LocalTest,
