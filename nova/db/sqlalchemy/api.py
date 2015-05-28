@@ -6160,11 +6160,11 @@ def pci_device_update(context, node_id, address, values):
 @require_context
 def ft_relation_create(context, values):
     try:
-        relation_ref = models.FaultToleranceRelation()
-        relation_ref.update(values)
-        relation_ref.save()
+        relation = models.FaultToleranceRelation()
+        relation.update(values)
+        relation.save()
 
-        return relation_ref
+        return relation
     except db_exc.DBDuplicateEntry:
         raise exception.KeyPairExists()
 
