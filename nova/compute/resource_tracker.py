@@ -98,7 +98,8 @@ class ResourceTracker(object):
         an instance build operation that will consume additional resources.
 
         :param context: security context
-        :param instance_ref: instance to reserve resources for
+        :param instance_ref: instance to reserve resources for.
+        :type instance_ref: nova.objects.instance.Instance object
         :param limits: Dict of oversubscription limits for memory, disk,
                        and CPUs.
         :returns: A Claim ticket representing the reserved resources.  It can
@@ -112,12 +113,12 @@ class ResourceTracker(object):
             return claims.NopClaim()
 
         # sanity checks:
-        if instance_ref['host']:
+        if instance_ref.host:
             LOG.warning(_LW("Host field should not be set on the instance "
                             "until resources have been claimed."),
                         instance=instance_ref)
 
-        if instance_ref['node']:
+        if instance_ref.node:
             LOG.warning(_LW("Node field should not be set on the instance "
                             "until resources have been claimed."),
                         instance=instance_ref)
@@ -125,7 +126,7 @@ class ResourceTracker(object):
         # get memory overhead required to build this instance:
         overhead = self.driver.estimate_instance_overhead(instance_ref)
         LOG.debug("Memory overhead for %(flavor)d MB instance; %(overhead)d "
-                  "MB", {'flavor': instance_ref['memory_mb'],
+                  "MB", {'flavor': instance_ref.memory_mb,
                           'overhead': overhead['memory_mb']})
 
         claim = claims.Claim(context, instance_ref, self, self.compute_node,
@@ -135,7 +136,7 @@ class ResourceTracker(object):
         # so set instance_ref['numa_topology'] first.  We need to make sure
         # that numa_topology is saved while under COMPUTE_RESOURCE_SEMAPHORE
         # so that the resource audit knows about any cpus we've pinned.
-        instance_ref['numa_topology'] = claim.claimed_numa_topology
+        instance_ref.numa_topology = claim.claimed_numa_topology
         self._set_instance_host_and_node(context, instance_ref)
 
         # Mark resources in-use and update stats
