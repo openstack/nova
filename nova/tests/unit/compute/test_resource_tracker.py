@@ -223,9 +223,6 @@ class BaseTestCase(test.TestCase):
         self.stubs.Set(db, 'instance_extra_get_by_instance_uuid',
                        self._fake_instance_extra_get_by_instance_uuid)
         self.stubs.Set(self.conductor.db,
-                       'instance_update_and_get_original',
-                       self._fake_instance_update_and_get_original)
-        self.stubs.Set(self.conductor.db,
                        'flavor_get', self._fake_flavor_get)
 
         self.host = 'fakehost'
@@ -497,15 +494,6 @@ class BaseTestCase(test.TestCase):
 
     def _fake_flavor_get(self, ctxt, id_):
         return self._instance_types[id_]
-
-    def _fake_instance_update_and_get_original(self, context, instance_uuid,
-                                               values, columns_to_join=None,
-                                               update_cells=False):
-        instance = self._instances[instance_uuid]
-        instance.update(values)
-        # the test doesn't care what the original instance values are, it's
-        # only used in the subsequent notification:
-        return (instance, instance)
 
     def _fake_compute_node_update(self, ctx, compute_node_id, values,
             prune_stats=False):
