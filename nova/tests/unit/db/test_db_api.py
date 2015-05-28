@@ -932,6 +932,24 @@ class SqlAlchemyDbApiNoDbTestCase(test.NoDBTestCase):
         sqlalchemy_api.convert_objects_related_datetimes(test3, *datetime_keys)
         self.assertEqual(test3, expected_dict)
 
+    def test_convert_objects_related_datetimes_with_strings(self):
+        t1 = '2015-05-28T17:15:53.000000'
+        t2 = '2012-04-21T18:25:43-05:00'
+        t3 = '2012-04-23T18:25:43.511Z'
+
+        datetime_keys = ('created_at', 'deleted_at', 'updated_at')
+        test1 = {'created_at': t1, 'deleted_at': t2, 'updated_at': t3}
+        expected_dict = {
+        'created_at': timeutils.parse_strtime(t1).replace(tzinfo=None),
+        'deleted_at': timeutils.parse_isotime(t2).replace(tzinfo=None),
+        'updated_at': timeutils.parse_isotime(t3).replace(tzinfo=None)}
+
+        sqlalchemy_api.convert_objects_related_datetimes(test1)
+        self.assertEqual(test1, expected_dict)
+
+        sqlalchemy_api.convert_objects_related_datetimes(test1, *datetime_keys)
+        self.assertEqual(test1, expected_dict)
+
     def test_get_regexp_op_for_database_sqlite(self):
         op = sqlalchemy_api._get_regexp_op_for_connection('sqlite:///')
         self.assertEqual('REGEXP', op)

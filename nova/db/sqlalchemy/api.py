@@ -321,10 +321,18 @@ def model_query(context, model,
 
 
 def convert_objects_related_datetimes(values, *datetime_keys):
+    if not datetime_keys:
+        datetime_keys = ('created_at', 'deleted_at', 'updated_at')
+
     for key in datetime_keys:
         if key in values and values[key]:
             if isinstance(values[key], six.string_types):
-                values[key] = timeutils.parse_strtime(values[key])
+                try:
+                    values[key] = timeutils.parse_strtime(values[key])
+                except ValueError:
+                    # Try alternate parsing since parse_strtime will fail
+                    # with say converting '2015-05-28T19:59:38+00:00'
+                    values[key] = timeutils.parse_isotime(values[key])
             # NOTE(danms): Strip UTC timezones from datetimes, since they're
             # stored that way in the database
             values[key] = values[key].replace(tzinfo=None)
@@ -609,8 +617,7 @@ def compute_node_create(context, values):
     """Creates a new ComputeNode and populates the capacity fields
     with the most recent data.
     """
-    datetime_keys = ('created_at', 'deleted_at', 'updated_at')
-    convert_objects_related_datetimes(values, *datetime_keys)
+    convert_objects_related_datetimes(values)
 
     compute_node_ref = models.ComputeNode()
     compute_node_ref.update(values)
@@ -631,8 +638,7 @@ def compute_node_update(context, compute_id, values):
         # changes in data.  This ensures that we invalidate the
         # scheduler cache of compute node data in case of races.
         values['updated_at'] = timeutils.utcnow()
-        datetime_keys = ('created_at', 'deleted_at', 'updated_at')
-        convert_objects_related_datetimes(values, *datetime_keys)
+        convert_objects_related_datetimes(values)
         compute_ref.update(values)
 
     return compute_ref
@@ -2587,6 +2593,8 @@ def instance_info_cache_update(context, instance_uuid, values):
     :param instance_uuid: = uuid of info cache's instance
     :param values: = dict containing column values to update
     """
+    convert_objects_related_datetimes(values)
+
     session = get_session()
     with session.begin():
         info_cache = model_query(context, models.InstanceInfoCache,
@@ -3846,6 +3854,8 @@ def _from_legacy_values(values, legacy, allow_updates=False):
 def block_device_mapping_create(context, values, legacy=True):
     _scrub_empty_str_values(values, ['volume_size'])
     values = _from_legacy_values(values, legacy)
+    convert_objects_related_datetimes(values)
+
     bdm_ref = models.BlockDeviceMapping()
     bdm_ref.update(values)
     bdm_ref.save()
@@ -3856,6 +3866,8 @@ def block_device_mapping_create(context, values, legacy=True):
 def block_device_mapping_update(context, bdm_id, values, legacy=True):
     _scrub_empty_str_values(values, ['volume_size'])
     values = _from_legacy_values(values, legacy, allow_updates=True)
+    convert_objects_related_datetimes(values)
+
     query = _block_device_mapping_get_query(context).filter_by(id=bdm_id)
     query.update(values)
     return query.first()
@@ -3864,6 +3876,7 @@ def block_device_mapping_update(context, bdm_id, values, legacy=True):
 def block_device_mapping_update_or_create(context, values, legacy=True):
     _scrub_empty_str_values(values, ['volume_size'])
     values = _from_legacy_values(values, legacy, allow_updates=True)
+    convert_objects_related_datetimes(values)
 
     session = get_session()
     with session.begin():
