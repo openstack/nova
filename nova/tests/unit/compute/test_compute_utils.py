@@ -104,7 +104,7 @@ class ComputeValidateDeviceTestCase(test.NoDBTestCase):
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                 self.context, self.instance['uuid'])
         return compute_utils.get_device_name_for_instance(
-                self.context, self.instance, bdms, device)
+            self.instance, bdms, device)
 
     @staticmethod
     def _fake_bdm(device):

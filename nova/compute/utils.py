@@ -92,7 +92,7 @@ def add_instance_fault_from_exc(context, instance, fault, exc_info=None):
     fault_obj.create()
 
 
-def get_device_name_for_instance(context, instance, bdms, device):
+def get_device_name_for_instance(instance, bdms, device):
     """Validates (or generates) a device name for instance.
 
     This method is a wrapper for get_next_device_name that gets the list
