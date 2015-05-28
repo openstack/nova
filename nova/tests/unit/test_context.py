@@ -134,7 +134,7 @@ class ContextTestCase(test.NoDBTestCase):
                                       '222',
                                       roles=['admin', 'weasel'])
 
-        ctxt = context.RequestContext.from_dict(ctxt.to_dict())
+        context.RequestContext.from_dict(ctxt.to_dict())
 
         self.assertEqual(len(warns), 0, warns)
 

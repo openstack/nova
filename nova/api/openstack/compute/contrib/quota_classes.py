@@ -84,8 +84,7 @@ class QuotaClassSetsController(wsgi.Controller):
                 bad_keys.append(key)
                 continue
             try:
-                value = utils.validate_integer(
-                        body['quota_class_set'][key], key)
+                utils.validate_integer(body['quota_class_set'][key], key)
             except exception.InvalidInput as e:
                 raise webob.exc.HTTPBadRequest(
                     explanation=e.format_message())

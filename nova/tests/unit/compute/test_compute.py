@@ -9969,7 +9969,7 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         aggr = self.api.create_aggregate(self.context, 'fake_aggregate',
                                          'fake_zone')
         fake_notifier.NOTIFICATIONS = []
-        aggr = self.api.update_aggregate(self.context, aggr['id'],
+        self.api.update_aggregate(self.context, aggr['id'],
                                          {'name': 'new_fake_aggregate'})
         self.assertIsNone(availability_zones._get_cache().get('cache'))
         self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
@@ -9993,8 +9993,7 @@ class ComputeAPIAggrTestCase(BaseTestCase):
                                                fake_host)
         metadata = {'name': 'new_fake_aggregate'}
         fake_notifier.NOTIFICATIONS = []
-        aggr2 = self.api.update_aggregate(self.context, aggr2['id'],
-                                                  metadata)
+        self.api.update_aggregate(self.context, aggr2['id'], metadata)
         self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
         msg = fake_notifier.NOTIFICATIONS[0]
         self.assertEqual(msg.event_type,
@@ -10016,8 +10015,7 @@ class ComputeAPIAggrTestCase(BaseTestCase):
                                        fake_host)
         metadata = {'availability_zone': 'new_fake_zone'}
         fake_notifier.NOTIFICATIONS = []
-        aggr1 = self.api.update_aggregate(self.context, aggr1['id'],
-                                                  metadata)
+        self.api.update_aggregate(self.context, aggr1['id'], metadata)
         self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
         msg = fake_notifier.NOTIFICATIONS[0]
         self.assertEqual(msg.event_type,
@@ -10045,8 +10043,7 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         aggr3 = self._init_aggregate_with_host(None, 'fake_aggregate3',
                                                None, fake_host2)
         metadata = {'availability_zone': fake_zone}
-        aggr3 = self.api.update_aggregate(self.context, aggr3['id'],
-                                          metadata)
+        self.api.update_aggregate(self.context, aggr3['id'], metadata)
         self.assertEqual(len(fake_notifier.NOTIFICATIONS), 15)
         msg = fake_notifier.NOTIFICATIONS[13]
         self.assertEqual(msg.event_type,
@@ -10146,8 +10143,7 @@ class ComputeAPIAggrTestCase(BaseTestCase):
                                        fake_host)
         metadata = {'availability_zone': 'new_fake_zone'}
         fake_notifier.NOTIFICATIONS = []
-        aggr1 = self.api.update_aggregate_metadata(self.context,
-                                                   aggr1['id'], metadata)
+        self.api.update_aggregate_metadata(self.context, aggr1['id'], metadata)
         self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
         msg = fake_notifier.NOTIFICATIONS[0]
         self.assertEqual(msg.event_type,
@@ -10190,9 +10186,7 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         aggr3 = self._init_aggregate_with_host(None, 'fake_aggregate3',
                                                None, fake_host)
         metadata = {'availability_zone': fake_zone}
-        aggr3 = self.api.update_aggregate_metadata(self.context,
-                                                   aggr3['id'],
-                                                   metadata)
+        self.api.update_aggregate_metadata(self.context, aggr3['id'], metadata)
         self.assertEqual(len(fake_notifier.NOTIFICATIONS), 15)
         msg = fake_notifier.NOTIFICATIONS[13]
         self.assertEqual(msg.event_type,

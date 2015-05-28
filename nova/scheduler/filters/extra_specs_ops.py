@@ -55,7 +55,7 @@ def match(value, req):
                 return True
             if not words:
                 break
-            op = words.pop(0)  # remove a keyword <or>
+            words.pop(0)  # remove a keyword <or>
             if not words:
                 break
         return False

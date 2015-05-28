@@ -2112,7 +2112,7 @@ class ComputeManager(manager.Manager):
             resources['block_device_info'] = block_device_info
         except (exception.InstanceNotFound,
                 exception.UnexpectedDeletingTaskStateError):
-            with excutils.save_and_reraise_exception() as ctxt:
+            with excutils.save_and_reraise_exception():
                 # Make sure the async call finishes
                 if network_info is not None:
                     network_info.wait(do_raise=False)

@@ -2411,8 +2411,8 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         db.instance_update(self.ctxt, instance['uuid'], {"task_state": None})
 
         # Ensure the newly rebooted instance is not returned.
-        instance = self.create_instance_with_args(task_state="rebooting",
-                                                updated_at=timeutils.utcnow())
+        self.create_instance_with_args(task_state="rebooting",
+                                       updated_at=timeutils.utcnow())
         results = db.instance_get_all_hung_in_rebooting(self.ctxt, 10)
         self.assertEqual([], results)
 

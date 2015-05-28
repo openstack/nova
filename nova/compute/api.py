@@ -421,7 +421,6 @@ class API(base.Base):
             # Convert to the appropriate exception message
             if allowed <= 0:
                 msg = _("Cannot run any more instances of this type.")
-                allowed = 0
             elif min_count <= allowed <= max_count:
                 # We're actually OK, but still need reservations
                 return self._check_num_instances_quota(context, instance_type,
