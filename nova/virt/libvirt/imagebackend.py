@@ -768,11 +768,6 @@ class Rbd(Image):
         return True
 
     def clone(self, context, image_id_or_uri):
-        if not self.driver.supports_layering():
-            reason = _('installed version of librbd does not support cloning')
-            raise exception.ImageUnacceptable(image_id=image_id_or_uri,
-                                              reason=reason)
-
         image_meta = IMAGE_API.get(context, image_id_or_uri,
                                    include_locations=True)
         locations = image_meta['locations']

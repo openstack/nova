@@ -93,6 +93,13 @@ class RADOSClient(object):
     def __exit__(self, type_, value, traceback):
         self.driver._disconnect_from_rados(self.cluster, self.ioctx)
 
+    @property
+    def features(self):
+        features = self.cluster.conf_get('rbd_default_features')
+        if ((features is None) or (int(features) == 0)):
+            features = rbd.RBD_FEATURE_LAYERING
+        return int(features)
+
 
 class RBDDriver(object):
 
@@ -122,9 +129,6 @@ class RBDDriver(object):
         # closing an ioctx cannot raise an exception
         ioctx.close()
         client.shutdown()
-
-    def supports_layering(self):
-        return hasattr(rbd, 'RBD_FEATURE_LAYERING')
 
     def ceph_args(self):
         """List of command line parameters to be passed to ceph commands to
@@ -213,7 +217,7 @@ class RBDDriver(object):
                                      snapshot.encode('utf-8'),
                                      dest_client.ioctx,
                                      dest_name,
-                                     features=rbd.RBD_FEATURE_LAYERING)
+                                     features=src_client.features)
 
     def size(self, name):
         with RBDVolumeProxy(self, name) as vol:
@@ -249,8 +253,10 @@ class RBDDriver(object):
         :name: Name of RBD volume
         """
         args = ['--pool', self.pool, base, name]
-        if self.supports_layering():
-            args += ['--new-format']
+        # Image format 2 supports cloning,
+        # in stable ceph rbd release default is not 2,
+        # we need to use it explicitly.
+        args += ['--image-format=2']
         args += self.ceph_args()
         utils.execute('rbd', 'import', *args)
 

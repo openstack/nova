@@ -154,6 +154,20 @@ class RbdTestCase(test.NoDBTestCase):
         ports = ['6789', '6790', '6791', '6792', '6791']
         self.assertEqual((hosts, ports), self.driver.get_mon_addrs())
 
+    @mock.patch.object(rbd_utils.RBDDriver, '_connect_to_rados')
+    @mock.patch.object(rbd_utils, 'rbd')
+    def test_rbd_conf_features(self, mock_rbd, mock_connect):
+        mock_rbd.RBD_FEATURE_LAYERING = 1
+        mock_cluster = mock.Mock()
+        mock_cluster.conf_get = mock.Mock()
+        mock_cluster.conf_get.return_value = None
+        mock_connect.return_value = (mock_cluster, None)
+        client = rbd_utils.RADOSClient(self.driver)
+        self.assertEqual(1, client.features)
+
+        mock_cluster.conf_get.return_value = '2'
+        self.assertEqual(2, client.features)
+
     @mock.patch.object(rbd_utils, 'RADOSClient')
     @mock.patch.object(rbd_utils, 'rbd')
     @mock.patch.object(rbd_utils, 'rados')
@@ -181,7 +195,7 @@ class RbdTestCase(test.NoDBTestCase):
 
         args = [client_stack[0].ioctx, str(image), str(snap),
                 client_stack[1].ioctx, str(self.volume_name)]
-        kwargs = {'features': mock_rbd.RBD_FEATURE_LAYERING}
+        kwargs = {'features': client.features}
         rbd.clone.assert_called_once_with(*args, **kwargs)
         self.assertEqual(client.__enter__.call_count, 2)
 

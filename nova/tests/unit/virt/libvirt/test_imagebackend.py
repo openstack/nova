@@ -1223,7 +1223,7 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
 
         rbd_name = "%s_%s" % (self.INSTANCE['uuid'], self.NAME)
         cmd = ('rbd', 'import', '--pool', self.POOL, self.TEMPLATE_PATH,
-               rbd_name, '--new-format', '--id', self.USER,
+               rbd_name, '--image-format=2', '--id', self.USER,
                '--conf', self.CONF)
         self.assertEqual(fake_processutils.fake_execute_get_log(),
             [' '.join(cmd)])
@@ -1245,7 +1245,7 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
         image.check_image_exists().AndReturn(False)
         rbd_name = "%s_%s" % (self.INSTANCE['uuid'], self.NAME)
         cmd = ('rbd', 'import', '--pool', self.POOL, self.TEMPLATE_PATH,
-               rbd_name, '--new-format', '--id', self.USER,
+               rbd_name, '--image-format=2', '--id', self.USER,
                '--conf', self.CONF)
         self.mox.StubOutWithMock(image, 'get_disk_size')
         image.get_disk_size(rbd_name).AndReturn(self.SIZE)
