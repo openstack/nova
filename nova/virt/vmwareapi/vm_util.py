@@ -189,13 +189,15 @@ def _get_allocation_info(client_factory, extra_specs):
 def get_vm_create_spec(client_factory, instance, data_store_name,
                        vif_infos, extra_specs,
                        os_type=constants.DEFAULT_OS_TYPE,
-                       profile_spec=None):
+                       profile_spec=None, metadata=None):
     """Builds the VM Create spec."""
     config_spec = client_factory.create('ns0:VirtualMachineConfigSpec')
     config_spec.name = instance.uuid
     config_spec.guestId = os_type
     # The name is the unique identifier for the VM.
     config_spec.instanceUuid = instance.uuid
+    if metadata:
+        config_spec.annotation = metadata
     # set the Hardware version
     config_spec.version = extra_specs.hw_version
 

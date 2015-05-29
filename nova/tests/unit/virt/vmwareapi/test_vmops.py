@@ -32,6 +32,7 @@ from nova.tests.unit import fake_instance
 import nova.tests.unit.image.fake
 from nova.tests.unit.virt.vmwareapi import fake as vmwareapi_fake
 from nova.tests.unit.virt.vmwareapi import stubs
+from nova import version
 from nova.virt import hardware
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import driver
@@ -74,6 +75,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 vmFolder='fake_vm_folder')
         cluster = vmwareapi_fake.create_cluster('fake_cluster', fake_ds_ref)
         self._instance_values = {
+            'display_name': 'fake_display_name',
             'name': 'fake_name',
             'uuid': 'fake_uuid',
             'vcpus': 1,
@@ -143,6 +145,20 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                   ovs_interfaceid=None,
                                   rxtx_cap=3)
                 ])
+        self._metadata = (
+            "name:fake_display_name\n"
+            "userid:fake_user\n"
+            "username:None\n"
+            "projectid:fake_project\n"
+            "projectname:None\n"
+            "flavor:name:m1.micro\n"
+            "flavor:memory_mb:6\n"
+            "flavor:vcpus:28\n"
+            "flavor:ephemeral_gb:8128\n"
+            "flavor:root_gb:496\n"
+            "flavor:swap:33550336\n"
+            "imageid:70a599e0-31e7-49b7-b260-868f441e862b\n"
+            "package:%s\n" % version.version_string_with_package())
 
     def test_get_machine_id_str(self):
         result = vmops.VMwareVMOps._get_machine_id_str(self.network_info)
@@ -829,6 +845,27 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         # that we checked it was scrubbed
         self.assertTrue(self.password_logged)
 
+    def _get_metadata(self, is_image_used=True):
+        if is_image_used:
+            image_id = '70a599e0-31e7-49b7-b260-868f441e862b'
+        else:
+            image_id = None
+        return ("name:fake_display_name\n"
+                "userid:fake_user\n"
+                "username:None\n"
+                "projectid:fake_project\n"
+                "projectname:None\n"
+                "flavor:name:m1.small\n"
+                "flavor:memory_mb:512\n"
+                "flavor:vcpus:1\n"
+                "flavor:ephemeral_gb:0\n"
+                "flavor:root_gb:10\n"
+                "flavor:swap:0\n"
+                "imageid:%(image_id)s\n"
+                "package:%(version)s\n" % {
+                    'image_id': image_id,
+                    'version': version.version_string_with_package()})
+
     @mock.patch('nova.virt.vmwareapi.vm_util.power_on_instance')
     @mock.patch.object(vmops.VMwareVMOps, '_use_disk_image_as_linked_clone')
     @mock.patch.object(vmops.VMwareVMOps, '_fetch_image_if_missing')
@@ -846,8 +883,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                          enlist_image, fetch_image,
                                          use_disk_image,
                                          power_on_instance):
+        self._instance.flavor = self._flavor
         extra_specs = get_extra_specs.return_value
-
         connection_info1 = {'data': 'fake-data1', 'serial': 'volume-fake-id1'}
         connection_info2 = {'data': 'fake-data2', 'serial': 'volume-fake-id2'}
         bdm = [{'connection_info': connection_info1,
@@ -866,7 +903,6 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         vi = get_vm_config_info.return_value
         from_image.return_value = image_info
         build_virtual_machine.return_value = 'fake-vm-ref'
-
         with mock.patch.object(self._vmops, '_volumeops') as volumeops:
             self._vmops.spawn(self._context, self._instance, {},
                               injected_files=None, admin_password=None,
@@ -877,7 +913,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 image_info, extra_specs.storage_policy)
             build_virtual_machine.assert_called_once_with(self._instance,
                 image_info, vi.dc_info, vi.datastore, [],
-                extra_specs)
+                extra_specs, self._get_metadata())
             enlist_image.assert_called_once_with(image_info.image_id,
                                                  vi.datastore, vi.dc_info.ref)
             fetch_image.assert_called_once_with(self._context, vi)
@@ -933,7 +969,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 image_info, extra_specs.storage_policy)
             build_virtual_machine.assert_called_once_with(self._instance,
                 image_info, vi.dc_info, vi.datastore, [],
-                extra_specs)
+                extra_specs, self._get_metadata(is_image_used=False))
             volumeops.attach_root_volume.assert_called_once_with(
                 connection_info1, self._instance, vi.datastore.ref,
                 constants.ADAPTER_TYPE_IDE)
@@ -958,7 +994,6 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         self._instance.image_ref = None
         self._instance.flavor = self._flavor
         extra_specs = get_extra_specs.return_value
-
         connection_info = {'data': 'fake-data', 'serial': 'volume-fake-id'}
         bdm = [{'boot_index': 0,
                 'connection_info': connection_info,
@@ -982,7 +1017,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             self._instance, image_info, extra_specs.storage_policy)
         build_virtual_machine.assert_called_once_with(self._instance,
             image_info, vi.dc_info, vi.datastore, [],
-            extra_specs)
+            extra_specs, self._get_metadata(is_image_used=False))
 
     def test_get_ds_browser(self):
         cache = self._vmops._datastore_browser_mapping
@@ -1232,9 +1267,11 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                   return_value='tmp-uuid'),
                 mock.patch.object(images, 'fetch_image'),
                 mock.patch.object(self._vmops, '_get_extra_specs',
-                                  return_value=extra_specs)
+                                  return_value=extra_specs),
+                mock.patch.object(self._vmops, '_get_instance_metadata',
+                                  return_value='fake-metadata')
         ) as (_wait_for_task, _call_method, _generate_uuid, _fetch_image,
-              _get_extra_specs):
+              _get_extra_specs, _get_instance_metadata):
             self._vmops.spawn(self._context, self._instance, image,
                               injected_files='fake_files',
                               admin_password='password',
@@ -1256,7 +1293,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                     [],
                     extra_specs,
                     'otherGuest',
-                    profile_spec=None)
+                    profile_spec=None,
+                    metadata='fake-metadata')
             mock_create_vm.assert_called_once_with(
                     self._session,
                     self._instance,
@@ -1492,7 +1530,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                                    image, self._dc_info,
                                                    self._ds,
                                                    self.network_info,
-                                                   extra_specs)
+                                                   extra_specs,
+                                                   self._metadata)
 
         vm = vmwareapi_fake._get_object(vm_ref)
 
@@ -1933,3 +1972,30 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
 
     def test_reboot_vm_hard(self):
         self._test_reboot_vm(reboot_type="HARD")
+
+    def test_get_instance_metadata(self):
+        flavor = objects.Flavor(id=7,
+                                name='m1.small',
+                                memory_mb=6,
+                                vcpus=28,
+                                root_gb=496,
+                                ephemeral_gb=8128,
+                                swap=33550336,
+                                extra_specs={})
+        self._instance.flavor = flavor
+        metadata = self._vmops._get_instance_metadata(
+            self._context, self._instance)
+        expected = ("name:fake_display_name\n"
+                    "userid:fake_user\n"
+                    "username:None\n"
+                    "projectid:fake_project\n"
+                    "projectname:None\n"
+                    "flavor:name:m1.small\n"
+                    "flavor:memory_mb:6\n"
+                    "flavor:vcpus:28\n"
+                    "flavor:ephemeral_gb:8128\n"
+                    "flavor:root_gb:496\n"
+                    "flavor:swap:33550336\n"
+                    "imageid:70a599e0-31e7-49b7-b260-868f441e862b\n"
+                    "package:%s\n" % version.version_string_with_package())
+        self.assertEqual(expected, metadata)
