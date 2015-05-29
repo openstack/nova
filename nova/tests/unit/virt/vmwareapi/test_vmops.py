@@ -414,7 +414,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     def test_get_datacenter_ref_and_name_with_no_datastore(self):
         self._test_get_datacenter_ref_and_name()
 
-    @mock.patch.object(vmops.VMwareVMOps, '_fetch_image_if_missing')
+    @mock.patch('nova.image.api.API.get')
     @mock.patch.object(vm_util, 'power_off_instance')
     @mock.patch.object(ds_util, 'disk_copy')
     @mock.patch.object(vm_util, 'get_vm_ref', return_value='fake-ref')
@@ -426,11 +426,11 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     def test_rescue(self, mock_get_ds_by_ref, mock_power_on, mock_reconfigure,
                     mock_get_boot_spec, mock_find_rescue,
                     mock_get_vm_ref, mock_disk_copy,
-                    mock_power_off, mock_fetch_image_if_missing):
+                    mock_power_off, mock_glance):
         _volumeops = mock.Mock()
         self._vmops._volumeops = _volumeops
-
-        ds = ds_obj.Datastore('fake-ref', 'ds1')
+        ds_ref = vmwareapi_fake.ManagedObjectReference(value='fake-ref')
+        ds = ds_obj.Datastore(ds_ref, 'ds1')
         mock_get_ds_by_ref.return_value = ds
         mock_find_rescue.return_value = 'fake-rescue-device'
         mock_get_boot_spec.return_value = 'fake-boot-spec'
@@ -456,7 +456,6 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             _get_dc_ref_and_name.return_value = dc_info
             self._vmops.rescue(
                 self._context, self._instance, None, self._image_meta)
-            mock_fetch_image_if_missing(self._context, mock.ANY)
             mock_power_off.assert_called_once_with(self._session,
                                                    self._instance,
                                                    vm_ref)
@@ -887,6 +886,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         mock_attach_cdrom_to_vm.assert_called_once_with(
                 vm_ref, self._instance, self._ds.ref, str(upload_iso_path))
 
+    @mock.patch('nova.image.api.API.get')
     @mock.patch.object(vmops.LOG, 'debug')
     @mock.patch.object(vmops.VMwareVMOps, '_fetch_image_if_missing')
     @mock.patch.object(vmops.VMwareVMOps, '_get_vm_config_info')
@@ -894,7 +894,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     @mock.patch.object(vmops.lockutils, 'lock')
     def test_spawn_mask_block_device_info_password(self, mock_lock,
         mock_build_virtual_machine, mock_get_vm_config_info,
-        mock_fetch_image_if_missing, mock_debug):
+        mock_fetch_image_if_missing, mock_debug, mock_glance):
         # Very simple test that just ensures block_device_info auth_password
         # is masked when logged; the rest of the test just fails out early.
         data = {'auth_password': 'scrubme'}
@@ -1001,7 +1001,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                               injected_files=None, admin_password=None,
                               network_info=[], block_device_info=bdi)
 
-            from_image.assert_called_once_with(self._instance.image_ref,
+            from_image.assert_called_once_with(self._context,
+                                               self._instance.image_ref,
                                                self._image_meta)
             get_vm_config_info.assert_called_once_with(self._instance,
                 image_info, extra_specs)
@@ -1064,7 +1065,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                               injected_files=None, admin_password=None,
                               network_info=[], block_device_info=bdi)
 
-            from_image.assert_called_once_with(self._instance.image_ref,
+            from_image.assert_called_once_with(self._context,
+                                               self._instance.image_ref,
                                                self._image_meta)
             get_vm_config_info.assert_called_once_with(self._instance,
                 image_info, extra_specs)
@@ -1117,7 +1119,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                           admin_password=None, network_info=[],
                           block_device_info=bdi)
 
-        from_image.assert_called_once_with(self._instance.image_ref,
+        from_image.assert_called_once_with(self._context,
+                                           self._instance.image_ref,
                                            self._image_meta)
         get_vm_config_info.assert_called_once_with(
             self._instance, image_info, extra_specs)
@@ -1392,6 +1395,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 mock.patch.object(uuidutils, 'generate_uuid',
                                   return_value='tmp-uuid'),
                 mock.patch.object(images, 'fetch_image'),
+                mock.patch('nova.image.api.API.get'),
                 mock.patch.object(vutil, 'get_inventory_path',
                                   return_value=self._dc_info.name),
                 mock.patch.object(self._vmops, '_get_extra_specs',
@@ -1399,7 +1403,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 mock.patch.object(self._vmops, '_get_instance_metadata',
                                   return_value='fake-metadata')
         ) as (_wait_for_task, _call_method, _generate_uuid, _fetch_image,
-              _get_inventory_path, _get_extra_specs, _get_instance_metadata):
+              _get_img_svc, _get_inventory_path, _get_extra_specs,
+              _get_instance_metadata):
             self._vmops.spawn(self._context, self._instance, image,
                               injected_files='fake_files',
                               admin_password='password',
@@ -1645,7 +1650,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                           injected_files=None, admin_password=None,
                           network_info=[], block_device_info=bdi)
 
-        from_image.assert_called_once_with(self._instance.image_ref, {})
+        from_image.assert_called_once_with(
+            self._context, self._instance.image_ref, {})
         get_vm_config_info.assert_called_once_with(self._instance,
             image_info, extra_specs)
         build_virtual_machine.assert_called_once_with(self._instance,
@@ -1968,7 +1974,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         extra_specs = vm_util.ExtraSpecs(cpu_limits=cpu_limits)
         self._validate_flavor_extra_specs(flavor_extra_specs, extra_specs)
 
-    def _make_vm_config_info(self, is_iso=False, is_sparse_disk=False):
+    def _make_vm_config_info(self, is_iso=False, is_sparse_disk=False,
+                             vsphere_location=None):
         disk_type = (constants.DISK_TYPE_SPARSE if is_sparse_disk
                      else constants.DEFAULT_DISK_TYPE)
         file_type = (constants.DISK_FORMAT_ISO if is_iso
@@ -1979,7 +1986,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 file_size=10 * units.Mi,
                 file_type=file_type,
                 disk_type=disk_type,
-                linked_clone=True)
+                linked_clone=True,
+                vsphere_location=vsphere_location)
         cache_root_folder = self._ds.build_path("vmware_base", self._image_id)
         mock_imagecache = mock.Mock()
         mock_imagecache.get_image_cache_folder.return_value = cache_root_folder
@@ -2067,6 +2075,34 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             self.assertEqual(1, len(cookies))
             self.assertEqual('vmware_cgi_ticket', cookies[0].name)
             self.assertEqual('"fira-ticket"', cookies[0].value)
+
+    def test_fetch_vsphere_image(self):
+        vsphere_location = 'vsphere://my?dcPath=mycenter&dsName=mystore'
+        vi = self._make_vm_config_info(vsphere_location=vsphere_location)
+        image_ds_loc = mock.Mock()
+        datacenter_moref = mock.Mock()
+        fake_copy_task = mock.Mock()
+
+        with test.nested(
+                mock.patch.object(
+                    self._session, 'invoke_api',
+                    side_effect=[datacenter_moref, fake_copy_task]),
+                mock.patch.object(self._session, '_wait_for_task')) as (
+                    invoke_api, wait_for_task):
+            self._vmops._fetch_vsphere_image(self._context, vi, image_ds_loc)
+            expected_calls = [
+                mock.call(
+                    self._session.vim, 'FindByInventoryPath',
+                    self._session.vim.service_content.searchIndex,
+                    inventoryPath='mycenter'),
+                mock.call(self._session.vim, 'CopyDatastoreFile_Task',
+                    self._session.vim.service_content.fileManager,
+                    destinationDatacenter=self._dc_info.ref,
+                    destinationName=str(image_ds_loc),
+                    sourceDatacenter=datacenter_moref,
+                    sourceName='[mystore]')]
+            invoke_api.assert_has_calls(expected_calls)
+            wait_for_task.assert_called_once_with(fake_copy_task)
 
     @mock.patch.object(images, 'fetch_image')
     @mock.patch.object(vmops.VMwareVMOps, '_get_esx_host_and_cookies')
