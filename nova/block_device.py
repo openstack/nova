@@ -86,6 +86,8 @@ class BlockDeviceDict(dict):
         self._validate(bdm_dict)
         if bdm_dict.get('device_name'):
             bdm_dict['device_name'] = prepend_dev(bdm_dict['device_name'])
+        bdm_dict['delete_on_termination'] = bool(
+            bdm_dict.get('delete_on_termination'))
         # NOTE (ndipanov): Never default db fields
         self.update({field: None for field in self._fields - do_not_default})
         self.update(list(six.iteritems(bdm_dict)))
