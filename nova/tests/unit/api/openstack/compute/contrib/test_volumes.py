@@ -286,6 +286,17 @@ class VolumeApiTestV21(test.NoDBTestCase):
         self.assertRaises(webob.exc.HTTPBadRequest,
                           volumes.VolumeController().create, req, body=body)
 
+    @mock.patch.object(cinder.API, 'get_snapshot')
+    @mock.patch.object(cinder.API, 'create')
+    def test_volume_create_bad_snapshot_id(self, mock_create, mock_get):
+        vol = {"snapshot_id": '1'}
+        body = {"volume": vol}
+        mock_get.side_effect = exception.SnapshotNotFound(snapshot_id='1')
+
+        req = fakes.HTTPRequest.blank(self.url_prefix + '/os-volumes')
+        self.assertRaises(webob.exc.HTTPNotFound,
+                          volumes.VolumeController().create, req, body=body)
+
     def test_volume_index(self):
         req = fakes.HTTPRequest.blank(self.url_prefix + '/os-volumes')
         resp = req.get_response(self.app)
