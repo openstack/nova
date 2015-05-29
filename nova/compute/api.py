@@ -2171,6 +2171,12 @@ class API(base.Base):
         sent_meta = compute_utils.get_image_metadata(
             context, self.image_api, image_ref, instance)
 
+        # Delete properties that are non-inheritable
+        image_props = sent_meta.get("properties", {})
+        for key in image_props.keys():
+            if key in CONF.non_inheritable_image_properties:
+                del image_props[key]
+
         sent_meta['name'] = name
         sent_meta['is_public'] = False
 

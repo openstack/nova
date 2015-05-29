@@ -1719,20 +1719,49 @@ class _ComputeAPIUnitTestMixIn(object):
                                   min_disk=None,
                                   create_fails=False,
                                   instance_vm_state=vm_states.ACTIVE):
+        params = dict(locked=True)
+        instance = self._create_instance_obj(params=params)
+        instance.vm_state = instance_vm_state
+
         # 'cache_in_nova' is for testing non-inheritable properties
         # 'user_id' should also not be carried from sys_meta into
         # image property...since it should be set explicitly by
         # _create_image() in compute api.
-        fake_sys_meta = dict(image_foo='bar', blah='bug?',
-                             image_cache_in_nova='dropped',
-                             cache_in_nova='dropped',
-                             user_id='meow')
-        if with_base_ref:
-            fake_sys_meta['image_base_image_ref'] = 'fake-base-ref'
-        params = dict(system_metadata=fake_sys_meta, locked=True)
-        instance = self._create_instance_obj(params=params)
-        instance.vm_state = instance_vm_state
-        fake_sys_meta.update(instance.system_metadata)
+        fake_image_meta = {
+            'is_public': True,
+            'name': 'base-name',
+            'properties': {
+                'user_id': 'meow',
+                'foo': 'bar',
+                'blah': 'bug?',
+                'cache_in_nova': 'dropped',
+            },
+        }
+        image_type = is_snapshot and 'snapshot' or 'backup'
+        sent_meta = {
+            'is_public': False,
+            'name': 'fake-name',
+            'properties': {
+                'user_id': self.context.user_id,
+                'instance_uuid': instance.uuid,
+                'image_type': image_type,
+                'foo': 'bar',
+                'blah': 'bug?',
+                'cow': 'moo',
+                'cat': 'meow',
+            },
+
+        }
+        if is_snapshot:
+            if min_ram is not None:
+                fake_image_meta['min_ram'] = min_ram
+                sent_meta['min_ram'] = min_ram
+            if min_disk is not None:
+                fake_image_meta['min_disk'] = min_disk
+                sent_meta['min_disk'] = min_disk
+        else:
+            sent_meta['properties']['backup_type'] = 'fake-backup-type'
+
         extra_props = dict(cow='moo', cat='meow')
 
         self.mox.StubOutWithMock(compute_utils, 'get_image_metadata')
@@ -1751,40 +1780,13 @@ class _ComputeAPIUnitTestMixIn(object):
             self.compute_api.is_volume_backed_instance(self.context,
                 instance).AndReturn(False)
 
-        image_type = is_snapshot and 'snapshot' or 'backup'
-
-        expected_sys_meta = dict(fake_sys_meta)
-        expected_sys_meta.pop('cache_in_nova')
-        expected_sys_meta.pop('image_cache_in_nova')
-        expected_sys_meta.pop('user_id')
-        expected_sys_meta['foo'] = expected_sys_meta.pop('image_foo')
-        if with_base_ref:
-            expected_sys_meta['base_image_ref'] = expected_sys_meta.pop(
-                    'image_base_image_ref')
-
-        expected_props = {'instance_uuid': instance.uuid,
-                          'user_id': self.context.user_id,
-                          'image_type': image_type}
-        expected_props.update(extra_props)
-        expected_props.update(expected_sys_meta)
-        expected_meta = {'name': 'fake-name',
-                         'is_public': False,
-                         'properties': expected_props}
-        if is_snapshot:
-            if min_ram is not None:
-                expected_meta['min_ram'] = min_ram
-            if min_disk is not None:
-                expected_meta['min_disk'] = min_disk
-        else:
-            expected_props['backup_type'] = 'fake-backup-type'
-
         compute_utils.get_image_metadata(
             self.context, self.compute_api.image_api,
-            FAKE_IMAGE_REF, instance).AndReturn(expected_meta)
+            FAKE_IMAGE_REF, instance).AndReturn(fake_image_meta)
 
         fake_image = dict(id='fake-image-id')
         mock_method = self.compute_api.image_api.create(
-                self.context, expected_meta)
+                self.context, sent_meta)
         if create_fails:
             mock_method.AndRaise(test.TestingException())
         else:

@@ -1116,9 +1116,6 @@ def get_image_from_system_metadata(system_meta):
         if key in SM_INHERITABLE_KEYS:
             image_meta[key] = value
         else:
-            # Skip properties that are non-inheritable
-            if key in CONF.non_inheritable_image_properties:
-                continue
             properties[key] = value
 
     image_meta['properties'] = properties
