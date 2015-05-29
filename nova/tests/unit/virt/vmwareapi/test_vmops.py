@@ -593,11 +593,25 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                                    self._instance,
                                                    'fake-ref')
             # Validate VM reconfiguration
+            metadata = ('name:fake_display_name\n'
+                        'userid:fake_user\n'
+                        'username:None\n'
+                        'projectid:fake_project\n'
+                        'projectname:None\n'
+                        'flavor:name:m1.small\n'
+                        'flavor:memory_mb:512\n'
+                        'flavor:vcpus:1\n'
+                        'flavor:ephemeral_gb:0\n'
+                        'flavor:root_gb:10\n'
+                        'flavor:swap:0\n'
+                        'imageid:70a599e0-31e7-49b7-b260-868f441e862b\n'
+                        'package:%s\n' % version.version_string_with_package())
             fake_resize_spec.assert_called_once_with(
                 self._session.vim.client.factory,
                 int(self._instance.vcpus),
                 int(self._instance.memory_mb),
-                extra_specs)
+                extra_specs,
+                metadata=metadata)
             fake_reconfigure_vm.assert_called_once_with(self._session,
                                                         'fake-ref',
                                                         'fake-spec')
@@ -638,18 +652,24 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     def test_finish_revert_migration_power_off(self):
         self._test_finish_revert_migration(power_on=False)
 
+    @mock.patch.object(vmops.VMwareVMOps, '_get_instance_metadata')
     @mock.patch.object(vmops.VMwareVMOps, '_get_extra_specs')
     @mock.patch.object(vm_util, 'reconfigure_vm')
     @mock.patch.object(vm_util, 'get_vm_resize_spec',
                        return_value='fake-spec')
     def test_resize_vm(self, fake_resize_spec, fake_reconfigure,
-                       fake_get_extra_specs):
+                       fake_get_extra_specs, fake_get_metadata):
         extra_specs = vm_util.ExtraSpecs()
         fake_get_extra_specs.return_value = extra_specs
-        flavor = {'vcpus': 2, 'memory_mb': 1024}
-        self._vmops._resize_vm('vm-ref', flavor)
+        fake_get_metadata.return_value = self._metadata
+        flavor = objects.Flavor(name='m1.small',
+                                memory_mb=1024,
+                                vcpus=2,
+                                extra_specs={})
+        self._vmops._resize_vm(self._context, self._instance, 'vm-ref', flavor)
         fake_resize_spec.assert_called_once_with(
-            self._session.vim.client.factory, 2, 1024, extra_specs)
+            self._session.vim.client.factory, 2, 1024, extra_specs,
+                metadata=self._metadata)
         fake_reconfigure.assert_called_once_with(self._session,
                                                  'vm-ref', 'fake-spec')
 
@@ -773,7 +793,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         fake_power_off.assert_called_once_with(self._session,
                                                self._instance,
                                                'fake-ref')
-        fake_resize_vm.assert_called_once_with('fake-ref', flavor)
+        fake_resize_vm.assert_called_once_with(self._context, self._instance,
+                                               'fake-ref', flavor)
         fake_resize_disk.assert_called_once_with(self._instance, 'fake-ref',
                                                  vmdk, flavor)
         calls = [mock.call(self._context, self._instance, step=i,
