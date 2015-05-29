@@ -68,10 +68,10 @@ class BaseFilterHandler(loadables.BaseLoader):
     def get_filtered_objects(self, filters, objs, filter_properties, index=0):
         list_objs = list(objs)
         LOG.debug("Starting with %d host(s)", len(list_objs))
-        for filter in filters:
-            if filter.run_filter_for_index(index):
-                cls_name = filter.__class__.__name__
-                objs = filter.filter_all(list_objs, filter_properties)
+        for filter_ in filters:
+            if filter_.run_filter_for_index(index):
+                cls_name = filter_.__class__.__name__
+                objs = filter_.filter_all(list_objs, filter_properties)
                 if objs is None:
                     LOG.debug("Filter %s says to stop filtering", cls_name)
                     return
