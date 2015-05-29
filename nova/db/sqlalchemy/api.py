@@ -465,7 +465,6 @@ def service_get_all_by_topic(context, topic):
                 all()
 
 
-@require_admin_context
 def service_get_by_host_and_topic(context, host, topic):
     return model_query(context, models.Service, read_deleted="no").\
                 filter_by(disabled=False).\
@@ -481,7 +480,6 @@ def service_get_all_by_binary(context, binary):
                 all()
 
 
-@require_admin_context
 def service_get_by_host_and_binary(context, host, binary):
     result = model_query(context, models.Service, read_deleted="no").\
                     filter_by(host=host).\
