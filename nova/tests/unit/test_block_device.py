@@ -631,12 +631,15 @@ class TestBlockDeviceDict(test.NoDBTestCase):
         self.assertEqual(snapshot['snapshot_id'], 'new-snapshot-id')
         self.assertEqual(snapshot['source_type'], 'snapshot')
         self.assertEqual(snapshot['destination_type'], 'volume')
+        self.assertEqual(template.volume_size, snapshot['volume_size'])
+        self.assertEqual(template.delete_on_termination,
+                         snapshot['delete_on_termination'])
         for key in ['disk_bus', 'device_type', 'boot_index']:
             self.assertEqual(snapshot[key], template[key])
 
     def test_snapshot_from_bdm(self):
         for bdm in self.new_mapping:
-            self._test_snapshot_from_bdm(bdm)
+            self._test_snapshot_from_bdm(objects.BlockDeviceMapping(**bdm))
 
     def test_snapshot_from_object(self):
         for bdm in self.new_mapping[:-1]:
