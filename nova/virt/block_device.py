@@ -409,9 +409,11 @@ def convert_all_volumes(*volume_bdms):
     source_volume = convert_volumes(volume_bdms)
     source_snapshot = convert_snapshots(volume_bdms)
     source_image = convert_images(volume_bdms)
+    source_blank = convert_blanks(volume_bdms)
 
     return [vol for vol in
-            itertools.chain(source_volume, source_snapshot, source_image)]
+            itertools.chain(source_volume, source_snapshot,
+                            source_image, source_blank)]
 
 
 def convert_volume(volume_bdm):
