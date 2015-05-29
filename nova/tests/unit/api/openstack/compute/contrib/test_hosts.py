@@ -392,6 +392,27 @@ class HostTestCaseV20(HostTestCaseV21):
         self.assertRaises(exception.AdminRequired,
                           self.controller.index, fakes.HTTPRequest.blank(''))
 
+    def test_host_maintenance_with_non_admin(self):
+        self.assertRaises(exception.AdminRequired,
+                          self.controller.update, fakes.HTTPRequest.blank(''),
+                          'host_c1', {'maintenance_mode': 'enable'})
+
+    def test_startup_with_non_admin(self):
+        self.assertRaises(exception.AdminRequired,
+                          self.controller.startup, fakes.HTTPRequest.blank(''),
+                          'host_c1')
+
+    def test_reboot_with_non_admin(self):
+        self.assertRaises(exception.AdminRequired,
+                          self.controller.reboot, fakes.HTTPRequest.blank(''),
+                          'host_c1')
+
+    def test_shutdown_with_non_admin(self):
+        self.assertRaises(exception.AdminRequired,
+                          self.controller.shutdown,
+                          fakes.HTTPRequest.blank(''),
+                          'host_c1')
+
 
 class HostsPolicyEnforcementV21(test.NoDBTestCase):
 
