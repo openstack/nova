@@ -3137,8 +3137,9 @@ class LibvirtDriver(driver.ComputeDriver):
                 libvirt_utils.get_instance_path(instance), 'rootfs')
             devices.append(fs)
         elif os_type == vm_mode.EXE and CONF.libvirt.virt_type == "parallels":
-            fs = self._get_guest_fs_config(instance, "disk")
-            devices.append(fs)
+            if 'disk' in disk_mapping:
+                fs = self._get_guest_fs_config(instance, "disk")
+                devices.append(fs)
         else:
 
             if rescue:
