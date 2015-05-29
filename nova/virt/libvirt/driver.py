@@ -404,7 +404,6 @@ class LibvirtDriver(driver.ComputeDriver):
         self._fc_wwnns = None
         self._fc_wwpns = None
         self._caps = None
-        self._vcpu_total = 0
         self.firewall_driver = firewall.load_driver(
             DEFAULT_FIREWALL_DRIVER,
             self.virtapi,
@@ -4498,9 +4497,6 @@ class LibvirtDriver(driver.ComputeDriver):
         :returns: the number of cpu core instances can be used.
 
         """
-        if self._vcpu_total != 0:
-            return self._vcpu_total
-
         try:
             total_pcpus = self._host.get_cpu_count()
         except libvirt.libvirtError:
@@ -4509,8 +4505,7 @@ class LibvirtDriver(driver.ComputeDriver):
             return 0
 
         if CONF.vcpu_pin_set is None:
-            self._vcpu_total = total_pcpus
-            return self._vcpu_total
+            return total_pcpus
 
         available_ids = hardware.get_vcpu_pin_set()
         # We get the list of online CPUs on the host and see if the requested
@@ -4534,8 +4529,7 @@ class LibvirtDriver(driver.ComputeDriver):
         elif sorted(available_ids)[-1] >= total_pcpus:
             raise exception.Invalid(_("Invalid vcpu_pin_set config, "
                                       "out of hypervisor cpu range."))
-        self._vcpu_total = len(available_ids)
-        return self._vcpu_total
+        return len(available_ids)
 
     @staticmethod
     def _get_local_gb_info():
