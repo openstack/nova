@@ -1317,10 +1317,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             def save(self):
                 pass
 
-        class FakeInstanceList(object):
-            def get_by_filters(self, *args, **kwargs):
-                return []
-
         a = FakeInstance('123', 'apple', {'clean_attempts': '100'})
         b = FakeInstance('456', 'orange', {'clean_attempts': '3'})
         c = FakeInstance('789', 'banana', {})

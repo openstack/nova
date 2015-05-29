@@ -1063,9 +1063,6 @@ class IronicDriverTestCase(test.NoDBTestCase):
                                           provision_state=ironic_states.ACTIVE)
         instance = fake_instance.fake_instance_obj(self.ctx, node=node_uuid)
 
-        def fake_set_provision_state(*_):
-            node.provision_state = ironic_states.ERROR
-
         mock_node.get_by_instance_uuid.return_value = node
         self.assertRaises(exception.NovaException, self.driver.destroy,
                           self.ctx, instance, None, None)

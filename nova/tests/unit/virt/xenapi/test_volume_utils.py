@@ -61,11 +61,6 @@ class SROps(stubs.XenAPITestBaseNoDB):
         class FakeException(Exception):
             pass
 
-        def fake_call_xenapi(method, *args):
-            self.assertEqual(method, 'VDI.get_SR')
-            self.assertEqual(args[0], vdi_ref)
-            return args[0]
-
         session = mock.Mock()
         session.XenAPI.Failure = FakeException
         session.call_xenapi.side_effect = FakeException

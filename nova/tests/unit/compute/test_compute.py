@@ -4628,9 +4628,6 @@ class ComputeTestCase(BaseTestCase):
         def throw_up(*args, **kwargs):
             raise test.TestingException()
 
-        def fake(*args, **kwargs):
-            pass
-
         self.stubs.Set(self.compute.driver, 'finish_migration', throw_up)
 
         self._stub_out_resize_network_methods()
