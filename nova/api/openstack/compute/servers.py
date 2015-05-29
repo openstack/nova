@@ -1079,6 +1079,10 @@ class Controller(wsgi.Controller):
         try:
             if self.compute_api.is_volume_backed_instance(context, instance,
                                                           bdms):
+                policy.enforce(context,
+                        'compute:snapshot_volume_backed',
+                        {'project_id': context.project_id,
+                        'user_id': context.user_id})
                 img = instance.image_ref
                 if not img:
                     properties = bdms.root_metadata(

@@ -32,6 +32,8 @@ from nova import db
 from nova import exception
 from nova.image import glance
 from nova import objects
+from nova.openstack.common import policy as common_policy
+from nova import policy
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_block_device
@@ -1308,3 +1310,55 @@ class ServerActionsControllerTestV2(ServerActionsControllerTestV21):
         self.mox.ReplayAll()
 
         self.controller._action_rebuild(self.req, FAKE_UUID, body)
+
+    def test_create_vol_backed_img_snapshotting_policy_blocks_project(self):
+        """Don't permit a snapshot of a volume backed instance if configured
+        not to based on project
+        """
+        body = {
+            'createImage': {
+                'name': 'Snapshot 1',
+            },
+        }
+        rule_name = "compute:snapshot_volume_backed"
+        rules = {
+                rule_name:
+                common_policy.parse_rule("project_id:no_id"),
+                "compute:get":
+                common_policy.parse_rule("")
+        }
+        policy.set_rules(rules)
+        with mock.patch.object(compute_api.API, 'is_volume_backed_instance',
+                               return_value=True):
+            exc = self.assertRaises(exception.PolicyNotAuthorized,
+                              self.controller._action_create_image,
+                              self.req, FAKE_UUID, body=body)
+            self.assertEqual(
+                "Policy doesn't allow %s to be performed." % rule_name,
+                exc.format_message())
+
+    def test_create_vol_backed_img_snapshotting_policy_blocks_role(self):
+        """Don't permit a snapshot of a volume backed instance if configured
+        not to based on role
+        """
+        body = {
+            'createImage': {
+                'name': 'Snapshot 1',
+            },
+        }
+        rule_name = "compute:snapshot_volume_backed"
+        rules = {
+                rule_name:
+                common_policy.parse_rule("role:no_role"),
+                "compute:get":
+                common_policy.parse_rule("")
+        }
+        policy.set_rules(rules)
+        with mock.patch.object(compute_api.API, 'is_volume_backed_instance',
+                               return_value=True):
+            exc = self.assertRaises(exception.PolicyNotAuthorized,
+                              self.controller._action_create_image,
+                              self.req, FAKE_UUID, body=body)
+            self.assertEqual(
+                "Policy doesn't allow %s to be performed." % rule_name,
+                exc.format_message())

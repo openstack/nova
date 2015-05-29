@@ -1031,6 +1031,7 @@ class ServersController(wsgi.Controller):
         try:
             if self.compute_api.is_volume_backed_instance(context, instance,
                                                           bdms):
+                authorize(context, action="create_image:allow_volume_backed")
                 img = instance.image_ref
                 if not img:
                     properties = bdms.root_metadata(

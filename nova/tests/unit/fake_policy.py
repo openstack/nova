@@ -86,6 +86,7 @@ policy_data = """
     "compute:reboot": "",
 
     "compute:snapshot": "",
+    "compute:snapshot_volume_backed": "",
     "compute:backup": "",
 
     "compute:shelve": "",
@@ -120,6 +121,7 @@ policy_data = """
     "os_compute_api:servers:revert_resize": "",
     "os_compute_api:servers:show": "",
     "os_compute_api:servers:create_image": "",
+    "os_compute_api:servers:create_image:allow_volume_backed": "",
     "os_compute_api:servers:update": "",
     "os_compute_api:servers:start": "",
     "os_compute_api:servers:stop": "",
