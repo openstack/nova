@@ -2996,7 +2996,14 @@ class ComputeManager(manager.Manager):
             instance.save(expected_task_state=[task_states.REBUILDING])
 
             if recreate:
+                # Needed for nova-network, does nothing for neutron
                 self.network_api.setup_networks_on_host(
+                        context, instance, self.host)
+                # For nova-network this is needed to move floating IPs
+                # For neutron this updates the host in the port binding
+                # TODO(cfriesen): this network_api call and the one above
+                # are so similar, we should really try to unify them.
+                self.network_api.setup_instance_network_on_host(
                         context, instance, self.host)
 
             network_info = compute_utils.get_nw_info_for_instance(instance)
