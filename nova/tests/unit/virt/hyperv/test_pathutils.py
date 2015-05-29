@@ -32,6 +32,24 @@ class PathUtilsTestCase(test_base.HyperVBaseTestCase):
 
         self._pathutils = pathutils.PathUtils()
 
+    @mock.patch.object(pathutils.PathUtils, 'rename')
+    @mock.patch.object(os.path, 'isfile')
+    @mock.patch.object(os, 'listdir')
+    def test_move_folder_files(self, mock_listdir, mock_isfile, mock_rename):
+        src_dir = 'src'
+        dest_dir = 'dest'
+        fname = 'tmp_file.txt'
+        subdir = 'tmp_folder'
+        src_fname = os.path.join(src_dir, fname)
+        dest_fname = os.path.join(dest_dir, fname)
+
+        # making sure src_subdir is not moved.
+        mock_listdir.return_value = [fname, subdir]
+        mock_isfile.side_effect = [True, False]
+
+        self._pathutils.move_folder_files(src_dir, dest_dir)
+        mock_rename.assert_called_once_with(src_fname, dest_fname)
+
     def _mock_lookup_configdrive_path(self, ext):
         self._pathutils.get_instance_dir = mock.MagicMock(
             return_value=self.fake_instance_dir)
