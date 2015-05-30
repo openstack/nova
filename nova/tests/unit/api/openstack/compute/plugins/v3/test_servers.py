@@ -32,6 +32,7 @@ import six.moves.urllib.parse as urlparse
 import testtools
 import webob
 
+from nova.api.openstack import api_version_request
 from nova.api.openstack import common
 from nova.api.openstack import compute
 from nova.api.openstack.compute import plugins
@@ -1237,6 +1238,31 @@ class ServersControllerTest(ControllerTest):
 
         req = fakes.HTTPRequestV3.blank('/servers?ip6=ffff.*',
                                       use_admin_context=True)
+        servers = self.controller.index(req)['servers']
+
+        self.assertEqual(len(servers), 1)
+        self.assertEqual(servers[0]['id'], server_uuid)
+
+    def test_get_servers_allows_ip6_with_new_version(self):
+        """Test getting servers by ip6 with new version requested
+        and no admin context
+        """
+        server_uuid = str(uuid.uuid4())
+
+        def fake_get_all(compute_self, context, search_opts=None,
+                         limit=None, marker=None, want_objects=False,
+                         expected_attrs=None, sort_keys=None, sort_dirs=None):
+            self.assertIsNotNone(search_opts)
+            self.assertIn('ip6', search_opts)
+            self.assertEqual(search_opts['ip6'], 'ffff.*')
+            db_list = [fakes.stub_instance(100, uuid=server_uuid)]
+            return instance_obj._make_instance_list(
+                context, objects.InstanceList(), db_list, FIELDS)
+
+        self.stubs.Set(compute_api.API, 'get_all', fake_get_all)
+
+        req = fakes.HTTPRequestV3.blank('/servers?ip6=ffff.*')
+        req.api_version_request = api_version_request.APIVersionRequest('2.5')
         servers = self.controller.index(req)['servers']
 
         self.assertEqual(len(servers), 1)

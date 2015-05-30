@@ -28,6 +28,7 @@ import stevedore
 import webob
 from webob import exc
 
+from nova.api.openstack import api_version_request
 from nova.api.openstack import common
 from nova.api.openstack.compute.schemas.v3 import servers as schema_servers
 from nova.api.openstack.compute.views import servers as views_servers
@@ -273,7 +274,7 @@ class ServersController(wsgi.Controller):
 
         context = req.environ['nova.context']
         remove_invalid_options(context, search_opts,
-                self._get_server_search_options())
+                self._get_server_search_options(req))
 
         # Verify search by 'status' contains a valid status.
         # Convert it to filter by vm_state or task_state for compute_api.
@@ -1075,10 +1076,14 @@ class ServersController(wsgi.Controller):
             password = utils.generate_password()
         return password
 
-    def _get_server_search_options(self):
+    def _get_server_search_options(self, req):
         """Return server search options allowed by non-admin."""
-        return ('reservation_id', 'name', 'status', 'image', 'flavor',
-                'ip', 'changes-since', 'all_tenants')
+        opt_list = ('reservation_id', 'name', 'status', 'image', 'flavor',
+                    'ip', 'changes-since', 'all_tenants')
+        req_ver = req.api_version_request
+        if req_ver > api_version_request.APIVersionRequest("2.4"):
+            opt_list += ('ip6',)
+        return opt_list
 
     def _get_instance(self, context, instance_uuid):
         try:
