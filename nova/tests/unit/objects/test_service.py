@@ -13,7 +13,6 @@
 #    under the License.
 
 import mock
-from oslo_serialization import jsonutils
 from oslo_utils import timeutils
 
 from nova import db
@@ -45,21 +44,15 @@ OPTIONAL = ['availability_zone', 'compute_node']
 class _TestServiceObject(object):
     def supported_hv_specs_comparator(self, expected, obj_val):
         obj_val = [inst.to_list() for inst in obj_val]
-        self.json_comparator(expected, obj_val)
+        self.assertJsonEqual(expected, obj_val)
 
     def pci_device_pools_comparator(self, expected, obj_val):
         obj_val = obj_val.obj_to_primitive()
-        self.json_loads_comparator(expected, obj_val)
-
-    def json_loads_comparator(self, expected, obj_val):
-        # NOTE(edleafe): This is necessary because the dumps() version of the
-        # PciDevicePoolList doesn't maintain ordering, so the output string
-        # doesn't always match.
-        self.assertEqual(jsonutils.loads(expected), obj_val)
+        self.assertJsonEqual(expected, obj_val)
 
     def comparators(self):
-        return {'stats': self.json_comparator,
-                'host_ip': self.str_comparator,
+        return {'stats': self.assertJsonEqual,
+                'host_ip': self.assertJsonEqual,
                 'supported_hv_specs': self.supported_hv_specs_comparator,
                 'pci_device_pools': self.pci_device_pools_comparator}
 
