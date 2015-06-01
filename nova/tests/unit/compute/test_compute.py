@@ -1685,7 +1685,7 @@ class ComputeTestCase(BaseTestCase):
         """block device mapping failure test.
 
         Make sure that when there is a block device mapping problem,
-        the instance goes to ERROR state, keeping the task state
+        the instance goes to ERROR state, cleaning the task state
         """
         def fake(*args, **kwargs):
             raise exception.InvalidBDM()
@@ -1700,10 +1700,10 @@ class ComputeTestCase(BaseTestCase):
                           node=None)
         # check state is failed even after the periodic poll
         self._assert_state({'vm_state': vm_states.ERROR,
-                            'task_state': task_states.BLOCK_DEVICE_MAPPING})
+                            'task_state': None})
         self.compute.periodic_tasks(context.get_admin_context())
         self._assert_state({'vm_state': vm_states.ERROR,
-                            'task_state': task_states.BLOCK_DEVICE_MAPPING})
+                            'task_state': None})
 
     @mock.patch('nova.compute.manager.ComputeManager._prep_block_device',
                 side_effect=exception.OverQuota(overs='volumes'))
@@ -1711,8 +1711,8 @@ class ComputeTestCase(BaseTestCase):
         """block device mapping over quota failure test.
 
         Make sure when we're over volume quota according to Cinder client, the
-        appropriate exception is raised and the instances to ERROR state, keep
-        the task state.
+        appropriate exception is raised and the instances to ERROR state,
+        cleaning the task state.
         """
         instance = self._create_fake_instance_obj()
         self.compute.build_and_run_instance(
@@ -1722,17 +1722,17 @@ class ComputeTestCase(BaseTestCase):
                           node=None, block_device_mapping=[], image={})
         # check state is failed even after the periodic poll
         self._assert_state({'vm_state': vm_states.ERROR,
-                            'task_state': task_states.BLOCK_DEVICE_MAPPING})
+                            'task_state': None})
         self.compute.periodic_tasks(context.get_admin_context())
         self._assert_state({'vm_state': vm_states.ERROR,
-                            'task_state': task_states.BLOCK_DEVICE_MAPPING})
+                            'task_state': None})
         self.assertTrue(mock_prep_block_dev.called)
 
     def test_run_instance_spawn_fail(self):
         """spawn failure test.
 
         Make sure that when there is a spawning problem,
-        the instance goes to ERROR state, keeping the task state.
+        the instance goes to ERROR state, cleaning the task state.
         """
         def fake(*args, **kwargs):
             raise test.TestingException()
@@ -1745,10 +1745,10 @@ class ComputeTestCase(BaseTestCase):
                           block_device_mapping=[], image={}, node=None)
         # check state is failed even after the periodic poll
         self._assert_state({'vm_state': vm_states.ERROR,
-                            'task_state': task_states.SPAWNING})
+                            'task_state': None})
         self.compute.periodic_tasks(context.get_admin_context())
         self._assert_state({'vm_state': vm_states.ERROR,
-                            'task_state': task_states.SPAWNING})
+                            'task_state': None})
 
     def test_run_instance_dealloc_network_instance_not_found(self):
         """spawn network deallocate test.
