@@ -601,7 +601,6 @@ def compute_node_search_by_hypervisor(context, hypervisor_match):
             all()
 
 
-@require_admin_context
 def compute_node_create(context, values):
     """Creates a new ComputeNode and populates the capacity fields
     with the most recent data.
@@ -616,7 +615,6 @@ def compute_node_create(context, values):
     return compute_node_ref
 
 
-@require_admin_context
 @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
 def compute_node_update(context, compute_id, values):
     """Updates the ComputeNode record with the most recent data."""
@@ -635,7 +633,6 @@ def compute_node_update(context, compute_id, values):
     return compute_ref
 
 
-@require_admin_context
 def compute_node_delete(context, compute_id):
     """Delete a ComputeNode record."""
     session = get_session()
