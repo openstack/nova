@@ -306,14 +306,6 @@ class HostTestCaseV21(test.TestCase):
         self.assertEqual(result["status"], "disabled")
         self.assertEqual(result["maintenance_mode"], "on_maintenance")
 
-    def test_show_forbidden(self):
-        self.req.environ["nova.context"].is_admin = False
-        dest = 'dummydest'
-        self.assertRaises(self.policy_ex,
-                          self.controller.show,
-                          self.req, dest)
-        self.req.environ["nova.context"].is_admin = True
-
     def test_show_host_not_exist(self):
         # A host given as an argument does not exist.
         self.req.environ["nova.context"].is_admin = True
@@ -413,6 +405,12 @@ class HostTestCaseV20(HostTestCaseV21):
                           fakes.HTTPRequest.blank(''),
                           'host_c1')
 
+    def test_show_non_admin(self):
+        self.assertRaises(exception.AdminRequired,
+                          self.controller.show,
+                          fakes.HTTPRequest.blank(''),
+                          1)
+
 
 class HostsPolicyEnforcementV21(test.NoDBTestCase):
 
@@ -427,6 +425,16 @@ class HostsPolicyEnforcementV21(test.NoDBTestCase):
         exc = self.assertRaises(
             exception.PolicyNotAuthorized,
             self.controller.index, self.req)
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+            exc.format_message())
+
+    def test_show_policy_failed(self):
+        rule_name = "os_compute_api:os-hosts"
+        self.policy.set_rules({rule_name: "project_id:non_fake"})
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.controller.show, self.req, 1)
         self.assertEqual(
             "Policy doesn't allow %s to be performed." % rule_name,
             exc.format_message())

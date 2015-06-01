@@ -288,6 +288,13 @@ class HostController(object):
                     'cpu': 1, 'memory_mb': 2048, 'disk_gb': 30}
         """
         context = req.environ['nova.context']
+
+        # NOTE(eliqiao): back-compatible with db layer hard-code admin
+        # permission checks. This has to be left only for API v2.0 because
+        # this version has to be stable even if it means that only admins
+        # can call this method while the policy could be changed.
+        nova_context.require_admin_context(context)
+
         host_name = id
         try:
             compute_node = (
@@ -295,9 +302,6 @@ class HostController(object):
                     context, host_name))
         except exception.NotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
-        except exception.AdminRequired:
-            msg = _("Describe-resource is admin only functionality")
-            raise webob.exc.HTTPForbidden(explanation=msg)
         instances = self.api.instance_get_all_by_host(context, host_name)
         resources = [self._get_total_resources(host_name, compute_node)]
         resources.append(self._get_used_now_resources(host_name,

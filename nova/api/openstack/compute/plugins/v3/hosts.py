@@ -248,7 +248,7 @@ class HostController(wsgi.Controller):
                                     instance['ephemeral_gb'])
         return project_map
 
-    @extensions.expected_errors((403, 404))
+    @extensions.expected_errors(404)
     def show(self, req, id):
         """Shows the physical/usage resource given by hosts.
 
@@ -269,12 +269,6 @@ class HostController(wsgi.Controller):
                     context, host_name))
         except exception.ComputeHostNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
-        except exception.AdminRequired:
-            # TODO(Alex Xu): The authorization is done by policy,
-            # db layer checking is needless. The db layer checking should
-            # be removed
-            msg = _("Describe-resource is admin only functionality")
-            raise webob.exc.HTTPForbidden(explanation=msg)
         instances = self.api.instance_get_all_by_host(context, host_name)
         resources = [self._get_total_resources(host_name, compute_node)]
         resources.append(self._get_used_now_resources(host_name,
