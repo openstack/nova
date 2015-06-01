@@ -1086,6 +1086,17 @@ class LibvirtDriver(driver.ComputeDriver):
             utils.execute('rm', '-rf', target, delay_on_retry=True,
                           attempts=5)
 
+        backend = self.image_backend.image(instance, 'disk')
+        # TODO(nic): Set ignore_errors=False in a future release.
+        # It is set to True here to avoid any upgrade issues surrounding
+        # instances being in pending resize state when the software is updated;
+        # in that case there will be no snapshot to remove.  Once it can be
+        # reasonably assumed that no such instances exist in the wild
+        # anymore, it should be set back to False (the default) so it will
+        # throw errors, like it should.
+        backend.remove_snap(libvirt_utils.RESIZE_SNAPSHOT_NAME,
+                            ignore_errors=True)
+
         if instance.host != CONF.host:
             self._undefine_domain(instance)
             self.unplug_vifs(instance, network_info)
@@ -2948,6 +2959,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 size = None
 
             backend = image('disk')
+            if instance.task_state == task_states.RESIZE_FINISH:
+                backend.create_snap(libvirt_utils.RESIZE_SNAPSHOT_NAME)
             if backend.SUPPORTS_CLONE:
                 def clone_fallback_to_fetch(*args, **kwargs):
                     try:
@@ -7067,6 +7080,25 @@ class LibvirtDriver(driver.ComputeDriver):
             utils.execute('mv', inst_base_resize, inst_base)
 
         image_meta = objects.ImageMeta.from_instance(instance)
+
+        backend = self.image_backend.image(instance, 'disk')
+        # Once we rollback, the snapshot is no longer needed, so remove it
+        # TODO(nic): Remove the try/except/finally in a future release
+        # To avoid any upgrade issues surrounding instances being in pending
+        # resize state when the software is updated, this portion of the
+        # method logs exceptions rather than failing on them.  Once it can be
+        # reasonably assumed that no such instances exist in the wild
+        # anymore, the try/except/finally should be removed,
+        # and ignore_errors should be set back to False (the default) so
+        # that problems throw errors, like they should.
+        try:
+            backend.rollback_to_snap(libvirt_utils.RESIZE_SNAPSHOT_NAME)
+        except exception.SnapshotNotFound:
+            LOG.warning(_LW("Failed to rollback snapshot (%s)"),
+                        libvirt_utils.RESIZE_SNAPSHOT_NAME)
+        finally:
+            backend.remove_snap(libvirt_utils.RESIZE_SNAPSHOT_NAME,
+                                ignore_errors=True)
 
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance,

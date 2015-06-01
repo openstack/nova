@@ -49,6 +49,8 @@ CONF.register_opts(libvirt_opts, 'libvirt')
 CONF.import_opt('instances_path', 'nova.compute.manager')
 LOG = logging.getLogger(__name__)
 
+RESIZE_SNAPSHOT_NAME = 'nova-resize'
+
 
 def execute(*args, **kwargs):
     return utils.execute(*args, **kwargs)

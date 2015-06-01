@@ -16,6 +16,8 @@
 
 import urllib
 
+from eventlet import tpool
+
 try:
     import rados
     import rbd
@@ -29,11 +31,13 @@ from oslo_service import loopingcall
 from oslo_utils import excutils
 from oslo_utils import units
 
+from nova.compute import task_states
 from nova import exception
 from nova.i18n import _
 from nova.i18n import _LE
 from nova.i18n import _LW
 from nova import utils
+from nova.virt.libvirt import utils as libvirt_utils
 
 LOG = logging.getLogger(__name__)
 
@@ -282,6 +286,9 @@ class RBDDriver(object):
             try:
                 rbd.RBD().remove(client.ioctx, volume)
                 raise loopingcall.LoopingCallDone(retvalue=False)
+            except rbd.ImageHasSnapshots:
+                self.remove_snap(volume, libvirt_utils.RESIZE_SNAPSHOT_NAME,
+                                 ignore_errors=True)
             except (rbd.ImageBusy, rbd.ImageHasSnapshots):
                 LOG.warn(_LW('rbd remove %(volume)s in pool %(pool)s '
                              'failed'),
@@ -293,7 +300,15 @@ class RBDDriver(object):
         with RADOSClient(self, self.pool) as client:
 
             def belongs_to_instance(disk):
-                return disk.startswith(instance.uuid)
+                # NOTE(nic): On revert_resize, the cleanup steps for the root
+                # volume are handled with an "rbd snap rollback" command,
+                # and none of this is needed (and is, in fact, harmful) so
+                # filter out non-ephemerals from the list
+                if instance.task_state == task_states.RESIZE_REVERTING:
+                    return (disk.startswith(instance.uuid) and
+                            disk.endswith('disk.local'))
+                else:
+                    return disk.startswith(instance.uuid)
 
             volumes = rbd.RBD().list(client.ioctx)
             for volume in filter(belongs_to_instance, volumes):
@@ -316,3 +331,46 @@ class RBDDriver(object):
             return {'total': stats['kb'] * units.Ki,
                     'free': stats['kb_avail'] * units.Ki,
                     'used': stats['kb_used'] * units.Ki}
+
+    def create_snap(self, volume, name):
+        """Create a snapshot on an RBD object.
+
+        :volume: Name of RBD object
+        :name: Name of snapshot
+        """
+        LOG.debug('creating snapshot(%(snap)s) on rbd image(%(img)s)',
+                  {'snap': name, 'img': volume})
+        with RBDVolumeProxy(self, volume) as vol:
+            tpool.execute(vol.create_snap, name)
+
+    def remove_snap(self, volume, name, ignore_errors=False):
+        """Remove a snapshot from an RBD volume.
+
+        :volume: Name of RBD object
+        :name: Name of snapshot
+        :ignore_errors: whether or not to log warnings on failures
+        """
+        with RBDVolumeProxy(self, volume) as vol:
+            if name in [snap.get('name', '') for snap in vol.list_snaps()]:
+                LOG.debug('removing snapshot(%(snap)s) on rbd image(%(img)s)',
+                          {'snap': name, 'img': volume})
+                tpool.execute(vol.remove_snap, name)
+            else:
+                if not ignore_errors:
+                    LOG.warning(_LW('no snapshot(%(snap)s) found on '
+                                    'image(%(img)s)'), {'snap': name,
+                                                        'img': volume})
+
+    def rollback_to_snap(self, volume, name):
+        """Revert an RBD volume to its contents at a snapshot.
+
+        :volume: Name of RBD object
+        :name: Name of snapshot
+        """
+        with RBDVolumeProxy(self, volume) as vol:
+            if name in [snap.get('name', '') for snap in vol.list_snaps()]:
+                LOG.debug('rolling back rbd image(%(img)s) to '
+                          'snapshot(%(snap)s)', {'snap': name, 'img': volume})
+                tpool.execute(vol.rollback_to_snap, name)
+            else:
+                raise exception.SnapshotNotFound(snapshot_id=name)
