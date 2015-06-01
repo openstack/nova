@@ -23,7 +23,6 @@ import pprint
 
 import mock
 from oslo_log import log
-from oslo_serialization import jsonutils
 from oslo_utils import timeutils
 import six
 from testtools import matchers
@@ -321,11 +320,6 @@ class _BaseTestCase(test.TestCase):
                     comparators=None):
         compare_obj(self, obj, db_obj, subs=subs, allow_missing=allow_missing,
                     comparators=comparators)
-
-    def json_comparator(self, expected, obj_val):
-        # json-ify an object field for comparison with its db str
-        # equivalent
-        self.assertEqual(expected, jsonutils.dumps(obj_val))
 
     def str_comparator(self, expected, obj_val):
         """Compare an object field to a string in the db by performing
