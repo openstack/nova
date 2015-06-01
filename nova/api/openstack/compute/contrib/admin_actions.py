@@ -46,8 +46,6 @@ class AdminActionsController(wsgi.Controller):
         super(AdminActionsController, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
 
-    # TODO(bcwaldon): These action names should be prefixed with 'os-'
-
     @wsgi.action('pause')
     def _pause(self, req, id, body):
         """Permit Admins to pause the server."""
