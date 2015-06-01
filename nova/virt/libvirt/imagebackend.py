@@ -408,6 +408,31 @@ class Image(object):
         # we should talk about if we want this functionality for everything.
         pass
 
+    def create_snap(self, name):
+        """Create a snapshot on the image.  A noop on backends that don't
+        support snapshots.
+
+        :param name: name of the snapshot
+        """
+        pass
+
+    def remove_snap(self, name, ignore_errors=False):
+        """Remove a snapshot on the image.  A noop on backends that don't
+        support snapshots.
+
+        :param name: name of the snapshot
+        :param ignore_errors: don't log errors if the snapshot does not exist
+        """
+        pass
+
+    def rollback_to_snap(self, name):
+        """Rollback the image to the named snapshot. A noop on backends that
+        don't support snapshots.
+
+        :param name: name of the snapshot
+        """
+        pass
+
 
 class Raw(Image):
     def __init__(self, instance=None, disk_name=None, path=None):
@@ -842,6 +867,15 @@ class Rbd(Image):
         if self.check_image_exists():
             self.driver.remove_image(name)
         self.driver.import_image(local_file, name)
+
+    def create_snap(self, name):
+        return self.driver.create_snap(self.rbd_name, name)
+
+    def remove_snap(self, name, ignore_errors=False):
+        return self.driver.remove_snap(self.rbd_name, name, ignore_errors)
+
+    def rollback_to_snap(self, name):
+        return self.driver.rollback_to_snap(self.rbd_name, name)
 
 
 class Ploop(Image):
