@@ -64,19 +64,19 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.stubs.Set(weights.HostWeightHandler,
                 'get_weighed_objects', _fake_weigh_objects)
 
-        request_spec = {'num_instances': 10,
-                        'instance_type': {'memory_mb': 512, 'root_gb': 512,
-                                          'ephemeral_gb': 0,
-                                          'vcpus': 1},
-                        'instance_properties': {'project_id': 1,
-                                                'root_gb': 512,
-                                                'memory_mb': 512,
-                                                'ephemeral_gb': 0,
-                                                'vcpus': 1,
-                                                'os_type': 'Linux',
-                                                'uuid': 'fake-uuid'}}
+        spec_obj = objects.RequestSpec(
+            num_instances=10,
+            flavor=objects.Flavor(memory_mb=512,
+                                  root_gb=512,
+                                  ephemeral_gb=0,
+                                  vcpus=1),
+            project_id=1,
+            os_type='Linux',
+            uuid='fake-uuid',
+            pci_requests=None,
+            numa_topology=None)
         self.mox.ReplayAll()
-        weighed_hosts = self.driver._schedule(self.context, request_spec, {})
+        weighed_hosts = self.driver._schedule(self.context, spec_obj)
         self.assertEqual(len(weighed_hosts), 10)
         for weighed_host in weighed_hosts:
             self.assertIsNotNone(weighed_host.obj)
@@ -133,20 +133,19 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.stubs.Set(self.driver.host_manager, 'get_filtered_hosts',
                 fake_get_filtered_hosts)
 
-        instance_properties = {'project_id': 1,
-                               'root_gb': 512,
-                               'memory_mb': 512,
-                               'ephemeral_gb': 0,
-                               'vcpus': 1,
-                               'os_type': 'Linux',
-                               'uuid': 'fake-uuid'}
-
-        request_spec = dict(instance_properties=instance_properties,
-                            instance_type={})
-        filter_properties = {}
+        spec_obj = objects.RequestSpec(
+            num_instances=1,
+            project_id=1,
+            os_type='Linux',
+            uuid='fake-uuid',
+            flavor=objects.Flavor(root_gb=512,
+                                  memory_mb=512,
+                                  ephemeral_gb=0,
+                                  vcpus=1),
+            pci_requests=None,
+            numa_topology=None)
         self.mox.ReplayAll()
-        hosts = self.driver._schedule(self.context, request_spec,
-                filter_properties=filter_properties)
+        hosts = self.driver._schedule(self.context, spec_obj)
 
         # one host should be chosen
         self.assertEqual(len(hosts), 1)
@@ -169,19 +168,19 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.stubs.Set(self.driver.host_manager, 'get_filtered_hosts',
                 fake_get_filtered_hosts)
 
-        instance_properties = {'project_id': 1,
-                               'root_gb': 512,
-                               'memory_mb': 512,
-                               'ephemeral_gb': 0,
-                               'vcpus': 1,
-                               'os_type': 'Linux',
-                               'uuid': 'fake-uuid'}
-        request_spec = dict(instance_properties=instance_properties,
-                            instance_type={})
-        filter_properties = {}
+        spec_obj = objects.RequestSpec(
+            num_instances=1,
+            project_id=1,
+            os_type='Linux',
+            uuid='fake-uuid',
+            flavor=objects.Flavor(root_gb=512,
+                                  memory_mb=512,
+                                  ephemeral_gb=0,
+                                  vcpus=1),
+            pci_requests=None,
+            numa_topology=None)
         self.mox.ReplayAll()
-        hosts = self.driver._schedule(self.context, request_spec,
-                filter_properties=filter_properties)
+        hosts = self.driver._schedule(self.context, spec_obj)
 
         # one host should be chose
         self.assertEqual(len(hosts), 1)
@@ -213,47 +212,28 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
             host_state = hosts[0]
             return [weights.WeighedHost(host_state, this_weight)]
 
-        instance_properties = {'project_id': 1,
-                                'root_gb': 512,
-                                'memory_mb': 512,
-                                'ephemeral_gb': 0,
-                                'vcpus': 1,
-                                'os_type': 'Linux',
-                                'uuid': 'fake-uuid'}
-
-        request_spec = dict(instance_properties=instance_properties,
-                            instance_type={})
+        spec_obj = objects.RequestSpec(
+            num_instances=1,
+            project_id=1,
+            os_type='Linux',
+            uuid='fake-uuid',
+            flavor=objects.Flavor(root_gb=512,
+                                  memory_mb=512,
+                                  ephemeral_gb=0,
+                                  vcpus=1),
+            pci_requests=None,
+            numa_topology=None)
 
         self.stubs.Set(weights.HostWeightHandler,
                         'get_weighed_objects', _fake_weigh_objects)
 
-        filter_properties = {}
         self.mox.ReplayAll()
-        hosts = self.driver._schedule(self.context, request_spec,
-                                      filter_properties=filter_properties)
+        hosts = self.driver._schedule(self.context, spec_obj)
 
         # one host should be chosen
         self.assertEqual(1, len(hosts))
 
         self.assertEqual(50, hosts[0].weight)
-
-    @mock.patch.object(objects.InstancePCIRequests,
-                       'from_request_spec_instance_props')
-    @mock.patch.object(host_manager.HostManager, 'get_filtered_hosts')
-    def test_schedule_with_pci_requests(self, get_filtered_hosts, from_rs_ip):
-        self.driver._get_all_host_states = mock.Mock()
-        get_filtered_hosts.return_value = None
-
-        fake_requests = objects.InstancePCIRequests()
-        from_rs_ip.return_value = fake_requests
-
-        instance_properties = {'pci_requests': 'anything_as_it_is_mocked'}
-        request_spec = dict(instance_properties=instance_properties,
-                            instance_type={})
-
-        self.driver._schedule(self.context, request_spec, {})
-        from_rs_ip.assert_called_once_with('anything_as_it_is_mocked')
-        self.assertEqual(fake_requests, instance_properties['pci_requests'])
 
     @mock.patch('nova.objects.ServiceList.get_by_binary',
                 return_value=fakes.SERVICES)
@@ -288,9 +268,10 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.stubs.Set(weights.HostWeightHandler,
             'get_weighed_objects', _fake_weigh_objects)
 
-        request_spec = {'instance_type': {'memory_mb': 512, 'root_gb': 512,
-                                          'ephemeral_gb': 0,
-                                          'vcpus': 1},
+        request_spec = {'instance_type': objects.Flavor(memory_mb=512,
+                                                        root_gb=512,
+                                                        ephemeral_gb=0,
+                                                        vcpus=1),
                         'instance_properties': {'project_id': 1,
                                                 'root_gb': 512,
                                                 'memory_mb': 512,
@@ -310,7 +291,21 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         mock_schedule.return_value = [mock.Mock()]
 
         with mock.patch.object(self.driver.notifier, 'info') as mock_info:
-            request_spec = {'num_instances': 1}
+            request_spec = {'num_instances': 1,
+                            'instance_properties': {'project_id': '1',
+                                                    'root_gb': 512,
+                                                    'memory_mb': 512,
+                                                    'ephemeral_gb': 0,
+                                                    'vcpus': 1,
+                                                    'uuid': '1',
+                                                    'pci_requests': None,
+                                                    'availability_zone': None,
+                                                    'numa_topology': None},
+                            'instance_type': objects.Flavor(memory_mb=512,
+                                                            root_gb=512,
+                                                            ephemeral_gb=0,
+                                                            vcpus=1),
+                            'image': {'properties': {}}}
 
             self.driver.select_destinations(self.context, request_spec, {})
 

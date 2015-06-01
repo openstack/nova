@@ -18,6 +18,7 @@ from nova import objects
 from nova.objects import base
 from nova.objects import fields
 from nova.objects import instance as obj_instance
+from nova.virt import hardware
 
 
 @base.NovaObjectRegistry.register
@@ -106,8 +107,27 @@ class RequestSpec(base.NovaObject):
         for field in instance_fields:
             if field == 'uuid':
                 setattr(self, 'instance_uuid', getter(instance, field))
+            elif field == 'pci_requests':
+                self._from_instance_pci_requests(getter(instance, field))
+            elif field == 'numa_topology':
+                self._from_instance_numa_topology(getter(instance, field))
             else:
                 setattr(self, field, getter(instance, field))
+
+    def _from_instance_pci_requests(self, pci_requests):
+        if isinstance(pci_requests, dict):
+            pci_req_cls = objects.InstancePCIRequests
+            self.pci_requests = pci_req_cls.from_request_spec_instance_props(
+                pci_requests)
+        else:
+            self.pci_requests = pci_requests
+
+    def _from_instance_numa_topology(self, numa_topology):
+        if isinstance(numa_topology, dict):
+            self.numa_topology = hardware.instance_topology_from_instance(
+                dict(numa_topology=numa_topology))
+        else:
+            self.numa_topology = numa_topology
 
     def _from_flavor(self, flavor):
         if isinstance(flavor, objects.Flavor):

@@ -101,6 +101,51 @@ class _TestRequestSpecObject(object):
             else:
                 self.assertEqual(instance.get(field), getattr(spec, field))
 
+    @mock.patch.object(objects.InstancePCIRequests,
+                       'from_request_spec_instance_props')
+    def test_from_instance_with_pci_requests(self, pci_from_spec):
+        fake_pci_requests = objects.InstancePCIRequests()
+        pci_from_spec.return_value = fake_pci_requests
+
+        instance = dict(
+            uuid=uuidutils.generate_uuid(),
+            root_gb=10,
+            ephemeral_gb=0,
+            memory_mb=10,
+            vcpus=1,
+            numa_topology=None,
+            project_id='1',
+            availability_zone='nova',
+            pci_requests={
+                'instance_uuid': 'fakeid',
+                'requests': [{'count': 1, 'spec': [{'vendor_id': '8086'}]}]})
+        spec = objects.RequestSpec()
+
+        spec._from_instance(instance)
+        pci_from_spec.assert_called_once_with(instance['pci_requests'])
+        self.assertEqual(fake_pci_requests, spec.pci_requests)
+
+    def test_from_instance_with_numa_stuff(self):
+        instance = dict(
+            uuid=uuidutils.generate_uuid(),
+            root_gb=10,
+            ephemeral_gb=0,
+            memory_mb=10,
+            vcpus=1,
+            project_id='1',
+            availability_zone='nova',
+            pci_requests=None,
+            numa_topology={'cells': [{'id': 1, 'cpuset': ['1'], 'memory': 8192,
+                                      'pagesize': None, 'cpu_topology': None,
+                                      'cpu_pinning_raw': None}]})
+        spec = objects.RequestSpec()
+
+        spec._from_instance(instance)
+        self.assertIsInstance(spec.numa_topology, objects.InstanceNUMATopology)
+        cells = spec.numa_topology.cells
+        self.assertEqual(1, len(cells))
+        self.assertIsInstance(cells[0], objects.InstanceNUMACell)
+
     def test_from_flavor_as_object(self):
         flavor = objects.Flavor()
 

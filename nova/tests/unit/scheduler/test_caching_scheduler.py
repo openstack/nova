@@ -100,14 +100,16 @@ class CachingSchedulerTestCase(test_scheduler.SchedulerTestCase):
                 self.context, request_spec, {})
 
     def _get_fake_request_spec(self):
-        flavor = {
-            "flavorid": "small",
-            "memory_mb": 512,
-            "root_gb": 1,
-            "ephemeral_gb": 1,
-            "vcpus": 1,
-            "swap": 0,
-        }
+        # NOTE(sbauza): Prevent to stub the Flavor.get_by_id call just by
+        # directly providing a Flavor object
+        flavor = objects.Flavor(
+            flavorid="small",
+            memory_mb=512,
+            root_gb=1,
+            ephemeral_gb=1,
+            vcpus=1,
+            swap=0,
+        )
         instance_properties = {
             "os_type": "linux",
             "project_id": "1234",
