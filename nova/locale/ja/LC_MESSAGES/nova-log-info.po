@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-05-02 06:18+0000\n"
-"PO-Revision-Date: 2015-05-02 01:00+0000\n"
+"POT-Creation-Date: 2015-06-01 06:23+0000\n"
+"PO-Revision-Date: 2015-05-06 14:14+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: Japanese (http://www.transifex.com/projects/p/nova/language/"
 "ja/)\n"
@@ -21,53 +21,40 @@ msgstr ""
 "Plural-Forms: nplurals=1; plural=0;\n"
 
 #, python-format
-msgid "Starting %(topic)s node (version %(version)s)"
-msgstr "%(topic)s ノード (バージョン %(version)s) を開始しています"
+msgid "%(action_str)s instance"
+msgstr "%(action_str)s インスタンス"
+
+#, python-format
+msgid "%(id)s (%(base_file)s): generating checksum"
+msgstr "%(id)s (%(base_file)s): チェックサムの生成中"
 
 #, python-format
 msgid "%(name)s listening on %(host)s:%(port)s"
 msgstr "%(name)s は %(host)s:%(port)s 上で listen しています"
 
-msgid "Stopping WSGI server."
-msgstr "WSGI サーバーを停止しています。"
-
-msgid "WSGI server has stopped."
-msgstr "WSGI サーバーが停止しました。"
+#, python-format
+msgid "%(url)s returned with HTTP %(status)d"
+msgstr "HTTP %(status)d の %(url)s が返されました"
 
 #, python-format
-msgid ""
-"Unauthorized request for controller=%(controller)s and action=%(action)s"
+msgid "Active base files: %s"
+msgstr "アクティブな基本ファイル: %s"
+
+#, python-format
+msgid "Adding security group %(security_group_id)s to port %(port_id)s"
 msgstr ""
-"コントローラ=%(controller)s とアクション=%(action)s 用の許可されていないリク"
-"エスト"
+"セキュリティー・グループ %(security_group_id)s をポート %(port_id)s に追加し"
+"ています"
+
+msgid "Allocate address"
+msgstr "Allocate address: アドレスを割り当てます。"
 
 #, python-format
-msgid "Create snapshot of volume %s"
-msgstr "ボリューム %s のスナップショットの作成"
+msgid "Associate address %(public_ip)s to instance %(instance_id)s"
+msgstr "インスタンス %(instance_id)s にアドレス %(public_ip)s を割り当て"
 
-#, python-format
-msgid "Create key pair %s"
-msgstr "Create key pair: キーペア %s を作成します。"
-
-#, python-format
-msgid "Import key %s"
-msgstr "鍵 %s のインポート"
-
-#, python-format
-msgid "Delete key pair %s"
-msgstr "Delete key pair: キーペア %s を削除します。"
-
-#, python-format
-msgid "Get console output for instance %s"
-msgstr "Get console output: インスタンス %s のコンソール出力を取得します。"
-
-#, python-format
-msgid "Create volume from snapshot %s"
-msgstr "スナップショット %s からボリュームを作成"
-
-#, python-format
-msgid "Create volume of %s GB"
-msgstr "Create volume: %s GBのボリュームを作成します。"
+msgid "Attach interface"
+msgstr "インターフェースの接続"
 
 #, python-format
 msgid "Attach volume %(volume_id)s to instance %(instance_id)s at %(device)s"
@@ -76,223 +63,19 @@ msgstr ""
 "%(device)s に接続"
 
 #, python-format
-msgid "Detach volume %s"
-msgstr "Detach volume: ボリューム %s をデタッチします"
-
-msgid "Allocate address"
-msgstr "Allocate address: アドレスを割り当てます。"
-
-#, python-format
-msgid "Release address %s"
-msgstr "Release address: アドレス %s を開放します。"
-
-#, python-format
-msgid "Associate address %(public_ip)s to instance %(instance_id)s"
-msgstr "インスタンス %(instance_id)s にアドレス %(public_ip)s を割り当て"
-
-#, python-format
-msgid "Disassociate address %s"
-msgstr "Disassociate address: アドレス %s の関連付けを解除します。"
-
-#, python-format
-msgid "Reboot instance %r"
-msgstr "Reboot instance: インスタンス %r を再起動します。"
-
-#, python-format
-msgid "De-registering image %s"
-msgstr "De-registering image: イメージ %s を登録解除します。"
-
-#, python-format
-msgid "Registered image %(image_location)s with id %(image_id)s"
-msgstr "イメージ %(image_location)s が ID %(image_id)s で登録されました"
-
-#, python-format
-msgid "Updating image %s publicity"
-msgstr "イメージ %s の公開設定を更新します。"
-
-msgid "Timestamp is invalid."
-msgstr "タイム・スタンプが無効です。"
-
-#, python-format
-msgid "%(url)s returned with HTTP %(status)d"
-msgstr "HTTP %(status)d の %(url)s が返されました"
-
-#, python-format
-msgid "Fault thrown: %s"
-msgstr "障害がスローされました: %s"
-
-#, python-format
-msgid "HTTP exception thrown: %s"
-msgstr "HTTP 例外がスローされました: %s"
-
-#, python-format
-msgid "Delete snapshot with id: %s"
-msgstr "次の ID のスナップショットを削除: %s"
-
-msgid "Attach interface"
-msgstr "インターフェースの接続"
-
-#, python-format
-msgid "Detach interface %s"
-msgstr "インターフェース %s の切り離し"
-
-#, python-format
-msgid "Putting host %(host_name)s in maintenance mode %(mode)s."
-msgstr "ホスト %(host_name)s を保守モード %(mode)s にしています。"
-
-#, python-format
-msgid "Enabling host %s."
-msgstr "ホスト %s を使用可能にしています。"
-
-#, python-format
-msgid "Disabling host %s."
-msgstr "ホスト %s を使用不可にしています。"
-
-#, python-format
-msgid "vol=%s"
-msgstr "vol=%s"
-
-#, python-format
-msgid "Delete volume with id: %s"
-msgstr "次の ID のボリュームを削除: %s"
-
-#, python-format
 msgid "Attach volume %(volume_id)s to instance %(server_id)s at %(device)s"
 msgstr ""
 "ボリューム %(volume_id)s を %(device)s でインスタンス %(server_id)s に接続し"
 "ます"
 
 #, python-format
-msgid "Create snapshot from volume %s"
-msgstr "ボリューム %s からスナップショットを作成"
-
-#, python-format
-msgid ""
-"Forcing a sync of instances, project_id=%(projid_str)s, updated_since="
-"%(since_str)s"
-msgstr ""
-"インスタンスの同期を強制実行しています。project_id=%(projid_str)s、"
-"updated_since=%(since_str)s"
-
-#, python-format
-msgid ""
-"No cells available when scheduling.  Will retry in %(sleep_time)s second(s)"
-msgstr ""
-"スケジュール時に使用可能なセルがありません。%(sleep_time)s 秒後に再試行します"
-
-msgid "instance termination disabled"
-msgstr "インスタンスの終了が使用不可です"
-
-#, python-format
-msgid "Create Security Group %s"
-msgstr "Create Security Group: セキュリティグループ %s を作成します。"
-
-#, python-format
-msgid "Delete security group %s"
-msgstr "Delete security group: セキュリティグループ %s を削除します。"
-
-msgid "Claim successful"
-msgstr "要求が正常に実行されました"
-
-#, python-format
-msgid ""
-"Deleting instance as its host (%(instance_host)s) is not equal to our host "
-"(%(our_host)s)."
-msgstr ""
-"ホスト (%(instance_host)s) として削除中のインスタンスは、当該ホスト "
-"(%(our_host)s) と同じではありません。"
-
-msgid "Instance found in migrating state during startup. Resetting task_state"
-msgstr ""
-"開始中にマイグレーション中状態のインスタンスが見つかりました。task_state をリ"
-"セットしています"
-
-msgid "Rebooting instance after nova-compute restart."
-msgstr "nova-compute 再始動後にインスタンスをリブートしています。"
-
-msgid "Starting instance..."
-msgstr "インスタンスを開始しています..."
-
-#, python-format
-msgid "%(action_str)s instance"
-msgstr "%(action_str)s インスタンス"
-
-msgid "Rebuilding instance"
-msgstr "インスタンスの再構築中"
-
-msgid "disk on shared storage, recreating using existing disk"
-msgstr "共有ストレージ上のディスク。既存のディスクを使用して再作成中"
-
-#, python-format
-msgid "bringing vm to original state: '%s'"
-msgstr "VM を元の状態に戻しています: '%s'"
-
-#, python-format
-msgid "Detaching from volume api: %s"
-msgstr "ボリューム API からの切り離し中: %s"
-
-msgid "Rebooting instance"
-msgstr "インスタンスのリブート中"
-
-msgid "instance snapshotting"
-msgstr "インスタンスのスナップショットを作成中"
-
-msgid "Root password set"
-msgstr "ルート・パスワードが設定されました"
-
-msgid "Rescuing"
-msgstr "レスキュー中"
-
-msgid "Unrescuing"
-msgstr "アンレスキュー中"
-
-msgid "Migrating"
-msgstr "マイグレーション中"
-
-msgid "Pausing"
-msgstr "一時停止中"
-
-msgid "Unpausing"
-msgstr "休止解除中"
-
-msgid "Retrieving diagnostics"
-msgstr "診断の取得中"
-
-msgid "Resuming"
-msgstr "再開中"
-
-msgid "Get console output"
-msgstr "コンソール出力の取得"
-
-#, python-format
 msgid "Attaching volume %(volume_id)s to %(mountpoint)s"
 msgstr "ボリューム %(volume_id)s を %(mountpoint)s に接続しています"
 
-#, python-format
-msgid "Detach volume %(volume_id)s from mountpoint %(mp)s"
-msgstr "ボリューム %(volume_id)s をマウント・ポイント %(mp)s から切り離します"
-
-msgid "_post_live_migration() is started.."
-msgstr "_post_live_migration() が開始されました.."
-
-msgid ""
-"You may see the error \"libvirt: QEMU error: Domain not found: no domain "
-"with matching name.\" This error can be safely ignored."
+msgid "Attempted to unfilter instance which is not filtered"
 msgstr ""
-"「libvirt: QEMU エラー: ドメインが見つかりません: 名前が一致するドメインがあ"
-"りません。」というエラーが表示されることがあります。このエラーは無視してかま"
-"いません。"
-
-msgid "Post operation of migration started"
-msgstr "マイグレーション後の操作が開始されました"
-
-#, python-format
-msgid ""
-"Found %(migration_count)d unconfirmed migrations older than "
-"%(confirm_window)d seconds"
-msgstr ""
-"%(confirm_window)d 秒を経過した未確認のマイグレーションが "
-"%(migration_count)d 個検出されました"
+"フィルター処理されていないインスタンスに対してフィルター処理の取り消しが試み"
+"られました"
 
 #, python-format
 msgid ""
@@ -302,27 +85,40 @@ msgstr ""
 "インスタンス %(instance_uuid)s のマイグレーション %(migration_id)s の自動確認"
 "中"
 
-#, python-format
-msgid ""
-"Running instance usage audit for host %(host)s from %(begin_time)s to "
-"%(end_time)s. %(number_instances)s instances."
-msgstr ""
-"ホスト %(host)s のインスタンス使用率監査を %(begin_time)s から %(end_time)s "
-"まで実行しています。%(number_instances)s 個のインスタンス。"
+msgid "Automatically hard rebooting"
+msgstr "自動ハード・リブート中"
 
-msgid "Updating bandwidth usage cache"
-msgstr "帯域幅使用量キャッシュの更新中"
+msgid "Beginning cold snapshot process"
+msgstr "コールド・スナップショット・プロセスを開始しています"
+
+msgid "Beginning live snapshot process"
+msgstr "ライブ・スナップショット・プロセスを開始しています"
 
 #, python-format
-msgid ""
-"During the sync_power process the instance has moved from host %(src)s to "
-"host %(dst)s"
-msgstr ""
-"sync_power プロセス中に、インスタンスはホスト %(src)s からホスト %(dst)s に移"
-"動しました"
+msgid "Booting with volume %(volume_id)s at %(mountpoint)s"
+msgstr "%(mountpoint)s にあるボリューム %(volume_id)s を使用してブート中"
 
-msgid "Reclaiming deleted instance"
-msgstr "削除済みインスタンスを再利用しています"
+msgid "Called setup_basic_filtering in nwfilter"
+msgstr "nwfilter で setup_basic_filtering を呼び出しました"
+
+#, python-format
+msgid "Caught %s, exiting"
+msgstr "%s が見つかりました。終了しています"
+
+#, python-format
+msgid "Caught %s, stopping children"
+msgstr "%s が見つかりました。子を停止しています"
+
+#, python-format
+msgid "Child %(pid)d killed by signal %(sig)d"
+msgstr "子 %(pid)d がシグナル %(sig)d によって強制終了されました"
+
+#, python-format
+msgid "Child %(pid)s exited with status %(code)d"
+msgstr "子 %(pid)s が状況 %(code)d で終了しました"
+
+msgid "Claim successful"
+msgstr "要求が正常に実行されました"
 
 #, python-format
 msgid "Compute_service record created for %(host)s:%(node)s"
@@ -333,165 +129,12 @@ msgid "Compute_service record updated for %(host)s:%(node)s"
 msgstr "%(host)s:%(node)s 用の Compute_service レコードが更新されました"
 
 #, python-format
-msgid "Updating from migration %s"
-msgstr "マイグレーション %s からの更新中"
+msgid "Connected volume (vdi_uuid): %s"
+msgstr "ボリューム (vdi_uuid): %s に接続しました"
 
 #, python-format
-msgid "re-assign floating IP %(address)s from instance %(instance_id)s"
-msgstr "浮動 IP %(address)s をインスタンス %(instance_id)s から再割り当て"
-
-#, python-format
-msgid "Loading network driver '%s'"
-msgstr "ネットワーク・ドライバー '%s' をロードしています"
-
-#, python-format
-msgid "Adding security group %(security_group_id)s to port %(port_id)s"
-msgstr ""
-"セキュリティー・グループ %(security_group_id)s をポート %(port_id)s に追加し"
-"ています"
-
-#, python-format
-msgid "Eventlet backdoor listening on %(port)s for process %(pid)d"
-msgstr "Eventlet backdoorは、プロセス%(pid)dの%(port)sをリスニングしています。"
-
-#, python-format
-msgid "Skipping periodic task %(task)s because its interval is negative"
-msgstr "タスクの間隔が負であるため、定期タスク %(task)s をスキップしています"
-
-#, python-format
-msgid "Skipping periodic task %(task)s because it is disabled"
-msgstr "タスクが使用不可であるため、定期タスク %(task)s をスキップしています"
-
-#, python-format
-msgid "Caught %s, exiting"
-msgstr "%s が見つかりました。終了しています"
-
-msgid "Parent process has died unexpectedly, exiting"
-msgstr "親プロセスが予期せずに停止しました。終了しています"
-
-msgid "Forking too fast, sleeping"
-msgstr "fork が早すぎます。スリープ状態にしています"
-
-#, python-format
-msgid "Started child %d"
-msgstr "子 %d を開始しました"
-
-#, python-format
-msgid "Starting %d workers"
-msgstr "%d ワーカーを開始しています"
-
-#, python-format
-msgid "Child %(pid)d killed by signal %(sig)d"
-msgstr "子 %(pid)d がシグナル %(sig)d によって強制終了されました"
-
-#, python-format
-msgid "Child %(pid)s exited with status %(code)d"
-msgstr "子 %(pid)s が状況 %(code)d で終了しました"
-
-#, python-format
-msgid "Caught %s, stopping children"
-msgstr "%s が見つかりました。子を停止しています"
-
-#, python-format
-msgid "Waiting on %d children to exit"
-msgstr "%d 個の子で終了を待機しています"
-
-#, python-format
-msgid "Removing dead compute node %(host)s:%(node)s from scheduler"
-msgstr ""
-"スケジューラーから非活動の計算ノード %(host)s:%(node)s を削除しています"
-
-#, python-format
-msgid "Booting with volume %(volume_id)s at %(mountpoint)s"
-msgstr "%(mountpoint)s にあるボリューム %(volume_id)s を使用してブート中"
-
-#, python-format
-msgid "Loading compute driver '%s'"
-msgstr "計算ドライバー '%s' をロードしています"
-
-msgid "Attempted to unfilter instance which is not filtered"
-msgstr ""
-"フィルター処理されていないインスタンスに対してフィルター処理の取り消しが試み"
-"られました"
-
-msgid "Device allocation failed. Will retry in 2 seconds."
-msgstr "装置割り振りに失敗しました。2 秒後に再試行します。"
-
-#, python-format
-msgid "Loop mount error: %s"
-msgstr "ループ・マウント・エラー: %s"
-
-#, python-format
-msgid "NBD mount error: %s"
-msgstr "NBD マウント・エラー: %s"
-
-msgid "The ISCSI initiator name can't be found. Choosing the default one"
-msgstr ""
-"iSCSI イニシエーター名が見つかりません。デフォルトの名前を選択しています"
-
-msgid "Spawning new instance"
-msgstr "新規インスタンスの作成中"
-
-#, python-format
-msgid "Creating config drive at %(path)s"
-msgstr "構成ドライブを %(path)s に作成しています"
-
-msgid "During wait destroy, instance disappeared."
-msgstr "破棄待機中にインスタンスが消失しました。"
-
-msgid "Instance destroyed successfully."
-msgstr "インスタンスが正常に破棄されました。"
-
-msgid "Instance may be started again."
-msgstr "インスタンスを再び開始できます。"
-
-msgid "Going to destroy instance again."
-msgstr "インスタンスの破棄を再び行います。"
-
-msgid "Beginning live snapshot process"
-msgstr "ライブ・スナップショット・プロセスを開始しています"
-
-msgid "Beginning cold snapshot process"
-msgstr "コールド・スナップショット・プロセスを開始しています"
-
-msgid "Snapshot extracted, beginning image upload"
-msgstr ""
-"スナップショットが抽出されました。イメージのアップロードを開始しています"
-
-msgid "Snapshot image upload complete"
-msgstr "スナップショット・イメージのアップロードが完了しました"
-
-msgid "Instance soft rebooted successfully."
-msgstr "インスタンスが正常にソフト・リブートされました。"
-
-msgid "Instance shutdown successfully."
-msgstr "インスタンスが正常にシャットダウンされました。"
-
-msgid "Instance may have been rebooted during soft reboot, so return now."
-msgstr ""
-"インスタンスはソフト・リブート時にリブートされた可能性があるため、ここで返し"
-"ます。"
-
-msgid "Instance rebooted successfully."
-msgstr "インスタンスが正常にリブートされました。"
-
-msgid "Instance spawned successfully."
-msgstr "インスタンスが正常に作成されました。"
-
-#, python-format
-msgid "data: %(data)r, fpath: %(fpath)r"
-msgstr "データ: %(data)r, ファイルパス: %(fpath)r"
-
-#, python-format
-msgid "Truncated console log returned, %d bytes ignored"
-msgstr ""
-"切り捨てられたコンソール・ログが返されました。%d バイトが無視されました"
-
-msgid "Creating image"
-msgstr "イメージの作成中"
-
-msgid "Using config drive"
-msgstr "構成ドライブを使用中"
+msgid "Corrupt base files: %s"
+msgstr "破損した基本ファイル: %s"
 
 #, python-format
 msgid ""
@@ -501,93 +144,195 @@ msgstr ""
 "インスタンス %s 用のドメインが Libvirt 内で見つかりませんでした。デバイスのブ"
 "ロックの統計を取得できません"
 
-msgid "Instance running successfully."
-msgstr "インスタンスが正常に実行されています。"
-
-msgid "Called setup_basic_filtering in nwfilter"
-msgstr "nwfilter で setup_basic_filtering を呼び出しました"
-
-msgid "Ensuring static filters"
-msgstr "静的フィルターの確認中"
+#, python-format
+msgid "Create Security Group %s"
+msgstr "Create Security Group: セキュリティグループ %s を作成します。"
 
 #, python-format
-msgid "Writing stored info to %s"
-msgstr "保管された情報を %s に書き込んでいます"
+msgid "Create key pair %s"
+msgstr "Create key pair: キーペア %s を作成します。"
 
 #, python-format
-msgid ""
-"image %(id)s at (%(base_file)s): image verification skipped, no hash stored"
-msgstr ""
-"(%(base_file)s) にあるイメージ %(id)s: イメージの検査がスキップされました。"
-"ハッシュは保管されていません"
+msgid "Create snapshot from volume %s"
+msgstr "ボリューム %s からスナップショットを作成"
 
 #, python-format
-msgid "%(id)s (%(base_file)s): generating checksum"
-msgstr "%(id)s (%(base_file)s): チェックサムの生成中"
+msgid "Create snapshot of volume %s"
+msgstr "ボリューム %s のスナップショットの作成"
 
 #, python-format
-msgid "image %(id)s at (%(base_file)s): checking"
-msgstr "(%(base_file)s) にあるイメージ %(id)s: 検査中"
+msgid "Create volume from snapshot %s"
+msgstr "スナップショット %s からボリュームを作成"
 
 #, python-format
-msgid ""
-"image %(id)s at (%(base_file)s): in use: on this node %(local)d local, "
-"%(remote)d on other nodes sharing this instance storage"
-msgstr ""
-"(%(base_file)s) にあるイメージ %(id)s: 使用中: このノード上では %(local)d "
-"ローカル、このインスタンスのストレージを共有する他のノード上では %(remote)d"
+msgid "Create volume of %s GB"
+msgstr "Create volume: %s GBのボリュームを作成します。"
 
 #, python-format
-msgid "Active base files: %s"
-msgstr "アクティブな基本ファイル: %s"
+msgid "Creating config drive at %(path)s"
+msgstr "構成ドライブを %(path)s に作成しています"
+
+msgid "Creating image"
+msgstr "イメージの作成中"
 
 #, python-format
-msgid "Corrupt base files: %s"
-msgstr "破損した基本ファイル: %s"
+msgid "De-registering image %s"
+msgstr "De-registering image: イメージ %s を登録解除します。"
 
 #, python-format
-msgid "Removable base files: %s"
-msgstr "削除可能な基本ファイル: %s"
+msgid "Delete key pair %s"
+msgstr "Delete key pair: キーペア %s を削除します。"
+
+#, python-format
+msgid "Delete security group %s"
+msgstr "Delete security group: セキュリティグループ %s を削除します。"
+
+#, python-format
+msgid "Delete snapshot with id: %s"
+msgstr "次の ID のスナップショットを削除: %s"
+
+#, python-format
+msgid "Delete volume with id: %s"
+msgstr "次の ID のボリュームを削除: %s"
+
+#, python-format
+msgid "Deleted %s snapshots."
+msgstr "スナップショット %s を削除しました"
 
 #, python-format
 msgid "Deleted virtual disk %s."
 msgstr "バーチャルディスク %s を削除しました"
 
 #, python-format
-msgid "Downloaded image file data %(image_ref)s"
-msgstr "イメージファイルデータ %(image_ref)s をダウンロードしました"
+msgid ""
+"Deleting instance as its host (%(instance_host)s) is not equal to our host "
+"(%(our_host)s)."
+msgstr ""
+"ホスト (%(instance_host)s) として削除中のインスタンスは、当該ホスト "
+"(%(our_host)s) と同じではありません。"
+
+msgid "Destroyed the VM"
+msgstr "VM を破棄しました"
+
+msgid "Destroying VM"
+msgstr "VM を破棄しています"
+
+#, python-format
+msgid "Detach interface %s"
+msgstr "インターフェース %s の切り離し"
+
+#, python-format
+msgid "Detach volume %(volume_id)s from mountpoint %(mp)s"
+msgstr "ボリューム %(volume_id)s をマウント・ポイント %(mp)s から切り離します"
+
+#, python-format
+msgid "Detach volume %s"
+msgstr "Detach volume: ボリューム %s をデタッチします"
+
+#, python-format
+msgid "Detaching from volume api: %s"
+msgstr "ボリューム API からの切り離し中: %s"
+
+msgid "Device allocation failed. Will retry in 2 seconds."
+msgstr "装置割り振りに失敗しました。2 秒後に再試行します。"
+
+#, python-format
+msgid "Disabling host %s."
+msgstr "ホスト %s を使用不可にしています。"
+
+#, python-format
+msgid "Disassociate address %s"
+msgstr "Disassociate address: アドレス %s の関連付けを解除します。"
+
+#, python-format
+msgid "Disconnecting stale VDI %s from compute domU"
+msgstr "失効した VDI %s を計算 domU から切断しています"
 
 #, python-format
 msgid "Downloaded OVA image file %(image_ref)s"
 msgstr "OVA イメージファイル %(image_ref)s をダウンロードしました"
 
-msgid "Destroyed the VM"
-msgstr "VM を破棄しました"
+#, python-format
+msgid "Downloaded image file data %(image_ref)s"
+msgstr "イメージファイルデータ %(image_ref)s をダウンロードしました"
+
+#, python-format
+msgid ""
+"During the sync_power process the instance has moved from host %(src)s to "
+"host %(dst)s"
+msgstr ""
+"sync_power プロセス中に、インスタンスはホスト %(src)s からホスト %(dst)s に移"
+"動しました"
+
+msgid "During wait destroy, instance disappeared."
+msgstr "破棄待機中にインスタンスが消失しました。"
+
+#, python-format
+msgid "Enabling host %s."
+msgstr "ホスト %s を使用可能にしています。"
+
+msgid "Ensuring static filters"
+msgstr "静的フィルターの確認中"
+
+#, python-format
+msgid "Error in handshake: %s"
+msgstr "ハンドシェーク中にエラーが発生しました: %s"
+
+#, python-format
+msgid "Eventlet backdoor listening on %(port)s for process %(pid)d"
+msgstr "Eventlet backdoorは、プロセス%(pid)dの%(port)sをリスニングしています。"
+
+#, python-format
+msgid "Failed to mount filesystem (expected for non-linux instances): %s"
+msgstr ""
+"ファイル・システムのマウントに失敗しました (非 Linux インスタンスでは想定済"
+"み): %s"
+
+#, python-format
+msgid "Fault thrown: %s"
+msgstr "障害がスローされました: %s"
+
+#, python-format
+msgid ""
+"Forcing a sync of instances, project_id=%(projid_str)s, updated_since="
+"%(since_str)s"
+msgstr ""
+"インスタンスの同期を強制実行しています。project_id=%(projid_str)s、"
+"updated_since=%(since_str)s"
+
+msgid "Forking too fast, sleeping"
+msgstr "fork が早すぎます。スリープ状態にしています"
 
 #, python-format
 msgid "Found %(instance_count)d hung reboots older than %(timeout)d seconds"
 msgstr ""
 "%(timeout)d 秒より前に停止したリブートが %(instance_count)d 個見つかりました"
 
-msgid "Automatically hard rebooting"
-msgstr "自動ハード・リブート中"
-
+#, python-format
 msgid ""
-"XenServer tools installed in this image are capable of network injection.  "
-"Networking files will not bemanipulated"
+"Found %(migration_count)d unconfirmed migrations older than "
+"%(confirm_window)d seconds"
 msgstr ""
-"このイメージにインストールされている XenServer ツールではネットワーク注入が可"
-"能です。ネットワーキング・ファイルは操作されません"
+"%(confirm_window)d 秒を経過した未確認のマイグレーションが "
+"%(migration_count)d 個検出されました"
 
-msgid ""
-"XenServer tools are present in this image but are not capable of network "
-"injection"
-msgstr ""
-"このイメージには XenServer ツールが存在しますが、このツールはネットワーク注入"
-"を実行できません"
+msgid "Get console output"
+msgstr "コンソール出力の取得"
 
-msgid "XenServer tools are not installed in this image"
-msgstr "このイメージには XenServer ツールがインストールされていません"
+#, python-format
+msgid "Get console output for instance %s"
+msgstr "Get console output: インスタンス %s のコンソール出力を取得します。"
+
+msgid "Going to destroy instance again."
+msgstr "インスタンスの破棄を再び行います。"
+
+#, python-format
+msgid "HTTP exception thrown: %s"
+msgstr "HTTP 例外がスローされました: %s"
+
+#, python-format
+msgid "Import key %s"
+msgstr "鍵 %s のインポート"
 
 #, python-format
 msgid ""
@@ -598,36 +343,58 @@ msgstr ""
 "した: これをワーカー VM と想定して、新規ホストへのマイグレーションをスキップ"
 "します"
 
-#, python-format
-msgid "VBD %s already detached"
-msgstr "VBD %s は既に切り離されています"
+msgid "Instance destroyed successfully."
+msgstr "インスタンスが正常に破棄されました。"
+
+msgid "Instance found in migrating state during startup. Resetting task_state"
+msgstr ""
+"開始中にマイグレーション中状態のインスタンスが見つかりました。task_state をリ"
+"セットしています"
+
+msgid "Instance may be started again."
+msgstr "インスタンスを再び開始できます。"
+
+msgid "Instance may have been rebooted during soft reboot, so return now."
+msgstr ""
+"インスタンスはソフト・リブート時にリブートされた可能性があるため、ここで返し"
+"ます。"
+
+msgid "Instance rebooted successfully."
+msgstr "インスタンスが正常にリブートされました。"
+
+msgid "Instance running successfully."
+msgstr "インスタンスが正常に実行されています。"
+
+msgid "Instance shutdown successfully."
+msgstr "インスタンスが正常にシャットダウンされました。"
+
+msgid "Instance soft rebooted successfully."
+msgstr "インスタンスが正常にソフト・リブートされました。"
+
+msgid "Instance spawned successfully."
+msgstr "インスタンスが正常に作成されました。"
 
 #, python-format
-msgid "Deleted %s snapshots."
-msgstr "スナップショット %s を削除しました"
+msgid "Invalid request: %s"
+msgstr "無効な要求: %s"
 
 #, python-format
-msgid "Disconnecting stale VDI %s from compute domU"
-msgstr "失効した VDI %s を計算 domU から切断しています"
+msgid "Loading compute driver '%s'"
+msgstr "計算ドライバー '%s' をロードしています"
+
+#, python-format
+msgid "Loading network driver '%s'"
+msgstr "ネットワーク・ドライバー '%s' をロードしています"
+
+#, python-format
+msgid "Loop mount error: %s"
+msgstr "ループ・マウント・エラー: %s"
 
 msgid "Manipulating interface files directly"
 msgstr "インターフェース・ファイルを直接操作しています"
 
-#, python-format
-msgid "Failed to mount filesystem (expected for non-linux instances): %s"
-msgstr ""
-"ファイル・システムのマウントに失敗しました (非 Linux インスタンスでは想定済"
-"み): %s"
-
-msgid "Starting halted instance found during reboot"
-msgstr "停止したインスタンスの開始が、リブート中に見つかりました"
-
-msgid "Destroying VM"
-msgstr "VM を破棄しています"
-
-#, python-format
-msgid "Connected volume (vdi_uuid): %s"
-msgstr "ボリューム (vdi_uuid): %s に接続しました"
+msgid "Migrating"
+msgstr "マイグレーション中"
 
 #, python-format
 msgid "Mountpoint %(mountpoint)s detached from instance %(instance_name)s"
@@ -636,29 +403,262 @@ msgstr ""
 "(detach)しました"
 
 #, python-format
-msgid "Error in handshake: %s"
-msgstr "ハンドシェーク中にエラーが発生しました: %s"
+msgid "NBD mount error: %s"
+msgstr "NBD マウント・エラー: %s"
 
 #, python-format
-msgid "Invalid request: %s"
-msgstr "無効な要求: %s"
+msgid ""
+"No cells available when scheduling.  Will retry in %(sleep_time)s second(s)"
+msgstr ""
+"スケジュール時に使用可能なセルがありません。%(sleep_time)s 秒後に再試行します"
+
+msgid "Parent process has died unexpectedly, exiting"
+msgstr "親プロセスが予期せずに停止しました。終了しています"
+
+msgid "Pausing"
+msgstr "一時停止中"
+
+msgid "Post operation of migration started"
+msgstr "マイグレーション後の操作が開始されました"
 
 #, python-format
-msgid "Request: %s"
-msgstr "要求: %s"
+msgid "Putting host %(host_name)s in maintenance mode %(mode)s."
+msgstr "ホスト %(host_name)s を保守モード %(mode)s にしています。"
 
 #, python-format
-msgid "Request made with missing token: %s"
-msgstr "トークンがない状態で要求が行われました: %s"
+msgid "Reboot instance %r"
+msgstr "Reboot instance: インスタンス %r を再起動します。"
+
+msgid "Rebooting instance"
+msgstr "インスタンスのリブート中"
+
+msgid "Rebooting instance after nova-compute restart."
+msgstr "nova-compute 再始動後にインスタンスをリブートしています。"
+
+msgid "Rebuilding instance"
+msgstr "インスタンスの再構築中"
+
+msgid "Reclaiming deleted instance"
+msgstr "削除済みインスタンスを再利用しています"
+
+#, python-format
+msgid "Registered image %(image_location)s with id %(image_id)s"
+msgstr "イメージ %(image_location)s が ID %(image_id)s で登録されました"
+
+#, python-format
+msgid "Release address %s"
+msgstr "Release address: アドレス %s を開放します。"
+
+#, python-format
+msgid "Removable base files: %s"
+msgstr "削除可能な基本ファイル: %s"
+
+#, python-format
+msgid "Removing dead compute node %(host)s:%(node)s from scheduler"
+msgstr ""
+"スケジューラーから非活動の計算ノード %(host)s:%(node)s を削除しています"
 
 #, python-format
 msgid "Request made with invalid token: %s"
 msgstr "無効なトークンを使用して要求が行われました: %s"
 
 #, python-format
-msgid "Unexpected error: %s"
-msgstr "予期しないエラー: %s"
+msgid "Request made with missing token: %s"
+msgstr "トークンがない状態で要求が行われました: %s"
+
+#, python-format
+msgid "Request: %s"
+msgstr "要求: %s"
+
+msgid "Rescuing"
+msgstr "レスキュー中"
+
+msgid "Resuming"
+msgstr "再開中"
+
+msgid "Retrieving diagnostics"
+msgstr "診断の取得中"
+
+msgid "Root password set"
+msgstr "ルート・パスワードが設定されました"
+
+#, python-format
+msgid ""
+"Running instance usage audit for host %(host)s from %(begin_time)s to "
+"%(end_time)s. %(number_instances)s instances."
+msgstr ""
+"ホスト %(host)s のインスタンス使用率監査を %(begin_time)s から %(end_time)s "
+"まで実行しています。%(number_instances)s 個のインスタンス。"
+
+#, python-format
+msgid "Skipping periodic task %(task)s because it is disabled"
+msgstr "タスクが使用不可であるため、定期タスク %(task)s をスキップしています"
+
+#, python-format
+msgid "Skipping periodic task %(task)s because its interval is negative"
+msgstr "タスクの間隔が負であるため、定期タスク %(task)s をスキップしています"
+
+msgid "Snapshot extracted, beginning image upload"
+msgstr ""
+"スナップショットが抽出されました。イメージのアップロードを開始しています"
+
+msgid "Snapshot image upload complete"
+msgstr "スナップショット・イメージのアップロードが完了しました"
+
+msgid "Spawning new instance"
+msgstr "新規インスタンスの作成中"
+
+#, python-format
+msgid "Started child %d"
+msgstr "子 %d を開始しました"
+
+#, python-format
+msgid "Starting %(topic)s node (version %(version)s)"
+msgstr "%(topic)s ノード (バージョン %(version)s) を開始しています"
+
+#, python-format
+msgid "Starting %d workers"
+msgstr "%d ワーカーを開始しています"
+
+msgid "Starting halted instance found during reboot"
+msgstr "停止したインスタンスの開始が、リブート中に見つかりました"
+
+msgid "Starting instance..."
+msgstr "インスタンスを開始しています..."
 
 #, python-format
 msgid "Starting nova-xvpvncproxy node (version %s)"
 msgstr "nova-xvpvncproxy ノード (バージョン %s) を開始しています"
+
+msgid "Stopping WSGI server."
+msgstr "WSGI サーバーを停止しています。"
+
+msgid "The ISCSI initiator name can't be found. Choosing the default one"
+msgstr ""
+"iSCSI イニシエーター名が見つかりません。デフォルトの名前を選択しています"
+
+msgid "Timestamp is invalid."
+msgstr "タイム・スタンプが無効です。"
+
+#, python-format
+msgid "Truncated console log returned, %d bytes ignored"
+msgstr ""
+"切り捨てられたコンソール・ログが返されました。%d バイトが無視されました"
+
+#, python-format
+msgid ""
+"Unauthorized request for controller=%(controller)s and action=%(action)s"
+msgstr ""
+"コントローラ=%(controller)s とアクション=%(action)s 用の許可されていないリク"
+"エスト"
+
+#, python-format
+msgid "Unexpected error: %s"
+msgstr "予期しないエラー: %s"
+
+msgid "Unpausing"
+msgstr "休止解除中"
+
+msgid "Unrescuing"
+msgstr "アンレスキュー中"
+
+msgid "Updating bandwidth usage cache"
+msgstr "帯域幅使用量キャッシュの更新中"
+
+#, python-format
+msgid "Updating from migration %s"
+msgstr "マイグレーション %s からの更新中"
+
+#, python-format
+msgid "Updating image %s publicity"
+msgstr "イメージ %s の公開設定を更新します。"
+
+msgid "Using config drive"
+msgstr "構成ドライブを使用中"
+
+#, python-format
+msgid "VBD %s already detached"
+msgstr "VBD %s は既に切り離されています"
+
+msgid "WSGI server has stopped."
+msgstr "WSGI サーバーが停止しました。"
+
+#, python-format
+msgid "Waiting on %d children to exit"
+msgstr "%d 個の子で終了を待機しています"
+
+#, python-format
+msgid "Writing stored info to %s"
+msgstr "保管された情報を %s に書き込んでいます"
+
+msgid "XenServer tools are not installed in this image"
+msgstr "このイメージには XenServer ツールがインストールされていません"
+
+msgid ""
+"XenServer tools are present in this image but are not capable of network "
+"injection"
+msgstr ""
+"このイメージには XenServer ツールが存在しますが、このツールはネットワーク注入"
+"を実行できません"
+
+msgid ""
+"XenServer tools installed in this image are capable of network injection.  "
+"Networking files will not bemanipulated"
+msgstr ""
+"このイメージにインストールされている XenServer ツールではネットワーク注入が可"
+"能です。ネットワーキング・ファイルは操作されません"
+
+msgid ""
+"You may see the error \"libvirt: QEMU error: Domain not found: no domain "
+"with matching name.\" This error can be safely ignored."
+msgstr ""
+"「libvirt: QEMU エラー: ドメインが見つかりません: 名前が一致するドメインがあ"
+"りません。」というエラーが表示されることがあります。このエラーは無視してかま"
+"いません。"
+
+msgid "_post_live_migration() is started.."
+msgstr "_post_live_migration() が開始されました.."
+
+#, python-format
+msgid "bringing vm to original state: '%s'"
+msgstr "VM を元の状態に戻しています: '%s'"
+
+#, python-format
+msgid "data: %(data)r, fpath: %(fpath)r"
+msgstr "データ: %(data)r, ファイルパス: %(fpath)r"
+
+msgid "disk on shared storage, recreating using existing disk"
+msgstr "共有ストレージ上のディスク。既存のディスクを使用して再作成中"
+
+#, python-format
+msgid "image %(id)s at (%(base_file)s): checking"
+msgstr "(%(base_file)s) にあるイメージ %(id)s: 検査中"
+
+#, python-format
+msgid ""
+"image %(id)s at (%(base_file)s): image verification skipped, no hash stored"
+msgstr ""
+"(%(base_file)s) にあるイメージ %(id)s: イメージの検査がスキップされました。"
+"ハッシュは保管されていません"
+
+#, python-format
+msgid ""
+"image %(id)s at (%(base_file)s): in use: on this node %(local)d local, "
+"%(remote)d on other nodes sharing this instance storage"
+msgstr ""
+"(%(base_file)s) にあるイメージ %(id)s: 使用中: このノード上では %(local)d "
+"ローカル、このインスタンスのストレージを共有する他のノード上では %(remote)d"
+
+msgid "instance snapshotting"
+msgstr "インスタンスのスナップショットを作成中"
+
+msgid "instance termination disabled"
+msgstr "インスタンスの終了が使用不可です"
+
+#, python-format
+msgid "re-assign floating IP %(address)s from instance %(instance_id)s"
+msgstr "浮動 IP %(address)s をインスタンス %(instance_id)s から再割り当て"
+
+#, python-format
+msgid "vol=%s"
+msgstr "vol=%s"

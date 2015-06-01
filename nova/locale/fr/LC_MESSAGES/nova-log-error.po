@@ -9,8 +9,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-05-02 06:18+0000\n"
-"PO-Revision-Date: 2015-04-30 01:44+0000\n"
+"POT-Creation-Date: 2015-06-01 06:23+0000\n"
+"PO-Revision-Date: 2015-05-12 19:59+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: French (http://www.transifex.com/projects/p/nova/language/"
 "fr/)\n"
@@ -21,626 +21,13 @@ msgstr ""
 "Generated-By: Babel 1.3\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
-msgid "Failed to write inbound.csr"
-msgstr "Impossible d'écrire inbound.csr"
-
-msgid "Exception in string format operation"
-msgstr "Exception dans le formatage de la chaîne"
-
-#, python-format
-msgid "Fatal Exception running %(name)s %(type)s-hook: %(obj)s"
-msgstr "Exception fatale de fonctionnement %(name)s %(type)s-hook: %(obj)s"
-
-#, python-format
-msgid "Exception running %(name)s %(type)s-hook: %(obj)s"
-msgstr "Exception de fonctionnement %(name)s %(type)s-hook: %(obj)s"
-
-msgid "Failed to send state update notification"
-msgstr "Echec de l'envoi de la notification de mise à jour d'état"
-
-msgid "Failed to get nw_info"
-msgstr "Echec d'obtention de nw_info"
-
-#, python-format
-msgid "Failed to commit reservations %s"
-msgstr "Échec de mise à jour des réservations %s"
-
-#, python-format
-msgid "Failed to roll back reservations %s"
-msgstr "Échec à restaurer les réservations %s"
-
-msgid "Service error occurred during cleanup_host"
-msgstr "Une erreur de service est survenu durant cleanup_host"
-
-#, python-format
-msgid "Temporary directory is invalid: %s"
-msgstr "Le répertoire temporaire n'est pas valide : %s"
-
-#, python-format
-msgid "Invalid server_string: %s"
-msgstr "server_string non valide : %s"
-
-#, python-format
-msgid "Could not remove tmpdir: %s"
-msgstr "Impossible de supprimer tmpdir : %s"
-
-#, python-format
-msgid "Failed to load %(cfgfile)s: %(ex)s"
-msgstr "Echec de chargement %(cfgfile)s: %(ex)s"
-
-#, python-format
-msgid "Could not bind to %(host)s:%(port)s"
-msgstr "Impossible de s'attacher à %(host)s:%(port)s"
-
-#, python-format
-msgid "Failed to start %(name)s on %(host)s:%(port)s with SSL support"
-msgstr ""
-"Impossible de démarrer %(name)s sur %(host)s:%(port)s avec le support SSL"
-
-#, python-format
-msgid "Keystone failure: %s"
-msgstr "Défaillance de Keystone : %s"
-
-#, python-format
-msgid "Unexpected %(ex_name)s raised: %(ex_str)s"
-msgstr "%(ex_name)s inattendu levé : %(ex_str)s"
-
-#, python-format
-msgid "Environment: %s"
-msgstr "Environnement : %s"
-
-#, python-format
-msgid "Failed to get metadata for ip: %s"
-msgstr "Impossible de récupérer les méta-donnérs pour l'IP : %s"
-
-#, python-format
-msgid "Failed to get metadata for instance id: %s"
-msgstr "Echec d'obtention des métadonnées pour l'ID instance : %s"
-
-#, python-format
-msgid "Caught error: %s"
-msgstr "Erreur interceptée : %s"
-
 #, python-format
 msgid ""
-"status is UNKNOWN from vm_state=%(vm_state)s task_state=%(task_state)s. Bad "
-"upgrade or db corrupted?"
+"%(base)s virtual size %(base_size)s larger than flavor root disk size "
+"%(size)s"
 msgstr ""
-"statut INCONNU pour vm_state = %(vm_state)s task_state = %(task_state)s. "
-"Mauvaise mise à niveau ou base de données endommagée ?"
-
-msgid "Unexpected exception in API method"
-msgstr "Exception inattendue dans la méthode API"
-
-#, python-format
-msgid "Exception handling resource: %s"
-msgstr "Exception lors du traitement de la ressource : %s"
-
-#, python-format
-msgid "Compute.api::pause %s"
-msgstr "Compute.api::pause %s"
-
-#, python-format
-msgid "Compute.api::unpause %s"
-msgstr "Compute.api::unpause %s"
-
-#, python-format
-msgid "compute.api::suspend %s"
-msgstr "compute.api::suspend %s"
-
-#, python-format
-msgid "compute.api::resume %s"
-msgstr "compute.api::resume %s"
-
-#, python-format
-msgid "Compute.api::reset_network %s"
-msgstr "Compute.api::reset_network %s"
-
-#, python-format
-msgid "Compute.api::inject_network_info %s"
-msgstr "Compute.api::inject_network_info %s"
-
-#, python-format
-msgid "Compute.api::lock %s"
-msgstr "Compute.api::lock %s"
-
-#, python-format
-msgid "Compute.api::unlock %s"
-msgstr "Compute.api::unlock %s"
-
-#, python-format
-msgid "Compute.api::resetState %s"
-msgstr "Compute.api::resetState %s"
-
-#, python-format
-msgid "Unable to find address %r"
-msgstr "Adresse %r introuvable"
-
-msgid "Failed to get default networks"
-msgstr "Échec à obtenir les réseaux par défaut"
-
-msgid "Failed to update usages deallocating network."
-msgstr "Echec de la mise à jour des messages de désallocation du réseau"
-
-msgid "Failed to update usages deallocating server group"
-msgstr ""
-"Échec dans la mise à jour des fonctions des désallocations des groupes de "
-"serveur"
-
-#, python-format
-msgid "Returning exception %s to caller"
-msgstr "Renvoi de l'exception %s à l'appelant"
-
-#, python-format
-msgid "Couldn't communicate with cell '%s'"
-msgstr "N'a pas pu communiquer avec la cellule '%s'"
-
-msgid "Couldn't communicate with any cells"
-msgstr "Impossible de communiquer avec les cellules"
-
-#, python-format
-msgid "Error scheduling instances %(instance_uuids)s"
-msgstr "Erreur lors de la planification des instances %(instance_uuids)s"
-
-#, python-format
-msgid "Unknown cell '%(cell_name)s' when trying to update capabilities"
-msgstr ""
-"Cellule inconnue '%(cell_name)s' lors de la tentative de mise à jour des "
-"capacités"
-
-#, python-format
-msgid "Unknown cell '%(cell_name)s' when trying to update capacities"
-msgstr ""
-"Cellule inconnue '%(cell_name)s' lors de la tentative de mise à jour des "
-"capacités"
-
-#, python-format
-msgid "Failed to load %s-api"
-msgstr "Échec de chargement api-%s"
-
-#, python-format
-msgid "Failed to load %s"
-msgstr "Echec de chargement %s"
-
-#, python-format
-msgid "No db access allowed in nova-compute: %s"
-msgstr "Pas d'accès db permis dans nova-compute : %s"
-
-#, python-format
-msgid "No db access allowed in nova-dhcpbridge: %s"
-msgstr "Pas d'accès db autorisé dans nova-dhcpbridge : %s"
-
-msgid "Environment variable 'NETWORK_ID' must be set."
-msgstr "Variable d'environnement 'NETWORK_ID' doit être définie."
-
-#, python-format
-msgid "No db access allowed in nova-network: %s"
-msgstr "Pas d'accès db autorisé dans nova-network : %s"
-
-msgid "Failed to set instance name using multi_instance_display_name_template."
-msgstr ""
-"Echec de définition du nom d'instance à l'aide du modèle "
-"multi_instance_display_name_template."
-
-msgid ""
-"Something wrong happened when trying to delete snapshot from shelved "
-"instance."
-msgstr ""
-"Un problème est survenu en tentant de supprimer l'instantané d'un instance "
-"en attente."
-
-#, python-format
-msgid ""
-"Instance compute service state on %s expected to be down, but it was up."
-msgstr ""
-"L'instance du service compute positionnée sur %s était supposée être en "
-"panne, mais était active."
-
-msgid "Failed to update usages deallocating security group"
-msgstr ""
-"Echec de la mise à jour des messages de désallocation du groupe de sécurité"
-
-#, python-format
-msgid "Instance type %s not found for deletion"
-msgstr "Type d'instance %s non trouvé pour suppression"
-
-#, python-format
-msgid "Error while trying to clean up image %s"
-msgstr "Erreur en tentant de nettoyer l'image %s"
-
-msgid "Failed to check if instance shared"
-msgstr "Échec pour vérifier si l'instance est partagée"
-
-msgid "Failed to complete a deletion"
-msgstr "Echec à compléter la suppression"
-
-msgid "Failed to cleanup snapshot."
-msgstr "Échec dans le nettoyage de l'instantané."
-
-msgid "Failed to stop instance"
-msgstr "Echec dans l'arrêt de l'instance"
-
-msgid "Failed to start instance"
-msgstr "Echec dans le démarrage de l'instance"
-
-msgid "Vifs plug failed"
-msgstr "Échec Vifs plug"
-
-msgid "Failed to revert crashed migration"
-msgstr "Echec de rétablissement de la migration interrompue"
-
-msgid "Failed to dealloc network for deleted instance"
-msgstr "Echec de la désallocation du réseau pour l'instance supprimée"
-
-msgid "Failed to dealloc network for failed instance"
-msgstr "Echec à désallouer le réseau de l'instance en echec"
-
-#, python-format
-msgid "Error: %s"
-msgstr "Erreur : %s"
-
-msgid "Error trying to reschedule"
-msgstr "Erreur lors de la tentative de replanification"
-
-#, python-format
-msgid "Instance failed network setup after %(attempts)d attempt(s)"
-msgstr ""
-"L'instance a échoué dans l'installation du réseau après %(attempts)d "
-"tentative(s)"
-
-msgid "Instance failed block device setup"
-msgstr "Echec de configuration de l'unité par bloc par l'instance"
-
-msgid "Instance failed to spawn"
-msgstr "Echec de génération de l'instance"
-
-msgid "Unexpected build failure, not rescheduling build."
-msgstr "Échec inexpliqué de la génération, pas de construction re-planifiée."
-
-msgid "Failed to allocate network(s)"
-msgstr "Echec  à allouer réseau(x)"
-
-msgid "Failure prepping block device"
-msgstr "Echec dans la préparation des périphériques par bloc"
-
-msgid "Failed to deallocate networks"
-msgstr "Echec à désallouer les réseaux"
-
-msgid "Failed to deallocate network for instance."
-msgstr "Echec de désallocation du réseau pour l'instance."
-
-msgid "Setting instance vm_state to ERROR"
-msgstr "Instance vm_state positionnée à ERROR"
-
-#, python-format
-msgid "Failed to get compute_info for %s"
-msgstr "Echec à obtenir compute_info pour %s"
-
-#, python-format
-msgid "Cannot reboot instance: %s"
-msgstr "Impossible de redémarrer l'instance: %s"
-
-msgid "Error trying to Rescue Instance"
-msgstr "Erreur en essayant de Sauver l'Instance"
-
-#, python-format
-msgid "Migration %s is not found during confirmation"
-msgstr "Migration %s n'est pas trouvée durant la confirmation"
-
-#, python-format
-msgid "Failed to attach %(volume_id)s at %(mountpoint)s"
-msgstr "Échec à attacher %(volume_id)s à %(mountpoint)s"
-
-#, python-format
-msgid "Failed to detach volume %(volume_id)s from %(mp)s"
-msgstr "Echec de la déconnexion du volume %(volume_id)s de %(mp)s"
-
-#, python-format
-msgid "Failed to swap volume %(old_volume_id)s for %(new_volume_id)s"
-msgstr "Echec à échanger le volume %(old_volume_id)s par %(new_volume_id)s"
-
-#, python-format
-msgid "Failed to connect to volume %(volume_id)s with volume at %(mountpoint)s"
-msgstr ""
-"Echec à connecter le volume %(volume_id)s avec le volume à %(mountpoint)s"
-
-#, python-format
-msgid "allocate_port_for_instance returned %(ports)s ports"
-msgstr "allocate_port_for_instance a renvoyé les ports %(ports)s"
-
-#, python-format
-msgid "Pre live migration failed at %s"
-msgstr "Pré migration en directe a échoué a %s"
-
-msgid "An error occurred while refreshing the network cache."
-msgstr "Une erreur est survenue pendant le rafraîchissement du cache réseau."
-
-msgid "Periodic task failed to offload instance."
-msgstr "La tâche périodique a échoué à décharger l'instance."
-
-#, python-format
-msgid "Failed to generate usage audit for instance on host %s"
-msgstr ""
-"Echec de la génération de l'audit d'utilisation pour l'instance sur l'hôte %s"
-
-msgid ""
-"Periodic sync_power_state task had an error while processing an instance."
-msgstr ""
-"La tâche périodique sync_power_state a eu une erreur lors du traitement "
-"d'une instance."
-
-msgid "error during stop() in sync_power_state."
-msgstr "Erreur lors du processus stop() dans sync_power_state."
-
-#, python-format
-msgid "Instance update attempted for '%(key)s' on %(instance_uuid)s"
-msgstr "Mise à jour d'instance tentée pour '%(key)s' sur %(instance_uuid)s"
-
-#, python-format
-msgid ""
-"Migration of instance %(instance_id)s to host %(dest)s unexpectedly failed."
-msgstr ""
-"La migration de l'instance %(instance_id)s vers l'hôte %(dest)s a "
-"inexplicablement échoué."
-
-msgid "Unshelve attempted but vm_state not SHELVED or SHELVED_OFFLOADED"
-msgstr ""
-"Tentative d'arrêt de suspension mais vm_state non SHELVED ou  "
-"SHELVED_OFFLOADED"
-
-msgid "Failed to write configuration file"
-msgstr "Impossible d'écrire le fichier de configuration."
-
-#, python-format
-msgid "Error starting xvp: %s"
-msgstr "Erreur au démarrage xvp : %s"
-
-msgid "Failed to notify cells of instance destroy"
-msgstr "Impossible d'avertir les cellules de la destruction d'instance"
-
-msgid "Failed to notify cells of instance update"
-msgstr "Impossible d'avertir les cellules de la mise à jour d'instance"
-
-msgid "Failed to notify cells of bw_usage update"
-msgstr "Impossible d'avertir les cellules de la mise à jour de bw_usage"
-
-msgid "Exception while creating table."
-msgstr "Exception lors de la création de la table"
-
-msgid "Exception while seeding instance_types table"
-msgstr "Exception lors de la distribution de la table instance_types"
-
-#, python-format
-msgid ""
-"When loading the module %(module_str)s the following error occurred: %(ex)s"
-msgstr ""
-"En chargeant le module %(module_str)s l'erreur suivante est survenue : %(ex)s"
-
-#, python-format
-msgid "Failed to instantiate the download handler for %(scheme)s"
-msgstr "Échec à instancier le gestionnaire de téléchargement pour %(scheme)s"
-
-#, python-format
-msgid "Failed to download %(image_location)s to %(image_path)s"
-msgstr "Echec du téléchargement de %(image_location)s dans %(image_path)s"
-
-#, python-format
-msgid "Failed to decrypt %(image_location)s to %(image_path)s"
-msgstr "Echec du déchiffrement de %(image_location)s dans %(image_path)s"
-
-#, python-format
-msgid "Failed to untar %(image_location)s to %(image_path)s"
-msgstr "Echec de la décompression de %(image_location)s dans %(image_path)s"
-
-#, python-format
-msgid "Failed to upload %(image_location)s to %(image_path)s"
-msgstr "Echec du téléchargement de %(image_location)s dans %(image_path)s"
-
-#, python-format
-msgid ""
-"%(scheme)s is registered as a module twice. %(module_name)s is not being "
-"used."
-msgstr ""
-"%(scheme)s est aussi enregistré comme un module. %(module_name)s ne sera pas "
-"utilisé."
-
-#, python-format
-msgid "Error creating key: %s"
-msgstr "Erreur lors de la création de la clé: %s"
-
-#, python-format
-msgid "Error storing key: %s"
-msgstr "Erreur lors du stockage de la clé: %s"
-
-#, python-format
-msgid "Error copying key: %s"
-msgstr "Erreur lors de la copie de clé: %s"
-
-#, python-format
-msgid "Error getting key: %s"
-msgstr "Erreur lors de la réception de la clé: %s"
-
-#, python-format
-msgid "Error deleting key: %s"
-msgstr "Erreur lors de la suppression de la clé: %s"
-
-msgid "Failed storing info cache"
-msgstr "Echec du stockage du cache d'informations"
-
-msgid "Network driver option required, but not specified"
-msgstr "Option de pilote de réseau obligatoire, mais non spécifiée"
-
-msgid "Failed to update usages deallocating floating IP"
-msgstr ""
-"Echec de la mise à jour des messages de désallocation de l'adresse IP "
-"flottante"
-
-#, python-format
-msgid "Interface %s not found"
-msgstr "Interface %s non trouvé"
-
-#, python-format
-msgid "Error deleting conntrack entries for %s"
-msgstr "Erreur lors de la suppression des entrées de connexions pour %s"
-
-#, python-format
-msgid "killing radvd threw %s"
-msgstr "La destruction de radvd à renvoyé %s"
-
-#, python-format
-msgid "Unable to execute %(cmd)s. Exception: %(exception)s"
-msgstr "Impossible d'exécuter %(cmd)s. Exception : %(exception)s"
-
-#, python-format
-msgid "Failed removing net device: '%s'"
-msgstr "Echec lors du retrait du périphérique réseau: '%s'"
-
-msgid "Failed to update usages deallocating fixed IP"
-msgstr ""
-"Echec de la mise à jour des messages de désallocation de l'adresse IP fixe"
-
-#, python-format
-msgid "Error releasing DHCP for IP %(address)s with MAC %(mac_address)s"
-msgstr ""
-"Erreur lors de la libération DHCP pour l'IP %(address)s avec MAC "
-"%(mac_address)s"
-
-#, python-format
-msgid "Neutron error creating port on network %s"
-msgstr "Erreur Neutron en créant un port sur le network %s "
-
-#, python-format
-msgid "Failed to access port %s"
-msgstr "Echec à eccéder au port %s"
-
-#, python-format
-msgid "Unable to access floating IP %s"
-msgstr "Incapable d'accéder à l'IP flottante %s"
-
-#, python-format
-msgid "Unable to access floating IP %(fixed_ip)s for port %(port_id)s"
-msgstr ""
-"Incapable d'accéder à l'IP flottante %(fixed_ip)s pour le port %(port_id)s"
-
-#, python-format
-msgid "Unable to update host of port %s"
-msgstr "Incapable de mettre à jour l'hôte du port %s"
-
-#, python-format
-msgid "Neutron Error creating security group %s"
-msgstr "Neutron Erreur lors de la création du groupe de sécurité %s"
-
-#, python-format
-msgid "Neutron Error updating security group %s"
-msgstr "Neutron erreur de mise à jour du groupe de sécurité %s"
-
-#, python-format
-msgid "Neutron Error: %s"
-msgstr "Erreur Neutron: %s"
-
-msgid "Neutron Error getting security groups"
-msgstr "Neutron Erreur de chargement des groupes de sécurité"
-
-#, python-format
-msgid "Neutron Error getting security group %s"
-msgstr "Neutron Erreur de chargement du groupe de sécurité %s"
-
-#, python-format
-msgid "Neutron Error adding rules to security group %s"
-msgstr "Neutron Erreur lors de l'ajout des règles de sécurité au groupe %s"
-
-msgid "Neutron Error:"
-msgstr "Erreur Neutron:"
-
-#, python-format
-msgid "Neutron Error unable to delete %s"
-msgstr "Erreur Neutron impossible de supprimer %s"
-
-#, python-format
-msgid "Error setting %(attr)s"
-msgstr "Erreur du paramètre %(attr)s  "
-
-#, python-format
-msgid "Unable to instantiate unregistered object type %(objtype)s"
-msgstr "Incapable d'instancier le type d'objet non enregistrée %(objtype)s"
-
-#, python-format
-msgid "No save handler for %s"
-msgstr "Pas de gestionnaire de sauvegarde pour %s"
-
-msgid "Failed to notify cells of instance fault"
-msgstr "Impossible d'avertir les cellules de l'erreur d'instance"
-
-msgid "Failed to notify cells of instance info cache update"
-msgstr ""
-"Impossible d'avertir les cellules de la mise à jour du cache d'informations "
-"d'instance"
-
-msgid "in fixed duration looping call"
-msgstr "dans l'appel en boucle de durée fixe"
-
-msgid "in dynamic looping call"
-msgstr "dans l'appel en boucle dynamique"
-
-#, python-format
-msgid "Error during %(full_task_name)s: %(e)s"
-msgstr "Erreur pendant %(full_task_name)s : %(e)s"
-
-#, python-format
-msgid "Failed to understand rule %s"
-msgstr "Règle %s incompréhensible"
-
-#, python-format
-msgid "No handler for matches of kind %s"
-msgstr "Aucun gestionnaire pour les correspondances de type %s"
-
-msgid "Unhandled exception"
-msgstr "Exception non gérée"
-
-msgid ""
-"Failed to allocate PCI devices for instance. Unassigning devices back to "
-"pools. This should not happen, since the scheduler should have accurate "
-"information, and allocation during claims is controlled via a hold on the "
-"compute node semaphore"
-msgstr ""
-"Échec à allouer les périphériques PCI pour l'instance. Les périphériques non "
-"assignés reviennent aux pools. Ceci ne doit pas arrivé, puisque "
-"l'ordonnanceur doit disposer d'informations précises et l'allocation pendant "
-"les réclamations est contrôlé par une prise sur le sémaphore de nœud de "
-"calcul."
-
-#, python-format
-msgid "PCI device %s not found"
-msgstr "Périphérique PCI %s non trouvé"
-
-#, python-format
-msgid "Error from last host: %(last_host)s (node %(last_node)s): %(exc)s"
-msgstr "Erreur du dernier hôte : %(last_host)s (noeud %(last_node)s) : %(exc)s"
-
-msgid "Recovered model server connection!"
-msgstr "Récupération du modelle de connexion serveur terminée!"
-
-msgid "model server went away"
-msgstr "Le modèle de serveur à disparu"
-
-msgid ""
-"Unable to join. It is possible that either another node exists with the same "
-"name, or this node just restarted. We will try again in a short while to "
-"make sure."
-msgstr ""
-"Impossible de joindre. Il se peut qu'un autre noeud existe avec le même nom "
-"ou que ce noeud vienne de redémarrer. Nouvelle tentative dans quelques "
-"instants pour vérifier."
-
-#, python-format
-msgid "Exception dispatching event %(event)s: %(ex)s"
-msgstr "Exception lors de la répartition de l'événement %(event)s : %(ex)s"
-
-msgid "Compute driver option required, but not specified"
-msgstr "Option de pilote de calcul obligatoire, mais non spécifiée"
-
-msgid "Unable to load the virtualization driver"
-msgstr "Incapable de charger le pilote de virtualisation"
+"%(base)s taille virtuelle %(base_size)s supérieure à la taille du disque "
+"racine du type d'instance %(size)s"
 
 #, python-format
 msgid ""
@@ -652,74 +39,155 @@ msgstr ""
 
 #, python-format
 msgid ""
-"Failed to mount container filesystem '%(image)s' on '%(target)s': %(errors)s"
+"%(scheme)s is registered as a module twice. %(module_name)s is not being "
+"used."
 msgstr ""
-"Echec du montage du système de fichiers de conteneur '%(image)s' sur "
-"'%(target)s' : %(errors)s"
+"%(scheme)s est aussi enregistré comme un module. %(module_name)s ne sera pas "
+"utilisé."
 
 #, python-format
-msgid "NBD error - previous umount did not cleanup /var/lock/qemu-nbd-%s."
+msgid ""
+"Aggregate %(aggregate_id)s: unrecoverable state during operation on %(host)s"
 msgstr ""
-"Erreur NBD - précédent démontage n'a pas nettoyé /var/lock/qemu_nbd-%s."
+"Agrégat %(aggregate_id)s : état irrémédiable au cours d'une opération sur "
+"%(host)s"
 
-msgid "nbd module not loaded"
-msgstr "Module nbd non chargé"
-
-#, python-format
-msgid "Error writing vm console log file from serial console pipe. Error: %s"
-msgstr ""
-"Erreur lors de l'écriture du fichier journal de la console de la vm depuis "
-"la sortie de la console en série. Erreur : %s"
-
-msgid "Cannot cleanup migration files"
-msgstr "Impossible de nettoyer les fichiers de migration"
-
-#, python-format
-msgid "Creating config drive failed with error: %s"
-msgstr "La création de l'unité de configuration a échoué avec l'erreur : %s"
-
-#, python-format
-msgid "Failed to destroy instance: %s"
-msgstr "Echec de la destruction de l'instance : %s"
-
-#, python-format
-msgid "Failed to change vm state of %(instance_name)s to %(req_state)s"
-msgstr "Échec à changer l'état de la vm de  %(instance_name)s à %(req_state)s"
-
-#, python-format
-msgid "Unable to attach volume to instance %s"
-msgstr "Impossible d'attacher le volume à l'instance %s"
+msgid "An error occurred while refreshing the network cache."
+msgstr "Une erreur est survenue pendant le rafraîchissement du cache réseau."
 
 #, python-format
 msgid "Attach volume failed: %s"
 msgstr "Echec de la connexion du volume : %s"
 
 #, python-format
-msgid ""
-"Failed to clean up the parameters on node %(node)s when unprovisioning the "
-"instance %(instance)s"
-msgstr ""
-"Échec à nettoyer les paramètres sur le nœud %(node)s lors de la fourniture "
-"de l'instance %(instance)s"
+msgid "Attaching PCI devices %(dev)s to %(dom)s failed."
+msgstr "La fixation des périphériques PCI %(dev)s à %(dom)s a echoué."
 
 #, python-format
-msgid ""
-"Error preparing deploy for instance %(instance)s on baremetal node %(node)s."
-msgstr ""
-"Erreur en préparant le déploiement de l'instance %(instance)s sur un nœud "
-"baremetal %(node)s."
+msgid "Attaching network adapter failed. Exception:  %s"
+msgstr "La fixation de l'adaptateur réseau a échoué. Exception : %s"
+
+msgid "Cannot cleanup migration files"
+msgstr "Impossible de nettoyer les fichiers de migration"
 
 #, python-format
-msgid "Failed to request Ironic to provision instance %(inst)s: %(reason)s"
-msgstr ""
-"Échec de la demande Ironic pour la fourniture de l'instance  %(inst)s :  "
-"%(reason)s"
+msgid "Cannot reboot instance: %s"
+msgstr "Impossible de redémarrer l'instance: %s"
+
+#, python-format
+msgid "Caught error: %s"
+msgstr "Erreur interceptée : %s"
+
+msgid "Compute driver option required, but not specified"
+msgstr "Option de pilote de calcul obligatoire, mais non spécifiée"
+
+#, python-format
+msgid "Compute.api::inject_network_info %s"
+msgstr "Compute.api::inject_network_info %s"
+
+#, python-format
+msgid "Compute.api::lock %s"
+msgstr "Compute.api::lock %s"
+
+#, python-format
+msgid "Compute.api::pause %s"
+msgstr "Compute.api::pause %s"
+
+#, python-format
+msgid "Compute.api::resetState %s"
+msgstr "Compute.api::resetState %s"
+
+#, python-format
+msgid "Compute.api::reset_network %s"
+msgstr "Compute.api::reset_network %s"
+
+#, python-format
+msgid "Compute.api::unlock %s"
+msgstr "Compute.api::unlock %s"
+
+#, python-format
+msgid "Compute.api::unpause %s"
+msgstr "Compute.api::unpause %s"
+
+#, python-format
+msgid "Connection to libvirt failed: %s"
+msgstr "Echec de la connexion à libvirt : %s"
+
+#, python-format
+msgid "Could not bind to %(host)s:%(port)s"
+msgstr "Impossible de s'attacher à %(host)s:%(port)s"
+
+#, python-format
+msgid "Could not remove tmpdir: %s"
+msgstr "Impossible de supprimer tmpdir : %s"
+
+msgid "Couldn't communicate with any cells"
+msgstr "Impossible de communiquer avec les cellules"
+
+#, python-format
+msgid "Couldn't communicate with cell '%s'"
+msgstr "N'a pas pu communiquer avec la cellule '%s'"
+
+#, python-format
+msgid "Couldn't unmount the GlusterFS share %s"
+msgstr "Impossible de démonter le partage GlusterFS %s"
+
+#, python-format
+msgid "Couldn't unmount the NFS share %s"
+msgstr "Impossible de démonter le partage NFS %s"
+
+#, python-format
+msgid "Creating config drive failed with error: %s"
+msgstr "La création de l'unité de configuration a échoué avec l'erreur : %s"
+
+#, python-format
+msgid "Detaching network adapter failed. Exception: %s"
+msgstr "Détachement de l'adaptateur réseau a échoué. Exception : %s"
+
+msgid "Environment variable 'NETWORK_ID' must be set."
+msgstr "Variable d'environnement 'NETWORK_ID' doit être définie."
+
+#, python-format
+msgid "Environment: %s"
+msgstr "Environnement : %s"
+
+#, python-format
+msgid "Error copying key: %s"
+msgstr "Erreur lors de la copie de clé: %s"
+
+#, python-format
+msgid "Error creating key: %s"
+msgstr "Erreur lors de la création de la clé: %s"
+
+#, python-format
+msgid "Error defining a domain with XML: %s"
+msgstr "Erreur définissant un domaine avec XML : %s"
+
+#, python-format
+msgid "Error deleting conntrack entries for %s"
+msgstr "Erreur lors de la suppression des entrées de connexions pour %s"
+
+#, python-format
+msgid "Error deleting key: %s"
+msgstr "Erreur lors de la suppression de la clé: %s"
 
 #, python-format
 msgid "Error deploying instance %(instance)s on baremetal node %(node)s."
 msgstr ""
 "Erreur lors du déploiement de l'instance %(instance)s sur le noeud Baremetal "
 "%(node)s."
+
+#, python-format
+msgid "Error during %(full_task_name)s: %(e)s"
+msgstr "Erreur pendant %(full_task_name)s : %(e)s"
+
+#, python-format
+msgid "Error enabling hairpin mode with XML: %s"
+msgstr "Erreur activation mode hairpin avec XML : %s"
+
+#, python-format
+msgid "Error from last host: %(last_host)s (node %(last_node)s): %(exc)s"
+msgstr "Erreur du dernier hôte : %(last_host)s (noeud %(last_node)s) : %(exc)s"
 
 #, python-format
 msgid "Error from libvirt during destroy. Code=%(errcode)s Error=%(e)s"
@@ -738,30 +206,20 @@ msgstr ""
 "= %(e)s"
 
 #, python-format
-msgid "Failed to attach volume at mountpoint: %s"
-msgstr "Échec d'attachement du volume au point de montage: %s"
+msgid "Error getting key: %s"
+msgstr "Erreur lors de la réception de la clé: %s"
 
-msgid "attaching network adapter failed."
-msgstr "échec de connexion de l'adaptateur de réseau."
+#, python-format
+msgid "Error injecting data into image %(img_id)s (%(e)s)"
+msgstr "Erreur lors de l'injection des données dans l'image %(img_id)s (%(e)s)"
 
-msgid "detaching network adapter failed."
-msgstr "échec de déconnexion de l'adaptateur de réseau."
+#, python-format
+msgid "Error instantiating %(provider)s: %(exception)s"
+msgstr "Erreur en instanciant %(provider)s : %(exception)s"
 
-msgid "Failed to send updated snapshot status to volume service."
-msgstr ""
-"Échec à envoyer un statut de l'instantané mis à jour au service volume. "
-
-msgid ""
-"Unable to create quiesced VM snapshot, attempting again with quiescing "
-"disabled."
-msgstr ""
-"Incapable de créer un instantané d'une VM mise au repos, essayer encore avec "
-"la mise au repos désactivée."
-
-msgid "Unable to create VM snapshot, failing volume_snapshot operation."
-msgstr ""
-"Incapable de créer un instantané VM, échec durant l'opération "
-"volume_snapshot."
+#, python-format
+msgid "Error launching a defined domain with XML: %s"
+msgstr "Erreur en lancant un domaine défini avec XML : %s"
 
 msgid ""
 "Error occurred during volume_snapshot_create, sending error status to Cinder."
@@ -782,41 +240,370 @@ msgstr ""
 "'%(ex)s'"
 
 #, python-format
-msgid "Error injecting data into image %(img_id)s (%(e)s)"
-msgstr "Erreur lors de l'injection des données dans l'image %(img_id)s (%(e)s)"
-
-#, python-format
-msgid "Attaching PCI devices %(dev)s to %(dom)s failed."
-msgstr "La fixation des périphériques PCI %(dev)s à %(dom)s a echoué."
-
-#, python-format
-msgid "Error defining a domain with XML: %s"
-msgstr "Erreur définissant un domaine avec XML : %s"
-
-#, python-format
-msgid "Error launching a defined domain with XML: %s"
-msgstr "Erreur en lancant un domaine défini avec XML : %s"
-
-#, python-format
-msgid "Error enabling hairpin mode with XML: %s"
-msgstr "Erreur activation mode hairpin avec XML : %s"
-
-#, python-format
-msgid "Neutron Reported failure on event %(event)s for instance %(uuid)s"
+msgid ""
+"Error preparing deploy for instance %(instance)s on baremetal node %(node)s."
 msgstr ""
-"Echec rapporté par Neutron sur l'evenement %(event)s pour l'instance %(uuid)s"
+"Erreur en préparant le déploiement de l'instance %(instance)s sur un nœud "
+"baremetal %(node)s."
 
 #, python-format
-msgid "Live Migration failure: %s"
-msgstr "Migration Directe a échoué : %s"
+msgid "Error reading image info file %(filename)s: %(error)s"
+msgstr ""
+"Erreur lors de la lecture du fichier d'infos d'image %(filename)s : %(error)s"
+
+#, python-format
+msgid "Error releasing DHCP for IP %(address)s with MAC %(mac_address)s"
+msgstr ""
+"Erreur lors de la libération DHCP pour l'IP %(address)s avec MAC "
+"%(mac_address)s"
+
+#, python-format
+msgid "Error scheduling instances %(instance_uuids)s"
+msgstr "Erreur lors de la planification des instances %(instance_uuids)s"
+
+#, python-format
+msgid "Error setting %(attr)s"
+msgstr "Erreur du paramètre %(attr)s  "
+
+#, python-format
+msgid "Error starting xvp: %s"
+msgstr "Erreur au démarrage xvp : %s"
+
+#, python-format
+msgid "Error storing key: %s"
+msgstr "Erreur lors du stockage de la clé: %s"
+
+msgid "Error trying to Rescue Instance"
+msgstr "Erreur en essayant de Sauver l'Instance"
+
+msgid "Error trying to reschedule"
+msgstr "Erreur lors de la tentative de replanification"
+
+#, python-format
+msgid "Error while trying to clean up image %s"
+msgstr "Erreur en tentant de nettoyer l'image %s"
+
+#, python-format
+msgid "Error writing vm console log file from serial console pipe. Error: %s"
+msgstr ""
+"Erreur lors de l'écriture du fichier journal de la console de la vm depuis "
+"la sortie de la console en série. Erreur : %s"
+
+#, python-format
+msgid "Error: %s"
+msgstr "Erreur : %s"
+
+#, python-format
+msgid "Exception dispatching event %(event)s: %(ex)s"
+msgstr "Exception lors de la répartition de l'événement %(event)s : %(ex)s"
+
+#, python-format
+msgid "Exception handling resource: %s"
+msgstr "Exception lors du traitement de la ressource : %s"
+
+msgid "Exception in string format operation"
+msgstr "Exception dans le formatage de la chaîne"
+
+#, python-format
+msgid "Exception running %(name)s %(type)s-hook: %(obj)s"
+msgstr "Exception de fonctionnement %(name)s %(type)s-hook: %(obj)s"
+
+msgid "Exception while creating table."
+msgstr "Exception lors de la création de la table"
+
+msgid "Exception while seeding instance_types table"
+msgstr "Exception lors de la distribution de la table instance_types"
+
+#, python-format
+msgid "Extending virtual disk failed with error: %s"
+msgstr "Extension du disque virtuel a échoué avec l'erreur : %s"
+
+#, python-format
+msgid "Failed removing net device: '%s'"
+msgstr "Echec lors du retrait du périphérique réseau: '%s'"
+
+msgid "Failed storing info cache"
+msgstr "Echec du stockage du cache d'informations"
+
+#, python-format
+msgid "Failed to access port %s"
+msgstr "Echec à eccéder au port %s"
+
+msgid ""
+"Failed to allocate PCI devices for instance. Unassigning devices back to "
+"pools. This should not happen, since the scheduler should have accurate "
+"information, and allocation during claims is controlled via a hold on the "
+"compute node semaphore"
+msgstr ""
+"Échec à allouer les périphériques PCI pour l'instance. Les périphériques non "
+"assignés reviennent aux pools. Ceci ne doit pas arrivé, puisque "
+"l'ordonnanceur doit disposer d'informations précises et l'allocation pendant "
+"les réclamations est contrôlé par une prise sur le sémaphore de nœud de "
+"calcul."
+
+msgid "Failed to allocate network(s)"
+msgstr "Echec  à allouer réseau(x)"
+
+#, python-format
+msgid "Failed to attach %(volume_id)s at %(mountpoint)s"
+msgstr "Échec à attacher %(volume_id)s à %(mountpoint)s"
+
+#, python-format
+msgid "Failed to attach volume at mountpoint: %s"
+msgstr "Échec d'attachement du volume au point de montage: %s"
+
+#, python-format
+msgid "Failed to change vm state of %(instance_name)s to %(req_state)s"
+msgstr "Échec à changer l'état de la vm de  %(instance_name)s à %(req_state)s"
+
+msgid "Failed to check if instance shared"
+msgstr "Échec pour vérifier si l'instance est partagée"
+
+#, python-format
+msgid ""
+"Failed to clean up the parameters on node %(node)s when unprovisioning the "
+"instance %(instance)s"
+msgstr ""
+"Échec à nettoyer les paramètres sur le nœud %(node)s lors de la fourniture "
+"de l'instance %(instance)s"
 
 #, python-format
 msgid "Failed to cleanup directory %(target)s: %(e)s"
 msgstr "Echec du nettoyage du répertoire %(target)s : %(e)s"
 
+msgid "Failed to cleanup snapshot."
+msgstr "Échec dans le nettoyage de l'instantané."
+
 #, python-format
-msgid "Connection to libvirt failed: %s"
-msgstr "Echec de la connexion à libvirt : %s"
+msgid "Failed to commit reservations %s"
+msgstr "Échec de mise à jour des réservations %s"
+
+msgid "Failed to complete a deletion"
+msgstr "Echec à compléter la suppression"
+
+#, python-format
+msgid "Failed to connect to volume %(volume_id)s with volume at %(mountpoint)s"
+msgstr ""
+"Echec à connecter le volume %(volume_id)s avec le volume à %(mountpoint)s"
+
+#, python-format
+msgid ""
+"Failed to copy cached image %(source)s to %(dest)s for resize: %(error)s"
+msgstr ""
+"Échec à copier l'image en cache %(source)s à %(dest)s pour "
+"redimensionnement : %(error)s"
+
+msgid "Failed to deallocate network for instance."
+msgstr "Echec de désallocation du réseau pour l'instance."
+
+msgid "Failed to deallocate networks"
+msgstr "Echec à désallouer les réseaux"
+
+#, python-format
+msgid "Failed to decrypt %(image_location)s to %(image_path)s"
+msgstr "Echec du déchiffrement de %(image_location)s dans %(image_path)s"
+
+#, python-format
+msgid "Failed to destroy instance: %s"
+msgstr "Echec de la destruction de l'instance : %s"
+
+#, python-format
+msgid "Failed to detach volume %(volume_id)s from %(mp)s"
+msgstr "Echec de la déconnexion du volume %(volume_id)s de %(mp)s"
+
+#, python-format
+msgid "Failed to download %(image_location)s to %(image_path)s"
+msgstr "Echec du téléchargement de %(image_location)s dans %(image_path)s"
+
+msgid "Failed to fetch glance image"
+msgstr "Echec de l'extraction de l'image Glance"
+
+#, python-format
+msgid "Failed to find an SR for volume %s"
+msgstr "Échec a trouvé un SR pour le volume %s"
+
+#, python-format
+msgid "Failed to forget the SR for volume %s"
+msgstr "Échec à oublier le SR pour le volume %s"
+
+#, python-format
+msgid "Failed to generate usage audit for instance on host %s"
+msgstr ""
+"Echec de la génération de l'audit d'utilisation pour l'instance sur l'hôte %s"
+
+#, python-format
+msgid "Failed to get compute_info for %s"
+msgstr "Echec à obtenir compute_info pour %s"
+
+msgid "Failed to get default networks"
+msgstr "Échec à obtenir les réseaux par défaut"
+
+#, python-format
+msgid "Failed to get metadata for instance id: %s"
+msgstr "Echec d'obtention des métadonnées pour l'ID instance : %s"
+
+#, python-format
+msgid "Failed to get metadata for ip: %s"
+msgstr "Impossible de récupérer les méta-donnérs pour l'IP : %s"
+
+msgid "Failed to get nw_info"
+msgstr "Echec d'obtention de nw_info"
+
+#, python-format
+msgid "Failed to instantiate the download handler for %(scheme)s"
+msgstr "Échec à instancier le gestionnaire de téléchargement pour %(scheme)s"
+
+#, python-format
+msgid "Failed to load %(cfgfile)s: %(ex)s"
+msgstr "Echec de chargement %(cfgfile)s: %(ex)s"
+
+#, python-format
+msgid "Failed to load %s"
+msgstr "Echec de chargement %s"
+
+#, python-format
+msgid "Failed to load %s-api"
+msgstr "Échec de chargement api-%s"
+
+#, python-format
+msgid ""
+"Failed to mount container filesystem '%(image)s' on '%(target)s': %(errors)s"
+msgstr ""
+"Echec du montage du système de fichiers de conteneur '%(image)s' sur "
+"'%(target)s' : %(errors)s"
+
+msgid "Failed to notify cells of bw_usage update"
+msgstr "Impossible d'avertir les cellules de la mise à jour de bw_usage"
+
+msgid "Failed to notify cells of instance destroy"
+msgstr "Impossible d'avertir les cellules de la destruction d'instance"
+
+msgid "Failed to notify cells of instance fault"
+msgstr "Impossible d'avertir les cellules de l'erreur d'instance"
+
+msgid "Failed to notify cells of instance info cache update"
+msgstr ""
+"Impossible d'avertir les cellules de la mise à jour du cache d'informations "
+"d'instance"
+
+msgid "Failed to notify cells of instance update"
+msgstr "Impossible d'avertir les cellules de la mise à jour d'instance"
+
+#, python-format
+msgid "Failed to remove %(base_file)s, error was %(error)s"
+msgstr "Echec du retrait de %(base_file)s, erreur %(error)s"
+
+#, python-format
+msgid "Failed to request Ironic to provision instance %(inst)s: %(reason)s"
+msgstr ""
+"Échec de la demande Ironic pour la fourniture de l'instance  %(inst)s :  "
+"%(reason)s"
+
+#, python-format
+msgid ""
+"Failed to retrieve encryption metadata for volume %(volume_id)s: "
+"%(exception)s"
+msgstr ""
+"Échec à récupérer le chiffrement des métadonnées pour le volume "
+"%(volume_id)s : %(exception)s"
+
+msgid "Failed to retrieve ephemeral encryption key"
+msgstr "Echec à récupérer la clé de chiffrement éphémere"
+
+msgid "Failed to revert crashed migration"
+msgstr "Echec de rétablissement de la migration interrompue"
+
+#, python-format
+msgid "Failed to roll back reservations %s"
+msgstr "Échec à restaurer les réservations %s"
+
+msgid "Failed to send state update notification"
+msgstr "Echec de l'envoi de la notification de mise à jour d'état"
+
+msgid "Failed to send updated snapshot status to volume service."
+msgstr ""
+"Échec à envoyer un statut de l'instantané mis à jour au service volume. "
+
+msgid "Failed to set instance name using multi_instance_display_name_template."
+msgstr ""
+"Echec de définition du nom d'instance à l'aide du modèle "
+"multi_instance_display_name_template."
+
+#, python-format
+msgid "Failed to start %(name)s on %(host)s:%(port)s with SSL support"
+msgstr ""
+"Impossible de démarrer %(name)s sur %(host)s:%(port)s avec le support SSL"
+
+msgid "Failed to start instance"
+msgstr "Echec dans le démarrage de l'instance"
+
+msgid "Failed to stop instance"
+msgstr "Echec dans l'arrêt de l'instance"
+
+#, python-format
+msgid "Failed to swap volume %(old_volume_id)s for %(new_volume_id)s"
+msgstr "Echec à échanger le volume %(old_volume_id)s par %(new_volume_id)s"
+
+#, python-format
+msgid "Failed to understand rule %s"
+msgstr "Règle %s incompréhensible"
+
+#, python-format
+msgid "Failed to untar %(image_location)s to %(image_path)s"
+msgstr "Echec de la décompression de %(image_location)s dans %(image_path)s"
+
+msgid "Failed to update usages deallocating fixed IP"
+msgstr ""
+"Echec de la mise à jour des messages de désallocation de l'adresse IP fixe"
+
+msgid "Failed to update usages deallocating floating IP"
+msgstr ""
+"Echec de la mise à jour des messages de désallocation de l'adresse IP "
+"flottante"
+
+msgid "Failed to update usages deallocating network."
+msgstr "Echec de la mise à jour des messages de désallocation du réseau"
+
+msgid "Failed to update usages deallocating security group"
+msgstr ""
+"Echec de la mise à jour des messages de désallocation du groupe de sécurité"
+
+msgid "Failed to update usages deallocating server group"
+msgstr ""
+"Échec dans la mise à jour des fonctions des désallocations des groupes de "
+"serveur"
+
+#, python-format
+msgid "Failed to upload %(image_location)s to %(image_path)s"
+msgstr "Echec du téléchargement de %(image_location)s dans %(image_path)s"
+
+msgid "Failed to write configuration file"
+msgstr "Impossible d'écrire le fichier de configuration."
+
+msgid "Failed to write inbound.csr"
+msgstr "Impossible d'écrire inbound.csr"
+
+msgid "Failed while plugging vif"
+msgstr "Échec lors de la connexion int. virt."
+
+msgid "Failed while unplugging vif"
+msgstr "Echec lors du débranchement d'int. virt."
+
+msgid "Failure prepping block device"
+msgstr "Echec dans la préparation des périphériques par bloc"
+
+msgid "Failure while cleaning up attached VDIs"
+msgstr "Echec lors du nettoyage des VDI connectées"
+
+#, python-format
+msgid "Fatal Exception running %(name)s %(type)s-hook: %(obj)s"
+msgstr "Exception fatale de fonctionnement %(name)s %(type)s-hook: %(obj)s"
+
+msgid "Guest does not have a console available"
+msgstr "Aucune console n'est disponible pour l'invité"
+
+msgid "Host is member of a pool, but DB says otherwise"
+msgstr "L'hôte est membre d'un pool, mais la BD dit autre chose"
 
 #, python-format
 msgid ""
@@ -827,78 +614,75 @@ msgstr ""
 "la prise en compte."
 
 #, python-format
-msgid ""
-"%(base)s virtual size %(base_size)s larger than flavor root disk size "
-"%(size)s"
+msgid "Image size %(size)d exceeded flavor allowed size %(allowed_size)d"
 msgstr ""
-"%(base)s taille virtuelle %(base_size)s supérieure à la taille du disque "
-"racine du type d'instance %(size)s"
-
-msgid "Failed to retrieve ephemeral encryption key"
-msgstr "Echec à récupérer la clé de chiffrement éphémere"
-
-#, python-format
-msgid "Error reading image info file %(filename)s: %(error)s"
-msgstr ""
-"Erreur lors de la lecture du fichier d'infos d'image %(filename)s : %(error)s"
-
-#, python-format
-msgid "image %(id)s at (%(base_file)s): image verification failed"
-msgstr "image %(id)s à (%(base_file)s) : échec de la vérification d'image"
-
-#, python-format
-msgid "Failed to remove %(base_file)s, error was %(error)s"
-msgstr "Echec du retrait de %(base_file)s, erreur %(error)s"
-
-#, python-format
-msgid "ignoring unrecognized volume_clear='%s' value"
-msgstr "valeur méconnue volume_clear = '%s' ignorée"
-
-#, python-format
-msgid "error opening rbd image %s"
-msgstr "erreur en ouvrant image rbd %s"
-
-msgid "Failed while plugging vif"
-msgstr "Échec lors de la connexion int. virt."
-
-msgid "Failed while unplugging vif"
-msgstr "Echec lors du débranchement d'int. virt."
-
-#, python-format
-msgid "Unknown content in connection_info/access_mode: %s"
-msgstr "Contenu inconnu dans connection_info/access_mode : %s"
-
-#, python-format
-msgid "Couldn't unmount the NFS share %s"
-msgstr "Impossible de démonter le partage NFS %s"
-
-#, python-format
-msgid "Couldn't unmount the GlusterFS share %s"
-msgstr "Impossible de démonter le partage GlusterFS %s"
-
-#, python-format
-msgid "Extending virtual disk failed with error: %s"
-msgstr "Extension du disque virtuel a échoué avec l'erreur : %s"
-
-#, python-format
-msgid "Attaching network adapter failed. Exception:  %s"
-msgstr "La fixation de l'adaptateur réseau a échoué. Exception : %s"
-
-#, python-format
-msgid "Detaching network adapter failed. Exception: %s"
-msgstr "Détachement de l'adaptateur réseau a échoué. Exception : %s"
+"La taille de l'image %(size)d dépasse la taille allouée %(allowed_size)d "
+"pour le type d'instance "
 
 #, python-format
 msgid ""
-"Failed to copy cached image %(source)s to %(dest)s for resize: %(error)s"
+"Instance compute service state on %s expected to be down, but it was up."
 msgstr ""
-"Échec à copier l'image en cache %(source)s à %(dest)s pour "
-"redimensionnement : %(error)s"
+"L'instance du service compute positionnée sur %s était supposée être en "
+"panne, mais était active."
+
+msgid "Instance failed block device setup"
+msgstr "Echec de configuration de l'unité par bloc par l'instance"
 
 #, python-format
-msgid "TIMEOUT: The call to %(method)s timed out. args=%(args)r"
+msgid "Instance failed network setup after %(attempts)d attempt(s)"
 msgstr ""
-"TIMEOUT : L'appel à %(method)s a dépassé le délai d'attente. args=%(args)r"
+"L'instance a échoué dans l'installation du réseau après %(attempts)d "
+"tentative(s)"
+
+msgid "Instance failed to spawn"
+msgstr "Echec de génération de l'instance"
+
+#, python-format
+msgid "Instance type %s not found for deletion"
+msgstr "Type d'instance %s non trouvé pour suppression"
+
+#, python-format
+msgid "Instance update attempted for '%(key)s' on %(instance_uuid)s"
+msgstr "Mise à jour d'instance tentée pour '%(key)s' sur %(instance_uuid)s"
+
+#, python-format
+msgid "Interface %s not found"
+msgstr "Interface %s non trouvé"
+
+#, python-format
+msgid "Invalid server_string: %s"
+msgstr "server_string non valide : %s"
+
+#, python-format
+msgid "Keystone failure: %s"
+msgstr "Défaillance de Keystone : %s"
+
+#, python-format
+msgid "Live Migration failure: %s"
+msgstr "Migration Directe a échoué : %s"
+
+msgid "Migrate Receive failed"
+msgstr "Echec de réception de la migration"
+
+msgid "Migrate Send failed"
+msgstr "Echec d'envoi de la migration"
+
+#, python-format
+msgid "Migration %s is not found during confirmation"
+msgstr "Migration %s n'est pas trouvée durant la confirmation"
+
+#, python-format
+msgid ""
+"Migration of instance %(instance_id)s to host %(dest)s unexpectedly failed."
+msgstr ""
+"La migration de l'instance %(instance_id)s vers l'hôte %(dest)s a "
+"inexplicablement échoué."
+
+#, python-format
+msgid "NBD error - previous umount did not cleanup /var/lock/qemu-nbd-%s."
+msgstr ""
+"Erreur NBD - précédent démontage n'a pas nettoyé /var/lock/qemu_nbd-%s."
 
 #, python-format
 msgid ""
@@ -908,44 +692,80 @@ msgstr ""
 "NOT IMPLEMENTED : L'appel à %(method)s n'est pas pris en charge par l'agent. "
 "args=%(args)r"
 
-#, python-format
-msgid "The call to %(method)s returned an error: %(e)s. args=%(args)r"
-msgstr "L'appel à %(method)s a renvoyé une erreur : %(e)s. args=%(args)r"
+msgid "Network driver option required, but not specified"
+msgstr "Option de pilote de réseau obligatoire, mais non spécifiée"
 
 #, python-format
-msgid ""
-"The agent call to %(method)s returned an invalid response: %(ret)r. args="
-"%(args)r"
+msgid "Neutron Error adding rules to security group %s"
+msgstr "Neutron Erreur lors de l'ajout des règles de sécurité au groupe %s"
+
+#, python-format
+msgid "Neutron Error creating security group %s"
+msgstr "Neutron Erreur lors de la création du groupe de sécurité %s"
+
+#, python-format
+msgid "Neutron Error getting security group %s"
+msgstr "Neutron Erreur de chargement du groupe de sécurité %s"
+
+msgid "Neutron Error getting security groups"
+msgstr "Neutron Erreur de chargement des groupes de sécurité"
+
+#, python-format
+msgid "Neutron Error unable to delete %s"
+msgstr "Erreur Neutron impossible de supprimer %s"
+
+#, python-format
+msgid "Neutron Error updating security group %s"
+msgstr "Neutron erreur de mise à jour du groupe de sécurité %s"
+
+msgid "Neutron Error:"
+msgstr "Erreur Neutron:"
+
+#, python-format
+msgid "Neutron Error: %s"
+msgstr "Erreur Neutron: %s"
+
+#, python-format
+msgid "Neutron Reported failure on event %(event)s for instance %(uuid)s"
 msgstr ""
-"L'agent appelant %(method)s a retourné une réponse invalide : %(ret)r.args="
-"%(args)r"
+"Echec rapporté par Neutron sur l'evenement %(event)s pour l'instance %(uuid)s"
 
 #, python-format
+msgid "Neutron error creating port on network %s"
+msgstr "Erreur Neutron en créant un port sur le network %s "
+
+#, python-format
+msgid "No db access allowed in nova-compute: %s"
+msgstr "Pas d'accès db permis dans nova-compute : %s"
+
+#, python-format
+msgid "No db access allowed in nova-dhcpbridge: %s"
+msgstr "Pas d'accès db autorisé dans nova-dhcpbridge : %s"
+
+#, python-format
+msgid "No db access allowed in nova-network: %s"
+msgstr "Pas d'accès db autorisé dans nova-network : %s"
+
+#, python-format
+msgid "No handler for matches of kind %s"
+msgstr "Aucun gestionnaire pour les correspondances de type %s"
+
+#, python-format
+msgid "No save handler for %s"
+msgstr "Pas de gestionnaire de sauvegarde pour %s"
+
+#, python-format
+msgid "PCI device %s not found"
+msgstr "Périphérique PCI %s non trouvé"
+
 msgid ""
-"The agent call to %(method)s returned an an error: %(ret)r. args=%(args)r"
+"Periodic sync_power_state task had an error while processing an instance."
 msgstr ""
-"L'agent appelant %(method)s a retourné une erreur : %(ret)r.args=%(args)r "
+"La tâche périodique sync_power_state a eu une erreur lors du traitement "
+"d'une instance."
 
-msgid "Failure while cleaning up attached VDIs"
-msgstr "Echec lors du nettoyage des VDI connectées"
-
-#, python-format
-msgid "Unable to migrate VM %(vm_ref)s from %(host)s"
-msgstr "Impossible de migrer la VM %(vm_ref)s depuis %(host)s"
-
-msgid "Unable to get updated status"
-msgstr "Impossible d'obtenir le statut mis à jour"
-
-#, python-format
-msgid "The call to %(method)s returned an error: %(e)s."
-msgstr "L'appel à %(method)s a renvoyé une erreur : %(e)s."
-
-#, python-format
-msgid ""
-"Aggregate %(aggregate_id)s: unrecoverable state during operation on %(host)s"
-msgstr ""
-"Agrégat %(aggregate_id)s : état irrémédiable au cours d'une opération sur "
-"%(host)s"
+msgid "Periodic task failed to offload instance."
+msgstr "La tâche périodique a échoué à décharger l'instance."
 
 #, python-format
 msgid "Pool-Join failed: %s"
@@ -956,25 +776,185 @@ msgid "Pool-eject failed: %s"
 msgstr "Echec Pool-eject: %s"
 
 #, python-format
-msgid "Unable to set up pool: %s."
-msgstr "Incapable de positionner le pool  : %s."
-
-#, python-format
 msgid "Pool-set_name_label failed: %s"
 msgstr "Pool-set_name_label a échoué : %s"
 
 #, python-format
-msgid "Image size %(size)d exceeded flavor allowed size %(allowed_size)d"
-msgstr ""
-"La taille de l'image %(size)d dépasse la taille allouée %(allowed_size)d "
-"pour le type d'instance "
+msgid "Pre live migration failed at %s"
+msgstr "Pré migration en directe a échoué a %s"
 
-msgid "Failed to fetch glance image"
-msgstr "Echec de l'extraction de l'image Glance"
+msgid "Recovered model server connection!"
+msgstr "Récupération du modelle de connexion serveur terminée!"
+
+#, python-format
+msgid "Returning exception %s to caller"
+msgstr "Renvoi de l'exception %s à l'appelant"
+
+msgid "Service error occurred during cleanup_host"
+msgstr "Une erreur de service est survenu durant cleanup_host"
+
+msgid "Setting instance vm_state to ERROR"
+msgstr "Instance vm_state positionnée à ERROR"
+
+msgid ""
+"Something wrong happened when trying to delete snapshot from shelved "
+"instance."
+msgstr ""
+"Un problème est survenu en tentant de supprimer l'instantané d'un instance "
+"en attente."
+
+#, python-format
+msgid "TIMEOUT: The call to %(method)s timed out. args=%(args)r"
+msgstr ""
+"TIMEOUT : L'appel à %(method)s a dépassé le délai d'attente. args=%(args)r"
+
+#, python-format
+msgid "Temporary directory is invalid: %s"
+msgstr "Le répertoire temporaire n'est pas valide : %s"
+
+#, python-format
+msgid ""
+"The agent call to %(method)s returned an an error: %(ret)r. args=%(args)r"
+msgstr ""
+"L'agent appelant %(method)s a retourné une erreur : %(ret)r.args=%(args)r "
+
+#, python-format
+msgid ""
+"The agent call to %(method)s returned an invalid response: %(ret)r. args="
+"%(args)r"
+msgstr ""
+"L'agent appelant %(method)s a retourné une réponse invalide : %(ret)r.args="
+"%(args)r"
+
+#, python-format
+msgid "The call to %(method)s returned an error: %(e)s."
+msgstr "L'appel à %(method)s a renvoyé une erreur : %(e)s."
+
+#, python-format
+msgid "The call to %(method)s returned an error: %(e)s. args=%(args)r"
+msgstr "L'appel à %(method)s a renvoyé une erreur : %(e)s. args=%(args)r"
+
+#, python-format
+msgid "Unable to access floating IP %(fixed_ip)s for port %(port_id)s"
+msgstr ""
+"Incapable d'accéder à l'IP flottante %(fixed_ip)s pour le port %(port_id)s"
+
+#, python-format
+msgid "Unable to access floating IP %s"
+msgstr "Incapable d'accéder à l'IP flottante %s"
+
+#, python-format
+msgid "Unable to attach volume to instance %s"
+msgstr "Impossible d'attacher le volume à l'instance %s"
+
+msgid "Unable to create VM snapshot, failing volume_snapshot operation."
+msgstr ""
+"Incapable de créer un instantané VM, échec durant l'opération "
+"volume_snapshot."
+
+msgid ""
+"Unable to create quiesced VM snapshot, attempting again with quiescing "
+"disabled."
+msgstr ""
+"Incapable de créer un instantané d'une VM mise au repos, essayer encore avec "
+"la mise au repos désactivée."
+
+#, python-format
+msgid "Unable to execute %(cmd)s. Exception: %(exception)s"
+msgstr "Impossible d'exécuter %(cmd)s. Exception : %(exception)s"
+
+#, python-format
+msgid "Unable to find address %r"
+msgstr "Adresse %r introuvable"
+
+msgid "Unable to get updated status"
+msgstr "Impossible d'obtenir le statut mis à jour"
+
+#, python-format
+msgid "Unable to instantiate unregistered object type %(objtype)s"
+msgstr "Incapable d'instancier le type d'objet non enregistrée %(objtype)s"
+
+msgid ""
+"Unable to join. It is possible that either another node exists with the same "
+"name, or this node just restarted. We will try again in a short while to "
+"make sure."
+msgstr ""
+"Impossible de joindre. Il se peut qu'un autre noeud existe avec le même nom "
+"ou que ce noeud vienne de redémarrer. Nouvelle tentative dans quelques "
+"instants pour vérifier."
+
+msgid "Unable to load the virtualization driver"
+msgstr "Incapable de charger le pilote de virtualisation"
+
+#, python-format
+msgid "Unable to migrate VM %(vm_ref)s from %(host)s"
+msgstr "Impossible de migrer la VM %(vm_ref)s depuis %(host)s"
+
+#, python-format
+msgid ""
+"Unable to obtain RRD XML for VM %(vm_uuid)s with server details: %(server)s."
+msgstr ""
+"Impossible d'obtenir l'élément RRD XML pour la machine virtuelle %(vm_uuid)s "
+"avec les détails de serveur : %(server)s."
 
 #, python-format
 msgid "Unable to parse rrd of %s"
 msgstr "Impossible d’analyser %s de rrd"
+
+#, python-format
+msgid "Unable to set up pool: %s."
+msgstr "Incapable de positionner le pool  : %s."
+
+#, python-format
+msgid "Unable to update host of port %s"
+msgstr "Incapable de mettre à jour l'hôte du port %s"
+
+#, python-format
+msgid "Unexpected %(ex_name)s raised: %(ex_str)s"
+msgstr "%(ex_name)s inattendu levé : %(ex_str)s"
+
+msgid "Unexpected build failure, not rescheduling build."
+msgstr "Échec inexpliqué de la génération, pas de construction re-planifiée."
+
+msgid "Unexpected exception in API method"
+msgstr "Exception inattendue dans la méthode API"
+
+msgid "Unhandled exception"
+msgstr "Exception non gérée"
+
+#, python-format
+msgid "Unknown cell '%(cell_name)s' when trying to update capabilities"
+msgstr ""
+"Cellule inconnue '%(cell_name)s' lors de la tentative de mise à jour des "
+"capacités"
+
+#, python-format
+msgid "Unknown cell '%(cell_name)s' when trying to update capacities"
+msgstr ""
+"Cellule inconnue '%(cell_name)s' lors de la tentative de mise à jour des "
+"capacités"
+
+#, python-format
+msgid "Unknown content in connection_info/access_mode: %s"
+msgstr "Contenu inconnu dans connection_info/access_mode : %s"
+
+msgid "Unshelve attempted but vm_state not SHELVED or SHELVED_OFFLOADED"
+msgstr ""
+"Tentative d'arrêt de suspension mais vm_state non SHELVED ou  "
+"SHELVED_OFFLOADED"
+
+msgid "Vifs plug failed"
+msgstr "Échec Vifs plug"
+
+#, python-format
+msgid "Volume %s is associated with the instance but no SR was found for it"
+msgstr "Volume %s est associé avec une instance mais pas de SR trouvé "
+
+#, python-format
+msgid ""
+"When loading the module %(module_str)s the following error occurred: %(ex)s"
+msgstr ""
+"En chargeant le module %(module_str)s l'erreur suivante est survenue : %(ex)s"
 
 msgid ""
 "XenAPI is unable to find a Storage Repository to install guest instances on. "
@@ -987,44 +967,58 @@ msgstr ""
 "configurer l'indicateur 'sr_matching_filter'."
 
 #, python-format
+msgid "allocate_port_for_instance returned %(ports)s ports"
+msgstr "allocate_port_for_instance a renvoyé les ports %(ports)s"
+
+msgid "attaching network adapter failed."
+msgstr "échec de connexion de l'adaptateur de réseau."
+
+#, python-format
+msgid "compute.api::resume %s"
+msgstr "compute.api::resume %s"
+
+#, python-format
+msgid "compute.api::suspend %s"
+msgstr "compute.api::suspend %s"
+
+msgid "detaching network adapter failed."
+msgstr "échec de déconnexion de l'adaptateur de réseau."
+
+msgid "error during stop() in sync_power_state."
+msgstr "Erreur lors du processus stop() dans sync_power_state."
+
+#, python-format
+msgid "error opening rbd image %s"
+msgstr "erreur en ouvrant image rbd %s"
+
+#, python-format
+msgid "ignoring unrecognized volume_clear='%s' value"
+msgstr "valeur méconnue volume_clear = '%s' ignorée"
+
+#, python-format
+msgid "image %(id)s at (%(base_file)s): image verification failed"
+msgstr "image %(id)s à (%(base_file)s) : échec de la vérification d'image"
+
+msgid "in dynamic looping call"
+msgstr "dans l'appel en boucle dynamique"
+
+msgid "in fixed duration looping call"
+msgstr "dans l'appel en boucle de durée fixe"
+
+#, python-format
+msgid "killing radvd threw %s"
+msgstr "La destruction de radvd à renvoyé %s"
+
+msgid "model server went away"
+msgstr "Le modèle de serveur à disparu"
+
+msgid "nbd module not loaded"
+msgstr "Module nbd non chargé"
+
+#, python-format
 msgid ""
-"Unable to obtain RRD XML for VM %(vm_uuid)s with server details: %(server)s."
+"status is UNKNOWN from vm_state=%(vm_state)s task_state=%(task_state)s. Bad "
+"upgrade or db corrupted?"
 msgstr ""
-"Impossible d'obtenir l'élément RRD XML pour la machine virtuelle %(vm_uuid)s "
-"avec les détails de serveur : %(server)s."
-
-#, python-format
-msgid "Failed to find an SR for volume %s"
-msgstr "Échec a trouvé un SR pour le volume %s"
-
-#, python-format
-msgid "Volume %s is associated with the instance but no SR was found for it"
-msgstr "Volume %s est associé avec une instance mais pas de SR trouvé "
-
-#, python-format
-msgid "Failed to forget the SR for volume %s"
-msgstr "Échec à oublier le SR pour le volume %s"
-
-msgid "Guest does not have a console available"
-msgstr "Aucune console n'est disponible pour l'invité"
-
-msgid "Migrate Receive failed"
-msgstr "Echec de réception de la migration"
-
-msgid "Migrate Send failed"
-msgstr "Echec d'envoi de la migration"
-
-msgid "Host is member of a pool, but DB says otherwise"
-msgstr "L'hôte est membre d'un pool, mais la BD dit autre chose"
-
-#, python-format
-msgid "Error instantiating %(provider)s: %(exception)s"
-msgstr "Erreur en instanciant %(provider)s : %(exception)s"
-
-#, python-format
-msgid ""
-"Failed to retrieve encryption metadata for volume %(volume_id)s: "
-"%(exception)s"
-msgstr ""
-"Échec à récupérer le chiffrement des métadonnées pour le volume "
-"%(volume_id)s : %(exception)s"
+"statut INCONNU pour vm_state = %(vm_state)s task_state = %(task_state)s. "
+"Mauvaise mise à niveau ou base de données endommagée ?"
