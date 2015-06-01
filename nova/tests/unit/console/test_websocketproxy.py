@@ -46,6 +46,16 @@ class NovaProxyRequestHandlerBaseTestCase(test.NoDBTestCase):
         else:
             return
 
+    def _fake_getheader_ipv6(self, header):
+        if header == 'cookie':
+            return 'token="123-456-789"'
+        elif header == 'Origin':
+            return 'https://[2001:db8::1]:6080'
+        elif header == 'Host':
+            return '[2001:db8::1]:6080'
+        else:
+            return
+
     def _fake_getheader_bad_token(self, header):
         if header == 'cookie':
             return 'token="XXX"'
@@ -107,6 +117,24 @@ class NovaProxyRequestHandlerBaseTestCase(test.NoDBTestCase):
         self.wh.socket.return_value = '<socket>'
         self.wh.path = "http://127.0.0.1/?token=123-456-789"
         self.wh.headers.getheader = self._fake_getheader
+
+        self.wh.new_websocket_client()
+
+        check_token.assert_called_with(mock.ANY, token="123-456-789")
+        self.wh.socket.assert_called_with('node1', 10000, connect=True)
+        self.wh.do_proxy.assert_called_with('<socket>')
+
+    @mock.patch('nova.consoleauth.rpcapi.ConsoleAuthAPI.check_token')
+    def test_new_websocket_client_ipv6_url(self, check_token):
+        check_token.return_value = {
+            'host': 'node1',
+            'port': '10000',
+            'console_type': 'novnc',
+            'access_url': 'https://[2001:db8::1]:6080'
+        }
+        self.wh.socket.return_value = '<socket>'
+        self.wh.path = "http://[2001:db8::1]/?token=123-456-789"
+        self.wh.headers.getheader = self._fake_getheader_ipv6
 
         self.wh.new_websocket_client()
 
