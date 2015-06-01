@@ -46,6 +46,7 @@ from nova.objects import base as nova_object
 from nova import quota
 from nova.scheduler import client as scheduler_client
 from nova.scheduler import utils as scheduler_utils
+from nova import utils
 
 LOG = logging.getLogger(__name__)
 
@@ -535,9 +536,8 @@ class ComputeTaskManager(base.Base):
 
     def _cold_migrate(self, context, instance, flavor, filter_properties,
                       reservations, clean_shutdown):
-        image_ref = instance.image_ref
-        image = compute_utils.get_image_metadata(
-            context, self.image_api, image_ref, instance)
+        image = utils.get_image_from_system_metadata(
+            instance.system_metadata)
 
         request_spec = scheduler_utils.build_request_spec(
             context, image, [instance], instance_type=flavor)

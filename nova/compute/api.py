@@ -2167,9 +2167,8 @@ class API(base.Base):
             'user_id': str(context.user_id),
             'image_type': image_type,
         }
-        image_ref = instance.image_ref
-        sent_meta = compute_utils.get_image_metadata(
-            context, self.image_api, image_ref, instance)
+        sent_meta = utils.get_image_from_system_metadata(
+            instance.system_metadata)
 
         # Delete properties that are non-inheritable
         image_props = sent_meta.get("properties", {})

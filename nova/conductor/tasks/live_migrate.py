@@ -15,7 +15,6 @@ from oslo_log import log as logging
 
 from nova.compute import power_state
 from nova.compute import rpcapi as compute_rpcapi
-from nova.compute import utils as compute_utils
 from nova import exception
 from nova.i18n import _
 from nova import image
@@ -23,6 +22,7 @@ from nova import objects
 from nova.scheduler import client as scheduler_client
 from nova.scheduler import utils as scheduler_utils
 from nova import servicegroup
+from nova import utils
 
 LOG = logging.getLogger(__name__)
 
@@ -147,12 +147,8 @@ class LiveMigrationTask(object):
     def _find_destination(self):
         # TODO(johngarbutt) this retry loop should be shared
         attempted_hosts = [self.source]
-        image = None
-        if self.instance.image_ref:
-            image = compute_utils.get_image_metadata(self.context,
-                                                     self.image_api,
-                                                     self.instance.image_ref,
-                                                     self.instance)
+        image = utils.get_image_from_system_metadata(
+            self.instance.system_metadata)
         request_spec = scheduler_utils.build_request_spec(self.context, image,
                                                           [self.instance])
 

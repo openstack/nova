@@ -13,13 +13,13 @@
 from mox3 import mox
 
 from nova.compute import power_state
-from nova.compute import utils as compute_utils
 from nova.conductor.tasks import live_migrate
 from nova import exception
 from nova import objects
 from nova.scheduler import utils as scheduler_utils
 from nova import test
 from nova.tests.unit import fake_instance
+from nova import utils
 
 
 class LiveMigrationTaskTestCase(test.NoDBTestCase):
@@ -37,6 +37,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                 image_ref=self.instance_image)
         self.instance = objects.Instance._from_db_object(
                 self.context, objects.Instance(), db_instance)
+        self.instance.system_metadata = {'image_hw_disk_bus': 'scsi'}
         self.destination = "destination"
         self.block_migration = "bm"
         self.disk_over_commit = "doc"
@@ -228,7 +229,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                           self.task._check_requested_destination)
 
     def test_find_destination_works(self):
-        self.mox.StubOutWithMock(compute_utils, 'get_image_metadata')
+        self.mox.StubOutWithMock(utils, 'get_image_from_system_metadata')
         self.mox.StubOutWithMock(scheduler_utils, 'build_request_spec')
         self.mox.StubOutWithMock(scheduler_utils, 'setup_instance_group')
         self.mox.StubOutWithMock(self.task.scheduler_client,
@@ -237,9 +238,8 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                 '_check_compatible_with_source_hypervisor')
         self.mox.StubOutWithMock(self.task, '_call_livem_checks_on_host')
 
-        compute_utils.get_image_metadata(self.context,
-                self.task.image_api, self.instance_image,
-                self.instance).AndReturn("image")
+        utils.get_image_from_system_metadata(
+            self.instance.system_metadata).AndReturn("image")
         scheduler_utils.build_request_spec(self.context, mox.IgnoreArg(),
                                            mox.IgnoreArg()).AndReturn({})
         scheduler_utils.setup_instance_group(
@@ -264,8 +264,10 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                 '_check_compatible_with_source_hypervisor')
         self.mox.StubOutWithMock(self.task, '_call_livem_checks_on_host')
 
-        scheduler_utils.build_request_spec(self.context, None,
-                                           mox.IgnoreArg()).AndReturn({})
+        scheduler_utils.build_request_spec(
+            self.context,
+            {'properties': {'hw_disk_bus': 'scsi'}},
+            mox.IgnoreArg()).AndReturn({})
         scheduler_utils.setup_instance_group(
             self.context, {}, {'ignore_hosts': [self.instance_host]})
         self.task.scheduler_client.select_destinations(self.context,
@@ -278,7 +280,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         self.assertEqual("host1", self.task._find_destination())
 
     def _test_find_destination_retry_hypervisor_raises(self, error):
-        self.mox.StubOutWithMock(compute_utils, 'get_image_metadata')
+        self.mox.StubOutWithMock(utils, 'get_image_from_system_metadata')
         self.mox.StubOutWithMock(scheduler_utils, 'build_request_spec')
         self.mox.StubOutWithMock(scheduler_utils, 'setup_instance_group')
         self.mox.StubOutWithMock(self.task.scheduler_client,
@@ -287,9 +289,8 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                 '_check_compatible_with_source_hypervisor')
         self.mox.StubOutWithMock(self.task, '_call_livem_checks_on_host')
 
-        compute_utils.get_image_metadata(self.context,
-                self.task.image_api, self.instance_image,
-                self.instance).AndReturn("image")
+        utils.get_image_from_system_metadata(
+            self.instance.system_metadata).AndReturn("image")
         scheduler_utils.build_request_spec(self.context, mox.IgnoreArg(),
                                            mox.IgnoreArg()).AndReturn({})
         scheduler_utils.setup_instance_group(
@@ -321,7 +322,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
 
     def test_find_destination_retry_with_invalid_livem_checks(self):
         self.flags(migrate_max_retries=1)
-        self.mox.StubOutWithMock(compute_utils, 'get_image_metadata')
+        self.mox.StubOutWithMock(utils, 'get_image_from_system_metadata')
         self.mox.StubOutWithMock(scheduler_utils, 'build_request_spec')
         self.mox.StubOutWithMock(scheduler_utils, 'setup_instance_group')
         self.mox.StubOutWithMock(self.task.scheduler_client,
@@ -330,9 +331,8 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                 '_check_compatible_with_source_hypervisor')
         self.mox.StubOutWithMock(self.task, '_call_livem_checks_on_host')
 
-        compute_utils.get_image_metadata(self.context,
-                self.task.image_api, self.instance_image,
-                self.instance).AndReturn("image")
+        utils.get_image_from_system_metadata(
+            self.instance.system_metadata).AndReturn("image")
         scheduler_utils.build_request_spec(self.context, mox.IgnoreArg(),
                                            mox.IgnoreArg()).AndReturn({})
         scheduler_utils.setup_instance_group(
@@ -357,7 +357,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
 
     def test_find_destination_retry_exceeds_max(self):
         self.flags(migrate_max_retries=0)
-        self.mox.StubOutWithMock(compute_utils, 'get_image_metadata')
+        self.mox.StubOutWithMock(utils, 'get_image_from_system_metadata')
         self.mox.StubOutWithMock(scheduler_utils, 'build_request_spec')
         self.mox.StubOutWithMock(scheduler_utils, 'setup_instance_group')
         self.mox.StubOutWithMock(self.task.scheduler_client,
@@ -365,9 +365,8 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(self.task,
                 '_check_compatible_with_source_hypervisor')
 
-        compute_utils.get_image_metadata(self.context,
-                self.task.image_api, self.instance_image,
-                self.instance).AndReturn("image")
+        utils.get_image_from_system_metadata(
+            self.instance.system_metadata).AndReturn("image")
         scheduler_utils.build_request_spec(self.context, mox.IgnoreArg(),
                                            mox.IgnoreArg()).AndReturn({})
         scheduler_utils.setup_instance_group(
@@ -382,14 +381,13 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         self.assertRaises(exception.NoValidHost, self.task._find_destination)
 
     def test_find_destination_when_runs_out_of_hosts(self):
-        self.mox.StubOutWithMock(compute_utils, 'get_image_metadata')
+        self.mox.StubOutWithMock(utils, 'get_image_from_system_metadata')
         self.mox.StubOutWithMock(scheduler_utils, 'build_request_spec')
         self.mox.StubOutWithMock(scheduler_utils, 'setup_instance_group')
         self.mox.StubOutWithMock(self.task.scheduler_client,
                                  'select_destinations')
-        compute_utils.get_image_metadata(self.context,
-                self.task.image_api, self.instance_image,
-                self.instance).AndReturn("image")
+        utils.get_image_from_system_metadata(
+            self.instance.system_metadata).AndReturn("image")
         scheduler_utils.build_request_spec(self.context, mox.IgnoreArg(),
                                            mox.IgnoreArg()).AndReturn({})
         scheduler_utils.setup_instance_group(

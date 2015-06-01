@@ -3120,9 +3120,7 @@ class ComputeManager(manager.Manager):
                         instance=instance)
             rescue_image_ref = instance.image_ref
 
-        image_meta = compute_utils.get_image_metadata(context, self.image_api,
-                                                      rescue_image_ref,
-                                                      instance)
+        image_meta = self.image_api.get(context, rescue_image_ref)
         # NOTE(belliott) bug #1227350 - xenapi needs the actual image id
         image_meta['id'] = rescue_image_ref
         return image_meta
@@ -4677,9 +4675,8 @@ class ComputeManager(manager.Manager):
                           'ports'), {'ports': len(network_info)})
             raise exception.InterfaceAttachFailed(
                     instance_uuid=instance.uuid)
-        image_ref = instance.get('image_ref')
-        image_meta = compute_utils.get_image_metadata(
-            context, self.image_api, image_ref, instance)
+        image_meta = utils.get_image_from_system_metadata(
+            instance.system_metadata)
 
         try:
             self.driver.attach_interface(instance, image_meta, network_info[0])
@@ -6204,9 +6201,8 @@ class ComputeManager(manager.Manager):
     def quiesce_instance(self, context, instance):
         """Quiesce an instance on this host."""
         context = context.elevated()
-        image_ref = instance.image_ref
-        image_meta = compute_utils.get_image_metadata(
-            context, self.image_api, image_ref, instance)
+        image_meta = utils.get_image_from_system_metadata(
+            instance.system_metadata)
         self.driver.quiesce(context, instance, image_meta)
 
     def _wait_for_snapshots_completion(self, context, mapping):
@@ -6240,7 +6236,6 @@ class ComputeManager(manager.Manager):
                 LOG.exception(_LE("Exception while waiting completion of "
                                   "volume snapshots: %s"),
                               error, instance=instance)
-        image_ref = instance.image_ref
-        image_meta = compute_utils.get_image_metadata(
-            context, self.image_api, image_ref, instance)
+        image_meta = utils.get_image_from_system_metadata(
+            instance.system_metadata)
         self.driver.unquiesce(context, instance, image_meta)

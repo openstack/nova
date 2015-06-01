@@ -60,6 +60,7 @@ from nova.console import type as ctype
 from nova import context
 from nova import db
 from nova import exception
+from nova.image import api as image_api
 from nova.image import glance
 from nova.network import api as network_api
 from nova.network import model as network_model
@@ -2186,11 +2187,10 @@ class ComputeTestCase(BaseTestCase):
 
         self.assertEqual('some_random_state', inst_obj.vm_state)
 
-    @mock.patch.object(nova.compute.utils, "get_image_metadata")
+    @mock.patch.object(image_api.API, "get")
     @mock.patch.object(nova.virt.fake.FakeDriver, "rescue")
     def test_rescue_with_image_specified(self, mock_rescue,
-                                         mock_get_image_metadata):
-
+                                         mock_image_get):
         image_ref = "image-ref"
         rescue_image_meta = {}
         params = {"task_state": task_states.RESCUING}
@@ -2200,24 +2200,21 @@ class ComputeTestCase(BaseTestCase):
         mock_context = mock.Mock()
         mock_context.elevated.return_value = ctxt
 
-        mock_get_image_metadata.return_value = rescue_image_meta
+        mock_image_get.return_value = rescue_image_meta
 
         self.compute.rescue_instance(mock_context, instance=instance,
                     rescue_password="password", rescue_image_ref=image_ref,
                     clean_shutdown=True)
 
-        mock_get_image_metadata.assert_called_with(ctxt,
-                                                   self.compute.image_api,
-                                                   image_ref, instance)
+        mock_image_get.assert_called_with(ctxt, image_ref)
         mock_rescue.assert_called_with(ctxt, instance, [],
                                        rescue_image_meta, 'password')
         self.compute.terminate_instance(ctxt, instance, [], [])
 
-    @mock.patch.object(nova.compute.utils, "get_image_metadata")
+    @mock.patch.object(image_api.API, "get")
     @mock.patch.object(nova.virt.fake.FakeDriver, "rescue")
     def test_rescue_with_base_image_when_image_not_specified(self,
-            mock_rescue, mock_get_image_metadata):
-
+            mock_rescue, mock_image_get):
         image_ref = "image-ref"
         system_meta = {"image_base_image_ref": image_ref}
         rescue_image_meta = {}
@@ -2229,16 +2226,15 @@ class ComputeTestCase(BaseTestCase):
         mock_context = mock.Mock()
         mock_context.elevated.return_value = ctxt
 
-        mock_get_image_metadata.return_value = rescue_image_meta
+        mock_image_get.return_value = rescue_image_meta
 
         self.compute.rescue_instance(mock_context, instance=instance,
                                      rescue_password="password",
                                      rescue_image_ref=None,
                                      clean_shutdown=True)
 
-        mock_get_image_metadata.assert_called_with(ctxt,
-                                                   self.compute.image_api,
-                                                   image_ref, instance)
+        mock_image_get.assert_called_with(ctxt, image_ref)
+
         mock_rescue.assert_called_with(ctxt, instance, [],
                                        rescue_image_meta, 'password')
         self.compute.terminate_instance(self.context, instance, [], [])

@@ -1288,7 +1288,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 raise exception.InterfaceDetachFailed(
                         instance_uuid=instance.uuid)
 
-    def _create_snapshot_metadata(self, base, instance, img_fmt, snp_name):
+    def _create_snapshot_metadata(self, image_meta, instance,
+                                  img_fmt, snp_name):
         metadata = {'is_public': False,
                     'status': 'active',
                     'name': snp_name,
@@ -1304,12 +1305,13 @@ class LibvirtDriver(driver.ComputeDriver):
             metadata['properties']['os_type'] = instance.os_type
 
         # NOTE(vish): glance forces ami disk format to be ami
-        if base.get('disk_format') == 'ami':
+        if image_meta.get('disk_format') == 'ami':
             metadata['disk_format'] = 'ami'
         else:
             metadata['disk_format'] = img_fmt
 
-        metadata['container_format'] = base.get('container_format', 'bare')
+        metadata['container_format'] = image_meta.get(
+            'container_format', 'bare')
 
         return metadata
 
@@ -1328,10 +1330,8 @@ class LibvirtDriver(driver.ComputeDriver):
         except exception.InstanceNotFound:
             raise exception.InstanceNotRunning(instance_id=instance.uuid)
 
-        base_image_ref = instance.image_ref
-
-        base = compute_utils.get_image_metadata(
-            context, self._image_api, base_image_ref, instance)
+        image_meta = utils.get_image_from_system_metadata(
+            instance.system_metadata)
 
         snapshot = self._image_api.get(context, image_id)
 
@@ -1344,7 +1344,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if image_format == 'lvm' or image_format == 'rbd':
             image_format = 'raw'
 
-        metadata = self._create_snapshot_metadata(base,
+        metadata = self._create_snapshot_metadata(image_meta,
                                                   instance,
                                                   image_format,
                                                   snapshot['name'])
@@ -1418,7 +1418,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     # NOTE(xqueralt): libvirt needs o+x in the temp directory
                     os.chmod(tmpdir, 0o701)
                     self._live_snapshot(context, instance, virt_dom, disk_path,
-                                        out_path, image_format, base)
+                                        out_path, image_format, image_meta)
                 else:
                     snapshot_backend.snapshot_extract(out_path, image_format)
             finally:
@@ -2138,17 +2138,6 @@ class LibvirtDriver(driver.ComputeDriver):
         # Convert the system metadata to image metadata
         image_meta = utils.get_image_from_system_metadata(
             instance.system_metadata)
-        # NOTE(stpierre): In certain cases -- e.g., when booting a
-        #                 guest to restore its state after restarting
-        #                 Nova compute -- the context is not
-        #                 populated, which causes this (and
-        #                 _create_images_and_backing below) to error.
-        if not image_meta and context.auth_token is not None:
-            image_ref = instance.get('image_ref')
-            image_meta = compute_utils.get_image_metadata(context,
-                                                          self._image_api,
-                                                          image_ref,
-                                                          instance)
 
         instance_dir = libvirt_utils.get_instance_path(instance)
         fileutils.ensure_tree(instance_dir)
@@ -2326,8 +2315,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def resume(self, context, instance, network_info, block_device_info=None):
         """resume the specified instance."""
-        image_meta = compute_utils.get_image_metadata(context,
-                self._image_api, instance.image_ref, instance)
+        image_meta = utils.get_image_from_system_metadata(
+            instance.system_metadata)
 
         disk_info = blockinfo.get_disk_info(
                 CONF.libvirt.virt_type, instance, image_meta,
@@ -3043,12 +3032,6 @@ class LibvirtDriver(driver.ComputeDriver):
                       {'dev': pci_devs, 'dom': dom.ID()})
             raise
 
-    def _prepare_args_for_get_config(self, context, instance):
-        image_ref = instance.image_ref
-        image_meta = compute_utils.get_image_metadata(
-                            context, self._image_api, image_ref, instance)
-        return instance.flavor, image_meta
-
     @staticmethod
     def _has_sriov_port(network_info):
         for vif in network_info:
@@ -3067,14 +3050,14 @@ class LibvirtDriver(driver.ComputeDriver):
             return
 
         if self._has_sriov_port(network_info):
-            flavor, image_meta = self._prepare_args_for_get_config(context,
-                                                                   instance)
+            image_meta = utils.get_image_from_system_metadata(
+                instance.system_metadata)
             for vif in network_info:
                 if vif['vnic_type'] == network_model.VNIC_TYPE_DIRECT:
                     cfg = self.vif_driver.get_config(instance,
                                                      vif,
                                                      image_meta,
-                                                     flavor,
+                                                     instance.flavor,
                                                      CONF.libvirt.virt_type)
                     LOG.debug('Attaching SR-IOV port %(port)s to %(dom)s',
                           {'port': vif, 'dom': dom.ID()})
@@ -3096,14 +3079,14 @@ class LibvirtDriver(driver.ComputeDriver):
                 raise exception.PciDeviceDetachFailed(reason=reason,
                                                       dev=network_info)
 
-            flavor, image_meta = self._prepare_args_for_get_config(context,
-                                                                   instance)
+            image_meta = utils.get_image_from_system_metadata(
+                instance.system_metadata)
             for vif in network_info:
                 if vif['vnic_type'] == network_model.VNIC_TYPE_DIRECT:
                     cfg = self.vif_driver.get_config(instance,
                                                      vif,
                                                      image_meta,
-                                                     flavor,
+                                                     instance.flavor,
                                                      CONF.libvirt.virt_type)
                     dom.detachDeviceFlags(cfg.to_xml(),
                                           libvirt.VIR_DOMAIN_AFFECT_LIVE)
@@ -6575,11 +6558,8 @@ class LibvirtDriver(driver.ComputeDriver):
             self._cleanup_failed_migration(inst_base)
             utils.execute('mv', inst_base_resize, inst_base)
 
-        image_ref = instance.get('image_ref')
-        image_meta = compute_utils.get_image_metadata(context,
-                                                      self._image_api,
-                                                      image_ref,
-                                                      instance)
+        image_meta = utils.get_image_from_system_metadata(
+            instance.system_metadata)
 
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance,
