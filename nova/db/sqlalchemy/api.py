@@ -5977,13 +5977,14 @@ def archive_deleted_rows(context, max_rows=None):
     return rows_archived
 
 
-def _augment_flavor_to_migrate(flavor_to_migrate, db_flavor):
+def _augment_flavor_to_migrate(flavor_to_migrate, full_flavor):
     """Make sure that extra_specs on the flavor to migrate is updated."""
     if not flavor_to_migrate.obj_attr_is_set('extra_specs'):
         flavor_to_migrate.extra_specs = {}
-    for key in db_flavor['extra_specs']:
+    for key in full_flavor['extra_specs']:
         if key not in flavor_to_migrate.extra_specs:
-            flavor_to_migrate.extra_specs[key] = db_flavor['extra_specs'][key]
+            flavor_to_migrate.extra_specs[key] = \
+                    full_flavor.extra_specs[key]
 
 
 def _augment_flavors_to_migrate(instance, flavor_cache):
@@ -5993,15 +5994,38 @@ def _augment_flavors_to_migrate(instance, flavor_cache):
     :param flavor_cache:  Dict to persist flavors we look up from the DB
     """
 
+    # NOTE(danms): Avoid circular import
+    from nova import objects
+
+    deleted_ctx = instance._context.elevated(read_deleted='yes')
+
     for flavorprop in ['flavor', 'old_flavor', 'new_flavor']:
         flavor = getattr(instance, flavorprop)
         if flavor is None:
             continue
         flavorid = flavor.flavorid
         if flavorid not in flavor_cache:
-            flavor_cache[flavorid] = flavor_get_by_flavor_id(
-                instance._context, flavorid, 'yes')
+            flavor_cache[flavorid] = objects.Flavor.get_by_flavor_id(
+                deleted_ctx, flavorid)
         _augment_flavor_to_migrate(flavor, flavor_cache[flavorid])
+
+
+def _load_missing_flavor(instance, flavor_cache):
+    # NOTE(danms): Avoid circular import
+    from nova import objects
+
+    deleted_ctx = instance._context.elevated(read_deleted='yes')
+
+    flavor_cache_by_id = {flavor.id: flavor
+                          for flavor in flavor_cache.values()}
+    if instance.instance_type_id in flavor_cache_by_id:
+        instance.flavor = flavor_cache_by_id[instance.instance_type_id]
+    else:
+        instance.flavor = objects.Flavor.get_by_id(deleted_ctx,
+                                                   instance.instance_type_id)
+        flavor_cache[instance.flavor.flavorid] = instance.flavor
+    instance.old_flavor = None
+    instance.new_flavor = None
 
 
 @require_admin_context
@@ -6038,7 +6062,22 @@ def migrate_flavor_data(context, max_count, flavor_cache, force=False):
             if instance.vm_state in [vm_states.RESCUED, vm_states.RESIZED]:
                 continue
 
-        _augment_flavors_to_migrate(instance, flavor_cache)
+        # NOTE(danms): If we have a really old instance with no flavor
+        # information at all, flavor will not have been set during load.
+        # If that's the case, look up the flavor by id (which implies that
+        # old_ and new_flavor are None). No need to augment with extra_specs
+        # since we're doing the lookup from scratch.
+        if not instance.obj_attr_is_set('flavor'):
+            try:
+                _load_missing_flavor(instance, flavor_cache)
+            except exception.FlavorNotFound:
+                LOG.error(_LE('Unable to lookup flavor for legacy instance; '
+                              'migration is not possible without manual '
+                              'intervention'),
+                          instance=instance)
+                continue
+        else:
+            _augment_flavors_to_migrate(instance, flavor_cache)
         if instance.obj_what_changed():
             if db_instance.get('extra') is None:
                 _instance_extra_create(context,
