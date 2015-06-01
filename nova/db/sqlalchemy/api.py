@@ -6046,8 +6046,15 @@ def _augment_flavors_to_migrate(instance, flavor_cache):
             continue
         flavorid = flavor.flavorid
         if flavorid not in flavor_cache:
-            flavor_cache[flavorid] = objects.Flavor.get_by_flavor_id(
-                deleted_ctx, flavorid)
+            try:
+                flavor_cache[flavorid] = objects.Flavor.get_by_flavor_id(
+                    deleted_ctx, flavorid)
+            except exception.FlavorNotFound:
+                LOG.warn(_LW('Flavor %(flavorid)s not found for instance '
+                             'during migration; extra_specs will not be '
+                             'available'),
+                         {'flavorid': flavorid}, instance=instance)
+                continue
         _augment_flavor_to_migrate(flavor, flavor_cache[flavorid])
 
 
