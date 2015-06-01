@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-05-02 06:18+0000\n"
-"PO-Revision-Date: 2015-05-02 01:00+0000\n"
+"POT-Creation-Date: 2015-06-01 06:23+0000\n"
+"PO-Revision-Date: 2015-05-06 14:14+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: Chinese (Taiwan) (http://www.transifex.com/projects/p/nova/"
 "language/zh_TW/)\n"
@@ -20,265 +20,53 @@ msgstr ""
 "Plural-Forms: nplurals=1; plural=0;\n"
 
 #, python-format
-msgid "Starting %(topic)s node (version %(version)s)"
-msgstr "正在啟動 %(topic)s 節點（%(version)s 版）"
+msgid "%(action_str)s instance"
+msgstr "%(action_str)s 實例"
+
+#, python-format
+msgid "%(id)s (%(base_file)s): generating checksum"
+msgstr "%(id)s (%(base_file)s)：正在產生總和檢查"
 
 #, python-format
 msgid "%(name)s listening on %(host)s:%(port)s"
 msgstr "%(name)s 正在 %(host)s:%(port)s 上接聽"
-
-msgid "Stopping WSGI server."
-msgstr "正在停止 WSGI 伺服器。"
-
-msgid "WSGI server has stopped."
-msgstr "WSGI 伺服器已停止。"
-
-#, python-format
-msgid ""
-"Unauthorized request for controller=%(controller)s and action=%(action)s"
-msgstr "對於控制器 = %(controller)s 及動作 = %(action)s 的要求未獲授權"
-
-#, python-format
-msgid "Create snapshot of volume %s"
-msgstr "建立磁區 %s 的 Snapshot"
-
-#, python-format
-msgid "Create key pair %s"
-msgstr "建立金鑰組 %s"
-
-#, python-format
-msgid "Import key %s"
-msgstr "匯入金鑰 %s"
-
-#, python-format
-msgid "Delete key pair %s"
-msgstr "刪除金鑰組 %s"
-
-#, python-format
-msgid "Get console output for instance %s"
-msgstr "取得實例 %s 的主控台輸出"
-
-#, python-format
-msgid "Create volume from snapshot %s"
-msgstr "從 Snapshot %s 建立磁區"
-
-#, python-format
-msgid "Create volume of %s GB"
-msgstr "建立 %s GB 的磁區"
-
-#, python-format
-msgid "Attach volume %(volume_id)s to instance %(instance_id)s at %(device)s"
-msgstr "將磁區 %(volume_id)s 連接至 %(device)s 處的實例 %(instance_id)s"
-
-#, python-format
-msgid "Detach volume %s"
-msgstr "分離磁區 %s"
-
-msgid "Allocate address"
-msgstr "配置位址"
-
-#, python-format
-msgid "Release address %s"
-msgstr "釋放位址 %s"
-
-#, python-format
-msgid "Associate address %(public_ip)s to instance %(instance_id)s"
-msgstr "使位址 %(public_ip)s 與實例 %(instance_id)s 產生關聯"
-
-#, python-format
-msgid "Disassociate address %s"
-msgstr "解除與位址 %s 的關聯"
-
-#, python-format
-msgid "Reboot instance %r"
-msgstr "重新啟動實例 %r"
-
-#, python-format
-msgid "De-registering image %s"
-msgstr "正在取消登錄映像檔 %s"
-
-#, python-format
-msgid "Registered image %(image_location)s with id %(image_id)s"
-msgstr "已登錄 ID 為 %(image_id)s 的映像檔 %(image_location)s"
-
-#, python-format
-msgid "Updating image %s publicity"
-msgstr "正在更新映像檔 %s 宣傳"
-
-msgid "Timestamp is invalid."
-msgstr "時間戳記無效。"
 
 #, python-format
 msgid "%(url)s returned with HTTP %(status)d"
 msgstr "%(url)s 傳回了 HTTP %(status)d"
 
 #, python-format
-msgid "Fault thrown: %s"
-msgstr "已擲出錯誤：%s"
+msgid "Active base files: %s"
+msgstr "作用中的基本檔案：%s"
 
 #, python-format
-msgid "HTTP exception thrown: %s"
-msgstr "已擲出 HTTP 異常狀況：%s"
+msgid "Adding security group %(security_group_id)s to port %(port_id)s"
+msgstr "正在將安全群組 %(security_group_id)s 新增至埠 %(port_id)s"
+
+msgid "Allocate address"
+msgstr "配置位址"
 
 #, python-format
-msgid "Delete snapshot with id: %s"
-msgstr "刪除 ID 為 %s 的 Snapshot"
+msgid "Associate address %(public_ip)s to instance %(instance_id)s"
+msgstr "使位址 %(public_ip)s 與實例 %(instance_id)s 產生關聯"
 
 msgid "Attach interface"
 msgstr "連接介面"
 
 #, python-format
-msgid "Detach interface %s"
-msgstr "分離介面 %s"
-
-#, python-format
-msgid "Putting host %(host_name)s in maintenance mode %(mode)s."
-msgstr "正在將主機 %(host_name)s 置於維護模式 %(mode)s。"
-
-#, python-format
-msgid "Enabling host %s."
-msgstr "正在啟用主機 %s。"
-
-#, python-format
-msgid "Disabling host %s."
-msgstr "正在停用主機 %s。"
-
-#, python-format
-msgid "vol=%s"
-msgstr "磁區 = %s"
-
-#, python-format
-msgid "Delete volume with id: %s"
-msgstr "刪除 ID 為 %s 的磁區"
+msgid "Attach volume %(volume_id)s to instance %(instance_id)s at %(device)s"
+msgstr "將磁區 %(volume_id)s 連接至 %(device)s 處的實例 %(instance_id)s"
 
 #, python-format
 msgid "Attach volume %(volume_id)s to instance %(server_id)s at %(device)s"
 msgstr "將磁區 %(volume_id)s 連接至 %(device)s 處的實例 %(server_id)s"
 
 #, python-format
-msgid "Create snapshot from volume %s"
-msgstr "從磁區 %s 建立 Snapshot"
-
-#, python-format
-msgid ""
-"Forcing a sync of instances, project_id=%(projid_str)s, updated_since="
-"%(since_str)s"
-msgstr ""
-"正在強制同步實例，project_id = %(projid_str)s，updated_since = %(since_str)s"
-
-#, python-format
-msgid ""
-"No cells available when scheduling.  Will retry in %(sleep_time)s second(s)"
-msgstr "排程時沒有可用的 Cell。將在 %(sleep_time)s 秒鐘後重試"
-
-msgid "instance termination disabled"
-msgstr "實例終止作業已停用"
-
-#, python-format
-msgid "Create Security Group %s"
-msgstr "建立安全群組 %s"
-
-#, python-format
-msgid "Delete security group %s"
-msgstr "刪除安全群組 %s"
-
-msgid "Claim successful"
-msgstr "要求成功"
-
-#, python-format
-msgid ""
-"Deleting instance as its host (%(instance_host)s) is not equal to our host "
-"(%(our_host)s)."
-msgstr ""
-"正在刪除實例，因為它的主機 (%(instance_host)s) 不同於我們的主機 "
-"(%(our_host)s)。"
-
-msgid "Instance found in migrating state during startup. Resetting task_state"
-msgstr "啟動期間發現實例處於移轉中狀態。正在重設 task_state"
-
-msgid "Rebooting instance after nova-compute restart."
-msgstr "在重新啟動 nova-compute 之後重新啟動實例。"
-
-msgid "Starting instance..."
-msgstr "正在啟動實例..."
-
-#, python-format
-msgid "%(action_str)s instance"
-msgstr "%(action_str)s 實例"
-
-msgid "Rebuilding instance"
-msgstr "正在重建實例"
-
-msgid "disk on shared storage, recreating using existing disk"
-msgstr "磁碟位於共用儲存體上，正在使用現有磁碟來重建"
-
-#, python-format
-msgid "bringing vm to original state: '%s'"
-msgstr "正在使 VM 進入原始狀態：'%s'"
-
-#, python-format
-msgid "Detaching from volume api: %s"
-msgstr "正在從磁區 API 分離：%s"
-
-msgid "Rebooting instance"
-msgstr "正在重新啟動實例"
-
-msgid "instance snapshotting"
-msgstr "正在給實例建立 Snapshot"
-
-msgid "Root password set"
-msgstr "已設定 Root 使用者密碼"
-
-msgid "Rescuing"
-msgstr "正在救援"
-
-msgid "Unrescuing"
-msgstr "正在取消救援"
-
-msgid "Migrating"
-msgstr "正在轉移"
-
-msgid "Pausing"
-msgstr "正在暫停"
-
-msgid "Unpausing"
-msgstr "正在取消暫停"
-
-msgid "Retrieving diagnostics"
-msgstr "正在擷取診斷程式"
-
-msgid "Resuming"
-msgstr "正在回復"
-
-msgid "Get console output"
-msgstr "取得主控台輸出"
-
-#, python-format
 msgid "Attaching volume %(volume_id)s to %(mountpoint)s"
 msgstr "正在將磁區 %(volume_id)s 連接至 %(mountpoint)s"
 
-#, python-format
-msgid "Detach volume %(volume_id)s from mountpoint %(mp)s"
-msgstr "將磁區 %(volume_id)s 從裝載點 %(mp)s 分離"
-
-msgid "_post_live_migration() is started.."
-msgstr "_post_live_migration() 已啟動。"
-
-msgid ""
-"You may see the error \"libvirt: QEMU error: Domain not found: no domain "
-"with matching name.\" This error can be safely ignored."
-msgstr ""
-"您可能會看到錯誤「libVirt：QEMU 錯誤：找不到網域：沒有名稱相符的網域。」此錯"
-"誤可以安全地忽略。"
-
-msgid "Post operation of migration started"
-msgstr "後置移轉作業已啟動"
-
-#, python-format
-msgid ""
-"Found %(migration_count)d unconfirmed migrations older than "
-"%(confirm_window)d seconds"
-msgstr "發現 %(migration_count)d 個 %(confirm_window)d 秒鐘前的未確認移轉"
+msgid "Attempted to unfilter instance which is not filtered"
+msgstr "已嘗試取消過濾未過濾的實例"
 
 #, python-format
 msgid ""
@@ -286,25 +74,40 @@ msgid ""
 "%(instance_uuid)s"
 msgstr "自動確認實例 %(instance_uuid)s 的移轉 %(migration_id)s"
 
-#, python-format
-msgid ""
-"Running instance usage audit for host %(host)s from %(begin_time)s to "
-"%(end_time)s. %(number_instances)s instances."
-msgstr ""
-"正在對主機 %(host)s 執行實例使用審核（從 %(begin_time)s 到 "
-"%(end_time)s）。%(number_instances)s 個實例。"
+msgid "Automatically hard rebooting"
+msgstr "自動強迫重新啟動"
 
-msgid "Updating bandwidth usage cache"
-msgstr "正在更新頻寬使用快取"
+msgid "Beginning cold snapshot process"
+msgstr "正在開始冷 Snapshot 程序"
+
+msgid "Beginning live snapshot process"
+msgstr "正在開始即時 Snapshot 程序"
 
 #, python-format
-msgid ""
-"During the sync_power process the instance has moved from host %(src)s to "
-"host %(dst)s"
-msgstr "在執行 sync_power 程序期間，實例已從主機 %(src)s 移至主機 %(dst)s"
+msgid "Booting with volume %(volume_id)s at %(mountpoint)s"
+msgstr "正在使用 %(mountpoint)s 處的磁區 %(volume_id)s 來開機"
 
-msgid "Reclaiming deleted instance"
-msgstr "正在收回已刪除的實例"
+msgid "Called setup_basic_filtering in nwfilter"
+msgstr "已呼叫 nwfilter 中的 setup_basic_filtering"
+
+#, python-format
+msgid "Caught %s, exiting"
+msgstr "已捕捉到 %s，正在結束"
+
+#, python-format
+msgid "Caught %s, stopping children"
+msgstr "已捕捉到 %s，正在停止子項"
+
+#, python-format
+msgid "Child %(pid)d killed by signal %(sig)d"
+msgstr "信號 %(sig)d 結束了子項 %(pid)d"
+
+#, python-format
+msgid "Child %(pid)s exited with status %(code)d"
+msgstr "子項 %(pid)s 已結束，狀態為 %(code)d"
+
+msgid "Claim successful"
+msgstr "要求成功"
 
 #, python-format
 msgid "Compute_service record created for %(host)s:%(node)s"
@@ -315,151 +118,8 @@ msgid "Compute_service record updated for %(host)s:%(node)s"
 msgstr "已給 %(host)s:%(node)s 更新 Compute_service 記錄"
 
 #, python-format
-msgid "Updating from migration %s"
-msgstr "正在從移轉 %s 更新"
-
-#, python-format
-msgid "re-assign floating IP %(address)s from instance %(instance_id)s"
-msgstr "從實例 %(instance_id)s 重新指派浮動 IP %(address)s"
-
-#, python-format
-msgid "Loading network driver '%s'"
-msgstr "正在載入網路驅動程式 '%s'"
-
-#, python-format
-msgid "Adding security group %(security_group_id)s to port %(port_id)s"
-msgstr "正在將安全群組 %(security_group_id)s 新增至埠 %(port_id)s"
-
-#, python-format
-msgid "Skipping periodic task %(task)s because its interval is negative"
-msgstr "正在跳過定期作業 %(task)s，因為其間隔為負數"
-
-#, python-format
-msgid "Skipping periodic task %(task)s because it is disabled"
-msgstr "正在跳過定期作業 %(task)s，因為它已停用"
-
-#, python-format
-msgid "Caught %s, exiting"
-msgstr "已捕捉到 %s，正在結束"
-
-msgid "Parent process has died unexpectedly, exiting"
-msgstr "母程序已非預期地當掉，正在結束"
-
-msgid "Forking too fast, sleeping"
-msgstr "分岔太快，正在休眠"
-
-#, python-format
-msgid "Started child %d"
-msgstr "已開始子行程 %d"
-
-#, python-format
-msgid "Starting %d workers"
-msgstr "正在啟動 %d 個工作程式"
-
-#, python-format
-msgid "Child %(pid)d killed by signal %(sig)d"
-msgstr "信號 %(sig)d 結束了子項 %(pid)d"
-
-#, python-format
-msgid "Child %(pid)s exited with status %(code)d"
-msgstr "子項 %(pid)s 已結束，狀態為 %(code)d"
-
-#, python-format
-msgid "Caught %s, stopping children"
-msgstr "已捕捉到 %s，正在停止子項"
-
-#, python-format
-msgid "Waiting on %d children to exit"
-msgstr "正在等待 %d 個子項結束"
-
-#, python-format
-msgid "Removing dead compute node %(host)s:%(node)s from scheduler"
-msgstr "正在將已停用的計算節點 %(host)s:%(node)s 從排程器中移除"
-
-#, python-format
-msgid "Booting with volume %(volume_id)s at %(mountpoint)s"
-msgstr "正在使用 %(mountpoint)s 處的磁區 %(volume_id)s 來開機"
-
-#, python-format
-msgid "Loading compute driver '%s'"
-msgstr "正在載入計算驅動程式 '%s'"
-
-msgid "Attempted to unfilter instance which is not filtered"
-msgstr "已嘗試取消過濾未過濾的實例"
-
-msgid "Device allocation failed. Will retry in 2 seconds."
-msgstr "裝置配置失敗。將在 2 秒鐘後重試。"
-
-#, python-format
-msgid "Loop mount error: %s"
-msgstr "迴圈裝載錯誤：%s"
-
-#, python-format
-msgid "NBD mount error: %s"
-msgstr "NBD 裝載錯誤：%s"
-
-msgid "The ISCSI initiator name can't be found. Choosing the default one"
-msgstr "找不到 iSCSI 起始器名稱。正在選擇預設名稱"
-
-msgid "Spawning new instance"
-msgstr "正在大量產生新實例"
-
-#, python-format
-msgid "Creating config drive at %(path)s"
-msgstr "正在 %(path)s 處建立配置磁碟機"
-
-msgid "During wait destroy, instance disappeared."
-msgstr "在等待毀損期間，實例消失。"
-
-msgid "Instance destroyed successfully."
-msgstr "已順利毀損實例。"
-
-msgid "Instance may be started again."
-msgstr "可重新啟動實例。"
-
-msgid "Going to destroy instance again."
-msgstr "將再次毀損實例。"
-
-msgid "Beginning live snapshot process"
-msgstr "正在開始即時 Snapshot 程序"
-
-msgid "Beginning cold snapshot process"
-msgstr "正在開始冷 Snapshot 程序"
-
-msgid "Snapshot extracted, beginning image upload"
-msgstr "已擷取 Snapshot，正在開始上傳映像檔"
-
-msgid "Snapshot image upload complete"
-msgstr "已完成 Snapshot 映像檔上傳"
-
-msgid "Instance soft rebooted successfully."
-msgstr "已順利正常重新啟動實例。"
-
-msgid "Instance shutdown successfully."
-msgstr "已順利關閉實例。"
-
-msgid "Instance may have been rebooted during soft reboot, so return now."
-msgstr "實例可能已在正常重新啟動期間重新啟動，因此現在返回。"
-
-msgid "Instance rebooted successfully."
-msgstr "已順利重新啟動實例。"
-
-msgid "Instance spawned successfully."
-msgstr "已順利大量產生實例。"
-
-#, python-format
-msgid "data: %(data)r, fpath: %(fpath)r"
-msgstr "資料：%(data)r，fpath：%(fpath)r"
-
-#, python-format
-msgid "Truncated console log returned, %d bytes ignored"
-msgstr "傳回了截斷的主控台日誌，已忽略 %d 個位元組"
-
-msgid "Creating image"
-msgstr "正在建立映像檔"
-
-msgid "Using config drive"
-msgstr "正在使用配置磁碟機"
+msgid "Corrupt base files: %s"
+msgstr "已毀損的基本檔案：%s"
 
 #, python-format
 msgid ""
@@ -467,75 +127,167 @@ msgid ""
 "device"
 msgstr "在 libVirt 中找不到實例 %s 的網域。無法取得裝置的區塊統計資料"
 
-msgid "Instance running successfully."
-msgstr "實例正在順利執行中。"
+#, python-format
+msgid "Create Security Group %s"
+msgstr "建立安全群組 %s"
 
-msgid "Called setup_basic_filtering in nwfilter"
-msgstr "已呼叫 nwfilter 中的 setup_basic_filtering"
+#, python-format
+msgid "Create key pair %s"
+msgstr "建立金鑰組 %s"
+
+#, python-format
+msgid "Create snapshot from volume %s"
+msgstr "從磁區 %s 建立 Snapshot"
+
+#, python-format
+msgid "Create snapshot of volume %s"
+msgstr "建立磁區 %s 的 Snapshot"
+
+#, python-format
+msgid "Create volume from snapshot %s"
+msgstr "從 Snapshot %s 建立磁區"
+
+#, python-format
+msgid "Create volume of %s GB"
+msgstr "建立 %s GB 的磁區"
+
+#, python-format
+msgid "Creating config drive at %(path)s"
+msgstr "正在 %(path)s 處建立配置磁碟機"
+
+msgid "Creating image"
+msgstr "正在建立映像檔"
+
+#, python-format
+msgid "De-registering image %s"
+msgstr "正在取消登錄映像檔 %s"
+
+#, python-format
+msgid "Delete key pair %s"
+msgstr "刪除金鑰組 %s"
+
+#, python-format
+msgid "Delete security group %s"
+msgstr "刪除安全群組 %s"
+
+#, python-format
+msgid "Delete snapshot with id: %s"
+msgstr "刪除 ID 為 %s 的 Snapshot"
+
+#, python-format
+msgid "Delete volume with id: %s"
+msgstr "刪除 ID 為 %s 的磁區"
+
+#, python-format
+msgid ""
+"Deleting instance as its host (%(instance_host)s) is not equal to our host "
+"(%(our_host)s)."
+msgstr ""
+"正在刪除實例，因為它的主機 (%(instance_host)s) 不同於我們的主機 "
+"(%(our_host)s)。"
+
+msgid "Destroyed the VM"
+msgstr "已毀損 VM"
+
+msgid "Destroying VM"
+msgstr "正在毀損 VM"
+
+#, python-format
+msgid "Detach interface %s"
+msgstr "分離介面 %s"
+
+#, python-format
+msgid "Detach volume %(volume_id)s from mountpoint %(mp)s"
+msgstr "將磁區 %(volume_id)s 從裝載點 %(mp)s 分離"
+
+#, python-format
+msgid "Detach volume %s"
+msgstr "分離磁區 %s"
+
+#, python-format
+msgid "Detaching from volume api: %s"
+msgstr "正在從磁區 API 分離：%s"
+
+msgid "Device allocation failed. Will retry in 2 seconds."
+msgstr "裝置配置失敗。將在 2 秒鐘後重試。"
+
+#, python-format
+msgid "Disabling host %s."
+msgstr "正在停用主機 %s。"
+
+#, python-format
+msgid "Disassociate address %s"
+msgstr "解除與位址 %s 的關聯"
+
+#, python-format
+msgid "Disconnecting stale VDI %s from compute domU"
+msgstr "正在切斷過時 VDI %s 與計算 domU 的連線"
+
+#, python-format
+msgid ""
+"During the sync_power process the instance has moved from host %(src)s to "
+"host %(dst)s"
+msgstr "在執行 sync_power 程序期間，實例已從主機 %(src)s 移至主機 %(dst)s"
+
+msgid "During wait destroy, instance disappeared."
+msgstr "在等待毀損期間，實例消失。"
+
+#, python-format
+msgid "Enabling host %s."
+msgstr "正在啟用主機 %s。"
 
 msgid "Ensuring static filters"
 msgstr "正在確定靜態過濾器"
 
 #, python-format
-msgid "Writing stored info to %s"
-msgstr "正在將儲存的資訊寫入 %s"
+msgid "Error in handshake: %s"
+msgstr "信號交換發生錯誤：%s"
+
+#, python-format
+msgid "Failed to mount filesystem (expected for non-linux instances): %s"
+msgstr "無法裝載檔案系統（對於非 Linux 實例，符合預期）：%s"
+
+#, python-format
+msgid "Fault thrown: %s"
+msgstr "已擲出錯誤：%s"
 
 #, python-format
 msgid ""
-"image %(id)s at (%(base_file)s): image verification skipped, no hash stored"
-msgstr "映像檔 %(id)s (%(base_file)s)：已跳過映像檔驗證，未儲存雜湊"
-
-#, python-format
-msgid "%(id)s (%(base_file)s): generating checksum"
-msgstr "%(id)s (%(base_file)s)：正在產生總和檢查"
-
-#, python-format
-msgid "image %(id)s at (%(base_file)s): checking"
-msgstr "映像檔 %(id)s (%(base_file)s)：正在檢查"
-
-#, python-format
-msgid ""
-"image %(id)s at (%(base_file)s): in use: on this node %(local)d local, "
-"%(remote)d on other nodes sharing this instance storage"
+"Forcing a sync of instances, project_id=%(projid_str)s, updated_since="
+"%(since_str)s"
 msgstr ""
-"映像檔 %(id)s (%(base_file)s)：使用中：%(local)d 個在此節點上（本"
-"端），%(remote)d 個在其他共用此實例儲存體的節點上"
+"正在強制同步實例，project_id = %(projid_str)s，updated_since = %(since_str)s"
 
-#, python-format
-msgid "Active base files: %s"
-msgstr "作用中的基本檔案：%s"
-
-#, python-format
-msgid "Corrupt base files: %s"
-msgstr "已毀損的基本檔案：%s"
-
-#, python-format
-msgid "Removable base files: %s"
-msgstr "可移除的基本檔案：%s"
-
-msgid "Destroyed the VM"
-msgstr "已毀損 VM"
+msgid "Forking too fast, sleeping"
+msgstr "分岔太快，正在休眠"
 
 #, python-format
 msgid "Found %(instance_count)d hung reboots older than %(timeout)d seconds"
 msgstr "發現 %(instance_count)d 個 %(timeout)d 秒鐘前的已當掉重新啟動作業"
 
-msgid "Automatically hard rebooting"
-msgstr "自動強迫重新啟動"
-
+#, python-format
 msgid ""
-"XenServer tools installed in this image are capable of network injection.  "
-"Networking files will not bemanipulated"
-msgstr ""
-"此映像檔中安裝的 XenServer 工具可進行網路注入作業。將不會操作網路功能檔案"
+"Found %(migration_count)d unconfirmed migrations older than "
+"%(confirm_window)d seconds"
+msgstr "發現 %(migration_count)d 個 %(confirm_window)d 秒鐘前的未確認移轉"
 
-msgid ""
-"XenServer tools are present in this image but are not capable of network "
-"injection"
-msgstr "XenServer 工具存在於此映像檔中，但不能進行網路注入作業"
+msgid "Get console output"
+msgstr "取得主控台輸出"
 
-msgid "XenServer tools are not installed in this image"
-msgstr "此映像檔中未安裝 XenServer 工具"
+#, python-format
+msgid "Get console output for instance %s"
+msgstr "取得實例 %s 的主控台輸出"
+
+msgid "Going to destroy instance again."
+msgstr "將再次毀損實例。"
+
+#, python-format
+msgid "HTTP exception thrown: %s"
+msgstr "已擲出 HTTP 異常狀況：%s"
+
+#, python-format
+msgid "Import key %s"
+msgstr "匯入金鑰 %s"
 
 #, python-format
 msgid ""
@@ -545,55 +297,303 @@ msgstr ""
 "在資料庫中找不到執行於 %(host)s 上的實例 %(name)s：將假定它是工作程式 VM，並"
 "跳過移轉至新主機的連線測試程序"
 
-#, python-format
-msgid "VBD %s already detached"
-msgstr "已分離 VBD %s"
+msgid "Instance destroyed successfully."
+msgstr "已順利毀損實例。"
 
-#, python-format
-msgid "Disconnecting stale VDI %s from compute domU"
-msgstr "正在切斷過時 VDI %s 與計算 domU 的連線"
+msgid "Instance found in migrating state during startup. Resetting task_state"
+msgstr "啟動期間發現實例處於移轉中狀態。正在重設 task_state"
 
-msgid "Manipulating interface files directly"
-msgstr "正在直接操作介面檔"
+msgid "Instance may be started again."
+msgstr "可重新啟動實例。"
 
-#, python-format
-msgid "Failed to mount filesystem (expected for non-linux instances): %s"
-msgstr "無法裝載檔案系統（對於非 Linux 實例，符合預期）：%s"
+msgid "Instance may have been rebooted during soft reboot, so return now."
+msgstr "實例可能已在正常重新啟動期間重新啟動，因此現在返回。"
 
-msgid "Starting halted instance found during reboot"
-msgstr "正在啟動重新啟動期間發現的已中止實例"
+msgid "Instance rebooted successfully."
+msgstr "已順利重新啟動實例。"
 
-msgid "Destroying VM"
-msgstr "正在毀損 VM"
+msgid "Instance running successfully."
+msgstr "實例正在順利執行中。"
 
-#, python-format
-msgid "Mountpoint %(mountpoint)s detached from instance %(instance_name)s"
-msgstr "掛載點 %(mountpoint)s 從虛擬機器 %(instance_name)s 卸載"
+msgid "Instance shutdown successfully."
+msgstr "已順利關閉實例。"
 
-#, python-format
-msgid "Error in handshake: %s"
-msgstr "信號交換發生錯誤：%s"
+msgid "Instance soft rebooted successfully."
+msgstr "已順利正常重新啟動實例。"
+
+msgid "Instance spawned successfully."
+msgstr "已順利大量產生實例。"
 
 #, python-format
 msgid "Invalid request: %s"
 msgstr "無效的要求：%s"
 
 #, python-format
-msgid "Request: %s"
-msgstr "要求：%s"
+msgid "Loading compute driver '%s'"
+msgstr "正在載入計算驅動程式 '%s'"
 
 #, python-format
-msgid "Request made with missing token: %s"
-msgstr "已發出要求，但是遺漏了記號：%s"
+msgid "Loading network driver '%s'"
+msgstr "正在載入網路驅動程式 '%s'"
+
+#, python-format
+msgid "Loop mount error: %s"
+msgstr "迴圈裝載錯誤：%s"
+
+msgid "Manipulating interface files directly"
+msgstr "正在直接操作介面檔"
+
+msgid "Migrating"
+msgstr "正在轉移"
+
+#, python-format
+msgid "Mountpoint %(mountpoint)s detached from instance %(instance_name)s"
+msgstr "掛載點 %(mountpoint)s 從虛擬機器 %(instance_name)s 卸載"
+
+#, python-format
+msgid "NBD mount error: %s"
+msgstr "NBD 裝載錯誤：%s"
+
+#, python-format
+msgid ""
+"No cells available when scheduling.  Will retry in %(sleep_time)s second(s)"
+msgstr "排程時沒有可用的 Cell。將在 %(sleep_time)s 秒鐘後重試"
+
+msgid "Parent process has died unexpectedly, exiting"
+msgstr "母程序已非預期地當掉，正在結束"
+
+msgid "Pausing"
+msgstr "正在暫停"
+
+msgid "Post operation of migration started"
+msgstr "後置移轉作業已啟動"
+
+#, python-format
+msgid "Putting host %(host_name)s in maintenance mode %(mode)s."
+msgstr "正在將主機 %(host_name)s 置於維護模式 %(mode)s。"
+
+#, python-format
+msgid "Reboot instance %r"
+msgstr "重新啟動實例 %r"
+
+msgid "Rebooting instance"
+msgstr "正在重新啟動實例"
+
+msgid "Rebooting instance after nova-compute restart."
+msgstr "在重新啟動 nova-compute 之後重新啟動實例。"
+
+msgid "Rebuilding instance"
+msgstr "正在重建實例"
+
+msgid "Reclaiming deleted instance"
+msgstr "正在收回已刪除的實例"
+
+#, python-format
+msgid "Registered image %(image_location)s with id %(image_id)s"
+msgstr "已登錄 ID 為 %(image_id)s 的映像檔 %(image_location)s"
+
+#, python-format
+msgid "Release address %s"
+msgstr "釋放位址 %s"
+
+#, python-format
+msgid "Removable base files: %s"
+msgstr "可移除的基本檔案：%s"
+
+#, python-format
+msgid "Removing dead compute node %(host)s:%(node)s from scheduler"
+msgstr "正在將已停用的計算節點 %(host)s:%(node)s 從排程器中移除"
 
 #, python-format
 msgid "Request made with invalid token: %s"
 msgstr "已提出要求，但記號無效：%s"
 
 #, python-format
-msgid "Unexpected error: %s"
-msgstr "非預期的錯誤：%s"
+msgid "Request made with missing token: %s"
+msgstr "已發出要求，但是遺漏了記號：%s"
+
+#, python-format
+msgid "Request: %s"
+msgstr "要求：%s"
+
+msgid "Rescuing"
+msgstr "正在救援"
+
+msgid "Resuming"
+msgstr "正在回復"
+
+msgid "Retrieving diagnostics"
+msgstr "正在擷取診斷程式"
+
+msgid "Root password set"
+msgstr "已設定 Root 使用者密碼"
+
+#, python-format
+msgid ""
+"Running instance usage audit for host %(host)s from %(begin_time)s to "
+"%(end_time)s. %(number_instances)s instances."
+msgstr ""
+"正在對主機 %(host)s 執行實例使用審核（從 %(begin_time)s 到 "
+"%(end_time)s）。%(number_instances)s 個實例。"
+
+#, python-format
+msgid "Skipping periodic task %(task)s because it is disabled"
+msgstr "正在跳過定期作業 %(task)s，因為它已停用"
+
+#, python-format
+msgid "Skipping periodic task %(task)s because its interval is negative"
+msgstr "正在跳過定期作業 %(task)s，因為其間隔為負數"
+
+msgid "Snapshot extracted, beginning image upload"
+msgstr "已擷取 Snapshot，正在開始上傳映像檔"
+
+msgid "Snapshot image upload complete"
+msgstr "已完成 Snapshot 映像檔上傳"
+
+msgid "Spawning new instance"
+msgstr "正在大量產生新實例"
+
+#, python-format
+msgid "Started child %d"
+msgstr "已開始子行程 %d"
+
+#, python-format
+msgid "Starting %(topic)s node (version %(version)s)"
+msgstr "正在啟動 %(topic)s 節點（%(version)s 版）"
+
+#, python-format
+msgid "Starting %d workers"
+msgstr "正在啟動 %d 個工作程式"
+
+msgid "Starting halted instance found during reboot"
+msgstr "正在啟動重新啟動期間發現的已中止實例"
+
+msgid "Starting instance..."
+msgstr "正在啟動實例..."
 
 #, python-format
 msgid "Starting nova-xvpvncproxy node (version %s)"
 msgstr "正在啟動 nova-xvpvncproxy 節點（%s 版）"
+
+msgid "Stopping WSGI server."
+msgstr "正在停止 WSGI 伺服器。"
+
+msgid "The ISCSI initiator name can't be found. Choosing the default one"
+msgstr "找不到 iSCSI 起始器名稱。正在選擇預設名稱"
+
+msgid "Timestamp is invalid."
+msgstr "時間戳記無效。"
+
+#, python-format
+msgid "Truncated console log returned, %d bytes ignored"
+msgstr "傳回了截斷的主控台日誌，已忽略 %d 個位元組"
+
+#, python-format
+msgid ""
+"Unauthorized request for controller=%(controller)s and action=%(action)s"
+msgstr "對於控制器 = %(controller)s 及動作 = %(action)s 的要求未獲授權"
+
+#, python-format
+msgid "Unexpected error: %s"
+msgstr "非預期的錯誤：%s"
+
+msgid "Unpausing"
+msgstr "正在取消暫停"
+
+msgid "Unrescuing"
+msgstr "正在取消救援"
+
+msgid "Updating bandwidth usage cache"
+msgstr "正在更新頻寬使用快取"
+
+#, python-format
+msgid "Updating from migration %s"
+msgstr "正在從移轉 %s 更新"
+
+#, python-format
+msgid "Updating image %s publicity"
+msgstr "正在更新映像檔 %s 宣傳"
+
+msgid "Using config drive"
+msgstr "正在使用配置磁碟機"
+
+#, python-format
+msgid "VBD %s already detached"
+msgstr "已分離 VBD %s"
+
+msgid "WSGI server has stopped."
+msgstr "WSGI 伺服器已停止。"
+
+#, python-format
+msgid "Waiting on %d children to exit"
+msgstr "正在等待 %d 個子項結束"
+
+#, python-format
+msgid "Writing stored info to %s"
+msgstr "正在將儲存的資訊寫入 %s"
+
+msgid "XenServer tools are not installed in this image"
+msgstr "此映像檔中未安裝 XenServer 工具"
+
+msgid ""
+"XenServer tools are present in this image but are not capable of network "
+"injection"
+msgstr "XenServer 工具存在於此映像檔中，但不能進行網路注入作業"
+
+msgid ""
+"XenServer tools installed in this image are capable of network injection.  "
+"Networking files will not bemanipulated"
+msgstr ""
+"此映像檔中安裝的 XenServer 工具可進行網路注入作業。將不會操作網路功能檔案"
+
+msgid ""
+"You may see the error \"libvirt: QEMU error: Domain not found: no domain "
+"with matching name.\" This error can be safely ignored."
+msgstr ""
+"您可能會看到錯誤「libVirt：QEMU 錯誤：找不到網域：沒有名稱相符的網域。」此錯"
+"誤可以安全地忽略。"
+
+msgid "_post_live_migration() is started.."
+msgstr "_post_live_migration() 已啟動。"
+
+#, python-format
+msgid "bringing vm to original state: '%s'"
+msgstr "正在使 VM 進入原始狀態：'%s'"
+
+#, python-format
+msgid "data: %(data)r, fpath: %(fpath)r"
+msgstr "資料：%(data)r，fpath：%(fpath)r"
+
+msgid "disk on shared storage, recreating using existing disk"
+msgstr "磁碟位於共用儲存體上，正在使用現有磁碟來重建"
+
+#, python-format
+msgid "image %(id)s at (%(base_file)s): checking"
+msgstr "映像檔 %(id)s (%(base_file)s)：正在檢查"
+
+#, python-format
+msgid ""
+"image %(id)s at (%(base_file)s): image verification skipped, no hash stored"
+msgstr "映像檔 %(id)s (%(base_file)s)：已跳過映像檔驗證，未儲存雜湊"
+
+#, python-format
+msgid ""
+"image %(id)s at (%(base_file)s): in use: on this node %(local)d local, "
+"%(remote)d on other nodes sharing this instance storage"
+msgstr ""
+"映像檔 %(id)s (%(base_file)s)：使用中：%(local)d 個在此節點上（本"
+"端），%(remote)d 個在其他共用此實例儲存體的節點上"
+
+msgid "instance snapshotting"
+msgstr "正在給實例建立 Snapshot"
+
+msgid "instance termination disabled"
+msgstr "實例終止作業已停用"
+
+#, python-format
+msgid "re-assign floating IP %(address)s from instance %(instance_id)s"
+msgstr "從實例 %(instance_id)s 重新指派浮動 IP %(address)s"
+
+#, python-format
+msgid "vol=%s"
+msgstr "磁區 = %s"

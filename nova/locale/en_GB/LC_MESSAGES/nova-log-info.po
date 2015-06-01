@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-05-02 06:18+0000\n"
-"PO-Revision-Date: 2015-05-02 01:00+0000\n"
+"POT-Creation-Date: 2015-06-01 06:23+0000\n"
+"PO-Revision-Date: 2015-05-06 14:14+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: English (United Kingdom) (http://www.transifex.com/projects/p/"
 "nova/language/en_GB/)\n"
@@ -21,282 +21,57 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #, python-format
-msgid "Filter %s returned 0 hosts"
-msgstr "Filter %s returned 0 hosts"
+msgid "%(action_str)s instance"
+msgstr "%(action_str)s instance"
 
 #, python-format
-msgid "Starting %(topic)s node (version %(version)s)"
-msgstr "Starting %(topic)s node (version %(version)s)"
+msgid "%(id)s (%(base_file)s): generating checksum"
+msgstr "%(id)s (%(base_file)s): generating checksum"
 
 #, python-format
 msgid "%(name)s listening on %(host)s:%(port)s"
 msgstr "%(name)s listening on %(host)s:%(port)s"
 
-msgid "Stopping WSGI server."
-msgstr "Stopping WSGI server."
-
-msgid "WSGI server has stopped."
-msgstr "WSGI server has stopped."
+#, python-format
+msgid "%(num_values)d values found, of which the minimum value will be used."
+msgstr "%(num_values)d values found, of which the minimum value will be used."
 
 #, python-format
-msgid ""
-"Unauthorized request for controller=%(controller)s and action=%(action)s"
-msgstr ""
-"Unauthorised request for controller=%(controller)s and action=%(action)s"
+msgid "%(url)s returned with HTTP %(status)d"
+msgstr "%(url)s returned with HTTP %(status)d"
 
 #, python-format
-msgid "Create snapshot of volume %s"
-msgstr "Create snapshot of volume %s"
+msgid "Active base files: %s"
+msgstr "Active base files: %s"
 
 #, python-format
-msgid "Create key pair %s"
-msgstr "Create key pair %s"
+msgid "Adding security group %(security_group_id)s to port %(port_id)s"
+msgstr "Adding security group %(security_group_id)s to port %(port_id)s"
+
+msgid "Allocate address"
+msgstr "Allocate address"
 
 #, python-format
-msgid "Import key %s"
-msgstr "Import key %s"
+msgid "Associate address %(public_ip)s to instance %(instance_id)s"
+msgstr "Associate address %(public_ip)s to instance %(instance_id)s"
 
-#, python-format
-msgid "Delete key pair %s"
-msgstr "Delete key pair %s"
-
-#, python-format
-msgid "Get console output for instance %s"
-msgstr "Get console output for instance %s"
-
-#, python-format
-msgid "Create volume from snapshot %s"
-msgstr "Create volume from snapshot %s"
-
-#, python-format
-msgid "Create volume of %s GB"
-msgstr "Create volume of %s GB"
+msgid "Attach interface"
+msgstr "Attach interface"
 
 #, python-format
 msgid "Attach volume %(volume_id)s to instance %(instance_id)s at %(device)s"
 msgstr "Attach volume %(volume_id)s to instance %(instance_id)s at %(device)s"
 
 #, python-format
-msgid "Detach volume %s"
-msgstr "Detach volume %s"
-
-msgid "Allocate address"
-msgstr "Allocate address"
-
-#, python-format
-msgid "Release address %s"
-msgstr "Release address %s"
-
-#, python-format
-msgid "Associate address %(public_ip)s to instance %(instance_id)s"
-msgstr "Associate address %(public_ip)s to instance %(instance_id)s"
-
-#, python-format
-msgid "Disassociate address %s"
-msgstr "Disassociate address %s"
-
-#, python-format
-msgid "Reboot instance %r"
-msgstr "Reboot instance %r"
-
-#, python-format
-msgid "De-registering image %s"
-msgstr "De-registering image %s"
-
-#, python-format
-msgid "Registered image %(image_location)s with id %(image_id)s"
-msgstr "Registered image %(image_location)s with id %(image_id)s"
-
-#, python-format
-msgid "Updating image %s publicity"
-msgstr "Updating image %s publicity"
-
-msgid "Timestamp is invalid."
-msgstr "Timestamp is invalid."
-
-#, python-format
-msgid "%(url)s returned with HTTP %(status)d"
-msgstr "%(url)s returned with HTTP %(status)d"
-
-msgid "V3 API has been disabled by configuration"
-msgstr "V3 API has been disabled by configuration"
-
-#, python-format
-msgid "Fault thrown: %s"
-msgstr "Fault thrown: %s"
-
-#, python-format
-msgid "HTTP exception thrown: %s"
-msgstr "HTTP exception thrown: %s"
-
-#, python-format
-msgid "Delete snapshot with id: %s"
-msgstr "Delete snapshot with id: %s"
-
-msgid "Attach interface"
-msgstr "Attach interface"
-
-#, python-format
-msgid "Detach interface %s"
-msgstr "Detach interface %s"
-
-#, python-format
-msgid "Putting host %(host_name)s in maintenance mode %(mode)s."
-msgstr "Putting host %(host_name)s in maintenance mode %(mode)s."
-
-#, python-format
-msgid "Enabling host %s."
-msgstr "Enabling host %s."
-
-#, python-format
-msgid "Disabling host %s."
-msgstr "Disabling host %s."
-
-#, python-format
-msgid "vol=%s"
-msgstr "vol=%s"
-
-#, python-format
-msgid "Delete volume with id: %s"
-msgstr "Delete volume with id: %s"
-
-#, python-format
 msgid "Attach volume %(volume_id)s to instance %(server_id)s at %(device)s"
 msgstr "Attach volume %(volume_id)s to instance %(server_id)s at %(device)s"
-
-#, python-format
-msgid "Create snapshot from volume %s"
-msgstr "Create snapshot from volume %s"
-
-#, python-format
-msgid ""
-"Forcing a sync of instances, project_id=%(projid_str)s, updated_since="
-"%(since_str)s"
-msgstr ""
-"Forcing a sync of instances, project_id=%(projid_str)s, updated_since="
-"%(since_str)s"
-
-#, python-format
-msgid ""
-"No cells available when scheduling.  Will retry in %(sleep_time)s second(s)"
-msgstr ""
-"No cells available when scheduling.  Will retry in %(sleep_time)s second(s)"
-
-msgid "instance termination disabled"
-msgstr "instance termination disabled"
-
-#, python-format
-msgid "Create Security Group %s"
-msgstr "Create Security Group %s"
-
-#, python-format
-msgid "Delete security group %s"
-msgstr "Delete security group %s"
-
-msgid "Claim successful"
-msgstr "Claim successful"
-
-#, python-format
-msgid ""
-"Deleting instance as its host (%(instance_host)s) is not equal to our host "
-"(%(our_host)s)."
-msgstr ""
-"Deleting instance as its host (%(instance_host)s) is not equal to our host "
-"(%(our_host)s)."
-
-msgid ""
-"Instance has been marked deleted already, removing it from the hypervisor."
-msgstr ""
-"Instance has been marked deleted already, removing it from the hypervisor."
-
-msgid "Instance found in migrating state during startup. Resetting task_state"
-msgstr "Instance found in migrating state during startup. Resetting task_state"
-
-msgid "Rebooting instance after nova-compute restart."
-msgstr "Rebooting instance after nova-compute restart."
-
-msgid "Starting instance..."
-msgstr "Starting instance..."
-
-#, python-format
-msgid "%(action_str)s instance"
-msgstr "%(action_str)s instance"
-
-msgid "Rebuilding instance"
-msgstr "Rebuilding instance"
-
-msgid "disk on shared storage, recreating using existing disk"
-msgstr "disk on shared storage, recreating using existing disk"
-
-#, python-format
-msgid "bringing vm to original state: '%s'"
-msgstr "bringing vm to original state: '%s'"
-
-#, python-format
-msgid "Detaching from volume api: %s"
-msgstr "Detaching from volume api: %s"
-
-msgid "Rebooting instance"
-msgstr "Rebooting instance"
-
-msgid "instance snapshotting"
-msgstr "instance snapshotting"
-
-msgid "Root password set"
-msgstr "Root password set"
-
-msgid "Rescuing"
-msgstr "Rescuing"
-
-msgid "Unrescuing"
-msgstr "Unrescuing"
-
-msgid "Migrating"
-msgstr "Migrating"
-
-msgid "Pausing"
-msgstr "Pausing"
-
-msgid "Unpausing"
-msgstr "Unpausing"
-
-msgid "Retrieving diagnostics"
-msgstr "Retrieving diagnostics"
-
-msgid "Resuming"
-msgstr "Resuming"
-
-msgid "Get console output"
-msgstr "Get console output"
 
 #, python-format
 msgid "Attaching volume %(volume_id)s to %(mountpoint)s"
 msgstr "Attaching volume %(volume_id)s to %(mountpoint)s"
 
-#, python-format
-msgid "Detach volume %(volume_id)s from mountpoint %(mp)s"
-msgstr "Detach volume %(volume_id)s from mountpoint %(mp)s"
-
-msgid "_post_live_migration() is started.."
-msgstr "_post_live_migration() is started.."
-
-msgid ""
-"You may see the error \"libvirt: QEMU error: Domain not found: no domain "
-"with matching name.\" This error can be safely ignored."
-msgstr ""
-"You may see the error \"libvirt: QEMU error: Domain not found: no domain "
-"with matching name.\" This error can be safely ignored."
-
-msgid "Post operation of migration started"
-msgstr "Post operation of migration started"
-
-#, python-format
-msgid ""
-"Found %(migration_count)d unconfirmed migrations older than "
-"%(confirm_window)d seconds"
-msgstr ""
-"Found %(migration_count)d unconfirmed migrations older than "
-"%(confirm_window)d seconds"
+msgid "Attempted to unfilter instance which is not filtered"
+msgstr "Attempted to unfilter instance which is not filtered"
 
 #, python-format
 msgid ""
@@ -306,95 +81,29 @@ msgstr ""
 "Automatically confirming migration %(migration_id)s for instance "
 "%(instance_uuid)s"
 
-#, python-format
-msgid ""
-"Running instance usage audit for host %(host)s from %(begin_time)s to "
-"%(end_time)s. %(number_instances)s instances."
-msgstr ""
-"Running instance usage audit for host %(host)s from %(begin_time)s to "
-"%(end_time)s. %(number_instances)s instances."
+msgid "Automatically hard rebooting"
+msgstr "Automatically hard rebooting"
 
-msgid "Updating bandwidth usage cache"
-msgstr "Updating bandwidth usage cache"
+msgid "Beginning cold snapshot process"
+msgstr "Beginning cold snapshot process"
+
+msgid "Beginning live snapshot process"
+msgstr "Beginning live snapshot process"
 
 #, python-format
-msgid ""
-"During sync_power_state the instance has a pending task (%(task)s). Skip."
-msgstr ""
-"During sync_power_state the instance has a pending task (%(task)s). Skip."
+msgid "Booting with volume %(volume_id)s at %(mountpoint)s"
+msgstr "Booting with volume %(volume_id)s at %(mountpoint)s"
 
-#, python-format
-msgid ""
-"During the sync_power process the instance has moved from host %(src)s to "
-"host %(dst)s"
-msgstr ""
-"During the sync_power process the instance has moved from host %(src)s to "
-"host %(dst)s"
-
-msgid "Reclaiming deleted instance"
-msgstr "Reclaiming deleted instance"
-
-#, python-format
-msgid "Compute_service record created for %(host)s:%(node)s"
-msgstr "Compute_service record created for %(host)s:%(node)s"
-
-#, python-format
-msgid "Compute_service record updated for %(host)s:%(node)s"
-msgstr "Compute_service record updated for %(host)s:%(node)s"
-
-#, python-format
-msgid "Updating from migration %s"
-msgstr "Updating from migration %s"
-
-#, python-format
-msgid "re-assign floating IP %(address)s from instance %(instance_id)s"
-msgstr "re-assign floating IP %(address)s from instance %(instance_id)s"
-
-#, python-format
-msgid "Loading network driver '%s'"
-msgstr "Loading network driver '%s'"
-
-#, python-format
-msgid "deleted %s"
-msgstr "deleted %s"
-
-#, python-format
-msgid "Adding security group %(security_group_id)s to port %(port_id)s"
-msgstr "Adding security group %(security_group_id)s to port %(port_id)s"
-
-#, python-format
-msgid "Eventlet backdoor listening on %(port)s for process %(pid)d"
-msgstr "Eventlet backdoor listening on %(port)s for process %(pid)d"
-
-#, python-format
-msgid "Skipping periodic task %(task)s because its interval is negative"
-msgstr "Skipping periodic task %(task)s because its interval is negative"
-
-#, python-format
-msgid "Skipping periodic task %(task)s because it is disabled"
-msgstr "Skipping periodic task %(task)s because it is disabled"
+msgid "Called setup_basic_filtering in nwfilter"
+msgstr "Called setup_basic_filtering in nwfilter"
 
 #, python-format
 msgid "Caught %s, exiting"
 msgstr "Caught %s, exiting"
 
-msgid "Parent process has died unexpectedly, exiting"
-msgstr "Parent process has died unexpectedly, exiting"
-
 #, python-format
-msgid "Child caught %s, exiting"
-msgstr "Child caught %s, exiting"
-
-msgid "Forking too fast, sleeping"
-msgstr "Forking too fast, sleeping"
-
-#, python-format
-msgid "Started child %d"
-msgstr "Started child %d"
-
-#, python-format
-msgid "Starting %d workers"
-msgstr "Starting %d workers"
+msgid "Caught %s, stopping children"
+msgstr "Caught %s, stopping children"
 
 #, python-format
 msgid "Child %(pid)d killed by signal %(sig)d"
@@ -405,86 +114,269 @@ msgid "Child %(pid)s exited with status %(code)d"
 msgstr "Child %(pid)s exited with status %(code)d"
 
 #, python-format
-msgid "Caught %s, stopping children"
-msgstr "Caught %s, stopping children"
+msgid "Child caught %s, exiting"
+msgstr "Child caught %s, exiting"
+
+msgid "Claim successful"
+msgstr "Claim successful"
 
 #, python-format
-msgid "Waiting on %d children to exit"
-msgstr "Waiting on %d children to exit"
+msgid "Compute_service record created for %(host)s:%(node)s"
+msgstr "Compute_service record created for %(host)s:%(node)s"
 
 #, python-format
-msgid "Removing dead compute node %(host)s:%(node)s from scheduler"
-msgstr "Removing dead compute node %(host)s:%(node)s from scheduler"
+msgid "Compute_service record updated for %(host)s:%(node)s"
+msgstr "Compute_service record updated for %(host)s:%(node)s"
+
+msgid "Configuring timezone for windows instance to localtime"
+msgstr "Configuring timezone for windows instance to localtime"
 
 #, python-format
-msgid "%(num_values)d values found, of which the minimum value will be used."
-msgstr "%(num_values)d values found, of which the minimum value will be used."
+msgid "Corrupt base files: %s"
+msgstr "Corrupt base files: %s"
 
 #, python-format
-msgid "Booting with volume %(volume_id)s at %(mountpoint)s"
-msgstr "Booting with volume %(volume_id)s at %(mountpoint)s"
+msgid ""
+"Could not find domain in libvirt for instance %s. Cannot get block stats for "
+"device"
+msgstr ""
+"Could not find domain in libvirt for instance %s. Cannot get block stats for "
+"device"
 
 #, python-format
-msgid "Loading compute driver '%s'"
-msgstr "Loading compute driver '%s'"
-
-msgid "Attempted to unfilter instance which is not filtered"
-msgstr "Attempted to unfilter instance which is not filtered"
+msgid "Create Security Group %s"
+msgstr "Create Security Group %s"
 
 #, python-format
-msgid "instance chain %s disappeared during refresh, skipping"
-msgstr "instance chain %s disappeared during refresh, skipping"
-
-msgid "Device allocation failed. Will retry in 2 seconds."
-msgstr "Device allocation failed. Will retry in 2 seconds."
+msgid "Create key pair %s"
+msgstr "Create key pair %s"
 
 #, python-format
-msgid "Loop mount error: %s"
-msgstr "Loop mount error: %s"
+msgid "Create snapshot from volume %s"
+msgstr "Create snapshot from volume %s"
 
 #, python-format
-msgid "NBD mount error: %s"
-msgstr "NBD mount error: %s"
+msgid "Create snapshot of volume %s"
+msgstr "Create snapshot of volume %s"
 
-msgid "The ISCSI initiator name can't be found. Choosing the default one"
-msgstr "The ISCSI initiator name can't be found. Choosing the default one"
+#, python-format
+msgid "Create volume from snapshot %s"
+msgstr "Create volume from snapshot %s"
 
-msgid "Spawning new instance"
-msgstr "Spawning new instance"
+#, python-format
+msgid "Create volume of %s GB"
+msgstr "Create volume of %s GB"
 
 #, python-format
 msgid "Creating config drive at %(path)s"
 msgstr "Creating config drive at %(path)s"
 
+msgid "Creating image"
+msgstr "Creating image"
+
+#, python-format
+msgid "De-registering image %s"
+msgstr "De-registering image %s"
+
+#, python-format
+msgid "Delete key pair %s"
+msgstr "Delete key pair %s"
+
+#, python-format
+msgid "Delete security group %s"
+msgstr "Delete security group %s"
+
+#, python-format
+msgid "Delete snapshot with id: %s"
+msgstr "Delete snapshot with id: %s"
+
+#, python-format
+msgid "Delete volume with id: %s"
+msgstr "Delete volume with id: %s"
+
+#, python-format
+msgid ""
+"Deleting instance as its host (%(instance_host)s) is not equal to our host "
+"(%(our_host)s)."
+msgstr ""
+"Deleting instance as its host (%(instance_host)s) is not equal to our host "
+"(%(our_host)s)."
+
+#, python-format
+msgid "Deleting instance files %s"
+msgstr "Deleting instance files %s"
+
+#, python-format
+msgid "Deletion of %s complete"
+msgstr "Deletion of %s complete"
+
+#, python-format
+msgid "Deletion of %s failed"
+msgstr "Deletion of %s failed"
+
+msgid "Destroyed the VM"
+msgstr "Destroyed the VM"
+
+msgid "Destroying VM"
+msgstr "Destroying VM"
+
+#, python-format
+msgid "Detach interface %s"
+msgstr "Detach interface %s"
+
+#, python-format
+msgid "Detach volume %(volume_id)s from mountpoint %(mp)s"
+msgstr "Detach volume %(volume_id)s from mountpoint %(mp)s"
+
+#, python-format
+msgid "Detach volume %s"
+msgstr "Detach volume %s"
+
+#, python-format
+msgid "Detaching from volume api: %s"
+msgstr "Detaching from volume api: %s"
+
+msgid "Device allocation failed. Will retry in 2 seconds."
+msgstr "Device allocation failed. Will retry in 2 seconds."
+
+#, python-format
+msgid "Disabling host %s."
+msgstr "Disabling host %s."
+
+#, python-format
+msgid "Disassociate address %s"
+msgstr "Disassociate address %s"
+
+#, python-format
+msgid "Disconnecting stale VDI %s from compute domU"
+msgstr "Disconnecting stale VDI %s from compute domU"
+
+#, python-format
+msgid ""
+"During sync_power_state the instance has a pending task (%(task)s). Skip."
+msgstr ""
+"During sync_power_state the instance has a pending task (%(task)s). Skip."
+
+#, python-format
+msgid ""
+"During the sync_power process the instance has moved from host %(src)s to "
+"host %(dst)s"
+msgstr ""
+"During the sync_power process the instance has moved from host %(src)s to "
+"host %(dst)s"
+
 msgid "During wait destroy, instance disappeared."
 msgstr "During wait destroy, instance disappeared."
 
-msgid "Instance destroyed successfully."
-msgstr "Instance destroyed successfully."
+#, python-format
+msgid "Enabling host %s."
+msgstr "Enabling host %s."
 
-msgid "Instance may be started again."
-msgstr "Instance may be started again."
+msgid "Ensuring static filters"
+msgstr "Ensuring static filters"
+
+#, python-format
+msgid "Error in handshake: %s"
+msgstr "Error in handshake: %s"
+
+#, python-format
+msgid "Eventlet backdoor listening on %(port)s for process %(pid)d"
+msgstr "Eventlet backdoor listening on %(port)s for process %(pid)d"
+
+#, python-format
+msgid "Failed to mount filesystem (expected for non-linux instances): %s"
+msgstr "Failed to mount filesystem (expected for non-linux instances): %s"
+
+#, python-format
+msgid "Fault thrown: %s"
+msgstr "Fault thrown: %s"
+
+#, python-format
+msgid "Filter %s returned 0 hosts"
+msgstr "Filter %s returned 0 hosts"
+
+#, python-format
+msgid ""
+"Forcing a sync of instances, project_id=%(projid_str)s, updated_since="
+"%(since_str)s"
+msgstr ""
+"Forcing a sync of instances, project_id=%(projid_str)s, updated_since="
+"%(since_str)s"
+
+msgid "Forking too fast, sleeping"
+msgstr "Forking too fast, sleeping"
+
+#, python-format
+msgid "Found %(instance_count)d hung reboots older than %(timeout)d seconds"
+msgstr "Found %(instance_count)d hung reboots older than %(timeout)d seconds"
+
+#, python-format
+msgid ""
+"Found %(migration_count)d unconfirmed migrations older than "
+"%(confirm_window)d seconds"
+msgstr ""
+"Found %(migration_count)d unconfirmed migrations older than "
+"%(confirm_window)d seconds"
+
+msgid "Get console output"
+msgstr "Get console output"
+
+#, python-format
+msgid "Get console output for instance %s"
+msgstr "Get console output for instance %s"
+
+#, python-format
+msgid ""
+"Getting block stats failed, device might have been detached. Instance="
+"%(instance_name)s Disk=%(disk)s Code=%(errcode)s Error=%(e)s"
+msgstr ""
+"Getting block stats failed, device might have been detached. Instance="
+"%(instance_name)s Disk=%(disk)s Code=%(errcode)s Error=%(e)s"
 
 msgid "Going to destroy instance again."
 msgstr "Going to destroy instance again."
 
-msgid "Beginning live snapshot process"
-msgstr "Beginning live snapshot process"
+#, python-format
+msgid "HTTP exception thrown: %s"
+msgstr "HTTP exception thrown: %s"
 
-msgid "Beginning cold snapshot process"
-msgstr "Beginning cold snapshot process"
+#, python-format
+msgid ""
+"Image creation data, cacheable: %(cache)s, downloaded: %(downloaded)s "
+"duration: %(duration).2f secs for image %(image_id)s"
+msgstr ""
+"Image creation data, cacheable: %(cache)s, downloaded: %(downloaded)s "
+"duration: %(duration).2f secs for image %(image_id)s"
 
-msgid "Snapshot extracted, beginning image upload"
-msgstr "Snapshot extracted, beginning image upload"
+#, python-format
+msgid "Import key %s"
+msgstr "Import key %s"
 
-msgid "Snapshot image upload complete"
-msgstr "Snapshot image upload complete"
+#, python-format
+msgid ""
+"Instance %(name)s running on %(host)s could not be found in the database: "
+"assuming it is a worker VM and skip ping migration to a new host"
+msgstr ""
+"Instance %(name)s running on %(host)s could not be found in the database: "
+"assuming it is a worker VM and skip ping migration to a new host"
 
-msgid "Instance soft rebooted successfully."
-msgstr "Instance soft rebooted successfully."
+msgid "Instance destroyed successfully."
+msgstr "Instance destroyed successfully."
 
-msgid "Instance shutdown successfully."
-msgstr "Instance shutdown successfully."
+msgid "Instance found in migrating state during startup. Resetting task_state"
+msgstr "Instance found in migrating state during startup. Resetting task_state"
+
+msgid ""
+"Instance has been marked deleted already, removing it from the hypervisor."
+msgstr ""
+"Instance has been marked deleted already, removing it from the hypervisor."
+
+#, python-format
+msgid "Instance launched has CPU info: %s"
+msgstr "Instance launched has CPU info: %s"
+
+msgid "Instance may be started again."
+msgstr "Instance may be started again."
 
 msgid "Instance may have been rebooted during soft reboot, so return now."
 msgstr "Instance may have been rebooted during soft reboot, so return now."
@@ -492,86 +384,281 @@ msgstr "Instance may have been rebooted during soft reboot, so return now."
 msgid "Instance rebooted successfully."
 msgstr "Instance rebooted successfully."
 
+msgid "Instance running successfully."
+msgstr "Instance running successfully."
+
+msgid "Instance shutdown successfully."
+msgstr "Instance shutdown successfully."
+
+msgid "Instance soft rebooted successfully."
+msgstr "Instance soft rebooted successfully."
+
 msgid "Instance spawned successfully."
 msgstr "Instance spawned successfully."
+
+#, python-format
+msgid "Invalid request: %s"
+msgstr "Invalid request: %s"
+
+#, python-format
+msgid "Loading compute driver '%s'"
+msgstr "Loading compute driver '%s'"
+
+#, python-format
+msgid "Loading network driver '%s'"
+msgstr "Loading network driver '%s'"
+
+#, python-format
+msgid "Loop mount error: %s"
+msgstr "Loop mount error: %s"
+
+msgid "Manipulating interface files directly"
+msgstr "Manipulating interface files directly"
+
+msgid "Migrating"
+msgstr "Migrating"
+
+#, python-format
+msgid "Mountpoint %(mountpoint)s detached from instance %(instance_name)s"
+msgstr "Mountpoint %(mountpoint)s detached from instance %(instance_name)s"
+
+#, python-format
+msgid "NBD mount error: %s"
+msgstr "NBD mount error: %s"
+
+#, python-format
+msgid ""
+"No cells available when scheduling.  Will retry in %(sleep_time)s second(s)"
+msgstr ""
+"No cells available when scheduling.  Will retry in %(sleep_time)s second(s)"
+
+msgid "Parent process has died unexpectedly, exiting"
+msgstr "Parent process has died unexpectedly, exiting"
+
+msgid "Pausing"
+msgstr "Pausing"
+
+msgid "Post operation of migration started"
+msgstr "Post operation of migration started"
+
+#, python-format
+msgid "Putting host %(host_name)s in maintenance mode %(mode)s."
+msgstr "Putting host %(host_name)s in maintenance mode %(mode)s."
+
+#, python-format
+msgid "Reboot instance %r"
+msgstr "Reboot instance %r"
+
+msgid "Rebooting instance"
+msgstr "Rebooting instance"
+
+msgid "Rebooting instance after nova-compute restart."
+msgstr "Rebooting instance after nova-compute restart."
+
+msgid "Rebuilding instance"
+msgstr "Rebuilding instance"
+
+msgid "Reclaiming deleted instance"
+msgstr "Reclaiming deleted instance"
+
+#, python-format
+msgid "Registered image %(image_location)s with id %(image_id)s"
+msgstr "Registered image %(image_location)s with id %(image_id)s"
+
+#, python-format
+msgid "Release address %s"
+msgstr "Release address %s"
+
+#, python-format
+msgid "Removable base files: %s"
+msgstr "Removable base files: %s"
+
+#, python-format
+msgid "Removing dead compute node %(host)s:%(node)s from scheduler"
+msgstr "Removing dead compute node %(host)s:%(node)s from scheduler"
+
+#, python-format
+msgid "Request made with invalid token: %s"
+msgstr "Request made with invalid token: %s"
+
+#, python-format
+msgid "Request made with missing token: %s"
+msgstr "Request made with missing token: %s"
+
+#, python-format
+msgid "Request: %s"
+msgstr "Request: %s"
+
+msgid "Rescuing"
+msgstr "Rescuing"
+
+msgid "Resuming"
+msgstr "Resuming"
+
+msgid "Retrieving diagnostics"
+msgstr "Retrieving diagnostics"
+
+msgid "Root password set"
+msgstr "Root password set"
+
+#, python-format
+msgid ""
+"Running instance usage audit for host %(host)s from %(begin_time)s to "
+"%(end_time)s. %(number_instances)s instances."
+msgstr ""
+"Running instance usage audit for host %(host)s from %(begin_time)s to "
+"%(end_time)s. %(number_instances)s instances."
+
+#, python-format
+msgid "Skipping periodic task %(task)s because it is disabled"
+msgstr "Skipping periodic task %(task)s because it is disabled"
+
+#, python-format
+msgid "Skipping periodic task %(task)s because its interval is negative"
+msgstr "Skipping periodic task %(task)s because its interval is negative"
+
+msgid "Snapshot extracted, beginning image upload"
+msgstr "Snapshot extracted, beginning image upload"
+
+msgid "Snapshot image upload complete"
+msgstr "Snapshot image upload complete"
+
+msgid "Spawning new instance"
+msgstr "Spawning new instance"
+
+#, python-format
+msgid "Started child %d"
+msgstr "Started child %d"
+
+#, python-format
+msgid "Starting %(topic)s node (version %(version)s)"
+msgstr "Starting %(topic)s node (version %(version)s)"
+
+#, python-format
+msgid "Starting %d workers"
+msgstr "Starting %d workers"
+
+msgid "Starting halted instance found during reboot"
+msgstr "Starting halted instance found during reboot"
+
+msgid "Starting instance..."
+msgstr "Starting instance..."
+
+#, python-format
+msgid "Starting nova-xvpvncproxy node (version %s)"
+msgstr "Starting nova-xvpvncproxy node (version %s)"
+
+msgid "Stopping WSGI server."
+msgstr "Stopping WSGI server."
+
+msgid "The ISCSI initiator name can't be found. Choosing the default one"
+msgstr "The ISCSI initiator name can't be found. Choosing the default one"
+
+msgid "Timestamp is invalid."
+msgstr "Timestamp is invalid."
+
+#, python-format
+msgid "Truncated console log returned, %d bytes ignored"
+msgstr "Truncated console log returned, %d bytes ignored"
+
+#, python-format
+msgid ""
+"Unable to use bulk domain list APIs, falling back to slow code path: %(ex)s"
+msgstr ""
+"Unable to use bulk domain list APIs, falling back to slow code path: %(ex)s"
+
+#, python-format
+msgid ""
+"Unauthorized request for controller=%(controller)s and action=%(action)s"
+msgstr ""
+"Unauthorised request for controller=%(controller)s and action=%(action)s"
+
+#, python-format
+msgid "Unexpected error: %s"
+msgstr "Unexpected error: %s"
+
+msgid "Unpausing"
+msgstr "Unpausing"
+
+msgid "Unrescuing"
+msgstr "Unrescuing"
+
+msgid "Updating bandwidth usage cache"
+msgstr "Updating bandwidth usage cache"
+
+#, python-format
+msgid "Updating from migration %s"
+msgstr "Updating from migration %s"
+
+#, python-format
+msgid "Updating image %s publicity"
+msgstr "Updating image %s publicity"
+
+msgid "Using config drive"
+msgstr "Using config drive"
+
+msgid "V3 API has been disabled by configuration"
+msgstr "V3 API has been disabled by configuration"
+
+#, python-format
+msgid "VBD %s already detached"
+msgstr "VBD %s already detached"
+
+msgid "WSGI server has stopped."
+msgstr "WSGI server has stopped."
+
+#, python-format
+msgid "Waiting on %d children to exit"
+msgstr "Waiting on %d children to exit"
+
+#, python-format
+msgid "Writing stored info to %s"
+msgstr "Writing stored info to %s"
+
+msgid "XenServer tools are not installed in this image"
+msgstr "XenServer tools are not installed in this image"
+
+msgid ""
+"XenServer tools are present in this image but are not capable of network "
+"injection"
+msgstr ""
+"XenServer tools are present in this image but are not capable of network "
+"injection"
+
+msgid ""
+"XenServer tools installed in this image are capable of network injection.  "
+"Networking files will not bemanipulated"
+msgstr ""
+"XenServer tools installed in this image are capable of network injection.  "
+"Networking files will not bemanipulated"
+
+msgid ""
+"You may see the error \"libvirt: QEMU error: Domain not found: no domain "
+"with matching name.\" This error can be safely ignored."
+msgstr ""
+"You may see the error \"libvirt: QEMU error: Domain not found: no domain "
+"with matching name.\" This error can be safely ignored."
+
+msgid "_post_live_migration() is started.."
+msgstr "_post_live_migration() is started.."
+
+#, python-format
+msgid "bringing vm to original state: '%s'"
+msgstr "bringing vm to original state: '%s'"
 
 #, python-format
 msgid "data: %(data)r, fpath: %(fpath)r"
 msgstr "data: %(data)r, fpath: %(fpath)r"
 
 #, python-format
-msgid "Truncated console log returned, %d bytes ignored"
-msgstr "Truncated console log returned, %d bytes ignored"
+msgid "deleted %s"
+msgstr "deleted %s"
 
-msgid "Creating image"
-msgstr "Creating image"
+msgid "disk on shared storage, recreating using existing disk"
+msgstr "disk on shared storage, recreating using existing disk"
 
-msgid "Using config drive"
-msgstr "Using config drive"
-
-msgid "Configuring timezone for windows instance to localtime"
-msgstr "Configuring timezone for windows instance to localtime"
-
-#, python-format
-msgid ""
-"Getting block stats failed, device might have been detached. Instance="
-"%(instance_name)s Disk=%(disk)s Code=%(errcode)s Error=%(e)s"
-msgstr ""
-"Getting block stats failed, device might have been detached. Instance="
-"%(instance_name)s Disk=%(disk)s Code=%(errcode)s Error=%(e)s"
-
-#, python-format
-msgid ""
-"Could not find domain in libvirt for instance %s. Cannot get block stats for "
-"device"
-msgstr ""
-"Could not find domain in libvirt for instance %s. Cannot get block stats for "
-"device"
-
-#, python-format
-msgid "Instance launched has CPU info: %s"
-msgstr "Instance launched has CPU info: %s"
-
-msgid "Instance running successfully."
-msgstr "Instance running successfully."
-
-#, python-format
-msgid "Deleting instance files %s"
-msgstr "Deleting instance files %s"
-
-#, python-format
-msgid "Deletion of %s failed"
-msgstr "Deletion of %s failed"
-
-#, python-format
-msgid "Deletion of %s complete"
-msgstr "Deletion of %s complete"
-
-msgid "Called setup_basic_filtering in nwfilter"
-msgstr "Called setup_basic_filtering in nwfilter"
-
-msgid "Ensuring static filters"
-msgstr "Ensuring static filters"
-
-#, python-format
-msgid ""
-"Unable to use bulk domain list APIs, falling back to slow code path: %(ex)s"
-msgstr ""
-"Unable to use bulk domain list APIs, falling back to slow code path: %(ex)s"
-
-#, python-format
-msgid "Writing stored info to %s"
-msgstr "Writing stored info to %s"
-
-#, python-format
-msgid ""
-"image %(id)s at (%(base_file)s): image verification skipped, no hash stored"
-msgstr ""
-"image %(id)s at (%(base_file)s): image verification skipped, no hash stored"
-
-#, python-format
-msgid "%(id)s (%(base_file)s): generating checksum"
-msgstr "%(id)s (%(base_file)s): generating checksum"
+msgid "findmnt tool is not installed"
+msgstr "findmnt tool is not installed"
 
 #, python-format
 msgid "image %(id)s at (%(base_file)s): checking"
@@ -579,6 +666,12 @@ msgstr "image %(id)s at (%(base_file)s): checking"
 
 #, python-format
 msgid ""
+"image %(id)s at (%(base_file)s): image verification skipped, no hash stored"
+msgstr ""
+"image %(id)s at (%(base_file)s): image verification skipped, no hash stored"
+
+#, python-format
+msgid ""
 "image %(id)s at (%(base_file)s): in use: on this node %(local)d local, "
 "%(remote)d on other nodes sharing this instance storage"
 msgstr ""
@@ -586,112 +679,19 @@ msgstr ""
 "%(remote)d on other nodes sharing this instance storage"
 
 #, python-format
-msgid "Active base files: %s"
-msgstr "Active base files: %s"
+msgid "instance chain %s disappeared during refresh, skipping"
+msgstr "instance chain %s disappeared during refresh, skipping"
+
+msgid "instance snapshotting"
+msgstr "instance snapshotting"
+
+msgid "instance termination disabled"
+msgstr "instance termination disabled"
 
 #, python-format
-msgid "Corrupt base files: %s"
-msgstr "Corrupt base files: %s"
+msgid "re-assign floating IP %(address)s from instance %(instance_id)s"
+msgstr "re-assign floating IP %(address)s from instance %(instance_id)s"
 
 #, python-format
-msgid "Removable base files: %s"
-msgstr "Removable base files: %s"
-
-msgid "findmnt tool is not installed"
-msgstr "findmnt tool is not installed"
-
-msgid "Destroyed the VM"
-msgstr "Destroyed the VM"
-
-#, python-format
-msgid "Found %(instance_count)d hung reboots older than %(timeout)d seconds"
-msgstr "Found %(instance_count)d hung reboots older than %(timeout)d seconds"
-
-msgid "Automatically hard rebooting"
-msgstr "Automatically hard rebooting"
-
-msgid ""
-"XenServer tools installed in this image are capable of network injection.  "
-"Networking files will not bemanipulated"
-msgstr ""
-"XenServer tools installed in this image are capable of network injection.  "
-"Networking files will not bemanipulated"
-
-msgid ""
-"XenServer tools are present in this image but are not capable of network "
-"injection"
-msgstr ""
-"XenServer tools are present in this image but are not capable of network "
-"injection"
-
-msgid "XenServer tools are not installed in this image"
-msgstr "XenServer tools are not installed in this image"
-
-#, python-format
-msgid ""
-"Instance %(name)s running on %(host)s could not be found in the database: "
-"assuming it is a worker VM and skip ping migration to a new host"
-msgstr ""
-"Instance %(name)s running on %(host)s could not be found in the database: "
-"assuming it is a worker VM and skip ping migration to a new host"
-
-#, python-format
-msgid "VBD %s already detached"
-msgstr "VBD %s already detached"
-
-#, python-format
-msgid ""
-"Image creation data, cacheable: %(cache)s, downloaded: %(downloaded)s "
-"duration: %(duration).2f secs for image %(image_id)s"
-msgstr ""
-"Image creation data, cacheable: %(cache)s, downloaded: %(downloaded)s "
-"duration: %(duration).2f secs for image %(image_id)s"
-
-#, python-format
-msgid "Disconnecting stale VDI %s from compute domU"
-msgstr "Disconnecting stale VDI %s from compute domU"
-
-msgid "Manipulating interface files directly"
-msgstr "Manipulating interface files directly"
-
-#, python-format
-msgid "Failed to mount filesystem (expected for non-linux instances): %s"
-msgstr "Failed to mount filesystem (expected for non-linux instances): %s"
-
-msgid "Starting halted instance found during reboot"
-msgstr "Starting halted instance found during reboot"
-
-msgid "Destroying VM"
-msgstr "Destroying VM"
-
-#, python-format
-msgid "Mountpoint %(mountpoint)s detached from instance %(instance_name)s"
-msgstr "Mountpoint %(mountpoint)s detached from instance %(instance_name)s"
-
-#, python-format
-msgid "Error in handshake: %s"
-msgstr "Error in handshake: %s"
-
-#, python-format
-msgid "Invalid request: %s"
-msgstr "Invalid request: %s"
-
-#, python-format
-msgid "Request: %s"
-msgstr "Request: %s"
-
-#, python-format
-msgid "Request made with missing token: %s"
-msgstr "Request made with missing token: %s"
-
-#, python-format
-msgid "Request made with invalid token: %s"
-msgstr "Request made with invalid token: %s"
-
-#, python-format
-msgid "Unexpected error: %s"
-msgstr "Unexpected error: %s"
-
-#, python-format
-msgid "Starting nova-xvpvncproxy node (version %s)"
-msgstr "Starting nova-xvpvncproxy node (version %s)"
+msgid "vol=%s"
+msgstr "vol=%s"
