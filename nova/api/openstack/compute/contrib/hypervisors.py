@@ -19,6 +19,7 @@ import webob.exc
 
 from nova.api.openstack import extensions
 from nova import compute
+from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
 from nova import servicegroup
@@ -83,6 +84,13 @@ class HypervisorsController(object):
     def index(self, req):
         context = req.environ['nova.context']
         authorize(context)
+
+        # NOTE(eliqiao): back-compatible with db layer hard-code admin
+        # permission checks. This has to be left only for API v2.0 because
+        # this version has to be stable even if it means that only admins
+        # can call this method while the policy could be changed.
+        nova_context.require_admin_context(context)
+
         compute_nodes = self.host_api.compute_node_get_all(context)
         req.cache_db_compute_nodes(compute_nodes)
         return dict(hypervisors=[self._view_hypervisor(
@@ -95,6 +103,13 @@ class HypervisorsController(object):
     def detail(self, req):
         context = req.environ['nova.context']
         authorize(context)
+
+        # NOTE(eliqiao): back-compatible with db layer hard-code admin
+        # permission checks. This has to be left only for API v2.0 because
+        # this version has to be stable even if it means that only admins
+        # can call this method while the policy could be changed.
+        nova_context.require_admin_context(context)
+
         compute_nodes = self.host_api.compute_node_get_all(context)
         req.cache_db_compute_nodes(compute_nodes)
         return dict(hypervisors=[self._view_hypervisor(
@@ -142,6 +157,13 @@ class HypervisorsController(object):
     def search(self, req, id):
         context = req.environ['nova.context']
         authorize(context)
+
+        # NOTE(eliqiao): back-compatible with db layer hard-code admin
+        # permission checks. This has to be left only for API v2.0 because
+        # this version has to be stable even if it means that only admins
+        # can call this method while the policy could be changed.
+        nova_context.require_admin_context(context)
+
         hypervisors = self.host_api.compute_node_search_by_hypervisor(
                 context, id)
         if hypervisors:
@@ -158,6 +180,13 @@ class HypervisorsController(object):
     def servers(self, req, id):
         context = req.environ['nova.context']
         authorize(context)
+
+        # NOTE(eliqiao): back-compatible with db layer hard-code admin
+        # permission checks. This has to be left only for API v2.0 because
+        # this version has to be stable even if it means that only admins
+        # can call this method while the policy could be changed.
+        nova_context.require_admin_context(context)
+
         compute_nodes = self.host_api.compute_node_search_by_hypervisor(
                 context, id)
         if not compute_nodes:

@@ -444,12 +444,39 @@ class HypervisorsTestV2(HypervisorsTestV21):
     def setUp(self):
         super(HypervisorsTestV2, self).setUp()
         self.rule_hyp_show = "compute_extension:hypervisors"
+        self.rule = {self.rule_hyp_show: ""}
 
     def _set_up_controller(self):
         self.context = context.get_admin_context()
         self.ext_mgr = extensions.ExtensionManager()
         self.ext_mgr.extensions = {}
         self.controller = hypervisors_v2.HypervisorsController(self.ext_mgr)
+
+    def test_index_non_admin_back_compatible_db(self):
+        self.policy.set_rules(self.rule)
+        req = self._get_request(False)
+        self.assertRaises(exception.AdminRequired,
+                          self.controller.index, req)
+
+    def test_detail_non_admin_back_compatible_db(self):
+        self.policy.set_rules(self.rule)
+        req = self._get_request(False)
+        self.assertRaises(exception.AdminRequired,
+                          self.controller.detail, req)
+
+    def test_search_non_admin_back_compatible_db(self):
+        self.policy.set_rules(self.rule)
+        req = self._get_request(False)
+        self.assertRaises(exception.AdminRequired,
+                          self.controller.search, req,
+                          self.TEST_HYPERS_OBJ[0].id)
+
+    def test_servers_non_admin_back_compatible_db(self):
+        self.policy.set_rules(self.rule)
+        req = self._get_request(False)
+        self.assertRaises(exception.AdminRequired,
+                          self.controller.servers, req,
+                          self.TEST_HYPERS_OBJ[0].id)
 
 
 class CellHypervisorsTestV21(HypervisorsTestV21):

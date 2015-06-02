@@ -588,12 +588,10 @@ def compute_node_get_all_by_host(context, host, use_slave=False):
     return result
 
 
-@require_admin_context
 def compute_node_get_all(context):
     return model_query(context, models.ComputeNode, read_deleted='no').all()
 
 
-@require_admin_context
 def compute_node_search_by_hypervisor(context, hypervisor_match):
     field = models.ComputeNode.hypervisor_hostname
     return model_query(context, models.ComputeNode).\
