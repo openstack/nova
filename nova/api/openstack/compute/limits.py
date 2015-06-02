@@ -33,13 +33,13 @@ process (each process will have its own rate limiting counter).
 
 import collections
 import copy
-import httplib
 import math
 import re
 import time
 
 from oslo_serialization import jsonutils
 from oslo_utils import importutils
+from six.moves import http_client as httplib
 import webob.dec
 import webob.exc
 

@@ -498,8 +498,8 @@ class _TestObject(object):
         error = None
         try:
             base.NovaObject.obj_class_from_name('MyObj', '1.25')
-        except exception.IncompatibleObjectVersion as error:
-            pass
+        except exception.IncompatibleObjectVersion as ex:
+            error = ex
 
         self.assertIsNotNone(error)
         self.assertEqual('1.6', error.kwargs['supported'])
@@ -646,7 +646,7 @@ class _TestObject(object):
         myobj_fields = (['foo', 'bar', 'missing',
                          'readonly', 'rel_object',
                          'rel_objects', 'mutable_default'] +
-                        base_fields)
+                        list(base_fields))
         myobj3_fields = ['new_field']
         self.assertTrue(issubclass(TestSubclassedObject, MyObj))
         self.assertEqual(len(myobj_fields), len(MyObj.fields))
@@ -1192,11 +1192,19 @@ object_relationships = {
 
 
 class TestObjectVersions(test.NoDBTestCase):
+    @staticmethod
+    def _is_method(thing):
+        # NOTE(dims): In Python3, The concept of 'unbound methods' has
+        # been removed from the language. When referencing a method
+        # as a class attribute, you now get a plain function object.
+        # so let's check for both
+        return inspect.isfunction(thing) or inspect.ismethod(thing)
+
     def _find_remotable_method(self, cls, thing, parent_was_remotable=False):
         """Follow a chain of remotable things down to the original function."""
         if isinstance(thing, classmethod):
             return self._find_remotable_method(cls, thing.__get__(None, cls))
-        elif inspect.ismethod(thing) and hasattr(thing, 'remotable'):
+        elif self._is_method(thing) and hasattr(thing, 'remotable'):
             return self._find_remotable_method(cls, thing.original_fn,
                                                parent_was_remotable=True)
         elif parent_was_remotable:
@@ -1210,12 +1218,12 @@ class TestObjectVersions(test.NoDBTestCase):
     def _get_fingerprint(self, obj_name):
         obj_classes = base.NovaObjectRegistry.obj_classes()
         obj_class = obj_classes[obj_name][0]
-        fields = obj_class.fields.items()
+        fields = list(obj_class.fields.items())
         fields.sort()
         methods = []
         for name in dir(obj_class):
             thing = getattr(obj_class, name)
-            if inspect.ismethod(thing) or isinstance(thing, classmethod):
+            if self._is_method(thing) or isinstance(thing, classmethod):
                 method = self._find_remotable_method(obj_class, thing)
                 if method:
                     methods.append((name, inspect.getargspec(method)))
@@ -1231,14 +1239,26 @@ class TestObjectVersions(test.NoDBTestCase):
                                  sorted(obj_class.child_versions.items())))
         else:
             relevant_data = (fields, methods)
-        fingerprint = '%s-%s' % (obj_class.VERSION,
-                                 hashlib.md5(str(relevant_data)).hexdigest())
+        relevant_data = repr(relevant_data)
+        if six.PY3:
+            relevant_data = relevant_data.encode('utf-8')
+        fingerprint = '%s-%s' % (
+        obj_class.VERSION, hashlib.md5(relevant_data).hexdigest())
         return fingerprint
+
+    def test_find_remotable_method(self):
+        class MyObject(object):
+            @base.remotable
+            def my_method(self):
+                return 'Hello World!'
+        thing = self._find_remotable_method(MyObject,
+                                            getattr(MyObject, 'my_method'))
+        self.assertIsNotNone(thing)
 
     def test_versions(self):
         fingerprints = {}
         obj_classes = base.NovaObjectRegistry.obj_classes()
-        for obj_name in obj_classes:
+        for obj_name in sorted(obj_classes, key=lambda x: x[0]):
             fingerprints[obj_name] = self._get_fingerprint(obj_name)
 
         if os.getenv('GENERATE_HASHES'):
