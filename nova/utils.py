@@ -46,6 +46,7 @@ from oslo_utils import encodeutils
 from oslo_utils import excutils
 from oslo_utils import importutils
 from oslo_utils import timeutils
+from oslo_utils import units
 import six
 from six.moves import range
 
@@ -1123,6 +1124,29 @@ def get_image_from_system_metadata(system_meta):
 
     image_meta['properties'] = properties
 
+    return image_meta
+
+
+def get_image_metadata_from_volume(volume):
+    properties = volume.get('volume_image_metadata', {})
+    image_meta = {'properties': properties}
+    # NOTE(yjiang5): restore the basic attributes
+    # NOTE(mdbooth): These values come from volume_glance_metadata
+    # in cinder. This is a simple key/value table, and all values
+    # are strings. We need to convert them to ints to avoid
+    # unexpected type errors.
+    image_meta['min_ram'] = int(properties.get('min_ram', 0))
+    image_meta['min_disk'] = int(properties.get('min_disk', 0))
+    # Volume size is no longer related to the original image size,
+    # so we take it from the volume directly. Cinder creates
+    # volumes in Gb increments, and stores size in Gb, whereas
+    # glance reports size in bytes. As we're returning glance
+    # metadata here, we need to convert it.
+    image_meta['size'] = volume.get('size', 0) * units.Gi
+    # NOTE(yjiang5): Always set the image status as 'active'
+    # and depends on followed volume_api.check_attach() to
+    # verify it. This hack should be harmless with that check.
+    image_meta['status'] = 'active'
     return image_meta
 
 
