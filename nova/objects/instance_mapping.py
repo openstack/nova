@@ -18,6 +18,7 @@ from nova.objects import base
 from nova.objects import fields
 
 
+@base.NovaObjectRegistry.register
 class InstanceMapping(base.NovaTimestampObject, base.NovaObject):
     # Version 1.0: Initial version
     VERSION = '1.0'
@@ -107,6 +108,7 @@ class InstanceMapping(base.NovaTimestampObject, base.NovaObject):
         self._destroy_in_db(self._context, self.instance_uuid)
 
 
+@base.NovaObjectRegistry.register
 class InstanceMappingList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     VERSION = '1.0'

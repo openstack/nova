@@ -22,6 +22,7 @@ OPTIONAL_ATTRS = ['parent_group', 'grantee_group']
 
 
 # TODO(berrange): Remove NovaObjectDictCompat
+@base.NovaObjectRegistry.register
 class SecurityGroupRule(base.NovaPersistentObject, base.NovaObject,
                         base.NovaObjectDictCompat):
     # Version 1.0: Initial version
@@ -84,6 +85,7 @@ class SecurityGroupRule(base.NovaPersistentObject, base.NovaObject,
         return cls._from_db_object(context, cls(), db_rule)
 
 
+@base.NovaObjectRegistry.register
 class SecurityGroupRuleList(base.ObjectListBase, base.NovaObject):
     fields = {
         'objects': fields.ListOfObjectsField('SecurityGroupRule'),

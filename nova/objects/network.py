@@ -41,6 +41,7 @@ CONF.register_opts(network_opts)
 
 
 # TODO(berrange): Remove NovaObjectDictCompat
+@obj_base.NovaObjectRegistry.register
 class Network(obj_base.NovaPersistentObject, obj_base.NovaObject,
               obj_base.NovaObjectDictCompat):
     # Version 1.0: Initial version
@@ -206,6 +207,7 @@ class Network(obj_base.NovaPersistentObject, obj_base.NovaObject,
             self._from_db_object(context, self, db_network)
 
 
+@obj_base.NovaObjectRegistry.register
 class NetworkList(obj_base.ObjectListBase, obj_base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Added get_by_project()

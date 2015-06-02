@@ -16,6 +16,7 @@ from nova.objects import base
 from nova.objects import fields
 
 
+@base.NovaObjectRegistry.register
 class Tag(base.NovaObject):
     # Version 1.0: Initial version
     VERSION = '1.0'
@@ -43,6 +44,7 @@ class Tag(base.NovaObject):
         db.instance_tag_delete(context, resource_id, name)
 
 
+@base.NovaObjectRegistry.register
 class TagList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     VERSION = '1.0'

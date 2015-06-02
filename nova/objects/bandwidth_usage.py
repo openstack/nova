@@ -16,6 +16,7 @@ from nova.objects import fields
 
 
 # TODO(berrange): Remove NovaObjectDictCompat
+@base.NovaObjectRegistry.register
 class BandwidthUsage(base.NovaPersistentObject, base.NovaObject,
                      base.NovaObjectDictCompat):
     # Version 1.0: Initial version
@@ -65,6 +66,7 @@ class BandwidthUsage(base.NovaPersistentObject, base.NovaObject,
         self._from_db_object(self._context, self, db_bw_usage)
 
 
+@base.NovaObjectRegistry.register
 class BandwidthUsageList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Add use_slave to get_by_uuids

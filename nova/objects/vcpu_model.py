@@ -17,6 +17,7 @@ from nova.objects import base
 from nova.objects import fields
 
 
+@base.NovaObjectRegistry.register
 class VirtCPUModel(base.NovaObject):
     # Version 1.0: Initial version
     VERSION = '1.0'
@@ -57,6 +58,7 @@ class VirtCPUModel(base.NovaObject):
         return cls.obj_from_primitive(jsonutils.loads(db_extra['vcpu_model']))
 
 
+@base.NovaObjectRegistry.register
 class VirtCPUFeature(base.NovaObject):
     VERSION = VirtCPUModel.VERSION
 

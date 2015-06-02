@@ -23,6 +23,7 @@ OPTIONAL_FIELDS = ['extra_specs', 'projects']
 
 
 # TODO(berrange): Remove NovaObjectDictCompat
+@base.NovaObjectRegistry.register
 class Flavor(base.NovaPersistentObject, base.NovaObject,
              base.NovaObjectDictCompat):
     # Version 1.0: Initial version
@@ -250,6 +251,7 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
         db.flavor_destroy(self._context, self.name)
 
 
+@base.NovaObjectRegistry.register
 class FlavorList(base.ObjectListBase, base.NovaObject):
     VERSION = '1.1'
 

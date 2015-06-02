@@ -42,6 +42,7 @@ def compare_pci_device_attributes(obj_a, obj_b):
 
 
 # TODO(berrange): Remove NovaObjectDictCompat
+@base.NovaObjectRegistry.register
 class PciDevice(base.NovaPersistentObject, base.NovaObject,
                 base.NovaObjectDictCompat):
 
@@ -200,6 +201,7 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject,
                 self._from_db_object(self._context, self, db_pci)
 
 
+@base.NovaObjectRegistry.register
 class PciDeviceList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     #              PciDevice <= 1.1

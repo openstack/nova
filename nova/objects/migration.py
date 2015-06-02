@@ -28,6 +28,7 @@ def _determine_migration_type(migration):
 
 
 # TODO(berrange): Remove NovaObjectDictCompat
+@base.NovaObjectRegistry.register
 class Migration(base.NovaPersistentObject, base.NovaObject,
                 base.NovaObjectDictCompat):
     # Version 1.0: Initial version
@@ -115,6 +116,7 @@ class Migration(base.NovaPersistentObject, base.NovaObject,
         return objects.Instance.get_by_uuid(self._context, self.instance_uuid)
 
 
+@base.NovaObjectRegistry.register
 class MigrationList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     #              Migration <= 1.1

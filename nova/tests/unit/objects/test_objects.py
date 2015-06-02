@@ -1283,6 +1283,15 @@ class TestObjectVersions(test.NoDBTestCase):
                          'versions have been bumped, and then update their '
                          'hashes here.')
 
+    def test_registry_matches_metaclass(self):
+        reference = set(object_data.keys())
+        actual = set(base.NovaObjectRegistry.classes)
+        test_objects = set(['MyObj', 'MyOwnedObject', 'TestSubclassedObject'])
+        # NOTE(danms): In the new registry, we don't implicitly track test
+        # objects, so make sure that the difference between the metaclass and
+        # the opt-in registry is the set of test objects.
+        self.assertEqual(test_objects, reference.symmetric_difference(actual))
+
     def _get_object_field_name(self, field):
         if isinstance(field._type, fields.Object):
             return field._type._obj_name

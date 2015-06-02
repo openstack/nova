@@ -24,6 +24,7 @@ from nova import utils
 
 
 # TODO(berrange): Remove NovaObjectDictCompat
+@base.NovaObjectRegistry.register
 class InstanceGroup(base.NovaPersistentObject, base.NovaObject,
                     base.NovaObjectDictCompat):
     # Version 1.0: Initial version
@@ -197,6 +198,7 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject,
         return len(instances)
 
 
+@base.NovaObjectRegistry.register
 class InstanceGroupList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     #              InstanceGroup <= version 1.3

@@ -26,6 +26,7 @@ LOG = logging.getLogger(__name__)
 
 
 # TODO(berrange): Remove NovaObjectDictCompat
+@base.NovaObjectRegistry.register
 class InstanceInfoCache(base.NovaPersistentObject, base.NovaObject,
                         base.NovaObjectDictCompat):
     # Version 1.0: Initial version

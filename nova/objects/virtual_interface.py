@@ -20,6 +20,7 @@ from nova.objects import fields
 
 
 # TODO(berrange): Remove NovaObjectDictCompat
+@base.NovaObjectRegistry.register
 class VirtualInterface(base.NovaPersistentObject, base.NovaObject,
                        base.NovaObjectDictCompat):
     # Version 1.0: Initial version
@@ -80,6 +81,7 @@ class VirtualInterface(base.NovaPersistentObject, base.NovaObject,
         db.virtual_interface_delete_by_instance(context, instance_uuid)
 
 
+@base.NovaObjectRegistry.register
 class VirtualInterfaceList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     VERSION = '1.0'

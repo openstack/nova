@@ -24,6 +24,7 @@ from nova.objects import fields
 from nova import utils
 
 
+@base.NovaObjectRegistry.register
 class PciDevicePool(base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Added numa_node field
@@ -67,6 +68,7 @@ class PciDevicePool(base.NovaObject):
         return pci_pool
 
 
+@base.NovaObjectRegistry.register
 class PciDevicePoolList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     #              PciDevicePool <= 1.0

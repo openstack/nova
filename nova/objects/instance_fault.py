@@ -30,6 +30,7 @@ LOG = logging.getLogger(__name__)
 
 
 # TODO(berrange): Remove NovaObjectDictCompat
+@base.NovaObjectRegistry.register
 class InstanceFault(base.NovaPersistentObject, base.NovaObject,
                     base.NovaObjectDictCompat):
     # Version 1.0: Initial version
@@ -90,6 +91,7 @@ class InstanceFault(base.NovaPersistentObject, base.NovaObject,
                 LOG.exception(_LE("Failed to notify cells of instance fault"))
 
 
+@base.NovaObjectRegistry.register
 class InstanceFaultList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     #              InstanceFault <= version 1.1

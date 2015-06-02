@@ -19,6 +19,7 @@ from nova import utils
 
 
 # TODO(berrange): Remove NovaObjectDictCompat
+@base.NovaObjectRegistry.register
 class InstancePCIRequest(base.NovaObject,
                          base.NovaObjectDictCompat):
     # Version 1.0: Initial version
@@ -52,6 +53,7 @@ class InstancePCIRequest(base.NovaObject,
 
 
 # TODO(berrange): Remove NovaObjectDictCompat
+@base.NovaObjectRegistry.register
 class InstancePCIRequests(base.NovaObject,
                           base.NovaObjectDictCompat):
     # Version 1.0: Initial version
