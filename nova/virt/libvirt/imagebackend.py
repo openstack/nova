@@ -142,6 +142,15 @@ class Image(object):
         """
         pass
 
+    @abc.abstractmethod
+    def resize_image(self, size):
+        """Resize image to size (in bytes).
+
+        :size: Desired size of image in bytes
+
+        """
+        pass
+
     def libvirt_info(self, disk_bus, disk_dev, device_type, cache_mode,
                      extra_specs, hypervisor_version):
         """Get `LibvirtConfigGuestDisk` filled for this image.
@@ -239,9 +248,13 @@ class Image(object):
             self.create_image(fetch_func_sync, base, size,
                               *args, **kwargs)
 
-        if (size and self.preallocate and self._can_fallocate() and
-                os.access(self.path, os.W_OK)):
-            utils.execute('fallocate', '-n', '-l', size, self.path)
+        if size:
+            if size > self.get_disk_size(base):
+                self.resize_image(size)
+
+            if (self.preallocate and self._can_fallocate() and
+                    os.access(self.path, os.W_OK)):
+                utils.execute('fallocate', '-n', '-l', size, self.path)
 
     def _can_fallocate(self):
         """Check once per class, whether fallocate(1) is available,
@@ -486,6 +499,10 @@ class Raw(Image):
                     copy_raw_image(base, self.path, size)
         self.correct_format()
 
+    def resize_image(self, size):
+        image = imgmodel.LocalFileImage(self.path, self.driver_format)
+        disk.extend(image, size)
+
     def snapshot_extract(self, target, out_format):
         images.convert_image(self.path, target, out_format)
 
@@ -558,6 +575,10 @@ class Qcow2(Image):
         if not os.path.exists(self.path):
             with fileutils.remove_path_on_error(self.path):
                 copy_qcow2_image(base, self.path, size)
+
+    def resize_image(self, size):
+        image = imgmodel.LocalFileImage(self.path, imgmodel.FORMAT_QCOW2)
+        disk.extend(image, size)
 
     def snapshot_extract(self, target, out_format):
         libvirt_utils.extract_snapshot(self.path, 'qcow2',
@@ -674,6 +695,11 @@ class Lvm(Image):
                 prepare_template(target=base, max_size=size, *args, **kwargs)
             with self.remove_volume_on_error(self.path):
                 create_lvm_image(base, size)
+
+    # NOTE(nic): Resizing the image is already handled in create_image(),
+    # and migrate/resize is not supported with LVM yet, so this is a no-op
+    def resize_image(self, size):
+        pass
 
     @contextlib.contextmanager
     def remove_volume_on_error(self, path):
@@ -795,6 +821,9 @@ class Rbd(Image):
         if size and size > self.get_disk_size(self.rbd_name):
             self.driver.resize(self.rbd_name, size)
 
+    def resize_image(self, size):
+        self.driver.resize(self.rbd_name, size)
+
     def snapshot_extract(self, target, out_format):
         images.convert_image(self.path, target, out_format)
 
@@ -905,6 +934,11 @@ class Ploop(Image):
                                         remove=shutil.rmtree)
         with fileutils.remove_path_on_error(self.path, remove=remove_func):
             create_ploop_image(base, self.path, size)
+
+    def resize_image(self, size):
+        dd_path = os.path.join(self.path, "DiskDescriptor.xml")
+        utils.execute('ploop', 'grow', '-s', '%dK' % (size >> 10), dd_path,
+                      run_as_root=True)
 
 
 class Backend(object):

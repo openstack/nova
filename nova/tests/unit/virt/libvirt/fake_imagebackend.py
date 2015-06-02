@@ -32,6 +32,9 @@ class Backend(object):
                               size, *args, **kwargs):
                 pass
 
+            def resize_image(self, size):
+                pass
+
             def cache(self, fetch_func, filename, size=None, *args, **kwargs):
                 pass
 
@@ -72,4 +75,7 @@ class Raw(imagebackend.Image):
         pass
 
     def create_image(self, prepare_template, base, size, *args, **kwargs):
+        pass
+
+    def resize_image(self, size):
         pass

@@ -107,6 +107,7 @@ class _ImageTestCase(object):
         def fake_fetch(target, *args, **kwargs):
             return
 
+        self.stubs.Set(image, 'get_disk_size', lambda _: self.SIZE)
         self.stubs.Set(os.path, 'exists', lambda _: True)
         self.stubs.Set(os, 'access', lambda p, w: True)
 
@@ -131,6 +132,7 @@ class _ImageTestCase(object):
 
         self.stubs.Set(image, 'check_image_exists', lambda: True)
         self.stubs.Set(image, '_can_fallocate', lambda: True)
+        self.stubs.Set(image, 'get_disk_size', lambda _: self.SIZE)
         self.stubs.Set(os.path, 'exists', lambda _: True)
         self.stubs.Set(os, 'access', lambda p, w: False)
 
@@ -766,6 +768,7 @@ class LvmTestCase(_ImageTestCase, test.NoDBTestCase):
 
         self.stubs.Set(os.path, 'exists', lambda _: True)
         self.stubs.Set(image, 'check_image_exists', lambda: True)
+        self.stubs.Set(image, 'get_disk_size', lambda _: self.SIZE)
 
         image.cache(fake_fetch, self.TEMPLATE_PATH, self.SIZE)
 
@@ -1138,6 +1141,7 @@ class EncryptedLvmTestCase(_ImageTestCase, test.NoDBTestCase):
 
         self.stubs.Set(os.path, 'exists', lambda _: True)
         self.stubs.Set(image, 'check_image_exists', lambda: True)
+        self.stubs.Set(image, 'get_disk_size', lambda _: self.SIZE)
 
         image.cache(fake_fetch, self.TEMPLATE_PATH, self.SIZE)
 
@@ -1324,6 +1328,7 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
 
         self.stubs.Set(os.path, 'exists', lambda _: True)
         self.stubs.Set(image, 'check_image_exists', lambda: True)
+        self.stubs.Set(image, 'get_disk_size', lambda _: self.SIZE)
 
         image.cache(fake_fetch, self.TEMPLATE_PATH, self.SIZE)
 
@@ -1502,6 +1507,7 @@ class PloopTestCase(_ImageTestCase, test.NoDBTestCase):
 
         self.stubs.Set(os.path, 'exists', lambda _: True)
         self.stubs.Set(image, 'check_image_exists', lambda: True)
+        self.stubs.Set(image, 'get_disk_size', lambda _: self.SIZE)
 
         image.cache(fake_fetch, self.TEMPLATE_PATH, self.SIZE)
 

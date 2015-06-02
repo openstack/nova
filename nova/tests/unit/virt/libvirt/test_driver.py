@@ -7177,8 +7177,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                    'ramdisk_id': 'fake_ramdisk_id',
                                    'project_id': 'fake-project'})
         instance = objects.Instance(**self.test_instance)
-        conn._create_images_and_backing(self.context, instance,
-                                        '/fake/instance/dir', disk_info)
+        with mock.patch.object(imagebackend.Image, 'get_disk_size'):
+            conn._create_images_and_backing(self.context, instance,
+                                            '/fake/instance/dir', disk_info)
         self.assertFalse(mock_fetch_image.called)
 
     def test_create_images_and_backing_ephemeral_gets_created(self):
@@ -7203,9 +7204,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             mock.patch.object(drvr, '_fetch_instance_kernel_ramdisk'),
             mock.patch.object(libvirt_driver.libvirt_utils, 'fetch_image'),
             mock.patch.object(drvr, '_create_ephemeral'),
-            mock.patch.object(imagebackend.Image, 'verify_base_size')
+            mock.patch.object(imagebackend.Image, 'verify_base_size'),
+            mock.patch.object(imagebackend.Image, 'get_disk_size')
         ) as (fetch_kernel_ramdisk_mock, fetch_image_mock,
-                create_ephemeral_mock, verify_base_size_mock):
+                create_ephemeral_mock, verify_base_size_mock, disk_size_mock):
             drvr._create_images_and_backing(self.context, instance,
                                             "/fake/instance/dir",
                                             disk_info)
@@ -8099,6 +8101,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                  size, *args, **kwargs):
                     pass
 
+                def resize_image(self, size):
+                    pass
+
                 def cache(self, fetch_func, filename, size=None,
                           *args, **kwargs):
                     gotFiles.append({'filename': filename,
@@ -8183,6 +8188,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
                 def create_image(self, prepare_template, base,
                                  size, *args, **kwargs):
+                    pass
+
+                def resize_image(self, size):
                     pass
 
                 def cache(self, fetch_func, filename, size=None,
@@ -8351,7 +8359,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             mock.patch.object(utils, 'execute'),
             mock.patch.object(drvr, 'get_info'),
             mock.patch.object(drvr, '_create_domain_and_network'),
-            mock.patch.object(imagebackend.Image, 'verify_base_size')):
+            mock.patch.object(imagebackend.Image, 'verify_base_size'),
+            mock.patch.object(imagebackend.Image, 'get_disk_size')):
             self.assertRaises(exception.InvalidBDMFormat, drvr._create_image,
                               context, instance, disk_info['mapping'],
                               block_device_info=block_device_info)
