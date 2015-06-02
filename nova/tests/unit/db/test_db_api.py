@@ -7500,25 +7500,23 @@ class Ec2TestCase(test.TestCase):
 class FlavorMigrationTestCase(test.TestCase):
     def test_augment_flavor_to_migrate_no_extra_specs(self):
         flavor = objects.Flavor()
-        db_flavor = {
-            'extra_specs': {'foo': 'bar'}}
-        sqlalchemy_api._augment_flavor_to_migrate(flavor, db_flavor)
+        full_flavor = objects.Flavor(extra_specs={'foo': 'bar'})
+        sqlalchemy_api._augment_flavor_to_migrate(flavor, full_flavor)
         self.assertTrue(flavor.obj_attr_is_set('extra_specs'))
-        self.assertEqual(db_flavor['extra_specs'], flavor.extra_specs)
+        self.assertEqual(full_flavor.extra_specs, flavor.extra_specs)
 
     def test_augment_flavor_to_migrate_extra_specs_merge(self):
         flavor = objects.Flavor()
         flavor.extra_specs = {'foo': '1', 'bar': '2'}
-        db_flavor = {
-            'extra_specs': {'bar': '3', 'baz': '4'}
-        }
-        sqlalchemy_api._augment_flavor_to_migrate(flavor, db_flavor)
+        full_flavor = objects.Flavor(extra_specs={'bar': '3', 'baz': '4'})
+        sqlalchemy_api._augment_flavor_to_migrate(flavor, full_flavor)
         self.assertEqual({'foo': '1', 'bar': '2', 'baz': '4'},
                          flavor.extra_specs)
 
     @mock.patch('nova.db.sqlalchemy.api._augment_flavor_to_migrate')
     def test_augment_flavors_to_migrate(self, mock_augment):
         instance = objects.Instance()
+        instance._context = context.get_admin_context()
         instance.flavor = objects.Flavor(flavorid='foo')
         instance.old_flavor = None
         instance.new_flavor = None
@@ -7527,7 +7525,7 @@ class FlavorMigrationTestCase(test.TestCase):
         mock_augment.assert_called_once_with(instance.flavor, 'bar')
 
     @mock.patch('nova.db.sqlalchemy.api._augment_flavor_to_migrate')
-    @mock.patch('nova.db.sqlalchemy.api.flavor_get_by_flavor_id')
+    @mock.patch('nova.objects.Flavor.get_by_flavor_id')
     def test_augment_flavors_to_migrate_uses_cache(self, mock_get,
                                                    mock_augment):
         instance = objects.Instance(context=context.get_admin_context())
@@ -7541,7 +7539,7 @@ class FlavorMigrationTestCase(test.TestCase):
         sqlalchemy_api._augment_flavors_to_migrate(instance, flavor_cache)
         self.assertIn('foo', flavor_cache)
         self.assertEqual('foo_flavor', flavor_cache['foo'])
-        mock_get.assert_called_once_with(instance._context, 'foo', 'yes')
+        mock_get.assert_called_once_with(mock.ANY, 'foo')
 
     def test_migrate_flavor(self):
         ctxt = context.get_admin_context()
@@ -7727,6 +7725,99 @@ class FlavorMigrationTestCase(test.TestCase):
         match, done = db.migrate_flavor_data(ctxt, None, {})
         self.assertEqual(1, match)
         self.assertEqual(1, done)
+
+    @mock.patch('nova.objects.Flavor.get_by_id')
+    def _test_migrate_flavor_with_no_sysmeta(self, flavor, inst,
+                                             expected_count,
+                                             mock_get_flavor):
+        ctxt = context.get_admin_context()
+        mock_get_flavor.return_value = flavor
+
+        flavor_cache = {}
+        total, hit = db.migrate_flavor_data(ctxt, None, flavor_cache)
+        self.assertEqual(expected_count, total)
+        self.assertEqual(expected_count, hit)
+        mock_get_flavor.assert_called_once_with(mock.ANY, 123)
+        self.assertIn(flavor.flavorid, flavor_cache)
+
+        # NOTE(danms): Fetch the pieces to make sure the sans-sysmeta
+        # instance is actually migrated in the database
+        extra = db.instance_extra_get_by_instance_uuid(ctxt, inst['uuid'])
+        self.assertIn('flavor', extra)
+        extra_flavor = objects.Flavor.obj_from_primitive(
+            jsonutils.loads(extra['flavor'])['cur'])
+        self.assertEqual(flavor.id, extra_flavor.id)
+
+        sysmeta = db.instance_system_metadata_get(ctxt, inst['uuid'])
+        self.assertNotIn('instance_type_id', sysmeta)
+
+    def test_migrate_flavor_with_no_sysmeta_first(self):
+        flavor = flavors.get_default_flavor()
+        sysmeta = flavors.save_flavor_info({}, flavor)
+        ctxt = context.get_admin_context()
+
+        values = {'uuid': str(stdlib_uuid.uuid4()),
+                  'instance_type_id': 123,
+                  'system_metadata': sysmeta,
+              }
+        db.instance_create(ctxt, values)
+
+        values = {'uuid': str(stdlib_uuid.uuid4()),
+                  'instance_type_id': 123,
+                  'system_metadata': {},
+              }
+        bad_inst = db.instance_create(ctxt, values)
+
+        self._test_migrate_flavor_with_no_sysmeta(flavor, bad_inst, 2)
+
+    def test_migrate_flavor_with_no_sysmeta_last(self):
+        flavor = flavors.get_default_flavor()
+        sysmeta = flavors.save_flavor_info({}, flavor)
+        ctxt = context.get_admin_context()
+
+        values = {'uuid': str(stdlib_uuid.uuid4()),
+                  'instance_type_id': 123,
+                  'system_metadata': {},
+              }
+        bad_inst = db.instance_create(ctxt, values)
+
+        values = {'uuid': str(stdlib_uuid.uuid4()),
+                  'instance_type_id': 123,
+                  'system_metadata': sysmeta,
+              }
+        db.instance_create(ctxt, values)
+
+        self._test_migrate_flavor_with_no_sysmeta(flavor, bad_inst, 2)
+
+    def test_migrate_flavor_with_no_sysmeta_alone(self):
+        flavor = flavors.get_default_flavor()
+        ctxt = context.get_admin_context()
+
+        values = {'uuid': str(stdlib_uuid.uuid4()),
+                  'instance_type_id': 123,
+                  'system_metadata': {},
+              }
+        bad_inst = db.instance_create(ctxt, values)
+
+        self._test_migrate_flavor_with_no_sysmeta(flavor, bad_inst, 1)
+
+    @mock.patch('nova.objects.Instance.save')
+    @mock.patch('nova.objects.Flavor.get_by_id')
+    def test_migrate_flavor_with_no_sysmeta_no_flavor(self, mock_get_flavor,
+                                                      mock_save):
+        ctxt = context.get_admin_context()
+        mock_get_flavor.side_effect = exception.FlavorNotFound(flavor_id=123)
+        values = {'uuid': str(stdlib_uuid.uuid4()),
+                  'instance_type_id': 123,
+                  'system_metadata': {},
+              }
+        db.instance_create(ctxt, values)
+
+        flavor_cache = {}
+        db.migrate_flavor_data(ctxt, None, flavor_cache)
+        mock_get_flavor.assert_called_once_with(mock.ANY, 123)
+        self.assertEqual({}, flavor_cache)
+        self.assertFalse(mock_save.called)
 
 
 class ArchiveTestCase(test.TestCase):
