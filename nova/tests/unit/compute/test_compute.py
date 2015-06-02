@@ -1115,7 +1115,7 @@ class ComputeVolumeTestCase(BaseTestCase):
                 'image_id': 1,
                 'device_name': '/dev/vdb',
             })]
-        self.assertRaises(exception.InvalidBDM,
+        self.assertRaises(exception.VolumeLimitExceeded,
                           compute_manager.ComputeManager()._prep_block_device,
                           self.context, instance, bdms)
         self.assertTrue(mock_create.called)
