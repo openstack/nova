@@ -4157,9 +4157,9 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
             context, id, columns_to_join=['instances'])
 
         for instance in security_group['instances']:
-            if instance.host is not None:
+            if instance['host'] is not None:
                 self.compute_rpcapi.refresh_instance_security_rules(
-                        context, instance.host, instance)
+                        context, instance['host'], instance)
 
     def trigger_members_refresh(self, context, group_ids):
         """Called when a security group gains a new or loses a member.
@@ -4188,14 +4188,14 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
         instances = {}
         for security_group in security_groups:
             for instance in security_group['instances']:
-                if instance.uuid not in instances:
-                    instances[instance.uuid] = instance
+                if instance['uuid'] not in instances:
+                    instances[instance['uuid']] = instance
 
         # ..then we send a request to refresh the rules for each instance.
         for instance in instances.values():
-            if instance.host:
+            if instance['host']:
                 self.compute_rpcapi.refresh_instance_security_rules(
-                        context, instance.host, instance)
+                        context, instance['host'], instance)
 
     def get_instance_security_groups(self, context, instance_uuid,
                                      detailed=False):
