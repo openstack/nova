@@ -1226,11 +1226,11 @@ class ComputeManager(manager.Manager):
                       'current task_state: %(task_state)s, current DB '
                       'power_state: %(db_power_state)s, VM power_state: '
                       '%(vm_power_state)s',
-                      dict(event=event.get_name(),
-                           vm_state=instance.vm_state,
-                           task_state=instance.task_state,
-                           db_power_state=instance.power_state,
-                           vm_power_state=vm_power_state),
+                      {'event': event.get_name(),
+                       'vm_state': instance.vm_state,
+                       'task_state': instance.task_state,
+                       'db_power_state': instance.power_state,
+                       'vm_power_state': vm_power_state},
                       instance_uuid=instance.uuid)
             self._sync_instance_power_state(context,
                                             instance,
@@ -2409,10 +2409,10 @@ class ComputeManager(manager.Manager):
                       'current task_state: %(task_state)s, current DB '
                       'power_state: %(db_power_state)s, current VM '
                       'power_state: %(current_power_state)s',
-                      dict(vm_state=instance.vm_state,
-                           task_state=instance.task_state,
-                           db_power_state=instance.power_state,
-                           current_power_state=current_power_state),
+                      {'vm_state': instance.vm_state,
+                       'task_state': instance.task_state,
+                       'db_power_state': instance.power_state,
+                       'current_power_state': current_power_state},
                       instance_uuid=instance.uuid)
 
             # NOTE(mriedem): If the instance is already powered off, we are
@@ -4653,7 +4653,7 @@ class ComputeManager(manager.Manager):
             context, instance, port_id, network_id, requested_ip)
         if len(network_info) != 1:
             LOG.error(_LE('allocate_port_for_instance returned %(ports)s '
-                          'ports'), dict(ports=len(network_info)))
+                          'ports'), {'ports': len(network_info)})
             raise exception.InterfaceAttachFailed(
                     instance_uuid=instance.uuid)
         image_ref = instance.get('image_ref')
@@ -5434,10 +5434,10 @@ class ComputeManager(manager.Manager):
                      " host %(host)s from %(begin_time)s to "
                      "%(end_time)s. %(number_instances)s"
                      " instances."),
-                 dict(host=self.host,
-                      begin_time=begin,
-                      end_time=end,
-                      number_instances=num_instances))
+                 {'host': self.host,
+                  'begin_time': begin,
+                  'end_time': end,
+                  'number_instances': num_instances})
         start_time = time.time()
         compute_utils.start_instance_usage_audit(context,
                                       self.conductor_api,
