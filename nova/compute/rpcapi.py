@@ -300,6 +300,7 @@ class ComputeAPI(object):
         * 4.1  - Make prep_resize() and resize_instance() send Flavor object
         * 4.2  - Add migration argument to live_migration()
         * 4.3  - Added get_mks_console method
+        * 4.4  - Make refresh_instance_security_rules send an instance object
     '''
 
     VERSION_ALIASES = {
@@ -925,10 +926,11 @@ class ComputeAPI(object):
                    security_group_id=security_group_id)
 
     def refresh_instance_security_rules(self, ctxt, host, instance):
-        version = '4.0'
-        # TODO(danms): This needs to be fixed for objects!
-        instance_p = jsonutils.to_primitive(instance)
+        version = '4.4'
+        if not self.client.can_send_version(version):
+            version = '4.0'
+            instance = objects_base.obj_to_primitive(instance)
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'refresh_instance_security_rules',
-                   instance=instance_p)
+                   instance=instance)

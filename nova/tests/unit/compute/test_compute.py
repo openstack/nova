@@ -9814,15 +9814,17 @@ class ComputeAPITestCase(BaseTestCase):
             mock_rule = db_fakes.FakeModel({'parent_group_id': 1})
             return [mock_rule]
 
-        def group_get(*args, **kwargs):
-            mock_group = db_fakes.FakeModel({'instances': [instance]})
-            return mock_group
+        @staticmethod
+        def get_by_security_group_id(context, security_group_id):
+            return [instance]
 
         self.stubs.Set(
                    self.compute_api.db,
                    'security_group_rule_get_by_security_group_grantee',
                    rule_get)
-        self.stubs.Set(self.compute_api.db, 'security_group_get', group_get)
+
+        self.stubs.Set(objects.InstanceList, 'get_by_security_group_id',
+                       get_by_security_group_id)
 
         rpcapi = compute_rpcapi.ComputeAPI
         self.mox.StubOutWithMock(rpcapi, 'refresh_instance_security_rules')
@@ -9836,24 +9838,25 @@ class ComputeAPITestCase(BaseTestCase):
     def test_secgroup_refresh_once(self):
         instance = self._create_fake_instance_obj()
 
+        @staticmethod
+        def get_by_security_group_id(context, security_group_id):
+            return [instance]
+
         def rule_get(*args, **kwargs):
             mock_rule = db_fakes.FakeModel({'parent_group_id': 1})
             return [mock_rule]
-
-        def group_get(*args, **kwargs):
-            mock_group = db_fakes.FakeModel({'instances': [instance]})
-            return mock_group
 
         self.stubs.Set(
                    self.compute_api.db,
                    'security_group_rule_get_by_security_group_grantee',
                    rule_get)
-        self.stubs.Set(self.compute_api.db, 'security_group_get', group_get)
 
+        self.stubs.Set(objects.InstanceList, 'get_by_security_group_id',
+                       get_by_security_group_id)
         rpcapi = compute_rpcapi.ComputeAPI
         self.mox.StubOutWithMock(rpcapi, 'refresh_instance_security_rules')
         rpcapi.refresh_instance_security_rules(self.context,
-                                               instance['host'],
+                                               instance.host,
                                                instance)
         self.mox.ReplayAll()
 
@@ -9884,12 +9887,11 @@ class ComputeAPITestCase(BaseTestCase):
     def test_secrule_refresh(self):
         instance = self._create_fake_instance_obj()
 
-        def group_get(*args, **kwargs):
-            mock_group = db_fakes.FakeModel({'instances': [instance]})
-            return mock_group
-
-        self.stubs.Set(self.compute_api.db, 'security_group_get', group_get)
-
+        @staticmethod
+        def get_by_security_group_id(context, security_group_id):
+            return [instance]
+        self.stubs.Set(objects.InstanceList, 'get_by_security_group_id',
+                       get_by_security_group_id)
         rpcapi = compute_rpcapi.ComputeAPI
         self.mox.StubOutWithMock(rpcapi, 'refresh_instance_security_rules')
         rpcapi.refresh_instance_security_rules(self.context,
@@ -9902,12 +9904,11 @@ class ComputeAPITestCase(BaseTestCase):
     def test_secrule_refresh_once(self):
         instance = self._create_fake_instance_obj()
 
-        def group_get(*args, **kwargs):
-            mock_group = db_fakes.FakeModel({'instances': [instance]})
-            return mock_group
-
-        self.stubs.Set(self.compute_api.db, 'security_group_get', group_get)
-
+        @staticmethod
+        def get_by_security_group_id(context, security_group_id):
+            return [instance]
+        self.stubs.Set(objects.InstanceList, 'get_by_security_group_id',
+                       get_by_security_group_id)
         rpcapi = compute_rpcapi.ComputeAPI
         self.mox.StubOutWithMock(rpcapi, 'refresh_instance_security_rules')
         rpcapi.refresh_instance_security_rules(self.context,
@@ -9918,12 +9919,11 @@ class ComputeAPITestCase(BaseTestCase):
         self.security_group_api.trigger_rules_refresh(self.context, [1, 2])
 
     def test_secrule_refresh_none(self):
-        def group_get(*args, **kwargs):
-            mock_group = db_fakes.FakeModel({'instances': []})
-            return mock_group
-
-        self.stubs.Set(self.compute_api.db, 'security_group_get', group_get)
-
+        @staticmethod
+        def get_by_security_group_id(context, security_group_id):
+            return []
+        self.stubs.Set(objects.InstanceList, 'get_by_security_group_id',
+                       get_by_security_group_id)
         rpcapi = compute_rpcapi.ComputeAPI
         self.mox.StubOutWithMock(rpcapi, 'refresh_instance_security_rules')
         self.mox.ReplayAll()
