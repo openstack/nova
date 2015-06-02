@@ -29,6 +29,7 @@ from six.moves import range
 
 from nova import exception
 from nova.i18n import _, _LE, _LW
+from nova import utils
 from nova.virt import driver
 from nova.virt.hyperv import utilsfactory
 from nova.virt.hyperv import vmutils
@@ -341,6 +342,17 @@ class ISCSIVolumeDriver(object):
         self.login_storage_target(connection_info)
 
 
+def export_path_synchronized(f):
+    def wrapper(inst, connection_info, *args, **kwargs):
+        export_path = inst._get_export_path(connection_info)
+
+        @utils.synchronized(export_path)
+        def inner():
+            return f(inst, connection_info, *args, **kwargs)
+        return inner()
+    return wrapper
+
+
 class SMBFSVolumeDriver(object):
     def __init__(self):
         self._pathutils = utilsfactory.get_pathutils()
@@ -349,6 +361,7 @@ class SMBFSVolumeDriver(object):
         self._username_regex = re.compile(r'user(?:name)?=([^, ]+)')
         self._password_regex = re.compile(r'pass(?:word)?=([^, ]+)')
 
+    @export_path_synchronized
     def attach_volume(self, connection_info, instance_name, ebs_root=False):
         self.ensure_share_mounted(connection_info)
 
@@ -384,7 +397,7 @@ class SMBFSVolumeDriver(object):
 
         self._vmutils.detach_vm_disk(instance_name, disk_path,
                                      is_physical=False)
-        self._pathutils.unmount_smb_share(export_path)
+        self._unmount_smb_share(export_path)
 
     def disconnect_volumes(self, block_device_mapping):
         export_paths = set()
@@ -394,7 +407,7 @@ class SMBFSVolumeDriver(object):
             export_paths.add(export_path)
 
         for export_path in export_paths:
-            self._pathutils.unmount_smb_share(export_path)
+            self._unmount_smb_share(export_path)
 
     def _get_export_path(self, connection_info):
         return connection_info['data']['export'].replace('/', '\\')
@@ -430,3 +443,13 @@ class SMBFSVolumeDriver(object):
 
     def initialize_volume_connection(self, connection_info):
         self.ensure_share_mounted(connection_info)
+
+    def _unmount_smb_share(self, export_path):
+        # We synchronize share unmount and volume attach operations based on
+        # the share path in order to avoid the situation when a SMB share is
+        # unmounted while a volume exported by it is about to be attached to
+        # an instance.
+        @utils.synchronized(export_path)
+        def unmount_synchronized():
+            self._pathutils.unmount_smb_share(export_path)
+        unmount_synchronized()
