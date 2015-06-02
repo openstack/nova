@@ -8,7 +8,7 @@ only working with Compute Nodes.
 Filtering
 ---------
 
-.. image:: ../images/filteringWorkflow1.png
+.. image:: ./images/filteringWorkflow1.png
 
 During its work Filter Scheduler firstly makes dictionary of unfiltered hosts,
 then filters them using filter properties and finally chooses hosts for the
@@ -370,7 +370,7 @@ so subsequent selections can adjust accordingly. It is useful if the customer
 asks for the some large amount of instances, because weight is computed for
 each instance requested.
 
-.. image:: ../images/filteringWorkflow2.png
+.. image:: ./images/filteringWorkflow2.png
 
 In the end Filter Scheduler sorts selected hosts by their weight and provisions
 instances on them.
