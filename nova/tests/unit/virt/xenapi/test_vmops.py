@@ -190,7 +190,8 @@ class VMOpsTestCase(VMOpsTestBase):
             try_auto_config):
         ctxt = context.RequestContext('user', 'project')
         instance = fake_instance.fake_instance_obj(ctxt)
-        image_meta = {'properties': {'auto_disk_config': 'false'}}
+        image_meta = objects.ImageMeta.from_dict(
+            {'properties': {'auto_disk_config': 'false'}})
         vdis = {'root': {'ref': 'fake-ref'}}
         self.assertRaises(test.TestingException, self._vmops._attach_disks,
                 instance, image_meta=image_meta, vm_ref=None,
@@ -205,7 +206,8 @@ class VMOpsTestCase(VMOpsTestBase):
             try_auto_config):
         ctxt = context.RequestContext('user', 'project')
         instance = fake_instance.fake_instance_obj(ctxt)
-        image_meta = {'properties': {'auto_disk_config': 'true'}}
+        image_meta = objects.ImageMeta.from_dict(
+            {'properties': {'auto_disk_config': 'true'}})
         vdis = {'root': {'ref': 'fake-ref'}}
         self.assertRaises(test.TestingException, self._vmops._attach_disks,
                 instance, image_meta=image_meta, vm_ref=None,
@@ -322,7 +324,7 @@ class SpawnTestCase(VMOpsTestBase):
         name_label = name_label_param
         if name_label is None:
             name_label = "dummy"
-        image_meta = {"id": "image_id"}
+        image_meta = objects.ImageMeta.from_dict({"id": "image_id"})
         context = "context"
         session = self.vmops._session
         injected_files = "fake_files"
@@ -481,7 +483,7 @@ class SpawnTestCase(VMOpsTestBase):
                 "root_device_name": "/dev/xvda"}
         disk_info = "disk_info"
         network_info = "net_info"
-        image_meta = {"id": "image_id"}
+        image_meta = objects.ImageMeta.from_dict({"id": "image_id"})
         block_device_info = {}
         import_root = True
         if booted_from_volume:
@@ -996,7 +998,8 @@ class CreateVMRecordTestCase(VMOpsTestBase):
         ramdisk_file = "ram"
         device_id = "0002"
         image_properties = {"xenapi_device_id": device_id}
-        image_meta = {"properties": image_properties}
+        image_meta = objects.ImageMeta.from_dict(
+            {"properties": image_properties})
         rescue = False
         session = "session"
         self.vmops._session = session
@@ -1006,7 +1009,7 @@ class CreateVMRecordTestCase(VMOpsTestBase):
         self.vmops._create_vm_record(context, instance, name_label,
             disk_image_type, kernel_file, ramdisk_file, image_meta, rescue)
 
-        mock_get_vm_device_id.assert_called_with(session, image_properties)
+        mock_get_vm_device_id.assert_called_with(session, image_meta)
         mock_create_vm.assert_called_with(session, instance, name_label,
             kernel_file, ramdisk_file, False, device_id)
 

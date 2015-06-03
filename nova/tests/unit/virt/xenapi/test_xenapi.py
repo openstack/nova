@@ -96,41 +96,49 @@ IMAGE_FIXTURES = {
     IMAGE_MACHINE: {
         'image_meta': {'name': 'fakemachine', 'size': 0,
                        'disk_format': 'ami',
-                       'container_format': 'ami'},
+                       'container_format': 'ami',
+                       'id': 'fake-image'},
     },
     IMAGE_KERNEL: {
         'image_meta': {'name': 'fakekernel', 'size': 0,
                        'disk_format': 'aki',
-                       'container_format': 'aki'},
+                       'container_format': 'aki',
+                       'id': 'fake-kernel'},
     },
     IMAGE_RAMDISK: {
         'image_meta': {'name': 'fakeramdisk', 'size': 0,
                        'disk_format': 'ari',
-                       'container_format': 'ari'},
+                       'container_format': 'ari',
+                       'id': 'fake-ramdisk'},
     },
     IMAGE_RAW: {
         'image_meta': {'name': 'fakeraw', 'size': 0,
                        'disk_format': 'raw',
-                       'container_format': 'bare'},
+                       'container_format': 'bare',
+                       'id': 'fake-image-raw'},
     },
     IMAGE_VHD: {
         'image_meta': {'name': 'fakevhd', 'size': 0,
                        'disk_format': 'vhd',
-                       'container_format': 'ovf'},
+                       'container_format': 'ovf',
+                       'id': 'fake-image-vhd'},
     },
     IMAGE_ISO: {
         'image_meta': {'name': 'fakeiso', 'size': 0,
                        'disk_format': 'iso',
-                       'container_format': 'bare'},
+                       'container_format': 'bare',
+                       'id': 'fake-image-iso'},
     },
     IMAGE_IPXE_ISO: {
         'image_meta': {'name': 'fake_ipxe_iso', 'size': 0,
                        'disk_format': 'iso',
                        'container_format': 'bare',
+                       'id': 'fake-image-pxe',
                        'properties': {'ipxe_boot': 'true'}},
     },
     IMAGE_FROM_VOLUME: {
         'image_meta': {'name': 'fake_ipxe_iso',
+                       'id': 'fake-image-volume',
                        'properties': {'foo': 'bar'}},
     },
 }
@@ -751,9 +759,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
             # NOTE(tr3buchet): this is a terrible way to do this...
             network_info[0]['network']['subnets'][0]['dns'] = []
 
-        image_meta = {}
-        if image_ref:
-            image_meta = IMAGE_FIXTURES[image_ref]["image_meta"]
+        image_meta = IMAGE_FIXTURES[image_ref]["image_meta"]
         self.conn.spawn(self.context, instance, image_meta, injected_files,
                         'herp', network_info, block_device_info)
         self.create_vm_record(self.conn, os_type, instance['name'])
@@ -912,11 +918,6 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
                          IMAGE_KERNEL,
                          IMAGE_RAMDISK)
         self.check_vm_params_for_linux_with_external_kernel()
-
-    def test_spawn_boot_from_volume_no_image_meta(self):
-        dev_info = get_fake_device_info()
-        self._test_spawn(None, None, None,
-                         block_device_info=dev_info)
 
     def test_spawn_boot_from_volume_no_glance_image_meta(self):
         dev_info = get_fake_device_info()
@@ -2041,20 +2042,19 @@ class XenAPIDetermineDiskImageTestCase(test.NoDBTestCase):
         self.assertEqual(expected_disk_type, actual)
 
     def test_machine(self):
-        image_meta = {'id': 'a', 'disk_format': 'ami'}
+        image_meta = objects.ImageMeta.from_dict(
+            {'disk_format': 'ami'})
         self.assert_disk_type(image_meta, vm_utils.ImageType.DISK)
 
     def test_raw(self):
-        image_meta = {'id': 'a', 'disk_format': 'raw'}
+        image_meta = objects.ImageMeta.from_dict(
+            {'disk_format': 'raw'})
         self.assert_disk_type(image_meta, vm_utils.ImageType.DISK_RAW)
 
     def test_vhd(self):
-        image_meta = {'id': 'a', 'disk_format': 'vhd'}
+        image_meta = objects.ImageMeta.from_dict(
+            {'disk_format': 'vhd'})
         self.assert_disk_type(image_meta, vm_utils.ImageType.DISK_VHD)
-
-    def test_none(self):
-        image_meta = None
-        self.assert_disk_type(image_meta, None)
 
 
 # FIXME(sirp): convert this to use XenAPITestBaseNoDB

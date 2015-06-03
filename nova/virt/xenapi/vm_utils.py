@@ -194,13 +194,11 @@ class ImageType(object):
         }.get(image_type_id)
 
 
-def get_vm_device_id(session, image_properties):
+def get_vm_device_id(session, image_meta):
     # NOTE: device_id should be 2 for windows VMs which run new xentools
     # (>=6.1). Refer to http://support.citrix.com/article/CTX135099 for more
     # information.
-    if image_properties is None:
-        image_properties = {}
-    device_id = image_properties.get('xenapi_device_id')
+    device_id = image_meta.properties.get('hw_device_id')
 
     # The device_id is required to be set for hypervisor version 6.1 and above
     if device_id:
@@ -1604,10 +1602,8 @@ def determine_disk_image_type(image_meta):
     2. If we're not using Glance, then we need to deduce this based on
        whether a kernel_id is specified.
     """
-    if not image_meta or 'disk_format' not in image_meta:
+    if not image_meta.obj_attr_is_set("disk_format"):
         return None
-
-    disk_format = image_meta['disk_format']
 
     disk_format_map = {
         'ami': ImageType.DISK,
@@ -1619,18 +1615,13 @@ def determine_disk_image_type(image_meta):
     }
 
     try:
-        image_type = disk_format_map[disk_format]
+        image_type = disk_format_map[image_meta.disk_format]
     except KeyError:
-        raise exception.InvalidDiskFormat(disk_format=disk_format)
+        raise exception.InvalidDiskFormat(disk_format=image_meta.disk_format)
 
-    image_ref = image_meta.get('id')
-
-    params = {
-        'image_type_str': ImageType.to_string(image_type),
-        'image_ref': image_ref
-    }
-    LOG.debug("Detected %(image_type_str)s format for image %(image_ref)s",
-              params)
+    LOG.debug("Detected %(type)s format for image %(image)s",
+              {'type': ImageType.to_string(image_type),
+               'image': image_meta})
 
     return image_type
 
