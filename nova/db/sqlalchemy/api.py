@@ -4431,6 +4431,9 @@ def migration_get_all_by_filters(context, filters):
         host = filters["host"]
         query = query.filter(or_(models.Migration.source_compute == host,
                                  models.Migration.dest_compute == host))
+    elif "source_compute" in filters:
+        host = filters['source_compute']
+        query = query.filter(models.Migration.source_compute == host)
     if "migration_type" in filters:
         migtype = filters["migration_type"]
         query = query.filter(models.Migration.migration_type == migtype)
