@@ -296,6 +296,8 @@ class CellsMessageClassesTestCase(test.TestCase):
             """
             fields = {'test': objects_fields.StringField()}
 
+        objects_base.NovaObjectRegistry.register(CellsMsgingTestObject)
+
         test_obj = CellsMsgingTestObject()
         test_obj.test = 'meow'
 

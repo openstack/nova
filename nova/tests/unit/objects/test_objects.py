@@ -21,19 +21,20 @@ import inspect
 import os
 import pprint
 
+import fixtures
 import mock
 from oslo_log import log
 from oslo_utils import timeutils
+from oslo_versionedobjects import exception as ovo_exc
+from oslo_versionedobjects import fixture
 import six
 from testtools import matchers
 
-from nova.conductor import rpcapi as conductor_rpcapi
 from nova import context
 from nova import exception
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
-from nova import rpc
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit import fake_notifier
@@ -122,6 +123,10 @@ class MyObjDiffVers(MyObj):
 
 
 class MyObj2(object):
+    fields = {
+        'bar': fields.StringField(),
+    }
+
     @classmethod
     def obj_name(cls):
         return 'MyObj'
@@ -136,78 +141,15 @@ class RandomMixInWithNoFields(object):
     pass
 
 
+@base.NovaObjectRegistry.register_if(False)
 class TestSubclassedObject(RandomMixInWithNoFields, MyObj):
     fields = {'new_field': fields.StringField()}
-
-
-class TestMetaclass(test.NoDBTestCase):
-    def test_obj_tracking(self):
-
-        @six.add_metaclass(base.NovaObjectMetaclass)
-        class NewBaseClass(object):
-            VERSION = '1.0'
-            fields = {}
-
-            @classmethod
-            def obj_name(cls):
-                return cls.__name__
-
-        class Fake1TestObj1(NewBaseClass):
-            @classmethod
-            def obj_name(cls):
-                return 'fake1'
-
-        class Fake1TestObj2(Fake1TestObj1):
-            pass
-
-        class Fake1TestObj3(Fake1TestObj1):
-            VERSION = '1.1'
-
-        class Fake2TestObj1(NewBaseClass):
-            @classmethod
-            def obj_name(cls):
-                return 'fake2'
-
-        class Fake1TestObj4(Fake1TestObj3):
-            VERSION = '1.2'
-
-        class Fake2TestObj2(Fake2TestObj1):
-            VERSION = '1.1'
-
-        class Fake1TestObj5(Fake1TestObj1):
-            VERSION = '1.1'
-
-        # Newest versions first in the list. Duplicate versions take the
-        # newest object.
-        expected = {'fake1': [Fake1TestObj4, Fake1TestObj5, Fake1TestObj2],
-                    'fake2': [Fake2TestObj2, Fake2TestObj1]}
-        self.assertEqual(expected, NewBaseClass._obj_classes)
-        # The following should work, also.
-        self.assertEqual(expected, Fake1TestObj1._obj_classes)
-        self.assertEqual(expected, Fake1TestObj2._obj_classes)
-        self.assertEqual(expected, Fake1TestObj3._obj_classes)
-        self.assertEqual(expected, Fake1TestObj4._obj_classes)
-        self.assertEqual(expected, Fake1TestObj5._obj_classes)
-        self.assertEqual(expected, Fake2TestObj1._obj_classes)
-        self.assertEqual(expected, Fake2TestObj2._obj_classes)
-
-    def test_field_checking(self):
-        def create_class(field):
-            class TestField(base.NovaObject):
-                VERSION = '1.5'
-                fields = {'foo': field()}
-            return TestField
-
-        create_class(fields.IPV4AndV6AddressField)
-        self.assertRaises(exception.ObjectFieldInvalid,
-                          create_class, fields.IPV4AndV6Address)
-        self.assertRaises(exception.ObjectFieldInvalid,
-                          create_class, int)
 
 
 class TestObjToPrimitive(test.NoDBTestCase):
 
     def test_obj_to_primitive_list(self):
+        @base.NovaObjectRegistry.register_if(False)
         class MyObjElement(base.NovaObject):
             fields = {'foo': fields.IntegerField()}
 
@@ -215,6 +157,7 @@ class TestObjToPrimitive(test.NoDBTestCase):
                 super(MyObjElement, self).__init__()
                 self.foo = foo
 
+        @base.NovaObjectRegistry.register_if(False)
         class MyList(base.ObjectListBase, base.NovaObject):
             fields = {'objects': fields.ListOfObjectsField('MyObjElement')}
 
@@ -224,11 +167,14 @@ class TestObjToPrimitive(test.NoDBTestCase):
                          [x['foo'] for x in base.obj_to_primitive(mylist)])
 
     def test_obj_to_primitive_dict(self):
+        base.NovaObjectRegistry.register(MyObj)
         myobj = MyObj(foo=1, bar='foo')
         self.assertEqual({'foo': 1, 'bar': 'foo'},
                          base.obj_to_primitive(myobj))
 
     def test_obj_to_primitive_recursive(self):
+        base.NovaObjectRegistry.register(MyObj)
+
         class MyList(base.ObjectListBase, base.NovaObject):
             fields = {'objects': fields.ListOfObjectsField('MyObj')}
 
@@ -239,6 +185,7 @@ class TestObjToPrimitive(test.NoDBTestCase):
                          base.obj_to_primitive(mylist))
 
     def test_obj_to_primitive_with_ip_addr(self):
+        @base.NovaObjectRegistry.register_if(False)
         class TestObject(base.NovaObject):
             fields = {'addr': fields.IPAddressField(),
                       'cidr': fields.IPNetworkField()}
@@ -316,6 +263,12 @@ class _BaseTestCase(test.TestCase):
         fake_notifier.stub_notifier(self.stubs)
         self.addCleanup(fake_notifier.reset)
 
+        # NOTE(danms): register these here instead of at import time
+        # so that they're not always present
+        base.NovaObjectRegistry.register(MyObj)
+        base.NovaObjectRegistry.register(MyObjDiffVers)
+        base.NovaObjectRegistry.register(MyOwnedObject)
+
     def compare_obj(self, obj, db_obj, subs=None, allow_missing=None,
                     comparators=None):
         compare_obj(self, obj, db_obj, subs=subs, allow_missing=allow_missing,
@@ -356,51 +309,57 @@ def things_temporarily_local():
     base.NovaObject.indirection_api = _api
 
 
+class FakeIndirectionHack(fixture.FakeIndirectionAPI):
+    def object_action(self, context, objinst, objmethod, args, kwargs):
+        objinst = self._ser.deserialize_entity(
+            context, self._ser.serialize_entity(
+                context, objinst))
+        objmethod = six.text_type(objmethod)
+        args = self._ser.deserialize_entity(
+            None, self._ser.serialize_entity(None, args))
+        kwargs = self._ser.deserialize_entity(
+            None, self._ser.serialize_entity(None, kwargs))
+        original = objinst.obj_clone()
+        with mock.patch('nova.objects.base.NovaObject.'
+                        'indirection_api', new=None):
+            result = getattr(objinst, objmethod)(*args, **kwargs)
+        updates = self._get_changes(original, objinst)
+        updates['obj_what_changed'] = objinst.obj_what_changed()
+        return updates, result
+
+    def object_class_action(self, context, objname, objmethod, objver,
+                            args, kwargs):
+        objname = six.text_type(objname)
+        objmethod = six.text_type(objmethod)
+        objver = six.text_type(objver)
+        args = self._ser.deserialize_entity(
+            None, self._ser.serialize_entity(None, args))
+        kwargs = self._ser.deserialize_entity(
+            None, self._ser.serialize_entity(None, kwargs))
+        cls = base.NovaObject.obj_class_from_name(objname, objver)
+        with mock.patch('nova.objects.base.NovaObject.'
+                        'indirection_api', new=None):
+            result = getattr(cls, objmethod)(context, *args, **kwargs)
+        return (base.NovaObject.obj_from_primitive(
+            result.obj_to_primitive(target_version=objver),
+            context=context)
+            if isinstance(result, base.NovaObject) else result)
+
+
+class IndirectionFixture(fixtures.Fixture):
+    def setUp(self):
+        super(IndirectionFixture, self).setUp()
+        ser = base.NovaObjectSerializer()
+        self.indirection_api = FakeIndirectionHack(serializer=ser)
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.objects.base.NovaObject.indirection_api',
+            self.indirection_api))
+
+
 class _RemoteTest(_BaseTestCase):
-    def _testable_conductor(self):
-        self.conductor_service = self.start_service(
-            'conductor', manager='nova.conductor.manager.ConductorManager')
-        self.remote_object_calls = list()
-
-        orig_object_class_action = \
-            self.conductor_service.manager.object_class_action
-        orig_object_action = \
-            self.conductor_service.manager.object_action
-
-        def fake_object_class_action(*args, **kwargs):
-            self.remote_object_calls.append((kwargs.get('objname'),
-                                             kwargs.get('objmethod')))
-            with things_temporarily_local():
-                result = orig_object_class_action(*args, **kwargs)
-            return (base.NovaObject.obj_from_primitive(result, context=args[0])
-                    if isinstance(result, base.NovaObject) else result)
-        self.stubs.Set(self.conductor_service.manager, 'object_class_action',
-                       fake_object_class_action)
-
-        def fake_object_action(*args, **kwargs):
-            self.remote_object_calls.append((kwargs.get('objinst'),
-                                             kwargs.get('objmethod')))
-            with things_temporarily_local():
-                result = orig_object_action(*args, **kwargs)
-            return result
-        self.stubs.Set(self.conductor_service.manager, 'object_action',
-                       fake_object_action)
-
-        # Things are remoted by default in this session
-        self.useFixture(nova_fixtures.IndirectionAPIFixture(
-                            conductor_rpcapi.ConductorAPI()))
-
-        # To make sure local and remote contexts match
-        self.stubs.Set(rpc.RequestContextSerializer,
-                       'serialize_context',
-                       lambda s, c: c)
-        self.stubs.Set(rpc.RequestContextSerializer,
-                       'deserialize_context',
-                       lambda s, c: c)
-
     def setUp(self):
         super(_RemoteTest, self).setUp()
-        self._testable_conductor()
+        self.useFixture(IndirectionFixture())
 
 
 class _TestObject(object):
@@ -494,6 +453,7 @@ class _TestObject(object):
         self.assertEqual(obj.bar, 'loaded!')
 
     def test_load_in_base(self):
+        @base.NovaObjectRegistry.register_if(False)
         class Foo(base.NovaObject):
             fields = {'foobar': fields.IntegerField()}
         obj = Foo()
@@ -586,6 +546,7 @@ class _TestObject(object):
         self.assertIsInstance(obj.rel_object, MyOwnedObject)
 
     def test_changed_with_sub_object(self):
+        @base.NovaObjectRegistry.register_if(False)
         class ParentObject(base.NovaObject):
             fields = {'foo': fields.IntegerField(),
                       'bar': fields.ObjectField('MyObj'),
@@ -734,6 +695,7 @@ class _TestObject(object):
         self.assertEqual({}, obj.obj_get_changes())
 
     def test_obj_fields(self):
+        @base.NovaObjectRegistry.register_if(False)
         class TestObj(base.NovaObject):
             fields = {'foo': fields.IntegerField()}
             obj_extra_fields = ['bar']
@@ -754,7 +716,7 @@ class _TestObject(object):
     def test_obj_read_only(self):
         obj = MyObj(context=self.context, foo=123, bar='abc')
         obj.readonly = 1
-        self.assertRaises(exception.ReadOnlyFieldError, setattr,
+        self.assertRaises(ovo_exc.ReadOnlyFieldError, setattr,
                           obj, 'readonly', 2)
 
     def test_obj_mutable_default(self):
@@ -853,12 +815,14 @@ class _TestObject(object):
                           obj.obj_make_compatible, {}, '1.0')
 
     def test_obj_make_compatible_doesnt_skip_falsey_sub_objects(self):
+        @base.NovaObjectRegistry.register_if(False)
         class MyList(base.ObjectListBase, base.NovaObject):
             VERSION = '1.2'
             fields = {'objects': fields.ListOfObjectsField('MyObjElement')}
 
         mylist = MyList(objects=[])
 
+        @base.NovaObjectRegistry.register_if(False)
         class MyOwner(base.NovaObject):
             VERSION = '1.2'
             fields = {'mylist': fields.ObjectField('MyList')}
@@ -977,6 +941,8 @@ class TestObjectSerializer(_BaseTestCase):
 
         class MyTestObj(MyObj):
             VERSION = my_version
+
+        base.NovaObjectRegistry.register(MyTestObj)
 
         obj = MyTestObj()
         obj.VERSION = obj_version
@@ -1135,8 +1101,6 @@ object_data = {
     'KeyPairList': '1.2-60f984184dc5a8eba6e34e20cbabef04',
     'Migration': '1.2-331b1f37d0b20b932614181b9832c860',
     'MigrationList': '1.2-5e79c0693d7ebe4e9ac03b5db11ab243',
-    'MyObj': '1.6-ee7b607402fbfb3390a92ab7199e0d88',
-    'MyOwnedObject': '1.0-fec853730bd02d54cc32771dd67f08a0',
     'NUMACell': '1.2-74fc993ac5c83005e76e34e8487f1c05',
     'NUMAPagesTopology': '1.0-c71d86317283266dc8364c149155e48e',
     'NUMATopology': '1.2-c63fad38be73b6afd04715c9c1b29220',
@@ -1160,7 +1124,6 @@ object_data = {
     'ServiceList': '1.10-2f49ab65571c0edcbf623f664da612c0',
     'Tag': '1.0-616bf44af4a22e853c17b37a758ec73e',
     'TagList': '1.0-e16d65894484b7530b720792ffbbbd02',
-    'TestSubclassedObject': '1.6-716fc8b481c9374f7e222de03ba0a621',
     'VirtCPUFeature': '1.0-3310718d8c72309259a6e39bdefe83ee',
     'VirtCPUModel': '1.0-6a5cc9f322729fc70ddc6733bacd57d3',
     'VirtCPUTopology': '1.0-fc694de72e20298f7c6bab1083fd4563',
@@ -1191,12 +1154,10 @@ object_relationships = {
     'InstanceNUMACell': {'VirtCPUTopology': '1.0'},
     'InstanceNUMATopology': {'InstanceNUMACell': '1.2'},
     'InstancePCIRequests': {'InstancePCIRequest': '1.1'},
-    'MyObj': {'MyOwnedObject': '1.0'},
     'NUMACell': {'NUMAPagesTopology': '1.0'},
     'NUMATopology': {'NUMACell': '1.2'},
     'SecurityGroupRule': {'SecurityGroup': '1.1'},
     'Service': {'ComputeNode': '1.11'},
-    'TestSubclassedObject': {'MyOwnedObject': '1.0'},
     'VirtCPUModel': {'VirtCPUFeature': '1.0', 'VirtCPUTopology': '1.0'},
 }
 
@@ -1218,7 +1179,8 @@ class TestObjectVersions(test.NoDBTestCase):
             return None
 
     def _get_fingerprint(self, obj_name):
-        obj_class = base.NovaObject._obj_classes[obj_name][0]
+        obj_classes = base.NovaObjectRegistry.obj_classes()
+        obj_class = obj_classes[obj_name][0]
         fields = obj_class.fields.items()
         fields.sort()
         methods = []
@@ -1246,7 +1208,8 @@ class TestObjectVersions(test.NoDBTestCase):
 
     def test_versions(self):
         fingerprints = {}
-        for obj_name in base.NovaObject._obj_classes:
+        obj_classes = base.NovaObjectRegistry.obj_classes()
+        for obj_name in obj_classes:
             fingerprints[obj_name] = self._get_fingerprint(obj_name)
 
         if os.getenv('GENERATE_HASHES'):
@@ -1269,15 +1232,6 @@ class TestObjectVersions(test.NoDBTestCase):
                          'versions have been bumped, and then update their '
                          'hashes here.')
 
-    def test_registry_matches_metaclass(self):
-        reference = set(object_data.keys())
-        actual = set(base.NovaObjectRegistry.classes)
-        test_objects = set(['MyObj', 'MyOwnedObject', 'TestSubclassedObject'])
-        # NOTE(danms): In the new registry, we don't implicitly track test
-        # objects, so make sure that the difference between the metaclass and
-        # the opt-in registry is the set of test objects.
-        self.assertEqual(test_objects, reference.symmetric_difference(actual))
-
     def _get_object_field_name(self, field):
         if isinstance(field._type, fields.Object):
             return field._type._obj_name
@@ -1290,6 +1244,7 @@ class TestObjectVersions(test.NoDBTestCase):
         if obj_name in tree:
             return
 
+        obj_classes = base.NovaObjectRegistry.obj_classes()
         for name, field in obj_class.fields.items():
             # Notes(yjiang5): ObjectListBase should be covered by
             # child_versions test
@@ -1298,15 +1253,16 @@ class TestObjectVersions(test.NoDBTestCase):
                 continue
             sub_obj_name = self._get_object_field_name(field)
             if sub_obj_name:
-                sub_obj_class = base.NovaObject._obj_classes[sub_obj_name][0]
+                sub_obj_class = obj_classes[sub_obj_name][0]
                 self._build_tree(tree, sub_obj_class)
                 tree.setdefault(obj_name, {})
                 tree[obj_name][sub_obj_name] = sub_obj_class.VERSION
 
     def test_relationships(self):
         tree = {}
-        for obj_name in base.NovaObject._obj_classes.keys():
-            self._build_tree(tree, base.NovaObject._obj_classes[obj_name][0])
+        obj_classes = base.NovaObjectRegistry.obj_classes()
+        for obj_name in obj_classes.keys():
+            self._build_tree(tree, obj_classes[obj_name][0])
 
         stored = set([(x, str(y)) for x, y in object_relationships.items()])
         computed = set([(x, str(y)) for x, y in tree.items()])
@@ -1329,8 +1285,9 @@ class TestObjectVersions(test.NoDBTestCase):
         # This doesn't actually test the data conversions, but it at least
         # makes sure the method doesn't blow up on something basic like
         # expecting the wrong version format.
-        for obj_name in base.NovaObject._obj_classes:
-            obj_class = base.NovaObject._obj_classes[obj_name][0]
+        obj_classes = base.NovaObjectRegistry.obj_classes()
+        for obj_name in obj_classes:
+            obj_class = obj_classes[obj_name][0]
             version = utils.convert_version_to_tuple(obj_class.VERSION)
             for n in range(version[1]):
                 test_version = '%d.%d' % (version[0], n)
@@ -1340,10 +1297,11 @@ class TestObjectVersions(test.NoDBTestCase):
 
     def _get_obj_to_test(self, obj_class):
         obj = obj_class()
+        obj_classes = base.NovaObjectRegistry.obj_classes()
         for fname, ftype in obj.fields.items():
             if isinstance(ftype, fields.ObjectField):
                 fobjname = ftype.AUTO_TYPE._obj_name
-                fobjcls = base.NovaObject._obj_classes[fobjname][0]
+                fobjcls = obj_classes[fobjname][0]
                 setattr(obj, fname, self._get_obj_to_test(fobjcls))
             elif isinstance(ftype, fields.ListOfObjectsField):
                 # FIXME(danms): This will result in no tests for this
@@ -1385,8 +1343,9 @@ class TestObjectVersions(test.NoDBTestCase):
         # This doesn't actually test the data conversions, but it at least
         # makes sure the method doesn't blow up on something basic like
         # expecting the wrong version format.
-        for obj_name in base.NovaObject._obj_classes:
-            obj_class = base.NovaObject._obj_classes[obj_name][0]
+        obj_classes = base.NovaObjectRegistry.obj_classes()
+        for obj_name in obj_classes:
+            obj_class = obj_classes[obj_name][0]
             if 'tests.unit' in obj_class.__module__:
                 # NOTE(danms): Skip test objects. When we move to
                 # oslo.versionedobjects, we won't have to do this
@@ -1407,8 +1366,9 @@ class TestObjectVersions(test.NoDBTestCase):
         # This doesn't actually test the data conversions, but it at least
         # makes sure the method doesn't blow up on something basic like
         # expecting the wrong version format.
-        for obj_name in base.NovaObject._obj_classes:
-            obj_class = base.NovaObject._obj_classes[obj_name][0]
+        obj_classes = base.NovaObjectRegistry.obj_classes()
+        for obj_name in obj_classes:
+            obj_class = obj_classes[obj_name][0]
             for field, versions in obj_class.obj_relationships.items():
                 last_my_version = (0, 0)
                 last_child_version = (0, 0)

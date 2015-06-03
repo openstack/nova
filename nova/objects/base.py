@@ -14,7 +14,6 @@
 
 """Nova common internal object model"""
 
-import collections
 import contextlib
 import copy
 import datetime
@@ -42,115 +41,16 @@ LOG = logging.getLogger('object')
 
 def get_attrname(name):
     """Return the mangled name of the attribute's underlying storage."""
-    return '_' + name
+    # FIXME(danms): This is just until we use o.vo's class properties
+    # and object base.
+    return '_obj_' + name
 
 
-def make_class_properties(cls):
-    # NOTE(danms/comstud): Inherit fields from super classes.
-    # mro() returns the current class first and returns 'object' last, so
-    # those can be skipped.  Also be careful to not overwrite any fields
-    # that already exist.  And make sure each cls has its own copy of
-    # fields and that it is not sharing the dict with a super class.
-    cls.fields = dict(cls.fields)
-    for supercls in cls.mro()[1:-1]:
-        if not hasattr(supercls, 'fields'):
-            continue
-        for name, field in supercls.fields.items():
-            if name not in cls.fields:
-                cls.fields[name] = field
-    for name, field in six.iteritems(cls.fields):
-        if not isinstance(field, obj_fields.Field):
-            raise exception.ObjectFieldInvalid(
-                field=name, objname=cls.obj_name())
-
-        def getter(self, name=name):
-            attrname = get_attrname(name)
-            if not hasattr(self, attrname):
-                self.obj_load_attr(name)
-            return getattr(self, attrname)
-
-        def setter(self, value, name=name, field=field):
-            attrname = get_attrname(name)
-            field_value = field.coerce(self, name, value)
-            if field.read_only and hasattr(self, attrname):
-                # Note(yjiang5): _from_db_object() may iterate
-                # every field and write, no exception in such situation.
-                if getattr(self, attrname) != field_value:
-                    raise exception.ReadOnlyFieldError(field=name)
-                else:
-                    return
-
-            self._changed_fields.add(name)
-            try:
-                return setattr(self, attrname, field_value)
-            except Exception:
-                attr = "%s.%s" % (self.obj_name(), name)
-                LOG.exception(_LE('Error setting %(attr)s'), {'attr': attr})
-                raise
-
-        def deleter(self, name=name):
-            attrname = get_attrname(name)
-            if not hasattr(self, attrname):
-                raise AttributeError('No such attribute `%s' % name)
-            delattr(self, get_attrname(name))
-
-        setattr(cls, name, property(getter, setter, deleter))
-
-
-# NOTE(danms): This is transitional to get the registration decorator
-# on everything before we make a cut over
-class NovaObjectRegistry(object):
-    classes = []
-
-    @classmethod
-    def register(cls, obj_cls):
-        cls.classes.append(obj_cls.obj_name())
-        return obj_cls
-
-
-class NovaObjectMetaclass(type):
-    """Metaclass that allows tracking of object classes."""
-
-    # NOTE(danms): This is what controls whether object operations are
-    # remoted. If this is not None, use it to remote things over RPC.
-    indirection_api = None
-
-    def __init__(cls, names, bases, dict_):
-        if not hasattr(cls, '_obj_classes'):
-            # This means this is a base class using the metaclass. I.e.,
-            # the 'NovaObject' class.
-            cls._obj_classes = collections.defaultdict(list)
-            return
-
-        def _vers_tuple(obj):
-            return tuple([int(x) for x in obj.VERSION.split(".")])
-
-        # Add the subclass to NovaObject._obj_classes. If the
-        # same version already exists, replace it. Otherwise,
-        # keep the list with newest version first.
-        make_class_properties(cls)
-        obj_name = cls.obj_name()
-        for i, obj in enumerate(cls._obj_classes[obj_name]):
-            if cls.VERSION == obj.VERSION:
-                cls._obj_classes[obj_name][i] = cls
-                # Update nova.objects with this newer class.
-                setattr(objects, obj_name, cls)
-                break
-            if _vers_tuple(cls) > _vers_tuple(obj):
-                # Insert before.
-                cls._obj_classes[obj_name].insert(i, cls)
-                if i == 0:
-                    # Later version than we've seen before. Update
-                    # nova.objects.
-                    setattr(objects, obj_name, cls)
-                break
-        else:
-            cls._obj_classes[obj_name].append(cls)
-            # Either this is the first time we've seen the object or it's
-            # an older version than anything we'e seen. Update nova.objects
-            # only if it's the first time we've seen this object name.
-            if not hasattr(objects, obj_name):
-                setattr(objects, obj_name, cls)
+class NovaObjectRegistry(ovoo_base.VersionedObjectRegistry):
+    def registration_hook(self, cls, index):
+        # NOTE(danms): Set the *latest* version of this class
+        newest = self._registry._obj_classes[cls.obj_name()][0]
+        setattr(objects, cls.obj_name(), newest)
 
 
 # These are decorators that mark an object's method as remotable.
@@ -220,7 +120,6 @@ def remotable(fn):
     return wrapper
 
 
-@six.add_metaclass(NovaObjectMetaclass)
 class NovaObject(object):
     """Base class and object factory.
 
@@ -279,6 +178,9 @@ class NovaObject(object):
     #   since they were not added until version 1.2.
     obj_relationships = {}
 
+    # Temporary until we inherit from o.vo.base.VersionedObject
+    indirection_api = None
+
     def __init__(self, context=None, **kwargs):
         self._changed_fields = set()
         self._context = context
@@ -304,7 +206,7 @@ class NovaObject(object):
     @classmethod
     def obj_class_from_name(cls, objname, objver):
         """Returns a class from the registry based on a name and version."""
-        if objname not in cls._obj_classes:
+        if objname not in NovaObjectRegistry.obj_classes():
             LOG.error(_LE('Unable to instantiate unregistered object type '
                           '%(objtype)s'), dict(objtype=objname))
             raise exception.UnsupportedObjectError(objtype=objname)
@@ -315,7 +217,8 @@ class NovaObject(object):
         # once below.
         compatible_match = None
 
-        for objclass in cls._obj_classes[objname]:
+        obj_classes = NovaObjectRegistry.obj_classes()
+        for objclass in obj_classes[objname]:
             if objclass.VERSION == objver:
                 return objclass
             if (not compatible_match and
@@ -326,7 +229,7 @@ class NovaObject(object):
             return compatible_match
 
         # As mentioned above, latest version is always first in the list.
-        latest_ver = cls._obj_classes[objname][0].VERSION
+        latest_ver = obj_classes[objname][0].VERSION
         raise exception.IncompatibleObjectVersion(objname=objname,
                                                   objver=objver,
                                                   supported=latest_ver)

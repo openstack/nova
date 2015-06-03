@@ -28,6 +28,7 @@ import sys
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import excutils
+from oslo_versionedobjects import exception as ovo_exc
 import six
 import webob.exc
 
@@ -1509,8 +1510,9 @@ class IncompatibleObjectVersion(NovaException):
                 'maximum supported version is: %(supported)s')
 
 
-class ReadOnlyFieldError(NovaException):
-    msg_fmt = _('Cannot modify readonly field %(field)s')
+# FIXME(danms): Remove this and convert existing object tests to catch
+# the oslo_versionedobjects exception themselves
+ReadOnlyFieldError = ovo_exc.ReadOnlyFieldError
 
 
 class ObjectActionError(NovaException):
