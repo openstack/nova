@@ -189,6 +189,57 @@ class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
 
         _test()
 
+    def test_delete_instance_no_cell_destroy_fails_already_deleted(self):
+        # If the instance.destroy() is reached during _local_delete,
+        # it will raise ObjectActionError if the instance has already
+        # been deleted by a instance_destroy_at_top, and instance.refresh()
+        # will raise InstanceNotFound
+        instance = objects.Instance(uuid='fake-uuid', cell_name=None)
+        actionerror = exception.ObjectActionError(action='destroy', reason='')
+        notfound = exception.InstanceNotFound(instance_id=instance.uuid)
+
+        @mock.patch.object(compute_api.API, 'delete')
+        @mock.patch.object(self.compute_api.cells_rpcapi,
+                           'instance_delete_everywhere')
+        @mock.patch.object(compute_api.API, '_local_delete',
+                           side_effect=actionerror)
+        @mock.patch.object(instance, 'refresh', side_effect=notfound)
+        def _test(mock_refresh, mock_local_delete, mock_delete_everywhere,
+                  mock_compute_delete):
+            self.compute_api.delete(self.context, instance)
+            mock_delete_everywhere.assert_called_once_with(self.context,
+                                                           instance, 'hard')
+            mock_local_delete.assert_called_once_with(self.context,
+                    instance, mock.ANY, 'delete', self.compute_api._do_delete)
+            mock_refresh.assert_called_once_with()
+            self.assertFalse(mock_compute_delete.called)
+
+        _test()
+
+    def test_delete_instance_no_cell_instance_not_found_already_deleted(self):
+        # If anything in _local_delete accesses the instance causing a db
+        # lookup before instance.destroy() is reached, if the instance has
+        # already been deleted by a instance_destroy_at_top,
+        # InstanceNotFound will be raised
+        instance = objects.Instance(uuid='fake-uuid', cell_name=None)
+        notfound = exception.InstanceNotFound(instance_id=instance.uuid)
+
+        @mock.patch.object(compute_api.API, 'delete')
+        @mock.patch.object(self.compute_api.cells_rpcapi,
+                           'instance_delete_everywhere')
+        @mock.patch.object(compute_api.API, '_local_delete',
+                           side_effect=notfound)
+        def _test(mock_local_delete, mock_delete_everywhere,
+                  mock_compute_delete):
+            self.compute_api.delete(self.context, instance)
+            mock_delete_everywhere.assert_called_once_with(self.context,
+                                                           instance, 'hard')
+            mock_local_delete.assert_called_once_with(self.context,
+                    instance, mock.ANY, 'delete', self.compute_api._do_delete)
+            self.assertFalse(mock_compute_delete.called)
+
+        _test()
+
     def test_soft_delete_instance_no_cell(self):
         cells_rpcapi = self.compute_api.cells_rpcapi
         self.mox.StubOutWithMock(cells_rpcapi,
