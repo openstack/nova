@@ -1143,7 +1143,9 @@ class API(base.Base):
     @staticmethod
     def _volume_size(instance_type, bdm):
         size = bdm.get('volume_size')
-        if size is None and bdm.get('source_type') == 'blank':
+        # NOTE (ndipanov): inherit flavour size only for swap and ephemeral
+        if (size is None and bdm.get('source_type') == 'blank' and
+                bdm.get('destination_type') == 'local'):
             if bdm.get('guest_format') == 'swap':
                 size = instance_type.get('swap', 0)
             else:
@@ -1257,6 +1259,12 @@ class API(base.Base):
                     raise
                 except Exception:
                     raise exception.InvalidBDMSnapshot(id=snapshot_id)
+            elif (bdm.source_type == 'blank' and
+                    bdm.destination_type == 'volume' and
+                    not bdm.volume_size):
+                raise exception.InvalidBDM(message=_("Blank volumes "
+                    "(source: 'blank', dest: 'volume') need to have non-zero "
+                    "size"))
 
         ephemeral_size = sum(bdm.volume_size or 0
                 for bdm in all_mappings
