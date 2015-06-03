@@ -23,6 +23,7 @@ from nova.scheduler import filter_scheduler
 from nova.scheduler import host_manager
 from nova.scheduler import utils as scheduler_utils
 from nova.scheduler import weights
+from nova import test  # noqa
 from nova.tests.unit.scheduler import fakes
 from nova.tests.unit.scheduler import test_scheduler
 
