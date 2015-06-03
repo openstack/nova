@@ -16,7 +16,7 @@ greenlet>=0.3.2
 PasteDeploy>=1.5.0
 Paste
 PrettyTable>=0.7,<0.8
-sqlalchemy-migrate>=0.9.5
+sqlalchemy-migrate>=0.9.6
 netaddr>=0.7.12
 netifaces>=0.10.4
 paramiko>=1.13.0
