@@ -28,7 +28,6 @@ import sys
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import excutils
-from oslo_versionedobjects import exception as ovo_exc
 import six
 import webob.exc
 
@@ -1518,11 +1517,6 @@ class OrphanedObjectError(NovaException):
 class IncompatibleObjectVersion(NovaException):
     msg_fmt = _('Version %(objver)s of %(objname)s is not supported. The '
                 'maximum supported version is: %(supported)s')
-
-
-# FIXME(danms): Remove this and convert existing object tests to catch
-# the oslo_versionedobjects exception themselves
-ReadOnlyFieldError = ovo_exc.ReadOnlyFieldError
 
 
 class ObjectActionError(NovaException):

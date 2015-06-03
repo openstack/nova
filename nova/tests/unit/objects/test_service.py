@@ -14,6 +14,7 @@
 
 import mock
 from oslo_utils import timeutils
+from oslo_versionedobjects import exception as ovo_exc
 
 from nova import db
 from nova import exception
@@ -138,7 +139,7 @@ class _TestServiceObject(object):
     def test_set_id_failure(self, db_mock):
         service_obj = service.Service(context=self.context)
         service_obj.create()
-        self.assertRaises(exception.ReadOnlyFieldError, setattr,
+        self.assertRaises(ovo_exc.ReadOnlyFieldError, setattr,
                           service_obj, 'id', 124)
 
     def _test_destroy(self):
