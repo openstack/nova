@@ -335,6 +335,14 @@ def convert_vif_model(name):
         return 'VirtualE1000'
     if name == network_model.VIF_MODEL_E1000E:
         return 'VirtualE1000e'
+    if name == network_model.VIF_MODEL_PCNET:
+        return 'VirtualPCNet32'
+    if name == network_model.VIF_MODEL_SRIOV:
+        return 'VirtualSriovEthernetCard'
+    if name == network_model.VIF_MODEL_VMXNET:
+        return 'VirtualVmxnet'
+    if name == network_model.VIF_MODEL_VMXNET3:
+        return 'VirtualVmxnet3'
     if name not in ALL_SUPPORTED_NETWORK_DEVICES:
         msg = _('%s is not supported.') % name
         raise exception.Invalid(msg)

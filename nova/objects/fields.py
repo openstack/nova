@@ -307,6 +307,18 @@ class Architecture(Enum):
         return super(Architecture, self).coerce(obj, attr, value)
 
 
+class CPUAllocationPolicy(Enum):
+
+    DEDICATED = "dedicated"
+    SHARED = "shared"
+
+    ALL = (DEDICATED, SHARED)
+
+    def __init__(self):
+        super(CPUAllocationPolicy, self).__init__(
+            valid_values=CPUAllocationPolicy.ALL)
+
+
 class CPUMode(Enum):
     # TODO(berrange): move all constants out of 'nova.compute.cpumodel'
     # into fields on this class
@@ -331,6 +343,23 @@ class CPUFeaturePolicy(Enum):
             valid_values=cpumodel.ALL_POLICIES, **kwargs)
 
 
+class DiskBus(Enum):
+
+    FDC = "fdc"
+    IDE = "ide"
+    SATA = "sata"
+    SCSI = "scsi"
+    USB = "usb"
+    VIRTIO = "virtio"
+    XEN = "xen"
+
+    ALL = (FDC, IDE, SATA, SCSI, USB, VIRTIO, XEN)
+
+    def __init__(self):
+        super(DiskBus, self).__init__(
+            valid_values=DiskBus.ALL)
+
+
 class HVType(Enum):
     # TODO(berrange): move all constants out of 'nova.compute.hv_type'
     # into fields on this class
@@ -347,6 +376,104 @@ class HVType(Enum):
         return super(HVType, self).coerce(obj, attr, value)
 
 
+class OSType(Enum):
+
+    LINUX = "linux"
+    WINDOWS = "windows"
+
+    ALL = (LINUX, WINDOWS)
+
+    def __init__(self):
+        super(OSType, self).__init__(
+            valid_values=OSType.ALL)
+
+    def coerce(self, obj, attr, value):
+        # Some code/docs use upper case or initial caps
+        # so canonicalize to all lower case
+        value = value.lower()
+        return super(OSType, self).coerce(obj, attr, value)
+
+
+class RNGModel(Enum):
+
+    VIRTIO = "virtio"
+
+    ALL = (VIRTIO,)
+
+    def __init__(self):
+        super(RNGModel, self).__init__(
+            valid_values=RNGModel.ALL)
+
+
+class SCSIModel(Enum):
+
+    BUSLOGIC = "buslogic"
+    IBMVSCSI = "ibmvscsi"
+    LSILOGIC = "lsilogic"
+    LSISAS1068 = "lsisas1068"
+    LSISAS1078 = "lsisas1078"
+    VIRTIO_SCSI = "virtio-scsi"
+    VMPVSCSI = "vmpvscsi"
+
+    ALL = (BUSLOGIC, IBMVSCSI, LSILOGIC, LSISAS1068,
+           LSISAS1078, VIRTIO_SCSI, VMPVSCSI)
+
+    def __init__(self):
+        super(SCSIModel, self).__init__(
+            valid_values=SCSIModel.ALL)
+
+    def coerce(self, obj, attr, value):
+        # Some compat for strings we'd see in the legacy
+        # vmware_adaptertype image property
+        value = value.lower()
+        if value == "lsilogicsas":
+            value = SCSIModel.LSISAS1068
+        elif value == "paravirtual":
+            value = SCSIModel.VMPVSCSI
+
+        return super(SCSIModel, self).coerce(obj, attr, value)
+
+
+class VideoModel(Enum):
+
+    CIRRUS = "cirrus"
+    QXL = "qxl"
+    VGA = "vga"
+    VMVGA = "vmvga"
+    XEN = "xen"
+
+    ALL = (CIRRUS, QXL, VGA, VMVGA, XEN)
+
+    def __init__(self):
+        super(VideoModel, self).__init__(
+            valid_values=VideoModel.ALL)
+
+
+class VIFModel(Enum):
+
+    def __init__(self):
+        super(VIFModel, self).__init__(
+            valid_values=network_model.VIF_MODEL_ALL)
+
+    def coerce(self, obj, attr, value):
+        # Some compat for strings we'd see in the legacy
+        # hw_vif_model image property
+        value = value.lower()
+        if value == "virtuale1000":
+            value = network_model.VIF_MODEL_E1000
+        elif value == "virtuale1000e":
+            value = network_model.VIF_MODEL_E1000E
+        elif value == "virtualpcnet32":
+            value = network_model.VIF_MODEL_PCNET
+        elif value == "virtualsriovethernetcard":
+            value = network_model.VIF_MODEL_SRIOV
+        elif value == "virtualvmxnet":
+            value = network_model.VIF_MODEL_VMXNET
+        elif value == "virtualvmxnet3":
+            value = network_model.VIF_MODEL_VMXNET3
+        return super(VIFModel, self).coerce(obj, attr, value)
+
+
 class VMMode(Enum):
     # TODO(berrange): move all constants out of 'nova.compute.vm_mode'
     # into fields on this class
@@ -361,6 +488,20 @@ class VMMode(Enum):
             msg = _("Virtual machine mode '%s' is not valid") % value
             raise ValueError(msg)
         return super(VMMode, self).coerce(obj, attr, value)
+
+
+class WatchdogAction(Enum):
+
+    NONE = "none"
+    PAUSE = "pause"
+    POWEROFF = "poweroff"
+    RESET = "reset"
+
+    ALL = (NONE, PAUSE, POWEROFF, RESET)
+
+    def __init__(self):
+        super(WatchdogAction, self).__init__(
+            valid_values=WatchdogAction.ALL)
 
 
 class UUID(FieldType):
@@ -746,6 +887,10 @@ class ArchitectureField(BaseEnumField):
     AUTO_TYPE = Architecture()
 
 
+class CPUAllocationPolicyField(BaseEnumField):
+    AUTO_TYPE = CPUAllocationPolicy()
+
+
 class CPUModeField(BaseEnumField):
     AUTO_TYPE = CPUMode()
 
@@ -758,12 +903,40 @@ class CPUFeaturePolicyField(BaseEnumField):
     AUTO_TYPE = CPUFeaturePolicy()
 
 
+class DiskBusField(BaseEnumField):
+    AUTO_TYPE = DiskBus()
+
+
 class HVTypeField(BaseEnumField):
     AUTO_TYPE = HVType()
 
 
+class OSTypeField(BaseEnumField):
+    AUTO_TYPE = OSType()
+
+
+class RNGModelField(BaseEnumField):
+    AUTO_TYPE = RNGModel()
+
+
+class SCSIModelField(BaseEnumField):
+    AUTO_TYPE = SCSIModel()
+
+
+class VideoModelField(BaseEnumField):
+    AUTO_TYPE = VideoModel()
+
+
+class VIFModelField(BaseEnumField):
+    AUTO_TYPE = VIFModel()
+
+
 class VMModeField(BaseEnumField):
     AUTO_TYPE = VMMode()
+
+
+class WatchdogActionField(BaseEnumField):
+    AUTO_TYPE = WatchdogAction()
 
 
 class UUIDField(AutoTypedField):
@@ -839,6 +1012,10 @@ class DictOfIntegersField(AutoTypedField):
 
 class ListOfStringsField(AutoTypedField):
     AUTO_TYPE = List(String())
+
+
+class ListOfIntegersField(AutoTypedField):
+    AUTO_TYPE = List(Integer())
 
 
 class SetOfIntegersField(AutoTypedField):
