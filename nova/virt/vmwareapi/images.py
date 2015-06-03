@@ -69,7 +69,8 @@ class VMwareImage(object):
             disk_type (str): type of disk in thin, thick, etc
             container_format (str): container format (bare or ova)
             file_type (str): vmdk or iso
-            linked_clone(bool): use linked clone, or don't
+            linked_clone (bool): use linked clone, or don't
+            vif_model (str): virtual machine network interface
         """
         self.image_id = image_id
         self.file_size = file_size
