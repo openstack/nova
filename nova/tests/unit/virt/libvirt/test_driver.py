@@ -7198,7 +7198,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                       'serial': 'afc1',
                       'data': {
                           'access_mode': 'rw',
-                          'device_path': '/dev/path/to/dev',
                           'target_discovered': False,
                           'encrypted': False,
                           'qos_specs': None,
@@ -7215,6 +7214,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                   'device_type': 'disk',
                   'delete_on_termination': False
               }
+
+        def _connect_volume_side_effect(connection_info, disk_info):
+            bdm['connection_info']['data']['device_path'] = '/dev/path/to/dev'
 
         def _get(key, opt=None):
             return bdm.get(key, opt)
@@ -7254,7 +7256,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             mock.patch.object(drvr.firewall_driver, 'prepare_instance_filter'),
             mock.patch.object(drvr.firewall_driver, 'apply_instance_filter'),
             mock.patch.object(drvr, '_create_domain'),
-            mock.patch.object(drvr, '_connect_volume'),
+            mock.patch.object(drvr, '_connect_volume',
+                              side_effect=_connect_volume_side_effect),
             mock.patch.object(drvr, '_get_volume_config',
                                      return_value=disk_mock),
             mock.patch.object(drvr, 'get_info',
