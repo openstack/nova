@@ -90,13 +90,14 @@ class CpuLimits(object):
 class ExtraSpecs(object):
 
     def __init__(self, cpu_limits=None, hw_version=None,
-                 storage_policy=None):
+                 storage_policy=None, cores_per_socket=None):
         """ExtraSpecs object holds extra_specs for the instance."""
         if cpu_limits is None:
             cpu_limits = CpuLimits()
         self.cpu_limits = cpu_limits
         self.hw_version = hw_version
         self.storage_policy = storage_policy
+        self.cores_per_socket = cores_per_socket
 
     def has_cpu_limits(self):
         return bool(self.cpu_limits.cpu_limit or
@@ -222,6 +223,8 @@ def get_vm_create_spec(client_factory, instance, data_store_name,
 
     config_spec.tools = tools_info
     config_spec.numCPUs = int(instance.vcpus)
+    if extra_specs.cores_per_socket:
+        config_spec.numCoresPerSocket = int(extra_specs.cores_per_socket)
     config_spec.memoryMB = int(instance.memory_mb)
 
     # Configure cpu information

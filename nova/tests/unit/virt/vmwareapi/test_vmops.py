@@ -671,7 +671,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                 memory_mb=1024,
                                 vcpus=2,
                                 extra_specs={})
-        self._vmops._resize_vm(self._context, self._instance, 'vm-ref', flavor)
+        self._vmops._resize_vm(self._context, self._instance, 'vm-ref', flavor,
+                               None)
         fake_resize_spec.assert_called_once_with(
             self._session.vim.client.factory, 2, 1024, extra_specs,
                 metadata=self._metadata)
@@ -815,7 +816,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                                self._instance,
                                                'fake-ref')
         fake_resize_vm.assert_called_once_with(self._context, self._instance,
-                                               'fake-ref', flavor)
+                                               'fake-ref', flavor, mock.ANY)
         fake_resize_disk.assert_called_once_with(self._instance, 'fake-ref',
                                                  vmdk, flavor)
         calls = [mock.call(self._context, self._instance, step=i,
@@ -1661,8 +1662,14 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
 
     def _validate_flavor_extra_specs(self, flavor_extra_specs, expected):
         # Validate that the extra specs are parsed correctly
-        flavor = objects.Flavor(extra_specs=flavor_extra_specs)
-        flavor_extra_specs = self._vmops._get_extra_specs(flavor)
+        flavor = objects.Flavor(name='my-flavor',
+                                memory_mb=6,
+                                vcpus=28,
+                                root_gb=496,
+                                ephemeral_gb=8128,
+                                swap=33550336,
+                                extra_specs=flavor_extra_specs)
+        flavor_extra_specs = self._vmops._get_extra_specs(flavor, None)
         self._validate_extra_specs(expected, flavor_extra_specs)
 
     def test_extra_specs_cpu_limit(self):
@@ -1943,7 +1950,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                 extra_specs={})
         self.flags(pbm_enabled=True,
                    pbm_default_policy='fake-policy', group='vmware')
-        extra_specs = self._vmops._get_extra_specs(flavor)
+        extra_specs = self._vmops._get_extra_specs(flavor, None)
         self.assertEqual('fake-policy', extra_specs.storage_policy)
 
     def test_get_storage_policy_extra_specs(self):
@@ -1957,7 +1964,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                 extra_specs=extra_specs)
         self.flags(pbm_enabled=True,
                    pbm_default_policy='default-policy', group='vmware')
-        extra_specs = self._vmops._get_extra_specs(flavor)
+        extra_specs = self._vmops._get_extra_specs(flavor, None)
         self.assertEqual('flavor-policy', extra_specs.storage_policy)
 
     def test_get_base_folder_not_set(self):
@@ -2114,3 +2121,15 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             self.assertEqual('fira', path['ticket'])
             self.assertEqual('aabbccddeeff', path['thumbprint'])
             self.assertEqual('[ds1] fira/foo.vmx', path['cfgFile'])
+
+    def test_get_cores_per_socket(self):
+        extra_specs = {'hw:cpu_sockets': 7}
+        flavor = objects.Flavor(name='m1.small',
+                                memory_mb=6,
+                                vcpus=28,
+                                root_gb=496,
+                                ephemeral_gb=8128,
+                                swap=33550336,
+                                extra_specs=extra_specs)
+        extra_specs = self._vmops._get_extra_specs(flavor, None)
+        self.assertEqual(4, int(extra_specs.cores_per_socket))
