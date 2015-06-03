@@ -633,6 +633,27 @@ class CreateBackupTestsV2(CommonMixin, test.NoDBTestCase):
         res = self._make_request(self._make_url('fake'), body=body)
         self.assertEqual(400, res.status_int)
 
+    def test_backup_volume_backed_instance(self):
+        body = {
+            'createBackup': {
+                'name': 'BackupMe',
+                'backup_type': 'daily',
+                'rotation': 3
+            },
+        }
+
+        common.check_img_metadata_properties_quota(self.context, {})
+        instance = self._stub_instance_get()
+        instance.image_ref = None
+
+        self.compute_api.backup(self.context, instance, 'BackupMe', 'daily', 3,
+                extra_properties={}).AndRaise(exception.InvalidRequest())
+
+        self.mox.ReplayAll()
+
+        res = self._make_request(self._make_url(instance['uuid']), body)
+        self.assertEqual(400, res.status_int)
+
 
 class ResetStateTestsV21(test.NoDBTestCase):
     admin_act = admin_actions_v21
