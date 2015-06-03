@@ -134,11 +134,8 @@ class ExtendedHyervisorPciSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
                                        "vendor_id": "8086",
                                        "product_id": "1520",
                                        "keya": "valuea",
-                                       "extra_info": {
-                                           "phys_function": '[["0x0000", '
-                                                            '"0x04", "0x00",'
-                                                            ' "0x1"]]',
-                                           "key1": "value1"}}),)
+                                       "key1": "value1",
+                                       "numa_node": 1}),)
         self.fake_service = objects.Service(
             id=2,
             host='043b3cacf6f34c90a7245151fc8ebcda',

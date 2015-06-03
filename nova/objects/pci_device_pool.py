@@ -53,8 +53,7 @@ class PciDevicePool(base.NovaObject):
         pool.product_id = pool_dict.pop("product_id")
         pool.numa_node = pool_dict.pop("numa_node", None)
         pool.count = pool_dict.pop("count")
-        pool.tags = {}
-        pool.tags.update(pool_dict)
+        pool.tags = pool_dict
         return pool
 
     # NOTE(sbauza): Before using objects, pci stats was a list of

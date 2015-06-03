@@ -21,6 +21,7 @@ import six
 
 from nova import exception
 from nova.i18n import _LE
+from nova.objects import pci_device_pool
 from nova.pci import utils
 from nova.pci import whitelist
 
@@ -255,3 +256,8 @@ class PciDeviceStats(object):
 
     def __ne__(self, other):
         return not (self == other)
+
+    def to_device_pools_obj(self):
+        """Return the contents of the pools as a PciDevicePoolList object."""
+        stats = [x for x in self]
+        return pci_device_pool.from_pci_stats(stats)
