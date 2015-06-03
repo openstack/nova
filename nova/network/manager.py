@@ -1351,13 +1351,11 @@ class NetworkManager(manager.Manager):
                 else:
                     net.gateway = current
                     current += 1
-                if not dhcp_server:
-                    dhcp_server = net.gateway
+                net.dhcp_server = dhcp_server or net.gateway
                 net.dhcp_start = current
                 current += 1
-                if str(net.dhcp_start) == dhcp_server:
+                if net.dhcp_start == net.dhcp_server:
                     net.dhcp_start = current
-                net.dhcp_server = dhcp_server
                 extra_reserved.append(str(net.dhcp_server))
                 extra_reserved.append(str(net.gateway))
 
