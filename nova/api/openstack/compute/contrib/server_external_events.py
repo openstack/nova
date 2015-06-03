@@ -55,6 +55,11 @@ class ServerExternalEventsController(wsgi.Controller):
             client_event = dict(_event)
             event = objects.InstanceExternalEvent(context)
 
+            status = client_event.get('status')
+            if status not in external_event_obj.EVENT_STATUSES:
+                raise webob.exc.HTTPBadRequest(
+                    _('Invalid event status `%s\'') % status)
+
             try:
                 event.instance_uuid = client_event.pop('server_uuid')
                 event.name = client_event.pop('name')
@@ -68,10 +73,6 @@ class ServerExternalEventsController(wsgi.Controller):
                 msg = (_('event entity contains unsupported items: %s') %
                        ', '.join(client_event.keys()))
                 raise webob.exc.HTTPBadRequest(explanation=msg)
-
-            if event.status not in external_event_obj.EVENT_STATUSES:
-                raise webob.exc.HTTPBadRequest(
-                    _('Invalid event status `%s\'') % event.status)
 
             instance = instances.get(event.instance_uuid)
             if not instance:
