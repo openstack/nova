@@ -211,10 +211,10 @@ def is_disk_bus_valid_for_virt(virt_type, disk_bus):
     return disk_bus in valid_bus[virt_type]
 
 
-def get_disk_bus_for_device_type(virt_type,
+def get_disk_bus_for_device_type(instance,
+                                 virt_type,
                                  image_meta,
-                                 device_type="disk",
-                                 instance=None):
+                                 device_type="disk"):
     """Determine the best disk bus to use for a device type.
 
        Considering the currently configured virtualization
@@ -243,9 +243,7 @@ def get_disk_bus_for_device_type(virt_type,
     elif virt_type == "lxc":
         return "lxc"
     elif virt_type == "xen":
-        guest_vm_mode = None
-        if instance:
-            guest_vm_mode = vm_mode.get_from_instance(instance)
+        guest_vm_mode = vm_mode.get_from_instance(instance)
         if guest_vm_mode == vm_mode.HVM:
             return "ide"
         else:
@@ -360,7 +358,7 @@ def get_config_drive_type():
     return config_drive_type
 
 
-def get_info_from_bdm(virt_type, image_meta, bdm,
+def get_info_from_bdm(instance, virt_type, image_meta, bdm,
                       mapping=None, disk_bus=None,
                       dev_type=None, allowed_types=None,
                       assigned_devices=None):
@@ -377,8 +375,8 @@ def get_info_from_bdm(virt_type, image_meta, bdm,
         if device_name:
             bdm_bus = get_disk_bus_for_disk_dev(virt_type, device_name)
         else:
-            bdm_bus = get_disk_bus_for_device_type(virt_type, image_meta,
-                                                   bdm_type)
+            bdm_bus = get_disk_bus_for_device_type(instance, virt_type,
+                                                   image_meta, bdm_type)
 
     if not device_name:
         if assigned_devices:
@@ -413,8 +411,8 @@ def get_device_name(bdm):
         return bdm.get('device_name') or bdm.get('mount_device')
 
 
-def get_root_info(virt_type, image_meta, root_bdm, disk_bus, cdrom_bus,
-                  root_device_name=None):
+def get_root_info(instance, virt_type, image_meta, root_bdm,
+                  disk_bus, cdrom_bus, root_device_name=None):
 
     # NOTE (ndipanov): This is a hack to avoid considering an image
     #                  BDM with local target, as we don't support them
@@ -443,7 +441,7 @@ def get_root_info(virt_type, image_meta, root_bdm, disk_bus, cdrom_bus,
         if not get_device_name(root_bdm) and root_device_name:
             root_bdm = root_bdm.copy()
             root_bdm['device_name'] = root_device_name
-        return get_info_from_bdm(virt_type, image_meta,
+        return get_info_from_bdm(instance, virt_type, image_meta,
                                  root_bdm, {}, disk_bus)
 
 
@@ -526,8 +524,9 @@ def get_disk_mapping(virt_type, instance,
 
     root_device_name = block_device.strip_dev(
         driver.block_device_info_get_root(block_device_info))
-    root_info = get_root_info(virt_type, image_meta, root_bdm,
-                              disk_bus, cdrom_bus, root_device_name)
+    root_info = get_root_info(
+        instance, virt_type, image_meta, root_bdm,
+        disk_bus, cdrom_bus, root_device_name)
 
     mapping['root'] = root_info
     # NOTE (ndipanov): This implicitly relies on image->local BDMs not
@@ -553,15 +552,16 @@ def get_disk_mapping(virt_type, instance,
     for idx, eph in enumerate(driver.block_device_info_get_ephemerals(
             block_device_info)):
         eph_info = get_info_from_bdm(
-            virt_type, image_meta, eph, mapping, disk_bus,
+            instance, virt_type, image_meta, eph, mapping, disk_bus,
             assigned_devices=pre_assigned_device_names)
         mapping[get_eph_disk(idx)] = eph_info
         update_bdm(eph, eph_info)
 
     swap = driver.block_device_info_get_swap(block_device_info)
     if swap and swap.get('swap_size', 0) > 0:
-        swap_info = get_info_from_bdm(virt_type, image_meta,
-                                      swap, mapping, disk_bus)
+        swap_info = get_info_from_bdm(
+            instance, virt_type, image_meta,
+            swap, mapping, disk_bus)
         mapping['disk.swap'] = swap_info
         update_bdm(swap, swap_info)
     elif inst_type['swap'] > 0:
@@ -576,17 +576,17 @@ def get_disk_mapping(virt_type, instance,
 
     for vol in block_device_mapping:
         vol_info = get_info_from_bdm(
-            virt_type, image_meta, vol, mapping,
+            instance, virt_type, image_meta, vol, mapping,
             assigned_devices=pre_assigned_device_names)
         mapping[block_device.prepend_dev(vol_info['dev'])] = vol_info
         update_bdm(vol, vol_info)
 
     if configdrive.required_by(instance):
         device_type = get_config_drive_type()
-        disk_bus = get_disk_bus_for_device_type(virt_type,
+        disk_bus = get_disk_bus_for_device_type(instance,
+                                                virt_type,
                                                 image_meta,
-                                                device_type,
-                                                instance=instance)
+                                                device_type)
         config_info = get_next_disk_info(mapping,
                                          disk_bus,
                                          device_type,
@@ -611,10 +611,10 @@ def get_disk_info(virt_type, instance, image_meta,
        Returns the disk mapping disk.
     """
 
-    disk_bus = get_disk_bus_for_device_type(virt_type, image_meta, "disk",
-                                            instance=instance)
-    cdrom_bus = get_disk_bus_for_device_type(virt_type, image_meta, "cdrom",
-                                             instance=instance)
+    disk_bus = get_disk_bus_for_device_type(instance, virt_type,
+                                            image_meta, "disk")
+    cdrom_bus = get_disk_bus_for_device_type(instance, virt_type,
+                                             image_meta, "cdrom")
     mapping = get_disk_mapping(virt_type, instance,
                                disk_bus, cdrom_bus,
                                image_meta,
