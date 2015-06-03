@@ -96,11 +96,13 @@ class RbdTestCase(test.NoDBTestCase):
                      'rbd://fsid/pool/image/',
                      'rbd://fsid/pool/image/snap/',
                      'rbd://///', ]
+        image_meta = objects.ImageMeta.from_dict({'disk_format': 'raw'})
+
         for loc in locations:
             self.assertRaises(exception.ImageUnacceptable,
                               self.driver.parse_url, loc)
             self.assertFalse(self.driver.is_cloneable({'url': loc},
-                                                      {'disk_format': 'raw'}))
+                                                      image_meta))
 
     @mock.patch.object(rbd_utils.RBDDriver, '_get_fsid')
     @mock.patch.object(rbd_utils, 'rbd')
@@ -108,16 +110,17 @@ class RbdTestCase(test.NoDBTestCase):
     def test_cloneable(self, mock_rados, mock_rbd, mock_get_fsid):
         mock_get_fsid.return_value = 'abc'
         location = {'url': 'rbd://abc/pool/image/snap'}
-        info = {'disk_format': 'raw'}
-        self.assertTrue(self.driver.is_cloneable(location, info))
+        image_meta = objects.ImageMeta.from_dict({'disk_format': 'raw'})
+        self.assertTrue(self.driver.is_cloneable(location, image_meta))
         self.assertTrue(mock_get_fsid.called)
 
     @mock.patch.object(rbd_utils.RBDDriver, '_get_fsid')
     def test_uncloneable_different_fsid(self, mock_get_fsid):
         mock_get_fsid.return_value = 'abc'
         location = {'url': 'rbd://def/pool/image/snap'}
+        image_meta = objects.ImageMeta.from_dict({'disk_format': 'raw'})
         self.assertFalse(
-            self.driver.is_cloneable(location, {'disk_format': 'raw'}))
+            self.driver.is_cloneable(location, image_meta))
         self.assertTrue(mock_get_fsid.called)
 
     @mock.patch.object(rbd_utils.RBDDriver, '_get_fsid')
@@ -130,9 +133,10 @@ class RbdTestCase(test.NoDBTestCase):
         location = {'url': 'rbd://abc/pool/image/snap'}
 
         mock_proxy.side_effect = mock_rbd.Error
+        image_meta = objects.ImageMeta.from_dict({'disk_format': 'raw'})
 
         self.assertFalse(
-            self.driver.is_cloneable(location, {'disk_format': 'raw'}))
+            self.driver.is_cloneable(location, image_meta))
         mock_proxy.assert_called_once_with(self.driver, 'image', pool='pool',
                                            snapshot='snap', read_only=True)
         self.assertTrue(mock_get_fsid.called)
@@ -143,8 +147,9 @@ class RbdTestCase(test.NoDBTestCase):
         location = {'url': 'rbd://abc/pool/image/snap'}
         formats = ['qcow2', 'vmdk', 'vdi']
         for f in formats:
+            image_meta = objects.ImageMeta.from_dict({'disk_format': f})
             self.assertFalse(
-                self.driver.is_cloneable(location, {'disk_format': f}))
+                self.driver.is_cloneable(location, image_meta))
         self.assertTrue(mock_get_fsid.called)
 
     @mock.patch.object(utils, 'execute')

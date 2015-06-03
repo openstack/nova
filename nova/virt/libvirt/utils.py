@@ -449,9 +449,9 @@ def get_arch(image_meta):
     :returns: guest (or host) architecture
     """
     if image_meta:
-        image_arch = image_meta.get('properties', {}).get('architecture')
+        image_arch = image_meta.properties.get('hw_architecture')
         if image_arch is not None:
-            return arch.canonicalize(image_arch)
+            return image_arch
 
     return arch.from_host()
 
