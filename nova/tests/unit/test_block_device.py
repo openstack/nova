@@ -427,6 +427,18 @@ class TestBlockDeviceDict(test.NoDBTestCase):
         bdm_dict = block_device.BlockDeviceDict(bdm)
         self.assertIsNone(bdm_dict['device_name'])
 
+    def test_init_boolify_delete_on_termination(self):
+        # Make sure that when delete_on_termination is not passed it's
+        # still set to False and not None
+        bdm = {'id': 3, 'instance_uuid': 'fake-instance',
+               'device_name': 'vda',
+               'source_type': 'volume',
+               'destination_type': 'volume',
+               'volume_id': 'fake-volume-id-1',
+               'boot_index': 0}
+        bdm_dict = block_device.BlockDeviceDict(bdm)
+        self.assertEqual(False, bdm_dict['delete_on_termination'])
+
     def test_validate(self):
         self.assertRaises(exception.InvalidBDMFormat,
                           block_device.BlockDeviceDict,
