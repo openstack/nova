@@ -14,6 +14,8 @@
 
 """The Fault Tolerance API extension."""
 
+import webob
+
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack.compute import servers
@@ -27,6 +29,21 @@ LOG = logging.getLogger(__name__)
 class FaultServerToleranceController(servers.Controller):
     def __init__(self, *args, **kwargs):
         super(FaultServerToleranceController, self).__init__(*args, **kwargs)
+
+    @wsgi.action('failover')
+    def _recover(self, req, id, body):
+        """Recover a failed instance."""
+        context = req.environ["nova.context"]
+
+        try:
+            instance = self.compute_api.get(context, id, want_objects=True)
+
+            # TODO(ORBIT): Call the failover task in the conductor + handle
+            #              exceptions and return an appropriate response.
+        except exception.InstanceNotFound as e:
+            raise webob.exc.HTTPNotFound(explanation=e.format_message())
+
+        return webob.Response(status_int=200)
 
     @wsgi.extends
     def delete(self, req, resp_obj, id):
