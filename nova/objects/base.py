@@ -837,3 +837,38 @@ def serialize_args(fn):
     wrapper.original_fn = fn
     return (functools.wraps(fn)(wrapper) if hasattr(fn, '__call__')
             else classmethod(wrapper))
+
+
+def obj_equal_prims(obj_1, obj_2, ignore=None):
+    """Compare two primitives for equivalence ignoring some keys.
+
+    This operation tests the primitives of two objects for equivalence.
+    Object primitives may contain a list identifying fields that have been
+    changed - this is ignored in the comparison. The ignore parameter lists
+    any other keys to be ignored.
+
+    :param:obj1: The first object in the comparison
+    :param:obj2: The second object in the comparison
+    :param:ignore: A list of fields to ignore
+    :returns: True if the primitives are equal ignoring changes
+    and specified fields, otherwise False.
+    """
+
+    def _strip(prim, keys):
+        if isinstance(prim, dict):
+            for k in keys:
+                prim.pop(k, None)
+            for v in prim.values():
+                _strip(v, keys)
+        if isinstance(prim, list):
+            for v in prim:
+                _strip(v, keys)
+        return prim
+
+    if ignore is not None:
+        keys = ['nova_object.changes'] + ignore
+    else:
+        keys = ['nova_object.changes']
+    prim_1 = _strip(obj_1.obj_to_primitive(), keys)
+    prim_2 = _strip(obj_2.obj_to_primitive(), keys)
+    return prim_1 == prim_2
