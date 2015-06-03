@@ -1052,7 +1052,7 @@ class VMwareVMOps(object):
         vmdk = vm_util.get_vmdk_info(self._session, vm_ref,
                                      uuid=instance.uuid)
         ds_ref = vmdk.device.backing.datastore
-        datastore = ds_util.get_datastore_by_ref(self._session, ds_ref)
+        datastore = ds_obj.get_datastore_by_ref(self._session, ds_ref)
         dc_info = self.get_datacenter_ref_and_name(datastore.ref)
 
         # Get the image details of the instance
@@ -1177,7 +1177,7 @@ class VMwareVMOps(object):
         vmdk = vm_util.get_vmdk_info(self._session, vm_ref,
                                      uuid=instance.uuid)
         ds_ref = vmdk.device.backing.datastore
-        datastore = ds_util.get_datastore_by_ref(self._session, ds_ref)
+        datastore = ds_obj.get_datastore_by_ref(self._session, ds_ref)
         dc_info = self.get_datacenter_ref_and_name(ds_ref)
         folder = ds_obj.DatastorePath.parse(vmdk.path).dirname
         self._create_ephemeral(block_device_info, instance, vm_ref,
