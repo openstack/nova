@@ -118,7 +118,6 @@ class _TestInstanceObject(object):
                                              expected_attrs=[])
         for attr in instance.INSTANCE_OPTIONAL_ATTRS:
             self.assertFalse(inst.obj_attr_is_set(attr))
-        self.assertRemotes()
 
     def test_get_with_expected(self):
         self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
@@ -173,7 +172,6 @@ class _TestInstanceObject(object):
                 # this test is being pedantic).
                 continue
             self.assertTrue(inst.obj_attr_is_set(attr))
-        self.assertRemotes()
 
     def test_get_by_id(self):
         self.mox.StubOutWithMock(db, 'instance_get')
@@ -184,7 +182,6 @@ class _TestInstanceObject(object):
         self.mox.ReplayAll()
         inst = instance.Instance.get_by_id(self.context, 'instid')
         self.assertEqual(inst.uuid, self.fake_instance['uuid'])
-        self.assertRemotes()
 
     def test_load(self):
         self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
@@ -209,7 +206,6 @@ class _TestInstanceObject(object):
         # Make sure we don't run load again
         meta2 = inst.metadata
         self.assertEqual(meta2, {'foo': 'bar'})
-        self.assertRemotes()
 
     def test_load_invalid(self):
         inst = instance.Instance(context=self.context, uuid='fake-uuid')
@@ -233,7 +229,6 @@ class _TestInstanceObject(object):
                          fake_instance['access_ip_v4'])
         self.assertEqual(str(inst.access_ip_v6),
                          fake_instance['access_ip_v6'])
-        self.assertRemotes()
 
     def test_refresh(self):
         self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
@@ -258,7 +253,6 @@ class _TestInstanceObject(object):
         self.assertEqual(inst.host, 'orig-host')
         inst.refresh()
         self.assertEqual(inst.host, 'new-host')
-        self.assertRemotes()
         self.assertEqual(set([]), inst.obj_what_changed())
 
     def test_refresh_does_not_recurse(self):
@@ -791,7 +785,6 @@ class _TestInstanceObject(object):
         inst = instance.Instance.get_by_uuid(self.context, fake_uuid,
                                              expected_attrs=['fault'])
         self.assertEqual(fake_faults[0], dict(inst.fault.items()))
-        self.assertRemotes()
 
     @mock.patch('nova.objects.EC2Ids.get_by_instance')
     @mock.patch('nova.db.instance_get_by_uuid')
@@ -807,7 +800,6 @@ class _TestInstanceObject(object):
         mock_ec2.assert_called_once_with(self.context, mock.ANY)
 
         self.assertEqual(fake_ec2_ids.instance_id, inst.ec2_ids.instance_id)
-        self.assertRemotes()
 
     def test_iteritems_with_extra_attrs(self):
         self.stubs.Set(instance.Instance, 'name', 'foo')
@@ -1399,7 +1391,6 @@ class _TestInstanceListObject(object):
         for i in range(0, len(fakes)):
             self.assertIsInstance(inst_list.objects[i], instance.Instance)
             self.assertEqual(inst_list.objects[i].uuid, fakes[i]['uuid'])
-        self.assertRemotes()
 
     def test_get_all_by_filters_sorted(self):
         fakes = [self.fake_instance(1), self.fake_instance(2)]
@@ -1418,7 +1409,6 @@ class _TestInstanceListObject(object):
         for i in range(0, len(fakes)):
             self.assertIsInstance(inst_list.objects[i], instance.Instance)
             self.assertEqual(inst_list.objects[i].uuid, fakes[i]['uuid'])
-        self.assertRemotes()
 
     @mock.patch.object(db, 'instance_get_all_by_filters_sort')
     @mock.patch.object(db, 'instance_get_all_by_filters')
@@ -1472,7 +1462,6 @@ class _TestInstanceListObject(object):
         self.assertEqual(1, len(inst_list))
         self.assertIsInstance(inst_list.objects[0], instance.Instance)
         self.assertEqual(inst_list.objects[0].uuid, fakes[1]['uuid'])
-        self.assertRemotes()
 
     def test_get_by_host(self):
         fakes = [self.fake_instance(1),
@@ -1488,7 +1477,6 @@ class _TestInstanceListObject(object):
             self.assertEqual(inst_list.objects[i].uuid, fakes[i]['uuid'])
             self.assertEqual(inst_list.objects[i]._context, self.context)
         self.assertEqual(inst_list.obj_what_changed(), set())
-        self.assertRemotes()
 
     def test_get_by_host_and_node(self):
         fakes = [self.fake_instance(1),
@@ -1503,7 +1491,6 @@ class _TestInstanceListObject(object):
         for i in range(0, len(fakes)):
             self.assertIsInstance(inst_list.objects[i], instance.Instance)
             self.assertEqual(inst_list.objects[i].uuid, fakes[i]['uuid'])
-        self.assertRemotes()
 
     def test_get_by_host_and_not_type(self):
         fakes = [self.fake_instance(1),
@@ -1518,7 +1505,6 @@ class _TestInstanceListObject(object):
         for i in range(0, len(fakes)):
             self.assertIsInstance(inst_list.objects[i], instance.Instance)
             self.assertEqual(inst_list.objects[i].uuid, fakes[i]['uuid'])
-        self.assertRemotes()
 
     @mock.patch('nova.objects.instance._expected_cols')
     @mock.patch('nova.db.instance_get_all')
@@ -1533,7 +1519,6 @@ class _TestInstanceListObject(object):
         for i in range(0, len(fakes)):
             self.assertIsInstance(inst_list.objects[i], instance.Instance)
             self.assertEqual(inst_list.objects[i].uuid, fakes[i]['uuid'])
-        self.assertRemotes()
 
     def test_get_hung_in_rebooting(self):
         fakes = [self.fake_instance(1),
@@ -1548,7 +1533,6 @@ class _TestInstanceListObject(object):
         for i in range(0, len(fakes)):
             self.assertIsInstance(inst_list.objects[i], instance.Instance)
             self.assertEqual(inst_list.objects[i].uuid, fakes[i]['uuid'])
-        self.assertRemotes()
 
     def test_get_active_by_window_joined(self):
         fakes = [self.fake_instance(1), self.fake_instance(2)]
@@ -1574,7 +1558,6 @@ class _TestInstanceListObject(object):
         for fake, obj in zip(fakes, inst_list.objects):
             self.assertIsInstance(obj, instance.Instance)
             self.assertEqual(obj.uuid, fake['uuid'])
-        self.assertRemotes()
 
     def test_with_fault(self):
         fake_insts = [

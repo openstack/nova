@@ -44,7 +44,6 @@ class _TestSecurityGroupObject(object):
         self.assertEqual(self._fix_deleted(fake_secgroup),
                          dict(secgroup.items()))
         self.assertEqual(secgroup.obj_what_changed(), set())
-        self.assertRemotes()
 
     def test_get_by_name(self):
         self.mox.StubOutWithMock(db, 'security_group_get_by_name')
@@ -57,7 +56,6 @@ class _TestSecurityGroupObject(object):
         self.assertEqual(self._fix_deleted(fake_secgroup),
                          dict(secgroup.items()))
         self.assertEqual(secgroup.obj_what_changed(), set())
-        self.assertRemotes()
 
     def test_in_use(self):
         self.mox.StubOutWithMock(db, 'security_group_in_use')
@@ -66,7 +64,6 @@ class _TestSecurityGroupObject(object):
         secgroup = security_group.SecurityGroup(context=self.context)
         secgroup.id = 123
         self.assertTrue(secgroup.in_use())
-        self.assertRemotes()
 
     def test_save(self):
         self.mox.StubOutWithMock(db, 'security_group_update')
@@ -83,7 +80,6 @@ class _TestSecurityGroupObject(object):
         self.assertEqual(self._fix_deleted(updated_secgroup),
                          dict(secgroup.items()))
         self.assertEqual(secgroup.obj_what_changed(), set())
-        self.assertRemotes()
 
     def test_save_no_changes(self):
         self.mox.StubOutWithMock(db, 'security_group_update')
@@ -105,7 +101,6 @@ class _TestSecurityGroupObject(object):
         self.assertEqual(self._fix_deleted(updated_secgroup),
                          dict(secgroup.items()))
         self.assertEqual(secgroup.obj_what_changed(), set())
-        self.assertRemotes()
 
 
 class TestSecurityGroupObject(test_objects._LocalTest,

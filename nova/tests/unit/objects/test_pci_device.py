@@ -135,7 +135,6 @@ class _TestPciDeviceObject(object):
         self.pci_device = pci_device.PciDevice.get_by_dev_addr(ctxt, 1, 'a')
         self.assertEqual(self.pci_device.product_id, 'p')
         self.assertEqual(self.pci_device.obj_what_changed(), set())
-        self.assertRemotes()
 
     def test_get_by_dev_id(self):
         ctxt = context.get_admin_context()
@@ -145,7 +144,6 @@ class _TestPciDeviceObject(object):
         self.pci_device = pci_device.PciDevice.get_by_dev_id(ctxt, 1)
         self.assertEqual(self.pci_device.product_id, 'p')
         self.assertEqual(self.pci_device.obj_what_changed(), set())
-        self.assertRemotes()
 
     def test_save(self):
         ctxt = context.get_admin_context()
@@ -164,7 +162,6 @@ class _TestPciDeviceObject(object):
         self.assertEqual(self.pci_device.status, 'available')
         self.assertEqual(self.pci_device.instance_uuid,
                          'fake-uuid-3')
-        self.assertRemotes()
 
     def test_save_no_extra_info(self):
         return_dev = dict(fake_db_dev, status='available',
@@ -190,7 +187,6 @@ class _TestPciDeviceObject(object):
         self.mox.ReplayAll()
         self.pci_device.save()
         self.assertEqual(self.pci_device.status, 'deleted')
-        self.assertRemotes()
 
     def test_save_deleted(self):
         def _fake_destroy(ctxt, node_id, addr):
@@ -270,7 +266,6 @@ class _TestPciDeviceListObject(object):
         for i in range(len(fake_pci_devs)):
             self.assertIsInstance(devs[i], pci_device.PciDevice)
             self.assertEqual(fake_pci_devs[i]['vendor_id'], devs[i].vendor_id)
-        self.assertRemotes()
 
     def test_get_by_instance_uuid(self):
         ctxt = context.get_admin_context()
@@ -288,7 +283,6 @@ class _TestPciDeviceListObject(object):
             self.assertIsInstance(devs[i], pci_device.PciDevice)
         self.assertEqual(devs[0].vendor_id, 'v')
         self.assertEqual(devs[1].vendor_id, 'v')
-        self.assertRemotes()
 
 
 class TestPciDeviceListObject(test_objects._LocalTest,
