@@ -4555,6 +4555,11 @@ class ComputeManager(manager.Manager):
                                                                 connector,
                                                                 instance,
                                                                 bdm)
+            LOG.debug("swap_volume: Calling driver volume swap with "
+                      "connection infos: new: %(new_cinfo)s; "
+                      "old: %(old_cinfo)s",
+                      {'new_cinfo': new_cinfo, 'old_cinfo': old_cinfo},
+                      contex=context, instance=instance)
             old_vol_size = self.volume_api.get(context, old_volume_id)['size']
             new_vol_size = self.volume_api.get(context, new_volume_id)['size']
             if new_vol_size > old_vol_size:
@@ -4583,6 +4588,9 @@ class ComputeManager(manager.Manager):
         finally:
             conn_volume = new_volume_id if failed else old_volume_id
             if new_cinfo:
+                LOG.debug("swap_volume: calling Cinder terminate_connection "
+                          "for %(volume)s", {'volume': conn_volume},
+                          context=context, instance=instance)
                 self.volume_api.terminate_connection(context,
                                                      conn_volume,
                                                      connector)
@@ -4593,6 +4601,9 @@ class ComputeManager(manager.Manager):
                                                       old_volume_id,
                                                       new_volume_id,
                                                       error=failed)
+            LOG.debug("swap_volume: Cinder migrate_volume_completion "
+                      "returned: %(comp_ret)s", {'comp_ret': comp_ret},
+                      context=context, instance=instance)
 
         return (comp_ret, new_cinfo)
 
@@ -4606,6 +4617,9 @@ class ComputeManager(manager.Manager):
         bdm = objects.BlockDeviceMapping.get_by_volume_id(
                 context, old_volume_id, instance_uuid=instance.uuid)
         connector = self.driver.get_volume_connector(instance)
+        LOG.info(_LI('Swapping volume %(old_volume)s for %(new_volume)s'),
+                  {'old_volume': old_volume_id, 'new_volume': new_volume_id},
+                  context=context, instance=instance)
         comp_ret, new_cinfo = self._swap_volume(context, instance,
                                                          bdm,
                                                          connector,
@@ -4624,6 +4638,10 @@ class ComputeManager(manager.Manager):
             'volume_id': save_volume_id,
             'volume_size': None,
             'no_device': None}
+        LOG.debug("swap_volume: Updating volume %(volume_id)s BDM record with "
+                  "%(updates)s", {'volume_id': bdm.volume_id,
+                                  'updates': values},
+                  context=context, instance=instance)
         bdm.update(values)
         bdm.save()
 
