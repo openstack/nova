@@ -851,23 +851,6 @@ def instance_group_members_get(context, group_uuid):
     return IMPL.instance_group_members_get(context, group_uuid)
 
 
-def instance_group_policies_add(context, group_uuid, policies,
-                                set_delete=False):
-    """Add policies to the group."""
-    return IMPL.instance_group_policies_add(context, group_uuid, policies,
-                                            set_delete=set_delete)
-
-
-def instance_group_policy_delete(context, group_uuid, policy):
-    """Delete a specific policy from the group."""
-    return IMPL.instance_group_policy_delete(context, group_uuid, policy)
-
-
-def instance_group_policies_get(context, group_uuid):
-    """Get the policies from the group."""
-    return IMPL.instance_group_policies_get(context, group_uuid)
-
-
 ###################
 
 

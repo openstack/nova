@@ -8441,63 +8441,6 @@ class InstanceGroupPoliciesDBApiTestCase(InstanceGroupDBApiTestCase):
         self._assertEqualObjects(result, values, ignored_keys)
         self._assertEqualListsOfPrimitivesAsSets(result['policies'], policies)
 
-    def test_instance_group_policies_add(self):
-        values = self._get_default_values()
-        values['uuid'] = 'fake_id'
-        result = self._create_instance_group(self.context, values)
-        id = result['uuid']
-        policies = db.instance_group_policies_get(self.context, id)
-        self.assertEqual(policies, [])
-        policies2 = ['policy1', 'policy2']
-        db.instance_group_policies_add(self.context, id, policies2)
-        policies = db.instance_group_policies_get(self.context, id)
-        self._assertEqualListsOfPrimitivesAsSets(policies, policies2)
-
-    def test_instance_group_policies_update(self):
-        values = self._get_default_values()
-        values['uuid'] = 'fake_id'
-        result = self._create_instance_group(self.context, values)
-        id = result['uuid']
-        policies2 = ['policy1', 'policy2']
-        db.instance_group_policies_add(self.context, id, policies2)
-        policies = db.instance_group_policies_get(self.context, id)
-        self._assertEqualListsOfPrimitivesAsSets(policies, policies2)
-        policies3 = ['policy1', 'policy2', 'policy3']
-        db.instance_group_policies_add(self.context, id, policies3)
-        policies = db.instance_group_policies_get(self.context, id)
-        self._assertEqualListsOfPrimitivesAsSets(policies, policies3)
-
-    def test_instance_group_policies_delete(self):
-        values = self._get_default_values()
-        values['uuid'] = 'fake_id'
-        result = self._create_instance_group(self.context, values)
-        id = result['uuid']
-        policies3 = ['policy1', 'policy2', 'policy3']
-        db.instance_group_policies_add(self.context, id, policies3)
-        policies = db.instance_group_policies_get(self.context, id)
-        self._assertEqualListsOfPrimitivesAsSets(policies, policies3)
-        for policy in policies3[:]:
-            db.instance_group_policy_delete(self.context, id, policy)
-            policies3.remove(policy)
-            policies = db.instance_group_policies_get(self.context, id)
-            self._assertEqualListsOfPrimitivesAsSets(policies, policies3)
-
-    def test_instance_group_policies_invalid_ids(self):
-        values = self._get_default_values()
-        result = self._create_instance_group(self.context, values)
-        id = result['uuid']
-        self.assertRaises(exception.InstanceGroupNotFound,
-                          db.instance_group_policies_get,
-                          self.context, 'invalid')
-        self.assertRaises(exception.InstanceGroupNotFound,
-                          db.instance_group_policy_delete, self.context,
-                          'invalidid', 'policy1')
-        policies = ['policy1', 'policy2']
-        db.instance_group_policies_add(self.context, id, policies)
-        self.assertRaises(exception.InstanceGroupPolicyNotFound,
-                          db.instance_group_policy_delete,
-                          self.context, id, 'invalid_policy')
-
 
 class PciDeviceDBApiTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def setUp(self):

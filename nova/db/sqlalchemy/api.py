@@ -6409,35 +6409,6 @@ def _instance_group_policies_add(context, id, policies, set_delete=False,
         return policies
 
 
-def instance_group_policies_add(context, group_uuid, policies,
-                                set_delete=False):
-    id = _instance_group_id(context, group_uuid)
-    return _instance_group_policies_add(context, id, policies,
-                                        set_delete=set_delete)
-
-
-def instance_group_policy_delete(context, group_uuid, policy):
-    id = _instance_group_id(context, group_uuid)
-    count = _instance_group_get_query(context,
-                                      models.InstanceGroupPolicy,
-                                      models.InstanceGroupPolicy.group_id,
-                                      id).\
-                            filter_by(policy=policy).\
-                            soft_delete()
-    if count == 0:
-        raise exception.InstanceGroupPolicyNotFound(group_uuid=group_uuid,
-                                                    policy=policy)
-
-
-def instance_group_policies_get(context, group_uuid):
-    id = _instance_group_id(context, group_uuid)
-    policies = model_query(context,
-                           models.InstanceGroupPolicy,
-                           (models.InstanceGroupPolicy.policy,)).\
-                    filter_by(group_id=id).all()
-    return [policy[0] for policy in policies]
-
-
 ####################
 
 
