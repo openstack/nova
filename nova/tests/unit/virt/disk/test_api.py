@@ -142,6 +142,23 @@ class APITestCase(test.NoDBTestCase):
         self.mox.ReplayAll()
         api.extend(imgfile, imgsize, use_cow=use_cow)
 
+    @mock.patch.object(api, 'can_resize_image', return_value=True)
+    @mock.patch.object(api, 'is_image_extendable')
+    @mock.patch.object(utils, 'execute')
+    def test_extend_qcow_no_resize(self, mock_execute, mock_extendable,
+                                   mock_can_resize_image):
+        imgfile = tempfile.NamedTemporaryFile()
+        imgsize = 10
+
+        self.flags(resize_fs_using_block_device=False)
+
+        api.extend(imgfile, imgsize, use_cow=True)
+
+        mock_can_resize_image.assert_called_once_with(imgfile, imgsize)
+        mock_execute.assert_called_once_with('qemu-img', 'resize', imgfile,
+                                             imgsize)
+        self.assertFalse(mock_extendable.called)
+
     def test_extend_raw_success(self):
         imgfile = tempfile.NamedTemporaryFile()
         imgsize = 10

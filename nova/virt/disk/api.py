@@ -179,6 +179,9 @@ def extend(image, size, use_cow=False):
 
     utils.execute('qemu-img', 'resize', image, size)
 
+    if use_cow and not CONF.resize_fs_using_block_device:
+        return
+
     # if we can't access the filesystem, we can't do anything more
     if not is_image_extendable(image, use_cow):
         return
@@ -194,15 +197,14 @@ def extend(image, size, use_cow=False):
 
     # NOTE(vish): attempts to resize filesystem
     if use_cow:
-        if CONF.resize_fs_using_block_device:
-            # in case of non-raw disks we can't just resize the image, but
-            # rather the mounted device instead
-            mounter = mount.Mount.instance_for_format(
-                image, None, None, 'qcow2')
-            if mounter.get_dev():
-                safe_resize2fs(mounter.device,
-                               run_as_root=True,
-                               finally_call=mounter.unget_dev)
+        # in case of non-raw disks we can't just resize the image, but
+        # rather the mounted device instead
+        mounter = mount.Mount.instance_for_format(
+            image, None, None, 'qcow2')
+        if mounter.get_dev():
+            safe_resize2fs(mounter.device,
+                           run_as_root=True,
+                           finally_call=mounter.unget_dev)
     else:
         safe_resize2fs(image)
 
