@@ -33,8 +33,6 @@ from oslo_serialization import jsonutils
 from oslo_utils import timeutils
 import six
 
-from nova.compute import task_states
-from nova.compute import vm_states
 from nova import context as context_module
 from nova import exception
 from nova.i18n import _LI, _LW
@@ -316,14 +314,10 @@ class HostState(object):
         self.numa_topology = hardware.get_host_numa_usage_from_instance(
                 self, instance)
 
-        vm_state = instance.get('vm_state', vm_states.BUILDING)
-        task_state = instance.get('task_state')
-        if vm_state == vm_states.BUILDING or task_state in [
-                task_states.RESIZE_MIGRATING, task_states.REBUILDING,
-                task_states.RESIZE_PREP, task_states.IMAGE_SNAPSHOT,
-                task_states.IMAGE_BACKUP, task_states.UNSHELVING,
-                task_states.RESCUING]:
-            self.num_io_ops += 1
+        # NOTE(sbauza): By considering all cases when the scheduler is called
+        # and when consume_from_instance() is run, we can safely say that there
+        # is always an IO operation because we want to move the instance
+        self.num_io_ops += 1
 
     def __repr__(self):
         return ("(%s, %s) ram:%s disk:%s io_ops:%s instances:%s" %
