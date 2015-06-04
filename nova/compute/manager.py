@@ -1176,8 +1176,8 @@ class ComputeManager(manager.Manager):
                 self.driver.ensure_filtering_rules_for_instance(
                                        instance, net_info)
             except NotImplementedError:
-                LOG.warning(_LW('Hypervisor driver does not support '
-                                'firewall rules'), instance=instance)
+                LOG.debug('Hypervisor driver does not support '
+                          'firewall rules', instance=instance)
 
     def _retry_reboot(self, context, instance):
         current_power_state = self._get_power_state(context, instance)
@@ -1361,8 +1361,8 @@ class ComputeManager(manager.Manager):
             try:
                 return self.driver.refresh_instance_security_rules(instance)
             except NotImplementedError:
-                LOG.warning(_LW('Hypervisor driver does not support '
-                                'security groups.'), instance=instance)
+                LOG.debug('Hypervisor driver does not support '
+                          'security groups.', instance=instance)
 
         return _sync_refresh()
 
@@ -5687,8 +5687,8 @@ class ComputeManager(manager.Manager):
                 # NOTE(PhilDay): Record that its not supported so we can
                 # skip fast on future calls rather than waste effort getting
                 # the list of instances.
-                LOG.warning(_LW("Bandwidth usage not supported by "
-                                "hypervisor."))
+                LOG.info(_LI("Bandwidth usage not supported by "
+                             "hypervisor."))
                 self._bw_usage_supported = False
                 return
 
@@ -6176,8 +6176,8 @@ class ComputeManager(manager.Manager):
                             # disable starting the instance
                             self.driver.set_bootable(instance, False)
                         except NotImplementedError:
-                            LOG.warning(_LW("set_bootable is not implemented "
-                                            "for the current driver"))
+                            LOG.debug("set_bootable is not implemented "
+                                      "for the current driver")
                         # and power it off
                         self.driver.power_off(instance)
                     except Exception:
