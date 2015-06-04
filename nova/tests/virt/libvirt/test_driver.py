@@ -1209,11 +1209,9 @@ class LibvirtConnTestCase(test.TestCase):
                     objects.Flavor, "get_by_id", return_value=flavor),
                 mock.patch.object(conn, '_has_min_version', return_value=True),
                 mock.patch.object(
-                    conn, "_get_host_capabilities", return_value=caps),
-                mock.patch.object(
-                        random, 'choice', side_effect=lambda cells: cells[0])):
+                    conn, "_get_host_capabilities", return_value=caps)):
             cfg = conn._get_guest_config(instance_ref, [], {}, disk_info)
-            self.assertEqual(set([0, 1]), cfg.cpuset)
+            self.assertIsNone(cfg.cpuset)
             self.assertIsNone(cfg.cputune)
             self.assertIsNone(cfg.cpu.numa)
 
@@ -1272,15 +1270,12 @@ class LibvirtConnTestCase(test.TestCase):
                 mock.patch.object(
                     conn, "_get_host_capabilities", return_value=caps),
                 mock.patch.object(
-                    hardware, 'get_vcpu_pin_set', return_value=set([2, 3])),
-                mock.patch.object(
-                    random, 'choice', side_effect=lambda cells: cells[0])
+                    hardware, 'get_vcpu_pin_set', return_value=set([2, 3]))
                 ) as (get_by_id_mock, has_min_version_mock, get_host_cap_mock,
-                        get_vcpu_pin_set_mock, choice_mock):
+                        get_vcpu_pin_set_mock):
             cfg = conn._get_guest_config(instance_ref, [], {}, disk_info)
             # NOTE(ndipanov): we make sure that pin_set was taken into account
             # when choosing viable cells
-            choice_mock.assert_called_once_with([set([2, 3])])
             self.assertEqual(set([2, 3]), cfg.cpuset)
             self.assertIsNone(cfg.cputune)
             self.assertIsNone(cfg.cpu.numa)
