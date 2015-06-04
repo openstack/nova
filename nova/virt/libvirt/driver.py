@@ -4848,9 +4848,6 @@ class LibvirtDriver(driver.ComputeDriver):
     def _has_numa_support(self):
         # This means that the host can support LibvirtConfigGuestNUMATune
         # and the nodeset field in LibvirtConfigGuestMemoryBackingPage
-        supported_archs = [arch.I686, arch.X86_64]
-        caps = self._host.get_capabilities()
-
         for ver in BAD_LIBVIRT_NUMA_VERSIONS:
             if self._host.has_version(ver):
                 if not getattr(self, '_bad_libvirt_numa_version_warn', False):
@@ -4861,6 +4858,9 @@ class LibvirtDriver(driver.ComputeDriver):
                              self._version_to_string(ver))
                     self._bad_libvirt_numa_version_warn = True
                 return False
+
+        supported_archs = [arch.I686, arch.X86_64]
+        caps = self._host.get_capabilities()
 
         return ((caps.host.cpu.arch in supported_archs) and
                 self._host.has_min_version(MIN_LIBVIRT_NUMA_VERSION,
