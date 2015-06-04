@@ -159,6 +159,25 @@ class Guest(object):
                 yield GuestVCPUInfo(
                     id=vcpu[0], cpu=vcpu[3], state=vcpu[1], time=vcpu[2])
 
+    def delete_configuration(self):
+        """Undefines a domain from hypervisor."""
+        try:
+            self._domain.undefineFlags(
+                libvirt.VIR_DOMAIN_UNDEFINE_MANAGED_SAVE)
+        except libvirt.libvirtError:
+            LOG.debug("Error from libvirt during undefineFlags. %d"
+                      "Retrying with undefine", self.id)
+            self._domain.undefine()
+        except AttributeError:
+            # Older versions of libvirt don't support undefine flags,
+            # trying to remove managed image
+            try:
+                if self._domain.hasManagedSaveImage(0):
+                    self._domain.managedSaveRemove(0)
+            except AttributeError:
+                pass
+            self._domain.undefine()
+
 
 class GuestVCPUInfo(object):
     def __init__(self, id, cpu, state, time):

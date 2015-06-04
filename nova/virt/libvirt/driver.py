@@ -741,38 +741,16 @@ class LibvirtDriver(driver.ComputeDriver):
     def _undefine_domain(self, instance):
         try:
             guest = self._host.get_guest(instance)
-
-            # TODO(sahid): We are converting all calls from a
-            # virDomain object to use nova.virt.libvirt.Guest.
-            # We should be able to remove virt_dom at the end.
-            virt_dom = guest._domain
-        except exception.InstanceNotFound:
-            virt_dom = None
-        if virt_dom:
             try:
-                try:
-                    virt_dom.undefineFlags(
-                        libvirt.VIR_DOMAIN_UNDEFINE_MANAGED_SAVE)
-                except libvirt.libvirtError:
-                    LOG.debug("Error from libvirt during undefineFlags."
-                        " Retrying with undefine", instance=instance)
-                    virt_dom.undefine()
-                except AttributeError:
-                    # NOTE(vish): Older versions of libvirt don't support
-                    #             undefine flags, so attempt to do the
-                    #             right thing.
-                    try:
-                        if virt_dom.hasManagedSaveImage(0):
-                            virt_dom.managedSaveRemove(0)
-                    except AttributeError:
-                        pass
-                    virt_dom.undefine()
+                guest.delete_configuration()
             except libvirt.libvirtError as e:
                 with excutils.save_and_reraise_exception():
                     errcode = e.get_error_code()
                     LOG.error(_LE('Error from libvirt during undefine. '
                                   'Code=%(errcode)s Error=%(e)s'),
                               {'errcode': errcode, 'e': e}, instance=instance)
+        except exception.InstanceNotFound:
+            pass
 
     def cleanup(self, context, instance, network_info, block_device_info=None,
                 destroy_disks=True, migrate_data=None, destroy_vifs=True):
@@ -1099,6 +1077,9 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _swap_volume(self, domain, disk_path, new_path, resize_to):
         """Swap existing disk with a new block device."""
+        # TODO(sahid): Should pass a guest to this method.
+        guest = libvirt_guest.Guest(domain)
+
         # Save a copy of the domain's persistent XML file
         xml = domain.XMLDesc(
             libvirt.VIR_DOMAIN_XML_INACTIVE |
@@ -1117,7 +1098,7 @@ class LibvirtDriver(driver.ComputeDriver):
             #             If any part of this block fails, the domain is
             #             re-defined regardless.
             if domain.isPersistent():
-                domain.undefine()
+                guest.delete_configuration()
 
             # Start copy with VIR_DOMAIN_REBASE_REUSE_EXT flag to
             # allow writing to existing external volume file
@@ -1555,6 +1536,9 @@ class LibvirtDriver(driver.ComputeDriver):
     def _live_snapshot(self, context, instance, domain, disk_path, out_path,
                        image_format, image_meta):
         """Snapshot an instance without downtime."""
+        # TODO(sahid): Should pass a guest to this method
+        guest = libvirt_guest.Guest(domain)
+
         # Save a copy of the domain's persistent XML file
         xml = domain.XMLDesc(
             libvirt.VIR_DOMAIN_XML_INACTIVE |
@@ -1590,7 +1574,7 @@ class LibvirtDriver(driver.ComputeDriver):
             #             If any part of this block fails, the domain is
             #             re-defined regardless.
             if domain.isPersistent():
-                domain.undefine()
+                guest.delete_configuration()
 
             # NOTE (rmk): Establish a temporary mirror of our root disk and
             #             issue an abort once we have a complete copy.

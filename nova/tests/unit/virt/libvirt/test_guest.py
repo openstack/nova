@@ -164,3 +164,21 @@ class GuestTestCase(test.NoDBTestCase):
         self.assertEqual(2, vcpus[0].cpu)
         self.assertEqual(1, vcpus[0].state)
         self.assertEqual(10290000000L, vcpus[0].time)
+
+    def test_delete_configuration(self):
+        domain = mock.MagicMock()
+
+        guest = libvirt_guest.Guest(domain)
+        guest.delete_configuration()
+
+        domain.undefineFlags.assert_called_once_with(
+            fakelibvirt.VIR_DOMAIN_UNDEFINE_MANAGED_SAVE)
+
+    def test_delete_configuration_exception(self):
+        domain = mock.MagicMock()
+        domain.undefineFlags.side_effect = fakelibvirt.libvirtError('oops')
+
+        guest = libvirt_guest.Guest(domain)
+        guest.delete_configuration()
+
+        domain.undefine.assert_called_once_with()

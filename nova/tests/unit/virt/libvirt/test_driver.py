@@ -8481,6 +8481,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         mock.ID()
         mock.destroy()
         mock.undefineFlags(1).AndRaise(fakelibvirt.libvirtError('Err'))
+        mock.ID().AndReturn(123)
         mock.undefine()
 
         self.mox.ReplayAll()
