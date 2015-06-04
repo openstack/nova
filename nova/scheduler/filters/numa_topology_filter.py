@@ -10,9 +10,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_log import log as logging
+
 from nova import objects
 from nova.scheduler import filters
 from nova.virt import hardware
+
+LOG = logging.getLogger(__name__)
 
 
 class NUMATopologyFilter(filters.BaseHostFilter):
@@ -40,10 +44,20 @@ class NUMATopologyFilter(filters.BaseHostFilter):
                         pci_requests=pci_requests,
                         pci_stats=host_state.pci_stats))
             if not instance_topology:
+                LOG.debug("%(host)s, %(node)s fails NUMA topology "
+                          "requirements. The instance does not fit on this "
+                          "host.", {'host': host_state.host,
+                                    'node': host_state.nodename},
+                          instance_uuid=instance.get('instance_uuid'))
                 return False
             host_state.limits['numa_topology'] = limits
             return True
         elif requested_topology:
+            LOG.debug("%(host)s, %(node)s fails NUMA topology requirements. "
+                      "No host NUMA topology while the instance specified "
+                      "one.",
+                      {'host': host_state.host, 'node': host_state.nodename},
+                      instance_uuid=instance.get('instance_uuid'))
             return False
         else:
             return True
