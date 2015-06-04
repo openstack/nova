@@ -13,8 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova.compute import hv_type
 from nova.objects import base
 from nova.objects import fields
+from nova import utils
 
 
 # TODO(berrange): Remove NovaObjectDictCompat
@@ -22,7 +24,8 @@ from nova.objects import fields
 class HVSpec(base.NovaObject,
              base.NovaObjectDictCompat):
     # Version 1.0: Initial version
-    VERSION = '1.0'
+    # Version 1.1: Added 'vz' hypervisor
+    VERSION = '1.1'
 
     fields = {
         'arch': fields.ArchitectureField(),
@@ -40,3 +43,10 @@ class HVSpec(base.NovaObject,
 
     def to_list(self):
         return [self.arch, self.hv_type, self.vm_mode]
+
+    def obj_make_compatible(self, primitive, target_version):
+        super(HVSpec, self).obj_make_compatible(primitive, target_version)
+        target_version = utils.convert_version_to_tuple(target_version)
+        if (target_version < (1, 1) and 'hv_type' in primitive and
+            hv_type.VIRTUOZZO == primitive['hv_type']):
+            primitive['hv_type'] = hv_type.PARALLELS

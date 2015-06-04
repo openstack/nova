@@ -38,6 +38,7 @@ KVM = "kvm"
 LXC = "lxc"
 OPENVZ = "openvz"
 PARALLELS = "parallels"
+VIRTUOZZO = "vz"
 PHYP = "phyp"
 QEMU = "qemu"
 TEST = "test"
@@ -64,6 +65,7 @@ ALL = (
     TEST,
     UML,
     VBOX,
+    VIRTUOZZO,
     VMWARE,
     XEN,
     ZVM,
