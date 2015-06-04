@@ -119,8 +119,8 @@ libvirt_opts = [
                help='Rescue ari image'),
     cfg.StrOpt('virt_type',
                default='kvm',
-               help='Libvirt domain type (valid options are: '
-                    'kvm, lxc, qemu, uml, xen and parallels)'),
+               choices=('kvm', 'lxc', 'qemu', 'uml', 'xen', 'parallels'),
+               help='Libvirt domain type'),
     cfg.StrOpt('connection_uri',
                default='',
                help='Override the default libvirt URI '
@@ -158,9 +158,8 @@ libvirt_opts = [
                default=0,
                help='Maximum bandwidth to be used during migration, in Mbps'),
     cfg.StrOpt('snapshot_image_format',
-               help='Snapshot image format (valid options are : '
-                    'raw, qcow2, vmdk, vdi). '
-                    'Defaults to same as source image'),
+               choices=('raw', 'qcow2', 'vmdk', 'vdi'),
+               help='Snapshot image format. Defaults to same as source image'),
     cfg.StrOpt('disk_prefix',
                help='Override the default disk prefix for the devices attached'
                     ' to a server, which is dependent on virt_type. '
@@ -171,6 +170,7 @@ libvirt_opts = [
                     ' soft reboot request is made. We fall back to hard reboot'
                     ' if instance does not shutdown within this window.'),
     cfg.StrOpt('cpu_mode',
+               choices=('host-model', 'host-passthrough', 'custom', 'none'),
                help='Set to "host-model" to clone the host CPU feature flags; '
                     'to "host-passthrough" to use the host CPU model exactly; '
                     'to "custom" to use a named CPU model; '
@@ -206,10 +206,9 @@ libvirt_opts = [
                     'For example: x86_64=machinetype1,armv7l=machinetype2'),
     cfg.StrOpt('sysinfo_serial',
                default='auto',
+               choices=('none', 'os', 'hardware', 'auto'),
                help='The data source used to the populate the host "serial" '
-                    'UUID exposed to guest in the virtual BIOS. Permitted '
-                    'options are "hardware", "os", "none" or "auto" '
-                    '(default).'),
+                    'UUID exposed to guest in the virtual BIOS.'),
     cfg.IntOpt('mem_stats_period_seconds',
                 default=10,
                 help='A number of seconds to memory usage statistics period. '

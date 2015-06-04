@@ -679,11 +679,6 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
         config_drive_type = blockinfo.get_config_drive_type()
         self.assertEqual('disk', config_drive_type)
 
-    def test_get_config_drive_type_improper_value(self):
-        self.flags(config_drive_format='test')
-        self.assertRaises(exception.ConfigDriveUnknownFormat,
-                          blockinfo.get_config_drive_type)
-
     def test_get_info_from_bdm(self):
         bdms = [{'device_name': '/dev/vds', 'device_type': 'disk',
                  'disk_bus': 'usb', 'swap_size': 4},

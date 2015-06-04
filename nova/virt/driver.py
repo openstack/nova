@@ -41,6 +41,7 @@ driver_opts = [
                     'formatted with on creation.'),
     cfg.StrOpt('preallocate_images',
                default='none',
+               choices=('none', 'space'),
                help='VM image preallocation mode: '
                     '"none" => no storage provisioning is done up front, '
                     '"space" => storage is fully allocated at instance start'),

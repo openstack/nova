@@ -106,11 +106,12 @@ volume_opts = [
                help='Path to a Quobyte Client configuration file.'),
     cfg.StrOpt('iscsi_iface',
                deprecated_name='iscsi_transport',
+               choices=('be2iscsi', 'bnx2i', 'cxgb3i', 'cxgb4i', 'qla4xxx',
+                        'ocs'),
                help='The iSCSI transport iface to use to connect to target in '
-                    'case offload support is desired. Supported transports '
-                    'are be2iscsi, bnx2i, cxgb3i, cxgb4i, qla4xxx and ocs. '
-                    'Default format is transport_name.hwaddress and can be '
-                    'generated manually or via iscsiadm -m iface'),
+                    'case offload support is desired. Default format is '
+                    'transport_name.hwaddress and can be generated manually '
+                    'or via iscsiadm -m iface'),
                     # iser is also supported, but use LibvirtISERVolumeDriver
                     # instead
     ]

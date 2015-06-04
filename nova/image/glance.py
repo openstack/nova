@@ -48,6 +48,7 @@ glance_opts = [
                help='Default glance port'),
     cfg.StrOpt('protocol',
                 default='http',
+                choices=('http', 'https'),
                 help='Default protocol to use when connecting to glance. '
                      'Set to https for SSL.'),
     cfg.ListOpt('api_servers',

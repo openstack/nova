@@ -218,8 +218,8 @@ timeout_opts = [
 running_deleted_opts = [
     cfg.StrOpt("running_deleted_instance_action",
                default="reap",
+               choices=('noop', 'log', 'shutdown', 'reap'),
                help="Action to take if a running deleted instance is detected."
-                    " Valid options are 'noop', 'log', 'shutdown', or 'reap'. "
                     "Set to 'noop' to take no action."),
     cfg.IntOpt("running_deleted_instance_poll_interval",
                default=1800,

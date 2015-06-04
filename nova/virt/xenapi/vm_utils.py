@@ -64,6 +64,7 @@ LOG = logging.getLogger(__name__)
 xenapi_vm_utils_opts = [
     cfg.StrOpt('cache_images',
                default='all',
+               choices=('all', 'some', 'none'),
                help='Cache glance images locally. `all` will cache all'
                     ' images, `some` will only cache images that have the'
                     ' image_property `cache_in_nova=True`, and `none` turns'
@@ -103,8 +104,8 @@ xenapi_vm_utils_opts = [
                     'should try once and no retry'),
     cfg.StrOpt('torrent_images',
                default='none',
-               help='Whether or not to download images via Bit Torrent '
-                    '(all|some|none).'),
+               choices=('all', 'some', 'none'),
+               help='Whether or not to download images via Bit Torrent.'),
     cfg.StrOpt('ipxe_network_name',
                help='Name of network to use for booting iPXE ISOs'),
     cfg.StrOpt('ipxe_boot_menu_url',

@@ -169,15 +169,6 @@ class LvmTestCase(test.NoDBTestCase):
         lvm.clear_volume('/dev/vc')
         self.assertEqual(expected_commands, executes)
 
-        # Test volume_clear=invalid falls back to the default 'zero'
-        CONF.set_override('volume_clear', 'invalid', 'libvirt')
-        lvm_size = 1
-        executes = []
-        expected_commands = [('dd', 'bs=1', 'if=/dev/zero', 'of=/dev/vd',
-                              'seek=0', 'count=1', 'conv=fdatasync')]
-        lvm.clear_volume('/dev/vd')
-        self.assertEqual(expected_commands, executes)
-
     @mock.patch.object(utils, 'execute',
                        side_effect=processutils.ProcessExecutionError(
                                     stderr=('blockdev: cannot open /dev/foo: '
