@@ -2948,15 +2948,21 @@ class API(base.Base):
         instance.locked_by = 'owner' if is_owner else 'admin'
         instance.save()
 
+    def is_expected_locked_by(self, context, instance):
+        is_owner = instance.project_id == context.project_id
+        expect_locked_by = 'owner' if is_owner else 'admin'
+        locked_by = instance.locked_by
+        if locked_by and locked_by != expect_locked_by:
+            return False
+        return True
+
     @wrap_check_policy
     def unlock(self, context, instance):
         """Unlock the given instance."""
         # If the instance was locked by someone else, check
         # that we're allowed to override the lock
-        is_owner = instance.project_id == context.project_id
-        expect_locked_by = 'owner' if is_owner else 'admin'
-        locked_by = instance.locked_by
-        if locked_by and locked_by != expect_locked_by:
+        if not self.skip_policy_check and not self.is_expected_locked_by(
+            context, instance):
             check_policy(context, 'unlock_override', instance)
 
         context = context.elevated()

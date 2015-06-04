@@ -273,6 +273,7 @@ policy_data = """
     "os_compute_api:os-keypairs:delete": "",
     "os_compute_api:os-lock-server:lock": "",
     "os_compute_api:os-lock-server:unlock": "",
+    "os_compute_api:os-lock-server:unlock:unlock_override": "",
     "os_compute_api:os-migrate-server:migrate": "",
     "os_compute_api:os-migrate-server:migrate_live": "",
     "compute_extension:multinic": "",
