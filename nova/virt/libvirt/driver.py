@@ -47,7 +47,6 @@ from oslo_concurrency import processutils
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
-from oslo_utils import encodeutils
 from oslo_utils import excutils
 from oslo_utils import importutils
 from oslo_utils import strutils
@@ -93,6 +92,7 @@ from nova.virt.libvirt import blockinfo
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import dmcrypt
 from nova.virt.libvirt import firewall as libvirt_firewall
+from nova.virt.libvirt import guest as libvirt_guest
 from nova.virt.libvirt import host
 from nova.virt.libvirt import imagebackend
 from nova.virt.libvirt import imagecache
@@ -1401,8 +1401,8 @@ class LibvirtDriver(driver.ComputeDriver):
                     if state == power_state.RUNNING:
                         new_dom = self._create_domain(domain=virt_dom)
                     elif state == power_state.PAUSED:
-                        new_dom = self._create_domain(domain=virt_dom,
-                                launch_flags=libvirt.VIR_DOMAIN_START_PAUSED)
+                        new_dom = self._create_domain(
+                            domain=virt_dom, pause=True)
                     if new_dom is not None:
                         self._attach_pci_devices(new_dom,
                             pci_manager.get_instance_pci_devs(instance))
@@ -2350,15 +2350,6 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def poll_rebooting_instances(self, timeout, instances):
         pass
-
-    def _enable_hairpin(self, xml):
-        interfaces = self._get_interfaces(xml)
-        for interface in interfaces:
-            utils.execute('tee',
-                          '/sys/class/net/%s/brport/hairpin_mode' % interface,
-                          process_input='1',
-                          run_as_root=True,
-                          check_exit_code=[0, 1])
 
     # NOTE(ilyaalekseyev): Implementation like in multinics
     # for xenapi(tr3buchet)
@@ -4328,36 +4319,25 @@ class LibvirtDriver(driver.ComputeDriver):
             self._create_domain_cleanup_lxc(instance)
 
     def _create_domain(self, xml=None, domain=None,
-                       instance=None, launch_flags=0, power_on=True):
+                       power_on=True, pause=False):
         """Create a domain.
 
         Either domain or xml must be passed in. If both are passed, then
         the domain definition is overwritten from the xml.
         """
-        err = None
-        try:
-            if xml:
-                err = (_LE('Error defining a domain with XML: %s') %
-                       encodeutils.safe_decode(xml, errors='ignore'))
-                domain = self._host.write_instance_config(xml)
+        if xml:
+            guest = libvirt_guest.Guest.create(xml, self._host)
+        else:
+            guest = libvirt_guest.Guest(domain)
 
-            if power_on:
-                err = _LE('Error launching a defined domain with XML: %s') \
-                          % encodeutils.safe_decode(domain.XMLDesc(0),
-                                                    errors='ignore')
-                domain.createWithFlags(launch_flags)
+        if power_on or pause:
+            guest.launch(pause=pause)
 
-            if not utils.is_neutron():
-                err = _LE('Error enabling hairpin mode with XML: %s') \
-                          % encodeutils.safe_decode(domain.XMLDesc(0),
-                                                    errors='ignore')
-                self._enable_hairpin(domain.XMLDesc(0))
-        except Exception:
-            with excutils.save_and_reraise_exception():
-                if err:
-                    LOG.error(err)
+        if not utils.is_neutron():
+            guest.enable_hairpin()
 
-        return domain
+        # TODO(sahid): This method should return the Guest object
+        return guest._domain
 
     def _neutron_failed_callback(self, event_name, instance):
         LOG.error(_LE('Neutron Reported failure on event '
@@ -4408,7 +4388,7 @@ class LibvirtDriver(driver.ComputeDriver):
         else:
             events = []
 
-        launch_flags = events and libvirt.VIR_DOMAIN_START_PAUSED or 0
+        pause = bool(events)
         domain = None
         try:
             with self.virtapi.wait_for_instance_event(
@@ -4422,9 +4402,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 with self._lxc_disk_handler(instance, image_meta,
                                             block_device_info, disk_info):
                     domain = self._create_domain(
-                        xml, instance=instance,
-                        launch_flags=launch_flags,
-                        power_on=power_on)
+                        xml, pause=pause, power_on=power_on)
 
                 self.firewall_driver.apply_instance_filter(instance,
                                                            network_info)
@@ -4448,7 +4426,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 raise exception.VirtualInterfaceCreateException()
 
         # Resume only if domain has been paused
-        if launch_flags & libvirt.VIR_DOMAIN_START_PAUSED:
+        if pause:
             domain.resume()
         return domain
 

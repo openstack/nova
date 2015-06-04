@@ -86,6 +86,7 @@ from nova.virt.libvirt import blockinfo
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import driver as libvirt_driver
 from nova.virt.libvirt import firewall
+from nova.virt.libvirt import guest as libvirt_guest
 from nova.virt.libvirt import host
 from nova.virt.libvirt import imagebackend
 from nova.virt.libvirt import lvm
@@ -95,6 +96,7 @@ from nova.virt.libvirt import volume as volume_drivers
 
 libvirt_driver.libvirt = fakelibvirt
 host.libvirt = fakelibvirt
+libvirt_guest.libvirt = fakelibvirt
 
 
 CONF = cfg.CONF
@@ -602,7 +604,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         return objects.Service(**service_ref)
 
-    def _get_launch_flags(self, drvr, network_info, power_on=True,
+    def _get_pause_flag(self, drvr, network_info, power_on=True,
                           vifs_already_plugged=False):
         timeout = CONF.vif_plugging_timeout
 
@@ -613,9 +615,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             power_on and timeout):
             events = drvr._get_neutron_events(network_info)
 
-        launch_flags = events and fakelibvirt.VIR_DOMAIN_START_PAUSED or 0
-
-        return launch_flags
+        return bool(events)
 
     def test_public_api_signatures(self):
         baseinst = driver.ComputeDriver(None)
@@ -9969,29 +9969,14 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         dom_mock.ID.assert_called_once_with()
         mock_get_domain.assert_called_once_with(instance)
 
-    @mock.patch.object(encodeutils, 'safe_decode')
-    def test_create_domain(self, mock_safe_decode):
+    def test_create_domain(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         mock_domain = mock.MagicMock()
-        mock_instance = mock.MagicMock()
 
-        domain = drvr._create_domain(domain=mock_domain,
-                                     instance=mock_instance)
+        domain = drvr._create_domain(domain=mock_domain)
 
         self.assertEqual(mock_domain, domain)
         mock_domain.createWithFlags.assert_has_calls([mock.call(0)])
-        # There is a global in oslo.log which calls encodeutils.safe_decode
-        # which could be getting called from any number of places, so we need
-        # to just assert that safe_decode was called at least twice in
-        # _create_domain with the errors='ignore' kwarg.
-        safe_decode_ignore_errors_calls = 0
-        for call in mock_safe_decode.call_args_list:
-            # call is a tuple where 0 is positional args and 1 is a kwargs dict
-            if call[1].get('errors') == 'ignore':
-                safe_decode_ignore_errors_calls += 1
-
-        self.assertTrue(safe_decode_ignore_errors_calls >= 2,
-                        'safe_decode should have been called at least twice')
 
     @mock.patch('nova.virt.disk.api.clean_lxc_namespace')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.get_info')
@@ -10166,13 +10151,13 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         self.log_error_called = False
 
-        def fake_error(msg, *args):
+        def fake_error(msg, *args, **kwargs):
             self.log_error_called = True
             self.assertIn(fake_xml, msg % args)
             self.assertIn('safe decoded', msg % args)
 
         self.stubs.Set(encodeutils, 'safe_decode', fake_safe_decode)
-        self.stubs.Set(nova.virt.libvirt.driver.LOG, 'error', fake_error)
+        self.stubs.Set(nova.virt.libvirt.guest.LOG, 'error', fake_error)
 
         self.create_fake_libvirt_mock(defineXML=fake_defineXML)
         self.mox.ReplayAll()
@@ -10194,12 +10179,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         self.log_error_called = False
 
-        def fake_error(msg, *args):
+        def fake_error(msg, *args, **kwargs):
             self.log_error_called = True
             self.assertIn(fake_xml, msg % args)
 
         self.stubs.Set(fake_domain, 'createWithFlags', fake_createWithFlags)
-        self.stubs.Set(nova.virt.libvirt.driver.LOG, 'error', fake_error)
+        self.stubs.Set(nova.virt.libvirt.guest.LOG, 'error', fake_error)
 
         self.create_fake_libvirt_mock()
         self.mox.ReplayAll()
@@ -10216,21 +10201,27 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         fake_xml = "<test>this is a test</test>"
         fake_domain = FakeVirtDomain(fake_xml)
 
-        def fake_enable_hairpin(launch_flags):
+        def fake_execute(*args, **kwargs):
             raise processutils.ProcessExecutionError('error')
+
+        def fake_get_interfaces(*args):
+            return ["dev"]
 
         self.log_error_called = False
 
-        def fake_error(msg, *args):
+        def fake_error(msg, *args, **kwargs):
             self.log_error_called = True
             self.assertIn(fake_xml, msg % args)
 
-        self.stubs.Set(nova.virt.libvirt.driver.LOG, 'error', fake_error)
+        self.stubs.Set(nova.virt.libvirt.guest.LOG, 'error', fake_error)
 
         self.create_fake_libvirt_mock()
         self.mox.ReplayAll()
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        self.stubs.Set(drvr, '_enable_hairpin', fake_enable_hairpin)
+        self.stubs.Set(nova.utils, 'execute', fake_execute)
+        self.stubs.Set(
+            nova.virt.libvirt.guest.Guest, 'get_interfaces',
+            fake_get_interfaces)
 
         self.assertRaises(processutils.ProcessExecutionError,
                           drvr._create_domain,
@@ -10596,7 +10587,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
               _handler, cleanup, firewall_driver, create, plug_vifs):
             domain = drvr._create_domain_and_network(self.context, 'xml',
                                                      instance, None, None)
-            self.assertEqual(0, create.call_args_list[0][1]['launch_flags'])
+            self.assertEqual(0, create.call_args_list[0][1]['pause'])
             self.assertEqual(0, domain.resume.call_count)
 
     def _test_create_with_network_events(self, neutron_failure=None,
@@ -10640,10 +10631,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                                      power_on=power_on)
             plug_vifs.assert_called_with(instance, vifs)
 
-            flag = self._get_launch_flags(drvr, vifs, power_on=power_on)
-            self.assertEqual(flag,
-                             create.call_args_list[0][1]['launch_flags'])
-            if flag:
+            pause = self._get_pause_flag(drvr, vifs, power_on=power_on)
+            self.assertEqual(pause,
+                             create.call_args_list[0][1]['pause'])
+            if pause:
                 domain.resume.assert_called_once_with()
             if neutron_failure and CONF.vif_plugging_is_fatal:
                 cleanup.assert_called_once_with(self.context,
@@ -10774,10 +10765,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                                           network_info)
             prepare_instance_filter.assert_called_once_with(instance,
                                                           network_info)
-            flags = self._get_launch_flags(drvr, network_info)
-            create_domain.assert_called_once_with(fake_xml, instance=instance,
-                                                  launch_flags=flags,
-                                                  power_on=True)
+            pause = self._get_pause_flag(drvr, network_info)
+            create_domain.assert_called_once_with(
+                fake_xml, pause=pause, power_on=True)
             self.assertEqual(mock_dom, domain)
 
     def test_get_guest_storage_config(self):
@@ -11799,7 +11789,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             self.assertEqual(powered_on, power_on)
             self.assertTrue(vifs_already_plugged)
 
-        def fake_enable_hairpin(instance):
+        def fake_enable_hairpin():
             pass
 
         def fake_execute(*args, **kwargs):
@@ -11823,7 +11813,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                        fake_create_image)
         self.stubs.Set(self.drvr, '_create_domain_and_network',
                        fake_create_domain_and_network)
-        self.stubs.Set(self.drvr, '_enable_hairpin',
+        self.stubs.Set(nova.virt.libvirt.guest.Guest, 'enable_hairpin',
                        fake_enable_hairpin)
         self.stubs.Set(utils, 'execute', fake_execute)
         fw = base_firewall.NoopFirewallDriver()
@@ -11879,7 +11869,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             self.assertTrue(vifs_already_plugged)
             return mock.MagicMock()
 
-        def fake_enable_hairpin(instance):
+        def fake_enable_hairpin():
             pass
 
         def fake_get_info(instance):
@@ -11900,7 +11890,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         self.stubs.Set(self.drvr, 'firewall_driver', fw)
         self.stubs.Set(self.drvr, '_create_domain_and_network',
                        fake_create_domain)
-        self.stubs.Set(self.drvr, '_enable_hairpin',
+        self.stubs.Set(nova.virt.libvirt.guest.Guest, 'enable_hairpin',
                        fake_enable_hairpin)
         self.stubs.Set(self.drvr, 'get_info',
                        fake_get_info)
