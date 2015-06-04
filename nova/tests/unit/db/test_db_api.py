@@ -106,14 +106,16 @@ def _quota_reserve(context, project_id, user_id):
             # test for project level resources
             resource = 'fixed_ips'
             quotas[resource] = db.quota_create(context,
-                                               project_id, resource, i)
+                                               project_id,
+                                               resource, i + 2).hard_limit
             user_quotas[resource] = quotas[resource]
         else:
             quotas[resource] = db.quota_create(context,
-                                               project_id, resource, i)
+                                               project_id,
+                                               resource, i + 1).hard_limit
             user_quotas[resource] = db.quota_create(context, project_id,
-                                                    resource, i,
-                                                    user_id=user_id)
+                                                    resource, i + 1,
+                                                    user_id=user_id).hard_limit
         sync_name = '_sync_%s' % resource
         resources[resource] = quota.ReservableResource(
             resource, sync_name, 'quota_res_%d' % i)
@@ -6194,7 +6196,8 @@ class QuotaTestCase(test.TestCase, ModelsObjectComparatorMixin):
         for i, resource in enumerate(quota.resources):
             if isinstance(resource, quota.ReservableResource):
                 quotas[resource.name] = db.quota_create(self.ctxt, 'project1',
-                                                        resource.name, 100)
+                                                        resource.name,
+                                                        100).hard_limit
                 deltas[resource.name] = i
                 reservable_resources[resource.name] = resource
 
