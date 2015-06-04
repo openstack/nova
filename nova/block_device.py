@@ -277,7 +277,8 @@ def create_image_bdm(image_ref, boot_index=0):
 def snapshot_from_bdm(snapshot_id, template):
     """Create a basic volume snapshot BDM from a given template bdm."""
 
-    copy_from_template = ['disk_bus', 'device_type', 'boot_index']
+    copy_from_template = ('disk_bus', 'device_type', 'boot_index',
+                          'delete_on_termination', 'volume_size')
     snapshot_dict = {'source_type': 'snapshot',
                      'destination_type': 'volume',
                      'snapshot_id': snapshot_id}
