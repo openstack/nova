@@ -3090,15 +3090,19 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return cpu
 
-    def _get_guest_cpu_config(self, flavor, image,
+    def _get_guest_cpu_config(self, flavor, image_meta,
                               guest_cpu_numa_config, instance_numa_topology):
         cpu = self._get_guest_cpu_model_config()
 
         if cpu is None:
             return None
 
+        # TODO(jaypipes): Remove when image_meta is always passed
+        # as an objects.ImageMeta
+        if not isinstance(image_meta, objects.ImageMeta):
+            image_meta = objects.ImageMeta.from_dict(image_meta)
         topology = hardware.get_best_cpu_topology(
-                flavor, image, numa_topology=instance_numa_topology)
+                flavor, image_meta, numa_topology=instance_numa_topology)
 
         cpu.sockets = topology.sockets
         cpu.cores = topology.cores
@@ -3689,6 +3693,10 @@ class LibvirtDriver(driver.ComputeDriver):
         guest_arch = libvirt_utils.get_arch(image_meta)
 
         if CONF.serial_console.enabled:
+            # TODO(jaypipes): Remove when image_meta is always passed
+            # as an objects.ImageMeta
+            if not isinstance(image_meta, objects.ImageMeta):
+                image_meta = objects.ImageMeta.from_dict(image_meta)
             num_ports = hardware.get_number_of_serial_ports(
                 flavor, image_meta)
             for port in six.moves.range(num_ports):

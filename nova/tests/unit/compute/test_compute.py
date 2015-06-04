@@ -219,7 +219,7 @@ class BaseTestCase(test.TestCase):
 
         def fake_show(meh, context, id, **kwargs):
             if id:
-                return {'id': id, 'min_disk': None, 'min_ram': None,
+                return {'id': id,
                         'name': 'fake_name',
                         'status': 'active',
                         'properties': {'kernel_id': 'fake_kernel_id',
@@ -7506,15 +7506,6 @@ class ComputeAPITestCase(BaseTestCase):
     @mock.patch('nova.virt.hardware.numa_get_constraints')
     def test_create_with_numa_topology(self, numa_constraints_mock):
         inst_type = flavors.get_default_flavor()
-        # This is what the stubbed out method will return
-        fake_image_props = {'status': 'active',
-                            'name': 'fake_name',
-                            'min_ram': None,
-                            'id': 1,
-                            'min_disk': None,
-                            'properties': {'kernel_id': 'fake_kernel_id',
-                                           'something_else': 'meow',
-                                           'ramdisk_id': 'fake_ramdisk_id'}}
 
         numa_topology = objects.InstanceNUMATopology(
             cells=[objects.InstanceNUMACell(
@@ -7527,7 +7518,7 @@ class ComputeAPITestCase(BaseTestCase):
                                                      self.fake_image['id'])
 
         numa_constraints_mock.assert_called_once_with(
-            inst_type, fake_image_props)
+            inst_type, test.MatchType(objects.ImageMeta))
         self.assertEqual(
             numa_topology.cells[0].obj_to_primitive(),
             instances[0].numa_topology.cells[0].obj_to_primitive())

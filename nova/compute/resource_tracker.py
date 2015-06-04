@@ -243,8 +243,11 @@ class ResourceTracker(object):
                 instance_type = self._get_instance_type(ctxt, instance, prefix)
 
             if image_meta is None:
-                image_meta = utils.get_image_from_system_metadata(
-                        instance['system_metadata'])
+                image_meta = objects.ImageMeta.from_instance(instance)
+            # TODO(jaypipes): Remove when image_meta is always passed
+            # as an objects.ImageMeta
+            elif not isinstance(image_meta, objects.ImageMeta):
+                image_meta = objects.ImageMeta.from_dict(image_meta)
 
             if (instance_type is not None and
                 instance_type.id == itype['id']):
@@ -661,8 +664,11 @@ class ResourceTracker(object):
                     migration.old_instance_type_id)
 
         if image_meta is None:
-            image_meta = utils.get_image_from_system_metadata(
-                    instance['system_metadata'])
+            image_meta = objects.ImageMeta.from_instance(instance)
+        # TODO(jaypipes): Remove when image_meta is always passed
+        # as an objects.ImageMeta
+        elif not isinstance(image_meta, objects.ImageMeta):
+            image_meta = objects.ImageMeta.from_dict(image_meta)
 
         if itype:
             host_topology = self.compute_node.get('numa_topology')

@@ -851,8 +851,9 @@ class API(base.Base):
                 block_device.properties_root_device_name(
                     boot_meta.get('properties', {})))
 
+        image_meta = objects.ImageMeta.from_dict(boot_meta)
         numa_topology = hardware.numa_get_constraints(
-                instance_type, boot_meta)
+                instance_type, image_meta)
 
         system_metadata = {}
 

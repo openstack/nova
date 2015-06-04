@@ -153,7 +153,7 @@ def get_number_of_serial_ports(flavor, image_meta):
     """Get the number of serial consoles from the flavor or image
 
     :param flavor: Flavor object to read extra specs from
-    :param image_meta: Image object to read image metadata from
+    :param image_meta: nova.objects.ImageMeta object instance
 
     If flavor extra specs is not set, then any image meta value is permitted.
     If flavour extra specs *is* set, then this provides the default serial
@@ -182,10 +182,8 @@ def get_number_of_serial_ports(flavor, image_meta):
                     num_ports=num_ports, property=property)
         return num_ports
 
-    image_meta_prop = (image_meta or {}).get('properties', {})
-
     flavor_num_ports = get_number(flavor.extra_specs, "hw:serial_port_count")
-    image_num_ports = get_number(image_meta_prop, "hw_serial_port_count")
+    image_num_ports = image_meta.properties.get("hw_serial_port_count", None)
 
     if (flavor_num_ports and image_num_ports) is not None:
         if image_num_ports > flavor_num_ports:
@@ -254,7 +252,7 @@ def _get_cpu_topology_constraints(flavor, image_meta):
     """Get the topology constraints declared in flavor or image
 
     :param flavor: Flavor object to read extra specs from
-    :param image_meta: Image object to read image metadata from
+    :param image_meta: nova.objects.ImageMeta object instance
 
     Gets the topology constraints from the configuration defined
     in the flavor extra specs or the image metadata. In the flavor
@@ -309,12 +307,10 @@ def _get_cpu_topology_constraints(flavor, image_meta):
                "threads": flvmaxthreads})
 
     # Get any customized limits from the image
-    maxsockets = int(image_meta.get("properties", {})
-                     .get("hw_cpu_max_sockets", flvmaxsockets))
-    maxcores = int(image_meta.get("properties", {})
-                   .get("hw_cpu_max_cores", flvmaxcores))
-    maxthreads = int(image_meta.get("properties", {})
-                     .get("hw_cpu_max_threads", flvmaxthreads))
+    props = image_meta.properties
+    maxsockets = props.get("hw_cpu_max_sockets", flvmaxsockets)
+    maxcores = props.get("hw_cpu_max_cores", flvmaxcores)
+    maxthreads = props.get("hw_cpu_max_threads", flvmaxthreads)
 
     LOG.debug("Image limits %(sockets)d:%(cores)d:%(threads)d",
               {"sockets": maxsockets,
@@ -354,12 +350,9 @@ def _get_cpu_topology_constraints(flavor, image_meta):
 
     # Finally see if the image has provided a preferred
     # topology to use
-    sockets = int(image_meta.get("properties", {})
-                  .get("hw_cpu_sockets", -1))
-    cores = int(image_meta.get("properties", {})
-                .get("hw_cpu_cores", -1))
-    threads = int(image_meta.get("properties", {})
-                  .get("hw_cpu_threads", -1))
+    sockets = props.get("hw_cpu_sockets", -1)
+    cores = props.get("hw_cpu_cores", -1)
+    threads = props.get("hw_cpu_threads", -1)
 
     LOG.debug("Image pref %(sockets)d:%(cores)d:%(threads)d",
               {"sockets": sockets,
@@ -550,7 +543,7 @@ def _get_desirable_cpu_topologies(flavor, image_meta, allow_threads=True,
     """Get desired CPU topologies according to settings
 
     :param flavor: Flavor object to query extra specs from
-    :param image_meta: ImageMeta object to query properties from
+    :param image_meta: nova.objects.ImageMeta object instance
     :param allow_threads: if the hypervisor supports CPU threads
     :param numa_topology: InstanceNUMATopology object that may contain
                           additional topology constraints (such as threading
@@ -610,7 +603,7 @@ def get_best_cpu_topology(flavor, image_meta, allow_threads=True,
     """Get best CPU topology according to settings
 
     :param flavor: Flavor object to query extra specs from
-    :param image_meta: ImageMeta object to query properties from
+    :param image_meta: nova.objects.ImageMeta object instance
     :param allow_threads: if the hypervisor supports CPU threads
     :param numa_topology: InstanceNUMATopology object that may contain
                           additional topology constraints (such as threading
@@ -805,32 +798,11 @@ def _numa_fit_instance_cell(host_cell, instance_cell, limit_cell=None):
     return instance_cell
 
 
-def _numa_get_flavor_or_image_prop(flavor, image_meta, propname):
-    """Return the value of propname from flavor or image
-
-    :param flavor: a Flavor object or dict of instance type information
-    :param image_meta: a dict of image information
-
-    :returns: a value or None
-    """
-    flavor_val = flavor.get('extra_specs', {}).get("hw:" + propname)
-    image_val = (image_meta or {}).get("properties", {}).get("hw_" + propname)
-
-    if flavor_val is not None:
-        if image_val is not None:
-            raise exception.ImageNUMATopologyForbidden(
-                name='hw_' + propname)
-
-        return flavor_val
-    else:
-        return image_val
-
-
 def _numa_get_pagesize_constraints(flavor, image_meta):
     """Return the requested memory page size
 
     :param flavor: a Flavor object to read extra specs from
-    :param image_meta: an Image object to read meta data from
+    :param image_meta: nova.objects.ImageMeta object instance
 
     :raises: MemoryPagesSizeInvalid or MemoryPageSizeForbidden
     :returns: a page size requested or MEMPAGES_*
@@ -854,10 +826,8 @@ def _numa_get_pagesize_constraints(flavor, image_meta):
 
         return request
 
-    image_meta_prop = (image_meta or {}).get("properties", {})
-
     flavor_request = flavor.get('extra_specs', {}).get("hw:mem_page_size", "")
-    image_request = image_meta_prop.get("hw_mem_page_size", "")
+    image_request = image_meta.properties.get("hw_mem_page_size", "")
 
     if not flavor_request and image_request:
         raise exception.MemoryPageSizeForbidden(
@@ -880,25 +850,72 @@ def _numa_get_pagesize_constraints(flavor, image_meta):
     return pagesize
 
 
-def _numa_get_constraints_manual(nodes, flavor, image_meta):
+def _numa_get_flavor_cpu_map_list(flavor):
+    hw_numa_cpus = []
+    hw_numa_cpus_set = False
+    extra_specs = flavor.get("extra_specs", {})
+    for cellid in range(objects.ImageMetaProps.NUMA_NODES_MAX):
+        cpuprop = "hw:numa_cpus.%d" % cellid
+        if cpuprop not in extra_specs:
+            break
+        hw_numa_cpus.append(
+            parse_cpu_spec(extra_specs[cpuprop]))
+        hw_numa_cpus_set = True
+
+    if hw_numa_cpus_set:
+        return hw_numa_cpus
+
+
+def _numa_get_cpu_map_list(flavor, image_meta):
+    flavor_cpu_list = _numa_get_flavor_cpu_map_list(flavor)
+    image_cpu_list = image_meta.properties.get("hw_numa_cpus", None)
+
+    if flavor_cpu_list is None:
+        return image_cpu_list
+    else:
+        if image_cpu_list is not None:
+            raise exception.ImageNUMATopologyForbidden(
+                name='hw_numa_cpus')
+        return flavor_cpu_list
+
+
+def _numa_get_flavor_mem_map_list(flavor):
+    hw_numa_mem = []
+    hw_numa_mem_set = False
+    extra_specs = flavor.get("extra_specs", {})
+    for cellid in range(objects.ImageMetaProps.NUMA_NODES_MAX):
+        memprop = "hw:numa_mem.%d" % cellid
+        if memprop not in extra_specs:
+            break
+        hw_numa_mem.append(int(extra_specs[memprop]))
+        hw_numa_mem_set = True
+
+    if hw_numa_mem_set:
+        return hw_numa_mem
+
+
+def _numa_get_mem_map_list(flavor, image_meta):
+    flavor_mem_list = _numa_get_flavor_mem_map_list(flavor)
+    image_mem_list = image_meta.properties.get("hw_numa_mem", None)
+
+    if flavor_mem_list is None:
+        return image_mem_list
+    else:
+        if image_mem_list is not None:
+            raise exception.ImageNUMATopologyForbidden(
+                name='hw_numa_mem')
+        return flavor_mem_list
+
+
+def _numa_get_constraints_manual(nodes, flavor, cpu_list, mem_list):
     cells = []
     totalmem = 0
 
     availcpus = set(range(flavor.vcpus))
 
     for node in range(nodes):
-        cpus = _numa_get_flavor_or_image_prop(
-            flavor, image_meta, "numa_cpus.%d" % node)
-        mem = _numa_get_flavor_or_image_prop(
-            flavor, image_meta, "numa_mem.%d" % node)
-
-        # We're expecting both properties set, so
-        # raise an error if either is missing
-        if cpus is None or mem is None:
-            raise exception.ImageNUMATopologyIncomplete()
-
-        mem = int(mem)
-        cpuset = parse_cpu_spec(cpus)
+        mem = mem_list[node]
+        cpuset = cpu_list[node]
 
         for cpu in cpuset:
             if cpu > (flavor.vcpus - 1):
@@ -927,23 +944,13 @@ def _numa_get_constraints_manual(nodes, flavor, image_meta):
     return objects.InstanceNUMATopology(cells=cells)
 
 
-def _numa_get_constraints_auto(nodes, flavor, image_meta):
+def _numa_get_constraints_auto(nodes, flavor):
     if ((flavor.vcpus % nodes) > 0 or
         (flavor.memory_mb % nodes) > 0):
         raise exception.ImageNUMATopologyAsymmetric()
 
     cells = []
     for node in range(nodes):
-        cpus = _numa_get_flavor_or_image_prop(
-            flavor, image_meta, "numa_cpus.%d" % node)
-        mem = _numa_get_flavor_or_image_prop(
-            flavor, image_meta, "numa_mem.%d" % node)
-
-        # We're not expecting any properties set, so
-        # raise an error if there are any
-        if cpus is not None or mem is not None:
-            raise exception.ImageNUMATopologyIncomplete()
-
         ncpus = int(flavor.vcpus / nodes)
         mem = int(flavor.memory_mb / nodes)
         start = node * ncpus
@@ -957,7 +964,7 @@ def _numa_get_constraints_auto(nodes, flavor, image_meta):
 
 def _add_cpu_pinning_constraint(flavor, image_meta, numa_topology):
     flavor_pinning = flavor.get('extra_specs', {}).get("hw:cpu_policy")
-    image_pinning = image_meta.get('properties', {}).get("hw_cpu_policy")
+    image_pinning = image_meta.properties.get("hw_cpu_policy")
     if flavor_pinning == "dedicated":
         requested = True
     elif flavor_pinning == "shared":
@@ -991,30 +998,52 @@ def numa_get_constraints(flavor, image_meta):
     """Return topology related to input request
 
     :param flavor: Flavor object to read extra specs from
-    :param image_meta: Image object to read image metadata from
+    :param image_meta: nova.objects.ImageMeta object instance
+
+    May raise exception.ImageNUMATopologyIncomplete() if the
+    image properties are not correctly specified, or
+    exception.ImageNUMATopologyForbidden if an attempt is
+    made to override flavor settings with image properties.
 
     :returns: InstanceNUMATopology or None
     """
-    nodes = _numa_get_flavor_or_image_prop(
-        flavor, image_meta, "numa_nodes")
+
+    nodes = flavor.get('extra_specs', {}).get("hw:numa_nodes")
+    props = image_meta.properties
+    if nodes is not None:
+        if props.obj_attr_is_set("hw_numa_nodes"):
+            raise exception.ImageNUMATopologyForbidden(
+                name='hw_numa_nodes')
+        nodes = int(nodes)
+    else:
+        nodes = props.get("hw_numa_nodes")
+
     pagesize = _numa_get_pagesize_constraints(
         flavor, image_meta)
 
     numa_topology = None
     if nodes or pagesize:
-        nodes = nodes and int(nodes) or 1
-        # We'll pick what path to go down based on whether
-        # anything is set for the first node. Both paths
-        # have logic to cope with inconsistent property usage
-        auto = _numa_get_flavor_or_image_prop(
-            flavor, image_meta, "numa_cpus.0") is None
+        nodes = nodes or 1
 
-        if auto:
+        cpu_list = _numa_get_cpu_map_list(flavor, image_meta)
+        mem_list = _numa_get_mem_map_list(flavor, image_meta)
+
+        # If one property list is specified both must be
+        if ((cpu_list is None and mem_list is not None) or
+            (cpu_list is not None and mem_list is None)):
+            raise exception.ImageNUMATopologyIncomplete()
+
+        # If any node has data set, all nodes must have data set
+        if ((cpu_list is not None and len(cpu_list) != nodes) or
+            (mem_list is not None and len(mem_list) != nodes)):
+            raise exception.ImageNUMATopologyIncomplete()
+
+        if cpu_list is None:
             numa_topology = _numa_get_constraints_auto(
-                nodes, flavor, image_meta)
+                nodes, flavor)
         else:
             numa_topology = _numa_get_constraints_manual(
-                nodes, flavor, image_meta)
+                nodes, flavor, cpu_list, mem_list)
 
         # We currently support same pagesize for all cells.
         [setattr(c, 'pagesize', pagesize) for c in numa_topology.cells]

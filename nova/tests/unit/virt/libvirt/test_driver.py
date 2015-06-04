@@ -2541,21 +2541,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual("tcp", cfg.devices[3].type)
         self.assertEqual("tcp", cfg.devices[4].type)
 
-    def test_get_guest_config_serial_console_invalid_img_meta(self):
-        self.flags(enabled=True, group='serial_console')
-
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        instance_ref = objects.Instance(**self.test_instance)
-        image_meta = {}
-
-        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
-                                            instance_ref,
-                                            image_meta)
-        image_meta = {"properties": {"hw_serial_port_count": "fail"}}
-        self.assertRaises(
-            exception.ImageSerialPortNumberInvalid,
-            drvr._get_guest_config, instance_ref, [], image_meta, disk_info)
-
     @mock.patch('nova.console.serial.acquire_port')
     def test_get_guest_config_serial_console_through_port_rng_exhausted(
             self, acquire_port):
@@ -2823,24 +2808,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual(cfg.devices[6].type, "vnc")
         self.assertEqual(cfg.devices[7].type, "spice")
 
-    def test_invalid_watchdog_action(self):
-        self.flags(virt_type='kvm', group='libvirt')
-
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        instance_ref = objects.Instance(**self.test_instance)
-        image_meta = {}
-
-        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
-                                            instance_ref,
-                                            image_meta)
-        image_meta = {"properties": {"hw_watchdog_action": "something"}}
-        self.assertRaises(exception.InvalidWatchdogAction,
-                          drvr._get_guest_config,
-                          instance_ref,
-                          [],
-                          image_meta,
-                          disk_info)
-
     def test_get_guest_config_with_watchdog_action_image_meta(self):
         self.flags(virt_type='kvm', group='libvirt')
 
@@ -2992,24 +2959,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                               vconfig.LibvirtConfigMemoryBalloon)
 
         self.assertEqual("pause", cfg.devices[7].action)
-
-    def test_unsupported_video_driver_through_image_meta(self):
-        self.flags(virt_type='kvm', group='libvirt')
-
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        instance_ref = objects.Instance(**self.test_instance)
-        image_meta = {}
-
-        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
-                                            instance_ref,
-                                            image_meta)
-        image_meta = {"properties": {"hw_video_model": "something"}}
-        self.assertRaises(exception.InvalidVideoMode,
-                          drvr._get_guest_config,
-                          instance_ref,
-                          [],
-                          image_meta,
-                          disk_info)
 
     def test_get_guest_config_with_video_driver_image_meta(self):
         self.flags(virt_type='kvm', group='libvirt')
@@ -3761,12 +3710,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                      _fake_network_info(self.stubs, 1),
                                      image_meta, disk_info)
         self.assertNotEqual(cfg.os_cmdline, "")
-
-        image_meta = {"properties": {"os_command_line": None}}
-        cfg = drvr._get_guest_config(instance_ref,
-                                     _fake_network_info(self.stubs, 1),
-                                     image_meta, disk_info)
-        self.assertIsNotNone(cfg.os_cmdline)
 
     def test_get_guest_config_armv7(self):
         def get_host_capabilities_stub(self):
