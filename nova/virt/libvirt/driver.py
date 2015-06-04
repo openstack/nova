@@ -33,7 +33,6 @@ import glob
 import mmap
 import operator
 import os
-import random
 import shutil
 import tempfile
 import time
@@ -3479,28 +3478,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 instance_numa_topology)
 
         if not guest_cpu_numa_config:
-            # No NUMA topology defined for instance
-            vcpus = flavor.vcpus
-            memory = flavor.memory_mb
-            if topology:
-                # Host is NUMA capable so try to keep the instance in a cell
-                pci_cells = {pci.numa_node for pci in pci_devs}
-                if len(pci_cells) == 0:
-                    viable_cells_cpus = []
-                    for cell in topology.cells:
-                        if vcpus <= len(cell.cpuset) and memory <= cell.memory:
-                            viable_cells_cpus.append(cell.cpuset)
-
-                    if viable_cells_cpus:
-                        pin_cpuset = random.choice(viable_cells_cpus)
-                        return GuestNumaConfig(pin_cpuset, None, None, None)
-                elif len(pci_cells) == 1 and None not in pci_cells:
-                    cell = topology.cells[pci_cells.pop()]
-                    if vcpus <= len(cell.cpuset) and memory <= cell.memory:
-                        return GuestNumaConfig(cell.cpuset, None, None, None)
-
-            # We have no NUMA topology in the host either,
-            # or we can't find a single cell to acomodate the instance
+            # No NUMA topology defined for instance - let the host kernel deal
+            # with the NUMA effects.
             # TODO(ndipanov): Attempt to spread the instance
             # across NUMA nodes and expose the topology to the
             # instance as an optimisation
