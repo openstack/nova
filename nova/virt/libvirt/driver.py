@@ -587,7 +587,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def instance_exists(self, instance):
         """Efficient override of base instance_exists method."""
         try:
-            self._host.get_domain(instance)
+            self._host.get_guest(instance)
             return True
         except exception.NovaException:
             return False
@@ -631,16 +631,19 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _destroy(self, instance):
         try:
-            virt_dom = self._host.get_domain(instance)
+            guest = self._host.get_guest(instance)
         except exception.InstanceNotFound:
-            virt_dom = None
+            guest = None
 
         # If the instance is already terminated, we're still happy
         # Otherwise, destroy it
         old_domid = -1
-        if virt_dom is not None:
+        if guest is not None:
             try:
-                old_domid = virt_dom.ID()
+                old_domid = guest.id
+                # TODO(sahid): A method shutdown should be dressed in Guest
+                # to handle when we needto destroy a domain in libvirt.
+                virt_dom = guest._domain
                 virt_dom.destroy()
 
             except libvirt.libvirtError as e:
@@ -653,6 +656,8 @@ class LibvirtDriver(driver.ComputeDriver):
                     # If the instance is already shut off, we get this:
                     # Code=55 Error=Requested operation is not valid:
                     # domain is not running
+
+                    # TODO(sahid): At this point we should be a Guest object
                     state = self._get_power_state(virt_dom)
                     if state == power_state.SHUTDOWN:
                         is_okay = True
@@ -732,7 +737,12 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _undefine_domain(self, instance):
         try:
-            virt_dom = self._host.get_domain(instance)
+            guest = self._host.get_guest(instance)
+
+            # TODO(sahid): We are converting all calls from a
+            # virDomain object to use nova.virt.libvirt.Guest.
+            # We should be able to remove virt_dom at the end.
+            virt_dom = guest._domain
         except exception.InstanceNotFound:
             virt_dom = None
         if virt_dom:
@@ -877,8 +887,10 @@ class LibvirtDriver(driver.ComputeDriver):
 
         :param mode: Should be a value in (None, bind, connect)
         """
-        virt_dom = self._host.get_domain(instance)
-        xml = virt_dom.XMLDesc(0)
+        guest = self._host.get_guest(instance)
+
+        # TODO(sahid): Should be moved in Guest object.
+        xml = guest._domain.XMLDesc(0)
         tree = etree.fromstring(xml)
 
         # The 'serial' device is the base for x86 platforms. Other platforms
@@ -1015,7 +1027,13 @@ class LibvirtDriver(driver.ComputeDriver):
                       disk_bus=None, device_type=None, encryption=None):
         image_meta = utils.get_image_from_system_metadata(
             instance.system_metadata)
-        virt_dom = self._host.get_domain(instance)
+
+        guest = self._host.get_guest(instance)
+
+        # TODO(sahid): We are converting all calls from a
+        # virDomain object to use nova.virt.libvirt.Guest.
+        # We should be able to remove virt_dom at the end.
+        virt_dom = guest._domain
         disk_dev = mountpoint.rpartition("/")[2]
         bdm = {
             'device_name': disk_dev,
@@ -1122,7 +1140,13 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def swap_volume(self, old_connection_info,
                     new_connection_info, instance, mountpoint, resize_to):
-        virt_dom = self._host.get_domain(instance)
+
+        guest = self._host.get_guest(instance)
+
+        # TODO(sahid): We are converting all calls from a
+        # virDomain object to use nova.virt.libvirt.Guest.
+        # We should be able to remove virt_dom at the end.
+        virt_dom = guest._domain
         disk_dev = mountpoint.rpartition("/")[2]
         xml = self._get_disk_xml(virt_dom.XMLDesc(0), disk_dev)
         if not xml:
@@ -1164,8 +1188,8 @@ class LibvirtDriver(driver.ComputeDriver):
     def _get_existing_domain_xml(self, instance, network_info,
                                  block_device_info=None):
         try:
-            virt_dom = self._host.get_domain(instance)
-            xml = virt_dom.XMLDesc(0)
+            guest = self._host.get_guest(instance)
+            xml = guest._domain.XMLDesc(0)
         except exception.InstanceNotFound:
             image_meta = utils.get_image_from_system_metadata(
                 instance.system_metadata)
@@ -1183,7 +1207,12 @@ class LibvirtDriver(driver.ComputeDriver):
                       encryption=None):
         disk_dev = mountpoint.rpartition("/")[2]
         try:
-            virt_dom = self._host.get_domain(instance)
+            guest = self._host.get_guest(instance)
+
+            # TODO(sahid): We are converting all calls from a
+            # virDomain object to use nova.virt.libvirt.Guest.
+            # We should be able to remove virt_dom at the end.
+            virt_dom = guest._domain
             xml = self._get_disk_xml(virt_dom.XMLDesc(0), disk_dev)
             if not xml:
                 raise exception.DiskNotFound(location=disk_dev)
@@ -1223,7 +1252,12 @@ class LibvirtDriver(driver.ComputeDriver):
         self._disconnect_volume(connection_info, disk_dev)
 
     def attach_interface(self, instance, image_meta, vif):
-        virt_dom = self._host.get_domain(instance)
+        guest = self._host.get_guest(instance)
+
+        # TODO(sahid): We are converting all calls from a
+        # virDomain object to use nova.virt.libvirt.Guest.
+        # We should be able to remove virt_dom at the end.
+        virt_dom = guest._domain
         self.vif_driver.plug(instance, vif)
         self.firewall_driver.setup_basic_filtering(instance, [vif])
         cfg = self.vif_driver.get_config(instance, vif, image_meta,
@@ -1243,7 +1277,12 @@ class LibvirtDriver(driver.ComputeDriver):
                     instance_uuid=instance.uuid)
 
     def detach_interface(self, instance, vif):
-        virt_dom = self._host.get_domain(instance)
+        guest = self._host.get_guest(instance)
+
+        # TODO(sahid): We are converting all calls from a
+        # virDomain object to use nova.virt.libvirt.Guest.
+        # We should be able to remove virt_dom at the end.
+        virt_dom = guest._domain
         cfg = self.vif_driver.get_config(instance, vif, None, instance.flavor,
                                          CONF.libvirt.virt_type)
         try:
@@ -1296,7 +1335,12 @@ class LibvirtDriver(driver.ComputeDriver):
         This command only works with qemu 0.14+
         """
         try:
-            virt_dom = self._host.get_domain(instance)
+            guest = self._host.get_guest(instance)
+
+            # TODO(sahid): We are converting all calls from a
+            # virDomain object to use nova.virt.libvirt.Guest.
+            # We should be able to remove virt_dom at the end.
+            virt_dom = guest._domain
         except exception.InstanceNotFound:
             raise exception.InstanceNotRunning(instance_id=instance.uuid)
 
@@ -1475,7 +1519,12 @@ class LibvirtDriver(driver.ComputeDriver):
                 instance_id=instance.uuid, reason=reason)
 
         try:
-            domain = self._host.get_domain(instance)
+            guest = self._host.get_guest(instance)
+
+            # TODO(sahid): We are converting all calls from a
+            # virDomain object to use nova.virt.libvirt.Guest.
+            # We should be able to remove domain at the end.
+            domain = guest._domain
             if quiesced:
                 domain.fsFreeze()
             else:
@@ -1726,7 +1775,12 @@ class LibvirtDriver(driver.ComputeDriver):
                   {'c_info': create_info}, instance=instance)
 
         try:
-            virt_dom = self._host.get_domain(instance)
+            guest = self._host.get_guest(instance)
+
+            # TODO(sahid): We are converting all calls from a
+            # virDomain object to use nova.virt.libvirt.Guest.
+            # We should be able to remove virt_dom at the end.
+            virt_dom = guest._domain
         except exception.InstanceNotFound:
             raise exception.InstanceNotRunning(instance_id=instance.uuid)
 
@@ -1804,7 +1858,12 @@ class LibvirtDriver(driver.ComputeDriver):
             raise exception.NovaException(msg)
 
         try:
-            virt_dom = self._host.get_domain(instance)
+            guest = self._host.get_guest(instance)
+
+            # TODO(sahid): We are converting all calls from a
+            # virDomain object to use nova.virt.libvirt.Guest.
+            # We should be able to remove virt_dom at the end.
+            virt_dom = guest._domain
         except exception.InstanceNotFound:
             raise exception.InstanceNotRunning(instance_id=instance.uuid)
 
@@ -2029,7 +2088,12 @@ class LibvirtDriver(driver.ComputeDriver):
 
         :returns: True if the reboot succeeded
         """
-        dom = self._host.get_domain(instance)
+        guest = self._host.get_guest(instance)
+
+        # TODO(sahid): We are converting all calls from a
+        # virDomain object to use nova.virt.libvirt.Guest.
+        # We should be able to remove dom at the end.
+        dom = guest._domain
         state = self._get_power_state(dom)
         old_domid = dom.ID()
         # NOTE(vish): This check allows us to reboot an instance that
@@ -2041,8 +2105,13 @@ class LibvirtDriver(driver.ComputeDriver):
         #             call takes to return.
         self._prepare_pci_devices_for_use(
             pci_manager.get_instance_pci_devs(instance, 'all'))
-        for x in range(CONF.libvirt.wait_soft_reboot_seconds):
-            dom = self._host.get_domain(instance)
+        for x in xrange(CONF.libvirt.wait_soft_reboot_seconds):
+            guest = self._host.get_guest(instance)
+
+            # TODO(sahid): We are converting all calls from a
+            # virDomain object to use nova.virt.libvirt.Guest.
+            # We should be able to remove dom at the end.
+            dom = guest._domain
             state = self._get_power_state(dom)
             new_domid = dom.ID()
 
@@ -2143,12 +2212,22 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def pause(self, instance):
         """Pause VM instance."""
-        dom = self._host.get_domain(instance)
+        guest = self._host.get_guest(instance)
+
+        # TODO(sahid): We are converting all calls from a
+        # virDomain object to use nova.virt.libvirt.Guest.
+        # We should be able to remove dom at the end.
+        dom = guest._domain
         dom.suspend()
 
     def unpause(self, instance):
         """Unpause paused VM instance."""
-        dom = self._host.get_domain(instance)
+        guest = self._host.get_guest(instance)
+
+        # TODO(sahid): We are converting all calls from a
+        # virDomain object to use nova.virt.libvirt.Guest.
+        # We should be able to remove dom at the end.
+        dom = guest._domain
         dom.resume()
 
     def _clean_shutdown(self, instance, timeout, retry_interval):
@@ -2168,7 +2247,12 @@ class LibvirtDriver(driver.ComputeDriver):
                            power_state.CRASHED]
 
         try:
-            dom = self._host.get_domain(instance)
+            guest = self._host.get_guest(instance)
+
+            # TODO(sahid): We are converting all calls from a
+            # virDomain object to use nova.virt.libvirt.Guest.
+            # We should be able to remove dom at the end.
+            dom = guest._domain
         except exception.InstanceNotFound:
             # If the instance has gone then we don't need to
             # wait for it to shutdown
@@ -2187,7 +2271,13 @@ class LibvirtDriver(driver.ComputeDriver):
 
         for sec in six.moves.range(timeout):
 
-            dom = self._host.get_domain(instance)
+            guest = self._host.get_guest(instance)
+
+            # TODO(sahid): We are converting all calls from a
+            # virDomain object to use nova.virt.libvirt.Guest.
+            # We should be able to remove dom at the end.
+            dom = guest._domain
+
             state = self._get_power_state(dom)
 
             if state in SHUTDOWN_STATES:
@@ -2240,7 +2330,13 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def suspend(self, context, instance):
         """Suspend the specified instance."""
-        dom = self._host.get_domain(instance)
+        guest = self._host.get_guest(instance)
+
+        # TODO(sahid): We are converting all calls from a
+        # virDomain object to use nova.virt.libvirt.Guest.
+        # We should be able to remove dom at the end.
+        dom = guest._domain
+
         self._detach_pci_devices(dom,
             pci_manager.get_instance_pci_devs(instance))
         self._detach_sriov_ports(context, instance, dom)
@@ -2271,7 +2367,13 @@ class LibvirtDriver(driver.ComputeDriver):
         # Check if the instance is running already and avoid doing
         # anything if it is.
         try:
-            domain = self._host.get_domain(instance)
+            guest = self._host.get_guest(instance)
+
+            # TODO(sahid): We are converting all calls from a
+            # virDomain object to use nova.virt.libvirt.Guest.
+            # We should be able to remove domain at the end.
+            domain = guest._domain
+
             state = self._get_power_state(domain)
 
             ignored_states = (power_state.RUNNING,
@@ -2337,7 +2439,12 @@ class LibvirtDriver(driver.ComputeDriver):
         instance_dir = libvirt_utils.get_instance_path(instance)
         unrescue_xml_path = os.path.join(instance_dir, 'unrescue.xml')
         xml = libvirt_utils.load_file(unrescue_xml_path)
-        virt_dom = self._host.get_domain(instance)
+        guest = self._host.get_guest(instance)
+
+        # TODO(sahid): We are converting all calls from a
+        # virDomain object to use nova.virt.libvirt.Guest.
+        # We should be able to remove virt_dom at the end.
+        virt_dom = guest._domain
         self._destroy(instance)
         self._create_domain(xml, virt_dom)
         libvirt_utils.file_delete(unrescue_xml_path)
@@ -2403,8 +2510,10 @@ class LibvirtDriver(driver.ComputeDriver):
         return fpath
 
     def get_console_output(self, context, instance):
-        virt_dom = self._host.get_domain(instance)
-        xml = virt_dom.XMLDesc(0)
+        guest = self._host.get_guest(instance)
+
+        # TODO(sahid): Should be moved in Guest object.
+        xml = guest._domain.XMLDesc(0)
         tree = etree.fromstring(xml)
 
         console_types = {}
@@ -2483,8 +2592,10 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def get_vnc_console(self, context, instance):
         def get_vnc_port_for_instance(instance_name):
-            virt_dom = self._host.get_domain(instance)
-            xml = virt_dom.XMLDesc(0)
+            guest = self._host.get_guest(instance)
+
+            # TODO(sahid): Should be moved in Guest object.
+            xml = guest._domain.XMLDesc(0)
             xml_dom = etree.fromstring(xml)
 
             graphic = xml_dom.find("./devices/graphics[@type='vnc']")
@@ -2501,7 +2612,12 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def get_spice_console(self, context, instance):
         def get_spice_ports_for_instance(instance_name):
-            virt_dom = self._host.get_domain(instance)
+            guest = self._host.get_guest(instance)
+
+            # TODO(sahid): We are converting all calls from a
+            # virDomain object to use nova.virt.libvirt.Guest.
+            # We should be able to remove virt_dom at the end.
+            virt_dom = guest._domain
             xml = virt_dom.XMLDesc(0)
             xml_dom = etree.fromstring(xml)
 
@@ -4215,7 +4331,12 @@ class LibvirtDriver(driver.ComputeDriver):
         libvirt error is.
 
         """
-        virt_dom = self._host.get_domain(instance)
+        guest = self._host.get_guest(instance)
+
+        # TODO(sahid): We are converting all calls from a
+        # virDomain object to use nova.virt.libvirt.Guest.
+        # We should be able to remove virt_dom at the end.
+        virt_dom = guest._domain
         try:
             dom_info = self._host.get_domain_info(virt_dom)
         except libvirt.libvirtError as ex:
@@ -4805,7 +4926,12 @@ class LibvirtDriver(driver.ComputeDriver):
     def block_stats(self, instance, disk_id):
         """Note that this function takes an instance name."""
         try:
-            domain = self._host.get_domain(instance)
+            guest = self._host.get_guest(instance)
+
+            # TODO(sahid): We are converting all calls from a
+            # virDomain object to use nova.virt.libvirt.Guest.
+            # We should be able to remove domain at the end.
+            domain = guest._domain
             return domain.blockStats(disk_id)
         except libvirt.libvirtError as e:
             errcode = e.get_error_code()
@@ -5648,7 +5774,12 @@ class LibvirtDriver(driver.ComputeDriver):
         migration and controls its operation
         """
 
-        dom = self._host.get_domain(instance)
+        guest = self._host.get_guest(instance)
+
+        # TODO(sahid): We are converting all calls from a
+        # virDomain object to use nova.virt.libvirt.Guest.
+        # We should be able to remove dom at the end.
+        dom = guest._domain
 
         opthread = greenthread.spawn(self._live_migration_operation,
                                      context, instance, dest,
@@ -6071,7 +6202,13 @@ class LibvirtDriver(driver.ComputeDriver):
     def get_instance_disk_info(self, instance,
                                block_device_info=None):
         try:
-            dom = self._host.get_domain(instance)
+            guest = self._host.get_guest(instance)
+
+            # TODO(sahid): We are converting all calls from a
+            # virDomain object to use nova.virt.libvirt.Guest.
+            # We should be able to remove dom at the end.
+            dom = guest._domain
+
             xml = dom.XMLDesc(0)
         except libvirt.libvirtError as ex:
             error_code = ex.get_error_code()
@@ -6489,7 +6626,12 @@ class LibvirtDriver(driver.ComputeDriver):
         return result
 
     def get_diagnostics(self, instance):
-        domain = self._host.get_domain(instance)
+        guest = self._host.get_guest(instance)
+
+        # TODO(sahid): We are converting all calls from a
+        # virDomain object to use nova.virt.libvirt.Guest.
+        # We should be able to remove domain at the end.
+        domain = guest._domain
         output = {}
         # get cpu time, might launch an exception if the method
         # is not supported by the underlying hypervisor being
@@ -6545,7 +6687,13 @@ class LibvirtDriver(driver.ComputeDriver):
         return output
 
     def get_instance_diagnostics(self, instance):
-        domain = self._host.get_domain(instance)
+        guest = self._host.get_guest(instance)
+
+        # TODO(sahid): We are converting all calls from a
+        # virDomain object to use nova.virt.libvirt.Guest.
+        # We should be able to remove domain at the end.
+        domain = guest._domain
+
         xml = domain.XMLDesc(0)
         xml_doc = etree.fromstring(xml)
 

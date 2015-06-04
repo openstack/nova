@@ -29,9 +29,11 @@ from nova.tests.unit.virt.libvirt import fakelibvirt
 from nova.virt import event
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import driver as libvirt_driver
+from nova.virt.libvirt import guest as libvirt_guest
 from nova.virt.libvirt import host
 
 host.libvirt = fakelibvirt
+libvirt_guest.libvirt = fakelibvirt
 
 
 class FakeVirtDomain(object):
@@ -405,6 +407,20 @@ class HostTestCase(test.NoDBTestCase):
         instance = objects.Instance(id="124")
 
         self.assertEqual(dom, self.host.get_domain(instance))
+
+        fake_get_domain.assert_called_once_with("instance-0000007c")
+
+    @mock.patch.object(host.Host, "_get_domain_by_name")
+    def test_get_guest(self, fake_get_domain):
+        dom = fakelibvirt.virDomain(self.host.get_connection(),
+                                    "<domain id='7'/>")
+
+        fake_get_domain.return_value = dom
+        instance = objects.Instance(id="124")
+
+        guest = self.host.get_guest(instance)
+        self.assertEqual(dom, guest._domain)
+        self.assertIsInstance(guest, libvirt_guest.Guest)
 
         fake_get_domain.assert_called_once_with("instance-0000007c")
 
