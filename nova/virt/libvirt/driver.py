@@ -4853,6 +4853,13 @@ class LibvirtDriver(driver.ComputeDriver):
 
         for ver in BAD_LIBVIRT_NUMA_VERSIONS:
             if self._host.has_version(ver):
+                if not getattr(self, '_bad_libvirt_numa_version_warn', False):
+                    LOG.warn(_LW('You are running with libvirt version %s '
+                                 'which is known to have broken NUMA support. '
+                                 'Consider patching or updating libvirt on '
+                                 'this host if you need NUMA support.'),
+                             self._version_to_string(ver))
+                    self._bad_libvirt_numa_version_warn = True
                 return False
 
         return ((caps.host.cpu.arch in supported_archs) and
