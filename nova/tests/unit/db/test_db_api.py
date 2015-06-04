@@ -3297,6 +3297,45 @@ class InstanceActionTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self._assertEqualObjects(event, saved_event,
                                  ['instance_uuid', 'request_id'])
 
+    def test_instance_action_event_start_with_different_request_id(self):
+        uuid = str(stdlib_uuid.uuid4())
+
+        action_values = self._create_action_values(uuid)
+        action = db.action_start(self.ctxt, action_values)
+
+        # init_host case
+        fake_admin_context = context.get_admin_context()
+        event_values = self._create_event_values(uuid, ctxt=fake_admin_context)
+        event = db.action_event_start(fake_admin_context, event_values)
+        event_values['action_id'] = action['id']
+        ignored = self.IGNORED_FIELDS + ['finish_time', 'traceback', 'result']
+        self._assertEqualObjects(event_values, event, ignored)
+
+        self._assertActionEventSaved(event, action['id'])
+
+    def test_instance_action_event_finish_with_different_request_id(self):
+        uuid = str(stdlib_uuid.uuid4())
+
+        action = db.action_start(self.ctxt, self._create_action_values(uuid))
+
+        # init_host case
+        fake_admin_context = context.get_admin_context()
+        db.action_event_start(fake_admin_context, self._create_event_values(
+            uuid, ctxt=fake_admin_context))
+
+        event_values = {
+            'finish_time': timeutils.utcnow() + datetime.timedelta(seconds=5),
+            'result': 'Success'
+        }
+        event_values = self._create_event_values(uuid, ctxt=fake_admin_context,
+                                                 extra=event_values)
+        event = db.action_event_finish(fake_admin_context, event_values)
+
+        self._assertActionEventSaved(event, action['id'])
+        action = db.action_get_by_request_id(self.ctxt, uuid,
+                                             self.ctxt.request_id)
+        self.assertNotEqual('Error', action['message'])
+
 
 class InstanceFaultTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def setUp(self):
