@@ -4493,6 +4493,18 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         vcpus = drvr._get_vcpu_total()
         self.assertEqual(expected_vcpus, vcpus)
 
+    @mock.patch('nova.virt.libvirt.host.Host.get_cpu_count')
+    def test_get_host_vcpus_after_hotplug(self, get_cpu_count):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        get_cpu_count.return_value = 2
+        expected_vcpus = 2
+        vcpus = drvr._get_vcpu_total()
+        self.assertEqual(expected_vcpus, vcpus)
+        get_cpu_count.return_value = 3
+        expected_vcpus = 3
+        vcpus = drvr._get_vcpu_total()
+        self.assertEqual(expected_vcpus, vcpus)
+
     @mock.patch.object(host.Host, "has_min_version", return_value=True)
     def test_quiesce(self, mock_has_min_version):
         self.create_fake_libvirt_mock(lookupByName=self.fake_lookup)
