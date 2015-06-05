@@ -35,7 +35,6 @@ from nova.compute import task_states
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
 from nova.conductor import api as conductor_api
-from nova.conductor import rpcapi as conductor_rpcapi
 from nova import context
 from nova import db
 from nova import exception
@@ -2247,8 +2246,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             self.assertEqual(expected_vm_state, instance.vm_state)
             # check revert_task_state decorator
             update_mock.assert_called_once_with(
-                self.context, instance.uuid,
-                task_state=expected_task_state)
+                self.context, instance, task_state=expected_task_state)
             # check wrap_instance_fault decorator
             add_fault_mock.assert_called_once_with(
                 self.context, instance, mock.ANY, mock.ANY)
@@ -2334,7 +2332,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
         self.assertRaises(NotImplementedError, do_test)
         inst_update_mock.assert_called_once_with(
-            self.context, instance.uuid,
+            self.context, instance,
             vm_state=vm_states.STOPPED, task_state=None)
 
     @mock.patch('nova.compute.manager.ComputeManager._instance_update')
@@ -2350,7 +2348,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
         self.assertRaises(test.TestingException, do_test)
         inst_update_mock.assert_called_once_with(
-            self.context, instance.uuid,
+            self.context, instance,
             vm_state=vm_states.ACTIVE, task_state=None)
 
     @mock.patch('nova.compute.manager.ComputeManager.'
@@ -2679,6 +2677,21 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             self.compute._set_instance_obj_error_state(self.context, instance)
             self.assertEqual(vm_states.ERROR, instance.vm_state)
             self.assertEqual(task_states.SPAWNING, instance.task_state)
+
+    @mock.patch.object(objects.Instance, 'save')
+    def test_instance_update(self, mock_save):
+        instance = objects.Instance(task_state=task_states.SCHEDULING,
+                                    vm_state=vm_states.BUILDING)
+        updates = {'task_state': None, 'vm_state': vm_states.ERROR}
+
+        with mock.patch.object(self.compute,
+                               '_update_resource_tracker') as mock_rt:
+            self.compute._instance_update(self.context, instance, **updates)
+
+            self.assertIsNone(instance.task_state)
+            self.assertEqual(vm_states.ERROR, instance.vm_state)
+            mock_save.assert_called_once_with()
+            mock_rt.assert_called_once_with(self.context, instance)
 
 
 class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
@@ -3694,7 +3707,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             self.assertEqual('False',
                     self.instance.system_metadata['network_allocated'])
 
-    @mock.patch.object(conductor_rpcapi.ConductorAPI, 'instance_update')
+    @mock.patch.object(manager.ComputeManager, '_instance_update')
     def test_launched_at_in_create_end_notification(self,
             mock_instance_update):
 
@@ -3725,7 +3738,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                     mock_notify.call_count - 1]
             self.assertEqual(expected_call, create_end_call)
 
-    @mock.patch.object(conductor_rpcapi.ConductorAPI, 'instance_update')
+    @mock.patch.object(manager.ComputeManager, '_instance_update')
     def test_create_end_on_instance_delete(self, mock_instance_update):
 
         def fake_notify(*args, **kwargs):
