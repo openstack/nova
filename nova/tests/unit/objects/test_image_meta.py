@@ -175,6 +175,22 @@ class TestImageMetaProps(test.NoDBTestCase):
         self.assertEqual(2, virtprops.hw_numa_nodes)
         self.assertEqual([2048, 4096], virtprops.hw_numa_mem)
 
+    def test_set_numa_mem_sparse(self):
+        props = {'hw_numa_nodes': 2,
+                 'hw_numa_mem.0': "2048",
+                 'hw_numa_mem.1': "1024",
+                 'hw_numa_mem.3': "4096"}
+        virtprops = objects.ImageMetaProps.from_dict(props)
+        self.assertEqual(2, virtprops.hw_numa_nodes)
+        self.assertEqual([2048, 1024], virtprops.hw_numa_mem)
+
+    def test_set_numa_mem_no_count(self):
+        props = {'hw_numa_mem.0': "2048",
+                 'hw_numa_mem.3': "4096"}
+        virtprops = objects.ImageMetaProps.from_dict(props)
+        self.assertIsNone(virtprops.get("hw_numa_nodes"))
+        self.assertEqual([2048], virtprops.hw_numa_mem)
+
     def test_set_numa_cpus(self):
         props = {'hw_numa_nodes': 2,
                  'hw_numa_cpus.0': "0-3",
@@ -182,4 +198,22 @@ class TestImageMetaProps(test.NoDBTestCase):
         virtprops = objects.ImageMetaProps.from_dict(props)
         self.assertEqual(2, virtprops.hw_numa_nodes)
         self.assertEqual([set([0, 1, 2, 3]), set([4, 5, 6, 7])],
+                         virtprops.hw_numa_cpus)
+
+    def test_set_numa_cpus_sparse(self):
+        props = {'hw_numa_nodes': 4,
+                 'hw_numa_cpus.0': "0-3",
+                 'hw_numa_cpus.1': "4,5",
+                 'hw_numa_cpus.3': "6-7"}
+        virtprops = objects.ImageMetaProps.from_dict(props)
+        self.assertEqual(4, virtprops.hw_numa_nodes)
+        self.assertEqual([set([0, 1, 2, 3]), set([4, 5])],
+                         virtprops.hw_numa_cpus)
+
+    def test_set_numa_cpus_no_count(self):
+        props = {'hw_numa_cpus.0': "0-3",
+                 'hw_numa_cpus.3': "4-7"}
+        virtprops = objects.ImageMetaProps.from_dict(props)
+        self.assertIsNone(virtprops.get("hw_numa_nodes"))
+        self.assertEqual([set([0, 1, 2, 3])],
                          virtprops.hw_numa_cpus)
