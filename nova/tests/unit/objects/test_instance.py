@@ -18,6 +18,7 @@ import iso8601
 import mock
 from mox3 import mox
 import netaddr
+from oslo_db import exception as db_exc
 from oslo_serialization import jsonutils
 from oslo_utils import timeutils
 
@@ -492,6 +493,21 @@ class _TestInstanceObject(object):
         inst.save()
         mock_update.assert_called_once_with(
             self.context, inst.uuid, {'vcpu_model': None})
+
+    def test_save_objectfield_missing_instance_row(self):
+        error = db_exc.DBReferenceError('table', 'constraint', 'key',
+                                        'key_table')
+        instance = fake_instance.fake_instance_obj(self.context)
+        fields_with_save_methods = [field for field in instance.fields
+                                    if hasattr(instance, '_save_%s' % field)]
+        for field in fields_with_save_methods:
+            @mock.patch.object(instance, '_save_%s' % field)
+            def _test(mock_save_field):
+                mock_save_field.side_effect = error
+                instance._changed_fields.add(field)
+                self.assertRaises(exception.InstanceNotFound,
+                                  instance.save)
+            _test()
 
     @mock.patch.object(cells_rpcapi.CellsAPI, 'instance_update_from_api')
     @mock.patch.object(cells_rpcapi.CellsAPI, 'instance_update_at_top')
