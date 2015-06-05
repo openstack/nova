@@ -1247,6 +1247,7 @@ class API(base.Base):
                     self.volume_api.check_attach(context,
                                                  volume,
                                                  instance=instance)
+                    bdm.volume_size = volume.get('size')
                 except (exception.CinderConnectionFailed,
                         exception.InvalidVolume):
                     raise
@@ -1254,7 +1255,8 @@ class API(base.Base):
                     raise exception.InvalidBDMVolume(id=volume_id)
             elif snapshot_id is not None:
                 try:
-                    self.volume_api.get_snapshot(context, snapshot_id)
+                    snap = self.volume_api.get_snapshot(context, snapshot_id)
+                    bdm.volume_size = bdm.volume_size or snap.get('size')
                 except exception.CinderConnectionFailed:
                     raise
                 except Exception:

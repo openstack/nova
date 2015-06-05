@@ -264,6 +264,8 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
                     volume_api.terminate_connection(context, volume_id,
                                                     connector)
         self['connection_info'] = connection_info
+        if self.volume_size is None:
+            self.volume_size = volume.get('size')
 
         mode = 'rw'
         if 'data' in connection_info:
