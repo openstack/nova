@@ -977,7 +977,7 @@ class VMwareAPISession(object):
         try:
             task_info = self._call_method(vim_util, "get_dynamic_property",
                             task_ref, "Task", "info")
-            task_name = task_info.name
+            task_name = getattr(task_info, 'name', '')
             if task_info.state in ['queued', 'running']:
                 return
             elif task_info.state == 'success':
