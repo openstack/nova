@@ -607,7 +607,7 @@ class Domain(object):
         disk_info['_attached'] = True
         return disk_info in self._def['devices']['disks']
 
-    def detachDeviceFlags(self, xml, _flags):
+    def detachDeviceFlags(self, xml, flags):
         self.detachDevice(xml)
 
     def XMLDesc(self, flags):
