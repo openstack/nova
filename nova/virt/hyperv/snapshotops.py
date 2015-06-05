@@ -24,6 +24,7 @@ from oslo_log import log as logging
 from nova.compute import task_states
 from nova.i18n import _LW
 from nova.image import glance
+from nova import utils
 from nova.virt.hyperv import utilsfactory
 
 CONF = cfg.CONF
@@ -47,6 +48,15 @@ class SnapshotOps(object):
             glance_image_service.update(context, image_id, image_metadata, f)
 
     def snapshot(self, context, instance, image_id, update_task_state):
+        # While the snapshot operation is not synchronized within the manager,
+        # attempting to destroy an instance while it's being snapshoted fails.
+        @utils.synchronized(instance.uuid)
+        def instance_synchronized_snapshot():
+            self._snapshot(context, instance, image_id, update_task_state)
+
+        instance_synchronized_snapshot()
+
+    def _snapshot(self, context, instance, image_id, update_task_state):
         """Create snapshot from a running VM instance."""
         instance_name = instance.name
 
