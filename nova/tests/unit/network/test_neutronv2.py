@@ -1427,7 +1427,8 @@ class TestNeutronv2(TestNeutronv2Base):
         neutronapi.API().list_ports(self.context, **search_opts)
 
     def test_show_port(self):
-        self.moxed_client.show_port('foo')
+        self.moxed_client.show_port('foo').AndReturn(
+                {'port': self.port_data1[0]})
         self.mox.ReplayAll()
         neutronapi.API().show_port(self.context, 'foo')
 
@@ -1587,9 +1588,9 @@ class TestNeutronv2(TestNeutronv2Base):
                 network_id='my_netid1',
                 port_id='3123-ad34-bc43-32332ca33e')])
 
-        NeutronNotFound = exceptions.NeutronClientException(status_code=404)
+        PortNotFound = exceptions.PortNotFoundClient()
         self.moxed_client.show_port(requested_networks[0].port_id).AndRaise(
-            NeutronNotFound)
+            PortNotFound)
         self.mox.ReplayAll()
         # Expected call from setUp.
         neutronapi.get_client(None)
@@ -1614,7 +1615,7 @@ class TestNeutronv2(TestNeutronv2Base):
         # Expected call from setUp.
         neutronapi.get_client(None)
         api = neutronapi.API()
-        self.assertRaises(exceptions.NeutronClientException,
+        self.assertRaises(exception.NovaException,
                           api.validate_networks,
                           self.context, requested_networks, 1)
 
@@ -3187,6 +3188,10 @@ class TestNeutronv2WithMock(test.TestCase):
     def test_show_port_forbidden(self):
         self._test_show_port_exceptions(exceptions.Unauthorized,
                                         exception.Forbidden)
+
+    def test_show_port_unknown_exception(self):
+        self._test_show_port_exceptions(exceptions.NeutronClientException,
+                                        exception.NovaException)
 
     def test_get_network(self):
         api = neutronapi.API()
