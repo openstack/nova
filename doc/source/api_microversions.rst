@@ -23,7 +23,7 @@ allow a client to always receive the most recent version of API
 responses from the server.
 
 For full details please read the `Kilo spec for microversions
-<http://git.openstack.org/cgit/openstack/nova-specs/tree/specs/kilo/approved/api-microversions.rst>`_
+<http://git.openstack.org/cgit/openstack/nova-specs/tree/specs/kilo/implemented/api-microversions.rst>`_
 
 
 In Code
@@ -69,7 +69,7 @@ In the controller class::
     def my_api_method(self, req, id):
         .... method_1 ...
 
-    @wsgi.Controller.api_version("2.4") #noqa
+    @wsgi.Controller.api_version("2.4")  # noqa
     def my_api_method(self, req, id):
         .... method_2 ...
 
@@ -78,7 +78,7 @@ default of ``2.1``) they would see the result from ``method_1``,
 ``2.4`` or later ``method_2``.
 
 It is vital that the two methods have the same name, so the second of
-them will need ``#noqa`` to avoid failing flake8's ``F811`` rule. The
+them will need ``# noqa`` to avoid failing flake8's ``F811`` rule. The
 two methods may be different in any kind of semantics (schema
 validation, return values, response codes, etc)
 
@@ -92,7 +92,7 @@ case you can decorate a private method::
     def _version_specific_func(self, req, arg1):
         pass
 
-    @api_version(min_version="2.5") #noqa
+    @api_version(min_version="2.5")  # noqa
     def _version_specific_func(self, req, arg1):
         pass
 
@@ -133,7 +133,7 @@ used to modify behaviour based on its value::
     def index(self, req):
         <common code>
 
-        req_ver = req.api_version_request
+        req_version = req.api_version_request
         if req_version.matches("2.1", "2.5"):
             ....stuff....
         elif req_version.matches("2.6", "2.10"):
@@ -169,6 +169,9 @@ necessary to add changes to other places which describe your change:
   ``nova/api/openstack/rest_api_version_history.rst``.  There should
   be enough information that it could be used by the docs team for
   release notes.
+
+* Update the expected versions in affected tests, for example in
+  ``nova/tests/unit/api/openstack/compute/test_versions.py``.
 
 Allocating a microversion
 -------------------------
