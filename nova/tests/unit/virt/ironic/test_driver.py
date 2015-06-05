@@ -509,9 +509,21 @@ class IronicDriverTestCase(test.NoDBTestCase):
              'power_state': ironic_states.NOSTATE,
              'provision_state': ironic_states.AVAILABLE},
             # a node not in maintenance or bad power state, bad provision state
-            {'uuid': uuidutils.generate_uuid,
+            {'uuid': uuidutils.generate_uuid(),
              'power_state': ironic_states.POWER_ON,
-             'provision_state': ironic_states.MANAGEABLE}
+             'provision_state': ironic_states.MANAGEABLE},
+            # a node in cleaning
+            {'uuid': uuidutils.generate_uuid(),
+             'power_state': ironic_states.POWER_ON,
+             'provision_state': ironic_states.CLEANING},
+            # a node in deleting
+            {'uuid': uuidutils.generate_uuid(),
+             'power_state': ironic_states.POWER_ON,
+             'provision_state': ironic_states.DELETING},
+            # a node in deleted
+            {'uuid': uuidutils.generate_uuid(),
+             'power_state': ironic_states.POWER_ON,
+             'provision_state': ironic_states.DELETED}
         ]
         for n in node_dicts:
             node = ironic_utils.get_test_node(**n)
@@ -531,20 +543,14 @@ class IronicDriverTestCase(test.NoDBTestCase):
             {'uuid': uuidutils.generate_uuid(),
              'instance_uuid': uuidutils.generate_uuid(),
              'provision_state': ironic_states.ACTIVE},
-            # a node in deploying but no instance yet
-            {'uuid': uuidutils.generate_uuid(),
-             'provision_state': ironic_states.DEPLOYWAIT},
-            # a node that made it to cleaning before losing its instance uuid
-            {'uuid': uuidutils.generate_uuid,
-            'instance_uuid': uuidutils.generate_uuid(),
-            'provision_state': ironic_states.CLEANING},
         ]
         for n in node_dicts:
             node = ironic_utils.get_test_node(**n)
             self.assertTrue(self.driver._node_resources_used(node))
 
         unused_node = ironic_utils.get_test_node(
-            power_state=ironic_states.AVAILABLE)
+            instance_uuid=None,
+            provision_state=ironic_states.AVAILABLE)
         self.assertFalse(self.driver._node_resources_used(unused_node))
 
     @mock.patch.object(FAKE_CLIENT.node, 'list')
