@@ -4672,14 +4672,15 @@ class LibvirtDriver(driver.ComputeDriver):
 
         for dom in self._host.list_instance_domains():
             try:
-                vcpus = dom.vcpus()
+                # TODO(sahid): list_instance_domains should
+                # return Guest objects.
+                vcpus = libvirt_guest.Guest(dom).get_vcpus_info()
+                if vcpus is not None:
+                    total += len(list(vcpus))
             except libvirt.libvirtError as e:
                 LOG.warn(_LW("couldn't obtain the vpu count from domain id:"
                              " %(uuid)s, exception: %(ex)s") %
                          {"uuid": dom.UUIDString(), "ex": e})
-            else:
-                if vcpus is not None and len(vcpus) > 1:
-                    total += len(vcpus[1])
             # NOTE(gtt116): give other tasks a chance.
             greenthread.sleep(0)
         return total
@@ -6649,9 +6650,8 @@ class LibvirtDriver(driver.ComputeDriver):
         # is not supported by the underlying hypervisor being
         # used by libvirt
         try:
-            cputime = domain.vcpus()[0]
-            for i in range(len(cputime)):
-                output["cpu" + str(i) + "_time"] = cputime[i][2]
+            for vcpu in guest.get_vcpus_info():
+                output["cpu" + str(vcpu.id) + "_time"] = vcpu.time
         except libvirt.libvirtError:
             pass
         # get io status
@@ -6727,10 +6727,8 @@ class LibvirtDriver(driver.ComputeDriver):
         # is not supported by the underlying hypervisor being
         # used by libvirt
         try:
-            cputime = domain.vcpus()[0]
-            num_cpus = len(cputime)
-            for i in range(num_cpus):
-                diags.add_cpu(time=cputime[i][2])
+            for vcpu in guest.get_vcpus_info():
+                diags.add_cpu(time=vcpu.time)
         except libvirt.libvirtError:
             pass
         # get io status

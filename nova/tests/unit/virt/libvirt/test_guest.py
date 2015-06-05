@@ -153,3 +153,14 @@ class GuestTestCase(test.NoDBTestCase):
         guest.resume()
 
         domain.resume.assert_called_once_with()
+
+    def test_get_vcpus_info(self):
+        domain = mock.MagicMock()
+        domain.vcpus.return_value = ([(0, 1, 10290000000L, 2)],
+                                     [(True, True)])
+        guest = libvirt_guest.Guest(domain)
+        vcpus = list(guest.get_vcpus_info())
+        self.assertEqual(0, vcpus[0].id)
+        self.assertEqual(2, vcpus[0].cpu)
+        self.assertEqual(1, vcpus[0].state)
+        self.assertEqual(10290000000L, vcpus[0].time)

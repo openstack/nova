@@ -147,3 +147,30 @@ class Guest(object):
             interfaces.append(target.get('dev'))
 
         return interfaces
+
+    def get_vcpus_info(self):
+        """Returns virtual cpus information of guest.
+
+        :returns: objects.VirtVCPUInfo
+        """
+        vcpus = self._domain.vcpus()
+        if vcpus is not None:
+            for vcpu in vcpus[0]:
+                yield GuestVCPUInfo(
+                    id=vcpu[0], cpu=vcpu[3], state=vcpu[1], time=vcpu[2])
+
+
+class GuestVCPUInfo(object):
+    def __init__(self, id, cpu, state, time):
+        """Structure for information about guest vcpus.
+
+        :param id: The virtual cpu number
+        :param cpu: The host cpu currently associated
+        :param state: The running state of the vcpu (0 offline, 1 running, 2
+                      blocked on resource)
+        :param time: The cpu time used in nanoseconds
+        """
+        self.id = id
+        self.cpu = cpu
+        self.state = state
+        self.time = time

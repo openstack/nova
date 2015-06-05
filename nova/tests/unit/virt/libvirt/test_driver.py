@@ -9828,7 +9828,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 if self._vcpus is None:
                     raise fakelibvirt.libvirtError("fake-error")
                 else:
-                    return ([1] * self._vcpus, [True] * self._vcpus)
+                    return ([[1, 2, 3, 4]] * self._vcpus, [True] * self._vcpus)
 
             def ID(self):
                 return 1
