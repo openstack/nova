@@ -752,7 +752,7 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
             dev.append(etree.Element("source", dev=self.source_path))
         elif self.source_type == "mount":
             dev.append(etree.Element("source", dir=self.source_path))
-        elif self.source_type == "network":
+        elif self.source_type == "network" and self.source_protocol:
             source = etree.Element("source", protocol=self.source_protocol)
             if self.source_name is not None:
                 source.set('name', self.source_name)

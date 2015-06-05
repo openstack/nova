@@ -35,6 +35,7 @@ from oslo_utils import importutils
 
 from nova.i18n import _LE
 from nova import utils
+from nova.virt.libvirt import config as vconfig
 
 libvirt = None
 
@@ -190,6 +191,21 @@ class Guest(object):
         flags = persistent and libvirt.VIR_DOMAIN_AFFECT_CONFIG or 0
         flags |= live and libvirt.VIR_DOMAIN_AFFECT_LIVE or 0
         self._domain.attachDeviceFlags(conf.to_xml(), flags=flags)
+
+    def get_disk(self, device):
+        """Returns the disk mounted at device
+
+        :returns LivirtConfigGuestDisk: mounted at device or None
+        """
+        try:
+            doc = etree.fromstring(self._domain.XMLDesc(0))
+        except Exception:
+            return None
+        node = doc.find("./devices/disk/target[@dev='%s'].." % device)
+        if node is not None:
+            conf = vconfig.LibvirtConfigGuestDisk()
+            conf.parse_dom(node)
+            return conf
 
 
 class GuestVCPUInfo(object):

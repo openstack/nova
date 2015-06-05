@@ -4722,21 +4722,21 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 mock_dom.attachDeviceFlags.assert_called_with(
                     mock_conf.to_xml(), flags=flags)
 
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_disk_xml')
     @mock.patch('nova.virt.libvirt.host.Host.get_domain')
     def test_detach_volume_with_vir_domain_affect_live_flag(self,
-            mock_get_domain, mock_get_disk_xml):
+            mock_get_domain):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instance = objects.Instance(**self.test_instance)
+        mock_xml = """<domain>
+  <devices>
+    <disk type='file'>
+      <source file='/path/to/fake-volume'/>
+      <target dev='vdc' bus='virtio'/>
+    </disk>
+  </devices>
+</domain>"""
         mock_dom = mock.MagicMock()
-        mock_xml = \
-            """
-            <disk type='file'>
-                <source file='/path/to/fake-volume'/>
-                <target dev='vdc' bus='virtio'/>
-            </disk>
-            """
-        mock_get_disk_xml.return_value = mock_xml
+        mock_dom.XMLDesc.return_value = mock_xml
 
         connection_info = {"driver_volume_type": "fake",
                            "data": {"device_path": "/fake",
@@ -4753,9 +4753,11 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 drvr.detach_volume(connection_info, instance, '/dev/vdc')
 
                 mock_get_domain.assert_called_with(instance)
-                mock_get_disk_xml.assert_called_with(mock_dom.XMLDesc(0),
-                                                     'vdc')
-                mock_dom.detachDeviceFlags.assert_called_with(mock_xml, flags)
+                mock_dom.detachDeviceFlags.assert_called_with("""<disk type="file" device="disk">
+  <source file="/path/to/fake-volume"/>
+  <target bus="virtio" dev="vdc"/>
+</disk>
+""", flags)
                 mock_disconnect_volume.assert_called_with(
                     connection_info, 'vdc')
 
@@ -10954,9 +10956,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 'get_by_volume_id')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_volume_config')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._connect_volume')
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_disk_xml')
     @mock.patch('nova.virt.libvirt.host.Host.get_domain')
-    def test_swap_volume_driver_bdm_save(self, get_domain, get_disk_xml,
+    def test_swap_volume_driver_bdm_save(self, get_domain,
                                          connect_volume, get_volume_config,
                                          get_by_volume_id, volume_save,
                                          swap_volume, disconnect_volume):
@@ -10971,16 +10972,16 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                'data': {'device_path': '/fake-new-volume',
                                         'access_mode': 'rw'}}
         mock_dom = mock.MagicMock()
-        mock_dom.XMLDesc.return_value = "<domain/>"
-        get_domain.return_value = mock_dom
-        mock_xml = \
-            """
+        mock_dom.XMLDesc.return_value = """<domain>
+          <devices>
             <disk type='file'>
                 <source file='/fake-old-volume'/>
                 <target dev='vdb' bus='virtio'/>
             </disk>
-            """
-        get_disk_xml.return_value = mock_xml
+          </devices>
+        </domain>
+        """
+        get_domain.return_value = mock_dom
         disk_info = {'bus': 'virtio', 'type': 'disk', 'dev': 'vdb'}
         get_volume_config.return_value = mock.MagicMock(
             source_path='/fake-new-volume')
@@ -10999,7 +11000,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                          '/dev/vdb', 1)
 
         get_domain.assert_called_once_with(instance)
-        get_disk_xml.assert_called_once_with(mock_dom.XMLDesc(0), 'vdb')
         connect_volume.assert_called_once_with(new_connection_info, disk_info)
         swap_volume.assert_called_once_with(mock_dom, 'vdb',
                                             '/fake-new-volume', 1)
@@ -12777,30 +12777,30 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
               </domain>
               """
 
-        diska_xml = """<disk type="file">
-                     <source file="disk1_file"/>
-                     <target dev="vda" bus="virtio"/>
-                     <serial>0e38683e-f0af-418f-a3f1-6b67ea0f919d</serial>
-                  </disk>
-                  """
+        diska_xml = """<disk type="file" device="disk">
+  <source file="disk1_file"/>
+  <target bus="virtio" dev="vda"/>
+  <serial>0e38683e-f0af-418f-a3f1-6b67ea0f919d</serial>
+</disk>"""
 
-        diskb_xml = """<disk type="block">
-                    <source dev="/path/to/dev/1"/>
-                    <target dev="vdb" bus="virtio" serial="1234"/>
-                  </disk>
-                  """
+        diskb_xml = """<disk type="block" device="disk">
+  <source dev="/path/to/dev/1"/>
+  <target bus="virtio" dev="vdb"/>
+</disk>"""
 
-        drv = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        dom = mock.MagicMock()
+        dom.XMLDesc.return_value = dom_xml
+        guest = libvirt_guest.Guest(dom)
 
         # NOTE(gcb): etree.tostring(node) returns an extra line with
         # some white spaces, need to strip it.
-        actual_diska_xml = drv._get_disk_xml(dom_xml, 'vda')
+        actual_diska_xml = guest.get_disk('vda').to_xml()
         self.assertEqual(diska_xml.strip(), actual_diska_xml.strip())
 
-        actual_diskb_xml = drv._get_disk_xml(dom_xml, 'vdb')
+        actual_diskb_xml = guest.get_disk('vdb').to_xml()
         self.assertEqual(diskb_xml.strip(), actual_diskb_xml.strip())
 
-        self.assertIsNone(drv._get_disk_xml(dom_xml, 'vdc'))
+        self.assertIsNone(guest.get_disk('vdc'))
 
     def test_vcpu_model_from_config(self):
         drv = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
