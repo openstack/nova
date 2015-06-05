@@ -4720,7 +4720,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                     connection_info, disk_info)
                 mock_set_cache_mode.assert_called_with(mock_conf)
                 mock_dom.attachDeviceFlags.assert_called_with(
-                    mock_conf.to_xml(), flags)
+                    mock_conf.to_xml(), flags=flags)
 
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_disk_xml')
     @mock.patch('nova.virt.libvirt.host.Host.get_domain')
@@ -8337,7 +8337,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                   shutdown_attempts=1,
                                   succeeds=False)
 
-    @mock.patch.object(FakeVirtDomain, 'attachDevice')
+    @mock.patch.object(FakeVirtDomain, 'attachDeviceFlags')
     @mock.patch.object(FakeVirtDomain, 'ID', return_value=1)
     @mock.patch.object(compute_utils, 'get_image_metadata', return_value=None)
     def test_attach_sriov_ports(self,
@@ -8356,7 +8356,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             drvr._image_api, instance['image_ref'], instance)
         self.assertTrue(mock_attachDevice.called)
 
-    @mock.patch.object(FakeVirtDomain, 'attachDevice')
+    @mock.patch.object(FakeVirtDomain, 'attachDeviceFlags')
     @mock.patch.object(FakeVirtDomain, 'ID', return_value=1)
     @mock.patch.object(compute_utils, 'get_image_metadata', return_value=None)
     def test_attach_sriov_ports_with_info_cache(self,
@@ -12284,7 +12284,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             CONF.libvirt.virt_type).AndReturn(expected)
         domain.info().AndReturn([power_state])
         if method == 'attach_interface':
-            domain.attachDeviceFlags(expected.to_xml(), expected_flags)
+            domain.attachDeviceFlags(expected.to_xml(), flags=expected_flags)
         elif method == 'detach_interface':
             domain.detachDeviceFlags(expected.to_xml(), expected_flags)
 

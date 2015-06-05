@@ -1011,10 +1011,6 @@ class LibvirtDriver(driver.ComputeDriver):
 
         guest = self._host.get_guest(instance)
 
-        # TODO(sahid): We are converting all calls from a
-        # virDomain object to use nova.virt.libvirt.Guest.
-        # We should be able to remove virt_dom at the end.
-        virt_dom = guest._domain
         disk_dev = mountpoint.rpartition("/")[2]
         bdm = {
             'device_name': disk_dev,
@@ -1049,20 +1045,15 @@ class LibvirtDriver(driver.ComputeDriver):
         self._set_cache_mode(conf)
 
         try:
-            # NOTE(vish): We can always affect config because our
-            #             domains are persistent, but we should only
-            #             affect live if the domain is running.
-            flags = libvirt.VIR_DOMAIN_AFFECT_CONFIG
-            state = self._get_power_state(virt_dom)
-            if state in (power_state.RUNNING, power_state.PAUSED):
-                flags |= libvirt.VIR_DOMAIN_AFFECT_LIVE
+            state = self._get_power_state(guest._domain)
+            live = state in (power_state.RUNNING, power_state.PAUSED)
 
             if encryption:
                 encryptor = self._get_volume_encryptor(connection_info,
                                                        encryption)
                 encryptor.attach_volume(context, **encryption)
 
-            virt_dom.attachDeviceFlags(conf.to_xml(), flags)
+            guest.attach_device(conf, persistent=True, live=live)
         except Exception as ex:
             LOG.exception(_LE('Failed to attach volume at mountpoint: %s'),
                           mountpoint, instance=instance)
@@ -1238,21 +1229,15 @@ class LibvirtDriver(driver.ComputeDriver):
     def attach_interface(self, instance, image_meta, vif):
         guest = self._host.get_guest(instance)
 
-        # TODO(sahid): We are converting all calls from a
-        # virDomain object to use nova.virt.libvirt.Guest.
-        # We should be able to remove virt_dom at the end.
-        virt_dom = guest._domain
         self.vif_driver.plug(instance, vif)
         self.firewall_driver.setup_basic_filtering(instance, [vif])
         cfg = self.vif_driver.get_config(instance, vif, image_meta,
                                          instance.flavor,
                                          CONF.libvirt.virt_type)
         try:
-            flags = libvirt.VIR_DOMAIN_AFFECT_CONFIG
-            state = self._get_power_state(virt_dom)
-            if state == power_state.RUNNING or state == power_state.PAUSED:
-                flags |= libvirt.VIR_DOMAIN_AFFECT_LIVE
-            virt_dom.attachDeviceFlags(cfg.to_xml(), flags)
+            state = self._get_power_state(guest._domain)
+            live = state in (power_state.RUNNING, power_state.PAUSED)
+            guest.attach_device(cfg, persistent=True, live=live)
         except libvirt.libvirtError:
             LOG.error(_LE('attaching network adapter failed.'),
                      instance=instance, exc_info=True)
@@ -3031,16 +3016,13 @@ class LibvirtDriver(driver.ComputeDriver):
                 raise
 
     def _attach_pci_devices(self, guest, pci_devs):
-        # TODO(sahid): A method attach_device should be added to
-        # the Guest object
-        dom = guest._domain
         try:
             for dev in pci_devs:
-                dom.attachDevice(self._get_guest_pci_device(dev).to_xml())
+                guest.attach_device(self._get_guest_pci_device(dev))
 
         except libvirt.libvirtError:
             LOG.error(_LE('Attaching PCI devices %(dev)s to %(dom)s failed.'),
-                      {'dev': pci_devs, 'dom': dom.ID()})
+                      {'dev': pci_devs, 'dom': guest.id})
             raise
 
     def _prepare_args_for_get_config(self, context, instance):
@@ -3057,10 +3039,6 @@ class LibvirtDriver(driver.ComputeDriver):
         return False
 
     def _attach_sriov_ports(self, context, instance, guest, network_info=None):
-        # TODO(sahid): A method attach_device should be added to
-        # the Guest object
-        dom = guest._domain
-
         if network_info is None:
             network_info = instance.info_cache.network_info
         if network_info is None:
@@ -3077,8 +3055,8 @@ class LibvirtDriver(driver.ComputeDriver):
                                                      flavor,
                                                      CONF.libvirt.virt_type)
                     LOG.debug('Attaching SR-IOV port %(port)s to %(dom)s',
-                          {'port': vif, 'dom': dom.ID()})
-                    dom.attachDevice(cfg.to_xml())
+                          {'port': vif, 'dom': guest.id})
+                    guest.attach_device(cfg)
 
     def _detach_sriov_ports(self, context, instance, dom):
         network_info = instance.info_cache.network_info
