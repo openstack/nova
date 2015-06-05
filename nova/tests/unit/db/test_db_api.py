@@ -7885,6 +7885,28 @@ class FlavorMigrationTestCase(test.TestCase):
         self.assertEqual({}, flavor_cache)
         self.assertFalse(mock_save.called)
 
+    @mock.patch('nova.objects.Flavor.get_by_flavor_id')
+    @mock.patch('nova.db.sqlalchemy.api._augment_flavor_to_migrate')
+    @mock.patch('nova.objects.Instance.save')
+    def test_migrate_flavor_with_missing_flavor(self, mock_save,
+                                                mock_augment,
+                                                mock_get_flavor):
+        ctxt = context.get_admin_context()
+        flavor = flavors.get_default_flavor()
+        sysmeta = flavors.save_flavor_info({}, flavor)
+        mock_get_flavor.side_effect = exception.FlavorNotFound(flavor_id=123)
+        values = {'uuid': str(stdlib_uuid.uuid4()),
+                  'instance_type_id': 123,
+                  'system_metadata': sysmeta,
+              }
+        db.instance_create(ctxt, values)
+
+        flavor_cache = {}
+        db.migrate_flavor_data(ctxt, None, flavor_cache)
+        self.assertFalse(mock_augment.called)
+        self.assertTrue(mock_save.called)
+        self.assertEqual({}, flavor_cache)
+
 
 class ArchiveTestCase(test.TestCase):
 
