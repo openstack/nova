@@ -451,26 +451,32 @@ class VideoModel(Enum):
 
 class VIFModel(Enum):
 
+    LEGACY_VALUES = {"virtuale1000":
+                     network_model.VIF_MODEL_E1000,
+                     "virtuale1000e":
+                     network_model.VIF_MODEL_E1000E,
+                     "virtualpcnet32":
+                     network_model.VIF_MODEL_PCNET,
+                     "virtualsriovethernetcard":
+                     network_model.VIF_MODEL_SRIOV,
+                     "virtualvmxnet":
+                     network_model.VIF_MODEL_VMXNET,
+                     "virtualvmxnet3":
+                     network_model.VIF_MODEL_VMXNET3,
+                    }
+
     def __init__(self):
         super(VIFModel, self).__init__(
             valid_values=network_model.VIF_MODEL_ALL)
+
+    def _get_legacy(self, value):
+        return value
 
     def coerce(self, obj, attr, value):
         # Some compat for strings we'd see in the legacy
         # hw_vif_model image property
         value = value.lower()
-        if value == "virtuale1000":
-            value = network_model.VIF_MODEL_E1000
-        elif value == "virtuale1000e":
-            value = network_model.VIF_MODEL_E1000E
-        elif value == "virtualpcnet32":
-            value = network_model.VIF_MODEL_PCNET
-        elif value == "virtualsriovethernetcard":
-            value = network_model.VIF_MODEL_SRIOV
-        elif value == "virtualvmxnet":
-            value = network_model.VIF_MODEL_VMXNET
-        elif value == "virtualvmxnet3":
-            value = network_model.VIF_MODEL_VMXNET3
+        value = VIFModel.LEGACY_VALUES.get(value, value)
         return super(VIFModel, self).coerce(obj, attr, value)
 
 
