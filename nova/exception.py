@@ -321,11 +321,6 @@ class InvalidContentType(Invalid):
     msg_fmt = _("Invalid content type %(content_type)s.")
 
 
-class InvalidUnicodeParameter(Invalid):
-    msg_fmt = _("Invalid Parameter: "
-                "Unicode is not supported by the current database.")
-
-
 class InvalidAPIVersionString(Invalid):
     msg_fmt = _("API Version String %(version)s is of invalid format. Must "
                 "be of format MajorNum.MinorNum.")
@@ -1158,16 +1153,8 @@ class ClassNotFound(NotFound):
     msg_fmt = _("Class %(class_name)s could not be found: %(exception)s")
 
 
-class NotAllowed(NovaException):
-    msg_fmt = _("Action not allowed.")
-
-
 class InstanceTagNotFound(NotFound):
     msg_fmt = _("Instance %(instance_id)s has no tag '%(tag)s'")
-
-
-class ImageRotationNotAllowed(NovaException):
-    msg_fmt = _("Rotation is not allowed for snapshots")
 
 
 class RotationRequiredForBackup(NovaException):
@@ -1360,14 +1347,6 @@ class InstanceInfoCacheNotFound(NotFound):
 class InvalidAssociation(NotFound):
     ec2_code = 'InvalidAssociationID.NotFound'
     msg_fmt = _("Invalid association.")
-
-
-class NodeNotFound(NotFound):
-    msg_fmt = _("Node %(node_id)s could not be found.")
-
-
-class NodeNotFoundByUUID(NotFound):
-    msg_fmt = _("Node with UUID %(node_uuid)s could not be found.")
 
 
 class MarkerNotFound(NotFound):
@@ -1567,11 +1546,6 @@ class InstanceGroupIdExists(NovaException):
     msg_fmt = _("Instance group %(group_uuid)s already exists.")
 
 
-class InstanceGroupMetadataNotFound(NotFound):
-    msg_fmt = _("Instance group %(group_uuid)s has no metadata with "
-                "key %(metadata_key)s.")
-
-
 class InstanceGroupMemberNotFound(NotFound):
     msg_fmt = _("Instance group %(group_uuid)s has no member with "
                 "id %(instance_id)s.")
@@ -1669,10 +1643,6 @@ class MissingParameter(NovaException):
 
 class PciConfigInvalidWhitelist(Invalid):
     msg_fmt = _("Invalid PCI devices Whitelist config %(reason)s")
-
-
-class PciTrackerInvalidNodeId(Invalid):
-    msg_fmt = _("Cannot change %(node_id)s to %(new_node_id)s")
 
 
 # Cannot be templated, msg needs to be constructed when raised.
