@@ -287,7 +287,6 @@ class ImageMetaProps(base.NovaObject):
     _legacy_property_map = {
         'architecture': 'hw_architecture',
         'owner_id': 'img_owner_id',
-        'vmware_adaptertype': 'hw_scsi_model',
         'vmware_disktype': 'hw_disk_type',
         'vmware_image_version': 'img_version',
         'vmware_ostype': 'os_distro',
@@ -319,6 +318,13 @@ class ImageMetaProps(base.NovaObject):
                 continue
 
             setattr(self, new_key, image_props[legacy_key])
+
+        vmware_adaptertype = image_props.get("vmware_adaptertype")
+        if vmware_adaptertype == "ide":
+            setattr(self, "hw_disk_bus", "ide")
+        elif vmware_adaptertype is not None:
+            setattr(self, "hw_disk_bus", "scsi")
+            setattr(self, "hw_scsi_model", vmware_adaptertype)
 
     def _set_numa_mem(self, image_props):
         nodes = int(image_props.get("hw_numa_nodes", "1"))

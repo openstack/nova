@@ -151,6 +151,28 @@ class TestImageMetaProps(test.NoDBTestCase):
         self.assertTrue(image_meta.img_bdm_v2)
         self.assertEqual("/dev/vda", image_meta.img_root_device_name)
 
+    def test_legacy_compat_vmware_adapter_types(self):
+        legacy_types = ['lsiLogic', 'busLogic', 'ide', 'lsiLogicsas',
+                        'paraVirtual']
+
+        for legacy_type in legacy_types:
+            legacy_props = {
+                'vmware_adaptertype': legacy_type,
+            }
+
+            image_meta = objects.ImageMetaProps.from_dict(legacy_props)
+            if legacy_type == 'ide':
+                self.assertEqual('ide', image_meta.hw_disk_bus)
+            else:
+                self.assertEqual('scsi', image_meta.hw_disk_bus)
+                if legacy_type == 'lsiLogicsas':
+                    expected = 'lsisas1068'
+                elif legacy_type == 'paraVirtual':
+                    expected = 'vmpvscsi'
+                else:
+                    expected = legacy_type.lower()
+                self.assertEqual(expected, image_meta.hw_scsi_model)
+
     def test_duplicate_legacy_and_normal_props(self):
         # Both keys are referring to the same object field
         props = {'hw_scsi_model': 'virtio-scsi',
