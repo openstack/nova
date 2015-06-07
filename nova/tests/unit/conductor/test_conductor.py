@@ -94,6 +94,31 @@ class _BaseTestCase(object):
 
         fake_utils.stub_out_utils_spawn_n(self.stubs)
 
+    def test_provider_fw_rule_get_all(self):
+        fake_rules = ['a', 'b', 'c']
+        self.mox.StubOutWithMock(db, 'provider_fw_rule_get_all')
+        db.provider_fw_rule_get_all(self.context).AndReturn(fake_rules)
+        self.mox.ReplayAll()
+        result = self.conductor.provider_fw_rule_get_all(self.context)
+        self.assertEqual(result, fake_rules)
+
+    def test_compute_node_create(self):
+        self.mox.StubOutWithMock(db, 'compute_node_create')
+        db.compute_node_create(self.context, 'fake-values').AndReturn(
+            'fake-result')
+        self.mox.ReplayAll()
+        result = self.conductor.compute_node_create(self.context,
+                                                    'fake-values')
+        self.assertEqual(result, 'fake-result')
+
+
+class ConductorTestCase(_BaseTestCase, test.TestCase):
+    """Conductor Manager Tests."""
+    def setUp(self):
+        super(ConductorTestCase, self).setUp()
+        self.conductor = conductor_manager.ConductorManager()
+        self.conductor_manager = self.conductor
+
     def _create_fake_instance(self, params=None, type_name='m1.tiny'):
         if not params:
             params = {}
@@ -136,31 +161,6 @@ class _BaseTestCase(object):
             self.conductor = utils.ExceptionHelper(self.conductor)
             self.assertRaises(KeyError,
                               self._do_update, 'any-uuid', foobar=1)
-
-    def test_provider_fw_rule_get_all(self):
-        fake_rules = ['a', 'b', 'c']
-        self.mox.StubOutWithMock(db, 'provider_fw_rule_get_all')
-        db.provider_fw_rule_get_all(self.context).AndReturn(fake_rules)
-        self.mox.ReplayAll()
-        result = self.conductor.provider_fw_rule_get_all(self.context)
-        self.assertEqual(result, fake_rules)
-
-    def test_compute_node_create(self):
-        self.mox.StubOutWithMock(db, 'compute_node_create')
-        db.compute_node_create(self.context, 'fake-values').AndReturn(
-            'fake-result')
-        self.mox.ReplayAll()
-        result = self.conductor.compute_node_create(self.context,
-                                                    'fake-values')
-        self.assertEqual(result, 'fake-result')
-
-
-class ConductorTestCase(_BaseTestCase, test.TestCase):
-    """Conductor Manager Tests."""
-    def setUp(self):
-        super(ConductorTestCase, self).setUp()
-        self.conductor = conductor_manager.ConductorManager()
-        self.conductor_manager = self.conductor
 
     def test_instance_get_by_uuid(self):
         orig_instance = self._create_fake_instance()
@@ -800,12 +800,6 @@ class ConductorAPITestCase(_BaseTestCase, test.TestCase):
         self.conductor_manager = self.conductor_service.manager
         self.db = None
 
-    def _do_update(self, instance_uuid, **updates):
-        # NOTE(danms): the public API takes actual keyword arguments,
-        # so override the base class here to make the call correctly
-        return self.conductor.instance_update(self.context, instance_uuid,
-                                              **updates)
-
     def test_wait_until_ready(self):
         timeouts = []
         calls = dict(count=0)
@@ -831,14 +825,6 @@ class ConductorLocalAPITestCase(ConductorAPITestCase):
         self.conductor = conductor_api.LocalAPI()
         self.conductor_manager = self.conductor._manager._target
         self.db = db
-
-    def test_client_exceptions(self):
-        instance = self._create_fake_instance()
-        # NOTE(danms): The LocalAPI should not raise exceptions wrapped
-        # in ClientException. KeyError should be raised if an invalid
-        # update key is passed, so use that to validate.
-        self.assertRaises(KeyError,
-                          self._do_update, instance['uuid'], foo='bar')
 
     def test_wait_until_ready(self):
         # Override test in ConductorAPITestCase
@@ -869,7 +855,7 @@ class ConductorImportTest(test.TestCase):
 class ConductorPolicyTest(test.TestCase):
     def test_all_allowed_keys(self):
         ctxt = context.RequestContext('fake-user', 'fake-project')
-        conductor = conductor_api.LocalAPI()
+        conductor = conductor_manager.ConductorManager()
         updates = {}
         for key in conductor_manager.allowed_updates:
             if key in conductor_manager.datetime_fields:
@@ -893,7 +879,8 @@ class ConductorPolicyTest(test.TestCase):
         with mock.patch.object(objects.Instance, 'save',
                                side_effect=fake_save,
                                autospec=True) as mock_save:
-            conductor.instance_update(ctxt, 'fake-instance', **updates)
+            conductor.instance_update(ctxt, 'fake-instance', updates,
+                                      'conductor')
             mock_save.assert_called_once_with(mock.ANY)
 
     def test_allowed_keys_are_real(self):
