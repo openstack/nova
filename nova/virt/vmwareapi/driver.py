@@ -37,6 +37,7 @@ from nova.compute import vm_states
 from nova import exception
 from nova import utils
 from nova.i18n import _, _LI, _LE, _LW
+from nova import objects
 from nova.virt import driver
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import error_util
@@ -329,6 +330,7 @@ class VMwareVCDriver(driver.ComputeDriver):
                          network_info, image_meta, resize_instance,
                          block_device_info=None, power_on=True):
         """Completes a resize, turning on the migrated instance."""
+        image_meta = objects.ImageMeta.from_dict(image_meta)
         self._vmops.finish_migration(context, migration, instance, disk_info,
                                      network_info, image_meta, resize_instance,
                                      block_device_info, power_on)
@@ -532,6 +534,7 @@ class VMwareVCDriver(driver.ComputeDriver):
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info=None, block_device_info=None):
         """Create VM instance."""
+        image_meta = objects.ImageMeta.from_dict(image_meta)
         _vmops = self._get_vmops_for_compute_node(instance.node)
         _vmops.spawn(context, instance, image_meta, injected_files,
               admin_password, network_info, block_device_info)
@@ -628,6 +631,7 @@ class VMwareVCDriver(driver.ComputeDriver):
     def rescue(self, context, instance, network_info, image_meta,
                rescue_password):
         """Rescue the specified instance."""
+        image_meta = objects.ImageMeta.from_dict(image_meta)
         self._vmops.rescue(context, instance, network_info, image_meta)
 
     def unrescue(self, instance, network_info):
@@ -718,6 +722,7 @@ class VMwareVCDriver(driver.ComputeDriver):
 
     def attach_interface(self, instance, image_meta, vif):
         """Attach an interface to the instance."""
+        image_meta = objects.ImageMeta.from_dict(image_meta)
         self._vmops.attach_interface(instance, image_meta, vif)
 
     def detach_interface(self, instance, vif):

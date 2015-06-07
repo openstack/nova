@@ -233,8 +233,8 @@ class VMwareImagesTestCase(test.NoDBTestCase):
                      "vmware_adaptertype": constants.DEFAULT_ADAPTER_TYPE,
                      "vmware_disktype": constants.DEFAULT_DISK_TYPE,
                      "hw_vif_model": constants.DEFAULT_VIF_MODEL,
-                     images.LINKED_CLONE_PROPERTY: True}}
-
+                     "vmware_linked_clone": True}}
+        mdata = objects.ImageMeta.from_dict(mdata)
         img_props = images.VMwareImage.from_image(image_id, mdata)
 
         image_size_in_kb = raw_disk_size_in_bytes / units.Ki
@@ -268,9 +268,9 @@ class VMwareImagesTestCase(test.NoDBTestCase):
                      "hw_vif_model": vif_model}}
 
         if image_lc_setting is not None:
-            mdata['properties'][
-                images.LINKED_CLONE_PROPERTY] = image_lc_setting
+            mdata['properties']["vmware_linked_clone"] = image_lc_setting
 
+        mdata = objects.ImageMeta.from_dict(mdata)
         return images.VMwareImage.from_image(image_id, mdata)
 
     def test_use_linked_clone_override_nf(self):
@@ -303,11 +303,6 @@ class VMwareImagesTestCase(test.NoDBTestCase):
         self.assertTrue(image_props.linked_clone,
                         "image level metadata failed to override global")
 
-    def test_use_disk_format_none(self):
-        image = self._image_build(None, True, disk_format=None)
-        self.assertIsNone(image.file_type)
-        self.assertFalse(image.is_iso)
-
     def test_use_disk_format_iso(self):
         image = self._image_build(None, True, disk_format='iso')
         self.assertEqual('iso', image.file_type)
@@ -323,15 +318,15 @@ class VMwareImagesTestCase(test.NoDBTestCase):
     def test_image_no_defaults(self):
         image = self._image_build(False, False,
                                   disk_format='iso',
-                                  os_type='fake-os-type',
-                                  adapter_type='fake-adapter-type',
-                                  disk_type='fake-disk-type',
-                                  vif_model='fake-vif-model')
+                                  os_type='otherGuest',
+                                  adapter_type='lsiLogic',
+                                  disk_type='preallocated',
+                                  vif_model='e1000e')
         self.assertEqual('iso', image.file_type)
-        self.assertEqual('fake-os-type', image.os_type)
-        self.assertEqual('fake-adapter-type', image.adapter_type)
-        self.assertEqual('fake-disk-type', image.disk_type)
-        self.assertEqual('fake-vif-model', image.vif_model)
+        self.assertEqual('otherGuest', image.os_type)
+        self.assertEqual('lsiLogic', image.adapter_type)
+        self.assertEqual('preallocated', image.disk_type)
+        self.assertEqual('e1000e', image.vif_model)
         self.assertFalse(image.linked_clone)
 
     def test_image_defaults(self):

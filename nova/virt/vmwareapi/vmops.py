@@ -1587,8 +1587,8 @@ class VMwareVMOps(object):
 
     def attach_interface(self, instance, image_meta, vif):
         """Attach an interface to the instance."""
-        vif_model = image_meta.get("hw_vif_model",
-                                   constants.DEFAULT_VIF_MODEL)
+        vif_model = image_meta.properties.get('hw_vif_model',
+                                              constants.DEFAULT_VIF_MODEL)
         vif_model = vm_util.convert_vif_model(vif_model)
         vif_info = vmwarevif.get_vif_dict(self._session, self._cluster,
                                           vif_model, utils.is_neutron(), vif)
