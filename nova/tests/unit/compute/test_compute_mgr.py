@@ -2341,7 +2341,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.flags(bandwidth_poll_interval=1)
         get_by_uuid_mac.return_value = usage
         _time = timeutils.utcnow()
-        bw_usage_update.return_value = {'instance_uuid': '', 'mac': '',
+        bw_usage_update.return_value = {'uuid': '', 'mac': '',
                 'start_period': _time, 'last_refreshed': _time, 'bw_in': 0,
                 'bw_out': 0, 'last_ctr_in': 0, 'last_ctr_out': 0, 'deleted': 0,
                 'created_at': _time, 'updated_at': _time, 'deleted_at': _time}
