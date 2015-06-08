@@ -22,8 +22,10 @@ from oslo_utils import excutils
 import six
 
 from nova import block_device
+from nova import exception
 from nova.i18n import _LE
 from nova.i18n import _LI
+from nova.i18n import _LW
 from nova import objects
 from nova.objects import base as obj_base
 from nova.volume import encryptors
@@ -303,6 +305,19 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
             pass
         super(DriverVolumeBlockDevice, self).save()
 
+    def _call_wait_func(self, context, wait_func, volume_api, volume_id):
+        try:
+            wait_func(context, volume_id)
+        except exception.VolumeNotCreated:
+            with excutils.save_and_reraise_exception():
+                if self['delete_on_termination']:
+                    try:
+                        volume_api.delete(context, volume_id)
+                    except Exception as exc:
+                        LOG.warn(_LW('Failed to delete volume: %(volume_id)s '
+                                     'due to %(exc)s'),
+                                 {'volume_id': volume_id, 'exc': exc})
+
 
 class DriverSnapshotBlockDevice(DriverVolumeBlockDevice):
 
@@ -319,7 +334,7 @@ class DriverSnapshotBlockDevice(DriverVolumeBlockDevice):
             vol = volume_api.create(context, self.volume_size, '', '',
                                     snapshot, availability_zone=av_zone)
             if wait_func:
-                wait_func(context, vol['id'])
+                self._call_wait_func(context, wait_func, volume_api, vol['id'])
 
             self.volume_id = vol['id']
 
@@ -342,7 +357,7 @@ class DriverImageBlockDevice(DriverVolumeBlockDevice):
                                     '', '', image_id=self.image_id,
                                     availability_zone=av_zone)
             if wait_func:
-                wait_func(context, vol['id'])
+                self._call_wait_func(context, wait_func, volume_api, vol['id'])
 
             self.volume_id = vol['id']
 
@@ -364,7 +379,7 @@ class DriverBlankBlockDevice(DriverVolumeBlockDevice):
             vol = volume_api.create(context, self.volume_size, vol_name, '',
                                     availability_zone=av_zone)
             if wait_func:
-                wait_func(context, vol['id'])
+                self._call_wait_func(context, wait_func, volume_api, vol['id'])
 
             self.volume_id = vol['id']
 
