@@ -60,13 +60,13 @@ class ServerExternalEventsTestV21(test.NoDBTestCase):
                         'server_uuid': fake_instance_uuids[0],
                         'status': 'completed'}
         self.event_2 = {'name': 'network-changed',
-                        'server_uuid': fake_instance_uuids[1],
-                        'status': 'completed'}
+                        'server_uuid': fake_instance_uuids[1]}
         self.default_body = {'events': [self.event_1, self.event_2]}
         self.resp_event_1 = dict(self.event_1)
         self.resp_event_1['code'] = 200
         self.resp_event_2 = dict(self.event_2)
         self.resp_event_2['code'] = 200
+        self.resp_event_2['status'] = 'completed'
         self.default_resp_body = {'events': [self.resp_event_1,
                                              self.resp_event_2]}
         self.req = fakes.HTTPRequest.blank('', use_admin_context=True)

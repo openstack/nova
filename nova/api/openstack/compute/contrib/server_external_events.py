@@ -55,7 +55,7 @@ class ServerExternalEventsController(wsgi.Controller):
             client_event = dict(_event)
             event = objects.InstanceExternalEvent(context)
 
-            status = client_event.get('status')
+            status = client_event.get('status', 'completed')
             if status not in external_event_obj.EVENT_STATUSES:
                 raise webob.exc.HTTPBadRequest(
                     _('Invalid event status `%s\'') % status)
