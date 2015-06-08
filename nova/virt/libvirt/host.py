@@ -392,25 +392,22 @@ class Host(object):
             event = args[0]
             self._events_delayed.pop(event.uuid, None)
 
-        if self._lifecycle_delay > 0:
-            # Cleanup possible delayed stop events.
-            if event.uuid in self._events_delayed.keys():
-                self._events_delayed[event.uuid].cancel()
-                self._events_delayed.pop(event.uuid, None)
-                LOG.debug("Removed pending event for %s due to "
-                          "lifecycle event", event.uuid)
+        # Cleanup possible delayed stop events.
+        if event.uuid in self._events_delayed.keys():
+            self._events_delayed[event.uuid].cancel()
+            self._events_delayed.pop(event.uuid, None)
+            LOG.debug("Removed pending event for %s due to "
+                      "lifecycle event", event.uuid)
 
-            if event.transition == virtevent.EVENT_LIFECYCLE_STOPPED:
-                # Delay STOPPED event, as they may be followed by a STARTED
-                # event in case the instance is rebooting
-                id_ = greenthread.spawn_after(self._lifecycle_delay,
-                                              self._event_emit, event)
-                self._events_delayed[event.uuid] = id_
-                # add callback to cleanup self._events_delayed dict after
-                # event was called
-                id_.link(event_cleanup, event)
-            else:
-                self._event_emit(event)
+        if event.transition == virtevent.EVENT_LIFECYCLE_STOPPED:
+            # Delay STOPPED event, as they may be followed by a STARTED
+            # event in case the instance is rebooting
+            id_ = greenthread.spawn_after(self._lifecycle_delay,
+                                          self._event_emit, event)
+            self._events_delayed[event.uuid] = id_
+            # add callback to cleanup self._events_delayed dict after
+            # event was called
+            id_.link(event_cleanup, event)
         else:
             self._event_emit(event)
 
