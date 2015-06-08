@@ -132,6 +132,17 @@ class BlockDeviceType(Enum):
             valid_values=BlockDeviceType.ALL)
 
 
+class ConfigDrivePolicy(Enum):
+    OPTIONAL = "optional"
+    MANDATORY = "mandatory"
+
+    ALL = (OPTIONAL, MANDATORY)
+
+    def __init__(self):
+        super(ConfigDrivePolicy, self).__init__(
+            valid_values=ConfigDrivePolicy.ALL)
+
+
 class CPUAllocationPolicy(Enum):
 
     DEDICATED = "dedicated"
@@ -594,6 +605,10 @@ class BlockDeviceSourceTypeField(BaseEnumField):
 
 class BlockDeviceTypeField(BaseEnumField):
     AUTO_TYPE = BlockDeviceType()
+
+
+class ConfigDrivePolicyField(BaseEnumField):
+    AUTO_TYPE = ConfigDrivePolicy()
 
 
 class CPUAllocationPolicyField(BaseEnumField):

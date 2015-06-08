@@ -35,7 +35,8 @@ class ImageMeta(base.NovaObject):
     # Version 1.4: ImageMetaProps version 1.4
     # Version 1.5: ImageMetaProps version 1.5
     # Version 1.6: ImageMetaProps version 1.6
-    VERSION = '1.6'
+    # Version 1.7: ImageMetaProps version 1.7
+    VERSION = '1.7'
 
     # These are driven by what the image client API returns
     # to Nova from Glance. This is defined in the glance
@@ -78,6 +79,7 @@ class ImageMeta(base.NovaObject):
                        ('1.4', '1.4'),
                        ('1.5', '1.5'),
                        ('1.6', '1.6'),
+                       ('1.7', '1.7'),
                        ],
     }
 
@@ -142,6 +144,7 @@ class ImageMetaProps(base.NovaObject):
     # Version 1.4: added hw_vif_multiqueue_enabled field
     # Version 1.5: added os_admin_user field
     # Version 1.6: Added 'lxc' and 'uml' enum types to DiskBusField
+    # Version 1.7: added img_config_drive field
     VERSION = ImageMeta.VERSION
 
     # Maximum number of NUMA nodes permitted for the guest topology
@@ -286,6 +289,9 @@ class ImageMetaProps(base.NovaObject):
 
         # type of the hypervisor, eg kvm, ironic, xen
         'img_hv_type': fields.HVTypeField(),
+
+        # Whether the image needs/expected config drive
+        'img_config_drive': fields.ConfigDrivePolicyField(),
 
         # boolean flag to set space-saving or performance behavior on the
         # Datastore

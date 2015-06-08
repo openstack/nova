@@ -26,6 +26,8 @@ from oslo_utils import units
 
 from nova import exception
 from nova.i18n import _LW
+from nova import objects
+from nova.objects import fields
 from nova import utils
 from nova import version
 
@@ -177,19 +179,16 @@ class ConfigDriveBuilder(object):
 
 
 def required_by(instance):
+    image_meta = objects.ImageMeta.from_instance(instance)
 
-    image_prop = utils.instance_sys_meta(instance).get(
-        utils.SM_IMAGE_PROP_PREFIX + 'img_config_drive', 'optional')
-    if image_prop not in ['optional', 'mandatory']:
-        LOG.warning(_LW('Image config drive option %(image_prop)s is invalid '
-                        'and will be ignored'),
-                    {'image_prop': image_prop},
-                    instance=instance)
+    image_prop = image_meta.properties.get(
+        "img_config_drive",
+        fields.ConfigDrivePolicy.OPTIONAL)
 
     return (instance.get('config_drive') or
             'always' == CONF.force_config_drive or
             strutils.bool_from_string(CONF.force_config_drive) or
-            image_prop == 'mandatory'
+            image_prop == fields.ConfigDrivePolicy.MANDATORY
             )
 
 
