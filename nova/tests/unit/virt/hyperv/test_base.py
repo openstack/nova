@@ -23,7 +23,9 @@ class HyperVBaseTestCase(test.NoDBTestCase):
     def setUp(self):
         super(HyperVBaseTestCase, self).setUp()
 
-        wmi_patcher = mock.patch('__builtin__.wmi', create=True)
+        self._mock_wmi = mock.MagicMock()
+        wmi_patcher = mock.patch('__builtin__.wmi', create=True,
+                                 new=self._mock_wmi)
         platform_patcher = mock.patch('sys.platform', 'win32')
 
         platform_patcher.start()
