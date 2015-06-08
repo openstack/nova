@@ -371,7 +371,7 @@ class HVType(Enum):
         try:
             value = hv_type.canonicalize(value)
         except exception.InvalidHypervisorVirtType:
-            msg = _("Hypervisr virt type '%s' is not valid") % value
+            msg = _("Hypervisor virt type '%s' is not valid") % value
             raise ValueError(msg)
         return super(HVType, self).coerce(obj, attr, value)
 
