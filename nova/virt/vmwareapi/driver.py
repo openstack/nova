@@ -32,6 +32,7 @@ from oslo_vmware import vim_util
 import six
 
 from nova import exception
+from nova import utils
 from nova.i18n import _, _LI, _LW
 from nova.openstack.common import versionutils
 from nova.virt import driver
@@ -149,6 +150,8 @@ class VMwareVCDriver(driver.ComputeDriver):
 
         self._session = VMwareAPISession(scheme=scheme)
 
+        self._check_min_version()
+
         # Update the PBM location if necessary
         if CONF.vmware.pbm_enabled:
             self._update_pbm_location()
@@ -198,6 +201,18 @@ class VMwareVCDriver(driver.ComputeDriver):
 
         # Register the OpenStack extension
         self._register_openstack_extension()
+
+    def _check_min_version(self):
+        min_version = utils.convert_version_to_int(constants.MIN_VC_VERSION)
+        vc_version = vim_util.get_vc_version(self._session)
+        LOG.info(_LI("VMware VC version: %s"), vc_version)
+        if min_version > utils.convert_version_to_int(vc_version):
+            # TODO(garyk): enforce this from M
+            LOG.warning(_LW('Running Nova with a VMware VC version less than '
+                            '%(version)s is deprecated. The required minimum '
+                            'version of VC will be raised to %(version)s '
+                            'in the 2016.1 release.'),
+                        {'version': constants.MIN_VC_VERSION})
 
     @property
     def need_legacy_block_device_info(self):
