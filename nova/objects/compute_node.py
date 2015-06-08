@@ -24,6 +24,7 @@ from nova import utils
 
 
 # TODO(berrange): Remove NovaObjectDictCompat
+@base.NovaObjectRegistry.register
 class ComputeNode(base.NovaPersistentObject, base.NovaObject,
                   base.NovaObjectDictCompat):
     # Version 1.0: Initial version
@@ -271,6 +272,7 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject,
         return self._cached_service
 
 
+@base.NovaObjectRegistry.register
 class ComputeNodeList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     #              ComputeNode <= version 1.2

@@ -97,6 +97,17 @@ def make_class_properties(cls):
         setattr(cls, name, property(getter, setter, deleter))
 
 
+# NOTE(danms): This is transitional to get the registration decorator
+# on everything before we make a cut over
+class NovaObjectRegistry(object):
+    classes = []
+
+    @classmethod
+    def register(cls, obj_cls):
+        cls.classes.append(obj_cls.obj_name())
+        return obj_cls
+
+
 class NovaObjectMetaclass(type):
     """Metaclass that allows tracking of object classes."""
 

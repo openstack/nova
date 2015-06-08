@@ -18,6 +18,7 @@ from nova.objects import fields
 
 
 # TODO(berrange): Remove NovaObjectDictCompat
+@base.NovaObjectRegistry.register
 class HVSpec(base.NovaObject,
              base.NovaObjectDictCompat):
     # Version 1.0: Initial version

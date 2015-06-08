@@ -20,6 +20,7 @@ from nova.objects import fields
 
 
 # TODO(berrange): Remove NovaObjectDictCompat
+@base.NovaObjectRegistry.register
 class Agent(base.NovaPersistentObject, base.NovaObject,
             base.NovaObjectDictCompat):
     VERSION = '1.0'
@@ -70,6 +71,7 @@ class Agent(base.NovaPersistentObject, base.NovaObject,
         self.obj_reset_changes()
 
 
+@base.NovaObjectRegistry.register
 class AgentList(base.ObjectListBase, base.NovaObject):
     VERSION = '1.0'
 

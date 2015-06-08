@@ -27,6 +27,7 @@ LOG = logging.getLogger(__name__)
 
 
 # TODO(berrange): Remove NovaObjectDictCompat
+@base.NovaObjectRegistry.register
 class Service(base.NovaPersistentObject, base.NovaObject,
               base.NovaObjectDictCompat):
     # Version 1.0: Initial version
@@ -179,6 +180,7 @@ class Service(base.NovaPersistentObject, base.NovaObject,
         db.service_destroy(self._context, self.id)
 
 
+@base.NovaObjectRegistry.register
 class ServiceList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     #              Service <= version 1.2

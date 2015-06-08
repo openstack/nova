@@ -38,6 +38,7 @@ def _expected_cols(expected_attrs):
 
 
 # TODO(berrange): Remove NovaObjectDictCompat
+@base.NovaObjectRegistry.register
 class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject,
                          base.NovaObjectDictCompat):
     # Version 1.0: Initial version
@@ -232,6 +233,7 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject,
         self.obj_reset_changes(fields=['instance'])
 
 
+@base.NovaObjectRegistry.register
 class BlockDeviceMappingList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: BlockDeviceMapping <= version 1.1

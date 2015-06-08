@@ -35,6 +35,7 @@ def all_things_equal(obj_a, obj_b):
 
 
 # TODO(berrange): Remove NovaObjectDictCompat
+@base.NovaObjectRegistry.register
 class NUMACell(base.NovaObject,
                base.NovaObjectDictCompat):
     # Version 1.0: Initial version
@@ -131,6 +132,7 @@ class NUMACell(base.NovaObject,
 
 
 # TODO(berrange): Remove NovaObjectDictCompat
+@base.NovaObjectRegistry.register
 class NUMAPagesTopology(base.NovaObject,
                         base.NovaObjectDictCompat):
     # Version 1.0: Initial version
@@ -160,6 +162,7 @@ class NUMAPagesTopology(base.NovaObject,
 
 
 # TODO(berrange): Remove NovaObjectDictCompat
+@base.NovaObjectRegistry.register
 class NUMATopology(base.NovaObject,
                    base.NovaObjectDictCompat):
     # Version 1.0: Initial version
@@ -210,6 +213,7 @@ class NUMATopology(base.NovaObject,
             for cell_dict in data_dict.get('cells', [])])
 
 
+@base.NovaObjectRegistry.register
 class NUMATopologyLimits(base.NovaObject):
     # Version 1.0: Initial version
     VERSION = '1.0'

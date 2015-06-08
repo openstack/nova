@@ -22,6 +22,7 @@ FLOATING_IP_OPTIONAL_ATTRS = ['fixed_ip']
 
 
 # TODO(berrange): Remove NovaObjectDictCompat
+@obj_base.NovaObjectRegistry.register
 class FloatingIP(obj_base.NovaPersistentObject, obj_base.NovaObject,
                  obj_base.NovaObjectDictCompat):
     # Version 1.0: Initial version
@@ -162,6 +163,7 @@ class FloatingIP(obj_base.NovaPersistentObject, obj_base.NovaObject,
         self._from_db_object(self._context, self, db_floatingip)
 
 
+@obj_base.NovaObjectRegistry.register
 class FloatingIPList(obj_base.ObjectListBase, obj_base.NovaObject):
     # Version 1.3: FloatingIP 1.2
     # Version 1.4: FloatingIP 1.3

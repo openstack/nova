@@ -22,6 +22,7 @@ from nova.virt import hardware
 
 
 # TODO(berrange): Remove NovaObjectDictCompat
+@base.NovaObjectRegistry.register
 class InstanceNUMACell(base.NovaObject,
                        base.NovaObjectDictCompat):
     # Version 1.0: Initial version
@@ -109,6 +110,7 @@ class InstanceNUMACell(base.NovaObject,
 
 
 # TODO(berrange): Remove NovaObjectDictCompat
+@base.NovaObjectRegistry.register
 class InstanceNUMATopology(base.NovaObject,
                            base.NovaObjectDictCompat):
     # Version 1.0: Initial version

@@ -21,6 +21,7 @@ from nova import utils
 from nova.virt import hardware
 
 
+@base.NovaObjectRegistry.register
 class ImageMeta(base.NovaObject):
     VERSION = '1.0'
 
@@ -98,6 +99,7 @@ class ImageMeta(base.NovaObject):
         return cls.from_dict(image_meta)
 
 
+@base.NovaObjectRegistry.register
 class ImageMetaProps(base.NovaObject):
     VERSION = ImageMeta.VERSION
 

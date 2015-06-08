@@ -24,6 +24,7 @@ KEYPAIR_TYPE_X509 = 'x509'
 
 
 # TODO(berrange): Remove NovaObjectDictCompat
+@base.NovaObjectRegistry.register
 class KeyPair(base.NovaPersistentObject, base.NovaObject,
               base.NovaObjectDictCompat):
     # Version 1.0: Initial version
@@ -78,6 +79,7 @@ class KeyPair(base.NovaPersistentObject, base.NovaObject,
         db.key_pair_destroy(self._context, self.user_id, self.name)
 
 
+@base.NovaObjectRegistry.register
 class KeyPairList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     #              KeyPair <= version 1.1

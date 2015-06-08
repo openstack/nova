@@ -17,6 +17,7 @@ from nova.objects import base
 from nova.objects import fields
 
 
+@base.NovaObjectRegistry.register
 class CellMapping(base.NovaTimestampObject, base.NovaObject):
     # Version 1.0: Initial version
     VERSION = '1.0'
