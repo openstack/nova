@@ -238,7 +238,7 @@ def pick_disk_driver_name(hypervisor_version, is_block_dev=False):
                         return 'qemu'
                     else:
                         raise
-                except processutils.ProcessExecutionError as exc:
+                except processutils.ProcessExecutionError:
                     LOG.debug("xend is not started")
                     # libvirt will try to use libxl toolstack
                     return 'qemu'
@@ -577,7 +577,7 @@ def is_mounted(mount_path, source=None):
 
         utils.execute(*check_cmd)
         return True
-    except processutils.ProcessExecutionError as exc:
+    except processutils.ProcessExecutionError:
         return False
     except OSError as exc:
         # info since it's not required to have this tool.
