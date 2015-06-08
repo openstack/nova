@@ -241,7 +241,8 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                 mox.IgnoreArg(), do_check_attach=False).AndReturn('fake_bdm')
         self.compute.network_api.setup_instance_network_on_host(
                 self.context, instance, self.compute.host)
-        self.compute.driver.spawn(self.context, instance, image,
+        self.compute.driver.spawn(self.context, instance,
+                mox.IsA(objects.ImageMeta),
                 injected_files=[], admin_password=None,
                 network_info=[],
                 block_device_info='fake_bdm')
@@ -317,7 +318,8 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         self.rt.instance_claim(self.context, instance, limits).AndReturn(
                 claims.Claim(self.context, instance, self.rt,
                              _fake_resources()))
-        self.compute.driver.spawn(self.context, instance, image_meta,
+        self.compute.driver.spawn(self.context, instance,
+                mox.IsA(objects.ImageMeta),
                 injected_files=[], admin_password=None,
                 network_info=[],
                 block_device_info='fake_bdm')

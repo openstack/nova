@@ -259,8 +259,8 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
         network_info = test_utils.get_test_network_info()
         network_info[0]['network']['subnets'][0]['meta']['dhcp_server'] = \
             '1.1.1.1'
-        image_info = test_utils.get_test_image_info(None, instance_ref)
-        self.connection.spawn(self.ctxt, instance_ref, image_info,
+        image_meta = test_utils.get_test_image_object(None, instance_ref)
+        self.connection.spawn(self.ctxt, instance_ref, image_meta,
                               [], 'herp', network_info=network_info)
         return instance_ref, network_info
 
@@ -344,7 +344,7 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
 
     @catch_notimplementederror
     def test_rescue(self):
-        image_meta = {}
+        image_meta = objects.ImageMeta.from_dict({})
         instance_ref, network_info = self._get_running_instance()
         self.connection.rescue(self.ctxt, instance_ref, network_info,
                                image_meta, '')
@@ -356,7 +356,7 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
 
     @catch_notimplementederror
     def test_unrescue_rescued_instance(self):
-        image_meta = {}
+        image_meta = objects.ImageMeta.from_dict({})
         instance_ref, network_info = self._get_running_instance()
         self.connection.rescue(self.ctxt, instance_ref, network_info,
                                image_meta, '')

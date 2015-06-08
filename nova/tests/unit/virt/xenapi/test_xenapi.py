@@ -758,7 +758,8 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
             # NOTE(tr3buchet): this is a terrible way to do this...
             network_info[0]['network']['subnets'][0]['dns'] = []
 
-        image_meta = IMAGE_FIXTURES[image_ref]["image_meta"]
+        image_meta = objects.ImageMeta.from_dict(
+            IMAGE_FIXTURES[image_ref]["image_meta"])
         self.conn.spawn(self.context, instance, image_meta, injected_files,
                         'herp', network_info, block_device_info)
         self.create_vm_record(self.conn, os_type, instance['name'])
@@ -1031,8 +1032,9 @@ iface eth0 inet6 static
         self.mox.StubOutWithMock(self.conn._vmops, '_inject_auto_disk_config')
         self.conn._vmops._inject_auto_disk_config(instance, mox.IgnoreArg())
         self.mox.ReplayAll()
-        self.conn.spawn(self.context, instance,
-                        IMAGE_FIXTURES['1']["image_meta"], [], 'herp', '')
+        image_meta = objects.ImageMeta.from_dict(
+            IMAGE_FIXTURES['1']["image_meta"])
+        self.conn.spawn(self.context, instance, image_meta, [], 'herp', '')
 
     def test_spawn_vlanmanager(self):
         self.flags(network_manager='nova.network.manager.VlanManager',
@@ -1276,9 +1278,10 @@ iface eth0 inet6 static
                                other_config={'osvol': True})
 
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
-        image_meta = {'id': IMAGE_VHD,
-                      'disk_format': 'vhd',
-                      'properties': {'vm_mode': 'xen'}}
+        image_meta = objects.ImageMeta.from_dict(
+            {'id': IMAGE_VHD,
+             'disk_format': 'vhd',
+             'properties': {'vm_mode': 'xen'}})
         conn.rescue(self.context, instance, [], image_meta, '')
 
         vm = xenapi_fake.get_record('VM', vm_ref)
@@ -1302,9 +1305,10 @@ iface eth0 inet6 static
         # bug #1227898
         instance = self._create_instance(obj=True)
         session = get_session()
-        image_meta = {'id': IMAGE_VHD,
-                      'disk_format': 'vhd',
-                      'properties': {'vm_mode': 'xen'}}
+        image_meta = objects.ImageMeta.from_dict(
+            {'id': IMAGE_VHD,
+             'disk_format': 'vhd',
+             'properties': {'vm_mode': 'xen'}})
         vm_ref = vm_utils.lookup(session, instance['name'])
         vdi_ref, vdi_rec = vm_utils.get_vdi_for_vm_safely(session, vm_ref)
 
@@ -1561,8 +1565,9 @@ iface eth0 inet6 static
         instance = create_instance_with_system_metadata(self.context,
                                                         instance_values)
         network_info = fake_network.fake_get_instance_nw_info(self)
-        image_meta = {'id': IMAGE_VHD,
-                      'disk_format': 'vhd'}
+        image_meta = objects.ImageMeta.from_dict(
+            {'id': IMAGE_VHD,
+             'disk_format': 'vhd'})
         if spawn:
             self.conn.spawn(self.context, instance, image_meta, [], 'herp',
                             network_info)
@@ -1771,7 +1776,8 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
 
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         network_info = fake_network.fake_get_instance_nw_info(self)
-        image_meta = {'id': instance['image_ref'], 'disk_format': 'vhd'}
+        image_meta = objects.ImageMeta.from_dict(
+            {'id': instance['image_ref'], 'disk_format': 'vhd'})
         base = xenapi_fake.create_vdi('hurr', 'fake')
         base_uuid = xenapi_fake.get_record('VDI', base)['uuid']
         cow = xenapi_fake.create_vdi('durr', 'fake')
@@ -1813,7 +1819,8 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
 
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         network_info = fake_network.fake_get_instance_nw_info(self)
-        image_meta = {'id': instance['image_ref'], 'disk_format': 'vhd'}
+        image_meta = objects.ImageMeta.from_dict(
+            {'id': instance['image_ref'], 'disk_format': 'vhd'})
         conn.finish_migration(self.context, self.migration, instance,
                               dict(base_copy='hurr', cow='durr'),
                               network_info, image_meta, resize_instance=True,
@@ -1840,7 +1847,8 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
                        "VDI_resize_online", fake_vdi_resize)
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         network_info = fake_network.fake_get_instance_nw_info(self)
-        image_meta = {'id': instance['image_ref'], 'disk_format': 'vhd'}
+        image_meta = objects.ImageMeta.from_dict(
+            {'id': instance['image_ref'], 'disk_format': 'vhd'})
         conn.finish_migration(self.context, self.migration, instance,
                               dict(base_copy='hurr', cow='durr'),
                               network_info, image_meta, resize_instance=True)
@@ -1857,7 +1865,8 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         network_info = fake_network.fake_get_instance_nw_info(self)
         # Resize instance would be determined by the compute call
-        image_meta = {'id': instance['image_ref'], 'disk_format': 'vhd'}
+        image_meta = objects.ImageMeta.from_dict(
+            {'id': instance['image_ref'], 'disk_format': 'vhd'})
         conn.finish_migration(self.context, self.migration, instance,
                               dict(base_copy='hurr', cow='durr'),
                               network_info, image_meta, resize_instance=False)
@@ -2324,9 +2333,10 @@ class XenAPIAutoDiskConfigTestCase(stubs.XenAPITestBase):
 
         vdi_uuid = session.call_xenapi('VDI.get_record', vdi_ref)['uuid']
         vdis = {'root': {'uuid': vdi_uuid, 'ref': vdi_ref}}
-        image_meta = {'id': 'null',
-                      'disk_format': 'vhd',
-                      'properties': {'vm_mode': 'xen'}}
+        image_meta = objects.ImageMeta.from_dict(
+            {'id': 'null',
+             'disk_format': 'vhd',
+             'properties': {'vm_mode': 'xen'}})
         self.conn._vmops._attach_disks(instance, image_meta, vm_ref,
                 instance['name'], vdis, disk_image_type, "fake_nw_inf")
 
@@ -2444,9 +2454,10 @@ class XenAPIGenerateLocal(stubs.XenAPITestBase):
             vdi_key = 'iso'
         vdis = {vdi_key: {'uuid': vdi_uuid, 'ref': vdi_ref}}
         self.called = False
-        image_meta = {'id': 'null',
-                      'disk_format': 'vhd',
-                      'properties': {'vm_mode': 'xen'}}
+        image_meta = objects.ImageMeta.from_dict(
+            {'id': 'null',
+             'disk_format': 'vhd',
+             'properties': {'vm_mode': 'xen'}})
         self.conn._vmops._attach_disks(instance, image_meta, vm_ref,
                     instance['name'], vdis, disk_image_type, "fake_nw_inf")
         self.assertTrue(self.called)

@@ -276,8 +276,8 @@ class ComputeDriver(object):
         :param instance: nova.objects.instance.Instance
                          This function should use the data there to guide
                          the creation of the new instance.
-        :param image_meta: image object returned by nova.image.glance that
-                           defines the image from which to boot this instance
+        :param nova.objects.ImageMeta image_meta:
+            The metadata of the image of the instance.
         :param injected_files: User files to inject into instance.
         :param admin_password: Administrator password to set in instance.
         :param bdms: block-device-mappings to use for rebuild
@@ -313,8 +313,8 @@ class ComputeDriver(object):
         :param instance: nova.objects.instance.Instance
                          This function should use the data there to guide
                          the creation of the new instance.
-        :param image_meta: image object returned by nova.image.glance that
-                           defines the image from which to boot this instance
+        :param nova.objects.ImageMeta image_meta:
+            The metadata of the image of the instance.
         :param injected_files: User files to inject into instance.
         :param admin_password: Administrator password to set in instance.
         :param network_info:
@@ -528,8 +528,8 @@ class ComputeDriver(object):
 
         :param nova.objects.instance.Instance instance:
             The instance which will get an additional network interface.
-        :param dict image_meta:
-            A dictionary which describes metadata of the image of the instance.
+        :param nova.objects.ImageMeta image_meta:
+            The metadata of the image of the instance.
         :param nova.network.model.NetworkInfo vif:
             The object which has the information about the interface to attach.
 
@@ -611,9 +611,8 @@ class ComputeDriver(object):
         :param disk_info: the newly transferred disk information
         :param network_info:
            :py:meth:`~nova.network.manager.NetworkManager.get_instance_nw_info`
-        :param image_meta: image object returned by nova.image.glance that
-                           defines the image from which this instance
-                           was created
+        :param nova.objects.ImageMeta image_meta:
+            The metadata of the image of the instance.
         :param resize_instance: True if the instance is being resized,
                                 False otherwise
         :param block_device_info: instance volume block device info
@@ -727,7 +726,15 @@ class ComputeDriver(object):
                rescue_password):
         """Rescue the specified instance.
 
-        :param instance: nova.objects.instance.Instance
+        :param nova.context.RequestContext context:
+            The context for the rescue.
+        :param nova.objects.instance.Instance instance:
+            The instance being rescued.
+        :param nova.network.model.NetworkInfo network_info:
+            Necessary network information for the resume.
+        :param nova.objects.ImageMeta image_meta:
+            The metadata of the image of the instance.
+        :param rescue_password: new root password to set for rescue.
         """
         raise NotImplementedError()
 
@@ -1535,7 +1542,15 @@ class ComputeDriver(object):
         raise NotImplementedError()
 
     def default_root_device_name(self, instance, image_meta, root_bdm):
-        """Provide a default root device name for the driver."""
+        """Provide a default root device name for the driver.
+
+        :param nova.objects.instance.Instance instance:
+            The instance to get the root device for.
+        :param nova.objects.ImageMeta image_meta:
+            The metadata of the image of the instance.
+        :param nova.objects.BlockDeviceMapping root_bdm:
+            The description of the root device.
+        """
         raise NotImplementedError()
 
     def default_device_names_for_instance(self, instance, root_device_name,
@@ -1581,9 +1596,8 @@ class ComputeDriver(object):
 
         :param context:  request context
         :param instance: nova.objects.instance.Instance to be quiesced
-        :param image_meta: image object returned by nova.image.glance that
-                           defines the image from which this instance
-                           was created
+        :param nova.objects.ImageMeta image_meta:
+            The metadata of the image of the instance.
         """
         raise NotImplementedError()
 
@@ -1596,9 +1610,8 @@ class ComputeDriver(object):
 
         :param context:  request context
         :param instance: nova.objects.instance.Instance to be unquiesced
-        :param image_meta: image object returned by nova.image.glance that
-                           defines the image from which this instance
-                           was created
+        :param nova.objects.ImageMeta image_meta:
+            The metadata of the image of the instance.
         """
         raise NotImplementedError()
 

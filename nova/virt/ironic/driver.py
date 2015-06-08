@@ -704,8 +704,6 @@ class IronicDriver(virt_driver.ComputeDriver):
         """
         LOG.debug('Spawn called for instance', instance=instance)
 
-        image_meta = objects.ImageMeta.from_dict(image_meta)
-
         # The compute manager is meant to know the node uuid, so missing uuid
         # is a significant issue. It may mean we've been passed the wrong data.
         node_uuid = instance.get('node')
@@ -1130,8 +1128,6 @@ class IronicDriver(virt_driver.ComputeDriver):
 
         """
         LOG.debug('Rebuild called for instance', instance=instance)
-
-        image_meta = objects.ImageMeta.from_dict(image_meta)
 
         instance.task_state = task_states.REBUILD_SPAWNING
         instance.save(expected_task_state=[task_states.REBUILDING])

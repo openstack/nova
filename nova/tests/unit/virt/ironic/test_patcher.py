@@ -28,7 +28,7 @@ class IronicDriverFieldsTestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(IronicDriverFieldsTestCase, self).setUp()
-        self.image_meta = ironic_utils.get_test_image_meta_object()
+        self.image_meta = ironic_utils.get_test_image_meta()
         self.flavor = ironic_utils.get_test_flavor()
         self.ctx = nova_context.get_admin_context()
         self.instance = fake_instance.fake_instance_obj(self.ctx)
