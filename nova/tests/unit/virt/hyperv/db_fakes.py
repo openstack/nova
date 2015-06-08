@@ -56,7 +56,7 @@ def get_fake_image_data(project_id, user_id):
             'mac_address': "de:ad:be:ef:be:ef",
             'flavor': 'm1.tiny',
             'properties': {
-                constants.IMAGE_PROP_VM_GEN: constants.IMAGE_PROP_VM_GEN_1}
+                "hw_machine_type": constants.IMAGE_PROP_VM_GEN_1}
             }
 
 

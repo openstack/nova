@@ -18,6 +18,8 @@ import mock
 from oslo_utils import units
 
 from nova import exception
+from nova import objects
+from nova import test
 from nova.tests.unit import fake_instance
 from nova.tests.unit.virt.hyperv import test_base
 from nova.virt.hyperv import migrationops
@@ -219,9 +221,12 @@ class MigrationOpsTestCase(test_base.HyperVBaseTestCase):
     @mock.patch.object(migrationops.MigrationOps,
                        '_check_and_attach_config_drive')
     @mock.patch.object(migrationops.MigrationOps, '_revert_migration_files')
-    def _check_finish_revert_migration(self, mock_revert_migration_files,
+    @mock.patch.object(objects.ImageMeta, "from_instance")
+    def _check_finish_revert_migration(self, mock_image,
+                                       mock_revert_migration_files,
                                        mock_check_attach_config_drive,
                                        boot_from_volume=False):
+        mock_image.return_value = objects.ImageMeta.from_dict({})
         mock_instance = fake_instance.fake_instance_obj(self.context)
         mock_ebs_root_in_block_devices = (
             self._migrationops._volumeops.ebs_root_in_block_devices)
@@ -248,10 +253,10 @@ class MigrationOpsTestCase(test_base.HyperVBaseTestCase):
             fake_root_path = None
 
         lookup_ephemeral.assert_called_with(mock_instance.name)
-        image_meta = (
-            self._migrationops._imagecache.get_image_details.return_value)
         get_image_vm_gen = self._migrationops._vmops.get_image_vm_generation
-        get_image_vm_gen.assert_called_once_with(fake_root_path, image_meta)
+        get_image_vm_gen.assert_called_once_with(
+            fake_root_path,
+            test.MatchType(objects.ImageMeta))
         self._migrationops._vmops.create_instance.assert_called_once_with(
             mock_instance, mock.sentinel.network_info,
             mock.sentinel.block_device, fake_root_path,
