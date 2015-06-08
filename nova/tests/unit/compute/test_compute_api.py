@@ -1991,6 +1991,7 @@ class _ComputeAPIUnitTestMixIn(object):
              'image_id': None, 'volume_id': None, 'disk_bus': None,
              'volume_size': None, 'source_type': 'snapshot',
              'device_type': None, 'snapshot_id': '1-snapshot',
+             'device_name': '/dev/vda',
              'destination_type': 'volume', 'delete_on_termination': False})
 
         # All the db_only fields and the volume ones are removed

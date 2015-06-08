@@ -646,8 +646,7 @@ class TestBlockDeviceDict(test.NoDBTestCase):
 
     def test_image_mapping(self):
         removed_fields = ['id', 'instance_uuid', 'connection_info',
-                          'device_name', 'created_at', 'updated_at',
-                          'deleted_at', 'deleted']
+                          'created_at', 'updated_at', 'deleted_at', 'deleted']
         for bdm in self.new_mapping:
             mapping_bdm = fake_block_device.FakeDbBlockDeviceDict(
                     bdm).get_image_mapping()
@@ -662,6 +661,7 @@ class TestBlockDeviceDict(test.NoDBTestCase):
         self.assertEqual(template.volume_size, snapshot['volume_size'])
         self.assertEqual(template.delete_on_termination,
                          snapshot['delete_on_termination'])
+        self.assertEqual(template.device_name, snapshot['device_name'])
         for key in ['disk_bus', 'device_type', 'boot_index']:
             self.assertEqual(snapshot[key], template[key])
 

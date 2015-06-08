@@ -1012,8 +1012,8 @@ class ServerActionsControllerTestV21(test.TestCase):
         self.assertEqual(bdms[0]['source_type'], 'snapshot')
         self.assertEqual(bdms[0]['destination_type'], 'volume')
         self.assertEqual(bdms[0]['snapshot_id'], snapshot['id'])
-        for fld in ('connection_info', 'id',
-                    'instance_uuid', 'device_name'):
+        self.assertEqual('/dev/vda', bdms[0]['device_name'])
+        for fld in ('connection_info', 'id', 'instance_uuid'):
             self.assertNotIn(fld, bdms[0])
         for k in extra_properties.keys():
             self.assertEqual(properties[k], extra_properties[k])
