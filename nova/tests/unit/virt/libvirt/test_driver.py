@@ -248,7 +248,7 @@ class FakeVirtDomain(object):
     def createWithFlags(self, launch_flags):
         pass
 
-    def XMLDesc(self, *args):
+    def XMLDesc(self, flags):
         return self._fake_dom_xml
 
     def UUIDString(self):
@@ -449,7 +449,7 @@ class FakeNodeDevice(object):
     def __init__(self, fakexml):
         self.xml = fakexml
 
-    def XMLDesc(self, *args):
+    def XMLDesc(self, flags):
         return self.xml
 
 
@@ -812,7 +812,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 pci_devices[0]['hypervisor_name'] = 'marked'
                 pass
 
-            def XMLDesc(self, flag):
+            def XMLDesc(self, flags):
                 return fake_domXML1
 
         guest = libvirt_guest.Guest(FakeDomain())
@@ -856,7 +856,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             def detachDeviceFlags(self, xml, flags):
                 pass
 
-            def XMLDesc(self, flag):
+            def XMLDesc(self, flags):
                 return fake_domXML1
 
         guest = libvirt_guest.Guest(FakeDomain())
@@ -5764,7 +5764,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         vdmock = self.mox.CreateMock(fakelibvirt.virDomain)
         self.mox.StubOutWithMock(vdmock, "migrateToURI2")
         _bandwidth = CONF.libvirt.live_migration_bandwidth
-        vdmock.XMLDesc(fakelibvirt.VIR_DOMAIN_XML_MIGRATABLE).AndReturn(
+        vdmock.XMLDesc(flags=fakelibvirt.VIR_DOMAIN_XML_MIGRATABLE).AndReturn(
                 initial_xml)
         vdmock.migrateToURI2(CONF.libvirt.live_migration_uri % 'dest',
                              None,
@@ -6069,8 +6069,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                 _bandwidth).AndRaise(
                                         fakelibvirt.libvirtError('ERR'))
         else:
-            vdmock.XMLDesc(fakelibvirt.VIR_DOMAIN_XML_MIGRATABLE).AndReturn(
-                    FakeVirtDomain().XMLDesc(0))
+            vdmock.XMLDesc(flags=fakelibvirt.VIR_DOMAIN_XML_MIGRATABLE
+            ).AndReturn(FakeVirtDomain().XMLDesc(flags=0))
             vdmock.migrateToURI2(CONF.libvirt.live_migration_uri % 'dest',
                                  None,
                                  mox.IgnoreArg(),
@@ -6105,8 +6105,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(vdmock, 'migrateToURI2')
         self.mox.StubOutWithMock(vdmock, 'migrateToURI')
         _bandwidth = CONF.libvirt.live_migration_bandwidth
-        vdmock.XMLDesc(fakelibvirt.VIR_DOMAIN_XML_MIGRATABLE).AndReturn(
-                FakeVirtDomain().XMLDesc(0))
+        vdmock.XMLDesc(flags=fakelibvirt.VIR_DOMAIN_XML_MIGRATABLE).AndReturn(
+                FakeVirtDomain().XMLDesc(flags=0))
         unsupported_config_error = fakelibvirt.libvirtError('ERR')
         unsupported_config_error.err = (
             fakelibvirt.VIR_ERR_CONFIG_UNSUPPORTED,)
@@ -6852,7 +6852,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         # Preparing mocks
         vdmock = self.mox.CreateMock(fakelibvirt.virDomain)
         self.mox.StubOutWithMock(vdmock, "XMLDesc")
-        vdmock.XMLDesc(0).AndReturn(dummyxml)
+        vdmock.XMLDesc(flags=0).AndReturn(dummyxml)
 
         def fake_lookup(instance_name):
             if instance_name == instance.name:
@@ -6942,7 +6942,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         # Preparing mocks
         vdmock = self.mox.CreateMock(fakelibvirt.virDomain)
         self.mox.StubOutWithMock(vdmock, "XMLDesc")
-        vdmock.XMLDesc(0).AndReturn(dummyxml)
+        vdmock.XMLDesc(flags=0).AndReturn(dummyxml)
 
         def fake_lookup(instance_name):
             if instance_name == instance.name:
@@ -7009,7 +7009,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         # Preparing mocks
         vdmock = self.mox.CreateMock(fakelibvirt.virDomain)
         self.mox.StubOutWithMock(vdmock, "XMLDesc")
-        vdmock.XMLDesc(0).AndReturn(dummyxml)
+        vdmock.XMLDesc(flags=0).AndReturn(dummyxml)
 
         def fake_lookup(instance_name):
             if instance_name == instance.name:
@@ -10193,7 +10193,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         vdmock = self.mox.CreateMock(fakelibvirt.virDomain)
         self.mox.StubOutWithMock(vdmock, "XMLDesc")
-        vdmock.XMLDesc(0).AndReturn(dummyxml)
+        vdmock.XMLDesc(flags=0).AndReturn(dummyxml)
 
         def fake_lookup(instance_name):
             if instance_name == instance['name']:
@@ -10212,7 +10212,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         vdmock = self.mox.CreateMock(fakelibvirt.virDomain)
         self.mox.StubOutWithMock(vdmock, "XMLDesc")
-        vdmock.XMLDesc(0).AndReturn(dummyxml)
+        vdmock.XMLDesc(flags=0).AndReturn(dummyxml)
 
         def fake_lookup(instance_name):
             if instance_name == instance['name']:
@@ -10233,7 +10233,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         vdmock = self.mox.CreateMock(fakelibvirt.virDomain)
         self.mox.StubOutWithMock(vdmock, "XMLDesc")
-        vdmock.XMLDesc(0).AndReturn(dummyxml)
+        vdmock.XMLDesc(flags=0).AndReturn(dummyxml)
 
         def fake_lookup(instance_name):
             if instance_name == instance['name']:
@@ -10252,7 +10252,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         vdmock = self.mox.CreateMock(fakelibvirt.virDomain)
         self.mox.StubOutWithMock(vdmock, "XMLDesc")
-        vdmock.XMLDesc(0).AndReturn(dummyxml)
+        vdmock.XMLDesc(flags=0).AndReturn(dummyxml)
 
         def fake_lookup(instance_name):
             if instance_name == instance['name']:
@@ -10877,8 +10877,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             drvr._swap_volume(mock_dom, srcfile, dstfile, 1)
 
             mock_dom.XMLDesc.assert_called_once_with(
-                fakelibvirt.VIR_DOMAIN_XML_INACTIVE |
-                fakelibvirt.VIR_DOMAIN_XML_SECURE)
+                flags=(fakelibvirt.VIR_DOMAIN_XML_INACTIVE |
+                       fakelibvirt.VIR_DOMAIN_XML_SECURE))
             mock_dom.blockRebase.assert_called_once_with(
                 srcfile, dstfile, 0,
                 fakelibvirt.VIR_DOMAIN_BLOCK_REBASE_COPY |
@@ -10973,9 +10973,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             drvr._live_snapshot(self.context, self.test_instance, mock_dom,
                                 srcfile, dstfile, "qcow2", {})
 
-            mock_dom.XMLDesc.assert_called_once_with(
+            mock_dom.XMLDesc.assert_called_once_with(flags=(
                 fakelibvirt.VIR_DOMAIN_XML_INACTIVE |
-                fakelibvirt.VIR_DOMAIN_XML_SECURE)
+                fakelibvirt.VIR_DOMAIN_XML_SECURE))
             mock_dom.blockRebase.assert_called_once_with(
                 srcfile, dltfile, 0,
                 fakelibvirt.VIR_DOMAIN_BLOCK_REBASE_COPY |
@@ -12022,7 +12022,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             def __init__(self):
                 super(FakeExceptionDomain, self).__init__()
 
-            def XMLDesc(self, *args):
+            def XMLDesc(self, flags):
                 raise fakelibvirt.libvirtError("Libvirt error")
 
         def fake_get_domain(self, instance):
@@ -13007,7 +13007,7 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
         domain = FakeVirtDomain(fake_xml=self.dom_xml)
         self.mox.StubOutWithMock(domain, 'XMLDesc')
         self.mox.StubOutWithMock(domain, 'snapshotCreateXML')
-        domain.XMLDesc(0).AndReturn(self.dom_xml)
+        domain.XMLDesc(flags=0).AndReturn(self.dom_xml)
 
         snap_xml_src = (
            '<domainsnapshot>\n'
@@ -13076,7 +13076,7 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
         domain = FakeVirtDomain(fake_xml=self.dom_xml)
         self.mox.StubOutWithMock(domain, 'XMLDesc')
         self.mox.StubOutWithMock(domain, 'snapshotCreateXML')
-        domain.XMLDesc(0).AndReturn(self.dom_xml)
+        domain.XMLDesc(flags=0).AndReturn(self.dom_xml)
 
         snap_xml_src = (
            '<domainsnapshot>\n'
@@ -13191,7 +13191,7 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
 
         domain = FakeVirtDomain(fake_xml=self.dom_xml)
         self.mox.StubOutWithMock(domain, 'XMLDesc')
-        domain.XMLDesc(0).AndReturn(self.dom_xml)
+        domain.XMLDesc(flags=0).AndReturn(self.dom_xml)
 
         self.mox.StubOutWithMock(self.drvr._host, 'get_domain')
         self.mox.StubOutWithMock(self.drvr._host, 'has_min_version')
@@ -13225,7 +13225,7 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
 
         domain = FakeVirtDomain(fake_xml=self.dom_xml)
         self.mox.StubOutWithMock(domain, 'XMLDesc')
-        domain.XMLDesc(0).AndReturn(self.dom_xml)
+        domain.XMLDesc(flags=0).AndReturn(self.dom_xml)
 
         self.mox.StubOutWithMock(self.drvr._host, 'get_domain')
         self.mox.StubOutWithMock(self.drvr._host, 'has_min_version')
@@ -13261,7 +13261,7 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
 
         domain = FakeVirtDomain(fake_xml=self.dom_xml)
         self.mox.StubOutWithMock(domain, 'XMLDesc')
-        domain.XMLDesc(0).AndReturn(self.dom_xml)
+        domain.XMLDesc(flags=0).AndReturn(self.dom_xml)
 
         self.mox.StubOutWithMock(self.drvr._host, 'get_domain')
         self.mox.StubOutWithMock(self.drvr._host, 'has_min_version')
@@ -13294,7 +13294,7 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
 
         domain = FakeVirtDomain(fake_xml=self.dom_xml)
         self.mox.StubOutWithMock(domain, 'XMLDesc')
-        domain.XMLDesc(0).AndReturn(self.dom_xml)
+        domain.XMLDesc(flags=0).AndReturn(self.dom_xml)
 
         self.mox.StubOutWithMock(self.drvr._host, 'get_domain')
         self.mox.StubOutWithMock(self.drvr._host, 'has_min_version')
@@ -13412,7 +13412,7 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
             def __init__(self, *args, **kwargs):
                 super(FakeNetdiskDomain, self).__init__(*args, **kwargs)
 
-            def XMLDesc(self, *args):
+            def XMLDesc(self, flags):
                 return self.dom_netdisk_xml
 
         # libvirt lib doesn't have VIR_DOMAIN_BLOCK_REBASE_RELATIVE
@@ -13424,7 +13424,7 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
 
         domain = FakeNetdiskDomain(fake_xml=self.dom_netdisk_xml)
         self.mox.StubOutWithMock(domain, 'XMLDesc')
-        domain.XMLDesc(0).AndReturn(self.dom_netdisk_xml)
+        domain.XMLDesc(flags=0).AndReturn(self.dom_netdisk_xml)
 
         self.mox.StubOutWithMock(self.drvr._host, 'get_domain')
         self.mox.StubOutWithMock(self.drvr._host, 'has_min_version')
@@ -13454,7 +13454,7 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
             def __init__(self, *args, **kwargs):
                 super(FakeNetdiskDomain, self).__init__(*args, **kwargs)
 
-            def XMLDesc(self, *args):
+            def XMLDesc(self, flags):
                 return self.dom_netdisk_xml
 
         self.stubs.Set(libvirt_driver, 'libvirt', fakelibvirt)
@@ -13464,7 +13464,7 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
 
         domain = FakeNetdiskDomain(fake_xml=self.dom_netdisk_xml)
         self.mox.StubOutWithMock(domain, 'XMLDesc')
-        domain.XMLDesc(0).AndReturn(self.dom_netdisk_xml)
+        domain.XMLDesc(flags=0).AndReturn(self.dom_netdisk_xml)
 
         self.mox.StubOutWithMock(self.drvr._host, 'get_domain')
         self.mox.StubOutWithMock(self.drvr._host, 'has_min_version')
@@ -13495,7 +13495,7 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
             def __init__(self, *args, **kwargs):
                 super(FakeNetdiskDomain, self).__init__(*args, **kwargs)
 
-            def XMLDesc(self, *args):
+            def XMLDesc(self, flags):
                 return self.dom_netdisk_xml
 
         # libvirt lib doesn't have VIR_DOMAIN_BLOCK_COMMIT_RELATIVE
@@ -13507,7 +13507,7 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
 
         domain = FakeNetdiskDomain(fake_xml=self.dom_netdisk_xml)
         self.mox.StubOutWithMock(domain, 'XMLDesc')
-        domain.XMLDesc(0).AndReturn(self.dom_netdisk_xml)
+        domain.XMLDesc(flags=0).AndReturn(self.dom_netdisk_xml)
 
         self.mox.StubOutWithMock(self.drvr._host, 'get_domain')
         self.mox.StubOutWithMock(self.drvr._host, 'has_min_version')
@@ -13536,7 +13536,7 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
             def __init__(self, *args, **kwargs):
                 super(FakeNetdiskDomain, self).__init__(*args, **kwargs)
 
-            def XMLDesc(self, *args):
+            def XMLDesc(self, flags):
                 return self.dom_netdisk_xml
 
         self.stubs.Set(libvirt_driver, 'libvirt', fakelibvirt)
@@ -13546,7 +13546,7 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
 
         domain = FakeNetdiskDomain(fake_xml=self.dom_netdisk_xml)
         self.mox.StubOutWithMock(domain, 'XMLDesc')
-        domain.XMLDesc(0).AndReturn(self.dom_netdisk_xml)
+        domain.XMLDesc(flags=0).AndReturn(self.dom_netdisk_xml)
 
         self.mox.StubOutWithMock(self.drvr._host, 'get_domain')
         self.mox.StubOutWithMock(self.drvr._host, 'has_min_version')

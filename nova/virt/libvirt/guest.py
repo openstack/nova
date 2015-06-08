@@ -220,6 +220,21 @@ class Guest(object):
         flags |= live and libvirt.VIR_DOMAIN_AFFECT_LIVE or 0
         self._domain.detachDeviceFlags(conf.to_xml(), flags=flags)
 
+    def get_xml_desc(self, dump_inactive=False, dump_sensitive=False,
+                     dump_migratable=False):
+        """Returns xml description of guest.
+
+        :param dump_inactive: Dump inactive domain information
+        :param dump_sensitive: Dump security sensitive information
+        :param dump_migratable: Dump XML suitable for migration
+
+        :returns string: XML description of the guest
+        """
+        flags = dump_inactive and libvirt.VIR_DOMAIN_XML_INACTIVE or 0
+        flags |= dump_sensitive and libvirt.VIR_DOMAIN_XML_SECURE or 0
+        flags |= dump_migratable and libvirt.VIR_DOMAIN_XML_MIGRATABLE or 0
+        return self._domain.XMLDesc(flags=flags)
+
 
 class GuestVCPUInfo(object):
     def __init__(self, id, cpu, state, time):

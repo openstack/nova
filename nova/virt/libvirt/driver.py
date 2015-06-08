@@ -870,8 +870,7 @@ class LibvirtDriver(driver.ComputeDriver):
         """
         guest = self._host.get_guest(instance)
 
-        # TODO(sahid): Should be moved in Guest object.
-        xml = guest._domain.XMLDesc(0)
+        xml = guest.get_xml_desc()
         tree = etree.fromstring(xml)
 
         # The 'serial' device is the base for x86 platforms. Other platforms
@@ -1072,9 +1071,7 @@ class LibvirtDriver(driver.ComputeDriver):
         guest = libvirt_guest.Guest(domain)
 
         # Save a copy of the domain's persistent XML file
-        xml = domain.XMLDesc(
-            libvirt.VIR_DOMAIN_XML_INACTIVE |
-            libvirt.VIR_DOMAIN_XML_SECURE)
+        xml = guest.get_xml_desc(dump_inactive=True, dump_sensitive=True)
 
         # Abort is an idempotent operation, so make sure any block
         # jobs which may have failed are ended.
@@ -1152,7 +1149,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                  block_device_info=None):
         try:
             guest = self._host.get_guest(instance)
-            xml = guest._domain.XMLDesc(0)
+            xml = guest.get_xml_desc()
         except exception.InstanceNotFound:
             image_meta = utils.get_image_from_system_metadata(
                 instance.system_metadata)
@@ -1496,9 +1493,7 @@ class LibvirtDriver(driver.ComputeDriver):
         guest = libvirt_guest.Guest(domain)
 
         # Save a copy of the domain's persistent XML file
-        xml = domain.XMLDesc(
-            libvirt.VIR_DOMAIN_XML_INACTIVE |
-            libvirt.VIR_DOMAIN_XML_SECURE)
+        xml = guest.get_xml_desc(dump_inactive=True, dump_sensitive=True)
 
         # Abort is an idempotent operation, so make sure any block
         # jobs which may have failed are ended.
@@ -1587,7 +1582,10 @@ class LibvirtDriver(driver.ComputeDriver):
 
         """
 
-        xml = domain.XMLDesc(0)
+        # TODO(sahid): An object Guest should be passed instead of
+        # a "domain" as virDomain.
+        guest = libvirt_guest.Guest(domain)
+        xml = guest.get_xml_desc()
         xml_doc = etree.fromstring(xml)
 
         device_info = vconfig.LibvirtConfigGuest()
@@ -1815,7 +1813,7 @@ class LibvirtDriver(driver.ComputeDriver):
         my_dev = None
         active_disk = None
 
-        xml = virt_dom.XMLDesc(0)
+        xml = guest.get_xml_desc()
         xml_doc = etree.fromstring(xml)
 
         device_info = vconfig.LibvirtConfigGuest()
@@ -2439,8 +2437,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def get_console_output(self, context, instance):
         guest = self._host.get_guest(instance)
 
-        # TODO(sahid): Should be moved in Guest object.
-        xml = guest._domain.XMLDesc(0)
+        xml = guest.get_xml_desc()
         tree = etree.fromstring(xml)
 
         console_types = {}
@@ -2521,8 +2518,7 @@ class LibvirtDriver(driver.ComputeDriver):
         def get_vnc_port_for_instance(instance_name):
             guest = self._host.get_guest(instance)
 
-            # TODO(sahid): Should be moved in Guest object.
-            xml = guest._domain.XMLDesc(0)
+            xml = guest.get_xml_desc()
             xml_dom = etree.fromstring(xml)
 
             graphic = xml_dom.find("./devices/graphics[@type='vnc']")
@@ -2541,11 +2537,7 @@ class LibvirtDriver(driver.ComputeDriver):
         def get_spice_ports_for_instance(instance_name):
             guest = self._host.get_guest(instance)
 
-            # TODO(sahid): We are converting all calls from a
-            # virDomain object to use nova.virt.libvirt.Guest.
-            # We should be able to remove virt_dom at the end.
-            virt_dom = guest._domain
-            xml = virt_dom.XMLDesc(0)
+            xml = guest.get_xml_desc()
             xml_dom = etree.fromstring(xml)
 
             graphic = xml_dom.find("./devices/graphics[@type='spice']")
@@ -2951,7 +2943,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 guest.detach_device(self._get_guest_pci_device(dev), live=True)
                 # after detachDeviceFlags returned, we should check the dom to
                 # ensure the detaching is finished
-                xml = guest._domain.XMLDesc(0)
+                xml = guest.get_xml_desc()
                 xml_doc = etree.fromstring(xml)
                 guest_config = vconfig.LibvirtConfigGuest()
                 guest_config.parse_dom(xml_doc)
@@ -4477,11 +4469,15 @@ class LibvirtDriver(driver.ComputeDriver):
         devices = []
         for dom in self._host.list_instance_domains():
             try:
-                doc = etree.fromstring(dom.XMLDesc(0))
+                # TODO(sahid): list_instance_domain should
+                # be renamed as list_guest and so returning
+                # Guest objects.
+                guest = libvirt_guest.Guest(dom)
+                doc = etree.fromstring(guest.get_xml_desc())
             except libvirt.libvirtError as e:
                 LOG.warn(_LW("couldn't obtain the XML from domain:"
                              " %(uuid)s, exception: %(ex)s") %
-                         {"uuid": dom.UUIDString(), "ex": e})
+                         {"uuid": guest.id, "ex": e})
                 continue
             except Exception:
                 continue
@@ -5441,6 +5437,8 @@ class LibvirtDriver(driver.ComputeDriver):
         This method is intended to be run in a background thread and will
         block that thread until the migration is finished or failed.
         """
+        # TODO(sahid): Should pass a guest to this method.
+        guest = libvirt_guest.Guest(dom)
 
         try:
             if block_migration:
@@ -5466,7 +5464,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                  None,
                                  CONF.libvirt.live_migration_bandwidth)
             else:
-                old_xml_str = dom.XMLDesc(migratable_flag)
+                old_xml_str = guest.get_xml_desc(dump_migratable=True)
                 new_xml_str = self._update_xml(old_xml_str,
                                                volume,
                                                listen_addrs)
@@ -6128,13 +6126,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                block_device_info=None):
         try:
             guest = self._host.get_guest(instance)
-
-            # TODO(sahid): We are converting all calls from a
-            # virDomain object to use nova.virt.libvirt.Guest.
-            # We should be able to remove dom at the end.
-            dom = guest._domain
-
-            xml = dom.XMLDesc(0)
+            xml = guest.get_xml_desc()
         except libvirt.libvirtError as ex:
             error_code = ex.get_error_code()
             LOG.warn(_LW('Error from libvirt while getting description of '
@@ -6156,8 +6148,13 @@ class LibvirtDriver(driver.ComputeDriver):
         disk_over_committed_size = 0
         for dom in self._host.list_instance_domains():
             try:
-                xml = dom.XMLDesc(0)
-                disk_infos = self._get_instance_disk_info(dom.name(), xml)
+                # TODO(sahid): list_instance_domain should
+                # be renamed as list_guest and so returning
+                # Guest objects.
+                guest = libvirt_guest.Guest(dom)
+                xml = guest.get_xml_desc()
+
+                disk_infos = self._get_instance_disk_info(guest.name, xml)
                 for info in disk_infos:
                     disk_over_committed_size += int(
                         info['over_committed_disk_size'])
@@ -6166,7 +6163,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 LOG.warn(_LW(
                     'Error from libvirt while getting description of '
                     '%(instance_name)s: [Error Code %(error_code)s] %(ex)s'
-                ) % {'instance_name': dom.name(),
+                ) % {'instance_name': guest.name,
                      'error_code': error_code,
                      'ex': ex})
             except OSError as e:
@@ -6175,14 +6172,14 @@ class LibvirtDriver(driver.ComputeDriver):
                                  'it is trying to get disk %(i_name)s, '
                                  'but disk file was removed by concurrent '
                                  'operations such as resize.'),
-                                {'i_name': dom.name()})
+                                {'i_name': guest.name})
                 elif e.errno == errno.EACCES:
                     LOG.warn(_LW('Periodic task is updating the host stat, '
                                  'it is trying to get disk %(i_name)s, '
                                  'but access is denied. It is most likely '
                                  'due to a VM that exists on the compute '
                                  'node but is not managed by Nova.'),
-                             {'i_name': dom.name()})
+                             {'i_name': guest.name})
                 else:
                     raise
             except exception.VolumeBDMPathNotFound as e:
@@ -6191,7 +6188,7 @@ class LibvirtDriver(driver.ComputeDriver):
                              'but the backing volume block device was removed '
                              'by concurrent operations such as resize. '
                              'Error: %(error)s'),
-                         {'i_name': dom.name(),
+                         {'i_name': guest.name,
                           'error': e})
             # NOTE(gtt116): give other tasks a chance.
             greenthread.sleep(0)
@@ -6564,7 +6561,7 @@ class LibvirtDriver(driver.ComputeDriver):
         except libvirt.libvirtError:
             pass
         # get io status
-        xml = domain.XMLDesc(0)
+        xml = guest.get_xml_desc()
         dom_io = LibvirtDriver._get_io_devices(xml)
         for guest_disk in dom_io["volumes"]:
             try:
@@ -6615,7 +6612,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # We should be able to remove domain at the end.
         domain = guest._domain
 
-        xml = domain.XMLDesc(0)
+        xml = guest.get_xml_desc()
         xml_doc = etree.fromstring(xml)
 
         (state, max_mem, mem, num_cpu, cpu_time) = \
