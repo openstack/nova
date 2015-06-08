@@ -222,14 +222,13 @@ class IronicDriver(virt_driver.ComputeDriver):
         a new instance on the node, has an instance on the node, or is in
         the process of cleaning up from a deleted instance. Returns True if
         used.
+
+        If we report resources as consumed for a node that does not have an
+        instance on it, the resource tracker will notice there's no instances
+        consuming resources and try to correct us. So only nodes with an
+        instance attached should report as consumed here.
         """
-        used_provision_states = [
-            ironic_states.CLEANING, ironic_states.DEPLOYING,
-            ironic_states.DEPLOYWAIT, ironic_states.DEPLOYDONE,
-            ironic_states.ACTIVE, ironic_states.DELETING,
-            ironic_states.DELETED]
-        return (node_obj.instance_uuid is not None or
-                node_obj.provision_state in used_provision_states)
+        return node_obj.instance_uuid is not None
 
     def _node_resource(self, node):
         """Helper method to create resource dict from node stats."""
