@@ -14,6 +14,7 @@
 #    under the License.
 
 import six
+import webob
 
 from nova.api.openstack.compute.schemas import quota_classes
 from nova.api.openstack import extensions
@@ -22,6 +23,7 @@ from nova.api import validation
 from nova import db
 from nova import exception
 from nova import quota
+from nova import utils
 
 
 QUOTAS = quota.QUOTAS
@@ -67,11 +69,18 @@ class QuotaClassSetsController(wsgi.Controller):
         values = QUOTAS.get_class_quotas(context, id)
         return self._format_quota_set(id, values)
 
-    @extensions.expected_errors(())
+    @extensions.expected_errors(400)
     @validation.schema(quota_classes.update)
     def update(self, req, id, body):
         context = req.environ['nova.context']
         authorize(context, action='update', target={'quota_class': id})
+        try:
+            utils.check_string_length(id, 'quota_class_name',
+                                      min_length=1, max_length=255)
+        except exception.InvalidInput as e:
+            raise webob.exc.HTTPBadRequest(
+                explanation=e.format_message())
+
         quota_class = id
 
         for key, value in six.iteritems(body['quota_class_set']):

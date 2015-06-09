@@ -114,6 +114,12 @@ class QuotaClassSetsTestV21(test.TestCase):
         self.assertRaises(self.validation_error, self.controller.update,
                           self.req, 'test_class', body=body)
 
+    def test_quotas_update_with_long_quota_class_name(self):
+        name = 'a' * 256
+        body = {'quota_class_set': {'instances': 10}}
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
+                          self.req, name, body=body)
+
     def test_quotas_update_with_non_integer(self):
         body = {'quota_class_set': {'instances': "abc"}}
         self.assertRaises(self.validation_error, self.controller.update,
