@@ -155,7 +155,7 @@ class ComputeNode(BASE, NovaBase):
     metrics = Column(Text)
 
     # Note(yongli): json string PCI Stats
-    # '{"vendor_id":"8086", "product_id":"1234", "count":3 }'
+    # '[{"vendor_id":"8086", "product_id":"1234", "count":3 }, ...]'
     pci_stats = Column(Text)
 
     # extra_resources is a json string containing arbitrary
