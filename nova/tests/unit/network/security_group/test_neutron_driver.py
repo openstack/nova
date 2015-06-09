@@ -96,6 +96,20 @@ class TestNeutronDriver(test.NoDBTestCase):
         self.assertRaises(exception.SecurityGroupNotFound,
                           sg_api.get, self.context, name=sg_name)
 
+    def test_create_security_group_with_bad_request(self):
+        name = 'test-security-group'
+        description = None
+        body = {'security_group': {'name': name,
+                                   'description': description}}
+        message = "Invalid input. Reason: 'None' is not a valid string."
+        self.moxed_client.create_security_group(
+            body).AndRaise(n_exc.BadRequest(message=message))
+        self.mox.ReplayAll()
+        sg_api = neutron_driver.SecurityGroupAPI()
+        self.assertRaises(exception.Invalid,
+                          sg_api.create_security_group, self.context, name,
+                          description)
+
     def test_create_security_group_exceed_quota(self):
         name = 'test-security-group'
         description = 'test-security-group'

@@ -52,6 +52,8 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
         try:
             security_group = neutron.create_security_group(
                 body).get('security_group')
+        except n_exc.BadRequest as e:
+            raise exception.Invalid(six.text_type(e))
         except n_exc.NeutronClientException as e:
             exc_info = sys.exc_info()
             LOG.exception(_LE("Neutron Error creating security group %s"),
