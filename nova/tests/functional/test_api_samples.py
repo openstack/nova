@@ -37,7 +37,6 @@ from nova.cloudpipe import pipelib
 from nova.compute import api as compute_api
 from nova.compute import cells_api as cells_api
 from nova.console import manager as console_manager  # noqa - only for cfg
-from nova import db
 from nova.network import api as network_api
 from nova.network.neutronv2 import api as neutron_api  # noqa - only for cfg
 from nova import objects
@@ -859,30 +858,6 @@ class ExtendedIpsMacSampleJsonTests(ServersSampleBase):
         subs['id'] = uuid
         subs['hostid'] = '[a-f0-9]+'
         subs['mac_addr'] = '(?:[a-f0-9]{2}:){5}[a-f0-9]{2}'
-        self._verify_response('servers-detail-resp', subs, response, 200)
-
-
-class ExtendedVolumesSampleJsonTests(ServersSampleBase):
-    extension_name = ("nova.api.openstack.compute.contrib"
-                      ".extended_volumes.Extended_volumes")
-
-    def test_show(self):
-        uuid = self._post_server()
-        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
-                       fakes.stub_bdm_get_all_by_instance)
-        response = self._do_get('servers/%s' % uuid)
-        subs = self._get_regexes()
-        subs['hostid'] = '[a-f0-9]+'
-        self._verify_response('server-get-resp', subs, response, 200)
-
-    def test_detail(self):
-        uuid = self._post_server()
-        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
-                       fakes.stub_bdm_get_all_by_instance)
-        response = self._do_get('servers/detail')
-        subs = self._get_regexes()
-        subs['id'] = uuid
-        subs['hostid'] = '[a-f0-9]+'
         self._verify_response('servers-detail-resp', subs, response, 200)
 
 
