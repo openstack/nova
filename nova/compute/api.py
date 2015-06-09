@@ -1735,8 +1735,9 @@ class API(base.Base):
             orig_host = instance.host
             try:
                 if instance.vm_state == vm_states.SHELVED_OFFLOADED:
-                    instance.host = instance._system_metadata.get(
-                        'shelved_host')
+                    sysmeta = getattr(instance,
+                                      obj_base.get_attrname('system_metadata'))
+                    instance.host = sysmeta.get('shelved_host')
                 self.network_api.deallocate_for_instance(elevated,
                                                          instance)
             finally:
