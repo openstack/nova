@@ -42,7 +42,7 @@ class GuestTestCase(test.NoDBTestCase):
         self.context = context.get_admin_context()
 
     def test_repr(self):
-        domain = mock.MagicMock()
+        domain = mock.Mock(spec=fakelibvirt.virDomain)
         domain.ID.return_value = 99
         domain.UUIDString.return_value = "UUID"
         domain.name.return_value = "foo"
@@ -63,7 +63,7 @@ class GuestTestCase(test.NoDBTestCase):
                           "foo", self.host)
 
     def test_launch(self):
-        domain = mock.MagicMock()
+        domain = mock.Mock(spec=fakelibvirt.virDomain)
 
         guest = libvirt_guest.Guest(domain)
         guest.launch()
@@ -71,7 +71,7 @@ class GuestTestCase(test.NoDBTestCase):
         domain.createWithFlags.assert_called_once_with(0)
 
     def test_launch_and_pause(self):
-        domain = mock.MagicMock()
+        domain = mock.Mock(spec=fakelibvirt.virDomain)
 
         guest = libvirt_guest.Guest(domain)
         guest.launch(pause=True)
@@ -81,7 +81,7 @@ class GuestTestCase(test.NoDBTestCase):
 
     @mock.patch.object(encodeutils, 'safe_decode')
     def test_launch_exception(self, mock_safe_decode):
-        domain = mock.MagicMock()
+        domain = mock.Mock(spec=fakelibvirt.virDomain)
         domain.createWithFlags.side_effect = test.TestingException
         mock_safe_decode.return_value = "</xml>"
 
@@ -117,7 +117,7 @@ class GuestTestCase(test.NoDBTestCase):
         self.assertEqual(1, mock_safe_decode.called)
 
     def test_get_interfaces(self):
-        dom = mock.MagicMock()
+        dom = mock.Mock(spec=fakelibvirt.virDomain)
         dom.XMLDesc.return_value = """
 <domain>
   <devices>
@@ -133,13 +133,13 @@ class GuestTestCase(test.NoDBTestCase):
         self.assertEqual(["vnet0", "vnet1"], guest.get_interfaces())
 
     def test_get_interfaces_exception(self):
-        dom = mock.MagicMock()
+        dom = mock.Mock(spec=fakelibvirt.virDomain)
         dom.XMLDesc.return_value = "<bad xml>"
         guest = libvirt_guest.Guest(dom)
         self.assertEqual([], guest.get_interfaces())
 
     def test_poweroff(self):
-        domain = mock.MagicMock()
+        domain = mock.Mock(spec=fakelibvirt.virDomain)
 
         guest = libvirt_guest.Guest(domain)
         guest.poweroff()
@@ -147,7 +147,7 @@ class GuestTestCase(test.NoDBTestCase):
         domain.destroy.assert_called_once_with()
 
     def test_resume(self):
-        domain = mock.MagicMock()
+        domain = mock.Mock(spec=fakelibvirt.virDomain)
 
         guest = libvirt_guest.Guest(domain)
         guest.resume()
@@ -155,7 +155,7 @@ class GuestTestCase(test.NoDBTestCase):
         domain.resume.assert_called_once_with()
 
     def test_get_vcpus_info(self):
-        domain = mock.MagicMock()
+        domain = mock.Mock(spec=fakelibvirt.virDomain)
         domain.vcpus.return_value = ([(0, 1, 10290000000L, 2)],
                                      [(True, True)])
         guest = libvirt_guest.Guest(domain)
@@ -166,7 +166,7 @@ class GuestTestCase(test.NoDBTestCase):
         self.assertEqual(10290000000L, vcpus[0].time)
 
     def test_delete_configuration(self):
-        domain = mock.MagicMock()
+        domain = mock.Mock(spec=fakelibvirt.virDomain)
 
         guest = libvirt_guest.Guest(domain)
         guest.delete_configuration()
@@ -175,8 +175,9 @@ class GuestTestCase(test.NoDBTestCase):
             fakelibvirt.VIR_DOMAIN_UNDEFINE_MANAGED_SAVE)
 
     def test_delete_configuration_exception(self):
-        domain = mock.MagicMock()
+        domain = mock.Mock(spec=fakelibvirt.virDomain)
         domain.undefineFlags.side_effect = fakelibvirt.libvirtError('oops')
+        domain.ID.return_value = 1
 
         guest = libvirt_guest.Guest(domain)
         guest.delete_configuration()
