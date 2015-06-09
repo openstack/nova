@@ -17,7 +17,7 @@
             "id": "1",
             "links": [
                 {
-                    "href": "%(host)s/flavors/1",
+                    "href": "%(host)s/openstack/flavors/1",
                     "rel": "bookmark"
                 }
             ]
@@ -28,18 +28,18 @@
             "id": "%(uuid)s",
             "links": [
                 {
-                    "href": "%(host)s/images/%(uuid)s",
+                    "href": "%(host)s/openstack/images/%(uuid)s",
                     "rel": "bookmark"
                 }
             ]
         },
         "links": [
             {
-                "href": "%(host)s/v3/servers/%(uuid)s",
+                "href": "%(host)s/v2/openstack/servers/%(uuid)s",
                 "rel": "self"
             },
             {
-                "href": "%(host)s/servers/%(uuid)s",
+                "href": "%(host)s/openstack/servers/%(uuid)s",
                 "rel": "bookmark"
             }
         ],
