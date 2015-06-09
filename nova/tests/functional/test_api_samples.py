@@ -13,11 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import datetime
+
 import inspect
 import os
 import re
-import urllib
 import uuid as uuid_lib
 
 import mock
@@ -25,7 +24,6 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import importutils
-from oslo_utils import timeutils
 import testtools
 
 from nova.api.metadata import password
@@ -586,48 +584,6 @@ class UsedLimitsForAdminSamplesJsonTest(ApiSampleTestBaseV2):
         subs = self._get_regexes()
         return self._verify_response('usedlimitsforadmin-get-resp', subs,
                                      response, 200)
-
-
-class SimpleTenantUsageSampleJsonTest(ServersSampleBase):
-    extension_name = ("nova.api.openstack.compute.contrib.simple_tenant_usage."
-                      "Simple_tenant_usage")
-
-    def setUp(self):
-        """setUp method for simple tenant usage."""
-        super(SimpleTenantUsageSampleJsonTest, self).setUp()
-
-        started = timeutils.utcnow()
-        now = started + datetime.timedelta(hours=1)
-
-        timeutils.set_time_override(started)
-        self._post_server()
-        timeutils.set_time_override(now)
-
-        self.query = {
-            'start': str(started),
-            'end': str(now)
-        }
-
-    def tearDown(self):
-        """tearDown method for simple tenant usage."""
-        super(SimpleTenantUsageSampleJsonTest, self).tearDown()
-        timeutils.clear_time_override()
-
-    def test_get_tenants_usage(self):
-        # Get api sample to get all tenants usage request.
-        response = self._do_get('os-simple-tenant-usage?%s' % (
-                                                urllib.urlencode(self.query)))
-        subs = self._get_regexes()
-        self._verify_response('simple-tenant-usage-get', subs, response, 200)
-
-    def test_get_tenant_usage_details(self):
-        # Get api sample to get specific tenant usage request.
-        tenant_id = 'openstack'
-        response = self._do_get('os-simple-tenant-usage/%s?%s' % (tenant_id,
-                                                urllib.urlencode(self.query)))
-        subs = self._get_regexes()
-        self._verify_response('simple-tenant-usage-get-specific', subs,
-                              response, 200)
 
 
 class AvailabilityZoneJsonTest(ServersSampleBase):

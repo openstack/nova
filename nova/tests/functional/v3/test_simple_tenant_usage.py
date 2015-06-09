@@ -15,13 +15,28 @@
 import datetime
 import urllib
 
+from oslo_config import cfg
 from oslo_utils import timeutils
 
 from nova.tests.functional.v3 import test_servers
 
+CONF = cfg.CONF
+CONF.import_opt('osapi_compute_extension',
+                'nova.api.openstack.compute.extensions')
+
 
 class SimpleTenantUsageSampleJsonTest(test_servers.ServersSampleBase):
     extension_name = "os-simple-tenant-usage"
+    extra_extensions_to_load = ["os-access-ips"]
+    _api_version = 'v2'
+
+    def _get_flags(self):
+        f = super(SimpleTenantUsageSampleJsonTest, self)._get_flags()
+        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.simple_tenant_usage.'
+            'Simple_tenant_usage')
+        return f
 
     def setUp(self):
         """setUp method for simple tenant usage."""
