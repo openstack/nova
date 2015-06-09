@@ -16,8 +16,9 @@
 
 from oslo_log import log as logging
 from oslo_utils import importutils
+from oslo_utils import strutils
 
-from nova.i18n import _LE
+from nova.i18n import _LE, _LW
 from nova.volume.encryptors import nop
 
 
@@ -50,6 +51,11 @@ def get_volume_encryptor(connection_info, **kwargs):
                       {'provider': provider, 'exception': e})
             raise
 
+    msg = ("Using volume encryptor '%(encryptor)s' for connection: "
+           "%(connection_info)s" %
+           {'encryptor': encryptor, 'connection_info': connection_info})
+    LOG.debug(strutils.mask_password(msg))
+
     return encryptor
 
 
@@ -60,10 +66,19 @@ def get_encryption_metadata(context, volume_api, volume_id, connection_info):
         try:
             metadata = volume_api.get_volume_encryption_metadata(context,
                                                                  volume_id)
+            if not metadata:
+                LOG.warn(_LW('Volume %s should be encrypted but there is no '
+                             'encryption metadata.'), volume_id)
         except Exception as e:
             LOG.error(_LE("Failed to retrieve encryption metadata for "
                           "volume %(volume_id)s: %(exception)s"),
                       {'volume_id': volume_id, 'exception': e})
             raise
+
+    if metadata:
+        msg = ("Using volume encryption metadata '%(metadata)s' for "
+               "connection: %(connection_info)s" %
+               {'metadata': metadata, 'connection_info': connection_info})
+        LOG.debug(strutils.mask_password(msg))
 
     return metadata
