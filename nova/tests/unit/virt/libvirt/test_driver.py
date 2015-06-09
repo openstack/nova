@@ -10423,32 +10423,50 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual(drvr.default_root_device_name(instance, image_meta,
                                                        root_bdm), '/dev/vda')
 
-    @mock.patch.object(driver, "get_block_device_info")
-    @mock.patch.object(blockinfo, "default_device_names")
     @mock.patch.object(utils, "get_image_from_system_metadata")
-    def test_default_device_names_for_instance(
-            self, mock_meta, mock_devnames, mock_blockinfo):
+    @mock.patch.object(objects.BlockDeviceMapping, "save")
+    def test_default_device_names_for_instance(self, save_mock, mock_meta):
         instance = objects.Instance(**self.test_instance)
         image_meta = {}
         instance.root_device_name = '/dev/vda'
-        ephemerals = [{'device_name': 'vdb'}]
-        swap = [{'device_name': 'vdc'}]
-        block_device_mapping = [{'device_name': 'vdc'}]
-        self.flags(virt_type='fake_libvirt_type', group='libvirt')
+        ephemerals = [objects.BlockDeviceMapping(
+                        **fake_block_device.AnonFakeDbBlockDeviceDict(
+                            {'device_name': 'vdb',
+                             'source_type': 'blank',
+                             'volume_size': 2,
+                             'destination_type': 'local'}))]
+        swap = [objects.BlockDeviceMapping(
+                        **fake_block_device.AnonFakeDbBlockDeviceDict(
+                            {'device_name': 'vdg',
+                             'source_type': 'blank',
+                             'volume_size': 512,
+                             'guest_format': 'swap',
+                             'destination_type': 'local'}))]
+        block_device_mapping = [
+            objects.BlockDeviceMapping(
+                **fake_block_device.AnonFakeDbBlockDeviceDict(
+                    {'source_type': 'volume',
+                     'destination_type': 'volume',
+                     'volume_id': 'fake-image-id',
+                     'device_name': '/dev/vdxx',
+                     'disk_bus': 'scsi'}))]
 
         mock_meta.return_value = image_meta
-        mock_blockinfo.return_value = 'fake-block-device-info'
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         drvr.default_device_names_for_instance(instance,
                                                instance.root_device_name,
                                                ephemerals, swap,
-                                               block_device_mapping,
-                                               image_meta)
-        mock_devnames.assert_called_once_with(
-            "fake_libvirt_type", mock.ANY,
-            instance, 'fake-block-device-info',
-            image_meta)
+                                               block_device_mapping)
+
+        # Ephemeral device name was correct so no changes
+        self.assertEqual('/dev/vdb', ephemerals[0].device_name)
+        # Swap device name was incorrect so it was changed
+        self.assertEqual('/dev/vdc', swap[0].device_name)
+        # Volume device name was changed too, taking the bus into account
+        self.assertEqual('/dev/sda', block_device_mapping[0].device_name)
+
+        self.assertEqual(3, save_mock.call_count)
 
     def test_is_supported_fs_format(self):
         supported_fs = [disk.FS_FORMAT_EXT2, disk.FS_FORMAT_EXT3,
