@@ -17,6 +17,7 @@ import datetime
 import iso8601
 import netaddr
 from oslo_utils import timeutils
+from oslo_versionedobjects import exception as ovo_exc
 import six
 
 from nova.network import model as network_model
@@ -169,10 +170,12 @@ class TestEnum(TestField):
         self.assertNotEqual(str(field1), str(field2))
 
     def test_without_valid_values(self):
-        self.assertRaises(ValueError, fields.EnumField, 1)
+        self.assertRaises(ovo_exc.EnumValidValuesInvalidError,
+                          fields.EnumField, 1)
 
     def test_with_empty_values(self):
-        self.assertRaises(ValueError, fields.EnumField, [])
+        self.assertRaises(ovo_exc.EnumRequiresValidValuesError,
+                          fields.EnumField, [])
 
 
 class TestArchitecture(TestField):
