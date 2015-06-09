@@ -105,7 +105,6 @@ class _TestBlockDeviceMappingObject(object):
                 self.context, 'fake-volume-id')
         for attr in block_device_obj.BLOCK_DEVICE_OPTIONAL_ATTRS:
             self.assertFalse(vol_bdm.obj_attr_is_set(attr))
-        self.assertRemotes()
 
     @mock.patch.object(db, 'block_device_mapping_get_by_volume_id')
     def test_get_by_volume_id_not_found(self, get_by_vol_id):
@@ -136,7 +135,6 @@ class _TestBlockDeviceMappingObject(object):
             self.assertTrue(vol_bdm.obj_attr_is_set(attr))
         get_by_vol_id.assert_called_once_with(self.context, 'fake-volume-id',
                                               ['instance'])
-        self.assertRemotes()
 
     def _test_create_mocked(self, cell_type=None, update_or_create=False):
         if cell_type:

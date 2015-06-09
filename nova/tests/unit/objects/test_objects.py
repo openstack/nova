@@ -345,9 +345,6 @@ class _LocalTest(_BaseTestCase):
         # Just in case
         self.useFixture(nova_fixtures.IndirectionAPIFixture(None))
 
-    def assertRemotes(self):
-        self.assertEqual(self.remote_object_calls, [])
-
 
 @contextlib.contextmanager
 def things_temporarily_local():
@@ -404,9 +401,6 @@ class _RemoteTest(_BaseTestCase):
     def setUp(self):
         super(_RemoteTest, self).setUp()
         self._testable_conductor()
-
-    def assertRemotes(self):
-        self.assertNotEqual(self.remote_object_calls, [])
 
 
 class _TestObject(object):
@@ -555,7 +549,6 @@ class _TestObject(object):
         obj._context = None
         self.assertRaises(exception.OrphanedObjectError,
                           obj._update_test)
-        self.assertRemotes()
 
     def test_changed_1(self):
         obj = MyObj.query(self.context)
@@ -564,7 +557,6 @@ class _TestObject(object):
         obj._update_test()
         self.assertEqual(obj.obj_what_changed(), set(['foo', 'bar']))
         self.assertEqual(obj.foo, 123)
-        self.assertRemotes()
 
     def test_changed_2(self):
         obj = MyObj.query(self.context)
@@ -573,7 +565,6 @@ class _TestObject(object):
         obj.save()
         self.assertEqual(obj.obj_what_changed(), set([]))
         self.assertEqual(obj.foo, 123)
-        self.assertRemotes()
 
     def test_changed_3(self):
         obj = MyObj.query(self.context)
@@ -583,7 +574,6 @@ class _TestObject(object):
         self.assertEqual(obj.obj_what_changed(), set([]))
         self.assertEqual(obj.foo, 321)
         self.assertEqual(obj.bar, 'refreshed')
-        self.assertRemotes()
 
     def test_changed_4(self):
         obj = MyObj.query(self.context)
@@ -594,7 +584,6 @@ class _TestObject(object):
         self.assertEqual(obj.foo, 42)
         self.assertEqual(obj.bar, 'meow')
         self.assertIsInstance(obj.rel_object, MyOwnedObject)
-        self.assertRemotes()
 
     def test_changed_with_sub_object(self):
         class ParentObject(base.NovaObject):
@@ -618,14 +607,12 @@ class _TestObject(object):
         self.assertEqual(obj.bar, 'bar')
         result = obj.marco()
         self.assertEqual(result, 'polo')
-        self.assertRemotes()
 
     def test_updates(self):
         obj = MyObj.query(self.context)
         self.assertEqual(obj.foo, 1)
         obj._update_test()
         self.assertEqual(obj.bar, 'updated')
-        self.assertRemotes()
 
     def test_base_attributes(self):
         dt = datetime.datetime(1955, 11, 5)
@@ -955,7 +942,6 @@ class TestRemoteObject(_RemoteTest, _TestObject):
         MyObj2.VERSION = '1.2'
         obj = MyObj2.query(self.context)
         self.assertEqual(obj.bar, 'bar')
-        self.assertRemotes()
 
     def test_compat(self):
         MyObj2.VERSION = '1.1'
