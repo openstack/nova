@@ -1956,6 +1956,25 @@ class VMOps(object):
                                       vm_ref=vm_ref, path=path,
                                       value=jsonutils.dumps(value))
 
+    def _read_from_xenstore(self, instance, path, ignore_missing_path=True,
+                            vm_ref=None):
+        """Reads the passed location from xenstore for the given vm.
+        Missing paths are ignored, unless explicitely stated not to
+        which will cause and exception to be raised by xenstore.
+        A XenAPIPlugin.PluginError will be raised if any error is
+        encountered in the read process.
+        """
+        # NOTE(sulo): These need to be string for valid field type
+        # for xapi.
+        if ignore_missing_path:
+            ignore_missing = 'True'
+        else:
+            ignore_missing = 'False'
+
+        return self._make_plugin_call('xenstore.py', 'read_record', instance,
+                                      vm_ref=vm_ref, path=path,
+                                      ignore_missing_path=ignore_missing)
+
     def _delete_from_xenstore(self, instance, path, vm_ref=None):
         """Deletes the value from the xenstore record for the given VM at
         the specified location.  A XenAPIPlugin.PluginError will be
@@ -2174,6 +2193,72 @@ class VMOps(object):
                 raise exception.MigrationPreCheckError(reason=msg)
         return dest_check_data
 
+    def _ensure_pv_driver_info_for_live_migration(self, instance, vm_ref):
+        """Checks if pv drivers are present for this instance. If it is
+        present but not reported, try to fake the info for live-migration.
+        """
+        if self._pv_driver_version_reported(instance, vm_ref):
+            # Since driver version is reported we dont need to do anything
+            return
+
+        if self._pv_device_reported(instance, vm_ref):
+            LOG.debug("PV device present but missing pv driver info. "
+                      "Attempting to insert missing info in xenstore.",
+                      instance=instance)
+            self._write_fake_pv_version(instance, vm_ref)
+        else:
+            LOG.debug("Could not determine the presence of pv device. "
+                      "Skipping inserting pv driver info.",
+                      instance=instance)
+
+    def _pv_driver_version_reported(self, instance, vm_ref):
+        xs_path = "attr/PVAddons/MajorVersion"
+        major_version = self._read_from_xenstore(instance, xs_path,
+                                                 vm_ref=vm_ref)
+        LOG.debug("Major Version: %s reported.", major_version,
+                  instance=instance)
+        # xenstore reports back string only, if the path is missing we get
+        # None as string, since missing paths are ignored.
+        if major_version == '"None"':
+            return False
+        else:
+            return True
+
+    def _pv_device_reported(self, instance, vm_ref):
+        vm_rec = self._session.VM.get_record(vm_ref)
+        vif_list = [self._session.call_xenapi("VIF.get_record", vrec)
+                    for vrec in vm_rec['VIFs']]
+        net_devices = [vif['device'] for vif in vif_list]
+        # NOTE(sulo): We infer the presence of pv driver
+        # by the presence of a pv network device. If xenstore reports
+        # device status as connected (status=4) we take that as the presence
+        # of pv driver. Any other status will likely cause migration to fail.
+        for device in net_devices:
+            xs_path = "device/vif/%s/state" % device
+            ret = self._read_from_xenstore(instance, xs_path, vm_ref=vm_ref)
+            LOG.debug("PV Device vif.%(vif_ref)s reporting state %(ret)s",
+                      {'vif_ref': device, 'ret': ret}, instance=instance)
+            if strutils.is_int_like(ret) and int(ret) == 4:
+                return True
+
+        return False
+
+    def _write_fake_pv_version(self, instance, vm_ref):
+        version = self._session.product_version
+        LOG.debug("Writing pvtools version major: %(major)s minor: %(minor)s "
+                  "micro: %(micro)s", {'major': version[0],
+                                       'minor': version[1],
+                                       'micro': version[2]},
+                                       instance=instance)
+        major_ver = "attr/PVAddons/MajorVersion"
+        self._write_to_xenstore(instance, major_ver, version[0], vm_ref=vm_ref)
+        minor_ver = "attr/PVAddons/MinorVersion"
+        self._write_to_xenstore(instance, minor_ver, version[1], vm_ref=vm_ref)
+        micro_ver = "attr/PVAddons/MicroVersion"
+        self._write_to_xenstore(instance, micro_ver, version[2], vm_ref=vm_ref)
+        xs_path = "data/updated"
+        self._write_to_xenstore(instance, xs_path, "1", vm_ref=vm_ref)
+
     def _generate_vdi_map(self, destination_sr_ref, vm_ref, sr_ref=None):
         """generate a vdi_map for _call_live_migrate_command."""
         if sr_ref is None:
@@ -2212,6 +2297,18 @@ class VMOps(object):
                      migrate_data=None):
         try:
             vm_ref = self._get_vm_opaque_ref(instance)
+            # NOTE(sulo): We try to ensure that PV driver information is
+            # present in xenstore for the instance we are trying to
+            # live-migrate, if the process of faking pv version info fails,
+            # we simply log it and carry on with the rest of the process.
+            # Any xapi error due to PV version are caught and migration
+            # will be safely reverted by the rollback process.
+            try:
+                self._ensure_pv_driver_info_for_live_migration(instance,
+                                                               vm_ref)
+            except Exception as e:
+                LOG.warning(e)
+
             if migrate_data is not None:
                 (kernel, ramdisk) = vm_utils.lookup_kernel_ramdisk(
                     self._session, vm_ref)

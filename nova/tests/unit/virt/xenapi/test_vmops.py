@@ -1108,6 +1108,118 @@ class CleanupFailedSnapshotTestCase(VMOpsTestBase):
                 "instance", "vm_ref")
 
 
+class XenstoreCallsTestCase(VMOpsTestBase):
+    """Test cases for Read/Write/Delete/Update xenstore calls
+    from vmops.
+    """
+
+    @mock.patch.object(vmops.VMOps, '_make_plugin_call')
+    def test_read_from_xenstore(self, fake_xapi_call):
+        fake_xapi_call.return_value = "fake_xapi_return"
+        fake_instance = {"name": "fake_instance"}
+        path = "attr/PVAddons/MajorVersion"
+        self.assertEqual("fake_xapi_return",
+                         self.vmops._read_from_xenstore(fake_instance, path,
+                                                        vm_ref="vm_ref"))
+
+    @mock.patch.object(vmops.VMOps, '_make_plugin_call')
+    def test_read_from_xenstore_ignore_missing_path(self, fake_xapi_call):
+        fake_instance = {"name": "fake_instance"}
+        path = "attr/PVAddons/MajorVersion"
+        self.vmops._read_from_xenstore(fake_instance, path, vm_ref="vm_ref")
+        fake_xapi_call.assert_called_once_with('xenstore.py', 'read_record',
+                                               fake_instance, vm_ref="vm_ref",
+                                               path=path,
+                                               ignore_missing_path='True')
+
+    @mock.patch.object(vmops.VMOps, '_make_plugin_call')
+    def test_read_from_xenstore_missing_path(self, fake_xapi_call):
+        fake_instance = {"name": "fake_instance"}
+        path = "attr/PVAddons/MajorVersion"
+        self.vmops._read_from_xenstore(fake_instance, path, vm_ref="vm_ref",
+                                       ignore_missing_path=False)
+        fake_xapi_call.assert_called_once_with('xenstore.py', 'read_record',
+                                               fake_instance, vm_ref="vm_ref",
+                                               path=path,
+                                               ignore_missing_path='False')
+
+
+class LiveMigrateFakeVersionTestCase(VMOpsTestBase):
+    @mock.patch.object(vmops.VMOps, '_pv_device_reported')
+    @mock.patch.object(vmops.VMOps, '_pv_driver_version_reported')
+    @mock.patch.object(vmops.VMOps, '_write_fake_pv_version')
+    def test_ensure_pv_driver_info_for_live_migration(
+        self,
+        mock_write_fake_pv_version,
+        mock_pv_driver_version_reported,
+        mock_pv_device_reported):
+
+        mock_pv_device_reported.return_value = True
+        mock_pv_driver_version_reported.return_value = False
+        fake_instance = {"name": "fake_instance"}
+        self.vmops._ensure_pv_driver_info_for_live_migration(fake_instance,
+                                                             "vm_rec")
+
+        mock_write_fake_pv_version.assert_called_once_with(fake_instance,
+                                                           "vm_rec")
+
+    @mock.patch.object(vmops.VMOps, '_read_from_xenstore')
+    def test_pv_driver_version_reported_None(self, fake_read_from_xenstore):
+        fake_read_from_xenstore.return_value = '"None"'
+        fake_instance = {"name": "fake_instance"}
+        self.assertFalse(self.vmops._pv_driver_version_reported(fake_instance,
+                                                                "vm_ref"))
+
+    @mock.patch.object(vmops.VMOps, '_read_from_xenstore')
+    def test_pv_driver_version_reported(self, fake_read_from_xenstore):
+        fake_read_from_xenstore.return_value = '6.2.0'
+        fake_instance = {"name": "fake_instance"}
+        self.assertTrue(self.vmops._pv_driver_version_reported(fake_instance,
+                                                               "vm_ref"))
+
+    @mock.patch.object(vmops.VMOps, '_read_from_xenstore')
+    def test_pv_device_reported(self, fake_read_from_xenstore):
+        with mock.patch.object(self._session.VM, 'get_record') as fake_vm_rec:
+            fake_vm_rec.return_value = {'VIFs': 'fake-vif-object'}
+            with mock.patch.object(self._session, 'call_xenapi') as fake_call:
+                fake_call.return_value = {'device': '0'}
+                fake_read_from_xenstore.return_value = '4'
+                fake_instance = {"name": "fake_instance"}
+                self.assertTrue(self.vmops._pv_device_reported(fake_instance,
+                                "vm_ref"))
+
+    @mock.patch.object(vmops.VMOps, '_read_from_xenstore')
+    def test_pv_device_not_reported(self, fake_read_from_xenstore):
+        with mock.patch.object(self._session.VM, 'get_record') as fake_vm_rec:
+            fake_vm_rec.return_value = {'VIFs': 'fake-vif-object'}
+            with mock.patch.object(self._session, 'call_xenapi') as fake_call:
+                fake_call.return_value = {'device': '0'}
+                fake_read_from_xenstore.return_value = '0'
+                fake_instance = {"name": "fake_instance"}
+                self.assertFalse(self.vmops._pv_device_reported(fake_instance,
+                                 "vm_ref"))
+
+    @mock.patch.object(vmops.VMOps, '_read_from_xenstore')
+    def test_pv_device_None_reported(self, fake_read_from_xenstore):
+        with mock.patch.object(self._session.VM, 'get_record') as fake_vm_rec:
+            fake_vm_rec.return_value = {'VIFs': 'fake-vif-object'}
+            with mock.patch.object(self._session, 'call_xenapi') as fake_call:
+                fake_call.return_value = {'device': '0'}
+                fake_read_from_xenstore.return_value = '"None"'
+                fake_instance = {"name": "fake_instance"}
+                self.assertFalse(self.vmops._pv_device_reported(fake_instance,
+                                 "vm_ref"))
+
+    @mock.patch.object(vmops.VMOps, '_write_to_xenstore')
+    def test_write_fake_pv_version(self, fake_write_to_xenstore):
+        fake_write_to_xenstore.return_value = 'fake_return'
+        fake_instance = {"name": "fake_instance"}
+        with mock.patch.object(self._session, 'product_version') as version:
+            version.return_value = ('6', '2', '0')
+            self.assertIsNone(self.vmops._write_fake_pv_version(fake_instance,
+                                                                "vm_ref"))
+
+
 class LiveMigrateHelperTestCase(VMOpsTestBase):
     def test_connect_block_device_volumes_none(self):
         self.assertEqual({}, self.vmops.connect_block_device_volumes(None))
