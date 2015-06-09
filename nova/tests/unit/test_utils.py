@@ -901,17 +901,6 @@ class GetImageFromSystemMetadataTestCase(test.NoDBTestCase):
         for key in utils.SM_INHERITABLE_KEYS:
             self.assertNotIn(key, image)
 
-    def test_non_inheritable_image_properties(self):
-        sys_meta = self.get_system_metadata()
-        sys_meta["%soo1" % utils.SM_IMAGE_PROP_PREFIX] = "bar"
-
-        self.flags(non_inheritable_image_properties=["foo1"])
-
-        image = utils.get_image_from_system_metadata(sys_meta)
-
-        # Verify that the foo1 key has not been inherited
-        self.assertNotIn("foo1", image)
-
 
 class GetImageMetadataFromVolumeTestCase(test.NoDBTestCase):
     def test_inherit_image_properties(self):
