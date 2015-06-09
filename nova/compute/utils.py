@@ -196,34 +196,6 @@ def _get_unused_letter(used_letters):
     return letters[0]
 
 
-def get_image_metadata(context, image_api, image_id_or_uri, instance):
-    image_system_meta = {}
-    # In case of boot from volume, image_id_or_uri may be None or ''
-    if image_id_or_uri is not None and image_id_or_uri != '':
-        # If the base image is still available, get its metadata
-        try:
-            image = image_api.get(context, image_id_or_uri)
-        except (exception.ImageNotAuthorized,
-                exception.ImageNotFound,
-                exception.Invalid) as e:
-            LOG.warning(_LW("Can't access image %(image_id)s: %(error)s"),
-                        {"image_id": image_id_or_uri, "error": e},
-                        instance=instance)
-        else:
-            flavor = instance.get_flavor()
-            image_system_meta = utils.get_system_metadata_from_image(image,
-                                                                     flavor)
-
-    # Get the system metadata from the instance
-    system_meta = utils.instance_sys_meta(instance)
-
-    # Merge the metadata from the instance with the image's, if any
-    system_meta.update(image_system_meta)
-
-    # Convert the system metadata to image metadata
-    return utils.get_image_from_system_metadata(system_meta)
-
-
 def get_value_from_system_metadata(instance, key, type, default):
     """Get a value of a specified type from image metadata.
 

@@ -51,7 +51,6 @@ from nova.compute import cpumodel
 from nova.compute import manager
 from nova.compute import power_state
 from nova.compute import task_states
-from nova.compute import utils as compute_utils
 from nova.compute import vm_mode
 from nova.compute import vm_states
 from nova import context
@@ -8274,7 +8273,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     @mock.patch.object(FakeVirtDomain, 'attachDevice')
     @mock.patch.object(FakeVirtDomain, 'ID', return_value=1)
-    @mock.patch.object(compute_utils, 'get_image_metadata', return_value=None)
+    @mock.patch.object(utils, 'get_image_from_system_metadata',
+                       return_value=None)
     def test_attach_sriov_ports(self,
                                 mock_get_image_metadata,
                                 mock_ID,
@@ -8287,13 +8287,14 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
         drvr._attach_sriov_ports(self.context, instance, guest, network_info)
-        mock_get_image_metadata.assert_called_once_with(self.context,
-            drvr._image_api, instance['image_ref'], instance)
+        mock_get_image_metadata.assert_called_once_with(
+            instance.system_metadata)
         self.assertTrue(mock_attachDevice.called)
 
     @mock.patch.object(FakeVirtDomain, 'attachDevice')
     @mock.patch.object(FakeVirtDomain, 'ID', return_value=1)
-    @mock.patch.object(compute_utils, 'get_image_metadata', return_value=None)
+    @mock.patch.object(utils, 'get_image_from_system_metadata',
+                       return_value=None)
     def test_attach_sriov_ports_with_info_cache(self,
                                                 mock_get_image_metadata,
                                                 mock_ID,
@@ -8308,14 +8309,15 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
         drvr._attach_sriov_ports(self.context, instance, guest, None)
-        mock_get_image_metadata.assert_called_once_with(self.context,
-            drvr._image_api, instance['image_ref'], instance)
+        mock_get_image_metadata.assert_called_once_with(
+            instance.system_metadata)
         self.assertTrue(mock_attachDevice.called)
 
     @mock.patch.object(host.Host,
                        'has_min_version', return_value=True)
     @mock.patch.object(FakeVirtDomain, 'detachDeviceFlags')
-    @mock.patch.object(compute_utils, 'get_image_metadata', return_value=None)
+    @mock.patch.object(utils, 'get_image_from_system_metadata',
+                       return_value=None)
     def test_detach_sriov_ports(self,
                                 mock_get_image_metadata,
                                 mock_detachDeviceFlags,
@@ -8331,8 +8333,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
         drvr._detach_sriov_ports(self.context, instance, domain)
-        mock_get_image_metadata.assert_called_once_with(mock.ANY,
-            drvr._image_api, instance['image_ref'], instance)
+        mock_get_image_metadata.assert_called_once_with(
+            instance.system_metadata)
         self.assertTrue(mock_detachDeviceFlags.called)
 
     def test_resume(self):
@@ -8358,7 +8360,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             mock.patch.object(drvr, '_attach_pci_devices'),
             mock.patch.object(pci_manager, 'get_instance_pci_devs',
                               return_value='fake_pci_devs'),
-            mock.patch.object(compute_utils, 'get_image_metadata'),
+            mock.patch.object(utils, 'get_image_from_system_metadata'),
             mock.patch.object(blockinfo, 'get_disk_info'),
         ) as (_get_existing_domain_xml, _create_domain_and_network,
               _attach_pci_devices, get_instance_pci_devs, get_image_metadata,
@@ -11844,7 +11846,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                        fake_enable_hairpin)
         self.stubs.Set(self.drvr, 'get_info',
                        fake_get_info)
-        self.stubs.Set(compute_utils, 'get_image_metadata', lambda *a: {})
+        self.stubs.Set(utils, 'get_image_from_system_metadata', lambda *a: {})
 
         with utils.tempdir() as tmpdir:
             self.flags(instances_path=tmpdir)
@@ -11877,6 +11879,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                 return None
         context = 'fake_context'
 
+        instance = self._create_instance()
         self.mox.StubOutWithMock(libvirt_utils, 'get_instance_path')
         self.mox.StubOutWithMock(os.path, 'exists')
         self.mox.StubOutWithMock(shutil, 'rmtree')
@@ -11890,7 +11893,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         self.stubs.Set(loopingcall, 'FixedIntervalLoopingCall',
                        lambda *a, **k: FakeLoopingCall())
 
-        libvirt_utils.get_instance_path({}).AndReturn('/fake/foo')
+        libvirt_utils.get_instance_path(instance).AndReturn('/fake/foo')
         os.path.exists('/fake/foo_resize').AndReturn(backup_made)
         if backup_made:
             if del_inst_failed:
@@ -11902,7 +11905,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
 
         self.mox.ReplayAll()
 
-        self.drvr.finish_revert_migration(context, {}, [])
+        self.drvr.finish_revert_migration(context, instance, [])
 
     def test_finish_revert_migration_after_crash(self):
         self._test_finish_revert_migration_after_crash(backup_made=True)
@@ -11930,7 +11933,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
 
         with contextlib.nested(
                 mock.patch.object(drvr, '_create_domain_and_network'),
-                mock.patch.object(compute_utils, 'get_image_metadata',
+                mock.patch.object(utils, 'get_image_from_system_metadata',
                                   return_value=image_meta),
                 mock.patch.object(drvr, '_get_guest_xml',
                                   side_effect=fake_get_guest_xml)):
@@ -12663,14 +12666,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instance = objects.Instance(uuid='fake-uuid', id=1)
         self.assertTrue(drvr.instance_on_disk(instance))
-
-    @mock.patch("nova.compute.utils.get_image_metadata")
-    def test_prepare_args_for_get_config(self, mock_image):
-        instance = self._create_instance()
-
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
-
-        drvr._prepare_args_for_get_config(self.context, instance)
 
     def test_get_interfaces(self):
         dom_xml = """
@@ -13659,6 +13654,9 @@ class LibvirtSnapshotTests(_BaseSnapshotTests):
     def test_ami(self):
         # Assign different image_ref from nova/images/fakes for testing ami
         self.instance_ref.image_ref = 'c905cedb-7281-47e4-8a62-f26bc5fc4c77'
+        self.instance_ref.system_metadata = \
+          utils.get_system_metadata_from_image(
+            {'disk_format': 'ami'})
 
         self._test_snapshot(disk_format='ami')
 

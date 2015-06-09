@@ -51,6 +51,7 @@ from nova.tests.unit import matchers
 from nova.tests.unit.objects import test_flavor
 from nova.tests.unit.objects import test_migration
 from nova.tests.unit.objects import test_service
+from nova import utils
 from nova.volume import cinder
 
 
@@ -1764,7 +1765,7 @@ class _ComputeAPIUnitTestMixIn(object):
 
         extra_props = dict(cow='moo', cat='meow')
 
-        self.mox.StubOutWithMock(compute_utils, 'get_image_metadata')
+        self.mox.StubOutWithMock(utils, 'get_image_from_system_metadata')
         self.mox.StubOutWithMock(self.compute_api.image_api,
                                  'create')
         self.mox.StubOutWithMock(instance, 'save')
@@ -1780,9 +1781,8 @@ class _ComputeAPIUnitTestMixIn(object):
             self.compute_api.is_volume_backed_instance(self.context,
                 instance).AndReturn(False)
 
-        compute_utils.get_image_metadata(
-            self.context, self.compute_api.image_api,
-            FAKE_IMAGE_REF, instance).AndReturn(fake_image_meta)
+        utils.get_image_from_system_metadata(
+            instance.system_metadata).AndReturn(fake_image_meta)
 
         fake_image = dict(id='fake-image-id')
         mock_method = self.compute_api.image_api.create(

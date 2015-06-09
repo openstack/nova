@@ -942,7 +942,7 @@ class _BaseTaskTestCase(object):
                  'block_migration', 'disk_over_commit')
 
     def _test_cold_migrate(self, clean_shutdown=True):
-        self.mox.StubOutWithMock(compute_utils, 'get_image_metadata')
+        self.mox.StubOutWithMock(utils, 'get_image_from_system_metadata')
         self.mox.StubOutWithMock(scheduler_utils, 'build_request_spec')
         self.mox.StubOutWithMock(scheduler_utils, 'setup_instance_group')
         self.mox.StubOutWithMock(
@@ -952,13 +952,13 @@ class _BaseTaskTestCase(object):
         inst = fake_instance.fake_db_instance(image_ref='image_ref')
         inst_obj = objects.Instance._from_db_object(
             self.context, objects.Instance(), inst, [])
+        inst_obj.system_metadata = {'image_hw_disk_bus': 'scsi'}
         flavor = flavors.get_default_flavor()
         flavor.extra_specs = {'extra_specs': 'fake'}
         request_spec = {'instance_type': obj_base.obj_to_primitive(flavor),
                         'instance_properties': {}}
-        compute_utils.get_image_metadata(
-            self.context, self.conductor_manager.image_api,
-            'image_ref', mox.IsA(objects.Instance)).AndReturn('image')
+        utils.get_image_from_system_metadata(
+            inst_obj.system_metadata).AndReturn('image')
 
         scheduler_utils.build_request_spec(
             self.context, 'image',
@@ -1619,18 +1619,20 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
 
     def test_cold_migrate_no_valid_host_back_in_active_state(self):
         flavor = flavors.get_flavor_by_name('m1.tiny')
-        inst = fake_instance.fake_db_instance(image_ref='fake-image_ref',
-                                              instance_type_id=flavor['id'])
-        inst_obj = objects.Instance._from_db_object(
-                self.context, objects.Instance(), inst,
-                expected_attrs=[])
+        inst_obj = objects.Instance(
+            image_ref='fake-image_ref',
+            instance_type_id=flavor['id'],
+            vm_state=vm_states.ACTIVE,
+            system_metadata={},
+            uuid='fake',
+            user_id='fake')
         request_spec = dict(instance_type=dict(extra_specs=dict()),
                             instance_properties=dict())
         filter_props = dict(context=None)
         resvs = 'fake-resvs'
         image = 'fake-image'
 
-        self.mox.StubOutWithMock(compute_utils, 'get_image_metadata')
+        self.mox.StubOutWithMock(utils, 'get_image_from_system_metadata')
         self.mox.StubOutWithMock(scheduler_utils, 'build_request_spec')
         self.mox.StubOutWithMock(scheduler_utils, 'setup_instance_group')
         self.mox.StubOutWithMock(self.conductor.scheduler_client,
@@ -1639,9 +1641,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                                  '_set_vm_state_and_notify')
         self.mox.StubOutWithMock(quota.QUOTAS, 'rollback')
 
-        compute_utils.get_image_metadata(
-            self.context, self.conductor_manager.image_api,
-            'fake-image_ref', mox.IsA(objects.Instance)).AndReturn(image)
+        utils.get_image_from_system_metadata(
+            inst_obj.system_metadata).AndReturn(image)
 
         scheduler_utils.build_request_spec(
                 self.context, image, [inst_obj],
@@ -1681,19 +1682,20 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
 
     def test_cold_migrate_no_valid_host_back_in_stopped_state(self):
         flavor = flavors.get_flavor_by_name('m1.tiny')
-        inst = fake_instance.fake_db_instance(image_ref='fake-image_ref',
-                                              vm_state=vm_states.STOPPED,
-                                              instance_type_id=flavor['id'])
-        inst_obj = objects.Instance._from_db_object(
-                self.context, objects.Instance(), inst,
-                expected_attrs=[])
+        inst_obj = objects.Instance(
+            image_ref='fake-image_ref',
+            vm_state=vm_states.STOPPED,
+            instance_type_id=flavor['id'],
+            system_metadata={},
+            uuid='fake',
+            user_id='fake')
         request_spec = dict(instance_type=dict(extra_specs=dict()),
                             instance_properties=dict())
         filter_props = dict(context=None)
         resvs = 'fake-resvs'
         image = 'fake-image'
 
-        self.mox.StubOutWithMock(compute_utils, 'get_image_metadata')
+        self.mox.StubOutWithMock(utils, 'get_image_from_system_metadata')
         self.mox.StubOutWithMock(scheduler_utils, 'build_request_spec')
         self.mox.StubOutWithMock(scheduler_utils, 'setup_instance_group')
         self.mox.StubOutWithMock(self.conductor.scheduler_client,
@@ -1702,9 +1704,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                                  '_set_vm_state_and_notify')
         self.mox.StubOutWithMock(quota.QUOTAS, 'rollback')
 
-        compute_utils.get_image_metadata(
-            self.context, self.conductor_manager.image_api,
-            'fake-image_ref', mox.IsA(objects.Instance)).AndReturn(image)
+        utils.get_image_from_system_metadata(
+            inst_obj.system_metadata).AndReturn(image)
 
         scheduler_utils.build_request_spec(
                 self.context, image, [inst_obj],
@@ -1743,12 +1744,13 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
 
     def test_cold_migrate_no_valid_host_error_msg(self):
         flavor = flavors.get_flavor_by_name('m1.tiny')
-        inst = fake_instance.fake_db_instance(image_ref='fake-image_ref',
-                                              vm_state=vm_states.STOPPED,
-                                              instance_type_id=flavor['id'])
-        inst_obj = objects.Instance._from_db_object(
-                self.context, objects.Instance(), inst,
-                expected_attrs=[])
+        inst_obj = objects.Instance(
+            image_ref='fake-image_ref',
+            vm_state=vm_states.STOPPED,
+            instance_type_id=flavor['id'],
+            system_metadata={},
+            uuid='fake',
+            user_id='fake')
         request_spec = dict(instance_type=dict(extra_specs=dict()),
                             instance_properties=dict())
         filter_props = dict(context=None)
@@ -1756,7 +1758,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         image = 'fake-image'
 
         with contextlib.nested(
-            mock.patch.object(compute_utils, 'get_image_metadata',
+            mock.patch.object(utils, 'get_image_from_system_metadata',
                               return_value=image),
             mock.patch.object(scheduler_utils, 'build_request_spec',
                               return_value=request_spec),
@@ -1773,7 +1775,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                                     clean_shutdown=True)
             self.assertIn('cold migrate', nvh.message)
 
-    @mock.patch.object(compute_utils, 'get_image_metadata')
+    @mock.patch.object(utils, 'get_image_from_system_metadata')
     @mock.patch('nova.scheduler.utils.build_request_spec')
     @mock.patch.object(scheduler_utils, 'setup_instance_group')
     @mock.patch.object(conductor_manager.ComputeTaskManager,
@@ -1784,12 +1786,13 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                                                  brs_mock,
                                                  image_mock):
         flavor = flavors.get_flavor_by_name('m1.tiny')
-        inst = fake_instance.fake_db_instance(image_ref='fake-image_ref',
-                                              vm_state=vm_states.STOPPED,
-                                              instance_type_id=flavor['id'])
-        inst_obj = objects.Instance._from_db_object(
-                self.context, objects.Instance(), inst,
-                expected_attrs=[])
+        inst_obj = objects.Instance(
+            image_ref='fake-image_ref',
+            vm_state=vm_states.STOPPED,
+            instance_type_id=flavor['id'],
+            system_metadata={},
+            uuid='fake',
+            user_id='fake')
         request_spec = dict(instance_type=dict(extra_specs=dict()),
                             instance_properties=dict())
         filter_props = dict(context=None)
@@ -1812,11 +1815,14 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                                             exception, request_spec)
 
     def test_cold_migrate_exception_host_in_error_state_and_raise(self):
-        inst = fake_instance.fake_db_instance(image_ref='fake-image_ref',
-                                              vm_state=vm_states.STOPPED)
-        inst_obj = objects.Instance._from_db_object(
-                self.context, objects.Instance(), inst,
-                expected_attrs=[])
+        flavor = flavors.get_flavor_by_name('m1.tiny')
+        inst_obj = objects.Instance(
+            image_ref='fake-image_ref',
+            vm_state=vm_states.STOPPED,
+            instance_type_id=flavor['id'],
+            system_metadata={},
+            uuid='fake',
+            user_id='fake')
         request_spec = dict(instance_type=dict(),
                             instance_properties=dict())
         filter_props = dict(context=None)
@@ -1824,7 +1830,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         image = 'fake-image'
         hosts = [dict(host='host1', nodename=None, limits={})]
 
-        self.mox.StubOutWithMock(compute_utils, 'get_image_metadata')
+        self.mox.StubOutWithMock(utils, 'get_image_from_system_metadata')
         self.mox.StubOutWithMock(scheduler_utils, 'build_request_spec')
         self.mox.StubOutWithMock(scheduler_utils, 'setup_instance_group')
         self.mox.StubOutWithMock(self.conductor.scheduler_client,
@@ -1837,9 +1843,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                                  '_set_vm_state_and_notify')
         self.mox.StubOutWithMock(quota.QUOTAS, 'rollback')
 
-        compute_utils.get_image_metadata(
-            self.context, self.conductor_manager.image_api,
-            'fake-image_ref', mox.IsA(objects.Instance)).AndReturn(image)
+        utils.get_image_from_system_metadata(
+            inst_obj.system_metadata).AndReturn(image)
 
         scheduler_utils.build_request_spec(
                 self.context, image, [inst_obj],
@@ -1896,12 +1901,14 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
     def test_resize_no_valid_host_error_msg(self):
         flavor = flavors.get_flavor_by_name('m1.tiny')
         flavor_new = flavors.get_flavor_by_name('m1.small')
-        inst = fake_instance.fake_db_instance(image_ref='fake-image_ref',
-                                              vm_state=vm_states.STOPPED,
-                                              instance_type_id=flavor['id'])
-        inst_obj = objects.Instance._from_db_object(
-                self.context, objects.Instance(), inst,
-                expected_attrs=[])
+        inst_obj = objects.Instance(
+            image_ref='fake-image_ref',
+            vm_state=vm_states.STOPPED,
+            instance_type_id=flavor['id'],
+            system_metadata={},
+            uuid='fake',
+            user_id='fake')
+
         request_spec = dict(instance_type=dict(extra_specs=dict()),
                             instance_properties=dict())
         filter_props = dict(context=None)
@@ -1909,7 +1916,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         image = 'fake-image'
 
         with contextlib.nested(
-            mock.patch.object(compute_utils, 'get_image_metadata',
+            mock.patch.object(utils, 'get_image_from_system_metadata',
                               return_value=image),
             mock.patch.object(scheduler_utils, 'build_request_spec',
                               return_value=request_spec),
