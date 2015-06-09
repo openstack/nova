@@ -108,6 +108,9 @@ class ImageMetaProps(base.NovaObject):
     # Version 1.1: added os_require_quiesce field
     VERSION = ImageMeta.VERSION
 
+    # Maximum number of NUMA nodes permitted for the guest topology
+    NUMA_NODES_MAX = 128
+
     # 'hw_' - settings affecting the guest virtual machine hardware
     # 'img_' - settings affecting the use of images by the compute node
     # 'os_' - settings affecting the guest operating system setup
@@ -330,30 +333,30 @@ class ImageMetaProps(base.NovaObject):
             setattr(self, new_key, image_props[legacy_key])
 
     def _set_numa_mem(self, image_props):
-        nodes = int(image_props.get("hw_numa_nodes", "1"))
-        hw_numa_mem = [None for i in range(nodes)]
+        hw_numa_mem = []
         hw_numa_mem_set = False
-        for cellid in range(nodes):
+        for cellid in range(ImageMetaProps.NUMA_NODES_MAX):
             memprop = "hw_numa_mem.%d" % cellid
-            if memprop in image_props:
-                hw_numa_mem[cellid] = int(image_props[memprop])
-                hw_numa_mem_set = True
-                del image_props[memprop]
+            if memprop not in image_props:
+                break
+            hw_numa_mem.append(int(image_props[memprop]))
+            hw_numa_mem_set = True
+            del image_props[memprop]
 
         if hw_numa_mem_set:
             self.hw_numa_mem = hw_numa_mem
 
     def _set_numa_cpus(self, image_props):
-        nodes = int(image_props.get("hw_numa_nodes", "1"))
-        hw_numa_cpus = [None for i in range(nodes)]
+        hw_numa_cpus = []
         hw_numa_cpus_set = False
-        for cellid in range(nodes):
+        for cellid in range(ImageMetaProps.NUMA_NODES_MAX):
             cpuprop = "hw_numa_cpus.%d" % cellid
-            if cpuprop in image_props:
-                hw_numa_cpus[cellid] = \
-                    hardware.parse_cpu_spec(image_props[cpuprop])
-                hw_numa_cpus_set = True
-                del image_props[cpuprop]
+            if cpuprop not in image_props:
+                break
+            hw_numa_cpus.append(
+                hardware.parse_cpu_spec(image_props[cpuprop]))
+            hw_numa_cpus_set = True
+            del image_props[cpuprop]
 
         if hw_numa_cpus_set:
             self.hw_numa_cpus = hw_numa_cpus
