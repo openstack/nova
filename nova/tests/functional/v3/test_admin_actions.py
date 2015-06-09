@@ -13,11 +13,29 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_config import cfg
+
 from nova.tests.functional.v3 import test_servers
+
+CONF = cfg.CONF
+CONF.import_opt('osapi_compute_extension',
+                'nova.api.openstack.compute.extensions')
 
 
 class AdminActionsSamplesJsonTest(test_servers.ServersSampleBase):
     extension_name = "os-admin-actions"
+    # TODO(gmann): Overriding '_api_version' till all functional tests
+    # are merged between v2 and v2.1. After that base class variable
+    # itself can be changed to 'v2'
+    _api_version = 'v2'
+    extra_extensions_to_load = ["os-access-ips"]
+
+    def _get_flags(self):
+        f = super(AdminActionsSamplesJsonTest, self)._get_flags()
+        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.admin_actions.Admin_actions')
+        return f
 
     def setUp(self):
         """setUp Method for AdminActions api samples extension
