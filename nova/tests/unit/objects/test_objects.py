@@ -45,16 +45,16 @@ LOG = log.getLogger(__name__)
 
 class MyOwnedObject(base.NovaPersistentObject, base.NovaObject):
     VERSION = '1.0'
-    fields = {'baz': fields.Field(fields.Integer())}
+    fields = {'baz': fields.IntegerField()}
 
 
 class MyObj(base.NovaPersistentObject, base.NovaObject,
             base.NovaObjectDictCompat):
     VERSION = '1.6'
-    fields = {'foo': fields.Field(fields.Integer(), default=1),
-              'bar': fields.Field(fields.String()),
-              'missing': fields.Field(fields.String()),
-              'readonly': fields.Field(fields.Integer(), read_only=True),
+    fields = {'foo': fields.IntegerField(default=1),
+              'bar': fields.StringField(),
+              'missing': fields.StringField(),
+              'readonly': fields.IntegerField(read_only=True),
               'rel_object': fields.ObjectField('MyOwnedObject', nullable=True),
               'rel_objects': fields.ListOfObjectsField('MyOwnedObject',
                                                        nullable=True),
@@ -137,7 +137,7 @@ class RandomMixInWithNoFields(object):
 
 
 class TestSubclassedObject(RandomMixInWithNoFields, MyObj):
-    fields = {'new_field': fields.Field(fields.String())}
+    fields = {'new_field': fields.StringField()}
 
 
 class TestMetaclass(test.NoDBTestCase):
@@ -501,7 +501,7 @@ class _TestObject(object):
 
     def test_load_in_base(self):
         class Foo(base.NovaObject):
-            fields = {'foobar': fields.Field(fields.Integer())}
+            fields = {'foobar': fields.IntegerField()}
         obj = Foo()
         with self.assertRaisesRegex(NotImplementedError, ".*foobar.*"):
             obj.foobar
@@ -748,7 +748,7 @@ class _TestObject(object):
 
     def test_obj_fields(self):
         class TestObj(base.NovaObject):
-            fields = {'foo': fields.Field(fields.Integer())}
+            fields = {'foo': fields.IntegerField()}
             obj_extra_fields = ['bar']
 
             @property
