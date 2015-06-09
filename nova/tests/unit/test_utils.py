@@ -33,6 +33,7 @@ from oslo_context import context as common_context
 from oslo_context import fixture as context_fixture
 from oslo_utils import encodeutils
 from oslo_utils import timeutils
+from oslo_utils import units
 import six
 
 
@@ -910,6 +911,31 @@ class GetImageFromSystemMetadataTestCase(test.NoDBTestCase):
 
         # Verify that the foo1 key has not been inherited
         self.assertNotIn("foo1", image)
+
+
+class GetImageMetadataFromVolumeTestCase(test.NoDBTestCase):
+    def test_inherit_image_properties(self):
+        properties = {"fake_prop": "fake_value"}
+        volume = {"volume_image_metadata": properties}
+        image_meta = utils.get_image_metadata_from_volume(volume)
+        self.assertEqual(properties, image_meta["properties"])
+
+    def test_image_size(self):
+        volume = {"size": 10}
+        image_meta = utils.get_image_metadata_from_volume(volume)
+        self.assertEqual(10 * units.Gi, image_meta["size"])
+
+    def test_image_status(self):
+        volume = {}
+        image_meta = utils.get_image_metadata_from_volume(volume)
+        self.assertEqual("active", image_meta["status"])
+
+    def test_values_conversion(self):
+        properties = {"min_ram": "5", "min_disk": "7"}
+        volume = {"volume_image_metadata": properties}
+        image_meta = utils.get_image_metadata_from_volume(volume)
+        self.assertEqual(5, image_meta["min_ram"])
+        self.assertEqual(7, image_meta["min_disk"])
 
 
 class VersionTestCase(test.NoDBTestCase):
