@@ -3866,12 +3866,13 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual("none", cfg.devices[7].action)
 
     def _test_get_guest_usb_tablet(self, vnc_enabled, spice_enabled, os_type,
-                                   agent_enabled=False):
+                                   agent_enabled=False, image_meta=None):
         self.flags(enabled=vnc_enabled, group='vnc')
         self.flags(enabled=spice_enabled,
                    agent_enabled=agent_enabled, group='spice')
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        return drvr._get_guest_pointer_model(os_type)
+        image_meta = objects.ImageMeta.from_dict(image_meta)
+        return drvr._get_guest_pointer_model(os_type, image_meta)
 
     def test_get_guest_usb_tablet_wipe(self):
         self.flags(use_usb_tablet=True, group='libvirt')
@@ -3895,6 +3896,44 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             False, True, vm_mode.HVM, True)
         self.assertIsNone(tablet)
 
+    def test_get_guest_usb_tablet_image_meta(self):
+        self.flags(use_usb_tablet=True, group='libvirt')
+        image_meta = {"properties": {"hw_pointer_model": "usbtablet"}}
+
+        tablet = self._test_get_guest_usb_tablet(
+            True, True, vm_mode.HVM, image_meta=image_meta)
+        self.assertIsNotNone(tablet)
+
+        tablet = self._test_get_guest_usb_tablet(
+            True, False, vm_mode.HVM, image_meta=image_meta)
+        self.assertIsNotNone(tablet)
+
+        tablet = self._test_get_guest_usb_tablet(
+            False, True, vm_mode.HVM, image_meta=image_meta)
+        self.assertIsNotNone(tablet)
+
+        tablet = self._test_get_guest_usb_tablet(
+            False, False, vm_mode.HVM, image_meta=image_meta)
+        self.assertIsNone(tablet)
+
+        tablet = self._test_get_guest_usb_tablet(
+            True, True, "foo", image_meta=image_meta)
+        self.assertIsNone(tablet)
+
+        tablet = self._test_get_guest_usb_tablet(
+            False, True, vm_mode.HVM, True, image_meta=image_meta)
+        self.assertIsNone(tablet)
+
+    def test_get_guest_usb_tablet_image_meta_no_vnc(self):
+        self.flags(use_usb_tablet=False, group='libvirt')
+        self.flags(pointer_model=None)
+
+        image_meta = {"properties": {"hw_pointer_model": "usbtablet"}}
+        self.assertRaises(
+            exception.UnsupportedPointerModelRequested,
+            self._test_get_guest_usb_tablet,
+            False, False, vm_mode.HVM, True, image_meta=image_meta)
+
     def test_get_guest_no_pointer_model_usb_tablet_set(self):
         self.flags(use_usb_tablet=True, group='libvirt')
 
@@ -3912,6 +3951,21 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.flags(pointer_model='usbtablet')
         tablet = self._test_get_guest_usb_tablet(True, True, vm_mode.HVM)
         self.assertIsNotNone(tablet)
+
+    def test_get_guest_pointer_model_usb_tablet_image(self):
+        image_meta = {"properties": {"hw_pointer_model": "usbtablet"}}
+        tablet = self._test_get_guest_usb_tablet(
+            True, True, vm_mode.HVM, image_meta=image_meta)
+        self.assertIsNotNone(tablet)
+
+    def test_get_guest_pointer_model_usb_tablet_image_no_HVM(self):
+        self.flags(pointer_model=None)
+        self.flags(use_usb_tablet=False, group='libvirt')
+        image_meta = {"properties": {"hw_pointer_model": "usbtablet"}}
+        self.assertRaises(
+            exception.UnsupportedPointerModelRequested,
+            self._test_get_guest_usb_tablet,
+            True, True, vm_mode.XEN, image_meta=image_meta)
 
     def _test_get_guest_config_with_watchdog_action_flavor(self,
             hw_watchdog_action="hw:watchdog_action"):

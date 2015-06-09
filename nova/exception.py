@@ -2153,3 +2153,8 @@ class InvalidReservedMemoryPagesOption(Invalid):
 class ConcurrentUpdateDetected(NovaException):
     msg_fmt = _("Another thread concurrently updated the data. "
                 "Please retry your update")
+
+
+class UnsupportedPointerModelRequested(Invalid):
+    msg_fmt = _("Pointer model '%(model)s' requested is not supported by "
+                "host.")

@@ -162,12 +162,15 @@ class ImageMetaProps(base.NovaObject):
     # Version 1.11: Added hw_firmware_type field
     # Version 1.12: Added properties for image signature verification
     # Version 1.13: added os_secure_boot field
-    VERSION = '1.13'
+    # Version 1.14: Added 'hw_pointer_model' field
+    VERSION = '1.14'
 
     def obj_make_compatible(self, primitive, target_version):
         super(ImageMetaProps, self).obj_make_compatible(primitive,
                                                         target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 14):
+            primitive.pop('hw_pointer_model', None)
         if target_version < (1, 13):
             primitive.pop('os_secure_boot', None)
         if target_version < (1, 11):
@@ -286,6 +289,9 @@ class ImageMetaProps(base.NovaObject):
         # Each list entry corresponds to a guest NUMA node and the
         # list value indicates the memory size of that node.
         'hw_numa_mem': fields.ListOfIntegersField(),
+
+        # Generic property to specify the pointer model type.
+        'hw_pointer_model': fields.PointerModelField(),
 
         # boolean 'yes' or 'no' to enable QEMU guest agent
         'hw_qemu_guest_agent': fields.FlexibleBooleanField(),
