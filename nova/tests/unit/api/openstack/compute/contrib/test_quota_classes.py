@@ -128,6 +128,11 @@ class QuotaClassSetsTestV21(test.TestCase):
         self.assertRaises(self.validation_error, self.controller.update,
                           self.req_admin, 'test_class', body=body)
 
+    def test_quotas_update_with_invalid_integer(self):
+        body = {'quota_class_set': {'instances': 2 ** 31 + 1}}
+        self.assertRaises(self.validation_error, self.controller.update,
+                          self.req_admin, 'test_class', body=body)
+
     def test_quotas_update_with_non_integer(self):
         body = {'quota_class_set': {'instances': "abc"}}
         self.assertRaises(self.validation_error, self.controller.update,
