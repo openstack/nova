@@ -1255,7 +1255,6 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                    mock_get_datastore,
                    mock_configure_config_drive,
                    block_device_info=None,
-                   power_on=True,
                    extra_specs=None,
                    config_drive=False):
 
@@ -1297,8 +1296,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                               injected_files='fake_files',
                               admin_password='password',
                               network_info=network_info,
-                              block_device_info=block_device_info,
-                              power_on=power_on)
+                              block_device_info=block_device_info)
 
             mock_is_neutron.assert_called_once_with()
 
@@ -1331,11 +1329,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 self._instance,
                 network_info,
                 vm_ref='fake_vm_ref')
-            if power_on:
-                mock_power_on_instance.assert_called_once_with(
-                    self._session, self._instance, vm_ref='fake_vm_ref')
-            else:
-                self.assertFalse(mock_power_on_instance.called)
+            mock_power_on_instance.assert_called_once_with(
+                self._session, self._instance, vm_ref='fake_vm_ref')
 
             if (block_device_info and
                 'block_device_mapping' in block_device_info):
@@ -1437,9 +1432,6 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     def test_spawn_config_drive_enabled(self):
         self.flags(force_config_drive=True)
         self._test_spawn(config_drive=True)
-
-    def test_spawn_no_power_on(self):
-        self._test_spawn(power_on=False)
 
     def test_spawn_with_block_device_info(self):
         block_device_info = {

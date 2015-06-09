@@ -585,8 +585,7 @@ class VMwareVMOps(object):
                                                    adapter_type, path)
 
     def spawn(self, context, instance, image_meta, injected_files,
-              admin_password, network_info, block_device_info=None,
-              power_on=True):
+              admin_password, network_info, block_device_info=None):
 
         client_factory = self._session.vim.client.factory
         image_info = images.VMwareImage.from_image(instance.image_ref,
@@ -672,8 +671,7 @@ class VMwareVMOps(object):
                     instance, vm_ref, vi.dc_info, vi.datastore,
                     injected_files, admin_password)
 
-        if power_on:
-            vm_util.power_on_instance(self._session, instance, vm_ref=vm_ref)
+        vm_util.power_on_instance(self._session, instance, vm_ref=vm_ref)
 
     def _is_bdm_valid(self, block_device_mapping):
         """Checks if the block device mapping is valid."""

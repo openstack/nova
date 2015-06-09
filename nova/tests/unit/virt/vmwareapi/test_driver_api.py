@@ -673,33 +673,10 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self._create_vm(uuid=uuid)
         self.assertIsNotNone(vm_util.vm_ref_cache_get(uuid))
 
-    def _spawn_power_state(self, power_on):
-        self._spawn = self.conn._vmops.spawn
-        self._power_on = power_on
-
-        def _fake_spawn(context, instance, image_meta, injected_files,
-            admin_password, network_info, block_device_info=None,
-            power_on=True):
-            return self._spawn(context, instance, image_meta,
-                               injected_files, admin_password, network_info,
-                               block_device_info=block_device_info,
-                               power_on=self._power_on)
-
-        with (
-            mock.patch.object(self.conn._vmops, 'spawn', _fake_spawn)
-        ):
-            self._create_vm(powered_on=power_on)
-            info = self._get_info()
-            if power_on:
-                self._check_vm_info(info, power_state.RUNNING)
-            else:
-                self._check_vm_info(info, power_state.SHUTDOWN)
-
-    def test_spawn_no_power_on(self):
-        self._spawn_power_state(False)
-
     def test_spawn_power_on(self):
-        self._spawn_power_state(True)
+        self._create_vm()
+        info = self._get_info()
+        self._check_vm_info(info, power_state.RUNNING)
 
     def test_spawn_root_size_0(self):
         self._create_vm(instance_type='m1.micro')
