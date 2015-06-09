@@ -22,6 +22,7 @@ from nova import context
 from nova import test
 from nova.tests.unit.virt.libvirt import fakelibvirt
 from nova import utils
+from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import guest as libvirt_guest
 from nova.virt.libvirt import host
 
@@ -183,3 +184,47 @@ class GuestTestCase(test.NoDBTestCase):
         guest.delete_configuration()
 
         domain.undefine.assert_called_once_with()
+
+    def test_attach_device(self):
+        domain = mock.Mock(spec=fakelibvirt.virDomain)
+        conf = mock.Mock(spec=vconfig.LibvirtConfigGuestDevice)
+        conf.to_xml.return_value = "</xml>"
+
+        guest = libvirt_guest.Guest(domain)
+        guest.attach_device(conf)
+
+        domain.attachDeviceFlags.assert_called_once_with("</xml>", flags=0)
+
+    def test_attach_device_persistent(self):
+        domain = mock.Mock(spec=fakelibvirt.virDomain)
+        conf = mock.Mock(spec=vconfig.LibvirtConfigGuestDevice)
+        conf.to_xml.return_value = "</xml>"
+
+        guest = libvirt_guest.Guest(domain)
+        guest.attach_device(conf, persistent=True)
+
+        domain.attachDeviceFlags.assert_called_once_with(
+            "</xml>", flags=fakelibvirt.VIR_DOMAIN_AFFECT_CONFIG)
+
+    def test_attach_device_live(self):
+        domain = mock.Mock(spec=fakelibvirt.virDomain)
+        conf = mock.Mock(spec=vconfig.LibvirtConfigGuestDevice)
+        conf.to_xml.return_value = "</xml>"
+
+        guest = libvirt_guest.Guest(domain)
+        guest.attach_device(conf, live=True)
+
+        domain.attachDeviceFlags.assert_called_once_with(
+            "</xml>", flags=fakelibvirt.VIR_DOMAIN_AFFECT_LIVE)
+
+    def test_attach_device_persistent_live(self):
+        domain = mock.Mock(spec=fakelibvirt.virDomain)
+        conf = mock.Mock(spec=vconfig.LibvirtConfigGuestDevice)
+        conf.to_xml.return_value = "</xml>"
+
+        guest = libvirt_guest.Guest(domain)
+        guest.attach_device(conf, persistent=True, live=True)
+
+        domain.attachDeviceFlags.assert_called_once_with(
+            "</xml>", flags=(fakelibvirt.VIR_DOMAIN_AFFECT_CONFIG |
+                             fakelibvirt.VIR_DOMAIN_AFFECT_LIVE))
