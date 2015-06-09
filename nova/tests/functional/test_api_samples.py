@@ -27,7 +27,6 @@ from oslo_utils import importutils
 import testtools
 
 from nova.api.metadata import password
-from nova.api.openstack.compute.contrib import fping
 from nova.api.openstack.compute import extensions
 from nova.cells import utils as cells_utils
 # Import extensions to pull in osapi_compute_extension CONF option used below.
@@ -42,12 +41,10 @@ from nova.servicegroup import api as service_group_api
 from nova import test
 from nova.tests.functional import api_samples_test_base
 from nova.tests.functional import integrated_helpers
-from nova.tests.unit.api.openstack.compute.contrib import test_fping
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_network
 from nova.tests.unit import fake_utils
 from nova.tests.unit.image import fake
-from nova import utils
 from nova.volume import cinder
 
 CONF = cfg.CONF
@@ -894,31 +891,6 @@ class BlockDeviceMappingV2BootJsonTest(ServersSampleBase):
         self.stubs.Set(cinder.API, 'check_attach',
                        fakes.stub_volume_check_attach)
         return self._post_server()
-
-
-class FpingSampleJsonTests(ServersSampleBase):
-    extension_name = ("nova.api.openstack.compute.contrib.fping.Fping")
-
-    def setUp(self):
-        super(FpingSampleJsonTests, self).setUp()
-
-        def fake_check_fping(self):
-            pass
-        self.stubs.Set(utils, "execute", test_fping.execute)
-        self.stubs.Set(fping.FpingController, "check_fping",
-                       fake_check_fping)
-
-    def test_get_fping(self):
-        self._post_server()
-        response = self._do_get('os-fping')
-        subs = self._get_regexes()
-        self._verify_response('fping-get-resp', subs, response, 200)
-
-    def test_get_fping_details(self):
-        uuid = self._post_server()
-        response = self._do_get('os-fping/%s' % (uuid))
-        subs = self._get_regexes()
-        self._verify_response('fping-get-details-resp', subs, response, 200)
 
 
 class ExtendedAvailabilityZoneJsonTests(ServersSampleBase):
