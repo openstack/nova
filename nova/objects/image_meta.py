@@ -23,7 +23,9 @@ from nova.virt import hardware
 
 @base.NovaObjectRegistry.register
 class ImageMeta(base.NovaObject):
-    VERSION = '1.0'
+    # Version 1.0: Initial version
+    # Version 1.1: updated ImageMetaProps
+    VERSION = '1.1'
 
     # These are driven by what the image client API returns
     # to Nova from Glance. This is defined in the glance
@@ -56,7 +58,8 @@ class ImageMeta(base.NovaObject):
     }
 
     obj_relationships = {
-        'properties': [('1.0', '1.0')],
+        'properties': [('1.0', '1.0'),
+                       ('1.1', '1.1')],
     }
 
     @classmethod
@@ -101,6 +104,8 @@ class ImageMeta(base.NovaObject):
 
 @base.NovaObjectRegistry.register
 class ImageMetaProps(base.NovaObject):
+    # Version 1.0: Initial version
+    # Version 1.1: added os_require_quiesce field
     VERSION = ImageMeta.VERSION
 
     # 'hw_' - settings affecting the guest virtual machine hardware
@@ -267,6 +272,10 @@ class ImageMetaProps(base.NovaObject):
         # user defined. Nova has no real need for strict validation so
         # leave it freeform
         'os_distro': fields.StringField(),
+
+        # boolean - if true, then guest must support disk quiesce
+        # or snapshot operation will be denied
+        'os_require_quiesce': fields.FlexibleBooleanField(),
 
         # boolean - if using agent don't inject files, assume someone else is
         # doing that (cloud-init)
