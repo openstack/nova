@@ -23,7 +23,7 @@ paramiko>=1.13.0
 pyasn1
 Babel>=1.3
 iso8601>=0.1.9
-jsonschema>=2.0.0,<3.0.0
+jsonschema>=2.0.0,<3.0.0,!=2.5.0
 python-cinderclient>=1.2.1
 python-keystoneclient>=1.6.0
 python-neutronclient>=2.3.11,<3
@@ -33,17 +33,17 @@ six>=1.9.0
 stevedore>=1.3.0  # Apache-2.0
 setuptools
 websockify>=0.6.0,<0.7
-oslo.concurrency>=1.8.0         # Apache-2.0
+oslo.concurrency>=2.0.0         # Apache-2.0
 oslo.config>=1.11.0  # Apache-2.0
 oslo.context>=0.2.0                     # Apache-2.0
 oslo.log>=1.2.0  # Apache-2.0
 oslo.serialization>=1.4.0               # Apache-2.0
 oslo.utils>=1.4.0                       # Apache-2.0
 oslo.db>=1.10.0  # Apache-2.0
-oslo.rootwrap>=1.6.0  # Apache-2.0
+oslo.rootwrap>=2.0.0  # Apache-2.0
 oslo.messaging>=1.8.0  # Apache-2.0
 oslo.i18n>=1.5.0  # Apache-2.0
 rfc3986>=0.2.0  # Apache-2.0
-oslo.middleware>=1.2.0                  # Apache-2.0
+oslo.middleware>=1.2.0,!=2.0.0                  # Apache-2.0
 psutil>=1.1.1,<2.0.0
 oslo.versionedobjects>=0.3.0
