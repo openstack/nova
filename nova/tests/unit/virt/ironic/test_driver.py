@@ -70,7 +70,8 @@ def _get_properties():
     return {'cpus': 2,
             'memory_mb': 512,
             'local_gb': 10,
-            'cpu_arch': 'x86_64'}
+            'cpu_arch': 'x86_64',
+            'capabilities': None}
 
 
 def _get_stats():
@@ -376,6 +377,65 @@ class IronicDriverTestCase(test.NoDBTestCase):
         self.assertEqual(props['local_gb'], result['local_gb_used'])
         self.assertEqual(node_uuid, result['hypervisor_hostname'])
         self.assertEqual(stats, jsonutils.loads(result['stats']))
+
+    @mock.patch.object(ironic_driver.LOG, 'warning')
+    def test__parse_node_properties(self, mock_warning):
+        props = _get_properties()
+        node = ironic_utils.get_test_node(
+            uuid=uuidutils.generate_uuid(),
+            properties=props)
+        # raw_cpu_arch is included because extra_specs filters do not
+        # canonicalized the arch
+        props['raw_cpu_arch'] = props['cpu_arch']
+        parsed = self.driver._parse_node_properties(node)
+
+        self.assertEqual(props, parsed)
+        # Assert we didn't log any warning since all properties are
+        # correct
+        self.assertFalse(mock_warning.called)
+
+    @mock.patch.object(ironic_driver.LOG, 'warning')
+    def test__parse_node_properties_bad_values(self, mock_warning):
+        props = _get_properties()
+        props['cpus'] = 'bad-value'
+        props['memory_mb'] = 'bad-value'
+        props['local_gb'] = 'bad-value'
+        props['cpu_arch'] = 'bad-value'
+        node = ironic_utils.get_test_node(
+            uuid=uuidutils.generate_uuid(),
+            properties=props)
+        # raw_cpu_arch is included because extra_specs filters do not
+        # canonicalized the arch
+        props['raw_cpu_arch'] = props['cpu_arch']
+        parsed = self.driver._parse_node_properties(node)
+
+        expected_props = props.copy()
+        expected_props['cpus'] = 0
+        expected_props['memory_mb'] = 0
+        expected_props['local_gb'] = 0
+        expected_props['cpu_arch'] = None
+        self.assertEqual(expected_props, parsed)
+        self.assertEqual(4, mock_warning.call_count)
+
+    @mock.patch.object(ironic_driver.LOG, 'warning')
+    def test__parse_node_properties_canonicalize_cpu_arch(self, mock_warning):
+        props = _get_properties()
+        props['cpu_arch'] = 'amd64'
+        node = ironic_utils.get_test_node(
+            uuid=uuidutils.generate_uuid(),
+            properties=props)
+        # raw_cpu_arch is included because extra_specs filters do not
+        # canonicalized the arch
+        props['raw_cpu_arch'] = props['cpu_arch']
+        parsed = self.driver._parse_node_properties(node)
+
+        expected_props = props.copy()
+        # Make sure it cpu_arch was canonicalized
+        expected_props['cpu_arch'] = 'x86_64'
+        self.assertEqual(expected_props, parsed)
+        # Assert we didn't log any warning since all properties are
+        # correct
+        self.assertFalse(mock_warning.called)
 
     @mock.patch.object(firewall.NoopFirewallDriver, 'prepare_instance_filter',
                        create=True)
