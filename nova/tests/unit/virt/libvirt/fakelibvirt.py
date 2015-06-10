@@ -53,6 +53,7 @@ VIR_DOMAIN_BLOCK_REBASE_SHALLOW = 1
 VIR_DOMAIN_BLOCK_REBASE_REUSE_EXT = 2
 VIR_DOMAIN_BLOCK_REBASE_COPY = 8
 
+VIR_DOMAIN_BLOCK_JOB_ABORT_ASYNC = 1
 VIR_DOMAIN_BLOCK_JOB_ABORT_PIVOT = 2
 
 VIR_DOMAIN_EVENT_ID_LIFECYCLE = 0
@@ -731,6 +732,18 @@ class Domain(object):
 
     def blockJobInfo(self, disk, flags):
         return {}
+
+    def blockJobAbort(self, disk, flags):
+        pass
+
+    def blockResize(self, disk, size):
+        pass
+
+    def blockRebase(self, disk, base, flags):
+        return 0
+
+    def blockCommit(self, disk, base, top, flags):
+        return 0
 
     def jobInfo(self):
         return []

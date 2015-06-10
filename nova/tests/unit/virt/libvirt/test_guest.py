@@ -326,3 +326,97 @@ class GuestTestCase(test.NoDBTestCase):
         guest.save_memory_state()
 
         domain.managedSave.assert_called_once_with(0)
+
+    def test_get_block_device(self):
+        domain = mock.Mock(spec=fakelibvirt.virDomain)
+        guest = libvirt_guest.Guest(domain)
+        disk = 'vda'
+
+        gblock = guest.get_block_device(disk)
+        self.assertEqual(disk, gblock._disk)
+        self.assertEqual(guest, gblock._guest)
+
+
+class GuestBlockTestCase(test.NoDBTestCase):
+
+    def setUp(self):
+        super(GuestBlockTestCase, self).setUp()
+
+        self.useFixture(fakelibvirt.FakeLibvirtFixture())
+        self.host = host.Host("qemu:///system")
+        self.context = context.get_admin_context()
+
+        self.domain = mock.Mock(spec=fakelibvirt.virDomain)
+        self.guest = libvirt_guest.Guest(self.domain)
+        self.gblock = self.guest.get_block_device('vda')
+
+    def test_abort_job(self):
+        self.gblock.abort_job()
+        self.domain.blockJobAbort.assert_called_once_with('vda', flags=0)
+
+    def test_abort_job_async(self):
+        self.gblock.abort_job(async=True)
+        self.domain.blockJobAbort.assert_called_once_with(
+            'vda', flags=fakelibvirt.VIR_DOMAIN_BLOCK_JOB_ABORT_ASYNC)
+
+    def test_abort_job_pivot(self):
+        self.gblock.abort_job(pivot=True)
+        self.domain.blockJobAbort.assert_called_once_with(
+            'vda', flags=fakelibvirt.VIR_DOMAIN_BLOCK_JOB_ABORT_PIVOT)
+
+    def test_get_job_info(self):
+        self.domain.blockJobInfo.return_value = {
+            "type": 1,
+            "bandwidth": 18,
+            "cur": 66,
+            "end": 100}
+
+        info = self.gblock.get_job_info()
+        self.assertEqual(1, info.job)
+        self.assertEqual(18, info.bandwidth)
+        self.assertEqual(66, info.cur)
+        self.assertEqual(100, info.end)
+        self.domain.blockJobInfo.assert_called_once_with('vda', flags=0)
+
+    def test_resize(self):
+        self.gblock.resize(10)
+        self.domain.blockResize.assert_called_once_with('vda', 10)
+
+    def test_rebase(self):
+        self.gblock.rebase("foo")
+        self.domain.blockRebase.assert_called_once_with(
+            'vda', "foo", 0, flags=0)
+
+    def test_rebase_shallow(self):
+        self.gblock.rebase("foo", shallow=True)
+        self.domain.blockRebase.assert_called_once_with(
+            'vda', "foo", 0, flags=fakelibvirt.VIR_DOMAIN_BLOCK_REBASE_SHALLOW)
+
+    def test_rebase_reuse_ext(self):
+        self.gblock.rebase("foo", reuse_ext=True)
+        self.domain.blockRebase.assert_called_once_with(
+            'vda', "foo", 0,
+            flags=fakelibvirt.VIR_DOMAIN_BLOCK_REBASE_REUSE_EXT)
+
+    def test_rebase_copy(self):
+        self.gblock.rebase("foo", copy=True)
+        self.domain.blockRebase.assert_called_once_with(
+            'vda', "foo", 0,
+            flags=fakelibvirt.VIR_DOMAIN_BLOCK_REBASE_COPY)
+
+    def test_rebase_relative(self):
+        self.gblock.rebase("foo", relative=True)
+        self.domain.blockRebase.assert_called_once_with(
+            'vda', "foo", 0,
+            flags=fakelibvirt.VIR_DOMAIN_BLOCK_REBASE_RELATIVE)
+
+    def test_commit(self):
+        self.gblock.commit("foo", "top")
+        self.domain.blockCommit.assert_called_once_with(
+            'vda', "foo", "top", 0, flags=0)
+
+    def test_commit_relative(self):
+        self.gblock.commit("foo", "top", relative=True)
+        self.domain.blockCommit.assert_called_once_with(
+            'vda', "foo", "top", 0,
+            flags=fakelibvirt.VIR_DOMAIN_BLOCK_COMMIT_RELATIVE)
