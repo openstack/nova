@@ -1197,13 +1197,14 @@ class ComputeVolumeTestCase(BaseTestCase):
 
         convert_swap.assert_called_once_with(bdms)
         convert_ephemerals.assert_called_once_with(bdms)
-        convert_volumes.assert_called_once_with(bdms)
-        convert_snapshots.assert_called_once_with(bdms)
-        convert_images.assert_called_once_with(bdms)
-        convert_blanks.assert_called_once_with(bdms)
+        bdm_args = tuple(bdms)
+        convert_volumes.assert_called_once_with(bdm_args)
+        convert_snapshots.assert_called_once_with(bdm_args)
+        convert_images.assert_called_once_with(bdm_args)
+        convert_blanks.assert_called_once_with(bdm_args)
 
         self.assertEqual(expected_block_device_info, block_device_info)
-        self.assertEqual(4, attach_block_devices.call_count)
+        self.assertEqual(1, attach_block_devices.call_count)
         get_swap.assert_called_once_with([])
 
 

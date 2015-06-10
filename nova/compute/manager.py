@@ -1692,45 +1692,35 @@ class ComputeManager(manager.Manager):
                                                 swap,
                                                 block_device_mapping)
 
+    def _block_device_info_to_legacy(self, block_device_info):
+        """Convert BDI to the old format for drivers that need it."""
+
+        if self.use_legacy_block_device_info:
+            ephemerals = driver_block_device.legacy_block_devices(
+                driver.block_device_info_get_ephemerals(block_device_info))
+            mapping = driver_block_device.legacy_block_devices(
+                driver.block_device_info_get_mapping(block_device_info))
+            swap = block_device_info['swap']
+            if swap:
+                swap = swap.legacy()
+
+            block_device_info.update({
+                'ephemerals': ephemerals,
+                'swap': swap,
+                'block_device_mapping': mapping})
+
     def _prep_block_device(self, context, instance, bdms,
                            do_check_attach=True):
         """Set up the block device for an instance with error logging."""
         try:
-            block_device_info = {
-                'root_device_name': instance.root_device_name,
-                'swap': driver_block_device.convert_swap(bdms),
-                'ephemerals': driver_block_device.convert_ephemerals(bdms),
-                'block_device_mapping': (
-                    driver_block_device.attach_block_devices(
-                        driver_block_device.convert_volumes(bdms),
-                        context, instance, self.volume_api,
-                        self.driver, do_check_attach=do_check_attach) +
-                    driver_block_device.attach_block_devices(
-                        driver_block_device.convert_snapshots(bdms),
-                        context, instance, self.volume_api,
-                        self.driver, self._await_block_device_map_created,
-                        do_check_attach=do_check_attach) +
-                    driver_block_device.attach_block_devices(
-                        driver_block_device.convert_images(bdms),
-                        context, instance, self.volume_api,
-                        self.driver, self._await_block_device_map_created,
-                        do_check_attach=do_check_attach) +
-                    driver_block_device.attach_block_devices(
-                        driver_block_device.convert_blanks(bdms),
-                        context, instance, self.volume_api,
-                        self.driver, self._await_block_device_map_created,
-                        do_check_attach=do_check_attach))
-            }
+            block_device_info = driver.get_block_device_info(instance, bdms)
+            mapping = driver.block_device_info_get_mapping(block_device_info)
+            driver_block_device.attach_block_devices(
+                mapping, context, instance, self.volume_api, self.driver,
+                do_check_attach=do_check_attach,
+                wait_func=self._await_block_device_map_created)
 
-            if self.use_legacy_block_device_info:
-                for bdm_type in ('swap', 'ephemerals', 'block_device_mapping'):
-                    block_device_info[bdm_type] = \
-                        driver_block_device.legacy_block_devices(
-                        block_device_info[bdm_type])
-
-            # Get swap out of the list
-            block_device_info['swap'] = driver_block_device.get_swap(
-                block_device_info['swap'])
+            self._block_device_info_to_legacy(block_device_info)
             return block_device_info
 
         except exception.OverQuota:
@@ -1810,39 +1800,23 @@ class ComputeManager(manager.Manager):
         if not bdms:
             bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                     context, instance.uuid)
-        swap = driver_block_device.convert_swap(bdms)
-        ephemerals = driver_block_device.convert_ephemerals(bdms)
-        block_device_mapping = (
-            driver_block_device.convert_volumes(bdms) +
-            driver_block_device.convert_snapshots(bdms) +
-            driver_block_device.convert_images(bdms))
+        block_device_info = driver.get_block_device_info(instance, bdms)
 
         if not refresh_conn_info:
             # if the block_device_mapping has no value in connection_info
             # (returned as None), don't include in the mapping
-            block_device_mapping = [
-                bdm for bdm in block_device_mapping
+            block_device_info['block_device_mapping'] = [
+                bdm for bdm in driver.block_device_info_get_mapping(
+                                    block_device_info)
                 if bdm.get('connection_info')]
         else:
-            block_device_mapping = driver_block_device.refresh_conn_infos(
-                block_device_mapping, context, instance, self.volume_api,
-                self.driver)
+            driver_block_device.refresh_conn_infos(
+                driver.block_device_info_get_mapping(block_device_info),
+                context, instance, self.volume_api, self.driver)
 
-        if self.use_legacy_block_device_info:
-            swap = driver_block_device.legacy_block_devices(swap)
-            ephemerals = driver_block_device.legacy_block_devices(ephemerals)
-            block_device_mapping = driver_block_device.legacy_block_devices(
-                block_device_mapping)
+        self._block_device_info_to_legacy(block_device_info)
 
-        # Get swap out of the list
-        swap = driver_block_device.get_swap(swap)
-
-        root_device_name = instance.get('root_device_name')
-
-        return {'swap': swap,
-                'root_device_name': root_device_name,
-                'ephemerals': ephemerals,
-                'block_device_mapping': block_device_mapping}
+        return block_device_info
 
     @wrap_exception()
     @reverts_task_state
