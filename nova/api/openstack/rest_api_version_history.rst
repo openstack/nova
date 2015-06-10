@@ -46,3 +46,9 @@ user documentation.
   This change is required for the extraction of EC2 API into a standalone
   service. It exposes necessary properties absent in public nova APIs yet.
   Add info for Standalone EC2 API to cut access to Nova DB.
+
+- **2.4**
+
+  Show the 'reserved' status on a FixedIP object in the os-fixed-ips API
+  extension. The extension allows one to reserve and unreserve a fixed IP
+  but the show method does not report the current status.
