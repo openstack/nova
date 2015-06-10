@@ -94,3 +94,31 @@ class BadLogTestCase(test.TestCase):
     def test_bad_debug_log(self):
         self.assertRaises(KeyError,
             LOG.debug, "this is a misformated %(log)s", {'nothing': 'nothing'})
+
+
+class MatchTypeTestCase(test.TestCase):
+
+    def test_match_type_simple(self):
+        matcher = test.MatchType(dict)
+
+        self.assertEqual(matcher, {})
+        self.assertEqual(matcher, {"hello": "world"})
+        self.assertEqual(matcher, {"hello": ["world"]})
+        self.assertNotEqual(matcher, [])
+        self.assertNotEqual(matcher, [{"hello": "world"}])
+        self.assertNotEqual(matcher, 123)
+        self.assertNotEqual(matcher, "foo")
+
+    def test_match_type_object(self):
+        class Hello(object):
+            pass
+
+        class World(object):
+            pass
+
+        matcher = test.MatchType(Hello)
+
+        self.assertEqual(matcher, Hello())
+        self.assertNotEqual(matcher, World())
+        self.assertNotEqual(matcher, 123)
+        self.assertNotEqual(matcher, "foo")
