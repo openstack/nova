@@ -566,7 +566,7 @@ class VMwareVMOps(object):
             ephemerals = driver.block_device_info_get_ephemerals(bdi)
             for idx, eph in enumerate(ephemerals):
                 size = eph['size'] * units.Mi
-                at = eph.get('disk_bus', adapter_type)
+                at = eph.get('disk_bus') or adapter_type
                 filename = vm_util.get_ephemeral_name(idx)
                 path = str(ds_obj.DatastorePath(datastore.name, folder,
                                                 filename))
