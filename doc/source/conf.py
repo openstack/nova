@@ -35,6 +35,7 @@ extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.graphviz',
               'oslosphinx',
               "ext.support_matrix",
+              'sphinxcontrib.seqdiag',
               ]
 
 todo_include_todos = True
