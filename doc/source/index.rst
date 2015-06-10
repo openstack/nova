@@ -39,6 +39,15 @@ Compute API References
 * `v2 (SUPPORTED)`_ and `v2 extensions (SUPPORTED)`_ (Will be deprecated in
   the near future.)
 
+API Microversion History:
+
+.. toctree::
+   :maxdepth: 1
+
+   api_microversion_history
+
+
+
 Local copy of v2 docs:
 
 .. toctree::
@@ -86,7 +95,7 @@ APIs Development
 
    addmethod.openstackapi
    api_plugins
-   api_microversions
+   api_microversion_dev
    policy_enforcement
 
 Concepts
