@@ -206,6 +206,7 @@ policy_data = """
     "os_compute_api:ips:index": "",
     "os_compute_api:ips:show": "",
     "os_compute_api:os-extended-volumes": "",
+    "os_compute_api:extensions": "",
     "os_compute_api:extensions:discoverable": "",
     "compute_extension:fixed_ips": "",
     "os_compute_api:os-fixed-ips": "",
