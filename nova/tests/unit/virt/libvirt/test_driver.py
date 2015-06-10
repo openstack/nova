@@ -8591,6 +8591,53 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             self.assertRaises(fakelibvirt.libvirtError, conn._destroy,
                               instance)
 
+    def test_private_destroy_ebusy_timeout(self):
+        # Tests that _destroy will retry 3 times to destroy the guest when an
+        # EBUSY is raised, but eventually times out and raises the libvirtError
+        ex = fakelibvirt.make_libvirtError(
+                fakelibvirt.libvirtError,
+                ("Failed to terminate process 26425 with SIGKILL: "
+                 "Device or resource busy"),
+                error_code=fakelibvirt.VIR_ERR_SYSTEM_ERROR,
+                int1=errno.EBUSY)
+
+        mock_guest = mock.Mock(libvirt_guest.Guest, id=1)
+        mock_guest.poweroff = mock.Mock(side_effect=ex)
+
+        instance = objects.Instance(**self.test_instance)
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+        with mock.patch.object(drvr._host, 'get_guest',
+                               return_value=mock_guest):
+            self.assertRaises(fakelibvirt.libvirtError, drvr._destroy,
+                              instance)
+
+        self.assertEqual(3, mock_guest.poweroff.call_count)
+
+    def test_private_destroy_ebusy_multiple_attempt_ok(self):
+        # Tests that the _destroy attempt loop is broken when EBUSY is no
+        # longer raised.
+        ex = fakelibvirt.make_libvirtError(
+                fakelibvirt.libvirtError,
+                ("Failed to terminate process 26425 with SIGKILL: "
+                 "Device or resource busy"),
+                error_code=fakelibvirt.VIR_ERR_SYSTEM_ERROR,
+                int1=errno.EBUSY)
+
+        mock_guest = mock.Mock(libvirt_guest.Guest, id=1)
+        mock_guest.poweroff = mock.Mock(side_effect=[ex, None])
+
+        inst_info = hardware.InstanceInfo(power_state.SHUTDOWN, id=1)
+        instance = objects.Instance(**self.test_instance)
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+        with mock.patch.object(drvr._host, 'get_guest',
+                               return_value=mock_guest):
+            with mock.patch.object(drvr, 'get_info', return_value=inst_info):
+                drvr._destroy(instance)
+
+        self.assertEqual(2, mock_guest.poweroff.call_count)
+
     def test_undefine_domain_with_not_found_instance(self):
         def fake_get_domain(self, instance):
             raise exception.InstanceNotFound(instance_id=instance.name)
