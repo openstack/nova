@@ -37,7 +37,10 @@ class _TestBandwidthUsage(test.TestCase):
     @staticmethod
     def _compare(test, db, obj):
         for field, value in db.items():
-            test.assertEqual(db[field], obj[field])
+            obj_field = field
+            if obj_field == 'uuid':
+                obj_field = 'instance_uuid'
+            test.assertEqual(db[field], obj[obj_field])
 
     @staticmethod
     def _fake_bw_usage(time=None, start_period=None, bw_in=100,
@@ -47,7 +50,7 @@ class _TestBandwidthUsage(test.TestCase):
             'updated_at': None,
             'deleted_at': None,
             'deleted': 0,
-            'instance_uuid': 'fake_uuid1',
+            'uuid': 'fake_uuid1',
             'mac': 'fake_mac1',
             'start_period': start_period,
             'bw_in': bw_in,

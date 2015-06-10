@@ -38,7 +38,10 @@ class BandwidthUsage(base.NovaPersistentObject, base.NovaObject,
     @staticmethod
     def _from_db_object(context, bw_usage, db_bw_usage):
         for field in bw_usage.fields:
-            bw_usage[field] = db_bw_usage[field]
+            if field == 'instance_uuid':
+                bw_usage[field] = db_bw_usage['uuid']
+            else:
+                bw_usage[field] = db_bw_usage[field]
         bw_usage._context = context
         bw_usage.obj_reset_changes()
         return bw_usage
