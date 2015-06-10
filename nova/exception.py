@@ -879,6 +879,10 @@ class FloatingIpAllocateFailed(NovaException):
     msg_fmt = _("Floating IP allocate failed.")
 
 
+class FloatingIpAssociateFailed(NovaException):
+    msg_fmt = _("Floating IP %(address)s association has failed.")
+
+
 class CannotDisassociateAutoAssignedFloatingIP(NovaException):
     ec2_code = "UnsupportedOperation"
     msg_fmt = _("Cannot disassociate auto assigned floating ip")
