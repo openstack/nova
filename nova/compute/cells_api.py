@@ -232,11 +232,22 @@ class ComputeCellsAPI(compute_api.API):
                 # that an update came up from a child cell and cell_name is
                 # set now.  If so try the delete again.
                 with excutils.save_and_reraise_exception() as exc:
-                    instance.refresh()
-                    if instance.cell_name:
+                    try:
+                        instance.refresh()
+                    except exception.InstanceNotFound:
+                        # NOTE(melwitt): If the instance has already been
+                        # deleted by instance_destroy_at_top from a cell,
+                        # instance.refresh() will raise InstanceNotFound.
                         exc.reraise = False
-                        self._handle_cell_delete(context, instance,
-                                method_name)
+                    else:
+                        if instance.cell_name:
+                            exc.reraise = False
+                            self._handle_cell_delete(context, instance,
+                                    method_name)
+            except exception.InstanceNotFound:
+                # NOTE(melwitt): We can get here if anything tries to
+                # lookup the instance after a instance_destroy_at_top hits.
+                pass
             return
 
         method = getattr(super(ComputeCellsAPI, self), method_name)
