@@ -22,7 +22,6 @@ import webob
 from nova.api.openstack.compute.contrib import quotas as quotas_v2
 from nova.api.openstack.compute.plugins.v3 import quota_sets as quotas_v21
 from nova.api.openstack import extensions
-from nova import context as context_maker
 from nova import exception
 from nova import quota
 from nova import test
@@ -98,6 +97,9 @@ class QuotaSetsTestV21(BaseQuotaSetsTest):
     def _setup_controller(self):
         self.ext_mgr = self.mox.CreateMock(extensions.ExtensionManager)
         self.controller = self.plugin.QuotaSetsController(self.ext_mgr)
+
+    def _get_http_request(self, url=''):
+        return fakes.HTTPRequest.blank(url)
 
     def test_format_quota_set(self):
         quota_set = self.controller._format_quota_set('1234',
@@ -314,25 +316,16 @@ class QuotaSetsTestV21(BaseQuotaSetsTest):
         body = {'quota_set': self.default_quotas}
         self._quotas_update_bad_request_case(body)
 
-    def test_quotas_delete_as_unauthorized_user(self):
+    def test_quotas_delete(self):
         if self._is_v20_api_test():
             self.ext_mgr.is_loaded('os-extended-quotas').AndReturn(True)
-            self.mox.ReplayAll()
-        req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/1234')
-        self.assertRaises(webob.exc.HTTPForbidden, self.controller.delete,
-                          req, 1234)
-
-    def test_quotas_delete_as_admin(self):
-        if self._is_v20_api_test():
-            self.ext_mgr.is_loaded('os-extended-quotas').AndReturn(True)
-        context = context_maker.get_admin_context()
-        self.req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/1234')
-        self.req.environ['nova.context'] = context
+        req = self._get_http_request()
         self.mox.StubOutWithMock(quota.QUOTAS,
                                  "destroy_all_by_project")
-        quota.QUOTAS.destroy_all_by_project(context, 1234)
+        quota.QUOTAS.destroy_all_by_project(req.environ['nova.context'],
+                                            1234)
         self.mox.ReplayAll()
-        res = self.controller.delete(self.req, 1234)
+        res = self.controller.delete(req, 1234)
         self.mox.VerifyAll()
         self.assertEqual(202, self.get_delete_status_int(res))
 
@@ -443,6 +436,9 @@ class UserQuotasTestV21(BaseQuotaSetsTest):
         super(UserQuotasTestV21, self).setUp()
         self._setup_controller()
 
+    def _get_http_request(self, url=''):
+        return fakes.HTTPRequest.blank(url)
+
     def _setup_controller(self):
         self.ext_mgr = self.mox.CreateMock(extensions.ExtensionManager)
         self.controller = self.plugin.QuotaSetsController(self.ext_mgr)
@@ -509,25 +505,18 @@ class UserQuotasTestV21(BaseQuotaSetsTest):
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
                           req, 'update_me', body=body)
 
-    def test_user_quotas_delete_as_unauthorized_user(self):
-        self.setup_mock_for_update()
-        req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/1234?user_id=1')
-        self.assertRaises(webob.exc.HTTPForbidden, self.controller.delete,
-                          req, 1234)
-
-    def test_user_quotas_delete_as_admin(self):
+    def test_user_quotas_delete(self):
         if self._is_v20_api_test():
             self.ext_mgr.is_loaded('os-extended-quotas').AndReturn(True)
             self.ext_mgr.is_loaded('os-user-quotas').AndReturn(True)
-        context = context_maker.get_admin_context()
         url = '/v2/fake4/os-quota-sets/1234?user_id=1'
-        self.req = fakes.HTTPRequest.blank(url)
-        self.req.environ['nova.context'] = context
+        req = self._get_http_request(url)
         self.mox.StubOutWithMock(quota.QUOTAS,
                                  "destroy_all_by_project_and_user")
-        quota.QUOTAS.destroy_all_by_project_and_user(context, 1234, '1')
+        quota.QUOTAS.destroy_all_by_project_and_user(
+            req.environ['nova.context'], 1234, '1')
         self.mox.ReplayAll()
-        res = self.controller.delete(self.req, 1234)
+        res = self.controller.delete(req, 1234)
         self.mox.VerifyAll()
         self.assertEqual(202, self.get_delete_status_int(res))
 
@@ -568,6 +557,9 @@ class QuotaSetsTestV2(QuotaSetsTestV21):
         self.mox.ReplayAll()
         self.controller = self.plugin.QuotaSetsController(self.ext_mgr)
         self.mox.ResetAll()
+
+    def _get_http_request(self, url=''):
+        return fakes.HTTPRequest.blank(url, use_admin_context=True)
 
     # NOTE: The following tests are tricky and v2.1 API does not allow
     # this kind of input by strong input validation. Just for test coverage,
@@ -622,6 +614,14 @@ class QuotaSetsTestV2(QuotaSetsTestV21):
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.delete,
                           req, 1234)
 
+    def test_quotas_delete_as_unauthorized_user(self):
+        if self._is_v20_api_test():
+            self.ext_mgr.is_loaded('os-extended-quotas').AndReturn(True)
+            self.mox.ReplayAll()
+        req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/1234')
+        self.assertRaises(webob.exc.HTTPForbidden, self.controller.delete,
+                          req, 1234)
+
 
 class QuotaSetsTestV2WithoutServerGroupQuotas(QuotaSetsTestV2):
     include_server_group_quotas = False
@@ -665,6 +665,15 @@ class UserQuotasTestV2(UserQuotasTestV21):
         self.controller = self.plugin.QuotaSetsController(self.ext_mgr)
         self.mox.ResetAll()
 
+    def _get_http_request(self, url=''):
+        return fakes.HTTPRequest.blank(url, use_admin_context=True)
+
+    def test_user_quotas_delete_with_non_admin(self):
+        self.setup_mock_for_update()
+        req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/1234?user_id=1')
+        self.assertRaises(webob.exc.HTTPForbidden, self.controller.delete,
+                          req, '1234')
+
 
 class UserQuotasTestV2WithoutServerGroupQuotas(UserQuotasTestV2):
     include_server_group_quotas = False
@@ -689,3 +698,21 @@ class UserQuotasTestV2WithoutServerGroupQuotas(UserQuotasTestV2):
         req = fakes.HTTPRequest.blank(url, use_admin_context=True)
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
                           req, 'update_me', body=body)
+
+
+class QuotaSetsPolicyEnforcementV21(test.NoDBTestCase):
+
+    def setUp(self):
+        super(QuotaSetsPolicyEnforcementV21, self).setUp()
+        self.controller = quotas_v21.QuotaSetsController()
+        self.req = fakes.HTTPRequest.blank('')
+
+    def test_delete_policy_failed(self):
+        rule_name = "os_compute_api:os-quota-sets:delete"
+        self.policy.set_rules({rule_name: "project_id:non_fake"})
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.controller.delete, self.req, fakes.FAKE_UUID)
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+            exc.format_message())
