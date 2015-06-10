@@ -1820,11 +1820,6 @@ class LibvirtDriver(driver.ComputeDriver):
 
         try:
             guest = self._host.get_guest(instance)
-
-            # TODO(sahid): We are converting all calls from a
-            # virDomain object to use nova.virt.libvirt.Guest.
-            # We should be able to remove virt_dom at the end.
-            virt_dom = guest._domain
         except exception.InstanceNotFound:
             raise exception.InstanceNotRunning(instance_id=instance.uuid)
 
@@ -1908,12 +1903,10 @@ class LibvirtDriver(driver.ComputeDriver):
             # Merge the most recent snapshot into the active image
 
             rebase_disk = my_dev
-            rebase_flags = 0
             rebase_base = delete_info['file_to_merge']  # often None
             if active_protocol is not None:
                 rebase_base = _get_snap_dev(delete_info['file_to_merge'],
                                             active_disk_object.backing_store)
-            rebase_bw = 0
 
             # NOTE(deepakcs): libvirt added support for _RELATIVE in v1.2.7,
             # and when available this flag _must_ be used to ensure backing
@@ -1922,26 +1915,27 @@ class LibvirtDriver(driver.ComputeDriver):
             # If _RELATIVE flag not found, continue with old behaviour
             # (relative backing path seems to work for this case)
             try:
-                if rebase_base is not None:
-                    rebase_flags |= libvirt.VIR_DOMAIN_BLOCK_REBASE_RELATIVE
+                libvirt.VIR_DOMAIN_BLOCK_REBASE_RELATIVE
+                relative = True
             except AttributeError:
                 LOG.warn(_LW("Relative blockrebase support was not detected. "
                              "Continuing with old behaviour."))
+                relative = False
 
-            LOG.debug('disk: %(disk)s, base: %(base)s, '
-                      'bw: %(bw)s, flags: %(flags)s',
-                      {'disk': rebase_disk,
-                       'base': rebase_base,
-                       'bw': rebase_bw,
-                       'flags': rebase_flags})
+            LOG.debug(
+                'disk: %(disk)s, base: %(base)s, '
+                'bw: %(bw)s, relative: %(relative)s',
+                {'disk': rebase_disk,
+                 'base': rebase_base,
+                 'bw': libvirt_guest.BlockDevice.REBASE_DEFAULT_BANDWIDTH,
+                 'relative': str(relative)})
 
-            result = virt_dom.blockRebase(rebase_disk, rebase_base,
-                                          rebase_bw, rebase_flags)
-
+            dev = guest.get_block_device(rebase_disk)
+            result = dev.rebase(rebase_base, relative=relative)
             if result == 0:
                 LOG.debug('blockRebase started successfully')
 
-            while self._wait_for_block_job(virt_dom, my_dev,
+            while self._wait_for_block_job(guest._domain, my_dev,
                                            abort_on_error=True):
                 LOG.debug('waiting for blockRebase job completion')
                 time.sleep(0.5)
@@ -1951,7 +1945,6 @@ class LibvirtDriver(driver.ComputeDriver):
             my_snap_base = None
             my_snap_top = None
             commit_disk = my_dev
-            commit_flags = 0
 
             # NOTE(deepakcs): libvirt added support for _RELATIVE in v1.2.7,
             # and when available this flag _must_ be used to ensure backing
@@ -1961,7 +1954,7 @@ class LibvirtDriver(driver.ComputeDriver):
             # path may not be maintained and Cinder flow is broken if allowed
             # to continue.
             try:
-                commit_flags |= libvirt.VIR_DOMAIN_BLOCK_COMMIT_RELATIVE
+                libvirt.VIR_DOMAIN_BLOCK_COMMIT_RELATIVE
             except AttributeError:
                 ver = '.'.join(
                     [str(x) for x in
@@ -1980,7 +1973,6 @@ class LibvirtDriver(driver.ComputeDriver):
 
             commit_base = my_snap_base or delete_info['merge_target_file']
             commit_top = my_snap_top or delete_info['file_to_merge']
-            bandwidth = 0
 
             LOG.debug('will call blockCommit with commit_disk=%(commit_disk)s '
                       'commit_base=%(commit_base)s '
@@ -1989,13 +1981,13 @@ class LibvirtDriver(driver.ComputeDriver):
                          'commit_base': commit_base,
                          'commit_top': commit_top})
 
-            result = virt_dom.blockCommit(commit_disk, commit_base, commit_top,
-                                          bandwidth, commit_flags)
+            dev = guest.get_block_device(commit_disk)
+            result = dev.commit(commit_base, commit_top, relative=True)
 
             if result == 0:
                 LOG.debug('blockCommit started successfully')
 
-            while self._wait_for_block_job(virt_dom, my_dev,
+            while self._wait_for_block_job(guest._domain, my_dev,
                                            abort_on_error=True):
                 LOG.debug('waiting for blockCommit job completion')
                 time.sleep(0.5)
