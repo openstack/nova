@@ -2912,7 +2912,6 @@ def _get_associated_fixed_ips_query(network_id, host=None):
     return query
 
 
-@require_admin_context
 def network_get_associated_fixed_ips(context, network_id, host=None):
     # FIXME(sirp): since this returns fixed_ips, this would be better named
     # fixed_ip_get_all_by_network.
