@@ -8637,8 +8637,7 @@ class ComputeAPITestCase(BaseTestCase):
                 self.context, base_options, {},
                 image_meta, 1, 1, bdms, legacy_bdms)
         for expected, got in zip(expected_bdms, transformed_bdm):
-            self.assertThat(dict(expected.items()),
-                            matchers.DictMatches(dict(got.items())))
+            self.assertEqual(dict(expected.items()), dict(got.items()))
 
     def test_check_and_transform_legacy_bdm_no_image_bdms(self):
         legacy_bdms = [
@@ -8713,6 +8712,51 @@ class ComputeAPITestCase(BaseTestCase):
         expected_bdms = bdms + image_bdms
         expected_bdms = block_device_obj.block_device_make_list_from_dicts(
                 self.context, expected_bdms)
+        self._test_check_and_transform_bdm(bdms, expected_bdms,
+                                           image_bdms=image_bdms)
+
+    def test_check_and_transform_bdm_image_bdms_w_overrides(self):
+        bdms = [block_device.BlockDeviceDict({'source_type': 'image',
+                                              'destination_type': 'local',
+                                              'image_id': FAKE_IMAGE_REF,
+                                              'boot_index': 0}),
+                block_device.BlockDeviceDict({'device_name': 'vdb',
+                                              'no_device': True})]
+        image_bdms = [block_device.BlockDeviceDict(
+            {'source_type': 'volume', 'destination_type': 'volume',
+             'volume_id': '33333333-aaaa-bbbb-cccc-444444444444',
+             'device_name': '/dev/vdb'})]
+        expected_bdms = block_device_obj.block_device_make_list_from_dicts(
+                self.context, bdms)
+        self._test_check_and_transform_bdm(bdms, expected_bdms,
+                                           image_bdms=image_bdms)
+
+    def test_check_and_transform_bdm_image_bdms_w_overrides_complex(self):
+        bdms = [block_device.BlockDeviceDict({'source_type': 'image',
+                                              'destination_type': 'local',
+                                              'image_id': FAKE_IMAGE_REF,
+                                              'boot_index': 0}),
+                block_device.BlockDeviceDict({'device_name': 'vdb',
+                                              'no_device': True}),
+                block_device.BlockDeviceDict(
+                    {'source_type': 'volume', 'destination_type': 'volume',
+                    'volume_id': '11111111-aaaa-bbbb-cccc-222222222222',
+                    'device_name': 'vdc'})]
+        image_bdms = [
+            block_device.BlockDeviceDict(
+                {'source_type': 'volume', 'destination_type': 'volume',
+                'volume_id': '33333333-aaaa-bbbb-cccc-444444444444',
+                'device_name': '/dev/vdb'}),
+            block_device.BlockDeviceDict(
+                {'source_type': 'volume', 'destination_type': 'volume',
+                'volume_id': '55555555-aaaa-bbbb-cccc-666666666666',
+                'device_name': '/dev/vdc'}),
+            block_device.BlockDeviceDict(
+                {'source_type': 'volume', 'destination_type': 'volume',
+                'volume_id': '77777777-aaaa-bbbb-cccc-8888888888888',
+                'device_name': '/dev/vdd'})]
+        expected_bdms = block_device_obj.block_device_make_list_from_dicts(
+                self.context, bdms + [image_bdms[2]])
         self._test_check_and_transform_bdm(bdms, expected_bdms,
                                            image_bdms=image_bdms)
 
