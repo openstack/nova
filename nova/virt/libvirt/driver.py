@@ -2143,12 +2143,12 @@ class LibvirtDriver(driver.ComputeDriver):
                                   write_to_disk=True)
 
         # NOTE (rmk): Re-populate any missing backing files.
-        disk_info_json = self._get_instance_disk_info(instance.name, xml,
-                                                      block_device_info)
+        disk_info = self._get_instance_disk_info(instance.name, xml,
+                                                 block_device_info)
 
         if context.auth_token is not None:
             self._create_images_and_backing(context, instance, instance_dir,
-                                            disk_info_json)
+                                            disk_info)
 
         # Initialize all the necessary networking, block devices and
         # start the instance.
@@ -5980,7 +5980,7 @@ class LibvirtDriver(driver.ComputeDriver):
                         filename=filename)
 
     def _create_images_and_backing(self, context, instance, instance_dir,
-                                   disk_info_json, fallback_from_host=None):
+                                   disk_info, fallback_from_host=None):
         """:param context: security context
            :param instance:
                nova.db.sqlalchemy.models.Instance object
@@ -5988,17 +5988,15 @@ class LibvirtDriver(driver.ComputeDriver):
            :param instance_dir:
                instance path to use, calculated externally to handle block
                migrating an instance with an old style instance path
-           :param disk_info_json:
-               json strings specified in get_instance_disk_info
+           :param disk_info:
+               disk info specified in _get_instance_disk_info
            :param fallback_from_host:
                host where we can retrieve images if the glance images are
                not available.
 
         """
-        if not disk_info_json:
+        if not disk_info:
             disk_info = []
-        else:
-            disk_info = jsonutils.loads(disk_info_json)
 
         for info in disk_info:
             base = os.path.basename(info['path'])
@@ -6155,7 +6153,7 @@ class LibvirtDriver(driver.ComputeDriver):
                               'backing_file': backing_file,
                               'disk_size': dk_size,
                               'over_committed_disk_size': over_commit_size})
-        return jsonutils.dumps(disk_info)
+        return disk_info
 
     def get_instance_disk_info(self, instance,
                                block_device_info=None):
@@ -6179,8 +6177,9 @@ class LibvirtDriver(driver.ComputeDriver):
                      instance=instance)
             raise exception.InstanceNotFound(instance_id=instance.uuid)
 
-        return self._get_instance_disk_info(instance.name, xml,
-                                            block_device_info)
+        return jsonutils.dumps(
+                self._get_instance_disk_info(instance.name, xml,
+                                             block_device_info))
 
     def _get_disk_over_committed_size_total(self):
         """Return total over committed disk size for all instances."""
@@ -6189,8 +6188,7 @@ class LibvirtDriver(driver.ComputeDriver):
         for dom in self._host.list_instance_domains():
             try:
                 xml = dom.XMLDesc(0)
-                disk_infos = jsonutils.loads(
-                        self._get_instance_disk_info(dom.name(), xml))
+                disk_infos = self._get_instance_disk_info(dom.name(), xml)
                 for info in disk_infos:
                     disk_over_committed_size += int(
                         info['over_committed_disk_size'])
