@@ -10914,6 +10914,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
 
         mock_dom = mock.MagicMock()
+        guest = libvirt_guest.Guest(mock_dom)
 
         with mock.patch.object(drvr._conn, 'defineXML',
                                create=True) as mock_define:
@@ -10925,15 +10926,15 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             mock_dom.isPersistent.return_value = True
             mock_dom.blockJobInfo.return_value = {}
 
-            drvr._swap_volume(mock_dom, srcfile, dstfile, 1)
+            drvr._swap_volume(guest, srcfile, dstfile, 1)
 
             mock_dom.XMLDesc.assert_called_once_with(
                 flags=(fakelibvirt.VIR_DOMAIN_XML_INACTIVE |
                        fakelibvirt.VIR_DOMAIN_XML_SECURE))
             mock_dom.blockRebase.assert_called_once_with(
-                srcfile, dstfile, 0,
-                fakelibvirt.VIR_DOMAIN_BLOCK_REBASE_COPY |
-                fakelibvirt.VIR_DOMAIN_BLOCK_REBASE_REUSE_EXT)
+                srcfile, dstfile, 0, flags=(
+                    fakelibvirt.VIR_DOMAIN_BLOCK_REBASE_COPY |
+                    fakelibvirt.VIR_DOMAIN_BLOCK_REBASE_REUSE_EXT))
             mock_dom.blockResize.assert_called_once_with(
                 srcfile, 1 * units.Gi / units.Ki)
             mock_define.assert_called_once_with(xmldoc)
@@ -10945,8 +10946,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 'get_by_volume_id')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_volume_config')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._connect_volume')
-    @mock.patch('nova.virt.libvirt.host.Host.get_domain')
-    def test_swap_volume_driver_bdm_save(self, get_domain,
+    @mock.patch('nova.virt.libvirt.host.Host.get_guest')
+    def test_swap_volume_driver_bdm_save(self, get_guest,
                                          connect_volume, get_volume_config,
                                          get_by_volume_id, volume_save,
                                          swap_volume, disconnect_volume):
@@ -10961,6 +10962,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                'data': {'device_path': '/fake-new-volume',
                                         'access_mode': 'rw'}}
         mock_dom = mock.MagicMock()
+        guest = libvirt_guest.Guest(mock_dom)
         mock_dom.XMLDesc.return_value = """<domain>
           <devices>
             <disk type='file'>
@@ -10970,7 +10972,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
           </devices>
         </domain>
         """
-        get_domain.return_value = mock_dom
+        mock_dom.name.return_value = 'inst'
+        mock_dom.UUIDString.return_value = 'uuid'
+        get_guest.return_value = guest
         disk_info = {'bus': 'virtio', 'type': 'disk', 'dev': 'vdb'}
         get_volume_config.return_value = mock.MagicMock(
             source_path='/fake-new-volume')
@@ -10988,9 +10992,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         conn.swap_volume(old_connection_info, new_connection_info, instance,
                          '/dev/vdb', 1)
 
-        get_domain.assert_called_once_with(instance)
+        get_guest.assert_called_once_with(instance)
         connect_volume.assert_called_once_with(new_connection_info, disk_info)
-        swap_volume.assert_called_once_with(mock_dom, 'vdb',
+
+        swap_volume.assert_called_once_with(guest, 'vdb',
                                             '/fake-new-volume', 1)
         disconnect_volume.assert_called_once_with(old_connection_info, 'vdb')
         volume_save.assert_called_once_with()
