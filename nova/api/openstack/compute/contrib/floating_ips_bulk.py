@@ -18,6 +18,7 @@ import six
 import webob.exc
 
 from nova.api.openstack import extensions
+from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
 from nova import objects
@@ -48,6 +49,9 @@ class FloatingIPBulkController(object):
 
     def _get_floating_ip_info(self, context, host=None):
         floating_ip_info = {"floating_ip_info": []}
+        # NOTE(shaohe-feng): back-compatible with db layer hard-code
+        # admin permission checks.
+        nova_context.require_admin_context(context)
 
         if host is None:
             try:
