@@ -1123,8 +1123,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # We should be able to remove virt_dom at the end.
         virt_dom = guest._domain
         disk_dev = mountpoint.rpartition("/")[2]
-        xml = self._get_disk_xml(virt_dom.XMLDesc(0), disk_dev)
-        if not xml:
+        if not guest.get_disk(disk_dev):
             raise exception.DiskNotFound(location=disk_dev)
         disk_info = {
             'dev': disk_dev,
@@ -1148,17 +1147,6 @@ class LibvirtDriver(driver.ComputeDriver):
 
         self._swap_volume(virt_dom, disk_dev, conf.source_path, resize_to)
         self._disconnect_volume(old_connection_info, disk_dev)
-
-    @staticmethod
-    def _get_disk_xml(xml, device):
-        """Returns the xml for the disk mounted at device."""
-        try:
-            doc = etree.fromstring(xml)
-        except Exception:
-            return None
-        node = doc.find("./devices/disk/target[@dev='%s'].." % device)
-        if node is not None:
-            return etree.tostring(node)
 
     def _get_existing_domain_xml(self, instance, network_info,
                                  block_device_info=None):
@@ -1188,8 +1176,8 @@ class LibvirtDriver(driver.ComputeDriver):
             # virDomain object to use nova.virt.libvirt.Guest.
             # We should be able to remove virt_dom at the end.
             virt_dom = guest._domain
-            xml = self._get_disk_xml(virt_dom.XMLDesc(0), disk_dev)
-            if not xml:
+            conf = guest.get_disk(disk_dev)
+            if not conf:
                 raise exception.DiskNotFound(location=disk_dev)
             else:
                 # NOTE(vish): We can always affect config because our
@@ -1199,7 +1187,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 state = self._get_power_state(virt_dom)
                 if state in (power_state.RUNNING, power_state.PAUSED):
                     flags |= libvirt.VIR_DOMAIN_AFFECT_LIVE
-                virt_dom.detachDeviceFlags(xml, flags)
+                virt_dom.detachDeviceFlags(conf.to_xml(), flags)
 
                 if encryption:
                     # The volume must be detached from the VM before
