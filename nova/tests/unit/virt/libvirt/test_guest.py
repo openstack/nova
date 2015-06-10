@@ -19,6 +19,7 @@ from oslo_config import cfg
 from oslo_utils import encodeutils
 
 from nova import context
+from nova import exception
 from nova import test
 from nova.tests.unit.virt.libvirt import fakelibvirt
 from nova import utils
@@ -420,3 +421,30 @@ class GuestBlockTestCase(test.NoDBTestCase):
         self.domain.blockCommit.assert_called_once_with(
             'vda', "foo", "top", 0,
             flags=fakelibvirt.VIR_DOMAIN_BLOCK_COMMIT_RELATIVE)
+
+    def test_wait_for_job(self):
+        self.domain.blockJobInfo.return_value = {
+            "type": 4,
+            "bandwidth": 18,
+            "cur": 95,
+            "end": 100}
+        in_progress = self.gblock.wait_for_job()
+        self.assertTrue(in_progress)
+
+        self.domain.blockJobInfo.return_value = {
+            "type": 4,
+            "bandwidth": 18,
+            "cur": 100,
+            "end": 100}
+        in_progress = self.gblock.wait_for_job()
+        self.assertFalse(in_progress)
+
+        self.domain.blockJobInfo.return_value = {"type": 0}
+        in_progress = self.gblock.wait_for_job(wait_for_job_clean=True)
+        self.assertFalse(in_progress)
+
+    def test_wait_for_job_arbort_on_error(self):
+        self.domain.blockJobInfo.return_value = -1
+        self.assertRaises(
+            exception.NovaException,
+            self.gblock.wait_for_job, abort_on_error=True)
