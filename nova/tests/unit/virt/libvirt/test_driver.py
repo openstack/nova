@@ -6722,10 +6722,11 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.stubs.Set(drvr, 'plug_vifs', fake_plug_vifs)
         self.stubs.Set(eventlet.greenthread, 'sleep',
                        lambda x: eventlet.sleep(0))
+        disk_info_json = jsonutils.dumps({})
         self.assertRaises(processutils.ProcessExecutionError,
                           drvr.pre_live_migration,
                           self.context, instance, block_device_info=None,
-                          network_info=[], disk_info={})
+                          network_info=[], disk_info=disk_info_json)
 
     def test_pre_live_migration_plug_vifs_retry_works(self):
         self.flags(live_migration_retry_count=3)
@@ -6743,8 +6744,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.stubs.Set(drvr, 'plug_vifs', fake_plug_vifs)
         self.stubs.Set(eventlet.greenthread, 'sleep',
                        lambda x: eventlet.sleep(0))
+        disk_info_json = jsonutils.dumps({})
         drvr.pre_live_migration(self.context, instance, block_device_info=None,
-                                network_info=[], disk_info={})
+                                network_info=[], disk_info=disk_info_json)
 
     def test_pre_live_migration_image_not_created_with_shared_storage(self):
         migrate_data_set = [{'is_shared_block_storage': False,
@@ -6768,11 +6770,13 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             rules_mock,
             plug_mock,
         ):
+            disk_info_json = jsonutils.dumps({})
             for migrate_data in migrate_data_set:
                 res = drvr.pre_live_migration(self.context, instance,
-                                        block_device_info=None,
-                                        network_info=[], disk_info={},
-                                        migrate_data=migrate_data)
+                                              block_device_info=None,
+                                              network_info=[],
+                                              disk_info=disk_info_json,
+                                              migrate_data=migrate_data)
                 self.assertFalse(create_image_mock.called)
                 self.assertIsInstance(res, dict)
 
@@ -6800,11 +6804,15 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             rules_mock,
             plug_mock,
         ):
+            disk_info_json = jsonutils.dumps({})
             res = drvr.pre_live_migration(self.context, instance,
-                                    block_device_info=None,
-                                    network_info=[], disk_info={},
-                                    migrate_data=migrate_data)
-            self.assertTrue(create_image_mock.called)
+                                          block_device_info=None,
+                                          network_info=[],
+                                          disk_info=disk_info_json,
+                                          migrate_data=migrate_data)
+            create_image_mock.assert_has_calls(
+                [mock.call(self.context, instance, mock.ANY, {},
+                           fallback_from_host=instance.host)])
             self.assertIsInstance(res, dict)
 
     def test_pre_live_migration_block_migrate_fails(self):
@@ -6828,10 +6836,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             mock.patch.object(drvr, '_connect_volume'),
             mock.patch.object(driver, 'block_device_info_get_mapping',
                               return_value=bdms)):
+            disk_info_json = jsonutils.dumps({})
             self.assertRaises(exception.MigrationError,
                               drvr.pre_live_migration,
                               self.context, instance, block_device_info=None,
-                              network_info=[], disk_info={}, migrate_data={})
+                              network_info=[], disk_info=disk_info_json,
+                              migrate_data={})
 
     def test_get_instance_disk_info_works_correctly(self):
         # Test data
