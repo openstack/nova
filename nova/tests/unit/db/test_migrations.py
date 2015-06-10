@@ -761,6 +761,11 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
     def _check_297(self, engine, data):
         self.assertColumnExists(engine, 'services', 'forced_down')
 
+    def _check_298(self, engine, data):
+        # NOTE(nic): This is a MySQL-specific migration, and is a no-op from
+        # the point-of-view of unit tests, since they use SQLite
+        pass
+
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
                                test_base.DbTestCase,
