@@ -30,6 +30,7 @@ import contextlib
 import errno
 import functools
 import glob
+import itertools
 import mmap
 import operator
 import os
@@ -6792,13 +6793,14 @@ class LibvirtDriver(driver.ComputeDriver):
         image_meta = utils.get_image_from_system_metadata(
             instance.system_metadata)
 
-        ephemerals, swap, block_device_mapping = block_device_lists[:3]
+        block_device_mapping = itertools.chain(*block_device_lists)
+        block_device_info = driver.get_block_device_info(instance,
+                                                         block_device_mapping)
 
         blockinfo.default_device_names(CONF.libvirt.virt_type,
                                        nova_context.get_admin_context(),
-                                       instance, root_device_name,
-                                       ephemerals, swap,
-                                       block_device_mapping,
+                                       instance,
+                                       block_device_info,
                                        image_meta)
 
     def is_supported_fs_format(self, fs_type):

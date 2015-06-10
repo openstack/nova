@@ -10378,29 +10378,31 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual(drvr.default_root_device_name(instance, image_meta,
                                                        root_bdm), '/dev/vda')
 
+    @mock.patch.object(driver, "get_block_device_info")
     @mock.patch.object(blockinfo, "default_device_names")
     @mock.patch.object(utils, "get_image_from_system_metadata")
-    def test_default_device_names_for_instance(self, mock_meta, mock_devnames):
+    def test_default_device_names_for_instance(
+            self, mock_meta, mock_devnames, mock_blockinfo):
         instance = objects.Instance(**self.test_instance)
         image_meta = {}
-        root_device_name = '/dev/vda'
+        instance.root_device_name = '/dev/vda'
         ephemerals = [{'device_name': 'vdb'}]
         swap = [{'device_name': 'vdc'}]
         block_device_mapping = [{'device_name': 'vdc'}]
         self.flags(virt_type='fake_libvirt_type', group='libvirt')
 
         mock_meta.return_value = image_meta
+        mock_blockinfo.return_value = 'fake-block-device-info'
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        drvr.default_device_names_for_instance(instance, root_device_name,
+        drvr.default_device_names_for_instance(instance,
+                                               instance.root_device_name,
                                                ephemerals, swap,
                                                block_device_mapping,
                                                image_meta)
-
         mock_devnames.assert_called_once_with(
             "fake_libvirt_type", mock.ANY,
-            instance, root_device_name,
-            ephemerals, swap, block_device_mapping,
+            instance, 'fake-block-device-info',
             image_meta)
 
     def test_is_supported_fs_format(self):
