@@ -20,7 +20,6 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import compute
 from nova import exception
-from nova.i18n import _
 
 ALIAS = "os-pause-server"
 
@@ -50,8 +49,7 @@ class PauseServerController(wsgi.Controller):
         except exception.InstanceNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
         except NotImplementedError:
-            msg = _("Virt driver does not implement pause function.")
-            raise exc.HTTPNotImplemented(explanation=msg)
+            common.raise_feature_not_supported()
 
     @wsgi.response(202)
     @extensions.expected_errors((404, 409, 501))
@@ -71,8 +69,7 @@ class PauseServerController(wsgi.Controller):
         except exception.InstanceNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
         except NotImplementedError:
-            msg = _("Virt driver does not implement pause function.")
-            raise exc.HTTPNotImplemented(explanation=msg)
+            common.raise_feature_not_supported()
 
 
 class PauseServer(extensions.V3APIExtensionBase):

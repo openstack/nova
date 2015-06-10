@@ -21,7 +21,6 @@ from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import compute
 from nova import exception
-from nova.i18n import _
 
 
 ALIAS = "os-remote-consoles"
@@ -56,8 +55,7 @@ class RemoteConsolesController(wsgi.Controller):
         except exception.InstanceNotReady as e:
             raise webob.exc.HTTPConflict(explanation=e.format_message())
         except NotImplementedError:
-            msg = _("Unable to get vnc console, functionality not implemented")
-            raise webob.exc.HTTPNotImplemented(explanation=msg)
+            common.raise_feature_not_supported()
 
         return {'console': {'type': console_type, 'url': output['url']}}
 
@@ -84,9 +82,7 @@ class RemoteConsolesController(wsgi.Controller):
         except exception.InstanceNotReady as e:
             raise webob.exc.HTTPConflict(explanation=e.format_message())
         except NotImplementedError:
-            msg = _("Unable to get spice console, "
-                    "functionality not implemented")
-            raise webob.exc.HTTPNotImplemented(explanation=msg)
+            common.raise_feature_not_supported()
 
         return {'console': {'type': console_type, 'url': output['url']}}
 
@@ -115,8 +111,7 @@ class RemoteConsolesController(wsgi.Controller):
         except exception.InstanceNotReady as e:
             raise webob.exc.HTTPConflict(explanation=e.format_message())
         except NotImplementedError:
-            msg = _("Unable to get rdp console, functionality not implemented")
-            raise webob.exc.HTTPNotImplemented(explanation=msg)
+            common.raise_feature_not_supported()
 
         return {'console': {'type': console_type, 'url': output['url']}}
 
@@ -145,9 +140,7 @@ class RemoteConsolesController(wsgi.Controller):
                 exception.SocketPortRangeExhaustedException) as e:
             raise webob.exc.HTTPBadRequest(explanation=e.format_message())
         except NotImplementedError:
-            msg = _("Unable to get serial console, "
-                    "functionality not implemented")
-            raise webob.exc.HTTPNotImplemented(explanation=msg)
+            common.raise_feature_not_supported()
 
         return {'console': {'type': console_type, 'url': output['url']}}
 

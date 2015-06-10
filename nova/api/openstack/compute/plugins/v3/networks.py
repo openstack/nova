@@ -17,6 +17,7 @@
 import netaddr
 from webob import exc
 
+from nova.api.openstack import common
 from nova.api.openstack.compute.schemas.v3 import networks as schema
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
@@ -102,9 +103,7 @@ class NetworkController(wsgi.Controller):
             msg = _("Network not found")
             raise exc.HTTPNotFound(explanation=msg)
         except NotImplementedError:
-            msg = _('Disassociate network is not implemented by the '
-                    'configured Network API')
-            raise exc.HTTPNotImplemented(explanation=msg)
+            common.raise_feature_not_supported()
 
     @extensions.expected_errors(404)
     def show(self, req, id):
@@ -170,8 +169,7 @@ class NetworkController(wsgi.Controller):
             self.network_api.add_network_to_project(
                 context, project_id, network_id)
         except NotImplementedError:
-            msg = (_("VLAN support must be enabled"))
-            raise exc.HTTPNotImplemented(explanation=msg)
+            common.raise_feature_not_supported()
         except (exception.NoMoreNetworks,
                 exception.NetworkNotFoundForUUID) as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())

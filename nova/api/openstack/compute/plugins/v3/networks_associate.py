@@ -12,6 +12,7 @@
 
 from webob import exc
 
+from nova.api.openstack import common
 from nova.api.openstack.compute.schemas.v3 import networks_associate
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
@@ -43,9 +44,7 @@ class NetworkAssociateActionController(wsgi.Controller):
             msg = _("Network not found")
             raise exc.HTTPNotFound(explanation=msg)
         except NotImplementedError:
-            msg = _('Disassociate host is not implemented by the configured '
-                    'Network API')
-            raise exc.HTTPNotImplemented(explanation=msg)
+            common.raise_feature_not_supported()
 
     @wsgi.action("disassociate_project")
     @wsgi.response(202)
@@ -59,9 +58,7 @@ class NetworkAssociateActionController(wsgi.Controller):
             msg = _("Network not found")
             raise exc.HTTPNotFound(explanation=msg)
         except NotImplementedError:
-            msg = _('Disassociate project is not implemented by the '
-                    'configured Network API')
-            raise exc.HTTPNotImplemented(explanation=msg)
+            common.raise_feature_not_supported()
 
     @wsgi.action("associate_host")
     @wsgi.response(202)
@@ -78,9 +75,7 @@ class NetworkAssociateActionController(wsgi.Controller):
             msg = _("Network not found")
             raise exc.HTTPNotFound(explanation=msg)
         except NotImplementedError:
-            msg = _('Associate host is not implemented by the configured '
-                    'Network API')
-            raise exc.HTTPNotImplemented(explanation=msg)
+            common.raise_feature_not_supported()
 
 
 class NetworksAssociate(extensions.V3APIExtensionBase):

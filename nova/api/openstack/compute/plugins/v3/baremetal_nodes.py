@@ -20,6 +20,7 @@ from oslo_config import cfg
 from oslo_utils import importutils
 import webob
 
+from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.i18n import _
@@ -59,8 +60,7 @@ CONF.import_opt('compute_driver', 'nova.virt.driver')
 def _check_ironic_client_enabled():
     """Check whether Ironic is installed or not."""
     if ironic_client is None:
-        msg = _("Ironic client unavailable, cannot access Ironic.")
-        raise webob.exc.HTTPNotImplemented(explanation=msg)
+        common.raise_feature_not_supported()
 
 
 def _get_ironic_client():

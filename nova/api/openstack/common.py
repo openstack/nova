@@ -536,11 +536,16 @@ def get_instance(compute_api, context, instance_id, expected_attrs=None):
         raise exc.HTTPNotFound(explanation=e.format_message())
 
 
+def raise_feature_not_supported(msg=None):
+    if msg is None:
+        msg = _("The requested functionality is not supported.")
+    raise webob.exc.HTTPNotImplemented(explanation=msg)
+
+
 def check_cells_enabled(function):
     @functools.wraps(function)
     def inner(*args, **kwargs):
         if not CONF.cells.enable:
-            msg = _("Cells is not enabled.")
-            raise webob.exc.HTTPNotImplemented(explanation=msg)
+            raise_feature_not_supported()
         return function(*args, **kwargs)
     return inner

@@ -25,7 +25,6 @@ from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import compute
 from nova import exception
-from nova.i18n import _
 
 ALIAS = "os-console-output"
 authorize = extensions.os_compute_authorizer(ALIAS)
@@ -61,8 +60,7 @@ class ConsoleOutputController(wsgi.Controller):
         except exception.InstanceNotReady as e:
             raise webob.exc.HTTPConflict(explanation=e.format_message())
         except NotImplementedError:
-            msg = _("Unable to get console log, functionality not implemented")
-            raise webob.exc.HTTPNotImplemented(explanation=msg)
+            common.raise_feature_not_supported()
 
         # XML output is not correctly escaped, so remove invalid characters
         # NOTE(cyeoh): We don't support XML output with V2.1, but for
