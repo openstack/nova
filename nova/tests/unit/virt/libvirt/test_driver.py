@@ -11025,18 +11025,19 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             mock_dom.isPersistent.return_value = True
             mock_size.return_value = 1004009
             mock_backing.return_value = bckfile
+            guest = libvirt_guest.Guest(mock_dom)
 
-            drvr._live_snapshot(self.context, self.test_instance, mock_dom,
+            drvr._live_snapshot(self.context, self.test_instance, guest,
                                 srcfile, dstfile, "qcow2", {})
 
             mock_dom.XMLDesc.assert_called_once_with(flags=(
                 fakelibvirt.VIR_DOMAIN_XML_INACTIVE |
                 fakelibvirt.VIR_DOMAIN_XML_SECURE))
             mock_dom.blockRebase.assert_called_once_with(
-                srcfile, dltfile, 0,
-                fakelibvirt.VIR_DOMAIN_BLOCK_REBASE_COPY |
-                fakelibvirt.VIR_DOMAIN_BLOCK_REBASE_REUSE_EXT |
-                fakelibvirt.VIR_DOMAIN_BLOCK_REBASE_SHALLOW)
+                srcfile, dltfile, 0, flags=(
+                    fakelibvirt.VIR_DOMAIN_BLOCK_REBASE_COPY |
+                    fakelibvirt.VIR_DOMAIN_BLOCK_REBASE_REUSE_EXT |
+                    fakelibvirt.VIR_DOMAIN_BLOCK_REBASE_SHALLOW))
 
             mock_size.assert_called_once_with(srcfile)
             mock_backing.assert_called_once_with(srcfile, basename=False)
