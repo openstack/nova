@@ -274,6 +274,17 @@ def create_image_bdm(image_ref, boot_index=0):
          'destination_type': 'local'})
 
 
+def create_blank_bdm(size, guest_format=None):
+    return BlockDeviceDict(
+        {'source_type': 'blank',
+         'delete_on_termination': True,
+         'device_type': 'disk',
+         'boot_index': -1,
+         'destination_type': 'local',
+         'guest_format': guest_format,
+         'volume_size': size})
+
+
 def snapshot_from_bdm(snapshot_id, template):
     """Create a basic volume snapshot BDM from a given template bdm."""
 

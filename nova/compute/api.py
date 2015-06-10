@@ -697,6 +697,23 @@ class API(base.Base):
 
         return image_defined_bdms
 
+    def _get_flavor_defined_bdms(self, instance_type, block_device_mapping):
+        flavor_defined_bdms = []
+
+        have_ephemeral_bdms = any(filter(
+            block_device.new_format_is_ephemeral, block_device_mapping))
+        have_swap_bdms = any(filter(
+            block_device.new_format_is_swap, block_device_mapping))
+
+        if instance_type.get('ephemeral_gb') and not have_ephemeral_bdms:
+            flavor_defined_bdms.append(
+                block_device.create_blank_bdm(instance_type['ephemeral_gb']))
+        if instance_type.get('swap') and not have_swap_bdms:
+            flavor_defined_bdms.append(
+                block_device.create_blank_bdm(instance_type['swap'], 'swap'))
+
+        return flavor_defined_bdms
+
     def _check_and_transform_bdm(self, context, base_options, instance_type,
                                  image_meta, min_count, max_count,
                                  block_device_mapping, legacy_bdm):
@@ -749,6 +766,9 @@ class API(base.Base):
                 msg = _('Cannot attach one or more volumes to multiple'
                         ' instances')
                 raise exception.InvalidRequest(msg)
+
+        block_device_mapping += self._get_flavor_defined_bdms(
+            instance_type, block_device_mapping)
 
         return block_device_obj.block_device_make_list_from_dicts(
                 context, block_device_mapping)
