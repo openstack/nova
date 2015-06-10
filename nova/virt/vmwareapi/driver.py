@@ -23,6 +23,7 @@ import re
 
 from oslo_config import cfg
 from oslo_log import log as logging
+from oslo_log import versionutils
 from oslo_serialization import jsonutils
 from oslo_vmware import api
 from oslo_vmware import exceptions as vexc
@@ -34,7 +35,6 @@ import six
 from nova import exception
 from nova import utils
 from nova.i18n import _, _LI, _LW
-from nova.openstack.common import versionutils
 from nova.virt import driver
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import error_util
