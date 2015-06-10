@@ -160,6 +160,15 @@ SM_IMAGE_PROP_PREFIX = "image_"
 SM_INHERITABLE_KEYS = (
     'min_ram', 'min_disk', 'disk_format', 'container_format',
 )
+# Keys which hold large structured data that won't fit in the
+# size constraints of the system_metadata table, so we avoid
+# storing and/or loading them.
+SM_SKIP_KEYS = (
+    # Legacy names
+    'mappings', 'block_device_mapping',
+    # Modern names
+    'img_mappings', 'img_block_device_mapping',
+)
 
 
 def vpn_ping(address, port, timeout=0.05, session_id=None):
@@ -1103,6 +1112,9 @@ def get_system_metadata_from_image(image_meta, flavor=None):
     prefix_format = SM_IMAGE_PROP_PREFIX + '%s'
 
     for key, value in six.iteritems(image_meta.get('properties', {})):
+        if key in SM_SKIP_KEYS:
+            continue
+
         new_value = safe_truncate(six.text_type(value), 255)
         system_meta[prefix_format % key] = new_value
 
@@ -1138,6 +1150,9 @@ def get_image_from_system_metadata(system_meta):
         # just the ones we need. Leaving it for now to keep the old behaviour.
         if key.startswith(SM_IMAGE_PROP_PREFIX):
             key = key[len(SM_IMAGE_PROP_PREFIX):]
+
+        if key in SM_SKIP_KEYS:
+            continue
 
         if key in SM_INHERITABLE_KEYS:
             image_meta[key] = value
