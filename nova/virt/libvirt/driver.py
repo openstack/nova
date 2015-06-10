@@ -5816,6 +5816,9 @@ class LibvirtDriver(driver.ComputeDriver):
     def pre_live_migration(self, context, instance, block_device_info,
                            network_info, disk_info, migrate_data=None):
         """Preparation live migration."""
+        if disk_info is not None:
+            disk_info = jsonutils.loads(disk_info)
+
         # Steps for volume backed instance live migration w/o shared storage.
         is_shared_block_storage = True
         is_shared_instance_path = True
