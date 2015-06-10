@@ -83,8 +83,9 @@ class NbdMount(api.Mount):
         # NOTE(mikal): qemu-nbd will return an error if the device file is
         # already in use.
         LOG.debug('Get nbd device %(dev)s for %(imgfile)s',
-                  {'dev': device, 'imgfile': self.image})
-        _out, err = utils.trycmd('qemu-nbd', '-c', device, self.image,
+                  {'dev': device, 'imgfile': self.image.path})
+        _out, err = utils.trycmd('qemu-nbd', '-c', device,
+                                 self.image.path,
                                  run_as_root=True)
         if err:
             self.error = _('qemu-nbd error: %s') % err

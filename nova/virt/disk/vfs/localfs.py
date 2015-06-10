@@ -24,6 +24,7 @@ from nova import utils
 from nova.virt.disk.mount import loop
 from nova.virt.disk.mount import nbd
 from nova.virt.disk.vfs import api as vfs
+from nova.virt.image import model as imgmodel
 
 LOG = logging.getLogger(__name__)
 
@@ -65,14 +66,18 @@ class VFSLocalFS(vfs.VFS):
         try:
             if self.imgfmt == "raw":
                 LOG.debug("Using LoopMount")
-                mnt = loop.LoopMount(self.imgfile,
-                                     self.imgdir,
-                                     self.partition)
+                mnt = loop.LoopMount(
+                    imgmodel.LocalFileImage(self.imgfile,
+                                            imgmodel.FORMAT_RAW),
+                    self.imgdir,
+                    self.partition)
             else:
                 LOG.debug("Using NbdMount")
-                mnt = nbd.NbdMount(self.imgfile,
-                                   self.imgdir,
-                                   self.partition)
+                mnt = nbd.NbdMount(
+                    imgmodel.LocalFileImage(self.imgfile,
+                                            imgmodel.FORMAT_QCOW2),
+                    self.imgdir,
+                    self.partition)
             if mount:
                 if not mnt.do_mount():
                     raise exception.NovaException(mnt.error)

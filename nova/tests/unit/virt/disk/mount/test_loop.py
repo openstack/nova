@@ -18,6 +18,7 @@ import fixtures
 
 from nova import test
 from nova.virt.disk.mount import loop
+from nova.virt.image import model as imgmodel
 
 
 def _fake_noop(*args, **kwargs):
@@ -33,9 +34,15 @@ def _fake_trycmd_losetup_fails(*args, **kwards):
 
 
 class LoopTestCase(test.NoDBTestCase):
+    def setUp(self):
+        super(LoopTestCase, self).setUp()
+
+        self.file = imgmodel.LocalFileImage("/some/file.qcow2",
+                                            imgmodel.FORMAT_QCOW2)
+
     def test_get_dev(self):
         tempdir = self.useFixture(fixtures.TempDir()).path
-        l = loop.LoopMount(None, tempdir)
+        l = loop.LoopMount(self.file, tempdir)
         self.useFixture(fixtures.MonkeyPatch('nova.utils.trycmd',
                                              _fake_trycmd_losetup_works))
         self.useFixture(fixtures.MonkeyPatch('nova.utils.execute',
@@ -55,7 +62,7 @@ class LoopTestCase(test.NoDBTestCase):
 
     def test_inner_get_dev_fails(self):
         tempdir = self.useFixture(fixtures.TempDir()).path
-        l = loop.LoopMount(None, tempdir)
+        l = loop.LoopMount(self.file, tempdir)
         self.useFixture(fixtures.MonkeyPatch('nova.utils.trycmd',
                                              _fake_trycmd_losetup_fails))
 
@@ -72,7 +79,7 @@ class LoopTestCase(test.NoDBTestCase):
 
     def test_get_dev_timeout(self):
         tempdir = self.useFixture(fixtures.TempDir()).path
-        l = loop.LoopMount(None, tempdir)
+        l = loop.LoopMount(self.file, tempdir)
         self.useFixture(fixtures.MonkeyPatch('time.sleep', _fake_noop))
         self.useFixture(fixtures.MonkeyPatch('nova.utils.trycmd',
                                              _fake_trycmd_losetup_fails))
@@ -89,7 +96,7 @@ class LoopTestCase(test.NoDBTestCase):
 
     def test_unget_dev(self):
         tempdir = self.useFixture(fixtures.TempDir()).path
-        l = loop.LoopMount(None, tempdir)
+        l = loop.LoopMount(self.file, tempdir)
         self.useFixture(fixtures.MonkeyPatch('nova.utils.execute',
                                              _fake_noop))
 

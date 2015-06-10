@@ -23,13 +23,14 @@ from nova import test
 from nova import utils
 from nova.virt.disk import api
 from nova.virt.disk.mount import api as mount
+from nova.virt.image import model as imgmodel
 
 
 class FakeMount(object):
     device = None
 
     @staticmethod
-    def instance_for_format(imgfile, mountdir, partition, imgfmt):
+    def instance_for_format(image, mountdir, partition):
         return FakeMount()
 
     def get_dev(self):
@@ -115,10 +116,11 @@ class APITestCase(test.NoDBTestCase):
         imgsize = 10
         device = "/dev/sdh"
         use_cow = True
+        image = imgmodel.LocalFileImage(imgfile, imgmodel.FORMAT_QCOW2)
 
         self.flags(resize_fs_using_block_device=True)
         mounter = FakeMount.instance_for_format(
-            imgfile, None, None, 'qcow2')
+            image, None, None)
         mounter.device = device
 
         self.mox.StubOutWithMock(api, 'can_resize_image')
@@ -133,8 +135,7 @@ class APITestCase(test.NoDBTestCase):
         api.can_resize_image(imgfile, imgsize).AndReturn(True)
         utils.execute('qemu-img', 'resize', imgfile, imgsize)
         api.is_image_extendable(imgfile, use_cow).AndReturn(True)
-        mount.Mount.instance_for_format(
-            imgfile, None, None, 'qcow2').AndReturn(mounter)
+        mount.Mount.instance_for_format(image, None, None).AndReturn(mounter)
         mounter.get_dev().AndReturn(True)
         api.resize2fs(mounter.device, run_as_root=True, check_exit_code=[0])
         mounter.unget_dev()

@@ -42,6 +42,7 @@ from nova.i18n import _LW
 from nova import utils
 from nova.virt.disk.mount import api as mount
 from nova.virt.disk.vfs import api as vfs
+from nova.virt.image import model as imgmodel
 from nova.virt import images
 
 
@@ -173,7 +174,12 @@ def get_disk_size(path):
 
 
 def extend(image, size, use_cow=False):
-    """Increase image to size."""
+    """Increase image to size.
+
+    :param image: path to disk image file
+    :param size: image size in bytes
+    :param use_cow: whether the disk is a qcow2 file
+    """
     if not can_resize_image(image, size):
         return
 
@@ -200,7 +206,9 @@ def extend(image, size, use_cow=False):
         # in case of non-raw disks we can't just resize the image, but
         # rather the mounted device instead
         mounter = mount.Mount.instance_for_format(
-            image, None, None, 'qcow2')
+            imgmodel.LocalFileImage(image,
+                                    imgmodel.FORMAT_QCOW2),
+            None, None)
         if mounter.get_dev():
             safe_resize2fs(mounter.device,
                            run_as_root=True,
@@ -270,11 +278,24 @@ class _DiskImage(object):
     tmp_prefix = 'openstack-disk-mount-tmp'
 
     def __init__(self, image, partition=None, use_cow=False, mount_dir=None):
+        """Create a new _DiskImage object instance
+
+        :param image: the path to the disk image file
+        :param partition: the partition number within the image
+        :param use_cow: whether the disk is in qcow2 format
+        :param mount_dir: the directory to mount the image on
+        """
+
         # These passed to each mounter
-        self.image = image
         self.partition = partition
         self.mount_dir = mount_dir
-        self.use_cow = use_cow
+
+        if use_cow:
+            self.image = imgmodel.LocalFileImage(image,
+                                                 imgmodel.FORMAT_QCOW2)
+        else:
+            self.image = imgmodel.LocalFileImage(image,
+                                                 imgmodel.FORMAT_RAW)
 
         # Internal
         self._mkdir = False
@@ -328,14 +349,10 @@ class _DiskImage(object):
             self.mount_dir = tempfile.mkdtemp(prefix=self.tmp_prefix)
             self._mkdir = True
 
-        imgfmt = "raw"
-        if self.use_cow:
-            imgfmt = "qcow2"
-
         mounter = mount.Mount.instance_for_format(self.image,
                                                   self.mount_dir,
-                                                  self.partition,
-                                                  imgfmt)
+                                                  self.partition)
+
         if mounter.do_mount():
             self._mounter = mounter
             return self._mounter.device

@@ -19,8 +19,10 @@ import time
 from oslo_log import log as logging
 from oslo_utils import importutils
 
+from nova import exception
 from nova.i18n import _, _LI, _LW
 from nova import utils
+from nova.virt.image import model as imgmodel
 
 LOG = logging.getLogger(__name__)
 
@@ -37,42 +39,79 @@ class Mount(object):
     mode = None  # to be overridden in subclasses
 
     @staticmethod
-    def instance_for_format(imgfile, mountdir, partition, imgfmt):
-        LOG.debug("Instance for format imgfile=%(imgfile)s "
-                  "mountdir=%(mountdir)s partition=%(partition)s "
-                  "imgfmt=%(imgfmt)s",
-                  {'imgfile': imgfile, 'mountdir': mountdir,
-                   'partition': partition, 'imgfmt': imgfmt})
-        if imgfmt == "raw":
-            LOG.debug("Using LoopMount")
-            return importutils.import_object(
-                "nova.virt.disk.mount.loop.LoopMount",
-                imgfile, mountdir, partition)
+    def instance_for_format(image, mountdir, partition):
+        """Get a Mount instance for the image type
+
+        :param image: instance of nova.virt.image.model.Image
+        :param mountdir: path to mount the image at
+        :param partition: partition number to mount
+        """
+        LOG.debug("Instance for format image=%(image)s "
+                  "mountdir=%(mountdir)s partition=%(partition)s",
+                  {'image': image, 'mountdir': mountdir,
+                   'partition': partition})
+
+        if isinstance(image, imgmodel.LocalFileImage):
+            if image.format == imgmodel.FORMAT_RAW:
+                LOG.debug("Using LoopMount")
+                return importutils.import_object(
+                    "nova.virt.disk.mount.loop.LoopMount",
+                    image, mountdir, partition)
+            else:
+                LOG.debug("Using NbdMount")
+                return importutils.import_object(
+                    "nova.virt.disk.mount.nbd.NbdMount",
+                    image, mountdir, partition)
         else:
-            LOG.debug("Using NbdMount")
-            return importutils.import_object(
-                "nova.virt.disk.mount.nbd.NbdMount",
-                imgfile, mountdir, partition)
+            # TODO(berrange) we could mount images of
+            # type LocalBlockImage directly without
+            # involving loop or nbd devices
+            #
+            # We could also mount RBDImage directly
+            # using kernel RBD block dev support.
+            #
+            # This is left as an enhancement for future
+            # motivated developers todo, since raising
+            # an exception is on par with what this
+            # code did historically
+            raise exception.UnsupportedImageModel(
+                image.__class__.__name__)
 
     @staticmethod
-    def instance_for_device(imgfile, mountdir, partition, device):
-        LOG.debug("Instance for device imgfile=%(imgfile)s "
+    def instance_for_device(image, mountdir, partition, device):
+        """Get a Mount instance for the device type
+
+        :param image: instance of nova.virt.image.model.Image
+        :param mountdir: path to mount the image at
+        :param partition: partition number to mount
+        :param device: mounted device path
+        """
+
+        LOG.debug("Instance for device image=%(image)s "
                   "mountdir=%(mountdir)s partition=%(partition)s "
                   "device=%(device)s",
-                  {'imgfile': imgfile, 'mountdir': mountdir,
+                  {'image': image, 'mountdir': mountdir,
                    'partition': partition, 'device': device})
+
         if "loop" in device:
             LOG.debug("Using LoopMount")
             return importutils.import_object(
                 "nova.virt.disk.mount.loop.LoopMount",
-                imgfile, mountdir, partition, device)
+                image, mountdir, partition, device)
         else:
             LOG.debug("Using NbdMount")
             return importutils.import_object(
                 "nova.virt.disk.mount.nbd.NbdMount",
-                imgfile, mountdir, partition, device)
+                image, mountdir, partition, device)
 
     def __init__(self, image, mount_dir, partition=None, device=None):
+        """Create a new Mount instance
+
+        :param image: instance of nova.virt.image.model.Image
+        :param mount_dir: path to mount the image at
+        :param partition: partition number to mount
+        :param device: mounted device path
+        """
 
         # Input
         self.image = image
