@@ -1132,11 +1132,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 mock.patch.object(host.Host, 'has_min_version',
                                   return_value=True),
                 mock.patch.object(host.Host, "get_capabilities",
-                                  return_value=caps),
-                mock.patch.object(
-                        random, 'choice', side_effect=lambda cells: cells[0])):
+                                  return_value=caps)):
             cfg = drvr._get_guest_config(instance_ref, [], {}, disk_info)
-            self.assertEqual(set([0, 1]), cfg.cpuset)
+            self.assertIsNone(cfg.cpuset)
             self.assertEqual(0, len(cfg.cputune.vcpupin))
             self.assertIsNone(cfg.cpu.numa)
 
@@ -1237,52 +1235,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         result = self._test_get_guest_memory_backing_config(
             host_topology, inst_topology, numa_tune)
         self.assertIsNone(result)
-
-    def test_get_guest_config_numa_host_instance_1pci_fits(self):
-        instance_ref = objects.Instance(**self.test_instance)
-        image_meta = {}
-        flavor = objects.Flavor(memory_mb=1, vcpus=2, root_gb=496,
-                                ephemeral_gb=8128, swap=33550336, name='fake',
-                                extra_specs={})
-        instance_ref.flavor = flavor
-
-        caps = vconfig.LibvirtConfigCaps()
-        caps.host = vconfig.LibvirtConfigCapsHost()
-        caps.host.cpu = vconfig.LibvirtConfigCPU()
-        caps.host.cpu.arch = "x86_64"
-        caps.host.topology = self._fake_caps_numa_topology()
-
-        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
-                                            instance_ref,
-                                            image_meta)
-        pci_device_info = dict(test_pci_device.fake_db_dev)
-        pci_device_info.update(compute_node_id=1,
-                               label='fake',
-                               status='available',
-                               address='0000:00:00.1',
-                               instance_uuid=None,
-                               request_id=None,
-                               extra_info={},
-                               numa_node=1)
-        pci_device = objects.PciDevice(**pci_device_info)
-
-        with contextlib.nested(
-                mock.patch.object(host.Host, 'has_min_version',
-                                  return_value=True),
-                mock.patch.object(
-                    host.Host, "get_capabilities", return_value=caps),
-                mock.patch.object(
-                        random, 'choice', side_effect=lambda cells: cells[0]),
-                mock.patch.object(pci_manager, "get_instance_pci_devs",
-                                  return_value=[pci_device]),
-                mock.patch.object(host.Host, 'get_online_cpus',
-                                  return_value=set(range(8)))):
-            cfg = conn._get_guest_config(instance_ref, [], {}, disk_info)
-            self.assertIsNone(instance_ref.numa_topology)
-            self.assertEqual(set([2, 3]), cfg.cpuset)
-            self.assertEqual(0, len(cfg.cputune.vcpupin))
-            self.assertIsNone(cfg.cpu.numa)
 
     def test_get_guest_config_numa_host_instance_pci_no_numa_info(self):
         instance_ref = objects.Instance(**self.test_instance)
@@ -1534,17 +1486,13 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                   return_value=caps),
                 mock.patch.object(
                     hardware, 'get_vcpu_pin_set', return_value=set([2, 3])),
-                mock.patch.object(
-                    random, 'choice', side_effect=lambda cells: cells[0]),
                 mock.patch.object(host.Host, 'get_online_cpus',
                                   return_value=set(range(8)))
                 ) as (has_min_version_mock, get_host_cap_mock,
-                        get_vcpu_pin_set_mock, choice_mock,
-                        get_online_cpus_mock):
+                        get_vcpu_pin_set_mock, get_online_cpus_mock):
             cfg = drvr._get_guest_config(instance_ref, [], {}, disk_info)
             # NOTE(ndipanov): we make sure that pin_set was taken into account
             # when choosing viable cells
-            choice_mock.assert_called_once_with([set([2, 3])])
             self.assertEqual(set([2, 3]), cfg.cpuset)
             self.assertEqual(0, len(cfg.cputune.vcpupin))
             self.assertIsNone(cfg.cpu.numa)
