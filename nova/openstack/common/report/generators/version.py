@@ -40,7 +40,21 @@ class PackageReportGenerator(object):
         self.version_obj = version_obj
 
     def __call__(self):
-        return vm.PackageModel(
-            self.version_obj.vendor_string(),
-            self.version_obj.product_string(),
-            self.version_obj.version_string_with_package())
+        if hasattr(self.version_obj, "vendor_string"):
+            vendor_string = self.version_obj.vendor_string()
+        else:
+            vendor_string = None
+
+        if hasattr(self.version_obj, "product_string"):
+            product_string = self.version_obj.product_string()
+        else:
+            product_string = None
+
+        if hasattr(self.version_obj, "version_string_with_package"):
+            version_string_with_package = self.version_obj.\
+                version_string_with_package()
+        else:
+            version_string_with_package = None
+
+        return vm.PackageModel(vendor_string, product_string,
+                               version_string_with_package)

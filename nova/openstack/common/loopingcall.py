@@ -84,9 +84,9 @@ class FixedIntervalLoopingCall(LoopingCallBase):
                         break
                     delay = end - start - interval
                     if delay > 0:
-                        LOG.warn(_LW('task %(func_name)r run outlasted '
-                                     'interval by %(delay).2f sec'),
-                                 {'func_name': self.f, 'delay': delay})
+                        LOG.warning(_LW('task %(func_name)r run outlasted '
+                                        'interval by %(delay).2f sec'),
+                                    {'func_name': self.f, 'delay': delay})
                     greenthread.sleep(-delay if delay < 0 else 0)
             except LoopingCallDone as e:
                 self.stop()
