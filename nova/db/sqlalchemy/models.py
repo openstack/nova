@@ -805,6 +805,7 @@ class VirtualInterface(BASE, NovaBase):
                         name="uniq_virtual_interfaces0address0deleted"),
         Index('virtual_interfaces_network_id_idx', 'network_id'),
         Index('virtual_interfaces_instance_uuid_fkey', 'instance_uuid'),
+        Index('virtual_interfaces_uuid_idx', 'uuid'),
     )
     id = Column(Integer, primary_key=True, nullable=False)
     address = Column(String(255))
