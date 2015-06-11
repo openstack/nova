@@ -831,6 +831,8 @@ class IronicDriverTestCase(test.NoDBTestCase):
                            'value': str(instance.root_gb)},
                           {'path': '/instance_info/swap_mb', 'op': 'add',
                            'value': str(flavor['swap'])},
+                          {'path': '/instance_info/display_name',
+                           'value': instance.display_name, 'op': 'add'},
                           {'path': '/instance_uuid', 'op': 'add',
                            'value': instance.uuid}]
         mock_update.assert_called_once_with(node.uuid, expected_patch)

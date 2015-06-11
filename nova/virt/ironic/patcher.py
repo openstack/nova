@@ -62,6 +62,8 @@ class GenericDriverFields(object):
                       'value': str(instance.root_gb)})
         patch.append({'path': '/instance_info/swap_mb', 'op': 'add',
                       'value': str(flavor['swap'])})
+        patch.append({'path': '/instance_info/display_name',
+                      'op': 'add', 'value': instance.display_name})
 
         if instance.ephemeral_gb:
             patch.append({'path': '/instance_info/ephemeral_gb',
