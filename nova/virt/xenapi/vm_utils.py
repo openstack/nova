@@ -54,10 +54,10 @@ from nova.virt import diagnostics
 from nova.virt.disk import api as disk
 from nova.virt.disk.vfs import localfs as vfsimpl
 from nova.virt import hardware
+from nova.virt.image import model as imgmodel
 from nova.virt import netutils
 from nova.virt.xenapi import agent
 from nova.virt.xenapi.image import utils as image_utils
-
 
 LOG = logging.getLogger(__name__)
 
@@ -2462,9 +2462,15 @@ def _mounted_processing(device, key, net, metadata):
             try:
                 # This try block ensures that the umount occurs
                 if not agent.find_guest_agent(tmpdir):
-                    vfs = vfsimpl.VFSLocalFS(imgfile=None,
-                                             imgfmt=None,
-                                             imgdir=tmpdir)
+                    # TODO(berrange) passing in a None filename is
+                    # rather dubious. We shouldn't be re-implementing
+                    # the mount/unmount logic here either, when the
+                    # VFSLocalFS impl has direct support for mount
+                    # and unmount handling if it were passed a
+                    # non-None filename
+                    vfs = vfsimpl.VFSLocalFS(
+                        imgmodel.LocalFileImage(None, imgmodel.FORMAT_RAW),
+                        imgdir=tmpdir)
                     LOG.info(_LI('Manipulating interface files directly'))
                     # for xenapi, we don't 'inject' admin_password here,
                     # it's handled at instance startup time, nor do we

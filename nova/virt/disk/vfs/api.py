@@ -39,18 +39,23 @@ class VFS(object):
     guestfs_ready = False
 
     @staticmethod
-    def instance_for_image(imgfile, imgfmt, partition):
-        LOG.debug("Instance for image imgfile=%(imgfile)s "
-                  "imgfmt=%(imgfmt)s partition=%(partition)s",
-                  {'imgfile': imgfile, 'imgfmt': imgfmt,
-                   'partition': partition})
+    def instance_for_image(image, partition):
+        """Get a VFS instance for the image
+
+        :param image: instance of nova.virt.image.model.Image
+        :param partition: the partition number to access
+        """
+
+        LOG.debug("Instance for image image=%(image)s "
+                  "partition=%(partition)s",
+                  {'image': image, 'partition': partition})
 
         vfs = None
         try:
             LOG.debug("Using primary VFSGuestFS")
             vfs = importutils.import_object(
                 "nova.virt.disk.vfs.guestfs.VFSGuestFS",
-                imgfile, imgfmt, partition)
+                image, partition)
             if not VFS.guestfs_ready:
                 # Inspect for capabilities and keep
                 # track of the result only if succeeded.
@@ -69,11 +74,16 @@ class VFS(object):
 
         return importutils.import_object(
             "nova.virt.disk.vfs.localfs.VFSLocalFS",
-            imgfile, imgfmt, partition)
+            image, partition)
 
-    def __init__(self, imgfile, imgfmt, partition):
-        self.imgfile = imgfile
-        self.imgfmt = imgfmt
+    def __init__(self, image, partition):
+        """Create a new local VFS instance
+
+        :param image: instance of nova.virt.image.model.Image
+        :param partition: the partition number to access
+        """
+
+        self.image = image
         self.partition = partition
 
     def setup(self, mount=True):

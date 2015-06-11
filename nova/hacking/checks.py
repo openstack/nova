@@ -196,7 +196,8 @@ def _get_virt_name(regex, data):
     driver = m.group(1)
     # Ignore things we mis-detect as virt drivers in the regex
     if driver in ["test_virt_drivers", "driver", "firewall",
-                  "disk", "api", "imagecache", "cpu", "hardware"]:
+                  "disk", "api", "imagecache", "cpu", "hardware",
+                  "image"]:
         return None
     return driver
 

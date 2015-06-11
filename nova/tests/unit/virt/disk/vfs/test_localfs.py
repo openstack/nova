@@ -22,6 +22,7 @@ from nova import exception
 from nova import test
 from nova.tests.unit import utils as tests_utils
 import nova.utils
+from nova.virt.disk.mount import nbd
 from nova.virt.disk.vfs import localfs as vfsimpl
 from nova.virt.image import model as imgmodel
 
@@ -134,11 +135,13 @@ class VirtDiskVFSLocalFSTestPaths(test.NoDBTestCase):
             return real_execute(*cmd_parts, **kwargs)
 
         self.stubs.Set(processutils, 'execute', nonroot_execute)
+        self.rawfile = imgmodel.LocalFileImage("/dummy.img",
+                                               imgmodel.FORMAT_RAW)
 
     def test_check_safe_path(self):
         if not tests_utils.coreutils_readlink_available():
             self.skipTest("coreutils readlink(1) unavailable")
-        vfs = vfsimpl.VFSLocalFS("dummy.img")
+        vfs = vfsimpl.VFSLocalFS(self.rawfile)
         vfs.imgdir = "/foo"
         ret = vfs._canonical_path('etc/something.conf')
         self.assertEqual(ret, '/foo/etc/something.conf')
@@ -146,7 +149,7 @@ class VirtDiskVFSLocalFSTestPaths(test.NoDBTestCase):
     def test_check_unsafe_path(self):
         if not tests_utils.coreutils_readlink_available():
             self.skipTest("coreutils readlink(1) unavailable")
-        vfs = vfsimpl.VFSLocalFS("dummy.img")
+        vfs = vfsimpl.VFSLocalFS(self.rawfile)
         vfs.imgdir = "/foo"
         self.assertRaises(exception.Invalid,
                           vfs._canonical_path,
@@ -154,13 +157,21 @@ class VirtDiskVFSLocalFSTestPaths(test.NoDBTestCase):
 
 
 class VirtDiskVFSLocalFSTest(test.NoDBTestCase):
+    def setUp(self):
+        super(VirtDiskVFSLocalFSTest, self).setUp()
+
+        self.qcowfile = imgmodel.LocalFileImage("/dummy.qcow2",
+                                                imgmodel.FORMAT_QCOW2)
+        self.rawfile = imgmodel.LocalFileImage("/dummy.img",
+                                               imgmodel.FORMAT_RAW)
+
     def test_makepath(self):
         global dirs, commands
         dirs = []
         commands = []
         self.stubs.Set(processutils, 'execute', fake_execute)
 
-        vfs = vfsimpl.VFSLocalFS(imgfile="/dummy.qcow2", imgfmt="qcow2")
+        vfs = vfsimpl.VFSLocalFS(self.qcowfile)
         vfs.imgdir = "/scratch/dir"
         vfs.make_path("/some/dir")
         vfs.make_path("/other/dir")
@@ -193,7 +204,7 @@ class VirtDiskVFSLocalFSTest(test.NoDBTestCase):
         commands = []
         self.stubs.Set(processutils, 'execute', fake_execute)
 
-        vfs = vfsimpl.VFSLocalFS(imgfile="/dummy.qcow2", imgfmt="qcow2")
+        vfs = vfsimpl.VFSLocalFS(self.qcowfile)
         vfs.imgdir = "/scratch/dir"
         vfs.append_file("/some/file", " Goodbye")
 
@@ -219,7 +230,7 @@ class VirtDiskVFSLocalFSTest(test.NoDBTestCase):
         commands = []
         self.stubs.Set(processutils, 'execute', fake_execute)
 
-        vfs = vfsimpl.VFSLocalFS(imgfile="/dummy.qcow2", imgfmt="qcow2")
+        vfs = vfsimpl.VFSLocalFS(self.qcowfile)
         vfs.imgdir = "/scratch/dir"
         vfs.replace_file("/some/file", "Goodbye")
 
@@ -244,7 +255,7 @@ class VirtDiskVFSLocalFSTest(test.NoDBTestCase):
         commands = []
         self.stubs.Set(processutils, 'execute', fake_execute)
 
-        vfs = vfsimpl.VFSLocalFS(imgfile="/dummy.qcow2", imgfmt="qcow2")
+        vfs = vfsimpl.VFSLocalFS(self.qcowfile)
         vfs.imgdir = "/scratch/dir"
         self.assertEqual(vfs.read_file("/some/file"), "Hello World")
 
@@ -264,7 +275,7 @@ class VirtDiskVFSLocalFSTest(test.NoDBTestCase):
         commands = []
         self.stubs.Set(processutils, 'execute', fake_execute)
 
-        vfs = vfsimpl.VFSLocalFS(imgfile="/dummy.qcow2", imgfmt="qcow2")
+        vfs = vfsimpl.VFSLocalFS(self.qcowfile)
         vfs.imgdir = "/scratch/dir"
         vfs.read_file("/some/file")
 
@@ -304,7 +315,7 @@ class VirtDiskVFSLocalFSTest(test.NoDBTestCase):
         files = {}
         self.stubs.Set(processutils, 'execute', fake_execute)
 
-        vfs = vfsimpl.VFSLocalFS(imgfile="/dummy.qcow2", imgfmt="qcow2")
+        vfs = vfsimpl.VFSLocalFS(self.qcowfile)
         vfs.imgdir = "/scratch/dir"
         vfs.read_file("/some/file")
 
@@ -335,7 +346,7 @@ class VirtDiskVFSLocalFSTest(test.NoDBTestCase):
         files = {}
         self.stubs.Set(processutils, 'execute', fake_execute)
 
-        vfs = vfsimpl.VFSLocalFS(imgfile="/dummy.qcow2", imgfmt="qcow2")
+        vfs = vfsimpl.VFSLocalFS(self.qcowfile)
         vfs.imgdir = "/scratch/dir"
         vfs.read_file("/some/file")
 
@@ -390,7 +401,7 @@ class VirtDiskVFSLocalFSTest(test.NoDBTestCase):
 
     @mock.patch.object(nova.utils, 'execute')
     def test_get_format_fs(self, execute):
-        vfs = vfsimpl.VFSLocalFS("dummy.img")
+        vfs = vfsimpl.VFSLocalFS(self.rawfile)
         vfs.setup = mock.MagicMock()
         vfs.teardown = mock.MagicMock()
 
@@ -421,9 +432,9 @@ class VirtDiskVFSLocalFSTest(test.NoDBTestCase):
                                         check_exit_code=[0, 2])
 
     @mock.patch.object(tempfile, 'mkdtemp')
-    @mock.patch.object(nova.virt.disk.mount.nbd, 'NbdMount')
+    @mock.patch.object(nbd, 'NbdMount')
     def test_setup_mount(self, NbdMount, mkdtemp):
-        vfs = vfsimpl.VFSLocalFS("img.qcow2", imgfmt='qcow2')
+        vfs = vfsimpl.VFSLocalFS(self.qcowfile)
 
         mounter = mock.MagicMock()
         mkdtemp.return_value = 'tmp/'
@@ -432,16 +443,13 @@ class VirtDiskVFSLocalFSTest(test.NoDBTestCase):
         vfs.setup()
 
         self.assertTrue(mkdtemp.called)
-        NbdMount.assert_called_once_with(
-            imgmodel.LocalFileImage('img.qcow2',
-                                    imgmodel.FORMAT_QCOW2),
-            'tmp/', None)
+        NbdMount.assert_called_once_with(self.qcowfile, "tmp/", None)
         mounter.do_mount.assert_called_once_with()
 
     @mock.patch.object(tempfile, 'mkdtemp')
-    @mock.patch.object(nova.virt.disk.mount.nbd, 'NbdMount')
+    @mock.patch.object(nbd, 'NbdMount')
     def test_setup_mount_false(self, NbdMount, mkdtemp):
-        vfs = vfsimpl.VFSLocalFS("img.qcow2", imgfmt='qcow2')
+        vfs = vfsimpl.VFSLocalFS(self.qcowfile)
 
         mounter = mock.MagicMock()
         mkdtemp.return_value = 'tmp/'
@@ -450,8 +458,5 @@ class VirtDiskVFSLocalFSTest(test.NoDBTestCase):
         vfs.setup(mount=False)
 
         self.assertTrue(mkdtemp.called)
-        NbdMount.assert_called_once_with(
-            imgmodel.LocalFileImage('img.qcow2',
-                                    imgmodel.FORMAT_QCOW2),
-            'tmp/', None)
+        NbdMount.assert_called_once_with(self.qcowfile, "tmp/", None)
         self.assertFalse(mounter.do_mount.called)

@@ -19,6 +19,7 @@ from nova import exception
 from nova import test
 from nova.tests.unit.virt.disk.vfs import fakeguestfs
 from nova.virt.disk.vfs import guestfs as vfsimpl
+from nova.virt.image import model as imgmodel
 
 
 class VirtDiskVFSGuestFSTest(test.NoDBTestCase):
@@ -28,15 +29,25 @@ class VirtDiskVFSGuestFSTest(test.NoDBTestCase):
                 fixtures.MonkeyPatch('nova.virt.disk.vfs.guestfs.guestfs',
                                      fakeguestfs))
 
-    def _do_test_appliance_setup_inspect(self, forcetcg):
+        self.qcowfile = imgmodel.LocalFileImage("/dummy.qcow2",
+                                                imgmodel.FORMAT_QCOW2)
+        self.rawfile = imgmodel.LocalFileImage("/dummy.img",
+                                               imgmodel.FORMAT_RAW)
+        self.lvmfile = imgmodel.LocalBlockImage("/dev/volgroup/myvol")
+        self.rbdfile = imgmodel.RBDImage("myvol", "mypool",
+                                         "cthulu",
+                                         "arrrrrgh",
+                                         ["server1:123", "server2:123"])
+
+    def _do_test_appliance_setup_inspect(self, image, drives, forcetcg):
         if forcetcg:
             vfsimpl.force_tcg()
         else:
             vfsimpl.force_tcg(False)
 
-        vfs = vfsimpl.VFSGuestFS(imgfile="/dummy.qcow2",
-                                 imgfmt="qcow2",
-                                 partition=-1)
+        vfs = vfsimpl.VFSGuestFS(
+            image,
+            partition=-1)
         vfs.setup()
 
         if forcetcg:
@@ -46,6 +57,8 @@ class VirtDiskVFSGuestFSTest(test.NoDBTestCase):
             self.assertIsNone(vfs.handle.backend_settings)
 
         self.assertTrue(vfs.handle.running)
+        self.assertEqual(drives,
+                         vfs.handle.drives)
         self.assertEqual(3, len(vfs.handle.mounts))
         self.assertEqual("/dev/mapper/guestvgf-lv_root",
                          vfs.handle.mounts[0][1])
@@ -66,14 +79,32 @@ class VirtDiskVFSGuestFSTest(test.NoDBTestCase):
         self.assertEqual(0, len(handle.mounts))
 
     def test_appliance_setup_inspect_auto(self):
-        self._do_test_appliance_setup_inspect(False)
+        drives = [("/dummy.qcow2", {"format": "qcow2"})]
+        self._do_test_appliance_setup_inspect(self.qcowfile, drives, False)
 
     def test_appliance_setup_inspect_tcg(self):
-        self._do_test_appliance_setup_inspect(True)
+        drives = [("/dummy.qcow2", {"format": "qcow2"})]
+        self._do_test_appliance_setup_inspect(self.qcowfile, drives, True)
+
+    def test_appliance_setup_inspect_raw(self):
+        drives = [("/dummy.img", {"format": "raw"})]
+        self._do_test_appliance_setup_inspect(self.rawfile, drives, True)
+
+    def test_appliance_setup_inspect_lvm(self):
+        drives = [("/dev/volgroup/myvol", {"format": "raw"})]
+        self._do_test_appliance_setup_inspect(self.lvmfile, drives, True)
+
+    def test_appliance_setup_inspect_rbd(self):
+        drives = [("mypool/myvol", {"format": "raw",
+                                    "protocol": "rbd",
+                                    "username": "cthulu",
+                                    "secret": "arrrrrgh",
+                                    "server": ["server1:123",
+                                               "server2:123"]})]
+        self._do_test_appliance_setup_inspect(self.rbdfile, drives, True)
 
     def test_appliance_setup_inspect_no_root_raises(self):
-        vfs = vfsimpl.VFSGuestFS(imgfile="/dummy.qcow2",
-                                 imgfmt="qcow2",
+        vfs = vfsimpl.VFSGuestFS(self.qcowfile,
                                  partition=-1)
         # call setup to init the handle so we can stub it
         vfs.setup()
@@ -87,8 +118,7 @@ class VirtDiskVFSGuestFSTest(test.NoDBTestCase):
         self.assertRaises(exception.NovaException, vfs.setup_os_inspect)
 
     def test_appliance_setup_inspect_multi_boots_raises(self):
-        vfs = vfsimpl.VFSGuestFS(imgfile="/dummy.qcow2",
-                                 imgfmt="qcow2",
+        vfs = vfsimpl.VFSGuestFS(self.qcowfile,
                                  partition=-1)
         # call setup to init the handle so we can stub it
         vfs.setup()
@@ -102,8 +132,7 @@ class VirtDiskVFSGuestFSTest(test.NoDBTestCase):
         self.assertRaises(exception.NovaException, vfs.setup_os_inspect)
 
     def test_appliance_setup_static_nopart(self):
-        vfs = vfsimpl.VFSGuestFS(imgfile="/dummy.qcow2",
-                                 imgfmt="qcow2",
+        vfs = vfsimpl.VFSGuestFS(self.qcowfile,
                                  partition=None)
         vfs.setup()
 
@@ -122,8 +151,7 @@ class VirtDiskVFSGuestFSTest(test.NoDBTestCase):
         self.assertEqual(0, len(handle.mounts))
 
     def test_appliance_setup_static_part(self):
-        vfs = vfsimpl.VFSGuestFS(imgfile="/dummy.qcow2",
-                                 imgfmt="qcow2",
+        vfs = vfsimpl.VFSGuestFS(self.qcowfile,
                                  partition=2)
         vfs.setup()
 
@@ -142,7 +170,7 @@ class VirtDiskVFSGuestFSTest(test.NoDBTestCase):
         self.assertEqual(0, len(handle.mounts))
 
     def test_makepath(self):
-        vfs = vfsimpl.VFSGuestFS(imgfile="/dummy.qcow2", imgfmt="qcow2")
+        vfs = vfsimpl.VFSGuestFS(self.qcowfile)
         vfs.setup()
         vfs.make_path("/some/dir")
         vfs.make_path("/other/dir")
@@ -155,7 +183,7 @@ class VirtDiskVFSGuestFSTest(test.NoDBTestCase):
         vfs.teardown()
 
     def test_append_file(self):
-        vfs = vfsimpl.VFSGuestFS(imgfile="/dummy.qcow2", imgfmt="qcow2")
+        vfs = vfsimpl.VFSGuestFS(self.qcowfile)
         vfs.setup()
         vfs.append_file("/some/file", " Goodbye")
 
@@ -166,7 +194,7 @@ class VirtDiskVFSGuestFSTest(test.NoDBTestCase):
         vfs.teardown()
 
     def test_replace_file(self):
-        vfs = vfsimpl.VFSGuestFS(imgfile="/dummy.qcow2", imgfmt="qcow2")
+        vfs = vfsimpl.VFSGuestFS(self.qcowfile)
         vfs.setup()
         vfs.replace_file("/some/file", "Goodbye")
 
@@ -177,14 +205,14 @@ class VirtDiskVFSGuestFSTest(test.NoDBTestCase):
         vfs.teardown()
 
     def test_read_file(self):
-        vfs = vfsimpl.VFSGuestFS(imgfile="/dummy.qcow2", imgfmt="qcow2")
+        vfs = vfsimpl.VFSGuestFS(self.qcowfile)
         vfs.setup()
         self.assertEqual("Hello World", vfs.read_file("/some/file"))
 
         vfs.teardown()
 
     def test_has_file(self):
-        vfs = vfsimpl.VFSGuestFS(imgfile="/dummy.qcow2", imgfmt="qcow2")
+        vfs = vfsimpl.VFSGuestFS(self.qcowfile)
         vfs.setup()
         vfs.read_file("/some/file")
 
@@ -194,7 +222,7 @@ class VirtDiskVFSGuestFSTest(test.NoDBTestCase):
         vfs.teardown()
 
     def test_set_permissions(self):
-        vfs = vfsimpl.VFSGuestFS(imgfile="/dummy.qcow2", imgfmt="qcow2")
+        vfs = vfsimpl.VFSGuestFS(self.qcowfile)
         vfs.setup()
         vfs.read_file("/some/file")
 
@@ -206,7 +234,7 @@ class VirtDiskVFSGuestFSTest(test.NoDBTestCase):
         vfs.teardown()
 
     def test_set_ownership(self):
-        vfs = vfsimpl.VFSGuestFS(imgfile="/dummy.qcow2", imgfmt="qcow2")
+        vfs = vfsimpl.VFSGuestFS(self.qcowfile)
         vfs.setup()
         vfs.read_file("/some/file")
 
@@ -228,29 +256,29 @@ class VirtDiskVFSGuestFSTest(test.NoDBTestCase):
         vfs.teardown()
 
     def test_close_on_error(self):
-        vfs = vfsimpl.VFSGuestFS(imgfile="/dummy.qcow2", imgfmt="qcow2")
+        vfs = vfsimpl.VFSGuestFS(self.qcowfile)
         vfs.setup()
         self.assertFalse(vfs.handle.kwargs['close_on_exit'])
         vfs.teardown()
         self.stubs.Set(fakeguestfs.GuestFS, 'SUPPORT_CLOSE_ON_EXIT', False)
-        vfs = vfsimpl.VFSGuestFS(imgfile="/dummy.qcow2", imgfmt="qcow2")
+        vfs = vfsimpl.VFSGuestFS(self.qcowfile)
         vfs.setup()
         self.assertNotIn('close_on_exit', vfs.handle.kwargs)
         vfs.teardown()
 
     def test_python_return_dict(self):
-        vfs = vfsimpl.VFSGuestFS(imgfile="/dummy.qcow2", imgfmt="qcow2")
+        vfs = vfsimpl.VFSGuestFS(self.qcowfile)
         vfs.setup()
         self.assertFalse(vfs.handle.kwargs['python_return_dict'])
         vfs.teardown()
         self.stubs.Set(fakeguestfs.GuestFS, 'SUPPORT_RETURN_DICT', False)
-        vfs = vfsimpl.VFSGuestFS(imgfile="/dummy.qcow2", imgfmt="qcow2")
+        vfs = vfsimpl.VFSGuestFS(self.qcowfile)
         vfs.setup()
         self.assertNotIn('python_return_dict', vfs.handle.kwargs)
         vfs.teardown()
 
     def test_setup_debug_disable(self):
-        vfs = vfsimpl.VFSGuestFS(imgfile="/dummy.qcow2", imgfmt="qcow2")
+        vfs = vfsimpl.VFSGuestFS(self.qcowfile)
         vfs.setup()
         self.assertFalse(vfs.handle.trace_enabled)
         self.assertFalse(vfs.handle.verbose_enabled)
@@ -258,14 +286,14 @@ class VirtDiskVFSGuestFSTest(test.NoDBTestCase):
 
     def test_setup_debug_enabled(self):
         self.flags(debug=True, group='guestfs')
-        vfs = vfsimpl.VFSGuestFS(imgfile="/dummy.qcow2", imgfmt="qcow2")
+        vfs = vfsimpl.VFSGuestFS(self.qcowfile)
         vfs.setup()
         self.assertTrue(vfs.handle.trace_enabled)
         self.assertTrue(vfs.handle.verbose_enabled)
         self.assertIsNotNone(vfs.handle.event_callback)
 
     def test_get_format_fs(self):
-        vfs = vfsimpl.VFSGuestFS("dummy.img")
+        vfs = vfsimpl.VFSGuestFS(self.rawfile)
         vfs.setup()
         self.assertIsNotNone(vfs.handle)
         self.assertTrue('ext3', vfs.get_image_fs())
@@ -273,12 +301,12 @@ class VirtDiskVFSGuestFSTest(test.NoDBTestCase):
 
     @mock.patch.object(vfsimpl.VFSGuestFS, 'setup_os')
     def test_setup_mount(self, setup_os):
-        vfs = vfsimpl.VFSGuestFS("img.qcow2", imgfmt='qcow2')
+        vfs = vfsimpl.VFSGuestFS(self.qcowfile)
         vfs.setup()
         self.assertTrue(setup_os.called)
 
     @mock.patch.object(vfsimpl.VFSGuestFS, 'setup_os')
     def test_setup_mount_false(self, setup_os):
-        vfs = vfsimpl.VFSGuestFS("img.qcow2", imgfmt='qcow2')
+        vfs = vfsimpl.VFSGuestFS(self.qcowfile)
         vfs.setup(mount=False)
         self.assertFalse(setup_os.called)
