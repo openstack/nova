@@ -808,14 +808,15 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             lambda x, y: FakeDev()
 
         class FakeDomain(object):
-            def detachDeviceFlags(self, xml, flag):
+            def detachDeviceFlags(self, xml, flags):
                 pci_devices[0]['hypervisor_name'] = 'marked'
                 pass
 
             def XMLDesc(self, flag):
                 return fake_domXML1
 
-        drvr._detach_pci_devices(FakeDomain(), pci_devices)
+        guest = libvirt_guest.Guest(FakeDomain())
+        drvr._detach_pci_devices(guest, pci_devices)
         self.assertEqual(pci_devices[0]['hypervisor_name'], 'marked')
 
     def test_detach_pci_devices_timeout(self):
@@ -852,13 +853,15 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             lambda x, y: FakeDev()
 
         class FakeDomain(object):
-            def detachDeviceFlags(self, xml, flag):
+            def detachDeviceFlags(self, xml, flags):
                 pass
 
             def XMLDesc(self, flag):
                 return fake_domXML1
+
+        guest = libvirt_guest.Guest(FakeDomain())
         self.assertRaises(exception.PciDeviceDetachFailed,
-                          drvr._detach_pci_devices, FakeDomain(), pci_devices)
+                          drvr._detach_pci_devices, guest, pci_devices)
 
     def test_get_connector(self):
         initiator = 'fake.initiator.iqn'
@@ -4704,7 +4707,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
   <source file="/path/to/fake-volume"/>
   <target bus="virtio" dev="vdc"/>
 </disk>
-""", flags)
+""", flags=flags)
                 mock_disconnect_volume.assert_called_with(
                     connection_info, 'vdc')
 
@@ -8288,8 +8291,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         domain = FakeVirtDomain()
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        guest = libvirt_guest.Guest(domain)
 
-        drvr._detach_sriov_ports(self.context, instance, domain)
+        drvr._detach_sriov_ports(self.context, instance, guest)
         mock_get_image_metadata.assert_called_once_with(
             instance.system_metadata)
         self.assertTrue(mock_detachDeviceFlags.called)

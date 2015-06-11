@@ -1199,31 +1199,21 @@ class LibvirtDriver(driver.ComputeDriver):
         disk_dev = mountpoint.rpartition("/")[2]
         try:
             guest = self._host.get_guest(instance)
-
-            # TODO(sahid): We are converting all calls from a
-            # virDomain object to use nova.virt.libvirt.Guest.
-            # We should be able to remove virt_dom at the end.
-            virt_dom = guest._domain
             conf = guest.get_disk(disk_dev)
             if not conf:
                 raise exception.DiskNotFound(location=disk_dev)
-            else:
-                # NOTE(vish): We can always affect config because our
-                #             domains are persistent, but we should only
-                #             affect live if the domain is running.
-                flags = libvirt.VIR_DOMAIN_AFFECT_CONFIG
-                state = self._get_power_state(virt_dom)
-                if state in (power_state.RUNNING, power_state.PAUSED):
-                    flags |= libvirt.VIR_DOMAIN_AFFECT_LIVE
-                virt_dom.detachDeviceFlags(conf.to_xml(), flags)
 
-                if encryption:
-                    # The volume must be detached from the VM before
-                    # disconnecting it from its encryptor. Otherwise, the
-                    # encryptor may report that the volume is still in use.
-                    encryptor = self._get_volume_encryptor(connection_info,
-                                                           encryption)
-                    encryptor.detach_volume(**encryption)
+            state = self._get_power_state(guest._domain)
+            live = state in (power_state.RUNNING, power_state.PAUSED)
+            guest.detach_device(conf, persistent=True, live=live)
+
+            if encryption:
+                # The volume must be detached from the VM before
+                # disconnecting it from its encryptor. Otherwise, the
+                # encryptor may report that the volume is still in use.
+                encryptor = self._get_volume_encryptor(connection_info,
+                                                       encryption)
+                encryptor.detach_volume(**encryption)
         except exception.InstanceNotFound:
             # NOTE(zhaoqin): If the instance does not exist, _lookup_by_name()
             #                will throw InstanceNotFound exception. Need to
@@ -1263,20 +1253,13 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def detach_interface(self, instance, vif):
         guest = self._host.get_guest(instance)
-
-        # TODO(sahid): We are converting all calls from a
-        # virDomain object to use nova.virt.libvirt.Guest.
-        # We should be able to remove virt_dom at the end.
-        virt_dom = guest._domain
         cfg = self.vif_driver.get_config(instance, vif, None, instance.flavor,
                                          CONF.libvirt.virt_type)
         try:
             self.vif_driver.unplug(instance, vif)
-            flags = libvirt.VIR_DOMAIN_AFFECT_CONFIG
-            state = self._get_power_state(virt_dom)
-            if state == power_state.RUNNING or state == power_state.PAUSED:
-                flags |= libvirt.VIR_DOMAIN_AFFECT_LIVE
-            virt_dom.detachDeviceFlags(cfg.to_xml(), flags)
+            state = self._get_power_state(guest._domain)
+            live = state in (power_state.RUNNING, power_state.PAUSED)
+            guest.detach_device(cfg, persistent=True, live=live)
         except libvirt.libvirtError as ex:
             error_code = ex.get_error_code()
             if error_code == libvirt.VIR_ERR_NO_DOMAIN:
@@ -1393,9 +1376,9 @@ class LibvirtDriver(driver.ComputeDriver):
         # NOTE(dkang): managedSave does not work for LXC
         if CONF.libvirt.virt_type != 'lxc' and not live_snapshot:
             if state == power_state.RUNNING or state == power_state.PAUSED:
-                self._detach_pci_devices(virt_dom,
+                self._detach_pci_devices(guest,
                     pci_manager.get_instance_pci_devs(instance))
-                self._detach_sriov_ports(context, instance, virt_dom)
+                self._detach_sriov_ports(context, instance, guest)
                 virt_dom.managedSave(0)
 
         snapshot_backend = self.image_backend.snapshot(instance,
@@ -2309,9 +2292,9 @@ class LibvirtDriver(driver.ComputeDriver):
         # We should be able to remove dom at the end.
         dom = guest._domain
 
-        self._detach_pci_devices(dom,
+        self._detach_pci_devices(guest,
             pci_manager.get_instance_pci_devs(instance))
-        self._detach_sriov_ports(context, instance, dom)
+        self._detach_sriov_ports(context, instance, guest)
         dom.managedSave(0)
 
     def resume(self, context, instance, network_info, block_device_info=None):
@@ -2980,7 +2963,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                                    dev['instance_uuid'],
                                                    reason=six.text_type(exc))
 
-    def _detach_pci_devices(self, dom, pci_devs):
+    def _detach_pci_devices(self, guest, pci_devs):
 
         # for libvirt version < 1.1.1, this is race condition
         # so forbid detach if not had this version
@@ -2993,11 +2976,10 @@ class LibvirtDriver(driver.ComputeDriver):
                                                       dev=pci_devs)
         try:
             for dev in pci_devs:
-                dom.detachDeviceFlags(self._get_guest_pci_device(dev).to_xml(),
-                                      libvirt.VIR_DOMAIN_AFFECT_LIVE)
+                guest.detach_device(self._get_guest_pci_device(dev), live=True)
                 # after detachDeviceFlags returned, we should check the dom to
                 # ensure the detaching is finished
-                xml = dom.XMLDesc(0)
+                xml = guest._domain.XMLDesc(0)
                 xml_doc = etree.fromstring(xml)
                 guest_config = vconfig.LibvirtConfigGuest()
                 guest_config.parse_dom(xml_doc)
@@ -3057,7 +3039,7 @@ class LibvirtDriver(driver.ComputeDriver):
                           {'port': vif, 'dom': guest.id})
                     guest.attach_device(cfg)
 
-    def _detach_sriov_ports(self, context, instance, dom):
+    def _detach_sriov_ports(self, context, instance, guest):
         network_info = instance.info_cache.network_info
         if network_info is None:
             return
@@ -3082,8 +3064,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                                      image_meta,
                                                      instance.flavor,
                                                      CONF.libvirt.virt_type)
-                    dom.detachDeviceFlags(cfg.to_xml(),
-                                          libvirt.VIR_DOMAIN_AFFECT_LIVE)
+                    guest.detach_device(cfg, live=True)
 
     def _set_host_enabled(self, enabled,
                           disable_reason=DISABLE_REASON_UNDEFINED):

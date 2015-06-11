@@ -207,6 +207,19 @@ class Guest(object):
             conf.parse_dom(node)
             return conf
 
+    def detach_device(self, conf, persistent=False, live=False):
+        """Detaches device to the guest.
+
+        :param conf: A LibvirtConfigObject of the device to detach
+        :param persistent: A bool to indicate whether the change is
+                           persistent or not
+        :param live: A bool to indicate whether it affect the guest
+                     in running state
+        """
+        flags = persistent and libvirt.VIR_DOMAIN_AFFECT_CONFIG or 0
+        flags |= live and libvirt.VIR_DOMAIN_AFFECT_LIVE or 0
+        self._domain.detachDeviceFlags(conf.to_xml(), flags=flags)
+
 
 class GuestVCPUInfo(object):
     def __init__(self, id, cpu, state, time):

@@ -228,3 +228,47 @@ class GuestTestCase(test.NoDBTestCase):
         domain.attachDeviceFlags.assert_called_once_with(
             "</xml>", flags=(fakelibvirt.VIR_DOMAIN_AFFECT_CONFIG |
                              fakelibvirt.VIR_DOMAIN_AFFECT_LIVE))
+
+    def test_detach_device(self):
+        domain = mock.Mock(spec=fakelibvirt.virDomain)
+        conf = mock.Mock(spec=vconfig.LibvirtConfigGuestDevice)
+        conf.to_xml.return_value = "</xml>"
+
+        guest = libvirt_guest.Guest(domain)
+        guest.detach_device(conf)
+
+        domain.detachDeviceFlags.assert_called_once_with("</xml>", flags=0)
+
+    def test_detach_device_persistent(self):
+        domain = mock.Mock(spec=fakelibvirt.virDomain)
+        conf = mock.Mock(spec=vconfig.LibvirtConfigGuestDevice)
+        conf.to_xml.return_value = "</xml>"
+
+        guest = libvirt_guest.Guest(domain)
+        guest.detach_device(conf, persistent=True)
+
+        domain.detachDeviceFlags.assert_called_once_with(
+            "</xml>", flags=fakelibvirt.VIR_DOMAIN_AFFECT_CONFIG)
+
+    def test_detach_device_live(self):
+        domain = mock.Mock(spec=fakelibvirt.virDomain)
+        conf = mock.Mock(spec=vconfig.LibvirtConfigGuestDevice)
+        conf.to_xml.return_value = "</xml>"
+
+        guest = libvirt_guest.Guest(domain)
+        guest.detach_device(conf, live=True)
+
+        domain.detachDeviceFlags.assert_called_once_with(
+            "</xml>", flags=fakelibvirt.VIR_DOMAIN_AFFECT_LIVE)
+
+    def test_detach_device_persistent_live(self):
+        domain = mock.Mock(spec=fakelibvirt.virDomain)
+        conf = mock.Mock(spec=vconfig.LibvirtConfigGuestDevice)
+        conf.to_xml.return_value = "</xml>"
+
+        guest = libvirt_guest.Guest(domain)
+        guest.detach_device(conf, persistent=True, live=True)
+
+        domain.detachDeviceFlags.assert_called_once_with(
+            "</xml>", flags=(fakelibvirt.VIR_DOMAIN_AFFECT_CONFIG |
+                             fakelibvirt.VIR_DOMAIN_AFFECT_LIVE))
