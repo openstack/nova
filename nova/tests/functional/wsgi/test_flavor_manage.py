@@ -40,10 +40,10 @@ def rand_flavor(**kwargs):
 class FlavorManageFullstack(test.TestCase):
     """Tests for flavors manage administrative command.
 
-    Extention: os-flavors-manage
+    Extension: os-flavors-manage
 
     os-flavors-manage adds a set of admin functions to the flavors
-    resource for create and delete of flavors.
+    resource for the creation and deletion of flavors.
 
     POST /v2/flavors:
 
