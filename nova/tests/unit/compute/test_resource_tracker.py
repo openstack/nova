@@ -281,6 +281,7 @@ class BaseTestCase(test.TestCase):
             'updated_at': None,
             'deleted_at': None,
             'deleted': False,
+            'last_seen_up': None,
         }
         return service
 

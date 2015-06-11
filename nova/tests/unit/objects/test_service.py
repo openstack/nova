@@ -36,6 +36,7 @@ fake_service = {
     'report_count': 1,
     'disabled': False,
     'disabled_reason': None,
+    'last_seen_up': None,
     }
 
 OPTIONAL = ['availability_zone', 'compute_node']
