@@ -1024,9 +1024,7 @@ class Ploop(Image):
             utils.execute('ploop', 'restore-descriptor', '-f', self.pcs_format,
                           target, image_path)
             if size:
-                dd_path = os.path.join(self.path, "DiskDescriptor.xml")
-                utils.execute('ploop', 'grow', '-s', '%dK' % (size >> 10),
-                              dd_path, run_as_root=True)
+                self.resize_image(size)
 
         if not os.path.exists(self.path):
             if CONF.force_raw_images:
@@ -1063,9 +1061,8 @@ class Ploop(Image):
             create_ploop_image(base, self.path, size)
 
     def resize_image(self, size):
-        dd_path = os.path.join(self.path, "DiskDescriptor.xml")
-        utils.execute('ploop', 'grow', '-s', '%dK' % (size >> 10), dd_path,
-                      run_as_root=True)
+        image = imgmodel.LocalFileImage(self.path, imgmodel.FORMAT_PLOOP)
+        disk.extend(image, size)
 
     def snapshot_extract(self, target, out_format):
         img_path = os.path.join(self.path, "root.hds")

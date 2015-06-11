@@ -1590,6 +1590,7 @@ class PloopTestCase(_ImageTestCase, test.NoDBTestCase):
                                  '__call__')
         self.mox.StubOutWithMock(imagebackend.libvirt_utils, 'copy_image')
         self.mox.StubOutWithMock(self.utils, 'execute')
+        self.mox.StubOutWithMock(imagebackend.disk, 'extend')
         return fn
 
     def test_cache(self):
@@ -1619,9 +1620,9 @@ class PloopTestCase(_ImageTestCase, test.NoDBTestCase):
         imagebackend.libvirt_utils.copy_image(self.TEMPLATE_PATH, img_path)
         self.utils.execute("ploop", "restore-descriptor", "-f", "raw",
                            self.PATH, img_path)
-        self.utils.execute("ploop", "grow", '-s', "2K",
-                           os.path.join(self.PATH, "DiskDescriptor.xml"),
-                           run_as_root=True)
+        image = imgmodel.LocalFileImage(self.PATH, imgmodel.FORMAT_PLOOP)
+        imagebackend.disk.extend(image, 2048)
+
         self.mox.ReplayAll()
 
         image = self.image_class(self.INSTANCE, self.NAME)

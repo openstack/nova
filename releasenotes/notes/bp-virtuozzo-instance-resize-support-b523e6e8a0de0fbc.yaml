@@ -1,0 +1,7 @@
+---
+features:
+    - Virtuozzo ploop disks can be resized now during "nova resize".
+upgrade:
+    - You must update the rootwrap configuration for the compute service
+      if you use ploop images, so that "ploop grow" filter is changed
+      to "prl_disk_tool resize".

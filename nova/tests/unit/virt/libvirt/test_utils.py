@@ -44,7 +44,7 @@ class LibvirtUtilsTestCase(test.NoDBTestCase):
     @mock.patch('nova.utils.execute')
     def test_copy_image_local(self, mock_execute):
         libvirt_utils.copy_image('src', 'dest')
-        mock_execute.assert_called_once_with('cp', 'src', 'dest')
+        mock_execute.assert_called_once_with('cp', '-r', 'src', 'dest')
 
     @mock.patch('nova.virt.libvirt.volume.remotefs.SshDriver.copy_file')
     def test_copy_image_remote_ssh(self, mock_rem_fs_remove):

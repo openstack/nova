@@ -196,7 +196,8 @@ class SshDriver(RemoteFilesystemDriver):
                           on_execute=on_execute, on_completion=on_completion)
 
     def copy_file(self, src, dst, on_execute, on_completion, compression):
-        utils.execute('scp', src, dst,
+        # As far as ploop disks are in fact directories we add '-r' argument
+        utils.execute('scp', '-r', src, dst,
                       on_execute=on_execute, on_completion=on_completion)
 
 
@@ -324,7 +325,8 @@ class RsyncDriver(RemoteFilesystemDriver):
                       on_execute=on_execute, on_completion=on_completion)
 
     def copy_file(self, src, dst, on_execute, on_completion, compression):
-        args = ['rsync', '--sparse', src, dst]
+        # As far as ploop disks are in fact directories we add '-r' argument
+        args = ['rsync', '-r', '--sparse', src, dst]
         if compression:
             args.append('--compress')
         utils.execute(*args,
