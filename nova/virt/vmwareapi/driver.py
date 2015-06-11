@@ -48,15 +48,15 @@ LOG = logging.getLogger(__name__)
 
 vmwareapi_opts = [
     cfg.StrOpt('host_ip',
-               help='Hostname or IP address for connection to VMware VC '
-                    'host.'),
+               help='Hostname or IP address for connection to VMware '
+                    'vCenter host.'),
     cfg.IntOpt('host_port',
                default=443,
-               help='Port for connection to VMware VC host.'),
+               help='Port for connection to VMware vCenter host.'),
     cfg.StrOpt('host_username',
-               help='Username for connection to VMware VC host.'),
+               help='Username for connection to VMware vCenter host.'),
     cfg.StrOpt('host_password',
-               help='Password for connection to VMware VC host.',
+               help='Password for connection to VMware vCenter host.',
                secret=True),
     cfg.MultiStrOpt('cluster_name',
                     help='Name of a VMware Cluster ComputeResource.'),
@@ -205,13 +205,13 @@ class VMwareVCDriver(driver.ComputeDriver):
     def _check_min_version(self):
         min_version = utils.convert_version_to_int(constants.MIN_VC_VERSION)
         vc_version = vim_util.get_vc_version(self._session)
-        LOG.info(_LI("VMware VC version: %s"), vc_version)
+        LOG.info(_LI("VMware vCenter version: %s"), vc_version)
         if min_version > utils.convert_version_to_int(vc_version):
             # TODO(garyk): enforce this from M
-            LOG.warning(_LW('Running Nova with a VMware VC version less than '
-                            '%(version)s is deprecated. The required minimum '
-                            'version of VC will be raised to %(version)s '
-                            'in the 2016.1 release.'),
+            LOG.warning(_LW('Running Nova with a VMware vCenter version less '
+                            'than %(version)s is deprecated. The required '
+                            'minimum version of vCenter will be raised to '
+                            '%(version)s in the 2016.1 release.'),
                         {'version': constants.MIN_VC_VERSION})
 
     @property
