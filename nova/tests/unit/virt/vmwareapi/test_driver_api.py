@@ -630,7 +630,6 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.conn.destroy(self.context, self.instance, self.network_info,
                           block_device_info=bdi)
         mock_power_off.assert_called_once_with(self.instance)
-        self.assertEqual(vm_states.STOPPED, self.instance.vm_state)
         mock_detach_volume.assert_called_once_with(
             connection_info, self.instance, 'fake-name')
         mock_destroy.assert_called_once_with(self.instance, True)
@@ -1443,7 +1442,6 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
             block_device_info_get_mapping.assert_called_once_with(
                 block_device_info)
             vmops.power_off.assert_called_once_with(self.instance)
-            self.assertEqual(vm_states.STOPPED, self.instance.vm_state)
             exp_detach_calls = [mock.call(mock.sentinel.connection_info_1,
                                           self.instance, 'dev1'),
                                 mock.call(mock.sentinel.connection_info_2,
