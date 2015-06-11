@@ -272,3 +272,43 @@ class GuestTestCase(test.NoDBTestCase):
         domain.detachDeviceFlags.assert_called_once_with(
             "</xml>", flags=(fakelibvirt.VIR_DOMAIN_AFFECT_CONFIG |
                              fakelibvirt.VIR_DOMAIN_AFFECT_LIVE))
+
+    def test_get_xml_desc(self):
+        domain = mock.Mock(spec=fakelibvirt.virDomain)
+        guest = libvirt_guest.Guest(domain)
+        guest.get_xml_desc()
+
+        domain.XMLDesc.assert_called_once_with(flags=0)
+
+    def test_get_xml_desc_dump_inactive(self):
+        domain = mock.Mock(spec=fakelibvirt.virDomain)
+        guest = libvirt_guest.Guest(domain)
+        guest.get_xml_desc(dump_inactive=True)
+
+        domain.XMLDesc.assert_called_once_with(
+            flags=fakelibvirt.VIR_DOMAIN_XML_INACTIVE)
+
+    def test_get_xml_desc_dump_sensitive(self):
+        domain = mock.Mock(spec=fakelibvirt.virDomain)
+        guest = libvirt_guest.Guest(domain)
+        guest.get_xml_desc(dump_sensitive=True)
+
+        domain.XMLDesc.assert_called_once_with(
+            flags=fakelibvirt.VIR_DOMAIN_XML_SECURE)
+
+    def test_get_xml_desc_dump_inactive_dump_sensitive(self):
+        domain = mock.Mock(spec=fakelibvirt.virDomain)
+        guest = libvirt_guest.Guest(domain)
+        guest.get_xml_desc(dump_inactive=True, dump_sensitive=True)
+
+        domain.XMLDesc.assert_called_once_with(
+            flags=(fakelibvirt.VIR_DOMAIN_XML_INACTIVE |
+                   fakelibvirt.VIR_DOMAIN_XML_SECURE))
+
+    def test_get_xml_desc_dump_migratable(self):
+        domain = mock.Mock(spec=fakelibvirt.virDomain)
+        guest = libvirt_guest.Guest(domain)
+        guest.get_xml_desc(dump_migratable=True)
+
+        domain.XMLDesc.assert_called_once_with(
+            flags=fakelibvirt.VIR_DOMAIN_XML_MIGRATABLE)
