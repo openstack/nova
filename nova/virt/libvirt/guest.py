@@ -179,6 +179,10 @@ class Guest(object):
                 pass
             self._domain.undefine()
 
+    def has_persistent_configuration(self):
+        """Whether domain config is persistently stored on the host."""
+        return self._domain.isPersistent()
+
     def attach_device(self, conf, persistent=False, live=False):
         """Attaches device to the guest.
 

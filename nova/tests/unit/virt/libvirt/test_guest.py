@@ -312,3 +312,10 @@ class GuestTestCase(test.NoDBTestCase):
 
         domain.XMLDesc.assert_called_once_with(
             flags=fakelibvirt.VIR_DOMAIN_XML_MIGRATABLE)
+
+    def test_has_persistent_configuration(self):
+        domain = mock.Mock(spec=fakelibvirt.virDomain)
+        guest = libvirt_guest.Guest(domain)
+        self.assertTrue(
+            guest.has_persistent_configuration())
+        domain.isPersistent.assert_called_once_with()
