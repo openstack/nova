@@ -25,6 +25,123 @@ responses from the server.
 For full details please read the `Kilo spec for microversions
 <http://git.openstack.org/cgit/openstack/nova-specs/tree/specs/kilo/implemented/api-microversions.rst>`_
 
+When do I need a new Microversion?
+----------------------------------
+
+A microversion is needed when the contract to the user is
+changed. The user contract covers many kinds of information such as:
+
+- the Request
+
+  - the list of resource urls which exist on the server
+
+    Example: adding a new servers/{ID}/foo which didn't exist in a
+    previous version of the code
+
+  - the list of query parameters that are valid on urls
+
+    Example: adding a new parameter ``is_yellow`` servers/{ID}?is_yellow=True
+
+  - the list of query parameter values for non free form fields
+
+    Example: parameter filter_by takes a small set of constants/enums "A",
+    "B", "C". Adding support for new enum "D".
+
+  - new headers accepted on a request
+
+- the Response
+
+  - the list of attributes and data structures returned
+
+    Example: adding a new attribute 'locked': True/False to the output
+    of servers/{ID}
+
+  - the allowed values of non free form fields
+
+    Example: adding a new allowed ``status`` to servers/{ID}
+
+  - the list of status codes allowed for a particular request
+
+    Example: an API previously could return 200, 400, 403, 404 and the
+    change would make the API now also be allowed to return 409.
+
+  - changing a status code on a particular response
+
+    Example: changing the return code of an API from 501 to 400.
+
+  - new headers returned on a response
+
+The following flow chart attempts to walk through the process of "do
+we need a microversion".
+
+
+.. graphviz::
+
+   digraph states {
+
+    label="Do I need a microversion?"
+
+    silent_fail[shape="diamond", style="", label="Did we silently
+   fail to do what is asked?"];
+    ret_500[shape="diamond", style="", label="Did we return a 500
+   before?"];
+    new_error[shape="diamond", style="", label="Are we changing what
+    status code is returned?"];
+    new_attr[shape="diamond", style="", label="Did we add or remove an
+    attribute to a payload?"];
+    new_param[shape="diamond", style="", label="Did we add or remove
+    an accepted query string parameter or value?"];
+    new_resource[shape="diamond", style="", label="Did we add or remove a
+   resource url?"];
+
+
+   no[shape="box", style=rounded, label="No microversion needed"];
+   yes[shape="box", style=rounded, label="Yes, you need a microversion"];
+   no2[shape="box", style=rounded, label="No microversion needed, it's
+   a bug"];
+
+   silent_fail -> ret_500[label="no"];
+   silent_fail -> no2[label="yes"];
+
+    ret_500 -> no2[label="yes [1]"];
+    ret_500 -> new_error[label="no"];
+
+    new_error -> new_attr[label="no"];
+    new_error -> yes[label="yes"];
+
+    new_attr -> new_param[label="no"];
+    new_attr -> yes[label="yes"];
+
+    new_param -> new_resource[label="no"];
+    new_param -> yes[label="yes"];
+
+    new_resource -> no[label="no"];
+    new_resource -> yes[label="yes"];
+
+   {rank=same; yes new_attr}
+   {rank=same; no2 ret_500}
+   {rank=min; silent_fail}
+   }
+
+
+**Footnotes**
+
+[1] - When fixing 500 errors that previously caused stack traces, try
+to map the new error into the existing set of errors that API call
+could previously return (400 if nothing else is appropriate). Changing
+the set of allowed status codes from a request is changing the
+contract, and should be part of a microversion.
+
+The reason why we are so strict on contract is that we'd like
+application writers to be able to know, for sure, what the contract is
+at every microversion in Nova. If they do not, they will need to write
+conditional code in their application to handle ambiguities.
+
+When in doubt, consider application authors. If it would work with no
+client side changes on both Nova versions, you probably don't need a
+microversion. If, on the other hand, there is any ambiguity, a
+microversion is probably needed.
+
 
 In Code
 -------
