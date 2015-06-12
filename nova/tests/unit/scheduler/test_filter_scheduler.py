@@ -19,6 +19,7 @@ Tests For Filter Scheduler.
 import mock
 
 from nova import exception
+from nova import objects
 from nova.scheduler import filter_scheduler
 from nova.scheduler import host_manager
 from nova.scheduler import utils as scheduler_utils
@@ -235,6 +236,24 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.assertEqual(1, len(hosts))
 
         self.assertEqual(50, hosts[0].weight)
+
+    @mock.patch.object(objects.InstancePCIRequests,
+                       'from_request_spec_instance_props')
+    @mock.patch.object(host_manager.HostManager, 'get_filtered_hosts')
+    def test_schedule_with_pci_requests(self, get_filtered_hosts, from_rs_ip):
+        self.driver._get_all_host_states = mock.Mock()
+        get_filtered_hosts.return_value = None
+
+        fake_requests = objects.InstancePCIRequests()
+        from_rs_ip.return_value = fake_requests
+
+        instance_properties = {'pci_requests': 'anything_as_it_is_mocked'}
+        request_spec = dict(instance_properties=instance_properties,
+                            instance_type={})
+
+        self.driver._schedule(self.context, request_spec, {})
+        from_rs_ip.assert_called_once_with('anything_as_it_is_mocked')
+        self.assertEqual(fake_requests, instance_properties['pci_requests'])
 
     @mock.patch('nova.objects.ServiceList.get_by_binary',
                 return_value=fakes.SERVICES)

@@ -31,7 +31,9 @@ class TestPCIPassthroughFilter(test.NoDBTestCase):
         request = objects.InstancePCIRequest(count=1,
             spec=[{'vendor_id': '8086'}])
         requests = objects.InstancePCIRequests(requests=[request])
-        filter_properties = {'pci_requests': requests}
+        filter_properties = {
+            'request_spec': {
+                'instance_properties': {'pci_requests': requests}}}
         host = fakes.FakeHostState(
             'host1', 'node1',
             attribute_dict={'pci_stats': pci_stats_mock})
@@ -45,7 +47,9 @@ class TestPCIPassthroughFilter(test.NoDBTestCase):
         request = objects.InstancePCIRequest(count=1,
             spec=[{'vendor_id': '8086'}])
         requests = objects.InstancePCIRequests(requests=[request])
-        filter_properties = {'pci_requests': requests}
+        filter_properties = {
+            'request_spec': {
+                'instance_properties': {'pci_requests': requests}}}
         host = fakes.FakeHostState(
             'host1', 'node1',
             attribute_dict={'pci_stats': pci_stats_mock})
@@ -60,7 +64,9 @@ class TestPCIPassthroughFilter(test.NoDBTestCase):
 
     def test_pci_passthrough_compute_stats(self):
         requests = [{'count': 1, 'spec': [{'vendor_id': '8086'}]}]
-        filter_properties = {'pci_requests': requests}
+        filter_properties = {
+            'request_spec': {
+                'instance_properties': {'pci_requests': requests}}}
         host = fakes.FakeHostState(
             'host1', 'node1',
             attribute_dict={})
@@ -71,7 +77,9 @@ class TestPCIPassthroughFilter(test.NoDBTestCase):
         request = objects.InstancePCIRequest(count=1,
             spec=[{'vendor_id': '8086'}])
         requests = objects.InstancePCIRequests(requests=[request])
-        filter_properties = {'pci_requests': requests}
+        filter_properties = {
+            'request_spec': {
+                'instance_properties': {'pci_requests': requests}}}
         host = fakes.FakeHostState('host1', 'node1',
             attribute_dict={'pci_stats': stats.PciDeviceStats()})
         self.assertFalse(self.filt_cls.host_passes(host, filter_properties))

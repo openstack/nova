@@ -26,7 +26,7 @@ class NUMATopologyFilter(filters.BaseHostFilter):
         requested_topology = hardware.instance_topology_from_instance(instance)
         host_topology, _fmt = hardware.host_topology_and_format_from_host(
                 host_state)
-        pci_requests = filter_properties.get('pci_requests')
+        pci_requests = instance.get('pci_requests')
         if pci_requests:
             pci_requests = pci_requests.requests
         if requested_topology and host_topology:

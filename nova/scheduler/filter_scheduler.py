@@ -27,6 +27,7 @@ from six.moves import range
 
 from nova import exception
 from nova.i18n import _
+from nova import objects
 from nova import rpc
 from nova.scheduler import driver
 from nova.scheduler import scheduler_options
@@ -105,6 +106,18 @@ class FilterScheduler(driver.Scheduler):
         """
         elevated = context.elevated()
         instance_properties = request_spec['instance_properties']
+
+        # NOTE(danms): Instance here is still a dict, which is converted from
+        # an object. The pci_requests are a dict as well. Convert this when
+        # we get an object all the way to this path.
+        # TODO(sbauza): Will be fixed later by the RequestSpec object
+        pci_requests = instance_properties.get('pci_requests')
+        if pci_requests:
+            pci_requests = (
+                objects.InstancePCIRequests.from_request_spec_instance_props(
+                    pci_requests))
+            instance_properties['pci_requests'] = pci_requests
+
         instance_type = request_spec.get("instance_type", None)
 
         update_group_hosts = filter_properties.get('group_updated', False)
