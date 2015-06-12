@@ -314,7 +314,6 @@ class _TestInstanceObject(object):
                                 ).AndReturn(old_ref)
         db.instance_update_and_get_original(
                 self.context, fake_uuid, expected_updates,
-                update_cells=False,
                 columns_to_join=['info_cache', 'security_groups',
                                  'system_metadata', 'extra', 'extra.flavor']
                 ).AndReturn((old_ref, new_ref))
@@ -325,12 +324,8 @@ class _TestInstanceObject(object):
                     exp_vm_state, exp_task_state, admin_reset)
         elif cell_type == 'compute':
             cells_rpcapi.CellsAPI().AndReturn(cells_api_mock)
-            expected = ['info_cache', 'security_groups', 'system_metadata',
-                        'flavor', 'new_flavor', 'old_flavor']
-            new_ref_obj = objects.Instance._from_db_object(self.context,
-                          objects.Instance(), new_ref, expected_attrs=expected)
-            instance_ref_p = base.obj_to_primitive(new_ref_obj)
-            cells_api_mock.instance_update_at_top(self.context, instance_ref_p)
+            cells_api_mock.instance_update_at_top(self.context,
+                                                  mox.IsA(instance.Instance))
         notifications.send_update(self.context, mox.IgnoreArg(),
                                   mox.IgnoreArg())
 
@@ -400,7 +395,7 @@ class _TestInstanceObject(object):
                                 use_slave=False
                                 ).AndReturn(old_ref)
         db.instance_update_and_get_original(
-                self.context, fake_uuid, expected_updates, update_cells=False,
+                self.context, fake_uuid, expected_updates,
                 columns_to_join=['info_cache', 'security_groups',
                                  'system_metadata', 'extra', 'extra.flavor']
                 ).AndReturn((old_ref, new_ref))
@@ -543,8 +538,12 @@ class _TestInstanceObject(object):
 
         self.assertEqual('foo!bar@baz', inst.cell_name)
         if cell_type == 'compute':
-            mock_update_at_top.assert_called_once_with(self.context,
-                    base.obj_to_primitive(inst))
+            mock_update_at_top.assert_called_once_with(self.context, mock.ANY)
+            # Compare primitives since we can't check instance object equality
+            expected_inst_p = base.obj_to_primitive(inst)
+            actual_inst = mock_update_at_top.call_args[0][1]
+            actual_inst_p = base.obj_to_primitive(actual_inst)
+            self.assertEqual(expected_inst_p, actual_inst_p)
             self.assertFalse(fake_update_from_api.called)
         elif cell_type == 'api':
             self.assertFalse(mock_update_at_top.called)
@@ -554,12 +553,12 @@ class _TestInstanceObject(object):
         expected_calls = [
                 mock.call(self.context, inst.uuid,
                     {'vm_state': 'foo', 'task_state': 'bar',
-                     'cell_name': 'foo!bar@baz'}, update_cells=False,
+                     'cell_name': 'foo!bar@baz'},
                     columns_to_join=['system_metadata', 'extra',
                         'extra.flavor']),
                 mock.call(self.context, inst.uuid,
                     {'vm_state': 'bar', 'task_state': 'foo'},
-                    update_cells=False, columns_to_join=['system_metadata',
+                    columns_to_join=['system_metadata',
                         'extra', 'extra.flavor'])]
         mock_db_update.assert_has_calls(expected_calls)
 
@@ -951,6 +950,28 @@ class _TestInstanceObject(object):
         inst.host = None
         self.assertRaises(exception.ObjectActionError,
                           inst.destroy)
+
+    @mock.patch.object(cells_rpcapi.CellsAPI, 'instance_destroy_at_top')
+    @mock.patch.object(db, 'instance_destroy')
+    def test_destroy_cell_sync_to_top(self, mock_destroy, mock_destroy_at_top):
+        self.flags(enable=True, cell_type='compute', group='cells')
+        fake_inst = fake_instance.fake_db_instance(deleted=True)
+        mock_destroy.return_value = fake_inst
+        inst = instance.Instance(context=self.context, id=1, uuid='fake-uuid')
+        inst.destroy()
+        mock_destroy_at_top.assert_called_once_with(self.context, mock.ANY)
+        actual_inst = mock_destroy_at_top.call_args[0][1]
+        self.assertIsInstance(actual_inst, objects.Instance)
+
+    @mock.patch.object(cells_rpcapi.CellsAPI, 'instance_destroy_at_top')
+    @mock.patch.object(db, 'instance_destroy')
+    def test_destroy_no_cell_sync_to_top(self, mock_destroy,
+                                         mock_destroy_at_top):
+        fake_inst = fake_instance.fake_db_instance(deleted=True)
+        mock_destroy.return_value = fake_inst
+        inst = instance.Instance(context=self.context, id=1, uuid='fake-uuid')
+        inst.destroy()
+        self.assertFalse(mock_destroy_at_top.called)
 
     def test_name_does_not_trigger_lazy_loads(self):
         values = {'user_id': self.context.user_id,

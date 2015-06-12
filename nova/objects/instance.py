@@ -659,6 +659,10 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         else:
             constraint = None
 
+        cell_type = cells_opts.get_cell_type()
+        if cell_type is not None:
+            stale_instance = self.obj_clone()
+
         try:
             db_inst = db.instance_destroy(self._context, self.uuid,
                                           constraint=constraint)
@@ -666,6 +670,9 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         except exception.ConstraintNotMet:
             raise exception.ObjectActionError(action='destroy',
                                               reason='host changed')
+        if cell_type == 'compute':
+            cells_api = cells_rpcapi.CellsAPI()
+            cells_api.instance_destroy_at_top(self._context, stale_instance)
         delattr(self, base.get_attrname('id'))
 
     def _save_info_cache(self, context):
@@ -793,7 +800,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
 
         context = self._context
         cell_type = cells_opts.get_cell_type()
-        if cell_type == 'api' and self.cell_name:
+
+        if cell_type is not None:
             # NOTE(comstud): We need to stash a copy of ourselves
             # before any updates are applied.  When we call the save
             # methods on nested objects, we will lose any changes to
@@ -805,15 +813,16 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
             # authoritative for their view of vm_state and task_state.
             stale_instance = self.obj_clone()
 
+        cells_update_from_api = (cell_type == 'api' and self.cell_name and
+                                 self._sync_cells)
+
+        if cells_update_from_api:
             def _handle_cell_update_from_api():
-                if self._sync_cells:
-                    cells_api = cells_rpcapi.CellsAPI()
-                    cells_api.instance_update_from_api(context, stale_instance,
+                cells_api = cells_rpcapi.CellsAPI()
+                cells_api.instance_update_from_api(context, stale_instance,
                             expected_vm_state,
                             expected_task_state,
                             admin_state_reset)
-        else:
-            stale_instance = None
 
         self._maybe_upgrade_flavor()
         updates = {}
@@ -845,7 +854,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                     updates[field] = self[field]
 
         if not updates:
-            if stale_instance:
+            if cells_update_from_api:
                 _handle_cell_update_from_api()
             return
 
@@ -883,24 +892,23 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
             expected_attrs.append('system_metadata')
             expected_attrs.append('flavor')
         old_ref, inst_ref = db.instance_update_and_get_original(
-                context, self.uuid, updates, update_cells=False,
+                context, self.uuid, updates,
                 columns_to_join=_expected_cols(expected_attrs))
 
         self._from_db_object(context, self, inst_ref,
                              expected_attrs=expected_attrs)
 
-        # NOTE(danms): We have to be super careful here not to trigger
-        # any lazy-loads that will unmigrate or unbackport something. So,
-        # make a copy of the instance for notifications first.
-        new_ref = self.obj_clone()
-
-        if stale_instance:
+        if cells_update_from_api:
             _handle_cell_update_from_api()
         elif cell_type == 'compute':
             if self._sync_cells:
                 cells_api = cells_rpcapi.CellsAPI()
-                cells_api.instance_update_at_top(context,
-                        base.obj_to_primitive(new_ref))
+                cells_api.instance_update_at_top(context, stale_instance)
+
+        # NOTE(danms): We have to be super careful here not to trigger
+        # any lazy-loads that will unmigrate or unbackport something. So,
+        # make a copy of the instance for notifications first.
+        new_ref = self.obj_clone()
 
         notifications.send_update(context, old_ref, new_ref)
         self.obj_reset_changes()

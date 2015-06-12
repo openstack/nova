@@ -21,7 +21,6 @@ import sys
 
 import six
 
-from nova import db
 from nova import exception
 from nova import objects
 from nova.objects import base as obj_base
@@ -141,13 +140,15 @@ def get_instances_to_sync(context, updated_since=None, project_id=None,
     if not deleted:
         filters['deleted'] = False
     # Active instances first.
-    instances = db.instance_get_all_by_filters(
-            context, filters, 'deleted', 'asc')
+    instances = objects.InstanceList.get_by_filters(
+            context, filters, sort_key='deleted', sort_dir='asc')
     if shuffle:
+        # NOTE(melwitt): Need a list that supports assignment for shuffle.
+        instances = [instance for instance in instances]
         random.shuffle(instances)
     for instance in instances:
         if uuids_only:
-            yield instance['uuid']
+            yield instance.uuid
         else:
             yield instance
 

@@ -110,7 +110,7 @@ class MultiCreateExtensionTestV21(test.TestCase):
             instance.update(values)
             return instance
 
-        def server_update(context, instance_uuid, params, update_cells=True,
+        def server_update(context, instance_uuid, params,
                           columns_to_join=None):
             inst = self.instance_cache_by_uuid[instance_uuid]
             inst.update(params)

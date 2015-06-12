@@ -584,12 +584,17 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
                                                        'migration')
 
     def test_instance_destroy(self):
-        self.mox.StubOutWithMock(db, 'instance_destroy')
-        db.instance_destroy(self.context, 'fake-uuid').AndReturn('fake-result')
-        self.mox.ReplayAll()
-        result = self.conductor.instance_destroy(self.context,
-                                                 {'uuid': 'fake-uuid'})
-        self.assertEqual(result, 'fake-result')
+        instance = objects.Instance(id=1, uuid='fake-uuid')
+
+        @mock.patch.object(instance, 'destroy')
+        @mock.patch.object(obj_base, 'obj_to_primitive',
+                           return_value='fake-result')
+        def do_test(mock_to_primitive, mock_destroy):
+            result = self.conductor.instance_destroy(self.context, instance)
+            mock_destroy.assert_called_once_with()
+            mock_to_primitive.assert_called_once_with(instance)
+            self.assertEqual(result, 'fake-result')
+        do_test()
 
     def test_compute_unrescue(self):
         self.mox.StubOutWithMock(self.conductor_manager.compute_api,
@@ -856,23 +861,33 @@ class ConductorImportTest(test.TestCase):
 
 class ConductorPolicyTest(test.TestCase):
     def test_all_allowed_keys(self):
-
-        def fake_db_instance_update(self, *args, **kwargs):
-            return None, None
-        self.stubs.Set(db, 'instance_update_and_get_original',
-                       fake_db_instance_update)
-
         ctxt = context.RequestContext('fake-user', 'fake-project')
         conductor = conductor_api.LocalAPI()
         updates = {}
         for key in conductor_manager.allowed_updates:
             if key in conductor_manager.datetime_fields:
                 updates[key] = timeutils.utcnow()
+            elif key == 'access_ip_v4':
+                updates[key] = '10.0.0.2'
+            elif key == 'access_ip_v6':
+                updates[key] = '2001:db8:0:1::1'
+            elif key in ('instance_type_id', 'memory_mb', 'ephemeral_gb',
+                         'root_gb', 'vcpus', 'power_state', 'progress'):
+                updates[key] = 5
+            elif key == 'system_metadata':
+                updates[key] = {'foo': 'foo'}
             else:
                 updates[key] = 'foo'
 
-        with mock.patch('nova.objects.Instance._from_db_object'):
+        def fake_save(inst):
+            # id that comes back from db after updating
+            inst.id = 1
+
+        with mock.patch.object(objects.Instance, 'save',
+                               side_effect=fake_save,
+                               autospec=True) as mock_save:
             conductor.instance_update(ctxt, 'fake-instance', **updates)
+            mock_save.assert_called_once_with(mock.ANY)
 
     def test_allowed_keys_are_real(self):
         instance = models.Instance()

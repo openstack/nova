@@ -30,6 +30,7 @@ from oslo_serialization import jsonutils
 
 from nova import exception
 from nova.i18n import _LE
+from nova import objects
 from nova.objects import base as objects_base
 from nova import rpc
 
@@ -112,6 +113,9 @@ class CellsAPI(object):
         ... Kilo supports message version 1.34.  So, any changes to
         existing methods in 1.x after that point should be done such that they
         can handle the version_cap being set to 1.34.
+
+        * 1.35 - Make instance_update_at_top, instance_destroy_at_top
+                 and instance_info_cache_update_at_top use instance objects
     '''
 
     VERSION_ALIASES = {
@@ -191,16 +195,23 @@ class CellsAPI(object):
         """Update instance at API level."""
         if not CONF.cells.enable:
             return
-        # Make sure we have a dict, not a SQLAlchemy model
-        instance_p = jsonutils.to_primitive(instance)
-        self.client.cast(ctxt, 'instance_update_at_top', instance=instance_p)
+        version = '1.35'
+        if not self.client.can_send_version('1.35'):
+            instance = objects_base.obj_to_primitive(instance)
+            version = '1.34'
+        cctxt = self.client.prepare(version=version)
+        cctxt.cast(ctxt, 'instance_update_at_top', instance=instance)
 
     def instance_destroy_at_top(self, ctxt, instance):
         """Destroy instance at API level."""
         if not CONF.cells.enable:
             return
-        instance_p = jsonutils.to_primitive(instance)
-        self.client.cast(ctxt, 'instance_destroy_at_top', instance=instance_p)
+        version = '1.35'
+        if not self.client.can_send_version('1.35'):
+            instance = objects_base.obj_to_primitive(instance)
+            version = '1.34'
+        cctxt = self.client.prepare(version=version)
+        cctxt.cast(ctxt, 'instance_destroy_at_top', instance=instance)
 
     def instance_delete_everywhere(self, ctxt, instance, delete_type):
         """Delete instance everywhere.  delete_type may be 'soft'
@@ -246,10 +257,14 @@ class CellsAPI(object):
         """Broadcast up that an instance's info_cache has changed."""
         if not CONF.cells.enable:
             return
-        iicache = jsonutils.to_primitive(instance_info_cache)
-        instance = {'uuid': iicache['instance_uuid'],
-                    'info_cache': iicache}
-        self.client.cast(ctxt, 'instance_update_at_top', instance=instance)
+        version = '1.35'
+        instance = objects.Instance(uuid=instance_info_cache.instance_uuid,
+                                    info_cache=instance_info_cache)
+        if not self.client.can_send_version('1.35'):
+            instance = objects_base.obj_to_primitive(instance)
+            version = '1.34'
+        cctxt = self.client.prepare(version=version)
+        cctxt.cast(ctxt, 'instance_update_at_top', instance=instance)
 
     def get_cell_info_for_neighbors(self, ctxt):
         """Get information about our neighbor cells from the manager."""

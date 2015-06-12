@@ -53,7 +53,6 @@ from nova import context
 from nova.db import base
 from nova import exception
 from nova.i18n import _, _LE, _LI, _LW
-from nova.network import model as network_model
 from nova import objects
 from nova.objects import base as objects_base
 from nova import rpc
@@ -683,7 +682,8 @@ class _TargetedMessageMethods(_BaseMessageMethods):
                 # Must be a race condition.  Let's try to resolve it by
                 # telling the top level cells that this instance doesn't
                 # exist.
-                instance = {'uuid': instance_uuid}
+                instance = objects.Instance(context=message.ctxt,
+                                            uuid=instance_uuid)
                 self.msg_runner.instance_destroy_at_top(message.ctxt,
                                                         instance)
         return fn(message.ctxt, *args, **method_info['method_kwargs'])
@@ -782,14 +782,15 @@ class _TargetedMessageMethods(_BaseMessageMethods):
         # 1st arg is instance_uuid that we need to turn into the
         # instance object.
         try:
-            instance = self.db.instance_get_by_uuid(message.ctxt,
+            instance = objects.Instance.get_by_uuid(message.ctxt,
                                                     instance_uuid)
         except exception.InstanceNotFound:
             with excutils.save_and_reraise_exception():
                 # Must be a race condition.  Let's try to resolve it by
                 # telling the top level cells that this instance doesn't
                 # exist.
-                instance = {'uuid': instance_uuid}
+                instance = objects.Instance(context=message.ctxt,
+                                            uuid=instance_uuid)
                 self.msg_runner.instance_destroy_at_top(message.ctxt,
                                                         instance)
         return self.compute_rpcapi.validate_console_port(message.ctxt,
@@ -826,7 +827,8 @@ class _TargetedMessageMethods(_BaseMessageMethods):
                 # Must be a race condition.  Let's try to resolve it by
                 # telling the top level cells that this instance doesn't
                 # exist.
-                instance = {'uuid': instance.uuid}
+                instance = objects.Instance(context=ctxt,
+                                            uuid=instance.uuid)
                 self.msg_runner.instance_destroy_at_top(ctxt,
                                                         instance)
         except exception.InstanceInfoCacheNotFound:
@@ -953,11 +955,10 @@ class _BroadcastMessageMethods(_BaseMessageMethods):
         """Are we the API level?"""
         return not self.state_manager.get_parent_cells()
 
-    def _apply_expected_states(self, instance_info):
+    def _get_expected_vm_state(self, instance):
         """To attempt to address out-of-order messages, do some sanity
-        checking on the VM and task states.  Add some requirements for
-        vm_state and task_state to the instance_update() DB call if
-        necessary.
+        checking on the VM states.  Add some requirements for
+        vm_state to the instance.save() call if necessary.
         """
         expected_vm_state_map = {
                 # For updates containing 'vm_state' of 'building',
@@ -967,6 +968,14 @@ class _BroadcastMessageMethods(_BaseMessageMethods):
                 # start out in 'building' anyway.. but just in case.
                 vm_states.BUILDING: [vm_states.BUILDING, None]}
 
+        if instance.obj_attr_is_set('vm_state'):
+            return expected_vm_state_map.get(instance.vm_state)
+
+    def _get_expected_task_state(self, instance):
+        """To attempt to address out-of-order messages, do some sanity
+        checking on the task states.  Add some requirements for
+        task_state to the instance.save() call if necessary.
+        """
         expected_task_state_map = {
                 # Always allow updates when task_state doesn't change,
                 # but also make sure we don't set resize/rebuild task
@@ -994,20 +1003,13 @@ class _BroadcastMessageMethods(_BaseMessageMethods):
                          task_states.RESIZE_MIGRATING,
                          task_states.RESIZE_PREP]}
 
-        if 'vm_state' in instance_info:
-            expected = expected_vm_state_map.get(instance_info['vm_state'])
-            if expected is not None:
-                instance_info['expected_vm_state'] = expected
-        if 'task_state' in instance_info:
-            expected = expected_task_state_map.get(instance_info['task_state'])
-            if expected is not None:
-                instance_info['expected_task_state'] = expected
+        if instance.obj_attr_is_set('task_state'):
+            return expected_task_state_map.get(instance.task_state)
 
     def instance_update_at_top(self, message, instance, **kwargs):
         """Update an instance in the DB if we're a top level cell."""
         if not self._at_the_top():
             return
-        instance_uuid = instance['uuid']
 
         # Remove things that we can't update in the top level cells.
         # 'metadata' is only updated in the API cell, so don't overwrite
@@ -1015,63 +1017,40 @@ class _BroadcastMessageMethods(_BaseMessageMethods):
         # 'cell_name' based on the routing path.
         items_to_remove = ['id', 'security_groups', 'volumes', 'cell_name',
                            'name', 'metadata']
-        for key in items_to_remove:
-            instance.pop(key, None)
-        instance['cell_name'] = _reverse_path(message.routing_path)
-
-        # Fixup info_cache.  We'll have to update this separately if
-        # it exists.
-        info_cache = instance.pop('info_cache', None)
-        if info_cache is not None:
-            info_cache.pop('id', None)
-            info_cache.pop('instance', None)
-
-        if 'system_metadata' in instance:
-            # Make sure we have the dict form that we need for
-            # instance_update.
-            instance['system_metadata'] = utils.instance_sys_meta(instance)
+        instance.obj_reset_changes(items_to_remove)
+        instance.cell_name = _reverse_path(message.routing_path)
 
         LOG.debug("Got update for instance: %(instance)s",
-                  {'instance': instance}, instance_uuid=instance_uuid)
+                  {'instance': instance}, instance_uuid=instance.uuid)
 
-        self._apply_expected_states(instance)
+        expected_vm_state = self._get_expected_vm_state(instance)
+        expected_task_state = self._get_expected_task_state(instance)
 
         # It's possible due to some weird condition that the instance
         # was already set as deleted... so we'll attempt to update
         # it with permissions that allows us to read deleted.
         with utils.temporary_mutation(message.ctxt, read_deleted="yes"):
             try:
-                self.db.instance_update(message.ctxt, instance_uuid,
-                        instance, update_cells=False)
-            except exception.NotFound:
+                with instance.skip_cells_sync():
+                    instance.save(expected_vm_state=expected_vm_state,
+                                  expected_task_state=expected_task_state)
+            except exception.InstanceNotFound:
                 # FIXME(comstud): Strange.  Need to handle quotas here,
                 # if we actually want this code to remain..
-                self.db.instance_create(message.ctxt, instance)
-        if info_cache:
-            network_info = info_cache.get('network_info')
-            if isinstance(network_info, list):
-                if not isinstance(network_info, network_model.NetworkInfo):
-                    network_info = network_model.NetworkInfo.hydrate(
-                            network_info)
-                info_cache['network_info'] = network_info.json()
-            try:
-                self.db.instance_info_cache_update(
-                        message.ctxt, instance_uuid, info_cache)
-            except exception.InstanceInfoCacheNotFound:
+                instance.create()
+            except exception.NotFound:
                 # Can happen if we try to update a deleted instance's
-                # network information.
+                # network information, for example.
                 pass
 
     def instance_destroy_at_top(self, message, instance, **kwargs):
         """Destroy an instance from the DB if we're a top level cell."""
         if not self._at_the_top():
             return
-        instance_uuid = instance['uuid']
         LOG.debug("Got update to delete instance",
-                  instance_uuid=instance_uuid)
+                  instance_uuid=instance.uuid)
         try:
-            self.db.instance_destroy(message.ctxt, instance_uuid,
-                    update_cells=False)
+            instance.destroy()
         except exception.InstanceNotFound:
             pass
 
@@ -1108,7 +1087,7 @@ class _BroadcastMessageMethods(_BaseMessageMethods):
         self.db.bw_usage_update(message.ctxt, **bw_update_info)
 
     def _sync_instance(self, ctxt, instance):
-        if instance['deleted']:
+        if instance.deleted:
             self.msg_runner.instance_destroy_at_top(ctxt, instance)
         else:
             self.msg_runner.instance_update_at_top(ctxt, instance)

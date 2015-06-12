@@ -40,7 +40,6 @@ from nova import image
 from nova import manager
 from nova import network
 from nova.network.security_group import openstack_driver
-from nova import notifications
 from nova import objects
 from nova.objects import base as nova_object
 from nova import quota
@@ -122,17 +121,11 @@ class ConductorManager(manager.Manager):
             if key in datetime_fields and isinstance(value, six.string_types):
                 updates[key] = timeutils.parse_strtime(value)
 
-        # NOTE(danms): the send_update() call below is going to want to know
-        # about the flavor, so we need to join the appropriate things here,
-        # and objectify the result.
-        old_ref, instance_ref = self.db.instance_update_and_get_original(
-            context, instance_uuid, updates,
-            columns_to_join=['system_metadata'])
-        inst_obj = objects.Instance._from_db_object(
-            context, objects.Instance(),
-            instance_ref, expected_attrs=['system_metadata'])
-        notifications.send_update(context, old_ref, inst_obj, service)
-        return jsonutils.to_primitive(instance_ref)
+        instance = objects.Instance(context=context, uuid=instance_uuid,
+                                    **updates)
+        instance.obj_reset_changes(['uuid'])
+        instance.save()
+        return nova_object.obj_to_primitive(instance)
 
     # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
     @messaging.expected_exceptions(exception.InstanceNotFound)
@@ -245,8 +238,12 @@ class ConductorManager(manager.Manager):
 
     # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
     def instance_destroy(self, context, instance):
-        result = self.db.instance_destroy(context, instance['uuid'])
-        return jsonutils.to_primitive(result)
+        if not isinstance(instance, objects.Instance):
+            instance = objects.Instance._from_db_object(context,
+                                                        objects.Instance(),
+                                                        instance)
+        instance.destroy()
+        return nova_object.obj_to_primitive(instance)
 
     # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
     def instance_fault_create(self, context, values):

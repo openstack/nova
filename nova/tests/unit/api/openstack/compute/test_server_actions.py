@@ -51,7 +51,6 @@ def return_server_not_found(*arg, **kwarg):
 
 
 def instance_update_and_get_original(context, instance_uuid, values,
-                                     update_cells=True,
                                      columns_to_join=None,
                                      ):
     inst = fakes.stub_instance(INSTANCE_IDS[instance_uuid], host='fake_host')
@@ -59,7 +58,7 @@ def instance_update_and_get_original(context, instance_uuid, values,
     return (inst, inst)
 
 
-def instance_update(context, instance_uuid, kwargs, update_cells=True):
+def instance_update(context, instance_uuid, kwargs):
     inst = fakes.stub_instance(INSTANCE_IDS[instance_uuid], host='fake_host')
     return inst
 
