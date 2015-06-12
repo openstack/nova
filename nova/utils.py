@@ -103,9 +103,9 @@ workarounds_opts = [
                      'https://bugs.launchpad.net/nova/+bug/1415106'),
     cfg.BoolOpt('disable_libvirt_livesnapshot',
                 default=True,
-                help='When using libvirt 1.2.2 fails live snapshots '
+                help='When using libvirt 1.2.2 live snapshots fail '
                      'intermittently under load.  This config option provides '
-                     'mechanism to disable livesnapshot while this is '
+                     'a mechanism to enable live snapshot while this is '
                      'resolved.  See '
                      'https://bugs.launchpad.net/nova/+bug/1334398'),
     cfg.BoolOpt('destroy_after_evacuate',
