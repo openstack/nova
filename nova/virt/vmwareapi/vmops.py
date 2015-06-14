@@ -1451,10 +1451,13 @@ class VMwareVMOps(object):
         lst_properties = ["summary.config.numCpu",
                     "summary.config.memorySizeMB",
                     "runtime.powerState"]
-        vm_props = self._session._call_method(vutil,
-                                              "get_object_properties_dict",
-                                              vm_ref,
-                                              lst_properties)
+        try:
+            vm_props = self._session._call_method(vutil,
+                                                  "get_object_properties_dict",
+                                                  vm_ref,
+                                                  lst_properties)
+        except vexc.ManagedObjectNotFoundException:
+            raise exception.InstanceNotFound(instance_id=instance.uuid)
         max_mem = int(vm_props.get('summary.config.memorySizeMB', 0)) * 1024
         num_cpu = int(vm_props.get('summary.config.numCpu', 0))
         return hardware.InstanceInfo(
