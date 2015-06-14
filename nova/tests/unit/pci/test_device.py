@@ -16,6 +16,7 @@
 from nova import context
 from nova import exception
 from nova import objects
+from nova.objects import fields
 from nova.pci import device
 from nova import test
 
@@ -32,7 +33,7 @@ dev_dict = {
     'product_id': 'p',
     'numa_node': 1,
     'dev_type': 't',
-    'status': 'available',
+    'status': fields.PciDeviceStatus.AVAILABLE,
     'dev_id': 'i',
     'label': 'l',
     'instance_uuid': None,
@@ -55,26 +56,28 @@ class PciDeviceTestCase(test.NoDBTestCase):
 
     def test_claim_device(self):
         device.claim(self.devobj, self.inst)
-        self.assertEqual(self.devobj.status, 'claimed')
+        self.assertEqual(self.devobj.status,
+                         fields.PciDeviceStatus.CLAIMED)
         self.assertEqual(self.devobj.instance_uuid,
                          self.inst.uuid)
         self.assertEqual(len(self.inst.pci_devices), 0)
 
     def test_claim_device_fail(self):
-        self.devobj.status = 'allocated'
+        self.devobj.status = fields.PciDeviceStatus.ALLOCATED
         self.assertRaises(exception.PciDeviceInvalidStatus,
                           device.claim, self.devobj, self.inst)
 
     def test_allocate_device(self):
         device.claim(self.devobj, self.inst)
         device.allocate(self.devobj, self.inst)
-        self.assertEqual(self.devobj.status, 'allocated')
+        self.assertEqual(self.devobj.status,
+                         fields.PciDeviceStatus.ALLOCATED)
         self.assertEqual(self.devobj.instance_uuid, 'fake-inst-uuid')
         self.assertEqual(len(self.inst.pci_devices), 1)
         self.assertEqual(self.inst.pci_devices[0].vendor_id,
                          'v')
         self.assertEqual(self.inst.pci_devices[0].status,
-                         'allocated')
+                         fields.PciDeviceStatus.ALLOCATED)
 
     def test_allocacte_device_fail_status(self):
         self.devobj.status = 'removed'
@@ -94,7 +97,8 @@ class PciDeviceTestCase(test.NoDBTestCase):
     def test_free_claimed_device(self):
         device.claim(self.devobj, self.inst)
         device.free(self.devobj, self.inst)
-        self.assertEqual(self.devobj.status, 'available')
+        self.assertEqual(self.devobj.status,
+                         fields.PciDeviceStatus.AVAILABLE)
         self.assertIsNone(self.devobj.instance_uuid)
 
     def test_free_allocated_device(self):
@@ -103,7 +107,8 @@ class PciDeviceTestCase(test.NoDBTestCase):
         self.assertEqual(len(self.inst.pci_devices), 1)
         device.free(self.devobj, self.inst)
         self.assertEqual(len(self.inst.pci_devices), 0)
-        self.assertEqual(self.devobj.status, 'available')
+        self.assertEqual(self.devobj.status,
+                         fields.PciDeviceStatus.AVAILABLE)
         self.assertIsNone(self.devobj.instance_uuid)
 
     def test_free_device_fail(self):

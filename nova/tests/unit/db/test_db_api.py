@@ -59,6 +59,7 @@ from nova.db.sqlalchemy import types as col_types
 from nova.db.sqlalchemy import utils as db_utils
 from nova import exception
 from nova import objects
+from nova.objects import fields
 from nova import quota
 from nova import test
 from nova.tests.unit import matchers
@@ -6111,7 +6112,7 @@ class NetworkTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertEqual('192.0.2.1', data[0]['address'])
         self.assertEqual('192.0.2.1', data[0]['vif_address'])
         self.assertEqual(instance.uuid, data[0]['instance_uuid'])
-        self.assertTrue(data[0]['allocated'])
+        self.assertTrue(data[0][fields.PciDeviceStatus.ALLOCATED])
 
     def test_network_create_safe(self):
         values = {'host': 'localhost', 'project_id': 'project1'}
@@ -8473,7 +8474,7 @@ class PciDeviceDBApiTestCase(test.TestCase, ModelsObjectComparatorMixin):
                 'dev_id': 'pci_0000:0f:08.7',
                 'extra_info': None,
                 'label': 'label_8086_1520',
-                'status': 'available',
+                'status': fields.PciDeviceStatus.AVAILABLE,
                 'instance_uuid': '00000000-0000-0000-0000-000000000010',
                 'request_id': None,
                 }, {'id': 3356,
@@ -8486,7 +8487,7 @@ class PciDeviceDBApiTestCase(test.TestCase, ModelsObjectComparatorMixin):
                 'dev_id': 'pci_0000:0f:08.7',
                 'extra_info': None,
                 'label': 'label_8086_1520',
-                'status': 'available',
+                'status': fields.PciDeviceStatus.AVAILABLE,
                 'instance_uuid': '00000000-0000-0000-0000-000000000010',
                 'request_id': None,
                 }
@@ -8554,8 +8555,8 @@ class PciDeviceDBApiTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_pci_device_get_by_instance_uuid(self):
         v1, v2 = self._create_fake_pci_devs()
-        v1['status'] = 'allocated'
-        v2['status'] = 'allocated'
+        v1['status'] = fields.PciDeviceStatus.ALLOCATED
+        v2['status'] = fields.PciDeviceStatus.ALLOCATED
         db.pci_device_update(self.admin_context, v1['compute_node_id'],
                              v1['address'], v1)
         db.pci_device_update(self.admin_context, v2['compute_node_id'],
@@ -8567,8 +8568,8 @@ class PciDeviceDBApiTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_pci_device_get_by_instance_uuid_check_status(self):
         v1, v2 = self._create_fake_pci_devs()
-        v1['status'] = 'allocated'
-        v2['status'] = 'claimed'
+        v1['status'] = fields.PciDeviceStatus.ALLOCATED
+        v2['status'] = fields.PciDeviceStatus.CLAIMED
         db.pci_device_update(self.admin_context, v1['compute_node_id'],
                              v1['address'], v1)
         db.pci_device_update(self.admin_context, v2['compute_node_id'],
@@ -8580,14 +8581,14 @@ class PciDeviceDBApiTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_pci_device_update(self):
         v1, v2 = self._create_fake_pci_devs()
-        v1['status'] = 'allocated'
+        v1['status'] = fields.PciDeviceStatus.ALLOCATED
         db.pci_device_update(self.admin_context, v1['compute_node_id'],
                              v1['address'], v1)
         result = db.pci_device_get_by_addr(
             self.admin_context, 1, '0000:0f:08.7')
         self._assertEqualObjects(v1, result, self.ignored_keys)
 
-        v1['status'] = 'claimed'
+        v1['status'] = fields.PciDeviceStatus.CLAIMED
         db.pci_device_update(self.admin_context, v1['compute_node_id'],
                              v1['address'], v1)
         result = db.pci_device_get_by_addr(

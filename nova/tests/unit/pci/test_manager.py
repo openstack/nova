@@ -22,6 +22,7 @@ from nova.compute import vm_states
 from nova import context
 from nova import db
 from nova import objects
+from nova.objects import fields
 from nova.pci import device
 from nova.pci import manager
 from nova import test
@@ -35,7 +36,7 @@ fake_pci = {
     'product_id': 'p',
     'vendor_id': 'v',
     'request_id': None,
-    'status': 'available',
+    'status': fields.PciDeviceStatus.AVAILABLE,
     'numa_node': 0}
 fake_pci_1 = dict(fake_pci, address='0000:00:00.2',
                   product_id='p1', vendor_id='v1')
@@ -54,7 +55,7 @@ fake_db_dev = {
     'product_id': 'p',
     'numa_node': 1,
     'dev_type': 't',
-    'status': 'available',
+    'status': fields.PciDeviceStatus.AVAILABLE,
     'dev_id': 'i',
     'label': 'l',
     'instance_uuid': None,

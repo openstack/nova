@@ -380,6 +380,21 @@ class VersionPredicate(fields.String):
         return value
 
 
+class PciDeviceStatus(Enum):
+
+    AVAILABLE = "available"
+    CLAIMED = "claimed"
+    ALLOCATED = "allocated"
+    REMOVED = "removed"  # The device has been hot-removed and not yet deleted
+    DELETED = "deleted"  # The device is marked not available/deleted.
+
+    ALL = (AVAILABLE, CLAIMED, ALLOCATED, REMOVED, DELETED)
+
+    def __init__(self):
+        super(PciDeviceStatus, self).__init__(
+            valid_values=PciDeviceStatus.ALL)
+
+
 # NOTE(danms): Remove this on next release of oslo.versionedobjects
 class FlexibleBoolean(fields.Boolean):
     @staticmethod
@@ -650,6 +665,10 @@ class MonitorMetricTypeField(BaseEnumField):
 # FIXME(sbauza): Remove this after oslo.versionedobjects gets it
 class VersionPredicateField(AutoTypedField):
     AUTO_TYPE = VersionPredicate()
+
+
+class PciDeviceStatusField(BaseEnumField):
+    AUTO_TYPE = PciDeviceStatus()
 
 
 # FIXME(danms): Remove this after oslo.versionedobjects gets it

@@ -62,6 +62,7 @@ from nova import db
 from nova import exception
 from nova.network import model as network_model
 from nova import objects
+from nova.objects import fields
 from nova.pci import manager as pci_manager
 from nova import test
 from nova.tests.unit import fake_block_device
@@ -1419,7 +1420,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         pci_device_info = dict(test_pci_device.fake_db_dev)
         pci_device_info.update(compute_node_id=1,
                                label='fake',
-                               status='available',
+                               status=fields.PciDeviceStatus.AVAILABLE,
                                address='0000:00:00.1',
                                instance_uuid=None,
                                request_id=None,
@@ -1464,7 +1465,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         pci_device_info = dict(test_pci_device.fake_db_dev)
         pci_device_info.update(compute_node_id=1,
                                label='fake',
-                               status='available',
+                               status=fields.PciDeviceStatus.AVAILABLE,
                                address='0000:00:00.1',
                                instance_uuid=None,
                                request_id=None,
@@ -3734,7 +3735,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         pci_device_info = dict(test_pci_device.fake_db_dev)
         pci_device_info.update(compute_node_id=1,
                                label='fake',
-                               status='allocated',
+                               status=fields.PciDeviceStatus.ALLOCATED,
                                address='0000:00:00.1',
                                compute_id=compute_ref['id'],
                                instance_uuid=instance.uuid,
@@ -3776,7 +3777,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         pci_device_info = dict(test_pci_device.fake_db_dev)
         pci_device_info.update(compute_node_id=1,
                                label='fake',
-                               status='allocated',
+                               status=fields.PciDeviceStatus.ALLOCATED,
                                address='0000:00:00.2',
                                compute_id=compute_ref['id'],
                                instance_uuid=instance.uuid,

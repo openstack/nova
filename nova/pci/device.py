@@ -17,6 +17,7 @@ import copy
 import functools
 
 from nova import exception
+from nova.objects import fields
 
 
 def check_device_status(dev_status=None):
@@ -41,21 +42,25 @@ def check_device_status(dev_status=None):
     return outer
 
 
-@check_device_status(dev_status=['available'])
+@check_device_status(dev_status=[fields.PciDeviceStatus.AVAILABLE])
 def claim(devobj, instance):
-    devobj.status = 'claimed'
+    devobj.status = fields.PciDeviceStatus.CLAIMED
     devobj.instance_uuid = instance['uuid']
 
 
-@check_device_status(dev_status=['available', 'claimed'])
+@check_device_status(dev_status=[
+    fields.PciDeviceStatus.AVAILABLE,
+    fields.PciDeviceStatus.CLAIMED
+])
 def allocate(devobj, instance):
-    if devobj.status == 'claimed' and devobj.instance_uuid != instance['uuid']:
+    if (devobj.status == fields.PciDeviceStatus.CLAIMED and
+            devobj.instance_uuid != instance['uuid']):
         raise exception.PciDeviceInvalidOwner(
             compute_node_id=devobj.compute_node_id,
             address=devobj.address, owner=devobj.instance_uuid,
             hopeowner=instance['uuid'])
 
-    devobj.status = 'allocated'
+    devobj.status = fields.PciDeviceStatus.ALLOCATED
     devobj.instance_uuid = instance['uuid']
 
     # Notes(yjiang5): remove this check when instance object for
@@ -68,14 +73,17 @@ def allocate(devobj, instance):
         instance.pci_devices.objects.append(copy.copy(devobj))
 
 
-@check_device_status(dev_status=['available'])
+@check_device_status(dev_status=[fields.PciDeviceStatus.AVAILABLE])
 def remove(devobj):
-    devobj.status = 'removed'
+    devobj.status = fields.PciDeviceStatus.REMOVED
     devobj.instance_uuid = None
     devobj.request_id = None
 
 
-@check_device_status(dev_status=['claimed', 'allocated'])
+@check_device_status(dev_status=[
+    fields.PciDeviceStatus.CLAIMED,
+    fields.PciDeviceStatus.ALLOCATED
+])
 def free(devobj, instance=None):
     if instance and devobj.instance_uuid != instance['uuid']:
         raise exception.PciDeviceInvalidOwner(
@@ -83,10 +91,10 @@ def free(devobj, instance=None):
             address=devobj.address, owner=devobj.instance_uuid,
             hopeowner=instance['uuid'])
     old_status = devobj.status
-    devobj.status = 'available'
+    devobj.status = fields.PciDeviceStatus.AVAILABLE
     devobj.instance_uuid = None
     devobj.request_id = None
-    if old_status == 'allocated' and instance:
+    if old_status == fields.PciDeviceStatus.ALLOCATED and instance:
         # Notes(yjiang5): remove this check when instance object for
         # compute manager is finished
         existed = next((dev for dev in instance['pci_devices']
