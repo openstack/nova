@@ -1,0 +1,3 @@
+{
+    "confirmResize" : null
+}

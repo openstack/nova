@@ -1,3 +1,3 @@
 {
-    "force_delete": null
+    "forceDelete": null
 }

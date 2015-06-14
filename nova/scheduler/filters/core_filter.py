@@ -15,12 +15,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo.config import cfg
+from oslo_config import cfg
+from oslo_log import log as logging
 
-from nova import db
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import log as logging
+from nova.i18n import _LW
 from nova.scheduler import filters
+from nova.scheduler.filters import utils
 
 LOG = logging.getLogger(__name__)
 
@@ -48,7 +48,7 @@ class BaseCoreFilter(filters.BaseHostFilter):
 
         if not host_state.vcpus_total:
             # Fail safe
-            LOG.warning(_("VCPUs not set; assuming CPU collection broken"))
+            LOG.warning(_LW("VCPUs not set; assuming CPU collection broken"))
             return True
 
         instance_vcpus = instance_type['vcpus']
@@ -61,7 +61,17 @@ class BaseCoreFilter(filters.BaseHostFilter):
         if vcpus_total > 0:
             host_state.limits['vcpu'] = vcpus_total
 
-        return (vcpus_total - host_state.vcpus_used) >= instance_vcpus
+        free_vcpus = vcpus_total - host_state.vcpus_used
+        if free_vcpus < instance_vcpus:
+            LOG.debug("%(host_state)s does not have %(instance_vcpus)d "
+                      "usable vcpus, it only has %(free_vcpus)d usable "
+                      "vcpus",
+                      {'host_state': host_state,
+                       'instance_vcpus': instance_vcpus,
+                       'free_vcpus': free_vcpus})
+            return False
+
+        return True
 
 
 class CoreFilter(BaseCoreFilter):
@@ -78,27 +88,14 @@ class AggregateCoreFilter(BaseCoreFilter):
     """
 
     def _get_cpu_allocation_ratio(self, host_state, filter_properties):
-        context = filter_properties['context'].elevated()
-        # TODO(uni): DB query in filter is a performance hit, especially for
-        # system with lots of hosts. Will need a general solution here to fix
-        # all filters with aggregate DB call things.
-        metadata = db.aggregate_metadata_get_by_host(
-                     context, host_state.host, key='cpu_allocation_ratio')
-        aggregate_vals = metadata.get('cpu_allocation_ratio', set())
-        num_values = len(aggregate_vals)
-
-        if num_values == 0:
-            return CONF.cpu_allocation_ratio
-
-        if num_values > 1:
-            LOG.warning(_("%(num_values)d ratio values found, "
-                          "of which the minimum value will be used."),
-                         {'num_values': num_values})
-
+        aggregate_vals = utils.aggregate_values_from_key(
+            host_state,
+            'cpu_allocation_ratio')
         try:
-            ratio = float(min(aggregate_vals))
+            ratio = utils.validate_num_values(
+                aggregate_vals, CONF.cpu_allocation_ratio, cast_to=float)
         except ValueError as e:
-            LOG.warning(_("Could not decode cpu_allocation_ratio: '%s'"), e)
+            LOG.warning(_LW("Could not decode cpu_allocation_ratio: '%s'"), e)
             ratio = CONF.cpu_allocation_ratio
 
         return ratio

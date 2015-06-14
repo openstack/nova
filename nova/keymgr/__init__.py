@@ -1,4 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
 # Copyright (c) 2013 The Johns Hopkins University/Applied Physics Laboratory
 # All Rights Reserved.
 #
@@ -15,9 +14,8 @@
 #    under the License.
 
 
-from oslo.config import cfg
-
-from nova.openstack.common import importutils
+from oslo_config import cfg
+from oslo_utils import importutils
 
 
 keymgr_opts = [

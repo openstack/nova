@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2013 Red Hat, Inc.
 # All Rights Reserved.
 #
@@ -15,13 +13,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import logging
-
-from oslo.config import cfg
+from oslo_config import cfg
+from oslo_log import log as logging
 
 from nova import exception
+from nova.i18n import _, _LI
 import nova.image.download.base as xfer_base
-from nova.openstack.common.gettextutils import _
 import nova.virt.libvirt.utils as lv_utils
 
 
@@ -29,9 +26,10 @@ CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 opt_group = cfg.ListOpt(name='filesystems', default=[],
-                        help=_('A list of filesystems that will be configured '
-                               'in this file under the sections '
-                               'image_file_url:<list entry name>'))
+                        help=_('List of file systems that are configured '
+                               'in this file in the '
+                               'image_file_url:<list entry name> '
+                               'sections'))
 CONF.register_opt(opt_group, group="image_file_url")
 
 
@@ -71,7 +69,7 @@ class FileTransfer(xfer_base.TransferBase):
 
     desc_required_keys = ['id', 'mountpoint']
 
-    #NOTE(jbresnah) because the group under which these options are added is
+    # NOTE(jbresnah) because the group under which these options are added is
     # dyncamically determined these options need to stay out of global space
     # or they will confuse generate_sample.sh
     filesystem_opts = [
@@ -144,7 +142,7 @@ class FileTransfer(xfer_base.TransferBase):
     def download(self, context, url_parts, dst_file, metadata, **kwargs):
         self.filesystems = self._get_options()
         if not self.filesystems:
-            #NOTE(jbresnah) when nothing is configured assume legacy behavior
+            # NOTE(jbresnah) when nothing is configured assume legacy behavior
             nova_mountpoint = '/'
             glance_mountpoint = '/'
         else:
@@ -162,11 +160,11 @@ class FileTransfer(xfer_base.TransferBase):
                                                   glance_mountpoint,
                                                   url_parts.path)
         lv_utils.copy_image(source_file, dst_file)
-        LOG.info(_('Copied %(source_file)s using %(module_str)s') %
+        LOG.info(_LI('Copied %(source_file)s using %(module_str)s'),
                  {'source_file': source_file, 'module_str': str(self)})
 
 
-def get_download_hander(**kwargs):
+def get_download_handler(**kwargs):
     return FileTransfer()
 
 

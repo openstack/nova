@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2010-2011 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -29,14 +27,12 @@ def get_view_builder(req):
 class ViewBuilder(common.ViewBuilder):
 
     def __init__(self, base_url):
-        """
-        :param base_url: url of the root wsgi application
-        """
+        """:param base_url: url of the root wsgi application."""
         self.base_url = base_url
 
     def build_choices(self, VERSIONS, req):
         version_objs = []
-        for version in VERSIONS:
+        for version in sorted(VERSIONS):
             version = VERSIONS[version]
             version_objs.append({
                 "id": version['id'],
@@ -59,6 +55,8 @@ class ViewBuilder(common.ViewBuilder):
             version_objs.append({
                 "id": version['id'],
                 "status": version['status'],
+                "version": version['version'],
+                "min_version": version['min_version'],
                 "updated": version['updated'],
                 "links": self._build_links(version),
             })
@@ -89,8 +87,8 @@ class ViewBuilder(common.ViewBuilder):
     def generate_href(self, version, path=None):
         """Create an url that refers to a specific version_number."""
         prefix = self._update_compute_link_prefix(self.base_url)
-        if version.find('v3.') == 0:
-            version_number = 'v3'
+        if version.find('v2.1') == 0:
+            version_number = 'v2.1'
         else:
             version_number = 'v2'
 

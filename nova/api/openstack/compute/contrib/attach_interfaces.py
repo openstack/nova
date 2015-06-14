@@ -15,15 +15,19 @@
 
 """The instance interfaces extension."""
 
+import netaddr
+from oslo_log import log as logging
+import six
 import webob
 from webob import exc
 
+from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova import compute
 from nova import exception
+from nova.i18n import _
+from nova.i18n import _LI
 from nova import network
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import log as logging
 
 
 LOG = logging.getLogger(__name__)
@@ -60,18 +64,22 @@ class InterfaceAttachmentController(object):
         authorize(context)
 
         port_id = id
-        try:
-            self.compute_api.get(context, server_id)
-        except exception.NotFound:
-            raise exc.HTTPNotFound()
+        # NOTE(mriedem): We need to verify the instance actually exists from
+        # the server_id even though we're not using the instance for anything,
+        # just the port id.
+        common.get_instance(self.compute_api, context, server_id)
 
         try:
             port_info = self.network_api.show_port(context, port_id)
-        except exception.NotFound:
-            raise exc.HTTPNotFound()
+        except exception.NotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
+        except exception.Forbidden as e:
+            raise exc.HTTPForbidden(explanation=e.format_message())
 
         if port_info['port']['device_id'] != server_id:
-            raise exc.HTTPNotFound()
+            msg = _("Instance %(instance)s does not have a port with id "
+                    "%(port)s") % {'instance': server_id, 'port': port_id}
+            raise exc.HTTPNotFound(explanation=msg)
 
         return {'interfaceAttachment': _translate_interface_attachment_view(
                 port_info['port'])}
@@ -94,53 +102,69 @@ class InterfaceAttachmentController(object):
                 pass
 
         if network_id and port_id:
-            raise exc.HTTPBadRequest()
+            msg = _("Must not input both network_id and port_id")
+            raise exc.HTTPBadRequest(explanation=msg)
         if req_ip and not network_id:
-            raise exc.HTTPBadRequest()
+            msg = _("Must input network_id when request IP address")
+            raise exc.HTTPBadRequest(explanation=msg)
+
+        if req_ip:
+            try:
+                netaddr.IPAddress(req_ip)
+            except netaddr.AddrFormatError as e:
+                raise exc.HTTPBadRequest(explanation=six.text_type(e))
 
         try:
-            instance = self.compute_api.get(context, server_id)
-            LOG.audit(_("Attach interface"), instance=instance)
+            instance = common.get_instance(self.compute_api,
+                                           context, server_id)
+            LOG.info(_LI("Attach interface"), instance=instance)
             vif = self.compute_api.attach_interface(context,
                 instance, network_id, port_id, req_ip)
-        except exception.NotFound as e:
-            LOG.exception(e)
-            raise exc.HTTPNotFound()
+        except (exception.PortNotFound,
+                exception.NetworkNotFound) as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
+        except (exception.FixedIpAlreadyInUse,
+                exception.NoMoreFixedIps,
+                exception.PortInUse,
+                exception.NetworkDuplicated,
+                exception.NetworkAmbiguous,
+                exception.PortNotUsable) as e:
+            raise exc.HTTPBadRequest(explanation=e.format_message())
+        except exception.InstanceIsLocked as e:
+            raise exc.HTTPConflict(explanation=e.format_message())
         except NotImplementedError:
             msg = _("Network driver does not support this function.")
             raise webob.exc.HTTPNotImplemented(explanation=msg)
-        except exception.InterfaceAttachFailed as e:
-            LOG.exception(e)
+        except exception.InterfaceAttachFailed:
             msg = _("Failed to attach interface")
             raise webob.exc.HTTPInternalServerError(explanation=msg)
+        except exception.InstanceInvalidState as state_error:
+            common.raise_http_conflict_for_instance_invalid_state(state_error,
+                    'attach_interface', server_id)
 
         return self.show(req, server_id, vif['id'])
-
-    def update(self, req, server_id, id, body):
-        """Update a interface attachment.  We don't currently support this."""
-        msg = _("Attachments update is not supported")
-        raise exc.HTTPNotImplemented(explanation=msg)
 
     def delete(self, req, server_id, id):
         """Detach an interface from an instance."""
         context = req.environ['nova.context']
         authorize(context)
         port_id = id
-
-        try:
-            instance = self.compute_api.get(context, server_id)
-            LOG.audit(_("Detach interface %s"), port_id, instance=instance)
-
-        except exception.NotFound:
-            raise exc.HTTPNotFound()
+        instance = common.get_instance(self.compute_api,
+                                       context, server_id)
+        LOG.info(_LI("Detach interface %s"), port_id, instance=instance)
         try:
             self.compute_api.detach_interface(context,
                 instance, port_id=port_id)
-        except exception.PortNotFound:
-            raise exc.HTTPNotFound()
+        except exception.PortNotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
+        except exception.InstanceIsLocked as e:
+            raise exc.HTTPConflict(explanation=e.format_message())
         except NotImplementedError:
             msg = _("Network driver does not support this function.")
             raise webob.exc.HTTPNotImplemented(explanation=msg)
+        except exception.InstanceInvalidState as state_error:
+            common.raise_http_conflict_for_instance_invalid_state(state_error,
+                    'detach_interface', server_id)
 
         return webob.Response(status_int=202)
 
@@ -148,19 +172,13 @@ class InterfaceAttachmentController(object):
         """Returns a list of attachments, transformed through entity_maker."""
         context = req.environ['nova.context']
         authorize(context)
-
-        try:
-            instance = self.compute_api.get(context, server_id)
-        except exception.NotFound:
-            raise exc.HTTPNotFound()
-
-        results = []
-        search_opts = {'device_id': instance['uuid']}
+        instance = common.get_instance(self.compute_api, context, server_id)
+        search_opts = {'device_id': instance.uuid}
 
         try:
             data = self.network_api.list_ports(context, **search_opts)
-        except exception.NotFound:
-            raise exc.HTTPNotFound()
+        except exception.NotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
         except NotImplementedError:
             msg = _("Network driver does not support this function.")
             raise webob.exc.HTTPNotImplemented(explanation=msg)
@@ -177,7 +195,7 @@ class Attach_interfaces(extensions.ExtensionDescriptor):
     name = "AttachInterfaces"
     alias = "os-attach-interfaces"
     namespace = "http://docs.openstack.org/compute/ext/interfaces/api/v1.1"
-    updated = "2012-07-22T00:00:00+00:00"
+    updated = "2012-07-22T00:00:00Z"
 
     def get_resources(self):
         resources = []

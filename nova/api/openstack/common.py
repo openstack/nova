@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2010 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -15,29 +13,33 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import collections
 import functools
 import itertools
 import os
 import re
-import urlparse
 
-from oslo.config import cfg
+from oslo_config import cfg
+from oslo_log import log as logging
+import six
+import six.moves.urllib.parse as urlparse
 import webob
+from webob import exc
 
-from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
+from nova.api.validation import parameter_types
 from nova.compute import task_states
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
 from nova import exception
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import log as logging
+from nova.i18n import _
+from nova.i18n import _LE
+from nova.i18n import _LW
 from nova import quota
 
 osapi_opts = [
     cfg.IntOpt('osapi_max_limit',
                default=1000,
-               help='the maximum number of items returned in a single '
+               help='The maximum number of items returned in a single '
                     'response from a collection resource'),
     cfg.StrOpt('osapi_compute_link_prefix',
                help='Base URL that will be presented to users in links '
@@ -52,6 +54,10 @@ CONF.register_opts(osapi_opts)
 LOG = logging.getLogger(__name__)
 QUOTAS = quota.QUOTAS
 
+CONF.import_opt('enable', 'nova.cells.opts', group='cells')
+
+VALID_NAME_REGEX = re.compile(parameter_types.valid_name_regex, re.UNICODE)
+
 
 XML_NS_V11 = 'http://docs.openstack.org/compute/api/v1.1'
 
@@ -60,7 +66,11 @@ _STATE_MAP = {
     vm_states.ACTIVE: {
         'default': 'ACTIVE',
         task_states.REBOOTING: 'REBOOT',
+        task_states.REBOOT_PENDING: 'REBOOT',
+        task_states.REBOOT_STARTED: 'REBOOT',
         task_states.REBOOTING_HARD: 'HARD_REBOOT',
+        task_states.REBOOT_PENDING_HARD: 'HARD_REBOOT',
+        task_states.REBOOT_STARTED_HARD: 'HARD_REBOOT',
         task_states.UPDATING_PASSWORD: 'PASSWORD',
         task_states.REBUILDING: 'REBUILD',
         task_states.REBUILD_BLOCK_DEVICE_MAPPING: 'REBUILD',
@@ -76,6 +86,13 @@ _STATE_MAP = {
     },
     vm_states.STOPPED: {
         'default': 'SHUTOFF',
+        task_states.RESIZE_PREP: 'RESIZE',
+        task_states.RESIZE_MIGRATING: 'RESIZE',
+        task_states.RESIZE_MIGRATED: 'RESIZE',
+        task_states.RESIZE_FINISH: 'RESIZE',
+        task_states.REBUILDING: 'REBUILD',
+        task_states.REBUILD_BLOCK_DEVICE_MAPPING: 'REBUILD',
+        task_states.REBUILD_SPAWNING: 'REBUILD',
     },
     vm_states.RESIZED: {
         'default': 'VERIFY_RESIZE',
@@ -86,6 +103,7 @@ _STATE_MAP = {
     },
     vm_states.PAUSED: {
         'default': 'PAUSED',
+        task_states.MIGRATING: 'MIGRATING',
     },
     vm_states.SUSPENDED: {
         'default': 'SUSPENDED',
@@ -95,6 +113,9 @@ _STATE_MAP = {
     },
     vm_states.ERROR: {
         'default': 'ERROR',
+        task_states.REBUILDING: 'REBUILD',
+        task_states.REBUILD_BLOCK_DEVICE_MAPPING: 'REBUILD',
+        task_states.REBUILD_SPAWNING: 'REBUILD',
     },
     vm_states.DELETED: {
         'default': 'DELETED',
@@ -116,24 +137,61 @@ def status_from_state(vm_state, task_state='default'):
     task_map = _STATE_MAP.get(vm_state, dict(default='UNKNOWN'))
     status = task_map.get(task_state, task_map['default'])
     if status == "UNKNOWN":
-        LOG.error(_("status is UNKNOWN from vm_state=%(vm_state)s "
-                    "task_state=%(task_state)s. Bad upgrade or db "
-                    "corrupted?"),
+        LOG.error(_LE("status is UNKNOWN from vm_state=%(vm_state)s "
+                      "task_state=%(task_state)s. Bad upgrade or db "
+                      "corrupted?"),
                   {'vm_state': vm_state, 'task_state': task_state})
     return status
 
 
-def task_and_vm_state_from_status(status):
-    """Map the server status string to a vm state and list of task states."""
-    vm_state = ''
-    task_states = []
-    for state, task_map in _STATE_MAP.iteritems():
-        for task_state, mapped_state in task_map.iteritems():
+def task_and_vm_state_from_status(statuses):
+    """Map the server's multiple status strings to list of vm states and
+    list of task states.
+    """
+    vm_states = set()
+    task_states = set()
+    lower_statuses = [status.lower() for status in statuses]
+    for state, task_map in six.iteritems(_STATE_MAP):
+        for task_state, mapped_state in six.iteritems(task_map):
             status_string = mapped_state
-            if status.lower() == status_string.lower():
-                vm_state = state
-                task_states.append(task_state)
-    return vm_state, task_states
+            if status_string.lower() in lower_statuses:
+                vm_states.add(state)
+                task_states.add(task_state)
+    # Add sort to avoid different order on set in Python 3
+    return sorted(vm_states), sorted(task_states)
+
+
+def get_sort_params(input_params, default_key='created_at',
+                    default_dir='desc'):
+    """Retrieves sort keys/directions parameters.
+
+    Processes the parameters to create a list of sort keys and sort directions
+    that correspond to the 'sort_key' and 'sort_dir' parameter values. These
+    sorting parameters can be specified multiple times in order to generate
+    the list of sort keys and directions.
+
+    The input parameters are not modified.
+
+    :param input_params: webob.multidict of request parameters (from
+                         nova.wsgi.Request.params)
+    :param default_key: default sort key value, added to the list if no
+                        'sort_key' parameters are supplied
+    :param default_dir: default sort dir value, added to the list if no
+                        'sort_dir' parameters are supplied
+    :returns: list of sort keys, list of sort dirs
+    """
+    params = input_params.copy()
+    sort_keys = []
+    sort_dirs = []
+    while 'sort_key' in params:
+        sort_keys.append(params.pop('sort_key').strip())
+    while 'sort_dir' in params:
+        sort_dirs.append(params.pop('sort_dir').strip())
+    if len(sort_keys) == 0 and default_key:
+        sort_keys.append(default_key)
+    if len(sort_dirs) == 0 and default_dir:
+        sort_dirs.append(default_dir)
+    return sort_keys, sort_dirs
 
 
 def get_pagination_params(request):
@@ -223,29 +281,6 @@ def get_limit_and_marker(request, max_limit=CONF.osapi_max_limit):
     return limit, marker
 
 
-def limited_by_marker(items, request, max_limit=CONF.osapi_max_limit):
-    """Return a slice of items according to the requested marker and limit."""
-    limit, marker = get_limit_and_marker(request, max_limit)
-
-    limit = min(max_limit, limit)
-    start_index = 0
-    if marker:
-        start_index = -1
-        for i, item in enumerate(items):
-            if 'flavorid' in item:
-                if item['flavorid'] == marker:
-                    start_index = i + 1
-                    break
-            elif item['id'] == marker or item.get('uuid') == marker:
-                start_index = i + 1
-                break
-        if start_index < 0:
-            msg = _('marker [%s] not found') % marker
-            raise webob.exc.HTTPBadRequest(explanation=msg)
-    range_end = start_index + limit
-    return items[start_index:range_end]
-
-
 def get_id_from_href(href):
     """Return the id or uuid portion of a url.
 
@@ -280,9 +315,8 @@ def remove_version_from_href(href):
     new_path = '/'.join(url_parts)
 
     if new_path == parsed_url.path:
-        msg = _('href %s does not contain version') % href
-        LOG.debug(msg)
-        raise ValueError(msg)
+        LOG.debug('href %s does not contain version' % href)
+        raise ValueError(_('href %s does not contain version') % href)
 
     parsed_url = list(parsed_url)
     parsed_url[2] = new_path
@@ -296,12 +330,11 @@ def check_img_metadata_properties_quota(context, metadata):
         QUOTAS.limit_check(context, metadata_items=len(metadata))
     except exception.OverQuota:
         expl = _("Image metadata limit exceeded")
-        raise webob.exc.HTTPRequestEntityTooLarge(explanation=expl,
-                                                headers={'Retry-After': 0})
+        raise webob.exc.HTTPForbidden(explanation=expl)
 
     #  check the key length.
     if isinstance(metadata, dict):
-        for key, value in metadata.iteritems():
+        for key, value in six.iteritems(metadata):
             if len(key) == 0:
                 expl = _("Image metadata key cannot be blank")
                 raise webob.exc.HTTPBadRequest(explanation=expl)
@@ -317,26 +350,24 @@ def dict_to_query_str(params):
     # TODO(throughnothing): we should just use urllib.urlencode instead of this
     # But currently we don't work with urlencoded url's
     param_str = ""
-    for key, val in params.iteritems():
+    for key, val in six.iteritems(params):
         param_str = param_str + '='.join([str(key), str(val)]) + '&'
 
     return param_str.rstrip('&')
 
 
 def get_networks_for_instance_from_nw_info(nw_info):
-    networks = {}
+    networks = collections.OrderedDict()
     for vif in nw_info:
         ips = vif.fixed_ips()
         floaters = vif.floating_ips()
         label = vif['network']['label']
         if label not in networks:
             networks[label] = {'ips': [], 'floating_ips': []}
-
+        for ip in itertools.chain(ips, floaters):
+            ip['mac_address'] = vif['address']
         networks[label]['ips'].extend(ips)
         networks[label]['floating_ips'].extend(floaters)
-        for ip in itertools.chain(networks[label]['ips'],
-                                  networks[label]['floating_ips']):
-            ip['mac_address'] = vif['address']
     return networks
 
 
@@ -363,103 +394,31 @@ def get_networks_for_instance(context, instance):
     return get_networks_for_instance_from_nw_info(nw_info)
 
 
-def raise_http_conflict_for_instance_invalid_state(exc, action):
-    """Return a webob.exc.HTTPConflict instance containing a message
+def raise_http_conflict_for_instance_invalid_state(exc, action, server_id):
+    """Raises a webob.exc.HTTPConflict instance containing a message
     appropriate to return via the API based on the original
     InstanceInvalidState exception.
     """
     attr = exc.kwargs.get('attr')
     state = exc.kwargs.get('state')
-    not_launched = exc.kwargs.get('not_launched')
-    if attr and state:
-        msg = _("Cannot '%(action)s' while instance is in %(attr)s "
-                "%(state)s") % {'action': action, 'attr': attr, 'state': state}
-    elif not_launched:
-        msg = _("Cannot '%s' an instance which has never been active") % action
+    if attr is not None and state is not None:
+        msg = _("Cannot '%(action)s' instance %(server_id)s while it is in "
+                "%(attr)s %(state)s") % {'action': action, 'attr': attr,
+                                         'state': state,
+                                         'server_id': server_id}
     else:
         # At least give some meaningful message
-        msg = _("Instance is in an invalid state for '%s'") % action
+        msg = _("Instance %(server_id)s is in an invalid state for "
+                "'%(action)s'") % {'action': action, 'server_id': server_id}
     raise webob.exc.HTTPConflict(explanation=msg)
-
-
-class MetadataDeserializer(wsgi.MetadataXMLDeserializer):
-    def deserialize(self, text):
-        dom = xmlutil.safe_minidom_parse_string(text)
-        metadata_node = self.find_first_child_named(dom, "metadata")
-        metadata = self.extract_metadata(metadata_node)
-        return {'body': {'metadata': metadata}}
-
-
-class MetaItemDeserializer(wsgi.MetadataXMLDeserializer):
-    def deserialize(self, text):
-        dom = xmlutil.safe_minidom_parse_string(text)
-        metadata_item = self.extract_metadata(dom)
-        return {'body': {'meta': metadata_item}}
-
-
-class MetadataXMLDeserializer(wsgi.XMLDeserializer):
-
-    def extract_metadata(self, metadata_node):
-        """Marshal the metadata attribute of a parsed request."""
-        if metadata_node is None:
-            return {}
-        metadata = {}
-        for meta_node in self.find_children_named(metadata_node, "meta"):
-            key = meta_node.getAttribute("key")
-            metadata[key] = self.extract_text(meta_node)
-        return metadata
-
-    def _extract_metadata_container(self, datastring):
-        dom = xmlutil.safe_minidom_parse_string(datastring)
-        metadata_node = self.find_first_child_named(dom, "metadata")
-        metadata = self.extract_metadata(metadata_node)
-        return {'body': {'metadata': metadata}}
-
-    def create(self, datastring):
-        return self._extract_metadata_container(datastring)
-
-    def update_all(self, datastring):
-        return self._extract_metadata_container(datastring)
-
-    def update(self, datastring):
-        dom = xmlutil.safe_minidom_parse_string(datastring)
-        metadata_item = self.extract_metadata(dom)
-        return {'body': {'meta': metadata_item}}
-
-
-metadata_nsmap = {None: xmlutil.XMLNS_V11}
-
-
-class MetaItemTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        sel = xmlutil.Selector('meta', xmlutil.get_items, 0)
-        root = xmlutil.TemplateElement('meta', selector=sel)
-        root.set('key', 0)
-        root.text = 1
-        return xmlutil.MasterTemplate(root, 1, nsmap=metadata_nsmap)
-
-
-class MetadataTemplateElement(xmlutil.TemplateElement):
-    def will_render(self, datum):
-        return True
-
-
-class MetadataTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = MetadataTemplateElement('metadata', selector='metadata')
-        elem = xmlutil.SubTemplateElement(root, 'meta',
-                                          selector=xmlutil.get_items)
-        elem.set('key', 0)
-        elem.text = 1
-        return xmlutil.MasterTemplate(root, 1, nsmap=metadata_nsmap)
 
 
 def check_snapshots_enabled(f):
     @functools.wraps(f)
     def inner(*args, **kwargs):
         if not CONF.allow_instance_snapshots:
-            LOG.warn(_('Rejecting snapshot request, snapshots currently'
-                       ' disabled'))
+            LOG.warning(_LW('Rejecting snapshot request, snapshots currently'
+                            ' disabled'))
             msg = _("Instance snapshots are not permitted at this time.")
             raise webob.exc.HTTPBadRequest(explanation=msg)
         return f(*args, **kwargs)
@@ -470,8 +429,7 @@ class ViewBuilder(object):
     """Model API responses as dictionaries."""
 
     def _get_project_id(self, request):
-        """
-        Get project id from request url if present or empty string
+        """Get project id from request url if present or empty string
         otherwise
         """
         project_id = request.environ["nova.context"].project_id
@@ -523,10 +481,18 @@ class ViewBuilder(object):
                               items,
                               collection_name,
                               id_key="uuid"):
-        """Retrieve 'next' link, if applicable."""
+        """Retrieve 'next' link, if applicable. This is included if:
+        1) 'limit' param is specified and equals the number of items.
+        2) 'limit' param is specified but it exceeds CONF.osapi_max_limit,
+        in this case the number of items is CONF.osapi_max_limit.
+        3) 'limit' param is NOT specified but the number of items is
+        CONF.osapi_max_limit.
+        """
         links = []
-        limit = int(request.params.get("limit", 0))
-        if limit and limit == len(items):
+        max_items = min(
+            int(request.params.get("limit", CONF.osapi_max_limit)),
+            CONF.osapi_max_limit)
+        if max_items and max_items == len(items):
             last_item = items[-1]
             if id_key in last_item:
                 last_item_id = last_item[id_key]
@@ -548,7 +514,8 @@ class ViewBuilder(object):
         url_parts = list(urlparse.urlsplit(orig_url))
         prefix_parts = list(urlparse.urlsplit(prefix))
         url_parts[0:2] = prefix_parts[0:2]
-        return urlparse.urlunsplit(url_parts)
+        url_parts[2] = prefix_parts[2] + url_parts[2]
+        return urlparse.urlunsplit(url_parts).rstrip('/')
 
     def _update_glance_link_prefix(self, orig_url):
         return self._update_link_prefix(orig_url,
@@ -557,3 +524,28 @@ class ViewBuilder(object):
     def _update_compute_link_prefix(self, orig_url):
         return self._update_link_prefix(orig_url,
                                         CONF.osapi_compute_link_prefix)
+
+
+def get_instance(compute_api, context, instance_id, expected_attrs=None):
+    """Fetch an instance from the compute API, handling error checking."""
+    try:
+        return compute_api.get(context, instance_id,
+                               want_objects=True,
+                               expected_attrs=expected_attrs)
+    except exception.InstanceNotFound as e:
+        raise exc.HTTPNotFound(explanation=e.format_message())
+
+
+def raise_feature_not_supported(msg=None):
+    if msg is None:
+        msg = _("The requested functionality is not supported.")
+    raise webob.exc.HTTPNotImplemented(explanation=msg)
+
+
+def check_cells_enabled(function):
+    @functools.wraps(function)
+    def inner(*args, **kwargs):
+        if not CONF.cells.enable:
+            raise_feature_not_supported()
+        return function(*args, **kwargs)
+    return inner

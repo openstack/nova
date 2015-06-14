@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 IBM Corp.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -14,12 +12,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import webob
 import webob.exc
 
 from nova.api.openstack import extensions
-from nova import db
 from nova import exception
-from nova.openstack.common.gettextutils import _
+from nova.i18n import _
+from nova import objects
 
 authorize = extensions.extension_authorizer('compute', 'fixed_ips')
 
@@ -30,23 +29,26 @@ class FixedIPController(object):
         context = req.environ['nova.context']
         authorize(context)
 
+        attrs = ['network', 'instance']
         try:
-            fixed_ip = db.fixed_ip_get_by_address_detailed(context, id)
-        except (exception.FixedIpNotFoundForAddress,
-                exception.FixedIpInvalid) as ex:
+            fixed_ip = objects.FixedIP.get_by_address(context, id,
+                                                      expected_attrs=attrs)
+        except exception.FixedIpNotFoundForAddress as ex:
             raise webob.exc.HTTPNotFound(explanation=ex.format_message())
+        except exception.FixedIpInvalid as ex:
+            raise webob.exc.HTTPBadRequest(explanation=ex.format_message())
 
         fixed_ip_info = {"fixed_ip": {}}
-        if fixed_ip[1] is None:
+        if fixed_ip is None:
             msg = _("Fixed IP %s has been deleted") % id
             raise webob.exc.HTTPNotFound(explanation=msg)
 
-        fixed_ip_info['fixed_ip']['cidr'] = fixed_ip[1]['cidr']
-        fixed_ip_info['fixed_ip']['address'] = fixed_ip[0]['address']
+        fixed_ip_info['fixed_ip']['cidr'] = str(fixed_ip.network.cidr)
+        fixed_ip_info['fixed_ip']['address'] = str(fixed_ip.address)
 
-        if fixed_ip[2]:
-            fixed_ip_info['fixed_ip']['hostname'] = fixed_ip[2]['hostname']
-            fixed_ip_info['fixed_ip']['host'] = fixed_ip[2]['host']
+        if fixed_ip.instance:
+            fixed_ip_info['fixed_ip']['hostname'] = fixed_ip.instance.hostname
+            fixed_ip_info['fixed_ip']['host'] = fixed_ip.instance.host
         else:
             fixed_ip_info['fixed_ip']['hostname'] = None
             fixed_ip_info['fixed_ip']['host'] = None
@@ -67,14 +69,16 @@ class FixedIPController(object):
 
     def _set_reserved(self, context, address, reserved):
         try:
-            fixed_ip = db.fixed_ip_get_by_address(context, address)
-            db.fixed_ip_update(context, fixed_ip['address'],
-                               {'reserved': reserved})
-        except (exception.FixedIpNotFoundForAddress, exception.FixedIpInvalid):
+            fixed_ip = objects.FixedIP.get_by_address(context, address)
+            fixed_ip.reserved = reserved
+            fixed_ip.save()
+        except exception.FixedIpNotFoundForAddress:
             msg = _("Fixed IP %s not found") % address
             raise webob.exc.HTTPNotFound(explanation=msg)
+        except exception.FixedIpInvalid as ex:
+            raise webob.exc.HTTPBadRequest(explanation=ex.format_message())
 
-        return webob.exc.HTTPAccepted()
+        return webob.Response(status_int=202)
 
 
 class Fixed_ips(extensions.ExtensionDescriptor):
@@ -83,10 +87,7 @@ class Fixed_ips(extensions.ExtensionDescriptor):
     name = "FixedIPs"
     alias = "os-fixed-ips"
     namespace = "http://docs.openstack.org/compute/ext/fixed_ips/api/v2"
-    updated = "2012-10-18T13:25:27-06:00"
-
-    def __init__(self, ext_mgr):
-        ext_mgr.register(self)
+    updated = "2012-10-18T19:25:27Z"
 
     def get_resources(self):
         member_actions = {'action': 'POST'}

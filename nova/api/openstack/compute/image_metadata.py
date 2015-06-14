@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2011 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -15,36 +13,37 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import six
 from webob import exc
 
 from nova.api.openstack import common
 from nova.api.openstack import wsgi
 from nova import exception
-from nova.image import glance
-from nova.openstack.common.gettextutils import _
+from nova.i18n import _
+import nova.image
 
 
 class Controller(object):
     """The image metadata API controller for the OpenStack API."""
 
     def __init__(self):
-        self.image_service = glance.get_default_image_service()
+        self.image_api = nova.image.API()
 
     def _get_image(self, context, image_id):
         try:
-            return self.image_service.show(context, image_id)
-        except exception.NotFound:
+            return self.image_api.get(context, image_id)
+        except exception.ImageNotAuthorized as e:
+            raise exc.HTTPForbidden(explanation=e.format_message())
+        except exception.ImageNotFound:
             msg = _("Image not found.")
             raise exc.HTTPNotFound(explanation=msg)
 
-    @wsgi.serializers(xml=common.MetadataTemplate)
     def index(self, req, image_id):
         """Returns the list of metadata for a given instance."""
         context = req.environ['nova.context']
         metadata = self._get_image(context, image_id)['properties']
         return dict(metadata=metadata)
 
-    @wsgi.serializers(xml=common.MetaItemTemplate)
     def show(self, req, image_id, id):
         context = req.environ['nova.context']
         metadata = self._get_image(context, image_id)['properties']
@@ -53,24 +52,21 @@ class Controller(object):
         else:
             raise exc.HTTPNotFound()
 
-    @wsgi.serializers(xml=common.MetadataTemplate)
-    @wsgi.deserializers(xml=common.MetadataDeserializer)
     def create(self, req, image_id, body):
         context = req.environ['nova.context']
         image = self._get_image(context, image_id)
         if 'metadata' in body:
-            for key, value in body['metadata'].iteritems():
+            for key, value in six.iteritems(body['metadata']):
                 image['properties'][key] = value
         common.check_img_metadata_properties_quota(context,
                                                    image['properties'])
         try:
-            image = self.image_service.update(context, image_id, image, None)
+            image = self.image_api.update(context, image_id, image, data=None,
+                                          purge_props=True)
         except exception.ImageNotAuthorized as e:
             raise exc.HTTPForbidden(explanation=e.format_message())
         return dict(metadata=image['properties'])
 
-    @wsgi.serializers(xml=common.MetaItemTemplate)
-    @wsgi.deserializers(xml=common.MetaItemDeserializer)
     def update(self, req, image_id, id, body):
         context = req.environ['nova.context']
 
@@ -92,13 +88,12 @@ class Controller(object):
         common.check_img_metadata_properties_quota(context,
                                                    image['properties'])
         try:
-            self.image_service.update(context, image_id, image, None)
+            self.image_api.update(context, image_id, image, data=None,
+                                  purge_props=True)
         except exception.ImageNotAuthorized as e:
             raise exc.HTTPForbidden(explanation=e.format_message())
         return dict(meta=meta)
 
-    @wsgi.serializers(xml=common.MetadataTemplate)
-    @wsgi.deserializers(xml=common.MetadataDeserializer)
     def update_all(self, req, image_id, body):
         context = req.environ['nova.context']
         image = self._get_image(context, image_id)
@@ -106,7 +101,8 @@ class Controller(object):
         common.check_img_metadata_properties_quota(context, metadata)
         image['properties'] = metadata
         try:
-            self.image_service.update(context, image_id, image, None)
+            self.image_api.update(context, image_id, image, data=None,
+                                  purge_props=True)
         except exception.ImageNotAuthorized as e:
             raise exc.HTTPForbidden(explanation=e.format_message())
         return dict(metadata=metadata)
@@ -120,7 +116,8 @@ class Controller(object):
             raise exc.HTTPNotFound(explanation=msg)
         image['properties'].pop(id)
         try:
-            self.image_service.update(context, image_id, image, None)
+            self.image_api.update(context, image_id, image, data=None,
+                                  purge_props=True)
         except exception.ImageNotAuthorized as e:
             raise exc.HTTPForbidden(explanation=e.format_message())
 

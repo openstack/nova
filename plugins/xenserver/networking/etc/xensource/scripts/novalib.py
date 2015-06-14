@@ -1,6 +1,4 @@
 #!/usr/bin/env python
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2011 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -28,13 +26,13 @@ def execute_get_output(*command):
     proc = subprocess.Popen(command, close_fds=True,
                             stdout=subprocess.PIPE, stderr=devnull)
     devnull.close()
-    return proc.stdout.read().strip()
+    stdout = proc.communicate()[0]
+    return stdout.strip()
 
 
 def execute(*command):
     """Execute without returning stdout."""
     devnull = open(os.devnull, 'w')
     command = map(str, command)
-    proc = subprocess.Popen(command, close_fds=True,
-                            stdout=subprocess.PIPE, stderr=devnull)
+    subprocess.call(command, close_fds=True, stdout=devnull, stderr=devnull)
     devnull.close()

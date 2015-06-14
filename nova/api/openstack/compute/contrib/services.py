@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 IBM Corp.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -14,62 +12,18 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo.config import cfg
 import webob.exc
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 from nova import compute
+from nova import context as nova_context
 from nova import exception
-from nova.openstack.common.gettextutils import _
+from nova.i18n import _
 from nova import servicegroup
 from nova import utils
 
 authorize = extensions.extension_authorizer('compute', 'services')
-CONF = cfg.CONF
-CONF.import_opt('service_down_time', 'nova.service')
-
-
-class ServicesIndexTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('services')
-        elem = xmlutil.SubTemplateElement(root, 'service', selector='services')
-        elem.set('binary')
-        elem.set('host')
-        elem.set('zone')
-        elem.set('status')
-        elem.set('state')
-        elem.set('updated_at')
-        elem.set('disabled_reason')
-
-        return xmlutil.MasterTemplate(root, 1)
-
-
-class ServiceUpdateTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('service', selector='service')
-        root.set('host')
-        root.set('binary')
-        root.set('status')
-        root.set('disabled_reason')
-
-        return xmlutil.MasterTemplate(root, 1)
-
-
-class ServiceUpdateDeserializer(wsgi.XMLDeserializer):
-    def default(self, string):
-        node = xmlutil.safe_minidom_parse_string(string)
-        service = {}
-        service_node = self.find_first_child_named(node, 'service')
-        if service_node is None:
-            return service
-        service['host'] = service_node.getAttribute('host')
-        service['binary'] = service_node.getAttribute('binary')
-        service['disabled_reason'] = service_node.getAttribute(
-                                                    'disabled_reason')
-
-        return dict(body=service)
 
 
 class ServiceController(object):
@@ -82,6 +36,11 @@ class ServiceController(object):
     def _get_services(self, req):
         context = req.environ['nova.context']
         authorize(context)
+
+        # NOTE(alex_xu): back-compatible with db layer hard-code admin
+        # permission checks
+        nova_context.require_admin_context(context)
+
         services = self.host_api.service_get_all(
             context, set_zones=True)
 
@@ -108,6 +67,8 @@ class ServiceController(object):
                      'zone': svc['availability_zone'],
                      'status': active, 'state': state,
                      'updated_at': svc['updated_at']}
+        if self.ext_mgr.is_loaded('os-extended-services-delete'):
+            service_detail['id'] = svc['id']
         if detailed:
             service_detail['disabled_reason'] = svc['disabled_reason']
 
@@ -130,23 +91,38 @@ class ServiceController(object):
 
         return True
 
-    @wsgi.serializers(xml=ServicesIndexTemplate)
+    @wsgi.response(204)
+    def delete(self, req, id):
+        """Deletes the specified service."""
+        if not self.ext_mgr.is_loaded('os-extended-services-delete'):
+            raise webob.exc.HTTPMethodNotAllowed()
+
+        context = req.environ['nova.context']
+        authorize(context)
+        # NOTE(alex_xu): back-compatible with db layer hard-code admin
+        # permission checks
+        nova_context.require_admin_context(context)
+
+        try:
+            self.host_api.service_delete(context, id)
+        except exception.ServiceNotFound:
+            explanation = _("Service %s not found.") % id
+            raise webob.exc.HTTPNotFound(explanation=explanation)
+
     def index(self, req):
-        """
-        Return a list of all running services. Filter by host & service name.
-        """
+        """Return a list of all running services."""
         detailed = self.ext_mgr.is_loaded('os-extended-services')
         services = self._get_services_list(req, detailed)
 
         return {'services': services}
 
-    @wsgi.deserializers(xml=ServiceUpdateDeserializer)
-    @wsgi.serializers(xml=ServiceUpdateTemplate)
     def update(self, req, id, body):
         """Enable/Disable scheduling for a service."""
         context = req.environ['nova.context']
         authorize(context)
-
+        # NOTE(alex_xu): back-compatible with db layer hard-code admin
+        # permission checks
+        nova_context.require_admin_context(context)
         ext_loaded = self.ext_mgr.is_loaded('os-extended-services')
         if id == "enable":
             disabled = False
@@ -156,7 +132,8 @@ class ServiceController(object):
             disabled = True
             status = "disabled"
         else:
-            raise webob.exc.HTTPNotFound("Unknown action")
+            msg = _("Unknown action")
+            raise webob.exc.HTTPNotFound(explanation=msg)
         try:
             host = body['host']
             binary = body['binary']
@@ -174,9 +151,10 @@ class ServiceController(object):
             if id == "disable-log-reason":
                 reason = body['disabled_reason']
                 if not self._is_valid_as_reason(reason):
-                    msg = _('Disabled reason contains invalid characters '
-                            'or is too long')
-                    raise webob.exc.HTTPUnprocessableEntity(detail=msg)
+                    msg = _('The string containing the reason for disabling '
+                            'the service contains invalid characters or is '
+                            'too long.')
+                    raise webob.exc.HTTPBadRequest(explanation=msg)
 
                 status_detail['disabled_reason'] = reason
                 ret_value['service']['disabled_reason'] = reason
@@ -184,12 +162,12 @@ class ServiceController(object):
             msg = _('Invalid attribute in the request')
             if 'host' in body and 'binary' in body:
                 msg = _('Missing disabled reason field')
-            raise webob.exc.HTTPUnprocessableEntity(detail=msg)
+            raise webob.exc.HTTPBadRequest(explanation=msg)
 
         try:
             self.host_api.service_update(context, host, binary, status_detail)
-        except exception.ServiceNotFound:
-            raise webob.exc.HTTPNotFound(_("Unknown service"))
+        except exception.HostBinaryNotFound as e:
+            raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
         return ret_value
 
@@ -200,7 +178,7 @@ class Services(extensions.ExtensionDescriptor):
     name = "Services"
     alias = "os-services"
     namespace = "http://docs.openstack.org/compute/ext/services/api/v2"
-    updated = "2012-10-28T00:00:00-00:00"
+    updated = "2012-10-28T00:00:00Z"
 
     def get_resources(self):
         resources = []

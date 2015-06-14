@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 OpenStack Foundation
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -16,75 +14,141 @@
 
 import webob
 
+from nova.api.openstack import common
+from nova.api.openstack.compute.schemas.v3 import remote_consoles
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+from nova.api import validation
 from nova import compute
 from nova import exception
 
 
 ALIAS = "os-remote-consoles"
-authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
+authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class RemoteConsolesController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
-        self.compute_api = compute.API()
+        self.compute_api = compute.API(skip_policy_check=True)
         super(RemoteConsolesController, self).__init__(*args, **kwargs)
 
-    @extensions.expected_errors((400, 404, 409))
-    @wsgi.action('get_vnc_console')
+    @extensions.expected_errors((400, 404, 409, 501))
+    @wsgi.action('os-getVNCConsole')
+    @validation.schema(remote_consoles.get_vnc_console)
     def get_vnc_console(self, req, id, body):
         """Get text console output."""
         context = req.environ['nova.context']
         authorize(context)
 
         # If type is not supplied or unknown, get_vnc_console below will cope
-        console_type = body['get_vnc_console'].get('type')
+        console_type = body['os-getVNCConsole'].get('type')
 
         try:
-            instance = self.compute_api.get(context, id)
+            instance = common.get_instance(self.compute_api, context, id)
             output = self.compute_api.get_vnc_console(context,
                                                       instance,
                                                       console_type)
-        except exception.ConsoleTypeInvalid as e:
+        except exception.ConsoleTypeUnavailable as e:
             raise webob.exc.HTTPBadRequest(explanation=e.format_message())
         except exception.InstanceNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
         except exception.InstanceNotReady as e:
             raise webob.exc.HTTPConflict(explanation=e.format_message())
+        except NotImplementedError:
+            common.raise_feature_not_supported()
 
         return {'console': {'type': console_type, 'url': output['url']}}
 
-    @extensions.expected_errors((400, 404, 409))
-    @wsgi.action('get_spice_console')
+    @extensions.expected_errors((400, 404, 409, 501))
+    @wsgi.action('os-getSPICEConsole')
+    @validation.schema(remote_consoles.get_spice_console)
     def get_spice_console(self, req, id, body):
         """Get text console output."""
         context = req.environ['nova.context']
         authorize(context)
 
         # If type is not supplied or unknown, get_spice_console below will cope
-        console_type = body['get_spice_console'].get('type')
+        console_type = body['os-getSPICEConsole'].get('type')
 
         try:
-            instance = self.compute_api.get(context, id)
+            instance = common.get_instance(self.compute_api, context, id)
             output = self.compute_api.get_spice_console(context,
                                                         instance,
                                                         console_type)
-        except exception.ConsoleTypeInvalid as e:
+        except exception.ConsoleTypeUnavailable as e:
             raise webob.exc.HTTPBadRequest(explanation=e.format_message())
         except exception.InstanceNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
         except exception.InstanceNotReady as e:
             raise webob.exc.HTTPConflict(explanation=e.format_message())
+        except NotImplementedError:
+            common.raise_feature_not_supported()
+
+        return {'console': {'type': console_type, 'url': output['url']}}
+
+    @extensions.expected_errors((400, 404, 409, 501))
+    @wsgi.action('os-getRDPConsole')
+    @validation.schema(remote_consoles.get_rdp_console)
+    def get_rdp_console(self, req, id, body):
+        """Get text console output."""
+        context = req.environ['nova.context']
+        authorize(context)
+
+        # If type is not supplied or unknown, get_rdp_console below will cope
+        console_type = body['os-getRDPConsole'].get('type')
+
+        instance = common.get_instance(self.compute_api, context, id)
+        try:
+            # NOTE(mikal): get_rdp_console() can raise InstanceNotFound, so
+            # we still need to catch it here.
+            output = self.compute_api.get_rdp_console(context,
+                                                      instance,
+                                                      console_type)
+        except exception.ConsoleTypeUnavailable as e:
+            raise webob.exc.HTTPBadRequest(explanation=e.format_message())
+        except exception.InstanceNotFound as e:
+            raise webob.exc.HTTPNotFound(explanation=e.format_message())
+        except exception.InstanceNotReady as e:
+            raise webob.exc.HTTPConflict(explanation=e.format_message())
+        except NotImplementedError:
+            common.raise_feature_not_supported()
+
+        return {'console': {'type': console_type, 'url': output['url']}}
+
+    @extensions.expected_errors((400, 404, 409, 501))
+    @wsgi.action('os-getSerialConsole')
+    @validation.schema(remote_consoles.get_serial_console)
+    def get_serial_console(self, req, id, body):
+        """Get connection to a serial console."""
+        context = req.environ['nova.context']
+        authorize(context)
+
+        # If type is not supplied or unknown get_serial_console below will cope
+        console_type = body['os-getSerialConsole'].get('type')
+        try:
+            instance = common.get_instance(self.compute_api, context, id)
+            output = self.compute_api.get_serial_console(context,
+                                                         instance,
+                                                         console_type)
+        except exception.InstanceNotFound as e:
+            raise webob.exc.HTTPNotFound(explanation=e.format_message())
+        except exception.InstanceNotReady as e:
+            raise webob.exc.HTTPConflict(explanation=e.format_message())
+        except (exception.ConsoleTypeUnavailable,
+                exception.ImageSerialPortNumberInvalid,
+                exception.ImageSerialPortNumberExceedFlavorValue,
+                exception.SocketPortRangeExhaustedException) as e:
+            raise webob.exc.HTTPBadRequest(explanation=e.format_message())
+        except NotImplementedError:
+            common.raise_feature_not_supported()
 
         return {'console': {'type': console_type, 'url': output['url']}}
 
 
 class RemoteConsoles(extensions.V3APIExtensionBase):
     """Interactive Console support."""
-    name = "RemoteConsoles"
+    name = "Consoles"
     alias = ALIAS
-    namespace = "http://docs.openstack.org/compute/ext/%s/api/v3" % ALIAS
     version = 1
 
     def get_controller_extensions(self):

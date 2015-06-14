@@ -12,6 +12,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+# NOTE: XenServer still only supports Python 2.4 in it's dom0 userspace
+# which means the Nova xenapi plugins must use only Python 2.4 features
+
 """Various utilities used by XenServer plugins."""
 
 import cPickle as pickle
@@ -19,6 +22,7 @@ import errno
 import logging
 import os
 import shutil
+import signal
 import subprocess
 import tempfile
 
@@ -100,6 +104,10 @@ def finish_subprocess(proc, cmdline, cmd_input=None, ok_exit_codes=None):
 
     ret = proc.returncode
     if ret not in ok_exit_codes:
+        LOG.error("Command '%(cmdline)s' with process id '%(pid)s' expected "
+                  "return code in '%(ok)s' but got '%(rc)s': %(err)s" %
+                  {'cmdline': cmdline, 'pid': proc.pid, 'ok': ok_exit_codes,
+                   'rc': ret, 'err': err})
         raise SubprocessException(' '.join(cmdline), ret, out, err)
     return out
 
@@ -117,9 +125,18 @@ def run_command(cmd, cmd_input=None, ok_exit_codes=None):
                              ok_exit_codes=ok_exit_codes)
 
 
+def try_kill_process(proc):
+    """Sends the given process the SIGKILL signal."""
+    pid = proc.pid
+    LOG.info("Killing process %s" % pid)
+    try:
+        os.kill(pid, signal.SIGKILL)
+    except Exception:
+        LOG.exception("Failed to kill %s" % pid)
+
+
 def make_staging_area(sr_path):
-    """
-    The staging area is a place where we can temporarily store and
+    """The staging area is a place where we can temporarily store and
     manipulate VHDs. The use of the staging area is different for upload and
     download:
 
@@ -204,21 +221,31 @@ def _assert_vhd_not_hidden(path):
                     "VHD %s is marked as hidden without child" % path)
 
 
+def _vhd_util_check(vdi_path):
+    check_cmd = ["vhd-util", "check", "-n", vdi_path, "-p"]
+    out = run_command(check_cmd, ok_exit_codes=[0, 22])
+    first_line = out.splitlines()[0].strip()
+    return out, first_line
+
+
 def _validate_vhd(vdi_path):
-    """
-    This checks for several errors in the VHD structure.
+    """This checks for several errors in the VHD structure.
 
     Most notably, it checks that the timestamp in the footer is correct, but
     may pick up other errors also.
 
     This check ensures that the timestamps listed in the VHD footer aren't in
-    the future.  This can occur during a migration if the clocks on the the two
+    the future.  This can occur during a migration if the clocks on the two
     Dom0's are out-of-sync. This would corrupt the SR if it were imported, so
     generate an exception to bail.
     """
-    check_cmd = ["vhd-util", "check", "-n", vdi_path, "-p"]
-    out = run_command(check_cmd, ok_exit_codes=[0, 22])
-    first_line = out.splitlines()[0].strip()
+    out, first_line = _vhd_util_check(vdi_path)
+
+    if 'invalid' in first_line:
+        LOG.warning("VHD invalid, attempting repair.")
+        repair_cmd = ["vhd-util", "repair", "-n", vdi_path]
+        run_command(repair_cmd)
+        out, first_line = _vhd_util_check(vdi_path)
 
     if 'invalid' in first_line:
         if 'footer' in first_line:
@@ -246,10 +273,11 @@ def _validate_vhd(vdi_path):
             "%(extra)s" % {'vdi_path': vdi_path, 'part': part,
                            'details': details, 'extra': extra})
 
+    LOG.info("VDI is valid: %s" % vdi_path)
+
 
 def _validate_vdi_chain(vdi_path):
-    """
-    This check ensures that the parent pointers on the VHDs are valid
+    """This check ensures that the parent pointers on the VHDs are valid
     before we move the VDI chain to the SR. This is *very* important
     because a bad parent pointer will corrupt the SR causing a cascade of
     failures.
@@ -381,16 +409,20 @@ def create_tarball(fileobj, path, callback=None, compression_level=None):
         env["GZIP"] = "-%d" % compression_level
     tar_proc = make_subprocess(tar_cmd, stdout=True, stderr=True, env=env)
 
-    while True:
-        chunk = tar_proc.stdout.read(CHUNK_SIZE)
-        if chunk == '':
-            break
+    try:
+        while True:
+            chunk = tar_proc.stdout.read(CHUNK_SIZE)
+            if chunk == '':
+                break
 
-        if callback:
-            callback(chunk)
+            if callback:
+                callback(chunk)
 
-        if fileobj:
-            fileobj.write(chunk)
+            if fileobj:
+                fileobj.write(chunk)
+    except Exception:
+        try_kill_process(tar_proc)
+        raise
 
     finish_subprocess(tar_proc, tar_cmd)
 
@@ -405,15 +437,19 @@ def extract_tarball(fileobj, path, callback=None):
     tar_cmd = ["tar", "-zx", "--directory=%s" % path]
     tar_proc = make_subprocess(tar_cmd, stderr=True, stdin=True)
 
-    while True:
-        chunk = fileobj.read(CHUNK_SIZE)
-        if chunk == '':
-            break
+    try:
+        while True:
+            chunk = fileobj.read(CHUNK_SIZE)
+            if chunk == '':
+                break
 
-        if callback:
-            callback(chunk)
+            if callback:
+                callback(chunk)
 
-        tar_proc.stdin.write(chunk)
+            tar_proc.stdin.write(chunk)
+    except Exception:
+        try_kill_process(tar_proc)
+        raise
 
     finish_subprocess(tar_proc, tar_cmd)
 

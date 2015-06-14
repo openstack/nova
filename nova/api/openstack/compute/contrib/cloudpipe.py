@@ -14,44 +14,25 @@
 
 """Connect your vlan to the world."""
 
-from oslo.config import cfg
+from oslo_config import cfg
+from oslo_utils import timeutils
+from webob import exc
 
 from nova.api.openstack import extensions
-from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 from nova.cloudpipe import pipelib
 from nova import compute
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
 from nova import exception
+from nova.i18n import _
 from nova import network
 from nova.openstack.common import fileutils
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import timeutils
 from nova import utils
 
 CONF = cfg.CONF
+CONF.import_opt('keys_path', 'nova.crypto')
+
 authorize = extensions.extension_authorizer('compute', 'cloudpipe')
-
-
-class CloudpipeTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('cloudpipe')
-        elem = xmlutil.SubTemplateElement(root, 'instance_id',
-                                          selector='instance_id')
-        elem.text = str
-        return xmlutil.MasterTemplate(root, 1)
-
-
-class CloudpipesTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('cloudpipes')
-        elem1 = xmlutil.SubTemplateElement(root, 'cloudpipe',
-                                           selector='cloudpipes')
-        elem2 = xmlutil.SubTemplateElement(elem1, xmlutil.Selector(0),
-                                           selector=xmlutil.get_items)
-        elem2.text = 1
-        return xmlutil.MasterTemplate(root, 1)
 
 
 class CloudpipeController(object):
@@ -73,18 +54,16 @@ class CloudpipeController(object):
     def _get_all_cloudpipes(self, context):
         """Get all cloudpipes."""
         instances = self.compute_api.get_all(context,
-                                             search_opts={'deleted': False})
+                                             search_opts={'deleted': False},
+                                             want_objects=True)
         return [instance for instance in instances
-                if pipelib.is_vpn_image(instance['image_ref'])
-                and instance['vm_state'] != vm_states.DELETED]
+                if pipelib.is_vpn_image(instance.image_ref)
+                and instance.vm_state != vm_states.DELETED]
 
-    def _get_cloudpipe_for_project(self, context, project_id):
-        """Get the cloudpipe instance for a project ID."""
+    def _get_cloudpipe_for_project(self, context):
+        """Get the cloudpipe instance for a project from context."""
         cloudpipes = self._get_all_cloudpipes(context) or [None]
         return cloudpipes[0]
-
-    def _get_ip_and_port(self, instance):
-        pass
 
     def _vpn_dict(self, context, project_id, instance):
         elevated = context.elevated()
@@ -92,8 +71,8 @@ class CloudpipeController(object):
         if not instance:
             rv['state'] = 'pending'
             return rv
-        rv['instance_id'] = instance['uuid']
-        rv['created_at'] = timeutils.isotime(instance['created_at'])
+        rv['instance_id'] = instance.uuid
+        rv['created_at'] = timeutils.isotime(instance.created_at)
         nw_info = compute_utils.get_nw_info_for_instance(instance)
         if not nw_info:
             return rv
@@ -123,7 +102,6 @@ class CloudpipeController(object):
                 rv['state'] = 'invalid'
         return rv
 
-    @wsgi.serializers(xml=CloudpipeTemplate)
     def create(self, req, body):
         """Create a new cloudpipe instance, if none exists.
 
@@ -140,7 +118,7 @@ class CloudpipeController(object):
         context.user_id = 'project-vpn'
         context.is_admin = False
         context.roles = []
-        instance = self._get_cloudpipe_for_project(context, project_id)
+        instance = self._get_cloudpipe_for_project(context)
         if not instance:
             try:
                 result = self.cloudpipe.launch_vpn_instance(context)
@@ -148,10 +126,9 @@ class CloudpipeController(object):
             except exception.NoMoreNetworks:
                 msg = _("Unable to claim IP for VPN instances, ensure it "
                         "isn't running, and try again in a few minutes")
-                raise exception.HTTPBadRequest(explanation=msg)
-        return {'instance_id': instance['uuid']}
+                raise exc.HTTPBadRequest(explanation=msg)
+        return {'instance_id': instance.uuid}
 
-    @wsgi.serializers(xml=CloudpipesTemplate)
     def index(self, req):
         """List running cloudpipe instances."""
         context = req.environ['nova.context']
@@ -175,7 +152,7 @@ class Cloudpipe(extensions.ExtensionDescriptor):
     name = "Cloudpipe"
     alias = "os-cloudpipe"
     namespace = "http://docs.openstack.org/compute/ext/cloudpipe/api/v1.1"
-    updated = "2011-12-16T00:00:00+00:00"
+    updated = "2011-12-16T00:00:00Z"
 
     def get_resources(self):
         resources = []

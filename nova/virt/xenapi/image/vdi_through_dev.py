@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2013 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -16,10 +14,11 @@
 #    under the License.
 
 import contextlib
-import eventlet
-from eventlet import greenio
 import os
 import tarfile
+
+import eventlet
+from eventlet import greenio
 
 from nova.image import glance
 from nova import utils
@@ -33,9 +32,9 @@ class VdiThroughDevStore(object):
     disk inside a tgz.
     """
 
-    def upload_image(self, context, session, instance, vdi_uuids, image_id):
+    def upload_image(self, context, session, instance, image_id, vdi_uuids):
         command = UploadToGlanceAsRawTgz(
-            context, session, instance, vdi_uuids, image_id)
+            context, session, instance, image_id, vdi_uuids)
         return command.upload_image()
 
     def download_image(self, context, session, instance, image_id):
@@ -45,7 +44,7 @@ class VdiThroughDevStore(object):
 
 
 class UploadToGlanceAsRawTgz(object):
-    def __init__(self, context, session, instance, vdi_uuids, image_id):
+    def __init__(self, context, session, instance, image_id, vdi_uuids):
         self.context = context
         self.image_id = image_id
         self.session = session

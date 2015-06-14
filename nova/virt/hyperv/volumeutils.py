@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-#
 # Copyright 2012 Pedro Navarro Perez
 # Copyright 2013 Cloudbase Solutions Srl
 # All Rights Reserved.
@@ -19,16 +17,25 @@
 """
 Helper methods for operations related to the management of volumes,
 and storage repositories
+
+Official Microsoft iSCSI Initiator and iSCSI command line interface
+documentation can be retrieved at:
+http://www.microsoft.com/en-us/download/details.aspx?id=34750
 """
 
+import re
 import time
 
-from oslo.config import cfg
+from oslo_config import cfg
+from oslo_log import log as logging
+from six.moves import range
 
-from nova.openstack.common.gettextutils import _
+from nova.i18n import _
 from nova import utils
 from nova.virt.hyperv import basevolumeutils
 from nova.virt.hyperv import vmutils
+
+LOG = logging.getLogger(__name__)
 
 CONF = cfg.CONF
 
@@ -44,24 +51,62 @@ class VolumeUtils(basevolumeutils.BaseVolumeUtils):
             raise vmutils.HyperVException(_('An error has occurred when '
                                             'calling the iscsi initiator: %s')
                                           % stdout_value)
+        return stdout_value
 
-    def login_storage_target(self, target_lun, target_iqn, target_portal):
-        """Add target portal, list targets and logins to the target."""
+    def _login_target_portal(self, target_portal):
         (target_address,
          target_port) = utils.parse_server_string(target_portal)
 
-        #Adding target portal to iscsi initiator. Sending targets
-        self.execute('iscsicli.exe ' + 'AddTargetPortal ' +
-                     target_address + ' ' + target_port +
-                     ' * * * * * * * * * * * * *')
-        #Listing targets
-        self.execute('iscsicli.exe ' + 'ListTargets')
-        #Sending login
-        self.execute('iscsicli.exe ' + 'qlogintarget ' + target_iqn)
-        #Waiting the disk to be mounted.
-        #TODO(pnavarro): Check for the operation to end instead of
-        #relying on a timeout
-        time.sleep(CONF.hyperv.volume_attach_retry_interval)
+        output = self.execute('iscsicli.exe', 'ListTargetPortals')
+        pattern = r'Address and Socket *: (.*)'
+        portals = [addr.split() for addr in re.findall(pattern, output)]
+        LOG.debug("Ensuring connection to portal: %s" % target_portal)
+        if [target_address, str(target_port)] in portals:
+            self.execute('iscsicli.exe', 'RefreshTargetPortal',
+                         target_address, target_port)
+        else:
+            # Adding target portal to iscsi initiator. Sending targets
+            self.execute('iscsicli.exe', 'AddTargetPortal',
+                         target_address, target_port,
+                         '*', '*', '*', '*', '*', '*', '*', '*', '*', '*', '*',
+                         '*', '*')
+
+    def login_storage_target(self, target_lun, target_iqn, target_portal,
+                             auth_username=None, auth_password=None):
+        """Ensure that the target is logged in."""
+
+        self._login_target_portal(target_portal)
+        # Listing targets
+        self.execute('iscsicli.exe', 'ListTargets')
+
+        retry_count = CONF.hyperv.volume_attach_retry_count
+
+        # If the target is not connected, at least two iterations are needed:
+        # one for performing the login and another one for checking if the
+        # target was logged in successfully.
+        if retry_count < 2:
+            retry_count = 2
+
+        for attempt in range(retry_count):
+            try:
+                session_info = self.execute('iscsicli.exe', 'SessionList')
+                if session_info.find(target_iqn) == -1:
+                    # Sending login
+                    self.execute('iscsicli.exe', 'qlogintarget', target_iqn,
+                                 auth_username, auth_password)
+                else:
+                    return
+            except vmutils.HyperVException as exc:
+                LOG.debug("Attempt %(attempt)d to connect to target  "
+                          "%(target_iqn)s failed. Retrying. "
+                          "Exceptipn: %(exc)s ",
+                          {'target_iqn': target_iqn,
+                           'exc': exc,
+                           'attempt': attempt})
+                time.sleep(CONF.hyperv.volume_attach_retry_interval)
+
+        raise vmutils.HyperVException(_('Failed to login target %s') %
+                                      target_iqn)
 
     def logout_storage_target(self, target_iqn):
         """Logs out storage target through its session id."""
@@ -74,4 +119,4 @@ class VolumeUtils(basevolumeutils.BaseVolumeUtils):
 
     def execute_log_out(self, session_id):
         """Executes log out of the session described by its session ID."""
-        self.execute('iscsicli.exe ' + 'logouttarget ' + session_id)
+        self.execute('iscsicli.exe', 'logouttarget', session_id)

@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright (c) 2011 Citrix Systems, Inc.
 # Copyright 2011 OpenStack Foundation
 # Copyright (C) 2011 Nicira, Inc
@@ -19,19 +17,19 @@
 
 """VIF drivers for XenAPI."""
 
-from oslo.config import cfg
+from oslo_config import cfg
 
-from nova.openstack.common.gettextutils import _
+from nova.i18n import _
 from nova.virt.xenapi import network_utils
 from nova.virt.xenapi import vm_utils
 
 
-xenapi_ovs_integration_bridge_opt = cfg.StrOpt('xenapi_ovs_integration_bridge',
-        default='xapi1',
-        help='Name of Integration Bridge used by Open vSwitch')
+xenapi_ovs_integration_bridge_opt = cfg.StrOpt('ovs_integration_bridge',
+                        default='xapi1',
+                        help='Name of Integration Bridge used by Open vSwitch')
 
 CONF = cfg.CONF
-CONF.register_opt(xenapi_ovs_integration_bridge_opt)
+CONF.register_opt(xenapi_ovs_integration_bridge_opt, 'xenserver')
 
 
 class XenVIFDriver(object):
@@ -96,7 +94,7 @@ class XenAPIBridgeDriver(XenVIFDriver):
                     bridge_interface)
             pifs = self._session.call_xenapi('PIF.get_all_records_where',
                                              expr)
-            pif_ref = None
+
             # Multiple PIF are ok: we are dealing with a pool
             if len(pifs) == 0:
                 raise Exception(_('Found no PIF for device %s') %
@@ -145,7 +143,7 @@ class XenAPIOpenVswitchDriver(XenVIFDriver):
         # with OVS model, always plug into an OVS integration bridge
         # that is already created
         network_ref = network_utils.find_network_with_bridge(
-                self._session, CONF.xenapi_ovs_integration_bridge)
+                self._session, CONF.xenserver.ovs_integration_bridge)
         vif_rec = {}
         vif_rec['device'] = str(device)
         vif_rec['network'] = network_ref

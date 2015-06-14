@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright (c) 2010 OpenStack Foundation
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -21,7 +19,4 @@
 .. automodule:: nova.scheduler
    :platform: Unix
    :synopsis: Module that picks a compute node to run a VM instance.
-.. moduleauthor:: Sandy Walsh <sandy.walsh@rackspace.com>
-.. moduleauthor:: Ed Leafe <ed@leafe.com>
-.. moduleauthor:: Chris Behrens <cbehrens@codestud.com>
 """

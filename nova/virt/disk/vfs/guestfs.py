@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 Red Hat, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,35 +13,103 @@
 # under the License.
 
 from eventlet import tpool
-import guestfs
+from oslo_config import cfg
+from oslo_log import log as logging
+from oslo_utils import importutils
+import six
 
 from nova import exception
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import log as logging
+from nova.i18n import _
+from nova.i18n import _LW
 from nova.virt.disk.vfs import api as vfs
+from nova.virt.image import model as imgmodel
 
 
 LOG = logging.getLogger(__name__)
 
 guestfs = None
+forceTCG = False
+
+guestfs_opts = [
+    cfg.BoolOpt('debug',
+                default=False,
+                help='Enable guestfs debug')
+]
+
+CONF = cfg.CONF
+CONF.register_opts(guestfs_opts, group='guestfs')
+
+
+def force_tcg(force=True):
+    """Prevent libguestfs trying to use KVM acceleration
+
+    It is a good idea to call this if it is known that
+    KVM is not desired, even if technically available.
+    """
+
+    global forceTCG
+    forceTCG = force
 
 
 class VFSGuestFS(vfs.VFS):
 
-    """
-    This class implements a VFS module that uses the libguestfs APIs
+    """This class implements a VFS module that uses the libguestfs APIs
     to access the disk image. The disk image is never mapped into
     the host filesystem, thus avoiding any potential for symlink
     attacks from the guest filesystem.
     """
-    def __init__(self, imgfile, imgfmt='raw', partition=None):
-        super(VFSGuestFS, self).__init__(imgfile, imgfmt, partition)
+    def __init__(self, image, partition=None):
+        """Create a new local VFS instance
+
+        :param image: instance of nova.virt.image.model.Image
+        :param partition: the partition number of access
+        """
+
+        super(VFSGuestFS, self).__init__(image, partition)
 
         global guestfs
         if guestfs is None:
-            guestfs = __import__('guestfs')
+            try:
+                guestfs = importutils.import_module('guestfs')
+            except Exception as e:
+                raise exception.NovaException(
+                    _("libguestfs is not installed (%s)") % e)
 
         self.handle = None
+        self.mount = False
+
+    def inspect_capabilities(self):
+        """Determines whether guestfs is well configured."""
+        try:
+            g = tpool.Proxy(guestfs.GuestFS())
+            g.add_drive("/dev/null")  # sic
+            g.launch()
+        except Exception as e:
+            raise exception.NovaException(
+                _("libguestfs installed but not usable (%s)") % e)
+
+        return self
+
+    def configure_debug(self):
+        """Configures guestfs to be verbose."""
+        if not self.handle:
+            LOG.warning(_LW("Please consider to execute setup before trying "
+                            "to configure debug log message."))
+        else:
+            def log_callback(ev, eh, buf, array):
+                if ev == guestfs.EVENT_APPLIANCE:
+                    buf = buf.rstrip()
+                LOG.debug("event=%(event)s eh=%(eh)d buf='%(buf)s' "
+                          "array=%(array)s", {
+                              "event": guestfs.event_to_string(ev),
+                              "eh": eh, "buf": buf, "array": array})
+
+            events = (guestfs.EVENT_APPLIANCE | guestfs.EVENT_LIBRARY
+                      | guestfs.EVENT_WARNING | guestfs.EVENT_TRACE)
+
+            self.handle.set_trace(True)  # just traces libguestfs API calls
+            self.handle.set_verbose(True)
+            self.handle.set_event_callback(log_callback, events)
 
     def setup_os(self):
         if self.partition == -1:
@@ -52,8 +118,8 @@ class VFSGuestFS(vfs.VFS):
             self.setup_os_static()
 
     def setup_os_static(self):
-        LOG.debug(_("Mount guest OS image %(imgfile)s partition %(part)s"),
-                  {'imgfile': self.imgfile, 'part': str(self.partition)})
+        LOG.debug("Mount guest OS image %(image)s partition %(part)s",
+                  {'image': self.image, 'part': str(self.partition)})
 
         if self.partition:
             self.handle.mount_options("", "/dev/sda%d" % self.partition, "/")
@@ -61,80 +127,126 @@ class VFSGuestFS(vfs.VFS):
             self.handle.mount_options("", "/dev/sda", "/")
 
     def setup_os_inspect(self):
-        LOG.debug(_("Inspecting guest OS image %s"), self.imgfile)
+        LOG.debug("Inspecting guest OS image %s", self.image)
         roots = self.handle.inspect_os()
 
         if len(roots) == 0:
             raise exception.NovaException(_("No operating system found in %s")
-                                          % self.imgfile)
+                                          % self.image)
 
         if len(roots) != 1:
-            LOG.debug(_("Multi-boot OS %(roots)s") % {'roots': str(roots)})
+            LOG.debug("Multi-boot OS %(roots)s", {'roots': str(roots)})
             raise exception.NovaException(
                 _("Multi-boot operating system found in %s") %
-                self.imgfile)
+                self.image)
 
         self.setup_os_root(roots[0])
 
     def setup_os_root(self, root):
-        LOG.debug(_("Inspecting guest OS root filesystem %s"), root)
+        LOG.debug("Inspecting guest OS root filesystem %s", root)
         mounts = self.handle.inspect_get_mountpoints(root)
 
         if len(mounts) == 0:
             raise exception.NovaException(
-                _("No mount points found in %(root)s of %(imgfile)s") %
-                {'root': root, 'imgfile': self.imgfile})
+                _("No mount points found in %(root)s of %(image)s") %
+                {'root': root, 'image': self.image})
 
         # the root directory must be mounted first
         mounts.sort(key=lambda mount: mount[0])
 
         root_mounted = False
         for mount in mounts:
-            LOG.debug(_("Mounting %(dev)s at %(dir)s") %
+            LOG.debug("Mounting %(dev)s at %(dir)s",
                       {'dev': mount[1], 'dir': mount[0]})
             try:
                 self.handle.mount_options("", mount[1], mount[0])
                 root_mounted = True
             except RuntimeError as e:
                 msg = _("Error mounting %(device)s to %(dir)s in image"
-                        " %(imgfile)s with libguestfs (%(e)s)") % \
-                      {'imgfile': self.imgfile, 'device': mount[1],
+                        " %(image)s with libguestfs (%(e)s)") % \
+                      {'image': self.image, 'device': mount[1],
                        'dir': mount[0], 'e': e}
                 if root_mounted:
                     LOG.debug(msg)
                 else:
                     raise exception.NovaException(msg)
 
-    def setup(self):
-        LOG.debug(_("Setting up appliance for %(imgfile)s %(imgfmt)s") %
-                  {'imgfile': self.imgfile, 'imgfmt': self.imgfmt})
-        self.handle = tpool.Proxy(guestfs.GuestFS())
+    def setup(self, mount=True):
+        LOG.debug("Setting up appliance for %(image)s",
+                  {'image': self.image})
+        try:
+            self.handle = tpool.Proxy(
+                guestfs.GuestFS(python_return_dict=False,
+                                close_on_exit=False))
+        except TypeError as e:
+            if ('close_on_exit' in six.text_type(e) or
+                'python_return_dict' in six.text_type(e)):
+                # NOTE(russellb) In case we're not using a version of
+                # libguestfs new enough to support parameters close_on_exit
+                # and python_return_dict which were added in libguestfs 1.20.
+                self.handle = tpool.Proxy(guestfs.GuestFS())
+            else:
+                raise
+
+        if CONF.guestfs.debug:
+            self.configure_debug()
 
         try:
-            self.handle.add_drive_opts(self.imgfile, format=self.imgfmt)
+            if forceTCG:
+                self.handle.set_backend_settings("force_tcg")
+        except AttributeError as ex:
+            # set_backend_settings method doesn't exist in older
+            # libguestfs versions, so nothing we can do but ignore
+            LOG.warning(_LW("Unable to force TCG mode, "
+                            "libguestfs too old? %s"), ex)
+            pass
+
+        try:
+            if isinstance(self.image, imgmodel.LocalImage):
+                self.handle.add_drive_opts(self.image.path,
+                                           format=self.image.format)
+            elif isinstance(self.image, imgmodel.RBDImage):
+                self.handle.add_drive_opts("%s/%s" % (self.image.pool,
+                                                      self.image.name),
+                                           protocol="rbd",
+                                           format=imgmodel.FORMAT_RAW,
+                                           server=self.image.servers,
+                                           username=self.image.user,
+                                           secret=self.image.password)
+            else:
+                raise exception.UnsupportedImageModel(
+                    self.image.__class__.__name__)
+
             self.handle.launch()
 
-            self.setup_os()
-
-            self.handle.aug_init("/", 0)
+            if mount:
+                self.setup_os()
+                self.handle.aug_init("/", 0)
+                self.mount = True
         except RuntimeError as e:
-            # dereference object and implicitly close()
-            self.handle = None
+            # explicitly teardown instead of implicit close()
+            # to prevent orphaned VMs in cases when an implicit
+            # close() is not enough
+            self.teardown()
             raise exception.NovaException(
-                _("Error mounting %(imgfile)s with libguestfs (%(e)s)") %
-                {'imgfile': self.imgfile, 'e': e})
+                _("Error mounting %(image)s with libguestfs (%(e)s)") %
+                {'image': self.image, 'e': e})
         except Exception:
-            self.handle = None
+            # explicitly teardown instead of implicit close()
+            # to prevent orphaned VMs in cases when an implicit
+            # close() is not enough
+            self.teardown()
             raise
 
     def teardown(self):
-        LOG.debug(_("Tearing down appliance"))
+        LOG.debug("Tearing down appliance")
 
         try:
             try:
-                self.handle.aug_close()
+                if self.mount:
+                    self.handle.aug_close()
             except RuntimeError as e:
-                LOG.warn(_("Failed to close augeas %s"), e)
+                LOG.warning(_LW("Failed to close augeas %s"), e)
 
             try:
                 self.handle.shutdown()
@@ -142,7 +254,7 @@ class VFSGuestFS(vfs.VFS):
                 # Older libguestfs versions haven't an explicit shutdown
                 pass
             except RuntimeError as e:
-                LOG.warn(_("Failed to shutdown appliance %s"), e)
+                LOG.warning(_LW("Failed to shutdown appliance %s"), e)
 
             try:
                 self.handle.close()
@@ -150,7 +262,7 @@ class VFSGuestFS(vfs.VFS):
                 # Older libguestfs versions haven't an explicit close
                 pass
             except RuntimeError as e:
-                LOG.warn(_("Failed to close guest handle %s"), e)
+                LOG.warning(_LW("Failed to close guest handle %s"), e)
         finally:
             # dereference object and implicitly close()
             self.handle = None
@@ -162,27 +274,27 @@ class VFSGuestFS(vfs.VFS):
         return path
 
     def make_path(self, path):
-        LOG.debug(_("Make directory path=%s"), path)
+        LOG.debug("Make directory path=%s", path)
         path = self._canonicalize_path(path)
         self.handle.mkdir_p(path)
 
     def append_file(self, path, content):
-        LOG.debug(_("Append file path=%s"), path)
+        LOG.debug("Append file path=%s", path)
         path = self._canonicalize_path(path)
         self.handle.write_append(path, content)
 
     def replace_file(self, path, content):
-        LOG.debug(_("Replace file path=%s"), path)
+        LOG.debug("Replace file path=%s", path)
         path = self._canonicalize_path(path)
         self.handle.write(path, content)
 
     def read_file(self, path):
-        LOG.debug(_("Read file path=%s"), path)
+        LOG.debug("Read file path=%s", path)
         path = self._canonicalize_path(path)
         return self.handle.read_file(path)
 
     def has_file(self, path):
-        LOG.debug(_("Has file path=%s"), path)
+        LOG.debug("Has file path=%s", path)
         path = self._canonicalize_path(path)
         try:
             self.handle.stat(path)
@@ -191,14 +303,14 @@ class VFSGuestFS(vfs.VFS):
             return False
 
     def set_permissions(self, path, mode):
-        LOG.debug(_("Set permissions path=%(path)s mode=%(mode)s"),
+        LOG.debug("Set permissions path=%(path)s mode=%(mode)s",
                   {'path': path, 'mode': mode})
         path = self._canonicalize_path(path)
         self.handle.chmod(mode, path)
 
     def set_ownership(self, path, user, group):
-        LOG.debug(_("Set ownership path=%(path)s "
-                    "user=%(user)s group=%(group)s"),
+        LOG.debug("Set ownership path=%(path)s "
+                  "user=%(user)s group=%(group)s",
                   {'path': path, 'user': user, 'group': group})
         path = self._canonicalize_path(path)
         uid = -1
@@ -211,6 +323,9 @@ class VFSGuestFS(vfs.VFS):
             gid = int(self.handle.aug_get(
                     "/files/etc/group/" + group + "/gid"))
 
-        LOG.debug(_("chown uid=%(uid)d gid=%(gid)s"),
+        LOG.debug("chown uid=%(uid)d gid=%(gid)s",
                   {'uid': uid, 'gid': gid})
         self.handle.chown(uid, gid, path)
+
+    def get_image_fs(self):
+        return self.handle.vfs_type('/dev/sda')

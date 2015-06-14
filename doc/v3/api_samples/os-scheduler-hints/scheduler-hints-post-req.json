@@ -1,0 +1,10 @@
+{
+    "server" : {
+        "name" : "new-server-test",
+        "imageRef" : "http://glance.openstack.example.com/openstack/images/70a599e0-31e7-49b7-b260-868f441e862b",
+        "flavorRef" : "http://openstack.example.com/openstack/flavors/1"
+    },
+    "OS-SCH-HNT:scheduler_hints": {
+        "same_host": "48e6a9f6-30af-47e0-bc04-acaed113bb4e"
+    }
+}

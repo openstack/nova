@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2013 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -36,6 +34,7 @@ REBUILD = 'rebuild'
 REVERT_RESIZE = 'revertResize'
 CONFIRM_RESIZE = 'confirmResize'
 RESIZE = 'resize'
+MIGRATE = 'migrate'
 PAUSE = 'pause'
 UNPAUSE = 'unpause'
 SUSPEND = 'suspend'
@@ -45,3 +44,4 @@ UNRESCUE = 'unrescue'
 CHANGE_PASSWORD = 'changePassword'
 SHELVE = 'shelve'
 UNSHELVE = 'unshelve'
+LIVE_MIGRATION = 'live-migration'

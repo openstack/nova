@@ -1,0 +1,10 @@
+{
+    "flavor": {
+        "name": "test_flavor",
+        "ram": 1024,
+        "vcpus": 2,
+        "disk": 10,
+        "id": "10",
+        "os-flavor-access:is_public": false
+    }
+}

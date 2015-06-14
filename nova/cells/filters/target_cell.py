@@ -21,9 +21,10 @@ specified to route a build to a particular cell.  No error handling is
 done as there's no way to know whether the full path is a valid.
 """
 
+from oslo_log import log as logging
+
 from nova.cells import filters
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import log as logging
+from nova.i18n import _LI
 
 LOG = logging.getLogger(__name__)
 
@@ -55,8 +56,8 @@ class TargetCellFilter(filters.BaseCellFilter):
             # No filtering, if not authorized.
             return cells
 
-        LOG.info(_("Forcing direct route to %(cell_name)s because "
-                   "of 'target_cell' scheduler hint"),
+        LOG.info(_LI("Forcing direct route to %(cell_name)s because "
+                     "of 'target_cell' scheduler hint"),
                  {'cell_name': cell_name})
 
         scheduler = filter_properties['scheduler']
@@ -64,11 +65,8 @@ class TargetCellFilter(filters.BaseCellFilter):
             return [scheduler.state_manager.get_my_state()]
         ctxt = filter_properties['context']
 
-        # NOTE(belliott) Remove after deprecated schedule_run_instance
-        # code goes away:
-        schedule = filter_properties['cell_scheduler_method']
-        schedule = getattr(scheduler.msg_runner, schedule)
-        schedule(ctxt, cell_name, filter_properties['host_sched_kwargs'])
+        scheduler.msg_runner.build_instances(ctxt, cell_name,
+                filter_properties['host_sched_kwargs'])
 
         # Returning None means to skip further scheduling, because we
         # handled it.

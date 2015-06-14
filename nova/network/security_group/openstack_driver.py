@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2013 Nicira, Inc.
 # All Rights Reserved
 #
@@ -14,12 +12,9 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-#
-# @author: Aaron Rosen, Nicira Networks, Inc.
 
-from oslo.config import cfg
-
-from nova.openstack.common import importutils
+from oslo_config import cfg
+from oslo_utils import importutils
 
 security_group_opts = [
     cfg.StrOpt('security_group_api',
@@ -30,19 +25,21 @@ security_group_opts = [
 CONF = cfg.CONF
 CONF.register_opts(security_group_opts)
 
-NOVA_DRIVER = ('nova.api.openstack.compute.contrib.security_groups.'
-               'NativeNovaSecurityGroupAPI')
-NEUTRON_DRIVER = ('nova.api.openstack.compute.contrib.security_groups.'
-                  'NativeNeutronSecurityGroupAPI')
+NOVA_DRIVER = ('nova.compute.api.SecurityGroupAPI')
+NEUTRON_DRIVER = ('nova.network.security_group.neutron_driver.'
+                  'SecurityGroupAPI')
 
 
-def get_openstack_security_group_driver():
+def get_openstack_security_group_driver(skip_policy_check=False):
     if CONF.security_group_api.lower() == 'nova':
-        return importutils.import_object(NOVA_DRIVER)
-    elif CONF.security_group_api.lower() in ('neutron', 'quantum'):
-        return importutils.import_object(NEUTRON_DRIVER)
+        return importutils.import_object(NOVA_DRIVER,
+                                         skip_policy_check=skip_policy_check)
+    elif is_neutron_security_groups():
+        return importutils.import_object(NEUTRON_DRIVER,
+                                         skip_policy_check=skip_policy_check)
     else:
-        return importutils.import_object(CONF.security_group_api)
+        return importutils.import_object(CONF.security_group_api,
+                                         skip_policy_check=skip_policy_check)
 
 
 def is_neutron_security_groups():

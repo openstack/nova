@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
@@ -29,11 +27,4 @@ class MetadataManager(manager.Manager):
     def __init__(self, *args, **kwargs):
         super(MetadataManager, self).__init__(*args, **kwargs)
         self.network_driver = driver.load_network_driver()
-
-    def init_host(self):
-        """Perform any initialization.
-
-        Currently, we only add an iptables filter rule for the metadata
-        service.
-        """
         self.network_driver.metadata_accept()

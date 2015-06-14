@@ -13,11 +13,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from six.moves import range
 from webob import exc
 
-from nova import conductor
 from nova import context
-from nova.openstack.common.gettextutils import _
+from nova.i18n import _
+from nova import objects
 from nova import utils
 
 
@@ -42,7 +43,7 @@ def convert_password(context, password):
     """
     password = password or ''
     meta = {}
-    for i in xrange(CHUNKS):
+    for i in range(CHUNKS):
         meta['password_%d' % i] = password[:CHUNK_LENGTH]
         password = password[CHUNK_LENGTH:]
     return meta
@@ -62,11 +63,8 @@ def handle_password(req, meta_data):
             msg = _("Request is too large.")
             raise exc.HTTPBadRequest(explanation=msg)
 
-        conductor_api = conductor.API()
-        instance = conductor_api.instance_get_by_uuid(ctxt, meta_data.uuid)
-        sys_meta = utils.metadata_to_dict(instance['system_metadata'])
-        sys_meta.update(convert_password(ctxt, req.body))
-        conductor_api.instance_update(ctxt, meta_data.uuid,
-                                      system_metadata=sys_meta)
+        instance = objects.Instance.get_by_uuid(ctxt, meta_data.uuid)
+        instance.system_metadata.update(convert_password(ctxt, req.body))
+        instance.save()
     else:
         raise exc.HTTPBadRequest()

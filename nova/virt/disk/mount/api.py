@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2011 Red Hat, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -18,10 +16,13 @@
 import os
 import time
 
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import importutils
-from nova.openstack.common import log as logging
+from oslo_log import log as logging
+from oslo_utils import importutils
+
+from nova import exception
+from nova.i18n import _, _LI, _LW
 from nova import utils
+from nova.virt.image import model as imgmodel
 
 LOG = logging.getLogger(__name__)
 
@@ -38,42 +39,79 @@ class Mount(object):
     mode = None  # to be overridden in subclasses
 
     @staticmethod
-    def instance_for_format(imgfile, mountdir, partition, imgfmt):
-        LOG.debug(_("Instance for format imgfile=%(imgfile)s "
-                    "mountdir=%(mountdir)s partition=%(partition)s "
-                    "imgfmt=%(imgfmt)s"),
-                  {'imgfile': imgfile, 'mountdir': mountdir,
-                   'partition': partition, 'imgfmt': imgfmt})
-        if imgfmt == "raw":
-            LOG.debug(_("Using LoopMount"))
-            return importutils.import_object(
-                "nova.virt.disk.mount.loop.LoopMount",
-                imgfile, mountdir, partition)
+    def instance_for_format(image, mountdir, partition):
+        """Get a Mount instance for the image type
+
+        :param image: instance of nova.virt.image.model.Image
+        :param mountdir: path to mount the image at
+        :param partition: partition number to mount
+        """
+        LOG.debug("Instance for format image=%(image)s "
+                  "mountdir=%(mountdir)s partition=%(partition)s",
+                  {'image': image, 'mountdir': mountdir,
+                   'partition': partition})
+
+        if isinstance(image, imgmodel.LocalFileImage):
+            if image.format == imgmodel.FORMAT_RAW:
+                LOG.debug("Using LoopMount")
+                return importutils.import_object(
+                    "nova.virt.disk.mount.loop.LoopMount",
+                    image, mountdir, partition)
+            else:
+                LOG.debug("Using NbdMount")
+                return importutils.import_object(
+                    "nova.virt.disk.mount.nbd.NbdMount",
+                    image, mountdir, partition)
         else:
-            LOG.debug(_("Using NbdMount"))
-            return importutils.import_object(
-                "nova.virt.disk.mount.nbd.NbdMount",
-                imgfile, mountdir, partition)
+            # TODO(berrange) we could mount images of
+            # type LocalBlockImage directly without
+            # involving loop or nbd devices
+            #
+            # We could also mount RBDImage directly
+            # using kernel RBD block dev support.
+            #
+            # This is left as an enhancement for future
+            # motivated developers todo, since raising
+            # an exception is on par with what this
+            # code did historically
+            raise exception.UnsupportedImageModel(
+                image.__class__.__name__)
 
     @staticmethod
-    def instance_for_device(imgfile, mountdir, partition, device):
-        LOG.debug(_("Instance for device imgfile=%(imgfile)s "
-                    "mountdir=%(mountdir)s partition=%(partition)s "
-                    "device=%(device)s"),
-                  {'imgfile': imgfile, 'mountdir': mountdir,
+    def instance_for_device(image, mountdir, partition, device):
+        """Get a Mount instance for the device type
+
+        :param image: instance of nova.virt.image.model.Image
+        :param mountdir: path to mount the image at
+        :param partition: partition number to mount
+        :param device: mounted device path
+        """
+
+        LOG.debug("Instance for device image=%(image)s "
+                  "mountdir=%(mountdir)s partition=%(partition)s "
+                  "device=%(device)s",
+                  {'image': image, 'mountdir': mountdir,
                    'partition': partition, 'device': device})
+
         if "loop" in device:
-            LOG.debug(_("Using LoopMount"))
+            LOG.debug("Using LoopMount")
             return importutils.import_object(
                 "nova.virt.disk.mount.loop.LoopMount",
-                imgfile, mountdir, partition, device)
+                image, mountdir, partition, device)
         else:
-            LOG.debug(_("Using NbdMount"))
+            LOG.debug("Using NbdMount")
             return importutils.import_object(
                 "nova.virt.disk.mount.nbd.NbdMount",
-                imgfile, mountdir, partition, device)
+                image, mountdir, partition, device)
 
     def __init__(self, image, mount_dir, partition=None, device=None):
+        """Create a new Mount instance
+
+        :param image: instance of nova.virt.image.model.Image
+        :param mount_dir: path to mount the image at
+        :param partition: partition number to mount
+        :param device: mounted device path
+        """
 
         # Input
         self.image = image
@@ -119,10 +157,11 @@ class Mount(object):
         start_time = time.time()
         device = self._inner_get_dev()
         while not device:
-            LOG.info(_('Device allocation failed. Will retry in 2 seconds.'))
+            LOG.info(_LI('Device allocation failed. Will retry in 2 seconds.'))
             time.sleep(2)
             if time.time() - start_time > MAX_DEVICE_WAIT:
-                LOG.warn(_('Device allocation failed after repeated retries.'))
+                LOG.warning(_LW('Device allocation failed after repeated '
+                                'retries.'))
                 return False
             device = self._inner_get_dev()
         return True
@@ -137,7 +176,7 @@ class Mount(object):
     def map_dev(self):
         """Map partitions of the device to the file system namespace."""
         assert(os.path.exists(self.device))
-        LOG.debug(_("Map dev %s"), self.device)
+        LOG.debug("Map dev %s", self.device)
         automapped_path = '/dev/%sp%s' % (os.path.basename(self.device),
                                               self.partition)
 
@@ -181,7 +220,7 @@ class Mount(object):
         """Remove partitions of the device from the file system namespace."""
         if not self.mapped:
             return
-        LOG.debug(_("Unmap dev %s"), self.device)
+        LOG.debug("Unmap dev %s", self.device)
         if self.partition and not self.automapped:
             utils.execute('kpartx', '-d', self.device, run_as_root=True)
         self.mapped = False
@@ -189,7 +228,7 @@ class Mount(object):
 
     def mnt_dev(self):
         """Mount the device into the file system."""
-        LOG.debug(_("Mount %(dev)s on %(dir)s") %
+        LOG.debug("Mount %(dev)s on %(dir)s",
                   {'dev': self.mapped_device, 'dir': self.mount_dir})
         _out, err = utils.trycmd('mount', self.mapped_device, self.mount_dir,
                                  discard_warnings=True, run_as_root=True)
@@ -205,9 +244,13 @@ class Mount(object):
         """Unmount the device from the file system."""
         if not self.mounted:
             return
-        LOG.debug(_("Umount %s") % self.mapped_device)
+        self.flush_dev()
+        LOG.debug("Umount %s", self.mapped_device)
         utils.execute('umount', self.mapped_device, run_as_root=True)
         self.mounted = False
+
+    def flush_dev(self):
+        pass
 
     def do_mount(self):
         """Call the get, map and mnt operations."""
@@ -216,7 +259,7 @@ class Mount(object):
             status = self.get_dev() and self.map_dev() and self.mnt_dev()
         finally:
             if not status:
-                LOG.debug(_("Fail to mount, tearing back down"))
+                LOG.debug("Fail to mount, tearing back down")
                 self.do_teardown()
         return status
 

@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 OpenStack Foundation
 # Copyright 2011 Canonical Ltd.
 # All Rights Reserved.
@@ -26,7 +24,6 @@ attributes.  This extension adds to that list:
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 
 
 authorize = extensions.soft_extension_authorizer('compute', 'flavorextradata')
@@ -43,7 +40,6 @@ class FlavorextradataController(wsgi.Controller):
         if not authorize(req.environ['nova.context']):
             return
         if 'flavor' in resp_obj.obj:
-            resp_obj.attach(xml=FlavorextradatumTemplate())
             self._extend_flavors(req, [resp_obj.obj['flavor']])
 
     @wsgi.extends
@@ -58,7 +54,6 @@ class FlavorextradataController(wsgi.Controller):
     def detail(self, req, resp_obj):
         if not authorize(req.environ['nova.context']):
             return
-        resp_obj.attach(xml=FlavorextradataTemplate())
         self._extend_flavors(req, list(resp_obj.obj['flavors']))
 
 
@@ -69,33 +64,9 @@ class Flavorextradata(extensions.ExtensionDescriptor):
     alias = "OS-FLV-EXT-DATA"
     namespace = ("http://docs.openstack.org/compute/ext/"
                  "flavor_extra_data/api/v1.1")
-    updated = "2011-09-14T00:00:00+00:00"
+    updated = "2011-09-14T00:00:00Z"
 
     def get_controller_extensions(self):
         controller = FlavorextradataController()
         extension = extensions.ControllerExtension(self, 'flavors', controller)
         return [extension]
-
-
-def make_flavor(elem):
-    elem.set('{%s}ephemeral' % Flavorextradata.namespace,
-             '%s:ephemeral' % Flavorextradata.alias)
-
-
-class FlavorextradatumTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('flavor', selector='flavor')
-        make_flavor(root)
-        alias = Flavorextradata.alias
-        namespace = Flavorextradata.namespace
-        return xmlutil.SlaveTemplate(root, 1, nsmap={alias: namespace})
-
-
-class FlavorextradataTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('flavors')
-        elem = xmlutil.SubTemplateElement(root, 'flavor', selector='flavors')
-        make_flavor(elem)
-        alias = Flavorextradata.alias
-        namespace = Flavorextradata.namespace
-        return xmlutil.SlaveTemplate(root, 1, nsmap={alias: namespace})

@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
 #    a copy of the License at
@@ -14,65 +12,56 @@
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 from nova import compute
+from nova.objects import base as obj_base
 
 
-XMLNS = "http://docs.openstack.org/compute/ext/migrations/api/v3"
 ALIAS = "os-migrations"
 
 
 def authorize(context, action_name):
-    action = 'v3:%s:%s' % (ALIAS, action_name)
-    extensions.extension_authorizer('compute', action)(context)
+    extensions.os_compute_authorizer(ALIAS)(context, action=action_name)
 
 
-class MigrationsTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('migrations')
-        elem = xmlutil.SubTemplateElement(root, 'migration',
-                                          selector='migrations')
-        elem.set('id')
-        elem.set('source_node')
-        elem.set('dest_node')
-        elem.set('source_compute')
-        elem.set('dest_compute')
-        elem.set('dest_host')
-        elem.set('status')
-        elem.set('instance_uuid')
-        elem.set('old_instance_type_id')
-        elem.set('new_instance_type_id')
-        elem.set('created_at')
-        elem.set('updated_at')
+def output(migrations_obj):
+    """Returns the desired output of the API from an object.
 
-        return xmlutil.MasterTemplate(root, 1)
+    From a MigrationsList's object this method returns a list of
+    primitive objects with the only necessary fields.
+    """
+    objects = obj_base.obj_to_primitive(migrations_obj)
+    objects = [x for x in objects if not x['hidden']]
+    for obj in objects:
+        del obj['deleted']
+        del obj['deleted_at']
+        del obj['migration_type']
+        del obj['hidden']
+    return objects
 
 
-class MigrationsController(object):
+class MigrationsController(wsgi.Controller):
     """Controller for accessing migrations in OpenStack API."""
     def __init__(self):
         self.compute_api = compute.API()
 
     @extensions.expected_errors(())
-    @wsgi.serializers(xml=MigrationsTemplate)
     def index(self, req):
         """Return all migrations in progress."""
         context = req.environ['nova.context']
         authorize(context, "index")
         migrations = self.compute_api.get_migrations(context, req.GET)
-        return {'migrations': migrations}
+        return {'migrations': output(migrations)}
 
 
 class Migrations(extensions.V3APIExtensionBase):
     """Provide data on migrations."""
     name = "Migrations"
     alias = ALIAS
-    namespace = XMLNS
     version = 1
 
     def get_resources(self):
         resources = []
-        resource = extensions.ResourceExtension('os-migrations',
+        resource = extensions.ResourceExtension(ALIAS,
                                                 MigrationsController())
         resources.append(resource)
         return resources

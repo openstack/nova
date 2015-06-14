@@ -14,12 +14,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo.config import cfg
+from oslo_config import cfg
+from oslo_log import log as logging
 
-from nova import db
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import log as logging
+from nova.i18n import _LW
 from nova.scheduler import filters
+from nova.scheduler.filters import utils
 
 LOG = logging.getLogger(__name__)
 
@@ -53,8 +53,8 @@ class BaseRamFilter(filters.BaseHostFilter):
         used_ram_mb = total_usable_ram_mb - free_ram_mb
         usable_ram = memory_mb_limit - used_ram_mb
         if not usable_ram >= requested_ram:
-            LOG.debug(_("%(host_state)s does not have %(requested_ram)s MB "
-                    "usable ram, it only has %(usable_ram)s MB usable ram."),
+            LOG.debug("%(host_state)s does not have %(requested_ram)s MB "
+                    "usable ram, it only has %(usable_ram)s MB usable ram.",
                     {'host_state': host_state,
                      'requested_ram': requested_ram,
                      'usable_ram': usable_ram})
@@ -79,27 +79,15 @@ class AggregateRamFilter(BaseRamFilter):
     """
 
     def _get_ram_allocation_ratio(self, host_state, filter_properties):
-        context = filter_properties['context'].elevated()
-        # TODO(uni): DB query in filter is a performance hit, especially for
-        # system with lots of hosts. Will need a general solution here to fix
-        # all filters with aggregate DB call things.
-        metadata = db.aggregate_metadata_get_by_host(
-                     context, host_state.host, key='ram_allocation_ratio')
-        aggregate_vals = metadata.get('ram_allocation_ratio', set())
-        num_values = len(aggregate_vals)
-
-        if num_values == 0:
-            return CONF.ram_allocation_ratio
-
-        if num_values > 1:
-            LOG.warning(_("%(num_values)d ratio values found, "
-                          "of which the minimum value will be used."),
-                         {'num_values': num_values})
+        aggregate_vals = utils.aggregate_values_from_key(
+            host_state,
+            'ram_allocation_ratio')
 
         try:
-            ratio = float(min(aggregate_vals))
+            ratio = utils.validate_num_values(
+                aggregate_vals, CONF.ram_allocation_ratio, cast_to=float)
         except ValueError as e:
-            LOG.warning(_("Could not decode ram_allocation_ratio: '%s'"), e)
+            LOG.warning(_LW("Could not decode ram_allocation_ratio: '%s'"), e)
             ratio = CONF.ram_allocation_ratio
 
         return ratio

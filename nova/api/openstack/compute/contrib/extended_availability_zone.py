@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2013 Netease, LLC.
 # All Rights Reserved.
 #
@@ -19,7 +17,6 @@
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 from nova import availability_zones as avail_zone
 
 authorize = extensions.soft_extension_authorizer('compute',
@@ -34,14 +31,13 @@ class ExtendedAZController(wsgi.Controller):
             # Likely hasn't reached a viable compute node yet so give back the
             # desired availability_zone that *may* exist in the instance
             # record itself.
-            az = instance['availability_zone']
+            az = instance.availability_zone
         server[key] = az
 
     @wsgi.extends
     def show(self, req, resp_obj, id):
         context = req.environ['nova.context']
         if authorize(context):
-            resp_obj.attach(xml=ExtendedAZTemplate())
             server = resp_obj.obj['server']
             db_instance = req.get_db_instance(server['id'])
             self._extend_server(context, server, db_instance)
@@ -50,7 +46,6 @@ class ExtendedAZController(wsgi.Controller):
     def detail(self, req, resp_obj):
         context = req.environ['nova.context']
         if authorize(context):
-            resp_obj.attach(xml=ExtendedAZsTemplate())
             servers = list(resp_obj.obj['servers'])
             for server in servers:
                 db_instance = req.get_db_instance(server['id'])
@@ -58,39 +53,15 @@ class ExtendedAZController(wsgi.Controller):
 
 
 class Extended_availability_zone(extensions.ExtensionDescriptor):
-    """Extended Server Attributes support."""
+    """Extended Availability Zone support."""
 
     name = "ExtendedAvailabilityZone"
     alias = "OS-EXT-AZ"
     namespace = ("http://docs.openstack.org/compute/ext/"
                  "extended_availability_zone/api/v2")
-    updated = "2013-01-30T00:00:00+00:00"
+    updated = "2013-01-30T00:00:00Z"
 
     def get_controller_extensions(self):
         controller = ExtendedAZController()
         extension = extensions.ControllerExtension(self, 'servers', controller)
         return [extension]
-
-
-def make_server(elem):
-    elem.set('{%s}availability_zone' % Extended_availability_zone.namespace,
-             '%s:availability_zone' % Extended_availability_zone.alias)
-
-
-class ExtendedAZTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('server', selector='server')
-        make_server(root)
-        alias = Extended_availability_zone.alias
-        namespace = Extended_availability_zone.namespace
-        return xmlutil.SlaveTemplate(root, 1, nsmap={alias: namespace})
-
-
-class ExtendedAZsTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('servers')
-        elem = xmlutil.SubTemplateElement(root, 'server', selector='servers')
-        make_server(elem)
-        alias = Extended_availability_zone.alias
-        namespace = Extended_availability_zone.namespace
-        return xmlutil.SlaveTemplate(root, 1, nsmap={alias: namespace})

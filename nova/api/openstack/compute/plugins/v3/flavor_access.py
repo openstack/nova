@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright (c) 2011 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -19,108 +17,55 @@
 
 import webob
 
+from nova.api.openstack.compute.schemas.v3 import flavor_access
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
-from nova.compute import flavors
+from nova.api import validation
 from nova import exception
-from nova.openstack.common.gettextutils import _
+from nova.i18n import _
+from nova import objects
 
 ALIAS = 'os-flavor-access'
-soft_authorize = extensions.soft_extension_authorizer('compute',
-                                                      'v3:' + ALIAS)
-authorize = extensions.extension_authorizer('compute', 'v3:%s' % ALIAS)
+soft_authorize = extensions.os_compute_soft_authorizer(ALIAS)
+authorize = extensions.os_compute_authorizer(ALIAS)
 
 
-def make_flavor(elem):
-    elem.set('{%s}is_public' % FlavorAccess.namespace,
-             '%s:is_public' % FlavorAccess.alias)
-
-
-def make_flavor_access(elem):
-    elem.set('flavor_id')
-    elem.set('tenant_id')
-
-
-class FlavorTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('flavor', selector='flavor')
-        make_flavor(root)
-        alias = FlavorAccess.alias
-        namespace = FlavorAccess.namespace
-        return xmlutil.SlaveTemplate(root, 1, nsmap={alias: namespace})
-
-
-class FlavorsTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('flavors')
-        elem = xmlutil.SubTemplateElement(root, 'flavor', selector='flavors')
-        make_flavor(elem)
-        alias = FlavorAccess.alias
-        namespace = FlavorAccess.namespace
-        return xmlutil.SlaveTemplate(root, 1, nsmap={alias: namespace})
-
-
-class FlavorAccessTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('flavor_access')
-        elem = xmlutil.SubTemplateElement(root, 'access',
-                                          selector='flavor_access')
-        make_flavor_access(elem)
-        return xmlutil.MasterTemplate(root, 1)
-
-
-def _marshall_flavor_access(flavor_id):
+def _marshall_flavor_access(flavor):
     rval = []
-    try:
-        access_list = flavors.get_flavor_access_by_flavor_id(flavor_id)
-    except exception.FlavorNotFound as e:
-        raise webob.exc.HTTPNotFound(explanation=e.format_message())
-
-    for access in access_list:
-        rval.append({'flavor_id': flavor_id,
-                     'tenant_id': access['project_id']})
+    for project_id in flavor.projects:
+        rval.append({'flavor_id': flavor.flavorid,
+                     'tenant_id': project_id})
 
     return {'flavor_access': rval}
 
 
-class FlavorAccessController(object):
+class FlavorAccessController(wsgi.Controller):
     """The flavor access API controller for the OpenStack API."""
 
     def __init__(self):
         super(FlavorAccessController, self).__init__()
 
     @extensions.expected_errors(404)
-    @wsgi.serializers(xml=FlavorAccessTemplate)
     def index(self, req, flavor_id):
         context = req.environ['nova.context']
         authorize(context)
 
         try:
-            flavor = flavors.get_flavor_by_flavor_id(flavor_id, ctxt=context)
+            flavor = objects.Flavor.get_by_flavor_id(context, flavor_id)
         except exception.FlavorNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
         # public flavor to all projects
-        if flavor['is_public']:
+        if flavor.is_public:
             explanation = _("Access list not available for public flavors.")
             raise webob.exc.HTTPNotFound(explanation=explanation)
 
         # private flavor to listed projects only
-        return _marshall_flavor_access(flavor_id)
+        return _marshall_flavor_access(flavor)
 
 
 class FlavorActionController(wsgi.Controller):
     """The flavor access API controller for the OpenStack API."""
-    def _get_flavor_refs(self, context):
-        """Return a dictionary mapping flavorid to flavor_ref."""
-
-        flavor_refs = flavors.get_all_flavors(context)
-        rval = {}
-        for name, obj in flavor_refs.iteritems():
-            rval[obj['flavorid']] = obj
-        return rval
-
     def _extend_flavor(self, flavor_rval, flavor_ref):
         key = "%s:is_public" % (FlavorAccess.alias)
         flavor_rval[key] = flavor_ref['is_public']
@@ -129,8 +74,6 @@ class FlavorActionController(wsgi.Controller):
     def show(self, req, resp_obj, id):
         context = req.environ['nova.context']
         if soft_authorize(context):
-            # Attach our slave template to the response object
-            resp_obj.attach(xml=FlavorTemplate())
             db_flavor = req.get_db_flavor(id)
 
             self._extend_flavor(resp_obj.obj['flavor'], db_flavor)
@@ -139,9 +82,6 @@ class FlavorActionController(wsgi.Controller):
     def detail(self, req, resp_obj):
         context = req.environ['nova.context']
         if soft_authorize(context):
-            # Attach our slave template to the response object
-            resp_obj.attach(xml=FlavorsTemplate())
-
             flavors = list(resp_obj.obj['flavors'])
             for flavor_rval in flavors:
                 db_flavor = req.get_db_flavor(flavor_rval['id'])
@@ -151,65 +91,50 @@ class FlavorActionController(wsgi.Controller):
     def create(self, req, body, resp_obj):
         context = req.environ['nova.context']
         if soft_authorize(context):
-            # Attach our slave template to the response object
-            resp_obj.attach(xml=FlavorTemplate())
-
             db_flavor = req.get_db_flavor(resp_obj.obj['flavor']['id'])
 
             self._extend_flavor(resp_obj.obj['flavor'], db_flavor)
 
     @extensions.expected_errors((400, 403, 404, 409))
-    @wsgi.serializers(xml=FlavorAccessTemplate)
-    @wsgi.action("add_tenant_access")
+    @wsgi.action("addTenantAccess")
+    @validation.schema(flavor_access.add_tenant_access)
     def _add_tenant_access(self, req, id, body):
         context = req.environ['nova.context']
         authorize(context, action="add_tenant_access")
 
-        if not self.is_valid_body(body, 'add_tenant_access'):
-            raise webob.exc.HTTPBadRequest(explanation=_("Invalid request"))
+        vals = body['addTenantAccess']
+        tenant = vals['tenant']
 
-        vals = body['add_tenant_access']
+        flavor = objects.Flavor(context=context, flavorid=id)
         try:
-            tenant = vals['tenant_id']
-        except KeyError:
-            raise webob.exc.HTTPBadRequest(
-                explanation=_("tenant_id is required"))
-
-        try:
-            flavors.add_flavor_access(id, tenant, context)
-        except exception.FlavorAccessExists as err:
-            raise webob.exc.HTTPConflict(explanation=err.format_message())
+            flavor.add_access(tenant)
         except exception.FlavorNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
+        except exception.FlavorAccessExists as err:
+            raise webob.exc.HTTPConflict(explanation=err.format_message())
         except exception.AdminRequired as e:
             raise webob.exc.HTTPForbidden(explanation=e.format_message())
-        return _marshall_flavor_access(id)
+        return _marshall_flavor_access(flavor)
 
     @extensions.expected_errors((400, 403, 404))
-    @wsgi.serializers(xml=FlavorAccessTemplate)
-    @wsgi.action("remove_tenant_access")
+    @wsgi.action("removeTenantAccess")
+    @validation.schema(flavor_access.remove_tenant_access)
     def _remove_tenant_access(self, req, id, body):
         context = req.environ['nova.context']
         authorize(context, action="remove_tenant_access")
 
-        if not self.is_valid_body(body, 'remove_tenant_access'):
-            raise webob.exc.HTTPBadRequest(explanation=_("Invalid request"))
+        vals = body['removeTenantAccess']
+        tenant = vals['tenant']
 
-        vals = body['remove_tenant_access']
+        flavor = objects.Flavor(context=context, flavorid=id)
         try:
-            tenant = vals['tenant_id']
-        except KeyError:
-            raise webob.exc.HTTPBadRequest(
-                explanation=_("tenant_id is required"))
-
-        try:
-            flavors.remove_flavor_access(id, tenant, context)
+            flavor.remove_access(tenant)
         except (exception.FlavorAccessNotFound,
                 exception.FlavorNotFound) as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
         except exception.AdminRequired as e:
             raise webob.exc.HTTPForbidden(explanation=e.format_message())
-        return _marshall_flavor_access(id)
+        return _marshall_flavor_access(flavor)
 
 
 class FlavorAccess(extensions.V3APIExtensionBase):
@@ -217,7 +142,6 @@ class FlavorAccess(extensions.V3APIExtensionBase):
 
     name = "FlavorAccess"
     alias = ALIAS
-    namespace = "http://docs.openstack.org/compute/ext/%s/api/v3" % ALIAS
     version = 1
 
     def get_resources(self):

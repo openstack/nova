@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2011 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -23,29 +21,13 @@ import webob.exc
 from nova.api.openstack.compute import servers
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 from nova.compute import api as compute_api
 from nova import exception
-from nova.openstack.common.gettextutils import _
+from nova.i18n import _
 
 
 authorize = extensions.extension_authorizer('compute', 'keypairs')
 soft_authorize = extensions.soft_extension_authorizer('compute', 'keypairs')
-
-
-class KeypairTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        return xmlutil.MasterTemplate(xmlutil.make_flat_dict('keypair'), 1)
-
-
-class KeypairsTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('keypairs')
-        elem = xmlutil.make_flat_dict('keypair', selector='keypairs',
-                                      subselector='keypair')
-        root.append(elem)
-
-        return xmlutil.MasterTemplate(root, 1)
 
 
 class KeypairController(object):
@@ -64,10 +46,8 @@ class KeypairController(object):
             clean[attr] = keypair[attr]
         return clean
 
-    @wsgi.serializers(xml=KeypairTemplate)
     def create(self, req, body):
-        """
-        Create or import keypair.
+        """Create or import keypair.
 
         Sending name will generate a key and return private_key
         and fingerprint.
@@ -105,43 +85,41 @@ class KeypairController(object):
 
         except exception.KeypairLimitExceeded:
             msg = _("Quota exceeded, too many key pairs.")
-            raise webob.exc.HTTPRequestEntityTooLarge(
-                        explanation=msg,
-                        headers={'Retry-After': 0})
+            raise webob.exc.HTTPForbidden(explanation=msg)
         except exception.InvalidKeypair as exc:
             raise webob.exc.HTTPBadRequest(explanation=exc.format_message())
         except exception.KeyPairExists as exc:
             raise webob.exc.HTTPConflict(explanation=exc.format_message())
 
     def delete(self, req, id):
-        """
-        Delete a keypair with a given name
-        """
+        """Delete a keypair with a given name."""
         context = req.environ['nova.context']
         authorize(context, action='delete')
         try:
             self.api.delete_key_pair(context, context.user_id, id)
-        except exception.KeypairNotFound:
-            raise webob.exc.HTTPNotFound()
+        except exception.KeypairNotFound as exc:
+            raise webob.exc.HTTPNotFound(explanation=exc.format_message())
         return webob.Response(status_int=202)
 
-    @wsgi.serializers(xml=KeypairTemplate)
     def show(self, req, id):
         """Return data for the given key name."""
         context = req.environ['nova.context']
         authorize(context, action='show')
 
         try:
+            # The return object needs to be a dict in order to pop the 'type'
+            # field, since it is incompatible with API version <= 2.1.
             keypair = self.api.get_key_pair(context, context.user_id, id)
-        except exception.KeypairNotFound:
-            raise webob.exc.HTTPNotFound()
+            keypair = self._filter_keypair(keypair, created_at=True,
+                                           deleted=True, deleted_at=True,
+                                           id=True, user_id=True,
+                                           updated_at=True)
+        except exception.KeypairNotFound as exc:
+            raise webob.exc.HTTPNotFound(explanation=exc.format_message())
         return {'keypair': keypair}
 
-    @wsgi.serializers(xml=KeypairsTemplate)
     def index(self, req):
-        """
-        List of keypairs for a user
-        """
+        """List of keypairs for a user."""
         context = req.environ['nova.context']
         authorize(context, action='index')
         key_pairs = self.api.get_key_pairs(context, context.user_id)
@@ -150,21 +128,6 @@ class KeypairController(object):
             rval.append({'keypair': self._filter_keypair(key_pair)})
 
         return {'keypairs': rval}
-
-
-class ServerKeyNameTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('server')
-        root.set('key_name', 'key_name')
-        return xmlutil.SlaveTemplate(root, 1)
-
-
-class ServersKeyNameTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('servers')
-        elem = xmlutil.SubTemplateElement(root, 'server', selector='servers')
-        elem.set('key_name', 'key_name')
-        return xmlutil.SlaveTemplate(root, 1)
 
 
 class Controller(servers.Controller):
@@ -178,7 +141,6 @@ class Controller(servers.Controller):
 
     def _show(self, req, resp_obj):
         if 'server' in resp_obj.obj:
-            resp_obj.attach(xml=ServerKeyNameTemplate())
             server = resp_obj.obj['server']
             self._add_key_name(req, [server])
 
@@ -192,7 +154,6 @@ class Controller(servers.Controller):
     def detail(self, req, resp_obj):
         context = req.environ['nova.context']
         if 'servers' in resp_obj.obj and soft_authorize(context):
-            resp_obj.attach(xml=ServersKeyNameTemplate())
             servers = resp_obj.obj['servers']
             self._add_key_name(req, servers)
 
@@ -203,7 +164,7 @@ class Keypairs(extensions.ExtensionDescriptor):
     name = "Keypairs"
     alias = "os-keypairs"
     namespace = "http://docs.openstack.org/compute/ext/keypairs/api/v1.1"
-    updated = "2011-08-08T00:00:00+00:00"
+    updated = "2011-08-08T00:00:00Z"
 
     def get_resources(self):
         resources = []

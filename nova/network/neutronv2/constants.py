@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2013 UnitedStack Inc.
 # All Rights Reserved.
 #
@@ -14,7 +12,7 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-# @author: Yong Sheng Gong, UnitedStack Inc.
 
+QOS_QUEUE = 'QoS Queue'
 NET_EXTERNAL = 'router:external'
 PORTBINDING_EXT = 'Port Binding'

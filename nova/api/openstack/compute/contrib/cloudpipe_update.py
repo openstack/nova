@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 IBM Corp.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,12 +13,13 @@
 #    under the License.
 
 
+import webob
 import webob.exc
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova import db
-from nova.openstack.common.gettextutils import _
+from nova.i18n import _
+from nova import objects
 
 authorize = extensions.extension_authorizer('compute', 'cloudpipe_update')
 
@@ -43,20 +42,21 @@ class CloudpipeUpdateController(wsgi.Controller):
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
         project_id = context.project_id
+        networks = objects.NetworkList.get_by_project(context, project_id)
 
         try:
             params = body['configure_project']
             vpn_ip = params['vpn_ip']
             vpn_port = params['vpn_port']
-        except (TypeError, KeyError):
-            raise webob.exc.HTTPUnprocessableEntity()
+            for network in networks:
+                network.vpn_public_address = vpn_ip
+                network.vpn_public_port = vpn_port
+                network.save()
+        except (TypeError, KeyError, ValueError) as ex:
+            msg = _("Invalid request body: %s") % ex
+            raise webob.exc.HTTPBadRequest(explanation=msg)
 
-        networks = db.project_get_networks(context, project_id)
-        for network in networks:
-            db.network_update(context, network['id'],
-                              {'vpn_public_address': vpn_ip,
-                               'vpn_public_port': int(vpn_port)})
-        return webob.exc.HTTPAccepted()
+        return webob.Response(status_int=202)
 
 
 class Cloudpipe_update(extensions.ExtensionDescriptor):
@@ -65,7 +65,7 @@ class Cloudpipe_update(extensions.ExtensionDescriptor):
     name = "CloudpipeUpdate"
     alias = "os-cloudpipe-update"
     namespace = "http://docs.openstack.org/compute/ext/cloudpipe-update/api/v2"
-    updated = "2012-11-14T00:00:00+00:00"
+    updated = "2012-11-14T00:00:00Z"
 
     def get_controller_extensions(self):
         controller = CloudpipeUpdateController()

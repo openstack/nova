@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2013 IBM Corp.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -14,10 +12,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_log import log as logging
 
 from nova import exception
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import log as logging
+from nova.i18n import _LE
 
 LOG = logging.getLogger(__name__)
 
@@ -33,7 +31,6 @@ class LoadedExtensionInfo(object):
             return False
 
         alias = ext.alias
-        LOG.audit(_("Loaded extension %s"), alias)
 
         if alias in self.extensions:
             raise exception.NovaException("Found duplicate extension: %s"
@@ -44,14 +41,9 @@ class LoadedExtensionInfo(object):
     def _check_extension(self, extension):
         """Checks for required methods in extension objects."""
         try:
-            LOG.debug(_('Ext name: %s'), extension.name)
-            LOG.debug(_('Ext alias: %s'), extension.alias)
-            LOG.debug(_('Ext description: %s'),
-                      ' '.join(extension.__doc__.strip().split()))
-            LOG.debug(_('Ext namespace: %s'), extension.namespace)
-            LOG.debug(_('Ext version: %i'), extension.version)
-        except AttributeError as ex:
-            LOG.exception(_("Exception loading extension: %s"), unicode(ex))
+            extension.is_valid()
+        except AttributeError:
+            LOG.exception(_LE("Exception loading extension"))
             return False
 
         return True

@@ -14,6 +14,16 @@
 
 """Handles database requests from other nova services."""
 
+import copy
+import itertools
+
+from oslo_log import log as logging
+import oslo_messaging as messaging
+from oslo_serialization import jsonutils
+from oslo_utils import excutils
+from oslo_utils import timeutils
+import six
+
 from nova.api.ec2 import ec2utils
 from nova import block_device
 from nova.cells import rpcapi as cells_rpcapi
@@ -25,23 +35,17 @@ from nova.compute import vm_states
 from nova.conductor.tasks import live_migrate
 from nova.db import base
 from nova import exception
-from nova.image import glance
+from nova.i18n import _, _LE, _LW
+from nova import image
 from nova import manager
 from nova import network
 from nova.network.security_group import openstack_driver
-from nova import notifications
+from nova import objects
 from nova.objects import base as nova_object
-from nova.objects import instance as instance_obj
-from nova.objects import migration as migration_obj
-from nova.openstack.common import excutils
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import jsonutils
-from nova.openstack.common import log as logging
-from nova.openstack.common.rpc import common as rpc_common
-from nova.openstack.common import timeutils
 from nova import quota
-from nova.scheduler import rpcapi as scheduler_rpcapi
+from nova.scheduler import client as scheduler_client
 from nova.scheduler import utils as scheduler_utils
+from nova import utils
 
 LOG = logging.getLogger(__name__)
 
@@ -74,7 +78,7 @@ class ConductorManager(manager.Manager):
     namespace.  See the ComputeTaskManager class for details.
     """
 
-    RPC_API_VERSION = '1.60'
+    target = messaging.Target(version='2.1')
 
     def __init__(self, *args, **kwargs):
         super(ConductorManager, self).__init__(service_name='conductor',
@@ -84,13 +88,8 @@ class ConductorManager(manager.Manager):
         self._network_api = None
         self._compute_api = None
         self.compute_task_mgr = ComputeTaskManager()
-        self.quotas = quota.QUOTAS
         self.cells_rpcapi = cells_rpcapi.CellsAPI()
-
-    def create_rpc_dispatcher(self, *args, **kwargs):
-        kwargs['additional_apis'] = [self.compute_task_mgr]
-        return super(ConductorManager, self).create_rpc_dispatcher(*args,
-                **kwargs)
+        self.additional_endpoints.append(self.compute_task_mgr)
 
     @property
     def network_api(self):
@@ -107,49 +106,38 @@ class ConductorManager(manager.Manager):
             self._compute_api = compute_api.API()
         return self._compute_api
 
-    def ping(self, context, arg):
-        # NOTE(russellb) This method can be removed in 2.0 of this API.  It is
-        # now a part of the base rpc API.
-        return jsonutils.to_primitive({'service': 'conductor', 'arg': arg})
-
-    @rpc_common.client_exceptions(KeyError, ValueError,
-                                  exception.InvalidUUID,
-                                  exception.InstanceNotFound,
-                                  exception.UnexpectedTaskStateError)
+    @messaging.expected_exceptions(KeyError, ValueError,
+                                   exception.InvalidUUID,
+                                   exception.InstanceNotFound,
+                                   exception.UnexpectedTaskStateError)
     def instance_update(self, context, instance_uuid,
-                        updates, service=None):
-        for key, value in updates.iteritems():
+                        updates, service):
+        for key, value in six.iteritems(updates):
             if key not in allowed_updates:
-                LOG.error(_("Instance update attempted for "
-                            "'%(key)s' on %(instance_uuid)s"),
+                LOG.error(_LE("Instance update attempted for "
+                              "'%(key)s' on %(instance_uuid)s"),
                           {'key': key, 'instance_uuid': instance_uuid})
                 raise KeyError("unexpected update keyword '%s'" % key)
-            if key in datetime_fields and isinstance(value, basestring):
+            if key in datetime_fields and isinstance(value, six.string_types):
                 updates[key] = timeutils.parse_strtime(value)
 
-        old_ref, instance_ref = self.db.instance_update_and_get_original(
-            context, instance_uuid, updates)
-        notifications.send_update(context, old_ref, instance_ref, service)
-        return jsonutils.to_primitive(instance_ref)
+        instance = objects.Instance(context=context, uuid=instance_uuid,
+                                    **updates)
+        instance.obj_reset_changes(['uuid'])
+        instance.save()
+        return nova_object.obj_to_primitive(instance)
 
-    @rpc_common.client_exceptions(exception.InstanceNotFound)
-    def instance_get(self, context, instance_id):
-        return jsonutils.to_primitive(
-            self.db.instance_get(context, instance_id))
-
-    @rpc_common.client_exceptions(exception.InstanceNotFound)
+    # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
+    @messaging.expected_exceptions(exception.InstanceNotFound)
     def instance_get_by_uuid(self, context, instance_uuid,
-                             columns_to_join=None):
+                             columns_to_join):
         return jsonutils.to_primitive(
             self.db.instance_get_by_uuid(context, instance_uuid,
                 columns_to_join))
 
-    # NOTE(hanlind): This method can be removed in v2.0 of the RPC API.
-    def instance_get_all(self, context):
-        return jsonutils.to_primitive(self.db.instance_get_all(context))
-
-    def instance_get_all_by_host(self, context, host, node=None,
-                                 columns_to_join=None):
+    # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
+    def instance_get_all_by_host(self, context, host, node,
+                                 columns_to_join):
         if node is not None:
             result = self.db.instance_get_all_by_host_and_node(
                 context.elevated(), host, node)
@@ -158,92 +146,37 @@ class ConductorManager(manager.Manager):
                                                       columns_to_join)
         return jsonutils.to_primitive(result)
 
-    # NOTE(comstud): This method is now deprecated and can be removed in
-    # version v2.0 of the RPC API
-    @rpc_common.client_exceptions(exception.MigrationNotFound)
-    def migration_get(self, context, migration_id):
-        migration_ref = self.db.migration_get(context.elevated(),
-                                              migration_id)
-        return jsonutils.to_primitive(migration_ref)
-
-    # NOTE(comstud): This method is now deprecated and can be removed in
-    # version v2.0 of the RPC API
-    def migration_get_unconfirmed_by_dest_compute(self, context,
-                                                  confirm_window,
-                                                  dest_compute):
-        migrations = self.db.migration_get_unconfirmed_by_dest_compute(
-            context, confirm_window, dest_compute)
-        return jsonutils.to_primitive(migrations)
-
+    # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
     def migration_get_in_progress_by_host_and_node(self, context,
                                                    host, node):
         migrations = self.db.migration_get_in_progress_by_host_and_node(
             context, host, node)
         return jsonutils.to_primitive(migrations)
 
-    # NOTE(comstud): This method can be removed in v2.0 of the RPC API.
-    def migration_create(self, context, instance, values):
-        values.update({'instance_uuid': instance['uuid'],
-                       'source_compute': instance['host'],
-                       'source_node': instance['node']})
-        migration_ref = self.db.migration_create(context.elevated(), values)
-        return jsonutils.to_primitive(migration_ref)
-
-    @rpc_common.client_exceptions(exception.MigrationNotFound)
-    def migration_update(self, context, migration, status):
-        migration_ref = self.db.migration_update(context.elevated(),
-                                                 migration['id'],
-                                                 {'status': status})
-        return jsonutils.to_primitive(migration_ref)
-
-    @rpc_common.client_exceptions(exception.AggregateHostExists)
+    # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
+    @messaging.expected_exceptions(exception.AggregateHostExists)
     def aggregate_host_add(self, context, aggregate, host):
         host_ref = self.db.aggregate_host_add(context.elevated(),
                 aggregate['id'], host)
 
         return jsonutils.to_primitive(host_ref)
 
-    @rpc_common.client_exceptions(exception.AggregateHostNotFound)
+    # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
+    @messaging.expected_exceptions(exception.AggregateHostNotFound)
     def aggregate_host_delete(self, context, aggregate, host):
         self.db.aggregate_host_delete(context.elevated(),
                 aggregate['id'], host)
 
-    @rpc_common.client_exceptions(exception.AggregateNotFound)
-    def aggregate_get(self, context, aggregate_id):
-        aggregate = self.db.aggregate_get(context.elevated(), aggregate_id)
-        return jsonutils.to_primitive(aggregate)
-
-    def aggregate_get_by_host(self, context, host, key=None):
-        aggregates = self.db.aggregate_get_by_host(context.elevated(),
-                                                   host, key)
-        return jsonutils.to_primitive(aggregates)
-
-    # NOTE(danms): This method is now deprecated and can be removed in
-    # version 2.0 of the RPC API
-    def aggregate_metadata_add(self, context, aggregate, metadata,
-                               set_delete=False):
-        new_metadata = self.db.aggregate_metadata_add(context.elevated(),
-                                                      aggregate['id'],
-                                                      metadata, set_delete)
-        return jsonutils.to_primitive(new_metadata)
-
-    # NOTE(danms): This method is now deprecated and can be removed in
-    # version 2.0 of the RPC API
-    @rpc_common.client_exceptions(exception.AggregateMetadataNotFound)
-    def aggregate_metadata_delete(self, context, aggregate, key):
-        self.db.aggregate_metadata_delete(context.elevated(),
-                                          aggregate['id'], key)
-
+    # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
     def aggregate_metadata_get_by_host(self, context, host,
                                        key='availability_zone'):
         result = self.db.aggregate_metadata_get_by_host(context, host, key)
         return jsonutils.to_primitive(result)
 
+    # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
     def bw_usage_update(self, context, uuid, mac, start_period,
-                        bw_in=None, bw_out=None,
-                        last_ctr_in=None, last_ctr_out=None,
-                        last_refreshed=None,
-                        update_cells=True):
+                        bw_in, bw_out, last_ctr_in, last_ctr_out,
+                        last_refreshed, update_cells):
         if [bw_in, bw_out, last_ctr_in, last_ctr_out].count(None) != 4:
             self.db.bw_usage_update(context, uuid, mac, start_period,
                                     bw_in, bw_out, last_ctr_in, last_ctr_out,
@@ -252,32 +185,18 @@ class ConductorManager(manager.Manager):
         usage = self.db.bw_usage_get(context, uuid, start_period, mac)
         return jsonutils.to_primitive(usage)
 
-    # NOTE(russellb) This method can be removed in 2.0 of this API.  It is
-    # deprecated in favor of the method in the base API.
-    def get_backdoor_port(self, context):
-        return self.backdoor_port
-
-    def security_group_get_by_instance(self, context, instance):
-        group = self.db.security_group_get_by_instance(context,
-                                                       instance['uuid'])
-        return jsonutils.to_primitive(group)
-
-    def security_group_rule_get_by_security_group(self, context, secgroup):
-        rules = self.db.security_group_rule_get_by_security_group(
-            context, secgroup['id'])
-        return jsonutils.to_primitive(rules, max_depth=4)
-
     def provider_fw_rule_get_all(self, context):
         rules = self.db.provider_fw_rule_get_all(context)
         return jsonutils.to_primitive(rules)
 
+    # NOTE(danms): This can be removed in version 3.0 of the RPC API
     def agent_build_get_by_triple(self, context, hypervisor, os, architecture):
         info = self.db.agent_build_get_by_triple(context, hypervisor, os,
                                                  architecture)
         return jsonutils.to_primitive(info)
 
-    def block_device_mapping_update_or_create(self, context, values,
-                                              create=None):
+    # NOTE(ndipanov): This can be removed in version 3.0 of the RPC API
+    def block_device_mapping_update_or_create(self, context, values, create):
         if create is None:
             bdm = self.db.block_device_mapping_update_or_create(context,
                                                                 values)
@@ -287,115 +206,54 @@ class ConductorManager(manager.Manager):
             bdm = self.db.block_device_mapping_update(context,
                                                       values['id'],
                                                       values)
-        # NOTE:comstud): 'bdm' is always in the new format, so we
-        # account for this in cells/messaging.py
-        self.cells_rpcapi.bdm_update_or_create_at_top(context, bdm,
+        bdm_obj = objects.BlockDeviceMapping._from_db_object(
+                context, objects.BlockDeviceMapping(), bdm)
+        self.cells_rpcapi.bdm_update_or_create_at_top(context, bdm_obj,
                                                       create=create)
 
+    # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
     def block_device_mapping_get_all_by_instance(self, context, instance,
-                                                 legacy=True):
+                                                 legacy):
         bdms = self.db.block_device_mapping_get_all_by_instance(
             context, instance['uuid'])
         if legacy:
             bdms = block_device.legacy_mapping(bdms)
         return jsonutils.to_primitive(bdms)
 
-    def block_device_mapping_destroy(self, context, bdms=None,
-                                     instance=None, volume_id=None,
-                                     device_name=None):
-        if bdms is not None:
-            for bdm in bdms:
-                self.db.block_device_mapping_destroy(context, bdm['id'])
-                # NOTE(comstud): bdm['id'] will be different in API cell,
-                # so we must try to destroy by device_name or volume_id.
-                # We need an instance_uuid in order to do this properly,
-                # too.
-                # I hope to clean a lot of this up in the object
-                # implementation.
-                instance_uuid = (bdm['instance_uuid'] or
-                                    (instance and instance['uuid']))
-                if not instance_uuid:
-                    continue
-                # Better to be safe than sorry.  device_name is not
-                # NULLable, however it could be an empty string.
-                if bdm['device_name']:
-                    self.cells_rpcapi.bdm_destroy_at_top(
-                            context, instance_uuid,
-                            device_name=bdm['device_name'])
-                elif bdm['volume_id']:
-                    self.cells_rpcapi.bdm_destroy_at_top(
-                            context, instance_uuid,
-                            volume_id=bdm['volume_id'])
-        elif instance is not None and volume_id is not None:
-            self.db.block_device_mapping_destroy_by_instance_and_volume(
-                context, instance['uuid'], volume_id)
-            self.cells_rpcapi.bdm_destroy_at_top(
-                context, instance['uuid'], volume_id=volume_id)
-        elif instance is not None and device_name is not None:
-            self.db.block_device_mapping_destroy_by_instance_and_device(
-                context, instance['uuid'], device_name)
-            self.cells_rpcapi.bdm_destroy_at_top(
-                context, instance['uuid'], device_name=device_name)
-        else:
-            # NOTE(danms): This shouldn't happen
-            raise exception.Invalid(_("Invalid block_device_mapping_destroy"
-                                      " invocation"))
-
+    # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
     def instance_get_all_by_filters(self, context, filters, sort_key,
-                                    sort_dir, columns_to_join=None):
+                                    sort_dir, columns_to_join,
+                                    use_slave):
         result = self.db.instance_get_all_by_filters(
             context, filters, sort_key, sort_dir,
-            columns_to_join=columns_to_join)
+            columns_to_join=columns_to_join, use_slave=use_slave)
         return jsonutils.to_primitive(result)
 
-    # NOTE(hanlind): This method can be removed in v2.0 of the RPC API.
-    def instance_get_all_hung_in_rebooting(self, context, timeout):
-        result = self.db.instance_get_all_hung_in_rebooting(context, timeout)
-        return jsonutils.to_primitive(result)
-
-    def instance_get_active_by_window(self, context, begin, end=None,
-                                      project_id=None, host=None):
-        # Unused, but cannot remove until major RPC version bump
-        result = self.db.instance_get_active_by_window(context, begin, end,
-                                                       project_id, host)
-        return jsonutils.to_primitive(result)
-
-    def instance_get_active_by_window_joined(self, context, begin, end=None,
-                                             project_id=None, host=None):
+    # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
+    def instance_get_active_by_window_joined(self, context, begin, end,
+                                             project_id, host):
         result = self.db.instance_get_active_by_window_joined(
             context, begin, end, project_id, host)
         return jsonutils.to_primitive(result)
 
+    # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
     def instance_destroy(self, context, instance):
-        self.db.instance_destroy(context, instance['uuid'])
+        if not isinstance(instance, objects.Instance):
+            instance = objects.Instance._from_db_object(context,
+                                                        objects.Instance(),
+                                                        instance)
+        instance.destroy()
+        return nova_object.obj_to_primitive(instance)
 
-    def instance_info_cache_delete(self, context, instance):
-        self.db.instance_info_cache_delete(context, instance['uuid'])
-
-    # NOTE(hanlind): This method is now deprecated and can be removed in
-    # version v2.0 of the RPC API.
-    def instance_info_cache_update(self, context, instance, values):
-        self.db.instance_info_cache_update(context, instance['uuid'],
-                                           values)
-
-    def instance_type_get(self, context, instance_type_id):
-        result = self.db.flavor_get(context, instance_type_id)
-        return jsonutils.to_primitive(result)
-
+    # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
     def instance_fault_create(self, context, values):
         result = self.db.instance_fault_create(context, values)
         return jsonutils.to_primitive(result)
 
-    # NOTE(kerrin): This method can be removed in v2.0 of the RPC API.
-    def vol_get_usage_by_time(self, context, start_time):
-        result = self.db.vol_get_usage_by_time(context, start_time)
-        return jsonutils.to_primitive(result)
-
     # NOTE(kerrin): The last_refreshed argument is unused by this method
-    # and can be removed in v2.0 of the RPC API.
+    # and can be removed in v3.0 of the RPC API.
     def vol_usage_update(self, context, vol_id, rd_req, rd_bytes, wr_req,
-                         wr_bytes, instance, last_refreshed=None,
-                         update_totals=False):
+                         wr_bytes, instance, last_refreshed, update_totals):
         vol_usage = self.db.vol_usage_update(context, vol_id,
                                              rd_req, rd_bytes,
                                              wr_req, wr_bytes,
@@ -409,21 +267,29 @@ class ConductorManager(manager.Manager):
         self.notifier.info(context, 'volume.usage',
                            compute_utils.usage_volume_info(vol_usage))
 
-    @rpc_common.client_exceptions(exception.ComputeHostNotFound,
-                                  exception.HostBinaryNotFound)
-    def service_get_all_by(self, context, topic=None, host=None, binary=None):
+    # NOTE(hanlind): This method can be removed in version 3.0 of the RPC API
+    @messaging.expected_exceptions(exception.ComputeHostNotFound,
+                                   exception.HostBinaryNotFound)
+    def service_get_all_by(self, context, topic, host, binary):
         if not any((topic, host, binary)):
             result = self.db.service_get_all(context)
         elif all((topic, host)):
             if topic == 'compute':
                 result = self.db.service_get_by_compute_host(context, host)
-                # FIXME(comstud) Potentially remove this on bump to v2.0
+                # NOTE(sbauza): Only Juno computes are still calling this
+                # conductor method for getting service_get_by_compute_node,
+                # but expect a compute_node field so we can safely add it.
+                result['compute_node'
+                       ] = objects.ComputeNodeList.get_all_by_host(
+                           context, result['host'])
+                # FIXME(comstud) Potentially remove this on bump to v3.0
                 result = [result]
             else:
                 result = self.db.service_get_by_host_and_topic(context,
                                                                host, topic)
         elif all((host, binary)):
-            result = self.db.service_get_by_args(context, host, binary)
+            result = self.db.service_get_by_host_and_binary(
+                context, host, binary)
         elif topic:
             result = self.db.service_get_all_by_topic(context, topic)
         elif host:
@@ -431,19 +297,26 @@ class ConductorManager(manager.Manager):
 
         return jsonutils.to_primitive(result)
 
+    # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
+    @messaging.expected_exceptions(exception.InstanceActionNotFound)
     def action_event_start(self, context, values):
         evt = self.db.action_event_start(context, values)
         return jsonutils.to_primitive(evt)
 
+    # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
+    @messaging.expected_exceptions(exception.InstanceActionNotFound,
+                                   exception.InstanceActionEventNotFound)
     def action_event_finish(self, context, values):
         evt = self.db.action_event_finish(context, values)
         return jsonutils.to_primitive(evt)
 
+    # NOTE(hanlind): This method can be removed in version 3.0 of the RPC API
     def service_create(self, context, values):
         svc = self.db.service_create(context, values)
         return jsonutils.to_primitive(svc)
 
-    @rpc_common.client_exceptions(exception.ServiceNotFound)
+    # NOTE(hanlind): This method can be removed in version 3.0 of the RPC API
+    @messaging.expected_exceptions(exception.ServiceNotFound)
     def service_destroy(self, context, service_id):
         self.db.service_destroy(context, service_id)
 
@@ -451,68 +324,83 @@ class ConductorManager(manager.Manager):
         result = self.db.compute_node_create(context, values)
         return jsonutils.to_primitive(result)
 
-    def compute_node_update(self, context, node, values, prune_stats=False):
-        result = self.db.compute_node_update(context, node['id'], values,
-                                             prune_stats)
+    # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
+    def compute_node_update(self, context, node, values):
+        result = self.db.compute_node_update(context, node['id'], values)
         return jsonutils.to_primitive(result)
 
+    # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
     def compute_node_delete(self, context, node):
         result = self.db.compute_node_delete(context, node['id'])
         return jsonutils.to_primitive(result)
 
-    @rpc_common.client_exceptions(exception.ServiceNotFound)
+    # NOTE(hanlind): This method can be removed in version 3.0 of the RPC API
+    @messaging.expected_exceptions(exception.ServiceNotFound)
     def service_update(self, context, service, values):
         svc = self.db.service_update(context, service['id'], values)
         return jsonutils.to_primitive(svc)
 
-    def task_log_get(self, context, task_name, begin, end, host, state=None):
+    def task_log_get(self, context, task_name, begin, end, host, state):
         result = self.db.task_log_get(context, task_name, begin, end, host,
                                       state)
         return jsonutils.to_primitive(result)
 
     def task_log_begin_task(self, context, task_name, begin, end, host,
-                            task_items=None, message=None):
+                            task_items, message):
         result = self.db.task_log_begin_task(context.elevated(), task_name,
                                              begin, end, host, task_items,
                                              message)
         return jsonutils.to_primitive(result)
 
     def task_log_end_task(self, context, task_name, begin, end, host,
-                          errors, message=None):
+                          errors, message):
         result = self.db.task_log_end_task(context.elevated(), task_name,
                                            begin, end, host, errors, message)
         return jsonutils.to_primitive(result)
 
-    def notify_usage_exists(self, context, instance, current_period=False,
-                            ignore_missing_network_data=True,
-                            system_metadata=None, extra_usage_info=None):
+    # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
+    def notify_usage_exists(self, context, instance, current_period,
+                            ignore_missing_network_data,
+                            system_metadata, extra_usage_info):
+        if not isinstance(instance, objects.Instance):
+            attrs = ['metadata', 'system_metadata']
+            instance = objects.Instance._from_db_object(context,
+                                                        objects.Instance(),
+                                                        instance,
+                                                        expected_attrs=attrs)
         compute_utils.notify_usage_exists(self.notifier, context, instance,
                                           current_period,
                                           ignore_missing_network_data,
                                           system_metadata, extra_usage_info)
 
+    # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
     def security_groups_trigger_handler(self, context, event, args):
         self.security_group_api.trigger_handler(event, context, *args)
 
     def security_groups_trigger_members_refresh(self, context, group_ids):
         self.security_group_api.trigger_members_refresh(context, group_ids)
 
+    # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
     def network_migrate_instance_start(self, context, instance, migration):
         self.network_api.migrate_instance_start(context, instance, migration)
 
+    # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
     def network_migrate_instance_finish(self, context, instance, migration):
         self.network_api.migrate_instance_finish(context, instance, migration)
 
+    # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
     def quota_commit(self, context, reservations, project_id=None,
                      user_id=None):
         quota.QUOTAS.commit(context, reservations, project_id=project_id,
                             user_id=user_id)
 
+    # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
     def quota_rollback(self, context, reservations, project_id=None,
                        user_id=None):
         quota.QUOTAS.rollback(context, reservations, project_id=project_id,
                               user_id=user_id)
 
+    # NOTE(hanlind): This method can be removed in version 3.0 of the RPC API
     def get_ec2_ids(self, context, instance):
         ec2_ids = {}
 
@@ -520,8 +408,8 @@ class ConductorManager(manager.Manager):
         ec2_ids['ami-id'] = ec2utils.glance_id_to_ec2_id(context,
                                                          instance['image_ref'])
         for image_type in ['kernel', 'ramdisk']:
-            if '%s_id' % image_type in instance:
-                image_id = instance['%s_id' % image_type]
+            image_id = instance.get('%s_id' % image_type)
+            if image_id is not None:
                 ec2_image_type = ec2utils.image_type(image_type)
                 ec2_id = ec2utils.glance_id_to_ec2_id(context, image_id,
                                                       ec2_image_type)
@@ -529,56 +417,31 @@ class ConductorManager(manager.Manager):
 
         return ec2_ids
 
-    # NOTE(danms): This method is now deprecated and can be removed in
-    # version v2.0 of the RPC API
-    def compute_stop(self, context, instance, do_cast=True):
-        # NOTE(mriedem): Clients using an interface before 1.43 will be sending
-        # dicts so we need to handle that here since compute/api::stop()
-        # requires an object.
-        if isinstance(instance, dict):
-            instance = instance_obj.Instance._from_db_object(
-                                context, instance_obj.Instance(), instance)
-        self.compute_api.stop(context, instance, do_cast)
-
-    # NOTE(comstud): This method is now deprecated and can be removed in
-    # version v2.0 of the RPC API
-    def compute_confirm_resize(self, context, instance, migration_ref):
-        if isinstance(instance, dict):
-            attrs = ['metadata', 'system_metadata', 'info_cache',
-                     'security_groups']
-            instance = instance_obj.Instance._from_db_object(
-                                context, instance_obj.Instance(), instance,
-                                expected_attrs=attrs)
-        if isinstance(migration_ref, dict):
-            migration_ref = migration_obj.Migration._from_db_object(
-                                context.elevated(), migration_ref)
-        self.compute_api.confirm_resize(context, instance,
-                                        migration=migration_ref)
-
+    # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
     def compute_unrescue(self, context, instance):
         self.compute_api.unrescue(context, instance)
 
-    def _object_dispatch(self, target, method, context, args, kwargs):
+    def _object_dispatch(self, target, method, args, kwargs):
         """Dispatch a call to an object method.
 
         This ensures that object methods get called and any exception
-        that is raised gets wrapped in a ClientException for forwarding
+        that is raised gets wrapped in an ExpectedException for forwarding
         back to the caller (without spamming the conductor logs).
         """
         try:
             # NOTE(danms): Keep the getattr inside the try block since
             # a missing method is really a client problem
-            return getattr(target, method)(context, *args, **kwargs)
+            return getattr(target, method)(*args, **kwargs)
         except Exception:
-            raise rpc_common.ClientException()
+            raise messaging.ExpectedException()
 
     def object_class_action(self, context, objname, objmethod,
                             objver, args, kwargs):
         """Perform a classmethod action on an object."""
         objclass = nova_object.NovaObject.obj_class_from_name(objname,
                                                               objver)
-        result = self._object_dispatch(objclass, objmethod, context,
-                                       args, kwargs)
+        args = tuple([context] + list(args))
+        result = self._object_dispatch(objclass, objmethod, args, kwargs)
         # NOTE(danms): The RPC layer will convert to primitives for us,
         # but in this case, we need to honor the version the client is
         # asking for, so we do it before returning here.
@@ -588,8 +451,7 @@ class ConductorManager(manager.Manager):
     def object_action(self, context, objinst, objmethod, args, kwargs):
         """Perform an action on an object."""
         oldobj = objinst.obj_clone()
-        result = self._object_dispatch(objinst, objmethod, context,
-                                       args, kwargs)
+        result = self._object_dispatch(objinst, objmethod, args, kwargs)
         updates = dict()
         # NOTE(danms): Diff the object with the one passed to us and
         # generate a list of changes to forward back
@@ -598,18 +460,16 @@ class ConductorManager(manager.Manager):
                 # Avoid demand-loading anything
                 continue
             if (not oldobj.obj_attr_is_set(name) or
-                    oldobj[name] != objinst[name]):
+                    getattr(oldobj, name) != getattr(objinst, name)):
                 updates[name] = field.to_primitive(objinst, name,
-                                                   objinst[name])
+                                                   getattr(objinst, name))
         # This is safe since a field named this would conflict with the
         # method anyway
         updates['obj_what_changed'] = objinst.obj_what_changed()
         return updates, result
 
-    # NOTE(danms): This method is now deprecated and can be removed in
-    # v2.0 of the RPC API
-    def compute_reboot(self, context, instance, reboot_type):
-        self.compute_api.reboot(context, instance, reboot_type)
+    def object_backport(self, context, objinst, target_version):
+        return objinst.obj_to_primitive(target_version=target_version)
 
 
 class ComputeTaskManager(base.Base):
@@ -621,72 +481,100 @@ class ComputeTaskManager(base.Base):
     may involve coordinating activities on multiple compute nodes.
     """
 
-    RPC_API_NAMESPACE = 'compute_task'
-    RPC_API_VERSION = '1.6'
+    target = messaging.Target(namespace='compute_task', version='1.11')
 
     def __init__(self):
         super(ComputeTaskManager, self).__init__()
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
-        self.scheduler_rpcapi = scheduler_rpcapi.SchedulerAPI()
-        self.image_service = glance.get_default_image_service()
-        self.quotas = quota.QUOTAS
+        self.image_api = image.API()
+        self.scheduler_client = scheduler_client.SchedulerClient()
 
-    @rpc_common.client_exceptions(exception.NoValidHost,
-                                  exception.ComputeServiceUnavailable,
-                                  exception.InvalidHypervisorType,
-                                  exception.UnableToMigrateToSelf,
-                                  exception.DestinationHypervisorTooOld,
-                                  exception.InvalidLocalStorage,
-                                  exception.InvalidSharedStorage,
-                                  exception.MigrationPreCheckError)
+    @messaging.expected_exceptions(exception.NoValidHost,
+                                   exception.ComputeServiceUnavailable,
+                                   exception.InvalidHypervisorType,
+                                   exception.InvalidCPUInfo,
+                                   exception.UnableToMigrateToSelf,
+                                   exception.DestinationHypervisorTooOld,
+                                   exception.InvalidLocalStorage,
+                                   exception.InvalidSharedStorage,
+                                   exception.HypervisorUnavailable,
+                                   exception.InstanceInvalidState,
+                                   exception.MigrationPreCheckError,
+                                   exception.LiveMigrationWithOldNovaNotSafe,
+                                   exception.UnsupportedPolicyException)
     def migrate_server(self, context, instance, scheduler_hint, live, rebuild,
-            flavor, block_migration, disk_over_commit, reservations=None):
-        if instance and not isinstance(instance, instance_obj.Instance):
+            flavor, block_migration, disk_over_commit, reservations=None,
+            clean_shutdown=True):
+        if instance and not isinstance(instance, nova_object.NovaObject):
             # NOTE(danms): Until v2 of the RPC API, we need to tolerate
             # old-world instance objects here
             attrs = ['metadata', 'system_metadata', 'info_cache',
                      'security_groups']
-            instance = instance_obj.Instance._from_db_object(
-                context, instance_obj.Instance(), instance,
+            instance = objects.Instance._from_db_object(
+                context, objects.Instance(), instance,
                 expected_attrs=attrs)
+        # NOTE(melwitt): Remove this in version 2.0 of the RPC API
+        if flavor and not isinstance(flavor, objects.Flavor):
+            # Code downstream may expect extra_specs to be populated since it
+            # is receiving an object, so lookup the flavor to ensure this.
+            flavor = objects.Flavor.get_by_id(context, flavor['id'])
         if live and not rebuild and not flavor:
             self._live_migrate(context, instance, scheduler_hint,
                                block_migration, disk_over_commit)
         elif not live and not rebuild and flavor:
-            instance_uuid = instance['uuid']
-            with compute_utils.EventReporter(context, ConductorManager(),
-                                         'cold_migrate', instance_uuid):
+            instance_uuid = instance.uuid
+            with compute_utils.EventReporter(context, 'cold_migrate',
+                                             instance_uuid):
                 self._cold_migrate(context, instance, flavor,
                                    scheduler_hint['filter_properties'],
-                                   reservations)
+                                   reservations, clean_shutdown)
         else:
             raise NotImplementedError()
 
     def _cold_migrate(self, context, instance, flavor, filter_properties,
-                      reservations):
-        image_ref = instance.image_ref
-        image = compute_utils.get_image_metadata(
-            context, self.image_service, image_ref, instance)
+                      reservations, clean_shutdown):
+        image = utils.get_image_from_system_metadata(
+            instance.system_metadata)
 
         request_spec = scheduler_utils.build_request_spec(
             context, image, [instance], instance_type=flavor)
 
+        quotas = objects.Quotas.from_reservations(context,
+                                                  reservations,
+                                                  instance=instance)
         try:
-            hosts = self.scheduler_rpcapi.select_destinations(
+            scheduler_utils.setup_instance_group(context, request_spec,
+                                                 filter_properties)
+            scheduler_utils.populate_retry(filter_properties, instance.uuid)
+            hosts = self.scheduler_client.select_destinations(
                     context, request_spec, filter_properties)
             host_state = hosts[0]
         except exception.NoValidHost as ex:
-            vm_state = instance['vm_state']
+            vm_state = instance.vm_state
             if not vm_state:
                 vm_state = vm_states.ACTIVE
             updates = {'vm_state': vm_state, 'task_state': None}
-            self._set_vm_state_and_notify(context, 'migrate_server',
+            self._set_vm_state_and_notify(context, instance.uuid,
+                                          'migrate_server',
                                           updates, ex, request_spec)
-            if reservations:
-                self.quotas.rollback(context, reservations)
+            quotas.rollback()
 
-            LOG.warning(_("No valid host found for cold migrate"))
-            return
+            # if the flavor IDs match, it's migrate; otherwise resize
+            if flavor['id'] == instance.instance_type_id:
+                msg = _("No valid host found for cold migrate")
+            else:
+                msg = _("No valid host found for resize")
+            raise exception.NoValidHost(reason=msg)
+        except exception.UnsupportedPolicyException as ex:
+            with excutils.save_and_reraise_exception():
+                vm_state = instance.vm_state
+                if not vm_state:
+                    vm_state = vm_states.ACTIVE
+                updates = {'vm_state': vm_state, 'task_state': None}
+                self._set_vm_state_and_notify(context, instance.uuid,
+                                              'migrate_server',
+                                              updates, ex, request_spec)
+                quotas.rollback()
 
         try:
             scheduler_utils.populate_filter_properties(filter_properties,
@@ -694,138 +582,267 @@ class ComputeTaskManager(base.Base):
             # context is not serializable
             filter_properties.pop('context', None)
 
-            # TODO(timello): originally, instance_type in request_spec
-            # on compute.api.resize does not have 'extra_specs', so we
-            # remove it for now to keep tests backward compatibility.
-            request_spec['instance_type'].pop('extra_specs')
-
             (host, node) = (host_state['host'], host_state['nodename'])
             self.compute_rpcapi.prep_resize(
                 context, image, instance,
                 flavor, host,
                 reservations, request_spec=request_spec,
-                filter_properties=filter_properties, node=node)
+                filter_properties=filter_properties, node=node,
+                clean_shutdown=clean_shutdown)
         except Exception as ex:
             with excutils.save_and_reraise_exception():
-                updates = {'vm_state': vm_states.ERROR,
-                            'task_state': None}
-                self._set_vm_state_and_notify(context, 'migrate_server',
+                updates = {'vm_state': instance.vm_state,
+                           'task_state': None}
+                self._set_vm_state_and_notify(context, instance.uuid,
+                                              'migrate_server',
                                               updates, ex, request_spec)
-                if reservations:
-                    self.quotas.rollback(context, reservations)
+                quotas.rollback()
 
-    def _set_vm_state_and_notify(self, context, method, updates, ex,
-                                 request_spec):
+    def _set_vm_state_and_notify(self, context, instance_uuid, method, updates,
+                                 ex, request_spec):
         scheduler_utils.set_vm_state_and_notify(
-                context, 'compute_task', method, updates,
+                context, instance_uuid, 'compute_task', method, updates,
                 ex, request_spec, self.db)
 
     def _live_migrate(self, context, instance, scheduler_hint,
                       block_migration, disk_over_commit):
         destination = scheduler_hint.get("host")
+
+        def _set_vm_state(context, instance, ex, vm_state=None,
+                          task_state=None):
+            request_spec = {'instance_properties': {
+                'uuid': instance.uuid, },
+            }
+            scheduler_utils.set_vm_state_and_notify(context,
+                instance.uuid,
+                'compute_task', 'migrate_server',
+                dict(vm_state=vm_state,
+                     task_state=task_state,
+                     expected_task_state=task_states.MIGRATING,),
+                ex, request_spec, self.db)
+
         try:
             live_migrate.execute(context, instance, destination,
                              block_migration, disk_over_commit)
         except (exception.NoValidHost,
                 exception.ComputeServiceUnavailable,
                 exception.InvalidHypervisorType,
+                exception.InvalidCPUInfo,
                 exception.UnableToMigrateToSelf,
                 exception.DestinationHypervisorTooOld,
                 exception.InvalidLocalStorage,
                 exception.InvalidSharedStorage,
-                exception.MigrationPreCheckError) as ex:
+                exception.HypervisorUnavailable,
+                exception.InstanceInvalidState,
+                exception.MigrationPreCheckError,
+                exception.LiveMigrationWithOldNovaNotSafe) as ex:
             with excutils.save_and_reraise_exception():
-                #TODO(johngarbutt) - eventually need instance actions here
-                request_spec = {'instance_properties': {
-                    'uuid': instance['uuid'], },
-                }
-                scheduler_utils.set_vm_state_and_notify(context,
-                        'compute_task', 'migrate_server',
-                        dict(vm_state=instance['vm_state'],
-                             task_state=None,
-                             expected_task_state=task_states.MIGRATING,),
-                        ex, request_spec, self.db)
+                # TODO(johngarbutt) - eventually need instance actions here
+                _set_vm_state(context, instance, ex, instance.vm_state)
         except Exception as ex:
-            with excutils.save_and_reraise_exception():
-                request_spec = {'instance_properties': {
-                    'uuid': instance['uuid'], },
-                }
-                scheduler_utils.set_vm_state_and_notify(context,
-                        'compute_task', 'migrate_server',
-                        {'vm_state': vm_states.ERROR},
-                        ex, request_spec, self.db)
+            LOG.error(_LE('Migration of instance %(instance_id)s to host'
+                          ' %(dest)s unexpectedly failed.'),
+                      {'instance_id': instance.uuid, 'dest': destination},
+                      exc_info=True)
+            _set_vm_state(context, instance, ex, vm_states.ERROR,
+                          instance.task_state)
+            raise exception.MigrationError(reason=six.text_type(ex))
 
     def build_instances(self, context, instances, image, filter_properties,
             admin_password, injected_files, requested_networks,
-            security_groups, block_device_mapping, legacy_bdm=True):
+            security_groups, block_device_mapping=None, legacy_bdm=True):
+        # TODO(ndipanov): Remove block_device_mapping and legacy_bdm in version
+        #                 2.0 of the RPC API.
         request_spec = scheduler_utils.build_request_spec(context, image,
                                                           instances)
-        # NOTE(alaski): For compatibility until a new scheduler method is used.
-        request_spec.update({'block_device_mapping': block_device_mapping,
-                             'security_group': security_groups})
-        self.scheduler_rpcapi.run_instance(context, request_spec=request_spec,
-                admin_password=admin_password, injected_files=injected_files,
-                requested_networks=requested_networks, is_first_time=True,
-                filter_properties=filter_properties,
-                legacy_bdm_in_spec=legacy_bdm)
+        # TODO(danms): Remove this in version 2.0 of the RPC API
+        if (requested_networks and
+                not isinstance(requested_networks,
+                               objects.NetworkRequestList)):
+            requested_networks = objects.NetworkRequestList(
+                objects=[objects.NetworkRequest.from_tuple(t)
+                         for t in requested_networks])
+        # TODO(melwitt): Remove this in version 2.0 of the RPC API
+        flavor = filter_properties.get('instance_type')
+        if flavor and not isinstance(flavor, objects.Flavor):
+            # Code downstream may expect extra_specs to be populated since it
+            # is receiving an object, so lookup the flavor to ensure this.
+            flavor = objects.Flavor.get_by_id(context, flavor['id'])
+            filter_properties = dict(filter_properties, instance_type=flavor)
 
-    def _get_image(self, context, image_id):
-        if not image_id:
-            return None
-        return self.image_service.show(context, image_id)
+        try:
+            scheduler_utils.setup_instance_group(context, request_spec,
+                                                 filter_properties)
+            # check retry policy. Rather ugly use of instances[0]...
+            # but if we've exceeded max retries... then we really only
+            # have a single instance.
+            scheduler_utils.populate_retry(filter_properties,
+                instances[0].uuid)
+            hosts = self.scheduler_client.select_destinations(context,
+                    request_spec, filter_properties)
+        except Exception as exc:
+            updates = {'vm_state': vm_states.ERROR, 'task_state': None}
+            for instance in instances:
+                self._set_vm_state_and_notify(
+                    context, instance.uuid, 'build_instances', updates,
+                    exc, request_spec)
+            return
 
-    def _delete_image(self, context, image_id):
-        (image_service, image_id) = glance.get_remote_image_service(context,
-                image_id)
-        return image_service.delete(context, image_id)
+        for (instance, host) in itertools.izip(instances, hosts):
+            try:
+                instance.refresh()
+            except (exception.InstanceNotFound,
+                    exception.InstanceInfoCacheNotFound):
+                LOG.debug('Instance deleted during build', instance=instance)
+                continue
+            local_filter_props = copy.deepcopy(filter_properties)
+            scheduler_utils.populate_filter_properties(local_filter_props,
+                host)
+            # The block_device_mapping passed from the api doesn't contain
+            # instance specific information
+            bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+                    context, instance.uuid)
+
+            self.compute_rpcapi.build_and_run_instance(context,
+                    instance=instance, host=host['host'], image=image,
+                    request_spec=request_spec,
+                    filter_properties=local_filter_props,
+                    admin_password=admin_password,
+                    injected_files=injected_files,
+                    requested_networks=requested_networks,
+                    security_groups=security_groups,
+                    block_device_mapping=bdms, node=host['nodename'],
+                    limits=host['limits'])
 
     def _schedule_instances(self, context, image, filter_properties,
             *instances):
         request_spec = scheduler_utils.build_request_spec(context, image,
                 instances)
-        # dict(host='', nodename='', limits='')
-        hosts = self.scheduler_rpcapi.select_destinations(context,
+        scheduler_utils.setup_instance_group(context, request_spec,
+                                             filter_properties)
+        hosts = self.scheduler_client.select_destinations(context,
                 request_spec, filter_properties)
         return hosts
 
     def unshelve_instance(self, context, instance):
         sys_meta = instance.system_metadata
 
+        def safe_image_show(ctx, image_id):
+            if image_id:
+                return self.image_api.get(ctx, image_id, show_deleted=False)
+            else:
+                raise exception.ImageNotFound(image_id='')
+
         if instance.vm_state == vm_states.SHELVED:
             instance.task_state = task_states.POWERING_ON
             instance.save(expected_task_state=task_states.UNSHELVING)
             self.compute_rpcapi.start_instance(context, instance)
-            snapshot_id = sys_meta.get('shelved_image_id')
-            if snapshot_id:
-                self._delete_image(context, snapshot_id)
         elif instance.vm_state == vm_states.SHELVED_OFFLOADED:
-            try:
-                with compute_utils.EventReporter(context, self.db,
-                        'get_image_info', instance.uuid):
-                    image = self._get_image(context,
-                            sys_meta['shelved_image_id'])
-            except exception.ImageNotFound:
-                with excutils.save_and_reraise_exception():
-                    LOG.error(_('Unshelve attempted but vm_state not SHELVED '
-                                'or SHELVED_OFFLOADED'), instance=instance)
-                    instance.vm_state = vm_states.ERROR
-                    instance.save()
+            image = None
+            image_id = sys_meta.get('shelved_image_id')
+            # No need to check for image if image_id is None as
+            # "shelved_image_id" key is not set for volume backed
+            # instance during the shelve process
+            if image_id:
+                with compute_utils.EventReporter(
+                    context, 'get_image_info', instance.uuid):
+                    try:
+                        image = safe_image_show(context, image_id)
+                    except exception.ImageNotFound:
+                        instance.vm_state = vm_states.ERROR
+                        instance.save()
 
-            filter_properties = {}
-            hosts = self._schedule_instances(context, image,
-                                             filter_properties, instance)
-            host = hosts.pop(0)['host']
-            self.compute_rpcapi.unshelve_instance(context, instance, host,
-                    image)
+                        reason = _('Unshelve attempted but the image %s '
+                                   'cannot be found.') % image_id
+
+                        LOG.error(reason, instance=instance)
+                        raise exception.UnshelveException(
+                            instance_id=instance.uuid, reason=reason)
+
+            try:
+                with compute_utils.EventReporter(context, 'schedule_instances',
+                                                 instance.uuid):
+                    filter_properties = {}
+                    scheduler_utils.populate_retry(filter_properties,
+                                                   instance.uuid)
+                    hosts = self._schedule_instances(context, image,
+                                                     filter_properties,
+                                                     instance)
+                    host_state = hosts[0]
+                    scheduler_utils.populate_filter_properties(
+                            filter_properties, host_state)
+                    (host, node) = (host_state['host'], host_state['nodename'])
+                    self.compute_rpcapi.unshelve_instance(
+                            context, instance, host, image=image,
+                            filter_properties=filter_properties, node=node)
+            except (exception.NoValidHost,
+                    exception.UnsupportedPolicyException):
+                instance.task_state = None
+                instance.save()
+                LOG.warning(_LW("No valid host found for unshelve instance"),
+                            instance=instance)
+                return
+            except Exception:
+                with excutils.save_and_reraise_exception():
+                    instance.task_state = None
+                    instance.save()
+                    LOG.error(_LE("Unshelve attempted but an error "
+                                  "has occurred"), instance=instance)
         else:
-            LOG.error(_('Unshelve attempted but vm_state not SHELVED or '
-                        'SHELVED_OFFLOADED'), instance=instance)
+            LOG.error(_LE('Unshelve attempted but vm_state not SHELVED or '
+                          'SHELVED_OFFLOADED'), instance=instance)
             instance.vm_state = vm_states.ERROR
             instance.save()
             return
 
-        for key in ['shelved_at', 'shelved_image_id', 'shelved_host']:
-            if key in sys_meta:
-                del(sys_meta[key])
-        instance.system_metadata = sys_meta
-        instance.save()
+    def rebuild_instance(self, context, instance, orig_image_ref, image_ref,
+                         injected_files, new_pass, orig_sys_metadata,
+                         bdms, recreate, on_shared_storage,
+                         preserve_ephemeral=False, host=None):
+
+        with compute_utils.EventReporter(context, 'rebuild_server',
+                                          instance.uuid):
+            if not host:
+                # NOTE(lcostantino): Retrieve scheduler filters for the
+                # instance when the feature is available
+                filter_properties = {'ignore_hosts': [instance.host]}
+                request_spec = scheduler_utils.build_request_spec(context,
+                                                                  image_ref,
+                                                                  [instance])
+                try:
+                    scheduler_utils.setup_instance_group(context, request_spec,
+                                                         filter_properties)
+                    hosts = self.scheduler_client.select_destinations(context,
+                                                            request_spec,
+                                                            filter_properties)
+                    host = hosts.pop(0)['host']
+                except exception.NoValidHost as ex:
+                    with excutils.save_and_reraise_exception():
+                        self._set_vm_state_and_notify(context, instance.uuid,
+                                'rebuild_server',
+                                {'vm_state': instance.vm_state,
+                                 'task_state': None}, ex, request_spec)
+                        LOG.warning(_LW("No valid host found for rebuild"),
+                                    instance=instance)
+                except exception.UnsupportedPolicyException as ex:
+                    with excutils.save_and_reraise_exception():
+                        self._set_vm_state_and_notify(context, instance.uuid,
+                                'rebuild_server',
+                                {'vm_state': instance.vm_state,
+                                 'task_state': None}, ex, request_spec)
+                        LOG.warning(_LW("Server with unsupported policy "
+                                        "cannot be rebuilt"),
+                                    instance=instance)
+
+            self.compute_rpcapi.rebuild_instance(context,
+                    instance=instance,
+                    new_pass=new_pass,
+                    injected_files=injected_files,
+                    image_ref=image_ref,
+                    orig_image_ref=orig_image_ref,
+                    orig_sys_metadata=orig_sys_metadata,
+                    bdms=bdms,
+                    recreate=recreate,
+                    on_shared_storage=on_shared_storage,
+                    preserve_ephemeral=preserve_ephemeral,
+                    host=host)

@@ -14,11 +14,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova import db
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import log as logging
+from oslo_log import log as logging
+import six
+
 from nova.scheduler import filters
 from nova.scheduler.filters import extra_specs_ops
+from nova.scheduler.filters import utils
 
 
 LOG = logging.getLogger(__name__)
@@ -42,10 +43,9 @@ class AggregateInstanceExtraSpecsFilter(filters.BaseHostFilter):
         if 'extra_specs' not in instance_type:
             return True
 
-        context = filter_properties['context'].elevated()
-        metadata = db.aggregate_metadata_get_by_host(context, host_state.host)
+        metadata = utils.aggregate_metadata_get_by_host(host_state)
 
-        for key, req in instance_type['extra_specs'].iteritems():
+        for key, req in six.iteritems(instance_type['extra_specs']):
             # Either not scope format, or aggregate_instance_extra_specs scope
             scope = key.split(':', 1)
             if len(scope) > 1:
@@ -56,17 +56,17 @@ class AggregateInstanceExtraSpecsFilter(filters.BaseHostFilter):
             key = scope[0]
             aggregate_vals = metadata.get(key, None)
             if not aggregate_vals:
-                LOG.debug(_("%(host_state)s fails instance_type extra_specs "
-                    "requirements. Extra_spec %(key)s is not in aggregate."),
+                LOG.debug("%(host_state)s fails instance_type extra_specs "
+                    "requirements. Extra_spec %(key)s is not in aggregate.",
                     {'host_state': host_state, 'key': key})
                 return False
             for aggregate_val in aggregate_vals:
                 if extra_specs_ops.match(aggregate_val, req):
                     break
             else:
-                LOG.debug(_("%(host_state)s fails instance_type extra_specs "
+                LOG.debug("%(host_state)s fails instance_type extra_specs "
                             "requirements. '%(aggregate_vals)s' do not "
-                            "match '%(req)s'"),
+                            "match '%(req)s'",
                           {'host_state': host_state, 'req': req,
                            'aggregate_vals': aggregate_vals})
                 return False

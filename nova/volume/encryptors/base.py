@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright (c) 2013 The Johns Hopkins University/Applied Physics Laboratory
 # All Rights Reserved.
 #
@@ -18,10 +16,10 @@
 
 import abc
 
+from oslo_log import log as logging
 import six
 
 from nova import keymgr
-from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
 

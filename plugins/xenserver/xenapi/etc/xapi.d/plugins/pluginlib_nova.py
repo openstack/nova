@@ -12,6 +12,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+# NOTE: XenServer still only supports Python 2.4 in it's dom0 userspace
+# which means the Nova xenapi plugins must use only Python 2.4 features
+
 #
 # Helper functions for the Nova xapi plugins.  In time, this will merge
 # with the pluginlib.py shipped with xapi, but for now, that file is not
@@ -23,6 +26,7 @@ import gettext
 import logging
 import logging.handlers
 import time
+
 import XenAPI
 
 
@@ -30,7 +34,7 @@ translations = gettext.translation('nova', fallback=True)
 _ = translations.ugettext
 
 
-##### Logging setup
+# Logging setup
 
 def configure_logging(name):
     log = logging.getLogger()
@@ -42,7 +46,7 @@ def configure_logging(name):
     log.addHandler(sysh)
 
 
-##### Exceptions
+# Exceptions
 
 class PluginError(Exception):
     """Base Exception class for all plugin errors."""
@@ -58,7 +62,7 @@ class ArgumentError(PluginError):
         PluginError.__init__(self, *args)
 
 
-##### Argument validation
+# Argument validation
 
 def exists(args, key):
     """Validates that a freeform string argument to a RPC method call is given.

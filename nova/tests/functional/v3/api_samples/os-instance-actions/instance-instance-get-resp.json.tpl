@@ -1,0 +1,27 @@
+{
+    "instanceAction": {
+        "action": "reboot",
+        "events": [
+            {
+                "event": "schedule",
+                "finish_time": "2012-12-05T01:02:00.000000",
+                "result": "Success",
+                "start_time": "2012-12-05T01:00:02.000000",
+                "traceback": ""
+            },
+            {
+                "event": "compute_create",
+                "finish_time": "2012-12-05T01:04:00.000000",
+                "result": "Success",
+                "start_time": "2012-12-05T01:03:00.000000",
+                "traceback": ""
+            }
+        ],
+        "instance_uuid": "b48316c5-71e8-45e4-9884-6c78055b9b13",
+        "message": "",
+        "project_id": "147",
+        "request_id": "req-3293a3f1-b44c-4609-b8d2-d81b105636b8",
+        "start_time": "2012-12-05T00:00:00.000000",
+        "user_id": "789"
+    }
+}

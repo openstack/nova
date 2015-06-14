@@ -1,13 +1,11 @@
 {
     "server": {
-        "access_ip_v4": "",
-        "access_ip_v6": "",
         "addresses": {
             "private": [
                 {
                     "addr": "192.168.0.3",
-                    "mac_addr": "aa:bb:cc:dd:ee:ff",
-                    "type": "fixed",
+                    "OS-EXT-IPS-MAC:mac_addr": "aa:bb:cc:dd:ee:ff",
+                    "OS-EXT-IPS:type": "fixed",
                     "version": 4
                 }
             ]
@@ -22,13 +20,13 @@
                 }
             ]
         },
-        "host_id": "53cd4520a6cc639eeabcae4a0512b93e4675d431002e0b60e2dcfc04",
+        "hostId": "53cd4520a6cc639eeabcae4a0512b93e4675d431002e0b60e2dcfc04",
         "id": "edfc3905-1f3c-4819-8fc3-a7d8131cfa22",
         "image": {
             "id": "70a599e0-31e7-49b7-b260-868f441e862b",
             "links": [
                 {
-                    "href": "http://glance.openstack.example.com/images/70a599e0-31e7-49b7-b260-868f441e862b",
+                    "href": "http://openstack.example.com/images/70a599e0-31e7-49b7-b260-868f441e862b",
                     "rel": "bookmark"
                 }
             ]

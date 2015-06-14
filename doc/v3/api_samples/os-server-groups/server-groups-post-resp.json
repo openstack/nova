@@ -1,0 +1,9 @@
+{
+    "server_group": {
+        "id": "5bbcc3c4-1da2-4437-a48a-66f15b1b13f9",
+        "name": "test",
+        "policies": ["anti-affinity"],
+        "members": [],
+        "metadata": {}
+    }
+}

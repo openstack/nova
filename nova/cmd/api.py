@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
@@ -24,12 +22,15 @@ Starts both the EC2 and OpenStack APIs in separate greenthreads.
 
 import sys
 
-from oslo.config import cfg
+from oslo_config import cfg
+from oslo_log import log as logging
 
 from nova import config
-from nova.openstack.common import log as logging
+from nova import objects
+from nova.openstack.common.report import guru_meditation_report as gmr
 from nova import service
 from nova import utils
+from nova import version
 
 CONF = cfg.CONF
 CONF.import_opt('enabled_apis', 'nova.service')
@@ -38,8 +39,11 @@ CONF.import_opt('enabled_ssl_apis', 'nova.service')
 
 def main():
     config.parse_args(sys.argv)
-    logging.setup("nova")
+    logging.setup(CONF, "nova")
     utils.monkey_patch()
+    objects.register_all()
+
+    gmr.TextGuruMeditation.setup_autorun(version)
 
     launcher = service.process_launcher()
     for api in CONF.enabled_apis:

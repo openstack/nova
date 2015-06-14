@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2011 OpenStack Foundation
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -21,5 +19,4 @@
 .. automodule:: nova.api.metadata
    :platform: Unix
    :synopsis: Metadata Server for Nova
-.. moduleauthor:: Vishvananda Ishaya <vishvananda@gmail.com>
 """

@@ -16,7 +16,7 @@ eventlet.monkey_patch()
 import os
 import sys
 
-from oslo.config import cfg
+from oslo_config import cfg
 
 # If ../nova/__init__.py exists, add ../ to Python search path, so that
 # it will override what happens to be installed in /usr/(local/)lib/python...
@@ -28,7 +28,6 @@ if os.path.exists(os.path.join(POSSIBLE_TOPDIR, 'nova', '__init__.py')):
     sys.path.insert(0, POSSIBLE_TOPDIR)
 
 from nova import config
-from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt.xenapi import driver as xenapi_driver
 from nova.virt.xenapi import vm_utils

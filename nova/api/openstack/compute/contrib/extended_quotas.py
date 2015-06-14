@@ -25,4 +25,4 @@ class Extended_quotas(extensions.ExtensionDescriptor):
     alias = "os-extended-quotas"
     namespace = ("http://docs.openstack.org/compute/ext/extended_quotas"
                  "/api/v1.1")
-    updated = "2013-06-09T00:00:00+00:00"
+    updated = "2013-06-09T00:00:00Z"

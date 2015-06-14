@@ -1,0 +1,37 @@
+
+.sp_feature_mandatory {
+    font-weight: bold;
+}
+
+.sp_feature_optional {
+}
+
+.sp_feature_choice {
+    font-style: italic;
+    font-weight: bold;
+}
+
+.sp_feature_condition {
+    font-style: italic;
+    font-weight: bold;
+}
+
+
+.sp_impl_complete {
+    color: rgb(0, 120, 0);
+    font-weight: normal;
+}
+
+.sp_impl_missing {
+    color: rgb(120, 0, 0);
+    font-weight: normal;
+}
+
+.sp_impl_partial {
+    color: rgb(170, 170, 0);
+    font-weight: normal;
+}
+
+.sp_impl_summary {
+    font-size: 2em;
+}

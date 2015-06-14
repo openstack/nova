@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright (c) 2012 Intel, Inc.
 # Copyright (c) 2011-2012 OpenStack Foundation
 # All Rights Reserved.
@@ -20,14 +18,14 @@
 Filter to add support for Trusted Computing Pools.
 
 Filter that only schedules tasks on a host if the integrity (trust)
-of that host matches the trust requested in the `extra_specs' for the
-flavor.  The `extra_specs' will contain a key/value pair where the
-key is `trust'.  The value of this pair (`trusted'/`untrusted') must
+of that host matches the trust requested in the ``extra_specs`` for the
+flavor.  The ``extra_specs`` will contain a key/value pair where the
+key is ``trust``.  The value of this pair (``trusted``/``untrusted``) must
 match the integrity of that host (obtained from the Attestation
 service) before the task can be scheduled on that host.
 
 Note that the parameters to control access to the Attestation Service
-are in the `nova.conf' file in a separate `trust' section.  For example,
+are in the ``nova.conf`` file in a separate ``trust`` section.  For example,
 the config file will look something like:
 
     [DEFAULT]
@@ -36,7 +34,8 @@ the config file will look something like:
     [trust]
     server=attester.mynetwork.com
 
-Details on the specific parameters can be found in the file `trust_attest.py'.
+Details on the specific parameters can be found in the file
+``trust_attest.py``.
 
 Details on setting up and using an Attestation Service can be found at
 the Open Attestation project at:
@@ -44,77 +43,43 @@ the Open Attestation project at:
     https://github.com/OpenAttestation/OpenAttestation
 """
 
-import httplib
-import socket
-import ssl
-
-from oslo.config import cfg
+from oslo_config import cfg
+from oslo_log import log as logging
+from oslo_serialization import jsonutils
+from oslo_utils import timeutils
+import requests
 
 from nova import context
-from nova import db
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import jsonutils
-from nova.openstack.common import log as logging
-from nova.openstack.common import timeutils
+from nova import objects
 from nova.scheduler import filters
 
 LOG = logging.getLogger(__name__)
 
 trusted_opts = [
     cfg.StrOpt('attestation_server',
-               help='attestation server http'),
+               help='Attestation server HTTP'),
     cfg.StrOpt('attestation_server_ca_file',
-               help='attestation server Cert file for Identity verification'),
+               help='Attestation server Cert file for Identity verification'),
     cfg.StrOpt('attestation_port',
                default='8443',
-               help='attestation server port'),
+               help='Attestation server port'),
     cfg.StrOpt('attestation_api_url',
                default='/OpenAttestationWebServices/V1.0',
-               help='attestation web API URL'),
+               help='Attestation web API URL'),
     cfg.StrOpt('attestation_auth_blob',
-               help='attestation authorization blob - must change'),
+               help='Attestation authorization blob - must change'),
     cfg.IntOpt('attestation_auth_timeout',
                default=60,
                help='Attestation status cache valid period length'),
+    cfg.BoolOpt('attestation_insecure_ssl',
+                default=False,
+                help='Disable SSL cert verification for Attestation service')
 ]
 
 CONF = cfg.CONF
 trust_group = cfg.OptGroup(name='trusted_computing', title='Trust parameters')
 CONF.register_group(trust_group)
 CONF.register_opts(trusted_opts, group=trust_group)
-
-
-class HTTPSClientAuthConnection(httplib.HTTPSConnection):
-    """
-    Class to make a HTTPS connection, with support for full client-based
-    SSL Authentication
-    """
-
-    def __init__(self, host, port, key_file, cert_file, ca_file, timeout=None):
-        httplib.HTTPSConnection.__init__(self, host,
-                                         key_file=key_file,
-                                         cert_file=cert_file)
-        self.host = host
-        self.port = port
-        self.key_file = key_file
-        self.cert_file = cert_file
-        self.ca_file = ca_file
-        self.timeout = timeout
-
-    def connect(self):
-        """
-        Connect to a host on a given (SSL) port.
-        If ca_file is pointing somewhere, use it to check Server Certificate.
-
-        Redefined/copied and extended from httplib.py:1105 (Python 2.6.x).
-        This is needed to pass cert_reqs=ssl.CERT_REQUIRED as parameter to
-        ssl.wrap_socket(), which forces SSL to check server certificate
-        against our client certificate.
-        """
-        sock = socket.create_connection((self.host, self.port), self.timeout)
-        self.sock = ssl.wrap_socket(sock, self.key_file, self.cert_file,
-                                    ca_certs=self.ca_file,
-                                    cert_reqs=ssl.CERT_REQUIRED)
 
 
 class AttestationService(object):
@@ -129,29 +94,35 @@ class AttestationService(object):
         self.cert_file = None
         self.ca_file = CONF.trusted_computing.attestation_server_ca_file
         self.request_count = 100
+        # If the CA file is not provided, let's check the cert if verification
+        # asked
+        self.verify = (not CONF.trusted_computing.attestation_insecure_ssl
+                       and self.ca_file or True)
+        self.cert = (self.cert_file, self.key_file)
 
     def _do_request(self, method, action_url, body, headers):
         # Connects to the server and issues a request.
         # :returns: result data
         # :raises: IOError if the request fails
 
-        action_url = "%s/%s" % (self.api_url, action_url)
+        action_url = "https://%s:%s%s/%s" % (self.host, self.port,
+                                             self.api_url, action_url)
         try:
-            c = HTTPSClientAuthConnection(self.host, self.port,
-                                          key_file=self.key_file,
-                                          cert_file=self.cert_file,
-                                          ca_file=self.ca_file)
-            c.request(method, action_url, body, headers)
-            res = c.getresponse()
-            status_code = res.status
-            if status_code in (httplib.OK,
-                               httplib.CREATED,
-                               httplib.ACCEPTED,
-                               httplib.NO_CONTENT):
-                return httplib.OK, res
+            res = requests.request(method, action_url, data=body,
+                                   headers=headers, cert=self.cert,
+                                   verify=self.verify)
+            status_code = res.status_code
+            if status_code in (requests.codes.OK,
+                               requests.codes.CREATED,
+                               requests.codes.ACCEPTED,
+                               requests.codes.NO_CONTENT):
+                try:
+                    return requests.codes.OK, jsonutils.loads(res.text)
+                except (TypeError, ValueError):
+                    return requests.codes.OK, res.text
             return status_code, None
 
-        except (socket.error, IOError):
+        except requests.exceptions.RequestException:
             return IOError, None
 
     def _request(self, cmd, subcmd, hosts):
@@ -165,11 +136,7 @@ class AttestationService(object):
         if self.auth_blob:
             headers['x-auth-blob'] = self.auth_blob
         status, res = self._do_request(cmd, subcmd, cooked, headers)
-        if status == httplib.OK:
-            data = res.read()
-            return status, jsonutils.loads(data)
-        else:
-            return status, None
+        return status, res
 
     def do_attestation(self, hosts):
         """Attests compute nodes through OAT service.
@@ -180,7 +147,7 @@ class AttestationService(object):
         result = None
 
         status, data = self._request("POST", "PollHosts", hosts)
-        if data != None:
+        if data is not None:
             result = data.get('hosts')
 
         return result
@@ -205,13 +172,9 @@ class ComputeAttestationCache(object):
         # Fetch compute node list to initialize the compute_nodes,
         # so that we don't need poll OAT service one by one for each
         # host in the first round that scheduler invokes us.
-        computes = db.compute_node_get_all(admin)
+        computes = objects.ComputeNodeList.get_all(admin)
         for compute in computes:
-            service = compute['service']
-            if not service:
-                LOG.warn(_("No service for compute ID %s") % compute['id'])
-                continue
-            host = service['host']
+            host = compute.hypervisor_hostname
             self._init_cache_entry(host)
 
     def _cache_valid(self, host):
@@ -245,9 +208,16 @@ class ComputeAttestationCache(object):
             entry['vtime'] = timeutils.normalize_time(
                             timeutils.parse_isotime(state['vtime']))
         except ValueError:
-            # Mark the system as un-trusted if get invalid vtime.
-            entry['trust_lvl'] = 'unknown'
-            entry['vtime'] = timeutils.utcnow()
+            try:
+                # Mt. Wilson does not necessarily return an ISO8601 formatted
+                # `vtime`, so we should try to parse it as a string formatted
+                # datetime.
+                vtime = timeutils.parse_strtime(state['vtime'], fmt="%c")
+                entry['vtime'] = timeutils.normalize_time(vtime)
+            except ValueError:
+                # Mark the system as un-trusted if get invalid vtime.
+                entry['trust_lvl'] = 'unknown'
+                entry['vtime'] = timeutils.utcnow()
 
         self.compute_nodes[host] = entry
 
@@ -284,11 +254,14 @@ class TrustedFilter(filters.BaseHostFilter):
     def __init__(self):
         self.compute_attestation = ComputeAttestation()
 
+    # The hosts the instances are running on doesn't change within a request
+    run_filter_once_per_request = True
+
     def host_passes(self, host_state, filter_properties):
-        instance = filter_properties.get('instance_type', {})
-        extra = instance.get('extra_specs', {})
+        instance_type = filter_properties.get('instance_type', {})
+        extra = instance_type.get('extra_specs', {})
         trust = extra.get('trust:trusted_host')
-        host = host_state.host
+        host = host_state.nodename
         if trust:
             return self.compute_attestation.is_trusted(host, trust)
         return True

@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright (c) 2012 OpenStack Foundation
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -16,29 +14,16 @@
 
 import webob.exc
 
+from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 import nova.cert.rpcapi
 from nova import exception
+from nova.i18n import _
 from nova import network
-from nova.openstack.common.gettextutils import _
 
 ALIAS = "os-certificates"
-authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
-
-
-def make_certificate(elem):
-    elem.set('data')
-    elem.set('private_key')
-
-
-class CertificateTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('certificate',
-                                       selector='certificate')
-        make_certificate(root)
-        return xmlutil.MasterTemplate(root, 1)
+authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 def _translate_certificate_view(certificate, private_key=None):
@@ -48,7 +33,7 @@ def _translate_certificate_view(certificate, private_key=None):
     }
 
 
-class CertificatesController(object):
+class CertificatesController(wsgi.Controller):
     """The x509 Certificates API controller for the OpenStack API."""
 
     def __init__(self):
@@ -57,14 +42,16 @@ class CertificatesController(object):
         super(CertificatesController, self).__init__()
 
     @extensions.expected_errors((404, 501))
-    @wsgi.serializers(xml=CertificateTemplate)
     def show(self, req, id):
         """Return certificate information."""
         context = req.environ['nova.context']
-        authorize(context)
+        authorize(context, action='show')
         if id != 'root':
             msg = _("Only root certificate can be retrieved.")
-            raise webob.exc.HTTPNotImplemented(explanation=msg)
+            # TODO(oomichi): This seems a HTTPBadRequest case because of the
+            # above message. This will be changed with a microversion in the
+            # future.
+            common.raise_feature_not_supported(msg=msg)
         try:
             cert = self.cert_rpcapi.fetch_ca(context,
                                              project_id=context.project_id)
@@ -72,16 +59,16 @@ class CertificatesController(object):
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
         return {'certificate': _translate_certificate_view(cert)}
 
+    # NOTE(gmann): Here should be 201 instead of 200 by v2.1
+    # +microversions because the resource certificate has been created
+    # completely when returning a response.
     @extensions.expected_errors(())
-    @wsgi.serializers(xml=CertificateTemplate)
-    @wsgi.response(201)
     def create(self, req, body=None):
         """Create a certificate."""
         context = req.environ['nova.context']
-        authorize(context)
+        authorize(context, action='create')
         pk, cert = self.cert_rpcapi.generate_x509_cert(context,
                 user_id=context.user_id, project_id=context.project_id)
-        context = req.environ['nova.context']
         return {'certificate': _translate_certificate_view(cert, pk)}
 
 
@@ -90,13 +77,11 @@ class Certificates(extensions.V3APIExtensionBase):
 
     name = "Certificates"
     alias = ALIAS
-    namespace = ("http://docs.openstack.org/compute/ext/"
-                 "certificates/api/v3")
     version = 1
 
     def get_resources(self):
         resources = [
-            extensions.ResourceExtension('os-certificates',
+            extensions.ResourceExtension(ALIAS,
                                          CertificatesController(),
                                          member_actions={})]
         return resources

@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2013 IBM Corp.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -14,32 +12,35 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
 import os
 import ssl
 
-from oslo.config import cfg
+from oslo_config import cfg
 
-from nova.openstack.common.gettextutils import _  # noqa
+from nova.openstack.common._i18n import _
 
 
 ssl_opts = [
     cfg.StrOpt('ca_file',
-               default=None,
                help="CA certificate file to use to verify "
-                    "connecting clients"),
+                    "connecting clients."),
     cfg.StrOpt('cert_file',
-               default=None,
                help="Certificate file to use when starting "
-                    "the server securely"),
+                    "the server securely."),
     cfg.StrOpt('key_file',
-               default=None,
                help="Private key file to use when starting "
-                    "the server securely"),
+                    "the server securely."),
 ]
 
-
 CONF = cfg.CONF
-CONF.register_opts(ssl_opts, "ssl")
+config_section = 'ssl'
+CONF.register_opts(ssl_opts, config_section)
+
+
+def list_opts():
+    """Entry point for oslo-config-generator."""
+    return [(config_section, copy.deepcopy(ssl_opts))]
 
 
 def is_enabled():
@@ -78,23 +79,3 @@ def wrap(sock):
         ssl_kwargs['cert_reqs'] = ssl.CERT_REQUIRED
 
     return ssl.wrap_socket(sock, **ssl_kwargs)
-
-
-_SSL_PROTOCOLS = {
-    "tlsv1": ssl.PROTOCOL_TLSv1,
-    "sslv23": ssl.PROTOCOL_SSLv23,
-    "sslv3": ssl.PROTOCOL_SSLv3
-}
-
-try:
-    _SSL_PROTOCOLS["sslv2"] = ssl.PROTOCOL_SSLv2
-except AttributeError:
-    pass
-
-
-def validate_ssl_version(version):
-    key = version.lower()
-    try:
-        return _SSL_PROTOCOLS[key]
-    except KeyError:
-        raise RuntimeError(_("Invalid SSL version : %s") % version)

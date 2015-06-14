@@ -1,5 +1,5 @@
 {
-    "instance_action": {
+    "instanceAction": {
         "action": "reboot",
         "events": [
             {

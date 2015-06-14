@@ -1,4 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
 # Copyright (c) 2013 The Johns Hopkins University/Applied Physics Laboratory
 # All Rights Reserved.
 #
@@ -32,10 +31,10 @@ encrypted with a key provided by this key manager actually share the same
 encryption key so *any* volume can be decrypted once the fixed key is known.
 """
 
-from oslo.config import cfg
+from oslo_config import cfg
 
+from nova.i18n import _
 from nova.keymgr import single_key_mgr
-from nova.openstack.common.gettextutils import _
 
 key_mgr_opts = [
     cfg.StrOpt('fixed_key',
@@ -47,11 +46,11 @@ CONF.register_opts(key_mgr_opts, group='keymgr')
 
 
 class ConfKeyManager(single_key_mgr.SingleKeyManager):
-    """
-    This key manager implementation supports all the methods specified by the
-    key manager interface. This implementation creates a single key in response
-    to all invocations of create_key. Side effects (e.g., raising exceptions)
-    for each method are handled as specified by the key manager interface.
+    """This key manager implementation supports all the methods specified by
+    the key manager interface. This implementation creates a single key in
+    response to all invocations of create_key. Side effects
+    (e.g., raising exceptions) for each method are handled
+    as specified by the key manager interface.
     """
 
     def __init__(self):

@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright (c) 2012 VMware, Inc.
 # Copyright (c) 2011 Citrix Systems, Inc.
 # Copyright 2011 OpenStack Foundation
@@ -24,12 +22,14 @@ to the write using a LightQueue as a Pipe between the reader and the writer.
 from eventlet import event
 from eventlet import greenthread
 from eventlet import queue
+from oslo_log import log as logging
 
 from nova import exception
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import log as logging
+from nova.i18n import _, _LE
+from nova import image
 
 LOG = logging.getLogger(__name__)
+IMAGE_API = image.API()
 
 IO_THREAD_SLEEP_TIME = .01
 GLANCE_POLL_INTERVAL = 5
@@ -52,7 +52,7 @@ class ThreadSafePipe(queue.LightQueue):
         that the data chunks written to the pipe by readers is the same as the
         chunks asked for by the Writer.
         """
-        if self.transferred < self.transfer_size:
+        if self.transfer_size == 0 or self.transferred < self.transfer_size:
             data_item = self.get()
             self.transferred += len(data_item)
             return data_item
@@ -81,14 +81,13 @@ class GlanceWriteThread(object):
     it is in correct ('active')state.
     """
 
-    def __init__(self, context, input, image_service, image_id,
+    def __init__(self, context, input, image_id,
             image_meta=None):
         if not image_meta:
             image_meta = {}
 
         self.context = context
         self.input = input
-        self.image_service = image_service
         self.image_id = image_id
         self.image_meta = image_meta
         self._running = False
@@ -100,15 +99,19 @@ class GlanceWriteThread(object):
             """Function to do the image data transfer through an update
             and thereon checks if the state is 'active'.
             """
-            self.image_service.update(self.context,
-                                      self.image_id,
-                                      self.image_meta,
-                                      data=self.input)
-            self._running = True
+            try:
+                IMAGE_API.update(self.context,
+                                 self.image_id,
+                                 self.image_meta,
+                                 data=self.input)
+                self._running = True
+            except exception.ImageNotAuthorized as exc:
+                self.done.send_exception(exc)
+
             while self._running:
                 try:
-                    image_meta = self.image_service.show(self.context,
-                                                         self.image_id)
+                    image_meta = IMAGE_API.get(self.context,
+                                               self.image_id)
                     image_status = image_meta.get("status")
                     if image_status == "active":
                         self.stop()
@@ -177,7 +180,7 @@ class IOThread(object):
                     greenthread.sleep(IO_THREAD_SLEEP_TIME)
                 except Exception as exc:
                     self.stop()
-                    LOG.exception(exc)
+                    LOG.exception(_LE('Read/Write data failed'))
                     self.done.send_exception(exc)
 
         greenthread.spawn(_inner)

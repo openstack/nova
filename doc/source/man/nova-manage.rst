@@ -44,11 +44,30 @@ Nova Db
 
 ``nova-manage db version``
 
-    Print the current database version.
+    Print the current main database version.
 
 ``nova-manage db sync``
 
-    Sync the database up to the most recent version. This is the standard way to create the db as well.
+    Sync the main database up to the most recent version. This is the standard way to create the db as well.
+
+``nova-manage db archive_deleted_rows [--max_rows <number>]``
+
+    Move deleted rows from production tables to shadow tables.
+
+``nova-manage db null_instance_uuid_scan [--delete]``
+
+    Lists and optionally deletes database records where instance_uuid is NULL.
+
+Nova ApiDb
+~~~~~~~~~~
+
+``nova-manage api_db version``
+
+    Print the current cells api database version.
+
+``nova-manage api_db sync``
+
+    Sync the api cells database up to the most recent version. This is the standard way to create the db as well.
 
 Nova Logs
 ~~~~~~~~~
@@ -115,41 +134,6 @@ Nova Floating IPs
 
     Displays a list of all floating IP addresses.
 
-Nova Flavor
-~~~~~~~~~~~
-
-``nova-manage flavor list``
-
-    Outputs a list of all active flavors to the screen.
-
-``nova-manage flavor list --all``
-
-    Outputs a list of all flavors (active and inactive) to the screen.
-
-``nova-manage flavor create <name> <memory> <vCPU> <local_storage> <flavorID> <(optional) swap> <(optional) RXTX Quota> <(optional) RXTX Cap>``
-
-    creates a flavor with the following positional arguments:
-     * memory (expressed in megabytes)
-     * vcpu(s) (integer)
-     * local storage (expressed in gigabytes)
-     * flavorid (unique integer)
-     * swap space (expressed in megabytes, defaults to zero, optional)
-     * RXTX quotas (expressed in gigabytes, defaults to zero, optional)
-     * RXTX cap (expressed in gigabytes, defaults to zero, optional)
-
-``nova-manage flavor delete <name>``
-
-    Delete the flavor with the name <name>. This marks the flavor as inactive and cannot be launched. However, the record stays in the database for archival and billing purposes.
-
-``nova-manage flavor delete <name> --purge``
-
-    Purges the flavor with the name <name>. This removes this flavor from the database.
-
-Nova Instance_type
-~~~~~~~~~~~~~~~~~~
-
-The instance_type command is provided as an alias for the flavor command. All the same subcommands and arguments from nova-manage flavor can be used.
-
 Nova Images
 ~~~~~~~~~~~
 
@@ -183,21 +167,15 @@ Nova VM
     Live migrate instance from current host to destination host. Requires instance id (which comes from euca-describe-instance) and destination host name (which can be found from nova-manage service list).
 
 
-FILES
-========
-
-The nova-manage.conf file contains configuration information in the form of python-gflags.
-
 SEE ALSO
 ========
 
 * `OpenStack Nova <http://nova.openstack.org>`__
-* `OpenStack Swift <http://swift.openstack.org>`__
 
 BUGS
 ====
 
-* Nova is sourced in Launchpad so you can view current bugs at `OpenStack Nova <http://nova.openstack.org>`__
+* Nova bugs are managed at Launchpad `Bugs : Nova <https://bugs.launchpad.net/nova>`__
 
 
 

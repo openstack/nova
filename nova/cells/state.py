@@ -16,31 +16,39 @@
 """
 CellState Manager
 """
+import collections
 import copy
 import datetime
 import functools
+import time
 
-from oslo.config import cfg
+from oslo_config import cfg
+from oslo_db import exception as db_exc
+from oslo_log import log as logging
+from oslo_serialization import jsonutils
+from oslo_utils import timeutils
+from oslo_utils import units
+import six
 
 from nova.cells import rpc_driver
 from nova import context
 from nova.db import base
 from nova import exception
+from nova.i18n import _LE
+from nova import objects
 from nova.openstack.common import fileutils
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import jsonutils
-from nova.openstack.common import log as logging
-from nova.openstack.common import timeutils
+from nova import rpc
 from nova import utils
 
 cell_state_manager_opts = [
-        cfg.IntOpt('db_check_interval',
-                default=60,
-                help='Seconds between getting fresh cell info from db.'),
-        cfg.StrOpt('cells_config',
-                   help='Configuration file from which to read cells '
-                   'configuration.  If given, overrides reading cells '
-                   'from the database.'),
+    cfg.IntOpt('db_check_interval',
+               default=60,
+               help='Interval, in seconds, for getting fresh cell '
+               'information from the database.'),
+    cfg.StrOpt('cells_config',
+               help='Configuration file from which to read cells '
+               'configuration.  If given, overrides reading cells '
+               'from the database.'),
 ]
 
 
@@ -50,7 +58,6 @@ CONF = cfg.CONF
 CONF.import_opt('name', 'nova.cells.opts', group='cells')
 CONF.import_opt('reserve_percent', 'nova.cells.opts', group='cells')
 CONF.import_opt('mute_child_interval', 'nova.cells.opts', group='cells')
-#CONF.import_opt('capabilities', 'nova.cells.opts', group='cells')
 CONF.register_opts(cell_state_manager_opts, group='cells')
 
 
@@ -70,9 +77,8 @@ class CellState(object):
 
     def update_db_info(self, cell_db_info):
         """Update cell credentials from db."""
-        self.db_info = dict(
-                [(k, v) for k, v in cell_db_info.iteritems()
-                        if k != 'name'])
+        self.db_info = {k: v for k, v in six.iteritems(cell_db_info)
+                        if k != 'name'}
 
     def update_capabilities(self, cell_metadata):
         """Update cell capabilities for a cell."""
@@ -97,10 +103,10 @@ class CellState(object):
             for field in db_fields_to_return:
                 cell_info[field] = self.db_info[field]
 
-            url_info = rpc_driver.parse_transport_url(
-                self.db_info['transport_url'])
-            for field, canonical in url_fields_to_return.items():
-                cell_info[canonical] = url_info[field]
+            url = rpc.get_transport_url(self.db_info['transport_url'])
+            if url.hosts:
+                for field, canonical in url_fields_to_return.items():
+                    cell_info[canonical] = getattr(url.hosts[0], field)
         return cell_info
 
     def send_message(self, message):
@@ -149,10 +155,7 @@ class CellStateManager(base.Base):
             cells_config = CONF.cells.cells_config
 
         if cells_config:
-            config_path = CONF.find_file(cells_config)
-            if not config_path:
-                raise cfg.ConfigFilesNotFoundError(config_files=[cells_config])
-            return CellStateManagerFile(cell_state_cls, config_path)
+            return CellStateManagerFile(cell_state_cls)
 
         return CellStateManagerDB(cell_state_cls)
 
@@ -166,7 +169,17 @@ class CellStateManager(base.Base):
         self.child_cells = {}
         self.last_cell_db_check = datetime.datetime.min
 
-        self._cell_data_sync(force=True)
+        attempts = 0
+        while True:
+            try:
+                self._cell_data_sync(force=True)
+                break
+            except db_exc.DBError:
+                attempts += 1
+                if attempts > 120:
+                    raise
+                LOG.exception(_LE('DB error'))
+                time.sleep(30)
 
         my_cell_capabs = {}
         for cap in CONF.cells.capabilities:
@@ -218,9 +231,10 @@ class CellStateManager(base.Base):
         {'total_mb': <total_memory_free_in_the_cell>,
          'units_by_mb: <units_dictionary>}
 
-        <units_dictionary> contains the number of units that we can
-        build for every instance_type that we have.  This number is
-        computed by looking at room available on every compute_node.
+        <units_dictionary> contains the number of units that we can build for
+        every distinct memory or disk requirement that we have based on
+        instance types.  This number is computed by looking at room available
+        on every compute_node.
 
         Take the following instance_types as an example:
 
@@ -247,20 +261,30 @@ class CellStateManager(base.Base):
             ctxt = context.get_admin_context()
 
         reserve_level = CONF.cells.reserve_percent / 100.0
-        compute_hosts = {}
+
+        def _defaultdict_int():
+            return collections.defaultdict(int)
+        compute_hosts = collections.defaultdict(_defaultdict_int)
 
         def _get_compute_hosts():
-            compute_nodes = self.db.compute_node_get_all(ctxt)
+            service_refs = {service.host: service
+                            for service in objects.ServiceList.get_by_binary(
+                                ctxt, 'nova-compute')}
+
+            compute_nodes = objects.ComputeNodeList.get_all(ctxt)
             for compute in compute_nodes:
-                service = compute['service']
+                host = compute.host
+                service = service_refs.get(host)
                 if not service or service['disabled']:
                     continue
-                host = service['host']
-                compute_hosts[host] = {
-                        'free_ram_mb': compute['free_ram_mb'],
-                        'free_disk_mb': compute['free_disk_gb'] * 1024,
-                        'total_ram_mb': compute['memory_mb'],
-                        'total_disk_mb': compute['local_gb'] * 1024}
+
+                chost = compute_hosts[host]
+                chost['free_ram_mb'] += compute['free_ram_mb']
+                free_disk = compute['free_disk_gb'] * 1024
+                chost['free_disk_mb'] += free_disk
+                chost['total_ram_mb'] += compute['memory_mb']
+                total_disk = compute['local_gb'] * 1024
+                chost['total_disk_mb'] += total_disk
 
         _get_compute_hosts()
         if not compute_hosts:
@@ -280,26 +304,26 @@ class CellStateManager(base.Base):
             else:
                 return 0
 
-        def _update_from_values(values, instance_type):
-            memory_mb = instance_type['memory_mb']
-            disk_mb = (instance_type['root_gb'] +
-                    instance_type['ephemeral_gb']) * 1024
-            ram_mb_free_units.setdefault(str(memory_mb), 0)
-            disk_mb_free_units.setdefault(str(disk_mb), 0)
-            ram_free_units = _free_units(compute_values['total_ram_mb'],
-                    compute_values['free_ram_mb'], memory_mb)
-            disk_free_units = _free_units(compute_values['total_disk_mb'],
-                    compute_values['free_disk_mb'], disk_mb)
-            ram_mb_free_units[str(memory_mb)] += ram_free_units
-            disk_mb_free_units[str(disk_mb)] += disk_free_units
-
         instance_types = self.db.flavor_get_all(ctxt)
+        memory_mb_slots = frozenset(
+                [inst_type['memory_mb'] for inst_type in instance_types])
+        disk_mb_slots = frozenset(
+                [(inst_type['root_gb'] + inst_type['ephemeral_gb']) * units.Ki
+                    for inst_type in instance_types])
 
         for compute_values in compute_hosts.values():
             total_ram_mb_free += compute_values['free_ram_mb']
             total_disk_mb_free += compute_values['free_disk_mb']
-            for instance_type in instance_types:
-                _update_from_values(compute_values, instance_type)
+            for memory_mb_slot in memory_mb_slots:
+                ram_mb_free_units.setdefault(str(memory_mb_slot), 0)
+                free_units = _free_units(compute_values['total_ram_mb'],
+                        compute_values['free_ram_mb'], memory_mb_slot)
+                ram_mb_free_units[str(memory_mb_slot)] += free_units
+            for disk_mb_slot in disk_mb_slots:
+                disk_mb_free_units.setdefault(str(disk_mb_slot), 0)
+                free_units = _free_units(compute_values['total_disk_mb'],
+                        compute_values['free_disk_mb'], disk_mb_slot)
+                disk_mb_free_units[str(disk_mb_slot)] += free_units
 
         capacities = {'ram_free': {'total_mb': total_ram_mb_free,
                                    'units_by_mb': ram_mb_free_units},
@@ -311,9 +335,9 @@ class CellStateManager(base.Base):
     def get_cell_info_for_neighbors(self):
         """Return cell information for all neighbor cells."""
         cell_list = [cell.get_cell_info()
-                for cell in self.child_cells.itervalues()]
+                for cell in six.itervalues(self.child_cells)]
         cell_list.extend([cell.get_cell_info()
-                for cell in self.parent_cells.itervalues()])
+                for cell in six.itervalues(self.parent_cells)])
         return cell_list
 
     @sync_before
@@ -345,8 +369,8 @@ class CellStateManager(base.Base):
         cell = (self.child_cells.get(cell_name) or
                 self.parent_cells.get(cell_name))
         if not cell:
-            LOG.error(_("Unknown cell '%(cell_name)s' when trying to "
-                        "update capabilities"),
+            LOG.error(_LE("Unknown cell '%(cell_name)s' when trying to "
+                          "update capabilities"),
                       {'cell_name': cell_name})
             return
         # Make sure capabilities are sets.
@@ -360,8 +384,8 @@ class CellStateManager(base.Base):
         cell = (self.child_cells.get(cell_name) or
                 self.parent_cells.get(cell_name))
         if not cell:
-            LOG.error(_("Unknown cell '%(cell_name)s' when trying to "
-                        "update capacities"),
+            LOG.error(_LE("Unknown cell '%(cell_name)s' when trying to "
+                          "update capacities"),
                       {'cell_name': cell_name})
             return
         cell.update_capacities(capacities)
@@ -417,19 +441,18 @@ class CellStateManager(base.Base):
 class CellStateManagerDB(CellStateManager):
     @utils.synchronized('cell-db-sync')
     def _cell_data_sync(self, force=False):
-        """
-        Update cell status for all cells from the backing data store
+        """Update cell status for all cells from the backing data store
         when necessary.
 
         :param force: If True, cell status will be updated regardless
                       of whether it's time to do so.
         """
         if force or self._time_to_sync():
-            LOG.debug(_("Updating cell cache from db."))
+            LOG.debug("Updating cell cache from db.")
             self.last_cell_db_check = timeutils.utcnow()
             ctxt = context.get_admin_context()
             db_cells = self.db.cell_get_all(ctxt)
-            db_cells_dict = dict((cell['name'], cell) for cell in db_cells)
+            db_cells_dict = {cell['name']: cell for cell in db_cells}
             self._refresh_cells_from_dict(db_cells_dict)
             self._update_our_capacity(ctxt)
 
@@ -447,13 +470,15 @@ class CellStateManagerDB(CellStateManager):
 
 
 class CellStateManagerFile(CellStateManager):
-    def __init__(self, cell_state_cls, cells_config_path):
-        self.cells_config_path = cells_config_path
+    def __init__(self, cell_state_cls=None):
+        cells_config = CONF.cells.cells_config
+        self.cells_config_path = CONF.find_file(cells_config)
+        if not self.cells_config_path:
+            raise cfg.ConfigFilesNotFoundError(config_files=[cells_config])
         super(CellStateManagerFile, self).__init__(cell_state_cls)
 
     def _cell_data_sync(self, force=False):
-        """
-        Update cell status for all cells from the backing data store
+        """Update cell status for all cells from the backing data store
         when necessary.
 
         :param force: If True, cell status will be updated regardless
@@ -463,7 +488,7 @@ class CellStateManagerFile(CellStateManager):
                                                     force_reload=force)
 
         if reloaded:
-            LOG.debug(_("Updating cell cache from config file."))
+            LOG.debug("Updating cell cache from config file.")
             self.cells_config_data = jsonutils.loads(data)
             self._refresh_cells_from_dict(self.cells_config_data)
 
@@ -472,10 +497,10 @@ class CellStateManagerFile(CellStateManager):
             self._update_our_capacity()
 
     def cell_create(self, ctxt, values):
-        raise exception.CellsUpdateProhibited()
+        raise exception.CellsUpdateUnsupported()
 
     def cell_update(self, ctxt, cell_name, values):
-        raise exception.CellsUpdateProhibited()
+        raise exception.CellsUpdateUnsupported()
 
     def cell_delete(self, ctxt, cell_name):
-        raise exception.CellsUpdateProhibited()
+        raise exception.CellsUpdateUnsupported()

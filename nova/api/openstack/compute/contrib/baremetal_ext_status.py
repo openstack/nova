@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2013 OpenStack Foundation
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -24,4 +22,4 @@ class Baremetal_ext_status(extensions.ExtensionDescriptor):
     alias = "os-baremetal-ext-status"
     namespace = ("http://docs.openstack.org/compute/ext/"
                  "baremetal_ext_status/api/v2")
-    updated = "2013-08-27T00:00:00+00:00"
+    updated = "2013-08-27T00:00:00Z"

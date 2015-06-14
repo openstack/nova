@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
@@ -17,10 +15,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_log import log as logging
+from oslo_serialization import jsonutils
+
 from nova import context
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import jsonutils
-from nova.openstack.common import log as logging
 from nova.virt import firewall
 from nova.virt import netutils
 
@@ -74,7 +72,7 @@ class Dom0IptablesFirewallDriver(firewall.IptablesFirewallDriver):
         ipv6_rules = []
         rules = self._virtapi.provider_fw_rule_get_all(ctxt)
         for rule in rules:
-            LOG.debug(_('Adding provider rule: %s'), rule['cidr'])
+            LOG.debug('Adding provider rule: %s', rule['cidr'])
             version = netutils.get_ip_version(rule['cidr'])
             if version == 4:
                 fw_rules = ipv4_rules

@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -18,12 +16,13 @@
 
 import datetime
 
-from oslo.config import cfg
+from oslo_config import cfg
 import webob.exc
 
 from nova.api.openstack import extensions
 from nova import compute
-from nova.openstack.common.gettextutils import _
+from nova import context as nova_context
+from nova.i18n import _
 from nova import utils
 
 CONF = cfg.CONF
@@ -76,6 +75,9 @@ class InstanceUsageAuditLogController(object):
             completed before this datetime. Has no effect if both begin and end
             are specified.
         """
+        # NOTE(alex_xu): back-compatible with db layer hard-code admin
+        # permission checks.
+        nova_context.require_admin_context(context)
         defbegin, defend = utils.last_completed_audit_period(before=before)
         if begin is None:
             begin = defbegin
@@ -102,11 +104,11 @@ class InstanceUsageAuditLogController(object):
                 running_hosts.add(tlog['host'])
             total_errors += tlog['errors']
             total_items += tlog['task_items']
-        log = dict((tl['host'], dict(state=tl['state'],
-                                  instances=tl['task_items'],
-                                  errors=tl['errors'],
-                                  message=tl['message']))
-                  for tl in task_logs)
+        log = {tl['host']: dict(state=tl['state'],
+                                instances=tl['task_items'],
+                                errors=tl['errors'],
+                                message=tl['message'])
+               for tl in task_logs}
         missing_hosts = hosts - seen_hosts
         overall_status = "%s hosts done. %s errors." % (
                     'ALL' if len(done_hosts) == len(hosts)
@@ -130,7 +132,7 @@ class Instance_usage_audit_log(extensions.ExtensionDescriptor):
     name = "OSInstanceUsageAuditLog"
     alias = "os-instance_usage_audit_log"
     namespace = "http://docs.openstack.org/ext/services/api/v1.1"
-    updated = "2012-07-06T01:00:00+00:00"
+    updated = "2012-07-06T01:00:00Z"
 
     def get_resources(self):
         ext = extensions.ResourceExtension('os-instance_usage_audit_log',

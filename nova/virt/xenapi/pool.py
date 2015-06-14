@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright (c) 2012 Citrix Systems, Inc.
 # Copyright 2010 OpenStack Foundation
 #
@@ -19,15 +17,15 @@
 Management class for Pool-related functions (join, eject, etc).
 """
 
-import urlparse
-
-from oslo.config import cfg
+from oslo_config import cfg
+from oslo_log import log as logging
+from oslo_serialization import jsonutils
+import six
+import six.moves.urllib.parse as urlparse
 
 from nova.compute import rpcapi as compute_rpcapi
 from nova import exception
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import jsonutils
-from nova.openstack.common import log as logging
+from nova.i18n import _, _LE
 from nova.virt.xenapi import pool_states
 from nova.virt.xenapi import vm_utils
 
@@ -40,17 +38,14 @@ xenapi_pool_opts = [
     ]
 
 CONF = cfg.CONF
-CONF.register_opts(xenapi_pool_opts)
+CONF.register_opts(xenapi_pool_opts, 'xenserver')
 CONF.import_opt('host', 'nova.netconf')
 
 
 class ResourcePool(object):
-    """
-    Implements resource pool operations.
-    """
+    """Implements resource pool operations."""
     def __init__(self, session, virtapi):
-        host_ref = session.get_xenapi_host()
-        host_rec = session.call_xenapi('host.get_record', host_ref)
+        host_rec = session.host.get_record(session.host_ref)
         self._host_name = host_rec['hostname']
         self._host_addr = host_rec['address']
         self._host_uuid = host_rec['uuid']
@@ -65,10 +60,10 @@ class ResourcePool(object):
             if set_error:
                 metadata = {pool_states.KEY: pool_states.ERROR}
                 aggregate.update_metadata(metadata)
-            op(context, aggregate, host)
+            op(host)
         except Exception:
-            LOG.exception(_('Aggregate %(aggregate_id)s: unrecoverable state '
-                            'during operation on %(host)s'),
+            LOG.exception(_LE('Aggregate %(aggregate_id)s: unrecoverable '
+                              'state during operation on %(host)s'),
                           {'aggregate_id': aggregate['id'], 'host': host})
 
     def add_to_aggregate(self, context, aggregate, host, slave_info=None):
@@ -76,15 +71,14 @@ class ResourcePool(object):
         if not pool_states.is_hv_pool(aggregate['metadata']):
             return
 
-        invalid = {pool_states.CHANGING: 'setup in progress',
-                   pool_states.DISMISSED: 'aggregate deleted',
-                   pool_states.ERROR: 'aggregate in error'}
+        invalid = {pool_states.CHANGING: _('setup in progress'),
+                   pool_states.DISMISSED: _('aggregate deleted'),
+                   pool_states.ERROR: _('aggregate in error')}
 
         if (aggregate['metadata'][pool_states.KEY] in invalid.keys()):
-            raise exception.InvalidAggregateAction(
-                    action='add host',
+            raise exception.InvalidAggregateActionAdd(
                     aggregate_id=aggregate['id'],
-                    reason=aggregate['metadata'][pool_states.KEY])
+                    reason=invalid[aggregate['metadata'][pool_states.KEY]])
 
         if (aggregate['metadata'][pool_states.KEY] == pool_states.CREATED):
             aggregate.update_metadata({pool_states.KEY: pool_states.CHANGING})
@@ -124,12 +118,11 @@ class ResourcePool(object):
         if not pool_states.is_hv_pool(aggregate['metadata']):
             return
 
-        invalid = {pool_states.CREATED: 'no hosts to remove',
-                   pool_states.CHANGING: 'setup in progress',
-                   pool_states.DISMISSED: 'aggregate deleted', }
+        invalid = {pool_states.CREATED: _('no hosts to remove'),
+                   pool_states.CHANGING: _('setup in progress'),
+                   pool_states.DISMISSED: _('aggregate deleted')}
         if aggregate['metadata'][pool_states.KEY] in invalid.keys():
-            raise exception.InvalidAggregateAction(
-                    action='remove host',
+            raise exception.InvalidAggregateActionDelete(
                     aggregate_id=aggregate['id'],
                     reason=invalid[aggregate['metadata'][pool_states.KEY]])
 
@@ -147,9 +140,8 @@ class ResourcePool(object):
             if len(aggregate['hosts']) > 1:
                 # NOTE: this could be avoided by doing a master
                 # re-election, but this is simpler for now.
-                raise exception.InvalidAggregateAction(
+                raise exception.InvalidAggregateActionDelete(
                                     aggregate_id=aggregate['id'],
-                                    action='remove_from_aggregate',
                                     reason=_('Unable to eject %s '
                                              'from the pool; pool not empty')
                                              % host)
@@ -176,13 +168,13 @@ class ResourcePool(object):
                     'url': url,
                     'user': user,
                     'password': passwd,
-                    'force': jsonutils.dumps(CONF.use_join_force),
+                    'force': jsonutils.dumps(CONF.xenserver.use_join_force),
                     'master_addr': self._host_addr,
-                    'master_user': CONF.xenapi_connection_username,
-                    'master_pass': CONF.xenapi_connection_password, }
+                    'master_user': CONF.xenserver.connection_username,
+                    'master_pass': CONF.xenserver.connection_password, }
             self._session.call_plugin('xenhost', 'host_join', args)
         except self._session.XenAPI.Failure as e:
-            LOG.error(_("Pool-Join failed: %s"), e)
+            LOG.error(_LE("Pool-Join failed: %s"), e)
             raise exception.AggregateError(aggregate_id=aggregate_id,
                                            action='add_to_aggregate',
                                            reason=_('Unable to join %s '
@@ -195,39 +187,38 @@ class ResourcePool(object):
             # guest instances, the eject will fail. That's a precaution
             # to deal with the fact that the admin should evacuate the host
             # first. The eject wipes out the host completely.
-            vm_ref = self._session.call_xenapi('VM.get_by_uuid', compute_uuid)
-            self._session.call_xenapi("VM.clean_shutdown", vm_ref)
+            vm_ref = self._session.VM.get_by_uuid(compute_uuid)
+            self._session.VM.clean_shutdown(vm_ref)
 
-            host_ref = self._session.call_xenapi('host.get_by_uuid', host_uuid)
-            self._session.call_xenapi("pool.eject", host_ref)
+            host_ref = self._session.host.get_by_uuid(host_uuid)
+            self._session.pool.eject(host_ref)
         except self._session.XenAPI.Failure as e:
-            LOG.error(_("Pool-eject failed: %s"), e)
+            LOG.error(_LE("Pool-eject failed: %s"), e)
             raise exception.AggregateError(aggregate_id=aggregate_id,
                                            action='remove_from_aggregate',
-                                           reason=str(e.details))
+                                           reason=six.text_type(e.details))
 
     def _init_pool(self, aggregate_id, aggregate_name):
         """Set the name label of a XenServer pool."""
         try:
-            pool_ref = self._session.call_xenapi("pool.get_all")[0]
-            self._session.call_xenapi("pool.set_name_label",
-                                      pool_ref, aggregate_name)
+            pool_ref = self._session.pool.get_all()[0]
+            self._session.pool.set_name_label(pool_ref, aggregate_name)
         except self._session.XenAPI.Failure as e:
-            LOG.error(_("Unable to set up pool: %s."), e)
+            LOG.error(_LE("Unable to set up pool: %s."), e)
             raise exception.AggregateError(aggregate_id=aggregate_id,
                                            action='add_to_aggregate',
-                                           reason=str(e.details))
+                                           reason=six.text_type(e.details))
 
     def _clear_pool(self, aggregate_id):
         """Clear the name label of a XenServer pool."""
         try:
-            pool_ref = self._session.call_xenapi('pool.get_all')[0]
-            self._session.call_xenapi('pool.set_name_label', pool_ref, '')
+            pool_ref = self._session.pool.get_all()[0]
+            self._session.pool.set_name_label(pool_ref, '')
         except self._session.XenAPI.Failure as e:
-            LOG.error(_("Pool-set_name_label failed: %s"), e)
+            LOG.error(_LE("Pool-set_name_label failed: %s"), e)
             raise exception.AggregateError(aggregate_id=aggregate_id,
                                            action='remove_from_aggregate',
-                                           reason=str(e.details))
+                                           reason=six.text_type(e.details))
 
     def _create_slave_info(self):
         """XenServer specific info needed to join the hypervisor pool."""
@@ -235,12 +226,12 @@ class ResourcePool(object):
         # because this might be 169.254.0.1, i.e. xenapi
         # NOTE: password in clear is not great, but it'll do for now
         sender_url = swap_xapi_host(
-            CONF.xenapi_connection_url, self._host_addr)
+            CONF.xenserver.connection_url, self._host_addr)
 
         return {
             "url": sender_url,
-            "user": CONF.xenapi_connection_username,
-            "passwd": CONF.xenapi_connection_password,
+            "user": CONF.xenserver.connection_username,
+            "passwd": CONF.xenserver.connection_password,
             "compute_uuid": vm_utils.get_this_vm_uuid(None),
             "xenhost_uuid": self._host_uuid,
         }

@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
 #    a copy of the License at
@@ -14,22 +12,19 @@
 
 import webob
 
-from nova.api.openstack.compute import flavors as flavors_api
 from nova.api.openstack.compute.views import flavors as flavors_view
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.compute import flavors
 from nova import exception
-from nova.openstack.common.gettextutils import _
+from nova.i18n import _
 
 
 authorize = extensions.extension_authorizer('compute', 'flavormanage')
 
 
 class FlavorManageController(wsgi.Controller):
-    """
-    The Flavor Lifecycle API controller for the OpenStack API.
-    """
+    """The Flavor Lifecycle API controller for the OpenStack API."""
     _view_builder_class = flavors_view.ViewBuilder
 
     def __init__(self):
@@ -39,11 +34,10 @@ class FlavorManageController(wsgi.Controller):
     def _delete(self, req, id):
         context = req.environ['nova.context']
         authorize(context)
-
         try:
             flavor = flavors.get_flavor_by_flavor_id(
                     id, ctxt=context, read_deleted="no")
-        except exception.NotFound as e:
+        except exception.FlavorNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
         flavors.destroy(flavor['name'])
@@ -51,7 +45,6 @@ class FlavorManageController(wsgi.Controller):
         return webob.Response(status_int=202)
 
     @wsgi.action("create")
-    @wsgi.serializers(xml=flavors_api.FlavorTemplate)
     def _create(self, req, body):
         context = req.environ['nova.context']
         authorize(context)
@@ -60,10 +53,26 @@ class FlavorManageController(wsgi.Controller):
             raise webob.exc.HTTPBadRequest(explanation=msg)
         vals = body['flavor']
         name = vals.get('name')
+        if name is None:
+            msg = _("A valid name parameter is required")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
         flavorid = vals.get('id')
         memory = vals.get('ram')
+        if memory is None:
+            msg = _("A valid ram parameter is required")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
         vcpus = vals.get('vcpus')
+        if vcpus is None:
+            msg = _("A valid vcpus parameter is required")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
         root_gb = vals.get('disk')
+        if root_gb is None:
+            msg = _("A valid disk parameter is required")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
         ephemeral_gb = vals.get('OS-FLV-EXT-DATA:ephemeral', 0)
         swap = vals.get('swap', 0)
         rxtx_factor = vals.get('rxtx_factor', 1.0)
@@ -75,29 +84,27 @@ class FlavorManageController(wsgi.Controller):
                                     flavorid=flavorid, swap=swap,
                                     rxtx_factor=rxtx_factor,
                                     is_public=is_public)
-            if not flavor['is_public']:
-                flavors.add_flavor_access(flavor['flavorid'],
-                                          context.project_id, context)
             req.cache_db_flavor(flavor)
-        except (exception.InstanceTypeExists,
-                exception.InstanceTypeIdExists) as err:
+        except (exception.FlavorExists,
+                exception.FlavorIdExists) as err:
             raise webob.exc.HTTPConflict(explanation=err.format_message())
         except exception.InvalidInput as exc:
             raise webob.exc.HTTPBadRequest(explanation=exc.format_message())
+        except exception.FlavorCreateFailed as exc:
+            raise webob.exc.HTTPInternalServerError(explanation=
+                exc.format_message())
 
         return self._view_builder.show(req, flavor)
 
 
 class Flavormanage(extensions.ExtensionDescriptor):
-    """
-    Flavor create/delete API support
-    """
+    """Flavor create/delete API support."""
 
     name = "FlavorManage"
     alias = "os-flavor-manage"
     namespace = ("http://docs.openstack.org/compute/ext/"
                  "flavor_manage/api/v1.1")
-    updated = "2012-01-19T00:00:00+00:00"
+    updated = "2012-01-19T00:00:00Z"
 
     def get_controller_extensions(self):
         controller = FlavorManageController()

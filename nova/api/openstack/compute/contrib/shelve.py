@@ -22,7 +22,6 @@ from nova.api.openstack import extensions as exts
 from nova.api.openstack import wsgi
 from nova import compute
 from nova import exception
-from nova.openstack.common.gettextutils import _
 
 
 auth_shelve = exts.extension_authorizer('compute', 'shelve')
@@ -35,26 +34,20 @@ class ShelveController(wsgi.Controller):
         super(ShelveController, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
 
-    def _get_instance(self, context, instance_id):
-        try:
-            return self.compute_api.get(context, instance_id,
-                                        want_objects=True)
-        except exception.InstanceNotFound:
-            msg = _("Server not found")
-            raise exc.HTTPNotFound(msg)
-
     @wsgi.action('shelve')
     def _shelve(self, req, id, body):
         """Move an instance into shelved mode."""
         context = req.environ["nova.context"]
         auth_shelve(context)
 
-        instance = self._get_instance(context, id)
+        instance = common.get_instance(self.compute_api, context, id)
         try:
             self.compute_api.shelve(context, instance)
+        except exception.InstanceIsLocked as e:
+            raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
-                                                                  'shelve')
+                                                                  'shelve', id)
 
         return webob.Response(status_int=202)
 
@@ -64,12 +57,15 @@ class ShelveController(wsgi.Controller):
         context = req.environ["nova.context"]
         auth_shelve_offload(context)
 
-        instance = self._get_instance(context, id)
+        instance = common.get_instance(self.compute_api, context, id)
         try:
             self.compute_api.shelve_offload(context, instance)
+        except exception.InstanceIsLocked as e:
+            raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
-                                                              'shelveOffload')
+                                                              'shelveOffload',
+                                                              id)
 
         return webob.Response(status_int=202)
 
@@ -78,12 +74,15 @@ class ShelveController(wsgi.Controller):
         """Restore an instance from shelved mode."""
         context = req.environ["nova.context"]
         auth_unshelve(context)
-        instance = self._get_instance(context, id)
+        instance = common.get_instance(self.compute_api, context, id)
         try:
             self.compute_api.unshelve(context, instance)
+        except exception.InstanceIsLocked as e:
+            raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
-                                                                  'unshelve')
+                                                                  'unshelve',
+                                                                  id)
         return webob.Response(status_int=202)
 
 
@@ -93,7 +92,7 @@ class Shelve(exts.ExtensionDescriptor):
     name = "Shelve"
     alias = "os-shelve"
     namespace = "http://docs.openstack.org/compute/ext/shelve/api/v1.1"
-    updated = "2013-04-06T00:00:00+00:00"
+    updated = "2013-04-06T00:00:00Z"
 
     def get_controller_extensions(self):
         controller = ShelveController()

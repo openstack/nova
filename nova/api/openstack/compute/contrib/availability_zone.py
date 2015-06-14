@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 OpenStack Foundation
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -14,14 +12,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo.config import cfg
+from oslo_config import cfg
 
-from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 from nova import availability_zones
-from nova import db
+from nova import context as nova_context
+from nova import objects
 from nova import servicegroup
 
 CONF = cfg.CONF
@@ -30,43 +27,6 @@ authorize_list = extensions.extension_authorizer('compute',
                                                  'availability_zone:list')
 authorize_detail = extensions.extension_authorizer('compute',
                                                    'availability_zone:detail')
-
-
-def make_availability_zone(elem):
-    elem.set('name', 'zoneName')
-
-    zoneStateElem = xmlutil.SubTemplateElement(elem, 'zoneState',
-                                               selector='zoneState')
-    zoneStateElem.set('available')
-
-    hostsElem = xmlutil.SubTemplateElement(elem, 'hosts', selector='hosts')
-    hostElem = xmlutil.SubTemplateElement(hostsElem, 'host',
-                                          selector=xmlutil.get_items)
-    hostElem.set('name', 0)
-
-    svcsElem = xmlutil.SubTemplateElement(hostElem, 'services', selector=1)
-    svcElem = xmlutil.SubTemplateElement(svcsElem, 'service',
-                                         selector=xmlutil.get_items)
-    svcElem.set('name', 0)
-
-    svcStateElem = xmlutil.SubTemplateElement(svcElem, 'serviceState',
-                                              selector=1)
-    svcStateElem.set('available')
-    svcStateElem.set('active')
-    svcStateElem.set('updated_at')
-
-    # Attach metadata node
-    elem.append(common.MetadataTemplate())
-
-
-class AvailabilityZonesTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('availabilityZones')
-        zoneElem = xmlutil.SubTemplateElement(root, 'availabilityZone',
-                                              selector='availabilityZoneInfo')
-        make_availability_zone(zoneElem)
-        return xmlutil.MasterTemplate(root, 1, nsmap={
-            Availability_zone.alias: Availability_zone.namespace})
 
 
 class AvailabilityZoneController(wsgi.Controller):
@@ -105,9 +65,8 @@ class AvailabilityZoneController(wsgi.Controller):
             availability_zones.get_availability_zones(ctxt)
 
         # Available services
-        enabled_services = db.service_get_all(context, False)
-        enabled_services = availability_zones.set_availability_zones(context,
-                enabled_services)
+        enabled_services = objects.ServiceList.get_all(context, disabled=False,
+                                                       set_zones=True)
         zone_hosts = {}
         host_services = {}
         for service in enabled_services:
@@ -141,7 +100,6 @@ class AvailabilityZoneController(wsgi.Controller):
                            "hosts": None})
         return {'availabilityZoneInfo': result}
 
-    @wsgi.serializers(xml=AvailabilityZonesTemplate)
     def index(self, req):
         """Returns a summary list of availability zone."""
         context = req.environ['nova.context']
@@ -149,12 +107,13 @@ class AvailabilityZoneController(wsgi.Controller):
 
         return self._describe_availability_zones(context)
 
-    @wsgi.serializers(xml=AvailabilityZonesTemplate)
     def detail(self, req):
         """Returns a detailed list of availability zone."""
         context = req.environ['nova.context']
         authorize_detail(context)
-
+        # NOTE(alex_xu): back-compatible with db layer hard-code admin
+        # permission checks.
+        nova_context.require_admin_context(context)
         return self._describe_availability_zones_verbose(context)
 
 
@@ -167,7 +126,7 @@ class Availability_zone(extensions.ExtensionDescriptor):
     alias = "os-availability-zone"
     namespace = ("http://docs.openstack.org/compute/ext/"
                  "availabilityzone/api/v1.1")
-    updated = "2012-12-21T00:00:00+00:00"
+    updated = "2012-12-21T00:00:00Z"
 
     def get_resources(self):
         resources = []

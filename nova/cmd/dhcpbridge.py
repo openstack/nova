@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
@@ -24,22 +22,28 @@ from __future__ import print_function
 
 import os
 import sys
+import traceback
 
-from oslo.config import cfg
+from oslo_config import cfg
+from oslo_log import log as logging
+from oslo_serialization import jsonutils
+from oslo_utils import importutils
 
+from nova.conductor import rpcapi as conductor_rpcapi
 from nova import config
 from nova import context
-from nova import db
+import nova.db.api
+from nova import exception
+from nova.i18n import _LE
 from nova.network import rpcapi as network_rpcapi
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import importutils
-from nova.openstack.common import jsonutils
-from nova.openstack.common import log as logging
-from nova.openstack.common import rpc
+from nova import objects
+from nova.objects import base as objects_base
+from nova import rpc
 
 CONF = cfg.CONF
 CONF.import_opt('host', 'nova.netconf')
 CONF.import_opt('network_manager', 'nova.service')
+CONF.import_opt('use_local', 'nova.conductor.api', group='conductor')
 LOG = logging.getLogger(__name__)
 
 
@@ -67,13 +71,13 @@ def del_lease(mac, ip_address):
 def init_leases(network_id):
     """Get the list of hosts for a network."""
     ctxt = context.get_admin_context()
-    network_ref = db.network_get(ctxt, network_id)
+    network = objects.Network.get_by_id(ctxt, network_id)
     network_manager = importutils.import_object(CONF.network_manager)
-    return network_manager.get_dhcp_leases(ctxt, network_ref)
+    return network_manager.get_dhcp_leases(ctxt, network)
 
 
 def add_action_parsers(subparsers):
-    parser = subparsers.add_parser('init')
+    subparsers.add_parser('init')
 
     # NOTE(cfb): dnsmasq always passes mac, and ip. hostname
     #            is passed if known. We don't care about
@@ -94,27 +98,46 @@ CONF.register_cli_opt(
                       handler=add_action_parsers))
 
 
+def block_db_access():
+    class NoDB(object):
+        def __getattr__(self, attr):
+            return self
+
+        def __call__(self, *args, **kwargs):
+            stacktrace = "".join(traceback.format_stack())
+            LOG.error(_LE('No db access allowed in nova-dhcpbridge: %s'),
+                      stacktrace)
+            raise exception.DBNotAllowed('nova-dhcpbridge')
+
+    nova.db.api.IMPL = NoDB()
+
+
 def main():
     """Parse environment and arguments and call the appropriate action."""
     config.parse_args(sys.argv,
         default_config_files=jsonutils.loads(os.environ['CONFIG_FILE']))
 
-    logging.setup("nova")
+    logging.setup(CONF, "nova")
     global LOG
     LOG = logging.getLogger('nova.dhcpbridge')
+    objects.register_all()
+
+    if not CONF.conductor.use_local:
+        block_db_access()
+        objects_base.NovaObject.indirection_api = \
+            conductor_rpcapi.ConductorAPI()
 
     if CONF.action.name in ['add', 'del', 'old']:
-        msg = (_("Called '%(action)s' for mac '%(mac)s' with ip '%(ip)s'") %
-               {"action": CONF.action.name,
-                "mac": CONF.action.mac,
-                "ip": CONF.action.ip})
-        LOG.debug(msg)
+        LOG.debug("Called '%(action)s' for mac '%(mac)s' with ip '%(ip)s'",
+                  {"action": CONF.action.name,
+                   "mac": CONF.action.mac,
+                   "ip": CONF.action.ip})
         CONF.action.func(CONF.action.mac, CONF.action.ip)
     else:
         try:
             network_id = int(os.environ.get('NETWORK_ID'))
         except TypeError:
-            LOG.error(_("Environment variable 'NETWORK_ID' must be set."))
+            LOG.error(_LE("Environment variable 'NETWORK_ID' must be set."))
             return(1)
 
         print(init_leases(network_id))

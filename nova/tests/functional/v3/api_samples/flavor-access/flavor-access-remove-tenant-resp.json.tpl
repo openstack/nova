@@ -1,0 +1,3 @@
+{
+    "flavor_access": []
+}

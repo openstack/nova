@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -13,21 +11,22 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import datetime
+import copy
+import logging
+import random
 import time
 
-from oslo.config import cfg
+from oslo_config import cfg
+import six
 
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import log as logging
-from nova.openstack.common import timeutils
+from nova.openstack.common._i18n import _, _LE, _LI
 
 
 periodic_opts = [
     cfg.BoolOpt('run_external_periodic_tasks',
                 default=True,
-                help=('Some periodic tasks can be run in a separate process. '
-                      'Should we run them here?')),
+                help='Some periodic tasks can be run in a separate process. '
+                     'Should we run them here?'),
 ]
 
 CONF = cfg.CONF
@@ -36,6 +35,11 @@ CONF.register_opts(periodic_opts)
 LOG = logging.getLogger(__name__)
 
 DEFAULT_INTERVAL = 60.0
+
+
+def list_opts():
+    """Entry point for oslo-config-generator."""
+    return [(None, copy.deepcopy(periodic_opts))]
 
 
 class InvalidPeriodicTaskArg(Exception):
@@ -47,18 +51,19 @@ def periodic_task(*args, **kwargs):
 
     This decorator can be used in two ways:
 
-        1. Without arguments '@periodic_task', this will be run on every cycle
-           of the periodic scheduler.
+        1. Without arguments '@periodic_task', this will be run on the default
+           interval of 60 seconds.
 
         2. With arguments:
-           @periodic_task(spacing=N [, run_immediately=[True|False]])
+           @periodic_task(spacing=N [, run_immediately=[True|False]]
+           [, name=[None|"string"])
            this will be run on approximately every N seconds. If this number is
            negative the periodic task will be disabled. If the run_immediately
            argument is provided and has a value of 'True', the first run of the
            task will be shortly after task scheduler starts.  If
            run_immediately is omitted or set to 'False', the first time the
            task runs will be approximately N seconds after the task scheduler
-           starts.
+           starts. If name is not provided, __name__ of function is used.
     """
     def decorator(f):
         # Test for old style invocation
@@ -72,6 +77,7 @@ def periodic_task(*args, **kwargs):
             f._periodic_enabled = False
         else:
             f._periodic_enabled = kwargs.pop('enabled', True)
+        f._periodic_name = kwargs.pop('name', f.__name__)
 
         # Control frequency
         f._periodic_spacing = kwargs.pop('spacing', 0)
@@ -79,18 +85,18 @@ def periodic_task(*args, **kwargs):
         if f._periodic_immediate:
             f._periodic_last_run = None
         else:
-            f._periodic_last_run = timeutils.utcnow()
+            f._periodic_last_run = time.time()
         return f
 
     # NOTE(sirp): The `if` is necessary to allow the decorator to be used with
-    # and without parens.
+    # and without parenthesis.
     #
-    # In the 'with-parens' case (with kwargs present), this function needs to
-    # return a decorator function since the interpreter will invoke it like:
+    # In the 'with-parenthesis' case (with kwargs present), this function needs
+    # to return a decorator function since the interpreter will invoke it like:
     #
     #   periodic_task(*args, **kwargs)(f)
     #
-    # In the 'without-parens' case, the original function will be passed
+    # In the 'without-parenthesis' case, the original function will be passed
     # in as the first argument, like:
     #
     #   periodic_task(f)
@@ -101,6 +107,36 @@ def periodic_task(*args, **kwargs):
 
 
 class _PeriodicTasksMeta(type):
+    def _add_periodic_task(cls, task):
+        """Add a periodic task to the list of periodic tasks.
+
+        The task should already be decorated by @periodic_task.
+
+        :return: whether task was actually enabled
+        """
+        name = task._periodic_name
+
+        if task._periodic_spacing < 0:
+            LOG.info(_LI('Skipping periodic task %(task)s because '
+                         'its interval is negative'),
+                     {'task': name})
+            return False
+        if not task._periodic_enabled:
+            LOG.info(_LI('Skipping periodic task %(task)s because '
+                         'it is disabled'),
+                     {'task': name})
+            return False
+
+        # A periodic spacing of zero indicates that this task should
+        # be run on the default interval to avoid running too
+        # frequently.
+        if task._periodic_spacing == 0:
+            task._periodic_spacing = DEFAULT_INTERVAL
+
+        cls._periodic_tasks.append((name, task))
+        cls._periodic_spacing[name] = task._periodic_spacing
+        return True
+
     def __init__(cls, names, bases, dict_):
         """Metaclass that allows us to collect decorated periodic tasks."""
         super(_PeriodicTasksMeta, cls).__init__(names, bases, dict_)
@@ -115,43 +151,52 @@ class _PeriodicTasksMeta(type):
             cls._periodic_tasks = []
 
         try:
-            cls._periodic_last_run = cls._periodic_last_run.copy()
-        except AttributeError:
-            cls._periodic_last_run = {}
-
-        try:
             cls._periodic_spacing = cls._periodic_spacing.copy()
         except AttributeError:
             cls._periodic_spacing = {}
 
         for value in cls.__dict__.values():
             if getattr(value, '_periodic_task', False):
-                task = value
-                name = task.__name__
-
-                if task._periodic_spacing < 0:
-                    LOG.info(_('Skipping periodic task %(task)s because '
-                               'its interval is negative'),
-                             {'task': name})
-                    continue
-                if not task._periodic_enabled:
-                    LOG.info(_('Skipping periodic task %(task)s because '
-                               'it is disabled'),
-                             {'task': name})
-                    continue
-
-                # A periodic spacing of zero indicates that this task should
-                # be run every pass
-                if task._periodic_spacing == 0:
-                    task._periodic_spacing = None
-
-                cls._periodic_tasks.append((name, task))
-                cls._periodic_spacing[name] = task._periodic_spacing
-                cls._periodic_last_run[name] = task._periodic_last_run
+                cls._add_periodic_task(value)
 
 
+def _nearest_boundary(last_run, spacing):
+    """Find nearest boundary which is in the past, which is a multiple of the
+    spacing with the last run as an offset.
+
+    Eg if last run was 10 and spacing was 7, the new last run could be: 17, 24,
+    31, 38...
+
+    0% to 5% of the spacing value will be added to this value to ensure tasks
+    do not synchronize. This jitter is rounded to the nearest second, this
+    means that spacings smaller than 20 seconds will not have jitter.
+    """
+    current_time = time.time()
+    if last_run is None:
+        return current_time
+    delta = current_time - last_run
+    offset = delta % spacing
+    # Add up to 5% jitter
+    jitter = int(spacing * (random.random() / 20))
+    return current_time - offset + jitter
+
+
+@six.add_metaclass(_PeriodicTasksMeta)
 class PeriodicTasks(object):
-    __metaclass__ = _PeriodicTasksMeta
+    def __init__(self):
+        super(PeriodicTasks, self).__init__()
+        self._periodic_last_run = {}
+        for name, task in self._periodic_tasks:
+            self._periodic_last_run[name] = task._periodic_last_run
+
+    def add_periodic_task(self, task):
+        """Add a periodic task to the list of periodic tasks.
+
+        The task should already be decorated by @periodic_task.
+        """
+        if self.__class__._add_periodic_task(task):
+            self._periodic_last_run[task._periodic_name] = (
+                task._periodic_last_run)
 
     def run_periodic_tasks(self, context, raise_on_error=False):
         """Tasks to be run at a periodic interval."""
@@ -159,30 +204,29 @@ class PeriodicTasks(object):
         for task_name, task in self._periodic_tasks:
             full_task_name = '.'.join([self.__class__.__name__, task_name])
 
-            now = timeutils.utcnow()
             spacing = self._periodic_spacing[task_name]
             last_run = self._periodic_last_run[task_name]
 
-            # If a periodic task is _nearly_ due, then we'll run it early
-            if spacing is not None and last_run is not None:
-                due = last_run + datetime.timedelta(seconds=spacing)
-                if not timeutils.is_soon(due, 0.2):
-                    idle_for = min(idle_for, timeutils.delta_seconds(now, due))
+            # Check if due, if not skip
+            idle_for = min(idle_for, spacing)
+            if last_run is not None:
+                delta = last_run + spacing - time.time()
+                if delta > 0:
+                    idle_for = min(idle_for, delta)
                     continue
 
-            if spacing is not None:
-                idle_for = min(idle_for, spacing)
-
-            LOG.debug(_("Running periodic task %(full_task_name)s"), locals())
-            self._periodic_last_run[task_name] = timeutils.utcnow()
+            LOG.debug("Running periodic task %(full_task_name)s",
+                      {"full_task_name": full_task_name})
+            self._periodic_last_run[task_name] = _nearest_boundary(
+                last_run, spacing)
 
             try:
                 task(self, context)
             except Exception as e:
                 if raise_on_error:
                     raise
-                LOG.exception(_("Error during %(full_task_name)s: %(e)s"),
-                              locals())
+                LOG.exception(_LE("Error during %(full_task_name)s: %(e)s"),
+                              {"full_task_name": full_task_name, "e": e})
             time.sleep(0)
 
         return idle_for

@@ -1,0 +1,6 @@
+{
+    "console": {
+        "type": "serial",
+        "url":"ws://127.0.0.1:6083/?token=f9906a48-b71e-4f18-baca-c987da3ebdb3"
+    }
+}

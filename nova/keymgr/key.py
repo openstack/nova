@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright (c) 2013 The Johns Hopkins University/Applied Physics Laboratory
 # All Rights Reserved.
 #
@@ -56,9 +54,7 @@ class Key(object):
 
 
 class SymmetricKey(Key):
-    """
-    This class represents symmetric keys
-    """
+    """This class represents symmetric keys."""
 
     def __init__(self, alg, key):
         """Create a new SymmetricKey object.

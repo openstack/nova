@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2011 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -17,6 +15,8 @@
 
 """Custom SQLAlchemy types."""
 
+import netaddr
+from oslo_utils import netutils
 from sqlalchemy.dialects import postgresql
 from sqlalchemy import types
 
@@ -40,7 +40,7 @@ class IPAddress(types.TypeDecorator):
             return value
         # NOTE(maurosr): The purpose here is to convert ipv6 to the shortened
         # form, not validate it.
-        elif utils.is_valid_ipv6(value):
+        elif netutils.is_valid_ipv6(value):
             return utils.get_shortened_ipv6(value)
         return value
 
@@ -62,3 +62,11 @@ class CIDR(types.TypeDecorator):
         if utils.is_valid_ipv6_cidr(value):
             return utils.get_shortened_ipv6_cidr(value)
         return value
+
+    def process_result_value(self, value, dialect):
+        try:
+            return str(netaddr.IPNetwork(value, version=4).cidr)
+        except netaddr.AddrFormatError:
+            return str(netaddr.IPNetwork(value, version=6).cidr)
+        except TypeError:
+            return None

@@ -16,7 +16,7 @@
 """
 Weigh cells by memory needed in a way that spreads instances.
 """
-from oslo.config import cfg
+from oslo_config import cfg
 
 from nova.cells import weights
 
@@ -34,12 +34,11 @@ CONF.register_opts(ram_weigher_opts, group='cells')
 class RamByInstanceTypeWeigher(weights.BaseCellWeigher):
     """Weigh cells by instance_type requested."""
 
-    def _weight_multiplier(self):
+    def weight_multiplier(self):
         return CONF.cells.ram_weight_multiplier
 
     def _weigh_object(self, cell, weight_properties):
-        """
-        Use the 'ram_free' for a particular instance_type advertised from a
+        """Use the 'ram_free' for a particular instance_type advertised from a
         child cell's capacity to compute a weight.  We want to direct the
         build to a cell with a higher capacity.  Since higher weights win,
         we just return the number of units available for the instance_type.

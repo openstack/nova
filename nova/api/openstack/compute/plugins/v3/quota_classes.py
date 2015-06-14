@@ -13,87 +13,83 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import six
 import webob
 
+from nova.api.openstack.compute.schemas.v3 import quota_classes
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
+from nova.api import validation
 import nova.context
 from nova import db
 from nova import exception
-from nova.openstack.common.gettextutils import _
 from nova import quota
 
 
 QUOTAS = quota.QUOTAS
-
 ALIAS = "os-quota-class-sets"
-authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
+
+# Quotas that are only enabled by specific extensions
+EXTENDED_QUOTAS = {'server_groups': 'os-server-group-quotas',
+                   'server_group_members': 'os-server-group-quotas'}
 
 
-class QuotaClassTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('quota_class_set',
-                                       selector='quota_class_set')
-        root.set('id')
-
-        for resource in QUOTAS.resources:
-            elem = xmlutil.SubTemplateElement(root, resource)
-            elem.text = resource
-
-        return xmlutil.MasterTemplate(root, 1)
+authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class QuotaClassSetsController(wsgi.Controller):
 
+    supported_quotas = []
+
+    def __init__(self, **kwargs):
+        self.supported_quotas = QUOTAS.resources
+        extension_info = kwargs.pop('extension_info').get_extensions()
+        for resource, extension in EXTENDED_QUOTAS.items():
+            if extension not in extension_info:
+                self.supported_quotas.remove(resource)
+
     def _format_quota_set(self, quota_class, quota_set):
         """Convert the quota object to a result dict."""
 
-        result = dict(id=str(quota_class))
+        if quota_class:
+            result = dict(id=str(quota_class))
+        else:
+            result = {}
 
-        for resource in QUOTAS.resources:
-            result[resource] = quota_set[resource]
+        for resource in self.supported_quotas:
+            if resource in quota_set:
+                result[resource] = quota_set[resource]
 
         return dict(quota_class_set=result)
 
     @extensions.expected_errors(403)
-    @wsgi.serializers(xml=QuotaClassTemplate)
     def show(self, req, id):
         context = req.environ['nova.context']
         authorize(context)
         try:
             nova.context.authorize_quota_class_context(context, id)
-            return self._format_quota_set(id,
-                                          QUOTAS.get_class_quotas(context, id))
-        except exception.NotAuthorized:
+            values = QUOTAS.get_class_quotas(context, id)
+            return self._format_quota_set(id, values)
+        except exception.Forbidden:
             raise webob.exc.HTTPForbidden()
 
-    @extensions.expected_errors((400, 403))
-    @wsgi.serializers(xml=QuotaClassTemplate)
+    @extensions.expected_errors((403))
+    @validation.schema(quota_classes.update)
     def update(self, req, id, body):
         context = req.environ['nova.context']
         authorize(context)
         quota_class = id
-        if not self.is_valid_body(body, 'quota_class_set'):
-            raise webob.exc.HTTPBadRequest("The request body invalid")
-        for key in body['quota_class_set'].keys():
-            if key in QUOTAS:
-                try:
-                    value = int(body['quota_class_set'][key])
-                except ValueError:
-                    msg = _("The value %s(val) of %(key)s isn't an "
-                            "integer") % {'val': body['quota_class_set'][key],
-                                          'key': key}
-                    raise webob.exc.HTTPBadRequest(explanation=msg)
-                try:
-                    db.quota_class_update(context, quota_class, key, value)
-                except exception.QuotaClassNotFound:
-                    db.quota_class_create(context, quota_class, key, value)
-                except exception.AdminRequired:
-                    raise webob.exc.HTTPForbidden()
-        return self._format_quota_set(
-            quota_class,
-            QUOTAS.get_class_quotas(context, quota_class))
+
+        for key, value in six.iteritems(body['quota_class_set']):
+            try:
+                db.quota_class_update(context, quota_class, key, value)
+            except exception.QuotaClassNotFound:
+                db.quota_class_create(context, quota_class, key, value)
+            except exception.AdminRequired:
+                raise webob.exc.HTTPForbidden()
+
+        values = QUOTAS.get_class_quotas(context, quota_class)
+        return self._format_quota_set(None, values)
 
 
 class QuotaClasses(extensions.V3APIExtensionBase):
@@ -101,13 +97,14 @@ class QuotaClasses(extensions.V3APIExtensionBase):
 
     name = "QuotaClasses"
     alias = ALIAS
-    namespace = ("http://docs.openstack.org/compute/ext/"
-                 "quota-class-sets/api/v3")
     version = 1
 
     def get_resources(self):
-        resources = [
-            extensions.ResourceExtension(ALIAS, QuotaClassSetsController())]
+        resources = []
+        res = extensions.ResourceExtension(
+            ALIAS,
+            QuotaClassSetsController(extension_info=self.extension_info))
+        resources.append(res)
         return resources
 
     def get_controller_extensions(self):

@@ -1,7 +1,7 @@
 {
-    "instance_usage_audit_log": {
+    "instance_usage_audit_logs": {
         "hosts_not_run": [
-            "defac351f91940668301096238d26b47"
+            "f4eb7cfd155f4574967f8b55a7faed75"
         ],
         "log": {},
         "num_hosts": 1,
@@ -9,8 +9,8 @@
         "num_hosts_not_run": 1,
         "num_hosts_running": 0,
         "overall_status": "0 of 1 hosts done. 0 errors.",
-        "period_beginning": "2013-08-01 00:00:00",
-        "period_ending": "2013-09-01 00:00:00",
+        "period_beginning": "2012-12-01 00:00:00",
+        "period_ending": "2013-01-01 00:00:00",
         "total_errors": 0,
         "total_instances": 0
     }

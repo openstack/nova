@@ -1,5 +1,0 @@
-{
-    "get_vnc_console": {
-        "type": "novnc"
-    }
-}

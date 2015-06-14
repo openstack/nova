@@ -1,6 +1,7 @@
 {
     "services": [
         {
+            "id": 1,
             "binary": "nova-scheduler",
             "disabled_reason": "test1",
             "host": "host1",
@@ -10,6 +11,7 @@
             "zone": "internal"
         },
         {
+            "id": 2,
             "binary": "nova-compute",
             "disabled_reason": "test2",
             "host": "host1",
@@ -19,8 +21,9 @@
             "zone": "nova"
         },
         {
+            "id": 3,
             "binary": "nova-scheduler",
-            "disabled_reason": "",
+            "disabled_reason": null,
             "host": "host2",
             "state": "down",
             "status": "enabled",
@@ -28,6 +31,7 @@
             "zone": "internal"
         },
         {
+            "id": 4,
             "binary": "nova-compute",
             "disabled_reason": "test4",
             "host": "host2",

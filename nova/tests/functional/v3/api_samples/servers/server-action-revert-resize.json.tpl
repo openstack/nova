@@ -1,0 +1,3 @@
+{
+    "revertResize" : null
+}

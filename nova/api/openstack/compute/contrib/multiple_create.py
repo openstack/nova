@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 OpenStack Foundation
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -24,4 +22,4 @@ class Multiple_create(extensions.ExtensionDescriptor):
     alias = "os-multiple-create"
     namespace = ("http://docs.openstack.org/compute/ext/"
                  "multiplecreate/api/v1.1")
-    updated = "2012-08-07T00:00:00+00:00"
+    updated = "2012-08-07T00:00:00Z"

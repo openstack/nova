@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2011 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -19,26 +17,87 @@ import functools
 
 import eventlet
 import netaddr
+from oslo_serialization import jsonutils
+import six
 
 from nova import exception
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import jsonutils
+from nova.i18n import _
 
 
 def ensure_string_keys(d):
     # http://bugs.python.org/issue4978
-    return dict([(str(k), v) for k, v in d.iteritems()])
+    return {str(k): v for k, v in six.iteritems(d)}
 
 # Constants for the 'vif_type' field in VIF class
 VIF_TYPE_OVS = 'ovs'
 VIF_TYPE_IVS = 'ivs'
+VIF_TYPE_DVS = 'dvs'
 VIF_TYPE_IOVISOR = 'iovisor'
 VIF_TYPE_BRIDGE = 'bridge'
 VIF_TYPE_802_QBG = '802.1qbg'
 VIF_TYPE_802_QBH = '802.1qbh'
+VIF_TYPE_HW_VEB = 'hw_veb'
 VIF_TYPE_MLNX_DIRECT = 'mlnx_direct'
 VIF_TYPE_MIDONET = 'midonet'
+VIF_TYPE_VHOSTUSER = 'vhostuser'
+VIF_TYPE_VROUTER = 'vrouter'
 VIF_TYPE_OTHER = 'other'
+
+# Constants for dictionary keys in the 'vif_details' field in the VIF
+# class
+VIF_DETAILS_PORT_FILTER = 'port_filter'
+VIF_DETAILS_OVS_HYBRID_PLUG = 'ovs_hybrid_plug'
+VIF_DETAILS_PHYSICAL_NETWORK = 'physical_network'
+
+# The following two constants define the SR-IOV related fields in the
+# 'vif_details'. 'profileid' should be used for VIF_TYPE_802_QBH,
+# 'vlan' for VIF_TYPE_HW_VEB
+VIF_DETAILS_PROFILEID = 'profileid'
+VIF_DETAILS_VLAN = 'vlan'
+
+# Constants for vhost-user related fields in 'vif_details'.
+# Sets mode on vhost-user socket, valid values are 'client'
+# and 'server'
+VIF_DETAILS_VHOSTUSER_MODE = 'vhostuser_mode'
+# vhost-user socket path
+VIF_DETAILS_VHOSTUSER_SOCKET = 'vhostuser_socket'
+# Specifies whether vhost-user socket should be plugged
+# into ovs bridge. Valid values are True and False
+VIF_DETAILS_VHOSTUSER_OVS_PLUG = 'vhostuser_ovs_plug'
+
+# Define supported virtual NIC types. VNIC_TYPE_DIRECT and VNIC_TYPE_MACVTAP
+# are used for SR-IOV ports
+VNIC_TYPE_NORMAL = 'normal'
+VNIC_TYPE_DIRECT = 'direct'
+VNIC_TYPE_MACVTAP = 'macvtap'
+
+# Constants for the 'vif_model' values
+VIF_MODEL_VIRTIO = 'virtio'
+VIF_MODEL_NE2K_PCI = 'ne2k_pci'
+VIF_MODEL_PCNET = 'pcnet'
+VIF_MODEL_RTL8139 = 'rtl8139'
+VIF_MODEL_E1000 = 'e1000'
+VIF_MODEL_E1000E = 'e1000e'
+VIF_MODEL_NETFRONT = 'netfront'
+VIF_MODEL_SPAPR_VLAN = 'spapr-vlan'
+
+VIF_MODEL_SRIOV = 'sriov'
+VIF_MODEL_VMXNET = 'vmxnet'
+VIF_MODEL_VMXNET3 = 'vmxnet3'
+
+VIF_MODEL_ALL = (
+    VIF_MODEL_VIRTIO,
+    VIF_MODEL_NE2K_PCI,
+    VIF_MODEL_PCNET,
+    VIF_MODEL_RTL8139,
+    VIF_MODEL_E1000,
+    VIF_MODEL_E1000E,
+    VIF_MODEL_NETFRONT,
+    VIF_MODEL_SPAPR_VLAN,
+    VIF_MODEL_SRIOV,
+    VIF_MODEL_VMXNET,
+    VIF_MODEL_VMXNET3,
+)
 
 # Constant for max length of network interface names
 # eg 'bridge' in the Network class or 'devname' in
@@ -82,7 +141,11 @@ class IP(Model):
                 raise exception.InvalidIpAddressError(msg)
 
     def __eq__(self, other):
-        return self['address'] == other['address']
+        keys = ['address', 'type', 'version']
+        return all(self[k] == other[k] for k in keys)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
     def is_in_subnet(self, subnet):
         if self['address'] and subnet['cidr']:
@@ -120,6 +183,13 @@ class FixedIP(IP):
         fixed_ip['floating_ips'] = [IP.hydrate(floating_ip)
                                    for floating_ip in fixed_ip['floating_ips']]
         return fixed_ip
+
+    def __eq__(self, other):
+        keys = ['address', 'type', 'version', 'floating_ips']
+        return all(self[k] == other[k] for k in keys)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
 
 class Route(Model):
@@ -159,7 +229,11 @@ class Subnet(Model):
             self['version'] = netaddr.IPNetwork(self['cidr']).version
 
     def __eq__(self, other):
-        return self['cidr'] == other['cidr']
+        keys = ['cidr', 'dns', 'gateway', 'ips', 'routes', 'version']
+        return all(self[k] == other[k] for k in keys)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
     def add_route(self, new_route):
         if new_route not in self['routes']:
@@ -212,6 +286,13 @@ class Network(Model):
                                   for subnet in network['subnets']]
         return network
 
+    def __eq__(self, other):
+        keys = ['id', 'bridge', 'label', 'subnets']
+        return all(self[k] == other[k] for k in keys)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
 
 class VIF8021QbgParams(Model):
     """Represents the parameters for a 802.1qbg VIF."""
@@ -233,25 +314,38 @@ class VIF8021QbhParams(Model):
 class VIF(Model):
     """Represents a Virtual Interface in Nova."""
     def __init__(self, id=None, address=None, network=None, type=None,
-                 devname=None, ovs_interfaceid=None,
-                 qbh_params=None, qbg_params=None,
-                 **kwargs):
+                 details=None, devname=None, ovs_interfaceid=None,
+                 qbh_params=None, qbg_params=None, active=False,
+                 vnic_type=VNIC_TYPE_NORMAL, profile=None,
+                 preserve_on_delete=False, **kwargs):
         super(VIF, self).__init__()
 
         self['id'] = id
         self['address'] = address
         self['network'] = network or None
         self['type'] = type
+        self['details'] = details or {}
         self['devname'] = devname
 
         self['ovs_interfaceid'] = ovs_interfaceid
         self['qbh_params'] = qbh_params
         self['qbg_params'] = qbg_params
+        self['active'] = active
+        self['vnic_type'] = vnic_type
+        self['profile'] = profile
+        self['preserve_on_delete'] = preserve_on_delete
 
         self._set_meta(kwargs)
 
     def __eq__(self, other):
-        return self['id'] == other['id']
+        keys = ['id', 'address', 'network', 'vnic_type',
+                'type', 'profile', 'details', 'devname',
+                'ovs_interfaceid', 'qbh_params', 'qbg_params',
+                'active', 'preserve_on_delete']
+        return all(self[k] == other[k] for k in keys)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
     def fixed_ips(self):
         return [fixed_ip for subnet in self['network']['subnets']
@@ -295,6 +389,18 @@ class VIF(Model):
                     'ips': ips}
         return []
 
+    def is_hybrid_plug_enabled(self):
+        return self['details'].get(VIF_DETAILS_OVS_HYBRID_PLUG, False)
+
+    def is_neutron_filtering_enabled(self):
+        return self['details'].get(VIF_DETAILS_PORT_FILTER, False)
+
+    def get_physical_network(self):
+        phy_network = self['network']['meta'].get('physical_network')
+        if not phy_network:
+            phy_network = self['details'].get(VIF_DETAILS_PHYSICAL_NETWORK)
+        return phy_network
+
     @classmethod
     def hydrate(cls, vif):
         vif = cls(**ensure_string_keys(vif))
@@ -324,12 +430,20 @@ class NetworkInfo(list):
 
     @classmethod
     def hydrate(cls, network_info):
-        if isinstance(network_info, basestring):
+        if isinstance(network_info, six.string_types):
             network_info = jsonutils.loads(network_info)
         return cls([VIF.hydrate(vif) for vif in network_info])
 
     def json(self):
         return jsonutils.dumps(self)
+
+    def wait(self, do_raise=True):
+        """A no-op method.
+
+        This is useful to avoid type checking when NetworkInfo might be
+        subclassed with NetworkInfoAsyncWrapper.
+        """
+        pass
 
 
 class NetworkInfoAsyncWrapper(NetworkInfo):

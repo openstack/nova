@@ -1,6 +1,4 @@
 #!/usr/bin/env python
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright (c) 2012 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -18,12 +16,12 @@
 
 """Module to authenticate Consoles."""
 
-from oslo.config import cfg
+from oslo_config import cfg
 
 
 consoleauth_topic_opt = cfg.StrOpt('consoleauth_topic',
         default='consoleauth',
-        help='the topic console auth proxy nodes listen on')
+        help='The topic console auth proxy nodes listen on')
 
 CONF = cfg.CONF
 CONF.register_opt(consoleauth_topic_opt)

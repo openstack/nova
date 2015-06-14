@@ -1,0 +1,13 @@
+{
+    "server": {
+        "name": "new-server-test",
+        "imageRef": "http://openstack.example.com/openstack/images/70a599e0-31e7-49b7-b260-868f441e862b",
+        "flavorRef": "http://openstack.example.com/openstack/flavors/1",
+        "metadata": {
+            "My Server Name": "Apache1"
+        },
+        "return_reservation_id": "True",
+        "min_count": "2",
+        "max_count": "3"
+    }
+}

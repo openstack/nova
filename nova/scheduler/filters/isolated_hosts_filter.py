@@ -13,7 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo.config import cfg
+from oslo_config import cfg
 
 from nova.scheduler import filters
 
@@ -40,20 +40,21 @@ class IsolatedHostsFilter(filters.BaseHostFilter):
     run_filter_once_per_request = True
 
     def host_passes(self, host_state, filter_properties):
-        """
-        Result Matrix with 'restrict_isolated_hosts_to_isolated_images' set
-        to True:
-                     | isolated_image | non_isolated_image
-        -------------+----------------+-------------------
-        iso_host     |    True        |     False
-        non_iso_host |    False       |      True
+        """Result Matrix with 'restrict_isolated_hosts_to_isolated_images' set
+        to True::
+
+        |                | isolated_image | non_isolated_image
+        |   -------------+----------------+-------------------
+        |   iso_host     |    True        |     False
+        |   non_iso_host |    False       |      True
 
         Result Matrix with 'restrict_isolated_hosts_to_isolated_images' set
-        to False:
-                     | isolated_image | non_isolated_image
-        -------------+----------------+-------------------
-        iso_host     |    True        |      True
-        non_iso_host |    False       |      True
+        to False::
+
+        |                | isolated_image | non_isolated_image
+        |   -------------+----------------+-------------------
+        |   iso_host     |    True        |      True
+        |   non_iso_host |    False       |      True
 
         """
         # If the configuration does not list any hosts, the filter will always

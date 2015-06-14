@@ -42,8 +42,9 @@ import inspect
 import os
 import sys
 
+from oslo_utils import importutils
+
 from nova import exception
-from nova.openstack.common import importutils
 
 
 class BaseLoader(object):

@@ -17,14 +17,111 @@
 Cells Utility Methods
 """
 import random
+import sys
 
-from nova import db
+import six
+
+from nova import exception
+from nova import objects
+from nova.objects import base as obj_base
+
 
 # Separator used between cell names for the 'full cell name' and routing
 # path
 PATH_CELL_SEP = '!'
+# Flag prepended to a cell name to indicate data shouldn't be synced during
+# an instance save.  There are no illegal chars in a cell name so using the
+# meaningful PATH_CELL_SEP in an invalid way will need to suffice.
+BLOCK_SYNC_FLAG = '!!'
 # Separator used between cell name and item
 _CELL_ITEM_SEP = '@'
+
+
+class ProxyObjectSerializer(obj_base.NovaObjectSerializer):
+    def __init__(self):
+        super(ProxyObjectSerializer, self).__init__()
+        self.serializer = super(ProxyObjectSerializer, self)
+
+    def _process_object(self, context, objprim):
+        return _CellProxy.obj_from_primitive(self.serializer, objprim, context)
+
+
+class _CellProxy(object):
+    def __init__(self, obj, cell_path):
+        self._obj = obj
+        self._cell_path = cell_path
+
+    @property
+    def id(self):
+        return cell_with_item(self._cell_path, self._obj.id)
+
+    @property
+    def host(self):
+        return cell_with_item(self._cell_path, self._obj.host)
+
+    def __getitem__(self, key):
+        if key == 'id':
+            return self.id
+        if key == 'host':
+            return self.host
+
+        return getattr(self._obj, key)
+
+    def obj_to_primitive(self):
+        obj_p = self._obj.obj_to_primitive()
+        obj_p['cell_proxy.class_name'] = self.__class__.__name__
+        obj_p['cell_proxy.cell_path'] = self._cell_path
+        return obj_p
+
+    @classmethod
+    def obj_from_primitive(cls, serializer, primitive, context=None):
+        obj_primitive = primitive.copy()
+        cell_path = obj_primitive.pop('cell_proxy.cell_path', None)
+        klass_name = obj_primitive.pop('cell_proxy.class_name', None)
+        obj = serializer._process_object(context, obj_primitive)
+        if klass_name is not None and cell_path is not None:
+            klass = getattr(sys.modules[__name__], klass_name)
+            return klass(obj, cell_path)
+        else:
+            return obj
+
+    # dict-ish syntax sugar
+    def _iteritems(self):
+        """For backwards-compatibility with dict-based objects.
+
+        NOTE(sbauza): May be removed in the future.
+        """
+        for name in self._obj.obj_fields:
+            if (self._obj.obj_attr_is_set(name) or
+                    name in self._obj.obj_extra_fields):
+                if name == 'id':
+                    yield name, self.id
+                elif name == 'host':
+                    yield name, self.host
+                else:
+                    yield name, getattr(self._obj, name)
+
+    if six.PY3:
+        items = _iteritems
+    else:
+        iteritems = _iteritems
+
+    def __getattr__(self, key):
+        return getattr(self._obj, key)
+
+
+class ComputeNodeProxy(_CellProxy):
+    pass
+
+
+class ServiceProxy(_CellProxy):
+    def __getattr__(self, key):
+        if key == 'compute_node':
+            # NOTE(sbauza): As the Service object is still having a nested
+            # ComputeNode object that consumers of this Proxy don't use, we can
+            # safely remove it from what's returned
+            raise AttributeError
+        return getattr(self._obj, key)
 
 
 def get_instances_to_sync(context, updated_since=None, project_id=None,
@@ -43,13 +140,15 @@ def get_instances_to_sync(context, updated_since=None, project_id=None,
     if not deleted:
         filters['deleted'] = False
     # Active instances first.
-    instances = db.instance_get_all_by_filters(
-            context, filters, 'deleted', 'asc')
+    instances = objects.InstanceList.get_by_filters(
+            context, filters, sort_key='deleted', sort_dir='asc')
     if shuffle:
+        # NOTE(melwitt): Need a list that supports assignment for shuffle.
+        instances = [instance for instance in instances]
         random.shuffle(instances)
     for instance in instances:
         if uuids_only:
-            yield instance['uuid']
+            yield instance.uuid
         else:
             yield instance
 
@@ -70,31 +169,30 @@ def split_cell_and_item(cell_and_item):
         return result
 
 
-def _add_cell_to_service(service, cell_name):
-    service['id'] = cell_with_item(cell_name, service['id'])
-    service['host'] = cell_with_item(cell_name, service['host'])
-
-
 def add_cell_to_compute_node(compute_node, cell_name):
     """Fix compute_node attributes that should be unique.  Allows
     API cell to query the 'id' by cell@id.
     """
-    compute_node['id'] = cell_with_item(cell_name, compute_node['id'])
-    # Might have a 'service' backref.  But if is_primitive() was used
-    # on this and it recursed too deep, 'service' may be "?".
-    service = compute_node.get('service')
-    if isinstance(service, dict):
-        _add_cell_to_service(service, cell_name)
+    # NOTE(sbauza): As compute_node is a ComputeNode object, we need to wrap it
+    # for adding the cell_path information
+    compute_proxy = ComputeNodeProxy(compute_node, cell_name)
+    try:
+        service = compute_proxy.service
+    except exception.ServiceNotFound:
+        service = None
+    if isinstance(service, objects.Service):
+        compute_proxy.service = ServiceProxy(service, cell_name)
+    return compute_proxy
 
 
 def add_cell_to_service(service, cell_name):
     """Fix service attributes that should be unique.  Allows
     API cell to query the 'id' or 'host' by cell@id/host.
     """
-    _add_cell_to_service(service, cell_name)
-    compute_node = service.get('compute_node')
-    if compute_node:
-        add_cell_to_compute_node(compute_node[0], cell_name)
+    # NOTE(sbauza): As service is a Service object, we need to wrap it
+    # for adding the cell_path information
+    service_proxy = ServiceProxy(service, cell_name)
+    return service_proxy
 
 
 def add_cell_to_task_log(task_log, cell_name):

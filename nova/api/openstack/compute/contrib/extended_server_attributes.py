@@ -16,7 +16,6 @@
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 
 authorize = extensions.soft_extension_authorizer('compute',
                                                  'extended_server_attributes')
@@ -25,7 +24,7 @@ authorize = extensions.soft_extension_authorizer('compute',
 class ExtendedServerAttributesController(wsgi.Controller):
     def _extend_server(self, context, server, instance):
         key = "%s:hypervisor_hostname" % Extended_server_attributes.alias
-        server[key] = instance['node']
+        server[key] = instance.node
 
         for attr in ['host', 'name']:
             if attr == 'name':
@@ -39,8 +38,6 @@ class ExtendedServerAttributesController(wsgi.Controller):
     def show(self, req, resp_obj, id):
         context = req.environ['nova.context']
         if authorize(context):
-            # Attach our slave template to the response object
-            resp_obj.attach(xml=ExtendedServerAttributeTemplate())
             server = resp_obj.obj['server']
             db_instance = req.get_db_instance(server['id'])
             # server['id'] is guaranteed to be in the cache due to
@@ -51,9 +48,6 @@ class ExtendedServerAttributesController(wsgi.Controller):
     def detail(self, req, resp_obj):
         context = req.environ['nova.context']
         if authorize(context):
-            # Attach our slave template to the response object
-            resp_obj.attach(xml=ExtendedServerAttributesTemplate())
-
             servers = list(resp_obj.obj['servers'])
             for server in servers:
                 db_instance = req.get_db_instance(server['id'])
@@ -69,37 +63,9 @@ class Extended_server_attributes(extensions.ExtensionDescriptor):
     alias = "OS-EXT-SRV-ATTR"
     namespace = ("http://docs.openstack.org/compute/ext/"
                  "extended_status/api/v1.1")
-    updated = "2011-11-03T00:00:00+00:00"
+    updated = "2011-11-03T00:00:00Z"
 
     def get_controller_extensions(self):
         controller = ExtendedServerAttributesController()
         extension = extensions.ControllerExtension(self, 'servers', controller)
         return [extension]
-
-
-def make_server(elem):
-    elem.set('{%s}instance_name' % Extended_server_attributes.namespace,
-             '%s:instance_name' % Extended_server_attributes.alias)
-    elem.set('{%s}host' % Extended_server_attributes.namespace,
-             '%s:host' % Extended_server_attributes.alias)
-    elem.set('{%s}hypervisor_hostname' % Extended_server_attributes.namespace,
-             '%s:hypervisor_hostname' % Extended_server_attributes.alias)
-
-
-class ExtendedServerAttributeTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('server', selector='server')
-        make_server(root)
-        alias = Extended_server_attributes.alias
-        namespace = Extended_server_attributes.namespace
-        return xmlutil.SlaveTemplate(root, 1, nsmap={alias: namespace})
-
-
-class ExtendedServerAttributesTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('servers')
-        elem = xmlutil.SubTemplateElement(root, 'server', selector='servers')
-        make_server(elem)
-        alias = Extended_server_attributes.alias
-        namespace = Extended_server_attributes.namespace
-        return xmlutil.SlaveTemplate(root, 1, nsmap={alias: namespace})

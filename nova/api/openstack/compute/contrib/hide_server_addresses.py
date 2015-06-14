@@ -15,7 +15,7 @@
 
 """Extension for hiding server addresses in certain states."""
 
-from oslo.config import cfg
+from oslo_config import cfg
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
@@ -76,7 +76,7 @@ class Hide_server_addresses(extensions.ExtensionDescriptor):
     alias = 'os-hide-server-addresses'
     namespace = ('http://docs.openstack.org/compute/ext/'
                  'hide_server_addresses/api/v1.1')
-    updated = '2012-12-11T00:00:00+00:00'
+    updated = '2012-12-11T00:00:00Z'
 
     def get_controller_extensions(self):
         return [extensions.ControllerExtension(self, 'servers', Controller())]

@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2011 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -15,13 +13,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import six
 from webob import exc
 
 from nova.api.openstack import common
 from nova.api.openstack import wsgi
 from nova import compute
 from nova import exception
-from nova.openstack.common.gettextutils import _
+from nova.i18n import _
 
 
 class Controller(object):
@@ -33,30 +32,30 @@ class Controller(object):
 
     def _get_metadata(self, context, server_id):
         try:
-            server = self.compute_api.get(context, server_id)
+            server = common.get_instance(self.compute_api, context, server_id)
             meta = self.compute_api.get_instance_metadata(context, server)
         except exception.InstanceNotFound:
             msg = _('Server does not exist')
             raise exc.HTTPNotFound(explanation=msg)
 
         meta_dict = {}
-        for key, value in meta.iteritems():
+        for key, value in six.iteritems(meta):
             meta_dict[key] = value
         return meta_dict
 
-    @wsgi.serializers(xml=common.MetadataTemplate)
     def index(self, req, server_id):
         """Returns the list of metadata for a given instance."""
         context = req.environ['nova.context']
         return {'metadata': self._get_metadata(context, server_id)}
 
-    @wsgi.serializers(xml=common.MetadataTemplate)
-    @wsgi.deserializers(xml=common.MetadataDeserializer)
     def create(self, req, server_id, body):
         try:
             metadata = body['metadata']
         except (KeyError, TypeError):
             msg = _("Malformed request body")
+            raise exc.HTTPBadRequest(explanation=msg)
+        if not isinstance(metadata, dict):
+            msg = _("Malformed request body. metadata must be object")
             raise exc.HTTPBadRequest(explanation=msg)
 
         context = req.environ['nova.context']
@@ -68,14 +67,16 @@ class Controller(object):
 
         return {'metadata': new_metadata}
 
-    @wsgi.serializers(xml=common.MetaItemTemplate)
-    @wsgi.deserializers(xml=common.MetaItemDeserializer)
     def update(self, req, server_id, id, body):
         try:
             meta_item = body['meta']
         except (TypeError, KeyError):
             expl = _('Malformed request body')
             raise exc.HTTPBadRequest(explanation=expl)
+
+        if not isinstance(meta_item, dict):
+            msg = _("Malformed request body. meta item must be object")
+            raise exc.HTTPBadRequest(explanation=msg)
 
         if id not in meta_item:
             expl = _('Request body and URI mismatch')
@@ -93,14 +94,16 @@ class Controller(object):
 
         return {'meta': meta_item}
 
-    @wsgi.serializers(xml=common.MetadataTemplate)
-    @wsgi.deserializers(xml=common.MetadataDeserializer)
     def update_all(self, req, server_id, body):
         try:
             metadata = body['metadata']
         except (TypeError, KeyError):
             expl = _('Malformed request body')
             raise exc.HTTPBadRequest(explanation=expl)
+
+        if not isinstance(metadata, dict):
+            msg = _("Malformed request body. metadata must be object")
+            raise exc.HTTPBadRequest(explanation=msg)
 
         context = req.environ['nova.context']
         new_metadata = self._update_instance_metadata(context,
@@ -113,7 +116,7 @@ class Controller(object):
     def _update_instance_metadata(self, context, server_id, metadata,
                                   delete=False):
         try:
-            server = self.compute_api.get(context, server_id)
+            server = common.get_instance(self.compute_api, context, server_id)
             return self.compute_api.update_instance_metadata(context,
                                                              server,
                                                              metadata,
@@ -135,15 +138,15 @@ class Controller(object):
                 explanation=error.format_message())
 
         except exception.QuotaError as error:
-            raise exc.HTTPRequestEntityTooLarge(
-                explanation=error.format_message(),
-                headers={'Retry-After': 0})
+            raise exc.HTTPForbidden(explanation=error.format_message())
+
+        except exception.InstanceIsLocked as e:
+            raise exc.HTTPConflict(explanation=e.format_message())
 
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
-                    'update metadata')
+                    'update metadata', server_id)
 
-    @wsgi.serializers(xml=common.MetaItemTemplate)
     def show(self, req, server_id, id):
         """Return a single metadata item."""
         context = req.environ['nova.context']
@@ -166,17 +169,20 @@ class Controller(object):
             msg = _("Metadata item was not found")
             raise exc.HTTPNotFound(explanation=msg)
 
+        server = common.get_instance(self.compute_api, context, server_id)
         try:
-            server = self.compute_api.get(context, server_id)
             self.compute_api.delete_instance_metadata(context, server, id)
 
         except exception.InstanceNotFound:
             msg = _('Server does not exist')
             raise exc.HTTPNotFound(explanation=msg)
 
+        except exception.InstanceIsLocked as e:
+            raise exc.HTTPConflict(explanation=e.format_message())
+
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
-                    'delete metadata')
+                    'delete metadata', server_id)
 
 
 def create_resource():

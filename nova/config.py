@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
@@ -17,21 +15,43 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo.config import cfg
+from oslo_config import cfg
+from oslo_db import options
+from oslo_log import log
 
-from nova.openstack.common.db.sqlalchemy import session as db_session
-from nova.openstack.common import rpc
+from nova import debugger
 from nova import paths
+from nova import rpc
 from nova import version
 
-_DEFAULT_SQL_CONNECTION = 'sqlite:///' + paths.state_path_def('$sqlite_db')
+
+CONF = cfg.CONF
+
+_DEFAULT_SQL_CONNECTION = 'sqlite:///' + paths.state_path_def('nova.sqlite')
+
+_DEFAULT_LOG_LEVELS = ['amqp=WARN', 'amqplib=WARN', 'boto=WARN',
+                       'qpid=WARN', 'sqlalchemy=WARN', 'suds=INFO',
+                       'oslo_messaging=INFO', 'iso8601=WARN',
+                       'requests.packages.urllib3.connectionpool=WARN',
+                       'urllib3.connectionpool=WARN', 'websocket=WARN',
+                       'keystonemiddleware=WARN', 'routes.middleware=WARN',
+                       'stevedore=WARN', 'glanceclient=WARN']
+
+_DEFAULT_LOGGING_CONTEXT_FORMAT = ('%(asctime)s.%(msecs)03d %(process)d '
+                                   '%(levelname)s %(name)s [%(request_id)s '
+                                   '%(user_identity)s] %(instance)s'
+                                   '%(message)s')
 
 
 def parse_args(argv, default_config_files=None):
-    db_session.set_defaults(sql_connection=_DEFAULT_SQL_CONNECTION,
-                            sqlite_db='nova.sqlite')
+    log.set_defaults(_DEFAULT_LOGGING_CONTEXT_FORMAT, _DEFAULT_LOG_LEVELS)
+    log.register_options(CONF)
+    options.set_defaults(CONF, connection=_DEFAULT_SQL_CONNECTION,
+                         sqlite_db='nova.sqlite')
     rpc.set_defaults(control_exchange='nova')
-    cfg.CONF(argv[1:],
-             project='nova',
-             version=version.version_string(),
-             default_config_files=default_config_files)
+    debugger.register_cli_opts()
+    CONF(argv[1:],
+         project='nova',
+         version=version.version_string(),
+         default_config_files=default_config_files)
+    rpc.init(CONF)

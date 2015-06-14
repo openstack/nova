@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 #    Copyright 2011 OpenStack Foundation
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -16,6 +14,8 @@
 
 import pbr.version
 
+from nova.i18n import _LE
+
 NOVA_VENDOR = "OpenStack Foundation"
 NOVA_PRODUCT = "OpenStack Nova"
 NOVA_PACKAGE = None  # OS distro package version suffix
@@ -29,11 +29,11 @@ def _load_config():
     # Don't load in global context, since we can't assume
     # these modules are accessible when distutils uses
     # this module
-    import ConfigParser
+    from six.moves import configparser
 
-    from oslo.config import cfg
+    from oslo_config import cfg
 
-    from nova.openstack.common import log as logging
+    import logging
 
     global loaded, NOVA_VENDOR, NOVA_PRODUCT, NOVA_PACKAGE
     if loaded:
@@ -46,23 +46,20 @@ def _load_config():
         return
 
     try:
-        cfg = ConfigParser.RawConfigParser()
+        cfg = configparser.RawConfigParser()
         cfg.read(cfgfile)
 
-        NOVA_VENDOR = cfg.get("Nova", "vendor")
         if cfg.has_option("Nova", "vendor"):
             NOVA_VENDOR = cfg.get("Nova", "vendor")
 
-        NOVA_PRODUCT = cfg.get("Nova", "product")
         if cfg.has_option("Nova", "product"):
             NOVA_PRODUCT = cfg.get("Nova", "product")
 
-        NOVA_PACKAGE = cfg.get("Nova", "package")
         if cfg.has_option("Nova", "package"):
             NOVA_PACKAGE = cfg.get("Nova", "package")
     except Exception as ex:
         LOG = logging.getLogger(__name__)
-        LOG.error("Failed to load %(cfgfile)s: %(ex)s",
+        LOG.error(_LE("Failed to load %(cfgfile)s: %(ex)s"),
                   {'cfgfile': cfgfile, 'ex': ex})
 
 

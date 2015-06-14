@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2013 Cloudbase Solutions Srl
 # All Rights Reserved.
 #
@@ -31,10 +29,11 @@ import sys
 if sys.platform == 'win32':
     import wmi
 
-from nova.openstack.common.gettextutils import _
+from xml.etree import ElementTree
+
+from nova.i18n import _
 from nova.virt.hyperv import constants
 from nova.virt.hyperv import vmutils
-from xml.etree import ElementTree
 
 
 VHD_HEADER_SIZE_FIX = 512
@@ -97,6 +96,10 @@ class VHDUtils(object):
             DestinationPath=dest_vhd_path)
         self._vmutils.check_ret_val(ret_val, job_path)
 
+    def _get_resize_method(self):
+        image_man_svc = self._conn.Msvm_ImageManagementService()[0]
+        return image_man_svc.ExpandVirtualHardDisk
+
     def resize_vhd(self, vhd_path, new_max_size, is_file_max_size=True):
         if is_file_max_size:
             new_internal_max_size = self.get_internal_vhd_size_by_file_size(
@@ -104,29 +107,29 @@ class VHDUtils(object):
         else:
             new_internal_max_size = new_max_size
 
-        image_man_svc = self._conn.Msvm_ImageManagementService()[0]
+        resize = self._get_resize_method()
 
-        (job_path, ret_val) = image_man_svc.ExpandVirtualHardDisk(
+        (job_path, ret_val) = resize(
             Path=vhd_path, MaxInternalSize=new_internal_max_size)
         self._vmutils.check_ret_val(ret_val, job_path)
 
     def get_internal_vhd_size_by_file_size(self, vhd_path, new_vhd_file_size):
         """Fixed VHD size = Data Block size + 512 bytes
-           Dynamic_VHD_size = Dynamic Disk Header
-                             + Copy of hard disk footer
-                             + Hard Disk Footer
-                             + Data Block
-                             + BAT
-           Dynamic Disk header fields
-                Copy of hard disk footer (512 bytes)
-                Dynamic Disk Header (1024 bytes)
-                BAT (Block Allocation table)
-                Data Block 1
-                Data Block 2
-                Data Block n
-                Hard Disk Footer (512 bytes)
-           Default block size is 2M
-           BAT entry size is 4byte
+           | Dynamic_VHD_size = Dynamic Disk Header
+           |                  + Copy of hard disk footer
+           |                  + Hard Disk Footer
+           |                  + Data Block
+           |                  + BAT
+           | Dynamic Disk header fields
+           |     Copy of hard disk footer (512 bytes)
+           |     Dynamic Disk Header (1024 bytes)
+           |     BAT (Block Allocation table)
+           |     Data Block 1
+           |     Data Block 2
+           |     Data Block n
+           |     Hard Disk Footer (512 bytes)
+           | Default block size is 2M
+           | BAT entry size is 4byte
         """
         base_vhd_info = self.get_vhd_info(vhd_path)
         vhd_type = base_vhd_info['Type']
@@ -145,9 +148,9 @@ class VHDUtils(object):
                                  (hs + ddhs + fs)) * bs / (bes + bs)
             return max_internal_size
         else:
-            raise vmutils.HyperVException(_("The %(vhd_type)s type VHD "
-                                            "is not supported") %
-                                            {"vhd_type": vhd_type})
+            vhd_parent = self.get_vhd_parent_path(vhd_path)
+            return self.get_internal_vhd_size_by_file_size(vhd_parent,
+                new_vhd_file_size)
 
     def _get_vhd_dynamic_blk_size(self, vhd_path):
         blk_size_offset = VHD_BLK_SIZE_OFFSET

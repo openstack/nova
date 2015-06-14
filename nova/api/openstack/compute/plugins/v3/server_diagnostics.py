@@ -13,42 +13,40 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import webob.exc
-
+from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 from nova import compute
 from nova import exception
 
 
 ALIAS = "os-server-diagnostics"
-authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
-sd_nsmap = {None: wsgi.XMLNS_V11}
+authorize = extensions.os_compute_authorizer(ALIAS)
 
 
-class ServerDiagnosticsTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('diagnostics')
-        elem = xmlutil.SubTemplateElement(root, xmlutil.Selector(0),
-                                          selector=xmlutil.get_items)
-        elem.text = 1
-        return xmlutil.MasterTemplate(root, 1, nsmap=sd_nsmap)
+class ServerDiagnosticsController(wsgi.Controller):
+    def __init__(self):
+        self.compute_api = compute.API(skip_policy_check=True)
 
-
-class ServerDiagnosticsController(object):
-    @extensions.expected_errors(404)
-    @wsgi.serializers(xml=ServerDiagnosticsTemplate)
+    @extensions.expected_errors((404, 409, 501))
     def index(self, req, server_id):
         context = req.environ["nova.context"]
         authorize(context)
-        compute_api = compute.API()
-        try:
-            instance = compute_api.get(context, server_id)
-        except exception.InstanceNotFound as e:
-            raise webob.exc.HTTPNotFound(e.format_message())
 
-        return compute_api.get_diagnostics(context, instance)
+        instance = common.get_instance(self.compute_api, context, server_id)
+
+        try:
+            # NOTE(gmann): To make V21 same as V2 API, this method will call
+            # 'get_diagnostics' instead of 'get_instance_diagnostics'.
+            # In future, 'get_instance_diagnostics' needs to be called to
+            # provide VM diagnostics in a defined format for all driver.
+            # BP - https://blueprints.launchpad.net/nova/+spec/v3-diagnostics.
+            return self.compute_api.get_diagnostics(context, instance)
+        except exception.InstanceInvalidState as state_error:
+            common.raise_http_conflict_for_instance_invalid_state(state_error,
+                    'get_diagnostics', server_id)
+        except NotImplementedError:
+            common.raise_feature_not_supported()
 
 
 class ServerDiagnostics(extensions.V3APIExtensionBase):
@@ -56,14 +54,12 @@ class ServerDiagnostics(extensions.V3APIExtensionBase):
 
     name = "ServerDiagnostics"
     alias = ALIAS
-    namespace = ("http://docs.openstack.org/compute/ext/"
-                 "server-diagnostics/api/v3")
     version = 1
 
     def get_resources(self):
         parent_def = {'member_name': 'server', 'collection_name': 'servers'}
         resources = [
-            extensions.ResourceExtension(ALIAS,
+            extensions.ResourceExtension('diagnostics',
                                          ServerDiagnosticsController(),
                                          parent=parent_def)]
         return resources

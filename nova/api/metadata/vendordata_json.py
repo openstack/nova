@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2013 Canonical Ltd
 # All Rights Reserved.
 #
@@ -19,15 +17,15 @@
 
 import errno
 
-from oslo.config import cfg
+from oslo_config import cfg
+from oslo_log import log as logging
+from oslo_serialization import jsonutils
 
 from nova.api.metadata import base
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import jsonutils
-from nova.openstack.common import log as logging
+from nova.i18n import _LW
 
 file_opt = cfg.StrOpt('vendordata_jsonfile_path',
-                      help='File to load json formatted vendor data from')
+                      help='File to load JSON formatted vendor data from')
 
 CONF = cfg.CONF
 CONF.register_opt(file_opt)
@@ -46,12 +44,15 @@ class JsonFileVendorData(base.VendorDataDriver):
                     data = jsonutils.load(fp)
             except IOError as e:
                 if e.errno == errno.ENOENT:
-                    LOG.warn(logprefix + _("file does not exist"))
+                    LOG.warning(_LW("%(logprefix)sfile does not exist"),
+                                {'logprefix': logprefix})
                 else:
-                    LOG.warn(logprefix + _("Unexpected IOError when reading"))
+                    LOG.warning(_LW("%(logprefix)unexpected IOError when "
+                                    "reading"), {'logprefix': logprefix})
                 raise e
             except ValueError:
-                LOG.warn(logprefix + _("failed to load json"))
+                LOG.warning(_LW("%(logprefix)sfailed to load json"),
+                            {'logprefix': logprefix})
                 raise
 
         self._data = data

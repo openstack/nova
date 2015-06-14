@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright (c) 2012 VMware, Inc.
 # Copyright (c) 2011 Citrix Systems, Inc.
 # Copyright 2011 OpenStack Foundation
@@ -19,71 +17,98 @@
 """
 Utility functions for ESX Networking.
 """
+from oslo_log import log as logging
+from oslo_vmware import exceptions as vexc
+from oslo_vmware import vim_util as vutil
 
 from nova import exception
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import log as logging
-from nova.virt.vmwareapi import error_util
+from nova.i18n import _
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
 
 LOG = logging.getLogger(__name__)
 
 
-def get_network_with_the_name(session, network_name="vmnet0", cluster=None):
+def _get_network_obj(session, network_objects, network_name):
+    """Gets the network object for the requested network.
+
+    The network object will be used when creating the VM configuration
+    spec. The network object contains the relevant network details for
+    the specific network type, for example, a distributed port group.
+
+    The method will search for the network_name in the list of
+    network_objects.
+
+    :param session: vCenter soap session
+    :param network_objects: group of networks
+    :param network_name: the requested network
+    :return: network object
     """
-    Gets reference to the network whose name is passed as the
+
+    network_obj = {}
+    # network_objects is actually a RetrieveResult object from vSphere API call
+    for obj_content in network_objects:
+        # the propset attribute "need not be set" by returning API
+        if not hasattr(obj_content, 'propSet'):
+            continue
+        prop_dict = vm_util.propset_dict(obj_content.propSet)
+        network_refs = prop_dict.get('network')
+        if network_refs:
+            network_refs = network_refs.ManagedObjectReference
+            for network in network_refs:
+                # Get network properties
+                if network._type == 'DistributedVirtualPortgroup':
+                    props = session._call_method(vim_util,
+                                "get_dynamic_property", network,
+                                "DistributedVirtualPortgroup", "config")
+                    # NOTE(asomya): This only works on ESXi if the port binding
+                    # is set to ephemeral
+                    # For a VLAN the network name will be the UUID. For a VXLAN
+                    # network this will have a VXLAN prefix and then the
+                    # network name.
+                    if network_name in props.name:
+                        network_obj['type'] = 'DistributedVirtualPortgroup'
+                        network_obj['dvpg'] = props.key
+                        dvs_props = session._call_method(vim_util,
+                                        "get_dynamic_property",
+                                        props.distributedVirtualSwitch,
+                                        "VmwareDistributedVirtualSwitch",
+                                        "uuid")
+                        network_obj['dvsw'] = dvs_props
+                        return network_obj
+                else:
+                    props = session._call_method(vim_util,
+                                "get_dynamic_property", network,
+                                "Network", "summary.name")
+                    if props == network_name:
+                        network_obj['type'] = 'Network'
+                        network_obj['name'] = network_name
+                        return network_obj
+
+
+def get_network_with_the_name(session, network_name="vmnet0", cluster=None):
+    """Gets reference to the network whose name is passed as the
     argument.
     """
-    host = vm_util.get_host_ref(session, cluster)
-    if cluster is not None:
-        vm_networks_ret = session._call_method(vim_util,
-                                               "get_dynamic_property", cluster,
-                                               "ClusterComputeResource",
-                                               "network")
-    else:
-        vm_networks_ret = session._call_method(vim_util,
-                                               "get_dynamic_property", host,
-                                               "HostSystem", "network")
-
-    # Meaning there are no networks on the host. suds responds with a ""
-    # in the parent property field rather than a [] in the
-    # ManagedObjectReference property field of the parent
-    if not vm_networks_ret:
-        return None
-    vm_networks = vm_networks_ret.ManagedObjectReference
-    network_obj = {}
-    LOG.debug(vm_networks)
-    for network in vm_networks:
-        # Get network properties
-        if network._type == 'DistributedVirtualPortgroup':
-            props = session._call_method(vim_util,
-                        "get_dynamic_property", network,
-                        "DistributedVirtualPortgroup", "config")
-            # NOTE(asomya): This only works on ESXi if the port binding is
-            # set to ephemeral
-            if props.name == network_name:
-                network_obj['type'] = 'DistributedVirtualPortgroup'
-                network_obj['dvpg'] = props.key
-                dvs_props = session._call_method(vim_util,
-                                "get_dynamic_property",
-                                props.distributedVirtualSwitch,
-                                "VmwareDistributedVirtualSwitch", "uuid")
-                network_obj['dvsw'] = dvs_props
-        else:
-            props = session._call_method(vim_util,
-                        "get_dynamic_property", network,
-                        "Network", "summary.name")
-            if props == network_name:
-                network_obj['type'] = 'Network'
-                network_obj['name'] = network_name
-    if (len(network_obj) > 0):
-        return network_obj
+    vm_networks = session._call_method(vim_util,
+                                       'get_object_properties',
+                                       None, cluster,
+                                       'ClusterComputeResource', ['network'])
+    while vm_networks:
+        if vm_networks.objects:
+            network_obj = _get_network_obj(session, vm_networks.objects,
+                                           network_name)
+            if network_obj:
+                session._call_method(vutil, 'cancel_retrieval',
+                                     vm_networks)
+                return network_obj
+        vm_networks = session._call_method(vutil, 'continue_retrieval',
+                                           vm_networks)
+    LOG.debug("Network %s not found on cluster!", network_name)
 
 
 def get_vswitch_for_vlan_interface(session, vlan_interface, cluster=None):
-    """
-    Gets the vswitch associated with the physical network adapter
+    """Gets the vswitch associated with the physical network adapter
     with the name supplied.
     """
     # Get the list of vSwicthes on the Host System
@@ -143,11 +168,10 @@ def get_vlanid_and_vswitch_for_portgroup(session, pg_name, cluster=None):
 
 
 def create_port_group(session, pg_name, vswitch_name, vlan_id=0, cluster=None):
-    """
-    Creates a port group on the host system with the vlan tags
+    """Creates a port group on the host system with the vlan tags
     supplied. VLAN id 0 means no vlan id association.
     """
-    client_factory = session._get_vim().client.factory
+    client_factory = session.vim.client.factory
     add_prt_grp_spec = vm_util.get_add_vswitch_port_group_spec(
                     client_factory,
                     vswitch_name,
@@ -157,19 +181,18 @@ def create_port_group(session, pg_name, vswitch_name, vlan_id=0, cluster=None):
     network_system_mor = session._call_method(vim_util,
         "get_dynamic_property", host_mor,
         "HostSystem", "configManager.networkSystem")
-    LOG.debug(_("Creating Port Group with name %s on "
-                "the ESX host") % pg_name)
+    LOG.debug("Creating Port Group with name %s on "
+              "the ESX host", pg_name)
     try:
-        session._call_method(session._get_vim(),
+        session._call_method(session.vim,
                 "AddPortGroup", network_system_mor,
                 portgrp=add_prt_grp_spec)
-    except error_util.VimFaultException as exc:
+    except vexc.AlreadyExistsException:
         # There can be a race condition when two instances try
         # adding port groups at the same time. One succeeds, then
         # the other one will get an exception. Since we are
         # concerned with the port group being created, which is done
         # by the other call, we can ignore the exception.
-        if error_util.FAULT_ALREADY_EXISTS not in exc.fault_list:
-            raise exception.NovaException(exc)
-    LOG.debug(_("Created Port Group with name %s on "
-                "the ESX host") % pg_name)
+        LOG.debug("Port Group %s already exists.", pg_name)
+    LOG.debug("Created Port Group with name %s on "
+              "the ESX host", pg_name)

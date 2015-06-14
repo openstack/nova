@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 #   Copyright 2013 OpenStack Foundation
 #
 #   Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -18,8 +16,7 @@
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
-from nova import compute
+from nova import objects
 
 authorize = extensions.soft_extension_authorizer('compute', 'extended_volumes')
 
@@ -27,11 +24,11 @@ authorize = extensions.soft_extension_authorizer('compute', 'extended_volumes')
 class ExtendedVolumesController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
         super(ExtendedVolumesController, self).__init__(*args, **kwargs)
-        self.compute_api = compute.API()
 
     def _extend_server(self, context, server, instance):
-        bdms = self.compute_api.get_instance_bdms(context, instance)
-        volume_ids = [bdm['volume_id'] for bdm in bdms if bdm['volume_id']]
+        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+                context, instance.uuid)
+        volume_ids = [bdm.volume_id for bdm in bdms if bdm.volume_id]
         key = "%s:volumes_attached" % Extended_volumes.alias
         server[key] = [{'id': volume_id} for volume_id in volume_ids]
 
@@ -39,8 +36,6 @@ class ExtendedVolumesController(wsgi.Controller):
     def show(self, req, resp_obj, id):
         context = req.environ['nova.context']
         if authorize(context):
-            # Attach our slave template to the response object
-            resp_obj.attach(xml=ExtendedVolumesServerTemplate())
             server = resp_obj.obj['server']
             db_instance = req.get_db_instance(server['id'])
             # server['id'] is guaranteed to be in the cache due to
@@ -51,8 +46,6 @@ class ExtendedVolumesController(wsgi.Controller):
     def detail(self, req, resp_obj):
         context = req.environ['nova.context']
         if authorize(context):
-            # Attach our slave template to the response object
-            resp_obj.attach(xml=ExtendedVolumesServersTemplate())
             servers = list(resp_obj.obj['servers'])
             for server in servers:
                 db_instance = req.get_db_instance(server['id'])
@@ -68,7 +61,7 @@ class Extended_volumes(extensions.ExtensionDescriptor):
     alias = "os-extended-volumes"
     namespace = ("http://docs.openstack.org/compute/ext/"
                  "extended_volumes/api/v1.1")
-    updated = "2013-06-07T00:00:00+00:00"
+    updated = "2013-06-07T00:00:00Z"
 
     def get_controller_extensions(self):
         controller = ExtendedVolumesController()
@@ -77,27 +70,3 @@ class Extended_volumes(extensions.ExtensionDescriptor):
 
     def get_resources(self):
         return []
-
-
-def make_server(elem):
-    volumes = xmlutil.SubTemplateElement(
-        elem, '{%s}volume_attached' % Extended_volumes.namespace,
-        selector='%s:volumes_attached' % Extended_volumes.alias)
-    volumes.set('id')
-
-
-class ExtendedVolumesServerTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('server', selector='server')
-        make_server(root)
-        return xmlutil.SlaveTemplate(root, 1, nsmap={
-            Extended_volumes.alias: Extended_volumes.namespace})
-
-
-class ExtendedVolumesServersTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('servers')
-        elem = xmlutil.SubTemplateElement(root, 'server', selector='servers')
-        make_server(elem)
-        return xmlutil.SlaveTemplate(root, 1, nsmap={
-            Extended_volumes.alias: Extended_volumes.namespace})

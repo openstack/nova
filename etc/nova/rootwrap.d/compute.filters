@@ -31,6 +31,13 @@ qemu-nbd: CommandFilter, qemu-nbd, root
 # nova/virt/disk/mount/loop.py: 'losetup', '--detach', device
 losetup: CommandFilter, losetup, root
 
+# nova/virt/disk/vfs/localfs.py: 'blkid', '-o', 'value', '-s', 'TYPE', device
+blkid: CommandFilter, blkid, root
+
+# nova/virt/libvirt/utils.py: 'blockdev', '--getsize64', path
+# nova/virt/disk/mount/nbd.py: 'blockdev', '--flushbufs', device
+blockdev: RegExpFilter, blockdev, root, blockdev, (--getsize64|--flushbufs), /dev/.*
+
 # nova/virt/disk/vfs/localfs.py: 'tee', canonpath
 tee: CommandFilter, tee, root
 
@@ -41,7 +48,6 @@ mkdir: CommandFilter, mkdir, root
 # nova/virt/libvirt/connection.py: 'chown', os.getuid( console_log
 # nova/virt/libvirt/connection.py: 'chown', os.getuid( console_log
 # nova/virt/libvirt/connection.py: 'chown', 'root', basepath('disk')
-# nova/utils.py: 'chown', owner_uid, path
 chown: CommandFilter, chown, root
 
 # nova/virt/disk/vfs/localfs.py: 'chmod'
@@ -79,6 +85,12 @@ tunctl: CommandFilter, tunctl, root
 # nova/virt/libvirt/vif.py: 'ovs-vsctl', 'del-port', ...
 # nova/network/linux_net.py: 'ovs-vsctl', ....
 ovs-vsctl: CommandFilter, ovs-vsctl, root
+
+# nova/virt/libvirt/vif.py: 'vrouter-port-control', ...
+vrouter-port-control: CommandFilter, vrouter-port-control, root
+
+# nova/virt/libvirt/vif.py: 'ebrctl', ...
+ebrctl: CommandFilter, ebrctl, root
 
 # nova/network/linux_net.py: 'ovs-ofctl', ....
 ovs-ofctl: CommandFilter, ovs-ofctl, root
@@ -150,7 +162,11 @@ brctl: CommandFilter, brctl, root
 # nova/virt/xenapi/vm_utils.py: 'mkswap'
 mkswap: CommandFilter, mkswap, root
 
+# nova/virt/libvirt/utils.py: 'nova-idmapshift'
+nova-idmapshift: CommandFilter, nova-idmapshift, root
+
 # nova/virt/xenapi/vm_utils.py: 'mkfs'
+# nova/utils.py: 'mkfs', fs, path, label
 mkfs: CommandFilter, mkfs, root
 
 # nova/virt/libvirt/utils.py: 'qemu-img'
@@ -159,11 +175,9 @@ qemu-img: CommandFilter, qemu-img, root
 # nova/virt/disk/vfs/localfs.py: 'readlink', '-e'
 readlink: CommandFilter, readlink, root
 
-# nova/virt/disk/api.py: 'touch', target
-touch: CommandFilter, touch, root
-
 # nova/virt/disk/api.py:
 mkfs.ext3: CommandFilter, mkfs.ext3, root
+mkfs.ext4: CommandFilter, mkfs.ext4, root
 mkfs.ntfs: CommandFilter, mkfs.ntfs, root
 
 # nova/virt/libvirt/connection.py:
@@ -198,8 +212,11 @@ systool: CommandFilter, systool, root
 # nova/virt/libvirt/volume.py:
 sginfo: CommandFilter, sginfo, root
 sg_scan: CommandFilter, sg_scan, root
+ln: RegExpFilter, ln, root, ln, --symbolic, --force, /dev/mapper/ip-.*-iscsi-iqn.*, /dev/disk/by-path/ip-.*-iscsi-iqn.*
+
+# nova/volume/encryptors.py:
+# nova/virt/libvirt/dmcrypt.py:
 cryptsetup: CommandFilter, cryptsetup, root
-ln: RegExpFilter, ln, root, ln, --symbolic, --force, /dev/mapper/ip-.*-iscsi-iqn.2010-10.org.openstack:volume-.*, /dev/disk/by-path/ip-.*-iscsi-iqn.2010-10.org.openstack:volume-.*
 
 # nova/virt/xenapi/vm_utils.py:
 xenstore-read: CommandFilter, xenstore-read, root
@@ -209,3 +226,18 @@ rpc.mountd: CommandFilter, rpc.mountd, root
 
 # nova/virt/libvirt/utils.py:
 rbd: CommandFilter, rbd, root
+
+# nova/virt/libvirt/utils.py: 'shred', '-n3', '-s%d' % volume_size, path
+shred: CommandFilter, shred, root
+
+# nova/virt/libvirt/volume.py: 'cp', '/dev/stdin', delete_control..
+cp: CommandFilter, cp, root
+
+# nova/virt/xenapi/vm_utils.py:
+sync: CommandFilter, sync, root
+
+# nova/virt/libvirt/imagebackend.py:
+ploop: CommandFilter, ploop, root
+
+# nova/virt/libvirt/utils.py: 'xend', 'status'
+xend: CommandFilter, xend, root

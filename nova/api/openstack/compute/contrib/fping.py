@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2011 Grid Dynamics
 # Copyright 2011 OpenStack Foundation
 # All Rights Reserved.
@@ -19,14 +17,14 @@
 import itertools
 import os
 
-from oslo.config import cfg
+from oslo_config import cfg
+import six
 from webob import exc
 
 from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova import compute
-from nova import exception
-from nova.openstack.common.gettextutils import _
+from nova.i18n import _
 from nova import utils
 
 authorize = extensions.extension_authorizer('compute', 'fping')
@@ -100,23 +98,23 @@ class FpingController(object):
                 exclude = set()
 
         instance_list = self.compute_api.get_all(
-            context, search_opts=search_opts)
+            context, search_opts=search_opts, want_objects=True)
         ip_list = []
         instance_ips = {}
         instance_projects = {}
 
         for instance in instance_list:
-            uuid = instance["uuid"]
+            uuid = instance.uuid
             if uuid in exclude or (include is not None and
                                    uuid not in include):
                 continue
             ips = [str(ip) for ip in self._get_instance_ips(context, instance)]
             instance_ips[uuid] = ips
-            instance_projects[uuid] = instance["project_id"]
+            instance_projects[uuid] = instance.project_id
             ip_list += ips
         alive_ips = self.fping(ip_list)
         res = []
-        for instance_uuid, ips in instance_ips.iteritems():
+        for instance_uuid, ips in six.iteritems(instance_ips):
             res.append({
                 "id": instance_uuid,
                 "project_id": instance_projects[instance_uuid],
@@ -125,22 +123,19 @@ class FpingController(object):
         return {"servers": res}
 
     def show(self, req, id):
-        try:
-            context = req.environ["nova.context"]
-            authorize(context)
-            self.check_fping()
-            instance = self.compute_api.get(context, id)
-            ips = [str(ip) for ip in self._get_instance_ips(context, instance)]
-            alive_ips = self.fping(ips)
-            return {
-                "server": {
-                    "id": instance["uuid"],
-                    "project_id": instance["project_id"],
-                    "alive": bool(set(ips) & alive_ips),
-                }
+        context = req.environ["nova.context"]
+        authorize(context)
+        self.check_fping()
+        instance = common.get_instance(self.compute_api, context, id)
+        ips = [str(ip) for ip in self._get_instance_ips(context, instance)]
+        alive_ips = self.fping(ips)
+        return {
+            "server": {
+                "id": instance.uuid,
+                "project_id": instance.project_id,
+                "alive": bool(set(ips) & alive_ips),
             }
-        except exception.NotFound:
-            raise exc.HTTPNotFound()
+        }
 
 
 class Fping(extensions.ExtensionDescriptor):
@@ -149,7 +144,7 @@ class Fping(extensions.ExtensionDescriptor):
     name = "Fping"
     alias = "os-fping"
     namespace = "http://docs.openstack.org/compute/ext/fping/api/v1.1"
-    updated = "2012-07-06T00:00:00+00:00"
+    updated = "2012-07-06T00:00:00Z"
 
     def get_resources(self):
         res = extensions.ResourceExtension(

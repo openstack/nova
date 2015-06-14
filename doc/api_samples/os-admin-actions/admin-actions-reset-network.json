@@ -1,3 +1,0 @@
-{
-    "resetNetwork": null
-}

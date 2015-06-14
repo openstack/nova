@@ -1,5 +1,5 @@
 {
     "server": {
-        "os-disk-config:disk_config": "AUTO"
+        "OS-DCF:diskConfig": "AUTO"
     }
 }

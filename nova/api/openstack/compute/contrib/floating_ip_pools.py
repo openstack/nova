@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright (c) 2011 X.commerce, a business unit of eBay Inc.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,46 +13,23 @@
 #    under the License.
 
 from nova.api.openstack import extensions
-from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 from nova import network
 
 
 authorize = extensions.extension_authorizer('compute', 'floating_ip_pools')
 
 
-def _translate_floating_ip_view(pool):
+def _translate_floating_ip_view(pool_name):
     return {
-        'name': pool['name'],
+        'name': pool_name,
     }
 
 
 def _translate_floating_ip_pools_view(pools):
     return {
-        'floating_ip_pools': [_translate_floating_ip_view(pool)
-                              for pool in pools]
+        'floating_ip_pools': [_translate_floating_ip_view(pool_name)
+                              for pool_name in pools]
     }
-
-
-def make_float_ip(elem):
-    elem.set('name')
-
-
-class FloatingIPPoolTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('floating_ip_pool',
-                                       selector='floating_ip_pool')
-        make_float_ip(root)
-        return xmlutil.MasterTemplate(root, 1)
-
-
-class FloatingIPPoolsTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('floating_ip_pools')
-        elem = xmlutil.SubTemplateElement(root, 'floating_ip_pool',
-                                          selector='floating_ip_pools')
-        make_float_ip(elem)
-        return xmlutil.MasterTemplate(root, 1)
 
 
 class FloatingIPPoolsController(object):
@@ -64,7 +39,6 @@ class FloatingIPPoolsController(object):
         self.network_api = network.API()
         super(FloatingIPPoolsController, self).__init__()
 
-    @wsgi.serializers(xml=FloatingIPPoolsTemplate)
     def index(self, req):
         """Return a list of pools."""
         context = req.environ['nova.context']
@@ -80,7 +54,7 @@ class Floating_ip_pools(extensions.ExtensionDescriptor):
     alias = "os-floating-ip-pools"
     namespace = ("http://docs.openstack.org/compute/ext/"
                  "floating_ip_pools/api/v1.1")
-    updated = "2012-01-04T00:00:00+00:00"
+    updated = "2012-01-04T00:00:00Z"
 
     def get_resources(self):
         resources = []

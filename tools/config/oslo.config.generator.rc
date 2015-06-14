@@ -1,0 +1,2 @@
+NOVA_CONFIG_GENERATOR_EXTRA_LIBRARIES="oslo.messaging oslo_db oslo.concurrency"
+NOVA_CONFIG_GENERATOR_EXTRA_MODULES=keystonemiddleware.auth_token

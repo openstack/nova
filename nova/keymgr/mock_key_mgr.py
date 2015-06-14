@@ -1,4 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
 # Copyright (c) 2013 The Johns Hopkins University/Applied Physics Laboratory
 # All Rights Reserved.
 #
@@ -29,12 +28,13 @@ this class.
 
 import array
 
+from oslo_log import log as logging
+from oslo_utils import uuidutils
+
 from nova import exception
+from nova.i18n import _LW
 from nova.keymgr import key
 from nova.keymgr import key_mgr
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import log as logging
-from nova.openstack.common import uuidutils
 from nova import utils
 
 
@@ -42,8 +42,7 @@ LOG = logging.getLogger(__name__)
 
 
 class MockKeyManager(key_mgr.KeyManager):
-    """
-    This mock key manager implementation supports all the methods specified
+    """This mock key manager implementation supports all the methods specified
     by the key manager interface. This implementation stores keys within a
     dictionary, and as a result, it is not acceptable for use across different
     services. Side effects (e.g., raising exceptions) for each method are
@@ -53,8 +52,8 @@ class MockKeyManager(key_mgr.KeyManager):
     """
 
     def __init__(self):
-        LOG.warn(_('This key manager is not suitable for use in production'
-                   ' deployments'))
+        LOG.warning(_LW('This key manager is not suitable for use in '
+                        'production deployments'))
 
         self.keys = {}
 
@@ -74,10 +73,10 @@ class MockKeyManager(key_mgr.KeyManager):
         """Creates a key.
 
         This implementation returns a UUID for the created key. A
-        NotAuthorized exception is raised if the specified context is None.
+        Forbidden exception is raised if the specified context is None.
         """
         if ctxt is None:
-            raise exception.NotAuthorized()
+            raise exception.Forbidden()
 
         key = self._generate_key(**kwargs)
         return self.store_key(ctxt, key)
@@ -89,17 +88,10 @@ class MockKeyManager(key_mgr.KeyManager):
 
         return key_id
 
-    def _generate_key_id(self):
-        key_id = uuidutils.generate_uuid()
-        while key_id in self.keys:
-            key_id = uuidutils.generate_uuid()
-
-        return key_id
-
     def store_key(self, ctxt, key, **kwargs):
         """Stores (i.e., registers) a key with the key manager."""
         if ctxt is None:
-            raise exception.NotAuthorized()
+            raise exception.Forbidden()
 
         key_id = self._generate_key_id()
         self.keys[key_id] = key
@@ -108,7 +100,7 @@ class MockKeyManager(key_mgr.KeyManager):
 
     def copy_key(self, ctxt, key_id, **kwargs):
         if ctxt is None:
-            raise exception.NotAuthorized()
+            raise exception.Forbidden()
 
         copied_key_id = self._generate_key_id()
         self.keys[copied_key_id] = self.keys[key_id]
@@ -119,21 +111,21 @@ class MockKeyManager(key_mgr.KeyManager):
         """Retrieves the key identified by the specified id.
 
         This implementation returns the key that is associated with the
-        specified UUID. A NotAuthorized exception is raised if the specified
+        specified UUID. A Forbidden exception is raised if the specified
         context is None; a KeyError is raised if the UUID is invalid.
         """
         if ctxt is None:
-            raise exception.NotAuthorized()
+            raise exception.Forbidden()
 
         return self.keys[key_id]
 
     def delete_key(self, ctxt, key_id, **kwargs):
         """Deletes the key identified by the specified id.
 
-        A NotAuthorized exception is raised if the context is None and a
+        A Forbidden exception is raised if the context is None and a
         KeyError is raised if the UUID is invalid.
         """
         if ctxt is None:
-            raise exception.NotAuthorized()
+            raise exception.Forbidden()
 
         del self.keys[key_id]

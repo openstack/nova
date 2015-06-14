@@ -12,15 +12,31 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import itertools
+
+from oslo_log import log as logging
+
+from nova.cells import opts as cells_opts
+from nova.cells import rpcapi as cells_rpcapi
 from nova import db
+from nova import exception
+from nova.i18n import _LE
+from nova import objects
 from nova.objects import base
 from nova.objects import fields
 
 
-class InstanceFault(base.NovaPersistentObject, base.NovaObject):
+LOG = logging.getLogger(__name__)
+
+
+# TODO(berrange): Remove NovaObjectDictCompat
+@base.NovaObjectRegistry.register
+class InstanceFault(base.NovaPersistentObject, base.NovaObject,
+                    base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     # Version 1.1: String attributes updated to support unicode
-    VERSION = '1.1'
+    # Version 1.2: Added create()
+    VERSION = '1.2'
 
     fields = {
         'id': fields.IntegerField(),
@@ -32,10 +48,11 @@ class InstanceFault(base.NovaPersistentObject, base.NovaObject):
         }
 
     @staticmethod
-    def _from_db_object(fault, db_fault):
+    def _from_db_object(context, fault, db_fault):
         # NOTE(danms): These are identical right now
         for key in fault.fields:
             fault[key] = db_fault[key]
+        fault._context = context
         fault.obj_reset_changes()
         return fault
 
@@ -44,26 +61,56 @@ class InstanceFault(base.NovaPersistentObject, base.NovaObject):
         db_faults = db.instance_fault_get_by_instance_uuids(context,
                                                             [instance_uuid])
         if instance_uuid in db_faults and db_faults[instance_uuid]:
-            return cls._from_db_object(cls(), db_faults[instance_uuid][0])
+            return cls._from_db_object(context, cls(),
+                                       db_faults[instance_uuid][0])
+
+    @base.remotable
+    def create(self):
+        if self.obj_attr_is_set('id'):
+            raise exception.ObjectActionError(action='create',
+                                              reason='already created')
+        values = {
+            'instance_uuid': self.instance_uuid,
+            'code': self.code,
+            'message': self.message,
+            'details': self.details,
+            'host': self.host,
+            }
+        db_fault = db.instance_fault_create(self._context, values)
+        self._from_db_object(self._context, self, db_fault)
+        self.obj_reset_changes()
+        # Cells should only try sending a message over to nova-cells
+        # if cells is enabled and we're not the API cell. Otherwise,
+        # if the API cell is calling this, we could end up with
+        # infinite recursion.
+        if cells_opts.get_cell_type() == 'compute':
+            try:
+                cells_rpcapi.CellsAPI().instance_fault_create_at_top(
+                    self._context, db_fault)
+            except Exception:
+                LOG.exception(_LE("Failed to notify cells of instance fault"))
 
 
-def _make_fault_list(faultlist, db_faultlist):
-    faultlist.objects = []
-    for instance_uuid in db_faultlist:
-        for db_fault in db_faultlist[instance_uuid]:
-            faultlist.objects.append(InstanceFault._from_db_object(
-                InstanceFault(), db_fault))
-    faultlist.obj_reset_changes()
-    return faultlist
-
-
+@base.NovaObjectRegistry.register
 class InstanceFaultList(base.ObjectListBase, base.NovaObject):
+    # Version 1.0: Initial version
+    #              InstanceFault <= version 1.1
+    # Version 1.1: InstanceFault version 1.2
+    VERSION = '1.1'
+
     fields = {
         'objects': fields.ListOfObjectsField('InstanceFault'),
+        }
+    child_versions = {
+        '1.0': '1.1',
+        # NOTE(danms): InstanceFault was at 1.1 before we added this
+        '1.1': '1.2',
         }
 
     @base.remotable_classmethod
     def get_by_instance_uuids(cls, context, instance_uuids):
-        db_faults = db.instance_fault_get_by_instance_uuids(context,
-                                                            instance_uuids)
-        return _make_fault_list(cls(), db_faults)
+        db_faultdict = db.instance_fault_get_by_instance_uuids(context,
+                                                               instance_uuids)
+        db_faultlist = itertools.chain(*db_faultdict.values())
+        return base.obj_make_list(context, cls(context), objects.InstanceFault,
+                                  db_faultlist)

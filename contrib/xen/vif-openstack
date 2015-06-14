@@ -1,13 +1,12 @@
 #!/bin/bash
 
-## vim: set syn=on ts=4 sw=4 sts=0 noet foldmethod=indent:
 ## copyright: B1 Systems GmbH <info@b1-systems.de>, 2012.
 ## author: Christian Berendt <berendt@b1-systems.de>, 2012.
 ## license: Apache License, Version 2.0
 ##
 ## purpose:
 ##   Creates a new vif device without attaching it to a
-##   bridge. Quantum Linux Bridge Agent will attach the
+##   bridge. Neutron Linux Bridge Agent will attach the
 ##   created device to the belonging bridge.
 ##
 ## usage:

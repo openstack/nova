@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2011 Justin Santa Barbara
 # All Rights Reserved.
 #
@@ -21,10 +19,10 @@ It can't be called 'extensions' because that causes namespacing problems.
 
 """
 
-from oslo.config import cfg
+from oslo_config import cfg
+from oslo_log import log as logging
 
 from nova.api.openstack import extensions
-from nova.openstack.common import log as logging
 
 ext_opts = [
     cfg.ListOpt('osapi_compute_ext_list',

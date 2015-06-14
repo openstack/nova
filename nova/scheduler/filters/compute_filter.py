@@ -13,10 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo.config import cfg
+from oslo_config import cfg
+from oslo_log import log as logging
 
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import log as logging
+from nova.i18n import _LW
 from nova.scheduler import filters
 from nova import servicegroup
 
@@ -37,10 +37,14 @@ class ComputeFilter(filters.BaseHostFilter):
     def host_passes(self, host_state, filter_properties):
         """Returns True for only active compute nodes."""
         service = host_state.service
-
-        alive = self.servicegroup_api.service_is_up(service)
-        if not alive or service['disabled']:
-            LOG.debug(_("%(host_state)s is disabled or has not been "
-                    "heard from in a while"), {'host_state': host_state})
+        if service['disabled']:
+            LOG.debug("%(host_state)s is disabled, reason: %(reason)s",
+                      {'host_state': host_state,
+                       'reason': service.get('disabled_reason')})
             return False
+        else:
+            if not self.servicegroup_api.service_is_up(service):
+                LOG.warning(_LW("%(host_state)s has not been heard from in a "
+                                "while"), {'host_state': host_state})
+                return False
         return True

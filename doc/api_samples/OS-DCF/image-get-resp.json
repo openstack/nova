@@ -13,7 +13,7 @@
                 "rel": "bookmark"
             },
             {
-                "href": "http://glance.openstack.example.com/openstack/images/70a599e0-31e7-49b7-b260-868f441e862b",
+                "href": "http://glance.openstack.example.com/images/70a599e0-31e7-49b7-b260-868f441e862b",
                 "rel": "alternate",
                 "type": "application/vnd.openstack.image"
             }

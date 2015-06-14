@@ -28,13 +28,13 @@ sys.path.insert(0, os.path.abspath('./'))
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 
 extensions = ['sphinx.ext.autodoc',
-              'sphinx.ext.intersphinx',
               'ext.nova_todo',
               'sphinx.ext.coverage',
               'sphinx.ext.pngmath',
               'sphinx.ext.ifconfig',
               'sphinx.ext.graphviz',
-              'oslo.sphinx',
+              'oslosphinx',
+              "ext.support_matrix",
               ]
 
 todo_include_todos = True
@@ -84,9 +84,6 @@ version = version_info.version_string()
 
 # List of documents that shouldn't be included in the build.
 unused_docs = [
-    'api_ext/rst_extension_template',
-    'vmwareapi_readme',
-    'installer',
 ]
 
 # List of directories, relative to source directory, that shouldn't be searched
@@ -148,11 +145,11 @@ man_pages = [
      [u'OpenStack'], 1),
     ('man/nova-spicehtml5proxy', 'nova-spicehtml5proxy', u'Cloud controller fabric',
      [u'OpenStack'], 1),
+    ('man/nova-serialproxy', 'nova-serialproxy', u'Cloud controller fabric',
+     [u'OpenStack'], 1),
     ('man/nova-objectstore', 'nova-objectstore', u'Cloud controller fabric',
      [u'OpenStack'], 1),
     ('man/nova-rootwrap', 'nova-rootwrap', u'Cloud controller fabric',
-     [u'OpenStack'], 1),
-    ('man/nova-rpc-zmq-receiver', 'nova-rpc-zmq-receiver', u'Cloud controller fabric',
      [u'OpenStack'], 1),
     ('man/nova-scheduler', 'nova-scheduler', u'Cloud controller fabric',
      [u'OpenStack'], 1),
@@ -271,8 +268,3 @@ latex_documents = [
 
 # If false, no module index is generated.
 #latex_use_modindex = True
-
-
-# Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {'python': ('http://docs.python.org/', None),
-                       'swift': ('http://swift.openstack.org', None)}

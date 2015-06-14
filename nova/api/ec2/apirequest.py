@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
@@ -21,14 +19,16 @@ APIRequest class
 """
 
 import datetime
-from lxml import etree
 # TODO(termie): replace minidom with etree
 from xml.dom import minidom
 
+from lxml import etree
+from oslo_log import log as logging
+from oslo_utils import encodeutils
+import six
+
 from nova.api.ec2 import ec2utils
 from nova import exception
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
 
@@ -59,10 +59,10 @@ class APIRequest(object):
             method = getattr(self.controller,
                              ec2utils.camelcase_to_underscore(self.action))
         except AttributeError:
-            LOG.exception(_('Unsupported API request: controller = '
-                            '%(controller)s, action = %(action)s'),
-                          {'controller': self.controller,
-                           'action': self.action})
+            LOG.debug('Unsupported API request: controller = '
+                        '%(controller)s, action = %(action)s',
+                        {'controller': self.controller,
+                         'action': self.action})
             # TODO(gundlach): Raise custom exception, trap in apiserver,
             #       and reraise as 400 error.
             raise exception.InvalidRequest()
@@ -136,6 +136,7 @@ class APIRequest(object):
             data_el.appendChild(
                   xml.createTextNode(_database_to_isoformat(data)))
         elif data is not None:
-            data_el.appendChild(xml.createTextNode(str(data)))
+            data_el.appendChild(xml.createTextNode(
+                encodeutils.safe_encode(six.text_type(data))))
 
         return data_el

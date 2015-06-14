@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
@@ -16,11 +14,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_utils import importutils
+
 # Importing full names to not pollute the namespace and cause possible
 # collisions with use of 'from nova.compute import <foo>' elsewhere.
 import nova.cells.opts
 import nova.exception
-import nova.openstack.common.importutils
 
 
 CELL_TYPE_TO_CLS_NAME = {'api': 'nova.compute.cells_api.ComputeCellsAPI',
@@ -36,17 +35,14 @@ def _get_compute_api_class_name():
 
 
 def API(*args, **kwargs):
-    importutils = nova.openstack.common.importutils
     class_name = _get_compute_api_class_name()
     return importutils.import_object(class_name, *args, **kwargs)
 
 
 def HostAPI(*args, **kwargs):
+    """Returns the 'HostAPI' class from the same module as the configured
+    compute api
     """
-    Returns the 'HostAPI' class from the same module as the configured compute
-    api
-    """
-    importutils = nova.openstack.common.importutils
     compute_api_class_name = _get_compute_api_class_name()
     compute_api_class = importutils.import_class(compute_api_class_name)
     class_name = compute_api_class.__module__ + ".HostAPI"
@@ -54,11 +50,9 @@ def HostAPI(*args, **kwargs):
 
 
 def InstanceActionAPI(*args, **kwargs):
-    """
-    Returns the 'InstanceActionAPI' class from the same module as the
+    """Returns the 'InstanceActionAPI' class from the same module as the
     configured compute api.
     """
-    importutils = nova.openstack.common.importutils
     compute_api_class_name = _get_compute_api_class_name()
     compute_api_class = importutils.import_class(compute_api_class_name)
     class_name = compute_api_class.__module__ + ".InstanceActionAPI"

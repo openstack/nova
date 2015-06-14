@@ -29,6 +29,7 @@ covhtml
 dist/*
 doc/source/api/*
 doc/build/*
+etc/nova/nova.conf.sample
 instances
 keeper
 keys
@@ -38,5 +39,3 @@ nosetests.xml
 nova/tests/cover/*
 nova/vcsversion.py
 tools/conf/nova.conf*
-tools/lintstack.head.py
-tools/pylint_exceptions

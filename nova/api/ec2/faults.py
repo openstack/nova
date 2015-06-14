@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
 #    a copy of the License at
@@ -12,14 +10,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo.config import cfg
+from oslo_config import cfg
+from oslo_log import log as logging
 import webob.dec
 import webob.exc
 
 import nova.api.ec2
 from nova import context
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import log as logging
 from nova import utils
 
 CONF = cfg.CONF
@@ -28,8 +25,8 @@ LOG = logging.getLogger(__name__)
 
 def ec2_error_response(request_id, code, message, status=500):
     """Helper to construct an EC2 compatible error response."""
-    LOG.debug(_('EC2 error response: %(code)s: %(message)s') %
-                {'code': code, 'message': message})
+    LOG.debug('EC2 error response: %(code)s: %(message)s',
+              {'code': code, 'message': message})
     resp = webob.Response()
     resp.status = status
     resp.headers['Content-Type'] = 'text/xml'

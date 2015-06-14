@@ -17,26 +17,11 @@
 
 from nova.api.openstack import common
 from nova.api.openstack import extensions
-from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 from nova import compute
 from nova import network
 
 
 authorize = extensions.extension_authorizer('compute', 'virtual_interfaces')
-
-
-vif_nsmap = {None: wsgi.XMLNS_V11}
-
-
-class VirtualInterfaceTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('virtual_interfaces')
-        elem = xmlutil.SubTemplateElement(root, 'virtual_interface',
-                                          selector='virtual_interfaces')
-        elem.set('id')
-        elem.set('mac_address')
-        return xmlutil.MasterTemplate(root, 1, nsmap=vif_nsmap)
 
 
 def _translate_vif_summary_view(_context, vif):
@@ -59,14 +44,13 @@ class ServerVirtualInterfaceController(object):
     def _items(self, req, server_id, entity_maker):
         """Returns a list of VIFs, transformed through entity_maker."""
         context = req.environ['nova.context']
+        instance = common.get_instance(self.compute_api, context, server_id)
 
-        instance = self.compute_api.get(context, server_id)
         vifs = self.network_api.get_vifs_by_instance(context, instance)
         limited_list = common.limited(vifs, req)
         res = [entity_maker(context, vif) for vif in limited_list]
         return {'virtual_interfaces': res}
 
-    @wsgi.serializers(xml=VirtualInterfaceTemplate)
     def index(self, req, server_id):
         """Returns the list of VIFs for a given instance."""
         authorize(req.environ['nova.context'])
@@ -81,7 +65,7 @@ class Virtual_interfaces(extensions.ExtensionDescriptor):
     alias = "os-virtual-interfaces"
     namespace = ("http://docs.openstack.org/compute/ext/"
                  "virtual_interfaces/api/v1.1")
-    updated = "2011-08-17T00:00:00+00:00"
+    updated = "2011-08-17T00:00:00Z"
 
     def get_resources(self):
         resources = []

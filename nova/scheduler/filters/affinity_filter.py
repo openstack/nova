@@ -16,66 +16,51 @@
 
 
 import netaddr
+from oslo_log import log as logging
 
-from nova.compute import api as compute
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import log as logging
 from nova.scheduler import filters
+from nova.scheduler.filters import utils
 
 LOG = logging.getLogger(__name__)
 
 
-class AffinityFilter(filters.BaseHostFilter):
-    def __init__(self):
-        self.compute_api = compute.API()
-
-
-class DifferentHostFilter(AffinityFilter):
+class DifferentHostFilter(filters.BaseHostFilter):
     '''Schedule the instance on a different host from a set of instances.'''
 
     # The hosts the instances are running on doesn't change within a request
     run_filter_once_per_request = True
 
     def host_passes(self, host_state, filter_properties):
-        context = filter_properties['context']
         scheduler_hints = filter_properties.get('scheduler_hints') or {}
 
         affinity_uuids = scheduler_hints.get('different_host', [])
-        if isinstance(affinity_uuids, basestring):
-            affinity_uuids = [affinity_uuids]
         if affinity_uuids:
-            return not self.compute_api.get_all(context,
-                                                {'host': host_state.host,
-                                                 'uuid': affinity_uuids,
-                                                 'deleted': False})
+            overlap = utils.instance_uuids_overlap(host_state, affinity_uuids)
+            return not overlap
         # With no different_host key
         return True
 
 
-class SameHostFilter(AffinityFilter):
+class SameHostFilter(filters.BaseHostFilter):
     '''Schedule the instance on the same host as another instance in a set of
-    of instances.
+    instances.
     '''
 
     # The hosts the instances are running on doesn't change within a request
     run_filter_once_per_request = True
 
     def host_passes(self, host_state, filter_properties):
-        context = filter_properties['context']
         scheduler_hints = filter_properties.get('scheduler_hints') or {}
 
         affinity_uuids = scheduler_hints.get('same_host', [])
-        if isinstance(affinity_uuids, basestring):
-            affinity_uuids = [affinity_uuids]
-        if affinity_uuids:
-            return self.compute_api.get_all(context, {'host': host_state.host,
-                                                      'uuid': affinity_uuids,
-                                                      'deleted': False})
-        # With no same_host key
+        if affinity_uuids and host_state.instances:
+            overlap = utils.instance_uuids_overlap(host_state, affinity_uuids)
+            return overlap
+        # With no same_host key or no instances
         return True
 
 
-class SimpleCIDRAffinityFilter(AffinityFilter):
+class SimpleCIDRAffinityFilter(filters.BaseHostFilter):
     '''Schedule the instance on a host with a particular cidr
     '''
 
@@ -98,34 +83,54 @@ class SimpleCIDRAffinityFilter(AffinityFilter):
         return True
 
 
-class GroupAntiAffinityFilter(AffinityFilter):
+class _GroupAntiAffinityFilter(filters.BaseHostFilter):
     """Schedule the instance on a different host from a set of group
     hosts.
     """
-
     def host_passes(self, host_state, filter_properties):
+        # Only invoke the filter is 'anti-affinity' is configured
+        policies = filter_properties.get('group_policies', [])
+        if self.policy_name not in policies:
+            return True
+
         group_hosts = filter_properties.get('group_hosts') or []
-        LOG.debug(_("Group anti affinity: check if %(host)s not "
-                    "in %(configured)s"), {'host': host_state.host,
+        LOG.debug("Group anti affinity: check if %(host)s not "
+                    "in %(configured)s", {'host': host_state.host,
                                            'configured': group_hosts})
         if group_hosts:
-            return not host_state.host in group_hosts
+            return host_state.host not in group_hosts
 
         # No groups configured
         return True
 
 
-class GroupAffinityFilter(AffinityFilter):
+class ServerGroupAntiAffinityFilter(_GroupAntiAffinityFilter):
+    def __init__(self):
+        self.policy_name = 'anti-affinity'
+        super(ServerGroupAntiAffinityFilter, self).__init__()
+
+
+class _GroupAffinityFilter(filters.BaseHostFilter):
     """Schedule the instance on to host from a set of group hosts.
     """
-
     def host_passes(self, host_state, filter_properties):
+        # Only invoke the filter is 'affinity' is configured
+        policies = filter_properties.get('group_policies', [])
+        if self.policy_name not in policies:
+            return True
+
         group_hosts = filter_properties.get('group_hosts', [])
-        LOG.debug(_("Group affinity: check if %(host)s in "
-                    "%(configured)s"), {'host': host_state.host,
+        LOG.debug("Group affinity: check if %(host)s in "
+                    "%(configured)s", {'host': host_state.host,
                                         'configured': group_hosts})
         if group_hosts:
             return host_state.host in group_hosts
 
         # No groups configured
         return True
+
+
+class ServerGroupAffinityFilter(_GroupAffinityFilter):
+    def __init__(self):
+        self.policy_name = 'affinity'
+        super(ServerGroupAffinityFilter, self).__init__()

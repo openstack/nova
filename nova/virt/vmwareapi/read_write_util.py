@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright (c) 2011 Citrix Systems, Inc.
 # Copyright 2011 OpenStack Foundation
 #
@@ -22,158 +20,36 @@ Collection of classes to handle image upload/download to/from Image service
 
 """
 
-import httplib
 import urllib
-import urllib2
-import urlparse
 
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import log as logging
-from nova import utils
-
-LOG = logging.getLogger(__name__)
-
-USER_AGENT = "OpenStack-ESX-Adapter"
-
-READ_CHUNKSIZE = 65536
+from oslo_utils import netutils
+from oslo_vmware import rw_handles
 
 
-class GlanceFileRead(object):
-    """Glance file read handler class."""
-
-    def __init__(self, glance_read_iter):
-        self.glance_read_iter = glance_read_iter
-        self.iter = self.get_next()
-
-    def read(self, chunk_size):
-        """Read an item from the queue.
-
-        The chunk size is ignored for the Client ImageBodyIterator
-        uses its own CHUNKSIZE.
-        """
-        try:
-            return self.iter.next()
-        except StopIteration:
-            return ""
-
-    def get_next(self):
-        """Get the next item from the image iterator."""
-        for data in self.glance_read_iter:
-            yield data
-
-    def close(self):
-        """A dummy close just to maintain consistency."""
-        pass
-
-
-class VMwareHTTPFile(object):
-    """Base class for HTTP file."""
-
-    def __init__(self, file_handle):
-        self.eof = False
-        self.file_handle = file_handle
-
-    def set_eof(self, eof):
-        """Set the end of file marker."""
-        self.eof = eof
-
-    def get_eof(self):
-        """Check if the end of file has been reached."""
-        return self.eof
-
-    def close(self):
-        """Close the file handle."""
-        try:
-            self.file_handle.close()
-        except Exception as exc:
-            LOG.exception(exc)
-
-    def __del__(self):
-        """Close the file handle on garbage collection."""
-        self.close()
-
-    def _build_vim_cookie_headers(self, vim_cookies):
-        """Build ESX host session cookie headers."""
-        cookie_header = ""
-        for vim_cookie in vim_cookies:
-            cookie_header = vim_cookie.name + "=" + vim_cookie.value
-            break
-        return cookie_header
-
-    def write(self, data):
-        """Write data to the file."""
-        raise NotImplementedError()
-
-    def read(self, chunk_size):
-        """Read a chunk of data."""
-        raise NotImplementedError()
-
-    def get_size(self):
-        """Get size of the file to be read."""
-        raise NotImplementedError()
-
-
-class VMwareHTTPWriteFile(VMwareHTTPFile):
-    """VMware file write handler class."""
-
-    def __init__(self, host, data_center_name, datastore_name, cookies,
-                 file_path, file_size, scheme="https"):
-        if utils.is_valid_ipv6(host):
-            base_url = "%s://[%s]/folder/%s" % (scheme, host, file_path)
-        else:
-            base_url = "%s://%s/folder/%s" % (scheme, host, file_path)
-        param_list = {"dcPath": data_center_name, "dsName": datastore_name}
-        base_url = base_url + "?" + urllib.urlencode(param_list)
-        _urlparse = urlparse.urlparse(base_url)
-        scheme, netloc, path, params, query, fragment = _urlparse
-        if scheme == "http":
-            conn = httplib.HTTPConnection(netloc)
-        elif scheme == "https":
-            conn = httplib.HTTPSConnection(netloc)
-        conn.putrequest("PUT", path + "?" + query)
-        conn.putheader("User-Agent", USER_AGENT)
-        conn.putheader("Content-Length", file_size)
-        conn.putheader("Cookie", self._build_vim_cookie_headers(cookies))
-        conn.endheaders()
-        self.conn = conn
-        VMwareHTTPFile.__init__(self, conn)
-
-    def write(self, data):
-        """Write to the file."""
-        self.file_handle.send(data)
-
-    def close(self):
-        """Get the response and close the connection."""
-        try:
-            self.conn.getresponse()
-        except Exception as excep:
-            LOG.debug(_("Exception during HTTP connection close in "
-                      "VMwareHTTPWrite. Exception is %s") % excep)
-        super(VMwareHTTPWriteFile, self).close()
-
-
-class VMwareHTTPReadFile(VMwareHTTPFile):
+class VMwareHTTPReadFile(rw_handles.FileHandle):
     """VMware file read handler class."""
 
-    def __init__(self, host, data_center_name, datastore_name, cookies,
+    def __init__(self, host, port, data_center_name, datastore_name, cookies,
                  file_path, scheme="https"):
-        base_url = "%s://%s/folder/%s" % (scheme, host,
-                                          urllib.pathname2url(file_path))
+        self._base_url = self._get_base_url(scheme, host, port, file_path)
         param_list = {"dcPath": data_center_name, "dsName": datastore_name}
-        base_url = base_url + "?" + urllib.urlencode(param_list)
-        headers = {'User-Agent': USER_AGENT,
-                   'Cookie': self._build_vim_cookie_headers(cookies)}
-        request = urllib2.Request(base_url, None, headers)
-        conn = urllib2.urlopen(request)
-        VMwareHTTPFile.__init__(self, conn)
+        self._base_url = self._base_url + "?" + urllib.urlencode(param_list)
+        self._conn = self._create_read_connection(self._base_url,
+                                                  cookies=cookies)
+        rw_handles.FileHandle.__init__(self, self._conn)
 
     def read(self, chunk_size):
-        """Read a chunk of data."""
-        # We are ignoring the chunk size passed for we want the pipe to hold
-        # data items of the chunk-size that Glance Client uses for read
-        # while writing.
-        return self.file_handle.read(READ_CHUNKSIZE)
+        return self._file_handle.read(rw_handles.READ_CHUNKSIZE)
+
+    def _get_base_url(self, scheme, host, port, file_path):
+        if netutils.is_valid_ipv6(host):
+            base_url = "%s://[%s]:%s/folder/%s" % (scheme, host, port,
+                                                urllib.pathname2url(file_path))
+        else:
+            base_url = "%s://%s:%s/folder/%s" % (scheme, host, port,
+                                              urllib.pathname2url(file_path))
+        return base_url
 
     def get_size(self):
         """Get size of the file to be read."""
-        return self.file_handle.headers.get("Content-Length", -1)
+        return self._file_handle.headers.get("Content-Length", -1)

@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -18,43 +16,50 @@
 
 import datetime
 
-from oslo.config import cfg
+from oslo_config import cfg
 import webob.exc
 
 from nova.api.openstack import extensions
+from nova.api.openstack import wsgi
 from nova import compute
-from nova.openstack.common.gettextutils import _
+from nova.i18n import _
 from nova import utils
 
 CONF = cfg.CONF
 CONF.import_opt('compute_topic', 'nova.compute.rpcapi')
 
-ALIAS = "os-instance-usage-audit-log"
-authorize = extensions.extension_authorizer('compute',
-                                            'v3:' + ALIAS)
+
+ALIAS = 'os-instance-usage-audit-log'
+authorize = extensions.os_compute_authorizer(ALIAS)
 
 
-class InstanceUsageAuditLogController(object):
+class InstanceUsageAuditLogController(wsgi.Controller):
     def __init__(self):
         self.host_api = compute.HostAPI()
 
-    @extensions.expected_errors(400)
+    @extensions.expected_errors(())
     def index(self, req):
         context = req.environ['nova.context']
         authorize(context)
-        before = req.GET.get('before', None)
-        if before:
-            try:
-                if '.' in before:
-                    before = datetime.datetime.strptime(str(before),
-                                                    "%Y-%m-%d %H:%M:%S.%f")
-                else:
-                    before = datetime.datetime.strptime(str(before),
-                                                    "%Y-%m-%d %H:%M:%S")
-            except ValueError:
-                msg = _("Invalid timestamp for date %s") % id
-                raise webob.exc.HTTPBadRequest(explanation=msg)
-        task_log = self._get_audit_task_logs(context, before=before)
+        task_log = self._get_audit_task_logs(context)
+        return {'instance_usage_audit_logs': task_log}
+
+    @extensions.expected_errors(400)
+    def show(self, req, id):
+        context = req.environ['nova.context']
+        authorize(context)
+        try:
+            if '.' in id:
+                before_date = datetime.datetime.strptime(str(id),
+                                                "%Y-%m-%d %H:%M:%S.%f")
+            else:
+                before_date = datetime.datetime.strptime(str(id),
+                                                "%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            msg = _("Invalid timestamp for date %s") % id
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+        task_log = self._get_audit_task_logs(context,
+                                                     before=before_date)
         return {'instance_usage_audit_log': task_log}
 
     def _get_audit_task_logs(self, context, begin=None, end=None,
@@ -98,11 +103,11 @@ class InstanceUsageAuditLogController(object):
                 running_hosts.add(tlog['host'])
             total_errors += tlog['errors']
             total_items += tlog['task_items']
-        log = dict((tl['host'], dict(state=tl['state'],
-                                  instances=tl['task_items'],
-                                  errors=tl['errors'],
-                                  message=tl['message']))
-                  for tl in task_logs)
+        log = {tl['host']: dict(state=tl['state'],
+                                instances=tl['task_items'],
+                                errors=tl['errors'],
+                                message=tl['message'])
+               for tl in task_logs}
         missing_hosts = hosts - seen_hosts
         overall_status = "%s hosts done. %s errors." % (
                     'ALL' if len(done_hosts) == len(hosts)
@@ -123,18 +128,14 @@ class InstanceUsageAuditLogController(object):
 
 class InstanceUsageAuditLog(extensions.V3APIExtensionBase):
     """Admin-only Task Log Monitoring."""
-    name = "InstanceUsageAuditLog"
+    name = "OSInstanceUsageAuditLog"
     alias = ALIAS
-    namespace = "http://docs.openstack.org/ext/services/api/v3"
     version = 1
 
     def get_resources(self):
-        ext = extensions.ResourceExtension(ALIAS,
+        ext = extensions.ResourceExtension('os-instance_usage_audit_log',
                                            InstanceUsageAuditLogController())
         return [ext]
 
     def get_controller_extensions(self):
-        """It's an abstract function V3APIExtensionBase and the extension
-        will not be loaded without it.
-        """
         return []

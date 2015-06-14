@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-#
 # Copyright (c) 2013 ISP RAS.
 # All Rights Reserved.
 #
@@ -15,7 +13,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_log import log as logging
+
 from nova.scheduler import filters
+
+LOG = logging.getLogger(__name__)
 
 
 class PciPassthroughFilter(filters.BaseHostFilter):
@@ -25,18 +27,27 @@ class PciPassthroughFilter(filters.BaseHostFilter):
     to meet the device requests in the 'extra_specs' for the flavor.
 
     PCI resource tracker provides updated summary information about the
-    PCI devices for each host, like:
-    [{"count": 5, "vendor_id": "8086", "product_id": "1520",
-        "extra_info":'{}'}],
-    and VM requests PCI devices via PCI requests, like:
-    [{"count": 1, "vendor_id": "8086", "product_id": "1520",}].
+    PCI devices for each host, like::
+
+        | [{"count": 5, "vendor_id": "8086", "product_id": "1520",
+        |   "extra_info":'{}'}],
+
+    and VM requests PCI devices via PCI requests, like::
+
+        | [{"count": 1, "vendor_id": "8086", "product_id": "1520",}].
 
     The filter checks if the host passes or not based on this information.
+
     """
 
     def host_passes(self, host_state, filter_properties):
         """Return true if the host has the required PCI devices."""
-        if not filter_properties.get('pci_requests'):
+        pci_requests = filter_properties.get('pci_requests')
+        if not pci_requests:
             return True
-        return host_state.pci_stats.support_requests(
-            filter_properties.get('pci_requests'))
+        if not host_state.pci_stats.support_requests(pci_requests.requests):
+            LOG.debug("%(host_state)s doesn't have the required PCI devices"
+                      " (%(requests)s)",
+                      {'host_state': host_state, 'requests': pci_requests})
+            return False
+        return True

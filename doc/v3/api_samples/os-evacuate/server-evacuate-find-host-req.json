@@ -1,0 +1,6 @@
+{
+    "evacuate": {
+        "adminPass": "MySecretPass",
+        "onSharedStorage": "False"
+    }
+}

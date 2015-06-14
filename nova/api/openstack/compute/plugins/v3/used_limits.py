@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 OpenStack Foundation
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -14,25 +12,18 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import six
+
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 from nova import quota
 
 
 QUOTAS = quota.QUOTAS
 
 
-XMLNS = "http://docs.openstack.org/compute/ext/used_limits/api/v3"
 ALIAS = "os-used-limits"
-authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
-
-
-class UsedLimitsTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('limits', selector='limits')
-        root.set('{%s}usedLimits' % XMLNS, '%s:usedLimits' % ALIAS)
-        return xmlutil.SlaveTemplate(root, 1, nsmap={ALIAS: XMLNS})
+authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class UsedLimitsController(wsgi.Controller):
@@ -45,10 +36,9 @@ class UsedLimitsController(wsgi.Controller):
             return False
 
     @wsgi.extends
+    @extensions.expected_errors(())
     def index(self, req, resp_obj):
         context = req.environ['nova.context']
-        authorize(context)
-        resp_obj.attach(xml=UsedLimitsTemplate())
         project_id = self._project_id(context, req)
         quotas = QUOTAS.get_project_quotas(context, project_id, usages=True)
         quota_map = {
@@ -57,13 +47,14 @@ class UsedLimitsController(wsgi.Controller):
             'totalInstancesUsed': 'instances',
             'totalFloatingIpsUsed': 'floating_ips',
             'totalSecurityGroupsUsed': 'security_groups',
+            'totalServerGroupsUsed': 'server_groups',
         }
         used_limits = {}
-        for display_name, quota in quota_map.iteritems():
-            if quota in quotas:
-                reserved = (quotas[quota]['reserved']
+        for display_name, key in six.iteritems(quota_map):
+            if key in quotas:
+                reserved = (quotas[key]['reserved']
                             if self._reserved(req) else 0)
-                used_limits[display_name] = quotas[quota]['in_use'] + reserved
+                used_limits[display_name] = quotas[key]['in_use'] + reserved
 
         resp_obj.obj['limits']['absolute'].update(used_limits)
 
@@ -74,7 +65,7 @@ class UsedLimitsController(wsgi.Controller):
                 'project_id': tenant_id,
                 'user_id': context.user_id
                 }
-            authorize(context, target=target, action='tenant')
+            authorize(context, target=target)
             return tenant_id
         return context.project_id
 
@@ -84,7 +75,6 @@ class UsedLimits(extensions.V3APIExtensionBase):
 
     name = "UsedLimits"
     alias = ALIAS
-    namespace = XMLNS
     version = 1
 
     def get_controller_extensions(self):

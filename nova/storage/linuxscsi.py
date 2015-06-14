@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # (c) Copyright 2013 Hewlett-Packard Development Company, L.P.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -16,13 +14,19 @@
 
 """Generic linux scsi subsystem utilities."""
 
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import log as logging
+from oslo_concurrency import processutils
+from oslo_log import log as logging
+
+from nova.i18n import _LW
 from nova.openstack.common import loopingcall
-from nova.openstack.common import processutils
 from nova import utils
 
+import os
+import re
+
 LOG = logging.getLogger(__name__)
+
+MULTIPATH_WWID_REGEX = re.compile("\((?P<wwid>.+)\)")
 
 
 def echo_scsi_command(path, content):
@@ -69,8 +73,8 @@ def get_device_info(device):
 
 def _wait_for_remove(device, tries):
     tries = tries + 1
-    LOG.debug(_("Trying (%(tries)s) to remove device %(device)s")
-              % {'tries': tries, 'device': device["device"]})
+    LOG.debug("Trying (%(tries)s) to remove device %(device)s",
+              {'tries': tries, 'device': device["device"]})
 
     path = "/sys/bus/scsi/drivers/sd/%s:%s:%s:%s/delete"
     echo_scsi_command(path % (device["host"], device["channel"],
@@ -99,34 +103,45 @@ def find_multipath_device(device):
         (out, err) = utils.execute('multipath', '-l', device,
                                run_as_root=True)
     except processutils.ProcessExecutionError as exc:
-        LOG.warn(_("Multipath call failed exit (%(code)s)")
-                 % {'code': exc.exit_code})
+        LOG.warning(_LW("Multipath call failed exit (%(code)s)"),
+                    {'code': exc.exit_code})
         return None
 
     if out:
         lines = out.strip()
         lines = lines.split("\n")
         if lines:
-            line = lines[0]
-            info = line.split(" ")
-            # device line output is different depending
-            # on /etc/multipath.conf settings.
-            if info[1][:2] == "dm":
-                mdev = "/dev/%s" % info[1]
-                mdev_id = info[0]
-            elif info[2][:2] == "dm":
-                mdev = "/dev/%s" % info[2]
-                mdev_id = info[1].replace('(', '')
-                mdev_id = mdev_id.replace(')', '')
 
-            if mdev is None:
-                LOG.warn(_("Couldn't find multipath device %s"), line)
+            # Use the device name, be it the WWID, mpathN or custom alias of
+            # a device to build the device path. This should be the first item
+            # on the first line of output from `multipath -l /dev/${path}`.
+            mdev_name = lines[0].split(" ")[0]
+            mdev = '/dev/mapper/%s' % mdev_name
+
+            # Find the WWID for the LUN if we are using mpathN or aliases.
+            wwid_search = MULTIPATH_WWID_REGEX.search(lines[0])
+            if wwid_search is not None:
+                mdev_id = wwid_search.group('wwid')
+            else:
+                mdev_id = mdev_name
+
+            # Confirm that the device is present.
+            try:
+                os.stat(mdev)
+            except OSError:
+                LOG.warning(_LW("Couldn't find multipath device %s"), mdev)
                 return None
 
-            LOG.debug(_("Found multipath device = %s"), mdev)
+            LOG.debug("Found multipath device = %s", mdev)
+
             device_lines = lines[3:]
             for dev_line in device_lines:
                 if dev_line.find("policy") != -1:
+                    continue
+                if '#' in dev_line:
+                    LOG.warning(_LW('Skip faulty line "%(dev_line)s" of'
+                                    ' multipath device %(mdev)s'),
+                                {'mdev': mdev, 'dev_line': dev_line})
                     continue
 
                 dev_line = dev_line.lstrip(' |-`')
@@ -143,6 +158,7 @@ def find_multipath_device(device):
     if mdev is not None:
         info = {"device": mdev,
                 "id": mdev_id,
+                "name": mdev_name,
                 "devices": devices}
         return info
     return None

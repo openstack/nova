@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2011 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -21,36 +19,7 @@ import nova
 from nova.api.openstack import common
 from nova.api.openstack.compute.views import addresses as view_addresses
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
-from nova.openstack.common.gettextutils import _
-
-
-def make_network(elem):
-    elem.set('id', 0)
-
-    ip = xmlutil.SubTemplateElement(elem, 'ip', selector=1)
-    ip.set('version')
-    ip.set('addr')
-
-
-network_nsmap = {None: xmlutil.XMLNS_V11}
-
-
-class NetworkTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        sel = xmlutil.Selector(xmlutil.get_items, 0)
-        root = xmlutil.TemplateElement('network', selector=sel)
-        make_network(root)
-        return xmlutil.MasterTemplate(root, 1, nsmap=network_nsmap)
-
-
-class AddressesTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('addresses', selector='addresses')
-        elem = xmlutil.SubTemplateElement(root, 'network',
-                                          selector=xmlutil.get_items)
-        make_network(elem)
-        return xmlutil.MasterTemplate(root, 1, nsmap=network_nsmap)
+from nova.i18n import _
 
 
 class Controller(wsgi.Controller):
@@ -62,31 +31,15 @@ class Controller(wsgi.Controller):
         super(Controller, self).__init__(**kwargs)
         self._compute_api = nova.compute.API()
 
-    def _get_instance(self, context, server_id):
-        try:
-            instance = self._compute_api.get(context, server_id)
-        except nova.exception.NotFound:
-            msg = _("Instance does not exist")
-            raise exc.HTTPNotFound(explanation=msg)
-        return instance
-
-    def create(self, req, server_id, body):
-        raise exc.HTTPNotImplemented()
-
-    def delete(self, req, server_id, id):
-        raise exc.HTTPNotImplemented()
-
-    @wsgi.serializers(xml=AddressesTemplate)
     def index(self, req, server_id):
         context = req.environ["nova.context"]
-        instance = self._get_instance(context, server_id)
+        instance = common.get_instance(self._compute_api, context, server_id)
         networks = common.get_networks_for_instance(context, instance)
         return self._view_builder.index(networks)
 
-    @wsgi.serializers(xml=NetworkTemplate)
     def show(self, req, server_id, id):
         context = req.environ["nova.context"]
-        instance = self._get_instance(context, server_id)
+        instance = common.get_instance(self._compute_api, context, server_id)
         networks = common.get_networks_for_instance(context, instance)
         if id not in networks:
             msg = _("Instance is not a member of specified network")

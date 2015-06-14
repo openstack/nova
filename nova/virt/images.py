@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
@@ -23,14 +21,14 @@ Handling of VM disk images.
 
 import os
 
-from oslo.config import cfg
+from oslo_config import cfg
+from oslo_log import log as logging
 
 from nova import exception
-from nova.image import glance
+from nova.i18n import _, _LE
+from nova import image
 from nova.openstack.common import fileutils
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import imageutils
-from nova.openstack.common import log as logging
 from nova import utils
 
 LOG = logging.getLogger(__name__)
@@ -43,15 +41,28 @@ image_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(image_opts)
+IMAGE_API = image.API()
 
 
 def qemu_img_info(path):
     """Return an object containing the parsed output from qemu-img info."""
-    if not os.path.exists(path) and CONF.libvirt_images_type != 'rbd':
-        return imageutils.QemuImgInfo()
+    # TODO(mikal): this code should not be referring to a libvirt specific
+    # flag.
+    # NOTE(sirp): The config option import must go here to avoid an import
+    # cycle
+    CONF.import_opt('images_type', 'nova.virt.libvirt.imagebackend',
+                    group='libvirt')
+    if not os.path.exists(path) and CONF.libvirt.images_type != 'rbd':
+        msg = (_("Path does not exist %(path)s") % {'path': path})
+        raise exception.InvalidDiskInfo(reason=msg)
 
     out, err = utils.execute('env', 'LC_ALL=C', 'LANG=C',
                              'qemu-img', 'info', path)
+    if not out:
+        msg = (_("Failed to run qemu-img info on %(path)s : %(error)s") %
+               {'path': path, 'error': err})
+        raise exception.InvalidDiskInfo(reason=msg)
+
     return imageutils.QemuImgInfo(out)
 
 
@@ -61,20 +72,19 @@ def convert_image(source, dest, out_format, run_as_root=False):
     utils.execute(*cmd, run_as_root=run_as_root)
 
 
-def fetch(context, image_href, path, _user_id, _project_id):
-    # TODO(vish): Improve context handling and add owner and auth data
-    #             when it is added to glance.  Right now there is no
-    #             auth checking in glance, so we assume that access was
-    #             checked before we got here.
-    (image_service, image_id) = glance.get_remote_image_service(context,
-                                                                image_href)
+def fetch(context, image_href, path, _user_id, _project_id, max_size=0):
     with fileutils.remove_path_on_error(path):
-        image_service.download(context, image_id, dst_path=path)
+        IMAGE_API.download(context, image_href, dest_path=path)
 
 
-def fetch_to_raw(context, image_href, path, user_id, project_id):
+def get_info(context, image_href):
+    return IMAGE_API.get(context, image_href)
+
+
+def fetch_to_raw(context, image_href, path, user_id, project_id, max_size=0):
     path_tmp = "%s.part" % path
-    fetch(context, image_href, path_tmp, user_id, project_id)
+    fetch(context, image_href, path_tmp, user_id, project_id,
+          max_size=max_size)
 
     with fileutils.remove_path_on_error(path_tmp):
         data = qemu_img_info(path_tmp)
@@ -90,6 +100,23 @@ def fetch_to_raw(context, image_href, path, user_id, project_id):
             raise exception.ImageUnacceptable(image_id=image_href,
                 reason=(_("fmt=%(fmt)s backed by: %(backing_file)s") %
                         {'fmt': fmt, 'backing_file': backing_file}))
+
+        # We can't generally shrink incoming images, so disallow
+        # images > size of the flavor we're booting.  Checking here avoids
+        # an immediate DoS where we convert large qcow images to raw
+        # (which may compress well but not be sparse).
+        # TODO(p-draigbrady): loop through all flavor sizes, so that
+        # we might continue here and not discard the download.
+        # If we did that we'd have to do the higher level size checks
+        # irrespective of whether the base image was prepared or not.
+        disk_size = data.virtual_size
+        if max_size and max_size < disk_size:
+            LOG.error(_LE('%(base)s virtual size %(disk_size)s '
+                          'larger than flavor root disk size %(size)s'),
+                      {'base': path,
+                       'disk_size': disk_size,
+                       'size': max_size})
+            raise exception.FlavorDiskTooSmall()
 
         if fmt != "raw" and CONF.force_raw_images:
             staged = "%s.converted" % path

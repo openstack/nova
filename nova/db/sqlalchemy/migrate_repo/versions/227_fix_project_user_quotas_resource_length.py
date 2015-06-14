@@ -28,9 +28,3 @@ def upgrade(migrate_engine):
         col_resource.alter(type=String(255))
         table.update().where(table.c.resource == 'injected_file_content_byt')\
             .values(resource='injected_file_content_bytes').execute()
-
-
-def downgrade(migrate_engine):
-    # This migration fixes the resource of project_user_quotas table.
-    # No need to go back and reverse this change.
-    pass

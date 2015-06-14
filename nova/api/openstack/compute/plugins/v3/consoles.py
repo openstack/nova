@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2010 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -15,7 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import webob
 from webob import exc
 
 from nova.api.openstack import extensions
@@ -24,12 +21,16 @@ from nova.console import api as console_api
 from nova import exception
 
 
+ALIAS = 'os-consoles'
+authorize = extensions.os_compute_authorizer(ALIAS)
+
+
 def _translate_keys(cons):
     """Coerces a console instance into proper dictionary format."""
     pool = cons['pool']
     info = {'id': cons['id'],
             'console_type': pool['console_type']}
-    return info
+    return dict(console=info)
 
 
 def _translate_detail_keys(cons):
@@ -44,27 +45,32 @@ def _translate_detail_keys(cons):
     return dict(console=info)
 
 
-class ConsolesController(object):
+class ConsolesController(wsgi.Controller):
     """The Consoles controller for the OpenStack API."""
 
     def __init__(self):
         self.console_api = console_api.API()
 
-    @extensions.expected_errors(404)
+    @extensions.expected_errors(())
     def index(self, req, server_id):
         """Returns a list of consoles for this instance."""
-        try:
-            consoles = self.console_api.get_consoles(
+        context = req.environ['nova.context']
+        authorize(context, action='index')
+
+        consoles = self.console_api.get_consoles(
                 req.environ['nova.context'], server_id)
-        except exception.InstanceNotFound as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
         return dict(consoles=[_translate_keys(console)
                               for console in consoles])
 
+    # NOTE(gmann): Here should be 201 instead of 200 by v2.1
+    # +microversions because the console has been created
+    # completely when returning a response.
     @extensions.expected_errors(404)
-    @wsgi.response(201)
-    def create(self, req, server_id):
+    def create(self, req, server_id, body):
         """Creates a new console."""
+        context = req.environ['nova.context']
+        authorize(context, action='create')
+
         try:
             self.console_api.create_console(
                 req.environ['nova.context'], server_id)
@@ -74,6 +80,9 @@ class ConsolesController(object):
     @extensions.expected_errors(404)
     def show(self, req, server_id, id):
         """Shows in-depth information on a specific console."""
+        context = req.environ['nova.context']
+        authorize(context, action='show')
+
         try:
             console = self.console_api.get_console(
                                         req.environ['nova.context'],
@@ -83,24 +92,26 @@ class ConsolesController(object):
             raise exc.HTTPNotFound(explanation=e.format_message())
         return _translate_detail_keys(console)
 
+    @wsgi.response(202)
     @extensions.expected_errors(404)
     def delete(self, req, server_id, id):
         """Deletes a console."""
+        context = req.environ['nova.context']
+        authorize(context, action='delete')
+
         try:
             self.console_api.delete_console(req.environ['nova.context'],
                                             server_id,
                                             int(id))
         except exception.ConsoleNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
-        return webob.Response(status_int=202)
 
 
 class Consoles(extensions.V3APIExtensionBase):
     """Consoles."""
 
     name = "Consoles"
-    alias = "consoles"
-    namespace = "http://docs.openstack.org/compute/core/consoles/v3"
+    alias = ALIAS
     version = 1
 
     def get_resources(self):

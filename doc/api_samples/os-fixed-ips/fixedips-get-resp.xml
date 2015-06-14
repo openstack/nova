@@ -1,7 +1,0 @@
-<?xml version='1.0' encoding='UTF-8'?>
-<fixed_ip>
-  <cidr>192.168.1.0/24</cidr>
-  <hostname>openstack</hostname>
-  <host>host</host>
-  <address>192.168.1.1</address>
-</fixed_ip>

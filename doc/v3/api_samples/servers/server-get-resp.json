@@ -1,13 +1,13 @@
 {
     "server": {
-        "access_ip_v4": "",
-        "access_ip_v6": "",
+        "accessIPv4": "1.2.3.4",
+        "accessIPv6": "80fe::",
         "addresses": {
             "private": [
                 {
                     "addr": "192.168.0.3",
-                    "mac_addr": "aa:bb:cc:dd:ee:ff",
-                    "type": "fixed",
+                    "OS-EXT-IPS-MAC:mac_addr": "aa:bb:cc:dd:ee:ff",
+                    "OS-EXT-IPS:type": "fixed",
                     "version": 4
                 }
             ]
@@ -17,18 +17,18 @@
             "id": "1",
             "links": [
                 {
-                    "href": "http://openstack.example.com/flavors/1",
+                    "href": "http://openstack.example.com/openstack/flavors/1",
                     "rel": "bookmark"
                 }
             ]
         },
-        "host_id": "92154fab69d5883ba2c8622b7e65f745dd33257221c07af363c51b29",
+        "hostId": "92154fab69d5883ba2c8622b7e65f745dd33257221c07af363c51b29",
         "id": "0e44cc9c-e052-415d-afbf-469b0d384170",
         "image": {
             "id": "70a599e0-31e7-49b7-b260-868f441e862b",
             "links": [
                 {
-                    "href": "http://glance.openstack.example.com/images/70a599e0-31e7-49b7-b260-868f441e862b",
+                    "href": "http://openstack.example.com/openstack/images/70a599e0-31e7-49b7-b260-868f441e862b",
                     "rel": "bookmark"
                 }
             ]
@@ -36,11 +36,11 @@
         "key_name": null,
         "links": [
             {
-                "href": "http://openstack.example.com/v3/servers/0e44cc9c-e052-415d-afbf-469b0d384170",
+                "href": "http://openstack.example.com/v2/openstack/servers/0e44cc9c-e052-415d-afbf-469b0d384170",
                 "rel": "self"
             },
             {
-                "href": "http://openstack.example.com/servers/0e44cc9c-e052-415d-afbf-469b0d384170",
+                "href": "http://openstack.example.com/openstack/servers/0e44cc9c-e052-415d-afbf-469b0d384170",
                 "rel": "bookmark"
             }
         ],

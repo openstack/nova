@@ -1,5 +1,0 @@
-{
-    "interface_attachment": {
-        "port_id": "ce531f90-199f-48c0-816c-13e38010b442"
-    }
-}

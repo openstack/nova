@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2011 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -15,80 +13,59 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import six
 from webob import exc
 
 from nova.api.openstack import common
+from nova.api.openstack.compute.schemas.v3 import server_metadata
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
+from nova.api import validation
 from nova import compute
 from nova import exception
-from nova.openstack.common.gettextutils import _
+from nova.i18n import _
 
-
-# NOTE(cyeoh): We cannot use the metadata serializers from
-# nova.api.openstack.common because the JSON format is different from
-# the V2 API. The metadata serializer for V2 is in common because it
-# is shared between image and server metadata, but since the image api
-# is not ported to the V3 API there is no point creating a common
-# version for the V3 API
-class MetaItemDeserializer(wsgi.MetadataXMLDeserializer):
-    def deserialize(self, text):
-        dom = xmlutil.safe_minidom_parse_string(text)
-        metadata_node = self.find_first_child_named(dom, "metadata")
-        key = metadata_node.getAttribute("key")
-        metadata = {}
-        metadata[key] = self.extract_text(metadata_node)
-        return {'body': {'metadata': metadata}}
-
-
-class MetaItemTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        sel = xmlutil.Selector('metadata', xmlutil.get_items, 0)
-        root = xmlutil.TemplateElement('metadata', selector=sel)
-        root.set('key', 0)
-        root.text = 1
-        return xmlutil.MasterTemplate(root, 1, nsmap=common.metadata_nsmap)
+ALIAS = 'server-metadata'
+authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class ServerMetadataController(wsgi.Controller):
     """The server metadata API controller for the OpenStack API."""
 
     def __init__(self):
-        self.compute_api = compute.API()
+        self.compute_api = compute.API(skip_policy_check=True)
         super(ServerMetadataController, self).__init__()
 
     def _get_metadata(self, context, server_id):
+        server = common.get_instance(self.compute_api, context, server_id)
         try:
-            server = self.compute_api.get(context, server_id)
+            # NOTE(mikal): get_instanc_metadata sometimes returns
+            # InstanceNotFound in unit tests, even though the instance is
+            # fetched on the line above. I blame mocking.
             meta = self.compute_api.get_instance_metadata(context, server)
         except exception.InstanceNotFound:
             msg = _('Server does not exist')
             raise exc.HTTPNotFound(explanation=msg)
-
         meta_dict = {}
-        for key, value in meta.iteritems():
+        for key, value in six.iteritems(meta):
             meta_dict[key] = value
         return meta_dict
 
     @extensions.expected_errors(404)
-    @wsgi.serializers(xml=common.MetadataTemplate)
     def index(self, req, server_id):
         """Returns the list of metadata for a given instance."""
         context = req.environ['nova.context']
+        authorize(context, action='index')
         return {'metadata': self._get_metadata(context, server_id)}
 
-    @extensions.expected_errors((400, 404, 409, 413))
-    @wsgi.serializers(xml=common.MetadataTemplate)
-    @wsgi.deserializers(xml=common.MetadataDeserializer)
-    @wsgi.response(201)
+    @extensions.expected_errors((400, 403, 404, 409, 413))
+    # NOTE(gmann): Returns 200 for backwards compatibility but should be 201
+    # as this operation complete the creation of metadata.
+    @validation.schema(server_metadata.create)
     def create(self, req, server_id, body):
-        if not self.is_valid_body(body, 'metadata'):
-            msg = _("Malformed request body")
-            raise exc.HTTPBadRequest(explanation=msg)
         metadata = body['metadata']
         context = req.environ['nova.context']
-
+        authorize(context, action='create')
         new_metadata = self._update_instance_metadata(context,
                                                       server_id,
                                                       metadata,
@@ -96,39 +73,29 @@ class ServerMetadataController(wsgi.Controller):
 
         return {'metadata': new_metadata}
 
-    @extensions.expected_errors((400, 404, 409, 413))
-    @wsgi.serializers(xml=MetaItemTemplate)
-    @wsgi.deserializers(xml=MetaItemDeserializer)
+    @extensions.expected_errors((400, 403, 404, 409, 413))
+    @validation.schema(server_metadata.update)
     def update(self, req, server_id, id, body):
-        if not self.is_valid_body(body, 'metadata'):
-            msg = _("Malformed request body")
-            raise exc.HTTPBadRequest(explanation=msg)
-        meta_item = body['metadata']
+        context = req.environ['nova.context']
+        authorize(context, action='update')
+        meta_item = body['meta']
         if id not in meta_item:
             expl = _('Request body and URI mismatch')
             raise exc.HTTPBadRequest(explanation=expl)
 
-        if len(meta_item) > 1:
-            expl = _('Request body contains too many items')
-            raise exc.HTTPBadRequest(explanation=expl)
-
-        context = req.environ['nova.context']
         self._update_instance_metadata(context,
                                        server_id,
                                        meta_item,
                                        delete=False)
 
-        return {'metadata': meta_item}
+        return {'meta': meta_item}
 
-    @extensions.expected_errors((400, 404, 409, 413))
-    @wsgi.serializers(xml=common.MetadataTemplate)
-    @wsgi.deserializers(xml=common.MetadataDeserializer)
+    @extensions.expected_errors((400, 403, 404, 409, 413))
+    @validation.schema(server_metadata.update_all)
     def update_all(self, req, server_id, body):
-        if not self.is_valid_body(body, 'metadata'):
-            msg = _("Malformed request body")
-            raise exc.HTTPBadRequest(explanation=msg)
-        metadata = body['metadata']
         context = req.environ['nova.context']
+        authorize(context, action='update_all')
+        metadata = body['metadata']
         new_metadata = self._update_instance_metadata(context,
                                                       server_id,
                                                       metadata,
@@ -139,41 +106,31 @@ class ServerMetadataController(wsgi.Controller):
     def _update_instance_metadata(self, context, server_id, metadata,
                                   delete=False):
         try:
-            server = self.compute_api.get(context, server_id)
+            server = common.get_instance(self.compute_api, context, server_id)
             return self.compute_api.update_instance_metadata(context,
                                                              server,
                                                              metadata,
                                                              delete)
 
-        except exception.InstanceNotFound:
-            msg = _('Server does not exist')
-            raise exc.HTTPNotFound(explanation=msg)
-
-        except exception.InvalidMetadata as error:
-            raise exc.HTTPBadRequest(explanation=error.format_message())
-
-        except exception.InvalidMetadataSize as error:
-            raise exc.HTTPRequestEntityTooLarge(
-                explanation=error.format_message())
-
         except exception.QuotaError as error:
-            raise exc.HTTPRequestEntityTooLarge(
-                explanation=error.format_message(),
-                headers={'Retry-After': 0})
+            raise exc.HTTPForbidden(explanation=error.format_message())
+
+        except exception.InstanceIsLocked as e:
+            raise exc.HTTPConflict(explanation=e.format_message())
 
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
-                    'update metadata')
+                    'update metadata', server_id)
 
     @extensions.expected_errors(404)
-    @wsgi.serializers(xml=MetaItemTemplate)
     def show(self, req, server_id, id):
         """Return a single metadata item."""
         context = req.environ['nova.context']
+        authorize(context, action='show')
         data = self._get_metadata(context, server_id)
 
         try:
-            return {'metadata': {id: data[id]}}
+            return {'meta': {id: data[id]}}
         except KeyError:
             msg = _("Metadata item was not found")
             raise exc.HTTPNotFound(explanation=msg)
@@ -183,31 +140,29 @@ class ServerMetadataController(wsgi.Controller):
     def delete(self, req, server_id, id):
         """Deletes an existing metadata."""
         context = req.environ['nova.context']
-
+        authorize(context, action='delete')
         metadata = self._get_metadata(context, server_id)
 
         if id not in metadata:
             msg = _("Metadata item was not found")
             raise exc.HTTPNotFound(explanation=msg)
 
+        server = common.get_instance(self.compute_api, context, server_id)
         try:
-            server = self.compute_api.get(context, server_id)
             self.compute_api.delete_instance_metadata(context, server, id)
 
-        except exception.InstanceNotFound:
-            msg = _('Server does not exist')
-            raise exc.HTTPNotFound(explanation=msg)
+        except exception.InstanceIsLocked as e:
+            raise exc.HTTPConflict(explanation=e.format_message())
 
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
-                    'delete metadata')
+                    'delete metadata', server_id)
 
 
 class ServerMetadata(extensions.V3APIExtensionBase):
     """Server Metadata API."""
-    name = "Server Metadata"
-    alias = "server-metadata"
-    namespace = "http://docs.openstack.org/compute/core/server_metadata/v3"
+    name = "ServerMetadata"
+    alias = ALIAS
     version = 1
 
     def get_resources(self):
@@ -226,6 +181,7 @@ class ServerMetadata(extensions.V3APIExtensionBase):
         return []
 
     def server_metadata_map(self, mapper, wsgi_resource):
-        mapper.connect("metadata", "/servers/{server_id}/metadata",
+        mapper.connect("metadata",
+                       "/{project_id}/servers/{server_id}/metadata",
                        controller=wsgi_resource,
                        action='update_all', conditions={"method": ['PUT']})

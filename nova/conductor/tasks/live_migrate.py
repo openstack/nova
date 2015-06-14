@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
 #    a copy of the License at
@@ -12,20 +10,19 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo.config import cfg
+from oslo_config import cfg
+from oslo_log import log as logging
 
 from nova.compute import power_state
 from nova.compute import rpcapi as compute_rpcapi
-from nova.compute import utils as compute_utils
-from nova import db
 from nova import exception
-from nova.image import glance
-from nova.objects import base as obj_base
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import log as logging
-from nova.scheduler import rpcapi as scheduler_rpcapi
+from nova.i18n import _
+from nova import image
+from nova import objects
+from nova.scheduler import client as scheduler_client
 from nova.scheduler import utils as scheduler_utils
 from nova import servicegroup
+from nova import utils
 
 LOG = logging.getLogger(__name__)
 
@@ -51,11 +48,11 @@ class LiveMigrationTask(object):
         self.migrate_data = None
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         self.servicegroup_api = servicegroup.API()
-        self.scheduler_rpcapi = scheduler_rpcapi.SchedulerAPI()
-        self.image_service = glance.get_default_image_service()
+        self.scheduler_client = scheduler_client.SchedulerClient()
+        self.image_api = image.API()
 
     def execute(self):
-        self._check_instance_is_running()
+        self._check_instance_is_active()
         self._check_host_is_up(self.source)
 
         if not self.destination:
@@ -63,31 +60,35 @@ class LiveMigrationTask(object):
         else:
             self._check_requested_destination()
 
-        #TODO(johngarbutt) need to move complexity out of compute manager
+        # TODO(johngarbutt) need to move complexity out of compute manager
+        # TODO(johngarbutt) disk_over_commit?
         return self.compute_rpcapi.live_migration(self.context,
                 host=self.source,
                 instance=self.instance,
                 dest=self.destination,
                 block_migration=self.block_migration,
                 migrate_data=self.migrate_data)
-                #TODO(johngarbutt) disk_over_commit?
 
     def rollback(self):
-        #TODO(johngarbutt) need to implement the clean up operation
+        # TODO(johngarbutt) need to implement the clean up operation
         # but this will make sense only once we pull in the compute
         # calls, since this class currently makes no state changes,
         # except to call the compute method, that has no matching
         # rollback call right now.
         raise NotImplementedError()
 
-    def _check_instance_is_running(self):
-        if self.instance.power_state != power_state.RUNNING:
-            raise exception.InstanceNotRunning(
-                    instance_id=self.instance.uuid)
+    def _check_instance_is_active(self):
+        if self.instance.power_state not in (power_state.RUNNING,
+                                             power_state.PAUSED):
+            raise exception.InstanceInvalidState(
+                    instance_uuid = self.instance.uuid,
+                    attr = 'power_state',
+                    state = self.instance.power_state,
+                    method = 'live migrate')
 
     def _check_host_is_up(self, host):
         try:
-            service = db.service_get_by_compute_host(self.context, host)
+            service = objects.Service.get_by_compute_host(self.context, host)
         except exception.NotFound:
             raise exception.ComputeServiceUnavailable(host=host)
 
@@ -121,8 +122,8 @@ class LiveMigrationTask(object):
                     mem_inst=mem_inst))
 
     def _get_compute_info(self, host):
-        service_ref = db.service_get_by_compute_host(self.context, host)
-        return service_ref['compute_node'][0]
+        return objects.ComputeNode.get_first_node_by_host_for_old_compat(
+            self.context, host)
 
     def _check_compatible_with_source_hypervisor(self, destination):
         source_info = self._get_compute_info(self.source)
@@ -144,29 +145,26 @@ class LiveMigrationTask(object):
                 destination, self.block_migration, self.disk_over_commit)
 
     def _find_destination(self):
-        #TODO(johngarbutt) this retry loop should be shared
+        # TODO(johngarbutt) this retry loop should be shared
         attempted_hosts = [self.source]
-        image = None
-        if self.instance.image_ref:
-            image = compute_utils.get_image_metadata(self.context,
-                                                     self.image_service,
-                                                     self.instance.image_ref,
-                                                     self.instance)
-        instance_p = obj_base.obj_to_primitive(self.instance)
+        image = utils.get_image_from_system_metadata(
+            self.instance.system_metadata)
         request_spec = scheduler_utils.build_request_spec(self.context, image,
-                                                          [instance_p])
+                                                          [self.instance])
 
         host = None
         while host is None:
             self._check_not_over_max_retries(attempted_hosts)
             filter_properties = {'ignore_hosts': attempted_hosts}
-            host = self.scheduler_rpcapi.select_hosts(self.context,
-                            request_spec, filter_properties)[0]
+            scheduler_utils.setup_instance_group(self.context, request_spec,
+                                                 filter_properties)
+            host = self.scheduler_client.select_destinations(self.context,
+                            request_spec, filter_properties)[0]['host']
             try:
                 self._check_compatible_with_source_hypervisor(host)
                 self._call_livem_checks_on_host(host)
             except exception.Invalid as e:
-                LOG.debug(_("Skipping host: %(host)s because: %(e)s") %
+                LOG.debug("Skipping host: %(host)s because: %(e)s",
                     {"host": host, "e": e})
                 attempted_hosts.append(host)
                 host = None
@@ -191,5 +189,5 @@ def execute(context, instance, destination,
                              destination,
                              block_migration,
                              disk_over_commit)
-    #TODO(johngarbutt) create a superclass that contains a safe_execute call
+    # TODO(johngarbutt) create a superclass that contains a safe_execute call
     return task.execute()

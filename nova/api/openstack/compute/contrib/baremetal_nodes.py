@@ -13,82 +13,87 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""The bare-metal admin extension."""
+"""The bare-metal admin extension with Ironic Proxy."""
 
+from oslo_config import cfg
+from oslo_log import log as logging
+from oslo_utils import importutils
 import webob
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
-from nova import exception
-from nova.openstack.common.gettextutils import _
-from nova.virt.baremetal import db
+from nova.i18n import _
+
+ironic_client = importutils.try_import('ironicclient.client')
+ironic_exc = importutils.try_import('ironicclient.exc')
 
 authorize = extensions.extension_authorizer('compute', 'baremetal_nodes')
 
 node_fields = ['id', 'cpus', 'local_gb', 'memory_mb', 'pm_address',
-               'pm_user',
-               'service_host', 'terminal_port', 'instance_uuid',
-               ]
+               'pm_user', 'service_host', 'terminal_port', 'instance_uuid']
 
 node_ext_fields = ['uuid', 'task_state', 'updated_at', 'pxe_config_path']
 
 interface_fields = ['id', 'address', 'datapath_id', 'port_no']
 
+CONF = cfg.CONF
 
-def _interface_dict(interface_ref):
-    d = {}
-    for f in interface_fields:
-        d[f] = interface_ref.get(f)
-    return d
+CONF.import_opt('api_version',
+                'nova.virt.ironic.driver',
+                group='ironic')
+CONF.import_opt('api_endpoint',
+                'nova.virt.ironic.driver',
+                group='ironic')
+CONF.import_opt('admin_username',
+                'nova.virt.ironic.driver',
+                group='ironic')
+CONF.import_opt('admin_password',
+                'nova.virt.ironic.driver',
+                group='ironic')
+CONF.import_opt('admin_tenant_name',
+                'nova.virt.ironic.driver',
+                group='ironic')
+CONF.import_opt('compute_driver', 'nova.virt.driver')
 
-
-def _make_node_elem(elem):
-    for f in node_fields:
-        elem.set(f)
-    for f in node_ext_fields:
-        elem.set(f)
-
-
-def _make_interface_elem(elem):
-    for f in interface_fields:
-        elem.set(f)
-
-
-class NodeTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        node_elem = xmlutil.TemplateElement('node', selector='node')
-        _make_node_elem(node_elem)
-        ifs_elem = xmlutil.TemplateElement('interfaces')
-        if_elem = xmlutil.SubTemplateElement(ifs_elem, 'interface',
-                                             selector='interfaces')
-        _make_interface_elem(if_elem)
-        node_elem.append(ifs_elem)
-        return xmlutil.MasterTemplate(node_elem, 1)
+LOG = logging.getLogger(__name__)
 
 
-class NodesTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('nodes')
-        node_elem = xmlutil.SubTemplateElement(root, 'node', selector='nodes')
-        _make_node_elem(node_elem)
-        ifs_elem = xmlutil.TemplateElement('interfaces')
-        if_elem = xmlutil.SubTemplateElement(ifs_elem, 'interface',
-                                             selector='interfaces')
-        _make_interface_elem(if_elem)
-        node_elem.append(ifs_elem)
-        return xmlutil.MasterTemplate(root, 1)
+def _check_ironic_client_enabled():
+    """Check whether Ironic is installed or not."""
+    if ironic_client is None:
+        msg = _("Ironic client unavailable, cannot access Ironic.")
+        raise webob.exc.HTTPNotImplemented(explanation=msg)
 
 
-class InterfaceTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('interface', selector='interface')
-        _make_interface_elem(root)
-        return xmlutil.MasterTemplate(root, 1)
+def _get_ironic_client():
+    """return an Ironic client."""
+    # TODO(NobodyCam): Fix insecure setting
+    kwargs = {'os_username': CONF.ironic.admin_username,
+              'os_password': CONF.ironic.admin_password,
+              'os_auth_url': CONF.ironic.admin_url,
+              'os_tenant_name': CONF.ironic.admin_tenant_name,
+              'os_service_type': 'baremetal',
+              'os_endpoint_type': 'public',
+              'insecure': 'true',
+              'ironic_url': CONF.ironic.api_endpoint}
+    ironicclient = ironic_client.get_client(CONF.ironic.api_version, **kwargs)
+    return ironicclient
+
+
+def _no_ironic_proxy(cmd):
+    raise webob.exc.HTTPBadRequest(
+                    explanation=_("Command Not supported. Please use Ironic "
+                                  "command %(cmd)s to perform this "
+                                  "action.") % {'cmd': cmd})
 
 
 class BareMetalNodeController(wsgi.Controller):
-    """The Bare-Metal Node API controller for the OpenStack API."""
+    """The Bare-Metal Node API controller for the OpenStack API.
+
+    Ironic is used for the following commands:
+        'baremetal-node-list'
+        'baremetal-node-show'
+    """
 
     def __init__(self, ext_mgr=None, *args, **kwargs):
         super(BareMetalNodeController, self).__init__(*args, **kwargs)
@@ -103,113 +108,62 @@ class BareMetalNodeController(wsgi.Controller):
                 d[f] = node_ref.get(f)
         return d
 
-    @wsgi.serializers(xml=NodesTemplate)
     def index(self, req):
         context = req.environ['nova.context']
         authorize(context)
-        nodes_from_db = db.bm_node_get_all(context)
         nodes = []
-        for node_from_db in nodes_from_db:
-            try:
-                ifs = db.bm_interface_get_all_by_bm_node_id(
-                        context, node_from_db['id'])
-            except exception.NodeNotFound:
-                ifs = []
-            node = self._node_dict(node_from_db)
-            node['interfaces'] = [_interface_dict(i) for i in ifs]
+        # proxy command to Ironic
+        _check_ironic_client_enabled()
+        ironicclient = _get_ironic_client()
+        ironic_nodes = ironicclient.node.list(detail=True)
+        for inode in ironic_nodes:
+            node = {'id': inode.uuid,
+                    'interfaces': [],
+                    'host': 'IRONIC MANAGED',
+                    'task_state': inode.provision_state,
+                    'cpus': inode.properties.get('cpus', 0),
+                    'memory_mb': inode.properties.get('memory_mb', 0),
+                    'disk_gb': inode.properties.get('local_gb', 0)}
             nodes.append(node)
         return {'nodes': nodes}
 
-    @wsgi.serializers(xml=NodeTemplate)
     def show(self, req, id):
         context = req.environ['nova.context']
         authorize(context)
+        # proxy command to Ironic
+        _check_ironic_client_enabled()
+        icli = _get_ironic_client()
         try:
-            node = db.bm_node_get(context, id)
-        except exception.NodeNotFound:
-            raise webob.exc.HTTPNotFound()
-        try:
-            ifs = db.bm_interface_get_all_by_bm_node_id(context, id)
-        except exception.NodeNotFound:
-            ifs = []
-        node = self._node_dict(node)
-        node['interfaces'] = [_interface_dict(i) for i in ifs]
+            inode = icli.node.get(id)
+        except ironic_exc.NotFound:
+            msg = _("Node %s could not be found.") % id
+            raise webob.exc.HTTPNotFound(explanation=msg)
+        iports = icli.node.list_ports(id)
+        node = {'id': inode.uuid,
+                'interfaces': [],
+                'host': 'IRONIC MANAGED',
+                'task_state': inode.provision_state,
+                'cpus': inode.properties.get('cpus', 0),
+                'memory_mb': inode.properties.get('memory_mb', 0),
+                'disk_gb': inode.properties.get('local_gb', 0),
+                'instance_uuid': inode.instance_uuid}
+        for port in iports:
+            node['interfaces'].append({'address': port.address})
         return {'node': node}
 
-    @wsgi.serializers(xml=NodeTemplate)
     def create(self, req, body):
-        context = req.environ['nova.context']
-        authorize(context)
-        values = body['node'].copy()
-        prov_mac_address = values.pop('prov_mac_address', None)
-        node = db.bm_node_create(context, values)
-        node = self._node_dict(node)
-        if prov_mac_address:
-            if_id = db.bm_interface_create(context,
-                                           bm_node_id=node['id'],
-                                           address=prov_mac_address,
-                                           datapath_id=None,
-                                           port_no=None)
-            if_ref = db.bm_interface_get(context, if_id)
-            node['interfaces'] = [_interface_dict(if_ref)]
-        else:
-            node['interfaces'] = []
-        return {'node': node}
+        _no_ironic_proxy("port-create")
 
     def delete(self, req, id):
-        context = req.environ['nova.context']
-        authorize(context)
-        try:
-            db.bm_node_destroy(context, id)
-        except exception.NodeNotFound:
-            raise webob.exc.HTTPNotFound()
-        return webob.Response(status_int=202)
+        _no_ironic_proxy("port-create")
 
-    def _check_node_exists(self, context, node_id):
-        try:
-            db.bm_node_get(context, node_id)
-        except exception.NodeNotFound:
-            raise webob.exc.HTTPNotFound()
-
-    @wsgi.serializers(xml=InterfaceTemplate)
     @wsgi.action('add_interface')
     def _add_interface(self, req, id, body):
-        context = req.environ['nova.context']
-        authorize(context)
-        self._check_node_exists(context, id)
-        body = body['add_interface']
-        address = body['address']
-        datapath_id = body.get('datapath_id')
-        port_no = body.get('port_no')
-        if_id = db.bm_interface_create(context,
-                                       bm_node_id=id,
-                                       address=address,
-                                       datapath_id=datapath_id,
-                                       port_no=port_no)
-        if_ref = db.bm_interface_get(context, if_id)
-        return {'interface': _interface_dict(if_ref)}
+        _no_ironic_proxy("port-create")
 
-    @wsgi.response(202)
     @wsgi.action('remove_interface')
     def _remove_interface(self, req, id, body):
-        context = req.environ['nova.context']
-        authorize(context)
-        self._check_node_exists(context, id)
-        body = body['remove_interface']
-        if_id = body.get('id')
-        address = body.get('address')
-        if not if_id and not address:
-            raise webob.exc.HTTPBadRequest(
-                    explanation=_("Must specify id or address"))
-        ifs = db.bm_interface_get_all_by_bm_node_id(context, id)
-        for i in ifs:
-            if if_id and if_id != i['id']:
-                continue
-            if address and address != i['address']:
-                continue
-            db.bm_interface_destroy(context, i['id'])
-            return webob.Response(status_int=202)
-        raise webob.exc.HTTPNotFound()
+        _no_ironic_proxy("port-delete")
 
 
 class Baremetal_nodes(extensions.ExtensionDescriptor):
@@ -218,7 +172,7 @@ class Baremetal_nodes(extensions.ExtensionDescriptor):
     name = "BareMetalNodes"
     alias = "os-baremetal-nodes"
     namespace = "http://docs.openstack.org/compute/ext/baremetal_nodes/api/v2"
-    updated = "2013-01-04T00:00:00+00:00"
+    updated = "2013-01-04T00:00:00Z"
 
     def get_resources(self):
         resources = []

@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 Red Hat, Inc.
 # All Rights Reserved.
 #
@@ -29,7 +27,7 @@ choose what sort of VM to boot.
 
 from nova import exception
 
-HVM = "hvm"  # Fully virtualized
+HVM = "hvm"  # Native ABI (aka fully virtualized)
 XEN = "xen"  # Xen 3.0 paravirtualized
 UML = "uml"  # User Mode Linux paravirtualized
 EXE = "exe"  # Executables in containers
@@ -38,7 +36,35 @@ ALL = [HVM, XEN, UML, EXE]
 
 
 def get_from_instance(instance):
-    mode = instance['vm_mode']
+    """Get the vm mode for an instance
+
+    :param instance: instance object to query
+
+    :returns: canonicalized vm mode for the instance
+    """
+
+    mode = instance.vm_mode
+    return canonicalize(mode)
+
+
+def is_valid(name):
+    """Check if a string is a valid vm mode
+
+    :param name: vm mode name to validate
+
+    :returns: True if @name is valid
+    """
+
+    return name in ALL
+
+
+def canonicalize(mode):
+    """Canonicalize the vm mode
+
+    :param name: vm mode name to canonicalize
+
+    :returns: a canonical vm mode name
+    """
 
     if mode is None:
         return None
@@ -52,7 +78,10 @@ def get_from_instance(instance):
     if mode == "hv":
         mode = HVM
 
-    if mode not in ALL:
-        raise exception.Invalid("Unknown vm mode '%s'" % mode)
+    if mode == "baremetal":
+        mode = HVM
+
+    if not is_valid(mode):
+        raise exception.InvalidVirtualMachineMode(vmmode=mode)
 
     return mode

@@ -1,6 +1,0 @@
-<?xml version='1.0' encoding='UTF-8'?>
-<network>
-  <cidr>172.0.0.0/24</cidr>
-  <id>9ac30188-57d8-4349-94d1-dbad63b20e4d</id>
-  <label>public</label>
-</network>

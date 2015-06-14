@@ -12,11 +12,11 @@
 #   License for the specific language governing permissions and limitations
 #   under the License.
 
+from oslo_log import log as logging
+
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 from nova import compute
-from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
 authorize = extensions.soft_extension_authorizer('compute', 'server_usage')
@@ -41,8 +41,6 @@ class ServerUsageController(wsgi.Controller):
     def show(self, req, resp_obj, id):
         context = req.environ['nova.context']
         if authorize(context):
-            # Attach our slave template to the response object
-            resp_obj.attach(xml=ServerUsageTemplate())
             server = resp_obj.obj['server']
             db_instance = req.get_db_instance(server['id'])
             # server['id'] is guaranteed to be in the cache due to
@@ -53,8 +51,6 @@ class ServerUsageController(wsgi.Controller):
     def detail(self, req, resp_obj):
         context = req.environ['nova.context']
         if authorize(context):
-            # Attach our slave template to the response object
-            resp_obj.attach(xml=ServerUsagesTemplate())
             servers = list(resp_obj.obj['servers'])
             for server in servers:
                 db_instance = req.get_db_instance(server['id'])
@@ -70,33 +66,9 @@ class Server_usage(extensions.ExtensionDescriptor):
     alias = "OS-SRV-USG"
     namespace = ("http://docs.openstack.org/compute/ext/"
                  "server_usage/api/v1.1")
-    updated = "2013-04-29T00:00:00+00:00"
+    updated = "2013-04-29T00:00:00Z"
 
     def get_controller_extensions(self):
         controller = ServerUsageController()
         extension = extensions.ControllerExtension(self, 'servers', controller)
         return [extension]
-
-
-def make_server(elem):
-    elem.set('{%s}launched_at' % Server_usage.namespace,
-             '%s:launched_at' % Server_usage.alias)
-    elem.set('{%s}terminated_at' % Server_usage.namespace,
-             '%s:terminated_at' % Server_usage.alias)
-
-
-class ServerUsageTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('server', selector='server')
-        make_server(root)
-        return xmlutil.SlaveTemplate(root, 1, nsmap={
-            Server_usage.alias: Server_usage.namespace})
-
-
-class ServerUsagesTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('servers')
-        elem = xmlutil.SubTemplateElement(root, 'server', selector='servers')
-        make_server(elem)
-        return xmlutil.SlaveTemplate(root, 1, nsmap={
-            Server_usage.alias: Server_usage.namespace})

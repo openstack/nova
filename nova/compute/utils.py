@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright (c) 2011 OpenStack Foundation
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -17,22 +15,23 @@
 """Compute-related Utilities and helpers."""
 
 import itertools
-import re
 import string
 import traceback
 
-from oslo.config import cfg
+import netifaces
+from oslo_config import cfg
+from oslo_log import log
+import six
 
 from nova import block_device
-from nova.compute import flavors
+from nova.compute import power_state
+from nova.compute import task_states
 from nova import exception
+from nova.i18n import _LW
 from nova.network import model as network_model
 from nova import notifications
-from nova import notifier as notify
-from nova.objects import instance as instance_obj
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import log
-from nova.openstack.common import timeutils
+from nova import objects
+from nova import rpc
 from nova import utils
 from nova.virt import driver
 
@@ -41,12 +40,11 @@ CONF.import_opt('host', 'nova.netconf')
 LOG = log.getLogger(__name__)
 
 
-def add_instance_fault_from_exc(context, conductor,
-                                instance, fault, exc_info=None):
-    """Adds the specified fault to the database."""
+def exception_to_dict(fault):
+    """Converts exceptions to a dict for use in notifications."""
+    # TODO(johngarbutt) move to nova/exception.py to share with wrap_exception
 
     code = 500
-
     if hasattr(fault, "kwargs"):
         code = fault.kwargs.get('code', 500)
 
@@ -58,7 +56,7 @@ def add_instance_fault_from_exc(context, conductor,
     # just because there is an unexpected error retrieving the message
     except Exception:
         try:
-            message = unicode(fault)
+            message = six.text_type(fault)
         except Exception:
             message = None
     if not message:
@@ -66,65 +64,35 @@ def add_instance_fault_from_exc(context, conductor,
     # NOTE(dripton) The message field in the database is limited to 255 chars.
     # MySQL silently truncates overly long messages, but PostgreSQL throws an
     # error if we don't truncate it.
-    u_message = unicode(message)[:255]
+    u_message = utils.safe_truncate(message, 255)
+    fault_dict = dict(exception=fault)
+    fault_dict["message"] = u_message
+    fault_dict["code"] = code
+    return fault_dict
+
+
+def _get_fault_details(exc_info, error_code):
     details = ''
-
-    if exc_info and code == 500:
+    if exc_info and error_code == 500:
         tb = exc_info[2]
-        details += ''.join(traceback.format_tb(tb))
-
-    values = {
-        'instance_uuid': instance['uuid'],
-        'code': code,
-        'message': u_message,
-        'details': unicode(details),
-        'host': CONF.host
-    }
-    conductor.instance_fault_create(context, values)
+        if tb:
+            details = ''.join(traceback.format_tb(tb))
+    return six.text_type(details)
 
 
-def pack_action_start(context, instance_uuid, action_name):
-    values = {'action': action_name,
-              'instance_uuid': instance_uuid,
-              'request_id': context.request_id,
-              'user_id': context.user_id,
-              'project_id': context.project_id,
-              'start_time': context.timestamp}
-    return values
+def add_instance_fault_from_exc(context, instance, fault, exc_info=None):
+    """Adds the specified fault to the database."""
+
+    fault_obj = objects.InstanceFault(context=context)
+    fault_obj.host = CONF.host
+    fault_obj.instance_uuid = instance.uuid
+    fault_obj.update(exception_to_dict(fault))
+    code = fault_obj.code
+    fault_obj.details = _get_fault_details(exc_info, code)
+    fault_obj.create()
 
 
-def pack_action_finish(context, instance_uuid):
-    values = {'instance_uuid': instance_uuid,
-              'request_id': context.request_id,
-              'finish_time': timeutils.utcnow()}
-    return values
-
-
-def pack_action_event_start(context, instance_uuid, event_name):
-    values = {'event': event_name,
-              'instance_uuid': instance_uuid,
-              'request_id': context.request_id,
-              'start_time': timeutils.utcnow()}
-    return values
-
-
-def pack_action_event_finish(context, instance_uuid, event_name, exc_val=None,
-                             exc_tb=None):
-    values = {'event': event_name,
-              'instance_uuid': instance_uuid,
-              'request_id': context.request_id,
-              'finish_time': timeutils.utcnow()}
-    if exc_tb is None:
-        values['result'] = 'Success'
-    else:
-        values['result'] = 'Error'
-        values['message'] = str(exc_val)
-        values['traceback'] = ''.join(traceback.format_tb(exc_tb))
-
-    return values
-
-
-def get_device_name_for_instance(context, instance, bdms, device):
+def get_device_name_for_instance(instance, bdms, device):
     """Validates (or generates) a device name for instance.
 
     This method is a wrapper for get_next_device_name that gets the list
@@ -136,23 +104,22 @@ def get_device_name_for_instance(context, instance, bdms, device):
 
 
 def default_device_names_for_instance(instance, root_device_name,
-                                      update_function, *block_device_lists):
+                                      *block_device_lists):
     """Generate missing device names for an instance."""
 
-    dev_list = [bdm['device_name']
+    dev_list = [bdm.device_name
                 for bdm in itertools.chain(*block_device_lists)
-                if bdm['device_name']]
+                if bdm.device_name]
     if root_device_name not in dev_list:
         dev_list.append(root_device_name)
 
     for bdm in itertools.chain(*block_device_lists):
-        dev = bdm.get('device_name')
+        dev = bdm.device_name
         if not dev:
             dev = get_next_device_name(instance, dev_list,
                                        root_device_name)
-            bdm['device_name'] = dev
-            if update_function:
-                update_function(bdm)
+            bdm.device_name = dev
+            bdm.save()
             dev_list.append(dev)
 
 
@@ -167,6 +134,8 @@ def get_next_device_name(instance, device_name_list,
     /dev/vdc is specified but the backend uses /dev/xvdc), the device
     name will be converted to the appropriate format.
     """
+    is_xen = driver.compute_driver_matches('xenapi.XenAPIDriver')
+
     req_prefix = None
     req_letter = None
 
@@ -180,34 +149,32 @@ def get_next_device_name(instance, device_name_list,
         root_device_name = block_device.DEFAULT_ROOT_DEV_NAME
 
     try:
-        prefix = block_device.match_device(root_device_name)[0]
+        prefix = block_device.match_device(
+                block_device.prepend_dev(root_device_name))[0]
     except (TypeError, AttributeError, ValueError):
         raise exception.InvalidDevicePath(path=root_device_name)
 
     # NOTE(vish): remove this when xenapi is setting default_root_device
-    if driver.compute_driver_matches('xenapi.XenAPIDriver'):
+    if is_xen:
         prefix = '/dev/xvd'
 
     if req_prefix != prefix:
-        LOG.debug(_("Using %(prefix)s instead of %(req_prefix)s"),
+        LOG.debug("Using %(prefix)s instead of %(req_prefix)s",
                   {'prefix': prefix, 'req_prefix': req_prefix})
 
     used_letters = set()
     for device_path in device_name_list:
-        letter = block_device.strip_prefix(device_path)
-        # NOTE(vish): delete numbers in case we have something like
-        #             /dev/sda1
-        letter = re.sub("\d+", "", letter)
+        letter = block_device.get_device_letter(device_path)
         used_letters.add(letter)
 
     # NOTE(vish): remove this when xenapi is properly setting
     #             default_ephemeral_device and default_swap_device
-    if driver.compute_driver_matches('xenapi.XenAPIDriver'):
-        instance_type = flavors.extract_flavor(instance)
-        if instance_type['ephemeral_gb']:
+    if is_xen:
+        flavor = instance.get_flavor()
+        if flavor.ephemeral_gb:
             used_letters.add('b')
 
-        if instance_type['swap']:
+        if flavor.swap:
             used_letters.add('c')
 
     if not req_letter:
@@ -229,27 +196,23 @@ def _get_unused_letter(used_letters):
     return letters[0]
 
 
-def get_image_metadata(context, image_service, image_id, instance):
-    # If the base image is still available, get its metadata
+def get_value_from_system_metadata(instance, key, type, default):
+    """Get a value of a specified type from image metadata.
+
+    @param instance: The instance object
+    @param key: The name of the property to get
+    @param type: The python type the value is be returned as
+    @param default: The value to return if key is not set or not the right type
+    """
+    value = instance.system_metadata.get(key, default)
     try:
-        image = image_service.show(context, image_id)
-    except Exception as e:
-        LOG.warning(_("Can't access image %(image_id)s: %(error)s"),
-                    {"image_id": image_id, "error": e}, instance=instance)
-        image_system_meta = {}
-    else:
-        instance_type = flavors.extract_flavor(instance)
-        image_system_meta = utils.get_system_metadata_from_image(
-                image, instance_type)
-
-    # Get the system metadata from the instance
-    system_meta = utils.instance_sys_meta(instance)
-
-    # Merge the metadata from the instance with the image's, if any
-    system_meta.update(image_system_meta)
-
-    # Convert the system metadata to image metadata
-    return utils.get_image_from_system_metadata(system_meta)
+        return type(value)
+    except ValueError:
+        LOG.warning(_LW("Metadata value %(value)s for %(key)s is not of "
+                        "type %(type)s. Using default value %(default)s."),
+                    {'value': value, 'key': key, 'type': type,
+                     'default': default}, instance=instance)
+        return default
 
 
 def notify_usage_exists(notifier, context, instance_ref, current_period=False,
@@ -297,9 +260,8 @@ def notify_usage_exists(notifier, context, instance_ref, current_period=False,
 
 def notify_about_instance_usage(notifier, context, instance, event_suffix,
                                 network_info=None, system_metadata=None,
-                                extra_usage_info=None):
-    """
-    Send a notification about an instance.
+                                extra_usage_info=None, fault=None):
+    """Send a notification about an instance.
 
     :param notifier: a messaging.Notifier
     :param event_suffix: Event type like "delete.start" or "exists"
@@ -315,6 +277,12 @@ def notify_about_instance_usage(notifier, context, instance, event_suffix,
     usage_info = notifications.info_from_instance(context, instance,
             network_info, system_metadata, **extra_usage_info)
 
+    if fault:
+        # NOTE(johngarbutt) mirrors the format in wrap_exception
+        fault_payload = exception_to_dict(fault)
+        LOG.debug(fault_payload["message"], instance=instance)
+        usage_info.update(fault_payload)
+
     if event_suffix.endswith("error"):
         method = notifier.error
     else:
@@ -323,9 +291,19 @@ def notify_about_instance_usage(notifier, context, instance, event_suffix,
     method(context, 'compute.instance.%s' % event_suffix, usage_info)
 
 
-def notify_about_aggregate_update(context, event_suffix, aggregate_payload):
+def notify_about_server_group_update(context, event_suffix, sg_payload):
+    """Send a notification about server group update.
+
+    :param event_suffix: Event type like "create.start" or "create.end"
+    :param sg_payload: payload for server group update
     """
-    Send a notification about aggregate update.
+    notifier = rpc.get_notifier(service='servergroup')
+
+    notifier.info(context, 'servergroup.%s' % event_suffix, sg_payload)
+
+
+def notify_about_aggregate_update(context, event_suffix, aggregate_payload):
+    """Send a notification about aggregate update.
 
     :param event_suffix: Event type like "create.start" or "create.end"
     :param aggregate_payload: payload for aggregate update
@@ -334,27 +312,39 @@ def notify_about_aggregate_update(context, event_suffix, aggregate_payload):
     if not aggregate_identifier:
         aggregate_identifier = aggregate_payload.get('name', None)
         if not aggregate_identifier:
-            LOG.debug(_("No aggregate id or name specified for this "
-                        "notification and it will be ignored"))
+            LOG.debug("No aggregate id or name specified for this "
+                      "notification and it will be ignored")
             return
 
-    notifier = notify.get_notifier(service='aggregate',
-                                   host=aggregate_identifier)
+    notifier = rpc.get_notifier(service='aggregate',
+                                host=aggregate_identifier)
 
     notifier.info(context, 'aggregate.%s' % event_suffix, aggregate_payload)
 
 
+def notify_about_host_update(context, event_suffix, host_payload):
+    """Send a notification about host update.
+
+    :param event_suffix: Event type like "create.start" or "create.end"
+    :param host_payload: payload for host update. It is a dict and there
+                         should be at least the 'host_name' key in this
+                         dict.
+    """
+    host_identifier = host_payload.get('host_name')
+    if not host_identifier:
+        LOG.warning(_LW("No host name specified for the notification of "
+                        "HostAPI.%s and it will be ignored"), event_suffix)
+        return
+
+    notifier = rpc.get_notifier(service='api', host=host_identifier)
+
+    notifier.info(context, 'HostAPI.%s' % event_suffix, host_payload)
+
+
 def get_nw_info_for_instance(instance):
-    if isinstance(instance, instance_obj.Instance):
-        if instance.info_cache is None:
-            return network_model.NetworkInfo.hydrate([])
-        return instance.info_cache.network_info
-    # FIXME(comstud): Transitional while we convert to objects.
-    info_cache = instance['info_cache'] or {}
-    nw_info = info_cache.get('network_info') or []
-    if not isinstance(nw_info, network_model.NetworkInfo):
-        nw_info = network_model.NetworkInfo.hydrate(nw_info)
-    return nw_info
+    if instance.info_cache is None:
+        return network_model.NetworkInfo.hydrate([])
+    return instance.info_cache.network_info
 
 
 def has_audit_been_run(context, conductor, host, timestamp=None):
@@ -411,26 +401,78 @@ def usage_volume_info(vol_usage):
     return usage_info
 
 
+def get_reboot_type(task_state, current_power_state):
+    """Checks if the current instance state requires a HARD reboot."""
+    if current_power_state != power_state.RUNNING:
+        return 'HARD'
+    soft_types = [task_states.REBOOT_STARTED, task_states.REBOOT_PENDING,
+                  task_states.REBOOTING]
+    reboot_type = 'SOFT' if task_state in soft_types else 'HARD'
+    return reboot_type
+
+
+def get_machine_ips():
+    """Get the machine's ip addresses
+
+    :returns: list of Strings of ip addresses
+    """
+    addresses = []
+    for interface in netifaces.interfaces():
+        try:
+            iface_data = netifaces.ifaddresses(interface)
+            for family in iface_data:
+                if family not in (netifaces.AF_INET, netifaces.AF_INET6):
+                    continue
+                for address in iface_data[family]:
+                    addr = address['addr']
+
+                    # If we have an ipv6 address remove the
+                    # %ether_interface at the end
+                    if family == netifaces.AF_INET6:
+                        addr = addr.split('%')[0]
+                    addresses.append(addr)
+        except ValueError:
+            pass
+    return addresses
+
+
+def remove_shelved_keys_from_system_metadata(instance):
+    # Delete system_metadata for a shelved instance
+    for key in ['shelved_at', 'shelved_image_id', 'shelved_host']:
+        if key in instance.system_metadata:
+            del (instance.system_metadata[key])
+
+
 class EventReporter(object):
     """Context manager to report instance action events."""
 
-    def __init__(self, context, conductor, event_name, *instance_uuids):
+    def __init__(self, context, event_name, *instance_uuids):
         self.context = context
-        self.conductor = conductor
         self.event_name = event_name
         self.instance_uuids = instance_uuids
 
     def __enter__(self):
         for uuid in self.instance_uuids:
-            event = pack_action_event_start(self.context, uuid,
-                                            self.event_name)
-            self.conductor.action_event_start(self.context, event)
+            objects.InstanceActionEvent.event_start(
+                self.context, uuid, self.event_name, want_result=False)
 
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         for uuid in self.instance_uuids:
-            event = pack_action_event_finish(self.context, uuid,
-                                             self.event_name, exc_val, exc_tb)
-            self.conductor.action_event_finish(self.context, event)
+            objects.InstanceActionEvent.event_finish_with_failure(
+                self.context, uuid, self.event_name, exc_val=exc_val,
+                exc_tb=exc_tb, want_result=False)
         return False
+
+
+class UnlimitedSemaphore(object):
+    def __enter__(self):
+        pass
+
+    def __exit__(self):
+        pass
+
+    @property
+    def balance(self):
+        return 0

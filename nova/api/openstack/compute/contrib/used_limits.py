@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 OpenStack Foundation
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -14,9 +12,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import six
+
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 from nova import quota
 
 
@@ -28,13 +27,6 @@ ALIAS = "os-used-limits"
 authorize = extensions.soft_extension_authorizer('compute', 'used_limits')
 authorize_for_admin = extensions.extension_authorizer('compute',
                                                       'used_limits_for_admin')
-
-
-class UsedLimitsTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('limits', selector='limits')
-        root.set('{%s}usedLimits' % XMLNS, '%s:usedLimits' % ALIAS)
-        return xmlutil.SlaveTemplate(root, 1, nsmap={ALIAS: XMLNS})
 
 
 class UsedLimitsController(wsgi.Controller):
@@ -51,7 +43,6 @@ class UsedLimitsController(wsgi.Controller):
 
     @wsgi.extends
     def index(self, req, resp_obj):
-        resp_obj.attach(xml=UsedLimitsTemplate())
         context = req.environ['nova.context']
         project_id = self._project_id(context, req)
         quotas = QUOTAS.get_project_quotas(context, project_id, usages=True)
@@ -62,12 +53,15 @@ class UsedLimitsController(wsgi.Controller):
             'totalFloatingIpsUsed': 'floating_ips',
             'totalSecurityGroupsUsed': 'security_groups',
         }
+        if self.ext_mgr.is_loaded('os-server-group-quotas'):
+            quota_map['totalServerGroupsUsed'] = 'server_groups'
+
         used_limits = {}
-        for display_name, quota in quota_map.iteritems():
-            if quota in quotas:
-                reserved = (quotas[quota]['reserved']
+        for display_name, key in six.iteritems(quota_map):
+            if key in quotas:
+                reserved = (quotas[key]['reserved']
                             if self._reserved(req) else 0)
-                used_limits[display_name] = quotas[quota]['in_use'] + reserved
+                used_limits[display_name] = quotas[key]['in_use'] + reserved
 
         resp_obj.obj['limits']['absolute'].update(used_limits)
 
@@ -90,7 +84,7 @@ class Used_limits(extensions.ExtensionDescriptor):
     name = "UsedLimits"
     alias = ALIAS
     namespace = XMLNS
-    updated = "2012-07-13T00:00:00+00:00"
+    updated = "2012-07-13T00:00:00Z"
 
     def get_controller_extensions(self):
         controller = UsedLimitsController(self.ext_mgr)

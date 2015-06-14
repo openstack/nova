@@ -13,22 +13,40 @@
 #    under the License.
 
 from nova import db
+from nova import exception
+from nova import objects
 from nova.objects import base
 from nova.objects import fields
+from nova import utils
+
+KEYPAIR_TYPE_SSH = 'ssh'
+KEYPAIR_TYPE_X509 = 'x509'
 
 
-class KeyPair(base.NovaPersistentObject, base.NovaObject):
+# TODO(berrange): Remove NovaObjectDictCompat
+@base.NovaObjectRegistry.register
+class KeyPair(base.NovaPersistentObject, base.NovaObject,
+              base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     # Version 1.1: String attributes updated to support unicode
-    VERSION = '1.1'
+    # Version 1.2: Added keypair type
+    # Version 1.3: Name field is non-null
+    VERSION = '1.3'
 
     fields = {
         'id': fields.IntegerField(),
-        'name': fields.StringField(nullable=True),
+        'name': fields.StringField(nullable=False),
         'user_id': fields.StringField(nullable=True),
         'fingerprint': fields.StringField(nullable=True),
         'public_key': fields.StringField(nullable=True),
+        'type': fields.StringField(nullable=False),
         }
+
+    def obj_make_compatible(self, primitive, target_version):
+        super(KeyPair, self).obj_make_compatible(primitive, target_version)
+        target_version = utils.convert_version_to_tuple(target_version)
+        if target_version < (1, 2) and 'type' in primitive:
+            del primitive['type']
 
     @staticmethod
     def _from_db_object(context, keypair, db_keypair):
@@ -48,25 +66,42 @@ class KeyPair(base.NovaPersistentObject, base.NovaObject):
         db.key_pair_destroy(context, user_id, name)
 
     @base.remotable
-    def create(self, context):
+    def create(self):
+        if self.obj_attr_is_set('id'):
+            raise exception.ObjectActionError(action='create',
+                                              reason='already created')
         updates = self.obj_get_changes()
-        db_keypair = db.key_pair_create(context, updates)
-        self._from_db_object(context, self, db_keypair)
+        db_keypair = db.key_pair_create(self._context, updates)
+        self._from_db_object(self._context, self, db_keypair)
 
     @base.remotable
-    def destroy(self, context):
-        db.key_pair_destroy(context, self.user_id, self.name)
+    def destroy(self):
+        db.key_pair_destroy(self._context, self.user_id, self.name)
 
 
+@base.NovaObjectRegistry.register
 class KeyPairList(base.ObjectListBase, base.NovaObject):
+    # Version 1.0: Initial version
+    #              KeyPair <= version 1.1
+    # Version 1.1: KeyPair <= version 1.2
+    # Version 1.2: KeyPair <= version 1.3
+    VERSION = '1.2'
+
     fields = {
         'objects': fields.ListOfObjectsField('KeyPair'),
+        }
+    child_versions = {
+        '1.0': '1.1',
+        # NOTE(danms): KeyPair was at 1.1 before we added this
+        '1.1': '1.2',
+        '1.2': '1.3',
         }
 
     @base.remotable_classmethod
     def get_by_user(cls, context, user_id):
         db_keypairs = db.key_pair_get_all_by_user(context, user_id)
-        return base.obj_make_list(context, KeyPairList(), KeyPair, db_keypairs)
+        return base.obj_make_list(context, cls(context), objects.KeyPair,
+                                  db_keypairs)
 
     @base.remotable_classmethod
     def get_count_by_user(cls, context, user_id):

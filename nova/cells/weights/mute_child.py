@@ -18,24 +18,26 @@ If a child cell hasn't sent capacity or capability updates in a while,
 downgrade its likelihood of being chosen for scheduling requests.
 """
 
-from oslo.config import cfg
+from oslo_config import cfg
+from oslo_log import log as logging
+from oslo_utils import timeutils
 
 from nova.cells import weights
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import log as logging
-from nova.openstack.common import timeutils
+from nova.i18n import _LW
 
 LOG = logging.getLogger(__name__)
 
 mute_weigher_opts = [
         cfg.FloatOpt('mute_weight_multiplier',
-                default=-10.0,
-                help='Multiplier used to weigh mute children.  (The value '
+                default=-10000.0,
+                help='Multiplier used to weigh mute children. (The value '
                      'should be negative.)'),
         cfg.FloatOpt('mute_weight_value',
-                default=1000.0,
-                help='Weight value assigned to mute children.  (The value '
-                     'should be positive.)'),
+                     help='DEPRECATED: this option has no effect anymore. '
+                          'Please use "mute_weight_multiplier" instead. '
+                          'This option is deprecated in the 2015.1 release '
+                          'and will be removed in the 2015.2 release.',
+                     deprecated_for_removal=True),
 ]
 
 CONF = cfg.CONF
@@ -48,7 +50,19 @@ class MuteChildWeigher(weights.BaseCellWeigher):
     weight.
     """
 
-    def _weight_multiplier(self):
+    MUTE_WEIGH_VALUE = 1.0
+
+    def __init__(self):
+        super(MuteChildWeigher, self).__init__()
+
+        if CONF.cells.mute_weight_value is not None:
+            LOG.warning(_LW('"mute_weight_value" has been DEPRECATED as of '
+                            'the 2015.1 release, and Nova is still configured '
+                            'to use it. Take into account that this option '
+                            'will have no effect at all, so please, use '
+                            '"mute_weight_multiplier" instead.'))
+
+    def weight_multiplier(self):
         # negative multiplier => lower weight
         return CONF.cells.mute_weight_multiplier
 
@@ -63,9 +77,9 @@ class MuteChildWeigher(weights.BaseCellWeigher):
 
         if timeutils.is_older_than(last_seen, secs):
             # yep, that's a mute child;  recommend highly that it be skipped!
-            LOG.warn(_("%(cell)s has not been seen since %(last_seen)s and is "
-                       "being treated as mute."),
-                     {'cell': cell, 'last_seen': last_seen})
-            return CONF.cells.mute_weight_value
+            LOG.warning(_LW("%(cell)s has not been seen since %(last_seen)s "
+                            "and is being treated as mute."),
+                        {'cell': cell, 'last_seen': last_seen})
+            return self.MUTE_WEIGH_VALUE
         else:
             return 0

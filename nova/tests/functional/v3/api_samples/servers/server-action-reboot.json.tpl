@@ -1,0 +1,5 @@
+{
+    "reboot" : {
+        "type" : "%(type)s"
+    }
+}

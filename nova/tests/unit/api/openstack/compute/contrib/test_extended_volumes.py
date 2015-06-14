@@ -1,0 +1,170 @@
+# Copyright 2013 OpenStack Foundation
+# All Rights Reserved.
+#
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+
+import mock
+from oslo_serialization import jsonutils
+import webob
+
+from nova.api.openstack.compute.plugins.v3 import (extended_volumes
+                                                   as extended_volumes_v21)
+from nova.api.openstack import wsgi as os_wsgi
+from nova import compute
+from nova import db
+from nova import objects
+from nova.objects import instance as instance_obj
+from nova import test
+from nova.tests.unit.api.openstack import fakes
+from nova.tests.unit import fake_block_device
+from nova.tests.unit import fake_instance
+from nova import volume
+
+UUID1 = '00000000-0000-0000-0000-000000000001'
+UUID2 = '00000000-0000-0000-0000-000000000002'
+UUID3 = '00000000-0000-0000-0000-000000000003'
+
+
+def fake_compute_get(*args, **kwargs):
+    inst = fakes.stub_instance(1, uuid=UUID1)
+    return fake_instance.fake_instance_obj(args[1], **inst)
+
+
+def fake_compute_get_all(*args, **kwargs):
+    db_list = [fakes.stub_instance(1), fakes.stub_instance(2)]
+    fields = instance_obj.INSTANCE_DEFAULT_FIELDS
+    return instance_obj._make_instance_list(args[1],
+                                            objects.InstanceList(),
+                                            db_list, fields)
+
+
+def fake_bdms_get_all_by_instance(*args, **kwargs):
+    return [fake_block_device.FakeDbBlockDeviceDict(
+            {'volume_id': UUID1, 'source_type': 'volume',
+             'destination_type': 'volume', 'id': 1,
+             'delete_on_termination': True}),
+            fake_block_device.FakeDbBlockDeviceDict(
+            {'volume_id': UUID2, 'source_type': 'volume',
+             'destination_type': 'volume', 'id': 2,
+             'delete_on_termination': False})]
+
+
+def fake_volume_get(*args, **kwargs):
+    pass
+
+
+class ExtendedVolumesTestV21(test.TestCase):
+    content_type = 'application/json'
+    prefix = 'os-extended-volumes:'
+    exp_volumes = [{'id': UUID1}, {'id': UUID2}]
+    wsgi_api_version = os_wsgi.DEFAULT_API_VERSION
+
+    def setUp(self):
+        super(ExtendedVolumesTestV21, self).setUp()
+        fakes.stub_out_nw_api(self.stubs)
+        self.stubs.Set(compute.api.API, 'get', fake_compute_get)
+        self.stubs.Set(compute.api.API, 'get_all', fake_compute_get_all)
+        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
+                       fake_bdms_get_all_by_instance)
+        self._setUp()
+        self.app = self._setup_app()
+        return_server = fakes.fake_instance_get()
+        self.stubs.Set(db, 'instance_get_by_uuid', return_server)
+
+    def _setup_app(self):
+        return fakes.wsgi_app_v21(init_only=('os-extended-volumes',
+                                             'servers'))
+
+    def _setUp(self):
+        self.Controller = extended_volumes_v21.ExtendedVolumesController()
+        self.stubs.Set(volume.cinder.API, 'get', fake_volume_get)
+        self.action_url = "/%s/action" % UUID1
+
+    def _make_request(self, url, body=None):
+        req = webob.Request.blank('/v2/fake/servers' + url)
+        req.headers['Accept'] = self.content_type
+        req.headers = {os_wsgi.API_VERSION_REQUEST_HEADER:
+                       self.wsgi_api_version}
+        if body:
+            req.body = jsonutils.dumps(body)
+            req.method = 'POST'
+        req.content_type = self.content_type
+        res = req.get_response(self.app)
+        return res
+
+    def _get_server(self, body):
+        return jsonutils.loads(body).get('server')
+
+    def _get_servers(self, body):
+        return jsonutils.loads(body).get('servers')
+
+    def test_show(self):
+        res = self._make_request('/%s' % UUID1)
+
+        self.assertEqual(200, res.status_int)
+        server = self._get_server(res.body)
+        actual = server.get('%svolumes_attached' % self.prefix)
+        self.assertEqual(self.exp_volumes, actual)
+
+    def test_detail(self):
+        res = self._make_request('/detail')
+
+        self.assertEqual(200, res.status_int)
+        for i, server in enumerate(self._get_servers(res.body)):
+            actual = server.get('%svolumes_attached' % self.prefix)
+            self.assertEqual(self.exp_volumes, actual)
+
+
+class ExtendedVolumesTestV2(ExtendedVolumesTestV21):
+
+    def _setup_app(self):
+        return fakes.wsgi_app(init_only=('servers',))
+
+    def _setUp(self):
+        self.flags(
+                   osapi_compute_extension=['nova.api.openstack.compute.'
+                                            'contrib.select_extensions'],
+                   osapi_compute_ext_list=['Extended_volumes'])
+
+
+class ExtendedVolumesTestV23(ExtendedVolumesTestV21):
+
+    exp_volumes = [{'id': UUID1, 'delete_on_termination': True},
+                   {'id': UUID2, 'delete_on_termination': False}]
+    wsgi_api_version = '2.3'
+
+
+class ExtendedVolumesEnforcementV21(test.NoDBTestCase):
+
+    def setUp(self):
+        super(ExtendedVolumesEnforcementV21, self).setUp()
+        self.controller = extended_volumes_v21.ExtendedVolumesController()
+        self.req = fakes.HTTPRequest.blank('')
+
+    @mock.patch.object(extended_volumes_v21.ExtendedVolumesController,
+                       '_extend_server')
+    def test_extend_show_policy_failed(self, mock_extend):
+        rule_name = 'os_compute_api:os-extended-volumes'
+        self.policy.set_rules({rule_name: "project:non_fake"})
+        # Pass ResponseObj as None, the code shouldn't touch the None.
+        self.controller.show(self.req, None, fakes.FAKE_UUID)
+        self.assertFalse(mock_extend.called)
+
+    @mock.patch.object(extended_volumes_v21.ExtendedVolumesController,
+                   '_extend_server')
+    def test_extend_detail_policy_failed(self, mock_extend):
+        rule_name = 'os_compute_api:os-extended-volumes'
+        self.policy.set_rules({rule_name: "project:non_fake"})
+        # Pass ResponseObj as None, the code shouldn't touch the None.
+        self.controller.detail(self.req, None)
+        self.assertFalse(mock_extend.called)

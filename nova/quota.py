@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
@@ -20,67 +18,84 @@
 
 import datetime
 
-from oslo.config import cfg
+from oslo_config import cfg
+from oslo_log import log as logging
+from oslo_utils import importutils
+from oslo_utils import timeutils
+import six
 
 from nova import db
 from nova import exception
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import importutils
-from nova.openstack.common import log as logging
-from nova.openstack.common import timeutils
+from nova.i18n import _LE
+from nova import objects
 
 LOG = logging.getLogger(__name__)
 
 quota_opts = [
     cfg.IntOpt('quota_instances',
                default=10,
-               help='number of instances allowed per project'),
+               help='Number of instances allowed per project'),
     cfg.IntOpt('quota_cores',
                default=20,
-               help='number of instance cores allowed per project'),
+               help='Number of instance cores allowed per project'),
     cfg.IntOpt('quota_ram',
                default=50 * 1024,
-               help='megabytes of instance ram allowed per project'),
+               help='Megabytes of instance RAM allowed per project'),
     cfg.IntOpt('quota_floating_ips',
                default=10,
-               help='number of floating ips allowed per project'),
+               help='Number of floating IPs allowed per project'),
     cfg.IntOpt('quota_fixed_ips',
                default=-1,
-               help=('number of fixed ips allowed per project (this should be '
-                     'at least the number of instances allowed)')),
+               help='Number of fixed IPs allowed per project (this should be '
+                    'at least the number of instances allowed)'),
     cfg.IntOpt('quota_metadata_items',
                default=128,
-               help='number of metadata items allowed per instance'),
+               help='Number of metadata items allowed per instance'),
     cfg.IntOpt('quota_injected_files',
                default=5,
-               help='number of injected files allowed'),
+               help='Number of injected files allowed'),
     cfg.IntOpt('quota_injected_file_content_bytes',
                default=10 * 1024,
-               help='number of bytes allowed per injected file'),
-    cfg.IntOpt('quota_injected_file_path_bytes',
+               help='Number of bytes allowed per injected file'),
+    cfg.IntOpt('quota_injected_file_path_length',
                default=255,
-               help='number of bytes allowed per injected file path'),
+               help='Length of injected file path'),
     cfg.IntOpt('quota_security_groups',
                default=10,
-               help='number of security groups per project'),
+               help='Number of security groups per project'),
     cfg.IntOpt('quota_security_group_rules',
                default=20,
-               help='number of security rules per security group'),
+               help='Number of security rules per security group'),
     cfg.IntOpt('quota_key_pairs',
                default=100,
-               help='number of key pairs per user'),
+               help='Number of key pairs per user'),
+    cfg.IntOpt('quota_server_groups',
+               default=10,
+               help='Number of server groups per project'),
+    cfg.IntOpt('quota_server_group_members',
+               default=10,
+               help='Number of servers per server group'),
     cfg.IntOpt('reservation_expire',
                default=86400,
-               help='number of seconds until a reservation expires'),
+               help='Number of seconds until a reservation expires'),
     cfg.IntOpt('until_refresh',
                default=0,
-               help='count of reservations until usage is refreshed'),
+               help='Count of reservations until usage is refreshed. This '
+                    'defaults to 0(off) to avoid additional load but it is '
+                    'useful to turn on to help keep quota usage up to date '
+                    'and reduce the impact of out of sync usage issues.'),
     cfg.IntOpt('max_age',
                default=0,
-               help='number of seconds between subsequent usage refreshes'),
+               help='Number of seconds between subsequent usage refreshes. '
+                    'This defaults to 0(off) to avoid additional load but it '
+                    'is useful to turn on to help keep quota usage up to date '
+                    'and reduce the impact of out of sync usage issues. '
+                    'Note that quotas are not updated on a periodic task, '
+                    'they will update on a new reservation if max_age has '
+                    'passed since the last reservation'),
     cfg.StrOpt('quota_driver',
                default='nova.quota.DbQuotaDriver',
-               help='default driver to use for quota checks'),
+               help='Default driver to use for quota checks'),
     ]
 
 CONF = cfg.CONF
@@ -88,15 +103,16 @@ CONF.register_opts(quota_opts)
 
 
 class DbQuotaDriver(object):
-    """
-    Driver to perform necessary checks to enforce quotas and obtain
+    """Driver to perform necessary checks to enforce quotas and obtain
     quota information.  The default driver utilizes the local
     database.
     """
+    UNLIMITED_VALUE = -1
+
     def get_by_project_and_user(self, context, project_id, user_id, resource):
         """Get a specific quota by project and user."""
 
-        return db.quota_get(context, project_id, user_id, resource)
+        return db.quota_get(context, project_id, resource, user_id=user_id)
 
     def get_by_project(self, context, project_id, resource):
         """Get a specific quota by project."""
@@ -127,8 +143,7 @@ class DbQuotaDriver(object):
 
     def get_class_quotas(self, context, resources, quota_class,
                          defaults=True):
-        """
-        Given a list of resources, retrieve the quotas for the given
+        """Given a list of resources, retrieve the quotas for the given
         quota class.
 
         :param context: The request context, for access checks.
@@ -199,9 +214,9 @@ class DbQuotaDriver(object):
 
     def get_user_quotas(self, context, resources, project_id, user_id,
                         quota_class=None, defaults=True,
-                        usages=True):
-        """
-        Given a list of resources, retrieve the quotas for the given
+                        usages=True, project_quotas=None,
+                        user_quotas=None):
+        """Given a list of resources, retrieve the quotas for the given
         user and project.
 
         :param context: The request context, for access checks.
@@ -219,12 +234,20 @@ class DbQuotaDriver(object):
                          specific value for the resource.
         :param usages: If True, the current in_use and reserved counts
                        will also be returned.
+        :param project_quotas: Quotas dictionary for the specified project.
+        :param user_quotas: Quotas dictionary for the specified project
+                            and user.
         """
-        user_quotas = db.quota_get_all_by_project_and_user(context,
-                                                           project_id, user_id)
+        if user_quotas:
+            user_quotas = user_quotas.copy()
+        else:
+            user_quotas = db.quota_get_all_by_project_and_user(context,
+                                                               project_id,
+                                                               user_id)
         # Use the project quota for default user quota.
-        proj_quotas = db.quota_get_all_by_project(context, project_id)
-        for key, value in proj_quotas.iteritems():
+        proj_quotas = project_quotas or db.quota_get_all_by_project(
+            context, project_id)
+        for key, value in six.iteritems(proj_quotas):
             if key not in user_quotas.keys():
                 user_quotas[key] = value
         user_usages = None
@@ -238,9 +261,8 @@ class DbQuotaDriver(object):
 
     def get_project_quotas(self, context, resources, project_id,
                            quota_class=None, defaults=True,
-                           usages=True, remains=False):
-        """
-        Given a list of resources, retrieve the quotas for the given
+                           usages=True, remains=False, project_quotas=None):
+        """Given a list of resources, retrieve the quotas for the given
         project.
 
         :param context: The request context, for access checks.
@@ -259,10 +281,13 @@ class DbQuotaDriver(object):
                        will also be returned.
         :param remains: If True, the current remains of the project will
                         will be returned.
+        :param project_quotas: Quotas dictionary for the specified project.
         """
-        project_quotas = db.quota_get_all_by_project(context, project_id)
+        project_quotas = project_quotas or db.quota_get_all_by_project(
+            context, project_id)
         project_usages = None
         if usages:
+            LOG.debug('Getting all quota usages for project: %s', project_id)
             project_usages = db.quota_usage_get_all_by_project(context,
                                                                project_id)
         return self._process_quotas(context, resources, project_id,
@@ -270,10 +295,33 @@ class DbQuotaDriver(object):
                                     defaults=defaults, usages=project_usages,
                                     remains=remains)
 
+    def _is_unlimited_value(self, v):
+        """A helper method to check for unlimited value.
+        """
+
+        return v <= self.UNLIMITED_VALUE
+
+    def _sum_quota_values(self, v1, v2):
+        """A helper method that handles unlimited values when performing
+        sum operation.
+        """
+
+        if self._is_unlimited_value(v1) or self._is_unlimited_value(v2):
+            return self.UNLIMITED_VALUE
+        return v1 + v2
+
+    def _sub_quota_values(self, v1, v2):
+        """A helper method that handles unlimited values when performing
+        subtraction operation.
+        """
+
+        if self._is_unlimited_value(v1) or self._is_unlimited_value(v2):
+            return self.UNLIMITED_VALUE
+        return v1 - v2
+
     def get_settable_quotas(self, context, resources, project_id,
                             user_id=None):
-        """
-        Given a list of resources, retrieve the range of settable quotas for
+        """Given a list of resources, retrieve the range of settable quotas for
         the given user or project.
 
         :param context: The request context, for access checks.
@@ -281,33 +329,38 @@ class DbQuotaDriver(object):
         :param project_id: The ID of the project to return quotas for.
         :param user_id: The ID of the user to return quotas for.
         """
+
         settable_quotas = {}
+        db_proj_quotas = db.quota_get_all_by_project(context, project_id)
         project_quotas = self.get_project_quotas(context, resources,
-                                                 project_id, remains=True)
+                                                 project_id, remains=True,
+                                                 project_quotas=db_proj_quotas)
         if user_id:
-            user_quotas = self.get_user_quotas(context, resources,
-                                               project_id, user_id)
             setted_quotas = db.quota_get_all_by_project_and_user(context,
                                                      project_id,
                                                      user_id)
+            user_quotas = self.get_user_quotas(context, resources,
+                                               project_id, user_id,
+                                               project_quotas=db_proj_quotas,
+                                               user_quotas=setted_quotas)
             for key, value in user_quotas.items():
-                maximum = project_quotas[key]['remains'] +\
-                        setted_quotas.get(key, 0)
-                settable_quotas[key] = dict(
-                        minimum=value['in_use'] + value['reserved'],
-                        maximum=maximum
-                        )
+                maximum = \
+                    self._sum_quota_values(project_quotas[key]['remains'],
+                                           setted_quotas.get(key, 0))
+                minimum = value['in_use'] + value['reserved']
+                settable_quotas[key] = {'minimum': minimum, 'maximum': maximum}
         else:
             for key, value in project_quotas.items():
-                minimum = max(int(value['limit'] - value['remains']),
-                              int(value['in_use'] + value['reserved']))
-                settable_quotas[key] = dict(minimum=minimum, maximum=-1)
+                minimum = \
+                    max(int(self._sub_quota_values(value['limit'],
+                                                   value['remains'])),
+                        int(value['in_use'] + value['reserved']))
+                settable_quotas[key] = {'minimum': minimum, 'maximum': -1}
         return settable_quotas
 
     def _get_quotas(self, context, resources, keys, has_sync, project_id=None,
-                    user_id=None):
-        """
-        A helper method which retrieves the quotas for the specific
+                    user_id=None, project_quotas=None):
+        """A helper method which retrieves the quotas for the specific
         resources identified by keys, and which apply to the current
         context.
 
@@ -324,6 +377,7 @@ class DbQuotaDriver(object):
         :param user_id: Specify the user_id if current context
                         is admin and admin wants to impact on
                         common user.
+        :param project_quotas: Quotas dictionary for the specified project.
         """
 
         # Filter resources
@@ -332,8 +386,8 @@ class DbQuotaDriver(object):
         else:
             sync_filt = lambda x: not hasattr(x, 'sync')
         desired = set(keys)
-        sub_resources = dict((k, v) for k, v in resources.items()
-                             if k in desired and sync_filt(v))
+        sub_resources = {k: v for k, v in resources.items()
+                        if k in desired and sync_filt(v)}
 
         # Make sure we accounted for all of them...
         if len(keys) != len(sub_resources):
@@ -341,18 +395,26 @@ class DbQuotaDriver(object):
             raise exception.QuotaResourceUnknown(unknown=sorted(unknown))
 
         if user_id:
+            LOG.debug('Getting quotas for user %(user_id)s and project '
+                      '%(project_id)s. Resources: %(keys)s',
+                      {'user_id': user_id, 'project_id': project_id,
+                       'keys': keys})
             # Grab and return the quotas (without usages)
             quotas = self.get_user_quotas(context, sub_resources,
                                           project_id, user_id,
-                                          context.quota_class, usages=False)
+                                          context.quota_class, usages=False,
+                                          project_quotas=project_quotas)
         else:
+            LOG.debug('Getting quotas for project %(project_id)s. Resources: '
+                      '%(keys)s', {'project_id': project_id, 'keys': keys})
             # Grab and return the quotas (without usages)
             quotas = self.get_project_quotas(context, sub_resources,
                                              project_id,
                                              context.quota_class,
-                                             usages=False)
+                                             usages=False,
+                                             project_quotas=project_quotas)
 
-        return dict((k, v['limit']) for k, v in quotas.items())
+        return {k: v['limit'] for k, v in quotas.items()}
 
     def limit_check(self, context, resources, values, project_id=None,
                     user_id=None):
@@ -382,6 +444,7 @@ class DbQuotaDriver(object):
                         is admin and admin wants to impact on
                         common user.
         """
+        _valid_method_call_check_resources(values, 'check')
 
         # Ensure no value is less than zero
         unders = [key for key, val in values.items() if val < 0]
@@ -396,20 +459,29 @@ class DbQuotaDriver(object):
             user_id = context.user_id
 
         # Get the applicable quotas
+        project_quotas = db.quota_get_all_by_project(context, project_id)
         quotas = self._get_quotas(context, resources, values.keys(),
-                                  has_sync=False, project_id=project_id)
+                                  has_sync=False, project_id=project_id,
+                                  project_quotas=project_quotas)
         user_quotas = self._get_quotas(context, resources, values.keys(),
                                        has_sync=False, project_id=project_id,
-                                       user_id=user_id)
+                                       user_id=user_id,
+                                       project_quotas=project_quotas)
 
         # Check the quotas and construct a list of the resources that
         # would be put over limit by the desired values
         overs = [key for key, val in values.items()
-                 if (quotas[key] >= 0 and quotas[key] < val) or
+                 if quotas[key] >= 0 and quotas[key] < val or
                  (user_quotas[key] >= 0 and user_quotas[key] < val)]
         if overs:
+            headroom = {}
+            for key in overs:
+                headroom[key] = min(
+                    val for val in (quotas.get(key), project_quotas.get(key))
+                    if val is not None
+                )
             raise exception.OverQuota(overs=sorted(overs), quotas=quotas,
-                                      usages={})
+                                      usages={}, headroom=headroom)
 
     def reserve(self, context, resources, deltas, expire=None,
                 project_id=None, user_id=None):
@@ -449,6 +521,7 @@ class DbQuotaDriver(object):
                         is admin and admin wants to impact on
                         common user.
         """
+        _valid_method_call_check_resources(deltas, 'reserve')
 
         # Set up the reservation expiration
         if expire is None:
@@ -463,19 +536,41 @@ class DbQuotaDriver(object):
         # If project_id is None, then we use the project_id in context
         if project_id is None:
             project_id = context.project_id
+            LOG.debug('Reserving resources using context.project_id: %s',
+                      project_id)
         # If user_id is None, then we use the project_id in context
         if user_id is None:
             user_id = context.user_id
+            LOG.debug('Reserving resources using context.user_id: %s',
+                      user_id)
+
+        LOG.debug('Attempting to reserve resources for project %(project_id)s '
+                  'and user %(user_id)s. Deltas: %(deltas)s',
+                  {'project_id': project_id, 'user_id': user_id,
+                   'deltas': deltas})
 
         # Get the applicable quotas.
         # NOTE(Vek): We're not worried about races at this point.
         #            Yes, the admin may be in the process of reducing
         #            quotas, but that's a pretty rare thing.
+        project_quotas = db.quota_get_all_by_project(context, project_id)
+        LOG.debug('Quota limits for project %(project_id)s: '
+                  '%(project_quotas)s', {'project_id': project_id,
+                                         'project_quotas': project_quotas})
+
         quotas = self._get_quotas(context, resources, deltas.keys(),
-                                  has_sync=True, project_id=project_id)
+                                  has_sync=True, project_id=project_id,
+                                  project_quotas=project_quotas)
+        LOG.debug('Quotas for project %(project_id)s after resource sync: '
+                  '%(quotas)s', {'project_id': project_id, 'quotas': quotas})
         user_quotas = self._get_quotas(context, resources, deltas.keys(),
                                        has_sync=True, project_id=project_id,
-                                       user_id=user_id)
+                                       user_id=user_id,
+                                       project_quotas=project_quotas)
+        LOG.debug('Quotas for project %(project_id)s and user %(user_id)s '
+                  'after resource sync: %(quotas)s',
+                  {'project_id': project_id, 'user_id': user_id,
+                   'quotas': quotas})
 
         # NOTE(Vek): Most of the work here has to be done in the DB
         #            API, because we have to do it in a transaction,
@@ -534,8 +629,7 @@ class DbQuotaDriver(object):
                                 user_id=user_id)
 
     def usage_reset(self, context, resources):
-        """
-        Reset the usage records for a particular user on a list of
+        """Reset the usage records for a particular user on a list of
         resources.  This will force that user's usage records to be
         refreshed the next time a reservation is made.
 
@@ -564,8 +658,7 @@ class DbQuotaDriver(object):
                 pass
 
     def destroy_all_by_project_and_user(self, context, project_id, user_id):
-        """
-        Destroy all quotas, usages, and reservations associated with a
+        """Destroy all quotas, usages, and reservations associated with a
         project and user.
 
         :param context: The request context, for access checks.
@@ -576,8 +669,7 @@ class DbQuotaDriver(object):
         db.quota_destroy_all_by_project_and_user(context, project_id, user_id)
 
     def destroy_all_by_project(self, context, project_id):
-        """
-        Destroy all quotas, usages, and reservations associated with a
+        """Destroy all quotas, usages, and reservations associated with a
         project.
 
         :param context: The request context, for access checks.
@@ -634,8 +726,7 @@ class NoopQuotaDriver(object):
 
     def get_class_quotas(self, context, resources, quota_class,
                          defaults=True):
-        """
-        Given a list of resources, retrieve the quotas for the given
+        """Given a list of resources, retrieve the quotas for the given
         quota class.
 
         :param context: The request context, for access checks.
@@ -651,11 +742,22 @@ class NoopQuotaDriver(object):
             quotas[resource.name] = -1
         return quotas
 
+    def _get_noop_quotas(self, resources, usages=None, remains=False):
+        quotas = {}
+        for resource in resources.values():
+            quotas[resource.name] = {}
+            quotas[resource.name]['limit'] = -1
+            if usages:
+                quotas[resource.name]['in_use'] = -1
+                quotas[resource.name]['reserved'] = -1
+            if remains:
+                quotas[resource.name]['remains'] = -1
+        return quotas
+
     def get_user_quotas(self, context, resources, project_id, user_id,
                         quota_class=None, defaults=True,
                         usages=True):
-        """
-        Given a list of resources, retrieve the quotas for the given
+        """Given a list of resources, retrieve the quotas for the given
         user and project.
 
         :param context: The request context, for access checks.
@@ -674,16 +776,12 @@ class NoopQuotaDriver(object):
         :param usages: If True, the current in_use and reserved counts
                        will also be returned.
         """
-        quotas = {}
-        for resource in resources.values():
-            quotas[resource.name] = -1
-        return quotas
+        return self._get_noop_quotas(resources, usages=usages)
 
     def get_project_quotas(self, context, resources, project_id,
                            quota_class=None, defaults=True,
                            usages=True, remains=False):
-        """
-        Given a list of resources, retrieve the quotas for the given
+        """Given a list of resources, retrieve the quotas for the given
         project.
 
         :param context: The request context, for access checks.
@@ -703,15 +801,11 @@ class NoopQuotaDriver(object):
         :param remains: If True, the current remains of the project will
                         will be returned.
         """
-        quotas = {}
-        for resource in resources.values():
-            quotas[resource.name] = -1
-        return quotas
+        return self._get_noop_quotas(resources, usages=usages, remains=remains)
 
     def get_settable_quotas(self, context, resources, project_id,
                             user_id=None):
-        """
-        Given a list of resources, retrieve the range of settable quotas for
+        """Given a list of resources, retrieve the range of settable quotas for
         the given user or project.
 
         :param context: The request context, for access checks.
@@ -721,7 +815,7 @@ class NoopQuotaDriver(object):
         """
         quotas = {}
         for resource in resources.values():
-            quotas[resource.name].update(minimum=0, maximum=-1)
+            quotas[resource.name] = {'minimum': 0, 'maximum': -1}
         return quotas
 
     def limit_check(self, context, resources, values, project_id=None,
@@ -825,8 +919,7 @@ class NoopQuotaDriver(object):
         pass
 
     def usage_reset(self, context, resources):
-        """
-        Reset the usage records for a particular user on a list of
+        """Reset the usage records for a particular user on a list of
         resources.  This will force that user's usage records to be
         refreshed the next time a reservation is made.
 
@@ -841,8 +934,7 @@ class NoopQuotaDriver(object):
         pass
 
     def destroy_all_by_project_and_user(self, context, project_id, user_id):
-        """
-        Destroy all quotas, usages, and reservations associated with a
+        """Destroy all quotas, usages, and reservations associated with a
         project and user.
 
         :param context: The request context, for access checks.
@@ -852,8 +944,7 @@ class NoopQuotaDriver(object):
         pass
 
     def destroy_all_by_project(self, context, project_id):
-        """
-        Destroy all quotas, usages, and reservations associated with a
+        """Destroy all quotas, usages, and reservations associated with a
         project.
 
         :param context: The request context, for access checks.
@@ -876,8 +967,7 @@ class BaseResource(object):
     """Describe a single resource for quota checking."""
 
     def __init__(self, name, flag=None):
-        """
-        Initializes a Resource.
+        """Initializes a Resource.
 
         :param name: The name of the resource, i.e., "instances".
         :param flag: The name of the flag or configuration option
@@ -889,8 +979,7 @@ class BaseResource(object):
         self.flag = flag
 
     def quota(self, driver, context, **kwargs):
-        """
-        Given a driver and context, obtain the quota for this
+        """Given a driver and context, obtain the quota for this
         resource.
 
         :param driver: A quota driver.
@@ -944,6 +1033,7 @@ class BaseResource(object):
 
 class ReservableResource(BaseResource):
     """Describe a reservable resource."""
+    valid_method = 'reserve'
 
     def __init__(self, name, sync, flag=None):
         """Initializes a ReservableResource.
@@ -981,19 +1071,16 @@ class ReservableResource(BaseResource):
 
 class AbsoluteResource(BaseResource):
     """Describe a non-reservable resource."""
-
-    pass
+    valid_method = 'check'
 
 
 class CountableResource(AbsoluteResource):
-    """
-    Describe a resource where the counts aren't based solely on the
+    """Describe a resource where the counts aren't based solely on the
     project ID.
     """
 
     def __init__(self, name, count, flag=None):
-        """
-        Initializes a CountableResource.
+        """Initializes a CountableResource.
 
         Countable resources are those resources which directly
         correspond to objects in the database, i.e., instances, cores,
@@ -1040,13 +1127,17 @@ class QuotaEngine(object):
             return self.__driver
         if not self._driver_cls:
             self._driver_cls = CONF.quota_driver
-        if isinstance(self._driver_cls, basestring):
+        if isinstance(self._driver_cls, six.string_types):
             self._driver_cls = importutils.import_object(self._driver_cls)
         self.__driver = self._driver_cls
         return self.__driver
 
     def __contains__(self, resource):
         return resource in self._resources
+
+    def __getitem__(self, key):
+        if key in self._resources:
+            return self._resources[key]
 
     def register_resource(self, resource):
         """Register a resource."""
@@ -1148,12 +1239,10 @@ class QuotaEngine(object):
                                               remains=remains)
 
     def get_settable_quotas(self, context, project_id, user_id=None):
-        """
-        Given a list of resources, retrieve the range of settable quotas for
+        """Given a list of resources, retrieve the range of settable quotas for
         the given user or project.
 
         :param context: The request context, for access checks.
-        :param resources: A dictionary of the registered resources.
         :param project_id: The ID of the project to return quotas for.
         :param user_id: The ID of the user to return quotas for.
         """
@@ -1253,7 +1342,7 @@ class QuotaEngine(object):
                                             project_id=project_id,
                                             user_id=user_id)
 
-        LOG.debug(_("Created reservations %s"), reservations)
+        LOG.debug("Created reservations %s", reservations)
 
         return reservations
 
@@ -1276,9 +1365,10 @@ class QuotaEngine(object):
             # usage resynchronization and the reservation expiration
             # mechanisms will resolve the issue.  The exception is
             # logged, however, because this is less than optimal.
-            LOG.exception(_("Failed to commit reservations %s"), reservations)
+            LOG.exception(_LE("Failed to commit reservations %s"),
+                          reservations)
             return
-        LOG.debug(_("Committed reservations %s"), reservations)
+        LOG.debug("Committed reservations %s", reservations)
 
     def rollback(self, context, reservations, project_id=None, user_id=None):
         """Roll back reservations.
@@ -1299,14 +1389,13 @@ class QuotaEngine(object):
             # usage resynchronization and the reservation expiration
             # mechanisms will resolve the issue.  The exception is
             # logged, however, because this is less than optimal.
-            LOG.exception(_("Failed to roll back reservations %s"),
+            LOG.exception(_LE("Failed to roll back reservations %s"),
                           reservations)
             return
-        LOG.debug(_("Rolled back reservations %s"), reservations)
+        LOG.debug("Rolled back reservations %s", reservations)
 
     def usage_reset(self, context, resources):
-        """
-        Reset the usage records for a particular user on a list of
+        """Reset the usage records for a particular user on a list of
         resources.  This will force that user's usage records to be
         refreshed the next time a reservation is made.
 
@@ -1322,8 +1411,7 @@ class QuotaEngine(object):
         self._driver.usage_reset(context, resources)
 
     def destroy_all_by_project_and_user(self, context, project_id, user_id):
-        """
-        Destroy all quotas, usages, and reservations associated with a
+        """Destroy all quotas, usages, and reservations associated with a
         project and user.
 
         :param context: The request context, for access checks.
@@ -1335,8 +1423,7 @@ class QuotaEngine(object):
                                                      project_id, user_id)
 
     def destroy_all_by_project(self, context, project_id):
-        """
-        Destroy all quotas, usages, and reservations associated with a
+        """Destroy all quotas, usages, and reservations associated with a
         project.
 
         :param context: The request context, for access checks.
@@ -1361,6 +1448,16 @@ class QuotaEngine(object):
         return sorted(self._resources.keys())
 
 
+def _keypair_get_count_by_user(*args, **kwargs):
+    """Helper method to avoid referencing objects.KeyPairList on import."""
+    return objects.KeyPairList.get_count_by_user(*args, **kwargs)
+
+
+def _server_group_count_members_by_user(context, group, user_id):
+    """Helper method to avoid referencing objects.InstanceGroup on import."""
+    return group.count_members_by_user(user_id)
+
+
 QUOTAS = QuotaEngine()
 
 
@@ -1378,13 +1475,34 @@ resources = [
     AbsoluteResource('injected_file_content_bytes',
                      'quota_injected_file_content_bytes'),
     AbsoluteResource('injected_file_path_bytes',
-                     'quota_injected_file_path_bytes'),
+                     'quota_injected_file_path_length'),
     CountableResource('security_group_rules',
                       db.security_group_rule_count_by_group,
                       'quota_security_group_rules'),
-    CountableResource('key_pairs', db.key_pair_count_by_user,
+    CountableResource('key_pairs', _keypair_get_count_by_user,
                       'quota_key_pairs'),
+    ReservableResource('server_groups', '_sync_server_groups',
+                      'quota_server_groups'),
+    CountableResource('server_group_members',
+                      _server_group_count_members_by_user,
+                      'quota_server_group_members'),
     ]
 
 
 QUOTAS.register_resources(resources)
+
+
+def _valid_method_call_check_resource(name, method):
+    if name not in QUOTAS:
+        raise exception.InvalidQuotaMethodUsage(method=method, res=name)
+    res = QUOTAS[name]
+
+    if res.valid_method != method:
+        raise exception.InvalidQuotaMethodUsage(method=method, res=name)
+
+
+def _valid_method_call_check_resources(resource, method):
+    """A method to check whether the resource can use the quota method."""
+
+    for name in resource.keys():
+        _valid_method_call_check_resource(name, method)

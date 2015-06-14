@@ -1,3 +1,3 @@
 {
-    "confirm_resize" : null
+    "confirmResize" : null
 }

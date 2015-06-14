@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 Nicira Networks, Inc
 # All Rights Reserved.
 #
@@ -15,8 +13,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_log import log as logging
+
 from nova.network import linux_net
-from nova.openstack.common import log as logging
 from nova import utils
 
 LOG = logging.getLogger(__name__)
@@ -87,9 +86,10 @@ class LinuxNetL3(L3Driver):
         networks = kwargs.get('networks', None)
         if not fixed_range and networks is not None:
             for network in networks:
-                self.initialize_network(network['cidr'])
-        else:
-            linux_net.init_host()
+                if network['enable_dhcp']:
+                    is_ext = (network['dhcp_server'] is not None and
+                              network['dhcp_server'] != network['gateway'])
+                    self.initialize_network(network['cidr'], is_ext)
         linux_net.ensure_metadata_ip()
         linux_net.metadata_forward()
         self.initialized = True
@@ -97,8 +97,8 @@ class LinuxNetL3(L3Driver):
     def is_initialized(self):
         return self.initialized
 
-    def initialize_network(self, cidr):
-        linux_net.init_host(cidr)
+    def initialize_network(self, cidr, is_external):
+        linux_net.init_host(cidr, is_external)
 
     def initialize_gateway(self, network_ref):
         mac_address = utils.generate_mac_address()
@@ -120,6 +120,7 @@ class LinuxNetL3(L3Driver):
         linux_net.unbind_floating_ip(floating_ip, l3_interface_id)
         linux_net.remove_floating_forward(floating_ip, fixed_ip,
                                           l3_interface_id, network)
+        linux_net.clean_conntrack(fixed_ip)
 
     def add_vpn(self, public_ip, port, private_ip):
         linux_net.ensure_vpn_forward(public_ip, port, private_ip)
@@ -128,9 +129,6 @@ class LinuxNetL3(L3Driver):
         # Linux net currently doesn't implement any way of removing
         # the VPN forwarding rules
         pass
-
-    def clean_conntrack(self, fixed_ip):
-        linux_net.clean_conntrack(fixed_ip)
 
     def teardown(self):
         pass

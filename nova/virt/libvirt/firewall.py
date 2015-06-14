@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
@@ -17,41 +15,53 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from eventlet import tpool
-from oslo.config import cfg
+import uuid
+
+from eventlet import greenthread
+from lxml import etree
+from oslo_config import cfg
+from oslo_log import log as logging
+from oslo_utils import importutils
 
 from nova.cloudpipe import pipelib
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import log as logging
+from nova.i18n import _LI
+from nova.i18n import _LW
 import nova.virt.firewall as base_firewall
 from nova.virt import netutils
 
 LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
 CONF.import_opt('use_ipv6', 'nova.netconf')
+CONF.import_opt('live_migration_retry_count', 'nova.compute.manager')
 
 libvirt = None
 
 
 class NWFilterFirewall(base_firewall.FirewallDriver):
-    """
-    This class implements a network filtering mechanism by using
+    """This class implements a network filtering mechanism by using
     libvirt's nwfilter.
     all instances get a filter ("nova-base") applied. This filter
     provides some basic security such as protection against MAC
     spoofing, IP spoofing, and ARP spoofing.
     """
 
-    def __init__(self, virtapi, get_connection, **kwargs):
+    def __init__(self, virtapi, host, **kwargs):
+        """Create an NWFilter firewall driver
+
+        :param virtapi: nova.virt.virtapi.VirtAPI instance
+        :param host: nova.virt.libvirt.host.Host instance
+        :param kwargs: currently unused
+        """
+
         super(NWFilterFirewall, self).__init__(virtapi)
         global libvirt
         if libvirt is None:
             try:
-                libvirt = __import__('libvirt')
+                libvirt = importutils.import_module('libvirt')
             except ImportError:
-                LOG.warn(_("Libvirt module could not be loaded. "
-                           "NWFilterFirewall will not work correctly."))
-        self._libvirt_get_connection = get_connection
+                LOG.warn(_LW("Libvirt module could not be loaded. "
+                             "NWFilterFirewall will not work correctly."))
+        self._host = host
         self.static_filters_configured = False
         self.handle_security_groups = False
 
@@ -60,35 +70,33 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
         pass
 
     def _get_connection(self):
-        return self._libvirt_get_connection()
+        return self._host.get_connection()
     _conn = property(_get_connection)
 
-    @staticmethod
-    def nova_no_nd_reflection_filter():
-        """
-        This filter protects false positives on IPv6 Duplicate Address
+    def nova_no_nd_reflection_filter(self):
+        """This filter protects false positives on IPv6 Duplicate Address
         Detection(DAD).
         """
+        uuid = self._get_filter_uuid('nova-no-nd-reflection')
         return '''<filter name='nova-no-nd-reflection' chain='ipv6'>
                   <!-- no nd reflection -->
                   <!-- drop if destination mac is v6 mcast mac addr and
                        we sent it. -->
-
+                  <uuid>%s</uuid>
                   <rule action='drop' direction='in'>
                       <mac dstmacaddr='33:33:00:00:00:00'
                            dstmacmask='ff:ff:00:00:00:00' srcmacaddr='$MAC'/>
                   </rule>
-                  </filter>'''
+                  </filter>''' % uuid
 
-    @staticmethod
-    def nova_dhcp_filter():
+    def nova_dhcp_filter(self):
         """The standard allow-dhcp-server filter is an <ip> one, so it uses
            ebtables to allow traffic through. Without a corresponding rule in
            iptables, it'll get blocked anyway.
         """
-
+        uuid = self._get_filter_uuid('nova-allow-dhcp-server')
         return '''<filter name='nova-allow-dhcp-server' chain='ipv4'>
-                    <uuid>891e4787-e5c0-d59b-cbd6-41bc3c6b36fc</uuid>
+                    <uuid>%s</uuid>
                     <rule action='accept' direction='out'
                           priority='100'>
                       <udp srcipaddr='0.0.0.0'
@@ -102,11 +110,11 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
                            srcportstart='67'
                            dstportstart='68'/>
                     </rule>
-                  </filter>'''
+                  </filter>''' % uuid
 
     def setup_basic_filtering(self, instance, network_info):
         """Set up basic filtering (MAC, IP, and ARP spoofing protection)."""
-        LOG.info(_('Called setup_basic_filtering in nwfilter'),
+        LOG.info(_LI('Called setup_basic_filtering in nwfilter'),
                  instance=instance)
 
         if self.handle_security_groups:
@@ -114,23 +122,20 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
             # anyway.
             return
 
-        LOG.info(_('Ensuring static filters'), instance=instance)
+        LOG.info(_LI('Ensuring static filters'), instance=instance)
         self._ensure_static_filters()
 
-        allow_dhcp = False
+        nodhcp_base_filter = self.get_base_filter_list(instance, False)
+        dhcp_base_filter = self.get_base_filter_list(instance, True)
+
         for vif in network_info:
-            if not vif['network'] or not vif['network']['subnets']:
-                continue
+            _base_filter = nodhcp_base_filter
             for subnet in vif['network']['subnets']:
                 if subnet.get_meta('dhcp_server'):
-                    allow_dhcp = True
+                    _base_filter = dhcp_base_filter
                     break
-
-        base_filter = self.get_base_filter_list(instance, allow_dhcp)
-
-        for vif in network_info:
             self._define_filter(self._get_instance_filter_xml(instance,
-                                                              base_filter,
+                                                              _base_filter,
                                                               vif))
 
     def _get_instance_filter_parameters(self, vif):
@@ -180,7 +185,9 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
         nic_id = vif['address'].replace(':', '')
         instance_filter_name = self._instance_filter_name(instance, nic_id)
         parameters = self._get_instance_filter_parameters(vif)
+        uuid = self._get_filter_uuid(instance_filter_name)
         xml = '''<filter name='%s' chain='root'>''' % instance_filter_name
+        xml += '<uuid>%s</uuid>' % uuid
         for f in filters:
             xml += '''<filterref filter='%s'>''' % f
             xml += ''.join(parameters)
@@ -189,15 +196,14 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
         return xml
 
     def get_base_filter_list(self, instance, allow_dhcp):
-        """
-        Obtain a list of base filters to apply to an instance.
+        """Obtain a list of base filters to apply to an instance.
         The return value should be a list of strings, each
         specifying a filter name.  Subclasses can override this
         function to add additional filters as needed.  Additional
         filters added to the list must also be correctly defined
         within the subclass.
         """
-        if pipelib.is_vpn_image(instance['image_ref']):
+        if pipelib.is_vpn_image(instance.image_ref):
             base_filter = 'nova-vpn'
         elif allow_dhcp:
             base_filter = 'nova-base'
@@ -219,63 +225,85 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
         filter_set = ['no-mac-spoofing',
                       'no-ip-spoofing',
                       'no-arp-spoofing']
-        self._define_filter(self.nova_no_nd_reflection_filter)
+
+        self._define_filter(self.nova_no_nd_reflection_filter())
         filter_set.append('nova-no-nd-reflection')
         self._define_filter(self._filter_container('nova-nodhcp', filter_set))
         filter_set.append('allow-dhcp-server')
         self._define_filter(self._filter_container('nova-base', filter_set))
         self._define_filter(self._filter_container('nova-vpn',
                                                    ['allow-dhcp-server']))
-        self._define_filter(self.nova_dhcp_filter)
+        self._define_filter(self.nova_dhcp_filter())
 
         self.static_filters_configured = True
 
     def _filter_container(self, name, filters):
-        xml = '''<filter name='%s' chain='root'>%s</filter>''' % (
-                 name,
+        uuid = self._get_filter_uuid(name)
+        xml = '''<filter name='%s' chain='root'>
+                   <uuid>%s</uuid>
+                   %s
+                 </filter>''' % (name, uuid,
                  ''.join(["<filterref filter='%s'/>" % (f,) for f in filters]))
         return xml
+
+    def _get_filter_uuid(self, name):
+        try:
+            flt = self._conn.nwfilterLookupByName(name)
+            xml = flt.XMLDesc(0)
+            doc = etree.fromstring(xml)
+            u = doc.find("./uuid").text
+        except Exception as e:
+            LOG.debug(u"Cannot find UUID for filter '%(name)s': '%(e)s'",
+                {'name': name, 'e': e})
+            u = uuid.uuid4().hex
+
+        LOG.debug("UUID for filter '%s' is '%s'" % (name, u))
+        return u
 
     def _define_filter(self, xml):
         if callable(xml):
             xml = xml()
-        # execute in a native thread and block current greenthread until done
-        if not CONF.libvirt_nonblocking:
-            # NOTE(maoy): the original implementation is to have the API called
-            # in the thread pool no matter what.
-            tpool.execute(self._conn.nwfilterDefineXML, xml)
-        else:
-            # NOTE(maoy): self._conn is an eventlet.tpool.Proxy object
-            self._conn.nwfilterDefineXML(xml)
+        self._conn.nwfilterDefineXML(xml)
 
     def unfilter_instance(self, instance, network_info):
         """Clear out the nwfilter rules."""
-        instance_name = instance['name']
         for vif in network_info:
             nic_id = vif['address'].replace(':', '')
             instance_filter_name = self._instance_filter_name(instance, nic_id)
 
-            try:
-                _nw = self._conn.nwfilterLookupByName(instance_filter_name)
-                _nw.undefine()
-            except libvirt.libvirtError as e:
-                errcode = e.get_error_code()
-                if errcode == libvirt.VIR_ERR_OPERATION_INVALID:
-                    # This happens when the instance filter is still in
-                    # use (ie. when the instance has not terminated properly)
-                    raise
-                LOG.debug(_('The nwfilter(%s) is not found.'),
-                          instance_filter_name, instance=instance)
-
-    def _define_filters(self, filter_name, filter_children):
-        self._define_filter(self._filter_container(filter_name,
-                                                   filter_children))
+            # nwfilters may be defined in a separate thread in the case
+            # of libvirt non-blocking mode, so we wait for completion
+            max_retry = CONF.live_migration_retry_count
+            for cnt in range(max_retry):
+                try:
+                    _nw = self._conn.nwfilterLookupByName(instance_filter_name)
+                    _nw.undefine()
+                    break
+                except libvirt.libvirtError as e:
+                    if cnt == max_retry - 1:
+                        raise
+                    errcode = e.get_error_code()
+                    if errcode == libvirt.VIR_ERR_OPERATION_INVALID:
+                        # This happens when the instance filter is still in use
+                        # (ie. when the instance has not terminated properly)
+                        LOG.info(_LI('Failed to undefine network filter '
+                                     '%(name)s. Try %(cnt)d of '
+                                     '%(max_retry)d.'),
+                                 {'name': instance_filter_name,
+                                  'cnt': cnt + 1,
+                                  'max_retry': max_retry},
+                                 instance=instance)
+                        greenthread.sleep(1)
+                    else:
+                        LOG.debug('The nwfilter(%s) is not found.',
+                                  instance_filter_name, instance=instance)
+                        break
 
     @staticmethod
     def _instance_filter_name(instance, nic_id=None):
         if not nic_id:
-            return 'nova-instance-%s' % (instance['name'])
-        return 'nova-instance-%s-%s' % (instance['name'], nic_id)
+            return 'nova-instance-%s' % (instance.name)
+        return 'nova-instance-%s-%s' % (instance.name, nic_id)
 
     def instance_filter_exists(self, instance, network_info):
         """Check nova-instance-instance-xxx exists."""
@@ -285,9 +313,9 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
             try:
                 self._conn.nwfilterLookupByName(instance_filter_name)
             except libvirt.libvirtError:
-                name = instance['name']
-                LOG.debug(_('The nwfilter(%(instance_filter_name)s) for'
-                            '%(name)s is not found.'),
+                name = instance.name
+                LOG.debug('The nwfilter(%(instance_filter_name)s) for'
+                          '%(name)s is not found.',
                           {'instance_filter_name': instance_filter_name,
                            'name': name},
                           instance=instance)
@@ -297,14 +325,25 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
 
 class IptablesFirewallDriver(base_firewall.IptablesFirewallDriver):
     def __init__(self, virtapi, execute=None, **kwargs):
+        """Create an IP tables firewall driver instance
+
+        :param virtapi: nova.virt.virtapi.VirtAPI instance
+        :param execute: unused, pass None
+        :param kwargs: extra arguments
+
+        The @kwargs parameter must contain a key 'host' that
+        maps to an instance of the nova.virt.libvirt.host.Host
+        class.
+        """
+
         super(IptablesFirewallDriver, self).__init__(virtapi, **kwargs)
-        self.nwfilter = NWFilterFirewall(virtapi, kwargs['get_connection'])
+        self.nwfilter = NWFilterFirewall(virtapi, kwargs['host'])
 
     def setup_basic_filtering(self, instance, network_info):
         """Set up provider rules and basic NWFilter."""
         self.nwfilter.setup_basic_filtering(instance, network_info)
         if not self.basically_filtered:
-            LOG.debug(_('iptables firewall: Setup Basic Filtering'),
+            LOG.debug('iptables firewall: Setup Basic Filtering',
                       instance=instance)
             self.refresh_provider_fw_rules()
             self.basically_filtered = True
@@ -316,15 +355,13 @@ class IptablesFirewallDriver(base_firewall.IptablesFirewallDriver):
     def unfilter_instance(self, instance, network_info):
         # NOTE(salvatore-orlando):
         # Overriding base class method for applying nwfilter operation
-        if self.instances.pop(instance['id'], None):
-            # NOTE(vish): use the passed info instead of the stored info
-            self.network_infos.pop(instance['id'])
+        if self.instance_info.pop(instance.id, None):
             self.remove_filters_for_instance(instance)
             self.iptables.apply()
             self.nwfilter.unfilter_instance(instance, network_info)
         else:
-            LOG.info(_('Attempted to unfilter instance which is not '
-                     'filtered'), instance=instance)
+            LOG.info(_LI('Attempted to unfilter instance which is not '
+                         'filtered'), instance=instance)
 
     def instance_filter_exists(self, instance, network_info):
         """Check nova-instance-instance-xxx exists."""

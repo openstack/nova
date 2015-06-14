@@ -15,30 +15,8 @@
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 
 authorize = extensions.soft_extension_authorizer('compute', 'image_size')
-
-
-def make_image(elem):
-    elem.set('{%s}size' % Image_size.namespace, '%s:size' % Image_size.alias)
-
-
-class ImagesSizeTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('images')
-        elem = xmlutil.SubTemplateElement(root, 'image', selector='images')
-        make_image(elem)
-        return xmlutil.SlaveTemplate(root, 1, nsmap={
-            Image_size.alias: Image_size.namespace})
-
-
-class ImageSizeTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('image', selector='image')
-        make_image(root)
-        return xmlutil.SlaveTemplate(root, 1, nsmap={
-            Image_size.alias: Image_size.namespace})
 
 
 class ImageSizeController(wsgi.Controller):
@@ -51,8 +29,6 @@ class ImageSizeController(wsgi.Controller):
     def show(self, req, resp_obj, id):
         context = req.environ["nova.context"]
         if authorize(context):
-            # Attach our slave template to the response object
-            resp_obj.attach(xml=ImageSizeTemplate())
             image_resp = resp_obj.obj['image']
             # image guaranteed to be in the cache due to the core API adding
             # it in its 'show' method
@@ -63,8 +39,6 @@ class ImageSizeController(wsgi.Controller):
     def detail(self, req, resp_obj):
         context = req.environ['nova.context']
         if authorize(context):
-            # Attach our slave template to the response object
-            resp_obj.attach(xml=ImagesSizeTemplate())
             images_resp = list(resp_obj.obj['images'])
             # images guaranteed to be in the cache due to the core API adding
             # it in its 'detail' method
@@ -80,7 +54,7 @@ class Image_size(extensions.ExtensionDescriptor):
     alias = "OS-EXT-IMG-SIZE"
     namespace = ("http://docs.openstack.org/compute/ext/"
                  "image_size/api/v1.1")
-    updated = "2013-02-19T00:00:00+00:00"
+    updated = "2013-02-19T00:00:00Z"
 
     def get_controller_extensions(self):
         controller = ImageSizeController()

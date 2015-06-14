@@ -20,12 +20,12 @@ except ImportError:
 
 import time
 
-from oslo.config import cfg
+from oslo_config import cfg
+from oslo_log import log as logging
 
 from nova import exception
+from nova.i18n import _, _LW
 from nova.network import dns_driver
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import log as logging
 from nova import utils
 
 CONF = cfg.CONF
@@ -34,38 +34,38 @@ LOG = logging.getLogger(__name__)
 ldap_dns_opts = [
     cfg.StrOpt('ldap_dns_url',
                default='ldap://ldap.example.com:389',
-               help='URL for ldap server which will store dns entries'),
+               help='URL for LDAP server which will store DNS entries'),
     cfg.StrOpt('ldap_dns_user',
                default='uid=admin,ou=people,dc=example,dc=org',
-               help='user for ldap DNS'),
+               help='User for LDAP DNS'),
     cfg.StrOpt('ldap_dns_password',
                default='password',
-               help='password for ldap DNS',
+               help='Password for LDAP DNS',
                secret=True),
     cfg.StrOpt('ldap_dns_soa_hostmaster',
                default='hostmaster@example.org',
-               help='Hostmaster for ldap dns driver Statement of Authority'),
+               help='Hostmaster for LDAP DNS driver Statement of Authority'),
     cfg.MultiStrOpt('ldap_dns_servers',
                     default=['dns.example.org'],
-                    help='DNS Servers for ldap dns driver'),
+                    help='DNS Servers for LDAP DNS driver'),
     cfg.StrOpt('ldap_dns_base_dn',
                default='ou=hosts,dc=example,dc=org',
-               help='Base DN for DNS entries in ldap'),
+               help='Base DN for DNS entries in LDAP'),
     cfg.StrOpt('ldap_dns_soa_refresh',
                default='1800',
-               help='Refresh interval (in seconds) for ldap dns driver '
+               help='Refresh interval (in seconds) for LDAP DNS driver '
                     'Statement of Authority'),
     cfg.StrOpt('ldap_dns_soa_retry',
                default='3600',
-               help='Retry interval (in seconds) for ldap dns driver '
+               help='Retry interval (in seconds) for LDAP DNS driver '
                     'Statement of Authority'),
     cfg.StrOpt('ldap_dns_soa_expiry',
                default='86400',
-               help='Expiry interval (in seconds) for ldap dns driver '
+               help='Expiry interval (in seconds) for LDAP DNS driver '
                     'Statement of Authority'),
     cfg.StrOpt('ldap_dns_soa_minimum',
                default='7200',
-               help='Minimum interval (in seconds) for ldap dns driver '
+               help='Minimum interval (in seconds) for LDAP DNS driver '
                     'Statement of Authority'),
     ]
 
@@ -105,9 +105,9 @@ class DNSEntry(object):
         if not entry:
             return None
         if len(entry) > 1:
-            LOG.warn(_("Found multiple matches for domain "
-                    "%(domain)s.\n%(entry)s") %
-                    (domain, entry))
+            LOG.warning(_LW("Found multiple matches for domain "
+                            "%(domain)s.\n%(entry)s"),
+                        domain, entry)
         return entry[0]
 
     @classmethod
@@ -132,10 +132,10 @@ class DNSEntry(object):
         if name.endswith(z):
             dequalified = name[0:name.rfind(z)]
         else:
-            LOG.warn(_("Unable to dequalify.  %(name)s is not in "
-                       "%(domain)s.\n") %
-                     {'name': name,
-                      'domain': self.qualified_domain})
+            LOG.warning(_LW("Unable to dequalify.  %(name)s is not in "
+                            "%(domain)s.\n"),
+                        {'name': name,
+                         'domain': self.qualified_domain})
             dequalified = None
 
         return dequalified
@@ -373,5 +373,6 @@ class LdapDNS(dns_driver.DNSDriver):
         dEntry.delete()
 
     def delete_dns_file(self):
-        LOG.warn(_("This shouldn't be getting called except during testing."))
+        LOG.warning(_LW("This shouldn't be getting called except during "
+                        "testing."))
         pass

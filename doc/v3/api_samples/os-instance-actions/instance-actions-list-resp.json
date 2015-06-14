@@ -1,5 +1,5 @@
 {
-    "instance_actions": [
+    "instanceActions": [
         {
             "action": "resize",
             "instance_uuid": "b48316c5-71e8-45e4-9884-6c78055b9b13",

@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 #    Copyright 2010 United States Government as represented by the
 #    Administrator of the National Aeronautics and Space Administration.
 #    All Rights Reserved.
@@ -22,26 +20,33 @@
 
 import errno
 import os
+import platform
+import re
 
 from lxml import etree
-from oslo.config import cfg
+from oslo_concurrency import processutils
+from oslo_config import cfg
+from oslo_log import log as logging
 
-from nova import exception
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import log as logging
-from nova.openstack.common import processutils
+from nova.compute import arch
+from nova.i18n import _
+from nova.i18n import _LI
+from nova.i18n import _LW
+from nova.storage import linuxscsi
 from nova import utils
 from nova.virt import images
+from nova.virt.libvirt import config as vconfig
+from nova.virt import volumeutils
 
 libvirt_opts = [
-    cfg.BoolOpt('libvirt_snapshot_compression',
+    cfg.BoolOpt('snapshot_compression',
                 default=False,
                 help='Compress snapshot images when possible. This '
                      'currently applies exclusively to qcow2 images'),
     ]
 
 CONF = cfg.CONF
-CONF.register_opts(libvirt_opts)
+CONF.register_opts(libvirt_opts, 'libvirt')
 CONF.import_opt('instances_path', 'nova.compute.manager')
 LOG = logging.getLogger(__name__)
 
@@ -51,17 +56,7 @@ def execute(*args, **kwargs):
 
 
 def get_iscsi_initiator():
-    """Get iscsi initiator name for this machine."""
-    # NOTE(vish) openiscsi stores initiator name in a file that
-    #            needs root permission to read.
-    try:
-        contents = utils.read_file_as_root('/etc/iscsi/initiatorname.iscsi')
-    except exception.FileNotFound:
-        return None
-
-    for l in contents.split('\n'):
-        if l.startswith('InitiatorName='):
-            return l[l.index('=') + 1:].strip()
+    return volumeutils.get_iscsi_initiator()
 
 
 def get_fc_hbas():
@@ -75,13 +70,13 @@ def get_fc_hbas():
         # and systool is not installed
         # 96 = nova.cmd.rootwrap.RC_NOEXECFOUND:
         if exc.exit_code == 96:
-            LOG.warn(_("systool is not installed"))
+            LOG.warn(_LW("systool is not installed"))
         return []
     except OSError as exc:
         # This handles the case where rootwrap is NOT used
         # and systool is not installed
         if exc.errno == errno.ENOENT:
-            LOG.warn(_("systool is not installed"))
+            LOG.warn(_LW("systool is not installed"))
         return []
 
     if out is None:
@@ -118,6 +113,13 @@ def get_fc_hbas_info():
     hbas = get_fc_hbas()
     hbas_info = []
     for hba in hbas:
+        # Systems implementing the S390 architecture support virtual HBAs
+        # may be online, or offline. This function should only return
+        # virtual HBAs in the online state
+        if (platform.machine() in (arch.S390, arch.S390X) and
+                              hba['port_state'].lower() != 'online'):
+            continue
+
         wwpn = hba['port_name'].replace('0x', '')
         wwnn = hba['node_name'].replace('0x', '')
         device_path = hba['ClassDevicepath']
@@ -191,17 +193,13 @@ def create_cow_image(backing_file, path, size=None):
         base_details = images.qemu_img_info(backing_file)
     else:
         base_details = None
-    # This doesn't seem to get inherited so force it to...
-    # http://paste.ubuntu.com/1213295/
-    # TODO(harlowja) probably file a bug against qemu-img/qemu
+    # Explicitly inherit the value of 'cluster_size' property of a qcow2
+    # overlay image from its backing file. This can be useful in cases
+    # when people create a base image with a non-default 'cluster_size'
+    # value or cases when images were created with very old QEMU
+    # versions which had a different default 'cluster_size'.
     if base_details and base_details.cluster_size is not None:
         cow_opts += ['cluster_size=%s' % base_details.cluster_size]
-    # For now don't inherit this due the following discussion...
-    # See: http://www.gossamer-threads.com/lists/openstack/dev/10592
-    # if 'preallocation' in base_details:
-    #     cow_opts += ['preallocation=%s' % base_details['preallocation']]
-    if base_details and base_details.encryption:
-        cow_opts += ['encryption=%s' % base_details.encryption]
     if size is not None:
         cow_opts += ['size=%s' % size]
     if cow_opts:
@@ -212,210 +210,56 @@ def create_cow_image(backing_file, path, size=None):
     execute(*cmd)
 
 
-def create_lvm_image(vg, lv, size, sparse=False):
-    """Create LVM image.
-
-    Creates a LVM image with given size.
-
-    :param vg: existing volume group which should hold this image
-    :param lv: name for this image (logical volume)
-    :size: size of image in bytes
-    :sparse: create sparse logical volume
-    """
-    vg_info = get_volume_group_info(vg)
-    free_space = vg_info['free']
-
-    def check_size(vg, lv, size):
-        if size > free_space:
-            raise RuntimeError(_('Insufficient Space on Volume Group %(vg)s.'
-                                 ' Only %(free_space)db available,'
-                                 ' but %(size)db required'
-                                 ' by volume %(lv)s.') %
-                               {'vg': vg,
-                                'free_space': free_space,
-                                'size': size,
-                                'lv': lv})
-
-    if sparse:
-        preallocated_space = 64 * 1024 * 1024
-        check_size(vg, lv, preallocated_space)
-        if free_space < size:
-            LOG.warning(_('Volume group %(vg)s will not be able'
-                          ' to hold sparse volume %(lv)s.'
-                          ' Virtual volume size is %(size)db,'
-                          ' but free space on volume group is'
-                          ' only %(free_space)db.'),
-                        {'vg': vg,
-                         'free_space': free_space,
-                         'size': size,
-                         'lv': lv})
-
-        cmd = ('lvcreate', '-L', '%db' % preallocated_space,
-                '--virtualsize', '%db' % size, '-n', lv, vg)
-    else:
-        check_size(vg, lv, size)
-        cmd = ('lvcreate', '-L', '%db' % size, '-n', lv, vg)
-    execute(*cmd, run_as_root=True, attempts=3)
-
-
-def import_rbd_image(*args):
-    execute('rbd', 'import', *args)
-
-
-def list_rbd_volumes(pool):
-    """List volumes names for given ceph pool.
-
-    :param pool: ceph pool name
-    """
-    out, err = utils.execute('rbd', '-p', pool, 'ls')
-
-    return [line.strip() for line in out.splitlines()]
-
-
-def remove_rbd_volumes(pool, *names):
-    """Remove one or more rbd volume."""
-    for name in names:
-        rbd_remove = ('rbd', '-p', pool, 'rm', name)
-        try:
-            execute(*rbd_remove, attempts=3, run_as_root=True)
-        except processutils.ProcessExecutionError:
-            LOG.warn(_("rbd remove %(name)s in pool %(pool)s failed"),
-                     {'name': name, 'pool': pool})
-
-
-def get_volume_group_info(vg):
-    """Return free/used/total space info for a volume group in bytes
-
-    :param vg: volume group name
-    :returns: A dict containing:
-             :total: How big the filesystem is (in bytes)
-             :free: How much space is free (in bytes)
-             :used: How much space is used (in bytes)
-    """
-
-    out, err = execute('vgs', '--noheadings', '--nosuffix',
-                       '--separator', '|',
-                       '--units', 'b', '-o', 'vg_size,vg_free', vg,
-                       run_as_root=True)
-
-    info = out.split('|')
-    if len(info) != 2:
-        raise RuntimeError(_("vg %s must be LVM volume group") % vg)
-
-    return {'total': int(info[0]),
-            'free': int(info[1]),
-            'used': int(info[0]) - int(info[1])}
-
-
-def list_logical_volumes(vg):
-    """List logical volumes paths for given volume group.
-
-    :param vg: volume group name
-    """
-    out, err = execute('lvs', '--noheadings', '-o', 'lv_name', vg,
-                       run_as_root=True)
-
-    return [line.strip() for line in out.splitlines()]
-
-
-def logical_volume_info(path):
-    """Get logical volume info.
-
-    :param path: logical volume path
-    """
-    out, err = execute('lvs', '-o', 'vg_all,lv_all',
-                       '--separator', '|', path, run_as_root=True)
-
-    info = [line.split('|') for line in out.splitlines()]
-
-    if len(info) != 2:
-        raise RuntimeError(_("Path %s must be LVM logical volume") % path)
-
-    return dict(zip(*info))
-
-
-def logical_volume_size(path):
-    """Get logical volume size in bytes.
-
-    :param path: logical volume path
-    """
-    # TODO(p-draigbrady) Possibly replace with the more general
-    # use of blockdev --getsize64 in future
-    out, _err = execute('lvs', '-o', 'lv_size', '--noheadings', '--units',
-                        'b', '--nosuffix', path, run_as_root=True)
-
-    return int(out)
-
-
-def clear_logical_volume(path):
-    """Obfuscate the logical volume.
-
-    :param path: logical volume path
-    """
-    # TODO(p-draigbrady): We currently overwrite with zeros
-    # but we may want to make this configurable in future
-    # for more or less security conscious setups.
-
-    vol_size = logical_volume_size(path)
-    bs = 1024 * 1024
-    direct_flags = ('oflag=direct',)
-    sync_flags = ()
-    remaining_bytes = vol_size
-
-    # The loop caters for versions of dd that
-    # don't support the iflag=count_bytes option.
-    while remaining_bytes:
-        zero_blocks = remaining_bytes / bs
-        seek_blocks = (vol_size - remaining_bytes) / bs
-        zero_cmd = ('dd', 'bs=%s' % bs,
-                    'if=/dev/zero', 'of=%s' % path,
-                    'seek=%s' % seek_blocks, 'count=%s' % zero_blocks)
-        zero_cmd += direct_flags
-        zero_cmd += sync_flags
-        if zero_blocks:
-            utils.execute(*zero_cmd, run_as_root=True)
-        remaining_bytes %= bs
-        bs /= 1024  # Limit to 3 iterations
-        # Use O_DIRECT with initial block size and fdatasync otherwise
-        direct_flags = ()
-        sync_flags = ('conv=fdatasync',)
-
-
-def remove_logical_volumes(*paths):
-    """Remove one or more logical volume."""
-
-    for path in paths:
-        clear_logical_volume(path)
-
-    if paths:
-        lvremove = ('lvremove', '-f') + paths
-        execute(*lvremove, attempts=3, run_as_root=True)
-
-
 def pick_disk_driver_name(hypervisor_version, is_block_dev=False):
     """Pick the libvirt primary backend driver name
 
-    If the hypervisor supports multiple backend drivers, then the name
-    attribute selects the primary backend driver name, while the optional
-    type attribute provides the sub-type.  For example, xen supports a name
-    of "tap", "tap2", "phy", or "file", with a type of "aio" or "qcow2",
-    while qemu only supports a name of "qemu", but multiple types including
-    "raw", "bochs", "qcow2", and "qed".
+    If the hypervisor supports multiple backend drivers we have to tell libvirt
+    which one should be used.
+
+    Xen supports the following drivers: "tap", "tap2", "phy", "file", or
+    "qemu", being "qemu" the preferred one. Qemu only supports "qemu".
 
     :param is_block_dev:
     :returns: driver_name or None
     """
-    if CONF.libvirt_type == "xen":
+    if CONF.libvirt.virt_type == "xen":
         if is_block_dev:
             return "phy"
         else:
-            # 4000000 == 4.0.0
-            if hypervisor_version == 4000000:
-                return "tap"
-            else:
-                return "tap2"
-
-    elif CONF.libvirt_type in ('kvm', 'qemu'):
+            # 4002000 == 4.2.0
+            if hypervisor_version >= 4002000:
+                try:
+                    execute('xend', 'status',
+                            run_as_root=True, check_exit_code=True)
+                except OSError as exc:
+                    if exc.errno == errno.ENOENT:
+                        LOG.debug("xend is not found")
+                        # libvirt will try to use libxl toolstack
+                        return 'qemu'
+                    else:
+                        raise
+                except processutils.ProcessExecutionError:
+                    LOG.debug("xend is not started")
+                    # libvirt will try to use libxl toolstack
+                    return 'qemu'
+            # libvirt will use xend/xm toolstack
+            try:
+                out, err = execute('tap-ctl', 'check', check_exit_code=False)
+                if out == 'ok\n':
+                    # 4000000 == 4.0.0
+                    if hypervisor_version > 4000000:
+                        return "tap2"
+                    else:
+                        return "tap"
+                else:
+                    LOG.info(_LI("tap-ctl check: %s"), out)
+            except OSError as exc:
+                if exc.errno == errno.ENOENT:
+                    LOG.debug("tap-ctl tool is not installed")
+                else:
+                    raise
+            return "file"
+    elif CONF.libvirt.virt_type in ('kvm', 'qemu'):
         return "qemu"
     else:
         # UML doesn't want a driver_name set
@@ -446,12 +290,13 @@ def get_disk_backing_file(path, basename=True):
     return backing_file
 
 
-def copy_image(src, dest, host=None):
+def copy_image(src, dest, host=None, receive=False):
     """Copy a disk image to an existing directory
 
     :param src: Source image
     :param dest: Destination path
     :param host: Remote host
+    :param receive: Reverse the rsync direction
     """
 
     if not host:
@@ -461,7 +306,10 @@ def copy_image(src, dest, host=None):
         # coreutils 8.11, holes can be read efficiently too.
         execute('cp', src, dest)
     else:
-        dest = "%s:%s" % (host, dest)
+        if receive:
+            src = "%s:%s" % (utils.safe_ip_format(host), src)
+        else:
+            dest = "%s:%s" % (utils.safe_ip_format(host), dest)
         # Try rsync first as that can compress and create sparse dest files.
         # Note however that rsync currently doesn't read sparse files
         # efficiently: https://bugzilla.samba.org/show_bug.cgi?id=8918
@@ -504,33 +352,32 @@ def chown(path, owner):
     execute('chown', owner, path, run_as_root=True)
 
 
-def create_snapshot(disk_path, snapshot_name):
-    """Create a snapshot in a disk image
+def _id_map_to_config(id_map):
+    return "%s:%s:%s" % (id_map.start, id_map.target, id_map.count)
 
-    :param disk_path: Path to disk image
-    :param snapshot_name: Name of snapshot in disk image
+
+def chown_for_id_maps(path, id_maps):
+    """Change ownership of file or directory for an id mapped
+    environment
+
+    :param path: File or directory whose ownership to change
+    :param id_maps: List of type LibvirtConfigGuestIDMap
     """
-    qemu_img_cmd = ('qemu-img', 'snapshot', '-c', snapshot_name, disk_path)
-    # NOTE(vish): libvirt changes ownership of images
-    execute(*qemu_img_cmd, run_as_root=True)
+    uid_maps_str = ','.join([_id_map_to_config(id_map) for id_map in id_maps if
+                             isinstance(id_map,
+                                        vconfig.LibvirtConfigGuestUIDMap)])
+    gid_maps_str = ','.join([_id_map_to_config(id_map) for id_map in id_maps if
+                             isinstance(id_map,
+                                        vconfig.LibvirtConfigGuestGIDMap)])
+    execute('nova-idmapshift', '-i', '-u', uid_maps_str,
+            '-g', gid_maps_str, path, run_as_root=True)
 
 
-def delete_snapshot(disk_path, snapshot_name):
-    """Create a snapshot in a disk image
-
-    :param disk_path: Path to disk image
-    :param snapshot_name: Name of snapshot in disk image
-    """
-    qemu_img_cmd = ('qemu-img', 'snapshot', '-d', snapshot_name, disk_path)
-    # NOTE(vish): libvirt changes ownership of images
-    execute(*qemu_img_cmd, run_as_root=True)
-
-
-def extract_snapshot(disk_path, source_fmt, snapshot_name, out_path, dest_fmt):
-    """Extract a named snapshot from a disk image
+def extract_snapshot(disk_path, source_fmt, out_path, dest_fmt):
+    """Extract a snapshot from a disk image.
+    Note that nobody should write to the disk image during this operation.
 
     :param disk_path: Path to disk image
-    :param snapshot_name: Name of snapshot in disk image
     :param out_path: Desired path of extracted snapshot
     """
     # NOTE(markmc): ISO is just raw to qemu-img
@@ -540,13 +387,8 @@ def extract_snapshot(disk_path, source_fmt, snapshot_name, out_path, dest_fmt):
     qemu_img_cmd = ('qemu-img', 'convert', '-f', source_fmt, '-O', dest_fmt)
 
     # Conditionally enable compression of snapshots.
-    if CONF.libvirt_snapshot_compression and dest_fmt == "qcow2":
+    if CONF.libvirt.snapshot_compression and dest_fmt == "qcow2":
         qemu_img_cmd += ('-c',)
-
-    # When snapshot name is omitted we do a basic convert, which
-    # is used by live snapshots.
-    if snapshot_name is not None:
-        qemu_img_cmd += ('-s', snapshot_name)
 
     qemu_img_cmd += (disk_path, out_path)
     execute(*qemu_img_cmd)
@@ -583,6 +425,16 @@ def file_delete(path):
     return os.unlink(path)
 
 
+def path_exists(path):
+    """Returns if path exists
+
+    Note: The reason this is kept in a separate module is to easily
+          be able to provide a stub module that doesn't alter system
+          state at all (for unit tests)
+    """
+    return os.path.exists(path)
+
+
 def find_disk(virt_dom):
     """Find root device path for instance
 
@@ -590,7 +442,7 @@ def find_disk(virt_dom):
     """
     xml_desc = virt_dom.XMLDesc(0)
     domain = etree.fromstring(xml_desc)
-    if CONF.libvirt_type == 'lxc':
+    if CONF.libvirt.virt_type == 'lxc':
         source = domain.find('devices/filesystem/source')
         disk_path = source.get('dir')
         disk_path = disk_path[0:disk_path.rfind('rootfs')]
@@ -598,7 +450,7 @@ def find_disk(virt_dom):
     else:
         source = domain.find('devices/disk/source')
         disk_path = source.get('file') or source.get('dev')
-        if not disk_path and CONF.libvirt_images_type == 'rbd':
+        if not disk_path and CONF.libvirt.images_type == 'rbd':
             disk_path = source.get('name')
             if disk_path:
                 disk_path = 'rbd:' + disk_path
@@ -639,9 +491,10 @@ def get_fs_info(path):
             'used': used}
 
 
-def fetch_image(context, target, image_id, user_id, project_id):
+def fetch_image(context, target, image_id, user_id, project_id, max_size=0):
     """Grab image."""
-    images.fetch_to_raw(context, image_id, target, user_id, project_id)
+    images.fetch_to_raw(context, image_id, target, user_id, project_id,
+                        max_size=max_size)
 
 
 def get_instance_path(instance, forceold=False, relative=False):
@@ -657,12 +510,129 @@ def get_instance_path(instance, forceold=False, relative=False):
 
     :returns: a path to store information about that instance
     """
-    pre_grizzly_name = os.path.join(CONF.instances_path, instance['name'])
+    pre_grizzly_name = os.path.join(CONF.instances_path, instance.name)
     if forceold or os.path.exists(pre_grizzly_name):
         if relative:
-            return instance['name']
+            return instance.name
         return pre_grizzly_name
 
     if relative:
-        return instance['uuid']
-    return os.path.join(CONF.instances_path, instance['uuid'])
+        return instance.uuid
+    return os.path.join(CONF.instances_path, instance.uuid)
+
+
+def get_instance_path_at_destination(instance, migrate_data=None):
+    """Get the the instance path on destination node while live migration.
+
+    This method determines the directory name for instance storage on
+    destination node, while live migration.
+
+    :param instance: the instance we want a path for
+    :param migrate_data: if not None, it is a dict which holds data
+                         required for live migration without shared
+                         storage.
+
+    :returns: a path to store information about that instance
+    """
+    instance_relative_path = None
+    if migrate_data:
+        instance_relative_path = migrate_data.get('instance_relative_path')
+    # NOTE(mikal): this doesn't use libvirt_utils.get_instance_path
+    # because we are ensuring that the same instance directory name
+    # is used as was at the source
+    if instance_relative_path:
+        instance_dir = os.path.join(CONF.instances_path,
+                                    instance_relative_path)
+    else:
+        instance_dir = get_instance_path(instance)
+    return instance_dir
+
+
+def get_arch(image_meta):
+    """Determine the architecture of the guest (or host).
+
+    This method determines the CPU architecture that must be supported by
+    the hypervisor. It gets the (guest) arch info from image_meta properties,
+    and it will fallback to the nova-compute (host) arch if no architecture
+    info is provided in image_meta.
+
+    :param image_meta: the metadata associated with the instance image
+
+    :returns: guest (or host) architecture
+    """
+    if image_meta:
+        image_arch = image_meta.get('properties', {}).get('architecture')
+        if image_arch is not None:
+            return arch.canonicalize(image_arch)
+
+    return arch.from_host()
+
+
+def is_mounted(mount_path, source=None):
+    """Check if the given source is mounted at given destination point."""
+    try:
+        check_cmd = ['findmnt', '--target', mount_path]
+        if source:
+            check_cmd.extend(['--source', source])
+
+        utils.execute(*check_cmd)
+        return True
+    except processutils.ProcessExecutionError:
+        return False
+    except OSError as exc:
+        # info since it's not required to have this tool.
+        if exc.errno == errno.ENOENT:
+            LOG.info(_LI("findmnt tool is not installed"))
+        return False
+
+
+def is_valid_hostname(hostname):
+    return re.match(r"^[\w\-\.:]+$", hostname)
+
+
+def perform_unit_add_for_s390(device_number, target_wwn, lun):
+    """Write the LUN to the port's unit_add attribute."""
+    # NOTE If LUN scanning is turned off on systems following the s390,
+    # or s390x architecture LUNs need to be added to the configuration
+    # using the unit_add call. The unit_add call may fail if a target_wwn
+    # is not accessible for the HBA specified by the device_number.
+    # This can be an expected situation in multipath configurations.
+    # This method will thus only log a warning message in case the
+    # unit_add call fails.
+    LOG.debug("perform unit_add for s390: device_number=(%(device_num)s) "
+              "target_wwn=(%(target_wwn)s) target_lun=(%(target_lun)s)",
+                {'device_num': device_number,
+                 'target_wwn': target_wwn,
+                 'target_lun': lun})
+    zfcp_device_command = ("/sys/bus/ccw/drivers/zfcp/%s/%s/unit_add" %
+                           (device_number, target_wwn))
+    try:
+        linuxscsi.echo_scsi_command(zfcp_device_command, lun)
+    except processutils.ProcessExecutionError as exc:
+            LOG.warn(_LW("unit_add call failed; exit code (%(code)s), "
+                         "stderr (%(stderr)s)"),
+                         {'code': exc.exit_code, 'stderr': exc.stderr})
+
+
+def perform_unit_remove_for_s390(device_number, target_wwn, lun):
+    """Write the LUN to the port's unit_remove attribute."""
+    # If LUN scanning is turned off on systems following the s390, or s390x
+    # architecture LUNs need to be removed from the configuration using the
+    # unit_remove call. The unit_remove call may fail if the LUN is not
+    # part of the configuration anymore. This may be an expected situation.
+    # For exmple, if LUN scanning is turned on.
+    # This method will thus only log a warning message in case the
+    # unit_remove call fails.
+    LOG.debug("perform unit_remove for s390: device_number=(%(device_num)s) "
+              "target_wwn=(%(target_wwn)s) target_lun=(%(target_lun)s)",
+                {'device_num': device_number,
+                 'target_wwn': target_wwn,
+                 'target_lun': lun})
+    zfcp_device_command = ("/sys/bus/ccw/drivers/zfcp/%s/%s/unit_remove" %
+                           (device_number, target_wwn))
+    try:
+        linuxscsi.echo_scsi_command(zfcp_device_command, lun)
+    except processutils.ProcessExecutionError as exc:
+            LOG.warn(_LW("unit_remove call failed; exit code (%(code)s), "
+                         "stderr (%(stderr)s)"),
+                         {'code': exc.exit_code, 'stderr': exc.stderr})

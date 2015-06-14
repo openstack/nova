@@ -2,8 +2,6 @@
     "private": [
         {
             "addr": "192.168.0.3",
-            "mac_addr": "aa:bb:cc:dd:ee:ff",
-            "type": "fixed",
             "version": 4
         }
     ]

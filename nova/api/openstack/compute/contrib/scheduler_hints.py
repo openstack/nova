@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2011 OpenStack Foundation
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -18,7 +16,7 @@ import webob.exc
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.openstack.common.gettextutils import _
+from nova.i18n import _
 
 
 class SchedulerHintsController(wsgi.Controller):
@@ -37,7 +35,7 @@ class SchedulerHintsController(wsgi.Controller):
         # Fail if non-dict provided
         except ValueError:
             msg = _("Malformed scheduler_hints attribute")
-            raise webob.exc.HTTPBadRequest(reason=msg)
+            raise webob.exc.HTTPBadRequest(explanation=msg)
 
         return hints
 
@@ -57,7 +55,7 @@ class Scheduler_hints(extensions.ExtensionDescriptor):
     alias = "OS-SCH-HNT"
     namespace = ("http://docs.openstack.org/compute/ext/"
                  "scheduler-hints/api/v2")
-    updated = "2011-07-19T00:00:00+00:00"
+    updated = "2011-07-19T00:00:00Z"
 
     def get_controller_extensions(self):
         controller = SchedulerHintsController()

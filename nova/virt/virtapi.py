@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 #    Copyright 2012 IBM Corp.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -14,69 +12,17 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import contextlib
+
 
 class VirtAPI(object):
-    def instance_update(self, context, instance_uuid, updates):
-        """Perform an instance update operation on behalf of a virt driver
-        :param context: security context
-        :param instance_uuid: uuid of the instance to be updated
-        :param updates: dict of attribute=value pairs to change
-
-        Returns: orig_instance, new_instance
-        """
-        raise NotImplementedError()
-
-    def security_group_get_by_instance(self, context, instance):
-        """Get the security group for a specified instance
-        :param context: security context
-        :param instance: instance defining the security group we want
-        """
-        raise NotImplementedError()
-
-    def security_group_rule_get_by_security_group(self, context,
-                                                  security_group):
-        """Get the rules associated with a specified security group
-        :param context: security context
-        :param security_group: the security group for which the rules
-                               should be returned
-        """
-        raise NotImplementedError()
-
     def provider_fw_rule_get_all(self, context):
         """Get the provider firewall rules
         :param context: security context
         """
         raise NotImplementedError()
 
-    def agent_build_get_by_triple(self, context, hypervisor, os, architecture):
-        """Get information about the available agent builds for a given
-        hypervisor, os, and architecture
-        :param context: security context
-        :param hypervisor: agent hypervisor type
-        :param os: agent operating system type
-        :param architecture: agent architecture
-        """
-        raise NotImplementedError()
-
-    def instance_type_get(self, context, instance_type_id):
-        """Get information about an instance type
-        :param context: security context
-        :param instance_type_id: the id of the instance type in question
-        """
-        raise NotImplementedError()
-
-    def block_device_mapping_get_all_by_instance(self, context, instance,
-                                                 legacy=True):
-        """Get block device mappings for an instance
-        :param context: security context
-        :param instance: the instance we're getting bdms for
-        :param legacy: get bdm info in legacy format (or not)
-        """
-        raise NotImplementedError()
-
-    def block_device_mapping_update(self, context, bdm_id, bdm_values):
-        """Update the database for the passed block device mapping
-        :param context: security context
-        :param bdm: the block device mapping dict
-        """
+    @contextlib.contextmanager
+    def wait_for_instance_event(self, instance, event_names, deadline=300,
+                                error_callback=None):
         raise NotImplementedError()

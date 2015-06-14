@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2011 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -15,13 +13,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from lxml import etree
-from oslo.config import cfg
+from oslo_config import cfg
 
+from nova.api.openstack import api_version_request
 from nova.api.openstack.compute.views import versions as views_versions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
-from nova.openstack.common import timeutils
 
 
 CONF = cfg.CONF
@@ -29,16 +25,10 @@ CONF.import_opt('enabled', 'nova.api.openstack', group='osapi_v3')
 
 LINKS = {
    'v2.0': {
-       'pdf': 'http://docs.openstack.org/'
-               'api/openstack-compute/2/os-compute-devguide-2.pdf',
-       'wadl': 'http://docs.openstack.org/'
-               'api/openstack-compute/2/wadl/os-compute-2.wadl'
+       'html': 'http://docs.openstack.org/'
     },
-   'v3.0': {
-       'pdf': 'http://docs.openstack.org/'
-               'api/openstack-compute/3/os-compute-devguide-3.pdf',
-       'wadl': 'http://docs.openstack.org/'
-               'api/openstack-compute/3/wadl/os-compute-3.wadl'
+   'v2.1': {
+       'html': 'http://docs.openstack.org/'
     },
 }
 
@@ -46,215 +36,60 @@ LINKS = {
 VERSIONS = {
     "v2.0": {
         "id": "v2.0",
-        "status": "CURRENT",
+        "status": "SUPPORTED",
+        "version": "",
+        "min_version": "",
         "updated": "2011-01-21T11:33:21Z",
         "links": [
             {
                 "rel": "describedby",
-                "type": "application/pdf",
-                "href": LINKS['v2.0']['pdf'],
-            },
-            {
-                "rel": "describedby",
-                "type": "application/vnd.sun.wadl+xml",
-                "href": LINKS['v2.0']['wadl'],
+                "type": "text/html",
+                "href": LINKS['v2.0']['html'],
             },
         ],
         "media-types": [
-            {
-                "base": "application/xml",
-                "type": "application/vnd.openstack.compute+xml;version=2",
-            },
             {
                 "base": "application/json",
                 "type": "application/vnd.openstack.compute+json;version=2",
             }
         ],
     },
-    "v3.0": {
-        "id": "v3.0",
-        "status": "EXPERIMENTAL",
+    "v2.1": {
+        "id": "v2.1",
+        "status": "CURRENT",
+        "version": api_version_request._MAX_API_VERSION,
+        "min_version": api_version_request._MIN_API_VERSION,
         "updated": "2013-07-23T11:33:21Z",
         "links": [
             {
                 "rel": "describedby",
-                "type": "application/pdf",
-                "href": LINKS['v3.0']['pdf'],
-            },
-            {
-                "rel": "describedby",
-                "type": "application/vnd.sun.wadl+xml",
-                "href": LINKS['v3.0']['wadl'],
+                "type": "text/html",
+                "href": LINKS['v2.1']['html'],
             },
         ],
         "media-types": [
             {
-                "base": "application/xml",
-                "type": "application/vnd.openstack.compute+xml;version=3",
-            },
-            {
                 "base": "application/json",
-                "type": "application/vnd.openstack.compute+json;version=3",
+                "type": "application/vnd.openstack.compute+json;version=2.1",
             }
         ],
     }
 }
 
 
-class MediaTypesTemplateElement(xmlutil.TemplateElement):
-    def will_render(self, datum):
-        return 'media-types' in datum
-
-
-def make_version(elem):
-    elem.set('id')
-    elem.set('status')
-    elem.set('updated')
-
-    mts = MediaTypesTemplateElement('media-types')
-    elem.append(mts)
-
-    mt = xmlutil.SubTemplateElement(mts, 'media-type', selector='media-types')
-    mt.set('base')
-    mt.set('type')
-
-    xmlutil.make_links(elem, 'links')
-
-
-version_nsmap = {None: xmlutil.XMLNS_COMMON_V10, 'atom': xmlutil.XMLNS_ATOM}
-
-
-class VersionTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('version', selector='version')
-        make_version(root)
-        return xmlutil.MasterTemplate(root, 1, nsmap=version_nsmap)
-
-
-class VersionsTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('versions')
-        elem = xmlutil.SubTemplateElement(root, 'version', selector='versions')
-        make_version(elem)
-        return xmlutil.MasterTemplate(root, 1, nsmap=version_nsmap)
-
-
-class ChoicesTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('choices')
-        elem = xmlutil.SubTemplateElement(root, 'version', selector='choices')
-        make_version(elem)
-        return xmlutil.MasterTemplate(root, 1, nsmap=version_nsmap)
-
-
-class AtomSerializer(wsgi.XMLDictSerializer):
-
-    NSMAP = {None: xmlutil.XMLNS_ATOM}
-
-    def __init__(self, metadata=None, xmlns=None):
-        self.metadata = metadata or {}
-        if not xmlns:
-            self.xmlns = wsgi.XMLNS_ATOM
-        else:
-            self.xmlns = xmlns
-
-    def _get_most_recent_update(self, versions):
-        recent = None
-        for version in versions:
-            updated = timeutils.parse_strtime(version['updated'],
-                                              '%Y-%m-%dT%H:%M:%SZ')
-            if not recent:
-                recent = updated
-            elif updated > recent:
-                recent = updated
-
-        return recent.strftime('%Y-%m-%dT%H:%M:%SZ')
-
-    def _get_base_url(self, link_href):
-        # Make sure no trailing /
-        link_href = link_href.rstrip('/')
-        return link_href.rsplit('/', 1)[0] + '/'
-
-    def _create_feed(self, versions, feed_title, feed_id):
-        feed = etree.Element('feed', nsmap=self.NSMAP)
-        title = etree.SubElement(feed, 'title')
-        title.set('type', 'text')
-        title.text = feed_title
-
-        # Set this updated to the most recently updated version
-        recent = self._get_most_recent_update(versions)
-        etree.SubElement(feed, 'updated').text = recent
-
-        etree.SubElement(feed, 'id').text = feed_id
-
-        link = etree.SubElement(feed, 'link')
-        link.set('rel', 'self')
-        link.set('href', feed_id)
-
-        author = etree.SubElement(feed, 'author')
-        etree.SubElement(author, 'name').text = 'Rackspace'
-        etree.SubElement(author, 'uri').text = 'http://www.rackspace.com/'
-
-        for version in versions:
-            feed.append(self._create_version_entry(version))
-
-        return feed
-
-    def _create_version_entry(self, version):
-        entry = etree.Element('entry')
-        etree.SubElement(entry, 'id').text = version['links'][0]['href']
-        title = etree.SubElement(entry, 'title')
-        title.set('type', 'text')
-        title.text = 'Version %s' % version['id']
-        etree.SubElement(entry, 'updated').text = version['updated']
-
-        for link in version['links']:
-            link_elem = etree.SubElement(entry, 'link')
-            link_elem.set('rel', link['rel'])
-            link_elem.set('href', link['href'])
-            if 'type' in link:
-                link_elem.set('type', link['type'])
-
-        content = etree.SubElement(entry, 'content')
-        content.set('type', 'text')
-        content.text = 'Version %s %s (%s)' % (version['id'],
-                                               version['status'],
-                                               version['updated'])
-        return entry
-
-
-class VersionsAtomSerializer(AtomSerializer):
-    def default(self, data):
-        versions = data['versions']
-        feed_id = self._get_base_url(versions[0]['links'][0]['href'])
-        feed = self._create_feed(versions, 'Available API Versions', feed_id)
-        return self._to_xml(feed)
-
-
-class VersionAtomSerializer(AtomSerializer):
-    def default(self, data):
-        version = data['version']
-        feed_id = version['links'][0]['href']
-        feed = self._create_feed([version], 'About This Version', feed_id)
-        return self._to_xml(feed)
-
-
 class Versions(wsgi.Resource):
     def __init__(self):
         super(Versions, self).__init__(None)
         if not CONF.osapi_v3.enabled:
-            del VERSIONS["v3.0"]
+            del VERSIONS["v2.1"]
 
-    @wsgi.serializers(xml=VersionsTemplate,
-                      atom=VersionsAtomSerializer)
-    def index(self, req):
+    def index(self, req, body=None):
         """Return all versions."""
         builder = views_versions.get_view_builder(req)
         return builder.build_versions(VERSIONS)
 
-    @wsgi.serializers(xml=ChoicesTemplate)
     @wsgi.response(300)
-    def multi(self, req):
+    def multi(self, req, body=None):
         """Return multiple choices."""
         builder = views_versions.get_view_builder(req)
         return builder.build_choices(VERSIONS, req)
@@ -271,8 +106,6 @@ class Versions(wsgi.Resource):
 
 
 class VersionV2(object):
-    @wsgi.serializers(xml=VersionTemplate,
-                      atom=VersionAtomSerializer)
     def show(self, req):
         builder = views_versions.get_view_builder(req)
         return builder.build_version(VERSIONS['v2.0'])

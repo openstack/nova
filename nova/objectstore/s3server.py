@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-#
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
 # Copyright 2010 OpenStack Foundation
@@ -36,31 +34,37 @@ S3 client with this module::
 
 import bisect
 import datetime
-import hashlib
 import os
 import os.path
 import urllib
 
-from oslo.config import cfg
+from oslo_config import cfg
+from oslo_log import log as logging
 import routes
+import six
 import webob
 
+from nova.i18n import _LW
 from nova.openstack.common import fileutils
+from nova.openstack.common import versionutils
 from nova import paths
 from nova import utils
 from nova import wsgi
 
 
+LOG = logging.getLogger(__name__)
+
+
 s3_opts = [
     cfg.StrOpt('buckets_path',
                default=paths.state_path_def('buckets'),
-               help='path to s3 buckets'),
+               help='Path to S3 buckets'),
     cfg.StrOpt('s3_listen',
                default="0.0.0.0",
                help='IP address for S3 API to listen'),
     cfg.IntOpt('s3_listen_port',
                default=3333,
-               help='port for s3 api to listen'),
+               help='Port for S3 API to listen'),
 ]
 
 CONF = cfg.CONF
@@ -84,6 +88,13 @@ class S3Application(wsgi.Router):
     """
 
     def __init__(self, root_directory, bucket_depth=0, mapper=None):
+        versionutils.report_deprecated_feature(
+            LOG,
+            _LW('The in tree EC2 API is deprecated as of Kilo release and may '
+                'be removed in a future release. The stackforge ec2-api '
+                'project http://git.openstack.org/cgit/stackforge/ec2-api/ '
+                'is the target replacement for this functionality.')
+        )
         if mapper is None:
             mapper = routes.Mapper()
 
@@ -184,14 +195,14 @@ class BaseRequestHandler(object):
         if not parts:
             parts = []
 
-        if isinstance(value, basestring):
+        if isinstance(value, six.string_types):
             parts.append(utils.xhtml_escape(value))
         elif isinstance(value, int) or isinstance(value, long):
             parts.append(str(value))
         elif isinstance(value, datetime.datetime):
             parts.append(value.strftime("%Y-%m-%dT%H:%M:%S.000Z"))
         elif isinstance(value, dict):
-            for name, subvalue in value.iteritems():
+            for name, subvalue in six.iteritems(value):
                 if not isinstance(subvalue, list):
                     subvalue = [subvalue]
                 for subsubvalue in subvalue:
@@ -205,7 +216,7 @@ class BaseRequestHandler(object):
         if self.application.bucket_depth < 1:
             return os.path.abspath(os.path.join(
                 self.application.directory, bucket, object_name))
-        hash = hashlib.md5(object_name).hexdigest()
+        hash = utils.get_hash_str(object_name)
         path = os.path.abspath(os.path.join(
             self.application.directory, bucket))
         for i in range(self.application.bucket_depth):
@@ -310,6 +321,16 @@ class BucketHandler(BaseRequestHandler):
         self.set_status(204)
         self.finish()
 
+    def head(self, bucket_name):
+        path = os.path.abspath(os.path.join(self.application.directory,
+                                            bucket_name))
+        if (not path.startswith(self.application.directory) or
+                not os.path.isdir(path)):
+            self.set_404()
+            return
+        self.set_status(200)
+        self.finish()
+
 
 class ObjectHandler(BaseRequestHandler):
     def get(self, bucket, object_name):
@@ -347,7 +368,7 @@ class ObjectHandler(BaseRequestHandler):
         object_file.write(self.request.body)
         object_file.close()
         self.set_header('ETag',
-                        '"%s"' % hashlib.md5(self.request.body).hexdigest())
+                        '"%s"' % utils.get_hash_str(self.request.body))
         self.finish()
 
     def delete(self, bucket, object_name):

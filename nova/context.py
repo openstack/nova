@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2011 OpenStack Foundation
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
@@ -20,50 +18,100 @@
 """RequestContext: context for requests that persist through all of nova."""
 
 import copy
-import uuid
+
+from keystoneclient import auth
+from keystoneclient import service_catalog
+from oslo_context import context
+from oslo_log import log as logging
+from oslo_utils import timeutils
+import six
 
 from nova import exception
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import local
-from nova.openstack.common import log as logging
-from nova.openstack.common import timeutils
+from nova.i18n import _, _LW
 from nova import policy
 
 
 LOG = logging.getLogger(__name__)
 
 
-def generate_request_id():
-    return 'req-' + str(uuid.uuid4())
+class _ContextAuthPlugin(auth.BaseAuthPlugin):
+    """A keystoneclient auth plugin that uses the values from the Context.
+
+    Ideally we would use the plugin provided by auth_token middleware however
+    this plugin isn't serialized yet so we construct one from the serialized
+    auth data.
+    """
+
+    def __init__(self, auth_token, sc):
+        super(_ContextAuthPlugin, self).__init__()
+
+        self.auth_token = auth_token
+        sc = {'serviceCatalog': sc}
+        self.service_catalog = service_catalog.ServiceCatalogV2(sc)
+
+    def get_token(self, *args, **kwargs):
+        return self.auth_token
+
+    def get_endpoint(self, session, service_type=None, interface=None,
+                     region_name=None, service_name=None, **kwargs):
+        return self.service_catalog.url_for(service_type=service_type,
+                                            service_name=service_name,
+                                            endpoint_type=interface,
+                                            region_name=region_name)
 
 
-class RequestContext(object):
+class RequestContext(context.RequestContext):
     """Security context and request information.
 
     Represents the user taking a given action within the system.
 
     """
 
-    def __init__(self, user_id, project_id, is_admin=None, read_deleted="no",
+    def __init__(self, user_id=None, project_id=None,
+                 is_admin=None, read_deleted="no",
                  roles=None, remote_address=None, timestamp=None,
                  request_id=None, auth_token=None, overwrite=True,
                  quota_class=None, user_name=None, project_name=None,
-                 service_catalog=None, instance_lock_checked=False, **kwargs):
-        """
-        :param read_deleted: 'no' indicates deleted records are hidden, 'yes'
-            indicates deleted records are visible, 'only' indicates that
-            *only* deleted records are visible.
+                 service_catalog=None, instance_lock_checked=False,
+                 user_auth_plugin=None, **kwargs):
+        """:param read_deleted: 'no' indicates deleted records are hidden,
+                'yes' indicates deleted records are visible,
+                'only' indicates that *only* deleted records are visible.
 
-        :param overwrite: Set to False to ensure that the greenthread local
-            copy of the index is not overwritten.
+           :param overwrite: Set to False to ensure that the greenthread local
+                copy of the index is not overwritten.
 
-        :param kwargs: Extra arguments that might be present, but we ignore
-            because they possibly came in from older rpc messages.
+           :param user_auth_plugin: The auth plugin for the current request's
+                authentication data.
+
+           :param kwargs: Extra arguments that might be present, but we ignore
+                because they possibly came in from older rpc messages.
         """
+        user = kwargs.pop('user', None)
+        tenant = kwargs.pop('tenant', None)
+        super(RequestContext, self).__init__(
+            auth_token=auth_token,
+            user=user_id or user,
+            tenant=project_id or tenant,
+            domain=kwargs.pop('domain', None),
+            user_domain=kwargs.pop('user_domain', None),
+            project_domain=kwargs.pop('project_domain', None),
+            is_admin=is_admin,
+            read_only=kwargs.pop('read_only', False),
+            show_deleted=kwargs.pop('show_deleted', False),
+            request_id=request_id,
+            resource_uuid=kwargs.pop('resource_uuid', None),
+            overwrite=overwrite)
+        # oslo_context's RequestContext.to_dict() generates this field, we can
+        # safely ignore this as we don't use it.
+        kwargs.pop('user_identity', None)
         if kwargs:
-            LOG.warn(_('Arguments dropped when creating context: %s') %
-                    str(kwargs))
+            LOG.warning(_LW('Arguments dropped when creating context: %s') %
+                        str(kwargs))
 
+        # FIXME(dims): user_id and project_id duplicate information that is
+        # already present in the oslo_context's RequestContext. We need to
+        # get rid of them.
         self.user_id = user_id
         self.project_id = project_id
         self.roles = roles or []
@@ -71,18 +119,14 @@ class RequestContext(object):
         self.remote_address = remote_address
         if not timestamp:
             timestamp = timeutils.utcnow()
-        if isinstance(timestamp, basestring):
+        if isinstance(timestamp, six.string_types):
             timestamp = timeutils.parse_strtime(timestamp)
         self.timestamp = timestamp
-        if not request_id:
-            request_id = generate_request_id()
-        self.request_id = request_id
-        self.auth_token = auth_token
 
         if service_catalog:
             # Only include required parts of service_catalog
             self.service_catalog = [s for s in service_catalog
-                if s.get('type') in ('volume')]
+                if s.get('type') in ('volume', 'volumev2', 'key-manager')]
         else:
             # if list is empty or none
             self.service_catalog = []
@@ -96,10 +140,15 @@ class RequestContext(object):
         self.user_name = user_name
         self.project_name = project_name
         self.is_admin = is_admin
+        self.user_auth_plugin = user_auth_plugin
         if self.is_admin is None:
             self.is_admin = policy.check_is_admin(self)
-        if overwrite or not hasattr(local.store, 'context'):
-            self.update_store()
+
+    def get_auth_plugin(self):
+        if self.user_auth_plugin:
+            return self.user_auth_plugin
+        else:
+            return _ContextAuthPlugin(self.auth_token, self.service_catalog)
 
     def _get_read_deleted(self):
         return self._read_deleted
@@ -116,36 +165,37 @@ class RequestContext(object):
     read_deleted = property(_get_read_deleted, _set_read_deleted,
                             _del_read_deleted)
 
-    def update_store(self):
-        local.store.context = self
-
     def to_dict(self):
-        return {'user_id': self.user_id,
-                'project_id': self.project_id,
-                'is_admin': self.is_admin,
-                'read_deleted': self.read_deleted,
-                'roles': self.roles,
-                'remote_address': self.remote_address,
-                'timestamp': timeutils.strtime(self.timestamp),
-                'request_id': self.request_id,
-                'auth_token': self.auth_token,
-                'quota_class': self.quota_class,
-                'user_name': self.user_name,
-                'service_catalog': self.service_catalog,
-                'project_name': self.project_name,
-                'instance_lock_checked': self.instance_lock_checked,
-                'tenant': self.tenant,
-                'user': self.user}
+        values = super(RequestContext, self).to_dict()
+        # FIXME(dims): defensive hasattr() checks need to be
+        # removed once we figure out why we are seeing stack
+        # traces
+        values.update({
+            'user_id': getattr(self, 'user_id', None),
+            'project_id': getattr(self, 'project_id', None),
+            'is_admin': getattr(self, 'is_admin', None),
+            'read_deleted': getattr(self, 'read_deleted', 'no'),
+            'roles': getattr(self, 'roles', None),
+            'remote_address': getattr(self, 'remote_address', None),
+            'timestamp': timeutils.strtime(self.timestamp) if hasattr(
+                self, 'timestamp') else None,
+            'request_id': getattr(self, 'request_id', None),
+            'quota_class': getattr(self, 'quota_class', None),
+            'user_name': getattr(self, 'user_name', None),
+            'service_catalog': getattr(self, 'service_catalog', None),
+            'project_name': getattr(self, 'project_name', None),
+            'instance_lock_checked': getattr(self, 'instance_lock_checked',
+                                             False)
+        })
+        return values
 
     @classmethod
     def from_dict(cls, values):
-        values.pop('user', None)
-        values.pop('tenant', None)
         return cls(**values)
 
     def elevated(self, read_deleted=None, overwrite=False):
         """Return a version of this context with admin flag set."""
-        context = copy.copy(self)
+        context = copy.deepcopy(self)
         context.is_admin = True
 
         if 'admin' not in context.roles:
@@ -156,18 +206,8 @@ class RequestContext(object):
 
         return context
 
-    # NOTE(sirp): the openstack/common version of RequestContext uses
-    # tenant/user whereas the Nova version uses project_id/user_id. We need
-    # this shim in order to use context-aware code from openstack/common, like
-    # logging, until we make the switch to using openstack/common's version of
-    # RequestContext.
-    @property
-    def tenant(self):
-        return self.project_id
-
-    @property
-    def user(self):
-        return self.user_id
+    def __str__(self):
+        return "<Context %s>" % self.to_dict()
 
 
 def get_admin_context(read_deleted="no"):
@@ -196,35 +236,35 @@ def require_admin_context(ctxt):
 
 
 def require_context(ctxt):
-    """Raise exception.NotAuthorized() if context is not a user or an
+    """Raise exception.Forbidden() if context is not a user or an
     admin context.
     """
     if not ctxt.is_admin and not is_user_context(ctxt):
-        raise exception.NotAuthorized()
+        raise exception.Forbidden()
 
 
 def authorize_project_context(context, project_id):
     """Ensures a request has permission to access the given project."""
     if is_user_context(context):
         if not context.project_id:
-            raise exception.NotAuthorized()
+            raise exception.Forbidden()
         elif context.project_id != project_id:
-            raise exception.NotAuthorized()
+            raise exception.Forbidden()
 
 
 def authorize_user_context(context, user_id):
     """Ensures a request has permission to access the given user."""
     if is_user_context(context):
         if not context.user_id:
-            raise exception.NotAuthorized()
+            raise exception.Forbidden()
         elif context.user_id != user_id:
-            raise exception.NotAuthorized()
+            raise exception.Forbidden()
 
 
 def authorize_quota_class_context(context, class_name):
     """Ensures a request has permission to access the given quota class."""
     if is_user_context(context):
         if not context.quota_class:
-            raise exception.NotAuthorized()
+            raise exception.Forbidden()
         elif context.quota_class != class_name:
-            raise exception.NotAuthorized()
+            raise exception.Forbidden()

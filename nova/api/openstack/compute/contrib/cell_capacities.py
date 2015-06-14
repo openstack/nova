@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-#
 # Copyright 2013 Rackspace Hosting
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -24,4 +22,4 @@ class Cell_capacities(extensions.ExtensionDescriptor):
     alias = "os-cell-capacities"
     namespace = ("http://docs.openstack.org/compute/ext/"
                  "cell_capacities/api/v1.1")
-    updated = "2013-05-27T00:00:00+00:00"
+    updated = "2013-05-27T00:00:00Z"

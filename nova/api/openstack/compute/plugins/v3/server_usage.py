@@ -14,14 +14,13 @@
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 from nova import compute
-from nova.openstack.common import log as logging
 
-LOG = logging.getLogger(__name__)
 
 ALIAS = "os-server-usage"
-authorize = extensions.soft_extension_authorizer('compute', 'v3:' + ALIAS)
+authorize = extensions.os_compute_soft_authorizer(ALIAS)
+
+resp_topic = "OS-SRV-USG"
 
 
 class ServerUsageController(wsgi.Controller):
@@ -31,7 +30,7 @@ class ServerUsageController(wsgi.Controller):
 
     def _extend_server(self, server, instance):
         for k in ['launched_at', 'terminated_at']:
-            key = "%s:%s" % (ServerUsage.alias, k)
+            key = "%s:%s" % (resp_topic, k)
             # NOTE(danms): Historically, this timestamp has been generated
             # merely by grabbing str(datetime) of a TZ-naive object. The
             # only way we can keep that with instance objects is to strip
@@ -43,8 +42,6 @@ class ServerUsageController(wsgi.Controller):
     def show(self, req, resp_obj, id):
         context = req.environ['nova.context']
         if authorize(context):
-            # Attach our slave template to the response object
-            resp_obj.attach(xml=ServerUsageTemplate())
             server = resp_obj.obj['server']
             db_instance = req.get_db_instance(server['id'])
             # server['id'] is guaranteed to be in the cache due to
@@ -55,8 +52,6 @@ class ServerUsageController(wsgi.Controller):
     def detail(self, req, resp_obj):
         context = req.environ['nova.context']
         if authorize(context):
-            # Attach our slave template to the response object
-            resp_obj.attach(xml=ServerUsagesTemplate())
             servers = list(resp_obj.obj['servers'])
             for server in servers:
                 db_instance = req.get_db_instance(server['id'])
@@ -70,8 +65,6 @@ class ServerUsage(extensions.V3APIExtensionBase):
 
     name = "ServerUsage"
     alias = ALIAS
-    namespace = ("http://docs.openstack.org/compute/ext/"
-                 "os-server-usage/api/v3")
     version = 1
 
     def get_controller_extensions(self):
@@ -81,27 +74,3 @@ class ServerUsage(extensions.V3APIExtensionBase):
 
     def get_resources(self):
         return []
-
-
-def make_server(elem):
-    elem.set('{%s}launched_at' % ServerUsage.namespace,
-             '%s:launched_at' % ServerUsage.alias)
-    elem.set('{%s}terminated_at' % ServerUsage.namespace,
-             '%s:terminated_at' % ServerUsage.alias)
-
-
-class ServerUsageTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('server', selector='server')
-        make_server(root)
-        return xmlutil.SlaveTemplate(root, 1, nsmap={
-            ServerUsage.alias: ServerUsage.namespace})
-
-
-class ServerUsagesTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('servers')
-        elem = xmlutil.SubTemplateElement(root, 'server', selector='servers')
-        make_server(elem)
-        return xmlutil.SlaveTemplate(root, 1, nsmap={
-            ServerUsage.alias: ServerUsage.namespace})

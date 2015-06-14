@@ -1,5 +1,6 @@
 # Copyright (c) 2012 Rackspace Hosting
 # All Rights Reserved.
+# Copyright 2013 Red Hat, Inc.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -19,18 +20,19 @@ within a cell).
 
 This is different than communication between child and parent nova-cells
 services.  That communication is handled by the cells driver via the
-messging module.
+messaging module.
 """
 
-from oslo.config import cfg
+from oslo_config import cfg
+from oslo_log import log as logging
+import oslo_messaging as messaging
+from oslo_serialization import jsonutils
 
 from nova import exception
+from nova.i18n import _LE
+from nova import objects
 from nova.objects import base as objects_base
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import jsonutils
-from nova.openstack.common import log as logging
-from nova import rpcclient
-
+from nova import rpc
 
 LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
@@ -42,65 +44,100 @@ rpcapi_cap_opt = cfg.StrOpt('cells',
 CONF.register_opt(rpcapi_cap_opt, 'upgrade_levels')
 
 
-class CellsAPI(rpcclient.RpcProxy):
+class CellsAPI(object):
     '''Cells client-side RPC API
 
     API version history:
 
-        1.0 - Initial version.
-        1.1 - Adds get_cell_info_for_neighbors() and sync_instances()
-        1.2 - Adds service_get_all(), service_get_by_compute_host(),
-              and proxy_rpc_to_compute_manager()
-        1.3 - Adds task_log_get_all()
-        1.4 - Adds compute_node_get(), compute_node_get_all(), and
-              compute_node_stats()
-        1.5 - Adds actions_get(), action_get_by_request_id(), and
-              action_events_get()
-        1.6 - Adds consoleauth_delete_tokens() and validate_console_port()
+        * 1.0 - Initial version.
+        * 1.1 - Adds get_cell_info_for_neighbors() and sync_instances()
+        * 1.2 - Adds service_get_all(), service_get_by_compute_host(),
+                and proxy_rpc_to_compute_manager()
+        * 1.3 - Adds task_log_get_all()
+        * 1.4 - Adds compute_node_get(), compute_node_get_all(), and
+                compute_node_stats()
+        * 1.5 - Adds actions_get(), action_get_by_request_id(), and
+                action_events_get()
+        * 1.6 - Adds consoleauth_delete_tokens() and validate_console_port()
 
         ... Grizzly supports message version 1.6.  So, any changes to existing
         methods in 2.x after that point should be done such that they can
         handle the version_cap being set to 1.6.
 
-        1.7 - Adds service_update()
-        1.8 - Adds build_instances(), deprecates schedule_run_instance()
-        1.9 - Adds get_capacities()
-        1.10 - Adds bdm_update_or_create_at_top(), and bdm_destroy_at_top()
-        1.11 - Adds get_migrations()
-        1.12 - Adds instance_start() and instance_stop()
-        1.13 - Adds cell_create(), cell_update(), cell_delete(), and
-               cell_get()
-        1.14 - Adds reboot_instance()
-        1.15 - Adds suspend_instance() and resume_instance()
-        1.16 - Adds instance_update_from_api()
-        1.17 - Adds get_host_uptime()
-        1.18 - Adds terminate_instance() and soft_delete_instance()
-        1.19 - Adds pause_instance() and unpause_instance()
-        1.20 - Adds resize_instance() and live_migrate_instance()
-        1.21 - Adds revert_resize() and confirm_resize()
-        1.22 - Adds reset_network()
-        1.23 - Adds inject_network_info()
-        1.24 - Adds backup_instance() and snapshot_instance()
+        * 1.7 - Adds service_update()
+        * 1.8 - Adds build_instances(), deprecates schedule_run_instance()
+        * 1.9 - Adds get_capacities()
+        * 1.10 - Adds bdm_update_or_create_at_top(), and bdm_destroy_at_top()
+        * 1.11 - Adds get_migrations()
+        * 1.12 - Adds instance_start() and instance_stop()
+        * 1.13 - Adds cell_create(), cell_update(), cell_delete(), and
+                 cell_get()
+        * 1.14 - Adds reboot_instance()
+        * 1.15 - Adds suspend_instance() and resume_instance()
+        * 1.16 - Adds instance_update_from_api()
+        * 1.17 - Adds get_host_uptime()
+        * 1.18 - Adds terminate_instance() and soft_delete_instance()
+        * 1.19 - Adds pause_instance() and unpause_instance()
+        * 1.20 - Adds resize_instance() and live_migrate_instance()
+        * 1.21 - Adds revert_resize() and confirm_resize()
+        * 1.22 - Adds reset_network()
+        * 1.23 - Adds inject_network_info()
+        * 1.24 - Adds backup_instance() and snapshot_instance()
 
         ... Havana supports message version 1.24.  So, any changes to existing
         methods in 1.x after that point should be done such that they can
         handle the version_cap being set to 1.24.
+
+        * 1.25 - Adds rebuild_instance()
+        * 1.26 - Adds service_delete()
+        * 1.27 - Updates instance_delete_everywhere() for instance objects
+
+        ... Icehouse supports message version 1.27.  So, any changes to
+        existing methods in 1.x after that point should be done such that they
+        can handle the version_cap being set to 1.27.
+
+        * 1.28 - Make bdm_update_or_create_at_top and use bdm objects
+        * 1.29 - Adds set_admin_password()
+
+        ... Juno supports message version 1.29.  So, any changes to
+        existing methods in 1.x after that point should be done such that they
+        can handle the version_cap being set to 1.29.
+
+        * 1.30 - Make build_instances() use flavor object
+        * 1.31 - Add clean_shutdown to stop, resize, rescue, and shelve
+        * 1.32 - Send objects for instances in build_instances()
+        * 1.33 - Add clean_shutdown to resize_instance()
+        * 1.34 - build_instances uses BlockDeviceMapping objects, drops
+                 legacy_bdm argument
+
+        ... Kilo supports message version 1.34.  So, any changes to
+        existing methods in 1.x after that point should be done such that they
+        can handle the version_cap being set to 1.34.
+
+        * 1.35 - Make instance_update_at_top, instance_destroy_at_top
+                 and instance_info_cache_update_at_top use instance objects
     '''
-    BASE_RPC_API_VERSION = '1.0'
 
     VERSION_ALIASES = {
         'grizzly': '1.6',
         'havana': '1.24',
+        'icehouse': '1.27',
+        'juno': '1.29',
+        'kilo': '1.34',
     }
 
     def __init__(self):
+        super(CellsAPI, self).__init__()
+        target = messaging.Target(topic=CONF.cells.topic, version='1.0')
         version_cap = self.VERSION_ALIASES.get(CONF.upgrade_levels.cells,
                                                CONF.upgrade_levels.cells)
-        super(CellsAPI, self).__init__(topic=CONF.cells.topic,
-                default_version=self.BASE_RPC_API_VERSION,
-                serializer=objects_base.NovaObjectSerializer(),
-                version_cap=version_cap)
-        self.client = self.get_client()
+        # NOTE(sbauza): Yes, this is ugly but cells_utils is calling cells.db
+        # which itself calls cells.rpcapi... You meant import cycling ? Gah.
+        from nova.cells import utils as cells_utils
+        serializer = cells_utils.ProxyObjectSerializer()
+        self.client = rpc.get_client(target,
+                                     version_cap=version_cap,
+                                     serializer=serializer)
 
     def cast_compute_api_method(self, ctxt, cell_name, method,
             *args, **kwargs):
@@ -124,21 +161,33 @@ class CellsAPI(rpcclient.RpcProxy):
                                 method_info=method_info,
                                 call=True)
 
-    # NOTE(alaski): Deprecated and should be removed later.
-    def schedule_run_instance(self, ctxt, **kwargs):
-        """Schedule a new instance for creation."""
-        self.client.cast(ctxt, 'schedule_run_instance',
-                         host_sched_kwargs=kwargs)
-
     def build_instances(self, ctxt, **kwargs):
         """Build instances."""
         build_inst_kwargs = kwargs
         instances = build_inst_kwargs['instances']
-        instances_p = [jsonutils.to_primitive(inst) for inst in instances]
-        build_inst_kwargs['instances'] = instances_p
         build_inst_kwargs['image'] = jsonutils.to_primitive(
                 build_inst_kwargs['image'])
-        cctxt = self.client.prepare(version='1.8')
+
+        version = '1.34'
+        if self.client.can_send_version('1.34'):
+            build_inst_kwargs.pop('legacy_bdm', None)
+        else:
+            bdm_p = objects_base.obj_to_primitive(
+                    build_inst_kwargs['block_device_mapping'])
+            build_inst_kwargs['block_device_mapping'] = bdm_p
+            version = '1.32'
+        if not self.client.can_send_version('1.32'):
+            instances_p = [jsonutils.to_primitive(inst) for inst in instances]
+            build_inst_kwargs['instances'] = instances_p
+            version = '1.30'
+        if not self.client.can_send_version('1.30'):
+            if 'filter_properties' in build_inst_kwargs:
+                filter_properties = build_inst_kwargs['filter_properties']
+                flavor = filter_properties['instance_type']
+                flavor_p = objects_base.obj_to_primitive(flavor)
+                filter_properties['instance_type'] = flavor_p
+            version = '1.8'
+        cctxt = self.client.prepare(version=version)
         cctxt.cast(ctxt, 'build_instances',
                    build_inst_kwargs=build_inst_kwargs)
 
@@ -146,16 +195,23 @@ class CellsAPI(rpcclient.RpcProxy):
         """Update instance at API level."""
         if not CONF.cells.enable:
             return
-        # Make sure we have a dict, not a SQLAlchemy model
-        instance_p = jsonutils.to_primitive(instance)
-        self.client.cast(ctxt, 'instance_update_at_top', instance=instance_p)
+        version = '1.35'
+        if not self.client.can_send_version('1.35'):
+            instance = objects_base.obj_to_primitive(instance)
+            version = '1.34'
+        cctxt = self.client.prepare(version=version)
+        cctxt.cast(ctxt, 'instance_update_at_top', instance=instance)
 
     def instance_destroy_at_top(self, ctxt, instance):
         """Destroy instance at API level."""
         if not CONF.cells.enable:
             return
-        instance_p = jsonutils.to_primitive(instance)
-        self.client.cast(ctxt, 'instance_destroy_at_top', instance=instance_p)
+        version = '1.35'
+        if not self.client.can_send_version('1.35'):
+            instance = objects_base.obj_to_primitive(instance)
+            version = '1.34'
+        cctxt = self.client.prepare(version=version)
+        cctxt.cast(ctxt, 'instance_destroy_at_top', instance=instance)
 
     def instance_delete_everywhere(self, ctxt, instance, delete_type):
         """Delete instance everywhere.  delete_type may be 'soft'
@@ -164,9 +220,14 @@ class CellsAPI(rpcclient.RpcProxy):
         """
         if not CONF.cells.enable:
             return
-        instance_p = jsonutils.to_primitive(instance)
-        self.client.cast(ctxt, 'instance_delete_everywhere',
-                         instance=instance_p, delete_type=delete_type)
+        if self.client.can_send_version('1.27'):
+            version = '1.27'
+        else:
+            version = '1.0'
+            instance = jsonutils.to_primitive(instance)
+        cctxt = self.client.prepare(version=version)
+        cctxt.cast(ctxt, 'instance_delete_everywhere', instance=instance,
+                delete_type=delete_type)
 
     def instance_fault_create_at_top(self, ctxt, instance_fault):
         """Create an instance fault at the top."""
@@ -196,10 +257,14 @@ class CellsAPI(rpcclient.RpcProxy):
         """Broadcast up that an instance's info_cache has changed."""
         if not CONF.cells.enable:
             return
-        iicache = jsonutils.to_primitive(instance_info_cache)
-        instance = {'uuid': iicache['instance_uuid'],
-                    'info_cache': iicache}
-        self.client.cast(ctxt, 'instance_update_at_top', instance=instance)
+        version = '1.35'
+        instance = objects.Instance(uuid=instance_info_cache.instance_uuid,
+                                    info_cache=instance_info_cache)
+        if not self.client.can_send_version('1.35'):
+            instance = objects_base.obj_to_primitive(instance)
+            version = '1.34'
+        cctxt = self.client.prepare(version=version)
+        cctxt.cast(ctxt, 'instance_update_at_top', instance=instance)
 
     def get_cell_info_for_neighbors(self, ctxt):
         """Get information about our neighbor cells from the manager."""
@@ -240,8 +305,7 @@ class CellsAPI(rpcclient.RpcProxy):
         return cctxt.call(context, 'get_host_uptime', host_name=host_name)
 
     def service_update(self, ctxt, host_name, binary, params_to_update):
-        """
-        Used to enable/disable a service. For compute services, setting to
+        """Used to enable/disable a service. For compute services, setting to
         disabled stops new builds arriving on that host.
 
         :param host_name: the name of the host machine that the service is
@@ -254,6 +318,12 @@ class CellsAPI(rpcclient.RpcProxy):
                           host_name=host_name,
                           binary=binary,
                           params_to_update=params_to_update)
+
+    def service_delete(self, ctxt, cell_service_id):
+        """Deletes the specified service."""
+        cctxt = self.client.prepare(version='1.26')
+        cctxt.call(ctxt, 'service_delete',
+                   cell_service_id=cell_service_id)
 
     def proxy_rpc_to_manager(self, ctxt, rpc_message, topic, call=False,
                              timeout=None):
@@ -347,12 +417,19 @@ class CellsAPI(rpcclient.RpcProxy):
         """
         if not CONF.cells.enable:
             return
-        cctxt = self.client.prepare(version='1.10')
+
+        if self.client.can_send_version('1.28'):
+            version = '1.28'
+        else:
+            version = '1.10'
+            bdm = objects_base.obj_to_primitive(bdm)
+        cctxt = self.client.prepare(version=version)
+
         try:
             cctxt.cast(ctxt, 'bdm_update_or_create_at_top',
                        bdm=bdm, create=create)
         except Exception:
-            LOG.exception(_("Failed to notify cells of BDM update/create."))
+            LOG.exception(_LE("Failed to notify cells of BDM update/create."))
 
     def bdm_destroy_at_top(self, ctxt, instance_uuid, device_name=None,
                            volume_id=None):
@@ -368,7 +445,7 @@ class CellsAPI(rpcclient.RpcProxy):
                        device_name=device_name,
                        volume_id=volume_id)
         except Exception:
-            LOG.exception(_("Failed to notify cells of BDM destroy."))
+            LOG.exception(_LE("Failed to notify cells of BDM destroy."))
 
     def get_migrations(self, ctxt, filters):
         """Get all migrations applying the filters."""
@@ -400,17 +477,23 @@ class CellsAPI(rpcclient.RpcProxy):
         cctxt = self.client.prepare(version='1.12')
         cctxt.cast(ctxt, 'start_instance', instance=instance)
 
-    def stop_instance(self, ctxt, instance, do_cast=True):
+    def stop_instance(self, ctxt, instance, do_cast=True, clean_shutdown=True):
         """Stop an instance in its cell.
 
         This method takes a new-world instance object.
         """
         if not CONF.cells.enable:
             return
-        cctxt = self.client.prepare(version='1.12')
+        msg_args = {'instance': instance,
+                    'do_cast': do_cast}
+        if self.client.can_send_version('1.31'):
+            version = '1.31'
+            msg_args['clean_shutdown'] = clean_shutdown
+        else:
+            version = '1.12'
+        cctxt = self.client.prepare(version=version)
         method = do_cast and cctxt.cast or cctxt.call
-        return method(ctxt, 'stop_instance',
-                      instance=instance, do_cast=do_cast)
+        return method(ctxt, 'stop_instance', **msg_args)
 
     def cell_create(self, ctxt, values):
         cctxt = self.client.prepare(version='1.13')
@@ -502,14 +585,22 @@ class CellsAPI(rpcclient.RpcProxy):
         cctxt.cast(ctxt, 'soft_delete_instance', instance=instance)
 
     def resize_instance(self, ctxt, instance, extra_instance_updates,
-                       scheduler_hint, flavor, reservations):
+                       scheduler_hint, flavor, reservations,
+                       clean_shutdown=True):
         if not CONF.cells.enable:
             return
         flavor_p = jsonutils.to_primitive(flavor)
-        cctxt = self.client.prepare(version='1.20')
-        cctxt.cast(ctxt, 'resize_instance',
-                   instance=instance, flavor=flavor_p,
-                   extra_instance_updates=extra_instance_updates)
+        version = '1.33'
+        msg_args = {'instance': instance,
+                    'flavor': flavor_p,
+                    'extra_instance_updates': extra_instance_updates,
+                    'clean_shutdown': clean_shutdown}
+        if not self.client.can_send_version(version):
+            del msg_args['clean_shutdown']
+            version = '1.20'
+
+        cctxt = self.client.prepare(version=version)
+        cctxt.cast(ctxt, 'resize_instance', **msg_args)
 
     def live_migrate_instance(self, ctxt, instance, host_name,
                               block_migration, disk_over_commit):
@@ -571,3 +662,24 @@ class CellsAPI(rpcclient.RpcProxy):
                    image_id=image_id,
                    backup_type=backup_type,
                    rotation=rotation)
+
+    def rebuild_instance(self, ctxt, instance, new_pass, injected_files,
+                         image_ref, orig_image_ref, orig_sys_metadata, bdms,
+                         recreate=False, on_shared_storage=False, host=None,
+                         preserve_ephemeral=False, kwargs=None):
+        if not CONF.cells.enable:
+            return
+
+        cctxt = self.client.prepare(version='1.25')
+        cctxt.cast(ctxt, 'rebuild_instance',
+                   instance=instance, image_href=image_ref,
+                   admin_password=new_pass, files_to_inject=injected_files,
+                   preserve_ephemeral=preserve_ephemeral, kwargs=kwargs)
+
+    def set_admin_password(self, ctxt, instance, new_pass):
+        if not CONF.cells.enable:
+            return
+
+        cctxt = self.client.prepare(version='1.29')
+        cctxt.cast(ctxt, 'set_admin_password', instance=instance,
+                new_pass=new_pass)

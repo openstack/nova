@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2013 Cloudbase Solutions Srl
 # All Rights Reserved.
 #
@@ -15,14 +13,17 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo.config import cfg
+from oslo_config import cfg
+from oslo_log import log as logging
 
-from nova.openstack.common import log as logging
+from nova.i18n import _
 from nova.virt.hyperv import hostutils
 from nova.virt.hyperv import livemigrationutils
 from nova.virt.hyperv import networkutils
 from nova.virt.hyperv import networkutilsv2
 from nova.virt.hyperv import pathutils
+from nova.virt.hyperv import rdpconsoleutils
+from nova.virt.hyperv import rdpconsoleutilsv2
 from nova.virt.hyperv import vhdutils
 from nova.virt.hyperv import vhdutilsv2
 from nova.virt.hyperv import vmutils
@@ -57,20 +58,30 @@ def _get_class(v1_class, v2_class, force_v1_flag):
     return cls
 
 
+def _get_virt_utils_class(v1_class, v2_class):
+    # The "root/virtualization" WMI namespace is no longer supported on
+    # Windows Server / Hyper-V Server 2012 R2 / Windows 8.1
+    # (kernel version 6.3) or above.
+    if (CONF.hyperv.force_hyperv_utils_v1 and
+            get_hostutils().check_min_windows_version(6, 3)):
+        raise vmutils.HyperVException(
+            _('The "force_hyperv_utils_v1" option cannot be set to "True" '
+              'on Windows Server / Hyper-V Server 2012 R2 or above as the WMI '
+              '"root/virtualization" namespace is no longer supported.'))
+    return _get_class(v1_class, v2_class, CONF.hyperv.force_hyperv_utils_v1)
+
+
 def get_vmutils(host='.'):
-    return _get_class(vmutils.VMUtils, vmutilsv2.VMUtilsV2,
-                      CONF.hyperv.force_hyperv_utils_v1)(host)
+    return _get_virt_utils_class(vmutils.VMUtils, vmutilsv2.VMUtilsV2)(host)
 
 
 def get_vhdutils():
-    return _get_class(vhdutils.VHDUtils, vhdutilsv2.VHDUtilsV2,
-                      CONF.hyperv.force_hyperv_utils_v1)()
+    return _get_virt_utils_class(vhdutils.VHDUtils, vhdutilsv2.VHDUtilsV2)()
 
 
 def get_networkutils():
-    return _get_class(networkutils.NetworkUtils,
-                      networkutilsv2.NetworkUtilsV2,
-                      CONF.hyperv.force_hyperv_utils_v1)()
+    return _get_virt_utils_class(networkutils.NetworkUtils,
+                           networkutilsv2.NetworkUtilsV2)()
 
 
 def get_hostutils():
@@ -88,3 +99,8 @@ def get_volumeutils():
 
 def get_livemigrationutils():
     return livemigrationutils.LiveMigrationUtils()
+
+
+def get_rdpconsoleutils():
+    return _get_virt_utils_class(rdpconsoleutils.RDPConsoleUtils,
+                      rdpconsoleutilsv2.RDPConsoleUtilsV2)()

@@ -1,13 +1,11 @@
 {
     "server": {
-        "access_ip_v4": "",
-        "access_ip_v6": "",
         "addresses": {
             "private": [
                 {
                     "addr": "192.168.0.3",
-                    "mac_addr": "aa:bb:cc:dd:ee:ff",
-                    "type": "fixed",
+                    "OS-EXT-IPS-MAC:mac_addr": "aa:bb:cc:dd:ee:ff",
+                    "OS-EXT-IPS:type": "fixed",
                     "version": 4
                 }
             ]
@@ -22,13 +20,13 @@
                 }
             ]
         },
-        "host_id": "b75d6736650f9b272223ceb48f4cde001de1856e381613a922117ab7",
+        "hostId": "b75d6736650f9b272223ceb48f4cde001de1856e381613a922117ab7",
         "id": "f22e4521-d03a-4e9f-9fd3-016b9e227219",
         "image": {
             "id": "70a599e0-31e7-49b7-b260-868f441e862b",
             "links": [
                 {
-                    "href": "http://glance.openstack.example.com/images/70a599e0-31e7-49b7-b260-868f441e862b",
+                    "href": "http://openstack.example.com/images/70a599e0-31e7-49b7-b260-868f441e862b",
                     "rel": "bookmark"
                 }
             ]
@@ -48,7 +46,7 @@
             "My Server Name": "Apache1"
         },
         "name": "new-server-test",
-        "os-extended-availability-zone:availability_zone": "nova",
+        "OS-EXT-AZ:availability_zone": "nova",
         "progress": 0,
         "status": "ACTIVE",
         "tenant_id": "openstack",

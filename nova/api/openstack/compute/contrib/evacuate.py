@@ -13,75 +13,90 @@
 #   under the License.
 
 
+from oslo_utils import strutils
 from webob import exc
 
 from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import compute
+from nova import context as nova_context
 from nova import exception
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import log as logging
-from nova.openstack.common import strutils
+from nova.i18n import _
 from nova import utils
 
-LOG = logging.getLogger(__name__)
 authorize = extensions.extension_authorizer('compute', 'evacuate')
 
 
 class Controller(wsgi.Controller):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, ext_mgr, *args, **kwargs):
         super(Controller, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
         self.host_api = compute.HostAPI()
+        self.ext_mgr = ext_mgr
 
     @wsgi.action('evacuate')
     def _evacuate(self, req, id, body):
-        """
-        Permit admins to evacuate a server from a failed host
+        """Permit admins to evacuate a server from a failed host
         to a new one.
+        If host is empty, the scheduler will select one.
         """
         context = req.environ["nova.context"]
         authorize(context)
 
-        try:
-            if len(body) != 1:
-                raise exc.HTTPBadRequest(_("Malformed request body"))
+        # NOTE(alex_xu): back-compatible with db layer hard-code admin
+        # permission checks. This has to be left only for API v2.0 because
+        # this version has to be stable even if it means that only admins
+        # can call this method while the policy could be changed.
+        nova_context.require_admin_context(context)
 
-            evacuate_body = body["evacuate"]
-            host = evacuate_body["host"]
-            on_shared_storage = strutils.bool_from_string(
-                                            evacuate_body["onSharedStorage"])
+        if not self.is_valid_body(body, "evacuate"):
+            raise exc.HTTPBadRequest(_("Malformed request body"))
+        evacuate_body = body["evacuate"]
 
-            password = None
-            if 'adminPass' in evacuate_body:
-                # check that if requested to evacuate server on shared storage
-                # password not specified
-                if on_shared_storage:
-                    msg = _("admin password can't be changed on existing disk")
-                    raise exc.HTTPBadRequest(explanation=msg)
+        host = evacuate_body.get("host")
 
-                password = evacuate_body['adminPass']
-            elif not on_shared_storage:
-                password = utils.generate_password()
-
-        except (TypeError, KeyError):
-            msg = _("host and onSharedStorage must be specified.")
+        if (not host and
+                not self.ext_mgr.is_loaded('os-extended-evacuate-find-host')):
+            msg = _("host must be specified.")
             raise exc.HTTPBadRequest(explanation=msg)
 
         try:
-            self.host_api.service_get_by_compute_host(context, host)
-        except exception.NotFound:
-            msg = _("Compute host %s not found.") % host
-            raise exc.HTTPNotFound(explanation=msg)
+            on_shared_storage = strutils.bool_from_string(
+                                            evacuate_body["onSharedStorage"])
+        except (TypeError, KeyError):
+            msg = _("onSharedStorage must be specified.")
+            raise exc.HTTPBadRequest(explanation=msg)
 
+        password = None
+        if 'adminPass' in evacuate_body:
+            # check that if requested to evacuate server on shared storage
+            # password not specified
+            if on_shared_storage:
+                msg = _("admin password can't be changed on existing disk")
+                raise exc.HTTPBadRequest(explanation=msg)
+
+            password = evacuate_body['adminPass']
+        elif not on_shared_storage:
+            password = utils.generate_password()
+
+        if host is not None:
+            try:
+                self.host_api.service_get_by_compute_host(context, host)
+            except exception.NotFound:
+                msg = _("Compute host %s not found.") % host
+                raise exc.HTTPNotFound(explanation=msg)
+
+        instance = common.get_instance(self.compute_api, context, id)
         try:
-            instance = self.compute_api.get(context, id)
+            if instance.host == host:
+                msg = _("The target host can't be the same one.")
+                raise exc.HTTPBadRequest(explanation=msg)
             self.compute_api.evacuate(context, instance, host,
                                       on_shared_storage, password)
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
-                    'evacuate')
+                    'evacuate', id)
         except exception.InstanceNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
         except exception.ComputeServiceInUse as e:
@@ -97,9 +112,9 @@ class Evacuate(extensions.ExtensionDescriptor):
     name = "Evacuate"
     alias = "os-evacuate"
     namespace = "http://docs.openstack.org/compute/ext/evacuate/api/v2"
-    updated = "2013-01-06T00:00:00+00:00"
+    updated = "2013-01-06T00:00:00Z"
 
     def get_controller_extensions(self):
-        controller = Controller()
+        controller = Controller(self.ext_mgr)
         extension = extensions.ControllerExtension(self, 'servers', controller)
         return [extension]

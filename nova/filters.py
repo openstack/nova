@@ -17,9 +17,10 @@
 Filter support
 """
 
+from oslo_log import log as logging
+
+from nova.i18n import _LI
 from nova import loadables
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
 
@@ -64,26 +65,21 @@ class BaseFilterHandler(loadables.BaseLoader):
     This class should be subclassed where one needs to use filters.
     """
 
-    def get_filtered_objects(self, filter_classes, objs,
-            filter_properties, index=0):
+    def get_filtered_objects(self, filters, objs, filter_properties, index=0):
         list_objs = list(objs)
-        LOG.debug(_("Starting with %d host(s)"), len(list_objs))
-        for filter_cls in filter_classes:
-            cls_name = filter_cls.__name__
-            filter = filter_cls()
-
-            if filter.run_filter_for_index(index):
-                objs = filter.filter_all(list_objs,
-                                               filter_properties)
+        LOG.debug("Starting with %d host(s)", len(list_objs))
+        for filter_ in filters:
+            if filter_.run_filter_for_index(index):
+                cls_name = filter_.__class__.__name__
+                objs = filter_.filter_all(list_objs, filter_properties)
                 if objs is None:
-                    LOG.debug(_("Filter %(cls_name)s says to stop filtering"),
-                          {'cls_name': cls_name})
+                    LOG.debug("Filter %s says to stop filtering", cls_name)
                     return
                 list_objs = list(objs)
                 if not list_objs:
-                    LOG.info(_("Filter %s returned 0 hosts"), cls_name)
+                    LOG.info(_LI("Filter %s returned 0 hosts"), cls_name)
                     break
-                LOG.debug(_("Filter %(cls_name)s returned "
-                            "%(obj_len)d host(s)"),
+                LOG.debug("Filter %(cls_name)s returned "
+                          "%(obj_len)d host(s)",
                           {'cls_name': cls_name, 'obj_len': len(list_objs)})
         return list_objs

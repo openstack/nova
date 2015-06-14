@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright (c) 2012 OpenStack Foundation
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -17,25 +15,11 @@
 import webob.exc
 
 from nova.api.openstack import extensions
-from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 import nova.cert.rpcapi
-from nova.openstack.common.gettextutils import _
+from nova import exception
+from nova.i18n import _
 
 authorize = extensions.extension_authorizer('compute', 'certificates')
-
-
-def make_certificate(elem):
-    elem.set('data')
-    elem.set('private_key')
-
-
-class CertificateTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('certificate',
-                                       selector='certificate')
-        make_certificate(root)
-        return xmlutil.MasterTemplate(root, 1)
 
 
 def _translate_certificate_view(certificate, private_key=None):
@@ -52,7 +36,6 @@ class CertificatesController(object):
         self.cert_rpcapi = nova.cert.rpcapi.CertAPI()
         super(CertificatesController, self).__init__()
 
-    @wsgi.serializers(xml=CertificateTemplate)
     def show(self, req, id):
         """Return certificate information."""
         context = req.environ['nova.context']
@@ -60,18 +43,19 @@ class CertificatesController(object):
         if id != 'root':
             msg = _("Only root certificate can be retrieved.")
             raise webob.exc.HTTPNotImplemented(explanation=msg)
-        cert = self.cert_rpcapi.fetch_ca(context,
-                project_id=context.project_id)
+        try:
+            cert = self.cert_rpcapi.fetch_ca(context,
+                    project_id=context.project_id)
+        except exception.CryptoCAFileNotFound as e:
+            raise webob.exc.HTTPNotFound(explanation=e.format_message())
         return {'certificate': _translate_certificate_view(cert)}
 
-    @wsgi.serializers(xml=CertificateTemplate)
     def create(self, req, body=None):
         """Create a certificate."""
         context = req.environ['nova.context']
         authorize(context)
         pk, cert = self.cert_rpcapi.generate_x509_cert(context,
                 user_id=context.user_id, project_id=context.project_id)
-        context = req.environ['nova.context']
         return {'certificate': _translate_certificate_view(cert, pk)}
 
 
@@ -82,7 +66,7 @@ class Certificates(extensions.ExtensionDescriptor):
     alias = "os-certificates"
     namespace = ("http://docs.openstack.org/compute/ext/"
                  "certificates/api/v1.1")
-    updated = "2012-01-19T00:00:00+00:00"
+    updated = "2012-01-19T00:00:00Z"
 
     def get_resources(self):
         resources = []

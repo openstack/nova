@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
@@ -20,12 +18,15 @@
 
 import sys
 
-from oslo.config import cfg
+from oslo_config import cfg
+from oslo_log import log as logging
 
 from nova import config
-from nova.openstack.common import log as logging
+from nova import objects
+from nova.openstack.common.report import guru_meditation_report as gmr
 from nova import service
 from nova import utils
+from nova import version
 
 CONF = cfg.CONF
 CONF.import_opt('scheduler_topic', 'nova.scheduler.rpcapi')
@@ -33,8 +34,12 @@ CONF.import_opt('scheduler_topic', 'nova.scheduler.rpcapi')
 
 def main():
     config.parse_args(sys.argv)
-    logging.setup("nova")
+    logging.setup(CONF, "nova")
     utils.monkey_patch()
+    objects.register_all()
+
+    gmr.TextGuruMeditation.setup_autorun(version)
+
     server = service.Service.create(binary='nova-scheduler',
                                     topic=CONF.scheduler_topic)
     service.serve(server)

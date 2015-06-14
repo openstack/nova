@@ -1,4 +1,0 @@
-<?xml version='1.0' encoding='UTF-8'?>
-<virtual_interfaces xmlns="http://docs.openstack.org/compute/api/v1.1">
-  <virtual_interface id="94edf7aa-565a-469a-8f45-656b4acf8229" mac_address="fa:16:3e:7d:31:9a"/>
-</virtual_interfaces>

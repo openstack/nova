@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
@@ -28,15 +26,16 @@ import tempfile
 import boto.s3.connection
 import eventlet
 from lxml import etree
-from oslo.config import cfg
+from oslo_concurrency import processutils
+from oslo_config import cfg
+from oslo_log import log as logging
 
 from nova.api.ec2 import ec2utils
 import nova.cert.rpcapi
+from nova.compute import arch
 from nova import exception
+from nova.i18n import _, _LE, _LI
 from nova.image import glance
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import log as logging
-from nova.openstack.common import processutils
 from nova import utils
 
 
@@ -45,27 +44,27 @@ LOG = logging.getLogger(__name__)
 s3_opts = [
     cfg.StrOpt('image_decryption_dir',
                default='/tmp',
-               help='parent dir for tempdir used for image decryption'),
+               help='Parent directory for tempdir used for image decryption'),
     cfg.StrOpt('s3_host',
                default='$my_ip',
-               help='hostname or ip for OpenStack to use when accessing '
-                    'the s3 api'),
+               help='Hostname or IP for OpenStack to use when accessing '
+                    'the S3 api'),
     cfg.IntOpt('s3_port',
                default=3333,
-               help='port used when accessing the s3 api'),
+               help='Port used when accessing the S3 api'),
     cfg.StrOpt('s3_access_key',
                default='notchecked',
-               help='access key to use for s3 server for images'),
+               help='Access key to use for S3 server for images'),
     cfg.StrOpt('s3_secret_key',
                default='notchecked',
-               help='secret key to use for s3 server for images'),
+               help='Secret key to use for S3 server for images'),
     cfg.BoolOpt('s3_use_ssl',
                default=False,
-               help='whether to use ssl when talking to s3'),
+               help='Whether to use SSL when talking to S3'),
     cfg.BoolOpt('s3_affix_tenant',
                default=False,
-               help='whether to affix the tenant id to the access key '
-                    'when downloading from s3'),
+               help='Whether to affix the tenant id to the access key '
+                    'when downloading from S3'),
     ]
 
 CONF = cfg.CONF
@@ -162,7 +161,7 @@ class S3ImageService(object):
         return self._translate_uuid_to_id(context, image)
 
     def detail(self, context, **kwargs):
-        #NOTE(bcwaldon): sort asc to make sure we assign lower ids
+        # NOTE(bcwaldon): sort asc to make sure we assign lower ids
         # to older images
         kwargs.setdefault('sort_dir', 'asc')
         images = self.service.detail(context, **kwargs)
@@ -217,9 +216,13 @@ class S3ImageService(object):
             ramdisk_id = None
 
         try:
-            arch = manifest.find('machine_configuration/architecture').text
+            guestarch = manifest.find(
+                'machine_configuration/architecture').text
         except Exception:
-            arch = 'x86_64'
+            guestarch = arch.X86_64
+
+        if not arch.is_valid(guestarch):
+            raise exception.InvalidArchitectureName(arch=guestarch)
 
         # NOTE(yamahata):
         # EC2 ec2-budlne-image --block-device-mapping accepts
@@ -244,7 +247,7 @@ class S3ImageService(object):
             mappings = []
 
         properties = metadata['properties']
-        properties['architecture'] = arch
+        properties['architecture'] = guestarch
 
         def _translate_dependent_image_id(image_key, image_id):
             image_uuid = ec2utils.ec2_id_to_glance_id(context, image_id)
@@ -266,7 +269,7 @@ class S3ImageService(object):
                          'properties': properties})
         metadata['properties']['image_state'] = 'pending'
 
-        #TODO(bcwaldon): right now, this removes user-defined ids.
+        # TODO(bcwaldon): right now, this removes user-defined ids.
         # We need to re-enable this.
         metadata.pop('id', None)
 
@@ -296,7 +299,6 @@ class S3ImageService(object):
 
         def delayed_create():
             """This handles the fetching and decrypting of the part files."""
-            context.update_store()
             log_vars = {'image_location': image_location,
                         'image_path': image_path}
 
@@ -330,8 +332,8 @@ class S3ImageService(object):
                                 shutil.copyfileobj(part, combined)
 
                 except Exception:
-                    LOG.exception(_("Failed to download %(image_location)s "
-                                    "to %(image_path)s"), log_vars)
+                    LOG.exception(_LE("Failed to download %(image_location)s "
+                                      "to %(image_path)s"), log_vars)
                     _update_image_state(context, image_uuid, 'failed_download')
                     return
 
@@ -347,8 +349,8 @@ class S3ImageService(object):
                     self._decrypt_image(context, enc_filename, encrypted_key,
                                         encrypted_iv, dec_filename)
                 except Exception:
-                    LOG.exception(_("Failed to decrypt %(image_location)s "
-                                    "to %(image_path)s"), log_vars)
+                    LOG.exception(_LE("Failed to decrypt %(image_location)s "
+                                      "to %(image_path)s"), log_vars)
                     _update_image_state(context, image_uuid, 'failed_decrypt')
                     return
 
@@ -358,8 +360,8 @@ class S3ImageService(object):
                     unz_filename = self._untarzip_image(image_path,
                                                         dec_filename)
                 except Exception:
-                    LOG.exception(_("Failed to untar %(image_location)s "
-                                    "to %(image_path)s"), log_vars)
+                    LOG.exception(_LE("Failed to untar %(image_location)s "
+                                      "to %(image_path)s"), log_vars)
                     _update_image_state(context, image_uuid, 'failed_untar')
                     return
 
@@ -368,8 +370,8 @@ class S3ImageService(object):
                     with open(unz_filename) as image_file:
                         _update_image_data(context, image_uuid, image_file)
                 except Exception:
-                    LOG.exception(_("Failed to upload %(image_location)s "
-                                    "to %(image_path)s"), log_vars)
+                    LOG.exception(_LE("Failed to upload %(image_location)s "
+                                      "to %(image_path)s"), log_vars)
                     _update_image_state(context, image_uuid, 'failed_upload')
                     return
 
@@ -380,7 +382,7 @@ class S3ImageService(object):
 
                 shutil.rmtree(image_path)
             except exception.ImageNotFound:
-                LOG.info(_("Image %s was deleted underneath us"), image_uuid)
+                LOG.info(_LI("Image %s was deleted underneath us"), image_uuid)
                 return
 
         eventlet.spawn_n(delayed_create)

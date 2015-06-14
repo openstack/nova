@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-#
 # Copyright 2013 Cloudbase Solutions Srl
 # Copyright 2013 Pedro Navarro Perez
 # All Rights Reserved.
@@ -18,10 +16,9 @@
 
 import abc
 
-from oslo.config import cfg
+from oslo_config import cfg
+from oslo_log import log as logging
 
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import log as logging
 from nova.virt.hyperv import utilsfactory
 
 hyperv_opts = [
@@ -70,8 +67,8 @@ class HyperVNovaNetworkVIFDriver(HyperVBaseVIFDriver):
         vswitch_path = self._netutils.get_external_vswitch(
             CONF.hyperv.vswitch_name)
 
-        vm_name = instance['name']
-        LOG.debug(_('Creating vswitch port for instance: %s') % vm_name)
+        vm_name = instance.name
+        LOG.debug('Creating vswitch port for instance: %s', vm_name)
         if self._netutils.vswitch_port_needed():
             vswitch_data = self._netutils.create_vswitch_port(vswitch_path,
                                                               vm_name)
@@ -81,5 +78,5 @@ class HyperVNovaNetworkVIFDriver(HyperVBaseVIFDriver):
         self._vmutils.set_nic_connection(vm_name, vif['id'], vswitch_data)
 
     def unplug(self, instance, vif):
-        #TODO(alepilotti) Not implemented
+        # TODO(alepilotti) Not implemented
         pass

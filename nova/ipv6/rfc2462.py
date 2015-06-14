@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
 # Copyright 2011 Justin Santa Barbara
@@ -21,7 +19,7 @@
 
 import netaddr
 
-from nova.openstack.common.gettextutils import _
+from nova.i18n import _
 
 
 def to_global(prefix, mac, project_id):

@@ -17,10 +17,8 @@
 import itertools
 
 from nova.api.openstack import common
-from nova.api.openstack.compute import ips
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 from nova import compute
 
 authorize = extensions.soft_extension_authorizer('compute', 'extended_ips')
@@ -47,8 +45,6 @@ class ExtendedIpsController(wsgi.Controller):
     def show(self, req, resp_obj, id):
         context = req.environ['nova.context']
         if authorize(context):
-            # Attach our slave template to the response object
-            resp_obj.attach(xml=ExtendedIpsServerTemplate())
             server = resp_obj.obj['server']
             db_instance = req.get_db_instance(server['id'])
             # server['id'] is guaranteed to be in the cache due to
@@ -59,8 +55,6 @@ class ExtendedIpsController(wsgi.Controller):
     def detail(self, req, resp_obj):
         context = req.environ['nova.context']
         if authorize(context):
-            # Attach our slave template to the response object
-            resp_obj.attach(xml=ExtendedIpsServersTemplate())
             servers = list(resp_obj.obj['servers'])
             for server in servers:
                 db_instance = req.get_db_instance(server['id'])
@@ -76,34 +70,9 @@ class Extended_ips(extensions.ExtensionDescriptor):
     alias = "OS-EXT-IPS"
     namespace = ("http://docs.openstack.org/compute/ext/"
                  "extended_ips/api/v1.1")
-    updated = "2013-01-06T00:00:00+00:00"
+    updated = "2013-01-06T00:00:00Z"
 
     def get_controller_extensions(self):
         controller = ExtendedIpsController()
         extension = extensions.ControllerExtension(self, 'servers', controller)
         return [extension]
-
-
-def make_server(elem):
-    elem.append(ips.AddressesTemplate())
-    ip = elem['addresses']['network']['ip']
-    ip.set('{%s}type' % Extended_ips.namespace,
-           '%s:type' % Extended_ips.alias)
-
-
-class ExtendedIpsServerTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('server', selector='server')
-        xmlutil.SubTemplateElement(root, 'server', selector='servers')
-        make_server(root)
-        return xmlutil.SlaveTemplate(root, 1, nsmap={
-            Extended_ips.alias: Extended_ips.namespace})
-
-
-class ExtendedIpsServersTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('servers')
-        elem = xmlutil.SubTemplateElement(root, 'server', selector='servers')
-        make_server(elem)
-        return xmlutil.SlaveTemplate(root, 1, nsmap={
-            Extended_ips.alias: Extended_ips.namespace})

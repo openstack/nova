@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
@@ -53,17 +51,12 @@ This module provides Manager, a base class for managers.
 
 """
 
-from oslo.config import cfg
+from oslo_config import cfg
+from oslo_log import log as logging
 
-from nova import baserpc
 from nova.db import base
-from nova import notifier
-from nova.objects import base as objects_base
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import log as logging
 from nova.openstack.common import periodic_task
-from nova.openstack.common.rpc import dispatcher as rpc_dispatcher
-from nova.scheduler import rpcapi as scheduler_rpcapi
+from nova import rpc
 
 
 CONF = cfg.CONF
@@ -72,8 +65,6 @@ LOG = logging.getLogger(__name__)
 
 
 class Manager(base.Base, periodic_task.PeriodicTasks):
-    # Set RPC API version to 1.0 by default.
-    RPC_API_VERSION = '1.0'
 
     def __init__(self, host=None, db_driver=None, service_name='undefined'):
         if not host:
@@ -81,22 +72,9 @@ class Manager(base.Base, periodic_task.PeriodicTasks):
         self.host = host
         self.backdoor_port = None
         self.service_name = service_name
-        self.notifier = notifier.get_notifier(self.service_name, self.host)
+        self.notifier = rpc.get_notifier(self.service_name, self.host)
+        self.additional_endpoints = []
         super(Manager, self).__init__(db_driver)
-
-    def create_rpc_dispatcher(self, backdoor_port=None, additional_apis=None):
-        '''Get the rpc dispatcher for this manager.
-
-        If a manager would like to set an rpc API version, or support more than
-        one class as the target of rpc messages, override this method.
-        '''
-        apis = []
-        if additional_apis:
-            apis.extend(additional_apis)
-        base_rpc = baserpc.BaseRPCAPI(self.service_name, backdoor_port)
-        apis.extend([self, base_rpc])
-        serializer = objects_base.NovaObjectSerializer()
-        return rpc_dispatcher.RpcDispatcher(apis, serializer)
 
     def periodic_tasks(self, context, raise_on_error=False):
         """Tasks to be run at a periodic interval."""
@@ -106,6 +84,13 @@ class Manager(base.Base, periodic_task.PeriodicTasks):
         """Hook to do additional manager initialization when one requests
         the service be started.  This is called before any service record
         is created.
+
+        Child classes should override this method.
+        """
+        pass
+
+    def cleanup_host(self):
+        """Hook to do cleanup work when the service shuts down.
 
         Child classes should override this method.
         """
@@ -129,40 +114,3 @@ class Manager(base.Base, periodic_task.PeriodicTasks):
         Child classes should override this method.
         """
         pass
-
-
-class SchedulerDependentManager(Manager):
-    """Periodically send capability updates to the Scheduler services.
-
-    Services that need to update the Scheduler of their capabilities
-    should derive from this class. Otherwise they can derive from
-    manager.Manager directly. Updates are only sent after
-    update_service_capabilities is called with non-None values.
-
-    """
-
-    def __init__(self, host=None, db_driver=None, service_name='undefined'):
-        self.last_capabilities = None
-        self.service_name = service_name
-        self.scheduler_rpcapi = scheduler_rpcapi.SchedulerAPI()
-        super(SchedulerDependentManager, self).__init__(host, db_driver,
-                service_name)
-
-    def update_service_capabilities(self, capabilities):
-        """Remember these capabilities to send on next periodic update."""
-        if not isinstance(capabilities, list):
-            capabilities = [capabilities]
-        self.last_capabilities = capabilities
-
-    def publish_service_capabilities(self, context):
-        """Pass data back to the scheduler.
-
-        Called at a periodic interval. And also called via rpc soon after
-        the start of the scheduler.
-        """
-        #NOTE(jogo): this is now deprecated, unused and can be removed in
-        #V3.0 of compute  RPCAPI
-        if self.last_capabilities:
-            LOG.debug(_('Notifying Schedulers of capabilities ...'))
-            self.scheduler_rpcapi.update_service_capabilities(context,
-                    self.service_name, self.host, self.last_capabilities)

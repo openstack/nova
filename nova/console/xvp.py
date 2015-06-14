@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright (c) 2010 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -21,14 +19,14 @@ import os
 import signal
 
 import jinja2
-from oslo.config import cfg
+from oslo_concurrency import processutils
+from oslo_config import cfg
+from oslo_log import log as logging
+from oslo_utils import excutils
 
 from nova import context
 from nova import db
-from nova.openstack.common import excutils
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import log as logging
-from nova.openstack.common import processutils
+from nova.i18n import _, _LE
 from nova import paths
 from nova import utils
 
@@ -39,7 +37,7 @@ xvp_opts = [
                help='XVP conf template'),
     cfg.StrOpt('console_xvp_conf',
                default='/etc/xvp.conf',
-               help='generated XVP conf file'),
+               help='Generated XVP conf file'),
     cfg.StrOpt('console_xvp_pid',
                default='/var/run/xvp.pid',
                help='XVP master process pid file'),
@@ -48,7 +46,7 @@ xvp_opts = [
                help='XVP log file'),
     cfg.IntOpt('console_xvp_multiplex_port',
                default=5900,
-               help='port for XVP to multiplex VNC connections on'),
+               help='Port for XVP to multiplex VNC connections on'),
     ]
 
 CONF = cfg.CONF
@@ -71,7 +69,7 @@ class XVPConsoleProxy(object):
 
     def get_port(self, context):
         """Get available port for consoles that need one."""
-        #TODO(mdragon): implement port selection for non multiplex ports,
+        # TODO(mdragon): implement port selection for non multiplex ports,
         #               we are not using that, but someone else may want
         #               it.
         return CONF.console_xvp_multiplex_port
@@ -98,7 +96,7 @@ class XVPConsoleProxy(object):
         return self._xvp_encrypt(password)
 
     def _rebuild_xvp_conf(self, context):
-        LOG.debug(_('Rebuilding xvp conf'))
+        LOG.debug('Rebuilding xvp conf')
         pools = [pool for pool in
                  db.console_pool_get_all_by_host_type(context, self.host,
                                                        self.console_type)
@@ -118,40 +116,40 @@ class XVPConsoleProxy(object):
 
     def _write_conf(self, config):
         try:
-            LOG.debug(_('Re-wrote %s') % CONF.console_xvp_conf)
+            LOG.debug('Re-wrote %s', CONF.console_xvp_conf)
             with open(CONF.console_xvp_conf, 'w') as cfile:
                 cfile.write(config)
         except IOError:
             with excutils.save_and_reraise_exception():
-                LOG.exception(_("Failed to write configuration file"))
+                LOG.exception(_LE("Failed to write configuration file"))
 
     def _xvp_stop(self):
-        LOG.debug(_('Stopping xvp'))
+        LOG.debug('Stopping xvp')
         pid = self._xvp_pid()
         if not pid:
             return
         try:
             os.kill(pid, signal.SIGTERM)
         except OSError:
-            #if it's already not running, no problem.
+            # if it's already not running, no problem.
             pass
 
     def _xvp_start(self):
         if self._xvp_check_running():
             return
-        LOG.debug(_('Starting xvp'))
+        LOG.debug('Starting xvp')
         try:
             utils.execute('xvp',
                           '-p', CONF.console_xvp_pid,
                           '-c', CONF.console_xvp_conf,
                           '-l', CONF.console_xvp_log)
         except processutils.ProcessExecutionError as err:
-            LOG.error(_('Error starting xvp: %s') % err)
+            LOG.error(_LE('Error starting xvp: %s'), err)
 
     def _xvp_restart(self):
-        LOG.debug(_('Restarting xvp'))
+        LOG.debug('Restarting xvp')
         if not self._xvp_check_running():
-            LOG.debug(_('xvp not running...'))
+            LOG.debug('xvp not running...')
             self._xvp_start()
         else:
             pid = self._xvp_pid()
@@ -184,7 +182,7 @@ class XVPConsoleProxy(object):
             - password: the password to encode, max 8 char for vm passwords,
                         and 16 chars for pool passwords. passwords will
                         be trimmed to max len before encoding.
-            - is_pool_password: True if this this is the XenServer api password
+            - is_pool_password: True if this is the XenServer api password
                                 False if it's a VM console password
               (xvp uses different keys and max lengths for pool passwords)
 
@@ -198,7 +196,7 @@ class XVPConsoleProxy(object):
         if is_pool_password:
             maxlen = 16
             flag = '-x'
-        #xvp will blow up on passwords that are too long (mdragon)
+        # xvp will blow up on passwords that are too long (mdragon)
         password = password[:maxlen]
         out, err = utils.execute('xvp', flag, process_input=password)
         if err:

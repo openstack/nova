@@ -15,11 +15,10 @@
 
 from webob import exc
 
+from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 from nova import compute
-from nova import exception
 
 authorize_actions = extensions.extension_authorizer('compute',
                                                     'instance_actions')
@@ -29,37 +28,6 @@ authorize_events = extensions.soft_extension_authorizer('compute',
 ACTION_KEYS = ['action', 'instance_uuid', 'request_id', 'user_id',
                'project_id', 'start_time', 'message']
 EVENT_KEYS = ['event', 'start_time', 'finish_time', 'result', 'traceback']
-
-
-def make_actions(elem):
-    for key in ACTION_KEYS:
-        elem.set(key)
-
-
-def make_action(elem):
-    for key in ACTION_KEYS:
-        elem.set(key)
-    event = xmlutil.TemplateElement('events', selector='events')
-    for key in EVENT_KEYS:
-        event.set(key)
-    elem.append(event)
-
-
-class InstanceActionsTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('instanceActions')
-        elem = xmlutil.SubTemplateElement(root, 'instanceAction',
-                                          selector='instanceActions')
-        make_actions(elem)
-        return xmlutil.MasterTemplate(root, 1)
-
-
-class InstanceActionTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('instanceAction',
-                                       selector='instanceAction')
-        make_action(root)
-        return xmlutil.MasterTemplate(root, 1)
 
 
 class InstanceActionsController(wsgi.Controller):
@@ -81,24 +49,19 @@ class InstanceActionsController(wsgi.Controller):
             event[key] = event_raw.get(key)
         return event
 
-    @wsgi.serializers(xml=InstanceActionsTemplate)
     def index(self, req, server_id):
         """Returns the list of actions recorded for a given instance."""
         context = req.environ["nova.context"]
-        try:
-            instance = self.compute_api.get(context, server_id)
-        except exception.InstanceNotFound as err:
-            raise exc.HTTPNotFound(explanation=err.format_message())
+        instance = common.get_instance(self.compute_api, context, server_id)
         authorize_actions(context, target=instance)
         actions_raw = self.action_api.actions_get(context, instance)
         actions = [self._format_action(action) for action in actions_raw]
         return {'instanceActions': actions}
 
-    @wsgi.serializers(xml=InstanceActionTemplate)
     def show(self, req, server_id, id):
         """Return data about the given instance action."""
         context = req.environ['nova.context']
-        instance = self.compute_api.get(context, server_id)
+        instance = common.get_instance(self.compute_api, context, server_id)
         authorize_actions(context, target=instance)
         action = self.action_api.action_get_by_request_id(context, instance,
                                                           id)
@@ -121,7 +84,7 @@ class Instance_actions(extensions.ExtensionDescriptor):
     alias = "os-instance-actions"
     namespace = ("http://docs.openstack.org/compute/ext/"
                  "instance-actions/api/v1.1")
-    updated = "2013-02-08T00:00:00+00:00"
+    updated = "2013-02-08T00:00:00Z"
 
     def get_resources(self):
         ext = extensions.ResourceExtension('os-instance-actions',

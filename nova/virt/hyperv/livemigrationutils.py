@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2013 Cloudbase Solutions Srl
 # All Rights Reserved.
 #
@@ -20,9 +18,10 @@ import sys
 if sys.platform == 'win32':
     import wmi
 
+from oslo_log import log as logging
+
 from nova import exception
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import log as logging
+from nova.i18n import _, _LE
 from nova.virt.hyperv import vmutils
 from nova.virt.hyperv import vmutilsv2
 from nova.virt.hyperv import volumeutilsv2
@@ -40,7 +39,7 @@ class LiveMigrationUtils(object):
         try:
             return wmi.WMI(moniker='//%s/root/virtualization/v2' % host)
         except wmi.x_wmi as ex:
-            LOG.exception(ex)
+            LOG.exception(_LE('Get version 2 connection error'))
             if ex.com_error.hresult == -2147217394:
                 msg = (_('Live migration is not supported on target host "%s"')
                        % host)
@@ -76,7 +75,7 @@ class LiveMigrationUtils(object):
         return vms[0]
 
     def _destroy_planned_vm(self, conn_v2_remote, planned_vm):
-        LOG.debug(_("Destroying existing remote planned VM: %s"),
+        LOG.debug("Destroying existing remote planned VM: %s",
                   planned_vm.ElementName)
         vs_man_svc = conn_v2_remote.Msvm_VirtualSystemManagementService()[0]
         (job_path, ret_val) = vs_man_svc.DestroySystem(planned_vm.path_())
@@ -98,7 +97,7 @@ class LiveMigrationUtils(object):
         vsmsd.DestinationIPAddressList = rmt_ip_addr_list
         migration_setting_data = vsmsd.GetText_(1)
 
-        LOG.debug(_("Creating remote planned VM for VM: %s"),
+        LOG.debug("Creating remote planned VM for VM: %s",
                   vm.ElementName)
         migr_svc = conn_v2_local.Msvm_VirtualSystemMigrationService()[0]
         (job_path, ret_val) = migr_svc.MigrateVirtualSystemToHost(
@@ -111,7 +110,11 @@ class LiveMigrationUtils(object):
 
     def _get_physical_disk_paths(self, vm_name):
         ide_ctrl_path = self._vmutils.get_vm_ide_controller(vm_name, 0)
-        ide_paths = self._vmutils.get_controller_volume_paths(ide_ctrl_path)
+        if ide_ctrl_path:
+            ide_paths = self._vmutils.get_controller_volume_paths(
+                ide_ctrl_path)
+        else:
+            ide_paths = {}
 
         scsi_ctrl_path = self._vmutils.get_vm_scsi_controller(vm_name)
         scsi_paths = self._vmutils.get_controller_volume_paths(scsi_ctrl_path)
@@ -122,20 +125,22 @@ class LiveMigrationUtils(object):
         volutils_remote = volumeutilsv2.VolumeUtilsV2(dest_host)
 
         disk_paths_remote = {}
-        iscsi_targets = []
         for (rasd_rel_path, disk_path) in disk_paths.items():
-            (target_iqn,
-             target_lun) = self._volutils.get_target_from_disk_path(disk_path)
-            iscsi_targets.append((target_iqn, target_lun))
+            target = self._volutils.get_target_from_disk_path(disk_path)
+            if target:
+                (target_iqn, target_lun) = target
 
-            dev_num = volutils_remote.get_device_number_for_target(target_iqn,
-                                                                   target_lun)
-            disk_path_remote = vmutils_remote.get_mounted_disk_by_drive_number(
-                dev_num)
+                dev_num = volutils_remote.get_device_number_for_target(
+                    target_iqn, target_lun)
+                disk_path_remote = (
+                    vmutils_remote.get_mounted_disk_by_drive_number(dev_num))
 
-            disk_paths_remote[rasd_rel_path] = disk_path_remote
+                disk_paths_remote[rasd_rel_path] = disk_path_remote
+            else:
+                LOG.debug("Could not retrieve iSCSI target "
+                          "from disk path: %s", disk_path)
 
-        return (disk_paths_remote, iscsi_targets)
+        return disk_paths_remote
 
     def _update_planned_vm_disk_resources(self, vmutils_remote, conn_v2_remote,
                                           planned_vm, vm_name,
@@ -155,16 +160,16 @@ class LiveMigrationUtils(object):
                 old_disk_path = sasd.HostResource[0]
                 new_disk_path = disk_paths_remote.pop(sasd.path().RelPath)
 
-                LOG.debug(_("Replacing host resource "
-                            "%(old_disk_path)s with "
-                            "%(new_disk_path)s on planned VM %(vm_name)s"),
+                LOG.debug("Replacing host resource "
+                          "%(old_disk_path)s with "
+                          "%(new_disk_path)s on planned VM %(vm_name)s",
                           {'old_disk_path': old_disk_path,
                            'new_disk_path': new_disk_path,
                            'vm_name': vm_name})
                 sasd.HostResource = [new_disk_path]
                 updated_resource_setting_data.append(sasd.GetText_(1))
 
-        LOG.debug(_("Updating remote planned VM disk paths for VM: %s"),
+        LOG.debug("Updating remote planned VM disk paths for VM: %s",
                   vm_name)
         vsmsvc = conn_v2_remote.Msvm_VirtualSystemManagementService()[0]
         (res_settings, job_path, ret_val) = vsmsvc.ModifyResourceSettings(
@@ -183,7 +188,6 @@ class LiveMigrationUtils(object):
         for sasd in sasds:
             if (sasd.ResourceType == 31 and sasd.ResourceSubType ==
                     "Microsoft:Hyper-V:Virtual Hard Disk"):
-                #sasd.PoolId = ""
                 new_resource_setting_data.append(sasd.GetText_(1))
         return new_resource_setting_data
 
@@ -200,7 +204,7 @@ class LiveMigrationUtils(object):
 
         migr_svc = conn_v2_local.Msvm_VirtualSystemMigrationService()[0]
 
-        LOG.debug(_("Starting live migration for VM: %s"), vm.ElementName)
+        LOG.debug("Starting live migration for VM: %s", vm.ElementName)
         (job_path, ret_val) = migr_svc.MigrateVirtualSystemToHost(
             ComputerSystem=vm.path_(),
             DestinationHost=dest_host,
@@ -209,7 +213,7 @@ class LiveMigrationUtils(object):
         self._vmutils.check_ret_val(ret_val, job_path)
 
     def _get_remote_ip_address_list(self, conn_v2_remote, dest_host):
-        LOG.debug(_("Getting live migration networks for remote host: %s"),
+        LOG.debug("Getting live migration networks for remote host: %s",
                   dest_host)
         migr_svc_rmt = conn_v2_remote.Msvm_VirtualSystemMigrationService()[0]
         return migr_svc_rmt.MigrationServiceListenerIPAddressList
@@ -226,15 +230,13 @@ class LiveMigrationUtils(object):
         rmt_ip_addr_list = self._get_remote_ip_address_list(conn_v2_remote,
                                                             dest_host)
 
-        iscsi_targets = []
         planned_vm = None
         disk_paths = self._get_physical_disk_paths(vm_name)
         if disk_paths:
             vmutils_remote = vmutilsv2.VMUtilsV2(dest_host)
-            (disk_paths_remote,
-             iscsi_targets) = self._get_remote_disk_data(vmutils_remote,
-                                                         disk_paths,
-                                                         dest_host)
+            disk_paths_remote = self._get_remote_disk_data(vmutils_remote,
+                                                           disk_paths,
+                                                           dest_host)
 
             planned_vm = self._create_remote_planned_vm(conn_v2_local,
                                                         conn_v2_remote,
@@ -248,6 +250,3 @@ class LiveMigrationUtils(object):
         new_resource_setting_data = self._get_vhd_setting_data(vm)
         self._live_migrate_vm(conn_v2_local, vm, planned_vm, rmt_ip_addr_list,
                               new_resource_setting_data, dest_host)
-
-        # In case the caller wants to log off the targets after migration
-        return iscsi_targets

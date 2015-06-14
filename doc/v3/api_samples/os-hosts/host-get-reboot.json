@@ -1,6 +1,4 @@
 {
-    "host": {
-        "host": "9557750dbc464741a89c907921c1cb31",
-        "power_action": "reboot"
-    }
+    "host": "9557750dbc464741a89c907921c1cb31",
+    "power_action": "reboot"
 }

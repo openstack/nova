@@ -1,0 +1,5 @@
+{
+    "os-getSerialConsole": {
+        "type": "serial"
+    }
+}

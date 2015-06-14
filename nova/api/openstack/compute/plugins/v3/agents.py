@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 IBM Corp.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -17,37 +15,20 @@
 
 import webob.exc
 
+from nova.api.openstack.compute.schemas.v3 import agents as schema
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
-from nova import db
+from nova.api import validation
 from nova import exception
-from nova.openstack.common.gettextutils import _
-from nova import utils
+from nova import objects
 
 
 ALIAS = "os-agents"
-authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
+authorize = extensions.os_compute_authorizer(ALIAS)
 
 
-class AgentsIndexTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('agents')
-        elem = xmlutil.SubTemplateElement(root, 'agent', selector='agents')
-        elem.set('hypervisor')
-        elem.set('os')
-        elem.set('architecture')
-        elem.set('version')
-        elem.set('md5hash')
-        elem.set('agent_id')
-        elem.set('url')
-
-        return xmlutil.MasterTemplate(root, 1)
-
-
-class AgentController(object):
-    """
-    The agent is talking about guest agent.The host can use this for
+class AgentController(wsgi.Controller):
+    """The agent is talking about guest agent.The host can use this for
     things like accessing files on the disk, configuring networking,
     or running other applications/scripts in the guest while it is
     running. Typically this uses some hypervisor-specific transport
@@ -69,11 +50,8 @@ class AgentController(object):
     http://wiki.openstack.org/GuestAgentXenStoreCommunication
     """
     @extensions.expected_errors(())
-    @wsgi.serializers(xml=AgentsIndexTemplate)
     def index(self, req):
-        """
-        Return a list of all agent builds. Filter by hypervisor.
-        """
+        """Return a list of all agent builds. Filter by hypervisor."""
         context = req.environ['nova.context']
         authorize(context)
         hypervisor = None
@@ -81,7 +59,8 @@ class AgentController(object):
         if 'hypervisor' in req.GET:
             hypervisor = req.GET['hypervisor']
 
-        for agent_build in db.agent_build_get_all(context, hypervisor):
+        builds = objects.AgentList.get_all(context, hypervisor=hypervisor)
+        for agent_build in builds:
             agents.append({'hypervisor': agent_build.hypervisor,
                            'os': agent_build.os,
                            'architecture': agent_build.architecture,
@@ -93,93 +72,86 @@ class AgentController(object):
         return {'agents': agents}
 
     @extensions.expected_errors((400, 404))
+    @validation.schema(schema.update)
     def update(self, req, id, body):
         """Update an existing agent build."""
         context = req.environ['nova.context']
         authorize(context)
 
-        try:
-            para = body['agent']
-            url = para['url']
-            md5hash = para['md5hash']
-            version = para['version']
-        except TypeError as e:
-            raise webob.exc.HTTPBadRequest()
-        except KeyError as e:
-            raise webob.exc.HTTPBadRequest(explanation=_(
-                "Could not find %s parameter in the request") % e.args[0])
+        # TODO(oomichi): This parameter name "para" is different from the ones
+        # of the other APIs. Most other names are resource names like "server"
+        # etc. This name should be changed to "agent" for consistent naming
+        # with v2.1+microversions.
+        para = body['para']
 
-        try:
-            utils.check_string_length(url, 'url', max_length=255)
-            utils.check_string_length(md5hash, 'md5hash', max_length=255)
-            utils.check_string_length(version, 'version', max_length=255)
-        except exception.InvalidInput as exc:
-            raise webob.exc.HTTPBadRequest(explanation=exc.format_message())
+        url = para['url']
+        md5hash = para['md5hash']
+        version = para['version']
 
+        agent = objects.Agent(context=context, id=id)
+        agent.obj_reset_changes()
+        agent.version = version
+        agent.url = url
+        agent.md5hash = md5hash
         try:
-            db.agent_build_update(context, id,
-                                {'version': version,
-                                 'url': url,
-                                 'md5hash': md5hash})
+            agent.save()
         except exception.AgentBuildNotFound as ex:
             raise webob.exc.HTTPNotFound(explanation=ex.format_message())
 
+        # TODO(alex_xu): The agent_id should be integer that consistent with
+        # create/index actions. But parameter 'id' is string type that parsed
+        # from url. This is a bug, but because back-compatibility, it can't be
+        # fixed for v2 API. This will be fixed after v3 API feature exposed by
+        # v2.1+microversions in the future. lp bug #1333494
         return {"agent": {'agent_id': id, 'version': version,
                 'url': url, 'md5hash': md5hash}}
 
+    # TODO(oomichi): Here should be 204(No Content) instead of 200 by v2.1
+    # +microversions because the resource agent has been deleted completely
+    # when returning a response.
     @extensions.expected_errors(404)
-    @wsgi.response(204)
+    @wsgi.response(200)
     def delete(self, req, id):
         """Deletes an existing agent build."""
         context = req.environ['nova.context']
         authorize(context)
 
         try:
-            db.agent_build_destroy(context, id)
+            agent = objects.Agent(context=context, id=id)
+            agent.destroy()
         except exception.AgentBuildNotFound as ex:
             raise webob.exc.HTTPNotFound(explanation=ex.format_message())
 
+    # TODO(oomichi): Here should be 201(Created) instead of 200 by v2.1
+    # +microversions because the creation of a resource agent finishes
+    # when returning a response.
     @extensions.expected_errors((400, 409))
-    @wsgi.response(201)
+    @wsgi.response(200)
+    @validation.schema(schema.create)
     def create(self, req, body):
         """Creates a new agent build."""
         context = req.environ['nova.context']
         authorize(context)
 
-        try:
-            agent = body['agent']
-            hypervisor = agent['hypervisor']
-            os = agent['os']
-            architecture = agent['architecture']
-            version = agent['version']
-            url = agent['url']
-            md5hash = agent['md5hash']
-        except TypeError as e:
-            raise webob.exc.HTTPBadRequest()
-        except KeyError as e:
-            raise webob.exc.HTTPBadRequest(explanation=_(
-                "Could not find %s parameter in the request") % e.args[0])
+        agent = body['agent']
+        hypervisor = agent['hypervisor']
+        os = agent['os']
+        architecture = agent['architecture']
+        version = agent['version']
+        url = agent['url']
+        md5hash = agent['md5hash']
+
+        agent_obj = objects.Agent(context=context)
+        agent_obj.hypervisor = hypervisor
+        agent_obj.os = os
+        agent_obj.architecture = architecture
+        agent_obj.version = version
+        agent_obj.url = url
+        agent_obj.md5hash = md5hash
 
         try:
-            utils.check_string_length(hypervisor, 'hypervisor', max_length=255)
-            utils.check_string_length(os, 'os', max_length=255)
-            utils.check_string_length(architecture, 'architecture',
-                                      max_length=255)
-            utils.check_string_length(version, 'version', max_length=255)
-            utils.check_string_length(url, 'url', max_length=255)
-            utils.check_string_length(md5hash, 'md5hash', max_length=255)
-        except exception.InvalidInput as exc:
-            raise webob.exc.HTTPBadRequest(explanation=exc.format_message())
-
-        try:
-            agent_build_ref = db.agent_build_create(context,
-                                                {'hypervisor': hypervisor,
-                                                 'os': os,
-                                                 'architecture': architecture,
-                                                 'version': version,
-                                                 'url': url,
-                                                 'md5hash': md5hash})
-            agent['agent_id'] = agent_build_ref.id
+            agent_obj.create()
+            agent['agent_id'] = agent_obj.id
         except exception.AgentBuildExists as ex:
             raise webob.exc.HTTPConflict(explanation=ex.format_message())
         return {'agent': agent}
@@ -190,7 +162,6 @@ class Agents(extensions.V3APIExtensionBase):
 
     name = "Agents"
     alias = ALIAS
-    namespace = "http://docs.openstack.org/compute/ext/agents/api/v3"
     version = 1
 
     def get_resources(self):

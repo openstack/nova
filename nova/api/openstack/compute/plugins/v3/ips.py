@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2011 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -22,73 +20,37 @@ from nova.api.openstack import common
 from nova.api.openstack.compute.views import addresses as views_addresses
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
-from nova.openstack.common.gettextutils import _
+from nova.i18n import _
 
-
-def make_network(elem):
-    elem.set('id', 0)
-
-    ip = xmlutil.SubTemplateElement(elem, 'ip', selector=1)
-    ip.set('version')
-    ip.set('addr')
-    ip.set('type')
-    ip.set('mac_addr')
-
-network_nsmap = {None: xmlutil.XMLNS_V11}
-
-
-class NetworkTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        sel = xmlutil.Selector(xmlutil.get_items, 0)
-        root = xmlutil.TemplateElement('network', selector=sel)
-        make_network(root)
-        return xmlutil.MasterTemplate(root, 1, nsmap=network_nsmap)
-
-
-class AddressesTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('addresses', selector='addresses')
-        elem = xmlutil.SubTemplateElement(root, 'network',
-                                          selector=xmlutil.get_items)
-        make_network(elem)
-        return xmlutil.MasterTemplate(root, 1, nsmap=network_nsmap)
+ALIAS = 'ips'
+authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class IPsController(wsgi.Controller):
     """The servers addresses API controller for the OpenStack API."""
-
-    _view_builder_class = views_addresses.ViewBuilderV3
+    # Note(gmann): here using V2 view builder instead of V3 to have V2.1
+    # server ips response same as V2 which does not include "OS-EXT-IPS:type"
+    # & "OS-EXT-IPS-MAC:mac_addr". If needed those can be added with
+    # microversion by using V3 view builder.
+    _view_builder_class = views_addresses.ViewBuilder
 
     def __init__(self, **kwargs):
         super(IPsController, self).__init__(**kwargs)
-        self._compute_api = nova.compute.API()
+        self._compute_api = nova.compute.API(skip_policy_check=True)
 
-    def _get_instance(self, context, server_id):
-        try:
-            instance = self._compute_api.get(context, server_id)
-        except nova.exception.NotFound:
-            msg = _("Instance does not exist")
-            raise exc.HTTPNotFound(explanation=msg)
-        return instance
-
-    def create(self, req, server_id, body):
-        raise exc.HTTPNotImplemented()
-
-    def delete(self, req, server_id, id):
-        raise exc.HTTPNotImplemented()
-
-    @wsgi.serializers(xml=AddressesTemplate)
+    @extensions.expected_errors(404)
     def index(self, req, server_id):
         context = req.environ["nova.context"]
-        instance = self._get_instance(context, server_id)
+        authorize(context, action='index')
+        instance = common.get_instance(self._compute_api, context, server_id)
         networks = common.get_networks_for_instance(context, instance)
         return self._view_builder.index(networks)
 
-    @wsgi.serializers(xml=NetworkTemplate)
+    @extensions.expected_errors(404)
     def show(self, req, server_id, id):
         context = req.environ["nova.context"]
-        instance = self._get_instance(context, server_id)
+        authorize(context, action='show')
+        instance = common.get_instance(self._compute_api, context, server_id)
         networks = common.get_networks_for_instance(context, instance)
         if id not in networks:
             msg = _("Instance is not a member of specified network")
@@ -100,9 +62,8 @@ class IPsController(wsgi.Controller):
 class IPs(extensions.V3APIExtensionBase):
     """Server addresses."""
 
-    name = "ips"
-    alias = "ips"
-    namespace = "http://docs.openstack.org/compute/core/ips/v3"
+    name = "Ips"
+    alias = ALIAS
     version = 1
 
     def get_resources(self):
@@ -110,7 +71,7 @@ class IPs(extensions.V3APIExtensionBase):
                   'collection_name': 'servers'}
         resources = [
             extensions.ResourceExtension(
-                'ips', IPsController(), parent=parent, member_name='ip')]
+                ALIAS, IPsController(), parent=parent, member_name='ip')]
 
         return resources
 

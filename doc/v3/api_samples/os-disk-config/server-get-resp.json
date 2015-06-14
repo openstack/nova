@@ -1,18 +1,17 @@
 {
     "server": {
-        "access_ip_v4": "",
-        "access_ip_v6": "",
+        "OS-DCF:diskConfig": "AUTO",
         "addresses": {
             "private": [
                 {
                     "addr": "192.168.0.3",
-                    "mac_addr": "aa:bb:cc:dd:ee:ff",
-                    "type": "fixed",
+                    "OS-EXT-IPS-MAC:mac_addr": "aa:bb:cc:dd:ee:ff",
+                    "OS-EXT-IPS:type": "fixed",
                     "version": 4
                 }
             ]
         },
-        "created": "2013-10-15T02:10:34Z",
+        "created": "2012-12-02T02:11:55Z",
         "flavor": {
             "id": "1",
             "links": [
@@ -22,25 +21,24 @@
                 }
             ]
         },
-        "host_id": "060592f7d211654f26c403eeb86fe3a0ce60f29b4338b37f1c88b15e",
-        "id": "5b5e7d2e-720b-404e-81ae-4faa7aa43c6a",
+        "hostId": "c949ab4256cea23b6089b710aa2df48bf6577ed915278b62e33ad8bb",
+        "id": "5046e2f2-3b33-4041-b3cf-e085f73e78e7",
         "image": {
             "id": "70a599e0-31e7-49b7-b260-868f441e862b",
             "links": [
                 {
-                    "href": "http://glance.openstack.example.com/images/70a599e0-31e7-49b7-b260-868f441e862b",
+                    "href": "http://openstack.example.com/images/70a599e0-31e7-49b7-b260-868f441e862b",
                     "rel": "bookmark"
                 }
             ]
         },
-        "key_name": null,
         "links": [
             {
-                "href": "http://openstack.example.com/v3/servers/5b5e7d2e-720b-404e-81ae-4faa7aa43c6a",
+                "href": "http://openstack.example.com/v3/servers/5046e2f2-3b33-4041-b3cf-e085f73e78e7",
                 "rel": "self"
             },
             {
-                "href": "http://openstack.example.com/servers/5b5e7d2e-720b-404e-81ae-4faa7aa43c6a",
+                "href": "http://openstack.example.com/servers/5046e2f2-3b33-4041-b3cf-e085f73e78e7",
                 "rel": "bookmark"
             }
         ],
@@ -48,11 +46,11 @@
             "My Server Name": "Apache1"
         },
         "name": "new-server-test",
-        "os-disk-config:disk_config": "AUTO",
         "progress": 0,
         "status": "ACTIVE",
         "tenant_id": "openstack",
-        "updated": "2013-10-15T02:10:34Z",
+        "updated": "2012-12-02T02:11:55Z",
+        "key_name": null,
         "user_id": "fake"
     }
 }

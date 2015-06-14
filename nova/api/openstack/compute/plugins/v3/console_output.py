@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2011 OpenStack Foundation
 # Copyright 2011 Grid Dynamics
 # Copyright 2011 Eldar Nugaev, Kirill Shileev, Ilya Alekseyev
@@ -17,60 +15,57 @@
 #    under the License.
 
 import re
+
 import webob
 
+from nova.api.openstack import common
+from nova.api.openstack.compute.schemas.v3 import console_output
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+from nova.api import validation
 from nova import compute
 from nova import exception
-from nova.openstack.common.gettextutils import _
 
-ALIAS = "console-output"
-authorize = extensions.extension_authorizer('compute', "v3:" + ALIAS)
+ALIAS = "os-console-output"
+authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class ConsoleOutputController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
         super(ConsoleOutputController, self).__init__(*args, **kwargs)
-        self.compute_api = compute.API()
+        self.compute_api = compute.API(skip_policy_check=True)
 
-    @extensions.expected_errors((400, 404, 409))
-    @wsgi.action('get_console_output')
+    @extensions.expected_errors((400, 404, 409, 501))
+    @wsgi.action('os-getConsoleOutput')
+    @validation.schema(console_output.get_console_output)
     def get_console_output(self, req, id, body):
         """Get text console output."""
         context = req.environ['nova.context']
         authorize(context)
 
-        try:
-            instance = self.compute_api.get(context, id)
-        except exception.InstanceNotFound as e:
-            raise webob.exc.HTTPNotFound(explanation=e.format_message())
-
-        try:
-            length = body['get_console_output'].get('length')
-        except (TypeError, KeyError):
-            raise webob.exc.HTTPBadRequest(_('get_console_output malformed '
-                                             'or missing from request body'))
-
-        if length is not None:
-            try:
-                # NOTE(maurosr): cast length into a string before cast into an
-                # integer to avoid thing like: int(2.5) which is 2 instead of
-                # raise ValueError like it would when we try int("2.5"). This
-                # can be removed once we have api validation landed.
-                int(str(length))
-            except ValueError:
-                raise webob.exc.HTTPBadRequest(_('Length in request body must '
-                                                 'be an integer value'))
+        instance = common.get_instance(self.compute_api, context, id)
+        length = body['os-getConsoleOutput'].get('length')
+        # TODO(cyeoh): In a future API update accept a length of -1
+        # as meaning unlimited length (convert to None)
 
         try:
             output = self.compute_api.get_console_output(context,
                                                          instance,
                                                          length)
+        # NOTE(cyeoh): This covers race conditions where the instance is
+        # deleted between common.get_instance and get_console_output
+        # being called
+        except exception.InstanceNotFound as e:
+            raise webob.exc.HTTPNotFound(explanation=e.format_message())
         except exception.InstanceNotReady as e:
             raise webob.exc.HTTPConflict(explanation=e.format_message())
+        except NotImplementedError:
+            common.raise_feature_not_supported()
 
         # XML output is not correctly escaped, so remove invalid characters
+        # NOTE(cyeoh): We don't support XML output with V2.1, but for
+        # backwards compatibility reasons we continue to filter the output
+        # We should remove this in the future
         remove_re = re.compile('[\x00-\x08\x0B-\x1F]')
         output = remove_re.sub('', output)
 
@@ -82,8 +77,6 @@ class ConsoleOutput(extensions.V3APIExtensionBase):
 
     name = "ConsoleOutput"
     alias = ALIAS
-    namespace = ("http://docs.openstack.org/compute/core/"
-                 "console-output/api/v3")
     version = 1
 
     def get_controller_extensions(self):

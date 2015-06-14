@@ -42,18 +42,18 @@ Developers wishing to work on the OpenStack Nova project should
 always base their work on the latest Nova code, available from
 the master GIT repository at:
 
-   http://github.com/openstack/nova
+   https://git.openstack.org/cgit/openstack/nova
 
 Developers should also join the discussion on the mailing list,
 at:
 
-   http://lists.openstack.org/cgi-bin/mailman/listinfo/openstack
+   http://lists.openstack.org/cgi-bin/mailman/listinfo/openstack-dev
 
 Any new code must follow the development guidelines detailed
 in the HACKING.rst file, and pass all unit tests. Further
 developer focused documentation is available at:
 
-   http://nova.openstack.org/
+   http://docs.openstack.org/developer/nova/
 
 For information on how to contribute to Nova, please see the
 contents of the CONTRIBUTING.rst file.

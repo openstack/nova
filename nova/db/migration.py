@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
@@ -18,21 +16,41 @@
 
 """Database setup and migration commands."""
 
-from nova import utils
+from nova.db.sqlalchemy import migration
+
+IMPL = migration
 
 
-IMPL = utils.LazyPluggable('backend',
-                           config_group='database',
-                           sqlalchemy='nova.db.sqlalchemy.migration')
-
-INIT_VERSION = 132
-
-
-def db_sync(version=None):
+def db_sync(version=None, database='main'):
     """Migrate the database to `version` or the most recent version."""
-    return IMPL.db_sync(version=version)
+    return IMPL.db_sync(version=version, database=database)
 
 
-def db_version():
+def db_version(database='main'):
     """Display the current database version."""
-    return IMPL.db_version()
+    return IMPL.db_version(database=database)
+
+
+def db_initial_version(database='main'):
+    """The starting version for the database."""
+    return IMPL.db_initial_version(database=database)
+
+
+def db_null_instance_uuid_scan(delete=False):
+    """Utility for scanning the database to look for NULL instance uuid rows.
+
+    Scans the backing nova database to look for table entries where
+    instances.uuid or instance_uuid columns are NULL (except for the
+    fixed_ips table since that can contain NULL instance_uuid entries by
+    design). Dumps the tables that have NULL instance_uuid entries or
+    optionally deletes them based on usage.
+
+    This tool is meant to be used in conjunction with the 267 database
+    migration script to detect and optionally cleanup NULL instance_uuid
+    records.
+
+    :param delete: If true, delete NULL instance_uuid records found, else
+                   just query to see if they exist for reporting.
+    :returns: dict of table name to number of hits for NULL instance_uuid rows.
+    """
+    return IMPL.db_null_instance_uuid_scan(delete=delete)

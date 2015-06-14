@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2011 Grid Dynamics
 # Copyright 2011 OpenStack Foundation
 # All Rights Reserved.
@@ -23,17 +21,18 @@ from webob import exc
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import exception
+from nova.i18n import _
 from nova import network
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import log as logging
+from nova.objects import base as base_obj
+from nova.objects import fields as obj_fields
 
-LOG = logging.getLogger(__name__)
 authorize = extensions.extension_authorizer('compute', 'networks')
 authorize_view = extensions.extension_authorizer('compute',
                                                  'networks:view')
+extended_fields = ('mtu', 'dhcp_server', 'enable_dhcp', 'share_address')
 
 
-def network_dict(context, network):
+def network_dict(context, network, extended):
     fields = ('id', 'cidr', 'netmask', 'gateway', 'broadcast', 'dns1', 'dns2',
               'cidr_v6', 'gateway_v6', 'label', 'netmask_v6')
     admin_fields = ('created_at', 'updated_at', 'deleted_at', 'deleted',
@@ -47,7 +46,30 @@ def network_dict(context, network):
         #               are only visible if they are an admin.
         if context.is_admin:
             fields += admin_fields
-        result = dict((field, network.get(field)) for field in fields)
+            if extended:
+                fields += extended_fields
+        # TODO(mriedem): Remove the NovaObject type check once the
+        # network.create API is returning objects.
+        is_obj = isinstance(network, base_obj.NovaObject)
+        result = {}
+        for field in fields:
+            # NOTE(mriedem): If network is an object, IPAddress fields need to
+            # be cast to a string so they look the same in the response as
+            # before the objects conversion.
+            if is_obj and isinstance(network.fields[field].AUTO_TYPE,
+                                     obj_fields.IPAddress):
+                # NOTE(danms): Here, network should be an object, which could
+                # have come from neutron and thus be missing most of the
+                # attributes. Providing a default to get() avoids trying to
+                # lazy-load missing attributes.
+                val = network.get(field, None)
+                if val is not None:
+                    result[field] = str(val)
+                else:
+                    result[field] = val
+            else:
+                # It's either not an object or it's not an IPAddress field.
+                result[field] = network.get(field, None)
         uuid = network.get('uuid')
         if uuid:
             result['id'] = uuid
@@ -58,54 +80,66 @@ def network_dict(context, network):
 
 class NetworkController(wsgi.Controller):
 
-    def __init__(self, network_api=None):
+    def __init__(self, network_api=None, ext_mgr=None):
         self.network_api = network_api or network.API()
+        if ext_mgr:
+            self.extended = ext_mgr.is_loaded('os-extended-networks')
+        else:
+            self.extended = False
 
     def index(self, req):
         context = req.environ['nova.context']
         authorize_view(context)
         networks = self.network_api.get_all(context)
-        result = [network_dict(context, net_ref) for net_ref in networks]
+        result = [network_dict(context, net_ref, self.extended)
+                  for net_ref in networks]
         return {'networks': result}
 
     @wsgi.action("disassociate")
     def _disassociate_host_and_project(self, req, id, body):
         context = req.environ['nova.context']
         authorize(context)
-        LOG.debug(_("Disassociating network with id %s"), id)
 
         try:
             self.network_api.associate(context, id, host=None, project=None)
         except exception.NetworkNotFound:
-            raise exc.HTTPNotFound(_("Network not found"))
-        return exc.HTTPAccepted()
+            msg = _("Network not found")
+            raise exc.HTTPNotFound(explanation=msg)
+        except NotImplementedError:
+            msg = _('Disassociate network is not implemented by the '
+                    'configured Network API')
+            raise exc.HTTPNotImplemented(explanation=msg)
+        return webob.Response(status_int=202)
 
     def show(self, req, id):
         context = req.environ['nova.context']
         authorize_view(context)
-        LOG.debug(_("Showing network with id %s") % id)
+
         try:
             network = self.network_api.get(context, id)
         except exception.NetworkNotFound:
-            raise exc.HTTPNotFound(_("Network not found"))
-        return {'network': network_dict(context, network)}
+            msg = _("Network not found")
+            raise exc.HTTPNotFound(explanation=msg)
+        return {'network': network_dict(context, network, self.extended)}
 
     def delete(self, req, id):
         context = req.environ['nova.context']
         authorize(context)
-        LOG.info(_("Deleting network with id %s") % id)
         try:
             self.network_api.delete(context, id)
+        except exception.NetworkInUse as e:
+            raise exc.HTTPConflict(explanation=e.format_message())
         except exception.NetworkNotFound:
-            raise exc.HTTPNotFound(_("Network not found"))
-        return exc.HTTPAccepted()
+            msg = _("Network not found")
+            raise exc.HTTPNotFound(explanation=msg)
+        return webob.Response(status_int=202)
 
     def create(self, req, body):
         context = req.environ['nova.context']
         authorize(context)
 
         def bad(e):
-            return exc.HTTPUnprocessableEntity(explanation=e)
+            return exc.HTTPBadRequest(explanation=e)
 
         if not (body and body.get("network")):
             raise bad(_("Missing network in body"))
@@ -118,13 +152,32 @@ class NetworkController(wsgi.Controller):
         if not cidr:
             raise bad(_("Network cidr or cidr_v6 is required"))
 
-        LOG.debug(_("Creating network with label %s") % params["label"])
+        if params.get("project_id") == "":
+            params["project_id"] = None
 
         params["num_networks"] = 1
-        params["network_size"] = netaddr.IPNetwork(cidr).size
+        try:
+            params["network_size"] = netaddr.IPNetwork(cidr).size
+        except netaddr.AddrFormatError:
+            msg = _('%s is not a valid ip network') % cidr
+            raise exc.HTTPBadRequest(explanation=msg)
 
-        network = self.network_api.create(context, **params)[0]
-        return {"network": network_dict(context, network)}
+        if not self.extended:
+            create_params = ('allowed_start', 'allowed_end')
+            for field in extended_fields + create_params:
+                if field in params:
+                    del params[field]
+
+        try:
+            network = self.network_api.create(context, **params)[0]
+        except (exception.InvalidCidr,
+                exception.InvalidIntValue,
+                exception.InvalidAddress,
+                exception.NetworkNotCreated) as ex:
+            raise exc.HTTPBadRequest(explanation=ex.format_message)
+        except exception.CidrConflict as ex:
+            raise exc.HTTPConflict(explanation=ex.format_message())
+        return {"network": network_dict(context, network, self.extended)}
 
     def add(self, req, body):
         context = req.environ['nova.context']
@@ -134,23 +187,16 @@ class NetworkController(wsgi.Controller):
 
         network_id = body.get('id', None)
         project_id = context.project_id
-        LOG.debug(_("Associating network %(network)s"
-                    " with project %(project)s") %
-                  {"network": network_id or "",
-                   "project": project_id})
+
         try:
             self.network_api.add_network_to_project(
                 context, project_id, network_id)
         except NotImplementedError:
             msg = (_("VLAN support must be enabled"))
             raise exc.HTTPNotImplemented(explanation=msg)
-        except Exception as ex:
-            msg = (_("Cannot associate network %(network)s"
-                     " with project %(project)s: %(message)s") %
-                   {"network": network_id or "",
-                    "project": project_id,
-                    "message": getattr(ex, "value", str(ex))})
-            raise exc.HTTPBadRequest(explanation=msg)
+        except (exception.NoMoreNetworks,
+                exception.NetworkNotFoundForUUID) as e:
+            raise exc.HTTPBadRequest(explanation=e.format_message())
 
         return webob.Response(status_int=202)
 
@@ -162,14 +208,14 @@ class Os_networks(extensions.ExtensionDescriptor):
     alias = "os-networks"
     namespace = ("http://docs.openstack.org/compute/"
                  "ext/os-networks/api/v1.1")
-    updated = "2011-12-23T00:00:00+00:00"
+    updated = "2011-12-23T00:00:00Z"
 
     def get_resources(self):
         member_actions = {'action': 'POST'}
         collection_actions = {'add': 'POST'}
         res = extensions.ResourceExtension(
             'os-networks',
-            NetworkController(),
+            NetworkController(ext_mgr=self.ext_mgr),
             member_actions=member_actions,
             collection_actions=collection_actions)
         return [res]

@@ -1,5 +1,0 @@
-{
-    "report" : {
-        "file" : "%(filename)s"
-    }
-}

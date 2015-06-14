@@ -38,15 +38,14 @@ import math
 import re
 import time
 
+from oslo_serialization import jsonutils
+from oslo_utils import importutils
 import webob.dec
 import webob.exc
 
 from nova.api.openstack.compute.views import limits as limits_views
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import importutils
-from nova.openstack.common import jsonutils
+from nova.i18n import _
 from nova import quota
 from nova import utils
 from nova import wsgi as base_wsgi
@@ -56,44 +55,16 @@ QUOTAS = quota.QUOTAS
 LIMITS_PREFIX = "limits."
 
 
-limits_nsmap = {None: xmlutil.XMLNS_COMMON_V10, 'atom': xmlutil.XMLNS_ATOM}
-
-
-class LimitsTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('limits', selector='limits')
-
-        rates = xmlutil.SubTemplateElement(root, 'rates')
-        rate = xmlutil.SubTemplateElement(rates, 'rate', selector='rate')
-        rate.set('uri', 'uri')
-        rate.set('regex', 'regex')
-        limit = xmlutil.SubTemplateElement(rate, 'limit', selector='limit')
-        limit.set('value', 'value')
-        limit.set('verb', 'verb')
-        limit.set('remaining', 'remaining')
-        limit.set('unit', 'unit')
-        limit.set('next-available', 'next-available')
-
-        absolute = xmlutil.SubTemplateElement(root, 'absolute',
-                                              selector='absolute')
-        limit = xmlutil.SubTemplateElement(absolute, 'limit',
-                                           selector=xmlutil.get_items)
-        limit.set('name', 0)
-        limit.set('value', 1)
-
-        return xmlutil.MasterTemplate(root, 1, nsmap=limits_nsmap)
-
-
 class LimitsController(object):
     """Controller for accessing limits in the OpenStack API."""
 
-    @wsgi.serializers(xml=LimitsTemplate)
     def index(self, req):
         """Return all global and rate limit information."""
         context = req.environ['nova.context']
-        quotas = QUOTAS.get_project_quotas(context, context.project_id,
+        project_id = req.params.get('tenant_id', context.project_id)
+        quotas = QUOTAS.get_project_quotas(context, project_id,
                                            usages=False)
-        abs_limits = dict((k, v['limit']) for k, v in quotas.items())
+        abs_limits = {k: v['limit'] for k, v in quotas.items()}
         rate_limits = req.environ.get("nova.limits", [])
 
         builder = self._get_view_builder(req)
@@ -105,10 +76,6 @@ class LimitsController(object):
 
     def delete(self, req, id):
         """Delete the limit."""
-        raise webob.exc.HTTPNotImplemented()
-
-    def detail(self, req):
-        """Return limit details."""
         raise webob.exc.HTTPNotImplemented()
 
     def show(self, req, id):
@@ -128,15 +95,12 @@ def create_resource():
 
 
 class Limit(object):
-    """
-    Stores information about a limit for HTTP requests.
-    """
+    """Stores information about a limit for HTTP requests."""
 
-    UNITS = dict([(v, k) for k, v in utils.TIME_UNITS.items()])
+    UNITS = {v: k for k, v in utils.TIME_UNITS.items()}
 
     def __init__(self, verb, uri, regex, value, unit):
-        """
-        Initialize a new `Limit`.
+        """Initialize a new `Limit`.
 
         @param verb: HTTP verb (POST, PUT, etc.)
         @param uri: Human-readable URI
@@ -161,13 +125,14 @@ class Limit(object):
         self.water_level = 0
         self.capacity = self.unit
         self.request_value = float(self.capacity) / float(self.value)
-        msg = _("Only %(value)s %(verb)s request(s) can be "
-                "made to %(uri)s every %(unit_string)s.")
-        self.error_message = msg % self.__dict__
+        msg = (_("Only %(value)s %(verb)s request(s) can be "
+                 "made to %(uri)s every %(unit_string)s.") %
+               {'value': self.value, 'verb': self.verb, 'uri': self.uri,
+                'unit_string': self.unit_string})
+        self.error_message = msg
 
     def __call__(self, verb, url):
-        """
-        Represents a call to this limit from a relevant request.
+        """Represents a call to this limit from a relevant request.
 
         @param verb: string http verb (POST, GET, etc.)
         @param url: string URL
@@ -237,15 +202,14 @@ DEFAULT_LIMITS = [
 
 
 class RateLimitingMiddleware(base_wsgi.Middleware):
-    """
-    Rate-limits requests passing through this middleware. All limit information
-    is stored in memory for this implementation.
+    """Rate-limits requests passing through this middleware. All limit
+    information is stored in memory for this implementation.
     """
 
     def __init__(self, application, limits=None, limiter=None, **kwargs):
-        """
-        Initialize new `RateLimitingMiddleware`, which wraps the given WSGI
-        application and sets up the given limits.
+        """Initialize new `RateLimitingMiddleware`.
+
+        It wraps the given WSGI application and sets up the given limits.
 
         @param application: WSGI application to wrap
         @param limits: String describing limits
@@ -269,10 +233,10 @@ class RateLimitingMiddleware(base_wsgi.Middleware):
 
     @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
-        """
-        Represents a single call through this middleware. We should record the
-        request if we have a limit relevant to it. If no limit is relevant to
-        the request, ignore it.
+        """Represents a single call through this middleware.
+
+        We should record the request if we have a limit relevant to it.
+        If no limit is relevant to the request, ignore it.
 
         If the request should be rate limited, return a fault telling the user
         they are over the limit and need to retry later.
@@ -299,13 +263,10 @@ class RateLimitingMiddleware(base_wsgi.Middleware):
 
 
 class Limiter(object):
-    """
-    Rate-limit checking class which handles limits in memory.
-    """
+    """Rate-limit checking class which handles limits in memory."""
 
     def __init__(self, limits, **kwargs):
-        """
-        Initialize the new `Limiter`.
+        """Initialize the new `Limiter`.
 
         @param limits: List of `Limit` objects
         """
@@ -319,14 +280,11 @@ class Limiter(object):
                 self.levels[username] = self.parse_limits(value)
 
     def get_limits(self, username=None):
-        """
-        Return the limits for a given user.
-        """
+        """Return the limits for a given user."""
         return [limit.display() for limit in self.levels[username]]
 
     def check_for_delay(self, verb, url, username=None):
-        """
-        Check the given verb/user/user triplet for limit.
+        """Check the given verb/user/user triplet for limit.
 
         @return: Tuple of delay (in seconds) and error message (or None, None)
         """
@@ -350,8 +308,7 @@ class Limiter(object):
     # default limit parsing.
     @staticmethod
     def parse_limits(limits):
-        """
-        Convert a string into a list of Limit instances.  This
+        """Convert a string into a list of Limit instances.  This
         implementation expects a semicolon-separated sequence of
         parenthesized groups, where each group contains a
         comma-separated sequence consisting of HTTP method,
@@ -405,8 +362,8 @@ class Limiter(object):
 
 
 class WsgiLimiter(object):
-    """
-    Rate-limit checking from a WSGI application. Uses an in-memory `Limiter`.
+    """Rate-limit checking from a WSGI application. Uses an in-memory
+    `Limiter`.
 
     To use, POST ``/<username>`` with JSON data such as::
 
@@ -421,8 +378,7 @@ class WsgiLimiter(object):
     """
 
     def __init__(self, limits=None):
-        """
-        Initialize the new `WsgiLimiter`.
+        """Initialize the new `WsgiLimiter`.
 
         @param limits: List of `Limit` objects
         """
@@ -430,10 +386,11 @@ class WsgiLimiter(object):
 
     @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, request):
-        """
-        Handles a call to this application. Returns 204 if the request is
-        acceptable to the limiter, else a 403 is returned with a relevant
-        header indicating when the request *will* succeed.
+        """Handles a call to this application.
+
+        Returns 204 if the request is acceptable to the limiter, else a 403
+        is returned with a relevant header indicating when the request *will*
+        succeed.
         """
         if request.method != "POST":
             raise webob.exc.HTTPMethodNotAllowed()
@@ -457,13 +414,10 @@ class WsgiLimiter(object):
 
 
 class WsgiLimiterProxy(object):
-    """
-    Rate-limit requests based on answers from a remote source.
-    """
+    """Rate-limit requests based on answers from a remote source."""
 
     def __init__(self, limiter_address):
-        """
-        Initialize the new `WsgiLimiterProxy`.
+        """Initialize the new `WsgiLimiterProxy`.
 
         @param limiter_address: IP/port combination of where to request limit
         """
@@ -494,8 +448,7 @@ class WsgiLimiterProxy(object):
     # decisions are made by a remote server.
     @staticmethod
     def parse_limits(limits):
-        """
-        Ignore a limits string--simply doesn't apply for the limit
+        """Ignore a limits string--simply doesn't apply for the limit
         proxy.
 
         @return: Empty list.

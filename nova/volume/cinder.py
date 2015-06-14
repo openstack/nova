@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
@@ -23,90 +21,117 @@ Handles all requests relating to volumes + cinder.
 import copy
 import sys
 
+from cinderclient import client as cinder_client
 from cinderclient import exceptions as cinder_exception
-from cinderclient import service_catalog
-from cinderclient.v1 import client as cinder_client
-from oslo.config import cfg
+from cinderclient.v1 import client as v1_client
+from keystoneclient import exceptions as keystone_exception
+from keystoneclient import session
+from oslo_config import cfg
+from oslo_log import log as logging
+from oslo_utils import strutils
+import six
+import six.moves.urllib.parse as urlparse
 
-from nova.db import base
+from nova import availability_zones as az
 from nova import exception
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import log as logging
+from nova.i18n import _
+from nova.i18n import _LW
 
 cinder_opts = [
-    cfg.StrOpt('cinder_catalog_info',
-            default='volume:cinder:publicURL',
+    cfg.StrOpt('catalog_info',
+            default='volumev2:cinderv2:publicURL',
             help='Info to match when looking for cinder in the service '
-                 'catalog. Format is : separated values of the form: '
+                 'catalog. Format is: separated values of the form: '
                  '<service_type>:<service_name>:<endpoint_type>'),
-    cfg.StrOpt('cinder_endpoint_template',
+    cfg.StrOpt('endpoint_template',
                help='Override service catalog lookup with template for cinder '
                     'endpoint e.g. http://localhost:8776/v1/%(project_id)s'),
     cfg.StrOpt('os_region_name',
-                help='region name of this node'),
-    cfg.StrOpt('cinder_ca_certificates_file',
-                help='Location of ca certificates file to use for cinder '
-                     'client requests.'),
-    cfg.IntOpt('cinder_http_retries',
+               help='Region name of this node'),
+    cfg.IntOpt('http_retries',
                default=3,
                help='Number of cinderclient retries on failed http calls'),
-    cfg.BoolOpt('cinder_api_insecure',
-               default=False,
-               help='Allow to perform insecure SSL requests to cinder'),
-    cfg.BoolOpt('cinder_cross_az_attach',
+    cfg.BoolOpt('cross_az_attach',
                 default=True,
                 help='Allow attach between instance and volume in different '
                      'availability zones.'),
 ]
 
 CONF = cfg.CONF
-CONF.register_opts(cinder_opts)
+CINDER_OPT_GROUP = 'cinder'
+
+# cinder_opts options in the DEFAULT group were deprecated in Juno
+CONF.register_opts(cinder_opts, group=CINDER_OPT_GROUP)
+
+
+deprecated = {'timeout': [cfg.DeprecatedOpt('http_timeout',
+                                            group=CINDER_OPT_GROUP)],
+              'cafile': [cfg.DeprecatedOpt('ca_certificates_file',
+                                           group=CINDER_OPT_GROUP)],
+              'insecure': [cfg.DeprecatedOpt('api_insecure',
+                                             group=CINDER_OPT_GROUP)]}
+
+session.Session.register_conf_options(CONF,
+                                      CINDER_OPT_GROUP,
+                                      deprecated_opts=deprecated)
 
 LOG = logging.getLogger(__name__)
 
+_SESSION = None
+_V1_ERROR_RAISED = False
+
+
+def reset_globals():
+    """Testing method to reset globals.
+    """
+    global _SESSION
+    _SESSION = None
+
 
 def cinderclient(context):
+    global _SESSION
+    global _V1_ERROR_RAISED
 
-    # FIXME: the cinderclient ServiceCatalog object is mis-named.
-    #        It actually contains the entire access blob.
-    # Only needed parts of the service catalog are passed in, see
-    # nova/context.py.
-    compat_catalog = {
-        'access': {'serviceCatalog': context.service_catalog or []}
-    }
-    sc = service_catalog.ServiceCatalog(compat_catalog)
-    if CONF.cinder_endpoint_template:
-        url = CONF.cinder_endpoint_template % context.to_dict()
+    if not _SESSION:
+        _SESSION = session.Session.load_from_conf_options(CONF,
+                                                          CINDER_OPT_GROUP)
+
+    url = None
+    endpoint_override = None
+
+    auth = context.get_auth_plugin()
+    service_type, service_name, interface = CONF.cinder.catalog_info.split(':')
+
+    service_parameters = {'service_type': service_type,
+                          'service_name': service_name,
+                          'interface': interface,
+                          'region_name': CONF.cinder.os_region_name}
+
+    if CONF.cinder.endpoint_template:
+        url = CONF.cinder.endpoint_template % context.to_dict()
+        endpoint_override = url
     else:
-        info = CONF.cinder_catalog_info
-        service_type, service_name, endpoint_type = info.split(':')
-        # extract the region if set in configuration
-        if CONF.os_region_name:
-            attr = 'region'
-            filter_value = CONF.os_region_name
-        else:
-            attr = None
-            filter_value = None
-        url = sc.url_for(attr=attr,
-                         filter_value=filter_value,
-                         service_type=service_type,
-                         service_name=service_name,
-                         endpoint_type=endpoint_type)
+        url = _SESSION.get_endpoint(auth, **service_parameters)
 
-    LOG.debug(_('Cinderclient connection created using URL: %s') % url)
+    # TODO(jamielennox): This should be using proper version discovery from
+    # the cinder service rather than just inspecting the URL for certain string
+    # values.
+    version = get_cinder_client_version(url)
 
-    c = cinder_client.Client(context.user_id,
-                             context.auth_token,
-                             project_id=context.project_id,
-                             auth_url=url,
-                             insecure=CONF.cinder_api_insecure,
-                             retries=CONF.cinder_http_retries,
-                             cacert=CONF.cinder_ca_certificates_file)
-    # noauth extracts user_id:project_id from auth_token
-    c.client.auth_token = context.auth_token or '%s:%s' % (context.user_id,
-                                                           context.project_id)
-    c.client.management_url = url
-    return c
+    if version == '1' and not _V1_ERROR_RAISED:
+        msg = _LW('Cinder V1 API is deprecated as of the Juno '
+                  'release, and Nova is still configured to use it. '
+                  'Enable the V2 API in Cinder and set '
+                  'cinder.catalog_info in nova.conf to use it.')
+        LOG.warn(msg)
+        _V1_ERROR_RAISED = True
+
+    return cinder_client.Client(version,
+                                session=_SESSION,
+                                auth=auth,
+                                endpoint_override=endpoint_override,
+                                connect_retries=CONF.cinder.http_retries,
+                                **service_parameters)
 
 
 def _untranslate_volume_summary_view(context, vol):
@@ -132,14 +157,18 @@ def _untranslate_volume_summary_view(context, vol):
         d['mountpoint'] = att['device']
     else:
         d['attach_status'] = 'detached'
-
-    d['display_name'] = vol.display_name
-    d['display_description'] = vol.display_description
-
+    # NOTE(dzyu) volume(cinder) v2 API uses 'name' instead of 'display_name',
+    # and use 'description' instead of 'display_description' for volume.
+    if hasattr(vol, 'display_name'):
+        d['display_name'] = vol.display_name
+        d['display_description'] = vol.display_description
+    else:
+        d['display_name'] = vol.name
+        d['display_description'] = vol.description
     # TODO(jdg): Information may be lost in this translation
     d['volume_type_id'] = vol.volume_type
     d['snapshot_id'] = vol.snapshot_id
-
+    d['bootable'] = strutils.bool_from_string(vol.bootable)
     d['volume_metadata'] = {}
     for key, value in vol.metadata.items():
         d['volume_metadata'][key] = value
@@ -159,8 +188,16 @@ def _untranslate_snapshot_summary_view(context, snapshot):
     d['progress'] = snapshot.progress
     d['size'] = snapshot.size
     d['created_at'] = snapshot.created_at
-    d['display_name'] = snapshot.display_name
-    d['display_description'] = snapshot.display_description
+
+    # NOTE(dzyu) volume(cinder) v2 API uses 'name' instead of 'display_name',
+    # 'description' instead of 'display_description' for snapshot.
+    if hasattr(snapshot, 'display_name'):
+        d['display_name'] = snapshot.display_name
+        d['display_description'] = snapshot.display_description
+    else:
+        d['display_name'] = snapshot.name
+        d['display_description'] = snapshot.description
+
     d['volume_id'] = snapshot.volume_id
     d['project_id'] = snapshot.project_id
     d['volume_size'] = snapshot.size
@@ -174,13 +211,23 @@ def translate_volume_exception(method):
     def wrapper(self, ctx, volume_id, *args, **kwargs):
         try:
             res = method(self, ctx, volume_id, *args, **kwargs)
-        except cinder_exception.ClientException:
+        except (cinder_exception.ClientException,
+                keystone_exception.ClientException):
             exc_type, exc_value, exc_trace = sys.exc_info()
-            if isinstance(exc_value, cinder_exception.NotFound):
+            if isinstance(exc_value, (keystone_exception.NotFound,
+                                      cinder_exception.NotFound)):
                 exc_value = exception.VolumeNotFound(volume_id=volume_id)
-            elif isinstance(exc_value, cinder_exception.BadRequest):
-                exc_value = exception.InvalidInput(reason=exc_value.message)
-            raise exc_value, None, exc_trace
+            elif isinstance(exc_value, (keystone_exception.BadRequest,
+                                        cinder_exception.BadRequest)):
+                exc_value = exception.InvalidInput(
+                    reason=six.text_type(exc_value))
+            six.reraise(exc_value, None, exc_trace)
+        except (cinder_exception.ConnectionError,
+                keystone_exception.ConnectionError):
+            exc_type, exc_value, exc_trace = sys.exc_info()
+            exc_value = exception.CinderConnectionFailed(
+                reason=six.text_type(exc_value))
+            six.reraise(exc_value, None, exc_trace)
         return res
     return wrapper
 
@@ -192,16 +239,45 @@ def translate_snapshot_exception(method):
     def wrapper(self, ctx, snapshot_id, *args, **kwargs):
         try:
             res = method(self, ctx, snapshot_id, *args, **kwargs)
-        except cinder_exception.ClientException:
+        except (cinder_exception.ClientException,
+                keystone_exception.ClientException):
             exc_type, exc_value, exc_trace = sys.exc_info()
-            if isinstance(exc_value, cinder_exception.NotFound):
+            if isinstance(exc_value, (keystone_exception.NotFound,
+                                      cinder_exception.NotFound)):
                 exc_value = exception.SnapshotNotFound(snapshot_id=snapshot_id)
-            raise exc_value, None, exc_trace
+            six.reraise(exc_value, None, exc_trace)
+        except (cinder_exception.ConnectionError,
+                keystone_exception.ConnectionError):
+            exc_type, exc_value, exc_trace = sys.exc_info()
+            reason = six.text_type(exc_value)
+            exc_value = exception.CinderConnectionFailed(reason=reason)
+            six.reraise(exc_value, None, exc_trace)
         return res
     return wrapper
 
 
-class API(base.Base):
+def get_cinder_client_version(url):
+    """Parse cinder client version by endpoint url.
+
+    :param url: URL for cinder.
+    :return: str value(1 or 2).
+    """
+    # FIXME(jamielennox): Use cinder_client.get_volume_api_from_url when
+    # bug #1386232 is fixed.
+    valid_versions = ['v1', 'v2']
+    scheme, netloc, path, query, frag = urlparse.urlsplit(url)
+    components = path.split("/")
+
+    for version in valid_versions:
+        if version in components:
+            return version[1:]
+
+    msg = "Invalid client version '%s'. must be one of: %s" % (
+        (version, ', '.join(valid_versions)))
+    raise cinder_exception.UnsupportedVersion(msg)
+
+
+class API(object):
     """API for interacting with the volume manager."""
 
     @translate_volume_exception
@@ -209,8 +285,11 @@ class API(base.Base):
         item = cinderclient(context).volumes.get(volume_id)
         return _untranslate_volume_summary_view(context, item)
 
-    def get_all(self, context, search_opts={}):
-        items = cinderclient(context).volumes.list(detailed=True)
+    def get_all(self, context, search_opts=None):
+        search_opts = search_opts or {}
+        items = cinderclient(context).volumes.list(detailed=True,
+                                                   search_opts=search_opts)
+
         rval = []
 
         for item in items:
@@ -219,28 +298,44 @@ class API(base.Base):
         return rval
 
     def check_attached(self, context, volume):
-        """Raise exception if volume in use."""
         if volume['status'] != "in-use":
-            msg = _("status must be 'in-use'")
+            msg = _("volume '%(vol)s' status must be 'in-use'. Currently in "
+                    "'%(status)s' status") % {"vol": volume['id'],
+                                              "status": volume['status']}
             raise exception.InvalidVolume(reason=msg)
 
     def check_attach(self, context, volume, instance=None):
         # TODO(vish): abstract status checking?
         if volume['status'] != "available":
-            msg = _("status must be 'available'")
+            msg = _("volume '%(vol)s' status must be 'available'. Currently "
+                    "in '%(status)s'") % {'vol': volume['id'],
+                                          'status': volume['status']}
             raise exception.InvalidVolume(reason=msg)
         if volume['attach_status'] == "attached":
-            msg = _("already attached")
+            msg = _("volume %s already attached") % volume['id']
             raise exception.InvalidVolume(reason=msg)
-        if instance and not CONF.cinder_cross_az_attach:
-            if instance['availability_zone'] != volume['availability_zone']:
-                msg = _("Instance and volume not in same availability_zone")
+        if instance and not CONF.cinder.cross_az_attach:
+            # NOTE(sorrison): If instance is on a host we match against it's AZ
+            #                 else we check the intended AZ
+            if instance.get('host'):
+                instance_az = az.get_instance_availability_zone(
+                    context, instance)
+            else:
+                instance_az = instance['availability_zone']
+            if instance_az != volume['availability_zone']:
+                msg = _("Instance %(instance)s and volume %(vol)s are not in "
+                        "the same availability_zone. Instance is in "
+                        "%(ins_zone)s. Volume is in %(vol_zone)s") % {
+                            "instance": instance['id'],
+                            "vol": volume['id'],
+                            'ins_zone': instance_az,
+                            'vol_zone': volume['availability_zone']}
                 raise exception.InvalidVolume(reason=msg)
 
     def check_detach(self, context, volume):
         # TODO(vish): abstract status checking?
         if volume['status'] == "available":
-            msg = _("already detached")
+            msg = _("volume %s already detached") % volume['id']
             raise exception.InvalidVolume(reason=msg)
 
     @translate_volume_exception
@@ -260,9 +355,9 @@ class API(base.Base):
         cinderclient(context).volumes.roll_detaching(volume_id)
 
     @translate_volume_exception
-    def attach(self, context, volume_id, instance_uuid, mountpoint):
+    def attach(self, context, volume_id, instance_uuid, mountpoint, mode='rw'):
         cinderclient(context).volumes.attach(volume_id, instance_uuid,
-                                             mountpoint)
+                                             mountpoint, mode=mode)
 
     @translate_volume_exception
     def detach(self, context, volume_id):
@@ -286,6 +381,7 @@ class API(base.Base):
     def create(self, context, size, name, description, snapshot=None,
                image_id=None, volume_type=None, metadata=None,
                availability_zone=None):
+        client = cinderclient(context)
 
         if snapshot is not None:
             snapshot_id = snapshot['id']
@@ -293,8 +389,6 @@ class API(base.Base):
             snapshot_id = None
 
         kwargs = dict(snapshot_id=snapshot_id,
-                      display_name=name,
-                      display_description=description,
                       volume_type=volume_type,
                       user_id=context.user_id,
                       project_id=context.project_id,
@@ -302,11 +396,21 @@ class API(base.Base):
                       metadata=metadata,
                       imageRef=image_id)
 
+        if isinstance(client, v1_client.Client):
+            kwargs['display_name'] = name
+            kwargs['display_description'] = description
+        else:
+            kwargs['name'] = name
+            kwargs['description'] = description
+
         try:
-            item = cinderclient(context).volumes.create(size, **kwargs)
+            item = client.volumes.create(size, **kwargs)
             return _untranslate_volume_summary_view(context, item)
-        except cinder_exception.BadRequest as e:
-            raise exception.InvalidInput(reason=e.message)
+        except cinder_exception.OverLimit:
+            raise exception.OverQuota(overs='volumes')
+        except (cinder_exception.BadRequest,
+                keystone_exception.BadRequest) as e:
+            raise exception.InvalidInput(reason=e)
 
     @translate_volume_exception
     def delete(self, context, volume_id):
@@ -353,23 +457,6 @@ class API(base.Base):
 
     def get_volume_encryption_metadata(self, context, volume_id):
         return cinderclient(context).volumes.get_encryption_metadata(volume_id)
-
-    @translate_volume_exception
-    def get_volume_metadata(self, context, volume_id):
-        raise NotImplementedError()
-
-    @translate_volume_exception
-    def delete_volume_metadata(self, context, volume_id, key):
-        raise NotImplementedError()
-
-    @translate_volume_exception
-    def update_volume_metadata(self, context, volume_id,
-                               metadata, delete=False):
-        raise NotImplementedError()
-
-    @translate_volume_exception
-    def get_volume_metadata_value(self, volume_id, key):
-        raise NotImplementedError()
 
     @translate_snapshot_exception
     def update_snapshot_status(self, context, snapshot_id, status):

@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
@@ -19,17 +17,19 @@
 import functools
 import re
 
-from nova import availability_zones
+from oslo_log import log as logging
+from oslo_utils import timeutils
+from oslo_utils import uuidutils
+import six
+
 from nova import context
-from nova import db
 from nova import exception
+from nova.i18n import _
+from nova.i18n import _LI
 from nova.network import model as network_model
-from nova.objects import instance as instance_obj
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import log as logging
+from nova import objects
+from nova.objects import base as obj_base
 from nova.openstack.common import memorycache
-from nova.openstack.common import timeutils
-from nova.openstack.common import uuidutils
 
 LOG = logging.getLogger(__name__)
 # NOTE(vish): cache mapping for one week
@@ -103,18 +103,20 @@ def resource_type_from_id(context, resource_id):
 @memoize
 def id_to_glance_id(context, image_id):
     """Convert an internal (db) id to a glance id."""
-    return db.s3_image_get(context, image_id)['uuid']
+    return objects.S3ImageMapping.get_by_id(context, image_id).uuid
 
 
 @memoize
 def glance_id_to_id(context, glance_id):
     """Convert a glance id to an internal (db) id."""
-    if glance_id is None:
+    if not glance_id:
         return
     try:
-        return db.s3_image_get_by_uuid(context, glance_id)['id']
+        return objects.S3ImageMapping.get_by_uuid(context, glance_id).id
     except exception.NotFound:
-        return db.s3_image_create(context, glance_id)['id']
+        s3imap = objects.S3ImageMapping(context, uuid=glance_id)
+        s3imap.create()
+        return s3imap.id
 
 
 def ec2_id_to_glance_id(context, ec2_id):
@@ -124,6 +126,8 @@ def ec2_id_to_glance_id(context, ec2_id):
 
 def glance_id_to_ec2_id(context, glance_id, image_type='ami'):
     image_id = glance_id_to_id(context, glance_id)
+    if image_id is None:
+        return
     return image_ec2_id(image_id, image_type=image_type)
 
 
@@ -159,21 +163,16 @@ def get_ip_info_for_instance_from_nw_info(nw_info):
 def get_ip_info_for_instance(context, instance):
     """Return a dictionary of IP information for an instance."""
 
-    if isinstance(instance, instance_obj.Instance):
+    if isinstance(instance, obj_base.NovaObject):
         nw_info = instance.info_cache.network_info
     else:
         # FIXME(comstud): Temporary as we transition to objects.
-        info_cache = instance['info_cache'] or {}
+        info_cache = instance.info_cache or {}
         nw_info = info_cache.get('network_info')
-        # Make sure empty response is turned into the model
-        if not nw_info:
-            nw_info = []
+    # Make sure empty response is turned into the model
+    if not nw_info:
+        nw_info = []
     return get_ip_info_for_instance_from_nw_info(nw_info)
-
-
-def get_availability_zone_by_host(host, conductor_api=None):
-    return availability_zones.get_host_availability_zone(
-        context.get_admin_context(), host, conductor_api)
 
 
 def id_to_ec2_id(instance_id, template='i-%08x'):
@@ -201,7 +200,8 @@ def ec2_inst_id_to_uuid(context, ec2_id):
 
 @memoize
 def get_instance_uuid_from_int_id(context, int_id):
-    return db.get_instance_uuid_by_ec2_id(context, int_id)
+    imap = objects.EC2InstanceMapping.get_by_id(context, int_id)
+    return imap.uuid
 
 
 def id_to_ec2_snap_id(snapshot_id):
@@ -236,11 +236,28 @@ def ec2_vol_id_to_uuid(ec2_id):
 _ms_time_regex = re.compile('^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3,6}Z$')
 
 
+def status_to_ec2_attach_status(volume):
+    """Get the corresponding EC2 attachment state.
+
+    According to EC2 API, the valid attachment status in response is:
+    attaching | attached | detaching | detached
+    """
+    volume_status = volume.get('status')
+    attach_status = volume.get('attach_status')
+    if volume_status in ('attaching', 'detaching'):
+        ec2_attach_status = volume_status
+    elif attach_status in ('attached', 'detached'):
+        ec2_attach_status = attach_status
+    else:
+        msg = _("Unacceptable attach status:%s for ec2 API.") % attach_status
+        raise exception.Invalid(msg)
+    return ec2_attach_status
+
+
 def is_ec2_timestamp_expired(request, expires=None):
     """Checks the timestamp or expiry time included in an EC2 request
     and returns true if the request is expired
     """
-    query_time = None
     timestamp = request.get('Timestamp')
     expiry_time = request.get('Expires')
 
@@ -272,7 +289,7 @@ def is_ec2_timestamp_expired(request, expires=None):
                        timeutils.is_newer_than(query_time, expires)
         return False
     except ValueError:
-        LOG.audit(_("Timestamp is invalid."))
+        LOG.info(_LI("Timestamp is invalid."))
         return True
 
 
@@ -281,9 +298,13 @@ def get_int_id_from_instance_uuid(context, instance_uuid):
     if instance_uuid is None:
         return
     try:
-        return db.get_ec2_instance_id_by_uuid(context, instance_uuid)
+        imap = objects.EC2InstanceMapping.get_by_uuid(context, instance_uuid)
+        return imap.id
     except exception.NotFound:
-        return db.ec2_instance_create(context, instance_uuid)['id']
+        imap = objects.EC2InstanceMapping(context)
+        imap.uuid = instance_uuid
+        imap.create()
+        return imap.id
 
 
 @memoize
@@ -291,14 +312,19 @@ def get_int_id_from_volume_uuid(context, volume_uuid):
     if volume_uuid is None:
         return
     try:
-        return db.get_ec2_volume_id_by_uuid(context, volume_uuid)
+        vmap = objects.EC2VolumeMapping.get_by_uuid(context, volume_uuid)
+        return vmap.id
     except exception.NotFound:
-        return db.ec2_volume_create(context, volume_uuid)['id']
+        vmap = objects.EC2VolumeMapping(context)
+        vmap.uuid = volume_uuid
+        vmap.create()
+        return vmap.id
 
 
 @memoize
 def get_volume_uuid_from_int_id(context, int_id):
-    return db.get_volume_uuid_by_ec2_id(context, int_id)
+    vmap = objects.EC2VolumeMapping.get_by_id(context, int_id)
+    return vmap.uuid
 
 
 def ec2_snap_id_to_uuid(ec2_id):
@@ -315,14 +341,18 @@ def get_int_id_from_snapshot_uuid(context, snapshot_uuid):
     if snapshot_uuid is None:
         return
     try:
-        return db.get_ec2_snapshot_id_by_uuid(context, snapshot_uuid)
+        smap = objects.EC2SnapshotMapping.get_by_uuid(context, snapshot_uuid)
+        return smap.id
     except exception.NotFound:
-        return db.ec2_snapshot_create(context, snapshot_uuid)['id']
+        smap = objects.EC2SnapshotMapping(context, uuid=snapshot_uuid)
+        smap.create()
+        return smap.id
 
 
 @memoize
 def get_snapshot_uuid_from_int_id(context, int_id):
-    return db.get_snapshot_uuid_by_ec2_id(context, int_id)
+    smap = objects.EC2SnapshotMapping.get_by_id(context, int_id)
+    return smap.uuid
 
 
 _c2u = re.compile('(((?<=[a-z])[A-Z])|([A-Z](?![A-Z]|$)))')
@@ -384,7 +414,7 @@ def dict_from_dotted_str(items):
     for key, value in items:
         parts = key.split(".")
         key = str(camelcase_to_underscore(parts[0]))
-        if isinstance(value, str) or isinstance(value, unicode):
+        if isinstance(value, six.string_types):
             # NOTE(vish): Automatically convert strings back
             #             into their respective values
             value = _try_convert(value)
@@ -405,8 +435,8 @@ def dict_from_dotted_str(items):
 
 
 def search_opts_from_filters(filters):
-    return dict((f['name'].replace('-', '_'), f['value']['1'])
-                for f in filters if f['value']['1']) if filters else {}
+    return {f['name'].replace('-', '_'): f['value']['1']
+            for f in filters if f['value']['1']} if filters else {}
 
 
 def regex_from_ec2_regex(ec2_re):
@@ -424,7 +454,7 @@ def regex_from_ec2_regex(ec2_re):
             py_re += '.'
         elif char == '\\':
             try:
-                next_char = iter_ec2_re.next()
+                next_char = next(iter_ec2_re)
             except StopIteration:
                 next_char = ''
             if next_char == '*' or next_char == '?':

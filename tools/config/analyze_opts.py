@@ -1,6 +1,4 @@
 #!/usr/bin/env python
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright (c) 2012, Cloudscaling
 # All Rights Reserved.
 #
@@ -29,7 +27,7 @@ import os
 import sys
 
 sys.path.append(os.getcwd())
-from oslo.config import iniparser
+from oslo_config import iniparser
 
 
 class PropertyCollecter(iniparser.BaseParser):

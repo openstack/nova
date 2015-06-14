@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 OpenStack Foundation
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -14,20 +12,19 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova.api.openstack.compute.schemas.v3 import user_data as schema_user_data
 from nova.api.openstack import extensions
 
 
 ALIAS = "os-user-data"
-ATTRIBUTE_NAME = '%s:user_data' % ALIAS
+ATTRIBUTE_NAME = 'user_data'
 
 
 class UserData(extensions.V3APIExtensionBase):
-    """Add user_data to the Create Server v1.1 API."""
+    """Add user_data to the Create Server API."""
 
     name = "UserData"
-    alias = "os-user-data"
-    namespace = ("http://docs.openstack.org/compute/ext/"
-                 "userdata/api/v3")
+    alias = ALIAS
     version = 1
 
     def get_controller_extensions(self):
@@ -36,10 +33,10 @@ class UserData(extensions.V3APIExtensionBase):
     def get_resources(self):
         return []
 
-    def server_create(self, server_dict, create_kwargs):
+    # NOTE(gmann): This function is not supposed to use 'body_deprecated_param'
+    # parameter as this is placed to handle scheduler_hint extension for V2.1.
+    def server_create(self, server_dict, create_kwargs, body_deprecated_param):
         create_kwargs['user_data'] = server_dict.get(ATTRIBUTE_NAME)
 
-    def server_xml_extract_server_deserialize(self, server_node, server_dict):
-        user_data = server_node.getAttribute(ATTRIBUTE_NAME)
-        if user_data:
-            server_dict[ATTRIBUTE_NAME] = user_data
+    def get_server_create_schema(self):
+        return schema_user_data.server_create

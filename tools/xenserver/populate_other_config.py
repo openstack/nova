@@ -38,11 +38,11 @@ if os.path.exists(os.path.join(possible_topdir, "nova", "__init__.py")):
         sys.path.insert(0, possible_topdir)
 
 from nova import config
-from nova.openstack.common import uuidutils
 from nova.virt import virtapi
 from nova.virt.xenapi import driver as xenapi_driver
 from nova.virt.xenapi import vm_utils
-from oslo.config import cfg
+from oslo_config import cfg
+from oslo_utils import uuidutils
 
 cli_opts = [
     cfg.BoolOpt('dry-run',

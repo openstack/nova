@@ -17,6 +17,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+# NOTE: XenServer still only supports Python 2.4 in it's dom0 userspace
+# which means the Nova xenapi plugins must use only Python 2.4 features
+
 #
 # XenAPI plugin for host operations
 #
@@ -27,7 +30,9 @@ except ImportError:
     import simplejson as json
 import logging
 import re
+import sys
 import time
+import xmlrpclib
 
 import utils
 
@@ -395,8 +400,49 @@ def cleanup(dct):
 #            "external-auth-service-name", "")
     return out
 
+def query_gc(session, sr_uuid, vdi_uuid):
+    result = _run_command(["/opt/xensource/sm/cleanup.py",
+                           "-q", "-u", sr_uuid])
+    # Example output: "Currently running: True"
+    return result[19:].strip() == "True"
+
+def get_pci_device_details(session):
+    """Returns a string that is a list of pci devices with details.
+
+    This string is obtained by running the command lspci. With -vmm option,
+    it dumps PCI device data in machine readable form. This verbose format
+    display a sequence of records separated by a blank line. We will also
+    use option "-n" to get vendor_id and device_id as numeric values and
+    the "-k" option to get the kernel driver used if any.
+    """
+    return _run_command(["lspci", "-vmmnk"])
+
+
+def get_pci_type(session, pci_device):
+    """Returns the type of the PCI device (type-PCI, type-VF or type-PF).
+
+    pci-device -- The address of the pci device
+    """
+    # We need to add the domain if it is missing
+    if pci_device.count(':') == 1:
+        pci_device = "0000:" + pci_device
+    output = _run_command(["ls", "/sys/bus/pci/devices/" + pci_device + "/"])
+
+    if "physfn" in output:
+        return "type-VF"
+    if "virtfn" in output:
+        return "type-PF"
+    return "type-PCI"
+
 
 if __name__ == "__main__":
+    # Support both serialized and non-serialized plugin approaches
+    _, methodname = xmlrpclib.loads(sys.argv[1])
+    if methodname in ['query_gc', 'get_pci_device_details', 'get_pci_type']:
+        utils.register_plugin_calls(query_gc,
+                                    get_pci_device_details,
+                                    get_pci_type)
+
     XenAPIPlugin.dispatch(
             {"host_data": host_data,
             "set_host_enabled": set_host_enabled,

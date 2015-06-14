@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 Cloudbase Solutions Srl
 # All Rights Reserved.
 #
@@ -19,29 +17,32 @@
 Constants used in ops classes
 """
 
+from nova.compute import arch
 from nova.compute import power_state
 
 HYPERV_VM_STATE_ENABLED = 2
 HYPERV_VM_STATE_DISABLED = 3
+HYPERV_VM_STATE_SHUTTING_DOWN = 4
 HYPERV_VM_STATE_REBOOT = 10
 HYPERV_VM_STATE_PAUSED = 32768
 HYPERV_VM_STATE_SUSPENDED = 32769
 
 HYPERV_POWER_STATE = {
     HYPERV_VM_STATE_DISABLED: power_state.SHUTDOWN,
+    HYPERV_VM_STATE_SHUTTING_DOWN: power_state.SHUTDOWN,
     HYPERV_VM_STATE_ENABLED: power_state.RUNNING,
     HYPERV_VM_STATE_PAUSED: power_state.PAUSED,
     HYPERV_VM_STATE_SUSPENDED: power_state.SUSPENDED
 }
 
 WMI_WIN32_PROCESSOR_ARCHITECTURE = {
-    0: 'x86',
-    1: 'MIPS',
-    2: 'Alpha',
-    3: 'PowerPC',
-    5: 'ARM',
-    6: 'Itanium-based systems',
-    9: 'x64',
+    0: arch.I686,
+    1: arch.MIPS,
+    2: arch.ALPHA,
+    3: arch.PPC,
+    5: arch.ARMV7,
+    6: arch.IA64,
+    9: arch.X86_64,
 }
 
 PROCESSOR_FEATURE = {
@@ -67,11 +68,34 @@ VM_SUMMARY_ENABLED_STATE = 100
 VM_SUMMARY_MEMORY_USAGE = 103
 VM_SUMMARY_UPTIME = 105
 
-IDE_DISK = "VHD"
-IDE_DVD = "DVD"
+CTRL_TYPE_IDE = "IDE"
+CTRL_TYPE_SCSI = "SCSI"
+
+DISK = "VHD"
+DISK_FORMAT = DISK
+DVD = "DVD"
+DVD_FORMAT = "ISO"
+
+DISK_FORMAT_MAP = {
+    DISK_FORMAT.lower(): DISK,
+    DVD_FORMAT.lower(): DVD
+}
 
 DISK_FORMAT_VHD = "VHD"
 DISK_FORMAT_VHDX = "VHDX"
 
 VHD_TYPE_FIXED = 2
 VHD_TYPE_DYNAMIC = 3
+
+SCSI_CONTROLLER_SLOTS_NUMBER = 64
+
+HOST_POWER_ACTION_SHUTDOWN = "shutdown"
+HOST_POWER_ACTION_REBOOT = "reboot"
+HOST_POWER_ACTION_STARTUP = "startup"
+
+IMAGE_PROP_VM_GEN = "hw_machine_type"
+IMAGE_PROP_VM_GEN_1 = "hyperv-gen1"
+IMAGE_PROP_VM_GEN_2 = "hyperv-gen2"
+
+VM_GEN_1 = 1
+VM_GEN_2 = 2

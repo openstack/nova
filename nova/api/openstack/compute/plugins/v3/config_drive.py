@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -17,30 +15,14 @@
 
 """Config Drive extension."""
 
+from nova.api.openstack.compute.schemas.v3 import config_drive as \
+                                                  schema_config_drive
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 
 ALIAS = "os-config-drive"
-ATTRIBUTE_NAME = "%s:config_drive" % ALIAS
-authorize = extensions.soft_extension_authorizer('compute', 'v3:' + ALIAS)
-
-
-class ServerConfigDriveTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('server')
-        root.set('{%s}config_drive' % ConfigDrive.namespace, ATTRIBUTE_NAME)
-        return xmlutil.SlaveTemplate(root, 1, nsmap={ConfigDrive.alias:
-                                                     ConfigDrive.namespace})
-
-
-class ServersConfigDriveTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('servers')
-        elem = xmlutil.SubTemplateElement(root, 'server', selector='servers')
-        elem.set('{%s}config_drive' % ConfigDrive.namespace, ATTRIBUTE_NAME)
-        return xmlutil.SlaveTemplate(root, 1, nsmap={ConfigDrive.alias:
-                                                     ConfigDrive.namespace})
+ATTRIBUTE_NAME = "config_drive"
+authorize = extensions.os_compute_soft_authorizer(ALIAS)
 
 
 class ConfigDriveController(wsgi.Controller):
@@ -54,7 +36,6 @@ class ConfigDriveController(wsgi.Controller):
 
     def _show(self, req, resp_obj):
         if 'server' in resp_obj.obj:
-            resp_obj.attach(xml=ServerConfigDriveTemplate())
             server = resp_obj.obj['server']
             self._add_config_drive(req, [server])
 
@@ -68,7 +49,6 @@ class ConfigDriveController(wsgi.Controller):
     def detail(self, req, resp_obj):
         context = req.environ['nova.context']
         if 'servers' in resp_obj.obj and authorize(context):
-            resp_obj.attach(xml=ServersConfigDriveTemplate())
             servers = resp_obj.obj['servers']
             self._add_config_drive(req, servers)
 
@@ -78,7 +58,6 @@ class ConfigDrive(extensions.V3APIExtensionBase):
 
     name = "ConfigDrive"
     alias = ALIAS
-    namespace = "http://docs.openstack.org/compute/ext/config_drive/api/v3"
     version = 1
 
     def get_controller_extensions(self):
@@ -89,10 +68,10 @@ class ConfigDrive(extensions.V3APIExtensionBase):
     def get_resources(self):
         return []
 
-    def server_create(self, server_dict, create_kwargs):
+    # NOTE(gmann): This function is not supposed to use 'body_deprecated_param'
+    # parameter as this is placed to handle scheduler_hint extension for V2.1.
+    def server_create(self, server_dict, create_kwargs, body_deprecated_param):
         create_kwargs['config_drive'] = server_dict.get(ATTRIBUTE_NAME)
 
-    def server_xml_extract_server_deserialize(self, server_node, server_dict):
-        config_drive = server_node.getAttribute(ATTRIBUTE_NAME)
-        if config_drive:
-            server_dict[ATTRIBUTE_NAME] = config_drive
+    def get_server_create_schema(self):
+        return schema_config_drive.server_create

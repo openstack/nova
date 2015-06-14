@@ -1,19 +1,17 @@
 {
     "servers": [
         {
-            "access_ip_v4": "",
-            "access_ip_v6": "",
             "addresses": {
                 "private": [
                     {
                         "addr": "192.168.0.3",
-                        "mac_addr": "aa:bb:cc:dd:ee:ff",
-                        "type": "fixed",
+                        "OS-EXT-IPS-MAC:mac_addr": "aa:bb:cc:dd:ee:ff",
+                        "OS-EXT-IPS:type": "fixed",
                         "version": 4
                     }
                 ]
             },
-            "created": "2013-09-25T03:29:11Z",
+            "created": "2014-09-18T10:13:33Z",
             "flavor": {
                 "id": "1",
                 "links": [
@@ -23,13 +21,13 @@
                     }
                 ]
             },
-            "host_id": "afeeb125d4d37d0a2123e3144a20a6672fda5d4b6cb85ec193430d82",
-            "id": "1b94e3fc-1b1c-431a-a077-6b280fb720ce",
+            "hostId": "2ab794bccd321fe64f9f8b679266aa2c96825f467434bbdd71b09b1d",
+            "id": "d182742c-6f20-479c-8e32-f79f9c9df6e3",
             "image": {
                 "id": "70a599e0-31e7-49b7-b260-868f441e862b",
                 "links": [
                     {
-                        "href": "http://glance.openstack.example.com/images/70a599e0-31e7-49b7-b260-868f441e862b",
+                        "href": "http://openstack.example.com/images/70a599e0-31e7-49b7-b260-868f441e862b",
                         "rel": "bookmark"
                     }
                 ]
@@ -37,11 +35,11 @@
             "key_name": null,
             "links": [
                 {
-                    "href": "http://openstack.example.com/v3/servers/1b94e3fc-1b1c-431a-a077-6b280fb720ce",
+                    "href": "http://openstack.example.com/v3/servers/d182742c-6f20-479c-8e32-f79f9c9df6e3",
                     "rel": "self"
                 },
                 {
-                    "href": "http://openstack.example.com/servers/1b94e3fc-1b1c-431a-a077-6b280fb720ce",
+                    "href": "http://openstack.example.com/servers/d182742c-6f20-479c-8e32-f79f9c9df6e3",
                     "rel": "bookmark"
                 }
             ],
@@ -57,7 +55,7 @@
             ],
             "status": "ACTIVE",
             "tenant_id": "openstack",
-            "updated": "2013-09-25T03:29:12Z",
+            "updated": "2014-09-18T10:13:34Z",
             "user_id": "fake"
         }
     ]

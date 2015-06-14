@@ -1,13 +1,11 @@
 {
     "server": {
-        "access_ip_v4": "",
-        "access_ip_v6": "",
         "addresses": {
             "private": [
                 {
                     "addr": "192.168.0.3",
-                    "mac_addr": "aa:bb:cc:dd:ee:ff",
-                    "type": "fixed",
+                    "OS-EXT-IPS-MAC:mac_addr": "aa:bb:cc:dd:ee:ff",
+                    "OS-EXT-IPS:type": "fixed",
                     "version": 4
                 }
             ]
@@ -17,18 +15,18 @@
             "id": "1",
             "links": [
                 {
-                    "href": "http://openstack.example.com/flavors/1",
+                    "href": "http://openstack.example.com/openstack/flavors/1",
                     "rel": "bookmark"
                 }
             ]
         },
-        "host_id": "46d2aa2d637bd55606304b611a1928627ee1278c149aef2206268d6e",
+        "hostId": "46d2aa2d637bd55606304b611a1928627ee1278c149aef2206268d6e",
         "id": "a868cb5e-c794-47bf-9cd8-e302b72bb94b",
         "image": {
             "id": "70a599e0-31e7-49b7-b260-868f441e862b",
             "links": [
                 {
-                    "href": "http://glance.openstack.example.com/images/70a599e0-31e7-49b7-b260-868f441e862b",
+                    "href": "http://openstack.example.com/openstack/images/70a599e0-31e7-49b7-b260-868f441e862b",
                     "rel": "bookmark"
                 }
             ]
@@ -36,11 +34,11 @@
         "key_name": null,
         "links": [
             {
-                "href": "http://openstack.example.com/v3/servers/a868cb5e-c794-47bf-9cd8-e302b72bb94b",
+                "href": "http://openstack.example.com/v2/openstack/servers/a868cb5e-c794-47bf-9cd8-e302b72bb94b",
                 "rel": "self"
             },
             {
-                "href": "http://openstack.example.com/servers/a868cb5e-c794-47bf-9cd8-e302b72bb94b",
+                "href": "http://openstack.example.com/openstack/servers/a868cb5e-c794-47bf-9cd8-e302b72bb94b",
                 "rel": "bookmark"
             }
         ],
@@ -48,10 +46,11 @@
             "My Server Name": "Apache1"
         },
         "name": "new-server-test",
-        "os-extended-status:locked_by": null,
-        "os-extended-status:power_state": 1,
-        "os-extended-status:task_state": null,
-        "os-extended-status:vm_state": "active",
+        "OS-EXT-STS:power_state": 1,
+        "OS-EXT-STS:task_state": null,
+        "OS-EXT-STS:vm_state": "active",
+        "accessIPv4": "1.2.3.4",
+        "accessIPv6": "80fe::",
         "progress": 0,
         "status": "ACTIVE",
         "tenant_id": "openstack",

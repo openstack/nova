@@ -1,4 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
 # Copyright (c) 2013 The Johns Hopkins University/Applied Physics Laboratory
 # All Rights Reserved.
 #
@@ -19,27 +18,27 @@ An implementation of a key manager that returns a single key in response to
 all invocations of get_key.
 """
 
+from oslo_log import log as logging
 
 from nova import exception
+from nova.i18n import _, _LW
 from nova.keymgr import mock_key_mgr
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import log as logging
 
 
 LOG = logging.getLogger(__name__)
 
 
 class SingleKeyManager(mock_key_mgr.MockKeyManager):
-    """
-    This key manager implementation supports all the methods specified by the
-    key manager interface. This implementation creates a single key in response
-    to all invocations of create_key. Side effects (e.g., raising exceptions)
-    for each method are handled as specified by the key manager interface.
+    """This key manager implementation supports all the methods specified by
+    the key manager interface. This implementation creates a single key in
+    response to all invocations of create_key. Side effects
+    (e.g., raising exceptions) for each method are handled as specified by
+    the key manager interface.
     """
 
     def __init__(self):
-        LOG.warn(_('This key manager is insecure and is not recommended for '
-                   'production deployments'))
+        LOG.warning(_LW('This key manager is insecure and is not recommended '
+                        'for production deployments'))
         super(SingleKeyManager, self).__init__()
 
         self.key_id = '00000000-0000-0000-0000-000000000000'
@@ -58,16 +57,16 @@ class SingleKeyManager(mock_key_mgr.MockKeyManager):
     def store_key(self, ctxt, key, **kwargs):
         if key != self.key:
             raise exception.KeyManagerError(
-                        reason="cannot store arbitrary keys")
+                        reason=_("cannot store arbitrary keys"))
 
         return super(SingleKeyManager, self).store_key(ctxt, key, **kwargs)
 
     def delete_key(self, ctxt, key_id, **kwargs):
         if ctxt is None:
-            raise exception.NotAuthorized()
+            raise exception.Forbidden()
 
         if key_id != self.key_id:
             raise exception.KeyManagerError(
-                        reason="cannot delete non-existent key")
+                        reason=_("cannot delete non-existent key"))
 
-        LOG.warn(_("Not deleting key %s"), key_id)
+        LOG.warning(_LW("Not deleting key %s"), key_id)

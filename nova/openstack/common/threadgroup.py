@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 Red Hat, Inc.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -13,12 +11,12 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+import logging
+import threading
 
-from eventlet import greenlet
+import eventlet
 from eventlet import greenpool
-from eventlet import greenthread
 
-from nova.openstack.common import log as logging
 from nova.openstack.common import loopingcall
 
 
@@ -48,9 +46,12 @@ class Thread(object):
     def wait(self):
         return self.thread.wait()
 
+    def link(self, func, *args, **kwargs):
+        self.thread.link(func, *args, **kwargs)
+
 
 class ThreadGroup(object):
-    """The point of the ThreadGroup classis to:
+    """The point of the ThreadGroup class is to:
 
     * keep track of timers and greenthreads (making it easier to stop them
       when need be).
@@ -79,21 +80,28 @@ class ThreadGroup(object):
         gt = self.pool.spawn(callback, *args, **kwargs)
         th = Thread(gt, self)
         self.threads.append(th)
+        return th
 
     def thread_done(self, thread):
         self.threads.remove(thread)
 
-    def stop(self):
-        current = greenthread.getcurrent()
-        for x in self.threads:
+    def _stop_threads(self):
+        current = threading.current_thread()
+
+        # Iterate over a copy of self.threads so thread_done doesn't
+        # modify the list while we're iterating
+        for x in self.threads[:]:
             if x is current:
                 # don't kill the current thread.
                 continue
             try:
                 x.stop()
+            except eventlet.greenlet.GreenletExit:
+                pass
             except Exception as ex:
                 LOG.exception(ex)
 
+    def stop_timers(self):
         for x in self.timers:
             try:
                 x.stop()
@@ -101,21 +109,41 @@ class ThreadGroup(object):
                 LOG.exception(ex)
         self.timers = []
 
+    def stop(self, graceful=False):
+        """stop function has the option of graceful=True/False.
+
+        * In case of graceful=True, wait for all threads to be finished.
+          Never kill threads.
+        * In case of graceful=False, kill threads immediately.
+        """
+        self.stop_timers()
+        if graceful:
+            # In case of graceful=True, wait for all threads to be
+            # finished, never kill threads
+            self.wait()
+        else:
+            # In case of graceful=False(Default), kill threads
+            # immediately
+            self._stop_threads()
+
     def wait(self):
         for x in self.timers:
             try:
                 x.wait()
-            except greenlet.GreenletExit:
+            except eventlet.greenlet.GreenletExit:
                 pass
             except Exception as ex:
                 LOG.exception(ex)
-        current = greenthread.getcurrent()
-        for x in self.threads:
+        current = threading.current_thread()
+
+        # Iterate over a copy of self.threads so thread_done doesn't
+        # modify the list while we're iterating
+        for x in self.threads[:]:
             if x is current:
                 continue
             try:
                 x.wait()
-            except greenlet.GreenletExit:
+            except eventlet.greenlet.GreenletExit:
                 pass
             except Exception as ex:
                 LOG.exception(ex)

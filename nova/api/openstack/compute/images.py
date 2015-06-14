@@ -18,10 +18,9 @@ import webob.exc
 from nova.api.openstack import common
 from nova.api.openstack.compute.views import images as views_images
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 from nova import exception
-import nova.image.glance
-from nova.openstack.common.gettextutils import _
+from nova.i18n import _
+import nova.image
 import nova.utils
 
 
@@ -36,72 +35,17 @@ SUPPORTED_FILTERS = {
 }
 
 
-def make_image(elem, detailed=False):
-    elem.set('name')
-    elem.set('id')
-
-    if detailed:
-        elem.set('updated')
-        elem.set('created')
-        elem.set('status')
-        elem.set('progress')
-        elem.set('minRam')
-        elem.set('minDisk')
-
-        server = xmlutil.SubTemplateElement(elem, 'server', selector='server')
-        server.set('id')
-        xmlutil.make_links(server, 'links')
-
-        elem.append(common.MetadataTemplate())
-
-    xmlutil.make_links(elem, 'links')
-
-
-image_nsmap = {None: xmlutil.XMLNS_V11, 'atom': xmlutil.XMLNS_ATOM}
-
-
-class ImageTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('image', selector='image')
-        make_image(root, detailed=True)
-        return xmlutil.MasterTemplate(root, 1, nsmap=image_nsmap)
-
-
-class MinimalImagesTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('images')
-        elem = xmlutil.SubTemplateElement(root, 'image', selector='images')
-        make_image(elem)
-        xmlutil.make_links(root, 'images_links')
-        return xmlutil.MasterTemplate(root, 1, nsmap=image_nsmap)
-
-
-class ImagesTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('images')
-        elem = xmlutil.SubTemplateElement(root, 'image', selector='images')
-        make_image(elem, detailed=True)
-        return xmlutil.MasterTemplate(root, 1, nsmap=image_nsmap)
-
-
 class Controller(wsgi.Controller):
     """Base controller for retrieving/displaying images."""
 
     _view_builder_class = views_images.ViewBuilder
 
-    def __init__(self, image_service=None, **kwargs):
-        """Initialize new `ImageController`.
-
-        :param image_service: `nova.image.glance:GlanceImageService`
-
-        """
+    def __init__(self, **kwargs):
         super(Controller, self).__init__(**kwargs)
-        self._image_service = (image_service or
-                               nova.image.glance.get_default_image_service())
+        self._image_api = nova.image.API()
 
     def _get_filters(self, req):
-        """
-        Return a dictionary of query param filters from the request
+        """Return a dictionary of query param filters from the request.
 
         :param req: the Request object coming from the wsgi layer
         :retval a dict of key/value filters
@@ -127,7 +71,6 @@ class Controller(wsgi.Controller):
 
         return filters
 
-    @wsgi.serializers(xml=ImageTemplate)
     def show(self, req, id):
         """Return detailed information about a specific image.
 
@@ -137,7 +80,7 @@ class Controller(wsgi.Controller):
         context = req.environ['nova.context']
 
         try:
-            image = self._image_service.show(context, id)
+            image = self._image_api.get(context, id)
         except (exception.NotFound, exception.InvalidImageRef):
             explanation = _("Image not found.")
             raise webob.exc.HTTPNotFound(explanation=explanation)
@@ -153,7 +96,7 @@ class Controller(wsgi.Controller):
         """
         context = req.environ['nova.context']
         try:
-            self._image_service.delete(context, id)
+            self._image_api.delete(context, id)
         except exception.ImageNotFound:
             explanation = _("Image not found.")
             raise webob.exc.HTTPNotFound(explanation=explanation)
@@ -164,7 +107,6 @@ class Controller(wsgi.Controller):
             raise webob.exc.HTTPForbidden(explanation=explanation)
         return webob.exc.HTTPNoContent()
 
-    @wsgi.serializers(xml=MinimalImagesTemplate)
     def index(self, req):
         """Return an index listing of images available to the request.
 
@@ -173,19 +115,15 @@ class Controller(wsgi.Controller):
         """
         context = req.environ['nova.context']
         filters = self._get_filters(req)
-        params = req.GET.copy()
         page_params = common.get_pagination_params(req)
-        for key, val in page_params.iteritems():
-            params[key] = val
 
         try:
-            images = self._image_service.detail(context, filters=filters,
-                                                **page_params)
+            images = self._image_api.get_all(context, filters=filters,
+                                             **page_params)
         except exception.Invalid as e:
             raise webob.exc.HTTPBadRequest(explanation=e.format_message())
         return self._view_builder.index(req, images)
 
-    @wsgi.serializers(xml=ImagesTemplate)
     def detail(self, req):
         """Return a detailed index listing of images available to the request.
 
@@ -194,13 +132,10 @@ class Controller(wsgi.Controller):
         """
         context = req.environ['nova.context']
         filters = self._get_filters(req)
-        params = req.GET.copy()
         page_params = common.get_pagination_params(req)
-        for key, val in page_params.iteritems():
-            params[key] = val
         try:
-            images = self._image_service.detail(context, filters=filters,
-                                                **page_params)
+            images = self._image_api.get_all(context, filters=filters,
+                                             **page_params)
         except exception.Invalid as e:
             raise webob.exc.HTTPBadRequest(explanation=e.format_message())
 

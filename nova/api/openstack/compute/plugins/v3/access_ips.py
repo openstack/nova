@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2013 IBM Corp.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -14,41 +12,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from webob import exc
-
+from nova.api.openstack.compute.schemas.v3 import access_ips
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import log as logging
-from nova import utils
 
 ALIAS = "os-access-ips"
-LOG = logging.getLogger(__name__)
-authorize = extensions.soft_extension_authorizer('compute', 'v3:' + ALIAS)
-
-
-class AccessIPTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('server', selector='server')
-        root.set('{%s}access_ip_v4' % AccessIPs.namespace,
-                 '%s:access_ip_v4' % AccessIPs.alias)
-        root.set('{%s}access_ip_v6' % AccessIPs.namespace,
-                 '%s:access_ip_v6' % AccessIPs.alias)
-        return xmlutil.SlaveTemplate(root, 1, nsmap={
-            AccessIPs.alias: AccessIPs.namespace})
-
-
-class AccessIPsTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('servers')
-        elem = xmlutil.SubTemplateElement(root, 'server', selector='servers')
-        elem.set('{%s}access_ip_v4' % AccessIPs.namespace,
-                 '%s:access_ip_v4' % AccessIPs.alias)
-        elem.set('{%s}access_ip_v6' % AccessIPs.namespace,
-                 '%s:access_ip_v6' % AccessIPs.alias)
-        return xmlutil.SlaveTemplate(root, 1, nsmap={
-            AccessIPs.alias: AccessIPs.namespace})
+authorize = extensions.os_compute_soft_authorizer(ALIAS)
 
 
 class AccessIPsController(wsgi.Controller):
@@ -56,24 +25,15 @@ class AccessIPsController(wsgi.Controller):
             db_instance = req.get_db_instance(server['id'])
             ip_v4 = db_instance.get('access_ip_v4')
             ip_v6 = db_instance.get('access_ip_v6')
-            server['%s:access_ip_v4' % ALIAS] = (
+            server['accessIPv4'] = (
                 str(ip_v4) if ip_v4 is not None else '')
-            server['%s:access_ip_v6' % ALIAS] = (
+            server['accessIPv6'] = (
                 str(ip_v6) if ip_v6 is not None else '')
-
-    @wsgi.extends
-    def create(self, req, resp_obj, body):
-        context = req.environ['nova.context']
-        if authorize(context) and 'server' in resp_obj.obj:
-            resp_obj.attach(xml=AccessIPTemplate())
-            server = resp_obj.obj['server']
-            self._extend_server(req, server)
 
     @wsgi.extends
     def show(self, req, resp_obj, id):
         context = req.environ['nova.context']
         if authorize(context):
-            resp_obj.attach(xml=AccessIPTemplate())
             server = resp_obj.obj['server']
             self._extend_server(req, server)
 
@@ -81,7 +41,6 @@ class AccessIPsController(wsgi.Controller):
     def update(self, req, resp_obj, id, body):
         context = req.environ['nova.context']
         if authorize(context):
-            resp_obj.attach(xml=AccessIPTemplate())
             server = resp_obj.obj['server']
             self._extend_server(req, server)
 
@@ -89,7 +48,6 @@ class AccessIPsController(wsgi.Controller):
     def rebuild(self, req, resp_obj, id, body):
         context = req.environ['nova.context']
         if authorize(context):
-            resp_obj.attach(xml=AccessIPTemplate())
             server = resp_obj.obj['server']
             self._extend_server(req, server)
 
@@ -97,7 +55,6 @@ class AccessIPsController(wsgi.Controller):
     def detail(self, req, resp_obj):
         context = req.environ['nova.context']
         if authorize(context):
-            resp_obj.attach(xml=AccessIPsTemplate())
             servers = resp_obj.obj['servers']
             for server in servers:
                 self._extend_server(req, server)
@@ -108,11 +65,9 @@ class AccessIPs(extensions.V3APIExtensionBase):
 
     name = "AccessIPs"
     alias = ALIAS
-    namespace = ("http://docs.openstack.org/compute/ext/"
-                 "os-access-ips/api/v3")
     version = 1
-    v4_key = '%s:access_ip_v4' % ALIAS
-    v6_key = '%s:access_ip_v6' % ALIAS
+    v4_key = 'accessIPv4'
+    v6_key = 'accessIPv6'
 
     def get_controller_extensions(self):
         controller = AccessIPsController()
@@ -123,49 +78,30 @@ class AccessIPs(extensions.V3APIExtensionBase):
     def get_resources(self):
         return []
 
-    def server_create(self, server_dict, create_kwargs):
+    # NOTE(gmann): This function is not supposed to use 'body_deprecated_param'
+    # parameter as this is placed to handle scheduler_hint extension for V2.1.
+    # making 'body_deprecated_param' as optional to avoid changes for
+    # server_update & server_rebuild
+    def server_create(self, server_dict, create_kwargs,
+                      body_deprecated_param=None):
         if AccessIPs.v4_key in server_dict:
             access_ip_v4 = server_dict.get(AccessIPs.v4_key)
             if access_ip_v4:
-                self._validate_access_ipv4(access_ip_v4)
                 create_kwargs['access_ip_v4'] = access_ip_v4
             else:
                 create_kwargs['access_ip_v4'] = None
         if AccessIPs.v6_key in server_dict:
             access_ip_v6 = server_dict.get(AccessIPs.v6_key)
             if access_ip_v6:
-                self._validate_access_ipv6(access_ip_v6)
                 create_kwargs['access_ip_v6'] = access_ip_v6
             else:
                 create_kwargs['access_ip_v6'] = None
 
     server_update = server_create
-
     server_rebuild = server_create
 
-    def server_xml_extract_server_deserialize(self, server_node, server_dict):
-        if server_node.hasAttribute(AccessIPs.v4_key):
-            access_ip_v4 = server_node.getAttribute(AccessIPs.v4_key)
-            if access_ip_v4:
-                server_dict[AccessIPs.v4_key] = access_ip_v4
-            else:
-                server_dict[AccessIPs.v4_key] = None
-        if server_node.hasAttribute(AccessIPs.v6_key):
-            access_ip_v6 = server_node.getAttribute(AccessIPs.v6_key)
-            if access_ip_v6:
-                server_dict[AccessIPs.v6_key] = access_ip_v6
-            else:
-                server_dict[AccessIPs.v6_key] = None
+    def get_server_create_schema(self):
+        return access_ips.server_create
 
-    server_xml_extract_rebuild_deserialize = \
-        server_xml_extract_server_deserialize
-
-    def _validate_access_ipv4(self, address):
-        if not utils.is_valid_ipv4(address):
-            expl = _('access_ip_v4 is not proper IPv4 format')
-            raise exc.HTTPBadRequest(explanation=expl)
-
-    def _validate_access_ipv6(self, address):
-        if not utils.is_valid_ipv6(address):
-            expl = _('access_ip_v6 is not proper IPv6 format')
-            raise exc.HTTPBadRequest(explanation=expl)
+    get_server_update_schema = get_server_create_schema
+    get_server_rebuild_schema = get_server_create_schema
