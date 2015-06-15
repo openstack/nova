@@ -60,7 +60,7 @@ from nova.virt.vmwareapi import vm_util
 
 vmops_opts = [
     cfg.StrOpt('cache_prefix',
-               help='The prefix for Where cached images are stored. This is '
+               help='The prefix for where cached images are stored. This is '
                     'NOT the full path - just a folder prefix. '
                     'This should only be used when a datastore cache should '
                     'be shared between compute nodes. Note: this should only '
