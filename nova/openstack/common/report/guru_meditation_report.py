@@ -157,7 +157,8 @@ class GuruMeditation(object):
                 service_name = service_name or os.path.basename(
                     inspect.stack()[-1][1])
                 filename = "%s_gurumeditation_%s" % (
-                    service_name, timeutils.strtime(fmt=cls.timestamp_fmt))
+                    service_name, timeutils.utcnow().strftime(
+                        cls.timestamp_fmt))
                 filepath = os.path.join(log_dir, filename)
                 try:
                     with open(filepath, "w") as dumpfile:

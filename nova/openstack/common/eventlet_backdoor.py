@@ -143,7 +143,7 @@ def initialize_if_enabled():
     # listen().  In any case, pull the port number out here.
     port = sock.getsockname()[1]
     LOG.info(
-        _LI('Eventlet backdoor listening on %(port)s for process %(pid)d') %
+        _LI('Eventlet backdoor listening on %(port)s for process %(pid)d'),
         {'port': port, 'pid': os.getpid()}
     )
     eventlet.spawn_n(eventlet.backdoor.backdoor_server, sock,
