@@ -1047,6 +1047,7 @@ class SpawnNTestCase(test.NoDBTestCase):
     def setUp(self):
         super(SpawnNTestCase, self).setUp()
         self.useFixture(context_fixture.ClearRequestContext())
+        self.spawn_name = 'spawn_n'
 
     def test_spawn_n_no_context(self):
         self.assertIsNone(common_context.get_current())
@@ -1059,8 +1060,8 @@ class SpawnNTestCase(test.NoDBTestCase):
         def fake(arg):
             pass
 
-        with mock.patch.object(eventlet, 'spawn_n', _fake_spawn):
-            utils.spawn_n(fake, 'test')
+        with mock.patch.object(eventlet, self.spawn_name, _fake_spawn):
+            getattr(utils, self.spawn_name)(fake, 'test')
         self.assertIsNone(common_context.get_current())
 
     def test_spawn_n_context(self):
@@ -1076,8 +1077,8 @@ class SpawnNTestCase(test.NoDBTestCase):
         def fake(context, kwarg1=None):
             pass
 
-        with mock.patch.object(eventlet, 'spawn_n', _fake_spawn):
-            utils.spawn_n(fake, ctxt, kwarg1='test')
+        with mock.patch.object(eventlet, self.spawn_name, _fake_spawn):
+            getattr(utils, self.spawn_name)(fake, ctxt, kwarg1='test')
         self.assertEqual(ctxt, common_context.get_current())
 
     def test_spawn_n_context_different_from_passed(self):
@@ -1096,6 +1097,12 @@ class SpawnNTestCase(test.NoDBTestCase):
         def fake(context, kwarg1=None):
             pass
 
-        with mock.patch.object(eventlet, 'spawn_n', _fake_spawn):
-            utils.spawn_n(fake, ctxt_passed, kwarg1='test')
+        with mock.patch.object(eventlet, self.spawn_name, _fake_spawn):
+            getattr(utils, self.spawn_name)(fake, ctxt_passed, kwarg1='test')
         self.assertEqual(ctxt, common_context.get_current())
+
+
+class SpawnTestCase(SpawnNTestCase):
+    def setUp(self):
+        super(SpawnTestCase, self).setUp()
+        self.spawn_name = 'spawn'
