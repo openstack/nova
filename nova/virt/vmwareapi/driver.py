@@ -25,7 +25,6 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_vmware import api
-from oslo_vmware import exceptions as vexc
 from oslo_vmware import pbm
 from oslo_vmware import vim
 from oslo_vmware import vim_util
@@ -227,9 +226,6 @@ class VMwareVCDriver(driver.ComputeDriver):
         self._session.pbm_wsdl_loc_set(pbm_wsdl_loc)
 
     def _validate_configuration(self):
-        if CONF.vmware.use_linked_clone is None:
-            raise vexc.UseLinkedCloneConfigurationFault()
-
         if CONF.vmware.pbm_enabled:
             if not CONF.vmware.pbm_default_policy:
                 raise error_util.PbmDefaultPolicyUnspecified()
