@@ -199,10 +199,10 @@ class _TestInstanceObject(object):
                                 ).AndReturn(fake_inst2)
         self.mox.ReplayAll()
         inst = instance.Instance.get_by_uuid(self.context, fake_uuid)
-        self.assertFalse(hasattr(inst, '_metadata'))
+        self.assertFalse(hasattr(inst, '_obj_metadata'))
         meta = inst.metadata
         self.assertEqual(meta, {'foo': 'bar'})
-        self.assertTrue(hasattr(inst, '_metadata'))
+        self.assertTrue(hasattr(inst, '_obj_metadata'))
         # Make sure we don't run load again
         meta2 = inst.metadata
         self.assertEqual(meta2, {'foo': 'bar'})
@@ -1351,6 +1351,8 @@ class TestRemoteInstanceObject(test_objects._RemoteTest,
         class OldInstance(objects.Instance):
             VERSION = '1.17'
 
+        base.NovaObjectRegistry.register(OldInstance)
+
         inst = OldInstance.get_by_uuid(self.context, inst.uuid)
         self.assertFalse(inst.obj_attr_is_set('system_metadata'))
         self.assertEqual('bar', inst.system_metadata['foo'])
@@ -1368,6 +1370,8 @@ class TestRemoteInstanceObject(test_objects._RemoteTest,
 
         class OldInstance(objects.Instance):
             VERSION = '1.17'
+
+        base.NovaObjectRegistry.register(OldInstance)
 
         inst = OldInstance.get_by_uuid(self.context, inst.uuid,
                                        expected_attrs=['system_metadata'])

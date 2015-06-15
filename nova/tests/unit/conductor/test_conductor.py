@@ -420,6 +420,8 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
                 else:
                     return 'test'
 
+        obj_base.NovaObjectRegistry.register(TestObject)
+
         obj = TestObject()
         # NOTE(danms): After a trip over RPC, any tuple will be a list,
         # so use a list here to make sure we can handle it
@@ -455,6 +457,8 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
             def touch_dict(self):
                 self.dict['foo'] = 'bar'
                 self.obj_reset_changes()
+
+        obj_base.NovaObjectRegistry.register(TestObject)
 
         obj = TestObject()
         obj.dict = {}

@@ -725,6 +725,9 @@ class TestObject(TestField):
         class OtherTestableObject(obj_base.NovaObject):
             pass
 
+        obj_base.NovaObjectRegistry.register(TestableObject)
+        obj_base.NovaObjectRegistry.register(OtherTestableObject)
+
         test_inst = TestableObject()
         self._test_cls = TestableObject
         self.field = fields.Field(fields.Object('TestableObject'))
