@@ -121,13 +121,8 @@ def ensure_ca_filesystem():
         genrootca_sh_path = os.path.abspath(
                 os.path.join(os.path.dirname(__file__), 'CA', 'genrootca.sh'))
 
-        start = os.getcwd()
         fileutils.ensure_tree(ca_dir)
-        os.chdir(ca_dir)
-        try:
-            utils.execute("sh", genrootca_sh_path)
-        finally:
-            os.chdir(start)
+        utils.execute("sh", genrootca_sh_path, cwd=ca_dir)
 
 
 def generate_fingerprint(public_key):
@@ -220,21 +215,16 @@ def ssh_encrypt_text(ssh_public_key, text):
 
 def revoke_cert(project_id, file_name):
     """Revoke a cert by file name."""
-    start = os.getcwd()
-    try:
-        os.chdir(ca_folder(project_id))
-    except OSError:
-        raise exception.ProjectNotFound(project_id=project_id)
     try:
         # NOTE(vish): potential race condition here
         utils.execute('openssl', 'ca', '-config', './openssl.cnf', '-revoke',
-                      file_name)
+                      file_name, cwd=ca_folder(project_id))
         utils.execute('openssl', 'ca', '-gencrl', '-config', './openssl.cnf',
-                      '-out', CONF.crl_file)
+                      '-out', CONF.crl_file, cwd=ca_folder(project_id))
+    except OSError:
+        raise exception.ProjectNotFound(project_id=project_id)
     except processutils.ProcessExecutionError:
         raise exception.RevokeCertFailure(project_id=project_id)
-    finally:
-        os.chdir(start)
 
 
 def revoke_certs_by_user(user_id):
@@ -342,11 +332,8 @@ def _ensure_project_folder(project_id):
     if not os.path.exists(ca_path(project_id)):
         geninter_sh_path = os.path.abspath(
                 os.path.join(os.path.dirname(__file__), 'CA', 'geninter.sh'))
-        start = os.getcwd()
-        os.chdir(ca_folder())
         utils.execute('sh', geninter_sh_path, project_id,
-                      _project_cert_subject(project_id))
-        os.chdir(start)
+                      _project_cert_subject(project_id), cwd=ca_folder())
 
 
 def generate_vpn_files(project_id):
@@ -390,17 +377,14 @@ def _sign_csr(csr_text, ca_folder):
                 LOG.exception(_LE('Failed to write inbound.csr'))
 
         LOG.debug('Flags path: %s', ca_folder)
-        start = os.getcwd()
 
         # Change working dir to CA
         fileutils.ensure_tree(ca_folder)
-        os.chdir(ca_folder)
         utils.execute('openssl', 'ca', '-batch', '-out', outbound, '-config',
-                      './openssl.cnf', '-infiles', inbound)
+                      './openssl.cnf', '-infiles', inbound, cwd=ca_folder)
         out, _err = utils.execute('openssl', 'x509', '-in', outbound,
-                                  '-serial', '-noout')
+                                  '-serial', '-noout', cwd=ca_folder)
         serial = out.rpartition('=')[2].strip()
-        os.chdir(start)
 
         with open(outbound, 'r') as crtfile:
             return (serial, crtfile.read())
