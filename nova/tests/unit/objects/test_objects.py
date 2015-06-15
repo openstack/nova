@@ -1385,7 +1385,7 @@ class TestObjectVersions(test.NoDBTestCase):
                     last_child_version = _ch_version
 
 
-class TestObjEqualPrims(test.NoDBTestCase):
+class TestObjEqualPrims(_BaseTestCase):
 
     def test_object_equal(self):
         obj1 = MyObj(foo=1, bar='goodbye')
