@@ -29,6 +29,40 @@ This document is trying to describe how we can achieve that.
 Once we have introduced the key concepts relating to upgrade, we will
 introduce the process needed for a no downtime upgrade of nova.
 
+
+Current Database Upgrade Types
+------------------------------
+
+Currently Nova has 2 types of database upgrades that are in use.
+
+#. Offline Migrations
+#. Online Migrations
+
+
+Offline Migrations consist of:
+''''''''''''''''''''''''''''''
+
+    #. Database schema migrations from pre-defined migrations in
+       nova/db/sqlalchemy/migrate_repo/versions.
+
+    #. *Deprecated* Database data migrations from pre-defined migrations in
+       nova/db/sqlalchemy/migrate_repo/versions.
+
+
+Online Migrations consist of:
+'''''''''''''''''''''''''''''
+
+    #. Online data migrations from inside Nova object source code.
+
+    #. *Future* Online schema migrations using auto-generation from models.
+
+
+An example of online data migrations are the flavor migrations done as part
+of Nova object version 1.18. This included a transient migration of flavor
+storage from one database location to another.
+
+:emphasis:`Note: Database downgrades are not supported.`
+
 Concepts
 --------
 
