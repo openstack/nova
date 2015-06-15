@@ -568,7 +568,7 @@ class UnsupportedDriverTestCase(BaseTestCase):
         self.tracker.update_usage(self.context, instance)
 
     def test_disabled_resize_claim(self):
-        instance = self._fake_instance()
+        instance = self._fake_instance_obj()
         instance_type = self._fake_flavor_create()
         claim = self.tracker.resize_claim(self.context, instance,
                 instance_type)
@@ -578,7 +578,7 @@ class UnsupportedDriverTestCase(BaseTestCase):
                 claim.migration['new_instance_type_id'])
 
     def test_disabled_resize_context_claim(self):
-        instance = self._fake_instance()
+        instance = self._fake_instance_obj()
         instance_type = self._fake_flavor_create()
         with self.tracker.resize_claim(self.context, instance, instance_type) \
                                        as claim:
@@ -1218,7 +1218,7 @@ class ResizeClaimTestCase(BaseTrackerTestCase):
     def setUp(self):
         super(ResizeClaimTestCase, self).setUp()
 
-        self.instance = self._fake_instance()
+        self.instance = self._fake_instance_obj()
         self.instance_type = self._fake_flavor_create()
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid',
@@ -1256,7 +1256,7 @@ class ResizeClaimTestCase(BaseTrackerTestCase):
               2 * FAKE_VIRT_VCPUS)
         self.tracker.resize_claim(self.context, self.instance,
                 self.instance_type, limits)
-        instance2 = self._fake_instance()
+        instance2 = self._fake_instance_obj()
         self.tracker.resize_claim(self.context, instance2, self.instance_type,
                 limits)
 
@@ -1310,28 +1310,6 @@ class ResizeClaimTestCase(BaseTrackerTestCase):
         self.assertEqual('fakehost', instance['host'])
         self.assertEqual('fakehost', instance['launched_on'])
         self.assertEqual('fakenode', instance['node'])
-
-
-class NoInstanceTypesInSysMetadata(ResizeClaimTestCase):
-    """Make sure we handle the case where the following are true:
-
-    #) Compute node C gets upgraded to code that looks for instance types in
-       system metadata. AND
-    #) C already has instances in the process of migrating that do not have
-       stashed instance types.
-
-    bug 1164110
-    """
-    def setUp(self):
-        super(NoInstanceTypesInSysMetadata, self).setUp()
-        self.instance = self._fake_instance(stash=False)
-
-    def test_get_instance_type_stash_false(self):
-        with (mock.patch.object(objects.Flavor, 'get_by_id',
-                                return_value=self.instance_type)):
-            flavor = self.tracker._get_instance_type(self.context,
-                                                     self.instance, "new_")
-            self.assertEqual(self.instance_type, flavor)
 
 
 class OrphanTestCase(BaseTrackerTestCase):

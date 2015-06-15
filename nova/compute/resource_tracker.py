@@ -26,7 +26,6 @@ from oslo_serialization import jsonutils
 from oslo_utils import importutils
 
 from nova.compute import claims
-from nova.compute import flavors
 from nova.compute import monitors
 from nova.compute import resources as ext_resources
 from nova.compute import task_states
@@ -177,18 +176,17 @@ class ResourceTracker(object):
                   "MB", {'flavor': instance_type['memory_mb'],
                           'overhead': overhead['memory_mb']})
 
-        instance_ref = instance_obj.compat_instance(instance)
-        claim = claims.ResizeClaim(context, instance_ref, instance_type,
+        claim = claims.ResizeClaim(context, instance, instance_type,
                                    image_meta, self, self.compute_node,
                                    overhead=overhead, limits=limits)
 
-        migration = self._create_migration(context, instance_ref,
+        migration = self._create_migration(context, instance,
                                            instance_type)
         claim.migration = migration
 
         # Mark the resources in-use for the resize landing on this
         # compute host:
-        self._update_usage_from_migration(context, instance_ref, image_meta,
+        self._update_usage_from_migration(context, instance, image_meta,
                                           migration)
         elevated = context.elevated()
         self._update(elevated)
@@ -200,17 +198,16 @@ class ResourceTracker(object):
         be done while the COMPUTE_RESOURCES_SEMAPHORE is held so the resource
         claim will not be lost if the audit process starts.
         """
-        old_instance_type = flavors.extract_flavor(instance)
         migration = objects.Migration(context=context.elevated())
         migration.dest_compute = self.host
         migration.dest_node = self.nodename
         migration.dest_host = self.driver.get_host_ip_addr()
-        migration.old_instance_type_id = old_instance_type['id']
+        migration.old_instance_type_id = instance.flavor.id
         migration.new_instance_type_id = instance_type['id']
         migration.status = 'pre-migrating'
-        migration.instance_uuid = instance['uuid']
-        migration.source_compute = instance['host']
-        migration.source_node = instance['node']
+        migration.instance_uuid = instance.uuid
+        migration.source_compute = instance.host
+        migration.source_node = instance.node
         migration.migration_type = (
             migration.old_instance_type_id != migration.new_instance_type_id
             and 'resize' or 'migration')
@@ -886,18 +883,8 @@ class ResourceTracker(object):
 
     def _get_instance_type(self, context, instance, prefix,
             instance_type_id=None):
-        """Get the instance type from sys metadata if it's stashed.  If not,
-        fall back to fetching it via the object API.
-
-        See bug 1164110
-        """
-        try:
-            extracted_flavor = flavors.extract_flavor(instance, prefix)
-        except KeyError:
-            if not instance_type_id:
-                instance_type_id = instance['instance_type_id']
-            return objects.Flavor.get_by_id(context, instance_type_id)
-        return extracted_flavor
+        """Get the instance type from instance."""
+        return getattr(instance, '%sflavor' % prefix)
 
     def _get_usage_dict(self, object_or_dict, **updates):
         """Make a usage dict _update methods expect.
