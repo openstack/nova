@@ -97,18 +97,22 @@ class HostController(wsgi.Controller):
     @extensions.expected_errors((400, 404, 501))
     @validation.schema(hosts.update)
     def update(self, req, id, body):
-        """:param body: example format {'status': 'enable',
-                                     'maintenance_mode': 'enable'}
-           :returns:
+        """Return booleanized version of body dict.
+
+        :param Request req: The request object (containing 'nova-context'
+                            env var).
+        :param str id: The host name.
+        :param dict body: example format {'host': {'status': 'enable',
+                          'maintenance_mode': 'enable'}}
+        :return: Same dict as body but 'enable' strings for 'status' and
+                 'maintenance_mode' are converted into True, else False.
+        :rtype: dict
         """
         def read_enabled(orig_val):
-            """:param orig_val: A string with either 'enable' or 'disable'. May
-                                be surrounded by whitespace, and case doesn't
-                                matter
-               :returns: True for 'enabled' and False for 'disabled'
-            """
+            # Convert enable/disable str to a bool.
             val = orig_val.strip().lower()
             return val == "enable"
+
         context = req.environ['nova.context']
         authorize(context)
         # See what the user wants to 'update'

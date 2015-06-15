@@ -124,13 +124,21 @@ class VHDUtilsV2(vhdutils.VHDUtils):
 
     def get_internal_vhd_size_by_file_size(self, vhd_path,
                                            new_vhd_file_size):
-        """VHDX Size = Header (1 MB)
-                        + Log
-                        + Metadata Region
-                        + BAT
-                        + Payload Blocks
-            Chunk size = maximum number of bytes described by a SB block
-                       = 2 ** 23 * LogicalSectorSize
+        """Get internal size of a VHD according to new VHD file size.
+
+        .. math::
+            VHDX Size =  Header (1 MB) + Log + Metadata Region + BAT
+            + Payload Blocks
+
+        The chunk size is the maximum number of bytes described by a SB
+        block.
+
+        .. math::
+            Chunk size = 2^{23} * LogicalSectorSize
+
+        :param str vhd_path: VHD file path
+        :param new_vhd_file_size: Size of the new VHD file.
+        :return: Internal VHD size according to new VHD file size.
         """
         vhd_format = self.get_vhd_format(vhd_path)
         if vhd_format == constants.DISK_FORMAT_VHD:
