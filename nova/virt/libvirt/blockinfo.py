@@ -264,7 +264,7 @@ def get_disk_bus_for_device_type(virt_type,
     elif virt_type == "parallels":
         if device_type == "cdrom":
             return "ide"
-        elif device_type == "disk":
+        elif device_type in ("disk", "fs"):
             return "sata"
     else:
         # If virt-type not in list then it is unsupported
@@ -340,11 +340,15 @@ def get_eph_disk(index):
     return 'disk.eph' + str(index)
 
 
-def get_config_drive_type():
+def get_config_drive_type(os_type=None):
     """Determine the type of config drive.
 
-       If config_drive_format is set to iso9660 then the config drive will
-       be 'cdrom', otherwise 'disk'.
+       Config drive will be:
+       'cdrom' in case of config_drive is set to iso9660;
+       'disk' in case of config_drive is set to vfat;
+       'fs' in case of os_type is EXE and virt_type is parallels;
+       Autodetected from (cdrom, disk, fs) in case of config_drive is None;
+       Otherwise, an exception of unknown format will be thrown.
 
        Returns a string indicating the config drive type.
     """
@@ -353,9 +357,22 @@ def get_config_drive_type():
         config_drive_type = 'cdrom'
     elif CONF.config_drive_format == 'vfat':
         config_drive_type = 'disk'
+    elif CONF.config_drive_format is None:
+        if CONF.libvirt.virt_type == 'parallels':
+            if os_type == vm_mode.HVM:
+                config_drive_type = 'cdrom'
+            elif os_type == vm_mode.EXE:
+                config_drive_type = 'fs'
+            else:
+                raise exception.ConfigDriveUnknownFormat(
+                    format=CONF.config_drive_format,
+                    os_type=os_type)
+        else:
+            config_drive_type = 'cdrom'
     else:
         raise exception.ConfigDriveUnknownFormat(
-            format=CONF.config_drive_format)
+            format=CONF.config_drive_format,
+            os_type=os_type)
 
     return config_drive_type
 

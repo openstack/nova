@@ -14,10 +14,13 @@
 #    under the License.
 
 
-import os
-import tempfile
-
+import fixtures
 import mock
+import os
+import shutil
+import tempfile
+import uuid
+
 from mox3 import mox
 from oslo_config import cfg
 
@@ -92,6 +95,35 @@ class ConfigDriveTestCase(test.NoDBTestCase):
         finally:
             if imagefile:
                 fileutils.delete_if_exists(imagefile)
+
+    def _create_ext4_ploop(self, calls):
+        imagefile = None
+        with mock.patch.object(utils, 'execute', return_value=('', '')) as ex:
+            with configdrive.ConfigDriveBuilder(FakeInstanceMD()) as c:
+                imagefile = "/tmp/cd_ext4_" + str(uuid.uuid4())[:8]
+                c.make_drive(imagefile, image_type='ploop')
+                ex.assert_has_calls(calls)
+        return imagefile
+
+    def test_create_configdrive_ext4_ploop(self):
+        self.flags(config_drive_format='ext4')
+        self.flags(virt_type='parallels', group='libvirt')
+
+        def fake_trycmd(*args, **kwargs):
+            return None, None
+        self.useFixture(fixtures.MonkeyPatch('nova.utils.trycmd', fake_trycmd))
+        calls = [
+                mock.call('ploop', 'init', '-s', mock.ANY,
+                          '-t', 'ext4', mock.ANY,
+                          run_as_root=True, attempts=1),
+                mock.call('chown', '-R', mock.ANY,
+                          mock.ANY, run_as_root=True),
+                mock.call('ploop', 'umount',
+                          mock.ANY, run_as_root=True)
+                ]
+        imagefile = self._create_ext4_ploop(calls)
+        if imagefile:
+            shutil.rmtree(imagefile)
 
     def test_config_drive_required_by_image_property(self):
         inst = fake_instance.fake_instance_obj(context.get_admin_context())

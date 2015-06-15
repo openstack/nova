@@ -689,7 +689,7 @@ class VMwareVMOps(object):
 
     def _create_config_drive(self, instance, injected_files, admin_password,
                              data_store_name, dc_name, upload_folder, cookies):
-        if CONF.config_drive_format != 'iso9660':
+        if CONF.config_drive_format not in ('iso9660', None):
             reason = (_('Invalid config_drive_format "%s"') %
                       CONF.config_drive_format)
             raise exception.InstancePowerOnFailure(reason=reason)
