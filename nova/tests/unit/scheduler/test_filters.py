@@ -18,6 +18,7 @@ Tests For Scheduler Host Filters.
 import inspect
 import sys
 
+import mock
 from six.moves import range
 
 from nova import filters
@@ -36,6 +37,13 @@ class Filter2(filters.BaseFilter):
 
 
 class FiltersTestCase(test.NoDBTestCase):
+
+    def setUp(self):
+        super(FiltersTestCase, self).setUp()
+        with mock.patch.object(loadables.BaseLoader, "__init__") as mock_load:
+            mock_load.return_value = None
+            self.filter_handler = filters.BaseFilterHandler(filters.BaseFilter)
+
     def test_filter_all(self):
         filter_obj_list = ['obj1', 'obj2', 'obj3']
         filter_properties = 'fake_filter_properties'
@@ -201,3 +209,71 @@ class FiltersTestCase(test.NoDBTestCase):
                                                      filter_objs_initial,
                                                      filter_properties)
         self.assertIsNone(result)
+
+    def test_get_filtered_objects_info_log_none_returned(self):
+        LOG = filters.LOG
+
+        class FilterA(filters.BaseFilter):
+            def filter_all(self, list_objs, filter_properties):
+                # return all but the first object
+                return list_objs[1:]
+
+        class FilterB(filters.BaseFilter):
+            def filter_all(self, list_objs, filter_properties):
+                # return an empty list
+                return []
+
+        filter_a = FilterA()
+        filter_b = FilterB()
+        all_filters = [filter_a, filter_b]
+        hosts = ["Host0", "Host1", "Host2"]
+        fake_res_id = "reservation"
+        fake_uuid = "uuid"
+        filt_props = {"request_spec": {"instance_properties": {
+                      "reservation_id": fake_res_id,
+                      "uuid": fake_uuid}}}
+        with mock.patch.object(LOG, "info") as mock_log:
+            result = self.filter_handler.get_filtered_objects(
+                    all_filters, hosts, filt_props)
+            self.assertFalse(result)
+            # FilterA should leave Host1 and Host2; FilterB should leave None.
+            exp_output = ("['FilterA: (start: 3, end: 2)', "
+                          "'FilterB: (start: 2, end: 0)']")
+            cargs = mock_log.call_args[0][0]
+            self.assertIn("with reservation ID '%s'" % fake_res_id, cargs)
+            self.assertIn("and instance ID '%s'" % fake_uuid, cargs)
+            self.assertIn(exp_output, cargs)
+
+    def test_get_filtered_objects_debug_log_none_returned(self):
+        LOG = filters.LOG
+
+        class FilterA(filters.BaseFilter):
+            def filter_all(self, list_objs, filter_properties):
+                # return all but the first object
+                return list_objs[1:]
+
+        class FilterB(filters.BaseFilter):
+            def filter_all(self, list_objs, filter_properties):
+                # return an empty list
+                return []
+
+        filter_a = FilterA()
+        filter_b = FilterB()
+        all_filters = [filter_a, filter_b]
+        hosts = ["Host0", "Host1", "Host2"]
+        fake_res_id = "reservation"
+        fake_uuid = "uuid"
+        filt_props = {"request_spec": {"instance_properties": {
+                      "reservation_id": fake_res_id,
+                      "uuid": fake_uuid}}}
+        with mock.patch.object(LOG, "debug") as mock_log:
+            result = self.filter_handler.get_filtered_objects(
+                    all_filters, hosts, filt_props)
+            self.assertFalse(result)
+            # FilterA should leave Host1 and Host2; FilterB should leave None.
+            exp_output = ("[('FilterA', [('Host1', ''), ('Host2', '')]), " +
+                          "('FilterB', None)]")
+            cargs = mock_log.call_args[0][0]
+            self.assertIn("with reservation ID '%s'" % fake_res_id, cargs)
+            self.assertIn("and instance ID '%s'" % fake_uuid, cargs)
+            self.assertIn(exp_output, cargs)
