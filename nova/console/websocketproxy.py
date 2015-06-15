@@ -100,7 +100,10 @@ class NovaProxyRequestHandlerBase(object):
         expected_origin_hostname = self.headers.getheader('Host')
         if ':' in expected_origin_hostname:
             e = expected_origin_hostname
-            expected_origin_hostname = e.split(':')[0]
+            if '[' in e and ']' in e:
+                expected_origin_hostname = e.split(']')[0][1:]
+            else:
+                expected_origin_hostname = e.split(':')[0]
         origin_url = self.headers.getheader('Origin')
         # missing origin header indicates non-browser client which is OK
         if origin_url is not None:
