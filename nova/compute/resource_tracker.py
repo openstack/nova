@@ -35,7 +35,6 @@ from nova.i18n import _, _LI, _LW
 from nova import objects
 from nova.objects import base as obj_base
 from nova.pci import manager as pci_manager
-from nova.pci import whitelist as pci_whitelist
 from nova import rpc
 from nova.scheduler import client as scheduler_client
 from nova import utils
@@ -72,7 +71,6 @@ class ResourceTracker(object):
         self.host = host
         self.driver = driver
         self.pci_tracker = None
-        self.pci_filter = pci_whitelist.get_pci_devices_filter()
         self.nodename = nodename
         self.compute_node = None
         self.stats = importutils.import_object(CONF.compute_stats_class)
@@ -420,20 +418,13 @@ class ResourceTracker(object):
             return
 
         if 'pci_passthrough_devices' in resources:
-            devs = []
-            for dev in jsonutils.loads(resources.pop(
-                'pci_passthrough_devices')):
-                if dev['dev_type'] == 'type-PF':
-                    continue
-
-                if self.pci_filter.device_assignable(dev):
-                    devs.append(dev)
-
+            # TODO(jaypipes): Move this into _init_compute_node()
             if not self.pci_tracker:
                 n_id = self.compute_node['id'] if self.compute_node else None
                 self.pci_tracker = pci_manager.PciDevTracker(context,
                                                              node_id=n_id)
-            self.pci_tracker.set_hvdevs(devs)
+            dev_json = resources.pop('pci_passthrough_devices')
+            self.pci_tracker.update_devices_from_hypervisor_resources(dev_json)
 
         # Grab all instances assigned to this node:
         instances = objects.InstanceList.get_by_host_and_node(

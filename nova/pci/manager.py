@@ -17,6 +17,7 @@
 import collections
 
 from oslo_log import log as logging
+from oslo_serialization import jsonutils
 
 from nova import exception
 from nova.i18n import _LW
@@ -24,6 +25,7 @@ from nova import objects
 from nova.objects import fields
 from nova.pci import device
 from nova.pci import stats
+from nova.pci import whitelist
 from nova.virt import hardware
 
 LOG = logging.getLogger(__name__)
@@ -53,6 +55,7 @@ class PciDevTracker(object):
         self.stale = {}
         self.node_id = node_id
         self.stats = stats.PciDeviceStats()
+        self.dev_filter = whitelist.get_pci_devices_filter()
         if node_id:
             self.pci_devs = list(
                 objects.PciDeviceList.get_by_compute_node(context, node_id))
@@ -89,7 +92,7 @@ class PciDevTracker(object):
     def pci_stats(self):
         return self.stats
 
-    def set_hvdevs(self, devices):
+    def update_devices_from_hypervisor_resources(self, devices_json):
         """Sync the pci device tracker with hypervisor information.
 
         To support pci device hot plug, we sync with the hypervisor
@@ -100,8 +103,23 @@ class PciDevTracker(object):
         but possibly the hypervisor has no such guarantee. The best
         we can do is to give a warning if a device is changed
         or removed while assigned.
+
+        :param devices_json: The JSON-ified string of device information
+                             that is returned from the virt driver's
+                             get_available_resource() call in the
+                             pci_passthrough_devices key.
         """
 
+        devices = []
+        for dev in jsonutils.loads(devices_json):
+            if dev.get('dev_type') == fields.PciDeviceType.SRIOV_PF:
+                continue
+
+            if self.dev_filter.device_assignable(dev):
+                devices.append(dev)
+        self._set_hvdevs(devices)
+
+    def _set_hvdevs(self, devices):
         exist_addrs = set([dev.address for dev in self.pci_devs])
         new_addrs = set([dev['address'] for dev in devices])
 

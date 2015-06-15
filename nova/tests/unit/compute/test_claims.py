@@ -200,7 +200,7 @@ class ClaimTestCase(test.NoDBTestCase):
             'numa_node': 0,
             'status': 'available'}
         self.tracker.new_pci_tracker()
-        self.tracker.pci_tracker.set_hvdevs([dev_dict])
+        self.tracker.pci_tracker._set_hvdevs([dev_dict])
         claim = self._claim()
         request = objects.InstancePCIRequest(count=1,
             spec=[{'vendor_id': 'v', 'product_id': 'p'}])
@@ -218,7 +218,7 @@ class ClaimTestCase(test.NoDBTestCase):
             'numa_node': 1,
             'status': 'available'}
         self.tracker.new_pci_tracker()
-        self.tracker.pci_tracker.set_hvdevs([dev_dict])
+        self.tracker.pci_tracker._set_hvdevs([dev_dict])
         claim = self._claim()
         request = objects.InstancePCIRequest(count=1,
             spec=[{'vendor_id': 'v', 'product_id': 'p'}])
@@ -236,7 +236,7 @@ class ClaimTestCase(test.NoDBTestCase):
             'numa_node': 0,
             'status': 'available'}
         self.tracker.new_pci_tracker()
-        self.tracker.pci_tracker.set_hvdevs([dev_dict])
+        self.tracker.pci_tracker._set_hvdevs([dev_dict])
         claim = self._claim()
         self.assertIsNone(claim._test_pci())
 
@@ -281,7 +281,7 @@ class ClaimTestCase(test.NoDBTestCase):
             'numa_node': 1,
             'status': 'available'}
         self.tracker.new_pci_tracker()
-        self.tracker.pci_tracker.set_hvdevs([dev_dict])
+        self.tracker.pci_tracker._set_hvdevs([dev_dict])
         request = objects.InstancePCIRequest(count=1,
             spec=[{'vendor_id': 'v', 'product_id': 'p'}])
         mock_get.return_value = objects.InstancePCIRequests(
@@ -310,7 +310,7 @@ class ClaimTestCase(test.NoDBTestCase):
             'numa_node': 2,
             'status': 'available'}
         self.tracker.new_pci_tracker()
-        self.tracker.pci_tracker.set_hvdevs([dev_dict, dev_dict2])
+        self.tracker.pci_tracker._set_hvdevs([dev_dict, dev_dict2])
 
         request = objects.InstancePCIRequest(count=2,
             spec=[{'vendor_id': 'v', 'product_id': 'p'}])
@@ -335,7 +335,7 @@ class ClaimTestCase(test.NoDBTestCase):
             'numa_node': None,
             'status': 'available'}
         self.tracker.new_pci_tracker()
-        self.tracker.pci_tracker.set_hvdevs([dev_dict])
+        self.tracker.pci_tracker._set_hvdevs([dev_dict])
 
         request = objects.InstancePCIRequest(count=1,
             spec=[{'vendor_id': 'v', 'product_id': 'p'}])
