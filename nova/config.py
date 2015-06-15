@@ -30,7 +30,7 @@ CONF = cfg.CONF
 _DEFAULT_SQL_CONNECTION = 'sqlite:///' + paths.state_path_def('nova.sqlite')
 
 _DEFAULT_LOG_LEVELS = ['amqp=WARN', 'amqplib=WARN', 'boto=WARN',
-                       'qpid=WARN', 'sqlalchemy=WARN', 'suds=INFO',
+                       'qpid=WARN', 'sqlalchemy=WARN',
                        'oslo_messaging=INFO', 'iso8601=WARN',
                        'requests.packages.urllib3.connectionpool=WARN',
                        'urllib3.connectionpool=WARN', 'websocket=WARN',
