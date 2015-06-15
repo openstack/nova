@@ -81,8 +81,10 @@ class SupportMatrixImplementation(object):
     STATUS_COMPLETE = "complete"
     STATUS_PARTIAL = "partial"
     STATUS_MISSING = "missing"
+    STATUS_UKNOWN = "unknown"
 
-    STATUS_ALL = [STATUS_COMPLETE, STATUS_PARTIAL, STATUS_MISSING]
+    STATUS_ALL = [STATUS_COMPLETE, STATUS_PARTIAL, STATUS_MISSING,
+                  STATUS_UKNOWN]
 
     def __init__(self, status=STATUS_MISSING, notes=None):
         # One of the status constants detailing the implementation
@@ -346,12 +348,14 @@ class SupportMatrixDirective(rst.Directive):
                 impltxt.append(implref)
 
                 status = ""
-                if impl.status == "complete":
+                if impl.status == SupportMatrixImplementation.STATUS_COMPLETE:
                     status = u"\u2714"
-                elif impl.status == "missing":
+                elif impl.status == SupportMatrixImplementation.STATUS_MISSING:
                     status = u"\u2716"
-                elif impl.status == "partial":
+                elif impl.status == SupportMatrixImplementation.STATUS_PARTIAL:
                     status = u"\u2714"
+                elif impl.status == SupportMatrixImplementation.STATUS_UKNOWN:
+                    status = u"?"
 
                 implref.append(nodes.literal(
                     text=status,
