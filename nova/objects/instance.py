@@ -711,6 +711,9 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         pass
 
     def _save_flavor(self, context):
+        if not any([x in self.obj_what_changed() for x in
+                    ('flavor', 'old_flavor', 'new_flavor')]):
+            return
         # FIXME(danms): We can do this smarterly by updating this
         # with all the other extra things at the same time
         flavor_info = {

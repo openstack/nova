@@ -498,6 +498,14 @@ class _TestInstanceObject(object):
                                   instance.save)
             _test()
 
+    def test_save_flavor_skips_unchanged_flavors(self):
+        inst = objects.Instance(context=self.context,
+                                flavor=objects.Flavor())
+        inst.obj_reset_changes()
+        with mock.patch('nova.db.instance_extra_update_by_uuid') as mock_upd:
+            inst.save()
+            self.assertFalse(mock_upd.called)
+
     @mock.patch.object(cells_rpcapi.CellsAPI, 'instance_update_from_api')
     @mock.patch.object(cells_rpcapi.CellsAPI, 'instance_update_at_top')
     @mock.patch.object(db, 'instance_update_and_get_original')
