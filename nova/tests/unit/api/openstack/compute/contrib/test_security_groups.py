@@ -44,6 +44,13 @@ class AttrDict(dict):
         return self[k]
 
 
+def security_group_request_template(**kwargs):
+    sg = kwargs.copy()
+    sg.setdefault('name', 'test')
+    sg.setdefault('description', 'test-description')
+    return sg
+
+
 def security_group_template(**kwargs):
     sg = kwargs.copy()
     sg.setdefault('tenant_id', '123')
@@ -150,7 +157,7 @@ class TestSecurityGroupsV21(test.TestCase):
         self.assertEqual(result['security_groups']['in_use'], in_use)
 
     def test_create_security_group(self):
-        sg = security_group_template()
+        sg = security_group_request_template()
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
         res_dict = self.controller.create(req, {'security_group': sg})
@@ -159,7 +166,7 @@ class TestSecurityGroupsV21(test.TestCase):
                          'test-description')
 
     def test_create_security_group_with_no_name(self):
-        sg = security_group_template()
+        sg = security_group_request_template()
         del sg['name']
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
@@ -169,7 +176,7 @@ class TestSecurityGroupsV21(test.TestCase):
         self._assert_no_security_groups_reserved(req.environ['nova.context'])
 
     def test_create_security_group_with_no_description(self):
-        sg = security_group_template()
+        sg = security_group_request_template()
         del sg['description']
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
@@ -179,7 +186,7 @@ class TestSecurityGroupsV21(test.TestCase):
         self._assert_no_security_groups_reserved(req.environ['nova.context'])
 
     def test_create_security_group_with_empty_description(self):
-        sg = security_group_template()
+        sg = security_group_request_template()
         sg['description'] = ""
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
@@ -194,7 +201,7 @@ class TestSecurityGroupsV21(test.TestCase):
         self._assert_no_security_groups_reserved(req.environ['nova.context'])
 
     def test_create_security_group_with_blank_name(self):
-        sg = security_group_template(name='')
+        sg = security_group_request_template(name='')
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
@@ -203,7 +210,7 @@ class TestSecurityGroupsV21(test.TestCase):
         self._assert_no_security_groups_reserved(req.environ['nova.context'])
 
     def test_create_security_group_with_whitespace_name(self):
-        sg = security_group_template(name=' ')
+        sg = security_group_request_template(name=' ')
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
@@ -212,7 +219,7 @@ class TestSecurityGroupsV21(test.TestCase):
         self._assert_no_security_groups_reserved(req.environ['nova.context'])
 
     def test_create_security_group_with_blank_description(self):
-        sg = security_group_template(description='')
+        sg = security_group_request_template(description='')
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
@@ -221,7 +228,7 @@ class TestSecurityGroupsV21(test.TestCase):
         self._assert_no_security_groups_reserved(req.environ['nova.context'])
 
     def test_create_security_group_with_whitespace_description(self):
-        sg = security_group_template(description=' ')
+        sg = security_group_request_template(description=' ')
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
@@ -230,7 +237,7 @@ class TestSecurityGroupsV21(test.TestCase):
         self._assert_no_security_groups_reserved(req.environ['nova.context'])
 
     def test_create_security_group_with_duplicate_name(self):
-        sg = security_group_template()
+        sg = security_group_request_template()
 
         # FIXME: Stub out _get instead of creating twice
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
@@ -259,7 +266,7 @@ class TestSecurityGroupsV21(test.TestCase):
         self._assert_no_security_groups_reserved(req.environ['nova.context'])
 
     def test_create_security_group_above_255_characters_name(self):
-        sg = security_group_template(name='1234567890' * 26)
+        sg = security_group_request_template(name='1234567890' * 26)
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
@@ -268,7 +275,7 @@ class TestSecurityGroupsV21(test.TestCase):
         self._assert_no_security_groups_reserved(req.environ['nova.context'])
 
     def test_create_security_group_above_255_characters_description(self):
-        sg = security_group_template(description='1234567890' * 26)
+        sg = security_group_request_template(description='1234567890' * 26)
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
@@ -277,7 +284,7 @@ class TestSecurityGroupsV21(test.TestCase):
         self._assert_no_security_groups_reserved(req.environ['nova.context'])
 
     def test_create_security_group_non_string_name(self):
-        sg = security_group_template(name=12)
+        sg = security_group_request_template(name=12)
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
@@ -286,7 +293,7 @@ class TestSecurityGroupsV21(test.TestCase):
         self._assert_no_security_groups_reserved(req.environ['nova.context'])
 
     def test_create_security_group_non_string_description(self):
-        sg = security_group_template(description=12)
+        sg = security_group_request_template(description=12)
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
@@ -298,11 +305,11 @@ class TestSecurityGroupsV21(test.TestCase):
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
         for num in range(1, CONF.quota_security_groups):
             name = 'test%s' % num
-            sg = security_group_template(name=name)
+            sg = security_group_request_template(name=name)
             res_dict = self.controller.create(req, {'security_group': sg})
             self.assertEqual(res_dict['security_group']['name'], name)
 
-        sg = security_group_template()
+        sg = security_group_request_template()
         self.assertRaises(webob.exc.HTTPForbidden, self.controller.create,
                           req, {'security_group': sg})
 
@@ -570,7 +577,7 @@ class TestSecurityGroupsV21(test.TestCase):
         self.assertTrue(self.called)
 
     def test_delete_security_group_by_admin(self):
-        sg = security_group_template()
+        sg = security_group_request_template()
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
         self.controller.create(req, {'security_group': sg})
