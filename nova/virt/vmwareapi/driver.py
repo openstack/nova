@@ -58,6 +58,15 @@ vmwareapi_opts = [
     cfg.StrOpt('host_password',
                help='Password for connection to VMware vCenter host.',
                secret=True),
+    cfg.StrOpt('ca_file',
+               help='Specify a CA bundle file to use in verifying the '
+                    'vCenter server certificate.'),
+    cfg.BoolOpt('insecure',
+                default=False,
+                help='If true, the vCenter server certificate is not '
+                     'verified. If false, then the default CA truststore is '
+                     'used for verification. This option is ignored if '
+                     '"ca_file" is set.'),
     cfg.MultiStrOpt('cluster_name',
                     help='Name of a VMware Cluster ComputeResource.'),
     cfg.StrOpt('datastore_regex',
@@ -696,7 +705,9 @@ class VMwareAPISession(api.VMwareAPISession):
                  username=CONF.vmware.host_username,
                  password=CONF.vmware.host_password,
                  retry_count=CONF.vmware.api_retry_count,
-                 scheme="https"):
+                 scheme="https",
+                 cacert=CONF.vmware.ca_file,
+                 insecure=CONF.vmware.insecure):
         super(VMwareAPISession, self).__init__(
                 host=host_ip,
                 port=host_port,
@@ -706,8 +717,9 @@ class VMwareAPISession(api.VMwareAPISession):
                 task_poll_interval=CONF.vmware.task_poll_interval,
                 scheme=scheme,
                 create_session=True,
-                wsdl_loc=CONF.vmware.wsdl_location
-                )
+                wsdl_loc=CONF.vmware.wsdl_location,
+                cacert=cacert,
+                insecure=insecure)
 
     def _is_vim_object(self, module):
         """Check if the module is a VIM Object instance."""
