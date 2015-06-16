@@ -3060,8 +3060,6 @@ def quota_get(context, project_id, resource, user_id=None):
 
 @require_context
 def quota_get_all_by_project_and_user(context, project_id, user_id):
-    nova.context.authorize_project_context(context, project_id)
-
     user_quotas = model_query(context, models.ProjectUserQuota,
                               (models.ProjectUserQuota.resource,
                                models.ProjectUserQuota.hard_limit)).\
@@ -3078,8 +3076,6 @@ def quota_get_all_by_project_and_user(context, project_id, user_id):
 
 @require_context
 def quota_get_all_by_project(context, project_id):
-    nova.context.authorize_project_context(context, project_id)
-
     rows = model_query(context, models.Quota, read_deleted="no").\
                    filter_by(project_id=project_id).\
                    all()
@@ -3093,8 +3089,6 @@ def quota_get_all_by_project(context, project_id):
 
 @require_context
 def quota_get_all(context, project_id):
-    nova.context.authorize_project_context(context, project_id)
-
     result = model_query(context, models.ProjectUserQuota).\
                    filter_by(project_id=project_id).\
                    all()
@@ -3102,7 +3096,6 @@ def quota_get_all(context, project_id):
     return result
 
 
-@require_admin_context
 def quota_create(context, project_id, resource, limit, user_id=None):
     per_user = user_id and resource not in PER_PROJECT_QUOTAS
     quota_ref = models.ProjectUserQuota() if per_user else models.Quota()
@@ -3118,7 +3111,6 @@ def quota_create(context, project_id, resource, limit, user_id=None):
     return quota_ref
 
 
-@require_admin_context
 def quota_update(context, project_id, resource, limit, user_id=None):
     per_user = user_id and resource not in PER_PROJECT_QUOTAS
     model = models.ProjectUserQuota if per_user else models.Quota
@@ -3224,7 +3216,6 @@ def quota_usage_get(context, project_id, resource, user_id=None):
 
 
 def _quota_usage_get_all(context, project_id, user_id=None):
-    nova.context.authorize_project_context(context, project_id)
     query = model_query(context, models.QuotaUsage, read_deleted="no").\
                    filter_by(project_id=project_id)
     result = {'project_id': project_id}

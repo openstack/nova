@@ -300,6 +300,7 @@ policy_data = """
     "os_compute_api:os-quota-sets:update": "",
     "os_compute_api:os-quota-sets:delete": "",
     "os_compute_api:os-quota-sets:detail": "",
+    "os_compute_api:os-quota-sets:defaults": "",
     "compute_extension:quota_classes": "",
     "os_compute_api:os-quota-class-sets": "",
     "compute_extension:rescue": "",
