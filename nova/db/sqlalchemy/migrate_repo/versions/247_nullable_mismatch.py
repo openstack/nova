@@ -24,7 +24,16 @@ def upgrade(migrate_engine):
     quota_usages.c.resource.alter(nullable=False)
 
     pci_devices = Table('pci_devices', meta, autoload=True)
-    pci_devices.c.deleted.alter(nullable=True)
+    # NOTE(mriedem): The deleted column is in a UniqueConstraint so making
+    # it nullable breaks DB2 with an SQL0542N error, so skip for DB2. There is
+    # a FKey in 246 so we're kind of stuck with DB2 since we can't create the
+    # FKey without the unique constraint and we can't have a unique constraint
+    # on a nullable column.
+    # TODO(mriedem): Revisit this once the deleted column (inherited from the
+    # SoftDeleteMixin in oslo.db) is non-null on all tables, which is going
+    # to be a non-trivial effort.
+    if migrate_engine.name != 'ibm_db_sa':
+        pci_devices.c.deleted.alter(nullable=True)
     pci_devices.c.product_id.alter(nullable=False)
     pci_devices.c.vendor_id.alter(nullable=False)
     pci_devices.c.dev_type.alter(nullable=False)

@@ -34,9 +34,14 @@ def upgrade(migrate_engine):
         Column('transport_url', Text()),
         Column('database_connection', Text()),
         UniqueConstraint('uuid', name='uniq_cell_mappings0uuid'),
-        Index('uuid_idx', 'uuid'),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
+
+    # NOTE(mriedem): DB2 creates an index when a unique constraint is created
+    # so trying to add a second index on the uuid column will fail with
+    # error SQL0605W, so omit the index in the case of DB2.
+    if migrate_engine.name != 'ibm_db_sa':
+        Index('uuid_idx', cell_mappings.c.uuid)
 
     cell_mappings.create(checkfirst=True)
