@@ -26,6 +26,7 @@ from nova.compute import flavors
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova import context
+from nova import exception
 from nova.network import api as network_api
 from nova import notifications
 from nova import objects
@@ -431,6 +432,35 @@ class NotificationsTestCase(test.TestCase):
 
         notifications.send_update(self.context, self.instance, self.instance)
         self.assertEqual(0, len(fake_notifier.NOTIFICATIONS))
+
+    @mock.patch.object(notifications.LOG, 'exception')
+    def test_fail_sending_update_instance_not_found(self, mock_log_exception):
+        # Tests that InstanceNotFound is handled as an expected exception and
+        # not logged as an error.
+        notfound = exception.InstanceNotFound(instance_id=self.instance.uuid)
+        with mock.patch.object(notifications,
+                               '_send_instance_update_notification',
+                               side_effect=notfound):
+            notifications.send_update(
+                self.context, self.instance, self.instance)
+        self.assertEqual(0, len(fake_notifier.NOTIFICATIONS))
+        self.assertEqual(0, mock_log_exception.call_count)
+
+    @mock.patch.object(notifications.LOG, 'exception')
+    def test_fail_send_update_with_states_inst_not_found(self,
+                                                         mock_log_exception):
+        # Tests that InstanceNotFound is handled as an expected exception and
+        # not logged as an error.
+        notfound = exception.InstanceNotFound(instance_id=self.instance.uuid)
+        with mock.patch.object(notifications,
+                               '_send_instance_update_notification',
+                               side_effect=notfound):
+            notifications.send_update_with_states(
+                self.context, self.instance,
+                vm_states.BUILDING, vm_states.ERROR,
+                task_states.NETWORKING, new_task_state=None)
+        self.assertEqual(0, len(fake_notifier.NOTIFICATIONS))
+        self.assertEqual(0, mock_log_exception.call_count)
 
 
 class NotificationsFormatTestCase(test.NoDBTestCase):
