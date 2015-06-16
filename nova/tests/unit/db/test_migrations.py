@@ -713,10 +713,6 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
         self.assertIndexMembers(engine, 'virtual_interfaces',
                                 'virtual_interfaces_uuid_idx', ['uuid'])
 
-    def _post_downgrade_295(self, engine):
-        self.assertIndexNotExists(engine, 'virtual_interfaces',
-                                  'virtual_interfaces_uuid_idx')
-
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
                                test_base.DbTestCase,

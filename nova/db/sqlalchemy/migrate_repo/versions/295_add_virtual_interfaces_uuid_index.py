@@ -43,12 +43,3 @@ def upgrade(migrate_engine):
     columns = [getattr(table.c, col_name) for col_name in INDEX_COLUMNS]
     index = Index(INDEX_NAME, *columns)
     index.create(migrate_engine)
-
-
-def downgrade(migrate_engine):
-    meta, table, index = _get_table_index(migrate_engine)
-    if not index:
-        LOG.info(_LI('Skipped removing %s because no such index exists'),
-                     INDEX_NAME)
-        return
-    index.drop(migrate_engine)
