@@ -138,6 +138,31 @@ class LookupTorrentURLTestCase(test.NoDBTestCase):
         self.assertEqual('http://foo/fakeimageid.torrent',
                          lookup_fn(self.image_id))
 
+    def test_invalid_base_url_warning_logged(self):
+        self.flags(torrent_base_url='www.foo.com',
+                   group='xenserver')
+        self.stubs.Set(pkg_resources, 'iter_entry_points',
+                       self._mock_iter_single)
+
+        # Make sure a warning is logged when an invalid base URL is set,
+        # where invalid means it does not contain any slash characters
+        warnings = []
+
+        def fake_warn(msg):
+            warnings.append(msg)
+
+        self.stubs.Set(bittorrent.LOG, 'warn', fake_warn)
+
+        lookup_fn = self.store._lookup_torrent_url_fn()
+        self.assertEqual('fakeimageid.torrent',
+                         lookup_fn(self.image_id))
+
+        self.assertTrue(any('does not contain a slash character' in msg for
+                            msg in warnings),
+                        '_lookup_torrent_url_fn() did not log a warning '
+                        'message when the torrent_base_url did not contain a '
+                        'slash character.')
+
     def test_with_extension(self):
         self.stubs.Set(pkg_resources, 'iter_entry_points',
                        self._mock_iter_single)

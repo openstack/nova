@@ -18,14 +18,15 @@ from oslo_log import log as logging
 import pkg_resources
 import six.moves.urllib.parse as urlparse
 
-from nova.i18n import _
+from nova.i18n import _, _LW
 from nova.virt.xenapi import vm_utils
 
 LOG = logging.getLogger(__name__)
 
 xenapi_torrent_opts = [
     cfg.StrOpt('torrent_base_url',
-               help='Base URL for torrent files.'),
+               help='Base URL for torrent files; must contain a slash'
+                    ' character (see RFC 1808, step 6)'),
     cfg.FloatOpt('torrent_seed_chance',
                  default=1.0,
                  help='Probability that peer will become a seeder.'
@@ -66,6 +67,13 @@ class BittorrentStore(object):
         """
 
         if CONF.xenserver.torrent_base_url:
+            if '/' not in CONF.xenserver.torrent_base_url:
+                LOG.warn(_LW('Value specified in conf file for'
+                             ' xenserver.torrent_base_url does not contain a'
+                             ' slash character, therefore it will not be used'
+                             ' as part of the torrent URL. Specify a valid'
+                             ' base URL as defined by RFC 1808 (see step 6).'))
+
             def _default_torrent_url_fn(image_id):
                 return urlparse.urljoin(CONF.xenserver.torrent_base_url,
                                         "%s.torrent" % image_id)
