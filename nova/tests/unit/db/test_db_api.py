@@ -4745,7 +4745,9 @@ class FloatingIpTestCase(test.TestCase, ModelsObjectComparatorMixin):
         float_addresses = ['1.1.1.1', '1.1.1.2', '1.1.1.3']
         fixed_addresses = ['2.2.2.1', '2.2.2.2', '2.2.2.3']
 
-        float_ips = [self._create_floating_ip({'address': address})
+        project_id = self.ctxt.project_id
+        float_ips = [self._create_floating_ip({'address': address,
+                                               'project_id': project_id})
                         for address in float_addresses]
         fixed_addrs = [self._create_fixed_ip({'address': address})
                         for address in fixed_addresses]
@@ -4760,16 +4762,22 @@ class FloatingIpTestCase(test.TestCase, ModelsObjectComparatorMixin):
             self.assertEqual(fixed_ip.id, updated_float_ip.fixed_ip_id)
             self.assertEqual('host', updated_float_ip.host)
 
-        # Test that already allocated float_ip returns None
-        result = db.floating_ip_fixed_ip_associate(self.ctxt,
-                                                   float_addresses[0],
-                                                   fixed_addresses[0], 'host')
-        self.assertIsNone(result)
+        fixed_ip = db.floating_ip_fixed_ip_associate(self.ctxt,
+                                                     float_addresses[0],
+                                                     fixed_addresses[0],
+                                                     'host')
+        self.assertEqual(fixed_ip.address, fixed_addresses[0])
 
     def test_floating_ip_fixed_ip_associate_float_ip_not_found(self):
-        self.assertRaises(exception.FloatingIpNotFoundForAddress,
+        self.assertRaises(exception.FixedIpNotFoundForAddress,
                           db.floating_ip_fixed_ip_associate,
                           self.ctxt, '10.10.10.10', 'some', 'some')
+
+    def test_floating_ip_associate_failed(self):
+        fixed_ip = self._create_fixed_ip({'address': '7.7.7.7'})
+        self.assertRaises(exception.FloatingIpAssociateFailed,
+                          db.floating_ip_fixed_ip_associate,
+                          self.ctxt, '10.10.10.10', fixed_ip, 'some')
 
     def test_floating_ip_deallocate(self):
         values = {'address': '1.1.1.1', 'project_id': 'fake', 'host': 'fake'}
@@ -4784,6 +4792,19 @@ class FloatingIpTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_floating_ip_deallocate_address_not_found(self):
         self.assertEqual(0, db.floating_ip_deallocate(self.ctxt, '2.2.2.2'))
+
+    def test_floating_ip_deallocate_address_associated_ip(self):
+        float_address = '1.1.1.1'
+        fixed_address = '2.2.2.1'
+
+        project_id = self.ctxt.project_id
+        float_ip = self._create_floating_ip({'address': float_address,
+                                             'project_id': project_id})
+        fixed_addr = self._create_fixed_ip({'address': fixed_address})
+        db.floating_ip_fixed_ip_associate(self.ctxt, float_ip.address,
+                                          fixed_addr, 'host')
+        self.assertEqual(0, db.floating_ip_deallocate(self.ctxt,
+                                                      float_address))
 
     def test_floating_ip_destroy(self):
         addresses = ['1.1.1.1', '1.1.1.2', '1.1.1.3']
@@ -4807,7 +4828,9 @@ class FloatingIpTestCase(test.TestCase, ModelsObjectComparatorMixin):
         float_addresses = ['1.1.1.1', '1.1.1.2', '1.1.1.3']
         fixed_addresses = ['2.2.2.1', '2.2.2.2', '2.2.2.3']
 
-        float_ips = [self._create_floating_ip({'address': address})
+        project_id = self.ctxt.project_id
+        float_ips = [self._create_floating_ip({'address': address,
+                                               'project_id': project_id})
                         for address in float_addresses]
         fixed_addrs = [self._create_fixed_ip({'address': address})
                         for address in fixed_addresses]
@@ -4839,7 +4862,9 @@ class FloatingIpTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_floating_ip_get_all_associated(self):
         instance = db.instance_create(self.ctxt, {'uuid': 'fake'})
-        float_ip = self._create_floating_ip({'address': '1.1.1.1'})
+        project_id = self.ctxt.project_id
+        float_ip = self._create_floating_ip({'address': '1.1.1.1',
+                                             'project_id': project_id})
         fixed_ip = self._create_fixed_ip({'address': '2.2.2.2',
                                           'instance_uuid': instance.uuid})
         db.floating_ip_fixed_ip_associate(self.ctxt,
@@ -4939,7 +4964,9 @@ class FloatingIpTestCase(test.TestCase, ModelsObjectComparatorMixin):
         ]
 
         for fixed_addr, float_addr in fixed_float:
-            self._create_floating_ip({'address': float_addr})
+            project_id = self.ctxt.project_id
+            self._create_floating_ip({'address': float_addr,
+                                      'project_id': project_id})
             self._create_fixed_ip({'address': fixed_addr})
             db.floating_ip_fixed_ip_associate(self.ctxt, float_addr,
                                               fixed_addr, 'some_host')
@@ -4957,7 +4984,9 @@ class FloatingIpTestCase(test.TestCase, ModelsObjectComparatorMixin):
         ]
 
         for fixed_addr, float_addr in fixed_float:
-            self._create_floating_ip({'address': float_addr})
+            project_id = self.ctxt.project_id
+            self._create_floating_ip({'address': float_addr,
+                                      'project_id': project_id})
             self._create_fixed_ip({'address': fixed_addr})
             db.floating_ip_fixed_ip_associate(self.ctxt, float_addr,
                                               fixed_addr, 'some_host')

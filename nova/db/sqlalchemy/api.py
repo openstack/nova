@@ -886,17 +886,23 @@ def floating_ip_fixed_ip_associate(context, floating_address,
                                    fixed_address, host):
     session = get_session()
     with session.begin():
-        floating_ip_ref = _floating_ip_get_by_address(context,
-                                                      floating_address,
-                                                      session=session)
         fixed_ip_ref = model_query(context, models.FixedIp, session=session).\
                          filter_by(address=fixed_address).\
                          options(joinedload('network')).\
                          first()
-        if floating_ip_ref.fixed_ip_id == fixed_ip_ref["id"]:
-            return None
-        floating_ip_ref.fixed_ip_id = fixed_ip_ref["id"]
-        floating_ip_ref.host = host
+        if not fixed_ip_ref:
+            raise exception.FixedIpNotFoundForAddress(address=fixed_address)
+        rows = model_query(context, models.FloatingIp, session=session).\
+                    filter_by(address=floating_address).\
+                    filter(models.FloatingIp.project_id ==
+                           context.project_id).\
+                    filter(or_(models.FloatingIp.fixed_ip_id ==
+                               fixed_ip_ref['id'],
+                               models.FloatingIp.fixed_ip_id.is_(None))).\
+                    update({'fixed_ip_id': fixed_ip_ref['id'], 'host': host})
+
+        if not rows:
+            raise exception.FloatingIpAssociateFailed(address=floating_address)
 
         return fixed_ip_ref
 
@@ -906,7 +912,8 @@ def floating_ip_fixed_ip_associate(context, floating_address,
 def floating_ip_deallocate(context, address):
     return model_query(context, models.FloatingIp).\
         filter_by(address=address).\
-        filter(models.FloatingIp.project_id != null()).\
+        filter(and_(models.FloatingIp.project_id != null()),
+                    models.FloatingIp.fixed_ip_id == null()).\
         update({'project_id': None,
                 'host': None,
                 'auto_assigned': False},
