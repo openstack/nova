@@ -345,8 +345,8 @@ class VmCommandsTestCase(test.TestCase):
             get.return_value = objects.InstanceList(
                 objects=[fake_instance.fake_instance_obj(
                     context.get_admin_context(), host='foo-host',
-                    instance_type=self.fake_flavor,
-                    expected_attrs=('flavor'))])
+                    flavor=self.fake_flavor,
+                    system_metadata={})])
             self.commands.list()
 
         sys.stdout = sys.__stdout__
@@ -363,8 +363,8 @@ class VmCommandsTestCase(test.TestCase):
             get.return_value = objects.InstanceList(
                 objects=[fake_instance.fake_instance_obj(
                     context.get_admin_context(),
-                    instance_type=self.fake_flavor,
-                    expected_attrs=('flavor'))])
+                    flavor=self.fake_flavor,
+                    system_metadata={})])
             self.commands.list(host='fake-host')
 
         sys.stdout = sys.__stdout__
