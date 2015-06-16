@@ -1638,29 +1638,14 @@ def isolate_dhcp_address(interface, address):
                  % (interface, address))
     rules.append('OUTPUT -p ARP -o %s --arp-ip-src %s -j DROP'
                  % (interface, address))
+    rules.append('FORWARD -p IPv4 -i %s --ip-protocol udp '
+                 '--ip-destination-port 67:68 -j DROP'
+                 % interface)
+    rules.append('FORWARD -p IPv4 -o %s --ip-protocol udp '
+                 '--ip-destination-port 67:68 -j DROP'
+                 % interface)
     # NOTE(vish): the above is not possible with iptables/arptables
     ensure_ebtables_rules(rules)
-    # block dhcp broadcast traffic across the interface
-    ipv4_filter = iptables_manager.ipv4['filter']
-    ipv4_filter.add_rule('FORWARD',
-                         ('-m physdev --physdev-in %s -d 255.255.255.255 '
-                          '-p udp --dport 67 -j %s'
-                          % (interface, CONF.iptables_drop_action)),
-                         top=True)
-    ipv4_filter.add_rule('FORWARD',
-                         ('-m physdev --physdev-out %s -d 255.255.255.255 '
-                          '-p udp --dport 67 -j %s'
-                          % (interface, CONF.iptables_drop_action)),
-                         top=True)
-    # block ip traffic to address across the interface
-    ipv4_filter.add_rule('FORWARD',
-                         ('-m physdev --physdev-in %s -d %s -j %s'
-                          % (interface, address, CONF.iptables_drop_action)),
-                         top=True)
-    ipv4_filter.add_rule('FORWARD',
-                         ('-m physdev --physdev-out %s -s %s -j %s'
-                          % (interface, address, CONF.iptables_drop_action)),
-                         top=True)
 
 
 def remove_isolate_dhcp_address(interface, address):
@@ -1670,38 +1655,14 @@ def remove_isolate_dhcp_address(interface, address):
                  % (interface, address))
     rules.append('OUTPUT -p ARP -o %s --arp-ip-src %s -j DROP'
                  % (interface, address))
+    rules.append('FORWARD -p IPv4 -i %s --ip-protocol udp '
+                 '--ip-destination-port 67:68 -j DROP'
+                 % interface)
+    rules.append('FORWARD -p IPv4 -o %s --ip-protocol udp '
+                 '--ip-destination-port 67:68 -j DROP'
+                 % interface)
     remove_ebtables_rules(rules)
     # NOTE(vish): the above is not possible with iptables/arptables
-    # block dhcp broadcast traffic across the interface
-    ipv4_filter = iptables_manager.ipv4['filter']
-
-    drop_actions = ['DROP']
-    if CONF.iptables_drop_action != 'DROP':
-        drop_actions.append(CONF.iptables_drop_action)
-
-    for drop_action in drop_actions:
-        ipv4_filter.remove_rule('FORWARD',
-                                ('-m physdev --physdev-in %s '
-                                 '-d 255.255.255.255 '
-                                 '-p udp --dport 67 -j %s'
-                                 % (interface, drop_action)),
-                                top=True)
-        ipv4_filter.remove_rule('FORWARD',
-                                ('-m physdev --physdev-out %s '
-                                 '-d 255.255.255.255 '
-                                 '-p udp --dport 67 -j %s'
-                                 % (interface, drop_action)),
-                                top=True)
-
-        # block ip traffic to address across the interface
-        ipv4_filter.remove_rule('FORWARD',
-                                ('-m physdev --physdev-in %s -d %s -j %s'
-                                 % (interface, address, drop_action)),
-                                top=True)
-        ipv4_filter.remove_rule('FORWARD',
-                                ('-m physdev --physdev-out %s -s %s -j %s'
-                                 % (interface, address, drop_action)),
-                                top=True)
 
 
 def get_gateway_rules(bridge):
