@@ -1021,7 +1021,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _disconnect_volume(self, connection_info, disk_dev):
         driver = self._get_volume_driver(connection_info)
-        return driver.disconnect_volume(connection_info, disk_dev)
+        driver.disconnect_volume(connection_info, disk_dev)
 
     def _get_volume_config(self, connection_info, disk_info):
         driver = self._get_volume_driver(connection_info)
