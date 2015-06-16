@@ -30,7 +30,6 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import strutils
 import six
-import six.moves.urllib.parse as urlparse
 
 from nova import availability_zones as az
 from nova import exception
@@ -116,7 +115,7 @@ def cinderclient(context):
     # TODO(jamielennox): This should be using proper version discovery from
     # the cinder service rather than just inspecting the URL for certain string
     # values.
-    version = get_cinder_client_version(url)
+    version = cinder_client.get_volume_api_from_url(url)
 
     if version == '1' and not _V1_ERROR_RAISED:
         msg = _LW('Cinder V1 API is deprecated as of the Juno '
@@ -254,27 +253,6 @@ def translate_snapshot_exception(method):
             six.reraise(exc_value, None, exc_trace)
         return res
     return wrapper
-
-
-def get_cinder_client_version(url):
-    """Parse cinder client version by endpoint url.
-
-    :param url: URL for cinder.
-    :return: str value(1 or 2).
-    """
-    # FIXME(jamielennox): Use cinder_client.get_volume_api_from_url when
-    # bug #1386232 is fixed.
-    valid_versions = ['v1', 'v2']
-    scheme, netloc, path, query, frag = urlparse.urlsplit(url)
-    components = path.split("/")
-
-    for version in valid_versions:
-        if version in components:
-            return version[1:]
-
-    msg = "Invalid client version '%s'. must be one of: %s" % (
-        (version, ', '.join(valid_versions)))
-    raise cinder_exception.UnsupportedVersion(msg)
 
 
 class API(object):
