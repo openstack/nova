@@ -21,6 +21,7 @@ import uuid
 
 import fixtures
 from oslo_config import cfg
+from oslo_serialization import jsonutils
 
 from nova.api.ec2 import cloud
 from nova.api.ec2 import ec2utils
@@ -497,23 +498,29 @@ class CinderCloudTestCase(test.TestCase):
 
     def _setUpBlockDeviceMapping(self):
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
-        sys_meta = flavors.save_flavor_info(
-            {}, flavors.get_flavor(1))
+        flavorinfo = jsonutils.dumps({
+            'cur': flavors.get_flavor(1).obj_to_primitive(),
+            'old': None,
+            'new': None,
+        })
         inst0 = db.instance_create(self.context,
                                   {'image_ref': image_uuid,
                                    'instance_type_id': 1,
                                    'root_device_name': '/dev/sdb1',
-                                   'system_metadata': sys_meta})
+                                   'extra': {'flavor': flavorinfo},
+                                   'system_metadata': {}})
         inst1 = db.instance_create(self.context,
                                   {'image_ref': image_uuid,
                                    'instance_type_id': 1,
                                    'root_device_name': '/dev/sdc1',
-                                   'system_metadata': sys_meta})
+                                   'extra': {'flavor': flavorinfo},
+                                   'system_metadata': {}})
         inst2 = db.instance_create(self.context,
                                   {'image_ref': '',
                                    'instance_type_id': 1,
                                    'root_device_name': '/dev/vda',
-                                   'system_metadata': sys_meta})
+                                   'extra': {'flavor': flavorinfo},
+                                   'system_metadata': {}})
 
         instance0_uuid = inst0['uuid']
         mappings0 = [
