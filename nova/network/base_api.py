@@ -39,7 +39,8 @@ def update_instance_cache_with_nw_info(impl, context, instance,
         if nw_info is None:
             nw_info = impl._get_instance_nw_info(context, instance)
 
-        LOG.debug('Updating cache with info: %s', nw_info)
+        LOG.debug('Updating instance_info_cache with network_info: %s',
+                  nw_info, instance=instance)
 
         # NOTE(comstud): The save() method actually handles updating or
         # creating the instance.  We don't need to retrieve the object
