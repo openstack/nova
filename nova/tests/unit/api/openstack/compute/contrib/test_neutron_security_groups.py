@@ -12,6 +12,7 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+import six
 import uuid
 
 import mock
@@ -638,6 +639,14 @@ class MockClient(object):
 
     def create_security_group(self, body=None):
         s = body.get('security_group')
+        if not isinstance(s.get('name', ''), six.string_types):
+            msg = ('BadRequest: Invalid input for name. Reason: '
+                   'None is not a valid string.')
+            raise n_exc.BadRequest(message=msg)
+        if not isinstance(s.get('description.', ''), six.string_types):
+            msg = ('BadRequest: Invalid input for description. Reason: '
+                   'None is not a valid string.')
+            raise n_exc.BadRequest(message=msg)
         if len(s.get('name')) > 255 or len(s.get('description')) > 255:
             msg = 'Security Group name great than 255'
             raise n_exc.NeutronClientException(message=msg, status_code=401)
