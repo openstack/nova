@@ -32,6 +32,7 @@ class LiveMigrationOpsTestCase(test_base.HyperVBaseTestCase):
         self.context = 'fake_context'
         self._livemigrops = livemigrationops.LiveMigrationOps()
         self._livemigrops._livemigrutils = mock.MagicMock()
+        self._livemigrops._pathutils = mock.MagicMock()
 
     @mock.patch('nova.virt.hyperv.vmops.VMOps.copy_vm_console_logs')
     @mock.patch('nova.virt.hyperv.vmops.VMOps.copy_vm_dvd_disks')
@@ -114,6 +115,8 @@ class LiveMigrationOpsTestCase(test_base.HyperVBaseTestCase):
             mock.sentinel.block_device_info)
         mock_disconnect_volumes.assert_called_once_with(
             mock.sentinel.block_device_info)
+        self._livemigrops._pathutils.get_instance_dir.assert_called_once_with(
+            mock.sentinel.instance.name, create_dir=False, remove_dir=True)
 
     @mock.patch('nova.virt.hyperv.vmops.VMOps.log_vm_serial_output')
     def test_post_live_migration_at_destination(self, mock_log_vm):
