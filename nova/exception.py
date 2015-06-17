@@ -1878,3 +1878,7 @@ class InvalidImageFormat(Invalid):
 
 class UnsupportedImageModel(Invalid):
     msg_fmt = _("Image model '%(image)s' is not supported")
+
+
+class DatabaseMigrationError(NovaException):
+    msg_fmt = _("Database migration failed: %(reason)s")

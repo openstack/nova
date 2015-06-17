@@ -716,9 +716,16 @@ class Migration(BASE, NovaBase):
     __table_args__ = (
         Index('migrations_instance_uuid_and_status_idx', 'deleted',
               'instance_uuid', 'status'),
+        # MySQL has a limit of 3072 bytes for an multi-column index. This
+        # index ends up being larger than that using the utf-8 encoding.
+        # Limiting the index to the prefixes will keep it under the limit.
+        # FIXME(johannes): Is it MySQL or InnoDB that imposes the limit?
         Index('migrations_by_host_nodes_and_status_idx', 'deleted',
               'source_compute', 'dest_compute', 'source_node', 'dest_node',
-              'status'),
+              'status', mysql_length={'source_compute': 100,
+                                      'dest_compute': 100,
+                                      'source_node': 100,
+                                      'dest_node': 100}),
     )
     id = Column(Integer, primary_key=True, nullable=False)
     # NOTE(tr3buchet): the ____compute variables are instance['host']

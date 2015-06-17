@@ -908,6 +908,24 @@ class DbCommands(object):
         """Sync the database up to the most recent version."""
         return migration.db_sync(version)
 
+    @args('--dry-run', action='store_true', dest='dry_run',
+          default=False, help='Print SQL statements instead of executing')
+    def expand(self, dry_run):
+        """Expand database schema."""
+        return migration.db_expand(dry_run)
+
+    @args('--dry-run', action='store_true', dest='dry_run',
+          default=False, help='Print SQL statements instead of executing')
+    def migrate(self, dry_run):
+        """Migrate database schema."""
+        return migration.db_migrate(dry_run)
+
+    @args('--dry-run', action='store_true', dest='dry_run',
+          default=False, help='Print SQL statements instead of executing')
+    def contract(self, dry_run):
+        """Contract database schema."""
+        return migration.db_contract(dry_run)
+
     def version(self):
         """Print the current database version."""
         print(migration.db_version())
