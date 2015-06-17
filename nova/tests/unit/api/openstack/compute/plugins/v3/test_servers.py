@@ -2806,6 +2806,18 @@ class ServersControllerCreateTestWithMock(test.TestCase):
                           self._test_create_extra, params)
         self.assertEqual(1, len(create_mock.call_args_list))
 
+    @mock.patch.object(compute_api.API, 'create')
+    def test_create_instance_with_neutronv2_invalid_fixed_ip(self,
+                                                             create_mock):
+        self.flags(network_api_class='nova.network.neutronv2.api.API')
+        network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+        address = '999.0.2.3'
+        requested_networks = [{'uuid': network, 'fixed_ip': address}]
+        params = {'networks': requested_networks}
+        self.assertRaises(exception.ValidationError,
+                          self._test_create_extra, params)
+        self.assertFalse(create_mock.called)
+
     @mock.patch.object(compute_api.API, 'create',
                        side_effect=exception.InvalidVolume(reason='error'))
     def test_create_instance_with_invalid_volume_error(self, create_mock):
