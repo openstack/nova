@@ -24,6 +24,7 @@ import netaddr
 from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_utils import timeutils
+from oslo_utils import versionutils
 from oslo_versionedobjects import base as ovoo_base
 import six
 
@@ -32,7 +33,6 @@ from nova import exception
 from nova.i18n import _, _LE
 from nova import objects
 from nova.objects import fields as obj_fields
-from nova.openstack.common import versionutils
 from nova import utils
 
 

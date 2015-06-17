@@ -23,13 +23,13 @@ from eventlet import queue
 from eventlet import timeout
 from oslo_config import cfg
 from oslo_log import log as logging
+from oslo_utils import versionutils
 from six.moves import range
 
 from nova import context
 from nova import exception
 from nova.i18n import _, _LE, _LW
 from nova import objects
-from nova.openstack.common import versionutils
 from nova import utils
 from nova import version
 from nova.virt.xenapi.client import objects as cli_objects

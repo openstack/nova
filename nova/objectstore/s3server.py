@@ -40,13 +40,13 @@ import urllib
 
 from oslo_config import cfg
 from oslo_log import log as logging
+from oslo_log import versionutils
 import routes
 import six
 import webob
 
 from nova.i18n import _LW
 from nova.openstack.common import fileutils
-from nova.openstack.common import versionutils
 from nova import paths
 from nova import utils
 from nova import wsgi

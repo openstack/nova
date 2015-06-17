@@ -25,6 +25,7 @@ import time
 
 from oslo_config import cfg
 from oslo_log import log as logging
+from oslo_log import versionutils
 from oslo_utils import timeutils
 import six
 
@@ -48,7 +49,6 @@ from nova import network
 from nova.network.security_group import neutron_driver
 from nova.network.security_group import openstack_driver
 from nova import objects
-from nova.openstack.common import versionutils
 from nova import quota
 from nova import servicegroup
 from nova import utils

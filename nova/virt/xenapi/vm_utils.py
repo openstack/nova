@@ -36,6 +36,7 @@ from oslo_utils import importutils
 from oslo_utils import strutils
 from oslo_utils import timeutils
 from oslo_utils import units
+from oslo_utils import versionutils
 import six
 from six.moves import range
 import six.moves.urllib.parse as urlparse
@@ -47,7 +48,6 @@ from nova.compute import vm_mode
 from nova import exception
 from nova.i18n import _, _LE, _LI, _LW
 from nova.network import model as network_model
-from nova.openstack.common import versionutils
 from nova import utils
 from nova.virt import configdrive
 from nova.virt import diagnostics

@@ -30,6 +30,7 @@ if hasattr(boto.connection, 'HTTPResponse'):
 else:
     import httplib
 import fixtures
+from oslo_utils import versionutils
 import webob
 
 from nova.api import auth
@@ -38,7 +39,6 @@ from nova.api.ec2 import ec2utils
 from nova import block_device
 from nova import context
 from nova import exception
-from nova.openstack.common import versionutils
 from nova import test
 from nova.tests.unit import matchers
 
