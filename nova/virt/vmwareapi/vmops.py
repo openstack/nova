@@ -979,9 +979,6 @@ class VMwareVMOps(object):
         2. Un-register.
         3. Delete the contents of the folder holding the VM related data.
         """
-        if instance.task_state == task_states.RESIZE_REVERTING:
-            return
-
         LOG.debug("Destroying instance", instance=instance)
         self._destroy_instance(instance, destroy_disks=destroy_disks)
         LOG.debug("Instance destroyed", instance=instance)

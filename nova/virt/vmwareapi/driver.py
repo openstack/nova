@@ -25,6 +25,7 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_log import versionutils
 from oslo_serialization import jsonutils
+from oslo_utils import excutils
 from oslo_vmware import api
 from oslo_vmware import exceptions as vexc
 from oslo_vmware import pbm
@@ -32,9 +33,11 @@ from oslo_vmware import vim
 from oslo_vmware import vim_util
 import six
 
+from nova.compute import task_states
+from nova.compute import vm_states
 from nova import exception
 from nova import utils
-from nova.i18n import _, _LI, _LW
+from nova.i18n import _, _LI, _LE, _LW
 from nova.virt import driver
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import error_util
@@ -577,6 +580,36 @@ class VMwareVCDriver(driver.ComputeDriver):
         # node is not set in instance. Perform destroy only if node is set
         if not instance.node:
             return
+
+        # A resize uses the same instance on the VC. We do not delete that
+        # VM in the event of a revert
+        if instance.task_state == task_states.RESIZE_REVERTING:
+            return
+
+        # We need to detach attached volumes
+        if block_device_info is not None:
+            block_device_mapping = driver.block_device_info_get_mapping(
+                block_device_info)
+            if block_device_mapping:
+                # Certain disk types, for example 'IDE' do not support hot
+                # plugging. Hence we need to power off the instance and update
+                # the instance state.
+                self._vmops.power_off(instance)
+                # TODO(garyk): update the volumeops to read the state form the
+                # VM instead of relying on a instance flag
+                instance.vm_state = vm_states.STOPPED
+                for disk in block_device_mapping:
+                    connection_info = disk['connection_info']
+                    try:
+                        self.detach_volume(connection_info, instance,
+                                           disk.get('device_name'))
+                    except Exception as e:
+                        with excutils.save_and_reraise_exception():
+                            LOG.error(_LE("Failed to detach %(device_name)s. "
+                                          "Exception: %(exc)s"),
+                                      {'device_name': disk.get('device_name'),
+                                       'exc': e},
+                                      instance=instance)
 
         self._vmops.destroy(instance, destroy_disks)
 
