@@ -4302,7 +4302,8 @@ class LibvirtDriver(driver.ComputeDriver):
         err = None
         try:
             if xml:
-                err = _LE('Error defining a domain with XML: %s') % xml
+                err = (_LE('Error defining a domain with XML: %s') %
+                       encodeutils.safe_decode(xml, errors='ignore'))
                 domain = self._conn.defineXML(xml)
 
             if power_on:
