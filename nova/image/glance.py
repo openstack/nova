@@ -28,6 +28,7 @@ import glanceclient.exc
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
+from oslo_service import sslutils
 from oslo_utils import excutils
 from oslo_utils import netutils
 from oslo_utils import timeutils
@@ -76,7 +77,6 @@ CONF = cfg.CONF
 CONF.register_opts(glance_opts, 'glance')
 CONF.import_opt('auth_strategy', 'nova.api.auth')
 CONF.import_opt('my_ip', 'nova.netconf')
-CONF.import_group('ssl', 'nova.openstack.common.sslutils')
 
 
 def generate_glance_url():
@@ -128,6 +128,7 @@ def _create_glance_client(context, host, port, use_ssl, version=1):
         # https specific params
         params['insecure'] = CONF.glance.api_insecure
         params['ssl_compression'] = False
+        sslutils.is_enabled(CONF)
         if CONF.ssl.cert_file:
             params['cert_file'] = CONF.ssl.cert_file
         if CONF.ssl.key_file:

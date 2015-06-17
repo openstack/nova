@@ -23,12 +23,12 @@ from oslo_config import cfg
 from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
+from oslo_service import periodic_task
 from oslo_utils import importutils
 
 from nova import exception
 from nova import manager
 from nova import objects
-from nova.openstack.common import periodic_task
 from nova import quota
 
 

@@ -417,8 +417,10 @@ class TestGlanceClientWrapper(test.NoDBTestCase):
         )
         sleep_mock.assert_called_once_with(1)
 
+    @mock.patch('oslo_service.sslutils.is_enabled')
     @mock.patch('glanceclient.Client')
-    def test_create_glance_client_with_ssl(self, client_mock):
+    def test_create_glance_client_with_ssl(self, client_mock,
+                                           ssl_enable_mock):
         self.flags(ca_file='foo.cert', cert_file='bar.cert',
                    key_file='wut.key', group='ssl')
         ctxt = mock.sentinel.ctx

@@ -43,6 +43,7 @@ oslo.db>=1.12.0 # Apache-2.0
 oslo.rootwrap>=2.0.0 # Apache-2.0
 oslo.messaging!=1.12.0,>=1.8.0 # Apache-2.0
 oslo.i18n>=1.5.0 # Apache-2.0
+oslo.service>=0.1.0 # Apache-2.0
 rfc3986>=0.2.0 # Apache-2.0
 oslo.middleware!=2.0.0,>=1.2.0 # Apache-2.0
 psutil<2.0.0,>=1.1.1

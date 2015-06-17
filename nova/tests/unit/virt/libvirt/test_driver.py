@@ -37,6 +37,7 @@ from oslo_concurrency import lockutils
 from oslo_concurrency import processutils
 from oslo_config import cfg
 from oslo_serialization import jsonutils
+from oslo_service import loopingcall
 from oslo_utils import encodeutils
 from oslo_utils import importutils
 from oslo_utils import timeutils
@@ -59,7 +60,6 @@ from nova import exception
 from nova.network import model as network_model
 from nova import objects
 from nova.openstack.common import fileutils
-from nova.openstack.common import loopingcall
 from nova.pci import manager as pci_manager
 from nova import test
 from nova.tests.unit import fake_block_device
@@ -8144,7 +8144,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                           block_device_info)
 
     @mock.patch('nova.openstack.common.fileutils.ensure_tree')
-    @mock.patch('nova.openstack.common.loopingcall.FixedIntervalLoopingCall')
+    @mock.patch('oslo_service.loopingcall.FixedIntervalLoopingCall')
     @mock.patch('nova.pci.manager.get_instance_pci_devs')
     @mock.patch('nova.virt.libvirt.LibvirtDriver._prepare_pci_devices_for_use')
     @mock.patch('nova.virt.libvirt.LibvirtDriver._create_domain_and_network')

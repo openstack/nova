@@ -25,6 +25,7 @@ from oslo_concurrency import processutils
 from oslo_config import cfg
 from oslo_log import log as logging
 import oslo_messaging as messaging
+from oslo_service import service
 from oslo_utils import importutils
 
 from nova import baserpc
@@ -35,7 +36,6 @@ from nova import exception
 from nova.i18n import _, _LE, _LI, _LW
 from nova import objects
 from nova.objects import base as objects_base
-from nova.openstack.common import service
 from nova import rpc
 from nova import servicegroup
 from nova import utils
@@ -305,7 +305,7 @@ class Service(service.Service):
             sys.exit(1)
 
 
-class WSGIService(object):
+class WSGIService(service.Service):
     """Provides ability to launch API from a 'paste' configuration."""
 
     def __init__(self, name, loader=None, use_ssl=False, max_url_len=None):
@@ -412,7 +412,7 @@ class WSGIService(object):
 
 
 def process_launcher():
-    return service.ProcessLauncher()
+    return service.ProcessLauncher(CONF)
 
 
 # NOTE(vish): the global launcher is to maintain the existing
@@ -426,7 +426,7 @@ def serve(server, workers=None):
     if _launcher:
         raise RuntimeError(_('serve() can only be called once'))
 
-    _launcher = service.launch(server, workers=workers)
+    _launcher = service.launch(CONF, server, workers=workers)
 
 
 def wait():

@@ -44,6 +44,8 @@ from oslo_config import cfg
 from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
+from oslo_service import loopingcall
+from oslo_service import periodic_task
 from oslo_utils import excutils
 from oslo_utils import strutils
 from oslo_utils import timeutils
@@ -78,8 +80,6 @@ from nova.network import model as network_model
 from nova.network.security_group import openstack_driver
 from nova import objects
 from nova.objects import base as obj_base
-from nova.openstack.common import loopingcall
-from nova.openstack.common import periodic_task
 from nova import paths
 from nova import rpc
 from nova import safe_utils
