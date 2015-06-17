@@ -33,6 +33,10 @@ class HostUtils(object):
     def __init__(self):
         if sys.platform == 'win32':
             self._conn_cimv2 = wmi.WMI(privileges=["Shutdown"])
+            self._init_wmi_virt_conn()
+
+    def _init_wmi_virt_conn(self):
+        self._conn_virt = None
 
     def get_cpus_info(self):
         cpus = self._conn_cimv2.query("SELECT * FROM Win32_Processor "

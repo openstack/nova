@@ -18,6 +18,7 @@ from oslo_log import log as logging
 
 from nova.i18n import _
 from nova.virt.hyperv import hostutils
+from nova.virt.hyperv import hostutilsv2
 from nova.virt.hyperv import livemigrationutils
 from nova.virt.hyperv import networkutils
 from nova.virt.hyperv import networkutilsv2
@@ -45,11 +46,13 @@ CONF.register_opts(hyper_opts, 'hyperv')
 
 LOG = logging.getLogger(__name__)
 
+utils = hostutils.HostUtils()
+
 
 def _get_class(v1_class, v2_class, force_v1_flag):
     # V2 classes are supported starting from Hyper-V Server 2012 and
     # Windows Server 2012 (kernel version 6.2)
-    if not force_v1_flag and get_hostutils().check_min_windows_version(6, 2):
+    if not force_v1_flag and utils.check_min_windows_version(6, 2):
         cls = v2_class
     else:
         cls = v1_class
@@ -63,7 +66,7 @@ def _get_virt_utils_class(v1_class, v2_class):
     # Windows Server / Hyper-V Server 2012 R2 / Windows 8.1
     # (kernel version 6.3) or above.
     if (CONF.hyperv.force_hyperv_utils_v1 and
-            get_hostutils().check_min_windows_version(6, 3)):
+            utils.check_min_windows_version(6, 3)):
         raise vmutils.HyperVException(
             _('The "force_hyperv_utils_v1" option cannot be set to "True" '
               'on Windows Server / Hyper-V Server 2012 R2 or above as the WMI '
@@ -85,7 +88,8 @@ def get_networkutils():
 
 
 def get_hostutils():
-    return hostutils.HostUtils()
+    return _get_virt_utils_class(hostutils.HostUtils,
+                                 hostutilsv2.HostUtilsV2)()
 
 
 def get_pathutils():

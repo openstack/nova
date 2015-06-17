@@ -44,14 +44,19 @@ class ImageCacheTestCase(test.NoDBTestCase):
 
         # utilsfactory will check the host OS version via get_hostutils,
         # in order to return the proper Utils Class, so it must be mocked.
-        patched_func = mock.patch.object(imagecache.utilsfactory,
-                                         "get_hostutils")
+        patched_get_hostutils = mock.patch.object(imagecache.utilsfactory,
+                                                  "get_hostutils")
         patched_get_pathutils = mock.patch.object(imagecache.utilsfactory,
                                                   "get_pathutils")
-        patched_func.start()
+        patched_get_vhdutils = mock.patch.object(imagecache.utilsfactory,
+                                                 "get_vhdutils")
+        patched_get_hostutils.start()
         patched_get_pathutils.start()
-        self.addCleanup(patched_func.stop)
+        patched_get_vhdutils.start()
+
+        self.addCleanup(patched_get_hostutils.stop)
         self.addCleanup(patched_get_pathutils.stop)
+        self.addCleanup(patched_get_vhdutils.stop)
 
         self.imagecache = imagecache.ImageCache()
         self.imagecache._pathutils = mock.MagicMock()
