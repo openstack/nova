@@ -483,21 +483,6 @@ class _TestInstanceObject(object):
         mock_update.assert_called_once_with(
             self.context, inst.uuid, {'vcpu_model': None})
 
-    def test_save_objectfield_missing_instance_row(self):
-        error = db_exc.DBReferenceError('table', 'constraint', 'key',
-                                        'key_table')
-        instance = fake_instance.fake_instance_obj(self.context)
-        fields_with_save_methods = [field for field in instance.fields
-                                    if hasattr(instance, '_save_%s' % field)]
-        for field in fields_with_save_methods:
-            @mock.patch.object(instance, '_save_%s' % field)
-            def _test(mock_save_field):
-                mock_save_field.side_effect = error
-                instance._changed_fields.add(field)
-                self.assertRaises(exception.InstanceNotFound,
-                                  instance.save)
-            _test()
-
     def test_save_flavor_skips_unchanged_flavors(self):
         inst = objects.Instance(context=self.context,
                                 flavor=objects.Flavor())
@@ -1341,7 +1326,28 @@ class _TestInstanceObject(object):
 
 class TestInstanceObject(test_objects._LocalTest,
                          _TestInstanceObject):
-    pass
+    def test_save_objectfield_missing_instance_row(self):
+        # NOTE(danms): Do this here and not in the remote test because
+        # we're mocking out obj_attr_is_set() without the thing actually
+        # being set, which confuses the heck out of the serialization
+        # stuff.
+        error = db_exc.DBReferenceError('table', 'constraint', 'key',
+                                        'key_table')
+        instance = fake_instance.fake_instance_obj(self.context)
+        fields_with_save_methods = [field for field in instance.fields
+                                    if hasattr(instance, '_save_%s' % field)]
+        for field in fields_with_save_methods:
+            @mock.patch.object(instance, '_save_%s' % field)
+            @mock.patch.object(instance, 'obj_attr_is_set')
+            def _test(mock_is_set, mock_save_field):
+                mock_is_set.return_value = True
+                mock_save_field.side_effect = error
+                instance.obj_reset_changes(fields=[field])
+                instance._changed_fields.add(field)
+                self.assertRaises(exception.InstanceNotFound,
+                                  instance.save)
+                instance.obj_reset_changes(fields=[field])
+            _test()
 
 
 class TestRemoteInstanceObject(test_objects._RemoteTest,
