@@ -641,6 +641,9 @@ class VMUtilsTestCase(test.NoDBTestCase):
         ret_val = self._vmutils.get_vm_serial_port_connection(
             self._FAKE_VM_NAME, update_connection=new_connection)
 
+        mock_vmsettings[0].associators.assert_called_once_with(
+            wmi_result_class=self._vmutils._SERIAL_PORT_SETTING_DATA_CLASS)
+
         if new_connection:
             self.assertEqual(new_connection, ret_val)
             fake_modify.assert_called_once_with(fake_serial_port,
