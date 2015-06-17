@@ -3401,7 +3401,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def _has_cpu_policy_support(self):
         for ver in BAD_LIBVIRT_CPU_POLICY_VERSIONS:
             if self._host.has_version(ver):
-                ver_ = self._version_to_string(version)
+                ver_ = self._version_to_string(ver)
                 raise exception.CPUPinningNotSupported(reason=_(
                     'Invalid libvirt version %(version)s') % {'version': ver_})
         return True
