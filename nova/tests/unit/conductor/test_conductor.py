@@ -45,7 +45,6 @@ from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import block_device as block_device_obj
 from nova.objects import fields
-from nova.objects import instance as instance_obj
 from nova.objects import quotas as quotas_obj
 from nova import quota
 from nova import rpc
@@ -1042,7 +1041,9 @@ class _BaseTaskTestCase(object):
                                       uuid=uuid.uuid4(),
                                       flavor=instance_type) for i in range(2)]
         instance_type_p = obj_base.obj_to_primitive(instance_type)
-        instance_properties = instance_obj.compat_instance(instances[0])
+        instance_properties = obj_base.obj_to_primitive(instances[0])
+        instance_properties['system_metadata'] = flavors.save_flavor_info(
+            {}, instance_type)
 
         self.mox.StubOutWithMock(scheduler_utils, 'setup_instance_group')
         self.mox.StubOutWithMock(self.conductor_manager.scheduler_client,
