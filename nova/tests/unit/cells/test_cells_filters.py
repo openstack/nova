@@ -17,6 +17,7 @@ Unit Tests for cells scheduler filters.
 """
 
 from nova.cells import filters
+from nova.cells import state
 from nova import context
 from nova.db.sqlalchemy import models
 from nova import test
@@ -30,6 +31,7 @@ class FiltersTestCase(test.NoDBTestCase):
         filter_classes = filters.all_filters()
         class_names = [cls.__name__ for cls in filter_classes]
         self.assertIn("TargetCellFilter", class_names)
+        self.assertIn("DifferentCellFilter", class_names)
 
 
 class _FilterTestClass(test.NoDBTestCase):
@@ -172,3 +174,57 @@ class TestTargetCellFilter(_FilterTestClass):
                          'cell': 'fake!cell!path',
                          'sched_kwargs': 'meow'}
         self.assertEqual(expected_info, info)
+
+
+class TestDifferentCellFilter(_FilterTestClass):
+    filter_cls_name = 'nova.cells.filters.different_cell.DifferentCellFilter'
+
+    def setUp(self):
+        super(TestDifferentCellFilter, self).setUp()
+        # We only load one filter so we know the first one is the one we want
+        self.policy.set_rules({'cells_scheduler_filter:DifferentCellFilter':
+            ''})
+        self.cells = [state.CellState('1'),
+                      state.CellState('2'),
+                      state.CellState('3')]
+
+    def test_missing_scheduler_hints(self):
+        filter_props = {'context': self.context}
+        # No filtering
+        self.assertEqual(self.cells,
+                self._filter_cells(self.cells, filter_props))
+
+    def test_no_different_cell_hint(self):
+        filter_props = {'scheduler_hints': {},
+                        'context': self.context}
+        # No filtering
+        self.assertEqual(self.cells,
+                self._filter_cells(self.cells, filter_props))
+
+    def test_different_cell(self):
+        filter_props = {'scheduler_hints': {'different_cell': 'fake!2'},
+                        'routing_path': 'fake',
+                        'context': self.context}
+        filtered_cells = self._filter_cells(self.cells, filter_props)
+        self.assertEqual(2, len(filtered_cells))
+        self.assertNotIn(self.cells[1], filtered_cells)
+
+    def test_different_multiple_cells(self):
+        filter_props = {'scheduler_hints':
+                            {'different_cell': ['fake!1', 'fake!2']},
+                        'routing_path': 'fake',
+                        'context': self.context}
+        filtered_cells = self._filter_cells(self.cells, filter_props)
+        self.assertEqual(1, len(filtered_cells))
+        self.assertNotIn(self.cells[0], filtered_cells)
+        self.assertNotIn(self.cells[1], filtered_cells)
+
+    def test_different_cell_specified_me_not_authorized(self):
+        self.policy.set_rules({'cells_scheduler_filter:DifferentCellFilter':
+            '!'})
+        filter_props = {'scheduler_hints': {'different_cell': 'fake!2'},
+                        'routing_path': 'fake',
+                        'context': self.context}
+        # No filtering, because not an admin.
+        self.assertEqual(self.cells,
+                self._filter_cells(self.cells, filter_props))
