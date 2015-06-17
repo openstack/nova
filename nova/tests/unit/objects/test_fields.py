@@ -283,8 +283,7 @@ class TestHVType(TestField):
                                    ('bhyve', 'bhyve'),
                                    ('fake', 'fake'),
                                    ('kvm', 'kvm'),
-                                   ('xapi', 'xen'),
-                                   ('powervm', 'phyp')]
+                                   ('xapi', 'xen')]
         self.coerce_bad_values = ['acme']
         self.to_primitive_values = self.coerce_good_values[0:1]
         self.from_primitive_values = self.coerce_good_values[0:1]
