@@ -100,7 +100,7 @@ class MigrationOps(object):
             LOG.error(_LE("Cannot cleanup migration files"))
 
     def _check_target_flavor(self, instance, flavor):
-        new_root_gb = flavor['root_gb']
+        new_root_gb = flavor.root_gb
         curr_root_gb = instance.root_gb
 
         if new_root_gb < curr_root_gb:

@@ -56,6 +56,14 @@ DEFAULT_FLAVORS = [
      'vcpu_weight': None, 'id': 4}
 ]
 
+CONTEXT = context.RequestContext('fake', 'fake', is_admin=False)
+
+DEFAULT_FLAVOR_OBJS = [
+    objects.Flavor._obj_from_primitive(CONTEXT, objects.Flavor.VERSION,
+                                       {'nova_object.data': flavor})
+    for flavor in DEFAULT_FLAVORS
+]
+
 
 class InstanceTypeTestCase(test.TestCase):
     """Test cases for flavor  code."""

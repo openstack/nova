@@ -1171,7 +1171,7 @@ class VMOps(object):
 
     def _ensure_not_resize_down_ephemeral(self, instance, flavor):
         old_gb = instance["ephemeral_gb"]
-        new_gb = flavor["ephemeral_gb"]
+        new_gb = flavor.ephemeral_gb
 
         if old_gb > new_gb:
             reason = _("Can't resize down ephemeral disks.")
@@ -1194,7 +1194,7 @@ class VMOps(object):
                                        total_steps=RESIZE_TOTAL_STEPS)
 
         old_gb = instance['root_gb']
-        new_gb = flavor['root_gb']
+        new_gb = flavor.root_gb
         resize_down = old_gb > new_gb
 
         if new_gb == 0 and old_gb != 0:

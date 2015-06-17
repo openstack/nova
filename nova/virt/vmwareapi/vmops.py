@@ -1135,16 +1135,16 @@ class VMwareVMOps(object):
         extra_specs = self._get_extra_specs(flavor)
         metadata = self._get_instance_metadata(context, instance)
         vm_resize_spec = vm_util.get_vm_resize_spec(client_factory,
-                                                    int(flavor['vcpus']),
-                                                    int(flavor['memory_mb']),
+                                                    int(flavor.vcpus),
+                                                    int(flavor.memory_mb),
                                                     extra_specs,
                                                     metadata=metadata)
         vm_util.reconfigure_vm(self._session, vm_ref, vm_resize_spec)
 
     def _resize_disk(self, instance, vm_ref, vmdk, flavor):
-        if (flavor['root_gb'] > instance.root_gb and
-            flavor['root_gb'] > vmdk.capacity_in_bytes / units.Gi):
-            root_disk_in_kb = flavor['root_gb'] * units.Mi
+        if (flavor.root_gb > instance.root_gb and
+            flavor.root_gb > vmdk.capacity_in_bytes / units.Gi):
+            root_disk_in_kb = flavor.root_gb * units.Mi
             ds_ref = vmdk.device.backing.datastore
             dc_info = self.get_datacenter_ref_and_name(ds_ref)
             folder = ds_obj.DatastorePath.parse(vmdk.path).dirname
@@ -1191,9 +1191,9 @@ class VMwareVMOps(object):
                                      uuid=instance.uuid)
 
         # Checks if the migration needs a disk resize down.
-        if (flavor['root_gb'] < instance.root_gb or
-            (flavor['root_gb'] != 0 and
-             flavor['root_gb'] < vmdk.capacity_in_bytes / units.Gi)):
+        if (flavor.root_gb < instance.root_gb or
+            (flavor.root_gb != 0 and
+             flavor.root_gb < vmdk.capacity_in_bytes / units.Gi)):
             reason = _("Unable to shrink disk.")
             raise exception.InstanceFaultRollback(
                 exception.ResizeError(reason=reason))
