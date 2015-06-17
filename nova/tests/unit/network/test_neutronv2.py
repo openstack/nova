@@ -1497,27 +1497,9 @@ class TestNeutronv2(TestNeutronv2Base):
             self.assertIn("my_netid2", six.text_type(ex))
             self.assertIn("my_netid3", six.text_type(ex))
 
-    def test_validate_networks_duplicate_disable(self):
-        """Verify that the correct exception is thrown when duplicate
-        network ids are passed to validate_networks, when nova config flag
-        allow_duplicate_networks is set to its default value: False
-        """
-        requested_networks = [('my_netid1', None, None, None),
-                              ('my_netid1', None, None, None)]
-        self.mox.ReplayAll()
-        # Expected call from setUp.
-        neutronapi.get_client(None)
-        api = neutronapi.API()
-        self.assertRaises(exception.NetworkDuplicated,
-                      api.validate_networks,
-                      self.context, requested_networks, 1)
-
     def test_validate_networks_duplicate_enable(self):
-        """Verify that no duplicateNetworks exception is thrown when duplicate
-        network ids are passed to validate_networks, when nova config flag
-        allow_duplicate_networks is set to its non default value: True
-        """
-        self.flags(allow_duplicate_networks=True, group='neutron')
+        # Verify that no duplicateNetworks exception is thrown when duplicate
+        # network ids are passed to validate_networks.
         requested_networks = objects.NetworkRequestList(
             objects=[objects.NetworkRequest(network_id='my_netid1'),
                      objects.NetworkRequest(network_id='my_netid1')])
@@ -1537,7 +1519,6 @@ class TestNeutronv2(TestNeutronv2Base):
 
     def test_allocate_for_instance_with_requested_networks_duplicates(self):
         # specify a duplicate network to allocate to instance
-        self.flags(allow_duplicate_networks=True, group='neutron')
         requested_networks = objects.NetworkRequestList(
             objects=[objects.NetworkRequest(network_id=net['id'])
                      for net in (self.nets6[0], self.nets6[1])])
@@ -1546,7 +1527,6 @@ class TestNeutronv2(TestNeutronv2Base):
 
     def test_allocate_for_instance_requested_networks_duplicates_port(self):
         # specify first port and last port that are in same network
-        self.flags(allow_duplicate_networks=True, group='neutron')
         requested_networks = objects.NetworkRequestList(
             objects=[objects.NetworkRequest(port_id=port['id'])
                      for port in (self.port_data1[0], self.port_data3[0])])
@@ -1555,7 +1535,6 @@ class TestNeutronv2(TestNeutronv2Base):
 
     def test_allocate_for_instance_requested_networks_duplicates_combo(self):
         # specify a combo net_idx=7 : net2, port in net1, net2, port in net1
-        self.flags(allow_duplicate_networks=True, group='neutron')
         requested_networks = objects.NetworkRequestList(
             objects=[objects.NetworkRequest(network_id='my_netid2'),
                      objects.NetworkRequest(port_id=self.port_data1[0]['id']),
@@ -1661,42 +1640,9 @@ class TestNeutronv2(TestNeutronv2Base):
                           api.validate_networks,
                           self.context, requested_networks, 1)
 
-    def test_validate_networks_ports_in_same_network_disable(self):
-        """Verify that duplicateNetworks exception is thrown when ports on same
-        duplicate network are passed to validate_networks, when nova config
-        flag allow_duplicate_networks is set to its default False
-        """
-        self.flags(allow_duplicate_networks=False, group='neutron')
-        port_a = self.port_data3[0]
-        port_a['fixed_ips'] = {'ip_address': '10.0.0.2',
-                           'subnet_id': 'subnet_id'}
-        port_b = self.port_data1[0]
-        self.assertEqual(port_a['network_id'], port_b['network_id'])
-        for port in [port_a, port_b]:
-            port['device_id'] = None
-            port['device_owner'] = None
-
-        requested_networks = objects.NetworkRequestList(
-            objects=[objects.NetworkRequest(port_id=port_a['id']),
-                     objects.NetworkRequest(port_id=port_b['id'])])
-        self.moxed_client.show_port(port_a['id']).AndReturn(
-                                                  {'port': port_a})
-        self.moxed_client.show_port(port_b['id']).AndReturn(
-                                                  {'port': port_b})
-
-        self.mox.ReplayAll()
-
-        api = neutronapi.API()
-        self.assertRaises(exception.NetworkDuplicated,
-                          api.validate_networks,
-                          self.context, requested_networks, 1)
-
     def test_validate_networks_ports_in_same_network_enable(self):
-        """Verify that duplicateNetworks exception is not thrown when ports
-        on same duplicate network are passed to validate_networks, when nova
-        config flag allow_duplicate_networks is set to its True
-        """
-        self.flags(allow_duplicate_networks=True, group='neutron')
+        # Verify that duplicateNetworks exception is not thrown when ports
+        # on same duplicate network are passed to validate_networks.
         port_a = self.port_data3[0]
         port_a['fixed_ips'] = {'ip_address': '10.0.0.2',
                                'subnet_id': 'subnet_id'}
