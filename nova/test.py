@@ -389,3 +389,35 @@ class BaseHookTestCase(NoDBTestCase):
     def assert_has_hook(self, expected_name, func):
         self.assertTrue(hasattr(func, '__hook_name__'))
         self.assertEqual(expected_name, func.__hook_name__)
+
+
+class MatchType(object):
+    """Matches any instance of a specified type
+
+    The MatchType class is a helper for use with the
+    mock.assert_called_with() method that lets you
+    assert that a particular parameter has a specific
+    data type. It enables strict check than the built
+    in mock.ANY helper, and is the equivalent of the
+    mox.IsA() function from the legacy mox library
+
+    Example usage could be:
+
+      mock_some_method.assert_called_once_with(
+            "hello",
+            MatchType(objects.Instance),
+            mock.ANY,
+            "world",
+            MatchType(objects.KeyPair))
+    """
+    def __init__(self, wanttype):
+        self.wanttype = wanttype
+
+    def __eq__(self, other):
+        return type(other) == self.wanttype
+
+    def __ne__(self, other):
+        return type(other) != self.wanttype
+
+    def __repr__(self):
+        return "<MatchType:" + str(self.wanttype) + ">"
