@@ -31,6 +31,7 @@ from nova.i18n import _, _LE
 from nova.virt import driver
 from nova.virt.hyperv import eventhandler
 from nova.virt.hyperv import hostops
+from nova.virt.hyperv import imagecache
 from nova.virt.hyperv import livemigrationops
 from nova.virt.hyperv import migrationops
 from nova.virt.hyperv import rdpconsoleops
@@ -93,7 +94,7 @@ exception_conversion_map = {
 @decorate_all_methods(convert_exceptions, exception_conversion_map)
 class HyperVDriver(driver.ComputeDriver):
     capabilities = {
-        "has_imagecache": False,
+        "has_imagecache": True,
         "supports_recreate": False,
         "supports_migrate_to_same_host": True,
         "supports_attach_interface": True
@@ -114,6 +115,7 @@ class HyperVDriver(driver.ComputeDriver):
         self._migrationops = migrationops.MigrationOps()
         self._rdpconsoleops = rdpconsoleops.RDPConsoleOps()
         self._serialconsoleops = serialconsoleops.SerialConsoleOps()
+        self._imagecache = imagecache.ImageCache()
 
     def _check_minimum_windows_version(self):
         if not utilsfactory.get_hostutils().check_min_windows_version(6, 2):
@@ -327,6 +329,9 @@ class HyperVDriver(driver.ComputeDriver):
 
     def get_console_output(self, context, instance):
         return self._serialconsoleops.get_console_output(instance.name)
+
+    def manage_image_cache(self, context, all_instances):
+        self._imagecache.update(context, all_instances)
 
     def attach_interface(self, instance, image_meta, vif):
         return self._vmops.attach_interface(instance, vif)
