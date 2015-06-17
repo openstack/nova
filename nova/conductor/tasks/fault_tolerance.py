@@ -13,23 +13,23 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova import compute
+from nova.compute import api as compute_api
 from nova.compute import flavors
 from nova import objects
-
 from nova.openstack.common import log as logging
+
 LOG = logging.getLogger(__name__)
 
 
 class FaultToleranceTasks(object):
     def __init__(self):
-        self.compute_api = compute.API()
+        self.compute_api = compute_api.API()
 
     # TODO(ORBIT): This might come in handy if the secondary VM need different
     #              resources (more RAM?) than the primary VM.
     #              Right now, we just change the role in the extra_specs.
     def _get_secondary_flavor(self, flavor):
-        flavor['extra_specs']['ft:role'] = 'secondary'
+        flavor['extra_specs']['ft:secondary'] = '1'
         return flavor
 
     def deploy_secondary_instance(self, context, primary_instance_uuid,
