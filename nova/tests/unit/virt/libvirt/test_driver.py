@@ -1792,6 +1792,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         conf = drvr._get_cpu_numa_config_from_instance(None)
         self.assertIsNone(conf)
 
+    @mock.patch.object(host.Host, 'has_version', return_value=True)
+    def test_has_cpu_policy_support(self, mock_has_version):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        self.assertRaises(exception.CPUPinningNotSupported,
+                          drvr._has_cpu_policy_support)
+
     def test_get_guest_config_clock(self):
         self.flags(virt_type='kvm', group='libvirt')
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
