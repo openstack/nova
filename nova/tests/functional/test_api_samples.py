@@ -25,7 +25,6 @@ from oslo_utils import importutils
 import testtools
 
 from nova.api.metadata import password
-from nova.api.openstack.compute import extensions
 # Import extensions to pull in osapi_compute_extension CONF option used below.
 from nova.compute import api as compute_api
 from nova.console import manager as console_manager  # noqa - only for cfg
@@ -498,81 +497,6 @@ class AvailabilityZoneJsonTest(ServersSampleBase):
                               response, 202)
 
 
-class QuotasSampleJsonTests(ApiSampleTestBaseV2):
-    ADMIN_API = True
-    extension_name = "nova.api.openstack.compute.contrib.quotas.Quotas"
-
-    def test_show_quotas(self):
-        # Get api sample to show quotas.
-        response = self._do_get('os-quota-sets/fake_tenant')
-        self._verify_response('quotas-show-get-resp', {}, response, 200)
-
-    def test_show_quotas_defaults(self):
-        # Get api sample to show quotas defaults.
-        response = self._do_get('os-quota-sets/fake_tenant/defaults')
-        self._verify_response('quotas-show-defaults-get-resp',
-                              {}, response, 200)
-
-    def test_update_quotas(self):
-        # Get api sample to update quotas.
-        response = self._do_put('os-quota-sets/fake_tenant',
-                                'quotas-update-post-req',
-                                {})
-        self._verify_response('quotas-update-post-resp', {}, response, 200)
-
-
-class ExtendedQuotasSampleJsonTests(ApiSampleTestBaseV2):
-    ADMIN_API = True
-    extends_name = "nova.api.openstack.compute.contrib.quotas.Quotas"
-    extension_name = ("nova.api.openstack.compute.contrib"
-                      ".extended_quotas.Extended_quotas")
-
-    def test_delete_quotas(self):
-        # Get api sample to delete quota.
-        response = self._do_delete('os-quota-sets/fake_tenant')
-        self.assertEqual(response.status_code, 202)
-        self.assertEqual(response.content, '')
-
-    def test_update_quotas(self):
-        # Get api sample to update quotas.
-        response = self._do_put('os-quota-sets/fake_tenant',
-                                'quotas-update-post-req',
-                                {})
-        return self._verify_response('quotas-update-post-resp', {},
-                                     response, 200)
-
-
-class UserQuotasSampleJsonTests(ApiSampleTestBaseV2):
-    ADMIN_API = True
-    extends_name = "nova.api.openstack.compute.contrib.quotas.Quotas"
-    extension_name = ("nova.api.openstack.compute.contrib"
-                      ".user_quotas.User_quotas")
-
-    def fake_load(self, *args):
-        return True
-
-    def test_show_quotas_for_user(self):
-        # Get api sample to show quotas for user.
-        response = self._do_get('os-quota-sets/fake_tenant?user_id=1')
-        self._verify_response('user-quotas-show-get-resp', {}, response, 200)
-
-    def test_delete_quotas_for_user(self):
-        # Get api sample to delete quota for user.
-        self.stubs.Set(extensions.ExtensionManager, "is_loaded",
-                self.fake_load)
-        response = self._do_delete('os-quota-sets/fake_tenant?user_id=1')
-        self.assertEqual(response.status_code, 202)
-        self.assertEqual(response.content, '')
-
-    def test_update_quotas_for_user(self):
-        # Get api sample to update quotas for user.
-        response = self._do_put('os-quota-sets/fake_tenant?user_id=1',
-                                'user-quotas-update-post-req',
-                                {})
-        return self._verify_response('user-quotas-update-post-resp', {},
-                                     response, 200)
-
-
 class ExtendedIpsSampleJsonTests(ServersSampleBase):
     extension_name = ("nova.api.openstack.compute.contrib"
                       ".extended_ips.Extended_ips")
@@ -875,9 +799,3 @@ class ServerGroupQuotas_UsedLimitsSamplesJsonTest(UsedLimitsSamplesJsonTest):
                "server_group_quotas.Server_group_quotas")
     extends_name = ("nova.api.openstack.compute.contrib.used_limits."
                     "Used_limits")
-
-
-class ServerGroupQuotas_QuotasSampleJsonTests(QuotasSampleJsonTests):
-    extension_name = ("nova.api.openstack.compute.contrib."
-               "server_group_quotas.Server_group_quotas")
-    extends_name = "nova.api.openstack.compute.contrib.quotas.Quotas"
