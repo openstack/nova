@@ -60,7 +60,10 @@ def fake_get_instance(self, context, instance_id, want_objects=False,
 
 
 def fake_get_volume(self, context, id):
-    return {'id': 'woot'}
+    return {'id': FAKE_UUID_A,
+            'status': 'available',
+            'attach_status': 'detached'
+            }
 
 
 def fake_attach_volume(self, context, instance, volume_id, device):

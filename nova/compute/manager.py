@@ -674,7 +674,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='4.6')
+    target = messaging.Target(version='4.7')
 
     # How long to wait in seconds before re-issuing a shutdown
     # signal to an instance during power off.  The overall
@@ -2326,7 +2326,7 @@ class ComputeManager(manager.Manager):
                 self.volume_api.terminate_connection(context,
                                                      bdm.volume_id,
                                                      connector)
-                self.volume_api.detach(context, bdm.volume_id)
+                self.volume_api.detach(context, bdm.volume_id, instance.uuid)
             except exception.DiskNotFound as exc:
                 LOG.debug('Ignoring DiskNotFound: %s', exc,
                           instance=instance)
@@ -4737,7 +4737,8 @@ class ComputeManager(manager.Manager):
                               context=context, instance=instance)
                 self.volume_api.roll_detaching(context, volume_id)
 
-    def _detach_volume(self, context, volume_id, instance, destroy_bdm=True):
+    def _detach_volume(self, context, volume_id, instance, destroy_bdm=True,
+                       attachment_id=None):
         """Detach a volume from an instance.
 
         :param context: security context
@@ -4790,14 +4791,16 @@ class ComputeManager(manager.Manager):
         info = dict(volume_id=volume_id)
         self._notify_about_instance_usage(
             context, instance, "volume.detach", extra_usage_info=info)
-        self.volume_api.detach(context.elevated(), volume_id)
+        self.volume_api.detach(context.elevated(), volume_id, instance.uuid,
+                               attachment_id)
 
     @wrap_exception()
     @wrap_instance_fault
-    def detach_volume(self, context, volume_id, instance):
+    def detach_volume(self, context, volume_id, instance, attachment_id=None):
         """Detach a volume from an instance."""
 
-        self._detach_volume(context, volume_id, instance)
+        self._detach_volume(context, volume_id, instance,
+                            attachment_id=attachment_id)
 
     def _init_volume_connection(self, context, new_volume_id,
                                 old_volume_id, connector, instance, bdm):

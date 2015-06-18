@@ -1764,7 +1764,8 @@ class API(base.Base):
                     self.volume_api.terminate_connection(context,
                                                          bdm.volume_id,
                                                          connector)
-                    self.volume_api.detach(elevated, bdm.volume_id)
+                    self.volume_api.detach(elevated, bdm.volume_id,
+                                           instance.uuid)
                     if bdm.delete_on_termination:
                         self.volume_api.delete(context, bdm.volume_id)
                 except Exception as exc:
@@ -3016,10 +3017,14 @@ class API(base.Base):
         This method is separated to make it easier for cells version
         to override.
         """
-        self.volume_api.check_detach(context, volume)
+        self.volume_api.check_detach(context, volume, instance=instance)
         self.volume_api.begin_detaching(context, volume['id'])
+        attachments = volume.get('attachments', {})
+        attachment_id = None
+        if attachments and instance.uuid in attachments:
+            attachment_id = attachments[instance.uuid]['attachment_id']
         self.compute_rpcapi.detach_volume(context, instance=instance,
-                volume_id=volume['id'])
+                volume_id=volume['id'], attachment_id=attachment_id)
 
     @wrap_check_policy
     @check_instance_lock
@@ -3028,13 +3033,7 @@ class API(base.Base):
                                     vm_states.SOFT_DELETED])
     def detach_volume(self, context, instance, volume):
         """Detach a volume from an instance."""
-        if volume['attach_status'] == 'detached':
-            msg = _("Volume must be attached in order to detach.")
-            raise exception.InvalidVolume(reason=msg)
-        # The caller likely got the instance from volume['instance_uuid']
-        # in the first place, but let's sanity check.
-        if volume['instance_uuid'] != instance.uuid:
-            raise exception.VolumeUnattached(volume_id=volume['id'])
+
         self._detach_volume(context, instance, volume)
 
     @wrap_check_policy
@@ -3046,9 +3045,9 @@ class API(base.Base):
         """Swap volume attached to an instance."""
         if old_volume['attach_status'] == 'detached':
             raise exception.VolumeUnattached(volume_id=old_volume['id'])
-        # The caller likely got the instance from volume['instance_uuid']
+        # The caller likely got the instance from volume['attachments']
         # in the first place, but let's sanity check.
-        if old_volume['instance_uuid'] != instance.uuid:
+        if not old_volume.get('attachments', {}).get(instance.uuid):
             msg = _("Old volume is attached to a different instance.")
             raise exception.InvalidVolume(reason=msg)
         if new_volume['attach_status'] == 'attached':

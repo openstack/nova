@@ -18,6 +18,7 @@
 Handles all requests relating to volumes + cinder.
 """
 
+import collections
 import copy
 import sys
 
@@ -160,12 +161,18 @@ def _untranslate_volume_summary_view(context, vol):
     #            removed.
     d['attach_time'] = ""
     d['mountpoint'] = ""
+    d['multiattach'] = getattr(vol, 'multiattach', False)
 
     if vol.attachments:
-        att = vol.attachments[0]
+        d['attachments'] = collections.OrderedDict()
+        for attachment in vol.attachments:
+            a = {attachment['server_id']:
+                 {'attachment_id': attachment.get('attachment_id'),
+                  'mountpoint': attachment.get('device')}
+                 }
+            d['attachments'].update(a.items())
+
         d['attach_status'] = 'attached'
-        d['instance_uuid'] = att['server_id']
-        d['mountpoint'] = att['device']
     else:
         d['attach_status'] = 'detached'
     # NOTE(dzyu) volume(cinder) v2 API uses 'name' instead of 'display_name',
@@ -316,11 +323,23 @@ class API(object):
                             'vol_zone': volume['availability_zone']}
                 raise exception.InvalidVolume(reason=msg)
 
-    def check_detach(self, context, volume):
+    def check_detach(self, context, volume, instance=None):
         # TODO(vish): abstract status checking?
         if volume['status'] == "available":
             msg = _("volume %s already detached") % volume['id']
             raise exception.InvalidVolume(reason=msg)
+
+        if volume['attach_status'] == 'detached':
+            msg = _("Volume must be attached in order to detach.")
+            raise exception.InvalidVolume(reason=msg)
+
+        # NOTE(ildikov):Preparation for multiattach support, when a volume
+        # can be attached to multiple hosts and/or instances,
+        # so just check the attachment specific to this instance
+        if instance is not None and instance.uuid not in volume['attachments']:
+            # TODO(ildikov): change it to a better exception, when enable
+            # multi-attach.
+            raise exception.VolumeUnattached(volume_id=volume['id'])
 
     @translate_volume_exception
     def reserve_volume(self, context, volume_id):
@@ -344,8 +363,34 @@ class API(object):
                                              mountpoint, mode=mode)
 
     @translate_volume_exception
-    def detach(self, context, volume_id):
-        cinderclient(context).volumes.detach(volume_id)
+    def detach(self, context, volume_id, instance_uuid=None,
+               attachment_id=None):
+        if attachment_id is None:
+            volume = self.get(context, volume_id)
+            if volume['multiattach']:
+                attachments = volume.get('attachments', {})
+                if instance_uuid:
+                    attachment_id = attachments.get(instance_uuid, {}).\
+                            get('attachment_id')
+                    if not attachment_id:
+                        LOG.warning(_LW("attachment_id couldn't be retrieved "
+                                        "for volume %(volume_id)s with "
+                                        "instance_uuid %(instance_id)s. The "
+                                        "volume has the 'multiattach' flag "
+                                        "enabled, without the attachment_id "
+                                        "Cinder most probably cannot perform "
+                                        "the detach."),
+                                    {'volume_id': volume_id,
+                                     'instance_id': instance_uuid})
+                else:
+                    LOG.warning(_LW("attachment_id couldn't be retrieved for "
+                                    "volume %(volume_id)s. The volume has the "
+                                    "'multiattach' flag enabled, without the "
+                                    "attachment_id Cinder most probably "
+                                    "cannot perform the detach."),
+                                {'volume_id': volume_id})
+
+        cinderclient(context).volumes.detach(volume_id, attachment_id)
 
     @translate_volume_exception
     def initialize_connection(self, context, volume_id, connector):

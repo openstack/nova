@@ -111,8 +111,6 @@ class VolumesSampleJsonTest(test_servers.ServersSampleBase):
                   'id': id,
                   'size': size,
                   'availability_zone': 'zone1:host1',
-                  'instance_uuid': '3912f2b4-c5ba-4aec-9165-872876fe202e',
-                  'mountpoint': '/',
                   'status': 'in-use',
                   'attach_status': 'attached',
                   'name': 'vol name',
@@ -122,7 +120,14 @@ class VolumesSampleJsonTest(test_servers.ServersSampleBase):
                   'snapshot_id': None,
                   'volume_type_id': 'fakevoltype',
                   'volume_metadata': [],
-                  'volume_type': {'name': 'Backup'}
+                  'volume_type': {'name': 'Backup'},
+                  'multiattach': False,
+                  'attachments': {'3912f2b4-c5ba-4aec-9165-872876fe202e':
+                                  {'mountpoint': '/',
+                                   'attachment_id':
+                                       'a26887c6-c47b-4654-abb5-dfadf7d3f803'
+                                   }
+                                  }
                   }
         return volume
 

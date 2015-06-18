@@ -19,6 +19,8 @@ import mock
 from nova import context
 from nova import exception
 from nova import test
+from nova.tests.unit.fake_instance import fake_instance_obj
+from nova.tests import uuidsentinel as uuids
 from nova.volume import cinder
 
 
@@ -171,6 +173,7 @@ class CinderApiTestCase(test.NoDBTestCase):
         volume = {'status': 'available'}
         volume['attach_status'] = "detached"
         volume['availability_zone'] = 'zone1'
+        volume['multiattach'] = False
         instance = {'availability_zone': 'zone1', 'host': 'fakehost'}
         cinder.CONF.set_override('cross_az_attach', False, group='cinder')
 
@@ -182,11 +185,27 @@ class CinderApiTestCase(test.NoDBTestCase):
         cinder.CONF.reset()
 
     def test_check_detach(self):
-        volume = {'id': 'fake', 'status': 'available'}
+        volume = {'id': 'fake', 'status': 'in-use',
+                  'attach_status': 'attached',
+                  'attachments': {uuids.instance: {
+                                    'attachment_id': uuids.attachment}}
+                  }
+        self.assertIsNone(self.api.check_detach(self.ctx, volume))
+        instance = fake_instance_obj(self.ctx)
+        instance.uuid = uuids.instance
+        self.assertIsNone(self.api.check_detach(self.ctx, volume, instance))
+        instance.uuid = uuids.instance2
+        self.assertRaises(exception.VolumeUnattached,
+                          self.api.check_detach, self.ctx, volume, instance)
+        volume['attachments'] = {}
+        self.assertRaises(exception.VolumeUnattached,
+                          self.api.check_detach, self.ctx, volume, instance)
+        volume['status'] = 'available'
         self.assertRaises(exception.InvalidVolume,
                           self.api.check_detach, self.ctx, volume)
-        volume['status'] = 'non-available'
-        self.assertIsNone(self.api.check_detach(self.ctx, volume))
+        volume['attach_status'] = 'detached'
+        self.assertRaises(exception.InvalidVolume,
+                          self.api.check_detach, self.ctx, volume)
 
     def test_reserve_volume(self):
         cinder.cinderclient(self.ctx).AndReturn(self.cinderclient)
@@ -251,14 +270,24 @@ class CinderApiTestCase(test.NoDBTestCase):
                                                     mode='ro')
 
     def test_detach(self):
+        self.mox.StubOutWithMock(self.api,
+                                 'get',
+                                 use_mock_anything=True)
+        self.api.get(self.ctx, 'id1').\
+            AndReturn({'id': 'id1', 'status': 'in-use',
+                       'multiattach': True,
+                       'attach_status': 'attached',
+                       'attachments': {'fake_uuid':
+                                       {'attachment_id': 'fakeid'}}
+                       })
         cinder.cinderclient(self.ctx).AndReturn(self.cinderclient)
         self.mox.StubOutWithMock(self.cinderclient.volumes,
                                  'detach',
                                  use_mock_anything=True)
-        self.cinderclient.volumes.detach('id1')
+        self.cinderclient.volumes.detach('id1', 'fakeid')
         self.mox.ReplayAll()
 
-        self.api.detach(self.ctx, 'id1')
+        self.api.detach(self.ctx, 'id1', instance_uuid='fake_uuid')
 
     def test_initialize_connection(self):
         cinder.cinderclient(self.ctx).AndReturn(self.cinderclient)

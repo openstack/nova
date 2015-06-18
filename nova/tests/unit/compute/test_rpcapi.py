@@ -198,7 +198,31 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
     def test_detach_volume(self):
         self._test_compute_api('detach_volume', 'cast',
                 instance=self.fake_instance_obj, volume_id='id',
-                version='4.0')
+                attachment_id='fake_id', version='4.7')
+
+    def test_detach_volume_no_attachment_id(self):
+        ctxt = context.RequestContext('fake_user', 'fake_project')
+        instance = self.fake_instance_obj
+        rpcapi = compute_rpcapi.ComputeAPI()
+        cast_mock = mock.Mock()
+        cctxt_mock = mock.Mock(cast=cast_mock)
+        with test.nested(
+            mock.patch.object(rpcapi.client, 'can_send_version',
+                              return_value=False),
+            mock.patch.object(rpcapi.client, 'prepare',
+                              return_value=cctxt_mock)
+        ) as (
+            can_send_mock, prepare_mock
+        ):
+            rpcapi.detach_volume(ctxt, instance=instance,
+                                 volume_id='id', attachment_id='fake_id')
+        # assert our mocks were called as expected
+        can_send_mock.assert_called_once_with('4.7')
+        prepare_mock.assert_called_once_with(server=instance['host'],
+                                             version='4.0')
+        cast_mock.assert_called_once_with(ctxt, 'detach_volume',
+                                          instance=instance,
+                                          volume_id='id')
 
     def test_finish_resize(self):
         self._test_compute_api('finish_resize', 'cast',

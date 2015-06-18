@@ -28,7 +28,7 @@ LOG = logging.getLogger(__name__)
 
 
 # NOTE(danms): This is the global service version counter
-SERVICE_VERSION = 4
+SERVICE_VERSION = 5
 
 
 # NOTE(danms): This is our SERVICE_VERSION history. The idea is that any
@@ -60,6 +60,8 @@ SERVICE_VERSION_HISTORY = (
     {'compute_rpc': '4.6'},
     # Version 4: Add PciDevice.parent_addr (data migration needed)
     {'compute_rpc': '4.6'},
+    # Version 5: Add attachment_id kwarg to detach_volume()
+    {'compute_rpc': '4.7'},
 )
 
 

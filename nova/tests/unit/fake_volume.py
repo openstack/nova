@@ -66,7 +66,8 @@ class fake_volume(object):
             'display_description': description,
             'provider_location': 'fake-location',
             'provider_auth': 'fake-auth',
-            'volume_type_id': 99
+            'volume_type_id': 99,
+            'multiattach': False
             }
 
     def get(self, key, default=None):
@@ -193,31 +194,38 @@ class API(object):
                 msg = "Instance and volume not in same availability_zone"
                 raise exception.InvalidVolume(reason=msg)
 
-    def check_detach(self, context, volume):
+    def check_detach(self, context, volume, instance=None):
         if volume['status'] == "available":
             msg = "already detached"
             raise exception.InvalidVolume(reason=msg)
+
+        if volume['attach_status'] == 'detached':
+            msg = "Volume must be attached in order to detach."
+            raise exception.InvalidVolume(reason=msg)
+
+        if instance and not volume.get('attachments', {}).get(instance.uuid):
+            raise exception.VolumeUnattached(volume_id=volume['id'])
 
     def attach(self, context, volume_id, instance_uuid, mountpoint, mode='rw'):
         LOG.info('attaching volume %s', volume_id)
         volume = self.get(context, volume_id)
         volume['status'] = 'in-use'
-        volume['mountpoint'] = mountpoint
         volume['attach_status'] = 'attached'
-        volume['instance_uuid'] = instance_uuid
         volume['attach_time'] = timeutils.utcnow()
+        volume['multiattach'] = True
+        volume['attachments'] = {instance_uuid:
+                                 {'attachment_id': str(uuid.uuid4()),
+                                  'mountpoint': mountpoint}}
 
     def reset_fake_api(self, context):
         del self.volume_list[:]
         del self.snapshot_list[:]
 
-    def detach(self, context, volume_id):
+    def detach(self, context, volume_id, instance_uuid, attachment_id=None):
         LOG.info('detaching volume %s', volume_id)
         volume = self.get(context, volume_id)
         volume['status'] = 'available'
-        volume['mountpoint'] = None
         volume['attach_status'] = 'detached'
-        volume['instance_uuid'] = None
 
     def initialize_connection(self, context, volume_id, connector):
         return {'driver_volume_type': 'iscsi', 'data': {}}

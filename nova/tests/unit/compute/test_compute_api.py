@@ -1796,16 +1796,21 @@ class _ComputeAPIUnitTestMixIn(object):
         volumes[old_volume_id] = {'id': old_volume_id,
                                   'display_name': 'old_volume',
                                   'attach_status': 'attached',
-                                  'instance_uuid': uuids.vol_instance,
                                   'size': 5,
-                                  'status': 'in-use'}
+                                  'status': 'in-use',
+                                  'multiattach': False,
+                                  'attachments': {uuids.vol_instance: {
+                                                    'attachment_id': 'fakeid'
+                                                     }
+                                                  }
+                                  }
         new_volume_id = uuidutils.generate_uuid()
         volumes[new_volume_id] = {'id': new_volume_id,
                                   'display_name': 'new_volume',
                                   'attach_status': 'detached',
-                                  'instance_uuid': None,
                                   'size': 5,
-                                  'status': 'available'}
+                                  'status': 'available',
+                                  'multiattach': False}
         self.assertRaises(exception.InstanceInvalidState,
                           self.compute_api.swap_volume, self.context, instance,
                           volumes[old_volume_id], volumes[new_volume_id])
@@ -1822,13 +1827,15 @@ class _ComputeAPIUnitTestMixIn(object):
         volumes[old_volume_id]['attach_status'] = 'attached'
 
         # Should fail if old volume's instance_uuid is not that of the instance
-        volumes[old_volume_id]['instance_uuid'] = uuids.vol_instance_2
+        volumes[old_volume_id]['attachments'] = {uuids.vol_instance_2:
+                                                 {'attachment_id': 'fakeid'}}
         self.assertRaises(exception.InvalidVolume,
                           self.compute_api.swap_volume, self.context, instance,
                           volumes[old_volume_id], volumes[new_volume_id])
         self.assertEqual(volumes[old_volume_id]['status'], 'in-use')
         self.assertEqual(volumes[new_volume_id]['status'], 'available')
-        volumes[old_volume_id]['instance_uuid'] = uuids.vol_instance
+        volumes[old_volume_id]['attachments'] = {uuids.vol_instance:
+                                                 {'attachment_id': 'fakeid'}}
 
         # Should fail if new volume is attached
         volumes[new_volume_id]['attach_status'] = 'attached'
