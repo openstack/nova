@@ -14,6 +14,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import glob
+import os
+
+import mock
+
 from nova import exception
 from nova.pci import utils
 from nova import test
@@ -59,3 +64,130 @@ class PciDeviceAddressParserTestCase(test.NoDBTestCase):
     def test_parse_address_invalid_character(self):
         self.assertRaises(exception.PciDeviceWrongAddressFormat,
             utils.parse_address, "0000:h4.12:6")
+
+
+class GetFunctionByIfnameTestCase(test.NoDBTestCase):
+
+    @mock.patch.object(os, 'readlink')
+    @mock.patch.object(os, 'listdir')
+    def test_virtual_function(self, mock_listdir, mock_readlink):
+        mock_listdir.return_value = ['foo', 'bar']
+        mock_readlink.return_value = '../../../0000.00.00.1'
+        address, physical_function = utils.get_function_by_ifname('eth0')
+        self.assertEqual(address, '0000.00.00.1')
+        self.assertFalse(physical_function)
+
+    @mock.patch.object(os, 'readlink')
+    @mock.patch.object(os, 'listdir')
+    def test_physical_function(self, mock_listdir, mock_readlink):
+        mock_listdir.return_value = ['foo', 'virtfn1', 'bar']
+        mock_readlink.return_value = '../../../0000:00:00.1'
+        address, physical_function = utils.get_function_by_ifname('eth0')
+        self.assertEqual(address, '0000:00:00.1')
+        self.assertTrue(physical_function)
+
+    @mock.patch.object(os, 'listdir')
+    def test_exception(self, mock_listdir):
+        mock_listdir.side_effect = OSError('No such file or directory')
+        address, physical_function = utils.get_function_by_ifname('lo')
+        self.assertIsNone(address)
+        self.assertFalse(physical_function)
+
+
+class IsPhysicalFunctionTestCase(test.NoDBTestCase):
+
+    class FakePciAddress(object):
+        def __init__(self):
+            self.domain = 0
+            self.bus = 0
+            self.slot = 0
+            self.func = 0
+
+    def setUp(self):
+        super(IsPhysicalFunctionTestCase, self).setUp()
+        self.pci_address = self.FakePciAddress()
+
+    @mock.patch.object(os, 'listdir')
+    def test_virtual_function(self, mock_listdir):
+        mock_listdir.return_value = ['foo', 'bar']
+        self.assertFalse(utils.is_physical_function(self.pci_address))
+
+    @mock.patch.object(os, 'listdir')
+    def test_physical_function(self, mock_listdir):
+        mock_listdir.return_value = ['foo', 'virtfn1', 'bar']
+        self.assertTrue(utils.is_physical_function(self.pci_address))
+
+    @mock.patch.object(os, 'listdir')
+    def test_exception(self, mock_listdir):
+        mock_listdir.side_effect = OSError('No such file or directory')
+        self.assertFalse(utils.is_physical_function(self.pci_address))
+
+
+class GetIfnameByPciAddressTestCase(test.NoDBTestCase):
+
+    def setUp(self):
+        super(GetIfnameByPciAddressTestCase, self).setUp()
+        self.pci_address = '0000:00:00.1'
+
+    @mock.patch.object(os, 'listdir')
+    def test_physical_function_inferface_name(self, mock_listdir):
+        mock_listdir.return_value = ['foo', 'bar']
+        ifname = utils.get_ifname_by_pci_address(
+            self.pci_address, pf_interface=True)
+        self.assertEqual(ifname, 'bar')
+
+    @mock.patch.object(os, 'listdir')
+    def test_virtual_function_inferface_name(self, mock_listdir):
+        mock_listdir.return_value = ['foo', 'bar']
+        ifname = utils.get_ifname_by_pci_address(
+            self.pci_address, pf_interface=False)
+        self.assertEqual(ifname, 'bar')
+
+    @mock.patch.object(os, 'listdir')
+    def test_exception(self, mock_listdir):
+        mock_listdir.side_effect = OSError('No such file or directory')
+        self.assertRaises(
+            exception.PciDeviceNotFoundById,
+            utils.get_ifname_by_pci_address,
+            self.pci_address
+        )
+
+
+class GetVfNumByPciAddressTestCase(test.NoDBTestCase):
+
+    def setUp(self):
+        super(GetVfNumByPciAddressTestCase, self).setUp()
+        self.pci_address = '0000:00:00.1'
+        self.paths = [
+            '/sys/bus/pci/devices/0000:00:00.1/physfn/virtfn3',
+        ]
+
+    @mock.patch.object(os, 'readlink')
+    @mock.patch.object(glob, 'iglob')
+    def test_vf_number_found(self, mock_iglob, mock_readlink):
+        mock_iglob.return_value = self.paths
+        mock_readlink.return_value = '../../0000:00:00.1'
+        vf_num = utils.get_vf_num_by_pci_address(self.pci_address)
+        self.assertEqual(vf_num, '3')
+
+    @mock.patch.object(os, 'readlink')
+    @mock.patch.object(glob, 'iglob')
+    def test_vf_number_not_found(self, mock_iglob, mock_readlink):
+        mock_iglob.return_value = self.paths
+        mock_readlink.return_value = '../../0000:00:00.2'
+        self.assertRaises(
+            exception.PciDeviceNotFoundById,
+            utils.get_vf_num_by_pci_address,
+            self.pci_address
+        )
+
+    @mock.patch.object(os, 'readlink')
+    @mock.patch.object(glob, 'iglob')
+    def test_exception(self, mock_iglob, mock_readlink):
+        mock_iglob.return_value = self.paths
+        mock_readlink.side_effect = OSError('No such file or directory')
+        self.assertRaises(
+            exception.PciDeviceNotFoundById,
+            utils.get_vf_num_by_pci_address,
+            self.pci_address
+        )
