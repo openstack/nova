@@ -2725,7 +2725,6 @@ def key_pair_count_by_user(context, user_id):
 ###################
 
 
-@require_admin_context
 def network_associate(context, project_id, network_id=None, force=False):
     """Associate a project with a network.
 

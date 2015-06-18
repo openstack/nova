@@ -15,6 +15,7 @@ from webob import exc
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
 from nova import network
@@ -32,6 +33,9 @@ class NetworkAssociateActionController(wsgi.Controller):
     def _disassociate_host_only(self, req, id, body):
         context = req.environ['nova.context']
         authorize(context)
+        # NOTE(shaohe-feng): back-compatible with db layer hard-code
+        # admin permission checks.  call db API objects.Network.associate
+        nova_context.require_admin_context(context)
 
         try:
             self.network_api.associate(context, id, host=None)
@@ -48,6 +52,9 @@ class NetworkAssociateActionController(wsgi.Controller):
     def _disassociate_project_only(self, req, id, body):
         context = req.environ['nova.context']
         authorize(context)
+        # NOTE(shaohe-feng): back-compatible with db layer hard-code
+        # admin permission checks.  call db API objects.Network.associate
+        nova_context.require_admin_context(context)
 
         try:
             self.network_api.associate(context, id, project=None)
@@ -65,6 +72,9 @@ class NetworkAssociateActionController(wsgi.Controller):
     def _associate_host(self, req, id, body):
         context = req.environ['nova.context']
         authorize(context)
+        # NOTE(shaohe-feng): back-compatible with db layer hard-code
+        # admin permission checks.  call db API objects.Network.associate
+        nova_context.require_admin_context(context)
 
         try:
             self.network_api.associate(context, id,
