@@ -577,6 +577,34 @@ class TestBlockDeviceDict(test.NoDBTestCase):
             block_device.BlockDeviceDict.from_api(api_dict, True),
             retexp)
 
+    def test_from_api_invalid_source_to_local_mapping_with_string_bi(self):
+        api_dict = {'id': 1,
+            'source_type': 'image',
+            'destination_type': 'local',
+            'uuid': 'fake-volume-id-1',
+            'boot_index': 'aaaa0'}
+        self.assertRaises(exception.InvalidBDMFormat,
+                          block_device.BlockDeviceDict.from_api, api_dict,
+                          False)
+
+    def test_from_api_valid_source_to_local_mapping_with_string_bi(self):
+        api_dict = {'id': 1,
+                    'source_type': 'image',
+                    'destination_type': 'local',
+                    'volume_id': 'fake-volume-id-1',
+                    'uuid': 1,
+                    'boot_index': '0'}
+
+        retexp = block_device.BlockDeviceDict(
+            {'id': 1,
+             'source_type': 'image',
+             'image_id': 1,
+             'destination_type': 'local',
+             'volume_id': 'fake-volume-id-1',
+             'boot_index': 0})
+        self.assertEqual(retexp,
+                         block_device.BlockDeviceDict.from_api(api_dict, True))
+
     def test_legacy(self):
         for legacy, new in zip(self.legacy_mapping, self.new_mapping):
             self.assertThat(
