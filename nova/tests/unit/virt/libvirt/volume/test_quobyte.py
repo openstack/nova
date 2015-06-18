@@ -23,7 +23,7 @@ from oslo_utils import fileutils
 from nova import exception
 from nova import test
 from nova import utils
-from nova.virt.libvirt import quobyte
+from nova.virt.libvirt.volume import quobyte
 
 
 class QuobyteTestCase(test.NoDBTestCase):

@@ -272,20 +272,21 @@ GuestNumaConfig = collections.namedtuple(
     'GuestNumaConfig', ['cpuset', 'cputune', 'numaconfig', 'numatune'])
 
 libvirt_volume_drivers = [
-    'iscsi=nova.virt.libvirt.volume.LibvirtISCSIVolumeDriver',
-    'iser=nova.virt.libvirt.volume.LibvirtISERVolumeDriver',
-    'local=nova.virt.libvirt.volume.LibvirtVolumeDriver',
-    'fake=nova.virt.libvirt.volume.LibvirtFakeVolumeDriver',
-    'rbd=nova.virt.libvirt.volume.LibvirtNetVolumeDriver',
-    'sheepdog=nova.virt.libvirt.volume.LibvirtNetVolumeDriver',
-    'nfs=nova.virt.libvirt.volume.LibvirtNFSVolumeDriver',
-    'smbfs=nova.virt.libvirt.volume.LibvirtSMBFSVolumeDriver',
-    'aoe=nova.virt.libvirt.volume.LibvirtAOEVolumeDriver',
-    'glusterfs=nova.virt.libvirt.volume.LibvirtGlusterfsVolumeDriver',
-    'fibre_channel=nova.virt.libvirt.volume.LibvirtFibreChannelVolumeDriver',
-    'scality=nova.virt.libvirt.volume.LibvirtScalityVolumeDriver',
-    'gpfs=nova.virt.libvirt.volume.LibvirtGPFSVolumeDriver',
-    'quobyte=nova.virt.libvirt.volume.LibvirtQuobyteVolumeDriver',
+    'iscsi=nova.virt.libvirt.volume.volume.LibvirtISCSIVolumeDriver',
+    'iser=nova.virt.libvirt.volume.volume.LibvirtISERVolumeDriver',
+    'local=nova.virt.libvirt.volume.volume.LibvirtVolumeDriver',
+    'fake=nova.virt.libvirt.volume.volume.LibvirtFakeVolumeDriver',
+    'rbd=nova.virt.libvirt.volume.volume.LibvirtNetVolumeDriver',
+    'sheepdog=nova.virt.libvirt.volume.volume.LibvirtNetVolumeDriver',
+    'nfs=nova.virt.libvirt.volume.volume.LibvirtNFSVolumeDriver',
+    'smbfs=nova.virt.libvirt.volume.volume.LibvirtSMBFSVolumeDriver',
+    'aoe=nova.virt.libvirt.volume.volume.LibvirtAOEVolumeDriver',
+    'glusterfs=nova.virt.libvirt.volume.volume.LibvirtGlusterfsVolumeDriver',
+    'fibre_channel='
+        'nova.virt.libvirt.volume.volume.LibvirtFibreChannelVolumeDriver',
+    'scality=nova.virt.libvirt.volume.volume.LibvirtScalityVolumeDriver',
+    'gpfs=nova.virt.libvirt.volume.volume.LibvirtGPFSVolumeDriver',
+    'quobyte=nova.virt.libvirt.volume.volume.LibvirtQuobyteVolumeDriver',
 ]
 
 

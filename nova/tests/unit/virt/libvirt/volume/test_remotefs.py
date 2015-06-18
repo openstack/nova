@@ -18,7 +18,7 @@ from oslo_concurrency import processutils
 
 from nova import test
 from nova import utils
-from nova.virt.libvirt import remotefs
+from nova.virt.libvirt.volume import remotefs
 
 
 class RemoteFSTestCase(test.NoDBTestCase):

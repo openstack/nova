@@ -93,7 +93,7 @@ from nova.virt.libvirt import imagebackend
 from nova.virt.libvirt.storage import lvm
 from nova.virt.libvirt.storage import rbd_utils
 from nova.virt.libvirt import utils as libvirt_utils
-from nova.virt.libvirt import volume as volume_drivers
+from nova.virt.libvirt.volume import volume as volume_drivers
 
 libvirt_driver.libvirt = fakelibvirt
 host.libvirt = fakelibvirt
@@ -4577,9 +4577,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             connection_info
         )
 
-    @mock.patch('nova.virt.libvirt.volume.LibvirtFakeVolumeDriver.'
-                'connect_volume')
-    @mock.patch('nova.virt.libvirt.volume.LibvirtFakeVolumeDriver.get_config')
+    @mock.patch.object(volume_drivers.LibvirtFakeVolumeDriver,
+                       'connect_volume')
+    @mock.patch.object(volume_drivers.LibvirtFakeVolumeDriver, 'get_config')
     def test_get_volume_config(self, get_config, connect_volume):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         connection_info = {'driver_volume_type': 'fake',
