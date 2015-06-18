@@ -578,7 +578,10 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
     def test_init_instance_stuck_in_deleting(self):
         instance = fake_instance.fake_instance_obj(
                 self.context,
+                project_id='fake',
                 uuid='fake-uuid',
+                vcpus=1,
+                memory_mb=64,
                 power_state=power_state.RUNNING,
                 vm_state=vm_states.ACTIVE,
                 host=self.compute.host,
@@ -588,17 +591,63 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                                  'get_by_instance_uuid')
         self.mox.StubOutWithMock(self.compute, '_delete_instance')
         self.mox.StubOutWithMock(instance, 'obj_load_attr')
+        self.mox.StubOutWithMock(self.compute, '_create_reservations')
 
         bdms = []
+        quotas = objects.quotas.Quotas(self.context)
         instance.obj_load_attr('metadata')
         instance.obj_load_attr('system_metadata')
         objects.BlockDeviceMappingList.get_by_instance_uuid(
                 self.context, instance.uuid).AndReturn(bdms)
+        self.compute._create_reservations(self.context, instance,
+                                          instance.project_id,
+                                          instance.user_id).AndReturn(quotas)
         self.compute._delete_instance(self.context, instance, bdms,
                                       mox.IgnoreArg())
 
         self.mox.ReplayAll()
         self.compute._init_instance(self.context, instance)
+
+    @mock.patch.object(objects.Instance, 'get_by_uuid')
+    @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
+    def test_init_instance_stuck_in_deleting_raises_exception(
+            self, mock_get_by_instance_uuid, mock_get_by_uuid):
+
+        instance = fake_instance.fake_instance_obj(
+            self.context,
+            project_id='fake',
+            uuid='fake-uuid',
+            vcpus=1,
+            memory_mb=64,
+            metadata={},
+            system_metadata={},
+            host=self.compute.host,
+            vm_state=vm_states.ACTIVE,
+            task_state=task_states.DELETING,
+            expected_attrs=['metadata', 'system_metadata'])
+
+        bdms = []
+        reservations = ['fake-resv']
+
+        def _create_patch(name, attr):
+            patcher = mock.patch.object(name, attr)
+            mocked_obj = patcher.start()
+            self.addCleanup(patcher.stop)
+            return mocked_obj
+
+        mock_delete_instance = _create_patch(self.compute, '_delete_instance')
+        mock_set_instance_error_state = _create_patch(
+            self.compute, '_set_instance_error_state')
+        mock_create_reservations = _create_patch(self.compute,
+                                                 '_create_reservations')
+
+        mock_create_reservations.return_value = reservations
+        mock_get_by_instance_uuid.return_value = bdms
+        mock_get_by_uuid.return_value = instance
+        mock_delete_instance.side_effect = test.TestingException('test')
+        self.compute._init_instance(self.context, instance)
+        mock_set_instance_error_state.assert_called_once_with(
+            self.context, instance)
 
     def _test_init_instance_reverts_crashed_migrations(self,
                                                        old_vm_state=None):
@@ -843,20 +892,32 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
     def test_init_instance_deletes_error_deleting_instance(self):
         instance = fake_instance.fake_instance_obj(
                 self.context,
-                uuid='fake',
+                project_id='fake',
+                uuid='fake-uuid',
+                vcpus=1,
+                memory_mb=64,
                 vm_state=vm_states.ERROR,
                 host=self.compute.host,
                 task_state=task_states.DELETING)
+
         self.mox.StubOutWithMock(objects.BlockDeviceMappingList,
                                  'get_by_instance_uuid')
         self.mox.StubOutWithMock(self.compute, '_delete_instance')
         self.mox.StubOutWithMock(instance, 'obj_load_attr')
+        self.mox.StubOutWithMock(objects.quotas, 'ids_from_instance')
+        self.mox.StubOutWithMock(self.compute, '_create_reservations')
 
         bdms = []
+        quotas = objects.quotas.Quotas(self.context)
         instance.obj_load_attr('metadata')
         instance.obj_load_attr('system_metadata')
         objects.BlockDeviceMappingList.get_by_instance_uuid(
                 self.context, instance.uuid).AndReturn(bdms)
+        objects.quotas.ids_from_instance(self.context, instance).AndReturn(
+            (instance.project_id, instance.user_id))
+        self.compute._create_reservations(self.context, instance,
+                                          instance.project_id,
+                                          instance.user_id).AndReturn(quotas)
         self.compute._delete_instance(self.context, instance, bdms,
                                       mox.IgnoreArg())
         self.mox.ReplayAll()
