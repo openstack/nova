@@ -290,7 +290,7 @@ class IronicDriver(virt_driver.ComputeDriver):
             for capability in str(capabilities).split(','):
                 parts = capability.split(':')
                 if len(parts) == 2 and parts[0] and parts[1]:
-                    nodes_extra_specs[parts[0]] = parts[1]
+                    nodes_extra_specs[parts[0].strip()] = parts[1]
                 else:
                     LOG.warning(_LW("Ignoring malformed capability '%s'. "
                                     "Format should be 'key:val'."), capability)
