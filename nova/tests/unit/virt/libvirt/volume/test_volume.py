@@ -922,17 +922,3 @@ Setting up iSCSI targets: unused
              export_string, export_mnt_base),
             ('umount', export_mnt_base)]
         self.assertEqual(expected_commands, self.executes)
-
-    def test_libvirt_gpfs_driver_get_config(self):
-        libvirt_driver = volume.LibvirtGPFSVolumeDriver(self.fake_conn)
-        connection_info = {
-            'driver_volume_type': 'gpfs',
-            'data': {
-                'device_path': '/gpfs/foo',
-            },
-            'serial': 'fake_serial',
-        }
-        conf = libvirt_driver.get_config(connection_info, self.disk_info)
-        tree = conf.format_dom()
-        self.assertEqual('file', tree.get('type'))
-        self.assertEqual('fake_serial', tree.find('./serial').text)
