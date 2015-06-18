@@ -6036,7 +6036,7 @@ def _instance_group_get_query(context, model_class, id_field=None, id=None,
                               session=None, read_deleted=None):
     columns_to_join = {models.InstanceGroup: ['_policies', '_members']}
     query = model_query(context, model_class, session=session,
-                        read_deleted=read_deleted)
+                        read_deleted=read_deleted, project_only=True)
 
     for c in columns_to_join.get(model_class, []):
         query = query.options(joinedload(c))
@@ -6255,10 +6255,9 @@ def instance_group_members_add(context, group_uuid, members,
 
 def instance_group_member_delete(context, group_uuid, instance_id):
     id = _instance_group_id(context, group_uuid)
-    count = _instance_group_get_query(context,
-                                      models.InstanceGroupMember,
-                                      models.InstanceGroupMember.group_id,
-                                      id).\
+    count = _instance_group_model_get_query(context,
+                                            models.InstanceGroupMember,
+                                            id).\
                             filter_by(instance_id=instance_id).\
                             soft_delete()
     if count == 0:

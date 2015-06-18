@@ -7685,6 +7685,8 @@ class ComputeAPITestCase(BaseTestCase):
 
         group = objects.InstanceGroup(self.context)
         group.uuid = str(uuid.uuid4())
+        group.project_id = self.context.project_id
+        group.user_id = self.context.user_id
         group.create()
 
         inst_type = flavors.get_default_flavor()
