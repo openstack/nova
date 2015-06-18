@@ -89,8 +89,8 @@ from nova.virt.libvirt import firewall
 from nova.virt.libvirt import guest as libvirt_guest
 from nova.virt.libvirt import host
 from nova.virt.libvirt import imagebackend
-from nova.virt.libvirt import lvm
-from nova.virt.libvirt import rbd_utils
+from nova.virt.libvirt.storage import lvm
+from nova.virt.libvirt.storage import rbd_utils
 from nova.virt.libvirt import utils as libvirt_utils
 from nova.virt.libvirt import volume as volume_drivers
 
@@ -12128,7 +12128,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             instance)
 
     @mock.patch('os.path.exists')
-    @mock.patch('nova.virt.libvirt.lvm.list_volumes')
+    @mock.patch.object(lvm, 'list_volumes')
     def test_lvm_disks(self, listlvs, exists):
         instance = objects.Instance(uuid='fake-uuid', id=1)
         self.flags(images_volume_group='vols', group='libvirt')

@@ -18,7 +18,7 @@ from nova import exception
 from nova import objects
 from nova import test
 from nova import utils
-from nova.virt.libvirt import rbd_utils
+from nova.virt.libvirt.storage import rbd_utils
 
 
 LOG = logging.getLogger(__name__)

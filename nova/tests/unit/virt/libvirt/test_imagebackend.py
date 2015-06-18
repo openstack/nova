@@ -40,7 +40,7 @@ from nova.virt.image import model as imgmodel
 from nova.virt import images
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import imagebackend
-from nova.virt.libvirt import rbd_utils
+from nova.virt.libvirt.storage import rbd_utils
 
 CONF = cfg.CONF
 CONF.import_opt('fixed_key', 'nova.keymgr.conf_key_mgr', group='keymgr')

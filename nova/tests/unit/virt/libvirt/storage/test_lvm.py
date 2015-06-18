@@ -22,7 +22,7 @@ from oslo_config import cfg
 from nova import exception
 from nova import test
 from nova import utils
-from nova.virt.libvirt import lvm
+from nova.virt.libvirt.storage import lvm
 from nova.virt.libvirt import utils as libvirt_utils
 
 CONF = cfg.CONF

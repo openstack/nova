@@ -91,14 +91,14 @@ from nova.virt import hardware
 from nova.virt.image import model as imgmodel
 from nova.virt.libvirt import blockinfo
 from nova.virt.libvirt import config as vconfig
-from nova.virt.libvirt import dmcrypt
 from nova.virt.libvirt import firewall as libvirt_firewall
 from nova.virt.libvirt import guest as libvirt_guest
 from nova.virt.libvirt import host
 from nova.virt.libvirt import imagebackend
 from nova.virt.libvirt import imagecache
-from nova.virt.libvirt import lvm
-from nova.virt.libvirt import rbd_utils
+from nova.virt.libvirt.storage import dmcrypt
+from nova.virt.libvirt.storage import lvm
+from nova.virt.libvirt.storage import rbd_utils
 from nova.virt.libvirt import utils as libvirt_utils
 from nova.virt.libvirt import vif as libvirt_vif
 from nova.virt import netutils

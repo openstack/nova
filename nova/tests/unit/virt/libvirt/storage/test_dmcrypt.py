@@ -17,7 +17,7 @@ import os
 
 from nova import test
 from nova import utils
-from nova.virt.libvirt import dmcrypt
+from nova.virt.libvirt.storage import dmcrypt
 
 
 class LibvirtDmcryptTestCase(test.NoDBTestCase):
