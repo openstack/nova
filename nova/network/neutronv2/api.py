@@ -100,15 +100,6 @@ neutron_opts = [
                 default=600,
                 help='Number of seconds before querying neutron for'
                      ' extensions'),
-    cfg.BoolOpt('allow_duplicate_networks',
-                default=False,
-                help='DEPRECATED: Allow an instance to have multiple vNICs '
-                     'attached to the same Neutron network. This option is '
-                     'deprecated in the 2015.1 release and will be removed '
-                     'in the 2015.2 release where the default behavior will '
-                     'be to always allow multiple ports from the same network '
-                     'to be attached to an instance.',
-                deprecated_for_removal=True),
    ]
 
 NEUTRON_GROUP = 'neutron'
@@ -1049,7 +1040,6 @@ class API(base_api.NetworkAPI):
             else:
                 ports_needed_per_instance = 1
         else:
-            instance_on_net_ids = []
             net_ids_requested = []
 
             # TODO(danms): Remove me when all callers pass an object
@@ -1094,12 +1084,6 @@ class API(base_api.NetworkAPI):
                             raise exception.FixedIpAlreadyInUse(
                                                     address=request.address,
                                                     instance_uuid=i_uuid)
-
-                if (not CONF.neutron.allow_duplicate_networks and
-                    request.network_id in instance_on_net_ids):
-                        raise exception.NetworkDuplicated(
-                            network_id=request.network_id)
-                instance_on_net_ids.append(request.network_id)
 
             # Now check to see if all requested networks exist
             if net_ids_requested:
