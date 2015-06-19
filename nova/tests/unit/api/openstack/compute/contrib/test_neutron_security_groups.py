@@ -175,7 +175,8 @@ class TestNeutronSecurityGroupsV21(
                                       sg['id'], use_admin_context=True)
         self.controller.delete(req, sg['id'])
 
-    def test_delete_security_group_in_use(self):
+    @mock.patch('nova.compute.utils.refresh_info_cache_for_instance')
+    def test_delete_security_group_in_use(self, refresh_info_cache_mock):
         sg = self._create_sg_template().get('security_group')
         self._create_network()
         db_inst = fakes.stub_instance(id=1, nw_cache=[], security_groups=[])

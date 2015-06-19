@@ -62,7 +62,6 @@ def refresh_cache(f):
 
     @functools.wraps(f)
     def wrapper(self, context, *args, **kwargs):
-        res = f(self, context, *args, **kwargs)
         try:
             # get the instance from arguments (or raise ValueError)
             instance = kwargs.get('instance')
@@ -73,6 +72,9 @@ def refresh_cache(f):
             raise Exception(msg)
 
         with lockutils.lock('refresh_cache-%s' % instance.uuid):
+            # We need to call the wrapped function with the lock held to ensure
+            # that it can call _get_instance_nw_info safely.
+            res = f(self, context, *args, **kwargs)
             update_instance_cache_with_nw_info(self, context, instance,
                                                nw_info=res)
         # return the original function's return value

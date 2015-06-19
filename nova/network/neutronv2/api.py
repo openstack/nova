@@ -861,6 +861,10 @@ class API(base_api.NetworkAPI):
         # by other code that updates instance nwinfo. It *must* be
         # called with the refresh_cache-%(instance_uuid) lock held!
         LOG.debug('_get_instance_nw_info()', instance=instance)
+        # Ensure that we have an up to date copy of the instance info cache.
+        # Otherwise multiple requests could collide and cause cache
+        # corruption.
+        compute_utils.refresh_info_cache_for_instance(context, instance)
         nw_info = self._build_network_info_model(context, instance, networks,
                                                  port_ids, admin_client,
                                                  preexisting_port_ids)

@@ -347,6 +347,15 @@ def get_nw_info_for_instance(instance):
     return instance.info_cache.network_info
 
 
+def refresh_info_cache_for_instance(context, instance):
+    """Refresh the info cache for an instance.
+
+    :param instance: The instance object.
+    """
+    if instance.info_cache is not None:
+        instance.info_cache.refresh()
+
+
 def usage_volume_info(vol_usage):
     def null_safe_str(s):
         return str(s) if s else ''

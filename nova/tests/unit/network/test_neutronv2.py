@@ -348,9 +348,12 @@ class TestNeutronv2Base(test.TestCase):
     def _fake_instance_object(self, instance):
         return fake_instance.fake_instance_obj(self.context, **instance)
 
-    def _fake_instance_info_cache(self, nw_info):
+    def _fake_instance_info_cache(self, nw_info, instance_uuid=None):
         info_cache = {}
-        info_cache['instance_uuid'] = str(uuid.uuid4())
+        if instance_uuid is None:
+            info_cache['instance_uuid'] = str(uuid.uuid4())
+        else:
+            info_cache['instance_uuid'] = instance_uuid
         info_cache['deleted'] = False
         info_cache['created_at'] = timeutils.utcnow()
         info_cache['deleted_at'] = timeutils.utcnow()
@@ -612,10 +615,15 @@ class TestNeutronv2Base(test.TestCase):
                 network_id=subnet_data[0]['network_id'],
                 device_owner='network:dhcp').AndReturn(
                     {'ports': []})
+        self.instance['info_cache'] = self._fake_instance_info_cache(
+            net_info_cache, self.instance['uuid'])
+        self.mox.StubOutWithMock(api.db, 'instance_info_cache_get')
+        api.db.instance_info_cache_get(mox.IgnoreArg(),
+                                       self.instance['uuid']).AndReturn(
+                                           self.instance['info_cache'])
+
         self.mox.ReplayAll()
 
-        self.instance['info_cache'] = self._fake_instance_info_cache(
-            net_info_cache)
         instance = self._fake_instance_object_with_info_cache(self.instance)
         nw_inf = api.get_instance_nw_info(self.context, instance)
         for i in range(0, number):
@@ -787,13 +795,19 @@ class TestNeutronv2(TestNeutronv2Base):
                         device_owner='network:dhcp').AndReturn(
                         {'ports': self.dhcp_port_data1})
                     index += 1
+        self.instance['info_cache'] = self._fake_instance_info_cache(
+            network_cache['info_cache']['network_info'], self.instance['uuid'])
+
+        self.mox.StubOutWithMock(api.db, 'instance_info_cache_get')
+        api.db.instance_info_cache_get(
+            mox.IgnoreArg(),
+            self.instance['uuid']).MultipleTimes().AndReturn(
+                self.instance['info_cache'])
+
         self.mox.ReplayAll()
 
-        self.instance['info_cache'] = network_cache
-        self.instance['info_cache'] = self._fake_instance_info_cache(
-            network_cache['info_cache']['network_info'])
-
         instance = self._fake_instance_object_with_info_cache(self.instance)
+
         nw_infs = api.get_instance_nw_info(self.context,
                                            instance,
                                            networks=original_networks,
@@ -828,7 +842,12 @@ class TestNeutronv2(TestNeutronv2Base):
             net_info_cache.append({"network": {"id": port['network_id']},
                                    "id": port['id']})
         self.instance['info_cache'] = self._fake_instance_info_cache(
-            net_info_cache)
+            net_info_cache, self.instance['uuid'])
+
+        self.mox.StubOutWithMock(api.db, 'instance_info_cache_get')
+        api.db.instance_info_cache_get(
+            mox.IgnoreArg(),
+            self.instance['uuid']).AndReturn(self.instance['info_cache'])
 
         self.mox.ReplayAll()
 
@@ -1380,7 +1399,7 @@ class TestNeutronv2(TestNeutronv2Base):
             net_info_cache.append({"network": {"id": port['network_id']},
                                    "id": port['id']})
         self.instance['info_cache'] = self._fake_instance_info_cache(
-            net_info_cache)
+            net_info_cache, self.instance['uuid'])
         api = neutronapi.API()
         neutronapi.get_client(mox.IgnoreArg(), admin=True).AndReturn(
             self.moxed_client)
@@ -1402,6 +1421,11 @@ class TestNeutronv2(TestNeutronv2Base):
                         {'floatingips': float_data[1:]})
         for port in port_data[1:]:
             self.moxed_client.list_subnets(id=['my_subid2']).AndReturn({})
+
+        self.mox.StubOutWithMock(api.db, 'instance_info_cache_get')
+        api.db.instance_info_cache_get(mox.IgnoreArg(),
+                                       self.instance['uuid']).AndReturn(
+                                           self.instance['info_cache'])
 
         self.mox.ReplayAll()
 
