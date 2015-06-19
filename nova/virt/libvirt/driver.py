@@ -3083,6 +3083,10 @@ class LibvirtDriver(driver.ComputeDriver):
         topology = hardware.get_best_cpu_topology(
                 flavor, image_meta, numa_topology=instance_numa_topology)
 
+        if instance_numa_topology:
+            for cell in instance_numa_topology.cells:
+                cell.cpu_topology = topology
+
         cpu.sockets = topology.sockets
         cpu.cores = topology.cores
         cpu.threads = topology.threads
