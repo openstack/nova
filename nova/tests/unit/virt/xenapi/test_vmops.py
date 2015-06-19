@@ -200,20 +200,20 @@ class InjectAutoDiskConfigTestCase(VMOpsTestBase):
 
 class GetConsoleOutputTestCase(VMOpsTestBase):
     def test_get_console_output_works(self):
-        self.mox.StubOutWithMock(self.vmops, '_get_dom_id')
+        self.mox.StubOutWithMock(self.vmops, '_get_last_dom_id')
 
         instance = {"name": "dummy"}
-        self.vmops._get_dom_id(instance, check_rescue=True).AndReturn(42)
+        self.vmops._get_last_dom_id(instance, check_rescue=True).AndReturn(42)
         self.mox.ReplayAll()
 
         self.assertEqual("dom_id: 42", self.vmops.get_console_output(instance))
 
     def test_get_console_output_throws_nova_exception(self):
-        self.mox.StubOutWithMock(self.vmops, '_get_dom_id')
+        self.mox.StubOutWithMock(self.vmops, '_get_last_dom_id')
 
         instance = {"name": "dummy"}
         # dom_id=0 used to trigger exception in fake XenAPI
-        self.vmops._get_dom_id(instance, check_rescue=True).AndReturn(0)
+        self.vmops._get_last_dom_id(instance, check_rescue=True).AndReturn(0)
         self.mox.ReplayAll()
 
         self.assertRaises(exception.NovaException,
@@ -278,6 +278,7 @@ class SpawnTestCase(VMOpsTestBase):
         self.mox.StubOutWithMock(self.vmops, '_remove_hostname')
         self.mox.StubOutWithMock(self.vmops.firewall_driver,
                                  'apply_instance_filter')
+        self.mox.StubOutWithMock(self.vmops, '_update_last_dom_id')
 
     def _test_spawn(self, name_label_param=None, block_device_info_param=None,
                     rescue=False, include_root_vdi=True, throw_exception=None,
@@ -389,6 +390,7 @@ class SpawnTestCase(VMOpsTestBase):
                                                  steps)
         self.vmops._start(instance, vm_ref)
         self.vmops._wait_for_instance_to_start(instance, vm_ref)
+        self.vmops._update_last_dom_id(vm_ref)
         step += 1
         self.vmops._update_instance_progress(context, instance, step, steps)
 
@@ -505,6 +507,7 @@ class SpawnTestCase(VMOpsTestBase):
         if power_on:
             self.vmops._start(instance, vm_ref)
             self.vmops._wait_for_instance_to_start(instance, vm_ref)
+            self.vmops._update_last_dom_id(vm_ref)
 
         self.vmops.firewall_driver.apply_instance_filter(instance,
                                                          network_info)

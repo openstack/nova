@@ -1258,6 +1258,12 @@ iface eth0 inet6 static
         self._test_spawn_fails_silently_with(exception.AgentError,
                                              value=error)
 
+    def test_spawn_sets_last_dom_id(self):
+        self._test_spawn(IMAGE_VHD, None, None,
+                         os_type="linux", architecture="x86-64")
+        self.assertEqual(self.vm['domid'],
+                         self.vm['other_config']['last_dom_id'])
+
     def test_rescue(self):
         instance = self._create_instance(spawn=False, obj=True)
         xenapi_fake.create_vm(instance['name'], 'Running')
