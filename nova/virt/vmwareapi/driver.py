@@ -223,7 +223,7 @@ class VMwareVCDriver(driver.ComputeDriver):
             LOG.warning(_LW('Running Nova with a VMware vCenter version less '
                             'than %(version)s is deprecated. The required '
                             'minimum version of vCenter will be raised to '
-                            '%(version)s in the 2016.1 release.'),
+                            '%(version)s in the 13.0.0 release.'),
                         {'version': constants.MIN_VC_VERSION})
 
     @property
