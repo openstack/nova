@@ -23,6 +23,7 @@ from nova import compute
 from nova import exception
 from nova.i18n import _
 from nova import servicegroup
+from nova import utils
 
 ALIAS = "os-services"
 authorize = extensions.os_compute_authorizer(ALIAS)
@@ -158,11 +159,16 @@ class ServiceController(wsgi.Controller):
         return action(body, context)
 
     @wsgi.response(204)
-    @extensions.expected_errors(404)
+    @extensions.expected_errors((400, 404))
     def delete(self, req, id):
         """Deletes the specified service."""
         context = req.environ['nova.context']
         authorize(context)
+
+        try:
+            utils.validate_integer(id, 'id')
+        except exception.InvalidInput as exc:
+            raise webob.exc.HTTPBadRequest(explanation=exc.format_message())
 
         try:
             self.host_api.service_delete(context, id)
