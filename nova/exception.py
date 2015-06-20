@@ -279,6 +279,11 @@ class VolumeNotCreated(NovaException):
                 " attempts. And its status is %(volume_status)s.")
 
 
+class VolumeEncryptionNotSupported(Invalid):
+    msg_fmt = _("Volume encryption is not supported for %(volume_type)s "
+                "volume %(volume_id)s")
+
+
 class InvalidKeypair(Invalid):
     ec2_code = 'InvalidKeyPair.Format'
     msg_fmt = _("Keypair data is invalid: %(reason)s")

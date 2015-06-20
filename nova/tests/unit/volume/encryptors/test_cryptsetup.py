@@ -17,7 +17,9 @@
 import array
 
 import mock
+import six
 
+from nova import exception
 from nova.keymgr import key
 from nova.tests.unit.volume.encryptors import test_base
 from nova.volume.encryptors import cryptsetup
@@ -89,3 +91,14 @@ class CryptsetupEncryptorTestCase(test_base.VolumeEncryptorTestCase):
                       run_as_root=True, check_exit_code=True),
         ])
         self.assertEqual(1, mock_execute.call_count)
+
+    def test_init_volume_encryption_not_supported(self):
+        # Tests that creating a CryptsetupEncryptor fails if there is no
+        # device_path key.
+        type = 'unencryptable'
+        data = dict(volume_id='a194699b-aa07-4433-a945-a5d23802043e')
+        connection_info = dict(driver_volume_type=type, data=data)
+        exc = self.assertRaises(exception.VolumeEncryptionNotSupported,
+                                cryptsetup.CryptsetupEncryptor,
+                                connection_info)
+        self.assertIn(type, six.text_type(exc))
