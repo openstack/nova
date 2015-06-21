@@ -163,8 +163,9 @@ class LegacyV2CompatibleWrapper(base_wsgi.Middleware):
                 del response.headers['Vary']
         return response
 
-    @webob.dec.wsgify
+    @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
+        req.set_legacy_v2()
         req = self._filter_request_headers(req)
         response = req.get_response(self.application)
         return self._filter_response_headers(response)

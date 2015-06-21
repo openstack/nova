@@ -31,7 +31,6 @@ def schema(request_body_schema, min_version=None, max_version=None):
     :argument dict request_body_schema: a schema to validate request body
 
     """
-    schema_validator = validators._SchemaValidator(request_body_schema)
 
     def add_validator(func):
         @functools.wraps(func)
@@ -46,13 +45,17 @@ def schema(request_body_schema, min_version=None, max_version=None):
             # to do this
             if 'req' in kwargs:
                 ver = kwargs['req'].api_version_request
+                legacy_v2 = kwargs['req'].is_legacy_v2()
             else:
                 ver = args[1].api_version_request
+                legacy_v2 = args[1].is_legacy_v2()
             if ver.matches(min_ver, max_ver):
                 # Only validate against the schema if it lies within
                 # the version range specified. Note that if both min
                 # and max are not specified the validator will always
                 # be run.
+                schema_validator = validators._SchemaValidator(
+                    request_body_schema, legacy_v2)
                 schema_validator.validate(kwargs['body'])
 
             return func(*args, **kwargs)
