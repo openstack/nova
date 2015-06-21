@@ -128,6 +128,46 @@ class FaultWrapper(base_wsgi.Middleware):
             return self._error(ex, req)
 
 
+class LegacyV2CompatibleWrapper(base_wsgi.Middleware):
+
+    def _filter_request_headers(self, req):
+        """For keeping same behavior with v2 API, ignores microversions
+        HTTP header X-OpenStack-Nova-API-Version in the request.
+        """
+
+        if wsgi.API_VERSION_REQUEST_HEADER in req.headers:
+            del req.headers[wsgi.API_VERSION_REQUEST_HEADER]
+        return req
+
+    def _filter_response_headers(self, response):
+        """For keeping same behavior with v2 API, filter out microversions
+        HTTP header and microversions field in header 'Vary'.
+        """
+
+        if wsgi.API_VERSION_REQUEST_HEADER in response.headers:
+            del response.headers[wsgi.API_VERSION_REQUEST_HEADER]
+
+        if 'Vary' in response.headers:
+            vary_headers = response.headers['Vary'].split(',')
+            filtered_vary = []
+            for vary in vary_headers:
+                vary = vary.strip()
+                if vary == wsgi.API_VERSION_REQUEST_HEADER:
+                    continue
+                filtered_vary.append(vary)
+            if filtered_vary:
+                response.headers['Vary'] = ','.join(filtered_vary)
+            else:
+                del response.headers['Vary']
+        return response
+
+    @webob.dec.wsgify
+    def __call__(self, req):
+        req = self._filter_request_headers(req)
+        response = req.get_response(self.application)
+        return self._filter_response_headers(response)
+
+
 class APIMapper(routes.Mapper):
     def routematch(self, url=None, environ=None):
         if url == "":
