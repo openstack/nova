@@ -2023,3 +2023,35 @@ def ft_relation_get_by_secondary_instance_uuid(context, instance_uuid):
     """
     return IMPL.ft_relation_get_by_secondary_instance_uuid(context,
                                                            instance_uuid)
+
+
+####################
+
+
+def colo_sync_vlan_range(context, vlan_min, vlan_max):
+    """Add the range of VLAN IDs that are not already available for COLO
+    connections and remove existing (unallocated) VLAN IDs that are outside of
+    the current range.
+
+    :param vlan_min: The lowest VLAN ID
+    :param vlan_max: The highest VLAN ID
+    """
+    return IMPL.colo_sync_vlan_range(context, vlan_min, vlan_max)
+
+
+def colo_allocate_vlan(context, instance_uuid):
+    """Obtain an available VLAN ID for a COLO connection.
+
+    :param instance_uuid: The UUID of the instance that is using the VLAN ID
+    :returns: The acquired VLAN ID
+    :raises: COLONoVlanIdAvailable
+    """
+    return IMPL.colo_allocate_vlan(context, instance_uuid)
+
+
+def colo_deallocate_vlan(context, instance_uuid):
+    """Release a VLAN ID to make it available for new COLO connections.
+
+    :param instance_uuid: UUID of the instance using the VLAN ID to release
+    """
+    return IMPL.colo_deallocate_vlan(context, instance_uuid)

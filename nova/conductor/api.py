@@ -216,6 +216,9 @@ class LocalAPI(object):
     def object_backport(self, context, objinst, target_version):
         return self._manager.object_backport(context, objinst, target_version)
 
+    def colo_deallocate_vlan(self, context, instance_uuid):
+        return self._manager.colo_deallocate_vlan(context, instance_uuid)
+
 
 class LocalComputeTaskAPI(object):
     def __init__(self):

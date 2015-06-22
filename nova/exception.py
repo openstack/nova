@@ -1775,3 +1775,15 @@ class FaultToleranceRelationByPrimaryNotFound(NovaException):
 class FaultToleranceRelationBySecondaryNotFound(NovaException):
     msg_fmt = _("No fault tolerance relation found for instance with UUID "
                 "'%(instance_uuid)s' as secondary.")
+
+
+class COLONoVlanIdAvailable(NovaException):
+    msg_fmt = _("No available VLAN ID found for a COLO connection.")
+
+
+class COLOVlanRangeError(NovaException):
+    msg_fmt = _("The COLO VLAN range '%(vlan_range)s' is invalid: %(error)s")
+
+
+class COLOMultipleInterfacesNotSupported(NovaException):
+    msg_fmt = _("Multiple network interfaces not enabled when using COLO.")

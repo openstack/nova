@@ -355,6 +355,11 @@ class ConductorAPI(object):
         return cctxt.call(context, 'object_backport', objinst=objinst,
                           target_version=target_version)
 
+    def colo_deallocate_vlan(self, context, instance_uuid):
+        cctxt = self.client.prepare()
+        return cctxt.cast(context, 'colo_deallocate_vlan',
+                          instance_uuid=instance_uuid)
+
 
 class ComputeTaskAPI(object):
     """Client side of the conductor 'compute' namespaced RPC API

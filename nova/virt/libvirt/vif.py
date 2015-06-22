@@ -498,11 +498,8 @@ class LibvirtGenericVIFDriver(object):
                               colo_v1_name, run_as_root=True)
 
             linux_net.create_ovs_vif_port_colo(self.get_ext_bridge_name(),
-                                          colo_v2_name, iface_id,
-                                          vif['address'],instance['uuid'])
-
-
-
+                                               colo_v2_name,
+                                               system_metadata['colo_vlan_id'])
 
     def plug_ovs(self, instance, vif):
         if self.get_firewall_required(vif) or vif.is_hybrid_plug_enabled():

@@ -28,6 +28,7 @@ from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import task_states
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
+from nova.conductor.tasks import colo
 from nova.conductor.tasks import fault_tolerance
 from nova.conductor.tasks import live_migrate
 from nova.db import base
@@ -439,6 +440,11 @@ class ConductorManager(manager.Manager):
     def object_backport(self, context, objinst, target_version):
         return objinst.obj_to_primitive(target_version=target_version)
 
+    def colo_deallocate_vlan(self, context, instance_uuid):
+        LOG.debug("Releasing COLO VLAN ID allocated for instance %s." %
+                  instance_uuid)
+        return self.db.colo_deallocate_vlan(context, instance_uuid)
+
 
 class ComputeTaskManager(base.Base):
     """Namespace for compute methods.
@@ -636,27 +642,48 @@ class ComputeTaskManager(base.Base):
             bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                     context, instance.uuid)
 
-            system_metadata = instance.system_metadata
-            if ('instance_type_extra_ft:enabled' in system_metadata and
-                    'ft_secondary_hosts' in host and
-                    host['ft_secondary_hosts']):
+            if 'instance_type_extra_ft:enabled' in instance.system_metadata:
                 ft = fault_tolerance.FaultToleranceTasks()
 
-                for ft_secondary_host in host['ft_secondary_hosts']:
-                    ft.deploy_secondary_instance(
-                        context, instance.uuid,
-                        host=ft_secondary_host['host'],
-                        node=ft_secondary_host['nodename'],
-                        limits=ft_secondary_host['limits'],
-                        image=image['id'],
-                        request_spec=request_spec,
-                        filter_properties=filter_properties,
-                        admin_password=admin_password,
-                        injected_files=injected_files,
-                        requested_networks=requested_networks,
-                        security_groups=security_groups,
-                        block_device_mapping=block_device_mapping,
-                        legacy_bdm=legacy_bdm)
+                if requested_networks and len(requested_networks) > 1:
+                    raise exception.COLOMultipleInterfacesNotSupported()
+
+                colo_tasks = colo.COLOTasks()
+
+                # TODO(ORBIT): If the final way of handling allocated vlan tags
+                #              that are outside of the range is by keeping
+                #              them until they get unallocated it might even
+                #              be a good idea to incorporate a sync before
+                #              each allocation.
+                #
+                #              Otherwise it should probably be enough to just
+                #              sync once everytime the conductor service is
+                #              started.
+                colo_tasks.sync_vlan_range()
+
+                vlan_id = colo_tasks.get_vlan_id(context, instance)
+
+                system_metadata = instance.system_metadata
+                system_metadata['colo_vlan_id'] = vlan_id
+                instance.system_metadata = system_metadata
+                instance.save()
+
+                if 'ft_secondary_hosts' in host:
+                    for ft_secondary_host in host['ft_secondary_hosts']:
+                        ft.deploy_secondary_instance(
+                            context, instance.uuid,
+                            host=ft_secondary_host['host'],
+                            node=ft_secondary_host['nodename'],
+                            limits=ft_secondary_host['limits'],
+                            image=image['id'],
+                            request_spec=request_spec,
+                            filter_properties=filter_properties,
+                            admin_password=admin_password,
+                            injected_files=injected_files,
+                            requested_networks=requested_networks,
+                            security_groups=security_groups,
+                            block_device_mapping=block_device_mapping,
+                            legacy_bdm=legacy_bdm)
 
             self.compute_rpcapi.build_and_run_instance(context,
                     instance=instance, host=host['host'], image=image,

@@ -19,6 +19,7 @@ import webob
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack.compute import servers
+from nova import conductor
 from nova import exception
 from nova import objects
 
@@ -29,6 +30,7 @@ LOG = logging.getLogger(__name__)
 class FaultServerToleranceController(servers.Controller):
     def __init__(self, *args, **kwargs):
         super(FaultServerToleranceController, self).__init__(*args, **kwargs)
+        self.conductor_api = conductor.API()
 
     @wsgi.action('failover')
     def _failover(self, req, id, body):
@@ -67,6 +69,10 @@ class FaultServerToleranceController(servers.Controller):
                           relation.secondary_instance_uuid)
         except exception.FaultToleranceRelationByPrimaryNotFound as e:
             LOG.debug(e.format_message())
+
+        # TODO(ORBIT): Investigate if this could happen even though the
+        #              instance remain undeleted.
+        self.conductor_api.colo_deallocate_vlan(context, id)
 
 
 class Fault_tolerance(extensions.ExtensionDescriptor):
