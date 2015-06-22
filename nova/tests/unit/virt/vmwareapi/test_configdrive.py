@@ -48,7 +48,7 @@ class ConfigDriveTestCase(test.NoDBTestCase):
                    host_username='test_username',
                    host_password='test_pass',
                    use_linked_clone=False, group='vmware')
-        self.flags(vnc_enabled=False)
+        self.flags(enabled=False, group='vnc')
         vmwareapi_fake.reset()
         stubs.set_stubs(self.stubs)
         nova.tests.unit.image.fake.stub_out_image_service(self.stubs)

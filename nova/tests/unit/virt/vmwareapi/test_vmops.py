@@ -56,10 +56,10 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         super(VMwareVMOpsTestCase, self).setUp()
         vmwareapi_fake.reset()
         stubs.set_stubs(self.stubs)
+        self.flags(enabled=True, group='vnc')
         self.flags(image_cache_subdirectory_name='vmware_base',
                    my_ip='',
-                   flat_injected=True,
-                   vnc_enabled=True)
+                   flat_injected=True)
         self._context = context.RequestContext('fake_user', 'fake_project')
         self._session = driver.VMwareAPISession()
 
@@ -861,7 +861,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 self.assertNotIn('scrubme', args[0])
 
         mock_debug.side_effect = fake_debug
-        self.flags(flat_injected=False, vnc_enabled=False)
+        self.flags(flat_injected=False)
+        self.flags(enabled=False, group='vnc')
 
         # Call spawn(). We don't care what it does as long as it generates
         # the log message, which we check below.
@@ -929,7 +930,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 'disk_bus': constants.DEFAULT_ADAPTER_TYPE,
                 'mount_device': '/dev/sdc'}]
         bdi = {'block_device_mapping': bdm, 'root_device_name': '/dev/sda'}
-        self.flags(flat_injected=False, vnc_enabled=False)
+        self.flags(flat_injected=False)
+        self.flags(enabled=False, group='vnc')
 
         image_size = (self._instance.root_gb) * units.Gi / 2
         image_info = images.VMwareImage(
@@ -987,7 +989,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 'connection_info': connection_info3,
                 'disk_bus': constants.ADAPTER_TYPE_LSILOGICSAS}]
         bdi = {'block_device_mapping': bdm}
-        self.flags(flat_injected=False, vnc_enabled=False)
+        self.flags(flat_injected=False)
+        self.flags(enabled=False, group='vnc')
 
         image_info = mock.sentinel.image_info
         vi = get_vm_config_info.return_value
@@ -1034,7 +1037,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 'connection_info': connection_info,
                 'disk_bus': 'invalid_adapter_type'}]
         bdi = {'block_device_mapping': bdm}
-        self.flags(flat_injected=False, vnc_enabled=False)
+        self.flags(flat_injected=False)
+        self.flags(enabled=False, group='vnc')
 
         image_info = mock.sentinel.image_info
         vi = get_vm_config_info.return_value

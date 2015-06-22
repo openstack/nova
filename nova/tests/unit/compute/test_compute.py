@@ -3199,7 +3199,7 @@ class ComputeTestCase(BaseTestCase):
 
     def test_novnc_vnc_console(self):
         # Make sure we can a vnc console for an instance.
-        self.flags(vnc_enabled=True)
+        self.flags(enabled=True, group='vnc')
         self.flags(enabled=False, group='spice')
 
         instance = self._create_fake_instance_obj()
@@ -3214,7 +3214,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.terminate_instance(self.context, instance, [], [])
 
     def test_validate_console_port_vnc(self):
-        self.flags(vnc_enabled=True)
+        self.flags(enabled=True, group='vnc')
         self.flags(enabled=True, group='spice')
         instance = self._create_fake_instance_obj()
 
@@ -3229,7 +3229,7 @@ class ComputeTestCase(BaseTestCase):
             console_type="novnc"))
 
     def test_validate_console_port_spice(self):
-        self.flags(vnc_enabled=True)
+        self.flags(enabled=True, group='vnc')
         self.flags(enabled=True, group='spice')
         instance = self._create_fake_instance_obj()
 
@@ -3258,7 +3258,7 @@ class ComputeTestCase(BaseTestCase):
             console_type="rdp-html5"))
 
     def test_validate_console_port_wrong_port(self):
-        self.flags(vnc_enabled=True)
+        self.flags(enabled=True, group='vnc')
         self.flags(enabled=True, group='spice')
         instance = self._create_fake_instance_obj()
 
@@ -3274,7 +3274,7 @@ class ComputeTestCase(BaseTestCase):
 
     def test_xvpvnc_vnc_console(self):
         # Make sure we can a vnc console for an instance.
-        self.flags(vnc_enabled=True)
+        self.flags(enabled=True, group='vnc')
         self.flags(enabled=False, group='spice')
 
         instance = self._create_fake_instance_obj()
@@ -3288,7 +3288,7 @@ class ComputeTestCase(BaseTestCase):
 
     def test_invalid_vnc_console_type(self):
         # Raise useful error if console type is an unrecognised string.
-        self.flags(vnc_enabled=True)
+        self.flags(enabled=True, group='vnc')
         self.flags(enabled=False, group='spice')
 
         instance = self._create_fake_instance_obj()
@@ -3309,7 +3309,7 @@ class ComputeTestCase(BaseTestCase):
 
     def test_missing_vnc_console_type(self):
         # Raise useful error is console type is None.
-        self.flags(vnc_enabled=True)
+        self.flags(enabled=True, group='vnc')
         self.flags(enabled=False, group='spice')
 
         instance = self._create_fake_instance_obj()
@@ -3350,7 +3350,7 @@ class ComputeTestCase(BaseTestCase):
 
     def test_spicehtml5_spice_console(self):
         # Make sure we can a spice console for an instance.
-        self.flags(vnc_enabled=False)
+        self.flags(enabled=False, group='vnc')
         self.flags(enabled=True, group='spice')
 
         instance = self._create_fake_instance_obj()
@@ -3366,7 +3366,7 @@ class ComputeTestCase(BaseTestCase):
 
     def test_invalid_spice_console_type(self):
         # Raise useful error if console type is an unrecognised string
-        self.flags(vnc_enabled=False)
+        self.flags(enabled=False, group='vnc')
         self.flags(enabled=True, group='spice')
 
         instance = self._create_fake_instance_obj()
@@ -3388,7 +3388,7 @@ class ComputeTestCase(BaseTestCase):
     def test_get_spice_console_not_implemented(self):
         self.stubs.Set(self.compute.driver, 'get_spice_console',
                        fake_not_implemented)
-        self.flags(vnc_enabled=False)
+        self.flags(enabled=False, group='vnc')
         self.flags(enabled=True, group='spice')
 
         instance = self._create_fake_instance_obj()
@@ -3408,7 +3408,7 @@ class ComputeTestCase(BaseTestCase):
 
     def test_missing_spice_console_type(self):
         # Raise useful error is console type is None
-        self.flags(vnc_enabled=False)
+        self.flags(enabled=False, group='vnc')
         self.flags(enabled=True, group='spice')
 
         instance = self._create_fake_instance_obj()
@@ -3429,7 +3429,7 @@ class ComputeTestCase(BaseTestCase):
 
     def test_rdphtml5_rdp_console(self):
         # Make sure we can a rdp console for an instance.
-        self.flags(vnc_enabled=False)
+        self.flags(enabled=False, group='vnc')
         self.flags(enabled=True, group='rdp')
 
         instance = self._create_fake_instance_obj()
@@ -3445,7 +3445,7 @@ class ComputeTestCase(BaseTestCase):
 
     def test_invalid_rdp_console_type(self):
         # Raise useful error if console type is an unrecognised string
-        self.flags(vnc_enabled=False)
+        self.flags(enabled=False, group='vnc')
         self.flags(enabled=True, group='rdp')
 
         instance = self._create_fake_instance_obj()
@@ -3466,7 +3466,7 @@ class ComputeTestCase(BaseTestCase):
 
     def test_missing_rdp_console_type(self):
         # Raise useful error is console type is None
-        self.flags(vnc_enabled=False)
+        self.flags(enabled=False, group='vnc')
         self.flags(enabled=True, group='rdp')
 
         instance = self._create_fake_instance_obj()
@@ -3486,7 +3486,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.terminate_instance(self.context, instance, [], [])
 
     def test_vnc_console_instance_not_ready(self):
-        self.flags(vnc_enabled=True)
+        self.flags(enabled=True, group='vnc')
         self.flags(enabled=False, group='spice')
         instance = self._create_fake_instance_obj(
                 params={'vm_state': vm_states.BUILDING})
@@ -3504,7 +3504,7 @@ class ComputeTestCase(BaseTestCase):
                 instance=instance)
 
     def test_spice_console_instance_not_ready(self):
-        self.flags(vnc_enabled=False)
+        self.flags(enabled=False, group='vnc')
         self.flags(enabled=True, group='spice')
         instance = self._create_fake_instance_obj(
                 params={'vm_state': vm_states.BUILDING})
@@ -3522,7 +3522,7 @@ class ComputeTestCase(BaseTestCase):
                 instance=instance)
 
     def test_rdp_console_instance_not_ready(self):
-        self.flags(vnc_enabled=False)
+        self.flags(enabled=False, group='vnc')
         self.flags(enabled=True, group='rdp')
         instance = self._create_fake_instance_obj(
                 params={'vm_state': vm_states.BUILDING})
@@ -3540,7 +3540,7 @@ class ComputeTestCase(BaseTestCase):
                 instance=instance)
 
     def test_vnc_console_disabled(self):
-        self.flags(vnc_enabled=False)
+        self.flags(enabled=False, group='vnc')
         instance = self._create_fake_instance_obj(
                 params={'vm_state': vm_states.BUILDING})
 
@@ -3961,7 +3961,7 @@ class ComputeTestCase(BaseTestCase):
 
     def test_delete_instance_deletes_console_auth_tokens(self):
         instance = self._create_fake_instance_obj()
-        self.flags(vnc_enabled=True)
+        self.flags(enabled=True, group='vnc')
 
         self.tokens_deleted = False
 
@@ -3979,7 +3979,7 @@ class ComputeTestCase(BaseTestCase):
 
     def test_delete_instance_deletes_console_auth_tokens_cells(self):
         instance = self._create_fake_instance_obj()
-        self.flags(vnc_enabled=True)
+        self.flags(enabled=True, group='vnc')
         self.flags(enable=True, group='cells')
 
         self.tokens_deleted = False

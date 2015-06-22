@@ -248,7 +248,7 @@ CONF.import_opt('allow_resize_to_same_host', 'nova.compute.api')
 CONF.import_opt('console_topic', 'nova.console.rpcapi')
 CONF.import_opt('host', 'nova.netconf')
 CONF.import_opt('my_ip', 'nova.netconf')
-CONF.import_opt('vnc_enabled', 'nova.vnc')
+CONF.import_opt('enabled', 'nova.vnc', group='vnc')
 CONF.import_opt('enabled', 'nova.spice', group='spice')
 CONF.import_opt('enable', 'nova.cells.opts', group='cells')
 CONF.import_opt('image_cache_manager_interval', 'nova.virt.imagecache')
@@ -4215,15 +4215,15 @@ class ComputeManager(manager.Manager):
         LOG.debug("Getting vnc console", instance=instance)
         token = str(uuid.uuid4())
 
-        if not CONF.vnc_enabled:
+        if not CONF.vnc.enabled:
             raise exception.ConsoleTypeUnavailable(console_type=console_type)
 
         if console_type == 'novnc':
             # For essex, novncproxy_base_url must include the full path
             # including the html file (like http://myhost/vnc_auto.html)
-            access_url = '%s?token=%s' % (CONF.novncproxy_base_url, token)
+            access_url = '%s?token=%s' % (CONF.vnc.novncproxy_base_url, token)
         elif console_type == 'xvpvnc':
-            access_url = '%s?token=%s' % (CONF.xvpvncproxy_base_url, token)
+            access_url = '%s?token=%s' % (CONF.vnc.xvpvncproxy_base_url, token)
         else:
             raise exception.ConsoleTypeInvalid(console_type=console_type)
 
@@ -5014,7 +5014,7 @@ class ComputeManager(manager.Manager):
 
     def _consoles_enabled(self):
         """Returns whether a console is enable."""
-        return (CONF.vnc_enabled or CONF.spice.enabled or
+        return (CONF.vnc.enabled or CONF.spice.enabled or
                 CONF.rdp.enabled or CONF.serial_console.enabled)
 
     def _clean_instance_console_tokens(self, ctxt, instance):

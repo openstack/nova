@@ -2239,7 +2239,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             mock_save.assert_called_with()
 
     def test_get_guest_config_with_vnc(self):
-        self.flags(vnc_enabled=True)
+        self.flags(enabled=True, group='vnc')
         self.flags(virt_type='kvm',
                    use_usb_tablet=False,
                    group='libvirt')
@@ -2272,7 +2272,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual(cfg.devices[4].type, "vnc")
 
     def test_get_guest_config_with_vnc_and_tablet(self):
-        self.flags(vnc_enabled=True)
+        self.flags(enabled=True, group='vnc')
         self.flags(virt_type='kvm',
                    use_usb_tablet=True,
                    group='libvirt')
@@ -2308,7 +2308,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual(cfg.devices[5].type, "vnc")
 
     def test_get_guest_config_with_spice_and_tablet(self):
-        self.flags(vnc_enabled=False)
+        self.flags(enabled=False, group='vnc')
         self.flags(virt_type='kvm',
                    use_usb_tablet=True,
                    group='libvirt')
@@ -2346,7 +2346,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual(cfg.devices[5].type, "spice")
 
     def test_get_guest_config_with_spice_and_agent(self):
-        self.flags(vnc_enabled=False)
+        self.flags(enabled=False, group='vnc')
         self.flags(virt_type='kvm',
                    use_usb_tablet=True,
                    group='libvirt')
@@ -2644,7 +2644,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             instance, mode=mode)
 
     def test_get_guest_config_with_type_xen(self):
-        self.flags(vnc_enabled=True)
+        self.flags(enabled=True, group='vnc')
         self.flags(virt_type='xen',
                    use_usb_tablet=False,
                    group='libvirt')
@@ -2679,7 +2679,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     @mock.patch.object(libvirt_driver.libvirt_utils, 'get_arch',
                        return_value=arch.S390X)
     def test_get_guest_config_with_type_kvm_on_s390(self, mock_get_arch):
-        self.flags(vnc_enabled=False)
+        self.flags(enabled=False, group='vnc')
         self.flags(virt_type='kvm',
                    use_usb_tablet=False,
                    group='libvirt')
@@ -2728,7 +2728,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         return drvr._get_guest_config(instance, [], {}, disk_info)
 
     def test_get_guest_config_with_type_xen_pae_hvm(self):
-        self.flags(vnc_enabled=True)
+        self.flags(enabled=True, group='vnc')
         self.flags(virt_type='xen',
                    use_usb_tablet=False,
                    group='libvirt')
@@ -2757,7 +2757,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                               vconfig.LibvirtConfigGuestFeatureAPIC)
 
     def test_get_guest_config_with_type_xen_pae_pvm(self):
-        self.flags(vnc_enabled=True)
+        self.flags(enabled=True, group='vnc')
         self.flags(virt_type='xen',
                    use_usb_tablet=False,
                    group='libvirt')
@@ -2780,7 +2780,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                               vconfig.LibvirtConfigGuestFeaturePAE)
 
     def test_get_guest_config_with_vnc_and_spice(self):
-        self.flags(vnc_enabled=True)
+        self.flags(enabled=True, group='vnc')
         self.flags(virt_type='kvm',
                    use_usb_tablet=True,
                    group='libvirt')
@@ -2877,7 +2877,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     def _test_get_guest_usb_tablet(self, vnc_enabled, spice_enabled, os_type,
                                    agent_enabled=False):
-        self.flags(vnc_enabled=vnc_enabled)
+        self.flags(enabled=vnc_enabled, group='vnc')
         self.flags(enabled=spice_enabled,
                    agent_enabled=agent_enabled, group='spice')
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -3082,7 +3082,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual(cfg.devices[7].target_name, "org.qemu.guest_agent.0")
 
     def test_get_guest_config_with_video_driver_vram(self):
-        self.flags(vnc_enabled=False)
+        self.flags(enabled=False, group='vnc')
         self.flags(virt_type='kvm', group='libvirt')
         self.flags(enabled=True,
                    agent_enabled=True,
@@ -3928,7 +3928,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 self.assertEqual(cfg.devices[device_index].type, 'vga')
 
     def test_get_guest_config_ppc64_through_image_meta_vnc_enabled(self):
-        self.flags(vnc_enabled=True)
+        self.flags(enabled=True, group='vnc')
         self._test_get_guest_config_ppc64(6)
 
     def test_get_guest_config_ppc64_through_image_meta_spice_enabled(self):
@@ -5980,7 +5980,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     @mock.patch.object(fakelibvirt, 'VIR_DOMAIN_XML_MIGRATABLE', None,
                        create=True)
     def test_live_migration_fails_without_migratable_flag_or_0_addr(self):
-        self.flags(vnc_enabled=True, vncserver_listen='1.2.3.4')
+        self.flags(enabled=True, vncserver_listen='1.2.3.4', group='vnc')
         self.compute = importutils.import_object(CONF.compute_manager)
         instance_dict = dict(self.test_instance)
         instance_dict.update({'host': 'fake',

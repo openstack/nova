@@ -76,7 +76,7 @@ xenapi_vmops_opts = [
 CONF = cfg.CONF
 CONF.register_opts(xenapi_vmops_opts, 'xenserver')
 CONF.import_opt('host', 'nova.netconf')
-CONF.import_opt('vncserver_proxyclient_address', 'nova.vnc')
+CONF.import_opt('vncserver_proxyclient_address', 'nova.vnc', group='vnc')
 
 DEFAULT_FIREWALL_DRIVER = "%s.%s" % (
     firewall.__name__,
@@ -1784,7 +1784,7 @@ class VMOps(object):
 
         # NOTE: XS5.6sp2+ use http over port 80 for xenapi com
         return ctype.ConsoleVNC(
-            host=CONF.vncserver_proxyclient_address,
+            host=CONF.vnc.vncserver_proxyclient_address,
             port=80,
             internal_access_path=path)
 
