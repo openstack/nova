@@ -257,6 +257,10 @@ class TenantNetworksTestV2(TenantNetworksTestV21):
     ctrlr = networks.NetworkController
     validation_error = webob.exc.HTTPBadRequest
 
+    def setUp(self):
+        super(TenantNetworksTestV2, self).setUp()
+        self.req = fakes.HTTPRequest.blank('', use_admin_context=True)
+
     def test_network_create_empty_body(self):
         self.assertRaises(webob.exc.HTTPUnprocessableEntity,
                           self.controller.create, self.req, {})
