@@ -31,8 +31,8 @@ class FaultServerToleranceController(servers.Controller):
         super(FaultServerToleranceController, self).__init__(*args, **kwargs)
 
     @wsgi.action('failover')
-    def _recover(self, req, id, body):
-        """Recover a failed instance."""
+    def _failover(self, req, id, body):
+        """Failover to secondary instance."""
         context = req.environ["nova.context"]
 
         try:
