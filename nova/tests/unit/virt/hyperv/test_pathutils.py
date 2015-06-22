@@ -136,6 +136,22 @@ class PathUtilsTestCase(test_base.HyperVBaseTestCase):
     def test_force_unmount_smb_share(self):
         self._test_unmount_smb_share(force=True)
 
+    @mock.patch('shutil.rmtree')
+    def test_rmtree(self, mock_rmtree):
+        class WindowsError(Exception):
+            def __init__(self, winerror=None):
+                self.winerror = winerror
+
+        mock_rmtree.side_effect = [WindowsError(
+            pathutils.ERROR_DIR_IS_NOT_EMPTY), True]
+        fake_windows_error = WindowsError
+        with mock.patch('__builtin__.WindowsError',
+                        fake_windows_error, create=True):
+            self._pathutils.rmtree(mock.sentinel.FAKE_PATH)
+
+        mock_rmtree.assert_has_calls([mock.call(mock.sentinel.FAKE_PATH),
+                                      mock.call(mock.sentinel.FAKE_PATH)])
+
     @mock.patch('os.path.join')
     def test_get_instances_sub_dir(self, fake_path_join):
 

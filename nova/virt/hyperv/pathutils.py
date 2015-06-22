@@ -16,6 +16,7 @@
 import os
 import shutil
 import sys
+import time
 
 if sys.platform == 'win32':
     import wmi
@@ -45,6 +46,7 @@ CONF.register_opts(hyperv_opts, 'hyperv')
 CONF.import_opt('instances_path', 'nova.compute.manager')
 
 ERROR_INVALID_NAME = 123
+ERROR_DIR_IS_NOT_EMPTY = 145
 
 
 class PathUtils(object):
@@ -98,7 +100,17 @@ class PathUtils(object):
                 self.rename(src, os.path.join(dest_dir, fname))
 
     def rmtree(self, path):
-        shutil.rmtree(path)
+        # This will be removed once support for Windows Server 2008R2 is
+        # stopped
+        for i in range(5):
+            try:
+                shutil.rmtree(path)
+                return
+            except WindowsError as e:
+                if e.winerror == ERROR_DIR_IS_NOT_EMPTY:
+                    time.sleep(1)
+                else:
+                    raise e
 
     def get_instances_dir(self, remote_server=None):
         local_instance_path = os.path.normpath(CONF.instances_path)
