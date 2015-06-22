@@ -475,10 +475,11 @@ def _create_vif_spec(client_factory, vif_info, vif_limits=None):
     return network_spec
 
 
-def get_network_attach_config_spec(client_factory, vif_info, index):
+def get_network_attach_config_spec(client_factory, vif_info, index,
+                                   vif_limits=None):
     """Builds the vif attach config spec."""
     config_spec = client_factory.create('ns0:VirtualMachineConfigSpec')
-    vif_spec = _create_vif_spec(client_factory, vif_info)
+    vif_spec = _create_vif_spec(client_factory, vif_info, vif_limits)
     config_spec.deviceChange = [vif_spec]
     if vif_info['iface_id'] is not None:
         config_spec.extraConfig = [_iface_id_option_value(client_factory,
