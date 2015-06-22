@@ -88,6 +88,9 @@ class VMUtils(object):
     _VIRTUAL_SYSTEM_CURRENT_SETTINGS = 3
     _AUTOMATIC_STARTUP_ACTION_NONE = 0
 
+    _PHYS_DISK_CONNECTION_ATTR = "HostResource"
+    _VIRT_DISK_CONNECTION_ATTR = "Connection"
+
     _vm_power_states_map = {constants.HYPERV_VM_STATE_ENABLED: 2,
                             constants.HYPERV_VM_STATE_DISABLED: 3,
                             constants.HYPERV_VM_STATE_SHUTTING_DOWN: 4,
@@ -689,9 +692,11 @@ class VMUtils(object):
         if is_physical:
             class_name = self._RESOURCE_ALLOC_SETTING_DATA_CLASS
             res_sub_type = self._PHYS_DISK_RES_SUB_TYPE
+            conn_attr = self._PHYS_DISK_CONNECTION_ATTR
         else:
             class_name = self._STORAGE_ALLOC_SETTING_DATA_CLASS
             res_sub_type = self._HARD_DISK_RES_SUB_TYPE
+            conn_attr = self._VIRT_DISK_CONNECTION_ATTR
 
         disk_resources = self._conn.query("SELECT * FROM %(class_name)s "
                                           "WHERE ResourceSubType = "
@@ -700,9 +705,9 @@ class VMUtils(object):
                                            "res_sub_type": res_sub_type})
 
         for disk_resource in disk_resources:
-            if disk_resource.HostResource:
-                if disk_resource.HostResource[0].lower() == disk_path.lower():
-                    return disk_resource
+            conn = getattr(disk_resource, conn_attr, None)
+            if conn and conn[0].lower() == disk_path.lower():
+                return disk_resource
 
     def get_mounted_disk_by_drive_number(self, device_number):
         mounted_disks = self._conn.query("SELECT * FROM Msvm_DiskDrive "
