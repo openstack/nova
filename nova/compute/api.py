@@ -3284,6 +3284,9 @@ class API(base.Base):
             migration.dest_compute = host
         migration.create()
 
+        compute_utils.notify_about_instance_usage(
+            self.notifier, context, instance, "evacuate")
+
         return self.compute_task_api.rebuild_instance(context,
                        instance=instance,
                        new_pass=admin_password,
