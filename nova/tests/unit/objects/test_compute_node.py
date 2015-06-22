@@ -15,6 +15,7 @@
 import mock
 from oslo_serialization import jsonutils
 from oslo_utils import timeutils
+from oslo_versionedobjects import exception as ovo_exc
 
 from nova import db
 from nova import exception
@@ -307,7 +308,7 @@ class _TestComputeNodeObject(object):
     def test_set_id_failure(self, db_mock):
         compute = compute_node.ComputeNode(context=self.context)
         compute.create()
-        self.assertRaises(exception.ReadOnlyFieldError, setattr,
+        self.assertRaises(ovo_exc.ReadOnlyFieldError, setattr,
                           compute, 'id', 124)
 
     def test_destroy(self):
