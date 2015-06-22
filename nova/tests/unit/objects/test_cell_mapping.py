@@ -14,6 +14,7 @@ import mock
 
 from oslo_utils import uuidutils
 
+from nova import exception
 from nova import objects
 from nova.objects import cell_mapping
 from nova.tests.unit.objects import test_objects
@@ -43,6 +44,16 @@ class _TestCellMappingObject(object):
                 db_mapping['uuid'])
         uuid_from_db.assert_called_once_with(self.context, db_mapping['uuid'])
         self.compare_obj(mapping_obj, db_mapping)
+
+    @mock.patch.object(cell_mapping.CellMapping, '_get_by_uuid_from_db',
+                       side_effect=exception.CellMappingNotFound(uuid='fake'))
+    def test_get_by_uuid_invalid(self, uuid_from_db):
+        db_mapping = get_db_mapping()
+        self.assertRaises(exception.CellMappingNotFound,
+                          objects.CellMapping().get_by_uuid,
+                          self.context,
+                          db_mapping['uuid'])
+        uuid_from_db.assert_called_once_with(self.context, db_mapping['uuid'])
 
     @mock.patch.object(cell_mapping.CellMapping, '_create_in_db')
     def test_create(self, create_in_db):
