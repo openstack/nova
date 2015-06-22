@@ -280,11 +280,6 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.assertTrue(
             self.conn.capabilities['supports_migrate_to_same_host'])
 
-    def test_configuration_linked_clone(self):
-        self.flags(use_linked_clone=None, group='vmware')
-        self.assertRaises(vexc.UseLinkedCloneConfigurationFault,
-                          self.conn._validate_configuration)
-
     @mock.patch.object(pbm, 'get_profile_id_by_name')
     def test_configuration_pbm(self, get_profile_mock):
         get_profile_mock.return_value = 'fake-profile'
