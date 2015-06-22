@@ -6432,6 +6432,28 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                           self.test_instance['project_id']),
             ])
 
+    @mock.patch.object(libvirt_driver.libvirt_utils, 'fetch_image')
+    @mock.patch.object(os.path, 'exists', return_value=True)
+    def test_create_images_and_backing_images_exist(self, mock_exists,
+                                                    mock_fetch_image):
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        disk_info = [
+            {u'backing_file': u'fake_image_backing_file',
+             u'disk_size': 10747904,
+             u'path': u'disk_path',
+             u'type': u'qcow2',
+             u'virt_disk_size': 25165824}]
+
+        self.test_instance.update({'user_id': 'fake-user',
+                                   'os_type': None,
+                                   'kernel_id': 'fake_kernel_id',
+                                   'ramdisk_id': 'fake_ramdisk_id',
+                                   'project_id': 'fake-project'})
+        instance = objects.Instance(**self.test_instance)
+        conn._create_images_and_backing(self.context, instance,
+                                        '/fake/instance/dir', disk_info)
+        self.assertFalse(mock_fetch_image.called)
+
     def test_create_images_and_backing_ephemeral_gets_created(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         disk_info = [
