@@ -922,9 +922,16 @@ class DbCommands(object):
 
     @args('--dry-run', action='store_true', dest='dry_run',
           default=False, help='Print SQL statements instead of executing')
-    def contract(self, dry_run):
+    @args('--force-experimental-contract', action='store_true',
+          dest='force_experimental_contract',
+          help="Force experimental contract operation to run *VOLATILE*")
+    def contract(self, dry_run, force_experimental_contract=False):
         """Contract database schema."""
-        return migration.db_contract(dry_run)
+        if force_experimental_contract:
+            return migration.db_contract(dry_run)
+        print('The "contract" command is experimental and potentially '
+              'dangerous. As such, it is disabled by default. Enable using '
+              '"--force-experimental".')
 
     def version(self):
         """Print the current database version."""
