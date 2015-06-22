@@ -13,6 +13,7 @@
 #    under the License.
 
 from oslo_serialization import jsonutils
+import six
 
 from nova import db
 from nova import exception
@@ -270,6 +271,29 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject,
             self._cached_service = objects.Service.get_by_id(self._context,
                                                              self.service_id)
         return self._cached_service
+
+    def update_from_virt_driver(self, resources):
+        # NOTE(pmurray): the virt driver provides a dict of values that
+        # can be copied into the compute node. The names and representation
+        # do not exactly match.
+        # TODO(pmurray): the resources dict should be formalized.
+        keys = ["vcpus", "memory_mb", "local_gb", "cpu_info",
+                "vcpus_used", "memory_mb_used", "local_gb_used",
+                "numa_topology", "hypervisor_type",
+                "hypervisor_version", "hypervisor_hostname",
+                "disk_available_least", "host_ip"]
+        for key in keys:
+            if key in resources:
+                self[key] = resources[key]
+
+        # supported_instances has a different name in compute_node
+        # TODO(pmurray): change virt drivers not to json encode
+        # values they add to the resources dict
+        if 'supported_instances' in resources:
+            si = resources['supported_instances']
+            if isinstance(si, six.string_types):
+                si = jsonutils.loads(si)
+            self.supported_hv_specs = [objects.HVSpec.from_list(s) for s in si]
 
 
 @base.NovaObjectRegistry.register
