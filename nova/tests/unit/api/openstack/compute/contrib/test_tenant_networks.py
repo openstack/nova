@@ -59,10 +59,6 @@ def fake_network_api_get_all(context):
         return NETWORKS
 
 
-def fake_network_api_create(context, **kwargs):
-    return NETWORKS
-
-
 class TenantNetworksTestV21(test.NoDBTestCase):
     ctrlr = networks_v21.TenantNetworkController
     validation_error = exception.ValidationError
@@ -77,6 +73,10 @@ class TenantNetworksTestV21(test.NoDBTestCase):
     def tearDown(self):
         super(TenantNetworksTestV21, self).tearDown()
         CONF.set_override("use_neutron_default_nets", self.original_value)
+
+    def _fake_network_api_create(self, context, **kwargs):
+        self.assertEqual(context.project_id, kwargs['project_id'])
+        return NETWORKS
 
     @mock.patch('nova.quota.QUOTAS.reserve')
     @mock.patch('nova.quota.QUOTAS.rollback')
@@ -181,7 +181,7 @@ class TenantNetworksTestV21(test.NoDBTestCase):
         ctxt = self.req.environ['nova.context']
 
         reserve_mock.return_value = 'rv'
-        create_mock.side_effect = fake_network_api_create
+        create_mock.side_effect = self._fake_network_api_create
 
         body = copy.deepcopy(NETWORKS[0])
         del body['id']
