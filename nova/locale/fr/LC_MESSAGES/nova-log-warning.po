@@ -9,8 +9,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-06-01 06:23+0000\n"
-"PO-Revision-Date: 2015-05-15 21:20+0000\n"
+"POT-Creation-Date: 2015-06-22 06:09+0000\n"
+"PO-Revision-Date: 2015-06-19 04:48+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: French (http://www.transifex.com/projects/p/nova/language/"
 "fr/)\n"
@@ -85,10 +85,6 @@ msgstr "Arguments supprimés lors de la création du contexte : %s"
 #, python-format
 msgid "Attempted to remove chain %s which does not exist"
 msgstr "Tentative de retrait de la chaîne %s qui n'existe pas"
-
-#, python-format
-msgid "Can't access image %(image_id)s: %(error)s"
-msgstr "Impossible d'accéder à l'image %(image_id)s : %(error)s"
 
 #, python-format
 msgid "Cannot access 'scality_sofs_config': %s"
@@ -868,12 +864,6 @@ msgstr ""
 "Le groupe de volumes %(vg)s ne pourra pas contenir le volume incomplet "
 "%(lv)s. La taille du volume virtuel est de %(size)db, mais l'espace libre "
 "sur le groupe de volumes est de seulement %(free_space)db."
-
-#, python-format
-msgid "Volume id: %s finished being created but was not set as 'available'"
-msgstr ""
-"Fin de création du Volume id! %s mais il n'est pas configuré comme "
-"'disponible'"
 
 msgid ""
 "WARNING: Using the remote debug option changes how Nova uses the eventlet "

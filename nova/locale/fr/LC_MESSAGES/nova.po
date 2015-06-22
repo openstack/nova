@@ -24,8 +24,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-06-01 06:22+0000\n"
-"PO-Revision-Date: 2015-05-29 02:41+0000\n"
+"POT-Creation-Date: 2015-06-22 06:08+0000\n"
+"PO-Revision-Date: 2015-06-17 17:32+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: French (http://www.transifex.com/projects/p/nova/language/"
 "fr/)\n"
@@ -116,30 +116,6 @@ msgid "%(value_name)s must be an integer"
 msgstr "%(value_name)s doit etre un entier."
 
 #, python-format
-msgid ""
-"%(what)s is deprecated as of %(as_of)s and may be removed in %(remove_in)s. "
-"It will not be superseded."
-msgstr ""
-"%(what)s déprécié depuis %(as_of)s et sera sans doute retiré dans "
-"%(remove_in)s. Ne sera pas remplacé."
-
-#, python-format
-msgid ""
-"%(what)s is deprecated as of %(as_of)s in favor of %(in_favor_of)s and may "
-"be removed in %(remove_in)s."
-msgstr ""
-"%(what)s déprécié depuis %(as_of)s au bénéfice de %(in_favor_of)s et sera "
-"sans doute retiré dans %(remove_in)s."
-
-#, python-format
-msgid "%(what)s is deprecated as of %(as_of)s in favor of %(in_favor_of)s."
-msgstr "%(what)s déprécié depuis %(as_of)s au bénéfice de %(in_favor_of)s."
-
-#, python-format
-msgid "%(what)s is deprecated as of %(as_of)s. It will not be superseded."
-msgstr "%(what)s déprécié depuis %(as_of)s. Ne sera pas remplacé."
-
-#, python-format
 msgid "%(worker_name)s value of %(workers)s is invalid, must be greater than 0"
 msgstr ""
 "La valeur %(worker_name)s de %(workers)s est invalide, elle doit être "
@@ -224,9 +200,6 @@ msgid ""
 msgstr ""
 "Action de request_id %(request_id)s sur l'instance %(instance_uuid)s non "
 "trouvée"
-
-msgid "Action not allowed."
-msgstr "Action non autorisée."
 
 msgid "Address could not be converted."
 msgstr "Impossible de convertir l'adresse."
@@ -502,10 +475,6 @@ msgstr "Impossible de connecter un ou plusieurs volumes à plusieurs instances"
 msgid "Cannot call %(method)s on orphaned %(objtype)s object"
 msgstr "Pas d'appel de %(method)s sur un objet %(objtype)s orphelin"
 
-#, python-format
-msgid "Cannot change %(node_id)s to %(new_node_id)s"
-msgstr "Imposible de changer %(node_id)s en %(new_node_id)s"
-
 msgid "Cannot disassociate auto assigned floating ip"
 msgstr "Impossible de dissocier une adresse IP affectée automatiquement"
 
@@ -526,10 +495,6 @@ msgid "Cannot get VM summary data for: %s"
 msgstr ""
 "Impossible d'obtenir les données récapitulatives de la machine virtuelle "
 "pour : %s"
-
-#, python-format
-msgid "Cannot modify readonly field %(field)s"
-msgstr "Impossible de modifier le champ en lecture seule %(field)s"
 
 #, python-format
 msgid "Cannot remove host %(host)s in aggregate %(id)s"
@@ -602,9 +567,6 @@ msgstr "Le type de cellule doit être 'parent' ou 'enfant'"
 #, python-format
 msgid "Cell with name %(name)s already exists."
 msgstr "Cellule avec le nom %(name)s existe déjà."
-
-msgid "Cells is not enabled."
-msgstr "Les cellules ne sont pas autorisées."
 
 #, python-format
 msgid ""
@@ -801,13 +763,6 @@ msgid "Deleting by fixed_range is not supported with the NeutronManager"
 msgstr "La suppression par fixed_range n'est pas supportée avec NeutronManager"
 
 #, python-format
-msgid "Deprecated: %s"
-msgstr "Obsolète : %s"
-
-msgid "Describe-resource is admin only functionality"
-msgstr "Describe-resource est une fonctionnalité admin uniquement"
-
-#, python-format
 msgid "Desired state must be specified.  Valid states are: %s"
 msgstr "L'état à appliquer doit être spécifié. Les états valides sont : %s"
 
@@ -900,10 +855,6 @@ msgid ""
 msgstr ""
 "Erreur de libvirt lors de la recherche de %(instance_name)s : [Code d'erreur "
 "%(error_code)s] %(ex)s"
-
-#, python-format
-msgid "Error mounting %(imgfile)s with libguestfs (%(e)s)"
-msgstr "Erreur lors du montage de %(imgfile)s avec libguestfs (%(e)s)"
 
 #, python-format
 msgid "Error when creating resource monitor: %(monitor)s"
@@ -1071,10 +1022,6 @@ msgstr "Échec à suspendre l'instance : %(reason)s"
 #, python-format
 msgid "Failed to terminate instance: %(reason)s"
 msgstr "Échec à terminer l'instance : %(reason)s"
-
-#, python-format
-msgid "Fatal call to deprecated config: %(msg)s"
-msgstr "Appel fatal adressé à une configuration obsolète : %(msg)s"
 
 msgid "Fibre Channel device not found."
 msgstr "Unité de canal optique introuvable."
@@ -1537,11 +1484,6 @@ msgstr "Le protocole IP %(protocol)s est invalide"
 #, python-format
 msgid "Invalid PCI alias definition: %(reason)s"
 msgstr "Définition d'un alias PCI invalide : %(reason)s"
-
-msgid "Invalid Parameter: Unicode is not supported by the current database."
-msgstr ""
-"Paramètre non valide : Unicode n'est pas pris en charge par la base de "
-"données actuelle."
 
 #, python-format
 msgid "Invalid Regular Expression %s"
@@ -2205,10 +2147,6 @@ msgstr "Plus d'adresses IP flottantes disponibles."
 msgid "No more floating ips in pool %s."
 msgstr "Plus d'adresses IP flottantes dans le pool %s."
 
-#, python-format
-msgid "No mount points found in %(root)s of %(imgfile)s"
-msgstr "Aucun point de montage trouvé dans %(root)s de %(imgfile)s"
-
 msgid "No networks defined."
 msgstr "Aucun réseau défini."
 
@@ -2241,15 +2179,6 @@ msgstr "Aucun réseau adéquat pour migrer"
 #, python-format
 msgid "No valid host was found. %(reason)s"
 msgstr "Hôte non valide trouvé. %(reason)s"
-
-#, python-format
-msgid "Node %(node_id)s could not be found."
-msgstr "Noeud %(node_id)s introuvable."
-
-#, python-format
-msgid "Node with UUID %(node_uuid)s could not be found."
-msgstr ""
-"Noeud avec un identificateur unique universel %(node_uuid)s introuvable."
 
 #, python-format
 msgid "Not able to acquire a free port for %(host)s"
@@ -2583,9 +2512,6 @@ msgstr "La ressource n'a pas pu être trouvée."
 
 msgid "Resumed"
 msgstr "Repris"
-
-msgid "Rotation is not allowed for snapshots"
-msgstr "Rotation non autorisée pour les instantanés"
 
 msgid "Rotation param is required for backup image_type"
 msgstr "Param de rotation obligatoire pour backup image_type"
@@ -3205,9 +3131,6 @@ msgstr "Impossibilité de mettre fin à l'instance."
 msgid "Unable to unplug VBD %s"
 msgstr "Impossible de deconnecter le VBD %s"
 
-msgid "Unable to update dns domain"
-msgstr "Incapable de mettre à jour un domaine dns"
-
 #, python-format
 msgid "Unable to update system group '%s'"
 msgstr "Incapable de mettre à jour le groupe système '%s'"
@@ -3274,11 +3197,6 @@ msgstr "Argument inconnu: port"
 #, python-format
 msgid "Unknown chain: %r"
 msgstr "Chaîne inconnue : %r"
-
-#, python-format
-msgid "Unknown config drive format %(format)s. Select one of iso9660 or vfat."
-msgstr ""
-"Format d'unité de config inconnu %(format)s. Sélectionnez iso9660 ou vfat."
 
 #, python-format
 msgid "Unknown delete_info type %s"
@@ -3408,9 +3326,6 @@ msgid "Virt driver does not implement host power management."
 msgstr ""
 "Le pilote virtuel n'implémente pas la gestion de la puissance de l'hôte."
 
-msgid "Virt driver does not implement pause function."
-msgstr "Le pilote virtuel n'implémente pas la fonction pause."
-
 msgid "Virt driver does not implement uptime function."
 msgstr "Le pilote virtuel n'implémente pas la fonction de disponibilité."
 
@@ -3442,14 +3357,6 @@ msgstr "ID réseau local virtuel"
 #, python-format
 msgid "Volume %(volume_id)s could not be found."
 msgstr "Le volume %(volume_id)s n'a pas pu être trouvé."
-
-#, python-format
-msgid ""
-"Volume %(volume_id)s did not finish being created even after we waited "
-"%(seconds)s seconds or %(attempts)s attempts."
-msgstr ""
-"Création du %(volume_id)s non terminée après attente de %(seconds)s secondes "
-"ou %(attempts)s tentatives."
 
 #, python-format
 msgid "Volume %(volume_id)s is not attached to anything"

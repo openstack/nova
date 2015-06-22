@@ -3,6 +3,7 @@
 # This file is distributed under the same license as the nova project.
 #
 # Translators:
+# Adriana Chisco Landazábal <achisco94@gmail.com>, 2015
 # David Martinez Morata, 2014
 # Rafael Rivero <rafael@cloudscaling.com>, 2014
 # Sergio Cuellar Valdes <scuellarv@kionetworks.com>, 2015
@@ -10,9 +11,9 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-06-01 06:23+0000\n"
-"PO-Revision-Date: 2015-05-12 19:59+0000\n"
-"Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
+"POT-Creation-Date: 2015-06-22 06:09+0000\n"
+"PO-Revision-Date: 2015-06-17 21:24+0000\n"
+"Last-Translator: Adriana Chisco Landazábal <achisco94@gmail.com>\n"
 "Language-Team: Spanish (http://www.transifex.com/projects/p/nova/language/"
 "es/)\n"
 "Language: es\n"
@@ -21,6 +22,9 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 1.3\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "\"Look for the VDIs failed"
+msgstr "\"Ha fallado la búsqueda de las VDIs"
 
 #, python-format
 msgid ""
@@ -67,6 +71,11 @@ msgstr "La asociación de dispositivos PCI %(dev)s a %(dom)s ha fallado."
 #, python-format
 msgid "Attaching network adapter failed. Exception:  %s"
 msgstr "Error al conectar el adaptador de red. Excepción: %s"
+
+#, python-format
+msgid "Cannot block migrate instance %s with mapped volumes"
+msgstr ""
+"No se puede bloquea la migración de instancia %s con volúmenes mapeados"
 
 msgid "Cannot cleanup migration files"
 msgstr "No se pueden limpiar los archivos de migración"
@@ -119,9 +128,18 @@ msgstr "Ha fallado la conexión a libvirt: %s"
 msgid "Could not bind to %(host)s:%(port)s"
 msgstr "No se puede asociar a %(host)s:%(port)s"
 
+msgid "Could not decode scheduler options"
+msgstr "No se ha podido decodificar las opciones del programador"
+
 #, python-format
 msgid "Could not remove tmpdir: %s"
 msgstr "No se ha podido eliminar directorio temporal: %s"
+
+#, python-format
+msgid "Could not stat scheduler options file %(filename)s"
+msgstr ""
+"No se ha podido crear estadísticas de archivo de opciones de planificador "
+"%(filename)s"
 
 msgid "Couldn't communicate with any cells"
 msgstr "No se puede establecer comunicación con alguna celda"
@@ -131,12 +149,20 @@ msgid "Couldn't communicate with cell '%s'"
 msgstr "No se puede comunicar con la celda '%s'"
 
 #, python-format
+msgid "Couldn't lookup app: %s"
+msgstr "No se pudo buscar aplicación: %s"
+
+#, python-format
 msgid "Couldn't unmount the GlusterFS share %s"
 msgstr "No se puede desmontar el recurso compartido GlusterFS %s"
 
 #, python-format
 msgid "Couldn't unmount the NFS share %s"
 msgstr "No se puede desmontar el recurso compartido NFS %s"
+
+#, python-format
+msgid "Couldn't unmount the Quobyte Volume at %s"
+msgstr "No se ha podido desmontar el Volumen Quobyte en %s"
 
 #, python-format
 msgid "Couldn't unmount the share %s"
@@ -148,6 +174,9 @@ msgstr "La creación de unidad de configuración ha fallado con el error: %s"
 
 msgid "DB error"
 msgstr "Error de BD"
+
+msgid "Destroy VM failed"
+msgstr "Ha fallado la destrucción de VM"
 
 msgid "Destroy instance failed"
 msgstr "Fallo en la destrucción de la instancia"
@@ -185,12 +214,28 @@ msgid "Error copying key: %s"
 msgstr "Error al copiar la llave: %s"
 
 #, python-format
+msgid "Error creating Barbican client: %s"
+msgstr "Error al crear cliente Barbican: %s"
+
+#, python-format
+msgid "Error creating key: %s"
+msgstr "Error al crear clave: %s"
+
+#, python-format
 msgid "Error defining a domain with XML: %s"
 msgstr "Error definiendo el dominio con XML: %s"
 
 #, python-format
+msgid "Error defining a secret with XML: %s"
+msgstr "Error al definir un secreto con XML: %s"
+
+#, python-format
 msgid "Error deleting conntrack entries for %s"
 msgstr "Error al eliminar las entradas conntrack para %s"
+
+#, python-format
+msgid "Error deleting key: %s"
+msgstr "Error al eliminar clave: %s"
 
 #, python-format
 msgid "Error deploying instance %(instance)s on baremetal node %(node)s."
@@ -199,8 +244,12 @@ msgstr ""
 "%(node)s."
 
 #, python-format
-msgid "Error during %(full_task_name)s: %(e)s"
-msgstr "Error durante %(full_task_name)s: %(e)s"
+msgid "Error during %(full_task_name)s"
+msgstr "Error durante %(full_task_name)s"
+
+#, python-format
+msgid "Error enabling hairpin mode with XML: %s"
+msgstr "Error al habilitar modo horquilla con XML: %s"
 
 #, python-format
 msgid "Error from last host: %(last_host)s (node %(last_node)s): %(exc)s"
@@ -223,6 +272,14 @@ msgstr ""
 "%(e)s"
 
 #, python-format
+msgid "Error getting key: %s"
+msgstr "Error al obtener clave: %s"
+
+#, python-format
+msgid "Error getting secret data: %s"
+msgstr "Error al obtener los datos secretos: %s"
+
+#, python-format
 msgid "Error getting secret metadata: %s"
 msgstr "Error al obtener los metadatos secretos: %s"
 
@@ -241,6 +298,12 @@ msgstr "Error al instanciar %(provider)s: %(exception)s"
 msgid "Error launching a defined domain with XML: %s"
 msgstr "Error al lanzar el dominio definido con XML: %s"
 
+msgid "Error locating next hop for message"
+msgstr "Error al localizar el siguiente salto para el mensaje"
+
+msgid "Error locating next hops for message"
+msgstr "Error al localizar el siguiente salto para el mensaje"
+
 msgid ""
 "Error occurred during volume_snapshot_create, sending error status to Cinder."
 msgstr ""
@@ -258,6 +321,16 @@ msgid "Error on '%(path)s' while checking direct I/O: '%(ex)s'"
 msgstr "Error en '%(path)s' al comprobar E/S directa: '%(ex)s'"
 
 #, python-format
+msgid ""
+"Error preparing deploy for instance %(instance)s on baremetal node %(node)s."
+msgstr ""
+"Error al preparar la implementacion para instancia %(instance)s en nodo "
+"nativo %(node)s."
+
+msgid "Error processing message locally"
+msgstr "Error al procesar el mensaje localmente"
+
+#, python-format
 msgid "Error reading image info file %(filename)s: %(error)s"
 msgstr "Error al leer imagen en archivo %(filename)s: %(error)s"
 
@@ -269,13 +342,18 @@ msgstr "Error al liberar DHCP para la IP %(address)s con MAC %(mac_address)s"
 msgid "Error scheduling instances %(instance_uuids)s"
 msgstr "Error al planificar instancias %(instance_uuids)s"
 
-#, python-format
-msgid "Error setting %(attr)s"
-msgstr "Error al establecer %(attr)s"
+msgid "Error sending message to next hops."
+msgstr "Error al enviar el mensaje a los siguientes saltos"
 
 #, python-format
 msgid "Error starting xvp: %s"
 msgstr "Error al iniciar xvp: %s "
+
+msgid "Error stopping thread."
+msgstr "Error al detener la línea."
+
+msgid "Error stopping timer."
+msgstr "Error al detener temporizador."
 
 #, python-format
 msgid "Error storing key: %s"
@@ -288,8 +366,24 @@ msgid "Error trying to reschedule"
 msgstr "Error al intentar volver a programar "
 
 #, python-format
+msgid "Error updating resources for node %(node)s: %(e)s"
+msgstr "Error al actualizar recursos para nodo %(node)s: %(e)s"
+
+msgid "Error waiting for responses from neighbor cells"
+msgstr "Error al esperar respuestas de celdas vecinas"
+
+msgid "Error waiting on ThreadGroup."
+msgstr "Error al esperar en ThreadGroup."
+
+#, python-format
 msgid "Error while trying to clean up image %s"
 msgstr "Error al intentar limpiar imagen %s"
+
+#, python-format
+msgid "Error writing vm console log file from serial console pipe. Error: %s"
+msgstr ""
+"Error al escribir archivo de inicio de sesión de consola vm a partir de "
+"canalización de consola serial. Error: %s"
 
 #, python-format
 msgid "Error: %s"
@@ -306,6 +400,13 @@ msgstr "Excepción al manejar recurso: %s"
 msgid "Exception in string format operation"
 msgstr "Excepción en la operación de formato de cadena"
 
+msgid "Exception loading extension"
+msgstr "Excepción al cargar extensión"
+
+#, python-format
+msgid "Exception running %(name)s %(type)s-hook: %(obj)s"
+msgstr "Excepción ejecutándose %(name)s %(type)s-enlace: %(obj)s"
+
 msgid "Exception while creating table."
 msgstr "Excepción al crear la tabla."
 
@@ -313,8 +414,16 @@ msgid "Exception while seeding instance_types table"
 msgstr "Excepción al iniciar la tabla instance_types"
 
 #, python-format
+msgid "Exception while waiting completion of volume snapshots: %s"
+msgstr "Excepción al esperar finalización de instantáneas de volumen: %s"
+
+#, python-format
 msgid "Extending virtual disk failed with error: %s"
 msgstr "La extensión del disco virtual ha fallado con el error: %s"
+
+#, python-format
+msgid "Failed removing bridge device: '%s'"
+msgstr "Error al eliminar dispositivo de puente: '%s'"
 
 #, python-format
 msgid "Failed removing net device: '%s'"
@@ -323,9 +432,16 @@ msgstr "Fallo al remover dispositivo de red: '%s'"
 msgid "Failed storing info cache"
 msgstr "Ha fallado el almacenamiento de memoria caché de información"
 
-#, python-format
-msgid "Failed to access port %s"
-msgstr "Fallo al acceder al puerto %s"
+msgid ""
+"Failed to allocate PCI devices for instance. Unassigning devices back to "
+"pools. This should not happen, since the scheduler should have accurate "
+"information, and allocation during claims is controlled via a hold on the "
+"compute node semaphore"
+msgstr ""
+"Error al asignar dispositivos PCI para instancia. Desasignando dispositivos "
+"de nuevo a pools. Esto no debe suceder, mientras el planificador tenga "
+"información acertada y se controle la asignación durante reclamos mediante "
+"la detención del semáforo de nodo de computación"
 
 msgid "Failed to allocate network(s)"
 msgstr "Fallo al asociar red(es)"
@@ -334,8 +450,24 @@ msgstr "Fallo al asociar red(es)"
 msgid "Failed to attach %(volume_id)s at %(mountpoint)s"
 msgstr "Fallo al asociar %(volume_id)s en %(mountpoint)s"
 
+#, python-format
+msgid "Failed to attach volume at mountpoint: %s"
+msgstr "Error al adjuntar volumen a punto de montaje: %s"
+
+#, python-format
+msgid "Failed to change vm state of %(instance_name)s to %(req_state)s"
+msgstr "Error al cambiar el estado de vm de %(instance_name)s a %(req_state)s"
+
 msgid "Failed to check if instance shared"
 msgstr "Fallo al verificar si la instancia se encuentra compartida"
+
+#, python-format
+msgid ""
+"Failed to clean up the parameters on node %(node)s when unprovisioning the "
+"instance %(instance)s"
+msgstr ""
+"Error al limpiar los parámetros en nodo  %(node)s  mientras de se des-"
+"aprovisionaba instancia %(instance)s"
 
 #, python-format
 msgid "Failed to cleanup directory %(target)s: %(e)s"
@@ -357,6 +489,13 @@ msgstr ""
 "Fallo al conectar hacia al volúmen %(volume_id)s con el volumen en "
 "%(mountpoint)s"
 
+#, python-format
+msgid ""
+"Failed to copy cached image %(source)s to %(dest)s for resize: %(error)s"
+msgstr ""
+"Error al copiar la imagen en memoria cahé %(source)s a %(dest)s para "
+"redimensionamiento: %(error)s"
+
 msgid "Failed to deallocate network for instance."
 msgstr "Se ha encontrado un error al desasignar la red para la instancia"
 
@@ -372,6 +511,10 @@ msgid "Failed to destroy instance: %s"
 msgstr "No se ha podido destruir instancia: %s"
 
 #, python-format
+msgid "Failed to detach %(device_name)s. Exception: %(exc)s"
+msgstr "Error al separar %(device_name)s. Excepción: %(exc)s"
+
+#, python-format
 msgid "Failed to detach volume %(volume_id)s from %(mp)s"
 msgstr "No se ha podido desconectar el volumen %(volume_id)s de %(mp)s"
 
@@ -381,6 +524,14 @@ msgstr "No se ha podido descargar %(image_location)s en %(image_path)s"
 
 msgid "Failed to fetch glance image"
 msgstr "No se ha podido captar la imagen glance"
+
+#, python-format
+msgid "Failed to find an SR for volume %s"
+msgstr "Error al encontrar SR para volumen %s"
+
+#, python-format
+msgid "Failed to forget the SR for volume %s"
+msgstr "Error al olvidad el SR para volumen %s"
 
 #, python-format
 msgid "Failed to generate usage audit for instance on host %s"
@@ -418,6 +569,10 @@ msgid "Failed to load %s"
 msgstr "Ha fallado la carga de %s"
 
 #, python-format
+msgid "Failed to load %s-api"
+msgstr "Error al cargar %s-api"
+
+#, python-format
 msgid ""
 "Failed to mount container filesystem '%(image)s' on '%(target)s': %(errors)s"
 msgstr ""
@@ -431,25 +586,24 @@ msgid "Failed to notify cells of BDM update/create."
 msgstr "Fallo al notificar las celdas de actualización/creación de BDM."
 
 msgid "Failed to notify cells of bw_usage update"
-msgstr "No se ha podido notificar a las células la actualización de bw_usage"
-
-msgid "Failed to notify cells of instance destroy"
-msgstr "No se ha podido notificar a las células la destrucción de instancia"
+msgstr "No se ha podido notificar a las celdas la actualización de bw_usage"
 
 msgid "Failed to notify cells of instance fault"
-msgstr "No se ha podido notificar a las células el error de instancia"
+msgstr "No se ha podido notificar a las celdas el error de instancia"
 
 msgid "Failed to notify cells of instance info cache update"
 msgstr ""
-"No se ha podido notificar a las células la actualización de memoria caché de "
+"No se ha podido notificar a las celdas la actualización de memoria caché de "
 "información de instancia"
-
-msgid "Failed to notify cells of instance update"
-msgstr "No se ha podido notificar a las células la actualización de instancia"
 
 #, python-format
 msgid "Failed to remove %(base_file)s, error was %(error)s"
 msgstr "No se ha podido eliminar %(base_file)s, el error era %(error)s"
+
+#, python-format
+msgid "Failed to request Ironic to provision instance %(inst)s: %(reason)s"
+msgstr ""
+"Error al solicitar Ironic para aprovisionar instancia %(inst)s: %(reason)s"
 
 #, python-format
 msgid ""
@@ -459,12 +613,22 @@ msgstr ""
 "Fallo al recuperar los metadatos de encripción para el volumen "
 "%(volume_id)s: %(exception)s"
 
+msgid "Failed to retrieve ephemeral encryption key"
+msgstr "Error al recuperar clave de cifrado efímera"
+
 msgid "Failed to revert crashed migration"
 msgstr "Se ha encontrado un error en al revertir la migración colgada"
 
 #, python-format
 msgid "Failed to roll back reservations %s"
 msgstr "Fallo al revertir las reservas %s"
+
+msgid "Failed to rollback quota for failed finish_resize"
+msgstr "Error al restaurar capacidad para finish_resize fallido"
+
+#, python-format
+msgid "Failed to send message to cell: %(next_hop)s"
+msgstr "Error al enviar mensaje a celda: %(next_hop)s"
 
 msgid "Failed to send state update notification"
 msgstr "No se ha podido enviar notificación de actualización de estado"
@@ -492,6 +656,12 @@ msgstr "Fallo al detener instancia"
 msgid "Failed to swap volume %(old_volume_id)s for %(new_volume_id)s"
 msgstr ""
 "Fallo para intercambiar volúmen %(old_volume_id)s por %(new_volume_id)s"
+
+msgid "Failed to teardown container filesystem"
+msgstr "Error al desarmar el sistema de archivo de contenedor "
+
+msgid "Failed to umount container filesystem"
+msgstr "Error al desmontar el sistema de archivos de contenedor"
 
 #, python-format
 msgid "Failed to understand rule %s"
@@ -522,6 +692,9 @@ msgid "Failed to update usages deallocating security group"
 msgstr ""
 "No se han podido actualizar los usos desasignando el grupo de seguridad "
 
+msgid "Failed to update usages deallocating server group"
+msgstr "Error al actualizar los usos desasignando el grupo de servidor"
+
 #, python-format
 msgid "Failed to upload %(image_location)s to %(image_path)s"
 msgstr "No se ha podido subir %(image_location)s a %(image_path)s "
@@ -543,6 +716,16 @@ msgstr "Fallo al preparar el dispositivo de bloques"
 
 msgid "Failure while cleaning up attached VDIs"
 msgstr "Error al limpiar VDI conectados "
+
+#, python-format
+msgid "Fatal Exception running %(name)s %(type)s-hook: %(obj)s"
+msgstr "Excepción fatal ejecutándose %(name)s %(type)s-enlace: %(obj)s"
+
+msgid "FaultWrapper error"
+msgstr "Error de FaultWrapper"
+
+msgid "Get version 2 connection error"
+msgstr "Error de conexión en obtención de versión 2"
 
 msgid "Guest does not have a console available"
 msgstr "El invitado no tiene una consola disponible"
@@ -685,6 +868,10 @@ msgid "Neutron error creating port on network %s"
 msgstr "Error de Neutron al crear puerto en la red: %s"
 
 #, python-format
+msgid "No compute node record for host %s"
+msgstr "No hay registro de nodo de cómputo para host %s"
+
+#, python-format
 msgid "No db access allowed in nova-compute: %s"
 msgstr "No se permite acceso a la base de datos en nova-compute: %s"
 
@@ -704,6 +891,11 @@ msgstr "No hay manejador para coincidencias de clase %s"
 msgid "No save handler for %s"
 msgstr "No hay manejador de guardado para %s"
 
+msgid "Not all properties needed are implemented in the compute driver"
+msgstr ""
+"No todas las propiedades necesarias están implementadas en el controlador de "
+"cómputo"
+
 #, python-format
 msgid "PCI device %s not found"
 msgstr "El dispositivo PCI %s no se ha encontrado"
@@ -716,6 +908,9 @@ msgstr ""
 
 msgid "Periodic task failed to offload instance."
 msgstr "Tarea periódica falló al descargar instancia."
+
+msgid "Plugin config_file get_val failed"
+msgstr "Ha fallado desconexión config_file get_val "
 
 #, python-format
 msgid "Pool-Join failed: %s"
@@ -740,6 +935,16 @@ msgid "Recovered model server connection!"
 msgstr "Recuperada la conexión al servidor de modelos."
 
 #, python-format
+msgid "Requested VM Generation %s is not supported on  this OS."
+msgstr "Este Sistema Operativo no soporta la generación de VM %s solicitada."
+
+#, python-format
+msgid "Requested VM Generation %s, but provided VHD instead of VHDX."
+msgstr ""
+"Generación de VM  solicitada %s, pero se ha proporcionado VHD en lugar de "
+"VHDX."
+
+#, python-format
 msgid "Returning exception %s to caller"
 msgstr "Devolviendo excepción %s al interlocutor"
 
@@ -748,6 +953,12 @@ msgstr "Ha ocurrido un error de servicio durante cleanup_host"
 
 msgid "Setting instance vm_state to ERROR"
 msgstr "Estableciendo el vm_state de la instancia a ERROR"
+
+msgid "Shutting down VM (cleanly) failed."
+msgstr "Ha fallado el cierre de VM (de forma limpia)."
+
+msgid "Shutting down VM (hard) failed"
+msgstr "Ha fallado el cierre de VM (de forma permanente)"
 
 msgid ""
 "Something wrong happened when trying to delete snapshot from shelved "
@@ -765,6 +976,10 @@ msgstr ""
 #, python-format
 msgid "Temporary directory is invalid: %s"
 msgstr "El directorio temporal no es válido: %s"
+
+#, python-format
+msgid "The Quobyte volume at %s is still in use."
+msgstr "El volumen Quobyte en %s todavía esta en uso."
 
 #, python-format
 msgid ""
@@ -789,6 +1004,9 @@ msgstr "La llamada a %(method)s ha devuelto un error: %(e)s."
 msgid "The call to %(method)s returned an error: %(e)s. args=%(args)r"
 msgstr "La llamada a %(method)s ha devuelto un error: %(e)s. args=%(args)r"
 
+msgid "Transfer data failed"
+msgstr "Ha fallado la transferencia de datos"
+
 #, python-format
 msgid "Unable to access floating IP %(fixed_ip)s for port %(port_id)s"
 msgstr ""
@@ -798,9 +1016,16 @@ msgstr ""
 msgid "Unable to access floating IP %s"
 msgstr "Incapaz de acceder a la Ip flotante %s"
 
+msgid "Unable to access the rescue disk"
+msgstr "No es posible acceder al disco de recuperación"
+
 #, python-format
 msgid "Unable to attach volume to instance %s"
 msgstr "Imposible adjuntar volumen a la instancia %s"
+
+#, python-format
+msgid "Unable to clear device ID for port '%s'"
+msgstr "No es posible limpiar el ID del dispositivo para puerto '%s'"
 
 msgid "Unable to create VM snapshot, failing volume_snapshot operation."
 msgstr ""
@@ -813,13 +1038,25 @@ msgstr ""
 "Incapaz de crear instantánea de VM inmovilizada, intentando nuevamente con "
 "la inmovilidad deshabilitada"
 
+msgid "Unable to destroy VBD"
+msgstr "No ha sido posible destruir VBD"
+
 #, python-format
 msgid "Unable to execute %(cmd)s. Exception: %(exception)s"
 msgstr "No se puede ejecutar %(cmd)s. Excepción: %(exception)s"
 
+msgid "Unable to find SR from VBD"
+msgstr "No es posible encontrar SR a partir de VBD"
+
+msgid "Unable to find SR from VDI"
+msgstr "No es posible encontrar SR a partir de VDI"
+
 #, python-format
 msgid "Unable to find address %r"
 msgstr "No se puede encontrar la dirección %r"
+
+msgid "Unable to get record of VDI"
+msgstr "No es posible obtener registro de VDI"
 
 msgid "Unable to get updated status"
 msgstr "No se puede obtener el estado actualizado"
@@ -827,6 +1064,12 @@ msgstr "No se puede obtener el estado actualizado"
 #, python-format
 msgid "Unable to instantiate unregistered object type %(objtype)s"
 msgstr "Incapaz de instanciar tipo de objeto no registrado %(objtype)s"
+
+msgid "Unable to introduce VDI for SR"
+msgstr "Inposible insertar VDI para SR"
+
+msgid "Unable to introduce VDI on SR"
+msgstr "No es posible insertar VDI o SR"
 
 msgid ""
 "Unable to join. It is possible that either another node exists with the same "
@@ -839,6 +1082,13 @@ msgstr ""
 
 msgid "Unable to load the virtualization driver"
 msgstr "Incapaz de cargar el controlador de virtualización"
+
+msgid ""
+"Unable to lookup flavor for legacy instance; migration is not possible "
+"without manual intervention"
+msgstr ""
+"No es posible buscar tipo para herencia de instancia; no es posible la "
+"migración sin intervención manual"
 
 #, python-format
 msgid "Unable to migrate VM %(vm_ref)s from %(host)s"
@@ -856,8 +1106,20 @@ msgid "Unable to parse rrd of %s"
 msgstr "Incapaz de analizar rrd de %s"
 
 #, python-format
+msgid "Unable to preallocate image at path: %(path)s"
+msgstr "No es posible pre-asignar imagen a ruta: %(path)s"
+
+#, python-format
+msgid "Unable to retrieve storage policy with name %s"
+msgstr ""
+"No ha sido posible recuperar la política de almacenamiento de nombre %s"
+
+#, python-format
 msgid "Unable to set up pool: %s."
 msgstr "Incapaz de establecer conjunto: %s"
+
+msgid "Unable to unplug VBD"
+msgstr "No ha sido posible desconectar VBD"
 
 #, python-format
 msgid "Unable to update host of port %s"
@@ -878,20 +1140,38 @@ msgstr "Excepción no controlada"
 
 #, python-format
 msgid "Unknown cell '%(cell_name)s' when trying to update capabilities"
-msgstr "Célula '%(cell_name)s' desconocida al intentar actualizar prestaciones"
+msgstr "Celda '%(cell_name)s' desconocida al intentar actualizar prestaciones"
 
 #, python-format
 msgid "Unknown cell '%(cell_name)s' when trying to update capacities"
-msgstr "Célula '%(cell_name)s' desconocida al intentar actualizar capacidades"
+msgstr "Celda '%(cell_name)s' desconocida al intentar actualizar capacidades"
 
 #, python-format
 msgid "Unknown content in connection_info/access_mode: %s"
 msgstr "Contenido desconocido en connection_info/access_mode: %s"
 
+msgid "Unshelve attempted but an error has occurred"
+msgstr "Se ha intentado la extracción pero ha ocurrido un error"
+
 msgid "Unshelve attempted but vm_state not SHELVED or SHELVED_OFFLOADED"
 msgstr ""
 "Se ha intentado desarchivar pero vm_state no se encuentra como SHELVED o "
 "SHELVED_OFFLOADED"
+
+msgid "Vifs plug failed"
+msgstr "Error de conexión Vifs"
+
+#, python-format
+msgid "Volume %s is associated with the instance but no SR was found for it"
+msgstr ""
+"El volumen %s está asociado con la instancia pero no se ha encontrado SR "
+"alguna para éste"
+
+#, python-format
+msgid "Volume is not writable. Please broaden the file permissions. Mount: %s"
+msgstr ""
+"No se puede escribir el volumen. Por favor amplíe los permisos del fichero. "
+"Montaje: %s"
 
 #, python-format
 msgid ""
@@ -909,6 +1189,9 @@ msgstr ""
 "instancias invitadas. Por favor verifica tu configuración (p.ej. establece "
 "un SR predeterminado en el conjunto) y/o ocnfigura el identificador "
 "'sr_matching_filter'."
+
+msgid "_migrate_disk_resizing_down failed. Restoring orig vm"
+msgstr "Falló _migrate_disk_resizing_down. Restaurando vm original"
 
 #, python-format
 msgid "_migrate_disk_resizing_up failed. Restoring orig vm due_to: %s."
@@ -940,10 +1223,6 @@ msgid "error opening rbd image %s"
 msgstr "Error al abrir imagen rbd %s"
 
 #, python-format
-msgid "ignoring unrecognized volume_clear='%s' value"
-msgstr "Ignorando valor no reconocido volume_clear='%s'"
-
-#, python-format
 msgid "image %(id)s at (%(base_file)s): image verification failed"
 msgstr "imagen %(id)s en (%(base_file)s): ha fallado la verificación de imagen"
 
@@ -966,6 +1245,9 @@ msgstr "el servidor de modelos se ha ido"
 
 msgid "nbd module not loaded"
 msgstr "El módulo nbd no se ha cargado"
+
+msgid "set_admin_password failed"
+msgstr "Error de set_admin_password"
 
 #, python-format
 msgid ""
