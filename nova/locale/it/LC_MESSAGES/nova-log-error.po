@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-06-01 06:23+0000\n"
-"PO-Revision-Date: 2015-05-12 19:59+0000\n"
+"POT-Creation-Date: 2015-06-22 06:09+0000\n"
+"PO-Revision-Date: 2015-06-17 21:07+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: Italian (http://www.transifex.com/projects/p/nova/language/"
 "it/)\n"
@@ -178,10 +178,6 @@ msgstr ""
 "%(node)s."
 
 #, python-format
-msgid "Error during %(full_task_name)s: %(e)s"
-msgstr "Errore durante %(full_task_name)s: %(e)s"
-
-#, python-format
 msgid "Error enabling hairpin mode with XML: %s"
 msgstr "Errore nell'abilitare la modalità hairpin tramite XML: %s"
 
@@ -257,10 +253,6 @@ msgid "Error scheduling instances %(instance_uuids)s"
 msgstr "Errore di pianificazione istanze %(instance_uuids)s"
 
 #, python-format
-msgid "Error setting %(attr)s"
-msgstr "Impossibile impostare %(attr)s"
-
-#, python-format
 msgid "Error starting xvp: %s"
 msgstr "Errore durante l'avvio di xvp: %s"
 
@@ -315,10 +307,6 @@ msgstr "Impossibile rimuovere il dispositivo di rete: '%s'"
 
 msgid "Failed storing info cache"
 msgstr "Impossibile memorizzare le informazioni nella cache"
-
-#, python-format
-msgid "Failed to access port %s"
-msgstr "Impossibile accedere alla porta %s"
 
 msgid ""
 "Failed to allocate PCI devices for instance. Unassigning devices back to "
@@ -474,9 +462,6 @@ msgstr "Impossibile notificare alle celle la creazione/aggiornamento del BDM."
 msgid "Failed to notify cells of bw_usage update"
 msgstr "Impossibile notificare alle celle l'aggiornamento di bw_usage"
 
-msgid "Failed to notify cells of instance destroy"
-msgstr "Impossibile notificare alle celle la distruzione dell'istanza"
-
 msgid "Failed to notify cells of instance fault"
 msgstr "Impossibile notificare alle celle l'errore dell'istanza"
 
@@ -484,9 +469,6 @@ msgid "Failed to notify cells of instance info cache update"
 msgstr ""
 "Impossibile notificare alle celle l'aggiornamento delle informazioni della "
 "cache sull'istanza"
-
-msgid "Failed to notify cells of instance update"
-msgstr "Impossibile notificare alle celle l'aggiornamento dell'istanza"
 
 #, python-format
 msgid "Failed to remove %(base_file)s, error was %(error)s"
@@ -1000,10 +982,6 @@ msgstr "errore durante l'arresto() in sync_power_state."
 #, python-format
 msgid "error opening rbd image %s"
 msgstr "Errore nell'apertura dell'immagine rbd %s"
-
-#, python-format
-msgid "ignoring unrecognized volume_clear='%s' value"
-msgstr " Si ignora il valore del volume_clear='%s' non riconosciuto"
 
 #, python-format
 msgid "image %(id)s at (%(base_file)s): image verification failed"

@@ -9,8 +9,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-06-01 06:23+0000\n"
-"PO-Revision-Date: 2015-05-12 19:59+0000\n"
+"POT-Creation-Date: 2015-06-22 06:09+0000\n"
+"PO-Revision-Date: 2015-06-17 21:07+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: French (http://www.transifex.com/projects/p/nova/language/"
 "fr/)\n"
@@ -178,10 +178,6 @@ msgstr ""
 "%(node)s."
 
 #, python-format
-msgid "Error during %(full_task_name)s: %(e)s"
-msgstr "Erreur pendant %(full_task_name)s : %(e)s"
-
-#, python-format
 msgid "Error enabling hairpin mode with XML: %s"
 msgstr "Erreur activation mode hairpin avec XML : %s"
 
@@ -262,10 +258,6 @@ msgid "Error scheduling instances %(instance_uuids)s"
 msgstr "Erreur lors de la planification des instances %(instance_uuids)s"
 
 #, python-format
-msgid "Error setting %(attr)s"
-msgstr "Erreur du paramètre %(attr)s  "
-
-#, python-format
 msgid "Error starting xvp: %s"
 msgstr "Erreur au démarrage xvp : %s"
 
@@ -324,10 +316,6 @@ msgstr "Echec lors du retrait du périphérique réseau: '%s'"
 
 msgid "Failed storing info cache"
 msgstr "Echec du stockage du cache d'informations"
-
-#, python-format
-msgid "Failed to access port %s"
-msgstr "Echec à eccéder au port %s"
 
 msgid ""
 "Failed to allocate PCI devices for instance. Unassigning devices back to "
@@ -475,9 +463,6 @@ msgstr ""
 msgid "Failed to notify cells of bw_usage update"
 msgstr "Impossible d'avertir les cellules de la mise à jour de bw_usage"
 
-msgid "Failed to notify cells of instance destroy"
-msgstr "Impossible d'avertir les cellules de la destruction d'instance"
-
 msgid "Failed to notify cells of instance fault"
 msgstr "Impossible d'avertir les cellules de l'erreur d'instance"
 
@@ -485,9 +470,6 @@ msgid "Failed to notify cells of instance info cache update"
 msgstr ""
 "Impossible d'avertir les cellules de la mise à jour du cache d'informations "
 "d'instance"
-
-msgid "Failed to notify cells of instance update"
-msgstr "Impossible d'avertir les cellules de la mise à jour d'instance"
 
 #, python-format
 msgid "Failed to remove %(base_file)s, error was %(error)s"
@@ -990,10 +972,6 @@ msgstr "Erreur lors du processus stop() dans sync_power_state."
 #, python-format
 msgid "error opening rbd image %s"
 msgstr "erreur en ouvrant image rbd %s"
-
-#, python-format
-msgid "ignoring unrecognized volume_clear='%s' value"
-msgstr "valeur méconnue volume_clear = '%s' ignorée"
 
 #, python-format
 msgid "image %(id)s at (%(base_file)s): image verification failed"
