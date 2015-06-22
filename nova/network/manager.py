@@ -593,15 +593,23 @@ class NetworkManager(manager.Manager):
         except exception.FixedIpNotFoundForInstance:
             fixed_ips = []
 
+        LOG.debug('Found %d fixed IPs associated to the instance in the '
+                  'database.',
+                  len(fixed_ips), instance_uuid=instance_uuid)
+
         nw_info = network_model.NetworkInfo()
 
         vifs = collections.OrderedDict()
         for fixed_ip in fixed_ips:
             vif = fixed_ip.virtual_interface
             if not vif:
+                LOG.warn(_LW('No VirtualInterface for FixedIP: %s'),
+                         str(fixed_ip.address), instance_uuid=instance_uuid)
                 continue
 
             if not fixed_ip.network:
+                LOG.warn(_LW('No Network for FixedIP: %s'),
+                         str(fixed_ip.address), instance_uuid=instance_uuid)
                 continue
 
             if vif.uuid in vifs:
@@ -647,7 +655,8 @@ class NetworkManager(manager.Manager):
         for vif in vifs.values():
             nw_info.append(network_model.VIF(**vif))
 
-        LOG.debug('Built network info: |%s|', nw_info)
+        LOG.debug('Built network info: |%s|', nw_info,
+                  instance_uuid=instance_uuid)
         return nw_info
 
     @staticmethod
@@ -895,6 +904,8 @@ class NetworkManager(manager.Manager):
                               instance=instance)
                     fip = objects.FixedIP.associate_pool(
                         context.elevated(), network['id'], instance_id)
+                    LOG.debug('Associated instance with fixed IP: %s', fip,
+                              instance=instance)
                     address = str(fip.address)
 
                 vif = objects.VirtualInterface.get_by_instance_and_network(
@@ -1053,6 +1064,8 @@ class NetworkManager(manager.Manager):
                         context, address)
                     if (instance_uuid == fixed_ip_ref.instance_uuid and
                             not fixed_ip_ref.leased):
+                        LOG.debug('Explicitly disassociating fixed IP %s from '
+                                  'instance.', instance_uuid=instance_uuid)
                         fixed_ip_ref.disassociate()
                 else:
                     # We can't try to free the IP address so just call teardown
@@ -1082,7 +1095,7 @@ class NetworkManager(manager.Manager):
         fixed_ip.save()
         if not fixed_ip.allocated:
             LOG.warning(_LW('IP |%s| leased that isn\'t allocated'), address,
-                        context=context)
+                        context=context, instance_uuid=fixed_ip.instance_uuid)
 
     def release_fixed_ip(self, context, address):
         """Called by dhcp-bridge when ip is released."""
@@ -1095,7 +1108,7 @@ class NetworkManager(manager.Manager):
             return
         if not fixed_ip.leased:
             LOG.warning(_LW('IP %s released that was not leased'), address,
-                        context=context)
+                        context=context, instance_uuid=fixed_ip.instance_uuid)
         fixed_ip.leased = False
         fixed_ip.save()
         if not fixed_ip.allocated:
