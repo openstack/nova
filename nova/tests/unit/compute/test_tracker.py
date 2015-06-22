@@ -18,7 +18,6 @@ from oslo_serialization import jsonutils
 from oslo_utils import units
 
 from nova.compute import claims
-from nova.compute import flavors
 from nova.compute import power_state
 from nova.compute import resource_tracker
 from nova.compute import task_states
@@ -116,18 +115,17 @@ _INSTANCE_TYPE_FIXTURES = {
 }
 
 
-# A collection of system_metadata attributes that would exist in instances
-# that have the instance type ID matching the dictionary key.
-_INSTANCE_TYPE_SYS_META = {
-    1: flavors.save_flavor_info({}, _INSTANCE_TYPE_FIXTURES[1]),
-    2: flavors.save_flavor_info({}, _INSTANCE_TYPE_FIXTURES[2]),
+_INSTANCE_TYPE_OBJ_FIXTURES = {
+    1: objects.Flavor(id=1, flavorid='fakeid-1', name='fake1.small',
+                      memory_mb=128, vcpus=1, root_gb=1,
+                      ephemeral_gb=0, swap=0, rxtx_factor=0,
+                      vcpu_weight=1, extra_specs={}),
+    2: objects.Flavor(id=2, flavorid='fakeid-2', name='fake1.medium',
+                      memory_mb=256, vcpus=2, root_gb=5,
+                      ephemeral_gb=0, swap=0, rxtx_factor=0,
+                      vcpu_weight=1, extra_specs={}),
 }
 
-
-_MIGRATION_SYS_META = flavors.save_flavor_info(
-        {}, _INSTANCE_TYPE_FIXTURES[1], 'old_')
-_MIGRATION_SYS_META = flavors.save_flavor_info(
-        _MIGRATION_SYS_META, _INSTANCE_TYPE_FIXTURES[2], 'new_')
 
 _2MB = 2 * units.Mi / units.Ki
 
@@ -179,6 +177,9 @@ _INSTANCE_FIXTURES = [
         task_state=None,
         os_type='fake-os',  # Used by the stats collector.
         project_id='fake-project',  # Used by the stats collector.
+        flavor = _INSTANCE_TYPE_OBJ_FIXTURES[1],
+        old_flavor = _INSTANCE_TYPE_OBJ_FIXTURES[1],
+        new_flavor = _INSTANCE_TYPE_OBJ_FIXTURES[1],
     ),
     objects.Instance(
         id=2,
@@ -196,6 +197,9 @@ _INSTANCE_FIXTURES = [
         task_state=None,
         os_type='fake-os',
         project_id='fake-project-2',
+        flavor = _INSTANCE_TYPE_OBJ_FIXTURES[2],
+        old_flavor = _INSTANCE_TYPE_OBJ_FIXTURES[2],
+        new_flavor = _INSTANCE_TYPE_OBJ_FIXTURES[2],
     ),
 ]
 
@@ -254,9 +258,12 @@ _MIGRATION_INSTANCE_FIXTURES = {
         vm_state=vm_states.ACTIVE,
         power_state=power_state.RUNNING,
         task_state=task_states.RESIZE_MIGRATING,
-        system_metadata=_MIGRATION_SYS_META,
+        system_metadata={},
         os_type='fake-os',
         project_id='fake-project',
+        flavor=_INSTANCE_TYPE_OBJ_FIXTURES[1],
+        old_flavor=_INSTANCE_TYPE_OBJ_FIXTURES[1],
+        new_flavor=_INSTANCE_TYPE_OBJ_FIXTURES[2],
     ),
     # dest-only
     'f6ed631a-8645-4b12-8e1e-2fff55795765': objects.Instance(
@@ -273,9 +280,12 @@ _MIGRATION_INSTANCE_FIXTURES = {
         vm_state=vm_states.ACTIVE,
         power_state=power_state.RUNNING,
         task_state=task_states.RESIZE_MIGRATING,
-        system_metadata=_MIGRATION_SYS_META,
+        system_metadata={},
         os_type='fake-os',
         project_id='fake-project',
+        flavor=_INSTANCE_TYPE_OBJ_FIXTURES[2],
+        old_flavor=_INSTANCE_TYPE_OBJ_FIXTURES[1],
+        new_flavor=_INSTANCE_TYPE_OBJ_FIXTURES[2],
     ),
     # source-and-dest
     'f4f0bfea-fe7e-4264-b598-01cb13ef1997': objects.Instance(
@@ -292,9 +302,12 @@ _MIGRATION_INSTANCE_FIXTURES = {
         vm_state=vm_states.ACTIVE,
         power_state=power_state.RUNNING,
         task_state=task_states.RESIZE_MIGRATING,
-        system_metadata=_MIGRATION_SYS_META,
+        system_metadata={},
         os_type='fake-os',
         project_id='fake-project',
+        flavor=_INSTANCE_TYPE_OBJ_FIXTURES[2],
+        old_flavor=_INSTANCE_TYPE_OBJ_FIXTURES[1],
+        new_flavor=_INSTANCE_TYPE_OBJ_FIXTURES[2],
     ),
 }
 
@@ -1024,7 +1037,7 @@ class TestInstanceClaim(BaseTestCase):
         self.elevated = mock.MagicMock()
         self.ctx.elevated.return_value = self.elevated
 
-        self.instance = copy.deepcopy(_INSTANCE_FIXTURES[0])
+        self.instance = _INSTANCE_FIXTURES[0].obj_clone()
 
     def assertEqualNUMAHostTopology(self, expected, got):
         attrs = ('cpuset', 'memory', 'id', 'cpu_usage', 'memory_usage')
@@ -1142,8 +1155,7 @@ class TestResizeClaim(BaseTestCase):
         self._setup_rt()
         self.rt.compute_node = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
 
-        self.instance = copy.deepcopy(_INSTANCE_FIXTURES[0])
-        self.instance.system_metadata = _INSTANCE_TYPE_SYS_META[1]
+        self.instance = _INSTANCE_FIXTURES[0].obj_clone()
         self.flavor = _INSTANCE_TYPE_FIXTURES[1]
         self.limits = {}
 
