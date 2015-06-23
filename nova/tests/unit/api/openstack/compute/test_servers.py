@@ -822,6 +822,7 @@ class ServersControllerTest(ControllerTest):
                          columns_to_join=None, use_slave=False):
             self.assertIsNotNone(filters)
             self.assertNotIn('project_id', filters)
+            self.assertTrue(context.is_admin)
             return [fakes.stub_instance(100)]
 
         self.stubs.Set(db, 'instance_get_all_by_filters',

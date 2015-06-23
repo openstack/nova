@@ -354,12 +354,14 @@ class ServersController(wsgi.Controller):
             except ValueError as err:
                 raise exception.InvalidInput(six.text_type(err))
 
+        elevated = None
         if 'all_tenants' in search_opts:
             if is_detail:
                 authorize(context, action="detail:get_all_tenants")
             else:
                 authorize(context, action="index:get_all_tenants")
             del search_opts['all_tenants']
+            elevated = context.elevated()
         else:
             if context.project_id:
                 search_opts['project_id'] = context.project_id
@@ -369,7 +371,7 @@ class ServersController(wsgi.Controller):
         limit, marker = common.get_limit_and_marker(req)
         sort_keys, sort_dirs = common.get_sort_params(req.params)
         try:
-            instance_list = self.compute_api.get_all(context,
+            instance_list = self.compute_api.get_all(elevated or context,
                     search_opts=search_opts, limit=limit, marker=marker,
                     want_objects=True, expected_attrs=['pci_devices'],
                     sort_keys=sort_keys, sort_dirs=sort_dirs)

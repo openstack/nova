@@ -203,11 +203,13 @@ class Controller(wsgi.Controller):
             except ValueError as err:
                 raise exception.InvalidInput(six.text_type(err))
 
+        elevated = None
         if 'all_tenants' in search_opts:
             policy.enforce(context, 'compute:get_all_tenants',
                            {'project_id': context.project_id,
                             'user_id': context.user_id})
             del search_opts['all_tenants']
+            elevated = context.elevated()
         else:
             if context.project_id:
                 search_opts['project_id'] = context.project_id
@@ -220,7 +222,7 @@ class Controller(wsgi.Controller):
         if self.ext_mgr.is_loaded('os-server-sort-keys'):
             sort_keys, sort_dirs = common.get_sort_params(req.params)
         try:
-            instance_list = self.compute_api.get_all(context,
+            instance_list = self.compute_api.get_all(elevated or context,
                                                      search_opts=search_opts,
                                                      limit=limit,
                                                      marker=marker,

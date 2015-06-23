@@ -10,7 +10,7 @@
     "compute:create:attach_volume": "",
     "compute:create:forced_host": "is_admin:True",
     "compute:get_all": "",
-    "compute:get_all_tenants": "",
+    "compute:get_all_tenants": "is_admin:True",
     "compute:start": "rule:admin_or_owner",
     "compute:stop": "rule:admin_or_owner",
     "compute:unlock_override": "rule:admin_api",
@@ -185,6 +185,8 @@
     "network:delete_dns_domain": "",
     "network:attach_external_network": "rule:admin_api",
 
+    "os_compute_api:servers:detail:get_all_tenants": "is_admin:True",
+    "os_compute_api:servers:index:get_all_tenants": "is_admin:True",
     "os_compute_api:servers:create_image:allow_volume_backed": "",
     "os_compute_api:servers:start": "rule:admin_or_owner",
     "os_compute_api:servers:stop": "rule:admin_or_owner",
