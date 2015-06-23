@@ -239,7 +239,7 @@ CONF.import_opt('cipher', 'nova.compute.api',
 CONF.import_opt('key_size', 'nova.compute.api',
                 group='ephemeral_storage_encryption')
 CONF.import_opt('live_migration_retry_count', 'nova.compute.manager')
-CONF.import_opt('vncserver_proxyclient_address', 'nova.vnc')
+CONF.import_opt('vncserver_proxyclient_address', 'nova.vnc', group='vnc')
 CONF.import_opt('server_proxyclient_address', 'nova.spice', group='spice')
 CONF.import_opt('vcpu_pin_set', 'nova.virt.hardware')
 CONF.import_opt('vif_plugging_is_fatal', 'nova.virt.driver')
@@ -2558,7 +2558,7 @@ class LibvirtDriver(driver.ComputeDriver):
             raise exception.ConsoleTypeUnavailable(console_type='vnc')
 
         port = get_vnc_port_for_instance(instance.name)
-        host = CONF.vncserver_proxyclient_address
+        host = CONF.vnc.vncserver_proxyclient_address
 
         return ctype.ConsoleVNC(host=host, port=port)
 
@@ -4131,12 +4131,12 @@ class LibvirtDriver(driver.ComputeDriver):
         # those versions are. We'll just let libvirt report the
         # errors appropriately if the user enables both.
         add_video_driver = False
-        if ((CONF.vnc_enabled and
+        if ((CONF.vnc.enabled and
              virt_type not in ('lxc', 'uml'))):
             graphics = vconfig.LibvirtConfigGuestGraphics()
             graphics.type = "vnc"
-            graphics.keymap = CONF.vnc_keymap
-            graphics.listen = CONF.vncserver_listen
+            graphics.keymap = CONF.vnc.keymap
+            graphics.listen = CONF.vnc.vncserver_listen
             guest.add_device(graphics)
             add_video_driver = True
 
@@ -4210,7 +4210,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # at the same time, we'll get the tablet whether the
         # SPICE agent is used or not.
         need_usb_tablet = False
-        if CONF.vnc_enabled:
+        if CONF.vnc.enabled:
             need_usb_tablet = CONF.libvirt.use_usb_tablet
         elif CONF.spice.enabled and not CONF.spice.agent_enabled:
             need_usb_tablet = CONF.libvirt.use_usb_tablet
@@ -5407,10 +5407,10 @@ class LibvirtDriver(driver.ComputeDriver):
     def _check_graphics_addresses_can_live_migrate(self, listen_addrs):
         LOCAL_ADDRS = ('0.0.0.0', '127.0.0.1', '::', '::1')
 
-        local_vnc = CONF.vncserver_listen in LOCAL_ADDRS
+        local_vnc = CONF.vnc.vncserver_listen in LOCAL_ADDRS
         local_spice = CONF.spice.server_listen in LOCAL_ADDRS
 
-        if ((CONF.vnc_enabled and not local_vnc) or
+        if ((CONF.vnc.enabled and not local_vnc) or
             (CONF.spice.enabled and not local_spice)):
 
             msg = _('Your libvirt version does not support the'
@@ -5428,7 +5428,7 @@ class LibvirtDriver(driver.ComputeDriver):
             dest_local_vnc = listen_addrs['vnc'] in LOCAL_ADDRS
             dest_local_spice = listen_addrs['spice'] in LOCAL_ADDRS
 
-            if ((CONF.vnc_enabled and not dest_local_vnc) or
+            if ((CONF.vnc.enabled and not dest_local_vnc) or
                 (CONF.spice.enabled and not dest_local_spice)):
 
                 LOG.warn(_LW('Your libvirt version does not support the'
@@ -5939,7 +5939,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         # Store vncserver_listen and latest disk device info
         res_data = {'graphics_listen_addrs': {}, 'volume': {}}
-        res_data['graphics_listen_addrs']['vnc'] = CONF.vncserver_listen
+        res_data['graphics_listen_addrs']['vnc'] = CONF.vnc.vncserver_listen
         res_data['graphics_listen_addrs']['spice'] = CONF.spice.server_listen
         for vol in block_device_mapping:
             connection_info = vol['connection_info']

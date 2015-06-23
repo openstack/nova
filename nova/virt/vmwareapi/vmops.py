@@ -73,7 +73,7 @@ CONF.register_opts(vmops_opts, 'vmware')
 
 CONF.import_opt('image_cache_subdirectory_name', 'nova.virt.imagecache')
 CONF.import_opt('remove_unused_base_images', 'nova.virt.imagecache')
-CONF.import_opt('vnc_enabled', 'nova.vnc')
+CONF.import_opt('enabled', 'nova.vnc', group='vnc')
 CONF.import_opt('my_ip', 'nova.netconf')
 
 LOG = logging.getLogger(__name__)
@@ -617,7 +617,7 @@ class VMwareVMOps(object):
                                 vm_ref=vm_ref)
 
         # Set the vnc configuration of the instance, vnc port starts from 5900
-        if CONF.vnc_enabled:
+        if CONF.vnc.enabled:
             self._get_and_set_vnc_config(client_factory, instance, vm_ref)
 
         block_device_mapping = []

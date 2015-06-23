@@ -36,7 +36,7 @@ class ConsolesSampleJsonTests(test_servers.ServersSampleBase):
 
     def setUp(self):
         super(ConsolesSampleJsonTests, self).setUp()
-        self.flags(vnc_enabled=True)
+        self.flags(enabled=True, group='vnc')
         self.flags(enabled=True, group='spice')
         self.flags(enabled=True, group='rdp')
         self.flags(enabled=True, group='serial_console')

@@ -178,8 +178,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                    host_password='test_pass',
                    api_retry_count=1,
                    use_linked_clone=False, group='vmware')
-        self.flags(vnc_enabled=False,
-                   image_cache_subdirectory_name='vmware_base',
+        self.flags(enabled=False, group='vnc')
+        self.flags(image_cache_subdirectory_name='vmware_base',
                    my_ip='')
         self.user_id = 'fake'
         self.project_id = 'fake'

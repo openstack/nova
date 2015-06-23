@@ -23,25 +23,37 @@ vnc_opts = [
     cfg.StrOpt('novncproxy_base_url',
                default='http://127.0.0.1:6080/vnc_auto.html',
                help='Location of VNC console proxy, in the form '
-                    '"http://127.0.0.1:6080/vnc_auto.html"'),
+                    '"http://127.0.0.1:6080/vnc_auto.html"',
+               deprecated_group='DEFAULT',
+               deprecated_name='novncproxy_base_url'),
     cfg.StrOpt('xvpvncproxy_base_url',
                default='http://127.0.0.1:6081/console',
                help='Location of nova xvp VNC console proxy, in the form '
-                    '"http://127.0.0.1:6081/console"'),
+                    '"http://127.0.0.1:6081/console"',
+               deprecated_group='DEFAULT',
+               deprecated_name='xvpvncproxy_base_url'),
     cfg.StrOpt('vncserver_listen',
                default='127.0.0.1',
-               help='IP address on which instance vncservers should listen'),
+               help='IP address on which instance vncservers should listen',
+               deprecated_group='DEFAULT',
+               deprecated_name='vncserver_listen'),
     cfg.StrOpt('vncserver_proxyclient_address',
                default='127.0.0.1',
                help='The address to which proxy clients '
-                    '(like nova-xvpvncproxy) should connect'),
-    cfg.BoolOpt('vnc_enabled',
+                    '(like nova-xvpvncproxy) should connect',
+               deprecated_group='DEFAULT',
+               deprecated_name='vncserver_proxyclient_address'),
+    cfg.BoolOpt('enabled',
                 default=True,
-                help='Enable VNC related features'),
-    cfg.StrOpt('vnc_keymap',
+                help='Enable VNC related features',
+                deprecated_group='DEFAULT',
+                deprecated_name='vnc_enabled'),
+    cfg.StrOpt('keymap',
                default='en-us',
-               help='Keymap for VNC'),
+               help='Keymap for VNC',
+               deprecated_group='DEFAULT',
+               deprecated_name='vnc_keymap'),
     ]
 
 CONF = cfg.CONF
-CONF.register_opts(vnc_opts)
+CONF.register_opts(vnc_opts, group='vnc')
