@@ -295,7 +295,9 @@ class BaseTestCase(test.TestCase):
         inst.updated_at = timeutils.utcnow()
         inst.launched_at = timeutils.utcnow()
         inst.security_groups = objects.SecurityGroupList(objects=[])
-        flavors.save_flavor_info(inst.system_metadata, flavor)
+        inst.flavor = flavor
+        inst.old_flavor = None
+        inst.new_flavor = None
         if params:
             inst.update(params)
         if services:
@@ -9085,10 +9087,10 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_attach_interface(self):
         new_type = flavors.get_flavor_by_flavor_id('4')
-        sys_meta = flavors.save_flavor_info({}, new_type)
 
         instance = objects.Instance(image_ref='foo',
-                                    system_metadata=sys_meta)
+                                    system_metadata={},
+                                    flavor=new_type)
         self.mox.StubOutWithMock(self.compute.network_api,
                                  'allocate_port_for_instance')
         nwinfo = [fake_network_cache_model.new_vif()]
@@ -9109,9 +9111,9 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_attach_interface_failed(self):
         new_type = flavors.get_flavor_by_flavor_id('4')
-        sys_meta = flavors.save_flavor_info({}, new_type)
         instance = objects.Instance(uuid='fake_id', image_ref='foo',
-                                    system_metadata=sys_meta)
+                                    system_metadata={},
+                                    flavor=new_type)
         nwinfo = [fake_network_cache_model.new_vif()]
         network_id = nwinfo[0]['network']['id']
         port_id = nwinfo[0]['id']

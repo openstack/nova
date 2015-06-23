@@ -66,7 +66,7 @@ class ConfigDriveTestCase(test.NoDBTestCase):
             'ramdisk_id': '1',
             'mac_addresses': [{'address': 'de:ad:be:ef:be:ef'}],
             'memory_mb': 8192,
-            'flavor': 'm1.large',
+            'flavor': objects.Flavor(extra_specs={}),
             'instance_type_id': 0,
             'vcpus': 4,
             'root_gb': 80,
@@ -82,7 +82,6 @@ class ConfigDriveTestCase(test.NoDBTestCase):
         }
         self.test_instance = fake_instance.fake_instance_obj(self.context,
                                                              **instance_values)
-        self.test_instance.flavor = objects.Flavor(extra_specs={})
 
         (image_service, image_id) = glance.get_remote_image_service(context,
                                     image_ref)

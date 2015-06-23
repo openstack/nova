@@ -350,7 +350,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                   'kernel_id': "fake_kernel_uuid",
                   'ramdisk_id': "fake_ramdisk_uuid",
                   'mac_address': "de:ad:be:ef:be:ef",
-                  'flavor': instance_type,
+                  'flavor': objects.Flavor(**self.type_data),
                   'node': node,
                   'memory_mb': self.type_data['memory_mb'],
                   'root_gb': self.type_data['root_gb'],
@@ -365,7 +365,6 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.uuid = uuid
         self.instance = fake_instance.fake_instance_obj(
                 self.context, **values)
-        self.instance.flavor = objects.Flavor(**self.type_data)
 
     def _create_vm(self, node=None, num_instances=1, uuid=None,
                    instance_type='m1.large', powered_on=True,
