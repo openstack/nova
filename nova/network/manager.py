@@ -875,6 +875,21 @@ class NetworkManager(manager.Manager):
 
         try:
             if network['cidr']:
+
+                # NOTE(mriedem): allocate the vif before associating the
+                # instance to reduce a race window where a previous instance
+                # was associated with the fixed IP and has released it, because
+                # release_fixed_ip will disassociate if allocated is False.
+                # TODO(mriedem): fix the race in release_fixed_ip
+                vif = objects.VirtualInterface.get_by_instance_and_network(
+                        context, instance_id, network['id'])
+                if vif is None:
+                    LOG.debug('vif for network %(network)s is used up, '
+                              'trying to create new vif',
+                              {'network': network['id']}, instance=instance)
+                    vif = self._add_virtual_interface(context,
+                        instance_id, network['id'])
+
                 address = kwargs.get('address', None)
                 if address:
                     LOG.debug('Associating instance with specified fixed IP '
@@ -896,15 +911,6 @@ class NetworkManager(manager.Manager):
                     fip = objects.FixedIP.associate_pool(
                         context.elevated(), network['id'], instance_id)
                     address = str(fip.address)
-
-                vif = objects.VirtualInterface.get_by_instance_and_network(
-                        context, instance_id, network['id'])
-                if vif is None:
-                    LOG.debug('vif for network %(network)s is used up, '
-                              'trying to create new vif',
-                              {'network': network['id']}, instance=instance)
-                    vif = self._add_virtual_interface(context,
-                        instance_id, network['id'])
 
                 fip.allocated = True
                 fip.virtual_interface_id = vif.id
@@ -1930,6 +1936,23 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
 
         LOG.debug('Allocate fixed ip on network %s', network['uuid'],
                   instance_uuid=instance_id)
+
+        # NOTE(mriedem): allocate the vif before associating the
+        # instance to reduce a race window where a previous instance
+        # was associated with the fixed IP and has released it, because
+        # release_fixed_ip will disassociate if allocated is False.
+        # TODO(mriedem): fix the race in release_fixed_ip
+        vif = objects.VirtualInterface.get_by_instance_and_network(
+            context, instance_id, network['id'])
+        if vif is None:
+            LOG.debug('vif for network %(network)s and instance '
+                      '%(instance_id)s is used up, '
+                      'trying to create new vif',
+                      {'network': network['id'],
+                       'instance_id': instance_id})
+            vif = self._add_virtual_interface(context,
+                instance_id, network['id'])
+
         if kwargs.get('vpn', None):
             address = network['vpn_private_address']
             fip = objects.FixedIP.associate(context, str(address),
@@ -1946,17 +1969,6 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
                                                      network['id'],
                                                      instance_id)
         address = fip.address
-
-        vif = objects.VirtualInterface.get_by_instance_and_network(
-            context, instance_id, network['id'])
-        if vif is None:
-            LOG.debug('vif for network %(network)s and instance '
-                      '%(instance_id)s is used up, '
-                      'trying to create new vif',
-                      {'network': network['id'],
-                       'instance_id': instance_id})
-            vif = self._add_virtual_interface(context,
-                instance_id, network['id'])
 
         fip.allocated = True
         fip.virtual_interface_id = vif.id

@@ -804,6 +804,29 @@ class FlatNetworkTestCase(test.TestCase):
                 net['id'])
             self.assertEqual(fip.virtual_interface_id, vif.id)
 
+    @mock.patch('nova.objects.instance.Instance.get_by_uuid')
+    @mock.patch.object(db, 'virtual_interface_get_by_instance_and_network',
+                       return_value=None)
+    @mock.patch('nova.objects.fixed_ip.FixedIP')
+    def test_allocate_fixed_ip_add_vif_fails(self, mock_fixedip,
+                                             mock_get_vif, mock_instance_get):
+        # Tests that we don't try to do anything with fixed IPs if
+        # _add_virtual_interface fails.
+        instance = fake_instance.fake_instance_obj(self.context)
+        mock_instance_get.return_value = instance
+        network = {'cidr': '24', 'id': 1,
+                   'uuid': '398399b3-f696-4859-8695-a6560e14cb02'}
+        vif_error = exception.VirtualInterfaceMacAddressException()
+        # mock out quotas because we don't care in this test
+        with mock.patch.object(self.network, 'quotas_cls', objects.QuotasNoOp):
+            with mock.patch.object(self.network, '_add_virtual_interface',
+                                   side_effect=vif_error):
+                self.assertRaises(
+                    exception.VirtualInterfaceMacAddressException,
+                    self.network.allocate_fixed_ip, self.context,
+                    '9d2ee1e3-ffad-4e5f-81ff-c96dd97b0ee0', network)
+        self.assertFalse(mock_fixedip.called, str(mock_fixedip.mock_calls))
+
 
 class FlatDHCPNetworkTestCase(test.TestCase):
 
@@ -906,18 +929,6 @@ class VlanNetworkTestCase(test.TestCase):
         network.vpn_private_address = '192.168.0.2'
         self.network.allocate_fixed_ip(self.context, FAKEUUID, network,
                                        vpn=True)
-
-    def test_vpn_allocate_fixed_ip_no_network_id(self):
-        network = dict(networks[0])
-        network['vpn_private_address'] = '192.168.0.2'
-        network['id'] = None
-        instance = db.instance_create(self.context, {})
-        self.assertRaises(exception.FixedIpNotFoundForNetwork,
-                self.network.allocate_fixed_ip,
-                self.context_admin,
-                instance['uuid'],
-                network,
-                vpn=True)
 
     def test_allocate_fixed_ip(self):
         self.stubs.Set(self.network,
@@ -1029,6 +1040,22 @@ class VlanNetworkTestCase(test.TestCase):
                                                '1.2.3.4',
                                                instance.uuid,
                                                1, reserved=True)
+
+    @mock.patch.object(db, 'virtual_interface_get_by_instance_and_network',
+                       return_value=None)
+    @mock.patch('nova.objects.fixed_ip.FixedIP')
+    def test_allocate_fixed_ip_add_vif_fails(self, mock_fixedip,
+                                             mock_get_vif):
+        # Tests that we don't try to do anything with fixed IPs if
+        # _add_virtual_interface fails.
+        vif_error = exception.VirtualInterfaceMacAddressException()
+        with mock.patch.object(self.network, '_add_virtual_interface',
+                               side_effect=vif_error):
+            self.assertRaises(exception.VirtualInterfaceMacAddressException,
+                              self.network.allocate_fixed_ip, self.context,
+                              '9d2ee1e3-ffad-4e5f-81ff-c96dd97b0ee0',
+                              networks[0])
+        self.assertFalse(mock_fixedip.called, str(mock_fixedip.mock_calls))
 
     def test_create_networks_too_big(self):
         self.assertRaises(ValueError, self.network.create_networks, None,
