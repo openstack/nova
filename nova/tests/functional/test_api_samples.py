@@ -693,37 +693,6 @@ class ExtendedAvailabilityZoneJsonTests(ServersSampleBase):
         self._verify_response('servers-detail-resp', subs, response, 200)
 
 
-class ConfigDriveSampleJsonTest(ServersSampleBase):
-    extension_name = ("nova.api.openstack.compute.contrib.config_drive."
-                      "Config_drive")
-
-    def setUp(self):
-        super(ConfigDriveSampleJsonTest, self).setUp()
-        fakes.stub_out_networking(self.stubs)
-        fakes.stub_out_rate_limiting(self.stubs)
-        fake.stub_out_image_service(self.stubs)
-
-    def test_config_drive_show(self):
-        uuid = self._post_server()
-        response = self._do_get('servers/%s' % uuid)
-        subs = self._get_regexes()
-        subs['hostid'] = '[a-f0-9]+'
-        # config drive can be a string for True or empty value for False
-        subs['cdrive'] = '.*'
-        self._verify_response('server-config-drive-get-resp', subs,
-                              response, 200)
-
-    def test_config_drive_detail(self):
-        self._post_server()
-        response = self._do_get('servers/detail')
-        subs = self._get_regexes()
-        subs['hostid'] = '[a-f0-9]+'
-        # config drive can be a string for True or empty value for False
-        subs['cdrive'] = '.*'
-        self._verify_response('servers-config-drive-details-resp',
-                              subs, response, 200)
-
-
 class PreserveEphemeralOnRebuildJsonTest(ServersSampleBase):
     extension_name = ('nova.api.openstack.compute.contrib.'
                       'preserve_ephemeral_rebuild.'
