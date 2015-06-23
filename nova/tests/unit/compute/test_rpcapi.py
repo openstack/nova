@@ -27,6 +27,7 @@ from nova import context
 from nova.objects import block_device as objects_block_dev
 from nova import test
 from nova.tests.unit import fake_block_device
+from nova.tests.unit import fake_flavor
 from nova.tests.unit import fake_instance
 
 CONF = cfg.CONF
@@ -37,10 +38,14 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
     def setUp(self):
         super(ComputeRpcAPITestCase, self).setUp()
         self.context = context.get_admin_context()
+        self.fake_flavor_obj = fake_flavor.fake_flavor_obj(self.context)
+        self.fake_flavor = jsonutils.to_primitive(self.fake_flavor_obj)
         instance_attr = {'host': 'fake_host',
-                         'instance_type_id': 1}
+                         'instance_type_id': self.fake_flavor_obj['id'],
+                         'instance_type': self.fake_flavor_obj}
         self.fake_instance_obj = fake_instance.fake_instance_obj(self.context,
                                                    **instance_attr)
+        self.fake_instance = jsonutils.to_primitive(self.fake_instance_obj)
         self.fake_volume_bdm = objects_block_dev.BlockDeviceMapping(
                 **fake_block_device.FakeDbBlockDeviceDict(
                     {'source_type': 'volume', 'destination_type': 'volume',
@@ -48,7 +53,7 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                      'volume_id': 'fake-volume-id'}))
 
     def _test_compute_api(self, method, rpc_method,
-                          assert_dict=False, **kwargs):
+                          expected_args=None, **kwargs):
         ctxt = context.RequestContext('fake_user', 'fake_project')
 
         rpcapi = kwargs.pop('rpcapi_class', compute_rpcapi.ComputeAPI)()
@@ -60,14 +65,12 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
         expected_version = kwargs.pop('version', base_version)
 
         expected_kwargs = kwargs.copy()
+        if expected_args:
+            expected_kwargs.update(expected_args)
         if 'host_param' in expected_kwargs:
             expected_kwargs['host'] = expected_kwargs.pop('host_param')
         else:
             expected_kwargs.pop('host', None)
-
-        if assert_dict:
-            expected_kwargs['instance'] = jsonutils.to_primitive(
-                expected_kwargs['instance'])
 
         cast_and_call = ['confirm_resize', 'stop_instance']
         if rpc_method == 'call' and method in cast_and_call:
@@ -187,8 +190,9 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                 instance=self.fake_instance_obj, version='4.0')
 
     def test_get_instance_diagnostics(self):
+        expected_args = {'instance': self.fake_instance}
         self._test_compute_api('get_instance_diagnostics', 'call',
-                assert_dict=True, instance=self.fake_instance_obj,
+                expected_args, instance=self.fake_instance_obj,
                 version='4.0')
 
     def test_get_vnc_console(self):
@@ -265,7 +269,18 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
 
     def test_prep_resize(self):
         self._test_compute_api('prep_resize', 'cast',
-                instance=self.fake_instance_obj, instance_type='fake_type',
+                instance=self.fake_instance_obj,
+                instance_type=self.fake_flavor_obj,
+                image='fake_image', host='host',
+                reservations=list('fake_res'),
+                request_spec='fake_spec',
+                filter_properties={'fakeprop': 'fakeval'},
+                node='node', clean_shutdown=True, version='4.1')
+        self.flags(compute='4.0', group='upgrade_levels')
+        expected_args = {'instance_type': self.fake_flavor}
+        self._test_compute_api('prep_resize', 'cast', expected_args,
+                instance=self.fake_instance_obj,
+                instance_type=self.fake_flavor_obj,
                 image='fake_image', host='host',
                 reservations=list('fake_res'),
                 request_spec='fake_spec',
@@ -306,9 +321,10 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                 security_group_id='id', host='host', version='4.0')
 
     def test_refresh_instance_security_rules(self):
+        expected_args = {'instance': self.fake_instance}
         self._test_compute_api('refresh_instance_security_rules', 'cast',
-                host='fake_host', instance=self.fake_instance_obj,
-                version='4.0', assert_dict=True)
+                expected_args, host='fake_host',
+                instance=self.fake_instance_obj, version='4.0')
 
     def test_remove_aggregate_host(self):
         self._test_compute_api('remove_aggregate_host', 'cast',
@@ -338,7 +354,14 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
     def test_resize_instance(self):
         self._test_compute_api('resize_instance', 'cast',
                 instance=self.fake_instance_obj, migration={'id': 'fake_id'},
-                image='image', instance_type={'id': 1},
+                image='image', instance_type=self.fake_flavor_obj,
+                reservations=list('fake_res'),
+                clean_shutdown=True, version='4.1')
+        self.flags(compute='4.0', group='upgrade_levels')
+        expected_args = {'instance_type': self.fake_flavor}
+        self._test_compute_api('resize_instance', 'cast', expected_args,
+                instance=self.fake_instance_obj, migration={'id': 'fake_id'},
+                image='image', instance_type=self.fake_flavor_obj,
                 reservations=list('fake_res'),
                 clean_shutdown=True, version='4.0')
 

@@ -297,6 +297,7 @@ class ComputeAPI(object):
         3.x for Juno compatibility. All new changes should go against 4.x.
 
         * 4.0  - Remove 3.x compatibility
+        * 4.1  - Make prep_resize() and resize_instance() send Flavor object
     '''
 
     VERSION_ALIASES = {
@@ -563,18 +564,20 @@ class ComputeAPI(object):
                     reservations=None, request_spec=None,
                     filter_properties=None, node=None,
                     clean_shutdown=True):
-        # TODO(danms): This needs to be fixed for objects!
-        instance_type_p = jsonutils.to_primitive(instance_type)
         image_p = jsonutils.to_primitive(image)
         msg_args = {'instance': instance,
-                    'instance_type': instance_type_p,
+                    'instance_type': instance_type,
                     'image': image_p,
                     'reservations': reservations,
                     'request_spec': request_spec,
                     'filter_properties': filter_properties,
                     'node': node,
                     'clean_shutdown': clean_shutdown}
-        version = '4.0'
+        version = '4.1'
+        if not self.client.can_send_version(version):
+            version = '4.0'
+            msg_args['instance_type'] = objects_base.obj_to_primitive(
+                                            instance_type)
         cctxt = self.client.prepare(server=host, version=version)
         cctxt.cast(ctxt, 'prep_resize', **msg_args)
 
@@ -660,14 +663,16 @@ class ComputeAPI(object):
 
     def resize_instance(self, ctxt, instance, migration, image, instance_type,
                         reservations=None, clean_shutdown=True):
-        # TODO(danms): This needs to be fixed for objects!
-        instance_type_p = jsonutils.to_primitive(instance_type)
         msg_args = {'instance': instance, 'migration': migration,
                     'image': image, 'reservations': reservations,
-                    'instance_type': instance_type_p,
+                    'instance_type': instance_type,
                     'clean_shutdown': clean_shutdown,
         }
-        version = '4.0'
+        version = '4.1'
+        if not self.client.can_send_version(version):
+            msg_args['instance_type'] = objects_base.obj_to_primitive(
+                                            instance_type)
+            version = '4.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'resize_instance', **msg_args)
