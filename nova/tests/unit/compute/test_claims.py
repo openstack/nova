@@ -36,7 +36,7 @@ class FakeResourceHandler(object):
 
     def test_resources(self, usage, limits):
         self.test_called = True
-        self.usage_is_itype = usage.get('name') is 'fakeitype'
+        self.usage_is_itype = usage.get('name') == 'fakeitype'
         return []
 
 
@@ -112,7 +112,7 @@ class ClaimTestCase(test.NoDBTestCase):
             'ephemeral_gb': 2
         }
         instance_type.update(**kwargs)
-        return instance_type
+        return objects.Flavor(**instance_type)
 
     def _fake_resources(self, values=None):
         resources = {

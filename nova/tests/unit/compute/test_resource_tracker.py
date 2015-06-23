@@ -480,6 +480,7 @@ class BaseTestCase(test.TestCase):
             'extra_specs': {},
         }
         instance_type.update(**kwargs)
+        instance_type = objects.Flavor(**instance_type)
 
         id_ = instance_type['id']
         self._instance_types[id_] = instance_type
