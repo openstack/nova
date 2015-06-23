@@ -88,6 +88,9 @@ class SecurityGroupDefaultRulesController(sg.SecurityGroupControllerBase):
     def delete(self, req, id):
         context = sg._authorize_context(req)
         authorize(context)
+        # NOTE(shaohe-feng): back-compatible with db layer hard-code
+        # admin permission checks.
+        nova_context.require_admin_context(context)
 
         try:
             id = self.security_group_api.validate_id(id)

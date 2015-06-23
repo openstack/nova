@@ -4285,7 +4285,6 @@ def security_group_default_rule_get(context, security_group_rule_default_id):
     return result
 
 
-@require_admin_context
 def security_group_default_rule_destroy(context,
                                         security_group_rule_default_id):
     session = get_session()
