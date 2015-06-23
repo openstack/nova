@@ -181,15 +181,6 @@ class ServersSampleMultiStatusJsonTest(ServersSampleBase):
         self._verify_response('servers-list-resp', subs, response, 200)
 
 
-class ExtensionsSampleJsonTest(ApiSampleTestBaseV2):
-    all_extensions = True
-
-    def test_extensions_get(self):
-        response = self._do_get('extensions')
-        subs = self._get_regexes()
-        self._verify_response('extensions-get-resp', subs, response, 200)
-
-
 class FlavorsSampleJsonTest(ApiSampleTestBaseV2):
     sample_dir = 'flavors'
 
