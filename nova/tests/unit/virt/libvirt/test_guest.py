@@ -253,6 +253,10 @@ class GuestTestCase(test.NoDBTestCase):
         self.assertEqual(disk, gblock._disk)
         self.assertEqual(self.guest, gblock._guest)
 
+    def test_set_user_password(self):
+        self.guest.set_user_password("foo", "123")
+        self.domain.setUserPassword.assert_called_once_with("foo", "123", 0)
+
 
 class GuestBlockTestCase(test.NoDBTestCase):
 
