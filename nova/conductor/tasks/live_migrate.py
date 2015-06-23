@@ -180,7 +180,7 @@ class LiveMigrationTask(object):
                      'instance %(instance_uuid)s during live migration')
                    % {'max_retries': retries,
                       'instance_uuid': self.instance.uuid})
-            raise exception.NoValidHost(reason=msg)
+            raise exception.MaxRetriesExceeded(reason=msg)
 
 
 def execute(context, instance, destination,

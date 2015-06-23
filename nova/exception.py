@@ -1250,6 +1250,10 @@ class NoValidHost(NovaException):
     msg_fmt = _("No valid host was found. %(reason)s")
 
 
+class MaxRetriesExceeded(NoValidHost):
+    msg_fmt = _("Exceeded maximum number of retries. %(reason)s")
+
+
 class QuotaError(NovaException):
     ec2_code = 'ResourceLimitExceeded'
     msg_fmt = _("Quota exceeded: code=%(code)s")

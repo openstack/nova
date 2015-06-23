@@ -161,7 +161,7 @@ def populate_retry(filter_properties, instance_uuid):
                % {'max_attempts': max_attempts,
                   'instance_uuid': instance_uuid,
                   'exc': exc})
-        raise exception.NoValidHost(reason=msg)
+        raise exception.MaxRetriesExceeded(reason=msg)
 
 
 def _log_compute_error(instance_uuid, retry):

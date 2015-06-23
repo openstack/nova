@@ -70,5 +70,6 @@ class ChanceScheduler(driver.Scheduler):
             dests.append(host_state)
 
         if len(dests) < num_instances:
-            raise exception.NoValidHost(reason='')
+            reason = _('There are not enough hosts available.')
+            raise exception.NoValidHost(reason=reason)
         return dests
