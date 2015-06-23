@@ -4213,6 +4213,20 @@ class FixedIPTestCase(BaseInstanceTypeTestCase):
                               self.ctxt, None, instance_uuid)
             self.assertEqual(1, mock_first.call_count)
 
+    def test_fixed_ip_associate_no_network_id_with_no_retries(self):
+        # Tests that trying to associate an instance to a fixed IP on a network
+        # but without specifying the network ID during associate will fail.
+        instance_uuid = self._create_instance()
+        network = db.network_create_safe(self.ctxt, {})
+        address = self.create_fixed_ip(network_id=network['id'])
+
+        with mock.patch('sqlalchemy.orm.query.Query.first',
+                        return_value=None) as mock_first:
+            self.assertRaises(exception.FixedIpNotFoundForNetwork,
+                              db.fixed_ip_associate,
+                              self.ctxt, address, instance_uuid)
+            self.assertEqual(1, mock_first.call_count)
+
     def test_fixed_ip_associate_pool_invalid_uuid(self):
         instance_uuid = '123'
         self.assertRaises(exception.InvalidUUID, db.fixed_ip_associate_pool,
