@@ -445,6 +445,34 @@ class TestWatchdogAction(TestField):
         self.assertRaises(ValueError, self.field.stringify, 'acme')
 
 
+class TestMonitorMetricType(TestField):
+    def setUp(self):
+        super(TestMonitorMetricType, self).setUp()
+        self.field = fields.MonitorMetricTypeField()
+        self.coerce_good_values = [('cpu.frequency', 'cpu.frequency'),
+                                   ('cpu.user.time', 'cpu.user.time'),
+                                   ('cpu.kernel.time', 'cpu.kernel.time'),
+                                   ('cpu.idle.time', 'cpu.idle.time'),
+                                   ('cpu.iowait.time', 'cpu.iowait.time'),
+                                   ('cpu.user.percent', 'cpu.user.percent'),
+                                   ('cpu.kernel.percent',
+                                       'cpu.kernel.percent'),
+                                   ('cpu.idle.percent', 'cpu.idle.percent'),
+                                   ('cpu.iowait.percent',
+                                       'cpu.iowait.percent'),
+                                   ('cpu.percent', 'cpu.percent')]
+        self.coerce_bad_values = ['cpu.typo']
+        self.to_primitive_values = self.coerce_good_values[0:1]
+        self.from_primitive_values = self.coerce_good_values[0:1]
+
+    def test_stringify(self):
+        self.assertEqual("'cpu.frequency'",
+                         self.field.stringify('cpu.frequency'))
+
+    def test_stringify_invalid(self):
+        self.assertRaises(ValueError, self.field.stringify, 'cpufrequency')
+
+
 class TestInteger(TestField):
     def setUp(self):
         super(TestInteger, self).setUp()
