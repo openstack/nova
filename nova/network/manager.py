@@ -249,7 +249,7 @@ class NetworkManager(manager.Manager):
         The one at a time part is to flatten the layout to help scale
     """
 
-    target = messaging.Target(version='1.13')
+    target = messaging.Target(version='1.14')
 
     # If True, this manager requires VIF to create a bridge.
     SHOULD_CREATE_BRIDGE = False
@@ -889,7 +889,6 @@ class NetworkManager(manager.Manager):
                 # instance to reduce a race window where a previous instance
                 # was associated with the fixed IP and has released it, because
                 # release_fixed_ip will disassociate if allocated is False.
-                # TODO(mriedem): fix the race in release_fixed_ip
                 vif = objects.VirtualInterface.get_by_instance_and_network(
                         context, instance_id, network['id'])
                 if vif is None:
@@ -1103,7 +1102,7 @@ class NetworkManager(manager.Manager):
             LOG.warning(_LW('IP |%s| leased that isn\'t allocated'), address,
                         context=context, instance_uuid=fixed_ip.instance_uuid)
 
-    def release_fixed_ip(self, context, address):
+    def release_fixed_ip(self, context, address, mac=None):
         """Called by dhcp-bridge when ip is released."""
         LOG.debug('Released IP |%s|', address, context=context)
         fixed_ip = objects.FixedIP.get_by_address(context, address)
@@ -1115,9 +1114,27 @@ class NetworkManager(manager.Manager):
         if not fixed_ip.leased:
             LOG.warning(_LW('IP %s released that was not leased'), address,
                         context=context, instance_uuid=fixed_ip.instance_uuid)
-        fixed_ip.leased = False
-        fixed_ip.save()
+        else:
+            fixed_ip.leased = False
+            fixed_ip.save()
         if not fixed_ip.allocated:
+            # NOTE(mriedem): Sometimes allocate_fixed_ip will associate the
+            # fixed IP to a new instance while an old associated instance is
+            # being deallocated. So we check to see if the mac is for the VIF
+            # that is associated to the instance that is currently associated
+            # with the fixed IP because if it's not, we hit this race and
+            # should ignore the request so we don't disassociate the fixed IP
+            # from the wrong instance.
+            if mac:
+                vif = objects.VirtualInterface.get_by_address(context, mac)
+                if vif and vif.instance_uuid != fixed_ip.instance_uuid:
+                    LOG.info(_LI("Ignoring request to release fixed IP "
+                                 "%(address)s with MAC %(mac)s since it is "
+                                 "now associated with a new instance that is "
+                                 "in the process of allocating it's network."),
+                             {'address': address, 'mac': mac},
+                             instance_uuid=fixed_ip.instance_uuid)
+                    return
             fixed_ip.disassociate()
 
     @staticmethod
@@ -1952,7 +1969,6 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
         # instance to reduce a race window where a previous instance
         # was associated with the fixed IP and has released it, because
         # release_fixed_ip will disassociate if allocated is False.
-        # TODO(mriedem): fix the race in release_fixed_ip
         vif = objects.VirtualInterface.get_by_instance_and_network(
             context, instance_id, network['id'])
         if vif is None:

@@ -3536,3 +3536,138 @@ class LdapDNSTestCase(test.NoDBTestCase):
         self.assertRaises(exception.NotFound,
                           self.driver.delete_entry,
                           name1, domain1)
+
+
+class NetworkManagerNoDBTestCase(test.NoDBTestCase):
+    """Tests nova.network.manager.NetworkManager without a database."""
+
+    def setUp(self):
+        super(NetworkManagerNoDBTestCase, self).setUp()
+        self.context = context.RequestContext('fake-user', 'fake-project')
+        self.manager = network_manager.NetworkManager()
+
+    @mock.patch.object(objects.FixedIP, 'get_by_address')
+    def test_release_fixed_ip_not_associated(self, mock_fip_get_by_addr):
+        # Tests that the method is a no-op when the fixed IP is not associated
+        # to an instance.
+        fip = objects.FixedIP._from_db_object(
+            self.context, objects.FixedIP(), fake_network.next_fixed_ip(1))
+        fip.instance_uuid = None
+        with mock.patch.object(fip, 'disassociate') as mock_disassociate:
+            self.manager.release_fixed_ip(self.context, fip.address)
+
+        self.assertFalse(mock_disassociate.called,
+                         str(mock_disassociate.mock_calls))
+
+    @mock.patch.object(objects.FixedIP, 'get_by_address')
+    def test_release_fixed_ip_allocated(self, mock_fip_get_by_addr):
+        # Tests that the fixed IP is not disassociated if it's allocated.
+        fip = objects.FixedIP._from_db_object(
+            self.context, objects.FixedIP(), fake_network.next_fixed_ip(1))
+        fip.leased = False
+        fip.allocated = True
+        with mock.patch.object(fip, 'disassociate') as mock_disassociate:
+            self.manager.release_fixed_ip(self.context, fip.address)
+
+        self.assertFalse(mock_disassociate.called,
+                         str(mock_disassociate.mock_calls))
+
+    @mock.patch.object(objects.FixedIP, 'get_by_address')
+    @mock.patch.object(objects.VirtualInterface, 'get_by_address')
+    def test_release_fixed_ip_mac_matches_associated_instance(self,
+                                                        mock_vif_get_by_addr,
+                                                        mock_fip_get_by_addr):
+        # Tests that the fixed IP is disassociated when the mac passed to
+        # release_fixed_ip matches the VIF which has the same instance_uuid
+        # as the instance associated to the FixedIP object. Also tests
+        # that the fixed IP is marked as not leased in the database if it was
+        # currently leased.
+        instance = fake_instance.fake_instance_obj(self.context)
+        fip = fake_network.next_fixed_ip(1)
+        fip['instance_uuid'] = instance.uuid
+        fip['leased'] = True
+        vif = fip['virtual_interface']
+        vif['instance_uuid'] = instance.uuid
+        vif = objects.VirtualInterface._from_db_object(
+                    self.context, objects.VirtualInterface(), vif)
+        fip = objects.FixedIP._from_db_object(
+                    self.context, objects.FixedIP(), fip)
+        mock_fip_get_by_addr.return_value = fip
+        mock_vif_get_by_addr.return_value = vif
+
+        with mock.patch.object(fip, 'save') as mock_fip_save:
+            with mock.patch.object(fip, 'disassociate') as mock_disassociate:
+                self.manager.release_fixed_ip(
+                    self.context, fip.address, vif.address)
+
+        mock_fip_save.assert_called_once_with()
+        self.assertFalse(fip.leased)
+        mock_vif_get_by_addr.assert_called_once_with(self.context, vif.address)
+        mock_disassociate.assert_called_once_with()
+
+    @mock.patch.object(objects.FixedIP, 'get_by_address')
+    @mock.patch.object(objects.VirtualInterface, 'get_by_address',
+                       return_value=None)
+    def test_release_fixed_ip_vif_not_found_for_mac(self, mock_vif_get_by_addr,
+                                                    mock_fip_get_by_addr):
+        # Tests that the fixed IP is disassociated when the fixed IP is marked
+        # as deallocated and there is no VIF found in the database for the mac
+        # passed in.
+        fip = fake_network.next_fixed_ip(1)
+        fip['leased'] = False
+        mac = fip['virtual_interface']['address']
+        fip = objects.FixedIP._from_db_object(
+                    self.context, objects.FixedIP(), fip)
+        mock_fip_get_by_addr.return_value = fip
+
+        with mock.patch.object(fip, 'disassociate') as mock_disassociate:
+            self.manager.release_fixed_ip(self.context, fip.address, mac)
+
+        mock_vif_get_by_addr.assert_called_once_with(self.context, mac)
+        mock_disassociate.assert_called_once_with()
+
+    @mock.patch.object(objects.FixedIP, 'get_by_address')
+    def test_release_fixed_ip_no_mac(self, mock_fip_get_by_addr):
+        # Tests that the fixed IP is disassociated when the fixed IP is
+        # deallocated and there is no mac address passed in (like before
+        # the network rpc api version bump to pass it in).
+        fip = fake_network.next_fixed_ip(1)
+        fip['leased'] = False
+        fip = objects.FixedIP._from_db_object(
+                    self.context, objects.FixedIP(), fip)
+        mock_fip_get_by_addr.return_value = fip
+
+        with mock.patch.object(fip, 'disassociate') as mock_disassociate:
+            self.manager.release_fixed_ip(self.context, fip.address)
+
+        mock_disassociate.assert_called_once_with()
+
+    @mock.patch.object(objects.FixedIP, 'get_by_address')
+    @mock.patch.object(objects.VirtualInterface, 'get_by_address')
+    def test_release_fixed_ip_mac_mismatch_associated_instance(self,
+                                                        mock_vif_get_by_addr,
+                                                        mock_fip_get_by_addr):
+        # Tests that the fixed IP is not disassociated when the VIF for the mac
+        # passed to release_fixed_ip does not have an instance_uuid that
+        # matches fixed_ip.instance_uuid.
+        old_instance = fake_instance.fake_instance_obj(self.context)
+        new_instance = fake_instance.fake_instance_obj(self.context)
+        fip = fake_network.next_fixed_ip(1)
+        fip['instance_uuid'] = new_instance.uuid
+        fip['leased'] = False
+        vif = fip['virtual_interface']
+        vif['instance_uuid'] = old_instance.uuid
+        vif = objects.VirtualInterface._from_db_object(
+                    self.context, objects.VirtualInterface(), vif)
+        fip = objects.FixedIP._from_db_object(
+                    self.context, objects.FixedIP(), fip)
+        mock_fip_get_by_addr.return_value = fip
+        mock_vif_get_by_addr.return_value = vif
+
+        with mock.patch.object(fip, 'disassociate') as mock_disassociate:
+            self.manager.release_fixed_ip(
+                self.context, fip.address, vif.address)
+
+        mock_vif_get_by_addr.assert_called_once_with(self.context, vif.address)
+        self.assertFalse(mock_disassociate.called,
+                         str(mock_disassociate.mock_calls))

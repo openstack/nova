@@ -103,6 +103,8 @@ class NetworkAPI(object):
         * NOTE: remove unused method associate_floating_ip()
         * NOTE: remove unused method disassociate_floating_ip()
         * NOTE: remove unused method associate()
+
+        * 1.14 - Add mac parameter to release_fixed_ip().
     '''
 
     VERSION_ALIASES = {
@@ -305,9 +307,15 @@ class NetworkAPI(object):
         cctxt = self.client.prepare(server=host)
         cctxt.cast(ctxt, 'lease_fixed_ip', address=address)
 
-    def release_fixed_ip(self, ctxt, address, host):
-        cctxt = self.client.prepare(server=host)
-        cctxt.cast(ctxt, 'release_fixed_ip', address=address)
+    def release_fixed_ip(self, ctxt, address, host, mac):
+        kwargs = {}
+        if self.client.can_send_version('1.14'):
+            version = '1.14'
+            kwargs['mac'] = mac
+        else:
+            version = '1.0'
+        cctxt = self.client.prepare(server=host, version=version)
+        cctxt.cast(ctxt, 'release_fixed_ip', address=address, **kwargs)
 
     def migrate_instance_start(self, ctxt, instance_uuid, rxtx_factor,
                                project_id, source_compute, dest_compute,

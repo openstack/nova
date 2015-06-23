@@ -65,7 +65,7 @@ def del_lease(mac, ip_address):
     """Called when a lease expires."""
     api = network_rpcapi.NetworkAPI()
     api.release_fixed_ip(context.get_admin_context(), ip_address,
-                         CONF.host)
+                         CONF.host, mac)
 
 
 def init_leases(network_id):
