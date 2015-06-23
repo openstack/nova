@@ -257,27 +257,31 @@ class VMUtilsTestCase(test.NoDBTestCase):
 
     @mock.patch("nova.virt.hyperv.vmutils.VMUtils.get_attached_disks")
     def test_get_free_controller_slot(self, mock_get_attached_disks):
-        mock_disk = mock.MagicMock()
-        mock_disk.AddressOnParent = 3
-        mock_get_attached_disks.return_value = [mock_disk]
+        with mock.patch.object(self._vmutils,
+                               '_get_disk_resource_address') as mock_get_addr:
+            mock_get_addr.return_value = 3
+            mock_get_attached_disks.return_value = [mock.sentinel.disk]
 
-        response = self._vmutils.get_free_controller_slot(
-            self._FAKE_CTRL_PATH)
+            response = self._vmutils.get_free_controller_slot(
+                self._FAKE_CTRL_PATH)
 
-        mock_get_attached_disks.assert_called_once_with(
-            self._FAKE_CTRL_PATH)
+            mock_get_attached_disks.assert_called_once_with(
+                self._FAKE_CTRL_PATH)
 
-        self.assertEqual(response, 0)
+            self.assertEqual(response, 0)
 
     def test_get_free_controller_slot_exception(self):
-        fake_drive = mock.MagicMock()
-        type(fake_drive).AddressOnParent = mock.PropertyMock(
-            side_effect=range(constants.SCSI_CONTROLLER_SLOTS_NUMBER))
+        mock_get_address = mock.Mock()
+        mock_get_address.side_effect = range(
+            constants.SCSI_CONTROLLER_SLOTS_NUMBER)
 
-        with mock.patch.object(self._vmutils,
-                'get_attached_disks') as fake_get_attached_disks:
-            fake_get_attached_disks.return_value = (
-                [fake_drive] * constants.SCSI_CONTROLLER_SLOTS_NUMBER)
+        mock_get_attached_disks = mock.Mock()
+        mock_get_attached_disks.return_value = (
+            [mock.sentinel.drive] * constants.SCSI_CONTROLLER_SLOTS_NUMBER)
+
+        with mock.patch.multiple(self._vmutils,
+                                 get_attached_disks=mock_get_attached_disks,
+                                 _get_disk_resource_address=mock_get_address):
             self.assertRaises(vmutils.HyperVException,
                               self._vmutils.get_free_controller_slot,
                               mock.sentinel.scsi_controller_path)
