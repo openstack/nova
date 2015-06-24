@@ -2633,8 +2633,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         # NOTE(ORBIT): Fault tolerant instances are started paused and need to
         #              synchronize before they are started. Skipping the wait.
-        system_metadata = utils.instance_sys_meta(instance)
-        if 'instance_type_extra_ft:enabled' in system_metadata:
+        if utils.ft_enabled(instance):
             return
 
         timer = loopingcall.FixedIntervalLoopingCall(_wait_for_boot)
@@ -4417,8 +4416,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # NOTE(ORBIT): We always want to launch the fault tolerant instances
         #              paused so that it has time to do the initial
         #              synchronization.
-        system_metadata = utils.instance_sys_meta(instance)
-        ft = 'instance_type_extra_ft:enabled' in system_metadata
+        ft = utils.ft_enabled(instance)
         if ft:
             launch_flags |= libvirt.VIR_DOMAIN_START_PAUSED
 

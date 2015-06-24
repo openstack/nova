@@ -219,12 +219,11 @@ class LibvirtGenericVIFDriver(object):
         return conf
 
     def set_config_ovs_hybrid_colo(self, instance, vif):
-        system_metadata = utils.instance_sys_meta(instance)
-        if 'instance_type_extra_ft:enabled' in system_metadata:
+        if utils.ft_enabled(instance):
             colo_nic_name, _ = self.get_colo_veth_pair_names(vif['id'])
             vif['network']['colo_nic_name'] = colo_nic_name
 
-            if 'instance_type_extra_ft:secondary' in system_metadata:
+            if utils.ft_secondary(instance):
                 vif['network']['colo_failover'] = vif['network']['bridge']
                 vif['network']['bridge'] = self.get_colo_br_name(vif['id'])
 
@@ -458,8 +457,7 @@ class LibvirtGenericVIFDriver(object):
                                           instance['uuid'])
 
         # if instance is FT, then extra steps are needed
-        system_metadata = utils.instance_sys_meta(instance)
-        if 'instance_type_extra_ft:enabled' in system_metadata:
+        if utils.ft_enabled(instance):
             self.plug_ovs_hybrid_colo(instance, vif)
 
     def plug_ovs_hybrid_colo(self, instance, vif):
@@ -471,8 +469,7 @@ class LibvirtGenericVIFDriver(object):
         iface_id = self.get_ovs_interfaceid(vif)
         colo_v1_name, colo_v2_name = self.get_colo_veth_pair_names(vif['id'])
 
-        system_metadata = utils.instance_sys_meta(instance)
-        ft_secondary = 'instance_type_extra_ft:secondary' in system_metadata
+        ft_secondary = utils.ft_secondary(instance)
         if ft_secondary:
             colo_br_name = self.get_colo_br_name(vif['id'])
 
@@ -497,9 +494,9 @@ class LibvirtGenericVIFDriver(object):
                 utils.execute('brctl', 'addif', colo_br_name,
                               colo_v1_name, run_as_root=True)
 
+            colo_vlan_id = instance.system_metadata['colo_vlan_id']
             linux_net.create_ovs_vif_port_colo(self.get_ext_bridge_name(),
-                                               colo_v2_name,
-                                               system_metadata['colo_vlan_id'])
+                                               colo_v2_name, colo_vlan_id)
 
     def plug_ovs(self, instance, vif):
         if self.get_firewall_required(vif) or vif.is_hybrid_plug_enabled():
@@ -660,9 +657,7 @@ class LibvirtGenericVIFDriver(object):
                                           v2_name)
 
             # if instance is FT, then extra steps are needed
-            system_metadata = utils.instance_sys_meta(instance)
-
-            if 'instance_type_extra_ft:enabled' in system_metadata:
+            if utils.ft_enabled(instance):
                 self.unplug_ovs_hybrid_colo(instance, vif)
 
         except processutils.ProcessExecutionError:
@@ -681,8 +676,7 @@ class LibvirtGenericVIFDriver(object):
             colo_v1_name, colo_v2_name = self.get_colo_veth_pair_names(
                                                   vif['id'])
 
-            system_metadata = utils.instance_sys_meta(instance)
-            if 'instance_type_extra_ft:secondary' in system_metadata:
+            if utils.ft_secondary(instance):
                 colo_br_name = self.get_colo_br_name(vif['id'])
 
                 if linux_net.device_exists(colo_br_name):

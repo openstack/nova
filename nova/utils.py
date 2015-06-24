@@ -1165,3 +1165,13 @@ else:
         for x, y in zip(first, second):
             result |= ord(x) ^ ord(y)
         return result == 0
+
+
+def ft_enabled(instance):
+    system_metadata = instance_sys_meta(instance)
+    return 'instance_type_extra_ft:enabled' in system_metadata
+
+
+def ft_secondary(instance):
+    system_metadata = instance_sys_meta(instance)
+    return 'instance_type_extra_ft:secondary' in system_metadata

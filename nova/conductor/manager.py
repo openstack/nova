@@ -49,6 +49,7 @@ from nova import quota
 from nova.scheduler import client as scheduler_client
 from nova.scheduler import driver as scheduler_driver
 from nova.scheduler import utils as scheduler_utils
+from nova import utils
 
 LOG = logging.getLogger(__name__)
 
@@ -642,9 +643,7 @@ class ComputeTaskManager(base.Base):
             bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                     context, instance.uuid)
 
-            if 'instance_type_extra_ft:enabled' in instance.system_metadata:
-                ft = fault_tolerance.FaultToleranceTasks()
-
+            if utils.ft_enabled(instance):
                 if requested_networks and len(requested_networks) > 1:
                     raise exception.COLOMultipleInterfacesNotSupported()
 
@@ -669,8 +668,9 @@ class ComputeTaskManager(base.Base):
                 instance.save()
 
                 if 'ft_secondary_hosts' in host:
+                    ft_tasks = fault_tolerance.FaultToleranceTasks()
                     for ft_secondary_host in host['ft_secondary_hosts']:
-                        ft.deploy_secondary_instance(
+                        ft_tasks.deploy_secondary_instance(
                             context, instance.uuid,
                             host=ft_secondary_host['host'],
                             node=ft_secondary_host['nodename'],

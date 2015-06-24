@@ -20,6 +20,7 @@ from nova import db
 from nova import exception
 from nova import objects
 from nova.openstack.common import log as logging
+from nova import utils
 
 CONF = cfg.CONF
 CONF.register_opt(
@@ -67,8 +68,7 @@ class COLOTasks(object):
     def get_vlan_id(self, context, instance):
         LOG.debug("Acquiring COLO VLAN ID for instance %s." % instance.uuid)
 
-        system_metadata = instance.system_metadata
-        if 'instance_type_extra_ft:secondary' in system_metadata:
+        if utils.ft_secondary(instance):
             relation = (objects.FaultToleranceRelation.
                         get_by_secondary_instance_uuid(context, instance.uuid))
             primary_instance_uuid = relation.primary_instance_uuid
