@@ -50,7 +50,7 @@ def InetSmall():
 def _create_shadow_tables(migrate_engine):
     meta = MetaData(migrate_engine)
     meta.reflect(migrate_engine)
-    table_names = meta.tables.keys()
+    table_names = list(meta.tables.keys())
 
     meta.bind = migrate_engine
 
@@ -96,7 +96,7 @@ def _populate_instance_types(instance_types_table):
 
     try:
         i = instance_types_table.insert()
-        for name, values in default_inst_types.iteritems():
+        for name, values in default_inst_types.items():
             i.execute({'name': name, 'memory_mb': values["mem"],
                         'vcpus': values["vcpus"], 'deleted': 0,
                         'root_gb': values["root_gb"],

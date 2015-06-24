@@ -393,7 +393,7 @@ class Constraint(object):
         self.conditions = conditions
 
     def apply(self, model, query):
-        for key, condition in self.conditions.iteritems():
+        for key, condition in self.conditions.items():
             for clause in condition.clauses(getattr(model, key)):
                 query = query.filter(clause)
         return query
@@ -697,7 +697,7 @@ def compute_node_statistics(context):
 @require_admin_context
 def certificate_create(context, values):
     certificate_ref = models.Certificate()
-    for (key, value) in values.iteritems():
+    for (key, value) in values.items():
         certificate_ref[key] = value
     certificate_ref.save()
     return certificate_ref
@@ -847,7 +847,7 @@ def floating_ip_bulk_destroy(context, ips):
     # Delete the quotas, if needed.
     # Quota update happens in a separate transaction, so previous must have
     # been committed first.
-    for project_id, count in project_id_to_quota_count.iteritems():
+    for project_id, count in project_id_to_quota_count.items():
         try:
             reservations = quota.QUOTAS.reserve(context,
                                                 project_id=project_id,
@@ -1544,7 +1544,7 @@ def virtual_interface_get_all(context):
 def _metadata_refs(metadata_dict, meta_class):
     metadata_refs = []
     if metadata_dict:
-        for k, v in metadata_dict.iteritems():
+        for k, v in metadata_dict.items():
             metadata_ref = meta_class()
             metadata_ref['key'] = k
             metadata_ref['value'] = v
@@ -1817,7 +1817,7 @@ def _instances_fill_metadata(context, instances,
 
     filled_instances = []
     for inst in instances:
-        inst = dict(inst.iteritems())
+        inst = dict(inst)
         inst['system_metadata'] = sys_meta[inst['uuid']]
         inst['metadata'] = meta[inst['uuid']]
         if 'pci_devices' in manual_joins:
@@ -2216,7 +2216,7 @@ def _exact_instance_filter(query, filters, legal_keys):
                         query = query.filter(column_attr.any(value=v))
 
             else:
-                for k, v in value.iteritems():
+                for k, v in value.items():
                     query = query.filter(column_attr.any(key=k))
                     query = query.filter(column_attr.any(value=v))
         elif isinstance(value, (list, tuple, set, frozenset)):
@@ -2385,8 +2385,7 @@ def instance_get_all_by_host_and_node(context, host, node,
         manual_joins = []
     else:
         candidates = ['system_metadata', 'metadata']
-        manual_joins = filter(lambda x: x in candidates,
-                              columns_to_join)
+        manual_joins = [x for x in columns_to_join if x in candidates]
         columns_to_join = list(set(columns_to_join) - set(candidates))
     return _instances_fill_metadata(context,
             _instance_get_all_query(
@@ -2488,7 +2487,7 @@ def _instance_metadata_update_in_place(context, instance, metadata_type, model,
         for condemned in to_delete:
             condemned.soft_delete(session=session)
 
-    for key, value in metadata.iteritems():
+    for key, value in metadata.items():
         newitem = model()
         newitem.update({'key': key, 'value': value,
                         'instance_uuid': instance['uuid']})
@@ -4575,7 +4574,7 @@ def flavor_create(context, values, projects=None):
     specs = values.get('extra_specs')
     specs_refs = []
     if specs:
-        for k, v in specs.iteritems():
+        for k, v in specs.items():
             specs_ref = models.InstanceTypeExtraSpecs()
             specs_ref['key'] = k
             specs_ref['value'] = v
@@ -4860,7 +4859,7 @@ def flavor_extra_specs_update_or_create(context, flavor_id, specs,
                     existing_keys.add(key)
                     spec_ref.update({"value": specs[key]})
 
-                for key, value in specs.iteritems():
+                for key, value in specs.items():
                     if key in existing_keys:
                         continue
                     spec_ref = models.InstanceTypeExtraSpecs()
@@ -5553,7 +5552,7 @@ def aggregate_metadata_add(context, aggregate_id, metadata, set_delete=False,
                     already_existing_keys.add(key)
 
                 new_entries = []
-                for key, value in metadata.iteritems():
+                for key, value in metadata.items():
                     if key in already_existing_keys:
                         continue
                     new_entries.append({"key": key,
@@ -5620,7 +5619,7 @@ def instance_fault_create(context, values):
     fault_ref = models.InstanceFault()
     fault_ref.update(values)
     fault_ref.save()
-    return dict(fault_ref.iteritems())
+    return dict(fault_ref)
 
 
 def instance_fault_get_by_instance_uuids(context, instance_uuids):

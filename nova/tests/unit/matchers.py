@@ -17,9 +17,9 @@
 """Matcher classes to be used inside of the testtools assertThat framework."""
 
 import pprint
-import StringIO
 
 from lxml import etree
+import six
 from testtools import content
 
 
@@ -398,7 +398,7 @@ class XMLMatches(object):
     def __init__(self, expected, allow_mixed_nodes=False,
                  skip_empty_text_nodes=True, skip_values=('DONTCARE',)):
         self.expected_xml = expected
-        self.expected = etree.parse(StringIO.StringIO(expected))
+        self.expected = etree.parse(six.StringIO(expected))
         self.allow_mixed_nodes = allow_mixed_nodes
         self.skip_empty_text_nodes = skip_empty_text_nodes
         self.skip_values = set(skip_values)
@@ -407,7 +407,7 @@ class XMLMatches(object):
         return 'XMLMatches(%r)' % self.expected_xml
 
     def match(self, actual_xml):
-        actual = etree.parse(StringIO.StringIO(actual_xml))
+        actual = etree.parse(six.StringIO(actual_xml))
 
         state = XMLMatchState(self.expected_xml, actual_xml)
         expected_doc_info = self._get_xml_docinfo(self.expected)
