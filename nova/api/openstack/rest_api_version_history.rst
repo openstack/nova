@@ -7,7 +7,7 @@ verbose one which has enough information to be suitable for use in
 user documentation.
 
 2.1
-----
+---
 
   This is the initial version of the v2.1 API which supports
   microversions. The V2.1 API is from the REST API users's point of
