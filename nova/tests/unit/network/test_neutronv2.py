@@ -2665,6 +2665,58 @@ class TestNeutronv2(TestNeutronv2Base):
         self.assertFalse(nw_infos[4]['preserve_on_delete'])
         self.assertTrue(nw_infos[5]['preserve_on_delete'])
 
+    @mock.patch('nova.network.neutronv2.api.API._nw_info_get_subnets')
+    @mock.patch('nova.network.neutronv2.api.API._nw_info_get_ips')
+    @mock.patch('nova.network.neutronv2.api.API._nw_info_build_network')
+    @mock.patch('nova.network.neutronv2.api.API._get_preexisting_port_ids')
+    @mock.patch('nova.network.neutronv2.api.API._gather_port_ids_and_networks')
+    def test_build_network_info_model_empty(
+            self, mock_gather_port_ids_and_networks,
+            mock_get_preexisting_port_ids,
+            mock_nw_info_build_network,
+            mock_nw_info_get_ips,
+            mock_nw_info_get_subnets):
+        api = neutronapi.API()
+
+        fake_inst = objects.Instance()
+        fake_inst.project_id = 'fake'
+        fake_inst.uuid = 'uuid'
+        fake_inst.info_cache = objects.InstanceInfoCache()
+        fake_inst.info_cache.network_info = model.NetworkInfo()
+        fake_ports = [
+            # admin_state_up=True and status='ACTIVE' thus vif.active=True
+            {'id': 'port1',
+             'network_id': 'net-id',
+             'admin_state_up': True,
+             'status': 'ACTIVE',
+             'fixed_ips': [{'ip_address': '1.1.1.1'}],
+             'mac_address': 'de:ad:be:ef:00:01',
+             'binding:vif_type': model.VIF_TYPE_BRIDGE,
+             'binding:vnic_type': model.VNIC_TYPE_NORMAL,
+             'binding:vif_details': {},
+             },
+            ]
+        fake_subnets = [model.Subnet(cidr='1.0.0.0/8')]
+
+        neutronapi.get_client(mox.IgnoreArg(), admin=True).MultipleTimes(
+        ).AndReturn(self.moxed_client)
+        self.moxed_client.list_ports(
+            tenant_id='fake', device_id='uuid').AndReturn(
+                {'ports': fake_ports})
+
+        mock_gather_port_ids_and_networks.return_value = (None, None)
+        mock_get_preexisting_port_ids.return_value = []
+        mock_nw_info_build_network.return_value = (None, None)
+        mock_nw_info_get_ips.return_value = []
+        mock_nw_info_get_subnets.return_value = fake_subnets
+
+        self.mox.ReplayAll()
+        neutronapi.get_client('fake')
+
+        nw_infos = api._build_network_info_model(
+            self.context, fake_inst)
+        self.assertEqual(len(nw_infos), 1)
+
     def test_get_subnets_from_port(self):
         api = neutronapi.API()
 
