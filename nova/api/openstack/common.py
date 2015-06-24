@@ -282,29 +282,26 @@ def get_id_from_href(href):
     return urlparse.urlsplit("%s" % href).path.split('/')[-1]
 
 
-def remove_version_from_href(href):
-    """Removes the first api version from the href.
+def remove_trailing_version_from_href(href):
+    """Removes the api version from the href.
 
-    Given: 'http://www.nova.com/v1.1/123'
-    Returns: 'http://www.nova.com/123'
+    Given: 'http://www.nova.com/compute/v1.1'
+    Returns: 'http://www.nova.com/compute'
 
     Given: 'http://www.nova.com/v1.1'
     Returns: 'http://www.nova.com'
 
     """
     parsed_url = urlparse.urlsplit(href)
-    url_parts = parsed_url.path.split('/', 2)
+    url_parts = parsed_url.path.rsplit('/', 1)
 
     # NOTE: this should match vX.X or vX
     expression = re.compile(r'^v([0-9]+|[0-9]+\.[0-9]+)(/.*|$)')
-    if expression.match(url_parts[1]):
-        del url_parts[1]
-
-    new_path = '/'.join(url_parts)
-
-    if new_path == parsed_url.path:
+    if not expression.match(url_parts.pop()):
         LOG.debug('href %s does not contain version' % href)
         raise ValueError(_('href %s does not contain version') % href)
+
+    new_path = '/'.join(url_parts)
 
     parsed_url = list(parsed_url)
     parsed_url[2] = new_path
@@ -447,7 +444,7 @@ class ViewBuilder(object):
 
     def _get_bookmark_link(self, request, identifier, collection_name):
         """Create a URL that refers to a specific resource."""
-        base_url = remove_version_from_href(request.application_url)
+        base_url = remove_trailing_version_from_href(request.application_url)
         base_url = self._update_compute_link_prefix(base_url)
         return os.path.join(base_url,
                             self._get_project_id(request),
