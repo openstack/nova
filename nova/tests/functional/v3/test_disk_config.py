@@ -13,19 +13,43 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_config import cfg
+
 from nova.tests.functional.v3 import test_servers
 from nova.tests.unit.image import fake
+
+CONF = cfg.CONF
+CONF.import_opt('osapi_compute_extension',
+                'nova.api.openstack.compute.extensions')
 
 
 class DiskConfigJsonTest(test_servers.ServersSampleBase):
     extension_name = 'os-disk-config'
-    extra_extensions_to_load = ["images"]
+    extra_extensions_to_load = ["images", "os-access-ips"]
+    _api_version = 'v2'
+
+    def _get_flags(self):
+        f = super(DiskConfigJsonTest, self)._get_flags()
+        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.keypairs.Keypairs')
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.extended_ips.Extended_ips')
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.extended_ips_mac.'
+            'Extended_ips_mac')
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.disk_config.'
+            'Disk_config')
+        return f
 
     def test_list_servers_detail(self):
         uuid = self._post_server(use_common_server_api_samples=False)
         response = self._do_get('servers/detail')
         subs = self._get_regexes()
         subs['hostid'] = '[a-f0-9]+'
+        subs['access_ip_v4'] = ''
+        subs['access_ip_v6'] = ''
         subs['id'] = uuid
         self._verify_response('list-servers-detail-get', subs, response, 200)
 
@@ -34,6 +58,8 @@ class DiskConfigJsonTest(test_servers.ServersSampleBase):
         response = self._do_get('servers/%s' % uuid)
         subs = self._get_regexes()
         subs['hostid'] = '[a-f0-9]+'
+        subs['access_ip_v4'] = ''
+        subs['access_ip_v6'] = ''
         self._verify_response('server-get-resp', subs, response, 200)
 
     def test_update_server(self):
@@ -42,6 +68,8 @@ class DiskConfigJsonTest(test_servers.ServersSampleBase):
                                 'server-update-put-req', {})
         subs = self._get_regexes()
         subs['hostid'] = '[a-f0-9]+'
+        subs['access_ip_v4'] = ''
+        subs['access_ip_v6'] = ''
         self._verify_response('server-update-put-resp', subs, response, 200)
 
     def test_resize_server(self):
@@ -64,6 +92,8 @@ class DiskConfigJsonTest(test_servers.ServersSampleBase):
                                  'server-action-rebuild-req', subs)
         subs = self._get_regexes()
         subs['hostid'] = '[a-f0-9]+'
+        subs['access_ip_v4'] = ''
+        subs['access_ip_v6'] = ''
         self._verify_response('server-action-rebuild-resp',
                               subs, response, 202)
 
