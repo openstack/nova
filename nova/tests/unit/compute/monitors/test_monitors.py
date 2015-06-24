@@ -15,91 +15,42 @@
 
 """Tests for resource monitors."""
 
+from oslo_utils import timeutils
+
 from nova.compute import monitors
+from nova.compute.monitors import base
+from nova.objects import fields
 from nova import test
 
 
-class FakeResourceMonitor(monitors.ResourceMonitorBase):
-    def _update_data(self):
-        self._data['foo.metric1'] = '1000'
-        self._data['foo.metric2'] = '99.999'
-        self._data['timestamp'] = '123'
+class CPUMonitor1(base.MonitorBase):
 
-    @monitors.ResourceMonitorBase.add_timestamp
-    def _get_foo_metric1(self, **kwargs):
-        return self._data.get("foo.metric1")
+    NOW_TS = timeutils.utcnow()
 
-    @monitors.ResourceMonitorBase.add_timestamp
-    def _get_foo_metric2(self, **kwargs):
-        return self._data.get("foo.metric2")
-
-
-class FakeMonitorClass1(monitors.ResourceMonitorBase):
-    def get_metrics(self, **kwargs):
-        data = [{'timestamp': 1232,
-                 'name': 'key1',
-                 'value': 2600,
-                 'source': 'libvirt'}]
-        return data
+    def __init__(self, *args):
+        super(CPUMonitor1, self).__init__(*args)
+        self.source = 'CPUMonitor1'
 
     def get_metric_names(self):
-        return ['key1']
+        return set([
+            fields.MonitorMetricType.CPU_FREQUENCY
+        ])
+
+    def get_metric(self, name):
+        return 100, CPUMonitor1.NOW_TS
 
 
-class FakeMonitorClass2(monitors.ResourceMonitorBase):
-    def get_metrics(self, **kwargs):
-        data = [{'timestamp': 123,
-                 'name': 'key2',
-                 'value': 1600,
-                 'source': 'libvirt'}]
-        return data
-
-    def get_metric_names(self):
-        return ['key2']
-
-
-class FakeMonitorClass3(monitors.ResourceMonitorBase):
-    def get_metrics(self, **kwargs):
-        data = [{'timestamp': 1234,
-                 'name': 'key1',
-                 'value': 1200,
-                 'source': 'libvirt'}]
-        return data
+class CPUMonitor2(base.MonitorBase):
 
     def get_metric_names(self):
-        return ['key1']
+        return set([
+            fields.MonitorMetricType.CPU_FREQUENCY
+        ])
 
-
-class FakeMonitorClass4(monitors.ResourceMonitorBase):
-    def get_metrics(self, **kwargs):
-        raise test.TestingException()
-
-    def get_metric_names(self):
-        raise test.TestingException()
-
-
-class ResourceMonitorBaseTestCase(test.NoDBTestCase):
-    def setUp(self):
-        super(ResourceMonitorBaseTestCase, self).setUp()
-        self.monitor = FakeResourceMonitor(None)
-
-    def test_get_metric_names(self):
-        names = self.monitor.get_metric_names()
-        self.assertEqual(2, len(names))
-        self.assertIn("foo.metric1", names)
-        self.assertIn("foo.metric2", names)
-
-    def test_get_metrics(self):
-        metrics_raw = self.monitor.get_metrics()
-        names = self.monitor.get_metric_names()
-        metrics = {}
-        for metric in metrics_raw:
-            self.assertIn(metric['name'], names)
-            self.assertEqual(metric["timestamp"], '123')
-            metrics[metric['name']] = metric['value']
-
-        self.assertEqual(metrics["foo.metric1"], '1000')
-        self.assertEqual(metrics["foo.metric2"], '99.999')
+    def get_metric(self, name):
+        # This should never be called since the CPU metrics overlap
+        # with the ones in the CPUMonitor1.
+        pass
 
 
 class ResourceMonitorsTestCase(test.NoDBTestCase):
@@ -109,36 +60,21 @@ class ResourceMonitorsTestCase(test.NoDBTestCase):
         super(ResourceMonitorsTestCase, self).setUp()
         self.monitor_handler = monitors.ResourceMonitorHandler()
         fake_monitors = [
-            'nova.tests.unit.compute.monitors.test_monitors.FakeMonitorClass1',
-            'nova.tests.unit.compute.monitors.test_monitors.FakeMonitorClass2']
+            'nova.tests.unit.compute.monitors.test_monitors.CPUMonitor1',
+            'nova.tests.unit.compute.monitors.test_monitors.CPUMonitor2']
         self.flags(compute_available_monitors=fake_monitors)
 
-        classes = self.monitor_handler.get_matching_classes(
-            ['nova.compute.monitors.all_monitors'])
-        self.class_map = {}
-        for cls in classes:
-            self.class_map[cls.__name__] = cls
-
     def test_choose_monitors_not_found(self):
-        self.flags(compute_monitors=['FakeMonitorClass5', 'FakeMonitorClass4'])
-        monitor_classes = self.monitor_handler.choose_monitors(self)
-        self.assertEqual(len(monitor_classes), 0)
-
-    def test_choose_monitors_bad(self):
-        self.flags(compute_monitors=['FakeMonitorClass1', 'FakePluginClass3'])
+        self.flags(compute_monitors=['CPUMonitor1', 'CPUMonitorb'])
         monitor_classes = self.monitor_handler.choose_monitors(self)
         self.assertEqual(len(monitor_classes), 1)
 
-    def test_choose_monitors(self):
-        self.flags(compute_monitors=['FakeMonitorClass1', 'FakeMonitorClass2'])
+    def test_choose_monitors_bad(self):
+        self.flags(compute_monitors=['CPUMonitor1', 'CPUMonitor2'])
         monitor_classes = self.monitor_handler.choose_monitors(self)
-        self.assertEqual(len(monitor_classes), 2)
+        self.assertEqual(len(monitor_classes), 1)
 
     def test_choose_monitors_none(self):
         self.flags(compute_monitors=[])
         monitor_classes = self.monitor_handler.choose_monitors(self)
         self.assertEqual(len(monitor_classes), 0)
-
-    def test_all_monitors(self):
-        # Double check at least a couple of known monitors exist
-        self.assertIn('ComputeDriverCPUMonitor', self.class_map)

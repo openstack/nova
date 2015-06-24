@@ -14,15 +14,14 @@
 #    under the License.
 
 """
-CPU monitor based on compute driver to retrieve CPU information
+CPU monitor based on virt driver to retrieve CPU information
 """
 
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import timeutils
 
-from nova.compute import monitors
-from nova.compute.monitors import cpu_monitor as monitor
+from nova.compute.monitors import base
 from nova import exception
 from nova.i18n import _LE
 
@@ -31,65 +30,21 @@ CONF.import_opt('compute_driver', 'nova.virt.driver')
 LOG = logging.getLogger(__name__)
 
 
-class ComputeDriverCPUMonitor(monitor._CPUMonitorBase):
-    """CPU monitor based on compute driver
+class Monitor(base.CPUMonitorBase):
+    """CPU monitor that uses the virt driver's get_host_cpu_stats() call."""
 
-    The class inherits from the base class for resource monitors,
-    and implements the essential methods to get metric names and their real
-    values for CPU utilization.
-
-    The compute manager could load the monitors to retrieve the metrics
-    of the devices on compute nodes and know their resource information
-    periodically.
-    """
-
-    def __init__(self, parent):
-        super(ComputeDriverCPUMonitor, self).__init__(parent)
+    def __init__(self, compute_manager):
+        super(Monitor, self).__init__(compute_manager)
         self.source = CONF.compute_driver
         self.driver = self.compute_manager.driver
+        self._data = {}
         self._cpu_stats = {}
 
-    @monitors.ResourceMonitorBase.add_timestamp
-    def _get_cpu_frequency(self, **kwargs):
-        return self._data.get("cpu.frequency")
+    def get_metric(self, name):
+        self._update_data()
+        return self._data[name], self._data["timestamp"]
 
-    @monitors.ResourceMonitorBase.add_timestamp
-    def _get_cpu_user_time(self, **kwargs):
-        return self._data.get("cpu.user.time")
-
-    @monitors.ResourceMonitorBase.add_timestamp
-    def _get_cpu_kernel_time(self, **kwargs):
-        return self._data.get("cpu.kernel.time")
-
-    @monitors.ResourceMonitorBase.add_timestamp
-    def _get_cpu_idle_time(self, **kwargs):
-        return self._data.get("cpu.idle.time")
-
-    @monitors.ResourceMonitorBase.add_timestamp
-    def _get_cpu_iowait_time(self, **kwargs):
-        return self._data.get("cpu.iowait.time")
-
-    @monitors.ResourceMonitorBase.add_timestamp
-    def _get_cpu_user_percent(self, **kwargs):
-        return self._data.get("cpu.user.percent")
-
-    @monitors.ResourceMonitorBase.add_timestamp
-    def _get_cpu_kernel_percent(self, **kwargs):
-        return self._data.get("cpu.kernel.percent")
-
-    @monitors.ResourceMonitorBase.add_timestamp
-    def _get_cpu_idle_percent(self, **kwargs):
-        return self._data.get("cpu.idle.percent")
-
-    @monitors.ResourceMonitorBase.add_timestamp
-    def _get_cpu_iowait_percent(self, **kwargs):
-        return self._data.get("cpu.iowait.percent")
-
-    @monitors.ResourceMonitorBase.add_timestamp
-    def _get_cpu_percent(self, **kwargs):
-        return self._data.get("cpu.percent")
-
-    def _update_data(self, **kwargs):
+    def _update_data(self):
         # Don't allow to call this function so frequently (<= 1 sec)
         now = timeutils.utcnow()
         if self._data.get("timestamp") is not None:
