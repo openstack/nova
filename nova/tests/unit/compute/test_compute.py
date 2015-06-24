@@ -6833,16 +6833,26 @@ class ComputeTestCase(BaseTestCase):
         self.mox.ReplayAll()
         self.compute._sync_power_states(ctxt)
 
-    def _test_lifecycle_event(self, lifecycle_event, power_state):
+    def _test_lifecycle_event(self, lifecycle_event, vm_power_state,
+                              is_actual_state=True):
         instance = self._create_fake_instance_obj()
         uuid = instance['uuid']
 
         self.mox.StubOutWithMock(self.compute, '_sync_instance_power_state')
-        if power_state is not None:
+        self.mox.StubOutWithMock(self.compute, '_get_power_state')
+
+        actual_state = (vm_power_state
+                        if vm_power_state is not None and is_actual_state
+                        else power_state.NOSTATE)
+        self.compute._get_power_state(
+            mox.IgnoreArg(),
+            mox.ContainsKeyValue('uuid', uuid)).AndReturn(actual_state)
+
+        if actual_state == vm_power_state:
             self.compute._sync_instance_power_state(
                 mox.IgnoreArg(),
                 mox.ContainsKeyValue('uuid', uuid),
-                power_state)
+                vm_power_state)
         self.mox.ReplayAll()
         self.compute.handle_events(event.LifecycleEvent(uuid, lifecycle_event))
         self.mox.VerifyAll()
@@ -6851,6 +6861,9 @@ class ComputeTestCase(BaseTestCase):
     def test_lifecycle_events(self):
         self._test_lifecycle_event(event.EVENT_LIFECYCLE_STOPPED,
                                    power_state.SHUTDOWN)
+        self._test_lifecycle_event(event.EVENT_LIFECYCLE_STOPPED,
+                                   power_state.SHUTDOWN,
+                                   is_actual_state=False)
         self._test_lifecycle_event(event.EVENT_LIFECYCLE_STARTED,
                                    power_state.RUNNING)
         self._test_lifecycle_event(event.EVENT_LIFECYCLE_PAUSED,

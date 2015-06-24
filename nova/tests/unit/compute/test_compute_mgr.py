@@ -69,9 +69,28 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.context = context.RequestContext('fake', 'fake')
         fake_server_actions.stub_out_action_events(self.stubs)
 
+    @mock.patch.object(manager.ComputeManager, '_get_power_state')
     @mock.patch.object(manager.ComputeManager, '_sync_instance_power_state')
     @mock.patch.object(objects.Instance, 'get_by_uuid')
-    def test_handle_lifecycle_event(self, mock_get, mock_sync):
+    def _test_handle_lifecycle_event(self, mock_get, mock_sync,
+                                     mock_get_power_state, transition,
+                                     event_pwr_state, current_pwr_state):
+        event = mock.Mock()
+        event.get_instance_uuid.return_value = mock.sentinel.uuid
+        event.get_transition.return_value = transition
+        mock_get_power_state.return_value = current_pwr_state
+
+        self.compute.handle_lifecycle_event(event)
+
+        mock_get.assert_called_with(mock.ANY, mock.sentinel.uuid,
+                                    expected_attrs=[])
+        if event_pwr_state == current_pwr_state:
+            mock_sync.assert_called_with(mock.ANY, mock_get.return_value,
+                                         event_pwr_state)
+        else:
+            self.assertFalse(mock_sync.called)
+
+    def test_handle_lifecycle_event(self):
         event_map = {virtevent.EVENT_LIFECYCLE_STOPPED: power_state.SHUTDOWN,
                      virtevent.EVENT_LIFECYCLE_STARTED: power_state.RUNNING,
                      virtevent.EVENT_LIFECYCLE_PAUSED: power_state.PAUSED,
@@ -79,15 +98,17 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                      virtevent.EVENT_LIFECYCLE_SUSPENDED:
                          power_state.SUSPENDED,
         }
-        event = mock.Mock()
-        event.get_instance_uuid.return_value = mock.sentinel.uuid
+
         for transition, pwr_state in six.iteritems(event_map):
-            event.get_transition.return_value = transition
-            self.compute.handle_lifecycle_event(event)
-            mock_get.assert_called_with(mock.ANY, mock.sentinel.uuid,
-                                        expected_attrs=[])
-            mock_sync.assert_called_with(mock.ANY, mock_get.return_value,
-                                         pwr_state)
+            self._test_handle_lifecycle_event(transition=transition,
+                                              event_pwr_state=pwr_state,
+                                              current_pwr_state=pwr_state)
+
+    def test_handle_lifecycle_event_state_mismatch(self):
+        self._test_handle_lifecycle_event(
+            transition=virtevent.EVENT_LIFECYCLE_STOPPED,
+            event_pwr_state=power_state.SHUTDOWN,
+            current_pwr_state=power_state.RUNNING)
 
     def test_delete_instance_info_cache_delete_ordering(self):
         call_tracker = mock.Mock()
