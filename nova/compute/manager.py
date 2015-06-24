@@ -2120,6 +2120,10 @@ class ComputeManager(manager.Manager):
                                       injected_files, admin_password,
                                       network_info=network_info,
                                       block_device_info=block_device_info)
+
+                    if (utils.ft_enabled(instance) and
+                            not utils.ft_secondary(instance)):
+                        self.colo_synchronize(context, instance)
         except (exception.InstanceNotFound,
                 exception.UnexpectedDeletingTaskStateError) as e:
             with excutils.save_and_reraise_exception():
@@ -6255,3 +6259,17 @@ class ComputeManager(manager.Manager):
                     instance.cleaned = True
                 with utils.temporary_mutation(context, read_deleted='yes'):
                     instance.save(context)
+
+    def colo_synchronize(self, context, primary_instance):
+        relations = (objects.FaultToleranceRelationList.
+                     get_by_primary_instance_uuid(context,
+                                                  primary_instance.uuid))
+
+        # NOTE(ORBIT): Currently supporting one secondary only.
+        relation = relations[0]
+
+        secondary_instance = objects.Instance.get_by_uuid(
+            context, relation.secondary_instance_uuid)
+
+        LOG.debug("Executing initial COLO synchronization of %s", relation)
+        self.driver.colo_synchronize(primary_instance, secondary_instance)

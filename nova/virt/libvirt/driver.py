@@ -2631,8 +2631,9 @@ class LibvirtDriver(driver.ComputeDriver):
                          instance=instance)
                 raise loopingcall.LoopingCallDone()
 
-        # NOTE(ORBIT): Fault tolerant instances are started paused and need to
-        #              synchronize before they are started. Skipping the wait.
+        # NOTE(ORBIT): Fault tolerant instances are not resumed because they
+        #              need to synchronize before they are started. Skipping
+        #              the wait.
         if utils.ft_enabled(instance):
             return
 
@@ -6378,6 +6379,15 @@ class LibvirtDriver(driver.ComputeDriver):
     def is_supported_fs_format(self, fs_type):
         return fs_type in [disk.FS_FORMAT_EXT2, disk.FS_FORMAT_EXT3,
                            disk.FS_FORMAT_EXT4, disk.FS_FORMAT_XFS]
+
+    def colo_synchronize(self, primary_instance, secondary_instance):
+        """Execute the initial synchronization of the primary and secondary VM.
+        """
+        # TODO(ORBIT): Do we need to wait for both instances to be running
+        #              before starting sync or is libvirt taking care of it?
+
+        # TODO(ORBIT): Currently just unpause the primary instance
+        self.unpause(primary_instance)
 
 
 class HostState(object):
