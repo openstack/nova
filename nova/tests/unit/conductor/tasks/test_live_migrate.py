@@ -14,10 +14,13 @@ import mock
 from mox3 import mox
 
 from nova.compute import power_state
+from nova.compute import rpcapi as compute_rpcapi
 from nova.conductor.tasks import live_migrate
 from nova import exception
 from nova import objects
+from nova.scheduler import client as scheduler_client
 from nova.scheduler import utils as scheduler_utils
+from nova import servicegroup
 from nova import test
 from nova.tests.unit import fake_instance
 from nova import utils
@@ -48,7 +51,8 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
     def _generate_task(self):
         self.task = live_migrate.LiveMigrationTask(self.context,
             self.instance, self.destination, self.block_migration,
-            self.disk_over_commit, self.migration)
+            self.disk_over_commit, self.migration, compute_rpcapi.ComputeAPI(),
+            servicegroup.API(), scheduler_client.SchedulerClient())
 
     def test_execute_with_destination(self):
         self.mox.StubOutWithMock(self.task, '_check_host_is_up')
@@ -406,6 +410,3 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
 
         self.mox.ReplayAll()
         self.assertRaises(exception.NoValidHost, self.task._find_destination)
-
-    def test_not_implemented_rollback(self):
-        self.assertRaises(NotImplementedError, self.task.rollback)
