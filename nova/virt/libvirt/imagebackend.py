@@ -142,7 +142,7 @@ class Image(object):
         pass
 
     def libvirt_info(self, disk_bus, disk_dev, device_type, cache_mode,
-            extra_specs, hypervisor_version):
+                     extra_specs, hypervisor_version):
         """Get `LibvirtConfigGuestDisk` filled for this image.
 
         :disk_dev: Disk bus device name
@@ -150,6 +150,7 @@ class Image(object):
         :device_type: Device type for this image.
         :cache_mode: Caching mode for this image
         :extra_specs: Instance type extra specs dict.
+        :hypervisor_version: the hypervisor version
         """
         info = vconfig.LibvirtConfigGuestDisk()
         info.source_type = self.source_type
