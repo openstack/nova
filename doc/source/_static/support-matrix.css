@@ -40,3 +40,8 @@
 .sp_impl_summary {
     font-size: 2em;
 }
+
+.sp_cli {
+    font-family: monospace;
+    background-color: #F5F5F5;
+}

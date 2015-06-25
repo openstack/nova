@@ -58,7 +58,7 @@ class SupportMatrixFeature(object):
                   STATUS_CONDITION, STATUS_OPTIONAL]
 
     def __init__(self, key, title, status=STATUS_OPTIONAL,
-                 group=None, notes=None):
+                 group=None, notes=None, cli=[]):
         # A unique key (eg 'foo.bar.wizz') to identify the feature
         self.key = key
         # A human friendly short title for the feature
@@ -74,6 +74,8 @@ class SupportMatrixFeature(object):
         # 'name' dict key is the value from SupportMatrixTarget.key
         # for the hypervisor in question
         self.implementations = {}
+        # A list of CLI commands which are related to that feature
+        self.cli = cli
 
 
 class SupportMatrixImplementation(object):
@@ -208,11 +210,15 @@ class SupportMatrixDirective(rst.Directive):
             notes = None
             if cfg.has_option(section, "notes"):
                 notes = cfg.get(section, "notes")
+            cli = []
+            if cfg.has_option(section, "cli"):
+                cli = cfg.get(section, "cli")
             feature = SupportMatrixFeature(section,
                                            title,
                                            status,
                                            group,
-                                           notes)
+                                           notes,
+                                           cli)
 
             # Now we've got the basic feature details, we must process
             # the hypervisor driver implementation for each feature
@@ -401,6 +407,11 @@ class SupportMatrixDirective(rst.Directive):
                 para.append(nodes.inline(text=feature.notes))
             item.append(para)
 
+            if feature.cli:
+                item.append(self._create_cli_paragraph(feature))
+
+            para_divers = nodes.paragraph()
+            para_divers.append(nodes.strong(text="drivers:"))
             # A sub-list giving details of each hypervisor target
             impls = nodes.bullet_list()
             for key in feature.implementations:
@@ -420,8 +431,24 @@ class SupportMatrixDirective(rst.Directive):
                     subitem.append(self._create_notes_paragraph(impl.notes))
                 impls.append(subitem)
 
-            item.append(impls)
+            para_divers.append(impls)
+            item.append(para_divers)
             details.append(item)
+
+    def _create_cli_paragraph(self, feature):
+        ''' Create a paragraph which represents the CLI commands of the feature
+
+        The paragraph will have a bullet list of CLI commands.
+        '''
+        para = nodes.paragraph()
+        para.append(nodes.strong(text="CLI commands:"))
+        commands = nodes.bullet_list()
+        for c in feature.cli.split(";"):
+            cli_command = nodes.list_item()
+            cli_command += nodes.literal(text=c, classes=["sp_cli"])
+            commands.append(cli_command)
+        para.append(commands)
+        return para
 
     def _create_notes_paragraph(self, notes):
         """ Constructs a paragraph which represents the implementation notes
