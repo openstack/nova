@@ -285,6 +285,6 @@ class URLMap(paste.urlmap.URLMap):
             environ['nova.best_content_type'] = mime_type
             return app(environ, start_response)
 
-        LOG.debug('Could not find application for %s', environ.PATH_INFO)
+        LOG.debug('Could not find application for %s', environ['PATH_INFO'])
         environ['paste.urlmap_object'] = self
         return self.not_found_application(environ, start_response)
