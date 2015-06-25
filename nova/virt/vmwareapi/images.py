@@ -32,6 +32,7 @@ import six
 from nova import exception
 from nova.i18n import _, _LE, _LI
 from nova import image
+from nova.objects import fields
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import io_util
 
@@ -46,8 +47,6 @@ LOG = logging.getLogger(__name__)
 IMAGE_API = image.API()
 
 QUEUE_BUFFER_SIZE = 10
-
-LINKED_CLONE_PROPERTY = 'vmware_linked_clone'
 
 
 class VMwareImage(object):
@@ -109,48 +108,66 @@ class VMwareImage(object):
         return self.container_format == constants.CONTAINER_FORMAT_OVA
 
     @classmethod
-    def from_image(cls, image_id, image_meta=None):
+    def from_image(cls, image_id, image_meta):
         """Returns VMwareImage, the subset of properties the driver uses.
 
         :param image_id - image id of image
-        :param image_meta - image metadata we are working with
+        :param image_meta - image metadata object we are working with
         :return: vmware image object
         :rtype: nova.virt.vmwareapi.images.VmwareImage
         """
-        if image_meta is None:
-            image_meta = {}
-
-        properties = image_meta.get("properties", {})
+        properties = image_meta.properties
 
         # calculate linked_clone flag, allow image properties to override the
         # global property set in the configurations.
-        image_linked_clone = properties.get(LINKED_CLONE_PROPERTY,
+        image_linked_clone = properties.get('img_linked_clone',
                                             CONF.vmware.use_linked_clone)
 
         # catch any string values that need to be interpreted as boolean values
         linked_clone = strutils.bool_from_string(image_linked_clone)
 
+        if image_meta.obj_attr_is_set('container_format'):
+            container_format = image_meta.container_format
+        else:
+            container_format = None
+
         props = {
             'image_id': image_id,
             'linked_clone': linked_clone,
-            'container_format': image_meta.get('container_format')
+            'container_format': container_format
         }
 
-        if 'size' in image_meta:
-            props['file_size'] = image_meta['size']
-        if 'disk_format' in image_meta:
-            props['file_type'] = image_meta['disk_format']
+        if image_meta.obj_attr_is_set('size'):
+            props['file_size'] = image_meta.size
+        if image_meta.obj_attr_is_set('disk_format'):
+            props['file_type'] = image_meta.disk_format
+        hw_disk_bus = properties.get('hw_disk_bus')
+        if hw_disk_bus:
+            mapping = {
+                fields.SCSIModel.LSILOGIC:
+                constants.DEFAULT_ADAPTER_TYPE,
+                fields.SCSIModel.LSISAS1068:
+                constants.ADAPTER_TYPE_LSILOGICSAS,
+                fields.SCSIModel.BUSLOGIC:
+                constants.ADAPTER_TYPE_BUSLOGIC,
+                fields.SCSIModel.VMPVSCSI:
+                constants.ADAPTER_TYPE_PARAVIRTUAL,
+            }
+            if hw_disk_bus == fields.DiskBus.IDE:
+                props['adapter_type'] = constants.ADAPTER_TYPE_IDE
+            elif hw_disk_bus == fields.DiskBus.SCSI:
+                hw_scsi_model = properties.get('hw_scsi_model')
+                props['adapter_type'] = mapping.get(hw_scsi_model)
 
         props_map = {
-            'vmware_ostype': 'os_type',
-            'vmware_adaptertype': 'adapter_type',
-            'vmware_disktype': 'disk_type',
+            'os_distro': 'os_type',
+            'hw_disk_type': 'disk_type',
             'hw_vif_model': 'vif_model'
         }
 
         for k, v in six.iteritems(props_map):
-            if k in properties:
-                props[v] = properties[k]
+            if properties.obj_attr_is_set(k):
+                props[v] = properties.get(k)
 
         return cls(**props)
 

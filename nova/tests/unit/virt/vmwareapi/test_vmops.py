@@ -95,7 +95,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         self._vmops = vmops.VMwareVMOps(self._session, self._virtapi, None,
                                         cluster=cluster.obj)
         self._cluster = cluster
-
+        self._image_meta = objects.ImageMeta.from_dict({})
         subnet_4 = network_model.Subnet(cidr='192.168.0.1/24',
                                         dns=[network_model.IP('192.168.0.1')],
                                         gateway=
@@ -425,7 +425,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         ) as (_get_dc_ref_and_name, fake_vmdk_info):
             dc_info = mock.Mock()
             _get_dc_ref_and_name.return_value = dc_info
-            self._vmops.rescue(self._context, self._instance, None, None)
+            self._vmops.rescue(
+                self._context, self._instance, None, self._image_meta)
 
             mock_power_off.assert_called_once_with(self._session,
                                                    self._instance,
@@ -870,7 +871,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             mock_vo.attach_root_volume.side_effect = test.TestingException
             try:
                 self._vmops.spawn(
-                    self._context, self._instance, {},
+                    self._context, self._instance, self._image_meta,
                     injected_files=None, admin_password=None,
                     network_info=[], block_device_info=bdi
                 )
@@ -941,11 +942,12 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         from_image.return_value = image_info
         build_virtual_machine.return_value = 'fake-vm-ref'
         with mock.patch.object(self._vmops, '_volumeops') as volumeops:
-            self._vmops.spawn(self._context, self._instance, {},
+            self._vmops.spawn(self._context, self._instance, self._image_meta,
                               injected_files=None, admin_password=None,
                               network_info=[], block_device_info=bdi)
 
-            from_image.assert_called_once_with(self._instance.image_ref, {})
+            from_image.assert_called_once_with(self._instance.image_ref,
+                                               self._image_meta)
             get_vm_config_info.assert_called_once_with(self._instance,
                 image_info, extra_specs.storage_policy)
             build_virtual_machine.assert_called_once_with(self._instance,
@@ -998,11 +1000,12 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         build_virtual_machine.return_value = 'fake-vm-ref'
 
         with mock.patch.object(self._vmops, '_volumeops') as volumeops:
-            self._vmops.spawn(self._context, self._instance, {},
+            self._vmops.spawn(self._context, self._instance, self._image_meta,
                               injected_files=None, admin_password=None,
                               network_info=[], block_device_info=bdi)
 
-            from_image.assert_called_once_with(self._instance.image_ref, {})
+            from_image.assert_called_once_with(self._instance.image_ref,
+                                               self._image_meta)
             get_vm_config_info.assert_called_once_with(self._instance,
                 image_info, extra_specs.storage_policy)
             build_virtual_machine.assert_called_once_with(self._instance,
@@ -1046,12 +1049,13 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         build_virtual_machine.return_value = 'fake-vm-ref'
 
         self.assertRaises(exception.UnsupportedHardware, self._vmops.spawn,
-                          self._context, self._instance, {},
+                          self._context, self._instance, self._image_meta,
                           injected_files=None,
                           admin_password=None, network_info=[],
                           block_device_info=bdi)
 
-        from_image.assert_called_once_with(self._instance.image_ref, {})
+        from_image.assert_called_once_with(self._instance.image_ref,
+                                           self._image_meta)
         get_vm_config_info.assert_called_once_with(
             self._instance, image_info, extra_specs.storage_policy)
         build_virtual_machine.assert_called_once_with(self._instance,
@@ -1282,6 +1286,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             'disk_format': 'vmdk',
             'size': image_size,
         }
+        image = objects.ImageMeta.from_dict(image)
         image_info = images.VMwareImage(
             image_id=self._image_id,
             file_size=image_size)
