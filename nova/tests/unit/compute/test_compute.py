@@ -5598,8 +5598,9 @@ class ComputeTestCase(BaseTestCase):
         self.assertIsNone(instance.task_state)
         self.assertEqual('failed', migration.status)
 
+    @mock.patch.object(compute_utils, 'EventReporter')
     @mock.patch('nova.objects.Migration.save')
-    def test_live_migration_works_correctly(self, mock_save):
+    def test_live_migration_works_correctly(self, mock_save, event_mock):
         # Confirm live_migration() works as expected correctly.
         # creating instance testdata
         c = context.get_admin_context()
@@ -5641,8 +5642,10 @@ class ComputeTestCase(BaseTestCase):
                                           block_migration=False,
                                           migration=migration,
                                           migrate_data=migrate_data)
-        self.assertIsNone(ret)
 
+        self.assertIsNone(ret)
+        event_mock.assert_called_with(
+                c, 'compute_live_migration', instance.uuid)
         # cleanup
         instance.destroy()
 
