@@ -570,7 +570,7 @@ class TestSecurityGroupsV21(test.TestCase):
         self.assertTrue(self.called)
 
     def test_delete_security_group_by_admin(self):
-        sg = security_group_template(id=2, rules=[])
+        sg = security_group_template()
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
         self.controller.create(req, {'security_group': sg})
