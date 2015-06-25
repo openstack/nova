@@ -35,7 +35,7 @@ The V2 API is the old Nova REST API. It will be replaced by V2.1 API totally.
 The code tree of V2 API will be removed in the future also.
 
 The V2.1 API is the new Nova REST API with a set of improvements which
-includes Mircoversion and standardized validation of inputs using JSON-Schema.
+includes Microversion and standardized validation of inputs using JSON-Schema.
 Also the V2.1 API is totally backwards compatible with the V2 API (That is the
 reason we call it as V2.1 API).
 
@@ -43,7 +43,7 @@ Stable API
 ----------
 
 In the V2 API, there is a concept called 'extension'. An operator can use it
-to enable/disable part of Nova REST API based on requirements. And end user
+to enable/disable part of Nova REST API based on requirements. An end user
 may query the '/extensions' API to discover what *API functionality* is
 supported by the Nova deployment.
 
@@ -78,7 +78,7 @@ The extension is considered as two things in the Nova V2.1 API:
 
   One of the improvements in the V2.1 API was using stevedore to load
   Nova REST API extensions instead of old V2 handcrafted extension load
-  mechanisim.
+  mechanism.
 
   There was an argument that the plugin framework supported extensibility in
   the Nova API to allow deployers to publish custom API resources.
