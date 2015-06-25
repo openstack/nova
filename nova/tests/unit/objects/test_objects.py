@@ -1124,6 +1124,8 @@ object_data = {
     'ServiceList': '1.11-d1728430a30700c143e542b7c75f65b0',
     'Tag': '1.0-616bf44af4a22e853c17b37a758ec73e',
     'TagList': '1.0-e16d65894484b7530b720792ffbbbd02',
+    'TaskLog': '1.0-78b0534366f29aa3eebb01860fbe18fe',
+    'TaskLogList': '1.0-2378c0e2afdbbfaf392f31c1dffa4d25',
     'VirtCPUFeature': '1.0-3310718d8c72309259a6e39bdefe83ee',
     'VirtCPUModel': '1.0-6a5cc9f322729fc70ddc6733bacd57d3',
     'VirtCPUTopology': '1.0-fc694de72e20298f7c6bab1083fd4563',
