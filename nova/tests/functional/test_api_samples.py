@@ -207,21 +207,6 @@ class LimitsSampleJsonTest(ApiSampleTestBaseV2):
         self._verify_response('limit-get-resp', subs, response, 200)
 
 
-class SchedulerHintsJsonTest(ApiSampleTestBaseV2):
-    extension_name = ("nova.api.openstack.compute.contrib.scheduler_hints."
-                     "Scheduler_hints")
-
-    def test_scheduler_hints_post(self):
-        # Get api sample of scheduler hint post request.
-        hints = {'image_id': fake.get_valid_image_id(),
-                 'image_near': str(uuid_lib.uuid4())
-        }
-        response = self._do_post('servers', 'scheduler-hints-post-req',
-                                 hints)
-        subs = self._get_regexes()
-        self._verify_response('scheduler-hints-post-resp', subs, response, 202)
-
-
 class KeyPairsSampleJsonTest(ApiSampleTestBaseV2):
     extension_name = "nova.api.openstack.compute.contrib.keypairs.Keypairs"
 
