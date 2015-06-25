@@ -29,6 +29,7 @@ import webob
 from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import context
 from nova.i18n import _LI
+from nova import utils
 from nova import version
 from nova import wsgi
 
@@ -108,7 +109,7 @@ class XCPVNCProxy(object):
     def proxy_connection(self, req, connect_info, start_response):
         """Spawn bi-directional vnc proxy."""
         sockets = {}
-        t0 = eventlet.spawn(self.handshake, req, connect_info, sockets)
+        t0 = utils.spawn(self.handshake, req, connect_info, sockets)
         t0.wait()
 
         if not sockets.get('client') or not sockets.get('server'):
@@ -120,8 +121,8 @@ class XCPVNCProxy(object):
         client = sockets['client']
         server = sockets['server']
 
-        t1 = eventlet.spawn(self.one_way_proxy, client, server)
-        t2 = eventlet.spawn(self.one_way_proxy, server, client)
+        t1 = utils.spawn(self.one_way_proxy, client, server)
+        t2 = utils.spawn(self.one_way_proxy, server, client)
         t1.wait()
         t2.wait()
 

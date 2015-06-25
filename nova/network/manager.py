@@ -32,7 +32,6 @@ import math
 import re
 import uuid
 
-import eventlet
 import netaddr
 from oslo_config import cfg
 from oslo_log import log as logging
@@ -184,7 +183,7 @@ class RPCAllocateFixedIP(object):
                                                             network_p)
             if host != self.host:
                 # need to call allocate_fixed_ip to correct network host
-                green_threads.append(eventlet.spawn(
+                green_threads.append(utils.spawn(
                         self.network_rpcapi._rpc_allocate_fixed_ip,
                         context, instance_id, network['id'], address, vpn,
                         host))
@@ -1516,7 +1515,7 @@ class NetworkManager(manager.Manager):
                 call_func(context, network)
             else:
                 # i'm not the right host, run call on correct host
-                green_threads.append(eventlet.spawn(
+                green_threads.append(utils.spawn(
                         self.network_rpcapi.rpc_setup_network_on_host, context,
                         network.id, teardown, host))
 

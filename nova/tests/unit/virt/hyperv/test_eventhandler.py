@@ -18,6 +18,7 @@ import mock
 
 from nova import exception
 from nova.tests.unit.virt.hyperv import test_base
+from nova import utils
 from nova.virt.hyperv import constants
 from nova.virt.hyperv import eventhandler
 from nova.virt.hyperv import utilsfactory
@@ -103,7 +104,7 @@ class EventHandlerTestCase(test_base.HyperVBaseTestCase):
         self._test_dispatch_event(missing_uuid=True)
 
     @mock.patch.object(eventhandler.InstanceEventHandler, '_get_virt_event')
-    @mock.patch.object(eventlet, 'spawn_n')
+    @mock.patch.object(utils, 'spawn_n')
     def test_emit_event(self, mock_spawn, mock_get_event):
         self._event_handler._emit_event(mock.sentinel.instance_name,
                                         mock.sentinel.instance_uuid,

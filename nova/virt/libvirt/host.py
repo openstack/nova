@@ -33,7 +33,6 @@ import socket
 import sys
 import threading
 
-import eventlet
 from eventlet import greenio
 from eventlet import greenthread
 from eventlet import patcher
@@ -457,7 +456,7 @@ class Host(object):
         self._event_thread.start()
 
         LOG.debug("Starting green dispatch thread")
-        eventlet.spawn(self._dispatch_thread)
+        utils.spawn(self._dispatch_thread)
 
     def _get_new_connection(self):
         # call with _wrapped_conn_lock held

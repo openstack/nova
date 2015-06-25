@@ -15,13 +15,13 @@
 
 import functools
 
-import eventlet
 import netaddr
 from oslo_serialization import jsonutils
 import six
 
 from nova import exception
 from nova.i18n import _
+from nova import utils
 
 
 def ensure_string_keys(d):
@@ -484,7 +484,7 @@ class NetworkInfoAsyncWrapper(NetworkInfo):
     """
 
     def __init__(self, async_method, *args, **kwargs):
-        self._gt = eventlet.spawn(async_method, *args, **kwargs)
+        self._gt = utils.spawn(async_method, *args, **kwargs)
         methods = ['json', 'fixed_ips', 'floating_ips']
         for method in methods:
             fn = getattr(self, method)

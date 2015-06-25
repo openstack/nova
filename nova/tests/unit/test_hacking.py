@@ -550,6 +550,14 @@ class HackingTestCase(test.NoDBTestCase):
         self._assert_has_errors(code, checks.check_greenthread_spawns,
                                 expected_errors=errors)
 
+        code = "eventlet.spawn(func, arg1, kwarg1=kwarg1)"
+        self._assert_has_errors(code, checks.check_greenthread_spawns,
+                                expected_errors=errors)
+
+        code = "eventlet.spawn_n(func, arg1, kwarg1=kwarg1)"
+        self._assert_has_errors(code, checks.check_greenthread_spawns,
+                                expected_errors=errors)
+
         code = "nova.utils.spawn(func, arg1, kwarg1=kwarg1)"
         self._assert_has_no_errors(code, checks.check_greenthread_spawns)
 

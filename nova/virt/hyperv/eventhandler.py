@@ -25,6 +25,7 @@ from oslo_log import log as logging
 
 from nova import exception
 from nova.i18n import _LW
+from nova import utils
 from nova.virt import event as virtevent
 from nova.virt.hyperv import constants
 from nova.virt.hyperv import utilsfactory
@@ -71,7 +72,7 @@ class InstanceEventHandler(object):
         self._running_state_callback = running_state_callback
 
     def start_listener(self):
-        eventlet.spawn_n(self._poll_events)
+        utils.spawn_n(self._poll_events)
 
     def _poll_events(self):
         while True:
@@ -101,11 +102,11 @@ class InstanceEventHandler(object):
     def _emit_event(self, instance_name, instance_uuid, instance_state):
         virt_event = self._get_virt_event(instance_uuid,
                                           instance_state)
-        eventlet.spawn_n(self._state_change_callback, virt_event)
+        utils.spawn_n(self._state_change_callback, virt_event)
 
         if instance_state == constants.HYPERV_VM_STATE_ENABLED:
-            eventlet.spawn_n(self._running_state_callback,
-                             instance_name, instance_uuid)
+            utils.spawn_n(self._running_state_callback,
+                          instance_name, instance_uuid)
 
     def _get_instance_uuid(self, instance_name):
         try:
