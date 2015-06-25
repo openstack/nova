@@ -986,11 +986,8 @@ class InstanceSystemMetadata(BASE, NovaBase):
                            ForeignKey('instances.uuid'),
                            nullable=False)
 
-    primary_join = ('and_(InstanceSystemMetadata.instance_uuid == '
-                    'Instance.uuid, InstanceSystemMetadata.deleted == 0)')
     instance = orm.relationship(Instance, backref="system_metadata",
-                            foreign_keys=instance_uuid,
-                            primaryjoin=primary_join)
+                            foreign_keys=instance_uuid)
 
 
 class InstanceTypeProjects(BASE, NovaBase):

@@ -2476,8 +2476,17 @@ def _instance_metadata_update_in_place(context, instance, metadata_type, model,
         elif key not in metadata:
             to_delete.append(keyvalue)
 
-    for condemned in to_delete:
-        condemned.soft_delete(session=session)
+    # NOTE: we have to hard_delete here otherwise we will get more than one
+    # system_metadata record when we read deleted for an instance;
+    # regular metadata doesn't have the same problem because we don't
+    # allow reading deleted regular metadata anywhere.
+    if metadata_type == 'system_metadata':
+        for condemned in to_delete:
+            session.delete(condemned)
+            instance[metadata_type].remove(condemned)
+    else:
+        for condemned in to_delete:
+            condemned.soft_delete(session=session)
 
     for key, value in metadata.iteritems():
         newitem = model()
@@ -4986,7 +4995,8 @@ def _instance_system_metadata_get_multi(context, instance_uuids,
     if not instance_uuids:
         return []
     return model_query(context, models.InstanceSystemMetadata,
-                       session=session, use_slave=use_slave).\
+                       session=session, use_slave=use_slave,
+                       read_deleted='yes').\
                     filter(
             models.InstanceSystemMetadata.instance_uuid.in_(instance_uuids))
 
