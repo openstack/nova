@@ -3029,6 +3029,29 @@ class TestNeutronv2WithMock(test.TestCase):
         # Assert the calls.
         create_port_mock.assert_called_once_with(port_req_body)
 
+    @mock.patch.object(client.Client, 'create_port',
+                       side_effect=exceptions.InvalidIpForNetworkClient())
+    def test_create_port_with_invalid_ip_for_network(self, create_port_mock):
+        # Create fake data.
+        instance = fake_instance.fake_instance_obj(self.context)
+        net = {'id': 'my_netid1',
+               'name': 'my_netname1',
+               'subnets': ['mysubnid1'],
+               'tenant_id': instance['project_id']}
+        zone = 'compute:%s' % instance['availability_zone']
+        port_req_body = {'port': {'device_id': instance['uuid'],
+                                  'device_owner': zone,
+                                  'mac_address': 'XX:XX:XX:XX:XX:XX'}}
+        fake_ip = '1.1.1.1'
+        # Run the code.
+        self.assertRaises(exception.InvalidInput,
+                          self.api._create_port,
+                          neutronapi.get_client(self.context),
+                          instance, net['id'], port_req_body,
+                          fixed_ip=fake_ip)
+        # Assert the calls.
+        create_port_mock.assert_called_once_with(port_req_body)
+
     def test_get_network_detail_not_found(self):
         api = neutronapi.API()
         expected_exc = exceptions.NetworkNotFoundClient()
