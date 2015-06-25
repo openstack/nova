@@ -136,7 +136,11 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject,
                     context, updates, legacy=False)
 
         self._from_db_object(context, self, db_bdm)
-        if cell_type == 'compute':
+        # NOTE(alaski): bdms are looked up by instance uuid and device_name
+        # so if we sync up with no device_name an entry will be created that
+        # will not be found on a later update_or_create call and a second bdm
+        # create will occur.
+        if cell_type == 'compute' and db_bdm.get('device_name') is not None:
             cells_api = cells_rpcapi.CellsAPI()
             cells_api.bdm_update_or_create_at_top(
                     context, self, create=cells_create)
