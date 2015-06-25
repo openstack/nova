@@ -19,7 +19,7 @@ oslosphinx>=2.5.0,<2.6.0  # Apache-2.0
 oslotest>=1.5.1,<1.6.0  # Apache-2.0
 testrepository>=0.0.18
 testtools>=0.9.36,!=1.2.0
-tempest-lib>=0.4.0
+tempest-lib>=0.4.0,<0.5.0
 
 # vmwareapi driver specific dependencies
 suds>=0.4
