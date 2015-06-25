@@ -17,7 +17,9 @@ Unit Tests for nova.network.rpcapi
 """
 
 import collections
+import contextlib
 
+import mock
 from mox3 import mox
 from oslo_config import cfg
 
@@ -90,7 +92,7 @@ class NetworkRpcAPITestCase(test.NoDBTestCase):
 
         version_check = [
             'deallocate_for_instance', 'deallocate_fixed_ip',
-            'allocate_for_instance',
+            'allocate_for_instance', 'release_fixed_ip',
         ]
         if method in version_check:
             rpcapi.client.can_send_version(mox.IgnoreArg()).AndReturn(True)
@@ -200,7 +202,33 @@ class NetworkRpcAPITestCase(test.NoDBTestCase):
 
     def test_release_fixed_ip(self):
         self._test_network_api('release_fixed_ip', rpc_method='cast',
-                host='fake_host', address='fake_addr')
+                host='fake_host', address='fake_addr', mac='fake_mac',
+                version='1.14')
+
+    def test_release_fixed_ip_no_mac_support(self):
+        # Tests that the mac kwarg is not passed when we can't send version
+        # 1.14 to the network manager.
+        ctxt = context.RequestContext('fake_user', 'fake_project')
+        address = '192.168.65.158'
+        host = 'fake-host'
+        mac = '00:0c:29:2c:b2:64'
+        rpcapi = network_rpcapi.NetworkAPI()
+        cast_mock = mock.Mock()
+        cctxt_mock = mock.Mock(cast=cast_mock)
+        with contextlib.nested(
+            mock.patch.object(rpcapi.client, 'can_send_version',
+                              return_value=False),
+            mock.patch.object(rpcapi.client, 'prepare',
+                              return_value=cctxt_mock)
+        ) as (
+            can_send_mock, prepare_mock
+        ):
+            rpcapi.release_fixed_ip(ctxt, address, host, mac)
+        # assert our mocks were called as expected     232
+        can_send_mock.assert_called_once_with('1.14')
+        prepare_mock.assert_called_once_with(server=host, version='1.0')
+        cast_mock.assert_called_once_with(ctxt, 'release_fixed_ip',
+                                          address=address)
 
     def test_set_network_host(self):
         self._test_network_api('set_network_host', rpc_method='call',
