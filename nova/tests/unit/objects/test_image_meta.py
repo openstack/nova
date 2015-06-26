@@ -95,7 +95,7 @@ class TestImageMetaProps(test.NoDBTestCase):
 
         self.assertEqual("hvm", virtprops.get("hw_vm_mode", "hvm"))
 
-    def test_non_existant_prop(self):
+    def test_non_existent_prop(self):
         props = {}
         virtprops = objects.ImageMetaProps.from_dict(props)
 
