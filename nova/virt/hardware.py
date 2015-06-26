@@ -263,18 +263,18 @@ def _get_cpu_topology_constraints(flavor, image_meta):
      hw:cpu_sockets - preferred socket count
      hw:cpu_cores - preferred core count
      hw:cpu_threads - preferred thread count
-     hw:cpu_maxsockets - maximum socket count
-     hw:cpu_maxcores - maximum core count
-     hw:cpu_maxthreads - maximum thread count
+     hw:cpu_max_sockets - maximum socket count
+     hw:cpu_max_cores - maximum core count
+     hw:cpu_max_threads - maximum thread count
 
     In the image metadata this will look at
 
      hw_cpu_sockets - preferred socket count
      hw_cpu_cores - preferred core count
      hw_cpu_threads - preferred thread count
-     hw_cpu_maxsockets - maximum socket count
-     hw_cpu_maxcores - maximum core count
-     hw_cpu_maxthreads - maximum thread count
+     hw_cpu_max_sockets - maximum socket count
+     hw_cpu_max_cores - maximum core count
+     hw_cpu_max_threads - maximum thread count
 
     The image metadata must be strictly lower than any values
     set in the flavor. All values are, however, optional.
