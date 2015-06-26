@@ -1786,4 +1786,4 @@ class COLOVlanRangeError(NovaException):
 
 
 class COLOMultipleInterfacesNotSupported(NovaException):
-    msg_fmt = _("Multiple network interfaces not enabled when using COLO.")
+    msg_fmt = _("Multiple network interfaces not supported when using COLO.")

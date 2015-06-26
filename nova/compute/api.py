@@ -1434,6 +1434,9 @@ class API(base.Base):
         self._check_create_policies(context, availability_zone,
                 requested_networks, block_device_mapping)
 
+        if requested_networks and len(requested_networks) > 1:
+            raise exception.COLOMultipleInterfacesNotSupported()
+
         if requested_networks and max_count > 1:
             self._check_multiple_instances_and_specified_ip(requested_networks)
             if utils.is_neutron():

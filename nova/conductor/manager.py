@@ -644,9 +644,6 @@ class ComputeTaskManager(base.Base):
                     context, instance.uuid)
 
             if utils.ft_enabled(instance):
-                if requested_networks and len(requested_networks) > 1:
-                    raise exception.COLOMultipleInterfacesNotSupported()
-
                 colo_tasks = colo.COLOTasks()
 
                 # TODO(ORBIT): If the final way of handling allocated vlan tags

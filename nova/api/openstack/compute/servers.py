@@ -1007,6 +1007,8 @@ class Controller(wsgi.Controller):
             raise exc.HTTPConflict(explanation=error.format_message())
         except exception.Invalid as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())
+        except exception.COLOMultipleInterfacesNotSupported as e:
+            raise exc.HTTPBadRequest(explanation=e.format_message())
 
         # If the caller wanted a reservation_id, return it
         if ret_resv_id:
