@@ -2123,7 +2123,7 @@ class ComputeManager(manager.Manager):
 
                     if (utils.ft_enabled(instance) and
                             not utils.ft_secondary(instance)):
-                        self.colo_synchronize(context, instance)
+                        self._colo_synchronize(context, instance)
         except (exception.InstanceNotFound,
                 exception.UnexpectedDeletingTaskStateError) as e:
             with excutils.save_and_reraise_exception():
@@ -2180,6 +2180,10 @@ class ComputeManager(manager.Manager):
         instance.vm_state = vm_states.ACTIVE
         instance.task_state = None
         instance.launched_at = timeutils.utcnow()
+
+        # TODO(ORBIT): Temp
+        if utils.ft_secondary(instance):
+            instance.vm_state = vm_states.PAUSED
 
         try:
             instance.save(expected_task_state=task_states.SPAWNING)
@@ -6260,7 +6264,7 @@ class ComputeManager(manager.Manager):
                 with utils.temporary_mutation(context, read_deleted='yes'):
                     instance.save(context)
 
-    def colo_synchronize(self, context, primary_instance):
+    def _colo_synchronize(self, context, primary_instance):
         relations = (objects.FaultToleranceRelationList.
                      get_by_primary_instance_uuid(context,
                                                   primary_instance.uuid))
@@ -6273,3 +6277,7 @@ class ComputeManager(manager.Manager):
 
         LOG.debug("Executing initial COLO synchronization of %s", relation)
         self.driver.colo_synchronize(primary_instance, secondary_instance)
+
+    def colo_cleanup(self, context, instance):
+        network_info = compute_utils.get_nw_info_for_instance(instance)
+        self.driver.colo_cleanup(instance, network_info)

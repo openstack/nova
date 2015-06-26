@@ -360,6 +360,10 @@ class ConductorAPI(object):
         return cctxt.cast(context, 'colo_deallocate_vlan',
                           instance_uuid=instance_uuid)
 
+    def ft_failover(self, context, instance_uuid):
+        cctxt = self.client.prepare()
+        return cctxt.call(context, 'ft_failover', instance_uuid=instance_uuid)
+
 
 class ComputeTaskAPI(object):
     """Client side of the conductor 'compute' namespaced RPC API

@@ -3275,6 +3275,9 @@ class API(base.Base):
             self.compute_rpcapi.external_instance_event(
                 context, instances_by_host[host], events_by_host[host])
 
+    def colo_cleanup(self, context, instance):
+        self.compute_rpcapi.colo_cleanup(context, instance)
+
 
 class HostAPI(base.Base):
     """Sub-set of the Compute Manager API for managing host operations."""

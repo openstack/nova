@@ -899,6 +899,10 @@ class ComputeAPI(object):
                 block_device_mapping=block_device_mapping, node=node,
                 limits=limits)
 
+    def colo_cleanup(self, ctxt, instance):
+        cctxt = self.client.prepare(server=_compute_host(None, instance))
+        cctxt.cast(ctxt, 'colo_cleanup', instance=instance)
+
 
 class SecurityGroupAPI(object):
     '''Client side of the security group rpc API.

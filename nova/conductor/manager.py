@@ -444,7 +444,18 @@ class ConductorManager(manager.Manager):
     def colo_deallocate_vlan(self, context, instance_uuid):
         LOG.debug("Releasing COLO VLAN ID allocated for instance %s." %
                   instance_uuid)
-        return self.db.colo_deallocate_vlan(context, instance_uuid)
+        self.db.colo_deallocate_vlan(context, instance_uuid)
+
+    def ft_failover(self, context, instance_uuid):
+        ft_tasks = fault_tolerance.FaultToleranceTasks()
+        ft_tasks.failover(context, instance_uuid)
+        # NOTE(ORBIT): We are currently cleaning up everything colo related
+        #              when doing a failover. We can therefore release the
+        #              VLAN ID.
+        #              When COLO is supporting the possibility to recover we
+        #              should probably keep the VLAN allocation by updating
+        #              the instance_uuid to the new primary.
+        self.colo_deallocate_vlan(context, instance_uuid)
 
 
 class ComputeTaskManager(base.Base):

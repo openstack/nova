@@ -38,12 +38,13 @@ class FaultServerToleranceController(servers.Controller):
         context = req.environ["nova.context"]
 
         try:
-            instance = self.compute_api.get(context, id, want_objects=True)
-
-            # TODO(ORBIT): Call the failover task in the conductor + handle
-            #              exceptions and return an appropriate response.
-        except exception.InstanceNotFound as e:
+            self.conductor_api.ft_failover(context, id)
+        except (exception.InstanceNotFound
+                exception.FaultToleranceRelationByPrimaryNotFound
+                exception.FaultToleranceRelationBySecondaryNotFound) as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
+        except exception.InstanceNotFaultTolerant as e:
+            raise webob.exc.HTTPBadRequest(explanation=e.format_message())
 
         return webob.Response(status_int=200)
 
@@ -67,12 +68,12 @@ class FaultServerToleranceController(servers.Controller):
 
                 LOG.debug("Successfully deleted secondary instance: %s",
                           relation.secondary_instance_uuid)
+
+            # TODO(ORBIT): Investigate if this could happen even though the
+            #              instance remain undeleted.
+            self.conductor_api.colo_deallocate_vlan(context, id)
         except exception.FaultToleranceRelationByPrimaryNotFound as e:
             LOG.debug(e.format_message())
-
-        # TODO(ORBIT): Investigate if this could happen even though the
-        #              instance remain undeleted.
-        self.conductor_api.colo_deallocate_vlan(context, id)
 
 
 class Fault_tolerance(extensions.ExtensionDescriptor):

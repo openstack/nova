@@ -6389,6 +6389,10 @@ class LibvirtDriver(driver.ComputeDriver):
         # TODO(ORBIT): Currently just unpause the primary instance
         self.unpause(primary_instance)
 
+    def colo_cleanup(self, instance, network_info):
+        for vif in network_info:
+            self.vif_driver.cleanup_colo_plug(instance, vif)
+
 
 class HostState(object):
     """Manages information about the compute node through libvirt."""

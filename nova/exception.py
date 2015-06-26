@@ -1787,3 +1787,7 @@ class COLOVlanRangeError(NovaException):
 
 class COLOMultipleInterfacesNotSupported(NovaException):
     msg_fmt = _("Multiple network interfaces not supported when using COLO.")
+
+
+class InstanceNotFaultTolerant(NovaException):
+    msg_fmt = _("Instance %(instance_uuid)s is not in fault tolerant mode.")
