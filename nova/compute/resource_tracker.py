@@ -80,8 +80,8 @@ class ResourceTracker(object):
         self.tracked_instances = {}
         self.tracked_migrations = {}
         self.conductor_api = conductor.API()
-        monitor_handler = monitors.ResourceMonitorHandler()
-        self.monitors = monitor_handler.choose_monitors(self)
+        monitor_handler = monitors.MonitorHandler(self)
+        self.monitors = monitor_handler.monitors
         self.ext_resources_handler = \
             ext_resources.ResourceHandler(CONF.compute_resources)
         self.old_resources = objects.ComputeNode()

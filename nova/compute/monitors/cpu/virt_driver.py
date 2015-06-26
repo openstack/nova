@@ -33,10 +33,10 @@ LOG = logging.getLogger(__name__)
 class Monitor(base.CPUMonitorBase):
     """CPU monitor that uses the virt driver's get_host_cpu_stats() call."""
 
-    def __init__(self, compute_manager):
-        super(Monitor, self).__init__(compute_manager)
+    def __init__(self, resource_tracker):
+        super(Monitor, self).__init__(resource_tracker)
         self.source = CONF.compute_driver
-        self.driver = self.compute_manager.driver
+        self.driver = resource_tracker.driver
         self._data = {}
         self._cpu_stats = {}
 

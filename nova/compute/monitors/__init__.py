@@ -19,20 +19,24 @@ Resource monitor API specification.
 
 from oslo_config import cfg
 from oslo_log import log as logging
+from stevedore import enabled
 
-import nova.compute.monitors.base
 from nova.i18n import _LW
-from nova import loadables
 
 compute_monitors_opts = [
     cfg.MultiStrOpt('compute_available_monitors',
-                    default=['nova.compute.monitors.all_monitors'],
+                    deprecated_for_removal=True,
+                    default=None,
                     help='Monitor classes available to the compute which may '
-                         'be specified more than once.'),
+                         'be specified more than once. This option is '
+                         'DEPRECATED and no longer used. Use setuptools entry '
+                         'points to list available monitor plugins.'),
     cfg.ListOpt('compute_monitors',
                 default=[],
                 help='A list of monitors that can be used for getting '
-                     'compute metrics.'),
+                     'compute metrics. You can use the alias/name from '
+                     'the setuptools entry points for nova.compute.monitors.* '
+                     'namespaces.'),
     ]
 
 CONF = cfg.CONF
@@ -40,64 +44,42 @@ CONF.register_opts(compute_monitors_opts)
 LOG = logging.getLogger(__name__)
 
 
-# TODO(jaypipes): Replace the use of loadables with stevedore.
-class ResourceMonitorHandler(loadables.BaseLoader):
-    """Base class to handle loading monitor classes.
-    """
-    def __init__(self):
-        super(ResourceMonitorHandler, self).__init__(
-                nova.compute.monitors.base.MonitorBase)
+class MonitorHandler(object):
 
-    def choose_monitors(self, manager):
-        """This function checks the monitor names and metrics names against a
-        predefined set of acceptable monitors.
-        """
-        monitor_classes = self.get_matching_classes(
-             CONF.compute_available_monitors)
-        monitor_class_map = {cls.__name__: cls for cls in monitor_classes}
-        monitor_cls_names = CONF.compute_monitors
-        good_monitors = []
-        bad_monitors = []
-        metric_names = set()
-        for monitor_name in monitor_cls_names:
-            if monitor_name not in monitor_class_map:
-                bad_monitors.append(monitor_name)
-                continue
+    def __init__(self, resource_tracker):
+        self.cpu_monitor_loaded = False
 
-            try:
-                # make sure different monitors do not have the same
-                # metric name
-                monitor = monitor_class_map[monitor_name](manager)
-                metric_names_tmp = monitor.get_metric_names()
-                overlap = metric_names & metric_names_tmp
-                if not overlap:
-                    metric_names = metric_names | metric_names_tmp
-                    good_monitors.append(monitor)
-                else:
-                    msg = (_LW("Excluding monitor %(monitor_name)s due to "
-                               "metric name overlap; overlapping "
-                               "metrics: %(overlap)s") %
-                               {'monitor_name': monitor_name,
-                                'overlap': ', '.join(overlap)})
-                    LOG.warn(msg)
-                    bad_monitors.append(monitor_name)
-            except Exception as ex:
-                msg = (_LW("Monitor %(monitor_name)s cannot be used: %(ex)s") %
-                          {'monitor_name': monitor_name, 'ex': ex})
-                LOG.warn(msg)
-                bad_monitors.append(monitor_name)
+        ns = 'nova.compute.monitors.cpu'
+        cpu_plugin_mgr = enabled.EnabledExtensionManager(
+                namespace=ns,
+                invoke_on_load=True,
+                check_func=self.check_enabled_cpu_monitor,
+                invoke_args=(resource_tracker,)
+        )
+        self.monitors = [obj.obj for obj in cpu_plugin_mgr]
 
-        if bad_monitors:
-            LOG.warning(_LW("The following monitors have been disabled: %s"),
-                        ', '.join(bad_monitors))
-
-        return good_monitors
-
-
-def all_monitors():
-    """Return a list of monitor classes found in this directory.
-
-    This method is used as the default for available monitors
-    and should return a list of all monitor classes available.
-    """
-    return ResourceMonitorHandler().get_all_classes()
+    def check_enabled_cpu_monitor(self, ext):
+        if self.cpu_monitor_loaded is not False:
+            msg = _LW("Excluding CPU monitor %(monitor_name)s. Already "
+                      "loaded %(loaded_cpu_monitor)s.")
+            msg = msg % {
+                'monitor_name': ext.name,
+                'loaded_cpu_monitor': self.cpu_monitor_loaded
+            }
+            LOG.warn(msg)
+            return False
+        # TODO(jaypipes): Right now, we only have CPU monitors, so we don't
+        # need to check if the plugin is a CPU monitor or not. Once non-CPU
+        # monitors are added, change this to check either the base class or
+        # the set of metric names returned to ensure only a single CPU
+        # monitor is loaded at any one time.
+        if ext.name in CONF.compute_monitors:
+            self.cpu_monitor_loaded = ext.name
+            return True
+        msg = _LW("Excluding CPU monitor %(monitor_name)s. Not in the "
+                  "list of enabled monitors (CONF.compute_monitors).")
+        msg = msg % {
+            'monitor_name': ext.name,
+        }
+        LOG.warn(msg)
+        return False

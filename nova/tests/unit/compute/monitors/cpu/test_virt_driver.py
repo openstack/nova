@@ -20,25 +20,24 @@ from nova import objects
 from nova import test
 
 
-class ComputeDriverCPUMonitorTestCase(test.NoDBTestCase):
-    def setUp(self):
-        super(ComputeDriverCPUMonitorTestCase, self).setUp()
+class FakeDriver(object):
+    def get_host_cpu_stats(self):
+        return {'kernel': 5664160000000,
+                'idle': 1592705190000000,
+                'frequency': 800,
+                'user': 26728850000000,
+                'iowait': 6121490000000}
 
-        class FakeDriver(object):
-            def get_host_cpu_stats(self):
-                return {'kernel': 5664160000000,
-                        'idle': 1592705190000000,
-                        'frequency': 800,
-                        'user': 26728850000000,
-                        'iowait': 6121490000000}
 
-        class FakeComputeManager(object):
-            driver = FakeDriver()
+class FakeResourceTracker(object):
+    driver = FakeDriver()
 
-        self.monitor = virt_driver.Monitor(FakeComputeManager())
+
+class VirtDriverCPUMonitorTestCase(test.NoDBTestCase):
 
     def test_get_metric_names(self):
-        names = self.monitor.get_metric_names()
+        monitor = virt_driver.Monitor(FakeResourceTracker())
+        names = monitor.get_metric_names()
         self.assertEqual(10, len(names))
         self.assertIn("cpu.frequency", names)
         self.assertIn("cpu.user.time", names)
@@ -53,8 +52,9 @@ class ComputeDriverCPUMonitorTestCase(test.NoDBTestCase):
 
     def test_get_metrics(self):
         metrics = objects.MonitorMetricList()
-        self.monitor.add_metrics_to_list(metrics)
-        names = self.monitor.get_metric_names()
+        monitor = virt_driver.Monitor(FakeResourceTracker())
+        monitor.add_metrics_to_list(metrics)
+        names = monitor.get_metric_names()
         for metric in metrics.objects:
             self.assertIn(metric.name, names)
 
