@@ -56,3 +56,11 @@ user documentation.
   Show the ``reserved`` status on a ``FixedIP`` object in the ``os-fixed-ips`` API
   extension. The extension allows one to ``reserve`` and ``unreserve`` a fixed IP
   but the show method does not report the current status.
+
+2.5
+---
+
+  Before version 2.5, the command ``nova list --ip6 xxx`` returns all servers
+  for non-admins, as the filter option is silently discarded. There is no
+  reason to treat ip6 different from ip, though, so we just add this
+  option to the allowed list.
