@@ -25,8 +25,10 @@ from oslo_config import cfg
 
 from nova import context
 from nova.network import rpcapi as network_rpcapi
+from nova.objects import base as objects_base
 from nova import test
 from nova.tests.unit import fake_instance
+from nova.tests.unit import fake_network
 
 CONF = cfg.CONF
 
@@ -92,7 +94,7 @@ class NetworkRpcAPITestCase(test.NoDBTestCase):
 
         version_check = [
             'deallocate_for_instance', 'deallocate_fixed_ip',
-            'allocate_for_instance', 'release_fixed_ip',
+            'allocate_for_instance', 'release_fixed_ip', 'set_network_host',
         ]
         if method in version_check:
             rpcapi.client.can_send_version(mox.IgnoreArg()).AndReturn(True)
@@ -231,8 +233,33 @@ class NetworkRpcAPITestCase(test.NoDBTestCase):
                                           address=address)
 
     def test_set_network_host(self):
+        network = fake_network.fake_network_obj(context.get_admin_context())
         self._test_network_api('set_network_host', rpc_method='call',
-                network_ref={})
+                               network_ref=network, version='1.15')
+
+    def test_set_network_host_network_object_to_primitive(self):
+        # Tests that the network object is converted to a primitive if it
+        # can't send version 1.15.
+        ctxt = context.RequestContext('fake_user', 'fake_project')
+        network = fake_network.fake_network_obj(ctxt)
+        network_dict = objects_base.obj_to_primitive(network)
+        rpcapi = network_rpcapi.NetworkAPI()
+        call_mock = mock.Mock()
+        cctxt_mock = mock.Mock(call=call_mock)
+        with contextlib.nested(
+            mock.patch.object(rpcapi.client, 'can_send_version',
+                              return_value=False),
+            mock.patch.object(rpcapi.client, 'prepare',
+                              return_value=cctxt_mock)
+        ) as (
+            can_send_mock, prepare_mock
+        ):
+            rpcapi.set_network_host(ctxt, network)
+        # assert our mocks were called as expected
+        can_send_mock.assert_called_once_with('1.15')
+        prepare_mock.assert_called_once_with(version='1.0')
+        call_mock.assert_called_once_with(ctxt, 'set_network_host',
+                                          network_ref=network_dict)
 
     def test_rpc_setup_network_on_host(self):
         self._test_network_api('rpc_setup_network_on_host', rpc_method='call',
