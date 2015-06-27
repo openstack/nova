@@ -564,7 +564,7 @@ class LibvirtDriver(driver.ComputeDriver):
                         {'version': self._version_to_string(
                             NEXT_MIN_LIBVIRT_VERSION)})
 
-    # TODO(sahid): This method is targetted for removal when the tests
+    # TODO(sahid): This method is targeted for removal when the tests
     # have been updated to avoid its use
     #
     # All libvirt API calls on the libvirt.Connect object should be

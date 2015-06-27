@@ -158,9 +158,9 @@ class ConfigDriveBuilder(object):
 
     def _make_ext4_ploop(self, path, tmpdir):
         """ploop is a disk loopback block device, that is used in
-        Parallels(OpenVZ) containers. It is similiar to Linux loop
+        Parallels(OpenVZ) containers. It is similar to Linux loop
         device but prevents double caching of data in memory and
-        supports snapshots and some other effeciency benefits. Adding
+        supports snapshots and some other efficiency benefits. Adding
         ploop is a natural way to add disk device to VZ containers.
         Ploop device has its own image format. It contains specific
         partition table with one ext4 partition.
