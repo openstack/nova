@@ -39,8 +39,8 @@ class FaultServerToleranceController(servers.Controller):
 
         try:
             self.conductor_api.ft_failover(context, id)
-        except (exception.InstanceNotFound
-                exception.FaultToleranceRelationByPrimaryNotFound
+        except (exception.InstanceNotFound,
+                exception.FaultToleranceRelationByPrimaryNotFound,
                 exception.FaultToleranceRelationBySecondaryNotFound) as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
         except exception.InstanceNotFaultTolerant as e:
@@ -68,6 +68,8 @@ class FaultServerToleranceController(servers.Controller):
 
                 LOG.debug("Successfully deleted secondary instance: %s",
                           relation.secondary_instance_uuid)
+
+                relation.destroy()
 
             # TODO(ORBIT): Investigate if this could happen even though the
             #              instance remain undeleted.
