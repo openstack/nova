@@ -683,7 +683,8 @@ class FlatNetworkTestCase(test.TestCase):
         mock_associate.assert_called_once_with(self.context,
                                                '1.2.3.4',
                                                instance.uuid,
-                                               1)
+                                               1,
+                                               vif_id=1)
 
     @mock.patch('nova.objects.instance.Instance.get_by_uuid')
     @mock.patch('nova.objects.virtual_interface.VirtualInterface'
@@ -736,11 +737,9 @@ class FlatNetworkTestCase(test.TestCase):
                 '.get_by_instance_and_network')
     @mock.patch('nova.objects.fixed_ip.FixedIP.disassociate')
     @mock.patch('nova.objects.fixed_ip.FixedIP.associate_pool')
-    @mock.patch('nova.objects.fixed_ip.FixedIP.save')
     @mock.patch('nova.network.manager.NetworkManager._add_virtual_interface')
     def test_allocate_fixed_ip_create_new_vifs(self,
                                                mock_add,
-                                               mock_fixedip_save,
                                                mock_fixedip_associate,
                                                mock_fixedip_disassociate,
                                                mock_vif_get,
@@ -749,7 +748,7 @@ class FlatNetworkTestCase(test.TestCase):
 
         fip = objects.FixedIP(instance_uuid='fake-uuid',
                               address=address,
-                              virtual_interface_id=1)
+                              virtual_interface_id=1000)
         net = {'cidr': '24', 'id': 1, 'uuid': 'nosuch'}
         instance = objects.Instance(context=self.context)
         instance.create()
@@ -881,10 +880,9 @@ class VlanNetworkTestCase(test.TestCase):
                               mox.IgnoreArg(),
                               mox.IgnoreArg(),
                               network_id=mox.IgnoreArg(),
-                              reserved=True).AndReturn(fixed)
-        db.fixed_ip_update(mox.IgnoreArg(),
-                           mox.IgnoreArg(),
-                           mox.IgnoreArg())
+                              reserved=True,
+                              virtual_interface_id=vifs[0]['id']
+                              ).AndReturn(fixed)
         db.virtual_interface_get_by_instance_and_network(mox.IgnoreArg(),
                 mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(vifs[0])
         db.instance_get_by_uuid(mox.IgnoreArg(),
@@ -907,7 +905,6 @@ class VlanNetworkTestCase(test.TestCase):
                 '_do_trigger_security_group_members_refresh_for_instance',
                 lambda *a, **kw: None)
         self.mox.StubOutWithMock(db, 'fixed_ip_associate_pool')
-        self.mox.StubOutWithMock(db, 'fixed_ip_update')
         self.mox.StubOutWithMock(db,
                               'virtual_interface_get_by_instance_and_network')
         self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
@@ -917,10 +914,9 @@ class VlanNetworkTestCase(test.TestCase):
         db.fixed_ip_associate_pool(mox.IgnoreArg(),
                                    mox.IgnoreArg(),
                                    instance_uuid=mox.IgnoreArg(),
-                                   host=None).AndReturn(fixed)
-        db.fixed_ip_update(mox.IgnoreArg(),
-                           mox.IgnoreArg(),
-                           mox.IgnoreArg())
+                                   host=None,
+                                   virtual_interface_id=vifs[0]['id']
+                                   ).AndReturn(fixed)
         db.virtual_interface_get_by_instance_and_network(mox.IgnoreArg(),
                 mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(vifs[0])
         db.instance_get_by_uuid(mox.IgnoreArg(),
@@ -945,9 +941,8 @@ class VlanNetworkTestCase(test.TestCase):
     @mock.patch('nova.network.manager.VlanManager._add_virtual_interface')
     @mock.patch('nova.objects.instance.Instance.get_by_uuid')
     @mock.patch('nova.objects.fixed_ip.FixedIP.associate')
-    @mock.patch('nova.objects.fixed_ip.FixedIP.save')
     @mock.patch('nova.objects.VirtualInterface.get_by_instance_and_network')
-    def test_allocate_fixed_ip_return_none(self, mock_get, mock_save,
+    def test_allocate_fixed_ip_return_none(self, mock_get,
             mock_associate, mock_get_uuid, mock_add, mock_trigger,
             mock_validate, mock_setup):
         net = {'cidr': '24', 'id': 1, 'uuid': 'nosuch'}
@@ -974,7 +969,6 @@ class VlanNetworkTestCase(test.TestCase):
 
         mock_add.assert_called_once_with(self.context_admin, instance.uuid,
                                          net['id'])
-        mock_save.assert_called_once_with()
 
     @mock.patch('nova.objects.instance.Instance.get_by_uuid')
     @mock.patch('nova.objects.fixed_ip.FixedIP.associate')
@@ -992,7 +986,8 @@ class VlanNetworkTestCase(test.TestCase):
         mock_associate.assert_called_once_with(self.context,
                                                '1.2.3.4',
                                                instance.uuid,
-                                               1)
+                                               1,
+                                               vif_id=1)
 
     @mock.patch('nova.objects.instance.Instance.get_by_uuid')
     @mock.patch('nova.objects.fixed_ip.FixedIP.associate')
@@ -1011,7 +1006,8 @@ class VlanNetworkTestCase(test.TestCase):
         mock_associate.assert_called_once_with(self.context,
                                                '1.2.3.4',
                                                instance.uuid,
-                                               1, reserved=True)
+                                               1, reserved=True,
+                                               vif_id=1)
 
     @mock.patch.object(db, 'virtual_interface_get_by_instance_and_network',
                        return_value=None)
@@ -1590,13 +1586,9 @@ class VlanNetworkTestCase(test.TestCase):
         self.mox.StubOutWithMock(db, 'fixed_ip_associate_pool')
         self.mox.StubOutWithMock(db,
                               'virtual_interface_get_by_instance_and_network')
-        self.mox.StubOutWithMock(db, 'fixed_ip_update')
         self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
         self.mox.StubOutWithMock(self.network, 'get_instance_nw_info')
 
-        db.fixed_ip_update(mox.IgnoreArg(),
-                           mox.IgnoreArg(),
-                           mox.IgnoreArg())
         db.virtual_interface_get_by_instance_and_network(mox.IgnoreArg(),
                 mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(vifs[0])
 
@@ -1605,7 +1597,9 @@ class VlanNetworkTestCase(test.TestCase):
         db.fixed_ip_associate_pool(mox.IgnoreArg(),
                                    mox.IgnoreArg(),
                                    instance_uuid=mox.IgnoreArg(),
-                                   host=None).AndReturn(fixed)
+                                   host=None,
+                                   virtual_interface_id=vifs[0]['id']
+                                   ).AndReturn(fixed)
         db.network_get(mox.IgnoreArg(),
                        mox.IgnoreArg(),
                        project_only=mox.IgnoreArg()

@@ -4532,6 +4532,28 @@ class FixedIPTestCase(BaseInstanceTypeTestCase):
                               self.ctxt, address, instance_uuid)
             self.assertEqual(1, mock_first.call_count)
 
+    def test_fixed_ip_associate_with_vif(self):
+        instance_uuid = self._create_instance()
+        network = db.network_create_safe(self.ctxt, {})
+        vif = db.virtual_interface_create(self.ctxt, {})
+        address = self.create_fixed_ip()
+
+        fixed_ip = db.fixed_ip_associate(self.ctxt, address, instance_uuid,
+                                         network_id=network['id'],
+                                         virtual_interface_id=vif['id'])
+
+        self.assertTrue(fixed_ip['allocated'])
+        self.assertEqual(vif['id'], fixed_ip['virtual_interface_id'])
+
+    def test_fixed_ip_associate_not_allocated_without_vif(self):
+        instance_uuid = self._create_instance()
+        address = self.create_fixed_ip()
+
+        fixed_ip = db.fixed_ip_associate(self.ctxt, address, instance_uuid)
+
+        self.assertFalse(fixed_ip['allocated'])
+        self.assertIsNone(fixed_ip['virtual_interface_id'])
+
     def test_fixed_ip_associate_pool_invalid_uuid(self):
         instance_uuid = '123'
         self.assertRaises(exception.InvalidUUID, db.fixed_ip_associate_pool,
@@ -6143,7 +6165,7 @@ class NetworkTestCase(test.TestCase, ModelsObjectComparatorMixin):
             'network_id': network.id, 'allocated': True,
             'virtual_interface_id': virtual_interface.id})
         db.fixed_ip_associate(self.ctxt, ip, instance.uuid,
-            network.id)
+            network.id, virtual_interface_id=virtual_interface['id'])
         return network, instance
 
     def test_network_get_associated_default_route(self):

@@ -488,25 +488,26 @@ def migration_get_all_by_filters(context, filters):
 
 
 def fixed_ip_associate(context, address, instance_uuid, network_id=None,
-                       reserved=False):
+                       reserved=False, virtual_interface_id=None):
     """Associate fixed ip to instance.
 
     Raises if fixed ip is not available.
 
     """
     return IMPL.fixed_ip_associate(context, address, instance_uuid, network_id,
-                                   reserved)
+                                   reserved, virtual_interface_id)
 
 
 def fixed_ip_associate_pool(context, network_id, instance_uuid=None,
-                            host=None):
+                            host=None, virtual_interface_id=None):
     """Find free ip in network and associate it to instance or host.
 
     Raises if one is not available.
 
     """
     return IMPL.fixed_ip_associate_pool(context, network_id,
-                                        instance_uuid, host)
+                                        instance_uuid, host,
+                                        virtual_interface_id)
 
 
 def fixed_ip_create(context, values):
