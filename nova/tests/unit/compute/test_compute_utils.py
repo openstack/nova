@@ -35,6 +35,7 @@ from nova import db
 from nova import exception
 from nova.image import glance
 from nova.network import api as network_api
+from nova.network import model
 from nova import objects
 from nova.objects import block_device as block_device_obj
 from nova import rpc
@@ -285,14 +286,10 @@ class DefaultDeviceNamesForInstanceTestCase(test.NoDBTestCase):
                   'source_type': 'blank',
                   'destination_type': 'volume',
                   'boot_index': -1})])
-        self.flavor = {'swap': 4}
         self.instance = {'uuid': 'fake_instance', 'ephemeral_gb': 2}
         self.is_libvirt = False
         self.root_device_name = '/dev/vda'
         self.update_called = False
-
-        def fake_extract_flavor(instance):
-            return self.flavor
 
         def fake_driver_matches(driver_string):
             if driver_string == 'libvirt.LibvirtDriver':
@@ -302,10 +299,6 @@ class DefaultDeviceNamesForInstanceTestCase(test.NoDBTestCase):
         self.patchers = []
         self.patchers.append(
                 mock.patch.object(objects.BlockDeviceMapping, 'save'))
-        self.patchers.append(
-                mock.patch.object(
-                    flavors, 'extract_flavor',
-                    new=mock.Mock(side_effect=fake_extract_flavor)))
         self.patchers.append(
                 mock.patch.object(driver,
                                   'compute_driver_matches',
@@ -436,29 +429,31 @@ class UsageInfoTestCase(test.TestCase):
 
     def _create_instance(self, params=None):
         """Create a test instance."""
-        params = params or {}
         flavor = flavors.get_flavor_by_name('m1.tiny')
-        sys_meta = flavors.save_flavor_info({}, flavor)
-        inst = {}
-        inst['image_ref'] = 1
-        inst['reservation_id'] = 'r-fakeres'
-        inst['user_id'] = self.user_id
-        inst['project_id'] = self.project_id
-        inst['instance_type_id'] = flavor['id']
-        inst['system_metadata'] = sys_meta
-        inst['ami_launch_index'] = 0
-        inst['root_gb'] = 0
-        inst['ephemeral_gb'] = 0
-        inst['info_cache'] = {'network_info': '[]'}
-        inst.update(params)
-        return db.instance_create(self.context, inst)['id']
+        net_info = model.NetworkInfo([])
+        info_cache = objects.InstanceInfoCache(network_info=net_info)
+        inst = objects.Instance(context=self.context,
+                                image_ref=1,
+                                reservation_id='r-fakeres',
+                                user_id=self.user_id,
+                                project_id=self.project_id,
+                                instance_type_id=flavor.id,
+                                flavor=flavor,
+                                old_flavor=None,
+                                new_flavor=None,
+                                system_metadata={},
+                                ami_launch_index=0,
+                                root_gb=0,
+                                ephemeral_gb=0,
+                                info_cache=info_cache)
+        if params:
+            inst.update(params)
+        inst.create()
+        return inst
 
     def test_notify_usage_exists(self):
         # Ensure 'exists' notification generates appropriate usage data.
-        instance_id = self._create_instance()
-        instance = objects.Instance.get_by_id(self.context, instance_id,
-                                              expected_attrs=[
-                                                  'system_metadata'])
+        instance = self._create_instance()
         # Set some system metadata
         sys_metadata = {'image_md_key1': 'val1',
                         'image_md_key2': 'val2',
@@ -494,9 +489,7 @@ class UsageInfoTestCase(test.TestCase):
 
     def test_notify_usage_exists_deleted_instance(self):
         # Ensure 'exists' notification generates appropriate usage data.
-        instance_id = self._create_instance()
-        instance = objects.Instance.get_by_id(self.context, instance_id,
-                expected_attrs=['metadata', 'system_metadata', 'info_cache'])
+        instance = self._create_instance()
         # Set some system metadata
         sys_metadata = {'image_md_key1': 'val1',
                         'image_md_key2': 'val2',
@@ -504,9 +497,6 @@ class UsageInfoTestCase(test.TestCase):
         instance.system_metadata.update(sys_metadata)
         instance.save()
         self.compute.terminate_instance(self.context, instance, [], [])
-        instance = objects.Instance.get_by_id(
-                self.context.elevated(read_deleted='yes'), instance_id,
-                expected_attrs=['system_metadata'])
         compute_utils.notify_usage_exists(
             rpc.get_notifier('compute'), self.context, instance)
         msg = fake_notifier.NOTIFICATIONS[-1]
@@ -533,9 +523,7 @@ class UsageInfoTestCase(test.TestCase):
 
     def test_notify_usage_exists_instance_not_found(self):
         # Ensure 'exists' notification generates appropriate usage data.
-        instance_id = self._create_instance()
-        instance = objects.Instance.get_by_id(self.context, instance_id,
-                expected_attrs=['metadata', 'system_metadata', 'info_cache'])
+        instance = self._create_instance()
         self.compute.terminate_instance(self.context, instance, [], [])
         compute_utils.notify_usage_exists(
             rpc.get_notifier('compute'), self.context, instance)
@@ -561,9 +549,7 @@ class UsageInfoTestCase(test.TestCase):
         self.assertEqual(payload['image_ref_url'], image_ref_url)
 
     def test_notify_about_instance_usage(self):
-        instance_id = self._create_instance()
-        instance = objects.Instance.get_by_id(self.context, instance_id,
-                expected_attrs=['metadata', 'system_metadata', 'info_cache'])
+        instance = self._create_instance()
         # Set some system metadata
         sys_metadata = {'image_md_key1': 'val1',
                         'image_md_key2': 'val2',
