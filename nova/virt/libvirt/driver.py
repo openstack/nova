@@ -105,6 +105,7 @@ from nova.virt.libvirt import lvm
 from nova.virt.libvirt import rbd_utils
 from nova.virt.libvirt import utils as libvirt_utils
 from nova.virt.libvirt import vif as libvirt_vif
+from nova.virt.libvirt import colo_vif
 from nova.virt import netutils
 from nova.virt import watchdog_actions
 from nova import volume
@@ -399,8 +400,10 @@ class LibvirtDriver(driver.ComputeDriver):
             self.virtapi,
             get_connection=self._get_connection)
 
-        self.vif_driver = libvirt_vif.LibvirtGenericVIFDriver(
-            self._get_connection)
+        # TODO(ORBIT): Temp
+        # self.vif_driver = libvirt_vif.LibvirtGenericVIFDriver(
+        #     self._get_connection)
+        self.vif_driver = colo_vif.LibvirtCOLOVIFDriver(self._get_connection)
 
         self.volume_drivers = driver.driver_dict_from_config(
             CONF.libvirt.volume_drivers, self)
