@@ -1413,28 +1413,19 @@ class LibvirtDriver(driver.ComputeDriver):
                 LOG.info(_LI("Snapshot image upload complete"),
                          instance=instance)
 
-    def _can_quiesce(self, image_meta):
-        if CONF.libvirt.virt_type not in ('kvm', 'qemu'):
-            return (False, _('Only KVM and QEMU are supported'))
-
-        if not self._host.has_min_version(MIN_LIBVIRT_FSFREEZE_VERSION):
-            ver = ".".join([str(x) for x in MIN_LIBVIRT_FSFREEZE_VERSION])
-            return (False, _('Quiescing requires libvirt version %(version)s '
-                             'or greater') % {'version': ver})
+    def _can_quiesce(self, instance, image_meta):
+        if (CONF.libvirt.virt_type not in ('kvm', 'qemu') or
+            not self._host.has_min_version(MIN_LIBVIRT_FSFREEZE_VERSION)):
+            raise exception.InstanceQuiesceNotSupported(
+                instance_id=instance.uuid)
 
         img_meta_prop = image_meta.get('properties', {}) if image_meta else {}
         hw_qga = img_meta_prop.get('hw_qemu_guest_agent', '')
         if not strutils.bool_from_string(hw_qga):
-            return (False, _('QEMU guest agent is not enabled'))
-
-        return (True, None)
+            raise exception.QemuGuestAgentNotEnabled()
 
     def _set_quiesced(self, context, instance, image_meta, quiesced):
-        supported, reason = self._can_quiesce(image_meta)
-        if not supported:
-            raise exception.InstanceQuiesceNotSupported(
-                instance_id=instance.uuid, reason=reason)
-
+        self._can_quiesce(instance, image_meta)
         try:
             guest = self._host.get_guest(instance)
 

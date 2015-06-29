@@ -6301,6 +6301,7 @@ class ComputeManager(manager.Manager):
                     instance.save()
 
     @messaging.expected_exceptions(exception.InstanceQuiesceNotSupported,
+                                   exception.QemuGuestAgentNotEnabled,
                                    exception.NovaException,
                                    NotImplementedError)
     @wrap_exception()
@@ -6325,6 +6326,7 @@ class ComputeManager(manager.Manager):
                 timer.start(interval=0.5).wait()
 
     @messaging.expected_exceptions(exception.InstanceQuiesceNotSupported,
+                                   exception.QemuGuestAgentNotEnabled,
                                    exception.NovaException,
                                    NotImplementedError)
     @wrap_exception()

@@ -1817,8 +1817,11 @@ class InvalidConnectionInfo(Invalid):
 
 
 class InstanceQuiesceNotSupported(Invalid):
-    msg_fmt = _('Quiescing is not supported in instance %(instance_id)s: '
-                '%(reason)s')
+    msg_fmt = _('Quiescing is not supported in instance %(instance_id)s')
+
+
+class QemuGuestAgentNotEnabled(Invalid):
+    msg_fmt = _('QEMU guest agent is not enabled')
 
 
 class MemoryPageSizeInvalid(Invalid):
