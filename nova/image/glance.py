@@ -37,7 +37,7 @@ from six.moves import range
 import six.moves.urllib.parse as urlparse
 
 from nova import exception
-from nova.i18n import _, _LE, _LW
+from nova.i18n import _LE, _LI, _LW
 import nova.image.download as image_xfers
 
 
@@ -236,12 +236,11 @@ class GlanceClientWrapper(object):
                 else:
                     extra = 'done trying'
 
-                error_msg = (_("Error contacting glance server "
-                               "'%(host)s:%(port)s' for '%(method)s', "
-                               "%(extra)s.") %
-                             {'host': host, 'port': port,
-                              'method': method, 'extra': extra})
-                LOG.exception(error_msg)
+                LOG.exception(_LE("Error contacting glance server "
+                                  "'%(host)s:%(port)s' for '%(method)s', "
+                                  "%(extra)s."),
+                              {'host': host, 'port': port,
+                               'method': method, 'extra': extra})
                 if attempt == num_attempts:
                     raise exception.GlanceConnectionFailed(
                             host=host, port=port, reason=six.text_type(e))
@@ -349,9 +348,8 @@ class GlanceImageService(object):
                 if xfer_mod:
                     try:
                         xfer_mod.download(context, o, dst_path, loc_meta)
-                        msg = _("Successfully transferred "
-                                "using %s") % o.scheme
-                        LOG.info(msg)
+                        LOG.info(_LI("Successfully transferred "
+                                     "using %s"), o.scheme)
                         return
                     except Exception:
                         LOG.exception(_LE("Download image error"))
