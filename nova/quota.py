@@ -526,7 +526,7 @@ class DbQuotaDriver(object):
         # Set up the reservation expiration
         if expire is None:
             expire = CONF.reservation_expire
-        if isinstance(expire, (int, long)):
+        if isinstance(expire, six.integer_types):
             expire = datetime.timedelta(seconds=expire)
         if isinstance(expire, datetime.timedelta):
             expire = timeutils.utcnow() + expire

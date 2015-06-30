@@ -83,8 +83,7 @@ def _expected_cols(expected_attrs):
                     if field in expected_attrs]
     if complex_cols:
         simple_cols.append('extra')
-    simple_cols = filter(lambda x: x not in _INSTANCE_EXTRA_FIELDS,
-                         simple_cols)
+    simple_cols = [x for x in simple_cols if x not in _INSTANCE_EXTRA_FIELDS]
     if (any([flavor in expected_attrs
              for flavor in ['flavor', 'old_flavor', 'new_flavor']]) and
             'system_metadata' not in simple_cols):

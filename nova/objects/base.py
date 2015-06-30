@@ -524,7 +524,7 @@ class NovaObject(object):
 
     @property
     def obj_fields(self):
-        return self.fields.keys() + self.obj_extra_fields
+        return list(self.fields.keys()) + self.obj_extra_fields
 
     # NOTE(danms): This is nova-specific, so don't copy this to o.vo
     @contextlib.contextmanager

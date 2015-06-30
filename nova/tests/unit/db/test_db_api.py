@@ -20,7 +20,6 @@
 
 import copy
 import datetime
-import types
 import uuid as stdlib_uuid
 
 import iso8601
@@ -170,7 +169,7 @@ class DecoratorTestCase(test.TestCase):
 
         decorated_func = decorator(test_func)
 
-        self.assertEqual(test_func.func_name, decorated_func.func_name)
+        self.assertEqual(test_func.__name__, decorated_func.__name__)
         self.assertEqual(test_func.__doc__, decorated_func.__doc__)
         self.assertEqual(test_func.__module__, decorated_func.__module__)
 
@@ -774,7 +773,7 @@ class AggregateDBApiTestCase(test.TestCase):
         ctxt = context.get_admin_context()
         result = _create_aggregate(context=ctxt)
         metadata = _get_fake_aggr_metadata()
-        key = metadata.keys()[0]
+        key = list(metadata.keys())[0]
         new_metadata = {key: 'foo',
                         'fake_new_key': 'fake_new_value'}
         metadata.update(new_metadata)
@@ -805,7 +804,7 @@ class AggregateDBApiTestCase(test.TestCase):
         ctxt = context.get_admin_context()
         result = _create_aggregate(context=ctxt)
         metadata = _get_fake_aggr_metadata()
-        key = metadata.keys()[0]
+        key = list(metadata.keys())[0]
         db.aggregate_metadata_delete(ctxt, result['id'], key)
         new_metadata = {key: 'foo'}
         db.aggregate_metadata_add(ctxt, result['id'], new_metadata)
@@ -818,9 +817,10 @@ class AggregateDBApiTestCase(test.TestCase):
         result = _create_aggregate(context=ctxt, metadata=None)
         metadata = _get_fake_aggr_metadata()
         db.aggregate_metadata_add(ctxt, result['id'], metadata)
-        db.aggregate_metadata_delete(ctxt, result['id'], metadata.keys()[0])
+        db.aggregate_metadata_delete(ctxt, result['id'],
+                                     list(metadata.keys())[0])
         expected = db.aggregate_metadata_get(ctxt, result['id'])
-        del metadata[metadata.keys()[0]]
+        del metadata[list(metadata.keys())[0]]
         self.assertThat(metadata, matchers.DictMatches(expected))
 
     def test_aggregate_remove_availability_zone(self):
@@ -1029,7 +1029,7 @@ class SqlAlchemyDbApiTestCase(DbTestCase):
         self.create_instance_with_args(host='host2')
         result = sqlalchemy_api._instance_get_all_uuids_by_host(ctxt, 'host1')
         self.assertEqual(2, len(result))
-        self.assertEqual(types.UnicodeType, type(result[0]))
+        self.assertEqual(six.text_type, type(result[0]))
 
     def test_instance_get_active_by_window_joined(self):
         now = datetime.datetime(2013, 10, 10, 17, 16, 37, 156701)
@@ -1369,7 +1369,11 @@ class ModelsObjectComparatorMixin(object):
     def _dict_from_object(self, obj, ignored_keys):
         if ignored_keys is None:
             ignored_keys = []
-        return {k: v for k, v in obj.iteritems()
+        if isinstance(obj, dict):
+            obj_items = obj.items()
+        else:
+            obj_items = obj.iteritems()
+        return {k: v for k, v in obj_items
                 if k not in ignored_keys}
 
     def _assertEqualObjects(self, obj1, obj2, ignored_keys=None):
@@ -1380,7 +1384,7 @@ class ModelsObjectComparatorMixin(object):
                          len(obj2),
                          "Keys mismatch: %s" %
                           str(set(obj1.keys()) ^ set(obj2.keys())))
-        for key, value in obj1.iteritems():
+        for key, value in obj1.items():
             self.assertEqual(value, obj2[key])
 
     def _assertEqualListsOfObjects(self, objs1, objs2, ignored_keys=None):
@@ -1393,7 +1397,7 @@ class ModelsObjectComparatorMixin(object):
     def _assertEqualOrderedListOfObjects(self, objs1, objs2,
                                          ignored_keys=None):
         obj_to_dict = lambda o: self._dict_from_object(o, ignored_keys)
-        conv = lambda obj: map(obj_to_dict, obj)
+        conv = lambda objs: [obj_to_dict(obj) for obj in objs]
 
         self.assertEqual(conv(objs1), conv(objs2))
 
@@ -1579,15 +1583,15 @@ class SecurityGroupRuleTestCase(test.TestCase, ModelsObjectComparatorMixin):
         rules_ids = [security_group_rule['id'], security_group_rule1['id']]
         for rule in found_rules:
             if columns is None:
-                self.assertIn('grantee_group', dict(rule.iteritems()))
+                self.assertIn('grantee_group', dict(rule))
                 self.assertIn('instances',
-                              dict(rule.grantee_group.iteritems()))
+                              dict(rule.grantee_group))
                 self.assertIn(
                     'system_metadata',
-                    dict(rule.grantee_group.instances[0].iteritems()))
+                    dict(rule.grantee_group.instances[0]))
                 self.assertIn(rule['id'], rules_ids)
             else:
-                self.assertNotIn('grantee_group', dict(rule.iteritems()))
+                self.assertNotIn('grantee_group', dict(rule))
 
     def test_security_group_rule_get_by_security_group(self):
         self._test_security_group_rule_get_by_security_group()
@@ -1675,7 +1679,7 @@ class SecurityGroupTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def test_security_group_create(self):
         security_group = self._create_security_group({})
         self.assertIsNotNone(security_group['id'])
-        for key, value in self._get_base_values().iteritems():
+        for key, value in self._get_base_values().items():
             self.assertEqual(value, security_group[key])
 
     def test_security_group_destroy(self):
@@ -1708,7 +1712,7 @@ class SecurityGroupTestCase(test.TestCase, ModelsObjectComparatorMixin):
             self.ctxt, secgroup['id'],
             columns_to_join=['instances.system_metadata'])
         inst = secgroup.instances[0]
-        self.assertIn('system_metadata', dict(inst.iteritems()).keys())
+        self.assertIn('system_metadata', dict(inst).keys())
 
     def test_security_group_get_no_instances(self):
         instance = db.instance_create(self.ctxt, {})
@@ -1863,7 +1867,7 @@ class SecurityGroupTestCase(test.TestCase, ModelsObjectComparatorMixin):
                                     security_group['id'],
                                     new_values,
                                     columns_to_join=['rules.grantee_group'])
-        for key, value in new_values.iteritems():
+        for key, value in new_values.items():
             self.assertEqual(updated_group[key], value)
         self.assertEqual(updated_group['rules'], [])
 
@@ -2817,7 +2821,7 @@ class ServiceTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def test_service_create(self):
         service = self._create_service({})
         self.assertIsNotNone(service['id'])
-        for key, value in self._get_base_values().iteritems():
+        for key, value in self._get_base_values().items():
             self.assertEqual(value, service[key])
 
     def test_service_create_disabled(self):
@@ -2846,7 +2850,7 @@ class ServiceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         }
         db.service_update(self.ctxt, service['id'], new_values)
         updated_service = db.service_get(self.ctxt, service['id'])
-        for key, value in new_values.iteritems():
+        for key, value in new_values.items():
             self.assertEqual(value, updated_service[key])
 
     def test_service_update_not_found_exception(self):
@@ -3534,9 +3538,9 @@ class InstanceTypeTestCase(BaseInstanceTypeTestCase):
                 filters = {}
 
             expected_it = flavors
-            for name, value in filters.iteritems():
+            for name, value in filters.items():
                 filt = lambda it: lambda_filters[name](it, value)
-                expected_it = filter(filt, expected_it)
+                expected_it = list(filter(filt, expected_it))
 
             real_it = db.flavor_get_all(self.ctxt, filters=filters)
             self._assertEqualListsOfObjects(expected_it, real_it)
@@ -3559,9 +3563,9 @@ class InstanceTypeTestCase(BaseInstanceTypeTestCase):
             for root in root_filts:
                 for disabled in disabled_filts:
                     for is_public in is_public_filts:
-                        filts = [f.items() for f in
-                                    [mem, root, disabled, is_public]]
-                        filts = dict(reduce(lambda x, y: x + y, filts, []))
+                        filts = {}
+                        for f in (mem, root, disabled, is_public):
+                            filts.update(f)
                         assert_multi_filter_flavor_get(filts)
 
     def test_flavor_get_all_limit_sort(self):
@@ -3749,7 +3753,7 @@ class InstanceTypeExtraSpecsTestCase(BaseInstanceTypeTestCase):
     def test_flavor_extra_specs_delete(self):
         for it in self.flavors:
             specs = it['extra_specs']
-            key = specs.keys()[0]
+            key = list(specs.keys())[0]
             del specs[key]
             db.flavor_extra_specs_delete(self.ctxt, it['flavorid'], key)
             real_specs = db.flavor_extra_specs_get(self.ctxt, it['flavorid'])
@@ -3958,15 +3962,15 @@ class FixedIPTestCase(BaseInstanceTypeTestCase):
             'host3': ['1.1.1.6']
         }
 
-        for host, ips in host_ips.iteritems():
+        for host, ips in host_ips.items():
             for ip in ips:
                 instance_uuid = self._create_instance(host=host)
                 db.fixed_ip_create(self.ctxt, {'address': ip})
                 db.fixed_ip_associate(self.ctxt, ip, instance_uuid)
 
-        for host, ips in host_ips.iteritems():
-            ips_on_host = map(lambda x: x['address'],
-                                db.fixed_ip_get_by_host(self.ctxt, host))
+        for host, ips in host_ips.items():
+            ips_on_host = [x['address']
+                           for x in db.fixed_ip_get_by_host(self.ctxt, host)]
             self._assertEqualListsOfPrimitivesAsSets(ips_on_host, ips)
 
     def test_fixed_ip_get_by_network_host_not_found_exception(self):
@@ -4572,13 +4576,13 @@ class FloatingIpTestCase(test.TestCase, ModelsObjectComparatorMixin):
             'pool2': ['2.2.2.2'],
             'pool3': ['3.3.3.3', '4.4.4.4', '5.5.5.5']
         }
-        for pool, addresses in pools.iteritems():
+        for pool, addresses in pools.items():
             for address in addresses:
                 vals = {'pool': pool, 'address': address, 'project_id': None}
                 self._create_floating_ip(vals)
 
         project_id = self._get_base_values()['project_id']
-        for pool, addresses in pools.iteritems():
+        for pool, addresses in pools.items():
             alloc_addrs = []
             for i in addresses:
                 float_addr = db.floating_ip_allocate_address(self.ctxt,
@@ -4676,7 +4680,7 @@ class FloatingIpTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def test_floating_ip_bulk_create(self):
         expected_ips = ['1.1.1.1', '1.1.1.2', '1.1.1.3', '1.1.1.4']
         result = db.floating_ip_bulk_create(self.ctxt,
-                                   map(lambda x: {'address': x}, expected_ips),
+                                   [{'address': x} for x in expected_ips],
                                    want_result=False)
         self.assertIsNone(result)
         self._assertEqualListsOfPrimitivesAsSets(self._get_existing_ips(),
@@ -4686,11 +4690,13 @@ class FloatingIpTestCase(test.TestCase, ModelsObjectComparatorMixin):
         ips = ['1.1.1.1', '1.1.1.2', '1.1.1.3', '1.1.1.4']
         prepare_ips = lambda x: {'address': x}
 
-        result = db.floating_ip_bulk_create(self.ctxt, map(prepare_ips, ips))
+        result = db.floating_ip_bulk_create(self.ctxt,
+                                            list(map(prepare_ips, ips)))
         self.assertEqual(ips, [ip.address for ip in result])
         self.assertRaises(exception.FloatingIpExists,
                           db.floating_ip_bulk_create,
-                          self.ctxt, map(prepare_ips, ['1.1.1.5', '1.1.1.4']),
+                          self.ctxt,
+                          list(map(prepare_ips, ['1.1.1.5', '1.1.1.4'])),
                           want_result=False)
         self.assertRaises(exception.FloatingIpNotFoundForAddress,
                           db.floating_ip_get_by_address,
@@ -4733,7 +4739,7 @@ class FloatingIpTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
         db.floating_ip_bulk_destroy(self.ctxt, ips_for_delete)
 
-        expected_addresses = map(lambda x: x['address'], ips_for_non_delete)
+        expected_addresses = [x['address'] for x in ips_for_non_delete]
         self._assertEqualListsOfPrimitivesAsSets(self._get_existing_ips(),
                                                  expected_addresses)
         self.assertEqual(db.quota_usage_get_all_by_project(
@@ -4908,14 +4914,14 @@ class FloatingIpTestCase(test.TestCase, ModelsObjectComparatorMixin):
         }
 
         hosts_with_float_ips = {}
-        for host, addresses in hosts.iteritems():
+        for host, addresses in hosts.items():
             hosts_with_float_ips[host] = []
             for address in addresses:
                 float_ip = self._create_floating_ip({'host': host,
                                                      'address': address})
                 hosts_with_float_ips[host].append(float_ip)
 
-        for host, float_ips in hosts_with_float_ips.iteritems():
+        for host, float_ips in hosts_with_float_ips.items():
             real_float_ips = db.floating_ip_get_all_by_host(self.ctxt, host)
             self._assertEqualListsOfObjects(float_ips, real_float_ips,
                                             ignored_keys="fixed_ip")
@@ -4933,14 +4939,14 @@ class FloatingIpTestCase(test.TestCase, ModelsObjectComparatorMixin):
         }
 
         projects_with_float_ips = {}
-        for project_id, addresses in projects.iteritems():
+        for project_id, addresses in projects.items():
             projects_with_float_ips[project_id] = []
             for address in addresses:
                 float_ip = self._create_floating_ip({'project_id': project_id,
                                                      'address': address})
                 projects_with_float_ips[project_id].append(float_ip)
 
-        for project_id, float_ips in projects_with_float_ips.iteritems():
+        for project_id, float_ips in projects_with_float_ips.items():
             real_float_ips = db.floating_ip_get_all_by_project(self.ctxt,
                                                                project_id)
             self._assertEqualListsOfObjects(float_ips, real_float_ips,
@@ -5452,8 +5458,8 @@ class BlockDeviceMappingTestCase(test.TestCase):
         bdm_real = db.block_device_mapping_get_all_by_instance(self.ctxt, uuid)
         self.assertEqual(bdm_real[0]['destination_type'], 'moon')
         # Also make sure the update call returned correct data
-        self.assertEqual(dict(bdm_real[0].iteritems()),
-                         dict(result.iteritems()))
+        self.assertEqual(dict(bdm_real[0]),
+                         dict(result))
 
     def test_block_device_mapping_update_or_create(self):
         values = {
@@ -6339,7 +6345,7 @@ class QuotaTestCase(test.TestCase, ModelsObjectComparatorMixin):
         reservations_uuids = db.quota_reserve(self.ctxt, reservable_resources,
                                               quotas, quotas, deltas, None,
                                               None, None, 'project1')
-        resources_names = reservable_resources.keys()
+        resources_names = list(reservable_resources.keys())
         for reservation_uuid in reservations_uuids:
             reservation = _reservation_get(self.ctxt, reservation_uuid)
             usage = db.quota_usage_get(self.ctxt, 'project1',
@@ -6392,7 +6398,7 @@ class QuotaTestCase(test.TestCase, ModelsObjectComparatorMixin):
         quota_usage = db.quota_usage_get(self.ctxt, 'p1', 'resource0')
         expected = {'resource': 'resource0', 'project_id': 'p1',
                     'in_use': 0, 'reserved': 0, 'total': 0}
-        for key, value in expected.iteritems():
+        for key, value in expected.items():
             self.assertEqual(value, quota_usage[key])
 
     def test_quota_usage_get_all_by_project(self):
@@ -6425,7 +6431,7 @@ class QuotaTestCase(test.TestCase, ModelsObjectComparatorMixin):
         quota_usage = db.quota_usage_get(self.ctxt, 'p1', 'resource0', 'u1')
         expected = {'resource': 'resource0', 'project_id': 'p1',
                     'user_id': 'u1', 'in_use': 42, 'reserved': 43, 'total': 85}
-        for key, value in expected.iteritems():
+        for key, value in expected.items():
             self.assertEqual(value, quota_usage[key])
 
     def test_quota_create_exists(self):
@@ -6760,7 +6766,7 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
             compute_node_data['hypervisor_hostname'] = name
             node = db.compute_node_create(self.ctxt, compute_node_data)
 
-            node = dict(node.iteritems())
+            node = dict(node)
 
             expected.append(node)
 
@@ -6905,7 +6911,7 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def test_compute_node_statistics(self):
         stats = db.compute_node_statistics(self.ctxt)
         self.assertEqual(stats.pop('count'), 1)
-        for k, v in stats.iteritems():
+        for k, v in stats.items():
             self.assertEqual(v, self.item[k])
 
     def test_compute_node_statistics_disabled_service(self):
@@ -7054,7 +7060,7 @@ class CertificateTestCase(test.TestCase, ModelsObjectComparatorMixin):
             'project_id': 'project',
             'file_name': 'filename'
         }
-        return [{k: v + str(x) for k, v in base_values.iteritems()}
+        return [{k: v + str(x) for k, v in base_values.items()}
                 for x in range(1, 4)]
 
     def _certificates_create(self):
@@ -7221,7 +7227,7 @@ class CellTestCase(test.TestCase, ModelsObjectComparatorMixin):
         test_values = []
         for x in range(1, 4):
             modified_val = {k: self._cell_value_modify(v, x)
-                        for k, v in self._get_cell_base_values().iteritems()}
+                        for k, v in self._get_cell_base_values().items()}
             db.cell_create(self.ctxt, modified_val)
             test_values.append(modified_val)
         return test_values
