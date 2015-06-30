@@ -189,7 +189,40 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
                                      ('DB Migration %i does not have a '
                                       'test. Please add one!') % version)
 
-        super(NovaMigrationsCheckers, self).migrate_up(version, with_data)
+        # NOTE(danms): This is a list of migrations where we allow dropping
+        # things. The rules for adding things here are very very specific.
+        # Chances are you don't meet the critera.
+        # Reviewers: DO NOT ALLOW THINGS TO BE ADDED HERE
+        exceptions = [
+            # 267 enforces non-nullable instance.uuid. This was mostly
+            # a special case because instance.uuid shouldn't be able
+            # to be nullable
+            267,
+
+            # 278 removes a FK restriction, so it's an alter operation
+            # that doesn't break existing users
+            278,
+
+            # 280 enforces non-null keypair name. This is really not
+            # something we should allow, but it's in the past
+            280,
+
+            # 292 drops completely orphaned tables with no users, so
+            # it can be done without affecting anything.
+            292,
+        ]
+        # Reviewers: DO NOT ALLOW THINGS TO BE ADDED HERE
+
+        # NOTE(danms): We only started requiring things be additive in
+        # kilo, so ignore all migrations before that point.
+        KILO_START = 265
+
+        if version >= KILO_START and version not in exceptions:
+            banned = ['Table', 'Column']
+        else:
+            banned = None
+        with nova_fixtures.BannedDBSchemaOperations(banned):
+            super(NovaMigrationsCheckers, self).migrate_up(version, with_data)
 
     def test_walk_versions(self):
         self.walk_versions(snake_walk=False, downgrade=False)
