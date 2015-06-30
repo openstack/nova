@@ -1574,6 +1574,61 @@ class _ComputeAPIUnitTestMixIn(object):
                               fake_inst, flavor_id='flavor-id')
             self.assertFalse(mock_save.called)
 
+    def test_check_instance_quota_exceeds_with_multiple_resources(self):
+        quotas = {'cores': 1, 'instances': 1, 'ram': 512}
+        usages = {'cores': dict(in_use=1, reserved=0),
+                  'instances': dict(in_use=1, reserved=0),
+                  'ram': dict(in_use=512, reserved=0)}
+        overs = ['cores', 'instances', 'ram']
+        over_quota_args = dict(quotas=quotas,
+                               usages=usages,
+                               overs=overs)
+        e = exception.OverQuota(**over_quota_args)
+        fake_flavor = self._create_flavor()
+        instance_num = 1
+        with mock.patch.object(objects.Quotas, 'reserve', side_effect=e):
+            try:
+                self.compute_api._check_num_instances_quota(self.context,
+                                                            fake_flavor,
+                                                            instance_num,
+                                                            instance_num)
+            except exception.TooManyInstances as e:
+                self.assertEqual('cores, instances, ram', e.kwargs['overs'])
+                self.assertEqual('1, 1, 512', e.kwargs['req'])
+                self.assertEqual('1, 1, 512', e.kwargs['used'])
+                self.assertEqual('1, 1, 512', e.kwargs['allowed'])
+            else:
+                self.fail("Exception not raised")
+
+    @mock.patch.object(flavors, 'get_flavor_by_flavor_id')
+    @mock.patch.object(objects.Quotas, 'reserve')
+    def test_resize_instance_quota_exceeds_with_multiple_resources(
+            self, mock_reserve, mock_get_flavor):
+        quotas = {'cores': 1, 'ram': 512}
+        usages = {'cores': dict(in_use=1, reserved=0),
+                  'ram': dict(in_use=512, reserved=0)}
+        overs = ['cores', 'ram']
+        over_quota_args = dict(quotas=quotas,
+                               usages=usages,
+                               overs=overs)
+
+        mock_reserve.side_effect = exception.OverQuota(**over_quota_args)
+        mock_get_flavor.return_value = self._create_flavor(id=333,
+                                                           vcpus=3,
+                                                           memory_mb=1536)
+        try:
+            self.compute_api.resize(self.context, self._create_instance_obj(),
+                                    'fake_flavor_id')
+        except exception.TooManyInstances as e:
+            self.assertEqual('cores, ram', e.kwargs['overs'])
+            self.assertEqual('2, 1024', e.kwargs['req'])
+            self.assertEqual('1, 512', e.kwargs['used'])
+            self.assertEqual('1, 512', e.kwargs['allowed'])
+            mock_get_flavor.assert_called_once_with('fake_flavor_id',
+                                                    read_deleted="no")
+        else:
+            self.fail("Exception not raised")
+
     def test_pause(self):
         # Ensure instance can be paused.
         instance = self._create_instance_obj()

@@ -87,9 +87,12 @@ class QuotaIntegrationTestCase(test.TestCase):
                                     instance_type=inst_type,
                                     image_href=image_uuid)
         except exception.QuotaError as e:
-            expected_kwargs = {'code': 413, 'resource': 'cores', 'req': 1,
-                          'used': 4, 'allowed': 4, 'overs': 'cores,instances'}
-            self.assertEqual(e.kwargs, expected_kwargs)
+            expected_kwargs = {'code': 413,
+                               'req': '1, 1',
+                               'used': '4, 2',
+                               'allowed': '4, 2',
+                               'overs': 'cores, instances'}
+            self.assertEqual(expected_kwargs, e.kwargs)
         else:
             self.fail('Expected QuotaError exception')
         for instance_uuid in instance_uuids:
@@ -104,9 +107,12 @@ class QuotaIntegrationTestCase(test.TestCase):
                                     instance_type=inst_type,
                                     image_href=image_uuid)
         except exception.QuotaError as e:
-            expected_kwargs = {'code': 413, 'resource': 'cores', 'req': 1,
-                          'used': 4, 'allowed': 4, 'overs': 'cores'}
-            self.assertEqual(e.kwargs, expected_kwargs)
+            expected_kwargs = {'code': 413,
+                               'req': '1',
+                               'used': '4',
+                               'allowed': '4',
+                               'overs': 'cores'}
+            self.assertEqual(expected_kwargs, e.kwargs)
         else:
             self.fail('Expected QuotaError exception')
         db.instance_destroy(self.context, instance['uuid'])

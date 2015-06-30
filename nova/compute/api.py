@@ -429,10 +429,12 @@ class API(base.Base):
                 msg = (_("Can only run %s more instances of this type.") %
                        allowed)
 
-            resource = overs[0]
-            used = quotas[resource] - headroom[resource]
-            total_allowed = quotas[resource]
-            overs = ','.join(overs)
+            num_instances = (str(min_count) if min_count == max_count else
+                "%s-%s" % (min_count, max_count))
+            requested = dict(instances=num_instances, cores=req_cores,
+                             ram=req_ram)
+            (overs, reqs, total_alloweds, useds) = self._get_over_quota_detail(
+                headroom, overs, quotas, requested)
             params = {'overs': overs, 'pid': context.project_id,
                       'min_count': min_count, 'max_count': max_count,
                       'msg': msg}
@@ -446,17 +448,24 @@ class API(base.Base):
                            " tried to run between %(min_count)d and"
                            " %(max_count)d instances. %(msg)s"),
                           params)
-
-            num_instances = (str(min_count) if min_count == max_count else
-                "%s-%s" % (min_count, max_count))
-            requested = dict(instances=num_instances, cores=req_cores,
-                             ram=req_ram)
             raise exception.TooManyInstances(overs=overs,
-                                             req=requested[resource],
-                                             used=used, allowed=total_allowed,
-                                             resource=resource)
+                                             req=reqs,
+                                             used=useds,
+                                             allowed=total_alloweds)
 
         return max_count, quotas
+
+    def _get_over_quota_detail(self, headroom, overs, quotas, requested):
+        reqs = []
+        useds = []
+        total_alloweds = []
+        for resource in overs:
+            reqs.append(str(requested[resource]))
+            useds.append(str(quotas[resource] - headroom[resource]))
+            total_alloweds.append(str(quotas[resource]))
+        (overs, reqs, useds, total_alloweds) = map(', '.join, (
+            overs, reqs, useds, total_alloweds))
+        return overs, reqs, total_alloweds, useds
 
     def _check_metadata_properties_quota(self, context, metadata=None):
         """Enforce quota limits on metadata properties."""
@@ -2636,19 +2645,16 @@ class API(base.Base):
                 overs = exc.kwargs['overs']
                 usages = exc.kwargs['usages']
                 headroom = self._get_headroom(quotas, usages, deltas)
-
-                resource = overs[0]
-                used = quotas[resource] - headroom[resource]
-                total_allowed = used + headroom[resource]
-                overs = ','.join(overs)
+                (overs, reqs, total_alloweds,
+                 useds) = self._get_over_quota_detail(headroom, overs, quotas,
+                                                      deltas)
                 LOG.warning(_LW("%(overs)s quota exceeded for %(pid)s,"
                                 " tried to resize instance."),
                             {'overs': overs, 'pid': context.project_id})
                 raise exception.TooManyInstances(overs=overs,
-                                                 req=deltas[resource],
-                                                 used=used,
-                                                 allowed=total_allowed,
-                                                 resource=resource)
+                                                 req=reqs,
+                                                 used=useds,
+                                                 allowed=total_alloweds)
         else:
             quotas = objects.Quotas(context=context)
 

@@ -111,7 +111,7 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
 
     def test_migrate_too_many_instances(self):
         exc_info = exception.TooManyInstances(overs='', req='', used=0,
-                                              allowed=0, resource='')
+                                              allowed=0)
         self._test_migrate_exception(exc_info, webob.exc.HTTPForbidden)
 
     def _test_migrate_live_succeeded(self, param):
