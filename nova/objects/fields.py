@@ -84,6 +84,19 @@ class Architecture(Enum):
         return super(Architecture, self).coerce(obj, attr, value)
 
 
+class BlockDeviceDestinationType(Enum):
+    """Represents possible destination_type values for a BlockDeviceMapping."""
+
+    LOCAL = 'local'
+    VOLUME = 'volume'
+
+    ALL = (LOCAL, VOLUME)
+
+    def __init__(self):
+        super(BlockDeviceDestinationType, self).__init__(
+            valid_values=BlockDeviceDestinationType.ALL)
+
+
 class BlockDeviceSourceType(Enum):
     """Represents the possible source_type values for a BlockDeviceMapping."""
 
@@ -530,6 +543,10 @@ class BaseEnumField(AutoTypedField):
 
 class ArchitectureField(BaseEnumField):
     AUTO_TYPE = Architecture()
+
+
+class BlockDeviceDestinationTypeField(BaseEnumField):
+    AUTO_TYPE = BlockDeviceDestinationType()
 
 
 class BlockDeviceSourceTypeField(BaseEnumField):

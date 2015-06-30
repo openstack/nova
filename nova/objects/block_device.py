@@ -52,14 +52,17 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject,
     # Version 1.8: Instance version 1.19
     # Version 1.9: Instance version 1.20
     # Version 1.10: Changed source_type field to BlockDeviceSourceTypeField.
-    VERSION = '1.10'
+    # Version 1.11: Changed destination_type field to
+    #               BlockDeviceDestinationTypeField.
+    VERSION = '1.11'
 
     fields = {
         'id': fields.IntegerField(),
         'instance_uuid': fields.UUIDField(),
         'instance': fields.ObjectField('Instance', nullable=True),
         'source_type': fields.BlockDeviceSourceTypeField(nullable=True),
-        'destination_type': fields.StringField(nullable=True),
+        'destination_type': fields.BlockDeviceDestinationTypeField(
+                                nullable=True),
         'guest_format': fields.StringField(nullable=True),
         'device_type': fields.StringField(nullable=True),
         'disk_bus': fields.StringField(nullable=True),
@@ -210,7 +213,8 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject,
 
     @property
     def is_volume(self):
-        return self.destination_type == 'volume'
+        return (self.destination_type ==
+                    fields.BlockDeviceDestinationType.VOLUME)
 
     @property
     def is_image(self):
@@ -252,7 +256,8 @@ class BlockDeviceMappingList(base.ObjectListBase, base.NovaObject):
     # Version 1.9: BlockDeviceMapping <= version 1.8
     # Version 1.10: BlockDeviceMapping <= version 1.9
     # Version 1.11: BlockDeviceMapping <= version 1.10
-    VERSION = '1.11'
+    # Version 1.12: BlockDeviceMapping <= version 1.11
+    VERSION = '1.12'
 
     fields = {
         'objects': fields.ListOfObjectsField('BlockDeviceMapping'),
@@ -270,6 +275,7 @@ class BlockDeviceMappingList(base.ObjectListBase, base.NovaObject):
         '1.9': '1.8',
         '1.10': '1.9',
         '1.11': '1.10',
+        '1.12': '1.11',
     }
 
     @base.remotable_classmethod
