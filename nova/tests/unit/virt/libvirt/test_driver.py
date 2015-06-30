@@ -6095,7 +6095,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         self._test_live_migration_monitoring(domain_info_records, False)
 
-    @mock.patch.object(greenthread, "spawn")
+    @mock.patch.object(utils, "spawn")
     @mock.patch.object(libvirt_driver.LibvirtDriver, "_live_migration_monitor")
     @mock.patch.object(host.Host, "get_domain")
     @mock.patch.object(fakelibvirt.Connection, "_mark_running")
@@ -10862,7 +10862,7 @@ Active:          8381604 kB
                                                   dstfile, "qcow2")
             mock_define.assert_called_once_with(xmldoc)
 
-    @mock.patch.object(greenthread, "spawn")
+    @mock.patch.object(utils, "spawn")
     def test_live_migration_hostname_valid(self, mock_spawn):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         drvr.live_migration(self.context, self.test_instance,
@@ -10871,7 +10871,7 @@ Active:          8381604 kB
                             lambda x: x)
         self.assertEqual(1, mock_spawn.call_count)
 
-    @mock.patch.object(greenthread, "spawn")
+    @mock.patch.object(utils, "spawn")
     @mock.patch.object(fake_libvirt_utils, "is_valid_hostname")
     def test_live_migration_hostname_invalid(self, mock_hostname, mock_spawn):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)

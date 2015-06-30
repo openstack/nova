@@ -5260,7 +5260,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if not libvirt_utils.is_valid_hostname(dest):
             raise exception.InvalidHostname(hostname=dest)
 
-        greenthread.spawn(self._live_migration, context, instance, dest,
+        utils.spawn(self._live_migration, context, instance, dest,
                           post_method, recover_method, block_migration,
                           migrate_data)
 
@@ -5651,7 +5651,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         dom = self._host.get_domain(instance)
 
-        opthread = greenthread.spawn(self._live_migration_operation,
+        opthread = utils.spawn(self._live_migration_operation,
                                      context, instance, dest,
                                      block_migration,
                                      migrate_data, dom)
