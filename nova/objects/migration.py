@@ -20,7 +20,7 @@ from nova.objects import fields
 from nova import utils
 
 
-def _determine_migration_type(migration):
+def determine_migration_type(migration):
     if migration['old_instance_type_id'] != migration['new_instance_type_id']:
         return 'resize'
     else:
@@ -58,7 +58,7 @@ class Migration(base.NovaPersistentObject, base.NovaObject,
         for key in migration.fields:
             value = db_migration[key]
             if key == 'migration_type' and value is None:
-                value = _determine_migration_type(db_migration)
+                value = determine_migration_type(db_migration)
             migration[key] = value
 
         migration._context = context
@@ -77,7 +77,7 @@ class Migration(base.NovaPersistentObject, base.NovaObject,
         if attrname == 'migration_type':
             # NOTE(danms): The only reason we'd need to load this is if
             # some older node sent us one. So, guess the type.
-            self.migration_type = _determine_migration_type(self)
+            self.migration_type = determine_migration_type(self)
         elif attrname == 'hidden':
             self.hidden = False
         else:
@@ -100,6 +100,11 @@ class Migration(base.NovaPersistentObject, base.NovaObject,
             raise exception.ObjectActionError(action='create',
                                               reason='already created')
         updates = self.obj_get_changes()
+        if 'migration_type' not in updates:
+            raise exception.ObjectActionError(
+                action="create",
+                reason="cannot create a Migration object without a "
+                       "migration_type set")
         db_migration = db.migration_create(self._context, updates)
         self._from_db_object(self._context, self, db_migration)
 
