@@ -5,11 +5,12 @@
 hacking<0.11,>=0.10.0
 coverage>=3.6
 discover
-fixtures>=0.3.14
+fixtures>=1.3.1
 mock>=1.0
 mox3>=0.7.0
-MySQL-python
+MySQL-python;python_version=='2.7'
 psycopg2
+PyMySQL>=0.6.2 # MIT License
 python-barbicanclient>=3.0.1
 python-ironicclient>=0.2.1
 python-subunit>=0.0.18
@@ -19,7 +20,7 @@ oslosphinx>=2.5.0 # Apache-2.0
 oslotest>=1.5.1 # Apache-2.0
 testrepository>=0.0.18
 testtools>=1.4.0
-tempest-lib>=0.5.0
+tempest-lib>=0.6.1
 
 # vmwareapi driver specific dependencies
 oslo.vmware>=0.13.1 # Apache-2.0
