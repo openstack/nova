@@ -2377,6 +2377,16 @@ class LibvirtConfigGuestCPUTuneTest(LibvirtConfigBaseTest):
         emu.cpuset = set([0, 1, 2, 3, 4, 5, 6, 7])
         cputune.emulatorpin = emu
 
+        sch0 = config.LibvirtConfigGuestCPUTuneVCPUSched()
+        sch0.vcpus = set([0, 1, 2, 3])
+        sch0.scheduler = "fifo"
+        sch0.priority = 1
+        sch1 = config.LibvirtConfigGuestCPUTuneVCPUSched()
+        sch1.vcpus = set([4, 5, 6, 7])
+        sch1.scheduler = "fifo"
+        sch1.priority = 99
+        cputune.vcpusched.extend([sch0, sch1])
+
         xml = cputune.to_xml()
         self.assertXmlEqual(xml, """
           <cputune>
@@ -2385,6 +2395,8 @@ class LibvirtConfigGuestCPUTuneTest(LibvirtConfigBaseTest):
             <vcpupin vcpu="1" cpuset="2-3"/>
             <vcpupin vcpu="2" cpuset="4-5"/>
             <vcpupin vcpu="3" cpuset="6-7"/>
+            <vcpusched vcpus="0-3" scheduler="fifo" priority="1"/>
+            <vcpusched vcpus="4-7" scheduler="fifo" priority="99"/>
           </cputune>""")
 
 
