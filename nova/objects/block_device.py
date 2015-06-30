@@ -54,7 +54,8 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject,
     # Version 1.10: Changed source_type field to BlockDeviceSourceTypeField.
     # Version 1.11: Changed destination_type field to
     #               BlockDeviceDestinationTypeField.
-    VERSION = '1.11'
+    # Version 1.12: Changed device_type field to BlockDeviceTypeField.
+    VERSION = '1.12'
 
     fields = {
         'id': fields.IntegerField(),
@@ -64,7 +65,7 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject,
         'destination_type': fields.BlockDeviceDestinationTypeField(
                                 nullable=True),
         'guest_format': fields.StringField(nullable=True),
-        'device_type': fields.StringField(nullable=True),
+        'device_type': fields.BlockDeviceTypeField(nullable=True),
         'disk_bus': fields.StringField(nullable=True),
         'boot_index': fields.IntegerField(nullable=True),
         'device_name': fields.StringField(nullable=True),
@@ -257,7 +258,8 @@ class BlockDeviceMappingList(base.ObjectListBase, base.NovaObject):
     # Version 1.10: BlockDeviceMapping <= version 1.9
     # Version 1.11: BlockDeviceMapping <= version 1.10
     # Version 1.12: BlockDeviceMapping <= version 1.11
-    VERSION = '1.12'
+    # Version 1.13: BlockDeviceMapping <= version 1.12
+    VERSION = '1.13'
 
     fields = {
         'objects': fields.ListOfObjectsField('BlockDeviceMapping'),
@@ -276,6 +278,7 @@ class BlockDeviceMappingList(base.ObjectListBase, base.NovaObject):
         '1.10': '1.9',
         '1.11': '1.10',
         '1.12': '1.11',
+        '1.13': '1.12',
     }
 
     @base.remotable_classmethod
