@@ -3343,6 +3343,8 @@ class LibvirtDriver(driver.ComputeDriver):
         sysinfo.system_serial = self._sysinfo_serial_func()
         sysinfo.system_uuid = instance.uuid
 
+        sysinfo.system_family = "Virtual Machine"
+
         return sysinfo
 
     def _get_guest_pci_device(self, pci_device):

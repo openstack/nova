@@ -618,6 +618,7 @@ class LibvirtConfigGuestSysinfo(LibvirtConfigObject):
         self.system_version = None
         self.system_serial = None
         self.system_uuid = None
+        self.system_family = None
 
     def format_dom(self):
         sysinfo = super(LibvirtConfigGuestSysinfo, self).format_dom()
@@ -674,6 +675,13 @@ class LibvirtConfigGuestSysinfo(LibvirtConfigObject):
                 system = etree.Element("system")
             info = etree.Element("entry", name="uuid")
             info.text = self.system_uuid
+            system.append(info)
+
+        if self.system_family is not None:
+            if system is None:
+                system = etree.Element("system")
+            info = etree.Element("entry", name="family")
+            info.text = self.system_family
             system.append(info)
 
         if bios is not None:
