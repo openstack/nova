@@ -1135,12 +1135,21 @@ object_data = {
 
 
 object_relationships = {
+    'AgentList': {'Agent': '1.0'},
+    'AggregateList': {'Aggregate': '1.1'},
+    'BandwidthUsageList': {'BandwidthUsage': '1.2'},
     'BlockDeviceMapping': {'Instance': '1.20'},
+    'BlockDeviceMappingList': {'BlockDeviceMapping': '1.9'},
     'ComputeNode': {'HVSpec': '1.0', 'PciDevicePoolList': '1.1'},
+    'ComputeNodeList': {'ComputeNode': '1.11'},
+    'DNSDomainList': {'DNSDomain': '1.0'},
     'FixedIP': {'Instance': '1.20', 'Network': '1.2',
                 'VirtualInterface': '1.0',
                 'FloatingIPList': '1.7'},
+    'FixedIPList': {'FixedIP': '1.10'},
+    'FlavorList': {'Flavor': '1.1'},
     'FloatingIP': {'FixedIP': '1.10'},
+    'FloatingIPList': {'FloatingIP': '1.6'},
     'ImageMeta': {'ImageMetaProps': '1.1'},
     'Instance': {'InstanceFault': '1.2',
                  'InstanceInfoCache': '1.5',
@@ -1153,14 +1162,32 @@ object_relationships = {
                  'VirtCPUModel': '1.0',
                  'EC2Ids': '1.0',
                  },
+    'InstanceActionEventList': {'InstanceActionEvent': '1.1'},
+    'InstanceActionList': {'InstanceAction': '1.1'},
+    'InstanceFaultList': {'InstanceFault': '1.2'},
+    'InstanceGroupList': {'InstanceGroup': '1.9'},
+    'InstanceList': {'Instance': '1.20'},
+    'InstanceMappingList': {'InstanceMapping': '1.0'},
     'InstanceNUMACell': {'VirtCPUTopology': '1.0'},
     'InstanceNUMATopology': {'InstanceNUMACell': '1.2'},
     'InstancePCIRequests': {'InstancePCIRequest': '1.1'},
+    'KeyPairList': {'KeyPair': '1.3'},
+    'MigrationList': {'Migration': '1.2'},
+    'NetworkList': {'Network': '1.2'},
+    'NetworkRequestList': {'NetworkRequest': '1.1'},
     'NUMACell': {'NUMAPagesTopology': '1.0'},
     'NUMATopology': {'NUMACell': '1.2'},
+    'PciDeviceList': {'PciDevice': '1.3'},
+    'PciDevicePoolList': {'PciDevicePool': '1.1'},
+    'SecurityGroupList': {'SecurityGroup': '1.1'},
     'SecurityGroupRule': {'SecurityGroup': '1.1'},
+    'SecurityGroupRuleList': {'SecurityGroupRule': '1.1'},
     'Service': {'ComputeNode': '1.11'},
+    'ServiceList': {'Service': '1.13'},
+    'TagList': {'Tag': '1.0'},
+    'TaskLogList': {'TaskLog': '1.0'},
     'VirtCPUModel': {'VirtCPUFeature': '1.0', 'VirtCPUTopology': '1.0'},
+    'VirtualInterfaceList': {'VirtualInterface': '1.0'}
 }
 
 
@@ -1248,11 +1275,6 @@ class TestObjectVersions(test.NoDBTestCase):
 
         obj_classes = base.NovaObjectRegistry.obj_classes()
         for name, field in obj_class.fields.items():
-            # Notes(yjiang5): ObjectListBase should be covered by
-            # child_versions test
-            if (issubclass(obj_class, base.ObjectListBase) and
-                    name == 'objects'):
-                continue
             sub_obj_name = self._get_object_field_name(field)
             if sub_obj_name:
                 sub_obj_class = obj_classes[sub_obj_name][0]
