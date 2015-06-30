@@ -102,9 +102,9 @@ class InstanceActionList(base.ObjectListBase, base.NovaObject):
     fields = {
         'objects': fields.ListOfObjectsField('InstanceAction'),
         }
-    child_versions = {
-        '1.0': '1.1',
-        # NOTE(danms): InstanceAction was at 1.1 before we added this
+    # NOTE(danms): InstanceAction was at 1.1 before we added this
+    obj_relationships = {
+        'objects': [('1.0', '1.1')],
         }
 
     @base.remotable_classmethod
@@ -212,9 +212,8 @@ class InstanceActionEventList(base.ObjectListBase, base.NovaObject):
     fields = {
         'objects': fields.ListOfObjectsField('InstanceActionEvent'),
         }
-    child_versions = {
-        '1.0': '1.0',
-        '1.1': '1.1',
+    obj_relationships = {
+        'objects': [('1.0', '1.0'), ('1.1', '1.1')],
         }
 
     @base.remotable_classmethod

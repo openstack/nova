@@ -217,10 +217,8 @@ class NetworkList(obj_base.ObjectListBase, obj_base.NovaObject):
     fields = {
         'objects': fields.ListOfObjectsField('Network'),
         }
-    child_versions = {
-        '1.0': '1.0',
-        '1.1': '1.1',
-        '1.2': '1.2',
+    obj_relationships = {
+        'objects': [('1.0', '1.0'), ('1.1', '1.1'), ('1.2', '1.2')],
         }
 
     @obj_base.remotable_classmethod

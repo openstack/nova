@@ -258,9 +258,8 @@ class FlavorList(base.ObjectListBase, base.NovaObject):
     fields = {
         'objects': fields.ListOfObjectsField('Flavor'),
         }
-    child_versions = {
-        '1.0': '1.0',
-        '1.1': '1.1',
+    obj_relationships = {
+        'objects': [('1.0', '1.0'), ('1.1', '1.1')],
         }
 
     @base.remotable_classmethod

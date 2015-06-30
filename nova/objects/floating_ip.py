@@ -176,16 +176,10 @@ class FloatingIPList(obj_base.ObjectListBase, obj_base.NovaObject):
     fields = {
         'objects': fields.ListOfObjectsField('FloatingIP'),
         }
-    child_versions = {
-        '1.0': '1.0',
-        '1.1': '1.1',
-        '1.2': '1.1',
-        '1.3': '1.2',
-        '1.4': '1.3',
-        '1.5': '1.4',
-        '1.6': '1.5',
-        '1.7': '1.6',
-        '1.8': '1.7',
+    obj_relationships = {
+        'objects': [('1.0', '1.0'), ('1.1', '1.1'), ('1.2', '1.1'),
+                    ('1.3', '1.2'), ('1.4', '1.3'), ('1.5', '1.4'),
+                    ('1.6', '1.5'), ('1.7', '1.6'), ('1.8', '1.7')],
         }
     VERSION = '1.8'
 

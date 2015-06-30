@@ -212,11 +212,9 @@ class PciDeviceList(base.ObjectListBase, base.NovaObject):
     fields = {
         'objects': fields.ListOfObjectsField('PciDevice'),
         }
-    child_versions = {
-        '1.0': '1.1',
-        # NOTE(danms): PciDevice was at 1.1 before we added this
-        '1.1': '1.2',
-        '1.2': '1.3',
+    # NOTE(danms): PciDevice was at 1.1 before we added this
+    obj_relationships = {
+        'objects': [('1.0', '1.1'), ('1.1', '1.2'), ('1.2', '1.3')],
         }
 
     def __init__(self, *args, **kwargs):

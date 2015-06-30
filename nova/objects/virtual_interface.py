@@ -88,8 +88,8 @@ class VirtualInterfaceList(base.ObjectListBase, base.NovaObject):
     fields = {
         'objects': fields.ListOfObjectsField('VirtualInterface'),
     }
-    child_versions = {
-        '1.0': '1.0',
+    obj_relationships = {
+        'objects': [('1.0', '1.0')],
     }
 
     @base.remotable_classmethod

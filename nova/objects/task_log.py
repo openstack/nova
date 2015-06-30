@@ -71,8 +71,8 @@ class TaskLogList(base.ObjectListBase, base.NovaObject):
     fields = {
         'objects': fields.ListOfObjectsField('TaskLog'),
     }
-    child_versions = {
-        '1.0': '1.0',
+    obj_relationships = {
+        'objects': [('1.0', '1.0')],
     }
 
     @base.serialize_args

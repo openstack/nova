@@ -116,8 +116,8 @@ class InstanceMappingList(base.ObjectListBase, base.NovaObject):
     fields = {
         'objects': fields.ListOfObjectsField('InstanceMapping'),
         }
-    child_versions = {
-        '1.0': '1.0',
+    obj_relationships = {
+        'objects': [('1.0', '1.0')],
         }
 
     @staticmethod
