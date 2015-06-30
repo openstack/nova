@@ -84,6 +84,21 @@ class Architecture(Enum):
         return super(Architecture, self).coerce(obj, attr, value)
 
 
+class BlockDeviceSourceType(Enum):
+    """Represents the possible source_type values for a BlockDeviceMapping."""
+
+    BLANK = 'blank'
+    IMAGE = 'image'
+    SNAPSHOT = 'snapshot'
+    VOLUME = 'volume'
+
+    ALL = (BLANK, IMAGE, SNAPSHOT, VOLUME)
+
+    def __init__(self):
+        super(BlockDeviceSourceType, self).__init__(
+            valid_values=BlockDeviceSourceType.ALL)
+
+
 class CPUAllocationPolicy(Enum):
 
     DEDICATED = "dedicated"
@@ -515,6 +530,10 @@ class BaseEnumField(AutoTypedField):
 
 class ArchitectureField(BaseEnumField):
     AUTO_TYPE = Architecture()
+
+
+class BlockDeviceSourceTypeField(BaseEnumField):
+    AUTO_TYPE = BlockDeviceSourceType()
 
 
 class CPUAllocationPolicyField(BaseEnumField):
