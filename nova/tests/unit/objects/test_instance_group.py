@@ -12,339 +12,286 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
 import uuid
 
-from nova.compute import flavors
-from nova import context
-from nova import db
+import mock
+from oslo_utils import timeutils
+
 from nova import exception
-from nova.objects import instance_group
-from nova.tests.unit import fake_notifier
+from nova import objects
 from nova.tests.unit.objects import test_objects
-from nova.tests.unit import utils as tests_utils
+
+_TS_NOW = timeutils.utcnow(with_timezone=True)
+# o.vo.fields.DateTimeField converts to tz-aware and
+# in process we lose microsecond resolution.
+_TS_NOW = _TS_NOW.replace(microsecond=0)
+_DB_UUID = str(uuid.uuid4())
+_INST_GROUP_DB = {
+    'id': 1,
+    'uuid': _DB_UUID,
+    'user_id': 'fake_user',
+    'project_id': 'fake_project',
+    'name': 'fake_name',
+    'policies': ['policy1', 'policy2'],
+    'members': ['instance_id1', 'instance_id2'],
+    'deleted': False,
+    'created_at': _TS_NOW,
+    'updated_at': _TS_NOW,
+    'deleted_at': None,
+}
 
 
-class _TestInstanceGroupObjects(object):
+class _TestInstanceGroupObject(object):
 
-    def setUp(self):
-        super(_TestInstanceGroupObjects, self).setUp()
-        self.user_id = 'fake_user'
-        self.project_id = 'fake_project'
-        self.context = context.RequestContext(self.user_id, self.project_id)
+    @mock.patch('nova.db.instance_group_get', return_value=_INST_GROUP_DB)
+    def test_get_by_uuid(self, mock_db_get):
+        obj = objects.InstanceGroup.get_by_uuid(mock.sentinel.ctx,
+                                                       _DB_UUID)
+        mock_db_get.assert_called_once_with(mock.sentinel.ctx, _DB_UUID)
+        self.assertEqual(_INST_GROUP_DB['members'], obj.members)
+        self.assertEqual(_INST_GROUP_DB['policies'], obj.policies)
+        self.assertEqual(_DB_UUID, obj.uuid)
+        self.assertEqual(_INST_GROUP_DB['project_id'], obj.project_id)
+        self.assertEqual(_INST_GROUP_DB['user_id'], obj.user_id)
+        self.assertEqual(_INST_GROUP_DB['name'], obj.name)
 
-    def _get_default_values(self):
-        return {'name': 'fake_name',
-                'user_id': self.user_id,
-                'project_id': self.project_id}
+    @mock.patch('nova.db.instance_group_get_by_instance',
+                return_value=_INST_GROUP_DB)
+    def test_get_by_instance_uuid(self, mock_db_get):
+        objects.InstanceGroup.get_by_instance_uuid(
+                mock.sentinel.ctx, mock.sentinel.instance_uuid)
+        mock_db_get.assert_called_once_with(
+                mock.sentinel.ctx, mock.sentinel.instance_uuid)
 
-    def _create_instance_group(self, context, values, policies=None,
-                               members=None):
-        return db.instance_group_create(context, values, policies=policies,
-                                        members=members)
+    @mock.patch('nova.db.instance_group_get')
+    def test_refresh(self, mock_db_get):
+        changed_group = copy.deepcopy(_INST_GROUP_DB)
+        changed_group['name'] = 'new_name'
+        mock_db_get.side_effect = [_INST_GROUP_DB, changed_group]
+        obj = objects.InstanceGroup.get_by_uuid(mock.sentinel.ctx,
+                                                       _DB_UUID)
+        self.assertEqual(_INST_GROUP_DB['name'], obj.name)
+        obj.refresh()
+        self.assertEqual('new_name', obj.name)
+        self.assertEqual(set([]), obj.obj_what_changed())
 
-    def test_get_by_uuid(self):
-        values = self._get_default_values()
-        policies = ['policy1', 'policy2']
-        members = ['instance_id1', 'instance_id2']
-        db_result = self._create_instance_group(self.context, values,
-                                                policies=policies,
-                                                members=members)
-        obj_result = instance_group.InstanceGroup.get_by_uuid(self.context,
-                                                              db_result.uuid)
-        self.assertEqual(obj_result.members, members)
-        self.assertEqual(obj_result.policies, policies)
+    @mock.patch('nova.compute.utils.notify_about_server_group_update')
+    @mock.patch('nova.db.instance_group_update')
+    @mock.patch('nova.db.instance_group_get')
+    def test_save(self, mock_db_get, mock_db_update, mock_notify):
+        changed_group = copy.deepcopy(_INST_GROUP_DB)
+        changed_group['name'] = 'new_name'
+        mock_db_get.side_effect = [_INST_GROUP_DB, changed_group]
+        obj = objects.InstanceGroup.get_by_uuid(mock.sentinel.ctx,
+                                                       _DB_UUID)
+        self.assertEqual(obj.name, 'fake_name')
+        obj.name = 'new_name'
+        obj.policies = ['policy1']  # Remove policy 2
+        obj.members = ['instance_id1']  # Remove member 2
+        obj.save()
+        mock_db_update.assert_called_once_with(mock.sentinel.ctx, _DB_UUID,
+                                               {'name': 'new_name',
+                                                'members': ['instance_id1'],
+                                                'policies': ['policy1']})
+        mock_notify.assert_called_once_with(mock.sentinel.ctx, "update",
+                                               {'name': 'new_name',
+                                                'members': ['instance_id1'],
+                                                'policies': ['policy1'],
+                                                'server_group_id': _DB_UUID})
 
-    def test_get_by_instance_uuid(self):
-        values = self._get_default_values()
-        policies = ['policy1', 'policy2']
-        members = ['instance_id1', 'instance_id2']
-        db_result = self._create_instance_group(self.context, values,
-                                                policies=policies,
-                                                members=members)
-        obj_result = instance_group.InstanceGroup.get_by_instance_uuid(
-                self.context, 'instance_id1')
-        self.assertEqual(obj_result.uuid, db_result.uuid)
+    @mock.patch('nova.compute.utils.notify_about_server_group_update')
+    @mock.patch('nova.db.instance_group_create', return_value=_INST_GROUP_DB)
+    def test_create(self, mock_db_create, mock_notify):
+        obj = objects.InstanceGroup(context=mock.sentinel.ctx)
+        obj.uuid = _DB_UUID
+        obj.name = _INST_GROUP_DB['name']
+        obj.user_id = _INST_GROUP_DB['user_id']
+        obj.project_id = _INST_GROUP_DB['project_id']
+        obj.members = _INST_GROUP_DB['members']
+        obj.policies = _INST_GROUP_DB['policies']
+        obj.updated_at = _TS_NOW
+        obj.created_at = _TS_NOW
+        obj.deleted_at = None
+        obj.deleted = False
+        obj.create()
+        mock_db_create.assert_called_once_with(
+            mock.sentinel.ctx,
+            {'uuid': _DB_UUID,
+             'name': _INST_GROUP_DB['name'],
+             'user_id': _INST_GROUP_DB['user_id'],
+             'project_id': _INST_GROUP_DB['project_id'],
+             'created_at': _TS_NOW,
+             'updated_at': _TS_NOW,
+             'deleted_at': None,
+             'deleted': False,
+             },
+            members=_INST_GROUP_DB['members'],
+            policies=_INST_GROUP_DB['policies'])
+        mock_notify.assert_called_once_with(
+            mock.sentinel.ctx, "create",
+            {'uuid': _DB_UUID,
+             'name': _INST_GROUP_DB['name'],
+             'user_id': _INST_GROUP_DB['user_id'],
+             'project_id': _INST_GROUP_DB['project_id'],
+             'created_at': _TS_NOW,
+             'updated_at': _TS_NOW,
+             'deleted_at': None,
+             'deleted': False,
+             'members': _INST_GROUP_DB['members'],
+             'policies': _INST_GROUP_DB['policies'],
+             'server_group_id': _DB_UUID})
 
-    def test_refresh(self):
-        values = self._get_default_values()
-        db_result = self._create_instance_group(self.context, values)
-        obj_result = instance_group.InstanceGroup.get_by_uuid(self.context,
-                                                              db_result.uuid)
-        self.assertEqual(obj_result.name, 'fake_name')
-        values = {'name': 'new_name', 'user_id': 'new_user',
-                  'project_id': 'new_project'}
-        db.instance_group_update(self.context, db_result['uuid'],
-                                 values)
-        obj_result.refresh()
-        self.assertEqual(obj_result.name, 'new_name')
-        self.assertEqual(set([]), obj_result.obj_what_changed())
+        self.assertRaises(exception.ObjectActionError, obj.create)
 
-    def test_save_simple(self):
-        values = self._get_default_values()
-        db_result = self._create_instance_group(self.context, values)
-        obj_result = instance_group.InstanceGroup.get_by_uuid(self.context,
-                                                              db_result.uuid)
-        self.assertEqual(obj_result.name, 'fake_name')
-        obj_result.name = 'new_name'
-        obj_result.save()
-        result = db.instance_group_get(self.context, db_result['uuid'])
-        self.assertEqual(result['name'], 'new_name')
+    @mock.patch('nova.compute.utils.notify_about_server_group_update')
+    @mock.patch('nova.db.instance_group_delete')
+    def test_destroy(self, mock_db_delete, mock_notify):
+        obj = objects.InstanceGroup(context=mock.sentinel.ctx)
+        obj.uuid = _DB_UUID
+        obj.destroy()
+        mock_db_delete.assert_called_once_with(mock.sentinel.ctx, _DB_UUID)
+        mock_notify.assert_called_once_with(mock.sentinel.ctx, "delete",
+                                            {'server_group_id': _DB_UUID})
 
-    def test_save_policies(self):
-        values = self._get_default_values()
-        db_result = self._create_instance_group(self.context, values)
-        obj_result = instance_group.InstanceGroup.get_by_uuid(self.context,
-                                                              db_result.uuid)
-        policies = ['policy1', 'policy2']
-        obj_result.policies = policies
-        obj_result.save()
-        result = db.instance_group_get(self.context, db_result['uuid'])
-        self.assertEqual(result['policies'], policies)
+    @mock.patch('nova.compute.utils.notify_about_server_group_update')
+    @mock.patch('nova.db.instance_group_members_add')
+    def test_add_members(self, mock_members_add_db, mock_notify):
+        mock_members_add_db.return_value = [mock.sentinel.members]
+        members = objects.InstanceGroup.add_members(mock.sentinel.ctx,
+                                                    _DB_UUID,
+                                                    mock.sentinel.members)
+        self.assertEqual([mock.sentinel.members], members)
+        mock_members_add_db.assert_called_once_with(
+                mock.sentinel.ctx,
+                _DB_UUID,
+                mock.sentinel.members)
+        mock_notify.assert_called_once_with(
+                mock.sentinel.ctx, "addmember",
+                {'instance_uuids': mock.sentinel.members,
+                 'server_group_id': _DB_UUID})
 
-    def test_save_members(self):
-        values = self._get_default_values()
-        db_result = self._create_instance_group(self.context, values)
-        obj_result = instance_group.InstanceGroup.get_by_uuid(self.context,
-                                                              db_result.uuid)
-        members = ['instance1', 'instance2']
-        obj_result.members = members
-        fake_notifier.NOTIFICATIONS = []
-        obj_result.save()
-        self.assertEqual(1, len(fake_notifier.NOTIFICATIONS))
-        msg = fake_notifier.NOTIFICATIONS[0]
-        self.assertEqual('servergroup.update', msg.event_type)
-        self.assertEqual(members, msg.payload['members'])
-        result = db.instance_group_get(self.context, db_result['uuid'])
-        self.assertEqual(result['members'], members)
+    @mock.patch('nova.objects.InstanceList.get_by_filters')
+    @mock.patch('nova.db.instance_group_get', return_value=_INST_GROUP_DB)
+    def test_count_members_by_user(self, mock_get_db, mock_il_get):
+        mock_il_get.return_value = [mock.ANY]
+        obj = objects.InstanceGroup.get_by_uuid(mock.sentinel.ctx, _DB_UUID)
+        expected_filters = {
+            'uuid': ['instance_id1', 'instance_id2'],
+            'user_id': 'fake_user',
+            'deleted': False
+        }
+        self.assertEqual(1, obj.count_members_by_user('fake_user'))
+        mock_il_get.assert_called_once_with(mock.sentinel.ctx,
+                                            filters=expected_filters)
 
-    def test_create(self):
-        group1 = instance_group.InstanceGroup(context=self.context)
-        group1.uuid = 'fake-uuid'
-        group1.name = 'fake-name'
-        fake_notifier.NOTIFICATIONS = []
-        group1.create()
-        self.assertEqual(1, len(fake_notifier.NOTIFICATIONS))
-        msg = fake_notifier.NOTIFICATIONS[0]
-        self.assertEqual(group1.name, msg.payload['name'])
-        self.assertEqual(group1.uuid, msg.payload['server_group_id'])
-        self.assertEqual('servergroup.create', msg.event_type)
-        group2 = instance_group.InstanceGroup.get_by_uuid(self.context,
-                                                          group1.uuid)
-        self.assertEqual(group1.id, group2.id)
-        self.assertEqual(group1.uuid, group2.uuid)
-        self.assertEqual(group1.name, group2.name)
-        result = db.instance_group_get(self.context, group1.uuid)
-        self.assertEqual(group1.id, result.id)
-        self.assertEqual(group1.uuid, result.uuid)
-        self.assertEqual(group1.name, result.name)
-
-    def test_create_with_policies(self):
-        group1 = instance_group.InstanceGroup(context=self.context)
-        group1.policies = ['policy1', 'policy2']
-        group1.create()
-        group2 = instance_group.InstanceGroup.get_by_uuid(self.context,
-                                                          group1.uuid)
-        self.assertEqual(group1.id, group2.id)
-        self.assertEqual(group1.policies, group2.policies)
-
-    def test_create_with_members(self):
-        group1 = instance_group.InstanceGroup(context=self.context)
-        group1.members = ['instance1', 'instance2']
-        group1.create()
-        group2 = instance_group.InstanceGroup.get_by_uuid(self.context,
-                                                          group1.uuid)
-        self.assertEqual(group1.id, group2.id)
-        self.assertEqual(group1.members, group2.members)
-
-    def test_recreate_fails(self):
-        group = instance_group.InstanceGroup(context=self.context)
-        group.create()
-        self.assertRaises(exception.ObjectActionError, group.create)
-
-    def test_destroy(self):
-        values = self._get_default_values()
-        result = self._create_instance_group(self.context, values)
-        group = instance_group.InstanceGroup(context=self.context)
-        group.id = result.id
-        group.uuid = result.uuid
-        fake_notifier.NOTIFICATIONS = []
-        group.destroy()
-        self.assertEqual(1, len(fake_notifier.NOTIFICATIONS))
-        msg = fake_notifier.NOTIFICATIONS[0]
-        self.assertEqual('servergroup.delete', msg.event_type)
-        self.assertEqual(group.uuid, msg.payload['server_group_id'])
-        self.assertRaises(exception.InstanceGroupNotFound,
-                          db.instance_group_get, self.context, result['uuid'])
-
-    def _populate_instances(self):
-        instances = [(str(uuid.uuid4()), 'f1', 'p1'),
-                     (str(uuid.uuid4()), 'f2', 'p1'),
-                     (str(uuid.uuid4()), 'f3', 'p2'),
-                     (str(uuid.uuid4()), 'f4', 'p2')]
-        for instance in instances:
-            values = self._get_default_values()
-            values['uuid'] = instance[0]
-            values['name'] = instance[1]
-            values['project_id'] = instance[2]
-            self._create_instance_group(self.context, values)
-        return instances
-
-    def test_list_all(self):
-        self._populate_instances()
-        inst_list = instance_group.InstanceGroupList.get_all(self.context)
-        groups = db.instance_group_get_all(self.context)
-        self.assertEqual(len(groups), len(inst_list.objects))
-        self.assertEqual(len(groups), 4)
-        for i in range(0, len(groups)):
-            self.assertIsInstance(inst_list.objects[i],
-                                  instance_group.InstanceGroup)
-            self.assertEqual(inst_list.objects[i].uuid, groups[i]['uuid'])
-
-    def test_list_by_project_id(self):
-        self._populate_instances()
-        project_ids = ['p1', 'p2']
-        for id in project_ids:
-            il = instance_group.InstanceGroupList.get_by_project_id(
-                    self.context, id)
-            groups = db.instance_group_get_all_by_project_id(self.context, id)
-            self.assertEqual(len(groups), len(il.objects))
-            self.assertEqual(len(groups), 2)
-            for i in range(0, len(groups)):
-                self.assertIsInstance(il.objects[i],
-                                      instance_group.InstanceGroup)
-                self.assertEqual(il.objects[i].uuid, groups[i]['uuid'])
-                self.assertEqual(il.objects[i].name, groups[i]['name'])
-                self.assertEqual(il.objects[i].project_id, id)
-
-    def test_get_by_name(self):
-        self._populate_instances()
-        ctxt = context.RequestContext('fake_user', 'p1')
-        ig = instance_group.InstanceGroup.get_by_name(ctxt, 'f1')
-        self.assertEqual('f1', ig.name)
-
-    def test_get_by_hint(self):
-        instances = self._populate_instances()
-        for instance in instances:
-            ctxt = context.RequestContext('fake_user', instance[2])
-            ig = instance_group.InstanceGroup.get_by_hint(ctxt, instance[1])
-            self.assertEqual(instance[1], ig.name)
-            ig = instance_group.InstanceGroup.get_by_hint(ctxt, instance[0])
-            self.assertEqual(instance[0], ig.uuid)
-
-    def test_add_members(self):
-        instance_ids = ['fakeid1', 'fakeid2']
-        values = self._get_default_values()
-        group = self._create_instance_group(self.context, values)
-        fake_notifier.NOTIFICATIONS = []
-        members = instance_group.InstanceGroup.add_members(self.context,
-                group.uuid, instance_ids)
-        self.assertEqual(1, len(fake_notifier.NOTIFICATIONS))
-        msg = fake_notifier.NOTIFICATIONS[0]
-        self.assertEqual('servergroup.addmember', msg.event_type)
-        self.assertEqual(group.uuid, msg.payload['server_group_id'])
-        self.assertEqual(instance_ids, msg.payload['instance_uuids'])
-        group = instance_group.InstanceGroup.get_by_uuid(self.context,
-                group.uuid)
-        for instance in instance_ids:
-            self.assertIn(instance, members)
-            self.assertIn(instance, group.members)
-
-    def test_get_hosts(self):
-        instance1 = tests_utils.get_test_instance(self.context,
-                flavor=flavors.get_default_flavor(), obj=True)
-        instance1.host = 'hostA'
-        instance1.save()
-        instance2 = tests_utils.get_test_instance(self.context,
-                flavor=flavors.get_default_flavor(), obj=True)
-        instance2.host = 'hostB'
-        instance2.save()
-        instance3 = tests_utils.get_test_instance(self.context,
-                flavor=flavors.get_default_flavor(), obj=True)
-        instance3.host = 'hostB'
-        instance3.save()
-
-        instance_ids = [instance1.uuid, instance2.uuid, instance3.uuid]
-        values = self._get_default_values()
-        group = self._create_instance_group(self.context, values)
-        instance_group.InstanceGroup.add_members(self.context, group.uuid,
-                instance_ids)
-
-        group = instance_group.InstanceGroup.get_by_uuid(self.context,
-                group.uuid)
-        hosts = group.get_hosts()
+    @mock.patch('nova.objects.InstanceList.get_by_filters')
+    @mock.patch('nova.db.instance_group_get', return_value=_INST_GROUP_DB)
+    def test_get_hosts(self, mock_get_db, mock_il_get):
+        mock_il_get.return_value = [objects.Instance(host='host1'),
+                                    objects.Instance(host='host2'),
+                                    objects.Instance(host=None)]
+        obj = objects.InstanceGroup.get_by_uuid(mock.sentinel.ctx, _DB_UUID)
+        hosts = obj.get_hosts()
+        self.assertEqual(['instance_id1', 'instance_id2'], obj.members)
+        expected_filters = {
+            'uuid': ['instance_id1', 'instance_id2'],
+            'deleted': False
+        }
+        mock_il_get.assert_called_once_with(mock.sentinel.ctx,
+                                            filters=expected_filters)
         self.assertEqual(2, len(hosts))
-        self.assertIn('hostA', hosts)
-        self.assertIn('hostB', hosts)
-        hosts = group.get_hosts(exclude=[instance1.uuid])
-        self.assertEqual(1, len(hosts))
-        self.assertIn('hostB', hosts)
+        self.assertIn('host1', hosts)
+        self.assertIn('host2', hosts)
 
-    def test_get_hosts_with_some_none(self):
-        instance1 = tests_utils.get_test_instance(self.context,
-                flavor=flavors.get_default_flavor(), obj=True)
-        instance1.host = None
-        instance1.save()
-        instance2 = tests_utils.get_test_instance(self.context,
-                flavor=flavors.get_default_flavor(), obj=True)
-        instance2.host = 'hostB'
-        instance2.save()
+        # Test manual exclusion
+        mock_il_get.reset_mock()
+        hosts = obj.get_hosts(exclude=['instance_id1'])
+        expected_filters = {
+            'uuid': set(['instance_id2']),
+            'deleted': False
+        }
+        mock_il_get.assert_called_once_with(mock.sentinel.ctx,
+                                            filters=expected_filters)
 
-        instance_ids = [instance1.uuid, instance2.uuid]
-        values = self._get_default_values()
-        group = self._create_instance_group(self.context, values)
-        instance_group.InstanceGroup.add_members(self.context, group.uuid,
-                instance_ids)
-
-        group = instance_group.InstanceGroup.get_by_uuid(self.context,
-                group.uuid)
-        hosts = group.get_hosts()
-        self.assertEqual(1, len(hosts))
-        self.assertIn('hostB', hosts)
-
-    def test_obj_make_compatible(self):
-        group = instance_group.InstanceGroup(context=self.context,
-                                             uuid='fake-uuid',
-                                             name='fake-name')
-        group.create()
-        group_primitive = group.obj_to_primitive()
-        group.obj_make_compatible(group_primitive, '1.6')
-        self.assertEqual({}, group_primitive['metadetails'])
-
-    def test_count_members_by_user(self):
-        instance1 = tests_utils.get_test_instance(self.context,
-                flavor=flavors.get_default_flavor(), obj=True)
-        instance1.user_id = 'user1'
-        instance1.save()
-        instance2 = tests_utils.get_test_instance(self.context,
-                flavor=flavors.get_default_flavor(), obj=True)
-        instance2.user_id = 'user2'
-        instance2.save()
-        instance3 = tests_utils.get_test_instance(self.context,
-                flavor=flavors.get_default_flavor(), obj=True)
-        instance3.user_id = 'user2'
-        instance3.save()
-
-        instance_ids = [instance1.uuid, instance2.uuid, instance3.uuid]
-        values = self._get_default_values()
-        group = self._create_instance_group(self.context, values)
-        instance_group.InstanceGroup.add_members(self.context, group.uuid,
-                instance_ids)
-
-        group = instance_group.InstanceGroup.get_by_uuid(self.context,
-                group.uuid)
-        count_user1 = group.count_members_by_user('user1')
-        count_user2 = group.count_members_by_user('user2')
-        count_user3 = group.count_members_by_user('user3')
-        self.assertEqual(1, count_user1)
-        self.assertEqual(2, count_user2)
-        self.assertEqual(0, count_user3)
+    @mock.patch('nova.db.instance_group_get', return_value=_INST_GROUP_DB)
+    def test_obj_make_compatible(self, mock_db_get):
+        obj = objects.InstanceGroup.get_by_uuid(mock.sentinel.ctx, _DB_UUID)
+        obj_primitive = obj.obj_to_primitive()
+        self.assertNotIn('metadetails', obj_primitive)
+        obj.obj_make_compatible(obj_primitive, '1.6')
+        self.assertEqual({}, obj_primitive['metadetails'])
 
 
 class TestInstanceGroupObject(test_objects._LocalTest,
-                              _TestInstanceGroupObjects):
+                              _TestInstanceGroupObject):
     pass
 
 
 class TestRemoteInstanceGroupObject(test_objects._RemoteTest,
-                                    _TestInstanceGroupObjects):
+                                    _TestInstanceGroupObject):
+    pass
+
+
+def _mock_db_list_get(*args):
+    instances = [(str(uuid.uuid4()), 'f1', 'p1'),
+                 (str(uuid.uuid4()), 'f2', 'p1'),
+                 (str(uuid.uuid4()), 'f3', 'p2'),
+                 (str(uuid.uuid4()), 'f4', 'p2')]
+    result = []
+    for instance in instances:
+        values = copy.deepcopy(_INST_GROUP_DB)
+        values['uuid'] = instance[0]
+        values['name'] = instance[1]
+        values['project_id'] = instance[2]
+        result.append(values)
+    return result
+
+
+class _TestInstanceGroupListObject(object):
+
+    @mock.patch('nova.db.instance_group_get_all')
+    def test_list_all(self, mock_db_get):
+        mock_db_get.side_effect = _mock_db_list_get
+        inst_list = objects.InstanceGroupList.get_all(mock.sentinel.ctx)
+        self.assertEqual(4, len(inst_list.objects))
+        mock_db_get.assert_called_once_with(mock.sentinel.ctx)
+
+    @mock.patch('nova.db.instance_group_get_all_by_project_id')
+    def test_list_by_project_id(self, mock_db_get):
+        mock_db_get.side_effect = _mock_db_list_get
+        objects.InstanceGroupList.get_by_project_id(
+                mock.sentinel.ctx, mock.sentinel.project_id)
+        mock_db_get.assert_called_once_with(
+                mock.sentinel.ctx, mock.sentinel.project_id)
+
+    @mock.patch('nova.db.instance_group_get_all_by_project_id')
+    def test_get_by_name(self, mock_db_get):
+        mock_db_get.side_effect = _mock_db_list_get
+        # Need the project_id value set, otherwise we'd use mock.sentinel
+        mock_ctx = mock.MagicMock()
+        mock_ctx.project_id = 'fake_project'
+        ig = objects.InstanceGroup.get_by_name(mock_ctx, 'f1')
+        mock_db_get.assert_called_once_with(mock_ctx, 'fake_project')
+        self.assertEqual('f1', ig.name)
+        self.assertRaises(exception.InstanceGroupNotFound,
+                          objects.InstanceGroup.get_by_name,
+                          mock_ctx, 'unknown')
+
+    @mock.patch('nova.objects.InstanceGroup.get_by_uuid')
+    @mock.patch('nova.objects.InstanceGroup.get_by_name')
+    def test_get_by_hint(self, mock_name, mock_uuid):
+        objects.InstanceGroup.get_by_hint(mock.sentinel.ctx, _DB_UUID)
+        mock_uuid.assert_called_once_with(mock.sentinel.ctx, _DB_UUID)
+        objects.InstanceGroup.get_by_hint(mock.sentinel.ctx, 'name')
+        mock_name.assert_called_once_with(mock.sentinel.ctx, 'name')
+
+
+class TestInstanceGroupListObject(test_objects._LocalTest,
+                                  _TestInstanceGroupListObject):
+    pass
+
+
+class TestRemoteInstanceGroupListObject(test_objects._RemoteTest,
+                                        _TestInstanceGroupListObject):
     pass
