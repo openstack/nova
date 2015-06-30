@@ -5431,7 +5431,8 @@ class ComputeTestCase(BaseTestCase):
         # cleanup
         db.instance_destroy(c, instance['uuid'])
 
-    def test_live_migration_exception_rolls_back(self):
+    @mock.patch('nova.objects.Migration.save')
+    def test_live_migration_exception_rolls_back(self, mock_save):
         # Confirm exception when pre_live_migration fails.
         c = context.get_admin_context()
 
@@ -5489,16 +5490,20 @@ class ComputeTestCase(BaseTestCase):
 
         # start test
         self.mox.ReplayAll()
+        migration = objects.Migration()
         self.assertRaises(test.TestingException,
                           self.compute.live_migration,
                           c, dest=dest_host, block_migration=True,
-                          instance=instance, migrate_data={})
+                          instance=instance, migration=migration,
+                          migrate_data={})
         instance.refresh()
         self.assertEqual('src_host', instance.host)
         self.assertEqual(vm_states.ACTIVE, instance.vm_state)
         self.assertIsNone(instance.task_state)
+        self.assertEqual('failed', migration.status)
 
-    def test_live_migration_works_correctly(self):
+    @mock.patch('nova.objects.Migration.save')
+    def test_live_migration_works_correctly(self, mock_save):
         # Confirm live_migration() works as expected correctly.
         # creating instance testdata
         c = context.get_admin_context()
@@ -5533,14 +5538,19 @@ class ComputeTestCase(BaseTestCase):
         # start test
         self.mox.ReplayAll()
 
+        migration = objects.Migration()
+
         ret = self.compute.live_migration(c, dest=dest,
                                           instance=instance,
                                           block_migration=False,
+                                          migration=migration,
                                           migrate_data=migrate_data)
         self.assertIsNone(ret)
 
         # cleanup
         instance.destroy()
+
+        self.assertEqual('completed', migration.status)
 
     def test_post_live_migration_no_shared_storage_working_correctly(self):
         """Confirm post_live_migration() works correctly as expected
@@ -5614,6 +5624,8 @@ class ComputeTestCase(BaseTestCase):
                         'power_state': power_state.PAUSED})
         instance.save()
 
+        migrate_data = {'migration': mock.MagicMock()}
+
         # creating mocks
         with contextlib.nested(
             mock.patch.object(self.compute.driver, 'post_live_migration'),
@@ -5635,12 +5647,14 @@ class ComputeTestCase(BaseTestCase):
             post_live_migration_at_source, setup_networks_on_host,
             clear_events, update_available_resource
         ):
-            self.compute._post_live_migration(c, instance, dest)
+            self.compute._post_live_migration(c, instance, dest,
+                                              migrate_data=migrate_data)
 
             post_live_migration.assert_has_calls([
                 mock.call(c, instance, {'swap': None, 'ephemerals': [],
                                         'root_device_name': None,
-                                        'block_device_mapping': []}, None)])
+                                        'block_device_mapping': []},
+                                        migrate_data)])
             unfilter_instance.assert_has_calls([mock.call(instance, [])])
             migration = {'source_compute': srchost,
                          'dest_compute': dest, }
@@ -5652,6 +5666,8 @@ class ComputeTestCase(BaseTestCase):
                 [mock.call(c, instance, [])])
             clear_events.assert_called_once_with(instance)
             update_available_resource.assert_has_calls([mock.call(c)])
+            self.assertEqual('completed', migrate_data['migration'].status)
+            migrate_data['migration'].save.assert_called_once_with()
 
     def test_post_live_migration_terminate_volume_connections(self):
         c = context.get_admin_context()
@@ -5779,6 +5795,29 @@ class ComputeTestCase(BaseTestCase):
                 exception.ComputeHostNotFound(host='fake-host'))
         updated = self._finish_post_live_migration_at_destination()
         self.assertIsNone(updated['node'])
+
+    @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid')
+    def test_rollback_live_migration(self, mock_bdms):
+        c = context.get_admin_context()
+        instance = mock.MagicMock()
+        migration = mock.MagicMock()
+        migrate_data = {'migration': migration}
+
+        mock_bdms.return_value = []
+
+        @mock.patch.object(self.compute, '_live_migration_cleanup_flags')
+        @mock.patch.object(self.compute, 'network_api')
+        def _test(mock_nw_api, mock_lmcf):
+            mock_lmcf.return_value = False, False
+            self.compute._rollback_live_migration(c, instance, 'foo',
+                                                  False,
+                                                  migrate_data=migrate_data)
+            mock_nw_api.setup_networks_on_host.assert_called_once_with(
+                c, instance, self.compute.host)
+        _test()
+
+        self.assertEqual('error', migration.status)
+        migration.save.assert_called_once_with()
 
     def test_rollback_live_migration_at_destination_correctly(self):
         # creating instance testdata

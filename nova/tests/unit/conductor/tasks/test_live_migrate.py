@@ -10,6 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
 from mox3 import mox
 
 from nova.compute import power_state
@@ -41,12 +42,13 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         self.destination = "destination"
         self.block_migration = "bm"
         self.disk_over_commit = "doc"
+        self.migration = objects.Migration()
         self._generate_task()
 
     def _generate_task(self):
         self.task = live_migrate.LiveMigrationTask(self.context,
             self.instance, self.destination, self.block_migration,
-            self.disk_over_commit)
+            self.disk_over_commit, self.migration)
 
     def test_execute_with_destination(self):
         self.mox.StubOutWithMock(self.task, '_check_host_is_up')
@@ -60,6 +62,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                 instance=self.instance,
                 dest=self.destination,
                 block_migration=self.block_migration,
+                migration=self.migration,
                 migrate_data=None).AndReturn("bob")
 
         self.mox.ReplayAll()
@@ -81,10 +84,14 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                 instance=self.instance,
                 dest="found_host",
                 block_migration=self.block_migration,
+                migration=self.migration,
                 migrate_data=None).AndReturn("bob")
 
         self.mox.ReplayAll()
-        self.assertEqual("bob", self.task.execute())
+        with mock.patch.object(self.migration, 'save') as mock_save:
+            self.assertEqual("bob", self.task.execute())
+            self.assertTrue(mock_save.called)
+            self.assertEqual('found_host', self.migration.dest_compute)
 
     def test_check_instance_is_active_passes_when_paused(self):
         self.task.instance['power_state'] = power_state.PAUSED

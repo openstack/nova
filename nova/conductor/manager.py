@@ -621,9 +621,24 @@ class ComputeTaskManager(base.Base):
                      expected_task_state=task_states.MIGRATING,),
                 ex, request_spec, self.db)
 
+        migration = objects.Migration(context=context.elevated())
+        migration.dest_compute = destination
+        migration.status = 'pre-migrating'
+        migration.instance_uuid = instance.uuid
+        migration.source_compute = instance.host
+        migration.migration_type = 'live-migration'
+        if instance.obj_attr_is_set('flavor'):
+            migration.old_instance_type_id = instance.flavor.id
+            migration.new_instance_type_id = instance.flavor.id
+        else:
+            migration.old_instance_type_id = instance.instance_type_id
+            migration.new_instance_type_id = instance.instance_type_id
+        migration.create()
+
         try:
             live_migrate.execute(context, instance, destination,
-                             block_migration, disk_over_commit)
+                                 block_migration, disk_over_commit,
+                                 migration)
         except (exception.NoValidHost,
                 exception.ComputeServiceUnavailable,
                 exception.InvalidHypervisorType,
@@ -639,6 +654,8 @@ class ComputeTaskManager(base.Base):
             with excutils.save_and_reraise_exception():
                 # TODO(johngarbutt) - eventually need instance actions here
                 _set_vm_state(context, instance, ex, instance.vm_state)
+                migration.status = 'error'
+                migration.save()
         except Exception as ex:
             LOG.error(_LE('Migration of instance %(instance_id)s to host'
                           ' %(dest)s unexpectedly failed.'),
@@ -646,6 +663,8 @@ class ComputeTaskManager(base.Base):
                       exc_info=True)
             _set_vm_state(context, instance, ex, vm_states.ERROR,
                           instance.task_state)
+            migration.status = 'failed'
+            migration.save()
             raise exception.MigrationError(reason=six.text_type(ex))
 
     def build_instances(self, context, instances, image, filter_properties,

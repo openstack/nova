@@ -1175,7 +1175,22 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
     @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
     def test_deleted_instances_with_migrations(self, mock_migration_list):
         migration = objects.Migration(context=self.context,
+                                      migration_type='resize',
                                       instance_uuid='invalid')
+        mock_migration_list.return_value = [migration]
+        self.tracker.update_available_resource(self.context)
+        self.assertEqual(0, self.tracker.compute_node['memory_mb_used'])
+        self.assertEqual(0, self.tracker.compute_node['local_gb_used'])
+        mock_migration_list.assert_called_once_with(self.context,
+                                                    "fakehost",
+                                                    "fakenode")
+
+    @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
+    def test_instances_with_live_migrations(self, mock_migration_list):
+        instance = self._fake_instance_obj()
+        migration = objects.Migration(context=self.context,
+                                      migration_type='live-migration',
+                                      instance_uuid=instance.uuid)
         mock_migration_list.return_value = [migration]
         self.tracker.update_available_resource(self.context)
         self.assertEqual(0, self.tracker.compute_node['memory_mb_used'])
