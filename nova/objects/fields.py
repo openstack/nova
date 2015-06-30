@@ -287,6 +287,37 @@ class WatchdogAction(Enum):
             valid_values=WatchdogAction.ALL)
 
 
+class MonitorMetricType(Enum):
+
+    CPU_FREQUENCY = "cpu.frequency"
+    CPU_USER_TIME = "cpu.user.time"
+    CPU_KERNEL_TIME = "cpu.kernel.time"
+    CPU_IDLE_TIME = "cpu.idle.time"
+    CPU_IOWAIT_TIME = "cpu.iowait.time"
+    CPU_USER_PERCENT = "cpu.user.percent"
+    CPU_KERNEL_PERCENT = "cpu.kernel.percent"
+    CPU_IDLE_PERCENT = "cpu.idle.percent"
+    CPU_IOWAIT_PERCENT = "cpu.iowait.percent"
+    CPU_PERCENT = "cpu.percent"
+
+    ALL = (
+        CPU_FREQUENCY,
+        CPU_USER_TIME,
+        CPU_KERNEL_TIME,
+        CPU_IDLE_TIME,
+        CPU_IOWAIT_TIME,
+        CPU_USER_PERCENT,
+        CPU_KERNEL_PERCENT,
+        CPU_IDLE_PERCENT,
+        CPU_IOWAIT_PERCENT,
+        CPU_PERCENT,
+    )
+
+    def __init__(self):
+        super(MonitorMetricType, self).__init__(
+            valid_values=MonitorMetricType.ALL)
+
+
 # NOTE(danms): Remove this on next release of oslo.versionedobjects
 class FlexibleBoolean(fields.Boolean):
     @staticmethod
@@ -536,6 +567,10 @@ class VMModeField(BaseEnumField):
 
 class WatchdogActionField(BaseEnumField):
     AUTO_TYPE = WatchdogAction()
+
+
+class MonitorMetricTypeField(BaseEnumField):
+    AUTO_TYPE = MonitorMetricType()
 
 
 # FIXME(danms): Remove this after oslo.versionedobjects gets it
