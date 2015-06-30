@@ -39,6 +39,7 @@ from six.moves import range
 from sqlalchemy import Column
 from sqlalchemy.dialects import sqlite
 from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import inspect
 from sqlalchemy import Integer
 from sqlalchemy import MetaData
@@ -2788,7 +2789,8 @@ class InstanceExtraTestCase(test.TestCase):
         extra = db.instance_extra_get_by_instance_uuid(
             self.ctxt, self.instance['uuid'],
             columns=['numa_topology', 'vcpu_model'])
-        self.assertNotIn('pci_requests', extra)
+        self.assertRaises(SQLAlchemyError,
+                          extra.__getitem__, 'pci_requests')
         self.assertIn('numa_topology', extra)
         self.assertIn('vcpu_model', extra)
 
