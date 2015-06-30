@@ -1164,10 +1164,10 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
         self.assertEqual('fakenode', instance['node'])
 
 
-class ResizeClaimTestCase(BaseTrackerTestCase):
+class MoveClaimTestCase(BaseTrackerTestCase):
 
     def setUp(self):
-        super(ResizeClaimTestCase, self).setUp()
+        super(MoveClaimTestCase, self).setUp()
 
         self.instance = self._fake_instance_obj()
         self.instance_type = self._fake_flavor_create()
@@ -1220,7 +1220,7 @@ class ResizeClaimTestCase(BaseTrackerTestCase):
     def test_revert(self, mock_get):
         self.tracker.resize_claim(self.context, self.instance,
                 self.instance_type, {}, self.limits)
-        self.tracker.drop_resize_claim(self.context, self.instance)
+        self.tracker.drop_move_claim(self.context, self.instance)
 
         self.assertEqual(0, len(self.tracker.tracked_instances))
         self.assertEqual(0, len(self.tracker.tracked_migrations))

@@ -7025,7 +7025,7 @@ class ComputeTestCase(BaseTestCase):
 
         fake_rt = self.mox.CreateMockAnything()
 
-        def fake_drop_resize_claim(*args, **kwargs):
+        def fake_drop_move_claim(*args, **kwargs):
             pass
 
         def fake_get_resource_tracker(self):
@@ -7034,7 +7034,7 @@ class ComputeTestCase(BaseTestCase):
         def fake_setup_networks_on_host(self, *args, **kwargs):
             pass
 
-        self.stubs.Set(fake_rt, 'drop_resize_claim', fake_drop_resize_claim)
+        self.stubs.Set(fake_rt, 'drop_move_claim', fake_drop_move_claim)
         self.stubs.Set(self.compute, '_get_resource_tracker',
                        fake_get_resource_tracker)
         self.stubs.Set(self.compute.network_api, 'setup_networks_on_host',
