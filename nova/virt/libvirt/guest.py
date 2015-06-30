@@ -239,6 +239,13 @@ class Guest(object):
         flags |= dump_migratable and libvirt.VIR_DOMAIN_XML_MIGRATABLE or 0
         return self._domain.XMLDesc(flags=flags)
 
+    def save_memory_state(self):
+        """Saves the domain's memory state. Requires running domain.
+
+        raises: raises libvirtError on error
+        """
+        self._domain.managedSave(0)
+
 
 class GuestVCPUInfo(object):
     def __init__(self, id, cpu, state, time):
