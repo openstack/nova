@@ -1301,7 +1301,9 @@ class TestObjectVersions(test.NoDBTestCase):
                          'Please make sure to bump the versions of '
                          'parent objects and provide a rule in their '
                          'obj_make_compatible() routines to backlevel '
-                         'the child object.')
+                         'the child object. Also remember to update versions '
+                         'of child objects as necessary in the '
+                         'object_relationships mapping used in this test.')
 
     def test_obj_make_compatible(self):
         # Iterate all object classes and verify that we can run
