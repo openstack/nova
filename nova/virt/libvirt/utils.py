@@ -33,6 +33,7 @@ from nova.i18n import _LI
 from nova import utils
 from nova.virt import images
 from nova.virt.libvirt import config as vconfig
+from nova.virt.libvirt.volume import remotefs
 from nova.virt import volumeutils
 
 libvirt_opts = [
@@ -206,22 +207,10 @@ def copy_image(src, dest, host=None, receive=False,
             src = "%s:%s" % (utils.safe_ip_format(host), src)
         else:
             dest = "%s:%s" % (utils.safe_ip_format(host), dest)
-        # Try rsync first as that can compress and create sparse dest files.
-        # Note however that rsync currently doesn't read sparse files
-        # efficiently: https://bugzilla.samba.org/show_bug.cgi?id=8918
-        # At least network traffic is mitigated with compression.
-        try:
-            # Do a relatively light weight test first, so that we
-            # can fall back to scp, without having run out of space
-            # on the destination for example.
-            execute('rsync', '--sparse', '--compress', '--dry-run', src, dest,
-                    on_execute=on_execute, on_completion=on_completion)
-        except processutils.ProcessExecutionError:
-            execute('scp', src, dest, on_execute=on_execute,
-                    on_completion=on_completion)
-        else:
-            execute('rsync', '--sparse', '--compress', src, dest,
-                    on_execute=on_execute, on_completion=on_completion)
+
+        remote_filesystem_driver = remotefs.RemoteFilesystem()
+        remote_filesystem_driver.copy_file(src, dest,
+            on_execute=on_execute, on_completion=on_completion)
 
 
 def write_to_file(path, contents, umask=None):

@@ -103,6 +103,7 @@ from nova.virt.libvirt.storage import lvm
 from nova.virt.libvirt.storage import rbd_utils
 from nova.virt.libvirt import utils as libvirt_utils
 from nova.virt.libvirt import vif as libvirt_vif
+from nova.virt.libvirt.volume import remotefs
 from nova.virt import netutils
 from nova.virt import watchdog_actions
 from nova import volume
@@ -476,6 +477,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                        sysinfo_serial_funcs.keys())})
 
         self.job_tracker = instancejobtracker.InstanceJobTracker()
+        self._remotefs = remotefs.RemoteFilesystem()
 
     def _get_volume_drivers(self):
         return libvirt_volume_drivers
@@ -6265,7 +6267,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 utils.execute('rm', '-rf', inst_base)
                 utils.execute('mv', inst_base_resize, inst_base)
                 if not shared_storage:
-                    utils.ssh_execute(dest, 'rm', '-rf', inst_base)
+                    self._remotefs.remove_dir(dest, inst_base)
         except Exception:
             pass
 
@@ -6280,12 +6282,12 @@ class LibvirtDriver(driver.ComputeDriver):
             tmp_path = os.path.join(inst_base, tmp_file)
 
             try:
-                utils.ssh_execute(dest, 'touch', tmp_path)
+                self._remotefs.create_file(dest, tmp_path)
                 if os.path.exists(tmp_path):
                     shared_storage = True
                     os.unlink(tmp_path)
                 else:
-                    utils.ssh_execute(dest, 'rm', tmp_path)
+                    self._remotefs.remove_file(dest, tmp_path)
             except Exception:
                 pass
         return shared_storage
@@ -6339,7 +6341,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # failures here earlier
         if not shared_storage:
             try:
-                utils.ssh_execute(dest, 'mkdir', '-p', inst_base)
+                self._remotefs.create_dir(dest, inst_base)
             except processutils.ProcessExecutionError as e:
                 reason = _("not able to execute ssh command: %s") % e
                 raise exception.InstanceFaultRollback(

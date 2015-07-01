@@ -9980,14 +9980,20 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         drvr.get_host_ip_addr = mock.MagicMock(return_value='bar')
         mock_exists.return_value = is_same
-        with mock.patch('nova.utils.ssh_execute') as mock_ssh_method:
-            result = drvr._is_storage_shared_with('foo', '/path')
-        mock_ssh_method.assert_any_call('foo', 'touch', mock.ANY)
+        with contextlib.nested(
+            mock.patch.object(drvr._remotefs, 'create_file'),
+            mock.patch.object(drvr._remotefs, 'remove_file')
+        ) as (mock_rem_fs_create, mock_rem_fs_remove):
+            result = drvr._is_storage_shared_with('host', '/path')
+        mock_rem_fs_create.assert_any_call('host', mock.ANY)
+        create_args, create_kwargs = mock_rem_fs_create.call_args
+        self.assertTrue(create_args[1].startswith('/path'))
         if is_same:
             mock_unlink.assert_called_once_with(mock.ANY)
         else:
-            self.assertEqual(2, mock_ssh_method.call_count)
-            mock_ssh_method.assert_called_with('foo', 'rm', mock.ANY)
+            mock_rem_fs_remove.assert_called_with('host', mock.ANY)
+            remove_args, remove_kwargs = mock_rem_fs_remove.call_args
+            self.assertTrue(remove_args[1].startswith('/path'))
         return result
 
     def test_shared_storage_detection_same_host(self):

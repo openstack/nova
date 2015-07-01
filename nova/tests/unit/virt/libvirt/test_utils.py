@@ -57,65 +57,23 @@ blah BLAH: bb
         self.assertEqual('raw', disk_type)
 
     @mock.patch('nova.utils.execute')
-    def test_copy_image_local_cp(self, mock_execute):
+    def test_copy_image_local(self, mock_execute):
         libvirt_utils.copy_image('src', 'dest')
         mock_execute.assert_called_once_with('cp', 'src', 'dest')
 
-    _rsync_call = functools.partial(mock.call,
-                                    'rsync', '--sparse', '--compress',
-                                    on_execute=None, on_completion=None)
-
-    @mock.patch('nova.utils.execute')
-    def test_copy_image_rsync(self, mock_execute):
+    @mock.patch('nova.virt.libvirt.volume.remotefs.SshDriver.copy_file')
+    def test_copy_image_remote_ssh(self, mock_rem_fs_remove):
+        self.flags(remote_filesystem_transport='ssh', group='libvirt')
         libvirt_utils.copy_image('src', 'dest', host='host')
+        mock_rem_fs_remove.assert_called_once_with('src', 'host:dest',
+            on_completion=None, on_execute=None)
 
-        mock_execute.assert_has_calls([
-            self._rsync_call('--dry-run', 'src', 'host:dest'),
-            self._rsync_call('src', 'host:dest'),
-        ])
-        self.assertEqual(2, mock_execute.call_count)
-
-    @mock.patch('nova.utils.execute')
-    def test_copy_image_scp(self, mock_execute):
-        mock_execute.side_effect = [
-            processutils.ProcessExecutionError,
-            mock.DEFAULT,
-        ]
-
+    @mock.patch('nova.virt.libvirt.volume.remotefs.RsyncDriver.copy_file')
+    def test_copy_image_remote_rsync(self, mock_rem_fs_remove):
+        self.flags(remote_filesystem_transport='rsync', group='libvirt')
         libvirt_utils.copy_image('src', 'dest', host='host')
-
-        mock_execute.assert_has_calls([
-            self._rsync_call('--dry-run', 'src', 'host:dest'),
-            mock.call('scp', 'src', 'host:dest',
-                      on_execute=None, on_completion=None),
-        ])
-        self.assertEqual(2, mock_execute.call_count)
-
-    @mock.patch('nova.utils.execute')
-    def test_copy_image_rsync_ipv6(self, mock_execute):
-        libvirt_utils.copy_image('src', 'dest', host='2600::')
-
-        mock_execute.assert_has_calls([
-            self._rsync_call('--dry-run', 'src', '[2600::]:dest'),
-            self._rsync_call('src', '[2600::]:dest'),
-        ])
-        self.assertEqual(2, mock_execute.call_count)
-
-    @mock.patch('nova.utils.execute')
-    def test_copy_image_scp_ipv6(self, mock_execute):
-        mock_execute.side_effect = [
-            processutils.ProcessExecutionError,
-            mock.DEFAULT,
-        ]
-
-        libvirt_utils.copy_image('src', 'dest', host='2600::')
-
-        mock_execute.assert_has_calls([
-            self._rsync_call('--dry-run', 'src', '[2600::]:dest'),
-            mock.call('scp', 'src', '[2600::]:dest',
-                      on_execute=None, on_completion=None),
-        ])
-        self.assertEqual(2, mock_execute.call_count)
+        mock_rem_fs_remove.assert_called_once_with('src', 'host:dest',
+            on_completion=None, on_execute=None)
 
     @mock.patch('os.path.exists', return_value=True)
     def test_disk_type(self, mock_exists):
