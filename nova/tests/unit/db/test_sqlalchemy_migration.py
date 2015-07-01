@@ -22,7 +22,6 @@ from migrate.versioning import api as versioning_api
 from oslo_db.sqlalchemy import utils as db_utils
 import sqlalchemy
 
-from nova.compute import flavors
 from nova import context
 from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy import migration
@@ -225,45 +224,4 @@ class TestFlavorCheck(test.TestCase):
                                                  'instance_type_id': 'foo'})
         inst.create()
         inst.destroy()
-        self.migration.upgrade(self.engine)
-
-    def test_upgrade_flavor_deleted_sysmeta(self):
-        flavor = flavors.get_default_flavor()
-        sysmeta = flavors.save_flavor_info({}, flavor)
-        sysmeta['foo'] = 'bar'
-        inst = objects.Instance(context=self.context,
-                                uuid=uuid.uuid4(),
-                                user_id=self.context.user_id,
-                                project_id=self.context.project_id,
-                                system_metadata=sysmeta)
-        inst.create()
-
-        sysmeta = db_api.instance_system_metadata_get(self.context,
-                                                      inst.uuid)
-        sysmeta = {k: v for k, v in sysmeta.items()
-                   if not k.startswith('instance_type_')}
-        db_api.instance_system_metadata_update(self.context, inst.uuid,
-                                               sysmeta, True)
-        inst.refresh()
-
-        self.assertEqual({'foo': 'bar'}, inst.system_metadata)
-        self.migration.upgrade(self.engine)
-
-    def test_upgrade_flavor_already_migrated(self):
-        flavor = flavors.get_default_flavor()
-        sysmeta = flavors.save_flavor_info({}, flavor)
-        sysmeta['foo'] = 'bar'
-        inst = objects.Instance(context=self.context,
-                                uuid=uuid.uuid4(),
-                                user_id=self.context.user_id,
-                                project_id=self.context.project_id,
-                                system_metadata=sysmeta)
-        inst.create()
-        # Trigger the migration by lazy-loading flavor
-        inst.flavor
-        inst.save()
-        self.assertNotIn('instance_type_id', inst.system_metadata)
-        sysmeta = db_api.instance_system_metadata_get(self.context,
-                                                      inst.uuid)
-        self.assertEqual({'foo': 'bar'}, sysmeta)
         self.migration.upgrade(self.engine)
