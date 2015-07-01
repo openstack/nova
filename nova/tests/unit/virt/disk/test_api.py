@@ -78,12 +78,13 @@ class APITestCase(test.NoDBTestCase):
                 fake_import_fails))
 
         imgfile = tempfile.NamedTemporaryFile()
-        image = imgmodel.LocalFileImage(imgfile, imgmodel.FORMAT_QCOW2)
         self.addCleanup(imgfile.close)
+        image = imgmodel.LocalFileImage(imgfile, imgmodel.FORMAT_QCOW2)
         self.assertFalse(api.is_image_extendable(image))
 
     def test_resize2fs_success(self):
         imgfile = tempfile.NamedTemporaryFile()
+        self.addCleanup(imgfile.close)
 
         self.mox.StubOutWithMock(utils, 'execute')
         utils.execute('e2fsck',
@@ -101,6 +102,7 @@ class APITestCase(test.NoDBTestCase):
 
     def test_resize2fs_e2fsck_fails(self):
         imgfile = tempfile.NamedTemporaryFile()
+        self.addCleanup(imgfile.close)
 
         self.mox.StubOutWithMock(utils, 'execute')
         utils.execute('e2fsck',
@@ -114,6 +116,7 @@ class APITestCase(test.NoDBTestCase):
 
     def test_extend_qcow_success(self):
         imgfile = tempfile.NamedTemporaryFile()
+        self.addCleanup(imgfile.close)
         imgsize = 10
         device = "/dev/sdh"
         image = imgmodel.LocalFileImage(imgfile, imgmodel.FORMAT_QCOW2)
@@ -149,6 +152,7 @@ class APITestCase(test.NoDBTestCase):
     def test_extend_qcow_no_resize(self, mock_execute, mock_extendable,
                                    mock_can_resize_image):
         imgfile = tempfile.NamedTemporaryFile()
+        self.addCleanup(imgfile.close)
         imgsize = 10
         image = imgmodel.LocalFileImage(imgfile, imgmodel.FORMAT_QCOW2)
 
@@ -163,6 +167,7 @@ class APITestCase(test.NoDBTestCase):
 
     def test_extend_raw_success(self):
         imgfile = tempfile.NamedTemporaryFile()
+        self.addCleanup(imgfile.close)
         imgsize = 10
         image = imgmodel.LocalFileImage(imgfile, imgmodel.FORMAT_RAW)
 
