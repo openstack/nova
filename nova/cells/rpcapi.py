@@ -117,6 +117,7 @@ class CellsAPI(object):
         * 1.35 - Make instance_update_at_top, instance_destroy_at_top
                  and instance_info_cache_update_at_top use instance objects
         * 1.36 - Added 'delete_type' parameter to terminate_instance()
+        * 1.37 - Add get_keypair_at_top to fetch keypair from api cell
     '''
 
     VERSION_ALIASES = {
@@ -691,3 +692,15 @@ class CellsAPI(object):
         cctxt = self.client.prepare(version='1.29')
         cctxt.cast(ctxt, 'set_admin_password', instance=instance,
                 new_pass=new_pass)
+
+    def get_keypair_at_top(self, ctxt, user_id, name):
+        if not CONF.cells.enable:
+            return
+
+        cctxt = self.client.prepare(version='1.37')
+        keypair = cctxt.call(ctxt, 'get_keypair_at_top', user_id=user_id,
+                             name=name)
+        if keypair is None:
+            raise exception.KeypairNotFound(user_id=user_id,
+                                            name=name)
+        return keypair

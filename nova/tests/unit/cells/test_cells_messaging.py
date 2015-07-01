@@ -2079,6 +2079,48 @@ class CellsBroadcastMethodsTestCase(test.TestCase):
             self.assertIn(response.value_or_raise(), [migrations_from_cell1,
                                                       migrations_from_cell2])
 
+    @mock.patch.object(objects.KeyPair, 'get_by_name',
+                       return_value='fake_keypair')
+    def test_get_keypair_at_top(self, fake_get_by_name):
+        user_id = 'fake_user_id'
+        name = 'fake_keypair_name'
+        responses = self.src_msg_runner.get_keypair_at_top(self.ctxt,
+                                                           user_id, name)
+        fake_get_by_name.assert_called_once_with(self.ctxt, user_id, name)
+
+        for response in responses:
+            if response.value is not None:
+                self.assertEqual('fake_keypair', response.value)
+
+    @mock.patch.object(objects.KeyPair, 'get_by_name')
+    def test_get_keypair_at_top_with_objects_exception(self, fake_get_by_name):
+        user_id = 'fake_user_id'
+        name = 'fake_keypair_name'
+        keypair_exception = exception.KeypairNotFound(user_id=user_id,
+                                                      name=name)
+        fake_get_by_name.side_effect = keypair_exception
+        responses = self.src_msg_runner.get_keypair_at_top(self.ctxt,
+                                                           user_id,
+                                                           name)
+        fake_get_by_name.assert_called_once_with(self.ctxt, user_id, name)
+
+        for response in responses:
+            self.assertIsNone(response.value)
+
+    @mock.patch.object(messaging._BroadcastMessage, 'process')
+    def test_get_keypair_at_top_with_process_response(self, fake_process):
+        user_id = 'fake_user_id'
+        name = 'fake_keypair_name'
+        response = messaging.Response(self.ctxt, 'cell', 'keypair', False)
+        other_response = messaging.Response(self.ctxt, 'cell',
+                                            'fake_other_keypair', False)
+        fake_process.return_value = [response, other_response]
+
+        responses = self.src_msg_runner.get_keypair_at_top(self.ctxt,
+                                                           user_id, name)
+        fake_process.assert_called_once_with()
+        self.assertEqual(fake_process.return_value, responses)
+
 
 class CellsPublicInterfacesTestCase(test.TestCase):
     """Test case for the public interfaces into cells messaging."""

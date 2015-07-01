@@ -1211,6 +1211,18 @@ class _BroadcastMessageMethods(_BaseMessageMethods):
         context = message.ctxt
         return self.compute_api.get_migrations(context, filters)
 
+    def get_keypair_at_top(self, message, user_id, name):
+        """Get keypair in API cells by name. Just return None if there is
+        no match keypair.
+        """
+        if not self._at_the_top():
+            return
+
+        try:
+            return objects.KeyPair.get_by_name(message.ctxt, user_id, name)
+        except exception.KeypairNotFound:
+            pass
+
 
 _CELL_MESSAGE_TYPE_TO_MESSAGE_CLS = {'targeted': _TargetedMessage,
                                      'broadcast': _BroadcastMessage,
@@ -1803,6 +1815,15 @@ class MessageRunner(object):
     def set_admin_password(self, ctxt, instance, new_pass):
         self._instance_action(ctxt, instance, 'set_admin_password',
                 extra_kwargs={'new_pass': new_pass})
+
+    def get_keypair_at_top(self, ctxt, user_id, name):
+        """Get Key Pair by name at top level cell."""
+        message = _BroadcastMessage(self, ctxt,
+                                    'get_keypair_at_top',
+                                    dict(user_id=user_id, name=name),
+                                    'up',
+                                    need_response=True, run_locally=False)
+        return message.process()
 
     @staticmethod
     def get_message_types():

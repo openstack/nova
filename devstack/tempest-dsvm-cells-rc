@@ -58,7 +58,6 @@ r="$r|(?:tempest\.api\.compute\.servers\.test_disk_config\.ServerDiskConfigTestJ
 r="$r|(?:tempest\.api\.compute\.servers\.test_create_server\.ServersTestJSON\.test_create_server_with_scheduler_hint_group*)"
 r="$r|(?:tempest\.api\.compute\.servers\.test_servers_negative\.ServersNegativeTestJSON\.test_shelve_shelved_server*)"
 r="$r|(?:tempest\.api\.compute\.servers\.test_create_server\.ServersTestManualDisk\.test_create_server_with_scheduler_hint_group*)"
-r="$r|(?:tempest\.api\.compute\.servers\.test_servers\.ServersTestJSON\.test_create_specify_keypair*)"
 r="$r|(?:tempest\.api\.compute\.servers\.test_virtual_interfaces\.VirtualInterfacesTestJSON\.test_list_virtual_interfaces*)"
 r="$r|(?:tempest\.api\.compute\.test_networks\.NetworksTestJSON\.test_list_networks*)"
 r="$r|(?:tempest\.scenario\.test_minimum_basic\.TestMinimumBasicScenario\.test_minimum_basic_scenario*)"
