@@ -14,7 +14,6 @@
 
 import datetime
 
-import iso8601
 import mock
 from mox3 import mox
 import netaddr
@@ -35,7 +34,6 @@ from nova.objects import instance_info_cache
 from nova.objects import pci_device
 from nova.objects import security_group
 from nova import test
-from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_instance
 from nova.tests.unit.objects import test_instance_fault
 from nova.tests.unit.objects import test_instance_info_cache
@@ -49,26 +47,29 @@ from nova.tests.unit.objects import test_vcpu_model
 class _TestInstanceObject(object):
     @property
     def fake_instance(self):
-        fake_instance = fakes.stub_instance(id=2,
-                                            access_ipv4='1.2.3.4',
-                                            access_ipv6='::1')
-        fake_instance['cell_name'] = 'api!child'
-        fake_instance['scheduled_at'] = None
-        fake_instance['terminated_at'] = None
-        fake_instance['deleted_at'] = None
-        fake_instance['created_at'] = None
-        fake_instance['updated_at'] = None
-        fake_instance['launched_at'] = (
-            fake_instance['launched_at'].replace(
-                tzinfo=iso8601.iso8601.Utc(), microsecond=0))
-        fake_instance['deleted'] = False
-        fake_instance['info_cache']['instance_uuid'] = fake_instance['uuid']
-        fake_instance['security_groups'] = []
-        fake_instance['pci_devices'] = []
-        fake_instance['user_id'] = self.context.user_id
-        fake_instance['project_id'] = self.context.project_id
-        fake_instance['tags'] = []
-        return fake_instance
+        db_inst = fake_instance.fake_db_instance(id=2,
+                                                 access_ip_v4='1.2.3.4',
+                                                 access_ip_v6='::1')
+        db_inst['uuid'] = '34fd7606-2ed5-42c7-ad46-76240c088801'
+        db_inst['cell_name'] = 'api!child'
+        db_inst['scheduled_at'] = None
+        db_inst['terminated_at'] = None
+        db_inst['deleted_at'] = None
+        db_inst['created_at'] = None
+        db_inst['updated_at'] = None
+        db_inst['launched_at'] = datetime.datetime(1955, 11, 12,
+                                                   22, 4, 0)
+        db_inst['deleted'] = False
+        db_inst['security_groups'] = []
+        db_inst['pci_devices'] = []
+        db_inst['user_id'] = self.context.user_id
+        db_inst['project_id'] = self.context.project_id
+        db_inst['tags'] = []
+
+        db_inst['info_cache'] = dict(test_instance_info_cache.fake_info_cache,
+                                     instance_uuid=db_inst['uuid'])
+
+        return db_inst
 
     def test_datetime_deserialization(self):
         red_letter_date = timeutils.parse_isotime(
@@ -224,7 +225,8 @@ class _TestInstanceObject(object):
         self.mox.ReplayAll()
         inst = instance.Instance.get_by_uuid(self.context, 'fake-uuid')
         self.assertEqual(inst.id, fake_instance['id'])
-        self.assertEqual(inst.launched_at, fake_instance['launched_at'])
+        self.assertEqual(inst.launched_at.replace(tzinfo=None),
+                         fake_instance['launched_at'])
         self.assertEqual(str(inst.access_ip_v4),
                          fake_instance['access_ip_v4'])
         self.assertEqual(str(inst.access_ip_v6),
@@ -1407,24 +1409,25 @@ class TestRemoteInstanceObject(test_objects._RemoteTest,
 
 class _TestInstanceListObject(object):
     def fake_instance(self, id, updates=None):
-        fake_instance = fakes.stub_instance(id=2,
-                                            access_ipv4='1.2.3.4',
-                                            access_ipv6='::1')
-        fake_instance['scheduled_at'] = None
-        fake_instance['terminated_at'] = None
-        fake_instance['deleted_at'] = None
-        fake_instance['created_at'] = None
-        fake_instance['updated_at'] = None
-        fake_instance['launched_at'] = (
-            fake_instance['launched_at'].replace(
-                tzinfo=iso8601.iso8601.Utc(), microsecond=0))
-        fake_instance['info_cache'] = {'network_info': '[]',
-                                       'instance_uuid': fake_instance['uuid']}
-        fake_instance['security_groups'] = []
-        fake_instance['deleted'] = 0
+        db_inst = fake_instance.fake_db_instance(id=2,
+                                                 access_ip_v4='1.2.3.4',
+                                                 access_ip_v6='::1')
+        db_inst['scheduled_at'] = None
+        db_inst['terminated_at'] = None
+        db_inst['deleted_at'] = None
+        db_inst['created_at'] = None
+        db_inst['updated_at'] = None
+        db_inst['launched_at'] = datetime.datetime(1955, 11, 12,
+                                                   22, 4, 0)
+        db_inst['security_groups'] = []
+        db_inst['deleted'] = 0
+
+        db_inst['info_cache'] = dict(test_instance_info_cache.fake_info_cache,
+                                     instance_uuid=db_inst['uuid'])
+
         if updates:
-            fake_instance.update(updates)
-        return fake_instance
+            db_inst.update(updates)
+        return db_inst
 
     def test_get_all_by_filters(self):
         fakes = [self.fake_instance(1), self.fake_instance(2)]
