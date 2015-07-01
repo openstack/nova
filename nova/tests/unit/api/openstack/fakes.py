@@ -43,6 +43,8 @@ from nova.db.sqlalchemy import models
 from nova import exception as exc
 import nova.netconf
 from nova.network import api as network_api
+from nova import objects
+from nova.objects import base
 from nova import quota
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_network
@@ -384,6 +386,13 @@ def fake_instance_get(**kwargs):
     return _return_server
 
 
+def fake_compute_get(**kwargs):
+    def _return_server_obj(context, uuid, want_objects=False,
+                           expected_attrs=None):
+        return stub_instance_obj(context, **kwargs)
+    return _return_server_obj
+
+
 def fake_actions_to_locked_server(self, context, instance, *args, **kwargs):
     raise exc.InstanceIsLocked(instance_uuid=instance['uuid'])
 
@@ -427,7 +436,23 @@ def fake_instance_get_all_by_filters(num_servers=5, **kwargs):
     return _return_servers
 
 
-def stub_instance(id, user_id=None, project_id=None, host=None,
+def fake_compute_get_all(num_servers=5, **kwargs):
+    def _return_servers_objs(context, search_opts=None, limit=None,
+                             marker=None, want_objects=False,
+                             expected_attrs=None, sort_keys=None,
+                             sort_dirs=None):
+        db_insts = fake_instance_get_all_by_filters()(None,
+                                                      limit=limit,
+                                                      marker=marker)
+        expected = ['metadata', 'system_metadata', 'flavor',
+                    'info_cache', 'security_groups']
+        return base.obj_make_list(context, objects.InstanceList(),
+                                  objects.Instance, db_insts,
+                                  expected_attrs=expected)
+    return _return_servers_objs
+
+
+def stub_instance(id=1, user_id=None, project_id=None, host=None,
                   node=None, vm_state=None, task_state=None,
                   reservation_id="", uuid=FAKE_UUID, image_ref="10",
                   flavor_id="1", name=None, key_name='',
@@ -479,14 +504,13 @@ def stub_instance(id, user_id=None, project_id=None, host=None,
 
     info_cache = create_info_cache(nw_cache)
 
-    if instance_type is not None:
-        flavorinfo = jsonutils.dumps({
-            'cur': instance_type.obj_to_primitive(),
-            'old': None,
-            'new': None,
-        })
-    else:
-        flavorinfo = None
+    if instance_type is None:
+        instance_type = flavors.get_default_flavor()
+    flavorinfo = jsonutils.dumps({
+        'cur': instance_type.obj_to_primitive(),
+        'old': None,
+        'new': None,
+    })
 
     instance = {
         "id": int(id),
@@ -557,6 +581,17 @@ def stub_instance(id, user_id=None, project_id=None, host=None,
     instance['info_cache']['instance_uuid'] = instance['uuid']
 
     return instance
+
+
+def stub_instance_obj(ctxt, *args, **kwargs):
+    db_inst = stub_instance(*args, **kwargs)
+    expected = ['metadata', 'system_metadata', 'flavor',
+                'info_cache', 'security_groups']
+    inst = objects.Instance._from_db_object(ctxt, objects.Instance(),
+                                            db_inst,
+                                            expected_attrs=expected)
+    inst.fault = None
+    return inst
 
 
 def stub_volume(id, **kwargs):

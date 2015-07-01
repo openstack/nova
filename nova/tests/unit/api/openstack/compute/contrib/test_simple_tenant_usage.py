@@ -284,16 +284,6 @@ class SimpleTenantUsageControllerTestV21(test.TestCase):
         self.inst_obj = objects.Instance._from_db_object(
             self.context, objects.Instance(), self.baseinst)
 
-    def test_get_flavor_from_sys_meta(self):
-        # Non-deleted instances get their type information from their
-        # system_metadata
-        with mock.patch.object(db, 'instance_get_by_uuid',
-                               return_value=self.baseinst):
-            flavor = self.controller._get_flavor(self.context,
-                                                 self.inst_obj, {})
-        self.assertEqual(objects.Flavor, type(flavor))
-        self.assertEqual(FAKE_INST_TYPE['id'], flavor.id)
-
     def test_get_flavor_from_non_deleted_with_id_fails(self):
         # If an instance is not deleted and missing type information from
         # system_metadata, then that's a bug
