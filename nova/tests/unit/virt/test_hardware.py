@@ -2329,3 +2329,34 @@ class CPUPinningTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
         self.assertRaises(exception.CPUPinningInvalid,
                 hw.numa_usage_from_instances, host_pin,
                 [inst_pin_1, inst_pin_2])
+
+
+class CPURealtimeTestCase(test.NoDBTestCase):
+    def test_success_flavor(self):
+        flavor = {"extra_specs": {"hw:cpu_realtime_mask": "^1"}}
+        image = objects.ImageMeta.from_dict({})
+        rt, em = hw.vcpus_realtime_topology(set([0, 1, 2]), flavor, image)
+        self.assertEqual(set([0, 2]), rt)
+        self.assertEqual(set([1]), em)
+
+    def test_success_image(self):
+        flavor = {"extra_specs": {}}
+        image = objects.ImageMeta.from_dict(
+            {"properties": {"hw_cpu_realtime_mask": "^0-1"}})
+        rt, em = hw.vcpus_realtime_topology(set([0, 1, 2]), flavor, image)
+        self.assertEqual(set([2]), rt)
+        self.assertEqual(set([0, 1]), em)
+
+    def test_no_mask_configured(self):
+        flavor = {"extra_specs": {}}
+        image = objects.ImageMeta.from_dict({"properties": {}})
+        self.assertRaises(
+            exception.RealtimeMaskNotFoundOrInvalid,
+            hw.vcpus_realtime_topology, set([0, 1, 2]), flavor, image)
+
+    def test_mask_badly_configured(self):
+        flavor = {"extra_specs": {"hw:cpu_realtime_mask": "^0-2"}}
+        image = objects.ImageMeta.from_dict({"properties": {}})
+        self.assertRaises(
+            exception.RealtimeMaskNotFoundOrInvalid,
+            hw.vcpus_realtime_topology, set([0, 1, 2]), flavor, image)
