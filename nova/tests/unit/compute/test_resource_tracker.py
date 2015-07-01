@@ -796,6 +796,15 @@ class TrackerTestCase(BaseTrackerTestCase):
         self.assertEqual(driver.pci_stats,
             self.tracker.compute_node['pci_device_pools'])
 
+    def test_set_instance_host_and_node(self):
+        inst = objects.Instance()
+        with mock.patch.object(inst, 'save') as mock_save:
+            self.tracker._set_instance_host_and_node(self.context, inst)
+            mock_save.assert_called_once_with()
+        self.assertEqual(self.tracker.host, inst.host)
+        self.assertEqual(self.tracker.nodename, inst.node)
+        self.assertEqual(self.tracker.host, inst.launched_on)
+
 
 class SchedulerClientTrackerTestCase(BaseTrackerTestCase):
 
@@ -1218,14 +1227,21 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
             self.tracker.instance_claim(self.context, inst)
         mock_save.assert_called_once_with()
 
-    def test_set_instance_host_and_node(self):
-        inst = objects.Instance()
-        with mock.patch.object(inst, 'save') as mock_save:
-            self.tracker._set_instance_host_and_node(self.context, inst)
-            mock_save.assert_called_once_with()
-        self.assertEqual(self.tracker.host, inst.host)
-        self.assertEqual(self.tracker.nodename, inst.node)
-        self.assertEqual(self.tracker.host, inst.launched_on)
+    @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid',
+                return_value=objects.InstancePCIRequests(requests=[]))
+    def test_claim_sets_instance_host_and_node(self, mock_get):
+        instance = self._fake_instance_obj()
+        self.assertIsNone(instance['host'])
+        self.assertIsNone(instance['launched_on'])
+        self.assertIsNone(instance['node'])
+
+        with mock.patch.object(instance, 'save'):
+            claim = self.tracker.instance_claim(self.context, instance)
+        self.assertNotEqual(0, claim.memory_mb)
+
+        self.assertEqual('fakehost', instance['host'])
+        self.assertEqual('fakehost', instance['launched_on'])
+        self.assertEqual('fakenode', instance['node'])
 
 
 class ResizeClaimTestCase(BaseTrackerTestCase):
@@ -1309,22 +1325,6 @@ class ResizeClaimTestCase(BaseTrackerTestCase):
                                                task_state=task_state)
                 result = self.tracker._instance_in_resize_state(instance)
                 self.assertTrue(result)
-
-    @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid',
-                return_value=objects.InstancePCIRequests(requests=[]))
-    def test_set_instance_host_and_node(self, mock_get):
-        instance = self._fake_instance_obj()
-        self.assertIsNone(instance['host'])
-        self.assertIsNone(instance['launched_on'])
-        self.assertIsNone(instance['node'])
-
-        with mock.patch.object(instance, 'save'):
-            claim = self.tracker.instance_claim(self.context, instance)
-        self.assertNotEqual(0, claim.memory_mb)
-
-        self.assertEqual('fakehost', instance['host'])
-        self.assertEqual('fakehost', instance['launched_on'])
-        self.assertEqual('fakenode', instance['node'])
 
 
 class OrphanTestCase(BaseTrackerTestCase):
