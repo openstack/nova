@@ -1127,15 +1127,28 @@ class NetworkManager(manager.Manager):
             # should ignore the request so we don't disassociate the fixed IP
             # from the wrong instance.
             if mac:
+                LOG.debug('Checking to see if virtual interface with MAC '
+                          '%(mac)s is still associated to instance.',
+                          {'mac': mac}, instance_uuid=fixed_ip.instance_uuid)
                 vif = objects.VirtualInterface.get_by_address(context, mac)
-                if vif and vif.instance_uuid != fixed_ip.instance_uuid:
-                    LOG.info(_LI("Ignoring request to release fixed IP "
-                                 "%(address)s with MAC %(mac)s since it is "
-                                 "now associated with a new instance that is "
-                                 "in the process of allocating it's network."),
-                             {'address': address, 'mac': mac},
-                             instance_uuid=fixed_ip.instance_uuid)
-                    return
+                if vif:
+                    LOG.debug('Found VIF: %s', vif,
+                              instance_uuid=fixed_ip.instance_uuid)
+                    if vif.instance_uuid != fixed_ip.instance_uuid:
+                        LOG.info(_LI("Ignoring request to release fixed IP "
+                                     "%(address)s with MAC %(mac)s since it "
+                                     "is now associated with a new instance "
+                                     "that is in the process of allocating "
+                                     "it's network."),
+                                 {'address': address, 'mac': mac},
+                                 instance_uuid=fixed_ip.instance_uuid)
+                        return
+                else:
+                    LOG.debug('No VIF was found for MAC: %s', mac,
+                              instance_uuid=fixed_ip.instance_uuid)
+
+            LOG.debug('Disassociating fixed IP %s from instance.', address,
+                      instance_uuid=fixed_ip.instance_uuid)
             fixed_ip.disassociate()
 
     @staticmethod
