@@ -23,7 +23,6 @@ from oslo_serialization import jsonutils
 from oslo_utils import importutils
 import testtools
 
-from nova.api.metadata import password
 # Import extensions to pull in osapi_compute_extension CONF option used below.
 from nova.console import manager as console_manager  # noqa - only for cfg
 from nova.network.neutronv2 import api as neutron_api  # noqa - only for cfg
@@ -336,34 +335,6 @@ class ExtendedVIFNetSampleJsonTests(ServersSampleBase):
         subs['mac_addr'] = '(?:[a-f0-9]{2}:){5}[a-f0-9]{2}'
 
         self._verify_response('vifs-list-resp', subs, response, 200)
-
-
-class ServerPasswordSampleJsonTests(ServersSampleBase):
-    extension_name = ("nova.api.openstack.compute.contrib.server_password."
-                      "Server_password")
-
-    def test_get_password(self):
-
-        # Mock password since there is no api to set it
-        def fake_ext_password(*args, **kwargs):
-            return ("xlozO3wLCBRWAa2yDjCCVx8vwNPypxnypmRYDa/zErlQ+EzPe1S/"
-                    "Gz6nfmC52mOlOSCRuUOmG7kqqgejPof6M7bOezS387zjq4LSvvwp"
-                    "28zUknzy4YzfFGhnHAdai3TxUJ26pfQCYrq8UTzmKF2Bq8ioSEtV"
-                    "VzM0A96pDh8W2i7BOz6MdoiVyiev/I1K2LsuipfxSJR7Wdke4zNX"
-                    "JjHHP2RfYsVbZ/k9ANu+Nz4iIH8/7Cacud/pphH7EjrY6a4RZNrj"
-                    "QskrhKYed0YERpotyjYk1eDtRe72GrSiXteqCM4biaQ5w3ruS+Ac"
-                    "X//PXk3uJ5kC7d67fPXaVz4WaQRYMg==")
-        self.stubs.Set(password, "extract_password", fake_ext_password)
-        uuid = self._post_server()
-        response = self._do_get('servers/%s/os-server-password' % uuid)
-        subs = self._get_regexes()
-        subs['encrypted_password'] = fake_ext_password().replace('+', '\\+')
-        self._verify_response('get-password-resp', subs, response, 200)
-
-    def test_reset_password(self):
-        uuid = self._post_server()
-        response = self._do_delete('servers/%s/os-server-password' % uuid)
-        self.assertEqual(response.status_code, 204)
 
 
 class BlockDeviceMappingV2BootJsonTest(ServersSampleBase):
