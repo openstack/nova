@@ -209,10 +209,15 @@ multipath: CommandFilter, multipath, root
 # nova/virt/libvirt/utils.py:
 systool: CommandFilter, systool, root
 
-# nova/virt/libvirt/volume.py:
+# nova/storage/linuxscsi.py: sginfo -r
 sginfo: CommandFilter, sginfo, root
+
+# nova/storage/linuxscsi.py: sg_scan device
 sg_scan: CommandFilter, sg_scan, root
-ln: RegExpFilter, ln, root, ln, --symbolic, --force, /dev/mapper/ip-.*-iscsi-iqn.*, /dev/disk/by-path/ip-.*-iscsi-iqn.*
+
+# nova/volume/encryptors/cryptsetup.py:
+# nova/volume/encryptors/luks.py:
+ln: RegExpFilter, ln, root, ln, --symbolic, --force, /dev/mapper/.*, .*
 
 # nova/volume/encryptors.py:
 # nova/virt/libvirt/dmcrypt.py:
