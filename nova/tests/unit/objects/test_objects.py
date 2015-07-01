@@ -1278,7 +1278,6 @@ class TestObjectVersions(test.NoDBTestCase):
             sub_obj_name = self._get_object_field_name(field)
             if sub_obj_name:
                 sub_obj_class = obj_classes[sub_obj_name][0]
-                self._build_tree(tree, sub_obj_class)
                 tree.setdefault(obj_name, {})
                 tree[obj_name][sub_obj_name] = sub_obj_class.VERSION
 
