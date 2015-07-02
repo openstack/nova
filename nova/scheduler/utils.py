@@ -29,7 +29,6 @@ from nova import exception
 from nova.i18n import _, _LE, _LW
 from nova import objects
 from nova.objects import base as obj_base
-from nova.objects import instance as instance_obj
 from nova import rpc
 
 
@@ -63,10 +62,24 @@ def build_request_spec(ctxt, image, instances, instance_type=None):
             instance_type = flavors.extract_flavor(instance)
 
     if isinstance(instance, objects.Instance):
-        instance = instance_obj.compat_instance(instance)
+        instance = obj_base.obj_to_primitive(instance)
+        # obj_to_primitive doesn't copy this enough, so be sure
+        # to detach our metadata blob because we modify it below.
+        instance['system_metadata'] = dict(instance.get('system_metadata', {}))
 
     if isinstance(instance_type, objects.Flavor):
         instance_type = obj_base.obj_to_primitive(instance_type)
+        # NOTE(danms): Replicate this old behavior because the
+        # scheduler RPC interface technically expects it to be
+        # there. Remove this when we bump the scheduler RPC API to
+        # v5.0
+        try:
+            flavors.save_flavor_info(instance.get('system_metadata', {}),
+                                     instance_type)
+        except KeyError:
+            # If the flavor isn't complete (which is legit with a
+            # flavor object, just don't put it in the request spec
+            pass
 
     request_spec = {
             'image': image or {},

@@ -35,7 +35,6 @@ from nova import exception
 from nova.i18n import _, _LI, _LW
 from nova import objects
 from nova.objects import base as obj_base
-from nova.objects import instance as instance_obj
 from nova.pci import manager as pci_manager
 from nova.pci import whitelist as pci_whitelist
 from nova import rpc
@@ -733,8 +732,7 @@ class ResourceTracker(object):
         is_deleted_instance = instance['vm_state'] == vm_states.DELETED
 
         if is_new_instance:
-            self.tracked_instances[uuid] = instance_obj.compat_instance(
-                instance)
+            self.tracked_instances[uuid] = obj_base.obj_to_primitive(instance)
             sign = 1
 
         if is_deleted_instance:
@@ -864,7 +862,7 @@ class ResourceTracker(object):
         """
         usage = {}
         if isinstance(object_or_dict, objects.Instance):
-            usage = instance_obj.compat_instance(object_or_dict)
+            usage = obj_base.obj_to_primitive(object_or_dict)
         elif isinstance(object_or_dict, objects.Flavor):
             usage = obj_base.obj_to_primitive(object_or_dict)
         else:

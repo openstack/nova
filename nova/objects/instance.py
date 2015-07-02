@@ -13,7 +13,6 @@
 #    under the License.
 
 import contextlib
-import copy
 
 from oslo_config import cfg
 from oslo_db import exception as db_exc
@@ -93,42 +92,6 @@ def _expected_cols(expected_attrs):
         simple_cols.append('system_metadata')
         expected_attrs.append('system_metadata')
     return simple_cols + complex_cols
-
-
-def compat_instance(instance):
-    """Create a dict-like instance structure from an objects.Instance.
-
-    This is basically the same as nova.objects.base.obj_to_primitive(),
-    except that it includes some instance-specific details, like stashing
-    flavor information in system_metadata.
-
-    If you have a function (or RPC client) that needs to see the instance
-    as a dict that has flavor information in system_metadata, use this
-    to appease it (while you fix said thing).
-
-    :param instance: a nova.objects.Instance instance
-    :returns: a dict-based instance structure
-    """
-    if not isinstance(instance, objects.Instance):
-        return instance
-
-    db_instance = copy.deepcopy(base.obj_to_primitive(instance))
-
-    flavor_attrs = [('', 'flavor'), ('old_', 'old_flavor'),
-                    ('new_', 'new_flavor')]
-    for prefix, attr in flavor_attrs:
-        flavor = (instance.obj_attr_is_set(attr) and
-                  getattr(instance, attr) or None)
-        if flavor:
-            # NOTE(danms): If flavor is unset or None, don't
-            # copy it into the primitive's system_metadata
-            db_instance['system_metadata'] = \
-                flavors.save_flavor_info(
-                    db_instance.get('system_metadata', {}),
-                    flavor, prefix)
-        if attr in db_instance:
-            del db_instance[attr]
-    return db_instance
 
 
 # TODO(berrange): Remove NovaObjectDictCompat

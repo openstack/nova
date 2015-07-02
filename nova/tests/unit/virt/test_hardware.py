@@ -22,7 +22,6 @@ from nova import context
 from nova import exception
 from nova import objects
 from nova.objects import base as base_obj
-from nova.objects import instance as instance_obj
 from nova.pci import stats
 from nova import test
 from nova.virt import hardware as hw
@@ -1658,7 +1657,7 @@ class HelperMethodsTestCase(test.NoDBTestCase):
         fake_uuid = str(uuid.uuid4())
         instance = objects.Instance(context=self.context, id=1, uuid=fake_uuid,
                                     numa_topology=self.instancetopo)
-        instance_dict = instance_obj.compat_instance(instance)
+        instance_dict = base_obj.obj_to_primitive(instance)
         instance_numa_topo = hw.instance_topology_from_instance(instance_dict)
         for expected_cell, actual_cell in zip(self.instancetopo.cells,
                                               instance_numa_topo.cells):

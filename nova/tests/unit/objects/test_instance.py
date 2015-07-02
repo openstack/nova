@@ -1700,21 +1700,3 @@ class TestInstanceObjectMisc(test.TestCase):
         self.assertEqual(['metadata', 'extra', 'extra.numa_topology'],
                          instance._expected_cols(['metadata',
                                                   'numa_topology']))
-
-    def test_compat_instance(self):
-        inst = objects.Instance(id=123)
-        inst.flavor = flavors.get_default_flavor()
-        inst.old_flavor = flavors.get_default_flavor()
-        inst.new_flavor = None
-        db_inst = instance.compat_instance(inst)
-        self.assertEqual(inst.id, db_inst['id'])
-        self.assertEqual(inst.flavor.flavorid,
-            db_inst['system_metadata']['instance_type_flavorid'])
-        self.assertEqual(inst.old_flavor.flavorid,
-            db_inst['system_metadata']['old_instance_type_flavorid'])
-        self.assertNotIn('new_instance_type_id',
-            db_inst['system_metadata'])
-
-    def test_compat_instance_noninstance(self):
-        self.assertEqual(mock.sentinel.noninstance,
-                         instance.compat_instance(mock.sentinel.noninstance))
