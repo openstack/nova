@@ -831,6 +831,24 @@ class GetSystemMetadataFromImageTestCase(test.NoDBTestCase):
             sys_key = "%s%s" % (utils.SM_IMAGE_PROP_PREFIX, key)
             self.assertEqual(sys_meta[sys_key], expected)
 
+    def test_skip_image_properties(self):
+        image = self.get_image()
+        image["properties"] = {
+            "foo1": "bar", "foo2": "baz",
+            "mappings": "wizz", "img_block_device_mapping": "eek",
+        }
+
+        sys_meta = utils.get_system_metadata_from_image(image)
+
+        # Verify that we inherit all the image properties
+        for key, expected in six.iteritems(image["properties"]):
+            sys_key = "%s%s" % (utils.SM_IMAGE_PROP_PREFIX, key)
+
+            if key in utils.SM_SKIP_KEYS:
+                self.assertNotIn(sys_key, sys_meta)
+            else:
+                self.assertEqual(sys_meta[sys_key], expected)
+
     def test_vhd_min_disk_image(self):
         image = self.get_image()
         flavor = self.get_flavor()
@@ -873,6 +891,8 @@ class GetImageFromSystemMetadataTestCase(test.NoDBTestCase):
         sys_meta = self.get_system_metadata()
         sys_meta["%soo1" % utils.SM_IMAGE_PROP_PREFIX] = "bar"
         sys_meta["%soo2" % utils.SM_IMAGE_PROP_PREFIX] = "baz"
+        sys_meta["%simg_block_device_mapping" %
+                 utils.SM_IMAGE_PROP_PREFIX] = "eek"
 
         image = utils.get_image_from_system_metadata(sys_meta)
 
@@ -887,6 +907,8 @@ class GetImageFromSystemMetadataTestCase(test.NoDBTestCase):
         for key, value in six.iteritems(image["properties"]):
             sys_key = "%s%s" % (utils.SM_IMAGE_PROP_PREFIX, key)
             self.assertEqual(image["properties"][key], sys_meta[sys_key])
+
+        self.assertNotIn("img_block_device_mapping", image["properties"])
 
     def test_dont_inherit_empty_values(self):
         sys_meta = self.get_system_metadata()
