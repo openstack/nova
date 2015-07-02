@@ -16,10 +16,10 @@ import os
 
 import fixtures
 from oslo_config import cfg
+from oslo_policy import policy as oslo_policy
 from oslo_serialization import jsonutils
 import six
 
-from nova.openstack.common import policy as common_policy
 from nova import paths
 import nova.policy
 from nova.tests.unit import fake_policy
@@ -48,15 +48,14 @@ class RealPolicyFixture(fixtures.Fixture):
         # policy_file can be overridden by subclasses
         self.policy_file = paths.state_path_def('etc/nova/policy.json')
         self._prepare_policy()
-        CONF.set_override('policy_file', self.policy_file)
+        CONF.set_override('policy_file', self.policy_file, group='oslo_policy')
         nova.policy.reset()
         nova.policy.init()
         self.addCleanup(nova.policy.reset)
 
     def set_rules(self, rules):
         policy = nova.policy._ENFORCER
-        policy.set_rules({k: common_policy.parse_rule(v)
-                          for k, v in rules.items()})
+        policy.set_rules(oslo_policy.Rules.from_dict(rules))
 
 
 class PolicyFixture(RealPolicyFixture):
@@ -80,7 +79,7 @@ class PolicyFixture(RealPolicyFixture):
                                         'policy.json')
         with open(self.policy_file, 'w') as f:
             f.write(fake_policy.policy_data)
-        CONF.set_override('policy_dirs', [])
+        CONF.set_override('policy_dirs', [], group='oslo_policy')
 
 
 class RoleBasedPolicyFixture(RealPolicyFixture):
@@ -101,7 +100,7 @@ class RoleBasedPolicyFixture(RealPolicyFixture):
         self.role = role
 
     def _prepare_policy(self):
-        policy = jsonutils.load(open(CONF.policy_file))
+        policy = jsonutils.load(open(CONF.oslo_policy.policy_file))
 
         # Convert all actions to require specified role
         for action, rule in six.iteritems(policy):

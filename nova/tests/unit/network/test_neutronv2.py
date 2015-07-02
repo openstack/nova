@@ -23,6 +23,7 @@ from mox3 import mox
 from neutronclient.common import exceptions
 from neutronclient.v2_0 import client
 from oslo_config import cfg
+from oslo_policy import policy as oslo_policy
 from oslo_serialization import jsonutils
 from oslo_utils import timeutils
 import six
@@ -35,7 +36,6 @@ from nova.network import model
 from nova.network.neutronv2 import api as neutronapi
 from nova.network.neutronv2 import constants
 from nova import objects
-from nova.openstack.common import policy as common_policy
 from nova.pci import manager as pci_manager
 from nova.pci import whitelist as pci_whitelist
 from nova import policy
@@ -1914,9 +1914,8 @@ class TestNeutronv2(TestNeutronv2Base):
         self._get_available_networks(prv_nets, pub_nets, req_ids)
 
     def test_get_available_networks_with_custom_policy(self):
-        rules = {'network:attach_external_network':
-                 common_policy.parse_rule('')}
-        policy.set_rules(rules)
+        rules = {'network:attach_external_network': ''}
+        policy.set_rules(oslo_policy.Rules.from_dict(rules))
         req_ids = [net['id'] for net in self.nets5]
         self._get_available_networks(self.nets5, pub_nets=[], req_ids=req_ids)
 

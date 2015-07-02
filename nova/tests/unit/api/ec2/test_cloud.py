@@ -29,6 +29,7 @@ import iso8601
 import mock
 from oslo_config import cfg
 from oslo_log import log as logging
+from oslo_policy import policy as oslo_policy
 from oslo_utils import timeutils
 from oslo_utils import uuidutils
 
@@ -54,7 +55,6 @@ from nova.network import model
 from nova.network.neutronv2 import api as neutronapi
 from nova import objects
 from nova.objects import base as obj_base
-from nova.openstack.common import policy as common_policy
 from nova import policy
 from nova import test
 from nova.tests.unit.api.openstack.compute import (
@@ -523,8 +523,8 @@ class CloudTestCase(test.TestCase):
 
     def test_delete_security_group_policy_not_allowed(self):
         rules = {'compute_extension:security_groups':
-                    common_policy.parse_rule('project_id:%(project_id)s')}
-        policy.set_rules(rules)
+                    'project_id:%(project_id)s'}
+        policy.set_rules(oslo_policy.Rules.from_dict(rules))
 
         with mock.patch.object(self.cloud.security_group_api,
                 'get') as get:
@@ -536,8 +536,8 @@ class CloudTestCase(test.TestCase):
 
     def test_authorize_security_group_ingress_policy_not_allowed(self):
         rules = {'compute_extension:security_groups':
-                    common_policy.parse_rule('project_id:%(project_id)s')}
-        policy.set_rules(rules)
+                    'project_id:%(project_id)s'}
+        policy.set_rules(oslo_policy.Rules.from_dict(rules))
 
         with mock.patch.object(self.cloud.security_group_api,
                 'get') as get:
@@ -669,8 +669,8 @@ class CloudTestCase(test.TestCase):
 
     def test_revoke_security_group_ingress_policy_not_allowed(self):
         rules = {'compute_extension:security_groups':
-                    common_policy.parse_rule('project_id:%(project_id)s')}
-        policy.set_rules(rules)
+                    'project_id:%(project_id)s'}
+        policy.set_rules(oslo_policy.Rules.from_dict(rules))
 
         with mock.patch.object(self.cloud.security_group_api,
                 'get') as get:
@@ -2354,10 +2354,9 @@ class CloudTestCase(test.TestCase):
                   'max_count': 1, }
         instance_id = self._run_instance(**kwargs)
         rules = {
-            "compute:start":
-                common_policy.parse_rule("project_id:non_fake"),
+            "compute:start": "project_id:non_fake",
         }
-        policy.set_rules(rules)
+        policy.set_rules(oslo_policy.Rules.from_dict(rules))
         exc = self.assertRaises(exception.PolicyNotAuthorized,
                                 self.cloud.start_instances,
                                 self.context, [instance_id])
@@ -2395,10 +2394,9 @@ class CloudTestCase(test.TestCase):
                   'max_count': 1, }
         instance_id = self._run_instance(**kwargs)
         rules = {
-            "compute:stop":
-                common_policy.parse_rule("project_id:non_fake")
+            "compute:stop": "project_id:non_fake"
         }
-        policy.set_rules(rules)
+        policy.set_rules(oslo_policy.Rules.from_dict(rules))
         exc = self.assertRaises(exception.PolicyNotAuthorized,
                                 self.cloud.stop_instances,
                                 self.context, [instance_id])

@@ -16,6 +16,7 @@
 import copy
 import uuid
 
+from oslo_policy import policy as oslo_policy
 import six
 from webob import exc
 
@@ -27,7 +28,6 @@ from nova import db
 from nova.db.sqlalchemy import models
 from nova import exception
 from nova import objects
-from nova.openstack.common import policy as common_policy
 from nova import policy
 from nova import test
 from nova.tests.unit.api.openstack import fakes
@@ -81,10 +81,10 @@ class InstanceActionsPolicyTestV21(test.NoDBTestCase):
         return fakes.HTTPRequest.blank(fake_url)
 
     def _set_policy_rules(self):
-        rules = {'compute:get': common_policy.parse_rule(''),
+        rules = {'compute:get': '',
                  'os_compute_api:os-instance-actions':
-                     common_policy.parse_rule('project_id:%(project_id)s')}
-        policy.set_rules(rules)
+                     'project_id:%(project_id)s'}
+        policy.set_rules(oslo_policy.Rules.from_dict(rules))
 
     def test_list_actions_restricted_by_project(self):
         self._set_policy_rules()
@@ -121,10 +121,10 @@ class InstanceActionsPolicyTestV2(InstanceActionsPolicyTestV21):
     instance_actions = instance_actions_v2
 
     def _set_policy_rules(self):
-        rules = {'compute:get': common_policy.parse_rule(''),
+        rules = {'compute:get': '',
                  'compute_extension:instance_actions':
-                     common_policy.parse_rule('project_id:%(project_id)s')}
-        policy.set_rules(rules)
+                     'project_id:%(project_id)s'}
+        policy.set_rules(oslo_policy.Rules.from_dict(rules))
 
 
 class InstanceActionsTestV21(test.NoDBTestCase):
@@ -153,12 +153,10 @@ class InstanceActionsTestV21(test.NoDBTestCase):
                                         use_admin_context=use_admin_context)
 
     def _set_policy_rules(self):
-        rules = {'compute:get': common_policy.parse_rule(''),
-                 'os_compute_api:os-instance-actions':
-                     common_policy.parse_rule(''),
-                 'os_compute_api:os-instance-actions:events':
-                     common_policy.parse_rule('is_admin:True')}
-        policy.set_rules(rules)
+        rules = {'compute:get': '',
+                 'os_compute_api:os-instance-actions': '',
+                 'os_compute_api:os-instance-actions:events': 'is_admin:True'}
+        policy.set_rules(oslo_policy.Rules.from_dict(rules))
 
     def test_list_actions(self):
         def fake_get_actions(context, uuid):
@@ -250,9 +248,7 @@ class InstanceActionsTestV2(InstanceActionsTestV21):
     instance_actions = instance_actions_v2
 
     def _set_policy_rules(self):
-        rules = {'compute:get': common_policy.parse_rule(''),
-                 'compute_extension:instance_actions':
-                     common_policy.parse_rule(''),
-                 'compute_extension:instance_actions:events':
-                     common_policy.parse_rule('is_admin:True')}
-        policy.set_rules(rules)
+        rules = {'compute:get': '',
+                 'compute_extension:instance_actions': '',
+                 'compute_extension:instance_actions:events': 'is_admin:True'}
+        policy.set_rules(oslo_policy.Rules.from_dict(rules))

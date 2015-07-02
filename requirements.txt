@@ -44,6 +44,7 @@ oslo.utils>=2.8.0 # Apache-2.0
 oslo.db>=3.2.0 # Apache-2.0
 oslo.rootwrap>=2.0.0 # Apache-2.0
 oslo.messaging!=2.8.0,>2.6.1 # Apache-2.0
+oslo.policy>=0.5.0  # Apache-2.0
 oslo.i18n>=1.5.0 # Apache-2.0
 oslo.service>=0.12.0 # Apache-2.0
 rfc3986>=0.2.0 # Apache-2.0

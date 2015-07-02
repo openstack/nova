@@ -19,6 +19,7 @@ import datetime
 import iso8601
 import mock
 from mox3 import mox
+from oslo_policy import policy as oslo_policy
 from oslo_serialization import jsonutils
 from oslo_utils import timeutils
 from oslo_utils import uuidutils
@@ -40,7 +41,6 @@ from nova import exception
 from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import quotas as quotas_obj
-from nova.openstack.common import policy as common_policy
 from nova import policy
 from nova import quota
 from nova import test
@@ -2924,11 +2924,11 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_skip_policy_check(self, mock_create, mock_get_ins_by_filters,
                                mock_get, mock_pause, mock_action, mock_save):
         policy.reset()
-        rules = {'compute:pause': common_policy.parse_rule('!'),
-                 'compute:get': common_policy.parse_rule('!'),
-                 'compute:get_all': common_policy.parse_rule('!'),
-                 'compute:create': common_policy.parse_rule('!')}
-        policy.set_rules(common_policy.Rules(rules))
+        rules = {'compute:pause': '!',
+                 'compute:get': '!',
+                 'compute:get_all': '!',
+                 'compute:create': '!'}
+        policy.set_rules(oslo_policy.Rules.from_dict(rules))
         instance = self._create_instance_obj()
         mock_get.return_value = instance
 

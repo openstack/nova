@@ -20,6 +20,7 @@ import uuid
 
 import mock
 from mox3 import mox
+from oslo_policy import policy as oslo_policy
 
 from nova.compute import flavors
 from nova import context
@@ -32,7 +33,6 @@ from nova.network import model as network_model
 from nova.network import rpcapi as network_rpcapi
 from nova import objects
 from nova.objects import fields
-from nova.openstack.common import policy as common_policy
 from nova import policy
 from nova import test
 from nova.tests.unit import fake_instance
@@ -76,8 +76,8 @@ class NetworkPolicyTestCase(test.TestCase):
 
     def test_skip_policy(self):
         policy.reset()
-        rules = {'network:get_all': common_policy.parse_rule('!')}
-        policy.set_rules(common_policy.Rules(rules))
+        rules = {'network:get_all': '!'}
+        policy.set_rules(oslo_policy.Rules.from_dict(rules))
         api = network.API()
         self.assertRaises(exception.PolicyNotAuthorized,
                           api.get_all, self.context)

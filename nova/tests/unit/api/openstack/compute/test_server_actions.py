@@ -19,6 +19,7 @@ import uuid
 import mock
 from mox3 import mox
 from oslo_config import cfg
+from oslo_policy import policy as oslo_policy
 from oslo_utils import uuidutils
 import webob
 
@@ -32,7 +33,6 @@ from nova import db
 from nova import exception
 from nova.image import glance
 from nova import objects
-from nova.openstack.common import policy as common_policy
 from nova import policy
 from nova import test
 from nova.tests.unit.api.openstack import fakes
@@ -1316,12 +1316,10 @@ class ServerActionsControllerTestV2(ServerActionsControllerTestV21):
         }
         rule_name = "compute:snapshot_volume_backed"
         rules = {
-                rule_name:
-                common_policy.parse_rule("project_id:no_id"),
-                "compute:get":
-                common_policy.parse_rule("")
+                rule_name: "project_id:no_id",
+                "compute:get": ""
         }
-        policy.set_rules(rules)
+        policy.set_rules(oslo_policy.Rules.from_dict(rules))
         with mock.patch.object(compute_api.API, 'is_volume_backed_instance',
                                return_value=True):
             exc = self.assertRaises(exception.PolicyNotAuthorized,
@@ -1342,12 +1340,10 @@ class ServerActionsControllerTestV2(ServerActionsControllerTestV21):
         }
         rule_name = "compute:snapshot_volume_backed"
         rules = {
-                rule_name:
-                common_policy.parse_rule("role:no_role"),
-                "compute:get":
-                common_policy.parse_rule("")
+                rule_name: "role:no_role",
+                "compute:get": ""
         }
-        policy.set_rules(rules)
+        policy.set_rules(oslo_policy.Rules.from_dict(rules))
         with mock.patch.object(compute_api.API, 'is_volume_backed_instance',
                                return_value=True):
             exc = self.assertRaises(exception.PolicyNotAuthorized,

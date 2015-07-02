@@ -16,6 +16,7 @@
 
 from oslo_config import cfg
 from oslo_config import fixture as config_fixture
+from oslo_policy import opts as policy_opts
 
 from nova import config
 from nova import ipv6
@@ -31,7 +32,6 @@ CONF.import_opt('network_size', 'nova.network.manager')
 CONF.import_opt('num_networks', 'nova.network.manager')
 CONF.import_opt('floating_ip_dns_manager', 'nova.network.floating_ips')
 CONF.import_opt('instance_dns_manager', 'nova.network.floating_ips')
-CONF.import_opt('policy_file', 'nova.openstack.common.policy')
 CONF.import_opt('compute_driver', 'nova.virt.driver')
 CONF.import_opt('api_paste_config', 'nova.wsgi')
 
@@ -66,5 +66,6 @@ class ConfFixture(config_fixture.Config):
         self.conf.set_default('enabled', True, 'osapi_v21')
         self.conf.set_default('force_dhcp_release', False)
         self.conf.set_default('periodic_enable', False)
+        policy_opts.set_defaults(self.conf)
         self.addCleanup(utils.cleanup_dns_managers)
         self.addCleanup(ipv6.api.reset_backend)
