@@ -5596,7 +5596,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual('src_host', instance.host)
         self.assertEqual(vm_states.ACTIVE, instance.vm_state)
         self.assertIsNone(instance.task_state)
-        self.assertEqual('failed', migration.status)
+        self.assertEqual('error', migration.status)
 
     @mock.patch.object(compute_utils, 'EventReporter')
     @mock.patch('nova.objects.Migration.save')

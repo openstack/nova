@@ -5286,7 +5286,7 @@ class ComputeManager(manager.Manager):
             with excutils.save_and_reraise_exception():
                 LOG.exception(_LE('Pre live migration failed at %s'),
                               dest, instance=instance)
-                self._set_migration_status(migration, 'failed')
+                self._set_migration_status(migration, 'error')
                 self._rollback_live_migration(context, instance, dest,
                                               block_migration, migrate_data)
 
@@ -5306,7 +5306,7 @@ class ComputeManager(manager.Manager):
             # nothing must be recovered in this version.
             LOG.exception(_LE('Live migration failed.'), instance=instance)
             with excutils.save_and_reraise_exception():
-                self._set_migration_status(migration, 'failed')
+                self._set_migration_status(migration, 'error')
 
     @wrap_exception()
     @wrap_instance_event

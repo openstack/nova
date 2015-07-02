@@ -335,7 +335,7 @@ class ComputeTaskManager(base.Base):
                       exc_info=True)
             _set_vm_state(context, instance, ex, vm_states.ERROR,
                           instance.task_state)
-            migration.status = 'failed'
+            migration.status = 'error'
             migration.save()
             raise exception.MigrationError(reason=six.text_type(ex))
 
