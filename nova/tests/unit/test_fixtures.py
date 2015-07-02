@@ -14,6 +14,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import sqlalchemy
 import sys
 
 import fixtures as fx
@@ -24,6 +25,7 @@ from oslo_utils import uuidutils
 import testtools
 
 from nova.db.sqlalchemy import api as session
+from nova import exception
 from nova.objects import base as obj_base
 from nova.tests import fixtures
 from nova.tests.unit import conf_fixture
@@ -309,3 +311,21 @@ class TestSpawnIsSynchronousFixture(testtools.TestCase):
         tester = mock.MagicMock()
         utils.spawn_n(tester.function, 'foo', bar='bar')
         tester.function.assert_called_once_with('foo', bar='bar')
+
+
+class TestBannedDBSchemaOperations(testtools.TestCase):
+    def test_column(self):
+        column = sqlalchemy.Column()
+        with fixtures.BannedDBSchemaOperations(['Column']):
+            self.assertRaises(exception.DBNotAllowed,
+                              column.drop)
+            self.assertRaises(exception.DBNotAllowed,
+                              column.alter)
+
+    def test_table(self):
+        table = sqlalchemy.Table()
+        with fixtures.BannedDBSchemaOperations(['Table']):
+            self.assertRaises(exception.DBNotAllowed,
+                              table.drop)
+            self.assertRaises(exception.DBNotAllowed,
+                              table.alter)

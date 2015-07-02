@@ -29,6 +29,7 @@ import six
 
 from nova.db import migration
 from nova.db.sqlalchemy import api as session
+from nova import exception
 from nova.objects import base as obj_base
 from nova import rpc
 from nova import service
@@ -412,3 +413,26 @@ class SpawnIsSynchronousFixture(fixtures.Fixture):
         super(SpawnIsSynchronousFixture, self).setUp()
         self.useFixture(fixtures.MonkeyPatch(
             'nova.utils.spawn_n', lambda f, *a, **k: f(*a, **k)))
+
+
+class BannedDBSchemaOperations(fixtures.Fixture):
+    """Ban some operations for migrations"""
+    def __init__(self, banned_resources=None):
+        super(BannedDBSchemaOperations, self).__init__()
+        self._banned_resources = banned_resources or []
+
+    @staticmethod
+    def _explode(resource, op):
+        raise exception.DBNotAllowed(
+            'Operation %s.%s() is not allowed in a database migration' % (
+                resource, op))
+
+    def setUp(self):
+        super(BannedDBSchemaOperations, self).setUp()
+        for thing in self._banned_resources:
+            self.useFixture(fixtures.MonkeyPatch(
+                'sqlalchemy.%s.drop' % thing,
+                lambda *a, **k: self._explode(thing, 'drop')))
+            self.useFixture(fixtures.MonkeyPatch(
+                'sqlalchemy.%s.alter' % thing,
+                lambda *a, **k: self._explode(thing, 'alter')))
