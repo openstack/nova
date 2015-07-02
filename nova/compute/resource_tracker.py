@@ -85,7 +85,7 @@ class ResourceTracker(object):
         self.monitors = monitor_handler.choose_monitors(self)
         self.ext_resources_handler = \
             ext_resources.ResourceHandler(CONF.compute_resources)
-        self.old_resources = {}
+        self.old_resources = objects.ComputeNode()
         self.scheduler_client = scheduler_client.SchedulerClient()
 
     @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE)
@@ -322,38 +322,17 @@ class ResourceTracker(object):
 
         # there was no local copy and none in the database
         # so we need to create a new compute node. This needs
-        # initial values for the database.
-        #
-        # TODO(pmurray) this section will be cleaned up when we
-        # use the ComputeNode object. Here it is the conductor call
-        # to compute_node_create() that sets up the compute_node
-        # dict. That will change to create the compute_node, initialize
-        # it and then save.
-        cn = {}
-        cn.update(resources)
+        # to be initialised with resource values.
+        self.compute_node = objects.ComputeNode(context)
         # TODO(pmurray) service_id is deprecated but is still a required field.
         # This should be removed when the field is changed.
-        cn['service_id'] = service.id
-        cn['host'] = self.host
-        # initialize load stats from existing instances:
-        self._write_ext_resources(cn)
-        # NOTE(pmurray): the stats field is stored as a json string. The
-        # json conversion will be done automatically by the ComputeNode object
-        # so this can be removed when using ComputeNode.
-        cn['stats'] = jsonutils.dumps(cn['stats'])
-        # pci_passthrough_devices may be in resources but are not
-        # stored in compute nodes
-        cn.pop('pci_passthrough_devices', None)
-
-        self.compute_node = self.conductor_api.compute_node_create(context, cn)
+        self.compute_node.service_id = service.id
+        self.compute_node.host = self.host
+        self._copy_resources(resources)
+        self.compute_node.create()
         LOG.info(_LI('Compute_service record created for '
                      '%(host)s:%(node)s'),
                  {'host': self.host, 'node': self.nodename})
-
-        # now we have created a compute node we can copy resources
-        # NOTE(pmurray): this has an unnecessary copy until the above
-        # is cleaned up.
-        self._copy_resources(resources)
 
     def _copy_resources(self, resources):
         """Copy resource values to initialise compute_node and related
@@ -363,9 +342,8 @@ class ResourceTracker(object):
         self.stats.clear()
         self.stats.digest_stats(resources.get('stats'))
 
-        # now copy reset to compute_node
-        self.compute_node.update(resources)
-        self.compute_node.pop('pci_passthrough_devices', None)
+        # now copy rest to compute_node
+        self.compute_node.update_from_virt_driver(resources)
 
     def _get_host_metrics(self, context, nodename):
         """Get the metrics from monitors and
@@ -487,24 +465,19 @@ class ResourceTracker(object):
         # from deleted instances.
         if self.pci_tracker:
             self.pci_tracker.clean_usage(instances, migrations, orphans)
-            self.compute_node['pci_device_pools'] = self.pci_tracker.stats
+            dev_pools_obj = self.pci_tracker.stats.to_device_pools_obj()
+            self.compute_node.pci_device_pools = dev_pools_obj
         else:
-            self.compute_node['pci_device_pools'] = []
+            self.compute_node.pci_device_pools = objects.PciDevicePoolList()
 
         self._report_final_resource_view()
 
         metrics = self._get_host_metrics(context, self.nodename)
-        self.compute_node['metrics'] = jsonutils.dumps(metrics)
+        # TODO(pmurray): metrics should not be a json string in ComputeNode,
+        # but it is. This should be changed in ComputeNode
+        self.compute_node.metrics = jsonutils.dumps(metrics)
 
-        # TODO(sbauza): Juno compute nodes are missing the host field and
-        # the Juno ResourceTracker does not set this field, even if
-        # the ComputeNode object can show it.
-        # Unfortunately, as we're not yet using ComputeNode.save(), we need
-        # to add this field in the resources dict until the RT is using
-        # the ComputeNode.save() method for populating the table.
-        # tl;dr: To be removed once RT is using ComputeNode.save()
-        self.compute_node['host'] = self.host
-
+        # update the compute_node
         self._update(context)
         LOG.info(_LI('Compute_service record updated for %(host)s:%(node)s'),
                      {'host': self.host, 'node': self.nodename})
@@ -512,16 +485,14 @@ class ResourceTracker(object):
     def _get_compute_node(self, context):
         """Returns compute node for the host and nodename."""
         try:
-            compute = objects.ComputeNode.get_by_host_and_nodename(
+            return objects.ComputeNode.get_by_host_and_nodename(
                 context, self.host, self.nodename)
-            return obj_base.obj_to_primitive(compute)
         except exception.NotFound:
             LOG.warning(_LW("No compute node record for %(host)s:%(node)s"),
                         {'host': self.host, 'node': self.nodename})
 
     def _write_ext_resources(self, resources):
-        resources['stats'] = {}
-        resources['stats'].update(self.stats)
+        resources.stats = copy.deepcopy(self.stats)
         self.ext_resources_handler.write_resources(resources)
 
     def _get_service(self, context):
@@ -577,10 +548,10 @@ class ResourceTracker(object):
         including instance calculations and in-progress resource claims. These
         values will be exposed via the compute node table to the scheduler.
         """
-        vcpus = self.compute_node['vcpus']
+        vcpus = self.compute_node.vcpus
         if vcpus:
             tcpu = vcpus
-            ucpu = self.compute_node['vcpus_used']
+            ucpu = self.compute_node.vcpus_used
             LOG.info(_LI("Total usable vcpus: %(tcpu)s, "
                         "total allocated vcpus: %(ucpu)s"),
                         {'tcpu': vcpus,
@@ -588,7 +559,7 @@ class ResourceTracker(object):
         else:
             tcpu = 0
             ucpu = 0
-        pci_device_pools = self.compute_node.get('pci_device_pools')
+        pci_stats = self.compute_node.pci_device_pools
         LOG.info(_LI("Final resource view: "
                      "name=%(node)s "
                      "phys_ram=%(phys_ram)sMB "
@@ -599,17 +570,17 @@ class ResourceTracker(object):
                      "used_vcpus=%(used_vcpus)s "
                      "pci_stats=%(pci_stats)s"),
                  {'node': self.nodename,
-                  'phys_ram': self.compute_node['memory_mb'],
-                  'used_ram': self.compute_node['memory_mb_used'],
-                  'phys_disk': self.compute_node['local_gb'],
-                  'used_disk': self.compute_node['local_gb_used'],
+                  'phys_ram': self.compute_node.memory_mb,
+                  'used_ram': self.compute_node.memory_mb_used,
+                  'phys_disk': self.compute_node.local_gb,
+                  'used_disk': self.compute_node.local_gb_used,
                   'total_vcpus': tcpu,
                   'used_vcpus': ucpu,
-                  'pci_stats': pci_device_pools})
+                  'pci_stats': pci_stats})
 
     def _resource_change(self):
-        """Check to see if any resouces have changed."""
-        if cmp(self.compute_node, self.old_resources) != 0:
+        """Check to see if any resources have changed."""
+        if not obj_base.obj_equal_prims(self.compute_node, self.old_resources):
             self.old_resources = copy.deepcopy(self.compute_node)
             return True
         return False
@@ -617,26 +588,12 @@ class ResourceTracker(object):
     def _update(self, context):
         """Update partial stats locally and populate them to Scheduler."""
         self._write_ext_resources(self.compute_node)
-        # NOTE(pmurray): the stats field is stored as a json string. The
-        # json conversion will be done automatically by the ComputeNode object
-        # so this can be removed when using ComputeNode.
-        self.compute_node['stats'] = jsonutils.dumps(
-            self.compute_node['stats'])
-
         if not self._resource_change():
             return
-        if "service" in self.compute_node:
-            del self.compute_node['service']
         # Persist the stats to the Scheduler
-        self._update_resource_stats(context, self.compute_node)
+        self.scheduler_client.update_resource_stats(self.compute_node)
         if self.pci_tracker:
             self.pci_tracker.save(context)
-
-    def _update_resource_stats(self, context, values):
-        stats = values.copy()
-        stats['id'] = self.compute_node['id']
-        self.scheduler_client.update_resource_stats(
-            context, (self.host, self.nodename), stats)
 
     def _update_usage(self, usage, sign=1):
         mem_usage = usage['memory_mb']
@@ -644,27 +601,24 @@ class ResourceTracker(object):
         overhead = self.driver.estimate_instance_overhead(usage)
         mem_usage += overhead['memory_mb']
 
-        self.compute_node['memory_mb_used'] += sign * mem_usage
-        self.compute_node['local_gb_used'] += sign * usage.get('root_gb', 0)
-        self.compute_node['local_gb_used'] += (
-            sign * usage.get('ephemeral_gb', 0))
+        self.compute_node.memory_mb_used += sign * mem_usage
+        self.compute_node.local_gb_used += sign * usage.get('root_gb', 0)
+        self.compute_node.local_gb_used += sign * usage.get('ephemeral_gb', 0)
 
         # free ram and disk may be negative, depending on policy:
-        self.compute_node['free_ram_mb'] = (
-            self.compute_node['memory_mb'] -
-            self.compute_node['memory_mb_used'])
-        self.compute_node['free_disk_gb'] = (
-            self.compute_node['local_gb'] -
-            self.compute_node['local_gb_used'])
+        self.compute_node.free_ram_mb = (self.compute_node.memory_mb -
+                                         self.compute_node.memory_mb_used)
+        self.compute_node.free_disk_gb = (self.compute_node.local_gb -
+                                          self.compute_node.local_gb_used)
 
-        self.compute_node['running_vms'] = self.stats.num_instances
+        self.compute_node.running_vms = self.stats.num_instances
         self.ext_resources_handler.update_from_instance(usage, sign)
 
         # Calculate the numa usage
         free = sign == -1
         updated_numa_topology = hardware.get_host_numa_usage_from_instance(
                 self.compute_node, usage, free)
-        self.compute_node['numa_topology'] = updated_numa_topology
+        self.compute_node.numa_topology = updated_numa_topology
 
     def _update_usage_from_migration(self, context, instance, image_meta,
                                      migration):
@@ -725,9 +679,11 @@ class ResourceTracker(object):
                 self.pci_tracker.update_pci_for_migration(context, instance)
             self._update_usage(usage)
             if self.pci_tracker:
-                self.compute_node['pci_device_pools'] = self.pci_tracker.stats
+                obj = self.pci_tracker.stats.to_device_pools_obj()
+                self.compute_node.pci_device_pools = obj
             else:
-                self.compute_node['pci_device_pools'] = []
+                obj = objects.PciDevicePoolList()
+                self.compute_node.pci_device_pools = obj
             self.tracked_migrations[uuid] = (migration, itype)
 
     def _update_usage_from_migrations(self, context, migrations):
@@ -795,11 +751,12 @@ class ResourceTracker(object):
             # new instance, update compute node resource usage:
             self._update_usage(instance, sign=sign)
 
-        self.compute_node['current_workload'] = self.stats.calculate_workload()
+        self.compute_node.current_workload = self.stats.calculate_workload()
         if self.pci_tracker:
-            self.compute_node['pci_device_pools'] = self.pci_tracker.stats
+            obj = self.pci_tracker.stats.to_device_pools_obj()
+            self.compute_node.pci_device_pools = obj
         else:
-            self.compute_node['pci_device_pools'] = []
+            self.compute_node.pci_device_pools = objects.PciDevicePoolList()
 
     def _update_usage_from_instances(self, context, instances):
         """Calculate resource usage based on instance utilization.  This is
@@ -810,16 +767,14 @@ class ResourceTracker(object):
         self.tracked_instances.clear()
 
         # set some initial values, reserve room for host/hypervisor:
-        self.compute_node['local_gb_used'] = CONF.reserved_host_disk_mb / 1024
-        self.compute_node['memory_mb_used'] = CONF.reserved_host_memory_mb
-        self.compute_node['free_ram_mb'] = (
-            self.compute_node['memory_mb'] -
-            self.compute_node['memory_mb_used'])
-        self.compute_node['free_disk_gb'] = (
-            self.compute_node['local_gb'] -
-            self.compute_node['local_gb_used'])
-        self.compute_node['current_workload'] = 0
-        self.compute_node['running_vms'] = 0
+        self.compute_node.local_gb_used = CONF.reserved_host_disk_mb / 1024
+        self.compute_node.memory_mb_used = CONF.reserved_host_memory_mb
+        self.compute_node.free_ram_mb = (self.compute_node.memory_mb -
+                                         self.compute_node.memory_mb_used)
+        self.compute_node.free_disk_gb = (self.compute_node.local_gb -
+                                          self.compute_node.local_gb_used)
+        self.compute_node.current_workload = 0
+        self.compute_node.running_vms = 0
 
         # Reset values for extended resources
         self.ext_resources_handler.reset_resources(self.compute_node,
