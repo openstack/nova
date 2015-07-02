@@ -1736,6 +1736,12 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.assertIsNone(
             self.compute.instance_events.pop_instance_event(inst, event))
 
+    def test_clear_events_fails_gracefully(self):
+        inst = objects.Instance(uuid='uuid')
+        self.compute.instance_events._events = None
+        self.assertEqual(
+            self.compute.instance_events.clear_events_for_instance(inst), {})
+
     def test_retry_reboot_pending_soft(self):
         instance = objects.Instance(self.context)
         instance.uuid = 'foo'

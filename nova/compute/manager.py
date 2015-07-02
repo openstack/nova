@@ -545,6 +545,10 @@ class InstanceEvents(object):
         """
         @utils.synchronized(self._lock_name(instance))
         def _clear_events():
+            if self._events is None:
+                LOG.debug('Unexpected attempt to clear events during shutdown',
+                          instance=instance)
+                return dict()
             return self._events.pop(instance.uuid, {})
         return _clear_events()
 
