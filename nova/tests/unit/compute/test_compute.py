@@ -11212,6 +11212,37 @@ class EvacuateHostTestCase(BaseTestCase):
             self.assertRaises(exception.InstanceRecreateNotSupported,
                               lambda: self._rebuild(on_shared_storage=True))
 
+    def test_on_shared_storage_not_provided_host_without_shared_storage(self):
+        fake_image = {'id': 1,
+                      'name': 'fake_name',
+                      'properties': {'kernel_id': 'fake_kernel_id',
+                                     'ramdisk_id': 'fake_ramdisk_id'}}
+
+        self.mox.StubOutWithMock(self.compute.driver, 'spawn')
+        self.compute.driver.spawn(mox.IsA(self.context),
+                mox.IsA(objects.Instance), mox.IsA(fake_image),
+                mox.IgnoreArg(), mox.IsA('newpass'),
+                network_info=mox.IgnoreArg(),
+                block_device_info=mox.IgnoreArg())
+
+        self.stubs.Set(self.compute.driver, 'instance_on_disk',
+                       lambda x: False)
+        self.mox.ReplayAll()
+
+        self._rebuild(on_shared_storage=None)
+
+    def test_on_shared_storage_not_provided_host_with_shared_storage(self):
+        self.mox.StubOutWithMock(self.compute.driver, 'spawn')
+        self.compute.driver.spawn(mox.IsA(self.context),
+                mox.IsA(objects.Instance), {}, mox.IgnoreArg(), 'newpass',
+                network_info=mox.IgnoreArg(),
+                block_device_info=mox.IgnoreArg())
+
+        self.stubs.Set(self.compute.driver, 'instance_on_disk', lambda x: True)
+        self.mox.ReplayAll()
+
+        self._rebuild(on_shared_storage=None)
+
 
 class ComputeInjectedFilesTestCase(BaseTestCase):
     # Test that running instances with injected_files decodes files correctly
