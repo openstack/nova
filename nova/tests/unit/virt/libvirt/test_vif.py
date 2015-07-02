@@ -268,6 +268,11 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                                     type=network_model.VIF_TYPE_MIDONET,
                                     devname='tap-xxx-yyy-zzz')
 
+    vif_tap = network_model.VIF(id='vif-xxx-yyy-zzz',
+                                address='ca:fe:de:ad:be:ef',
+                                type=network_model.VIF_TYPE_TAP,
+                                devname='tap-xxx-yyy-zzz')
+
     vif_iovisor = network_model.VIF(id='vif-xxx-yyy-zzz',
                                    address='ca:fe:de:ad:be:ef',
                                    network=network_bridge,
@@ -999,6 +1004,24 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         node = self._get_node(xml)
         self._assertTypeAndMacEquals(node, "ethernet", "target", "dev",
                                      self.vif_midonet, br_want)
+
+    def test_tap_ethernet_vif_driver(self):
+        d = vif.LibvirtGenericVIFDriver()
+        br_want = self.vif_tap['devname']
+        xml = self._get_instance_xml(d, self.vif_tap)
+        node = self._get_node(xml)
+        self._assertTypeAndMacEquals(node, "ethernet", "target", "dev",
+                                     self.vif_tap, br_want)
+
+    @mock.patch('nova.network.linux_net.device_exists')
+    def test_plug_tap(self, device_exists):
+        device_exists.return_value = True
+        d = vif.LibvirtGenericVIFDriver()
+        d.plug_tap(None, self.vif_tap)
+
+    def test_unplug_tap(self):
+        d = vif.LibvirtGenericVIFDriver()
+        d.unplug_tap(None, self.vif_tap)
 
     def test_generic_8021qbh_driver(self):
         d = vif.LibvirtGenericVIFDriver()

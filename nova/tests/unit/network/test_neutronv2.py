@@ -2394,6 +2394,12 @@ class TestNeutronv2(TestNeutronv2Base):
         self.assertTrue(net['should_create_bridge'])
         self.assertIsNone(iid)
 
+    def test_nw_info_build_network_tap(self):
+        net, iid = self._test_nw_info_build_network(model.VIF_TYPE_TAP)
+        self.assertIsNone(net['bridge'])
+        self.assertNotIn('should_create_bridge', net)
+        self.assertIsNone(iid)
+
     def test_nw_info_build_network_other(self):
         net, iid = self._test_nw_info_build_network(None)
         self.assertIsNone(net['bridge'])
