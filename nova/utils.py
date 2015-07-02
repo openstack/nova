@@ -19,6 +19,7 @@
 
 import contextlib
 import datetime
+import errno
 import functools
 import hashlib
 import hmac
@@ -565,6 +566,12 @@ def monkey_patch():
     # If CONF.monkey_patch is not True, this function do nothing.
     if not CONF.monkey_patch:
         return
+    if six.PY3:
+        def is_method(obj):
+            # Unbound methods became regular functions on Python 3
+            return inspect.ismethod(obj) or inspect.isfunction(obj)
+    else:
+        is_method = inspect.ismethod
     # Get list of modules and decorators
     for module_and_decorator in CONF.monkey_patch_modules:
         module, decorator_name = module_and_decorator.split(':')
@@ -573,15 +580,15 @@ def monkey_patch():
         __import__(module)
         # Retrieve module information using pyclbr
         module_data = pyclbr.readmodule_ex(module)
-        for key in module_data.keys():
+        for key, value in module_data.items():
             # set the decorator for the class methods
-            if isinstance(module_data[key], pyclbr.Class):
+            if isinstance(value, pyclbr.Class):
                 clz = importutils.import_class("%s.%s" % (module, key))
-                for method, func in inspect.getmembers(clz, inspect.ismethod):
+                for method, func in inspect.getmembers(clz, is_method):
                     setattr(clz, method,
                         decorator("%s.%s.%s" % (module, key, method), func))
             # set the decorator for the function
-            if isinstance(module_data[key], pyclbr.Function):
+            if isinstance(value, pyclbr.Function):
                 func = importutils.import_class("%s.%s" % (module, key))
                 setattr(sys.modules[module], key,
                     decorator("%s.%s" % (module, key), func))
@@ -614,7 +621,10 @@ def make_dev_path(dev, partition=None, base='/dev'):
 def sanitize_hostname(hostname):
     """Return a hostname which conforms to RFC-952 and RFC-1123 specs."""
     if isinstance(hostname, six.text_type):
+        # Remove characters outside the Unicode range U+0000-U+00FF
         hostname = hostname.encode('latin-1', 'ignore')
+        if six.PY3:
+            hostname = hostname.decode('latin-1')
 
     hostname = re.sub('[ _]', '-', hostname)
     hostname = re.sub('[^\w.-]+', '', hostname)
@@ -830,7 +840,10 @@ def last_bytes(file_like_object, num):
     try:
         file_like_object.seek(-num, os.SEEK_END)
     except IOError as e:
-        if e.errno == 22:
+        # seek() fails with EINVAL when trying to go before the start of the
+        # file. It means that num is larger than the file size, so just
+        # go to the start.
+        if e.errno == errno.EINVAL:
             file_like_object.seek(0, os.SEEK_SET)
         else:
             raise
@@ -874,14 +887,14 @@ def instance_sys_meta(instance):
 
 def get_wrapped_function(function):
     """Get the method at the bottom of a stack of decorators."""
-    if not hasattr(function, 'func_closure') or not function.func_closure:
+    if not hasattr(function, '__closure__') or not function.__closure__:
         return function
 
     def _get_wrapped_function(function):
-        if not hasattr(function, 'func_closure') or not function.func_closure:
+        if not hasattr(function, '__closure__') or not function.__closure__:
             return None
 
-        for closure in function.func_closure:
+        for closure in function.__closure__:
             func = closure.cell_contents
 
             deeper_func = _get_wrapped_function(func)
@@ -1190,7 +1203,12 @@ def get_image_metadata_from_volume(volume):
 
 
 def get_hash_str(base_str):
-    """returns string that represents hash of base_str (in hex format)."""
+    """Returns string that represents MD5 hash of base_str (in hex format).
+
+    If base_str is a Unicode string, encode it to UTF-8.
+    """
+    if isinstance(base_str, six.text_type):
+        base_str = base_str.encode('utf-8')
     return hashlib.md5(base_str).hexdigest()
 
 if hasattr(hmac, 'compare_digest'):

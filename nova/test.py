@@ -294,16 +294,14 @@ class TestCase(testtools.TestCase):
         if isinstance(observed, six.string_types):
             observed = jsonutils.loads(observed)
 
-        def sort(what):
-            def get_key(item):
-                if isinstance(item, (datetime.datetime, set)):
-                    return str(item)
-                if six.PY3 and isinstance(item, dict):
-                    return str(sort(list(six.iterkeys(item)) +
-                                         list(six.itervalues(item))))
-                return str(item) if six.PY3 else item
-
-            return sorted(what, key=get_key)
+        def sort_key(x):
+            if isinstance(x, set) or isinstance(x, datetime.datetime):
+                return str(x)
+            if isinstance(x, dict):
+                items = ((sort_key(key), sort_key(value))
+                         for key, value in x.items())
+                return sorted(items)
+            return x
 
         def inner(expected, observed):
             if isinstance(expected, dict) and isinstance(observed, dict):
@@ -318,8 +316,8 @@ class TestCase(testtools.TestCase):
                       isinstance(observed, (list, tuple, set))):
                 self.assertEqual(len(expected), len(observed))
 
-                expected_values_iter = iter(sort(expected))
-                observed_values_iter = iter(sort(observed))
+                expected_values_iter = iter(sorted(expected, key=sort_key))
+                observed_values_iter = iter(sorted(observed, key=sort_key))
 
                 for i in range(len(expected)):
                     inner(next(expected_values_iter),

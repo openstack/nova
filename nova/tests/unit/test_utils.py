@@ -19,7 +19,6 @@ import importlib
 import os
 import os.path
 import socket
-import StringIO
 import struct
 import tempfile
 
@@ -112,7 +111,7 @@ class GenericUtilsTestCase(test.NoDBTestCase):
 
         fake_contents = "lorem ipsum"
         m = mock.mock_open(read_data=fake_contents)
-        with mock.patch("__builtin__.open", m, create=True):
+        with mock.patch("six.moves.builtins.open", m, create=True):
             cache_data = {"data": 1123, "mtime": 1}
             self.reload_called = False
 
@@ -209,10 +208,13 @@ class GenericUtilsTestCase(test.NoDBTestCase):
         self.assertEqual("localhost", utils.safe_ip_format("localhost"))
 
     def test_get_hash_str(self):
-        base_str = "foo"
+        base_str = b"foo"
+        base_unicode = u"foo"
         value = hashlib.md5(base_str).hexdigest()
         self.assertEqual(
             value, utils.get_hash_str(base_str))
+        self.assertEqual(
+            value, utils.get_hash_str(base_unicode))
 
     def test_use_rootwrap(self):
         self.flags(disable_rootwrap=False, group='workarounds')
@@ -554,26 +556,26 @@ class LastBytesTestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(LastBytesTestCase, self).setUp()
-        self.f = StringIO.StringIO('1234567890')
+        self.f = six.BytesIO(b'1234567890')
 
     def test_truncated(self):
         self.f.seek(0, os.SEEK_SET)
         out, remaining = utils.last_bytes(self.f, 5)
-        self.assertEqual(out, '67890')
+        self.assertEqual(out, b'67890')
         self.assertTrue(remaining > 0)
 
     def test_read_all(self):
         self.f.seek(0, os.SEEK_SET)
         out, remaining = utils.last_bytes(self.f, 1000)
-        self.assertEqual(out, '1234567890')
+        self.assertEqual(out, b'1234567890')
         self.assertFalse(remaining > 0)
 
     def test_seek_too_far_real_file(self):
         # StringIO doesn't raise IOError if you see past the start of the file.
-        flo = tempfile.TemporaryFile()
-        content = '1234567890'
-        flo.write(content)
-        self.assertEqual((content, 0), utils.last_bytes(flo, 1000))
+        with tempfile.TemporaryFile() as flo:
+            content = b'1234567890'
+            flo.write(content)
+            self.assertEqual((content, 0), utils.last_bytes(flo, 1000))
 
 
 class MetadataToDictTestCase(test.NoDBTestCase):
@@ -587,11 +589,14 @@ class MetadataToDictTestCase(test.NoDBTestCase):
         self.assertEqual(utils.metadata_to_dict([]), {})
 
     def test_dict_to_metadata(self):
+        def sort_key(adict):
+            return sorted(adict.items())
+
+        metadata = utils.dict_to_metadata(dict(foo1='bar1', foo2='bar2'))
         expected = [{'key': 'foo1', 'value': 'bar1'},
                     {'key': 'foo2', 'value': 'bar2'}]
-        self.assertEqual(sorted(utils.dict_to_metadata(dict(foo1='bar1',
-                                                     foo2='bar2'))),
-                         sorted(expected))
+        self.assertEqual(sorted(metadata, key=sort_key),
+                         sorted(expected, key=sort_key))
 
     def test_dict_to_metadata_empty(self):
         self.assertEqual(utils.dict_to_metadata({}), [])
@@ -612,7 +617,7 @@ class WrappedCodeTestCase(test.NoDBTestCase):
             pass
 
         func = utils.get_wrapped_function(wrapped)
-        func_code = func.func_code
+        func_code = func.__code__
         self.assertEqual(4, len(func_code.co_varnames))
         self.assertIn('self', func_code.co_varnames)
         self.assertIn('instance', func_code.co_varnames)
@@ -626,7 +631,7 @@ class WrappedCodeTestCase(test.NoDBTestCase):
             pass
 
         func = utils.get_wrapped_function(wrapped)
-        func_code = func.func_code
+        func_code = func.__code__
         self.assertEqual(4, len(func_code.co_varnames))
         self.assertIn('self', func_code.co_varnames)
         self.assertIn('instance', func_code.co_varnames)
@@ -641,7 +646,7 @@ class WrappedCodeTestCase(test.NoDBTestCase):
             pass
 
         func = utils.get_wrapped_function(wrapped)
-        func_code = func.func_code
+        func_code = func.__code__
         self.assertEqual(4, len(func_code.co_varnames))
         self.assertIn('self', func_code.co_varnames)
         self.assertIn('instance', func_code.co_varnames)
@@ -759,7 +764,7 @@ class ValidateIntegerTestCase(test.NoDBTestCase):
                           max_value=54)
         self.assertRaises(exception.InvalidInput,
                           utils.validate_integer,
-                          unichr(129), "UnicodeError",
+                          six.unichr(129), "UnicodeError",
                           max_value=1000)
 
 
@@ -1050,7 +1055,7 @@ class SafeTruncateTestCase(test.NoDBTestCase):
         # Generate Chinese byte string whose length is 300. This Chinese UTF-8
         # character occupies 3 bytes. After truncating, the byte string length
         # should be 255.
-        msg = encodeutils.safe_decode('\xe8\xb5\xb5' * 100)
+        msg = u'\u8d75' * 100
         truncated_msg = utils.safe_truncate(msg, 255)
         byte_message = encodeutils.safe_encode(truncated_msg)
         self.assertEqual(255, len(byte_message))
