@@ -503,6 +503,13 @@ class LibvirtGenericVIFDriver(object):
                           process_input='0',
                           run_as_root=True,
                           check_exit_code=[0, 1])
+            disv6 = '/proc/sys/net/ipv6/conf/%s/disable_ipv6' % br_name
+            if os.path.exists(disv6):
+                utils.execute('tee',
+                              disv6,
+                              process_input='1',
+                              run_as_root=True,
+                              check_exit_code=[0, 1])
 
         if not linux_net.device_exists(v2_name):
             linux_net._create_veth_pair(v1_name, v2_name)
