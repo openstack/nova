@@ -168,12 +168,11 @@ class APITestCase(test.NoDBTestCase):
 
         self.mox.StubOutWithMock(api, 'can_resize_image')
         self.mox.StubOutWithMock(utils, 'execute')
-        self.mox.StubOutWithMock(api, 'is_image_extendable')
         self.mox.StubOutWithMock(api, 'resize2fs')
 
         api.can_resize_image(imgfile, imgsize).AndReturn(True)
         utils.execute('qemu-img', 'resize', imgfile, imgsize)
-        api.is_image_extendable(image).AndReturn(True)
+        utils.execute('e2label', image.path)
         api.resize2fs(imgfile, run_as_root=False, check_exit_code=[0])
 
         self.mox.ReplayAll()

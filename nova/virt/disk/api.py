@@ -269,7 +269,7 @@ def is_image_extendable(image):
     else:
         # For raw, we can directly inspect the file system
         try:
-            utils.execute('e2label', image.file)
+            utils.execute('e2label', image.path)
         except processutils.ProcessExecutionError as e:
             LOG.debug('Unable to determine label for image %(image)s with '
                       'error %(error)s. Cannot resize.',
