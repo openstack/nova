@@ -402,13 +402,11 @@ def _get_cpu_topology_constraints(flavor, image_meta):
 
 
 def _get_possible_cpu_topologies(vcpus, maxtopology,
-                                 allow_threads, specified_threads):
+                                 allow_threads):
     """Get a list of possible topologies for a vCPU count
     :param vcpus: total number of CPUs for guest instance
     :param maxtopology: nova.objects.VirtCPUTopology for upper limits
     :param allow_threads: if the hypervisor supports CPU threads
-    :param specified_threads: if there is a specific request for threads we
-                              should attempt to honour
 
     Given a total desired vCPU count and constraints on the
     maximum number of sockets, cores and threads, return a
@@ -429,21 +427,12 @@ def _get_possible_cpu_topologies(vcpus, maxtopology,
     maxthreads = min(vcpus, maxtopology.threads)
 
     if not allow_threads:
-        # NOTE (ndipanov): If we don't support threads - it doesn't matter that
-        # they are specified by the NUMA logic.
-        specified_threads = None
         maxthreads = 1
 
     LOG.debug("Build topologies for %(vcpus)d vcpu(s) "
               "%(maxsockets)d:%(maxcores)d:%(maxthreads)d",
               {"vcpus": vcpus, "maxsockets": maxsockets,
                "maxcores": maxcores, "maxthreads": maxthreads})
-
-    def _get_topology_for_vcpus(vcpus, sockets, cores, threads):
-        if threads * cores * sockets == vcpus:
-            return objects.VirtCPUTopology(sockets=sockets,
-                                           cores=cores,
-                                           threads=threads)
 
     # Figure out all possible topologies that match
     # the required vcpus count and satisfy the declared
@@ -454,15 +443,13 @@ def _get_possible_cpu_topologies(vcpus, maxtopology,
     possible = []
     for s in range(1, maxsockets + 1):
         for c in range(1, maxcores + 1):
-            if specified_threads:
-                o = _get_topology_for_vcpus(vcpus, s, c, specified_threads)
-                if o is not None:
-                    possible.append(o)
-            else:
-                for t in range(1, maxthreads + 1):
-                    o = _get_topology_for_vcpus(vcpus, s, c, t)
-                    if o is not None:
-                        possible.append(o)
+            for t in range(1, maxthreads + 1):
+                if (t * c * s) != vcpus:
+                    continue
+                possible.append(
+                    objects.VirtCPUTopology(sockets=s,
+                                            cores=c,
+                                            threads=t))
 
     # We want to
     #  - Minimize threads (ie larger sockets * cores is best)
@@ -480,6 +467,48 @@ def _get_possible_cpu_topologies(vcpus, maxtopology,
                                                        threads=maxthreads)
 
     return possible
+
+
+def _filter_for_numa_threads(possible, wantthreads):
+    """Filter to topologies which closest match to NUMA threads
+    :param possible: list of nova.objects.VirtCPUTopology
+    :param wantthreads: ideal number of threads
+
+    Determine which topologies provide the closest match to
+    the number of threads desired by the NUMA topology of
+    the instance.
+
+    The possible topologies may not have any entries
+    which match the desired thread count. So this method
+    will find the topologies which have the closest
+    matching count.
+
+    ie if wantthreads is 4 and the possible topologies
+    has entries with 6, 3, 2 or 1 threads, it will
+    return the topologies which have 3 threads, as
+    this is the closest match not greater than 4.
+
+    :returns: list of nova.objects.VirtCPUTopology
+    """
+
+    # First figure out the largest available thread
+    # count which is not greater than wantthreads
+    mostthreads = 0
+    for topology in possible:
+        if topology.threads > wantthreads:
+            continue
+        if topology.threads > mostthreads:
+            mostthreads = topology.threads
+
+    # Now restrict to just those topologies which
+    # match the largest thread count
+    bestthreads = []
+    for topology in possible:
+        if topology.threads != mostthreads:
+            continue
+        bestthreads.append(topology)
+
+    return bestthreads
 
 
 def _sort_possible_cpu_topologies(possible, wanttopology):
@@ -516,18 +545,6 @@ def _sort_possible_cpu_topologies(possible, wanttopology):
     return desired
 
 
-def _threads_requested_by_user(flavor, image_meta):
-    keys = ("cpu_threads", "cpu_maxthreads")
-    if any(flavor.extra_specs.get("hw:%s" % key) for key in keys):
-        return True
-
-    if any(image_meta.get("properties", {}).get("hw_%s" % key)
-           for key in keys):
-        return True
-
-    return False
-
-
 def _get_desirable_cpu_topologies(flavor, image_meta, allow_threads=True,
                                   numa_topology=None):
     """Get desired CPU topologies according to settings
@@ -548,12 +565,19 @@ def _get_desirable_cpu_topologies(flavor, image_meta, allow_threads=True,
     """
 
     LOG.debug("Getting desirable topologies for flavor %(flavor)s "
-              "and image_meta %(image_meta)s",
-              {"flavor": flavor, "image_meta": image_meta})
+              "and image_meta %(image_meta)s, allow threads: %(threads)s",
+              {"flavor": flavor, "image_meta": image_meta,
+               "threads": allow_threads})
 
     preferred, maximum = _get_cpu_topology_constraints(flavor, image_meta)
+    LOG.debug("Topology preferred %(preferred)s, maximum %(maximum)s" %
+              {"preferred": preferred, "maximum": maximum})
 
-    specified_threads = None
+    possible = _get_possible_cpu_topologies(flavor.vcpus,
+                                            maximum,
+                                            allow_threads)
+    LOG.debug("Possible topologies %s" % possible)
+
     if numa_topology:
         min_requested_threads = None
         cell_topologies = [cell.cpu_topology for cell in numa_topology.cells
@@ -561,18 +585,23 @@ def _get_desirable_cpu_topologies(flavor, image_meta, allow_threads=True,
         if cell_topologies:
             min_requested_threads = min(
                     topo.threads for topo in cell_topologies)
+
         if min_requested_threads:
-            if _threads_requested_by_user(flavor, image_meta):
+            if preferred.threads != -1:
                 min_requested_threads = min(preferred.threads,
                                             min_requested_threads)
+
             specified_threads = max(1, min_requested_threads)
+            LOG.debug("Filtering topologies best for %d threads" %
+                      specified_threads)
 
-    possible = _get_possible_cpu_topologies(flavor.vcpus,
-                                            maximum,
-                                            allow_threads,
-                                            specified_threads)
+            possible = _filter_for_numa_threads(possible,
+                                                specified_threads)
+            LOG.debug("Remaining possible topologies %s" %
+                      possible)
+
     desired = _sort_possible_cpu_topologies(possible, preferred)
-
+    LOG.debug("Sorted desired topologies %s" % desired)
     return desired
 
 
