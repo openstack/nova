@@ -78,7 +78,9 @@ class VMUtilsV2(vmutils.VMUtils):
         for vs in self._conn.Msvm_VirtualSystemSettingData(
                 ['ElementName', 'Notes'],
                 VirtualSystemType=self._VIRTUAL_SYSTEM_TYPE_REALIZED):
-            instance_notes.append((vs.ElementName, [v for v in vs.Notes if v]))
+            if vs.Notes is not None:
+                instance_notes.append(
+                    (vs.ElementName, [v for v in vs.Notes if v]))
 
         return instance_notes
 

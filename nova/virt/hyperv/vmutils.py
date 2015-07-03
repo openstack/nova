@@ -108,8 +108,9 @@ class VMUtils(object):
         for vs in self._conn.Msvm_VirtualSystemSettingData(
                 ['ElementName', 'Notes'],
                 SettingType=self._VIRTUAL_SYSTEM_CURRENT_SETTINGS):
-            instance_notes.append((vs.ElementName,
-                                  [v for v in vs.Notes.split('\n') if v]))
+            if vs.Notes is not None:
+                instance_notes.append(
+                    (vs.ElementName, [v for v in vs.Notes.split('\n') if v]))
 
         return instance_notes
 
