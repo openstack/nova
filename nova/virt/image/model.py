@@ -40,7 +40,7 @@ class Image(object):
     """
 
     def __init__(self, format):
-        """Create a new abstract iamge
+        """Create a new abstract image
 
         :param format: one of the format constants
         """
