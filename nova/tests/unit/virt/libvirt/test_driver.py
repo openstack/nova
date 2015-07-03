@@ -3850,14 +3850,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
             self._test_get_guest_config_sysinfo_serial(theuuid)
 
-    def test_get_guest_config_sysinfo_serial_invalid(self):
-        self.flags(sysinfo_serial="invalid", group="libvirt")
-
-        self.assertRaises(exception.NovaException,
-                          libvirt_driver.LibvirtDriver,
-                          fake.FakeVirtAPI(),
-                          True)
-
     def _create_fake_service_compute(self):
         service_info = {
             'id': 1729,
