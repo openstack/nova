@@ -123,8 +123,12 @@ class NovaExceptionTestCase(test.NoDBTestCase):
         class FakeNovaException_Remote(exception.NovaException):
             msg_fmt = "some message"
 
-            def __unicode__(self):
-                return u"print the whole trace"
+            if six.PY3:
+                def __str__(self):
+                    return "print the whole trace"
+            else:
+                def __unicode__(self):
+                    return u"print the whole trace"
 
         exc = FakeNovaException_Remote()
         self.assertEqual(six.text_type(exc), u"print the whole trace")
