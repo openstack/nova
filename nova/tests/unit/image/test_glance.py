@@ -286,6 +286,33 @@ class TestGlanceClientWrapper(test.NoDBTestCase):
                 client.call, ctx, 1, 'get', 'meow')
         self.assertFalse(sleep_mock.called)
 
+    @mock.patch('nova.image.glance.LOG')
+    @mock.patch('time.sleep')
+    @mock.patch('nova.image.glance._create_glance_client')
+    def test_static_client_with_retries_negative(self, create_client_mock,
+                                                 sleep_mock, mock_log):
+        client_mock = mock.Mock(spec=glanceclient.Client)
+        images_mock = mock.Mock()
+        images_mock.get.side_effect = glanceclient.exc.ServiceUnavailable
+        client_mock.images = images_mock
+        create_client_mock.return_value = client_mock
+        self.flags(num_retries=-1, group='glance')
+
+        ctx = context.RequestContext('fake', 'fake')
+        host = 'host4'
+        port = 9295
+        use_ssl = False
+
+        client = glance.GlanceClientWrapper(context=ctx, host=host, port=port,
+                                            use_ssl=use_ssl)
+        create_client_mock.assert_called_once_with(ctx, host, port, use_ssl, 1)
+        self.assertRaises(exception.GlanceConnectionFailed,
+                client.call, ctx, 1, 'get', 'meow')
+        self.assertTrue(mock_log.warning.called)
+        msg = mock_log.warning.call_args_list[0]
+        self.assertIn('Treating negative config value', msg[0][0])
+        self.assertFalse(sleep_mock.called)
+
     @mock.patch('time.sleep')
     @mock.patch('nova.image.glance._create_glance_client')
     def test_static_client_with_retries(self, create_client_mock,
