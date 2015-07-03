@@ -2820,6 +2820,20 @@ class TestNeutronv2WithMock(test.TestCase):
                           api.get_instance_nw_info, 'context', instance)
         mock_lock.assert_called_once_with('refresh_cache-%s' % instance.uuid)
 
+    @mock.patch('oslo_concurrency.lockutils.lock')
+    @mock.patch.object(neutronapi.API, '_get_instance_nw_info')
+    @mock.patch('nova.network.base_api.update_instance_cache_with_nw_info')
+    def test_get_instance_nw_info(self, mock_update, mock_get, mock_lock):
+        fake_result = mock.sentinel.get_nw_info_result
+        mock_get.return_value = fake_result
+        instance = fake_instance.fake_instance_obj(self.context)
+        result = self.api.get_instance_nw_info(self.context, instance)
+        mock_get.assert_called_once_with(self.context, instance)
+        mock_update.assert_called_once_with(self.api, self.context, instance,
+                                            nw_info=fake_result,
+                                            update_cells=False)
+        self.assertEqual(fake_result, result)
+
     def _test_validate_networks_fixed_ip_no_dup(self, nets, requested_networks,
                                                 ids, list_port_values):
 

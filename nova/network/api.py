@@ -369,16 +369,10 @@ class API(base_api.NetworkAPI):
     @wrap_check_policy
     def get_instance_nw_info(self, context, instance, **kwargs):
         """Returns all network info related to an instance."""
-        result = self._get_instance_nw_info(context, instance)
-        # NOTE(comstud): Don't update API cell with new info_cache every
-        # time we pull network info for an instance.  The periodic healing
-        # of info_cache causes too many cells messages.  Healing the API
-        # will happen separately.
-        base_api.update_instance_cache_with_nw_info(self, context, instance,
-                                                    result, update_cells=False)
-        return result
+        return super(API, self).get_instance_nw_info(context, instance,
+                                                     **kwargs)
 
-    def _get_instance_nw_info(self, context, instance):
+    def _get_instance_nw_info(self, context, instance, **kwargs):
         """Returns all network info related to an instance."""
         flavor = instance.get_flavor()
         args = {'instance_id': instance.uuid,
