@@ -35,6 +35,7 @@ from nova import context
 from nova import exception
 from nova import objects
 from nova import test
+from nova.tests.unit import fake_flavor
 from nova.tests.unit import fake_instance
 from nova.tests.unit.objects import test_flavor
 from nova.tests.unit.virt.xenapi import stubs
@@ -471,6 +472,10 @@ class TestImageCompression(VMUtilsTestBase):
 
 
 class ResizeHelpersTestCase(VMUtilsTestBase):
+    def setUp(self):
+        super(ResizeHelpersTestCase, self).setUp()
+        self.context = context.RequestContext('user', 'project')
+
     def test_repair_filesystem(self):
         self.mox.StubOutWithMock(utils, 'execute')
 
@@ -571,9 +576,9 @@ class ResizeHelpersTestCase(VMUtilsTestBase):
         vm_utils._resize_part_and_fs("fake", 0, 20, 30, "")
 
     def test_resize_disk_throws_on_zero_size(self):
-        self.assertRaises(exception.ResizeError,
-                vm_utils.resize_disk, "session", "instance", "vdi_ref",
-                {"root_gb": 0})
+        flavor = fake_flavor.fake_flavor_obj(self.context, root_gb=0)
+        self.assertRaises(exception.ResizeError, vm_utils.resize_disk,
+                          "session", "instance", "vdi_ref", flavor)
 
     def test_auto_config_disk_returns_early_on_zero_size(self):
         vm_utils.try_auto_configure_disk("bad_session", "bad_vdi_ref", 0)

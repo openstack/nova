@@ -910,7 +910,7 @@ def update_vdi_virtual_size(session, instance, vdi_ref, new_gb):
 
 
 def resize_disk(session, instance, vdi_ref, flavor):
-    size_gb = flavor['root_gb']
+    size_gb = flavor.root_gb
     if size_gb == 0:
         reason = _("Can't resize a disk to 0 GB.")
         raise exception.ResizeError(reason=reason)

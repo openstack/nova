@@ -6302,8 +6302,8 @@ class LibvirtDriver(driver.ComputeDriver):
                     instance.ephemeral_gb)
 
         # Checks if the migration needs a disk resize down.
-        root_down = flavor['root_gb'] < instance.root_gb
-        ephemeral_down = flavor['ephemeral_gb'] < eph_size
+        root_down = flavor.root_gb < instance.root_gb
+        ephemeral_down = flavor.ephemeral_gb < eph_size
         disk_info_text = self.get_instance_disk_info(
             instance, block_device_info=block_device_info)
         booted_from_volume = self._is_booted_from_volume(instance,

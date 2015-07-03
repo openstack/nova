@@ -28,6 +28,7 @@ from nova import exception
 from nova.network import model as network_model
 from nova import objects
 from nova import test
+from nova.tests.unit import fake_flavor
 from nova.tests.unit import fake_instance
 import nova.tests.unit.image.fake
 from nova.tests.unit.virt.vmwareapi import fake as vmwareapi_fake
@@ -697,7 +698,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             mock_attach_disk = self._vmops._volumeops.attach_disk_to_vm
             mock_detach_disk = self._vmops._volumeops.detach_disk_from_vm
 
-            flavor = {'root_gb': self._instance.root_gb + 1}
+            flavor = fake_flavor.fake_flavor_obj(self._context,
+                         root_gb=self._instance.root_gb + 1)
             self._vmops._resize_disk(self._instance, 'fake-ref', vmdk, flavor)
             fake_get_dc_ref_and_name.assert_called_once_with(datastore.ref)
             fake_disk_copy.assert_called_once_with(
@@ -796,7 +798,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                 self._instance.root_gb * units.Gi,
                                 'fake-device')
         fake_get_vmdk_info.return_value = vmdk
-        flavor = {'root_gb': flavor_root_gb}
+        flavor = fake_flavor.fake_flavor_obj(self._context,
+                                             root_gb=flavor_root_gb)
         self._vmops.migrate_disk_and_power_off(self._context,
                                                self._instance,
                                                None,
