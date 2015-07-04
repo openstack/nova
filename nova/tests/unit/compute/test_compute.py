@@ -1034,6 +1034,25 @@ class ComputeVolumeTestCase(BaseTestCase):
                           self.context, instance, instance_type,
                           mappings_)
 
+        # blank device without a specified size fails
+        blank_no_size = [
+            fake_block_device.FakeDbBlockDeviceDict({
+                'device_name': '/dev/sda4',
+                'source_type': 'blank',
+                'destination_type': 'volume',
+                'boot_index': -1,
+                'volume_size': None,
+            }, anon=True)
+        ]
+        blank_no_size = block_device_obj.block_device_make_list_from_dicts(
+                self.context, blank_no_size)
+        mappings_ = mappings[:]
+        mappings_.objects.extend(blank_no_size)
+        self.assertRaises(exception.InvalidBDM,
+                          self.compute_api._validate_bdm,
+                          self.context, instance, instance_type,
+                          mappings_)
+
     def test_validate_bdm_media_service_exceptions(self):
         instance_type = {'swap': 1, 'ephemeral_gb': 1}
         all_mappings = [fake_block_device.FakeDbBlockDeviceDict({
@@ -8672,9 +8691,13 @@ class ComputeAPITestCase(BaseTestCase):
         swap_size = 3
         volume_size = 5
 
-        swap_bdm = {'source_type': 'blank', 'guest_format': 'swap'}
-        ephemeral_bdm = {'source_type': 'blank', 'guest_format': None}
-        volume_bdm = {'source_type': 'volume', 'volume_size': volume_size}
+        swap_bdm = {'source_type': 'blank', 'guest_format': 'swap',
+                    'destination_type': 'local'}
+        ephemeral_bdm = {'source_type': 'blank', 'guest_format': None,
+                         'destination_type': 'local'}
+        volume_bdm = {'source_type': 'volume', 'volume_size': volume_size,
+                      'destination_type': 'volume'}
+        blank_bdm = {'source_type': 'blank', 'destination_type': 'volume'}
 
         inst_type = {'ephemeral_gb': ephemeral_size, 'swap': swap_size}
         self.assertEqual(
@@ -8692,6 +8715,8 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertEqual(
             self.compute_api._volume_size(inst_type, volume_bdm),
             volume_size)
+        self.assertIsNone(
+            self.compute_api._volume_size(inst_type, blank_bdm))
 
     def test_is_volume_backed_instance(self):
         ctxt = self.context
