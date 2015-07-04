@@ -18,9 +18,9 @@
 import sys
 
 from oslo_log import log as logging
+from oslo_reports import guru_meditation_report as gmr
 
 from nova import config
-from nova.openstack.common.report import guru_meditation_report as gmr
 from nova import service
 from nova import version
 from nova.vnc import xvp_proxy

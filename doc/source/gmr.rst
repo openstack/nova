@@ -51,7 +51,7 @@ First import the module (currently residing in oslo-incubator), as well as the N
 
 .. code-block:: python
 
-      from nova.openstack.common.report import guru_meditation_report as gmr
+      from oslo_reports import guru_meditation_report as gmr
       from nova import version
 
 Then, register any additional sections (optional):
@@ -70,4 +70,4 @@ Finally (under main), before running the "main loop" of the executable (usually 
 Extending the GMR
 -----------------
 
-As mentioned above, additional sections can be added to the GMR for a particular executable.  For more information, see the inline documentation under :mod:`nova.openstack.common.report`
+As mentioned above, additional sections can be added to the GMR for a particular executable.  For more information, see the inline documentation under :mod:`oslo.reports`

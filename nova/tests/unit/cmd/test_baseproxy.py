@@ -14,11 +14,11 @@
 
 import mock
 from oslo_log import log as logging
+from oslo_reports import guru_meditation_report as gmr
 
 from nova.cmd import baseproxy
 from nova import config
 from nova.console import websocketproxy
-from nova.openstack.common.report import guru_meditation_report as gmr
 from nova import test
 from nova import version
 
