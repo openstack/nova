@@ -27,6 +27,7 @@ from oslo_log import versionutils
 from oslo_serialization import jsonutils
 from oslo_utils import excutils
 from oslo_vmware import api
+from oslo_vmware import exceptions as vexc
 from oslo_vmware import pbm
 from oslo_vmware import vim
 from oslo_vmware import vim_util
@@ -573,6 +574,31 @@ class VMwareVCDriver(driver.ComputeDriver):
         """Reboot VM instance."""
         self._vmops.reboot(instance, network_info, reboot_type)
 
+    def _detach_instance_volumes(self, instance, block_device_info):
+        # We need to detach attached volumes
+        block_device_mapping = driver.block_device_info_get_mapping(
+            block_device_info)
+        if block_device_mapping:
+            # Certain disk types, for example 'IDE' do not support hot
+            # plugging. Hence we need to power off the instance and update
+            # the instance state.
+            self._vmops.power_off(instance)
+            # TODO(garyk): update the volumeops to read the state form the
+            # VM instead of relying on a instance flag
+            instance.vm_state = vm_states.STOPPED
+            for disk in block_device_mapping:
+                connection_info = disk['connection_info']
+                try:
+                    self.detach_volume(connection_info, instance,
+                                       disk.get('device_name'))
+                except Exception as e:
+                    with excutils.save_and_reraise_exception():
+                        LOG.error(_LE("Failed to detach %(device_name)s. "
+                                      "Exception: %(exc)s"),
+                                  {'device_name': disk.get('device_name'),
+                                   'exc': e},
+                                  instance=instance)
+
     def destroy(self, context, instance, network_info, block_device_info=None,
                 destroy_disks=True, migrate_data=None):
         """Destroy VM instance."""
@@ -590,29 +616,12 @@ class VMwareVCDriver(driver.ComputeDriver):
 
         # We need to detach attached volumes
         if block_device_info is not None:
-            block_device_mapping = driver.block_device_info_get_mapping(
-                block_device_info)
-            if block_device_mapping:
-                # Certain disk types, for example 'IDE' do not support hot
-                # plugging. Hence we need to power off the instance and update
-                # the instance state.
-                self._vmops.power_off(instance)
-                # TODO(garyk): update the volumeops to read the state form the
-                # VM instead of relying on a instance flag
-                instance.vm_state = vm_states.STOPPED
-                for disk in block_device_mapping:
-                    connection_info = disk['connection_info']
-                    try:
-                        self.detach_volume(connection_info, instance,
-                                           disk.get('device_name'))
-                    except Exception as e:
-                        with excutils.save_and_reraise_exception():
-                            LOG.error(_LE("Failed to detach %(device_name)s. "
-                                          "Exception: %(exc)s"),
-                                      {'device_name': disk.get('device_name'),
-                                       'exc': e},
-                                      instance=instance)
-
+            try:
+                self._detach_instance_volumes(instance, block_device_info)
+            except vexc.ManagedObjectNotFoundException:
+                LOG.warning(_LW('Instance does not exists. Proceeding to '
+                                'delete instance properties on datastore'),
+                            instance=instance)
         self._vmops.destroy(instance, destroy_disks)
 
     def pause(self, instance):
