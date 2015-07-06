@@ -121,7 +121,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
     # Version 1.19: Added vcpu_model
     # Version 1.20: Added ec2_ids
     # Version 1.21: TagList 1.1
-    VERSION = '1.21'
+    # Version 1.22: InstanceNUMATopology 1.2
+    VERSION = '1.22'
 
     fields = {
         'id': fields.IntegerField(),
@@ -228,7 +229,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         'info_cache': [('1.1', '1.0'), ('1.9', '1.4'), ('1.10', '1.5')],
         'security_groups': [('1.2', '1.0')],
         'pci_devices': [('1.6', '1.0'), ('1.15', '1.1'), ('1.18', '1.2')],
-        'numa_topology': [('1.14', '1.0'), ('1.16', '1.1')],
+        'numa_topology': [('1.14', '1.0'), ('1.16', '1.1'), ('1.22', '1.2')],
         'pci_requests': [('1.16', '1.1')],
         'tags': [('1.17', '1.0'), ('1.21', '1.1')],
         'flavor': [('1.18', '1.1')],
@@ -1035,7 +1036,8 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
     # Version 1.17: Instance <= version 1.20
     # Version 1.18: Instance <= version 1.21
     # Version 1.19: Erronenous removal of get_hung_in_rebooting(). Reverted.
-    VERSION = '1.19'
+    # Version 1.20: Instance <= version 1.22
+    VERSION = '1.20'
 
     fields = {
         'objects': fields.ListOfObjectsField('Instance'),
@@ -1048,7 +1050,7 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
                     ('1.10', '1.16'), ('1.11', '1.16'), ('1.12', '1.16'),
                     ('1.13', '1.17'), ('1.14', '1.18'), ('1.15', '1.19'),
                     ('1.16', '1.19'), ('1.17', '1.20'), ('1.18', '1.21'),
-                    ('1.19', '1.21')],
+                    ('1.19', '1.21'), ('1.20', '1.22')],
     }
 
     @base.remotable_classmethod

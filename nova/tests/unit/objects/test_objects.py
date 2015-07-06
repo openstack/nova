@@ -1092,8 +1092,8 @@ object_data = {
     'AggregateList': '1.2-fb6e19f3c3a3186b04eceb98b5dadbfa',
     'BandwidthUsage': '1.2-c6e4c779c7f40f2407e3d70022e3cd1c',
     'BandwidthUsageList': '1.2-5fe7475ada6fe62413cbfcc06ec70746',
-    'BlockDeviceMapping': '1.13-d44d8d694619e79c172a99b3c1d6261d',
-    'BlockDeviceMappingList': '1.14-6fa262c059dad1d519b9fe05b9e4f404',
+    'BlockDeviceMapping': '1.14-d44d8d694619e79c172a99b3c1d6261d',
+    'BlockDeviceMappingList': '1.15-6fa262c059dad1d519b9fe05b9e4f404',
     'CellMapping': '1.0-7f1a7e85a22bbb7559fc730ab658b9bd',
     'ComputeNode': '1.12-71784d2e6f2814ab467d4e0f69286843',
     'ComputeNodeList': '1.12-3b6f4f5ade621c40e70cb116db237844',
@@ -1103,17 +1103,17 @@ object_data = {
     'EC2InstanceMapping': '1.0-a4556eb5c5e94c045fe84f49cf71644f',
     'EC2SnapshotMapping': '1.0-47e7ddabe1af966dce0cfd0ed6cd7cd1',
     'EC2VolumeMapping': '1.0-5b713751d6f97bad620f3378a521020d',
-    'FixedIP': '1.11-b5818a33996228fc146f096d1403742c',
-    'FixedIPList': '1.11-87a39361c8f08f059004d6b15103cdfd',
+    'FixedIP': '1.12-b5818a33996228fc146f096d1403742c',
+    'FixedIPList': '1.12-87a39361c8f08f059004d6b15103cdfd',
     'Flavor': '1.1-b6bb7a730a79d720344accefafacf7ee',
     'FlavorList': '1.1-52b5928600e7ca973aa4fc1e46f3934c',
-    'FloatingIP': '1.7-52a67d52d85eb8b3f324a5b7935a335b',
-    'FloatingIPList': '1.8-7f2ba670714e1b7bab462ab3290f7159',
+    'FloatingIP': '1.8-52a67d52d85eb8b3f324a5b7935a335b',
+    'FloatingIPList': '1.9-7f2ba670714e1b7bab462ab3290f7159',
     'HostMapping': '1.0-1a3390a696792a552ab7bd31a77ba9ac',
     'HVSpec': '1.1-6b4f7c0f688cbd03e24142a44eb9010d',
     'ImageMeta': '1.5-642d1b2eb3e880a367f37d72dd76162d',
     'ImageMetaProps': '1.5-93a74996a8d3c2aa821fddab301a9b1a',
-    'Instance': '1.21-260d385315d4868b6397c61a13109841',
+    'Instance': '1.22-260d385315d4868b6397c61a13109841',
     'InstanceAction': '1.1-f9f293e526b66fca0d05c3b3a2d13914',
     'InstanceActionEvent': '1.1-e56a64fa4710e43ef7af2ad9d6028b33',
     'InstanceActionEventList': '1.1-13d92fb953030cdbfee56481756e02be',
@@ -1124,11 +1124,11 @@ object_data = {
     'InstanceGroup': '1.9-a413a4ec0ff391e3ef0faa4e3e2a96d0',
     'InstanceGroupList': '1.6-be18078220513316abd0ae1b2d916873',
     'InstanceInfoCache': '1.5-cd8b96fefe0fc8d4d337243ba0bf0e1e',
-    'InstanceList': '1.19-5f6eba7d94c4e4ad6fc9a3347f85f4a7',
+    'InstanceList': '1.20-5f6eba7d94c4e4ad6fc9a3347f85f4a7',
     'InstanceMapping': '1.0-47ef26034dfcbea78427565d9177fe50',
     'InstanceMappingList': '1.0-9e982e3de1613b9ada85e35f69b23d47',
     'InstanceNUMACell': '1.2-535ef30e0de2d6a0d26a71bd58ecafc4',
-    'InstanceNUMATopology': '1.1-d944a7d6c21e1c773ffdf09c6d025954',
+    'InstanceNUMATopology': '1.2-d944a7d6c21e1c773ffdf09c6d025954',
     'InstancePCIRequest': '1.1-b1d75ebc716cb12906d9d513890092bf',
     'InstancePCIRequests': '1.1-fc8d179960869c9af038205a80af2541',
     'KeyPair': '1.3-bfaa2a8b148cdf11e0c72435d9dd097a',
@@ -1167,65 +1167,6 @@ object_data = {
     'VirtCPUTopology': '1.0-fc694de72e20298f7c6bab1083fd4563',
     'VirtualInterface': '1.0-19921e38cba320f355d56ecbf8f29587',
     'VirtualInterfaceList': '1.0-9750e2074437b3077e46359102779fc6',
-}
-
-
-object_relationships = {
-    'AgentList': {'Agent': '1.0'},
-    'AggregateList': {'Aggregate': '1.1'},
-    'BandwidthUsageList': {'BandwidthUsage': '1.2'},
-    'BlockDeviceMapping': {'Instance': '1.21'},
-    'BlockDeviceMappingList': {'BlockDeviceMapping': '1.13'},
-    'ComputeNode': {'HVSpec': '1.1', 'PciDevicePoolList': '1.1'},
-    'ComputeNodeList': {'ComputeNode': '1.12'},
-    'DNSDomainList': {'DNSDomain': '1.0'},
-    'FixedIP': {'Instance': '1.21', 'Network': '1.2',
-                'VirtualInterface': '1.0',
-                'FloatingIPList': '1.8'},
-    'FixedIPList': {'FixedIP': '1.11'},
-    'FlavorList': {'Flavor': '1.1'},
-    'FloatingIP': {'FixedIP': '1.11'},
-    'FloatingIPList': {'FloatingIP': '1.7'},
-    'HostMapping': {'CellMapping': '1.0'},
-    'ImageMeta': {'ImageMetaProps': '1.5'},
-    'Instance': {'InstanceFault': '1.2',
-                 'InstanceInfoCache': '1.5',
-                 'InstanceNUMATopology': '1.1',
-                 'PciDeviceList': '1.2',
-                 'TagList': '1.1',
-                 'SecurityGroupList': '1.0',
-                 'Flavor': '1.1',
-                 'InstancePCIRequests': '1.1',
-                 'VirtCPUModel': '1.0',
-                 'EC2Ids': '1.0',
-                 },
-    'InstanceActionEventList': {'InstanceActionEvent': '1.1'},
-    'InstanceActionList': {'InstanceAction': '1.1'},
-    'InstanceFaultList': {'InstanceFault': '1.2'},
-    'InstanceGroupList': {'InstanceGroup': '1.9'},
-    'InstanceList': {'Instance': '1.21'},
-    'InstanceMappingList': {'InstanceMapping': '1.0'},
-    'InstanceNUMACell': {'VirtCPUTopology': '1.0'},
-    'InstanceNUMATopology': {'InstanceNUMACell': '1.2'},
-    'InstancePCIRequests': {'InstancePCIRequest': '1.1'},
-    'KeyPairList': {'KeyPair': '1.3'},
-    'MigrationList': {'Migration': '1.2'},
-    'MonitorMetricList': {'MonitorMetric': '1.1'},
-    'NetworkList': {'Network': '1.2'},
-    'NetworkRequestList': {'NetworkRequest': '1.1'},
-    'NUMACell': {'NUMAPagesTopology': '1.0'},
-    'NUMATopology': {'NUMACell': '1.2'},
-    'PciDeviceList': {'PciDevice': '1.3'},
-    'PciDevicePoolList': {'PciDevicePool': '1.1'},
-    'SecurityGroupList': {'SecurityGroup': '1.1'},
-    'SecurityGroupRule': {'SecurityGroup': '1.1'},
-    'SecurityGroupRuleList': {'SecurityGroupRule': '1.1'},
-    'Service': {'ComputeNode': '1.12'},
-    'ServiceList': {'Service': '1.15'},
-    'TagList': {'Tag': '1.1'},
-    'TaskLogList': {'TaskLog': '1.0'},
-    'VirtCPUModel': {'VirtCPUFeature': '1.0', 'VirtCPUTopology': '1.0'},
-    'VirtualInterfaceList': {'VirtualInterface': '1.0'}
 }
 
 
@@ -1347,7 +1288,7 @@ class TestObjectVersions(test.NoDBTestCase):
             return field._type._element_type._type._obj_name
         return None
 
-    def _build_tree(self, tree, obj_class):
+    def _build_tree(self, tree, obj_class, get_current_versions=True):
         obj_name = obj_class.obj_name()
         if obj_name in tree:
             return
@@ -1358,30 +1299,51 @@ class TestObjectVersions(test.NoDBTestCase):
             if sub_obj_name:
                 sub_obj_class = obj_classes[sub_obj_name][0]
                 tree.setdefault(obj_name, {})
-                tree[obj_name][sub_obj_name] = sub_obj_class.VERSION
+                if get_current_versions:
+                    sub_obj_ver = sub_obj_class.VERSION
+                else:
+                    # get the most recent subobject version
+                    # from obj_relationships
+                    sub_obj_ver = obj_class.obj_relationships[name][-1][1]
+                tree[obj_name][sub_obj_name] = sub_obj_ver
 
     def test_relationships(self):
-        tree = {}
+        # This test asserts that the obj_relationship map of all objects
+        # contain the current versions of any subobjects.
+        current_versions_tree = {}
+        obj_relationships_tree = {}
         obj_classes = base.NovaObjectRegistry.obj_classes()
         for obj_name in obj_classes.keys():
-            self._build_tree(tree, obj_classes[obj_name][0])
+            self._build_tree(current_versions_tree, obj_classes[obj_name][0])
+            self._build_tree(obj_relationships_tree, obj_classes[obj_name][0],
+                             get_current_versions=False)
 
-        stored = set([(x, str(y)) for x, y in object_relationships.items()])
-        computed = set([(x, str(y)) for x, y in tree.items()])
+        stored = set([(x, str(y))
+                      for x, y in obj_relationships_tree.items()])
+        computed = set([(x, str(y))
+                        for x, y in current_versions_tree.items()])
         changed = stored.symmetric_difference(computed)
         expected = {}
         actual = {}
         for name, deps in changed:
-            expected[name] = object_relationships.get(name)
-            actual[name] = tree.get(name)
+            expected[name] = current_versions_tree.get(name)
+            actual[name] = obj_relationships_tree.get(name)
+
+        # If this assertion is failing, this means an object is holding a
+        # non-current version of another object.
+        # Example: if Instance is bumped from version 1.1 to 1.2,
+        # and InstanceList is still only has obj_relationships with 1.1,
+        # this assertion will fail. InstanceList will need to also be bumped
+        # a version, with the relationship to Instance 1.2 added.
         self.assertEqual(expected, actual,
                          'Some objects have changed dependencies. '
                          'Please make sure to bump the versions of '
                          'parent objects and provide a rule in their '
                          'obj_make_compatible() routines to backlevel '
-                         'the child object. Also remember to update versions '
-                         'of child objects as necessary in the '
-                         'object_relationships mapping used in this test.')
+                         'the child object. The expected dict is the '
+                         'current versions of all objects held by other '
+                         'objects, and the actual dict is what is held '
+                         'within obj_relationships on the given objects.')
 
     def test_obj_make_compatible(self):
         # Iterate all object classes and verify that we can run
@@ -1456,6 +1418,35 @@ class TestObjectVersions(test.NoDBTestCase):
         self.assertNotIn('objects', primitive_data,
                          "List was backported to before 'objects' existed."
                          " 'objects' should not be in the primitive.")
+
+    def test_obj_bad_relationships(self):
+        # Make sure having an object with bad relationships is caught by
+        # _build_tree()
+        @base.NovaObjectRegistry.register
+        class TestObj(base.NovaObject):
+            VERSION = '1.1'
+            fields = {'foo': fields.IntegerField()}
+
+        @base.NovaObjectRegistry.register
+        class OtherTestObj(base.NovaObject):
+            VERSION = '1.2'
+            fields = {'test': fields.ObjectField('TestObj')}
+            obj_relationships = {'test': [('1.0', '1.0')]}
+
+        current_versions_tree = {}
+        obj_relationships_tree = {}
+        obj_classes = base.NovaObjectRegistry.obj_classes()
+        expected_current = {'OtherTestObj': {'TestObj': '1.1'}}
+        self._build_tree(current_versions_tree,
+                         obj_classes['OtherTestObj'][0])
+
+        expected_obj_relationships = {'OtherTestObj': {'TestObj': '1.0'}}
+        self._build_tree(obj_relationships_tree,
+                         obj_classes['OtherTestObj'][0],
+                         get_current_versions=False)
+
+        self.assertEqual(expected_current, current_versions_tree)
+        self.assertEqual(expected_obj_relationships, obj_relationships_tree)
 
     def _get_obj_to_test(self, obj_class):
         obj = obj_class()

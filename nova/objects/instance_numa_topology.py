@@ -115,7 +115,8 @@ class InstanceNUMATopology(base.NovaObject,
                            base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     # Version 1.1: Takes into account pagesize
-    VERSION = '1.1'
+    # Version 1.2: InstanceNUMACell 1.2
+    VERSION = '1.2'
 
     fields = {
         # NOTE(danms): The 'id' field is no longer used and should be
@@ -126,7 +127,7 @@ class InstanceNUMATopology(base.NovaObject,
         }
 
     obj_relationships = {
-        'cells': [('1.0', '1.0')],
+        'cells': [('1.0', '1.0'), ('1.2', '1.2')],
     }
 
     @classmethod
