@@ -48,7 +48,7 @@ class Migration(base.NovaPersistentObject, base.NovaObject,
         'instance_uuid': fields.StringField(nullable=True),
         'status': fields.StringField(nullable=True),
         'migration_type': fields.EnumField(['migration', 'resize',
-                                            'live-migration', 'evacuate'],
+                                            'live-migration', 'evacuation'],
                                            nullable=False),
         'hidden': fields.BooleanField(nullable=False, default=False),
         }
