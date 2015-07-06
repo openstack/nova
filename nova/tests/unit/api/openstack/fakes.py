@@ -469,7 +469,7 @@ def stub_instance(id=1, user_id=None, project_id=None, host=None,
                   availability_zone='', locked_by=None, cleaned=False,
                   memory_mb=0, vcpus=0, root_gb=0, ephemeral_gb=0,
                   instance_type=None, launch_index=0, kernel_id="",
-                  ramdisk_id="", user_data=None):
+                  ramdisk_id="", user_data=None, system_metadata=None):
     if user_id is None:
         user_id = 'fake_user'
     if project_id is None:
@@ -484,6 +484,7 @@ def stub_instance(id=1, user_id=None, project_id=None, host=None,
 
     inst_type = flavors.get_flavor_by_flavor_id(int(flavor_id))
     sys_meta = flavors.save_flavor_info({}, inst_type)
+    sys_meta.update(system_metadata or {})
 
     if host is not None:
         host = str(host)

@@ -20,6 +20,7 @@ import datetime
 import iso8601
 import mock
 from mox3 import mox
+from oslo_serialization import jsonutils
 from oslo_utils import timeutils
 from oslo_utils import uuidutils
 
@@ -1978,40 +1979,40 @@ class _ComputeAPIUnitTestMixIn(object):
 
     def _test_snapshot_volume_backed(self, quiesce_required, quiesce_fails,
                                      vm_state=vm_states.ACTIVE):
-        params = dict(locked=True, vm_state=vm_state)
+        params = dict(locked=True, vm_state=vm_state,
+                      system_metadata={'image_min_ram': '11',
+                                       'image_min_disk': '22',
+                                       'image_container_format': 'ami',
+                                       'image_disk_format': 'ami',
+                                       'image_ram_disk': 'fake_ram_disk_id',
+                                       'image_bdm_v2': 'True',
+                                       'image_block_device_mapping': '[]',
+                                       'image_mappings': '[]',
+                                       })
         instance = self._create_instance_obj(params=params)
         instance['root_device_name'] = 'vda'
 
         instance_bdms = []
 
-        image_meta = {
-            'id': 'fake-image-id',
-            'properties': {'mappings': []},
-            'status': 'fake-status',
-            'location': 'far-away',
-            'owner': 'fake-tenant',
-        }
-
         expect_meta = {
             'name': 'test-snapshot',
             'properties': {'root_device_name': 'vda',
-                           'mappings': 'DONTCARE'},
+                           'ram_disk': 'fake_ram_disk_id'},
             'size': 0,
-            'is_public': False
+            'min_disk': '22',
+            'is_public': False,
+            'min_ram': '11',
         }
 
         quiesced = [False, False]
         quiesce_expected = not quiesce_fails and vm_state == vm_states.ACTIVE
 
         if quiesce_required:
-            image_meta['properties']['os_require_quiesce'] = 'yes'
+            instance.system_metadata['image_os_require_quiesce'] = 'yes'
             expect_meta['properties']['os_require_quiesce'] = 'yes'
 
         def fake_get_all_by_instance(context, instance, use_slave=False):
             return copy.deepcopy(instance_bdms)
-
-        def fake_image_get(context, image_id):
-            return copy.deepcopy(image_meta)
 
         def fake_image_create(context, image_meta, data=None):
             self.assertThat(image_meta, matchers.DictMatches(expect_meta))
@@ -2033,8 +2034,6 @@ class _ComputeAPIUnitTestMixIn(object):
 
         self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
                        fake_get_all_by_instance)
-        self.stubs.Set(self.compute_api.image_api, 'get',
-                       fake_image_get)
         self.stubs.Set(self.compute_api.image_api, 'create',
                        fake_image_create)
         self.stubs.Set(self.compute_api.volume_api, 'get',
@@ -2073,19 +2072,37 @@ class _ComputeAPIUnitTestMixIn(object):
         self.assertEqual(quiesce_expected, quiesced[0])
         self.assertEqual(quiesce_expected, quiesced[1])
 
-        image_mappings = [{'virtual': 'ami', 'device': 'vda'},
-                          {'device': 'vda', 'virtual': 'ephemeral0'},
-                          {'device': 'vdb', 'virtual': 'swap'},
-                          {'device': 'vdc', 'virtual': 'ephemeral1'}]
+        instance.system_metadata['image_mappings'] = jsonutils.dumps(
+            [{'virtual': 'ami', 'device': 'vda'},
+             {'device': 'vda', 'virtual': 'ephemeral0'},
+             {'device': 'vdb', 'virtual': 'swap'},
+             {'device': 'vdc', 'virtual': 'ephemeral1'}])[:255]
+        instance.system_metadata['image_block_device_mapping'] = (
+            jsonutils.dumps(
+                [{'source_type': 'snapshot', 'destination_type': 'volume',
+                  'guest_format': None, 'device_type': 'disk', 'boot_index': 1,
+                  'disk_bus': 'ide', 'device_name': '/dev/vdf',
+                  'delete_on_termination': True, 'snapshot_id': 'snapshot-2',
+                  'volume_id': None, 'volume_size': 100, 'image_id': None,
+                  'no_device': None}])[:255])
 
-        image_meta['properties']['mappings'] = image_mappings
-
-        expect_meta['properties']['mappings'] = [
-            {'virtual': 'ami', 'device': 'vda'}]
+        bdm = fake_block_device.FakeDbBlockDeviceDict(
+                {'no_device': False, 'volume_id': None, 'boot_index': -1,
+                 'connection_info': 'inf', 'device_name': '/dev/vdh',
+                 'source_type': 'blank', 'destination_type': 'local',
+                 'guest_format': 'swap', 'delete_on_termination': True})
+        instance_bdms.append(bdm)
+        expect_meta['properties']['block_device_mapping'].append(
+            {'guest_format': 'swap', 'boot_index': -1, 'no_device': False,
+             'image_id': None, 'volume_id': None, 'disk_bus': None,
+             'volume_size': None, 'source_type': 'blank',
+             'device_type': None, 'snapshot_id': None,
+             'device_name': '/dev/vdh',
+             'destination_type': 'local', 'delete_on_termination': True})
 
         quiesced = [False, False]
 
-        # Check that the mappgins from the image properties are included
+        # Check that the mappgins from the image properties are not included
         self.compute_api.snapshot_volume_backed(
             self.context, instance, 'test-snapshot')
 
