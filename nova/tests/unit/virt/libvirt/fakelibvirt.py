@@ -528,6 +528,9 @@ class Domain(object):
     def undefine(self):
         self._connection._undefine(self)
 
+    def isPersistent(self):
+        return True
+
     def undefineFlags(self, flags):
         self.undefine()
         if flags & VIR_DOMAIN_UNDEFINE_MANAGED_SAVE:

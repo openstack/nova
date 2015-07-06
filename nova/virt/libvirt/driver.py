@@ -1114,7 +1114,7 @@ class LibvirtDriver(driver.ComputeDriver):
             #             domains, so we need to temporarily undefine it.
             #             If any part of this block fails, the domain is
             #             re-defined regardless.
-            if domain.isPersistent():
+            if guest.has_persistent_configuration():
                 guest.delete_configuration()
 
             # Start copy with VIR_DOMAIN_REBASE_REUSE_EXT flag to
@@ -1553,7 +1553,7 @@ class LibvirtDriver(driver.ComputeDriver):
             #             domains, so we need to temporarily undefine it.
             #             If any part of this block fails, the domain is
             #             re-defined regardless.
-            if domain.isPersistent():
+            if guest.has_persistent_configuration():
                 guest.delete_configuration()
 
             # NOTE (rmk): Establish a temporary mirror of our root disk and
