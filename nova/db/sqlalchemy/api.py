@@ -2830,7 +2830,6 @@ def network_delete_safe(context, network_id):
         session.delete(network_ref)
 
 
-@require_admin_context
 def network_disassociate(context, network_id, disassociate_host,
                          disassociate_project):
     net_update = {}
