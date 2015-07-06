@@ -294,13 +294,16 @@ def get_disk_backing_file(path, basename=True):
     return backing_file
 
 
-def copy_image(src, dest, host=None, receive=False):
+def copy_image(src, dest, host=None, receive=False,
+               on_execute=None, on_completion=None):
     """Copy a disk image to an existing directory
 
     :param src: Source image
     :param dest: Destination path
     :param host: Remote host
     :param receive: Reverse the rsync direction
+    :param on_execute: Callback method to store pid of process in cache
+    :param on_completion: Callback method to remove pid of process from cache
     """
 
     if not host:
@@ -322,11 +325,14 @@ def copy_image(src, dest, host=None, receive=False):
             # Do a relatively light weight test first, so that we
             # can fall back to scp, without having run out of space
             # on the destination for example.
-            execute('rsync', '--sparse', '--compress', '--dry-run', src, dest)
+            execute('rsync', '--sparse', '--compress', '--dry-run', src, dest,
+                    on_execute=on_execute, on_completion=on_completion)
         except processutils.ProcessExecutionError:
-            execute('scp', src, dest)
+            execute('scp', src, dest, on_execute=on_execute,
+                    on_completion=on_completion)
         else:
-            execute('rsync', '--sparse', '--compress', src, dest)
+            execute('rsync', '--sparse', '--compress', src, dest,
+                    on_execute=on_execute, on_completion=on_completion)
 
 
 def write_to_file(path, contents, umask=None):

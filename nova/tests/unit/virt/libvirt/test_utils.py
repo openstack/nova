@@ -62,7 +62,8 @@ blah BLAH: bb
         mock_execute.assert_called_once_with('cp', 'src', 'dest')
 
     _rsync_call = functools.partial(mock.call,
-                                    'rsync', '--sparse', '--compress')
+                                    'rsync', '--sparse', '--compress',
+                                    on_execute=None, on_completion=None)
 
     @mock.patch('nova.utils.execute')
     def test_copy_image_rsync(self, mock_execute):
@@ -85,7 +86,8 @@ blah BLAH: bb
 
         mock_execute.assert_has_calls([
             self._rsync_call('--dry-run', 'src', 'host:dest'),
-            mock.call('scp', 'src', 'host:dest'),
+            mock.call('scp', 'src', 'host:dest',
+                      on_execute=None, on_completion=None),
         ])
         self.assertEqual(2, mock_execute.call_count)
 
@@ -110,7 +112,8 @@ blah BLAH: bb
 
         mock_execute.assert_has_calls([
             self._rsync_call('--dry-run', 'src', '[2600::]:dest'),
-            mock.call('scp', 'src', '[2600::]:dest'),
+            mock.call('scp', 'src', '[2600::]:dest',
+                      on_execute=None, on_completion=None),
         ])
         self.assertEqual(2, mock_execute.call_count)
 
