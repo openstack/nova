@@ -1164,6 +1164,22 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
                               driver.ensure_bridge, 'bridge', 'eth0')
             device_exists.assert_called_once_with('bridge')
 
+    def test_ensure_bridge_brclt_addbr_neutron_race(self):
+        def fake_execute(*cmd, **kwargs):
+            if ('brctl', 'addbr', 'brq1234567-89') == cmd:
+                return ('', "device brq1234567-89 already exists; "
+                            "can't create bridge with the same name\n")
+            else:
+                return ('', '')
+
+        with contextlib.nested(
+            mock.patch.object(linux_net, 'device_exists', return_value=False),
+            mock.patch.object(linux_net, '_execute', fake_execute)
+        ) as (device_exists, _):
+            driver = linux_net.LinuxBridgeInterfaceDriver()
+            driver.ensure_bridge('brq1234567-89', '')
+            device_exists.assert_called_once_with('brq1234567-89')
+
     def test_set_device_mtu_configured(self):
         self.flags(network_device_mtu=10000)
         calls = [
