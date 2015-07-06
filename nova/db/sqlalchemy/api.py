@@ -38,9 +38,7 @@ from oslo_utils import uuidutils
 import six
 from six.moves import range
 from sqlalchemy import and_
-from sqlalchemy import Boolean
 from sqlalchemy.exc import NoSuchTableError
-from sqlalchemy import Integer
 from sqlalchemy import MetaData
 from sqlalchemy import or_
 from sqlalchemy.orm import aliased
@@ -57,7 +55,6 @@ from sqlalchemy.sql import false
 from sqlalchemy.sql import func
 from sqlalchemy.sql import null
 from sqlalchemy.sql import true
-from sqlalchemy import String
 
 from nova import block_device
 from nova.compute import task_states
@@ -5902,31 +5899,6 @@ def task_log_end_task(context, task_name, period_beginning, period_ending,
         if rows == 0:
             # It's not running!
             raise exception.TaskNotRunning(task_name=task_name, host=host)
-
-
-def _get_default_deleted_value(table):
-    # TODO(dripton): It would be better to introspect the actual default value
-    # from the column, but I don't see a way to do that in the low-level APIs
-    # of SQLAlchemy 0.7.  0.8 has better introspection APIs, which we should
-    # use when Nova is ready to require 0.8.
-
-    # NOTE(snikitin): We have one table (tags) which is not
-    # subclass of NovaBase. That is way this table does not contain
-    # column 'deleted'
-    if 'deleted' not in table.c:
-        return
-
-    # NOTE(mikal): this is a little confusing. This method returns the value
-    # that a _not_deleted_ row would have.
-    deleted_column_type = table.c.deleted.type
-    if isinstance(deleted_column_type, Integer):
-        return 0
-    elif isinstance(deleted_column_type, Boolean):
-        return False
-    elif isinstance(deleted_column_type, String):
-        return ""
-    else:
-        return None
 
 
 @require_admin_context
