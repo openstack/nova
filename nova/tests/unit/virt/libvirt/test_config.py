@@ -1243,6 +1243,21 @@ class LibvirtConfigGuestInterfaceTest(LibvirtConfigBaseTest):
               </virtualport>
             </interface>""")
 
+    def test_config_bridge_xen(self):
+        obj = config.LibvirtConfigGuestInterface()
+        obj.net_type = "bridge"
+        obj.source_dev = "br0"
+        obj.mac_addr = "CA:FE:BE:EF:CA:FE"
+        obj.script = "/path/to/test-vif-openstack"
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <interface type="bridge">
+              <mac address="CA:FE:BE:EF:CA:FE"/>
+              <source bridge="br0"/>
+              <script path="/path/to/test-vif-openstack"/>
+            </interface>""")
+
     def test_config_8021Qbh(self):
         obj = config.LibvirtConfigGuestInterface()
         obj.net_type = "direct"
