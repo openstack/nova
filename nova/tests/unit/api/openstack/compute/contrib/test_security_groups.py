@@ -28,7 +28,6 @@ from nova import context as context_maker
 import nova.db
 from nova import exception
 from nova import objects
-from nova.objects import instance as instance_obj
 from nova import quota
 from nova import test
 from nova.tests.unit.api.openstack import fakes
@@ -1329,30 +1328,29 @@ def fake_compute_get_all(*args, **kwargs):
     base = {'id': 1, 'description': 'foo', 'user_id': 'bar',
             'project_id': 'baz', 'deleted': False, 'deleted_at': None,
             'updated_at': None, 'created_at': None}
-    db_list = [
-        fakes.stub_instance(
-            1, uuid=UUID1,
+    inst_list = [
+        fakes.stub_instance_obj(
+            None, 1, uuid=UUID1,
             security_groups=[dict(base, **{'name': 'fake-0-0'}),
                              dict(base, **{'name': 'fake-0-1'})]),
-        fakes.stub_instance(
-            2, uuid=UUID2,
+        fakes.stub_instance_obj(
+            None, 2, uuid=UUID2,
             security_groups=[dict(base, **{'name': 'fake-1-0'}),
                              dict(base, **{'name': 'fake-1-1'})])
     ]
 
-    return instance_obj._make_instance_list(args[1],
-                                            objects.InstanceList(),
-                                            db_list,
-                                            ['metadata', 'system_metadata',
-                                             'security_groups', 'info_cache'])
+    return objects.InstanceList(objects=inst_list)
 
 
 def fake_compute_get(*args, **kwargs):
-    inst = fakes.stub_instance(1, uuid=UUID3,
-                               security_groups=[{'name': 'fake-2-0'},
-                                                {'name': 'fake-2-1'}])
-    return fake_instance.fake_instance_obj(args[1],
-               expected_attrs=instance_obj.INSTANCE_DEFAULT_FIELDS, **inst)
+    secgroups = objects.SecurityGroupList()
+    secgroups.objects = [
+        objects.SecurityGroup(name='fake-2-0'),
+        objects.SecurityGroup(name='fake-2-1'),
+    ]
+    inst = fakes.stub_instance_obj(None, 1, uuid=UUID3)
+    inst.security_groups = secgroups
+    return inst
 
 
 def fake_compute_create(*args, **kwargs):
