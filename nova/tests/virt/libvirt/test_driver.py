@@ -23,6 +23,7 @@ import os
 import random
 import re
 import shutil
+import signal
 import tempfile
 import threading
 import time
@@ -9188,6 +9189,17 @@ Active:          8381604 kB
         self.mox.ReplayAll()
         self.assertTrue(conn._is_storage_shared_with('foo', '/path'))
 
+    def test_store_pid_remove_pid(self):
+        params = self.test_instance
+        params['pci_devices'] = objects.PciDeviceList()
+        instance = objects.Instance(**params)
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        popen = mock.Mock(pid=3)
+        drvr.job_tracker.add_job(instance, popen.pid)
+        self.assertIn(3, drvr.job_tracker.jobs[instance.uuid])
+        drvr.job_tracker.remove_job(instance, popen.pid)
+        self.assertNotIn(instance.uuid, drvr.job_tracker.jobs)
+
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._lookup_by_name')
     def test_get_domain_info_with_more_return(self, lookup_mock):
         instance = fake_instance.fake_instance_obj(mock.sentinel.ctx)
@@ -11592,12 +11604,18 @@ class LibvirtDriverTestCase(test.TestCase):
         def fake_execute(*args, **kwargs):
             pass
 
+        def fake_copy_image(src, dest, host=None, receive=False,
+                            on_execute=None, on_completion=None):
+            self.assertIsNotNone(on_execute)
+            self.assertIsNotNone(on_completion)
+
         self.stubs.Set(self.libvirtconnection, 'get_instance_disk_info',
                        fake_get_instance_disk_info)
         self.stubs.Set(self.libvirtconnection, '_destroy', fake_destroy)
         self.stubs.Set(self.libvirtconnection, 'get_host_ip_addr',
                        fake_get_host_ip_addr)
         self.stubs.Set(utils, 'execute', fake_execute)
+        self.stubs.Set(libvirt_utils, 'copy_image', fake_copy_image)
 
         ins_ref = self._create_instance()
         flavor = {'root_gb': 10, 'ephemeral_gb': 20}
@@ -12530,6 +12548,29 @@ class LibvirtDriverTestCase(test.TestCase):
         exe.assert_called_with('mv', '/path', '/path_del')
         shutil.assert_called_with('/path_del')
         self.assertTrue(result)
+
+    @mock.patch('shutil.rmtree')
+    @mock.patch('nova.utils.execute')
+    @mock.patch('os.path.exists')
+    @mock.patch('os.kill')
+    @mock.patch('nova.virt.libvirt.utils.get_instance_path')
+    def test_delete_instance_files_kill_running(
+            self, get_instance_path, kill, exists, exe, shutil):
+        lv = self.libvirtconnection
+        get_instance_path.return_value = '/path'
+        instance = objects.Instance(uuid='fake-uuid', id=1)
+        lv.job_tracker.jobs[instance.uuid] = [3, 4]
+
+        exists.side_effect = [False, False, True, False]
+
+        result = lv.delete_instance_files(instance)
+        get_instance_path.assert_called_with(instance)
+        exe.assert_called_with('mv', '/path', '/path_del')
+        kill.assert_has_calls([mock.call(3, signal.SIGKILL), mock.call(3, 0),
+                               mock.call(4, signal.SIGKILL), mock.call(4, 0)])
+        shutil.assert_called_with('/path_del')
+        self.assertTrue(result)
+        self.assertNotIn(instance.uuid, lv.job_tracker.jobs)
 
     @mock.patch('shutil.rmtree')
     @mock.patch('nova.utils.execute')
