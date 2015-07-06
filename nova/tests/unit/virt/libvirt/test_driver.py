@@ -2904,6 +2904,54 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             drvr._get_guest_config, instance_ref, [],
             image_meta, disk_info)
 
+    @mock.patch('os.path.getsize', return_value=0)  # size doesn't matter
+    @mock.patch('nova.virt.libvirt.storage.lvm.get_volume_size',
+                return_value='fake-size')
+    def test_detach_encrypted_volumes(self, mock_getsize,
+                                      mock_get_volume_size):
+        """Test that unencrypted volumes are not disconnected with dmcrypt."""
+        instance = objects.Instance(**self.test_instance)
+        xml = """
+              <domain type='kvm'>
+                  <devices>
+                      <disk type='file'>
+                          <driver name='fake-driver' type='fake-type' />
+                          <source file='filename'/>
+                          <target dev='vdc' bus='virtio'/>
+                      </disk>
+                      <disk type='block' device='disk'>
+                          <driver name='fake-driver' type='fake-type' />
+                          <source dev='/dev/mapper/disk'/>
+                          <target dev='vda'/>
+                      </disk>
+                      <disk type='block' device='disk'>
+                          <driver name='fake-driver' type='fake-type' />
+                          <source dev='/dev/mapper/swap'/>
+                          <target dev='vdb'/>
+                      </disk>
+                  </devices>
+              </domain>
+              """
+        dom = FakeVirtDomain(fake_xml=xml)
+        instance.ephemeral_key_uuid = 'fake-id'  # encrypted
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+        @mock.patch.object(dmcrypt, 'delete_volume')
+        @mock.patch.object(conn._host, 'get_domain', return_value=dom)
+        def detach_encrypted_volumes(block_device_info, mock_get_domain,
+                                     mock_delete_volume):
+            conn._detach_encrypted_volumes(instance, block_device_info)
+
+            mock_get_domain.assert_called_once_with(instance)
+            self.assertFalse(mock_delete_volume.called)
+
+        block_device_info = {'root_device_name': '/dev/vda',
+                             'ephemerals': [],
+                             'block_device_mapping': []}
+
+        detach_encrypted_volumes(block_device_info)
+
     @mock.patch.object(libvirt_guest.Guest, "get_xml_desc")
     def test_get_serial_ports_from_guest(self, mock_get_xml_desc):
         i = self._test_get_serial_ports_from_guest(None,
@@ -8997,6 +9045,37 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         self.assertFalse(drvr._image_api.get.called)
         mock_ensure_tree.assert_called_once_with('/foo')
+
+    def test_suspend(self):
+        guest = libvirt_guest.Guest(FakeVirtDomain(id=1))
+        dom = guest._domain
+
+        instance = objects.Instance(**self.test_instance)
+        instance.ephemeral_key_uuid = None
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+        @mock.patch.object(dmcrypt, 'delete_volume')
+        @mock.patch.object(conn, '_get_instance_disk_info', return_value=[])
+        @mock.patch.object(conn, '_detach_sriov_ports')
+        @mock.patch.object(conn, '_detach_pci_devices')
+        @mock.patch.object(pci_manager, 'get_instance_pci_devs',
+                           return_value='pci devs')
+        @mock.patch.object(conn._host, 'get_guest', return_value=guest)
+        def suspend(mock_get_guest, mock_get_instance_pci_devs,
+                    mock_detach_pci_devices, mock_detach_sriov_ports,
+                    mock_get_instance_disk_info, mock_delete_volume):
+            mock_managedSave = mock.Mock()
+            dom.managedSave = mock_managedSave
+
+            conn.suspend(self.context, instance)
+
+            mock_managedSave.assert_called_once_with(0)
+            self.assertEqual(mock_get_instance_disk_info.called, False)
+            mock_delete_volume.assert_has_calls([mock.call(disk['path'])
+                for disk in mock_get_instance_disk_info.return_value], False)
+
+        suspend()
 
     @mock.patch.object(time, 'sleep')
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_create_domain')
