@@ -40,7 +40,9 @@ class ApiSampleTestBaseV3(testscenarios.WithScenarios,
         # TODO(gmann): Below condition is to skip the tests which running
         # for 'v2' and have not been merged yet. Once all tests are merged
         # this condition needs to be removed.
-        if ((self._test == 'v2') and (self._api_version == 'v3')):
+        if (hasattr(self, '_test') and
+            (self._test == 'v2') and
+            (self._api_version == 'v3')):
             raise testtools.TestCase.skipException('tests are not merged yet')
         self.flags(use_ipv6=False,
                    osapi_compute_link_prefix=self._get_host(),
@@ -60,7 +62,8 @@ class ApiSampleTestBaseV3(testscenarios.WithScenarios,
                               'osapi_v3')
         # TODO(gmann): Currently redirecting only merged tests
         # after merging all tests, second condition needs to be removed.
-        if ((self._test == 'v2.1') and (self._api_version == 'v2')):
+        if (not hasattr(self, '_test') or
+            ((self._test == 'v2.1') and (self._api_version == 'v2'))):
             # NOTE(gmann)For v2.1 API testing, override /v2 endpoint with v2.1
             self.useFixture(api_paste_fixture.ApiPasteFixture())
         super(ApiSampleTestBaseV3, self).setUp()
