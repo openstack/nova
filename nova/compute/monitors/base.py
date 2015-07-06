@@ -40,8 +40,9 @@ class MonitorBase(object):
 
         Get available metric names, which are represented by a set of keys
         that can be used to check conflicts and duplications
+
         :returns: set containing one or more values from
-                  nova.objects.fields.MonitorMetricType.ALL constants
+            :py:attr: nova.objects.fields.MonitorMetricType.ALL
         """
         raise NotImplementedError('get_metric_names')
 

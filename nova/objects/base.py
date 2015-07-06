@@ -469,15 +469,16 @@ class NovaObject(object):
     def obj_reset_changes(self, fields=None, recursive=False):
         """Reset the list of fields that have been changed.
 
+        .. note::
+
+          - This is NOT "revert to previous values"
+          - Specifying fields on recursive resets will only be honored at the
+            top level. Everything below the top will reset all.
+
         :param fields: List of fields to reset, or "all" if None.
         :param recursive: Call obj_reset_changes(recursive=True) on
                           any sub-objects within the list of fields
                           being reset.
-
-        NOTE: This is NOT "revert to previous values"
-        NOTE: Specifying fields on recursive resets will only be
-              honored at the top level. Everything below the top
-              will reset all.
         """
         if recursive:
             for field in self.obj_get_changes():

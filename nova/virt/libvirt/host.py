@@ -845,9 +845,10 @@ class Host(object):
     def create_secret(self, usage_type, usage_id, password=None):
         """Create a secret.
 
-        usage_type: one of 'iscsi', 'ceph', 'rbd' or 'volume'
+        :param usage_type: one of 'iscsi', 'ceph', 'rbd' or 'volume'
                            'rbd' will be converted to 'ceph'.
-        usage_id: name of resource in secret
+        :param usage_id: name of resource in secret
+        :param password: optional secret value to set
         """
         secret_conf = vconfig.LibvirtConfigSecret()
         secret_conf.ephemeral = False

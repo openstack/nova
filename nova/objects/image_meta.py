@@ -97,7 +97,7 @@ class ImageMeta(base.NovaObject):
         :param instance: Instance object
 
         Creates a new object instance, initializing from the
-        system metadata "image_" properties associated with
+        system metadata "image_*" properties associated with
         instance
 
         :returns: an ImageMeta instance

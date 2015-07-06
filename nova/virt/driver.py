@@ -82,13 +82,13 @@ def get_block_device_info(instance, block_device_mapping):
     Virt drivers expect block device mapping to be presented in the format
     of a dict containing the following keys:
 
-        root_device_name: device name of the root disk
-        ephemerals: a (potentially empty) list of DriverEphemeralBlockDevice
-                    instances
-        swap: An instance of DriverSwapBlockDevice or None
-        block_device_mapping: a (potentially empty) list of
-                           DriverVolumeBlockDevice or any of it's more
-                           specialized subclasses.
+    - root_device_name: device name of the root disk
+    - ephemerals: a (potentially empty) list of DriverEphemeralBlockDevice
+                  instances
+    - swap: An instance of DriverSwapBlockDevice or None
+    - block_device_mapping: a (potentially empty) list of
+                            DriverVolumeBlockDevice or any of it's more
+                            specialized subclasses.
     """
     from nova.virt import block_device as virt_block_device
 

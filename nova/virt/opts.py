@@ -30,10 +30,10 @@ import nova.virt.ironic.driver
 import nova.virt.libvirt.driver
 import nova.virt.libvirt.imagebackend
 import nova.virt.libvirt.imagecache
-import nova.virt.libvirt.lvm
+import nova.virt.libvirt.storage.lvm
 import nova.virt.libvirt.utils
 import nova.virt.libvirt.vif
-import nova.virt.libvirt.volume
+import nova.virt.libvirt.volume.volume
 import nova.virt.netutils
 import nova.virt.vmwareapi.driver
 import nova.virt.vmwareapi.images
@@ -81,10 +81,10 @@ def list_opts():
              nova.virt.libvirt.driver.libvirt_opts,
              nova.virt.libvirt.imagebackend.__imagebackend_opts,
              nova.virt.libvirt.imagecache.imagecache_opts,
-             nova.virt.libvirt.lvm.lvm_opts,
+             nova.virt.libvirt.storage.lvm.lvm_opts,
              nova.virt.libvirt.utils.libvirt_opts,
              nova.virt.libvirt.vif.libvirt_vif_opts,
-             nova.virt.libvirt.volume.volume_opts,
+             nova.virt.libvirt.volume.volume.volume_opts,
          )),
         ('vmware',
          itertools.chain(

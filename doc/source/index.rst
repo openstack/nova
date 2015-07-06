@@ -190,6 +190,16 @@ Module Reference
 
    services
 
+
+.. # NOTE(mriedem): This is the section where we hide things that we don't
+   # actually want in the table of contents but sphinx build would fail if
+   # they aren't in the toctree somewhere. For example, we hide api/autoindex
+   # since that's already covered with modindex below.
+.. toctree::
+   :hidden:
+
+   api/autoindex
+
 Indices and tables
 ==================
 
