@@ -1799,27 +1799,12 @@ class CloudController(object):
                               'task_state': instance.task_state})
                     raise exception.InternalError(message=err)
 
-        glance_uuid = instance.image_ref
-        ec2_image_id = ec2utils.glance_id_to_ec2_id(context, glance_uuid)
-        src_image = self._get_image(context, ec2_image_id)
-        image_meta = dict(src_image)
-
-        def _unmap_id_property(properties, name):
-            if properties[name]:
-                properties[name] = ec2utils.id_to_glance_id(context,
-                                                            properties[name])
-
-        # ensure the ID properties are unmapped back to the glance UUID
-        _unmap_id_property(image_meta['properties'], 'kernel_id')
-        _unmap_id_property(image_meta['properties'], 'ramdisk_id')
-
         # meaningful image name
         name_map = dict(instance=instance_uuid, now=timeutils.isotime())
         name = name or _('image of %(instance)s at %(now)s') % name_map
 
         new_image = self.compute_api.snapshot_volume_backed(context,
                                                             instance,
-                                                            image_meta,
                                                             name)
 
         ec2_id = ec2utils.glance_id_to_ec2_id(context, new_image['id'])
