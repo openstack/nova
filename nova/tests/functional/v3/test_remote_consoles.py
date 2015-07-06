@@ -83,3 +83,27 @@ class ConsolesSampleJsonTests(test_servers.ServersSampleBase):
             "((ws?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)"
         self._verify_response('get-serial-console-post-resp', subs,
                               response, 200)
+
+
+class ConsolesV26SampleJsonTests(test_servers.ServersSampleBase):
+    extension_name = "os-remote-consoles"
+    _api_version = 'v3'
+
+    def setUp(self):
+        super(ConsolesV26SampleJsonTests, self).setUp()
+        self.http_regex = "(https?://)([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*"
+
+    def test_create_console(self):
+        # NOTE(rgerganov): set temporary to None to avoid duplicating server
+        # templates in the v2.6 folder
+        ConsolesV26SampleJsonTests.request_api_version = None
+        uuid = self._post_server()
+        ConsolesV26SampleJsonTests.request_api_version = '2.6'
+
+        body = {'protocol': 'vnc', 'type': 'novnc'}
+        response = self._do_post('servers/%s/remote-consoles' % uuid,
+                                 'create-vnc-console-req', body,
+                                 api_version='2.6')
+        subs = self._get_regexes()
+        subs["url"] = self.http_regex
+        self._verify_response('create-vnc-console-resp', subs, response, 200)

@@ -64,3 +64,29 @@ user documentation.
   for non-admins, as the filter option is silently discarded. There is no
   reason to treat ip6 different from ip, though, so we just add this
   option to the allowed list.
+
+2.6
+---
+
+  A new API for getting remote console is added::
+
+    POST /servers/<uuid>/remote-consoles
+    {
+      "remote_console": {
+        "protocol": ["vnc"|"rdp"|"serial"|"spice"],
+        "type": ["novnc"|"xpvnc"|"rdp-html5"|"spice-html5"|"serial"]
+      }
+    }
+
+  Example response::
+
+    {
+      "remote_console": {
+        "protocol": "vnc",
+        "type": "novnc",
+        "url": "http://example.com:6080/vnc_auto.html?token=XYZ"
+      }
+    }
+
+  The old APIs 'os-getVNCConsole', 'os-getSPICEConsole', 'os-getSerialConsole'
+  and 'os-getRDPConsole' are removed.
