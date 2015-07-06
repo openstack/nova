@@ -15,6 +15,8 @@
 
 import mock
 
+from oslo_concurrency import processutils
+
 from nova import test
 from nova.virt.libvirt.storage import dmcrypt
 
@@ -44,6 +46,18 @@ class LibvirtDmcryptTestCase(test.NoDBTestCase):
                       run_as_root=True),
         ])
 
+    @mock.patch('nova.virt.libvirt.storage.dmcrypt.LOG')
+    @mock.patch('nova.utils.execute')
+    def test_create_volume_fail(self, mock_execute, mock_log):
+        mock_execute.side_effect = processutils.ProcessExecutionError()
+
+        self.assertRaises(processutils.ProcessExecutionError,
+                          dmcrypt.create_volume, self.TARGET, self.PATH,
+                          self.CIPHER, self.KEY_SIZE, self.KEY)
+
+        self.assertEqual(1, mock_execute.call_count)
+        self.assertEqual(1, mock_log.error.call_count)  # error logged
+
     @mock.patch('nova.utils.execute')
     def test_delete_volume(self, mock_execute):
         dmcrypt.delete_volume(self.TARGET)
@@ -51,6 +65,28 @@ class LibvirtDmcryptTestCase(test.NoDBTestCase):
         mock_execute.assert_has_calls([
             mock.call('cryptsetup', 'remove', self.TARGET, run_as_root=True),
         ])
+
+    @mock.patch('nova.virt.libvirt.storage.dmcrypt.LOG')
+    @mock.patch('nova.utils.execute')
+    def test_delete_volume_fail(self, mock_execute, mock_log):
+        mock_execute.side_effect = processutils.ProcessExecutionError()
+
+        self.assertRaises(processutils.ProcessExecutionError,
+                          dmcrypt.delete_volume, self.TARGET)
+
+        self.assertEqual(1, mock_execute.call_count)
+        self.assertEqual(1, mock_log.error.call_count)  # error logged
+
+    @mock.patch('nova.virt.libvirt.storage.dmcrypt.LOG')
+    @mock.patch('nova.utils.execute')
+    def test_delete_missing_volume(self, mock_execute, mock_log):
+        mock_execute.side_effect = \
+                processutils.ProcessExecutionError(exit_code=4)
+
+        dmcrypt.delete_volume(self.TARGET)
+
+        self.assertEqual(1, mock_log.debug.call_count)
+        self.assertEqual(0, mock_log.error.call_count)
 
     @mock.patch('os.listdir')
     def test_list_volumes(self, mock_listdir):

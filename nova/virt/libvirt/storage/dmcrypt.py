@@ -15,7 +15,15 @@
 
 import os
 
+from oslo_concurrency import processutils
+from oslo_log import log as logging
+from oslo_utils import excutils
+
+from nova.i18n import _LE
 from nova.virt.libvirt import utils
+
+
+LOG = logging.getLogger(__name__)
 
 _dmcrypt_suffix = '-dmcrypt'
 
@@ -54,7 +62,12 @@ def create_volume(target, device, cipher, key_size, key):
            '--key-size=' + str(key_size),
            '--key-file=-')
     key = ''.join(map(lambda byte: "%02x" % byte, key))
-    utils.execute(*cmd, process_input=key, run_as_root=True)
+    try:
+        utils.execute(*cmd, process_input=key, run_as_root=True)
+    except processutils.ProcessExecutionError as e:
+        with excutils.save_and_reraise_exception():
+            LOG.error(_LE("Could not start encryption for disk %(device)s: "
+                          "%(exception)s"), {'device': device, 'exception': e})
 
 
 def delete_volume(target):
@@ -62,7 +75,21 @@ def delete_volume(target):
 
     :param target: name of the mapped logical device
     """
-    utils.execute('cryptsetup', 'remove', target, run_as_root=True)
+    try:
+        utils.execute('cryptsetup', 'remove', target, run_as_root=True)
+    except processutils.ProcessExecutionError as e:
+        # cryptsetup returns 4 when attempting to destroy a non-existent
+        # dm-crypt device. It indicates that the device is invalid, which
+        # means that the device is invalid (i.e., it has already been
+        # destroyed).
+        if e.exit_code == 4:
+            LOG.debug("Ignoring exit code 4, volume already destroyed")
+        else:
+            with excutils.save_and_reraise_exception():
+                LOG.error(_LE("Could not disconnect encrypted volume "
+                              "%(volume)s. If dm-crypt device is still active "
+                              "it will have to be destroyed manually for "
+                              "cleanup to succeed."), {'volume': target})
 
 
 def list_volumes():
