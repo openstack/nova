@@ -49,13 +49,13 @@ variables / types used
       'root' -> disk_info
 
 
- * 'disk_info': a tuple specifying disk configuration
+ * 'disk_info': a dict specifying disk configuration
 
-   It contains the following 3 fields
+   It contains the following 3 required fields
 
-      (disk bus, disk dev, device type)
+      bus (disk_bus), dev (disk_dev), type (device_type)
 
-   and possibly these optional fields: ('format',)
+   and possibly these optional fields: ('format', 'boot_index')
 
  * 'disk_bus': the guest bus type ('ide', 'virtio', 'scsi', etc)
 
