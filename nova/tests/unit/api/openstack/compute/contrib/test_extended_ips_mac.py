@@ -20,10 +20,8 @@ import webob
 from nova.api.openstack.compute.contrib import extended_ips_mac
 from nova import compute
 from nova import objects
-from nova.objects import instance as instance_obj
 from nova import test
 from nova.tests.unit.api.openstack import fakes
-from nova.tests.unit import fake_instance
 
 UUID1 = '00000000-0000-0000-0000-000000000001'
 UUID2 = '00000000-0000-0000-0000-000000000002'
@@ -94,20 +92,16 @@ ALL_IPS.sort()
 
 
 def fake_compute_get(*args, **kwargs):
-    inst = fakes.stub_instance(1, uuid=UUID3, nw_cache=NW_CACHE)
-    return fake_instance.fake_instance_obj(args[1],
-              expected_attrs=instance_obj.INSTANCE_DEFAULT_FIELDS, **inst)
+    inst = fakes.stub_instance_obj(None, 1, uuid=UUID3, nw_cache=NW_CACHE)
+    return inst
 
 
 def fake_compute_get_all(*args, **kwargs):
-    db_list = [
-        fakes.stub_instance(1, uuid=UUID1, nw_cache=NW_CACHE),
-        fakes.stub_instance(2, uuid=UUID2, nw_cache=NW_CACHE),
+    inst_list = [
+        fakes.stub_instance_obj(None, 1, uuid=UUID1, nw_cache=NW_CACHE),
+        fakes.stub_instance_obj(None, 2, uuid=UUID2, nw_cache=NW_CACHE),
     ]
-    fields = instance_obj.INSTANCE_DEFAULT_FIELDS
-    return instance_obj._make_instance_list(args[1],
-                                            objects.InstanceList(),
-                                            db_list, fields)
+    return objects.InstanceList(objects=inst_list)
 
 
 class ExtendedIpsMacTestV21(test.TestCase):
