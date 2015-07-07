@@ -117,3 +117,9 @@ user documentation.
   Administrators will be able to list, get details and delete keypairs owned by
   users other than themselves and to create new keypairs on behalf of their
   users.
+
+2.11
+----
+
+  Exposed attribute ``forced_down`` for ``os-services``.
+  Added ability to change the ``forced_down`` attribute by calling an update.

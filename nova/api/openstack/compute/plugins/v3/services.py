@@ -14,6 +14,7 @@
 
 import webob.exc
 
+from nova.api.openstack import api_version_request
 from nova.api.openstack.compute.schemas.v3 import services
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
@@ -32,6 +33,9 @@ class ServiceController(wsgi.Controller):
     def __init__(self):
         self.host_api = compute.HostAPI()
         self.servicegroup_api = servicegroup.API()
+        self.actions = {"enable": self._enable,
+                        "disable": self._disable,
+                        "disable-log-reason": self._disable_log_reason}
 
     def _get_services(self, req):
         context = req.environ['nova.context']
@@ -51,7 +55,7 @@ class ServiceController(wsgi.Controller):
 
         return _services
 
-    def _get_service_detail(self, svc):
+    def _get_service_detail(self, svc, additional_fields):
         alive = self.servicegroup_api.service_is_up(svc)
         state = (alive and "up") or "down"
         active = 'enabled'
@@ -66,11 +70,15 @@ class ServiceController(wsgi.Controller):
                           'updated_at': svc['updated_at'],
                           'disabled_reason': svc['disabled_reason']}
 
+        for field in additional_fields:
+            service_detail[field] = svc[field]
+
         return service_detail
 
-    def _get_services_list(self, req):
+    def _get_services_list(self, req, additional_fields=()):
         _services = self._get_services(req)
-        return [self._get_service_detail(svc) for svc in _services]
+        return [self._get_service_detail(svc, additional_fields)
+                for svc in _services]
 
     def _enable(self, body, context):
         """Enable scheduling for a service."""
@@ -112,12 +120,42 @@ class ServiceController(wsgi.Controller):
         self._update(context, body['host'], body['binary'], params_to_update)
         return ret_value
 
+    def _forced_down(self, body, context):
+        """Set or unset forced_down flag for the service"""
+        try:
+            forced_down = body["forced_down"]
+        except KeyError:
+            msg = _('Missing forced_down field')
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
+        host = body['host']
+        binary = body['binary']
+
+        ret_value = {'service': {'host': host,
+                                 'binary': binary,
+                                 'forced_down': forced_down}}
+        self._update(context, host, binary, {"forced_down": forced_down})
+        return ret_value
+
     def _update(self, context, host, binary, payload):
         """Do the actual PUT/update"""
         try:
             self.host_api.service_update(context, host, binary, payload)
         except exception.HostBinaryNotFound as exc:
             raise webob.exc.HTTPNotFound(explanation=exc.format_message())
+
+    def _perform_action(self, req, id, body, actions):
+        """Calculate action dictionary dependent on provided fields"""
+        context = req.environ['nova.context']
+        authorize(context)
+
+        try:
+            action = actions[id]
+        except KeyError:
+            msg = _("Unknown action")
+            raise webob.exc.HTTPNotFound(explanation=msg)
+
+        return action(body, context)
 
     @wsgi.response(204)
     @extensions.expected_errors(404)
@@ -137,26 +175,29 @@ class ServiceController(wsgi.Controller):
         """Return a list of all running services. Filter by host & service
         name
         """
-        return {'services': self._get_services_list(req)}
+        req_ver = req.api_version_request
+        if req_ver >= api_version_request.APIVersionRequest("2.11"):
+            _services = self._get_services_list(req, ['forced_down'])
+        else:
+            _services = self._get_services_list(req)
 
+        return {'services': _services}
+
+    @wsgi.Controller.api_version('2.1', '2.10')
     @extensions.expected_errors((400, 404))
     @validation.schema(services.service_update)
     def update(self, req, id, body):
         """Perform service update"""
-        context = req.environ['nova.context']
-        authorize(context)
+        return self._perform_action(req, id, body, self.actions)
 
-        actions = {"enable": self._enable,
-                   "disable": self._disable,
-                   "disable-log-reason": self._disable_log_reason}
-
-        try:
-            action = actions[id]
-        except KeyError:
-            msg = _("Unknown action")
-            raise webob.exc.HTTPNotFound(explanation=msg)
-
-        return action(body, context)
+    @wsgi.Controller.api_version('2.11')  # noqa
+    @extensions.expected_errors((400, 404))
+    @validation.schema(services.service_update_v211)
+    def update(self, req, id, body):
+        """Perform service update"""
+        actions = self.actions.copy()
+        actions["force-down"] = self._forced_down
+        return self._perform_action(req, id, body, actions)
 
 
 class Services(extensions.V3APIExtensionBase):

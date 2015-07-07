@@ -28,6 +28,8 @@ CONF.import_opt('osapi_compute_extension',
 class ServicesJsonTest(api_sample_base.ApiSampleTestBaseV3):
     ADMIN_API = True
     extension_name = "os-services"
+    request_api_version = None
+
     # TODO(gmann): Overriding '_api_version' till all functional tests
     # are merged between v2 and v2.1. After that base class variable
     # itself can be changed to 'v2'
@@ -63,7 +65,8 @@ class ServicesJsonTest(api_sample_base.ApiSampleTestBaseV3):
 
     def test_services_list(self):
         """Return a list of all agent builds."""
-        response = self._do_get('os-services')
+        response = self._do_get('os-services',
+                                api_version=self.request_api_version)
         subs = {'binary': 'nova-compute',
                 'host': 'host1',
                 'zone': 'nova',
@@ -77,7 +80,8 @@ class ServicesJsonTest(api_sample_base.ApiSampleTestBaseV3):
         subs = {"host": "host1",
                 'binary': 'nova-compute'}
         response = self._do_put('os-services/enable',
-                                'service-enable-put-req', subs)
+                                'service-enable-put-req', subs,
+                                api_version=self.request_api_version)
         self._verify_response('service-enable-put-resp', subs, response, 200)
 
     def test_service_disable(self):
@@ -85,7 +89,8 @@ class ServicesJsonTest(api_sample_base.ApiSampleTestBaseV3):
         subs = {"host": "host1",
                 'binary': 'nova-compute'}
         response = self._do_put('os-services/disable',
-                                'service-disable-put-req', subs)
+                                'service-disable-put-req', subs,
+                                api_version=self.request_api_version)
         self._verify_response('service-disable-put-resp', subs, response, 200)
 
     def test_service_disable_log_reason(self):
@@ -94,12 +99,46 @@ class ServicesJsonTest(api_sample_base.ApiSampleTestBaseV3):
                 'binary': 'nova-compute',
                 'disabled_reason': 'test2'}
         response = self._do_put('os-services/disable-log-reason',
-                                'service-disable-log-put-req', subs)
-        return self._verify_response('service-disable-log-put-resp',
-                                     subs, response, 200)
+                                'service-disable-log-put-req', subs,
+                                api_version=self.request_api_version)
+        self._verify_response('service-disable-log-put-resp',
+                              subs, response, 200)
 
     def test_service_delete(self):
         """Delete an existing service."""
-        response = self._do_delete('os-services/1')
+        response = self._do_delete('os-services/1',
+                                   api_version=self.request_api_version)
         self.assertEqual(response.status_code, 204)
         self.assertEqual(response.content, "")
+
+
+class ServicesV211JsonTest(ServicesJsonTest):
+    request_api_version = '2.11'
+    _api_version = 'v2'
+    # NOTE(gryf): There is no need to run those tests on v2 API. Only
+    # scenarios for v2_9 will be run.
+    scenarios = [('v2_11', {})]
+
+    def test_services_list(self):
+        """Return a list of all agent builds."""
+        response = self._do_get('os-services',
+                                api_version=self.request_api_version)
+        subs = {'binary': 'nova-compute',
+                'host': 'host1',
+                'zone': 'nova',
+                'forced_down': 'false',
+                'status': 'disabled',
+                'state': 'up'}
+        subs.update(self._get_regexes())
+        self._verify_response('services-list-get-resp', subs, response, 200)
+
+    def test_force_down(self):
+        """Set forced_down flag"""
+        subs = {"host": 'host1',
+                'binary': 'nova-compute',
+                'forced_down': 'true'}
+        response = self._do_put('os-services/force-down',
+                                'service-force-down-put-req', subs,
+                                api_version=self.request_api_version)
+        self._verify_response('service-force-down-put-resp', subs,
+                              response, 200)

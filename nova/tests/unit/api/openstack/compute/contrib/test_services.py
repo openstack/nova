@@ -21,9 +21,11 @@ import mock
 from oslo_utils import timeutils
 import webob.exc
 
+from nova.api.openstack import api_version_request as api_version
 from nova.api.openstack.compute.contrib import services as services_v2
 from nova.api.openstack.compute.plugins.v3 import services as services_v21
 from nova.api.openstack import extensions
+from nova.api.openstack import wsgi as os_wsgi
 from nova import availability_zones
 from nova.cells import utils as cells_utils
 from nova.compute import cells_api
@@ -46,6 +48,7 @@ fake_services_list = [
          topic='scheduler',
          updated_at=datetime.datetime(2012, 10, 29, 13, 42, 2),
          created_at=datetime.datetime(2012, 9, 18, 2, 46, 27),
+         forced_down=False,
          disabled_reason='test1'),
     dict(test_service.fake_service,
          binary='nova-compute',
@@ -55,6 +58,7 @@ fake_services_list = [
          topic='compute',
          updated_at=datetime.datetime(2012, 10, 29, 13, 42, 5),
          created_at=datetime.datetime(2012, 9, 18, 2, 46, 27),
+         forced_down=False,
          disabled_reason='test2'),
     dict(test_service.fake_service,
          binary='nova-scheduler',
@@ -64,6 +68,7 @@ fake_services_list = [
          topic='scheduler',
          updated_at=datetime.datetime(2012, 9, 19, 6, 55, 34),
          created_at=datetime.datetime(2012, 9, 18, 2, 46, 28),
+         forced_down=False,
          disabled_reason=None),
     dict(test_service.fake_service,
          binary='nova-compute',
@@ -73,28 +78,30 @@ fake_services_list = [
          topic='compute',
          updated_at=datetime.datetime(2012, 9, 18, 8, 3, 38),
          created_at=datetime.datetime(2012, 9, 18, 2, 46, 28),
+         forced_down=False,
          disabled_reason='test4'),
     ]
 
 
 class FakeRequest(object):
-        environ = {"nova.context": context.get_admin_context()}
-        GET = {}
+    environ = {"nova.context": context.get_admin_context()}
+    GET = {}
+
+    def __init__(self, version=os_wsgi.DEFAULT_API_VERSION):  # version='2.1'):
+        super(FakeRequest, self).__init__()
+        self.api_version_request = api_version.APIVersionRequest(version)
 
 
-class FakeRequestWithService(object):
-        environ = {"nova.context": context.get_admin_context()}
-        GET = {"binary": "nova-compute"}
+class FakeRequestWithService(FakeRequest):
+    GET = {"binary": "nova-compute"}
 
 
-class FakeRequestWithHost(object):
-        environ = {"nova.context": context.get_admin_context()}
-        GET = {"host": "host1"}
+class FakeRequestWithHost(FakeRequest):
+    GET = {"host": "host1"}
 
 
-class FakeRequestWithHostService(object):
-        environ = {"nova.context": context.get_admin_context()}
-        GET = {"host": "host1", "binary": "nova-compute"}
+class FakeRequestWithHostService(FakeRequest):
+    GET = {"host": "host1", "binary": "nova-compute"}
 
 
 def fake_service_get_all(services):
@@ -160,6 +167,7 @@ def fake_utcnow_ts():
 class ServicesTestV21(test.TestCase):
     service_is_up_exc = webob.exc.HTTPInternalServerError
     bad_request = exception.ValidationError
+    wsgi_api_version = os_wsgi.DEFAULT_API_VERSION
 
     def _set_up_controller(self):
         self.controller = services_v21.ServiceController()
@@ -549,6 +557,285 @@ class ServicesTestV21(test.TestCase):
         self.stubs.Set(db_driver.DbDriver, 'is_up', dummy_is_up)
         req = FakeRequestWithHostService()
         self.assertRaises(self.service_is_up_exc, self.controller.index, req)
+
+
+class ServicesTestV211(ServicesTestV21):
+    wsgi_api_version = '2.11'
+
+    def test_services_list(self):
+        req = FakeRequest(self.wsgi_api_version)
+        res_dict = self.controller.index(req)
+
+        response = {'services': [
+                    {'binary': 'nova-scheduler',
+                    'host': 'host1',
+                    'zone': 'internal',
+                    'status': 'disabled',
+                    'id': 1,
+                    'state': 'up',
+                    'forced_down': False,
+                    'disabled_reason': 'test1',
+                    'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 2)},
+                    {'binary': 'nova-compute',
+                     'host': 'host1',
+                     'zone': 'nova',
+                     'id': 2,
+                     'status': 'disabled',
+                     'disabled_reason': 'test2',
+                     'state': 'up',
+                     'forced_down': False,
+                     'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 5)},
+                    {'binary': 'nova-scheduler',
+                     'host': 'host2',
+                     'zone': 'internal',
+                     'id': 3,
+                     'status': 'enabled',
+                     'disabled_reason': None,
+                     'state': 'down',
+                     'forced_down': False,
+                     'updated_at': datetime.datetime(2012, 9, 19, 6, 55, 34)},
+                    {'binary': 'nova-compute',
+                     'host': 'host2',
+                     'zone': 'nova',
+                     'id': 4,
+                     'status': 'disabled',
+                     'disabled_reason': 'test4',
+                     'state': 'down',
+                     'forced_down': False,
+                     'updated_at': datetime.datetime(2012, 9, 18, 8, 3, 38)}]}
+        self._process_output(response)
+        self.assertEqual(res_dict, response)
+
+    def test_services_list_with_host(self):
+        req = FakeRequestWithHost(self.wsgi_api_version)
+        res_dict = self.controller.index(req)
+
+        response = {'services': [
+                    {'binary': 'nova-scheduler',
+                    'host': 'host1',
+                    'disabled_reason': 'test1',
+                    'id': 1,
+                    'zone': 'internal',
+                    'status': 'disabled',
+                    'state': 'up',
+                    'forced_down': False,
+                    'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 2)},
+                   {'binary': 'nova-compute',
+                    'host': 'host1',
+                    'zone': 'nova',
+                    'disabled_reason': 'test2',
+                    'id': 2,
+                    'status': 'disabled',
+                    'state': 'up',
+                    'forced_down': False,
+                    'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 5)}]}
+        self._process_output(response)
+        self.assertEqual(res_dict, response)
+
+    def test_services_list_with_service(self):
+        req = FakeRequestWithService(self.wsgi_api_version)
+        res_dict = self.controller.index(req)
+
+        response = {'services': [
+                    {'binary': 'nova-compute',
+                    'host': 'host1',
+                    'disabled_reason': 'test2',
+                    'id': 2,
+                    'zone': 'nova',
+                    'status': 'disabled',
+                    'state': 'up',
+                    'forced_down': False,
+                    'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 5)},
+                    {'binary': 'nova-compute',
+                     'host': 'host2',
+                     'zone': 'nova',
+                     'disabled_reason': 'test4',
+                     'id': 4,
+                     'status': 'disabled',
+                     'state': 'down',
+                     'forced_down': False,
+                     'updated_at': datetime.datetime(2012, 9, 18, 8, 3, 38)}]}
+        self._process_output(response)
+        self.assertEqual(res_dict, response)
+
+    def test_services_list_with_host_service(self):
+        req = FakeRequestWithHostService(self.wsgi_api_version)
+        res_dict = self.controller.index(req)
+
+        response = {'services': [
+                    {'binary': 'nova-compute',
+                    'host': 'host1',
+                    'zone': 'nova',
+                    'disabled_reason': 'test2',
+                    'id': 2,
+                    'status': 'disabled',
+                    'state': 'up',
+                    'forced_down': False,
+                    'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 5)}]}
+        self._process_output(response)
+        self.assertEqual(res_dict, response)
+
+    def test_services_detail(self):
+        self.ext_mgr.extensions['os-extended-services'] = True
+        req = FakeRequest(self.wsgi_api_version)
+        res_dict = self.controller.index(req)
+
+        response = {'services': [
+                    {'binary': 'nova-scheduler',
+                    'host': 'host1',
+                    'zone': 'internal',
+                    'status': 'disabled',
+                    'id': 1,
+                    'state': 'up',
+                    'forced_down': False,
+                    'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 2),
+                    'disabled_reason': 'test1'},
+                    {'binary': 'nova-compute',
+                     'host': 'host1',
+                     'zone': 'nova',
+                     'status': 'disabled',
+                     'state': 'up',
+                     'id': 2,
+                     'forced_down': False,
+                     'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 5),
+                     'disabled_reason': 'test2'},
+                    {'binary': 'nova-scheduler',
+                     'host': 'host2',
+                     'zone': 'internal',
+                     'status': 'enabled',
+                     'id': 3,
+                     'state': 'down',
+                     'forced_down': False,
+                     'updated_at': datetime.datetime(2012, 9, 19, 6, 55, 34),
+                     'disabled_reason': None},
+                    {'binary': 'nova-compute',
+                     'host': 'host2',
+                     'zone': 'nova',
+                     'id': 4,
+                     'status': 'disabled',
+                     'state': 'down',
+                     'forced_down': False,
+                     'updated_at': datetime.datetime(2012, 9, 18, 8, 3, 38),
+                     'disabled_reason': 'test4'}]}
+        self._process_output(response, has_disabled=True)
+        self.assertEqual(res_dict, response)
+
+    def test_service_detail_with_host(self):
+        self.ext_mgr.extensions['os-extended-services'] = True
+        req = FakeRequestWithHost(self.wsgi_api_version)
+        res_dict = self.controller.index(req)
+
+        response = {'services': [
+                    {'binary': 'nova-scheduler',
+                    'host': 'host1',
+                    'zone': 'internal',
+                    'id': 1,
+                    'status': 'disabled',
+                    'state': 'up',
+                    'forced_down': False,
+                    'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 2),
+                    'disabled_reason': 'test1'},
+                   {'binary': 'nova-compute',
+                    'host': 'host1',
+                    'zone': 'nova',
+                    'id': 2,
+                    'status': 'disabled',
+                    'state': 'up',
+                    'forced_down': False,
+                    'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 5),
+                    'disabled_reason': 'test2'}]}
+        self._process_output(response, has_disabled=True)
+        self.assertEqual(res_dict, response)
+
+    def test_service_detail_with_service(self):
+        self.ext_mgr.extensions['os-extended-services'] = True
+        req = FakeRequestWithService(self.wsgi_api_version)
+        res_dict = self.controller.index(req)
+
+        response = {'services': [
+                    {'binary': 'nova-compute',
+                    'host': 'host1',
+                    'zone': 'nova',
+                    'id': 2,
+                    'status': 'disabled',
+                    'state': 'up',
+                    'forced_down': False,
+                    'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 5),
+                    'disabled_reason': 'test2'},
+                    {'binary': 'nova-compute',
+                     'host': 'host2',
+                     'id': 4,
+                     'zone': 'nova',
+                     'status': 'disabled',
+                     'state': 'down',
+                     'forced_down': False,
+                     'updated_at': datetime.datetime(2012, 9, 18, 8, 3, 38),
+                     'disabled_reason': 'test4'}]}
+        self._process_output(response, has_disabled=True)
+        self.assertEqual(res_dict, response)
+
+    def test_service_detail_with_host_service(self):
+        self.ext_mgr.extensions['os-extended-services'] = True
+        req = FakeRequestWithHostService(self.wsgi_api_version)
+        res_dict = self.controller.index(req)
+
+        response = {'services': [
+                    {'binary': 'nova-compute',
+                    'host': 'host1',
+                    'zone': 'nova',
+                    'status': 'disabled',
+                    'id': 2,
+                    'state': 'up',
+                    'forced_down': False,
+                    'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 5),
+                    'disabled_reason': 'test2'}]}
+        self._process_output(response, has_disabled=True)
+        self.assertEqual(res_dict, response)
+
+    def test_services_detail_with_delete_extension(self):
+        self.ext_mgr.extensions['os-extended-services-delete'] = True
+        req = FakeRequest(self.wsgi_api_version)
+        res_dict = self.controller.index(req)
+
+        response = {'services': [
+            {'binary': 'nova-scheduler',
+             'host': 'host1',
+             'id': 1,
+             'zone': 'internal',
+             'disabled_reason': 'test1',
+             'status': 'disabled',
+             'state': 'up',
+             'forced_down': False,
+             'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 2)},
+            {'binary': 'nova-compute',
+             'host': 'host1',
+             'id': 2,
+             'zone': 'nova',
+             'disabled_reason': 'test2',
+             'status': 'disabled',
+             'state': 'up',
+             'forced_down': False,
+             'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 5)},
+            {'binary': 'nova-scheduler',
+             'host': 'host2',
+             'disabled_reason': None,
+             'id': 3,
+             'zone': 'internal',
+             'status': 'enabled',
+             'state': 'down',
+             'forced_down': False,
+             'updated_at': datetime.datetime(2012, 9, 19, 6, 55, 34)},
+            {'binary': 'nova-compute',
+             'host': 'host2',
+             'id': 4,
+             'disabled_reason': 'test4',
+             'zone': 'nova',
+             'status': 'disabled',
+             'state': 'down',
+             'forced_down': False,
+             'updated_at': datetime.datetime(2012, 9, 18, 8, 3, 38)}]}
+        self._process_output(response, has_id=True)
+        self.assertEqual(res_dict, response)
 
 
 class ServicesTestV20(ServicesTestV21):

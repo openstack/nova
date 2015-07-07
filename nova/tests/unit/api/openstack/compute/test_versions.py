@@ -65,7 +65,7 @@ EXP_VERSIONS = {
     "v2.1": {
         "id": "v2.1",
         "status": "CURRENT",
-        "version": "2.10",
+        "version": "2.11",
         "min_version": "2.1",
         "updated": "2013-07-23T11:33:21Z",
         "links": [
@@ -114,7 +114,7 @@ class VersionsTestV20(test.NoDBTestCase):
             {
                 "id": "v2.1",
                 "status": "CURRENT",
-                "version": "2.10",
+                "version": "2.11",
                 "min_version": "2.1",
                 "updated": "2013-07-23T11:33:21Z",
                 "links": [
