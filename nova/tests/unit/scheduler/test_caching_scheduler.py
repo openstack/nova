@@ -75,29 +75,29 @@ class CachingSchedulerTestCase(test_scheduler.SchedulerTestCase):
             self.assertEqual(mock_get_hosts.return_value, result)
 
     def test_select_destination_raises_with_no_hosts(self):
-        fake_request_spec = self._get_fake_request_spec()
+        spec_obj = self._get_fake_request_spec()
         self.driver.all_host_states = []
 
         self.assertRaises(exception.NoValidHost,
                 self.driver.select_destinations,
-                self.context, fake_request_spec, {})
+                self.context, spec_obj)
 
     @mock.patch('nova.db.instance_extra_get_by_instance_uuid',
                 return_value={'numa_topology': None,
                               'pci_requests': None})
     def test_select_destination_works(self, mock_get_extra):
-        fake_request_spec = self._get_fake_request_spec()
+        spec_obj = self._get_fake_request_spec()
         fake_host = self._get_fake_host_state()
         self.driver.all_host_states = [fake_host]
 
-        result = self._test_select_destinations(fake_request_spec)
+        result = self._test_select_destinations(spec_obj)
 
         self.assertEqual(1, len(result))
         self.assertEqual(result[0]["host"], fake_host.host)
 
-    def _test_select_destinations(self, request_spec):
+    def _test_select_destinations(self, spec_obj):
         return self.driver.select_destinations(
-                self.context, request_spec, {})
+                self.context, spec_obj)
 
     def _get_fake_request_spec(self):
         # NOTE(sbauza): Prevent to stub the Flavor.get_by_id call just by
@@ -113,17 +113,22 @@ class CachingSchedulerTestCase(test_scheduler.SchedulerTestCase):
         instance_properties = {
             "os_type": "linux",
             "project_id": "1234",
-            "memory_mb": 512,
-            "root_gb": 1,
-            "ephemeral_gb": 1,
-            "vcpus": 1,
-            "uuid": 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
         }
-        request_spec = {
-            "instance_type": flavor,
-            "instance_properties": instance_properties,
-            "num_instances": 1,
-        }
+        request_spec = objects.RequestSpec(
+            flavor=flavor,
+            num_instances=1,
+            ignore_hosts=None,
+            force_hosts=None,
+            force_nodes=None,
+            retry=None,
+            availability_zone=None,
+            image=None,
+            instance_group=None,
+            pci_requests=None,
+            numa_topology=None,
+            instance_uuid='aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+            **instance_properties
+        )
         return request_spec
 
     def _get_fake_host_state(self, index=0):
@@ -152,7 +157,7 @@ class CachingSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
         self.flags(service_down_time=240)
 
-        request_spec = self._get_fake_request_spec()
+        spec_obj = self._get_fake_request_spec()
         host_states = []
         for x in range(hosts):
             host_state = self._get_fake_host_state(x)
@@ -164,7 +169,7 @@ class CachingSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
             for x in range(requests):
                 self.driver.select_destinations(
-                    self.context, request_spec, {})
+                    self.context, spec_obj)
 
             b = timeutils.utcnow()
             c = b - a

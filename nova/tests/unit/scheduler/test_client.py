@@ -62,20 +62,15 @@ class SchedulerQueryClientTestCase(test.NoDBTestCase):
     def test_constructor(self):
         self.assertIsNotNone(self.client.scheduler_rpcapi)
 
-    @mock.patch.object(objects.RequestSpec, 'to_legacy_filter_properties_dict')
-    @mock.patch.object(objects.RequestSpec, 'to_legacy_request_spec_dict')
     @mock.patch.object(scheduler_rpcapi.SchedulerAPI, 'select_destinations')
-    def test_select_destinations(self, mock_select_destinations, to_spec,
-                                 to_props):
+    def test_select_destinations(self, mock_select_destinations):
         fake_spec = objects.RequestSpec()
-        to_spec.return_value = 'fake_request_spec'
-        to_props.return_value = 'fake_props'
         self.client.select_destinations(
             context=self.context,
             spec_obj=fake_spec
         )
         mock_select_destinations.assert_called_once_with(
-            self.context, 'fake_request_spec', 'fake_props')
+            self.context, fake_spec)
 
     @mock.patch.object(scheduler_rpcapi.SchedulerAPI, 'update_aggregates')
     def test_update_aggregates(self, mock_update_aggs):

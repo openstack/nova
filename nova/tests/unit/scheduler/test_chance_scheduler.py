@@ -57,7 +57,7 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
     def test_select_destinations(self):
         ctxt = context.RequestContext('fake', 'fake', False)
         ctxt_elevated = 'fake-context-elevated'
-        request_spec = {'num_instances': 2}
+        spec_obj = objects.RequestSpec(num_instances=2, ignore_hosts=None)
 
         self.mox.StubOutWithMock(ctxt, 'elevated')
         self.mox.StubOutWithMock(self.driver, 'hosts_up')
@@ -74,7 +74,7 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
         random.choice(hosts_full).AndReturn('host2')
 
         self.mox.ReplayAll()
-        dests = self.driver.select_destinations(ctxt, request_spec, {})
+        dests = self.driver.select_destinations(ctxt, spec_obj)
         self.assertEqual(2, len(dests))
         (host, node) = (dests[0]['host'], dests[0]['nodename'])
         self.assertEqual('host3', host)
@@ -94,7 +94,7 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.stubs.Set(self.driver, '_filter_hosts', _return_no_host)
         self.mox.ReplayAll()
 
-        request_spec = {'num_instances': 1}
+        spec_obj = objects.RequestSpec(num_instances=1)
         self.assertRaises(exception.NoValidHost,
                           self.driver.select_destinations, self.context,
-                          request_spec, {})
+                          spec_obj)

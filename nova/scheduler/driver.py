@@ -53,7 +53,7 @@ class Scheduler(object):
                 if self.servicegroup_api.service_is_up(service)]
 
     @abc.abstractmethod
-    def select_destinations(self, context, request_spec, filter_properties):
+    def select_destinations(self, context, spec_obj):
         """Must override select_destinations method.
 
         :return: A list of dicts with 'host', 'nodename' and 'limits' as keys
